@@ -1,0 +1,3636 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Kiwi · Encaisse à T+1, 1,79 % flat. Aucun frais caché.</title>
+<meta name="description" content="L'argent de la veille, sur ton IBAN à 9 h. 1,79 % flat. Aucun frais caché. Le terminal pensé pour le commerçant marocain. Conçu à Tanger." />
+<meta name="theme-color" content="#0B6E4F" />
+<link rel="canonical" href="https://kiwi.ma/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="fr_MA" />
+<meta property="og:url" content="https://kiwi.ma/" />
+<meta property="og:title" content="Kiwi · Encaisse à T+1, 1,79 % flat. Aucun frais caché." />
+<meta property="og:description" content="L'argent de la veille, sur ton IBAN à 9 h. 1,79 % flat, aucun frais caché. Le terminal pensé pour le commerçant marocain." />
+<meta property="og:image" content="https://kiwi.ma/assets/og-card.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Kiwi · 1,79 % flat. Versement T+1. Conçu à Tanger." />
+<meta property="og:site_name" content="Kiwi" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Kiwi · Encaisse à T+1, 1,79 % flat." />
+<meta name="twitter:description" content="L'argent de la veille, sur ton IBAN à 9 h. Aucun frais caché. Conçu à Tanger." />
+<meta name="twitter:image" content="https://kiwi.ma/assets/og-card.png" />
+
+<link rel="icon" type="image/png" href="assets/kiwi-favicon.png" />
+<link rel="apple-touch-icon" href="assets/kiwi-mark-app-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Reem+Kufi:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/base.css" />
+<link rel="stylesheet" href="assets/components.css" />
+
+<!-- No-JS fallback — every reveal-triggered element stays visible,
+     scroll-driven + cursor-driven animations resolve to their final state -->
+<noscript>
+  <style>
+    .reveal { opacity: 1 !important; transform: none !important; }
+    .dash-mock-frame { animation: none !important; transform: none !important; }
+    .hero-mock::after { display: none; }
+    .editorial .em-num.draw::after { transform: scaleX(1) !important; transition: none !important; }
+    .why-grid.reveal.in .why-card, .feat-grid.reveal.in .feat-cell,
+    .logos.reveal.in .logo-cell, .t1-viz.reveal.in .t1-from,
+    .t1-viz.reveal.in .t1-arrow, .t1-viz.reveal.in .t1-to,
+    .cmp.reveal.in tbody tr, .cmp.reveal.in tbody tr.us {
+      animation: none !important; opacity: 1 !important; transform: none !important;
+    }
+    .cmp.reveal.in .v.yes::before { animation: none !important; transform: none !important; }
+    /* Loss counter shows a representative static daily figure */
+    #lossNumber { font-variant-numeric: tabular-nums; }
+  </style>
+</noscript>
+
+<style>
+/* ════════════════════════════════════════════════════════════════
+   Page-scoped layout — extends tokens.css / base.css / components.css
+   ════════════════════════════════════════════════════════════════ */
+
+html { scroll-behavior: smooth; }
+
+/* Section heads ─────────────────────────────────────────────────── */
+.s-num {
+  font-family: var(--font-mono); font-size: var(--t-eyebrow);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--n-500);
+}
+.s-num b { color: var(--atlas); font-weight: var(--w-medium); }
+.slab-ink .s-num, .slab-riad .s-num { color: rgba(247,245,240,0.5); }
+.slab-ink .s-num b, .slab-riad .s-num b { color: var(--mint); }
+
+.s-eyebrow {
+  font-family: var(--font-mono); font-size: var(--t-eyebrow);
+  letter-spacing: var(--ls-eyebrow); text-transform: uppercase;
+  font-weight: var(--w-medium);
+  color: var(--atlas);
+}
+.slab-ink .s-eyebrow, .slab-riad .s-eyebrow { color: var(--mint); }
+
+.s-head { max-width: 920px; }
+.s-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h2); line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2); font-weight: var(--w-medium);
+}
+.s-head .lede {
+  max-width: 64ch; font-size: var(--t-lead);
+  line-height: var(--lh-lead); letter-spacing: var(--ls-lead);
+  color: var(--n-600); font-weight: var(--w-regular);
+}
+.slab-ink .s-head .lede, .slab-riad .s-head .lede { color: rgba(247,245,240,0.7); }
+
+/* Heading typesetting discipline */
+h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
+  text-wrap: balance;
+  -webkit-hyphens: manual; hyphens: manual;
+}
+.lede, .hero-lede, p { text-wrap: pretty; }
+
+/* HERO ──────────────────────────────────────────────────────────── */
+.hero { position: relative; overflow: hidden; padding-bottom: var(--s-24); }
+
+.hero-mesh {
+  position: absolute; pointer-events: none;
+  top: -8%; right: -12%; width: 64%; height: 80%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.18) 0deg,
+    rgba(125, 242, 176, 0.20) 90deg,
+    rgba(5, 59, 44, 0.16) 180deg,
+    rgba(11, 110, 79, 0.18) 270deg,
+    rgba(125, 242, 176, 0.20) 360deg);
+  filter: blur(80px);
+  border-radius: 50%;
+  mask-image: radial-gradient(ellipse 80% 80% at 60% 30%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 60% 30%, black 30%, transparent 75%);
+  animation: meshSpin 24s linear infinite;
+  z-index: 0;
+}
+@keyframes meshSpin { to { --hue: 360deg; transform: rotate(360deg); } }
+
+.hero-grid {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1.05fr 1fr;
+  gap: var(--s-12); align-items: center;
+}
+@media (max-width: 1100px) { .hero-grid { grid-template-columns: 1fr; gap: var(--s-10); } }
+
+.hero h1 {
+  position: relative;
+  isolation: isolate;
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5.4vw, 84px);
+  line-height: 1.06;
+  letter-spacing: var(--ls-hero);
+  font-weight: var(--w-medium);
+  max-width: 22ch;
+  text-shadow:
+    0 4px 28px rgba(11, 110, 79, 0.16),
+    0 14px 56px rgba(11, 110, 79, 0.08);
+}
+.hero h1::before {
+  content: ""; position: absolute;
+  inset: -18% -10% -18% -8%;
+  z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 70% at 22% 40%,
+      rgba(11, 110, 79, 0.26) 0%,
+      rgba(125, 242, 176, 0.22) 30%,
+      transparent 65%),
+    radial-gradient(ellipse 50% 65% at 78% 60%,
+      rgba(125, 242, 176, 0.18) 0%,
+      rgba(11, 110, 79, 0.16) 35%,
+      transparent 70%);
+  filter: blur(48px);
+  border-radius: 50%;
+  animation: heroH1Glow 9s var(--ease-counter) infinite;
+}
+@keyframes heroH1Glow {
+  0%, 100% { opacity: 0.72; transform: scale(0.96) translateX(-2%); }
+  50%      { opacity: 1.00; transform: scale(1.06) translateX(2%); }
+}
+
+.hero-lede {
+  margin-top: var(--s-6); max-width: 56ch;
+  font-size: var(--t-lead); line-height: var(--lh-lead);
+  letter-spacing: var(--ls-lead); color: var(--n-600);
+}
+.hero-ctas { margin-top: var(--s-8); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+/* Hero KPI card — one unified floating panel, atmospheric mint mesh,
+   hairline border, soft elevation. The signature: a single live mint dot
+   top-left + atlas accent on the lead number. No dividers, no Bootstrap
+   feel. Stripe + Linear + Vercel weight class. ─────────────────────── */
+.hero-kpis-card {
+  position: relative;
+  margin-top: var(--s-10);
+  padding: var(--s-6) var(--s-8);
+  background: linear-gradient(180deg, #FFFFFF 0%, var(--paper) 100%);
+  border-radius: var(--r-2xl);
+  box-shadow:
+    inset 0 0 0 1px rgba(11, 110, 79, 0.08),
+    0 1px 0 rgba(10, 15, 13, 0.04),
+    0 12px 36px -16px rgba(10, 15, 13, 0.16);
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+.hero-kpis-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(11, 110, 79, 0.16),
+    0 1px 0 rgba(10, 15, 13, 0.04),
+    0 24px 56px -16px rgba(11, 110, 79, 0.20),
+    0 0 36px rgba(125, 242, 176, 0.12);
+}
+/* Atmospheric mint mesh behind the card content */
+.hero-kpis-card::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 220%;
+  background: radial-gradient(ellipse 70% 60% at 30% 50%,
+    rgba(125, 242, 176, 0.18) 0%,
+    rgba(11, 110, 79, 0.06) 40%,
+    transparent 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+}
+/* Live signature — mint dot in top-left, signals "this is real, not a mockup" */
+.hero-kpis-eye {
+  position: absolute;
+  top: 14px; left: var(--s-8);
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--atlas); font-weight: var(--w-medium);
+}
+.hero-kpis-eye::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow:
+    0 0 0 3px rgba(125, 242, 176, 0.22),
+    0 0 10px rgba(125, 242, 176, 0.6);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+}
+@media (prefers-reduced-motion: reduce) { .hero-kpis-eye::before { animation: none; } }
+
+.hero-kpis {
+  margin-top: var(--s-8);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-6);
+  position: relative; z-index: 1;
+}
+.hero-kpi {
+  display: flex; flex-direction: column; gap: 12px;
+  min-width: 0;
+}
+.hero-kpi-num {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.4vw, 44px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.030em;
+  color: var(--ink);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.hero-kpi-num .unit {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--n-500);
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.hero-kpi-num em {
+  font-style: normal;
+  color: var(--ink);
+}
+/* The first KPI gets the atlas accent + soft glow — single brand signature */
+.hero-kpi:first-child .hero-kpi-num em {
+  color: var(--atlas);
+  text-shadow:
+    0 4px 18px rgba(11, 110, 79, 0.18),
+    0 0 24px rgba(125, 242, 176, 0.18);
+}
+.hero-kpi-label {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--n-600);
+  font-weight: var(--w-regular);
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+.hero-kpi-label b {
+  color: var(--ink);
+  font-weight: var(--w-medium);
+}
+@media (max-width: 880px) {
+  .hero-kpis-card { padding: var(--s-5) var(--s-6); }
+  .hero-kpis { gap: var(--s-4); }
+  .hero-kpi-num { font-size: 28px; }
+}
+@media (max-width: 720px) {
+  .hero-kpis-card { margin-top: var(--s-8); padding: var(--s-5); }
+  .hero-kpis-eye { left: var(--s-5); }
+  .hero-kpis {
+    margin-top: var(--s-6);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-4) var(--s-5);
+  }
+  .hero-kpi-num { font-size: 26px; }
+  .hero-kpi-label { font-size: 12.5px; }
+}
+
+.trust-row {
+  margin-top: var(--s-8);
+  display: flex; flex-wrap: wrap; gap: 8px 22px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--n-500); letter-spacing: 0.04em;
+}
+.trust-row span { display: inline-flex; align-items: center; gap: 6px; }
+.trust-row span::before {
+  content: ""; width: 4px; height: 4px;
+  background: var(--atlas); border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mesh, .hero h1::before { animation: none; }
+}
+
+/* DASH-MOCK (lifted from v2 pages.css) ─────────────────────────── */
+.dash-mock {
+  position: relative;
+  perspective: 1600px;
+  perspective-origin: 60% 30%;
+}
+.dash-mock-frame {
+  background: #FFFFFF;
+  border-radius: var(--r-2xl);
+  box-shadow:
+    0 1px 0 var(--hairline-light),
+    0 30px 80px -30px rgba(10, 15, 13, 0.35),
+    0 80px 200px -60px rgba(11, 110, 79, 0.18);
+  overflow: hidden;
+  transform: rotateX(var(--scroll-x, 14deg)) rotateY(var(--scroll-y, -6deg)) scale(var(--scroll-s, 0.96));
+  animation: dashTilt linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0 50vh;
+  will-change: transform;
+}
+@keyframes dashTilt {
+  0%   { --scroll-x: 14deg; --scroll-y: -6deg; --scroll-s: 0.96; }
+  100% { --scroll-x: 0deg;  --scroll-y: 0deg;  --scroll-s: 1.00; }
+}
+@property --scroll-x { syntax: '<angle>'; initial-value: 14deg; inherits: false; }
+@property --scroll-y { syntax: '<angle>'; initial-value: -6deg; inherits: false; }
+@property --scroll-s { syntax: '<number>'; initial-value: 0.96; inherits: false; }
+@supports not (animation-timeline: scroll()) {
+  .dash-mock-frame { animation: none; will-change: auto; }
+}
+@media (max-width: 1100px) {
+  .dash-mock-frame { animation: none; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-mock-frame { animation: none; transform: none; }
+}
+
+.dash-mock-top {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 12px 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--hairline-light);
+  position: relative;
+}
+.dash-mock-top .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--paper-line); flex-shrink: 0; }
+.dash-mock-top .dot:nth-child(1) { background: #FF5F57; }
+.dash-mock-top .dot:nth-child(2) { background: #FEBC2E; }
+.dash-mock-top .dot:nth-child(3) { background: #28C840; }
+.dash-mock-url {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--n-500);
+}
+.dash-mock-body {
+  padding: var(--s-6) var(--s-6) var(--s-6);
+  background: #FBFAF6;
+}
+.dash-mock-greeting {
+  font-size: 13px; color: var(--n-500);
+  font-weight: var(--w-medium);
+}
+.dash-mock-amount {
+  margin-top: 6px;
+  display: flex; align-items: baseline; gap: 12px;
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  font-size: clamp(40px, 4vw, 56px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.02em;
+  color: var(--ink); line-height: 1;
+  flex-wrap: wrap;
+}
+.dash-mock-amount .unit {
+  font-size: 18px; color: var(--n-500); font-weight: var(--w-medium);
+}
+.dash-mock-delta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: var(--s-3);
+  padding: 4px 10px; border-radius: var(--r-pill);
+  background: var(--mint-soft); color: var(--riad);
+  font-family: var(--font-mono); font-size: 12px;
+  font-weight: var(--w-medium);
+}
+.dash-mock-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+  margin-top: var(--s-6); padding-top: var(--s-5);
+  border-top: 1px solid var(--hairline-light);
+}
+.dash-mock-stat .label {
+  font-size: 11px; color: var(--n-500);
+  font-weight: var(--w-medium); letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.dash-mock-stat .value {
+  margin-top: 4px;
+  font-family: var(--font-mono); font-size: 18px;
+  font-weight: var(--w-medium); letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.dash-mock-chart {
+  margin-top: var(--s-5); height: 64px;
+  position: relative;
+  background: linear-gradient(to top, rgba(11,110,79,.12), transparent 70%);
+  border-radius: var(--r-md); overflow: hidden;
+}
+.dash-mock-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dash-mock-tx {
+  margin-top: var(--s-4);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.dash-mock-tx-row {
+  display: grid; grid-template-columns: 32px 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.6);
+  box-shadow: inset 0 0 0 1px var(--hairline-light);
+}
+.dash-mock-tx-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--paper-soft);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink);
+}
+.dash-mock-tx-label { display: flex; flex-direction: column; gap: 2px; }
+.dash-mock-tx-name { font-size: 13px; font-weight: var(--w-medium); color: var(--ink); }
+.dash-mock-tx-meta { font-size: 11px; color: var(--n-500); }
+.dash-mock-tx-amt {
+  font-family: var(--font-mono); font-size: 14px;
+  font-weight: var(--w-medium); color: var(--atlas);
+}
+/* Floating glass badges */
+.dash-mock-floater {
+  position: absolute; z-index: 2;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px 12px 12px;
+  background: rgba(247, 245, 240, 0.62);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-radius: var(--r-pill);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(10, 15, 13, 0.05),
+    0 12px 32px -8px rgba(10, 15, 13, 0.18),
+    0 24px 48px -16px rgba(10, 15, 13, 0.12);
+  font-size: 13px; font-weight: var(--w-medium); color: var(--ink);
+  transition: transform var(--d-base) var(--ease-glide),
+              box-shadow var(--d-base) var(--ease-glide);
+}
+.dash-mock-floater:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(10, 15, 13, 0.08),
+    0 16px 40px -8px rgba(10, 15, 13, 0.22),
+    0 32px 64px -16px rgba(10, 15, 13, 0.16),
+    0 0 32px rgba(125, 242, 176, 0.20);
+}
+.dash-mock-floater .ico {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--mint); color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+}
+.floater-iban {
+  top: 22%; right: -28px;
+  animation: floatY 6s var(--ease-glide) infinite alternate;
+}
+.floater-tap {
+  top: 56%; left: -64px;
+  animation: floatY 7s var(--ease-glide) infinite alternate-reverse;
+}
+@keyframes floatY {
+  0%   { transform: translateY(-4px); }
+  100% { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floater-iban, .floater-tap { animation: none; }
+}
+
+/* TICKER ─────────────────────────────────────────────────────────── */
+.ticker {
+  border-top: 1px solid var(--paper-line);
+  border-bottom: 1px solid var(--paper-line);
+  background: var(--paper);
+  padding: 14px 0; overflow: hidden;
+}
+.ticker-track {
+  display: flex; gap: 48px; width: max-content;
+  animation: tickerScroll 40s linear infinite;
+}
+@keyframes tickerScroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+.tk-item {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--n-600); white-space: nowrap;
+}
+.tk-item b { color: var(--ink); font-weight: var(--w-medium); }
+.tk-item .amt { color: var(--atlas); font-weight: var(--w-medium); }
+.tk-item::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 6px rgba(125,242,176,0.7);
+}
+
+/* EDITORIAL · premium ──────────────────────────────────────────── */
+.editorial-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+/* Atmospheric atlas+mint mesh behind the text (subtle, blurred) */
+.editorial-section::before {
+  content: "";
+  position: absolute;
+  top: -30%; right: -10%;
+  width: 60%; height: 160%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.14),
+    rgba(125, 242, 176, 0.18),
+    rgba(11, 110, 79, 0.10),
+    rgba(125, 242, 176, 0.16),
+    rgba(11, 110, 79, 0.14));
+  filter: blur(70px);
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+          mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+  animation: meshSpin 32s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+.editorial-section > .wrap { position: relative; z-index: 1; }
+
+.editorial {
+  font-family: var(--font-display); font-style: normal;
+  font-weight: var(--w-medium);
+  font-size: clamp(28px, 3.6vw, 56px);
+  line-height: 1.10; letter-spacing: -0.025em;
+  max-width: 28ch; color: var(--ink);
+}
+.editorial .em-num {
+  position: relative;
+  display: inline-block;
+  color: var(--atlas);
+  font-weight: var(--w-medium);
+  text-shadow:
+    0 4px 24px rgba(11, 110, 79, 0.30),
+    0 12px 48px rgba(125, 242, 176, 0.18);
+}
+/* Mint→atlas underline that draws on reveal under the count */
+.editorial .em-num.draw::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0.02em;
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--mint), var(--atlas));
+  box-shadow: 0 0 12px rgba(125, 242, 176, 0.5);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1.2s 0.5s var(--ease-glide);
+}
+.editorial.in .em-num.draw::after { transform: scaleX(1); }
+
+.slab-ink .editorial, .slab-riad .editorial { color: var(--paper); }
+.slab-ink .editorial .em-num, .slab-riad .editorial .em-num { color: var(--mint); }
+.attribution {
+  margin-top: var(--s-8);
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--n-500); letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: reduce) {
+  .editorial-section::before { animation: none; }
+  .editorial .em-num.draw::after { transition: none; transform: scaleX(1); }
+}
+
+/* EDITORIAL · 2-column with live commission counter on the right */
+.editorial-section .wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-12);
+  align-items: center;
+}
+@media (max-width: 980px) {
+  .editorial-section .wrap {
+    grid-template-columns: 1fr;
+    gap: var(--s-10);
+  }
+}
+
+.loss-counter {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--s-10) var(--s-10) var(--s-8);
+  border-radius: var(--r-2xl);
+  background: linear-gradient(160deg, var(--ink) 0%, var(--riad-deep) 100%);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline-dark),
+    0 24px 60px -16px rgba(11, 110, 79, 0.22),
+    0 0 40px rgba(125, 242, 176, 0.06);
+}
+.loss-counter::before {
+  content: "";
+  position: absolute;
+  top: -25%; right: -30%;
+  width: 80%; height: 80%;
+  background: radial-gradient(circle at center,
+    rgba(125, 242, 176, 0.20) 0%,
+    rgba(11, 110, 79, 0.10) 35%,
+    transparent 70%);
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+}
+.loss-counter > * { position: relative; z-index: 1; }
+
+.loss-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--mint); font-weight: var(--w-medium);
+  margin-bottom: 18px;
+}
+.loss-eyebrow::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow:
+    0 0 0 2px rgba(125, 242, 176, 0.20),
+    0 0 12px rgba(125, 242, 176, 0.7);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+}
+.loss-number {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 6vw, 84px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--mint);
+  font-feature-settings: "tnum" 1;
+  text-shadow: 0 0 32px rgba(125, 242, 176, 0.32);
+}
+.loss-unit {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: rgba(247, 245, 240, 0.72);
+  letter-spacing: -0.005em;
+}
+.loss-sub {
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px solid var(--hairline-dark);
+  font-size: 13px; line-height: 1.55;
+  color: rgba(247, 245, 240, 0.55);
+}
+.loss-rate {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mint);
+  font-weight: var(--w-medium);
+  background: rgba(125, 242, 176, 0.10);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 0 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loss-eyebrow::before { animation: none; }
+}
+
+.ed-map-svg {
+  position: relative;
+  background: var(--paper-soft);
+  border-radius: var(--r-2xl);
+  padding: 32px;
+  box-shadow: inset 0 0 0 1px var(--hairline-light);
+  overflow: hidden;
+  isolation: isolate;
+}
+.ed-map-svg::before {
+  content: "";
+  position: absolute;
+  top: 25%; left: 30%;
+  width: 50%; height: 60%;
+  background: radial-gradient(circle, rgba(125, 242, 176, 0.16), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.ed-map-svg svg {
+  position: relative; z-index: 1;
+  width: 100%; height: auto;
+  max-height: 520px; display: block;
+}
+.ed-map-img {
+  filter:
+    grayscale(0.4)
+    brightness(1.05)
+    contrast(0.95);
+  opacity: 0.85;
+  mix-blend-mode: multiply;
+}
+.city-dot {
+  fill: var(--paper);
+  stroke: var(--n-400);
+  stroke-width: 1.5;
+}
+.city-dot.now {
+  fill: var(--mint);
+  stroke: var(--atlas);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(125, 242, 176, 0.7));
+}
+.city-pulse {
+  fill: var(--mint);
+  opacity: 0;
+  transform-origin: center;
+  animation: cityPulse 2.6s var(--ease-counter) infinite;
+}
+@keyframes cityPulse {
+  0%   { r: 6;  opacity: 0.55; }
+  100% { r: 28; opacity: 0; }
+}
+.city-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--ink);
+  letter-spacing: -0.012em;
+}
+.city-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  fill: var(--atlas);
+  letter-spacing: 0.10em;
+}
+.city-tag.future { fill: var(--n-500); }
+@media (prefers-reduced-motion: reduce) {
+  .city-pulse { animation: none; opacity: 0; }
+}
+
+.ed-map-list { list-style: none; display: flex; flex-direction: column; }
+.ed-map-list li {
+  padding: 18px 0;
+  border-top: 1px solid var(--paper-line);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px; align-items: baseline;
+}
+.ed-map-list li:first-child { border-top: 0; padding-top: 0; }
+.ed-map-list .name {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 500;
+  color: var(--ink); letter-spacing: -0.018em;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.ed-map-list .name::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--paper-line);
+  flex-shrink: 0;
+}
+.ed-map-list li.now .name::before {
+  background: var(--mint);
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.20), 0 0 10px rgba(125, 242, 176, 0.5);
+}
+.ed-map-list .zone {
+  display: block; margin-top: 4px; padding-left: 16px;
+  font-family: var(--font-display);
+  font-size: 12.5px; font-weight: 400;
+  color: var(--n-500); letter-spacing: -0.005em;
+}
+.ed-map-list .tag {
+  font-family: var(--font-mono); font-size: 10.5px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  padding: 5px 11px; border-radius: var(--r-pill);
+  background: var(--mint-soft); color: var(--riad); font-weight: 500;
+  white-space: nowrap;
+}
+.ed-map-list .tag.future {
+  background: var(--paper-soft); color: var(--n-600);
+}
+
+/* WHY NOW · special effects ───────────────────────────────────── */
+.why-grid {
+  margin-top: var(--s-10);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+@media (max-width: 880px) { .why-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .why-grid { grid-template-columns: 1fr; } }
+
+.why-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+
+/* Mint top-edge sweep — draws in left→right on hover (Linear-style) */
+.why-card::before {
+  content: "";
+  position: absolute; top: 0; left: 0;
+  height: 2px; width: 0;
+  background: linear-gradient(90deg,
+    rgba(125, 242, 176, 1) 0%,
+    rgba(125, 242, 176, 0.4) 60%,
+    transparent 100%);
+  transition: width 0.7s var(--ease-glide);
+  z-index: 2;
+  pointer-events: none;
+}
+.why-card:hover::before { width: 100%; }
+
+/* Radial atlas glow leaking from top-right on hover */
+.why-card::after {
+  content: "";
+  position: absolute; top: 0; right: 0;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle at top right,
+    rgba(125, 242, 176, 0.14) 0%,
+    rgba(11, 110, 79, 0.06) 30%,
+    transparent 70%);
+  opacity: 0;
+  transition: opacity var(--d-base) var(--ease-glide);
+  pointer-events: none;
+  z-index: 0;
+}
+.why-card:hover::after { opacity: 1; }
+
+.why-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 0 0 1px rgba(11, 110, 79, 0.22),
+    0 28px 56px -20px rgba(11, 110, 79, 0.22),
+    0 0 36px rgba(125, 242, 176, 0.10);
+}
+
+/* Date with leading dot — atlas → mint pulse on hover */
+.why-card .ddate {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--atlas); letter-spacing: 0.08em;
+  margin-bottom: 6px; font-weight: var(--w-medium);
+  display: inline-flex; align-items: center; gap: 8px;
+  position: relative; z-index: 1;
+}
+.why-card .ddate::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--atlas);
+  transition:
+    background-color var(--d-quick) var(--ease-glide),
+    box-shadow var(--d-quick) var(--ease-glide),
+    transform var(--d-quick) var(--ease-glide);
+  flex-shrink: 0;
+}
+.why-card:hover .ddate::before {
+  background: var(--mint);
+  transform: scale(1.2);
+  box-shadow:
+    0 0 0 3px rgba(125, 242, 176, 0.22),
+    0 0 14px rgba(125, 242, 176, 0.6);
+}
+
+.why-card h4 {
+  font-family: var(--font-display); font-size: 15.5px;
+  font-weight: var(--w-medium); letter-spacing: -0.012em;
+  line-height: 1.35; margin-bottom: 6px;
+  position: relative; z-index: 1;
+  transition: transform var(--d-quick) var(--ease-glide);
+}
+.why-card:hover h4 { transform: translateY(-1px); }
+.why-card p {
+  font-size: 13px; line-height: 1.5; color: var(--n-600);
+  position: relative; z-index: 1;
+}
+
+/* Stagger entrance — each card fades up with a brief mint border flash */
+.why-grid.reveal.in .why-card {
+  animation: whyCardEnter 0.85s var(--ease-glide) both;
+}
+.why-grid.reveal.in .why-card:nth-child(1) { animation-delay: 0.00s; }
+.why-grid.reveal.in .why-card:nth-child(2) { animation-delay: 0.08s; }
+.why-grid.reveal.in .why-card:nth-child(3) { animation-delay: 0.16s; }
+.why-grid.reveal.in .why-card:nth-child(4) { animation-delay: 0.24s; }
+.why-grid.reveal.in .why-card:nth-child(5) { animation-delay: 0.32s; }
+.why-grid.reveal.in .why-card:nth-child(6) { animation-delay: 0.40s; }
+
+@keyframes whyCardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+    box-shadow: inset 0 0 0 1px var(--hairline-light);
+  }
+  55% {
+    box-shadow:
+      inset 0 0 0 1px rgba(125, 242, 176, 0.55),
+      0 0 28px rgba(125, 242, 176, 0.18);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: inset 0 0 0 1px var(--hairline-light);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .why-card, .why-card::before, .why-card::after, .why-card h4 { transition: none; }
+  .why-grid.reveal.in .why-card { animation: none; }
+}
+
+/* SIX-FEATURE GRID · cursor-spotlight + icon-glow effects ───────── */
+.feat-grid {
+  margin-top: var(--s-10);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+@media (max-width: 1000px) { .feat-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px)  { .feat-grid { grid-template-columns: 1fr; } }
+
+/* Proximity-glow: siblings dim slightly when one card is hovered */
+.feat-grid:hover .feat-cell { opacity: 0.55; }
+.feat-grid:hover .feat-cell:hover { opacity: 1; }
+
+.feat-cell {
+  position: relative;
+  isolation: isolate;
+  padding: 32px 28px 30px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 260px;
+  --mx: 50%;
+  --my: 50%;
+  transition:
+    opacity var(--d-base) var(--ease-glide),
+    transform var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+
+/* Cursor-tracked spotlight — mint+atlas radial follows the mouse */
+.feat-cell::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    400px circle at var(--mx) var(--my),
+    rgba(125, 242, 176, 0.20) 0%,
+    rgba(11, 110, 79, 0.08) 30%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-glide);
+  pointer-events: none;
+  z-index: 0;
+}
+.feat-cell:hover::before { opacity: 1; }
+
+.feat-cell:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 242, 176, 0.4),
+    0 24px 56px -16px rgba(11, 110, 79, 0.22),
+    0 0 32px rgba(125, 242, 176, 0.10);
+}
+
+/* Icon promoted to a tinted container with hover-glow halo */
+.feat-cell .icn {
+  position: relative;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(11, 110, 79, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(11, 110, 79, 0.10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--atlas);
+  margin-bottom: 12px;
+  z-index: 1;
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    background var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide),
+    color var(--d-base) var(--ease-glide);
+}
+.feat-cell:hover .icn {
+  transform: scale(1.06) rotate(-3deg);
+  background: rgba(125, 242, 176, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 242, 176, 0.45),
+    0 8px 24px rgba(11, 110, 79, 0.20),
+    0 0 28px rgba(125, 242, 176, 0.32);
+  color: var(--riad);
+}
+.feat-cell .icn svg {
+  width: 22px; height: 22px;
+  stroke: currentColor; stroke-width: 1.6; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.feat-cell h4 {
+  font-family: var(--font-display); font-size: 17px;
+  font-weight: var(--w-medium); letter-spacing: -0.018em;
+  position: relative; z-index: 1;
+}
+.feat-cell p {
+  font-size: 13.5px; line-height: 1.55; color: var(--n-600);
+  position: relative; z-index: 1;
+  transition: color var(--d-quick) var(--ease-glide);
+}
+.feat-cell:hover p { color: var(--n-700); }
+
+/* Stagger entrance — scale-in (different gesture from why-now's fade-up) */
+.feat-grid.reveal.in .feat-cell {
+  animation: featCellEnter 0.85s var(--ease-glide) both;
+}
+.feat-grid.reveal.in .feat-cell:nth-child(1) { animation-delay: 0.00s; }
+.feat-grid.reveal.in .feat-cell:nth-child(2) { animation-delay: 0.09s; }
+.feat-grid.reveal.in .feat-cell:nth-child(3) { animation-delay: 0.18s; }
+.feat-grid.reveal.in .feat-cell:nth-child(4) { animation-delay: 0.27s; }
+.feat-grid.reveal.in .feat-cell:nth-child(5) { animation-delay: 0.36s; }
+.feat-grid.reveal.in .feat-cell:nth-child(6) { animation-delay: 0.45s; }
+@keyframes featCellEnter {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feat-cell, .feat-cell .icn, .feat-cell::before, .feat-cell p { transition: none; }
+  .feat-grid.reveal.in .feat-cell { animation: none; }
+}
+
+/* T+1 FLOW · premium effects ───────────────────────────────────── */
+.t1-viz {
+  position: relative;
+  isolation: isolate;
+  margin-top: var(--s-10);
+  padding: var(--s-10);
+  overflow: hidden;
+}
+/* Subtle atlas+mint mesh in the dark slab behind */
+.t1-viz::before {
+  content: "";
+  position: absolute;
+  top: -30%; right: -20%;
+  width: 70%; height: 130%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.18),
+    rgba(125, 242, 176, 0.20),
+    rgba(11, 110, 79, 0.10),
+    rgba(125, 242, 176, 0.18));
+  filter: blur(80px);
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+          mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  animation: meshSpin 28s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) { .t1-viz::before { animation: none; } }
+.t1-flow {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: var(--s-8); align-items: center;
+  padding-bottom: var(--s-10); margin-bottom: var(--s-8);
+  border-bottom: 1px solid var(--hairline-dark);
+}
+.t1-from, .t1-to { display: flex; flex-direction: column; gap: 8px; }
+.t1-to { text-align: right; }
+.t1-stamp {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(247, 245, 240, 0.5);
+}
+.t1-amount {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.6vw, 56px);
+  font-weight: var(--w-medium); letter-spacing: -0.025em;
+  line-height: 1; font-feature-settings: "tnum" 1;
+  color: var(--paper); white-space: nowrap;
+}
+.t1-amount.mint {
+  color: var(--mint);
+  text-shadow:
+    0 0 18px rgba(125, 242, 176, 0.40),
+    0 0 36px rgba(125, 242, 176, 0.18);
+}
+.t1-unit {
+  font-size: 0.42em; color: rgba(247, 245, 240, 0.55);
+  margin-left: 6px; font-weight: var(--w-medium);
+}
+.t1-amount.mint .t1-unit { color: rgba(125, 242, 176, 0.7); }
+.t1-note {
+  font-family: var(--font-mono); font-size: 12px;
+  color: rgba(247, 245, 240, 0.55);
+}
+.t1-arrow {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  min-width: 180px; padding: 0 var(--s-4);
+}
+.t1-arrow-label {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--mint); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.t1-arrow-line { position: relative; width: 100%; height: 16px; display: flex; align-items: center; }
+.t1-arrow-line::before {
+  content: ""; position: absolute; left: 8px; right: 8px; top: 50%;
+  height: 1px;
+  background-image: linear-gradient(90deg, rgba(125, 242, 176, 0.5) 50%, transparent 50%);
+  background-size: 8px 1px; background-repeat: repeat-x;
+  transform: translateY(-50%);
+}
+.t1-dot {
+  position: absolute; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--mint); top: 50%; transform: translateY(-50%);
+}
+.t1-dot.start { left: 0; }
+.t1-dot.end {
+  right: 0; width: 12px; height: 12px;
+  box-shadow: 0 0 0 4px rgba(125, 242, 176, 0.18);
+}
+/* Continuous ripple on the destination dot */
+.t1-dot.end::after {
+  content: "";
+  position: absolute; inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid var(--mint);
+  animation: t1EndRipple 2.4s var(--ease-counter) infinite;
+  pointer-events: none;
+}
+@keyframes t1EndRipple {
+  0%   { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(3.5); opacity: 0; }
+}
+
+/* Traveling mint particle along the dashed line */
+.t1-particle {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow:
+    0 0 12px rgba(125, 242, 176, 0.85),
+    0 0 28px rgba(125, 242, 176, 0.4);
+  transform: translate(-50%, -50%);
+  animation: t1ParticleTravel 3.6s var(--ease-glide) infinite;
+  pointer-events: none;
+}
+@keyframes t1ParticleTravel {
+  0%   { left: 8px; opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { left: calc(100% - 8px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t1-dot.end::after { animation: none; }
+  .t1-particle { animation: none; opacity: 0; }
+}
+
+/* Stagger entrance — flow rows fade in sequentially when revealed */
+.t1-viz.reveal.in .t1-from  { animation: t1FlowEnter 0.85s var(--ease-glide) both; animation-delay: 0.00s; }
+.t1-viz.reveal.in .t1-arrow { animation: t1FlowEnter 0.85s var(--ease-glide) both; animation-delay: 0.18s; }
+.t1-viz.reveal.in .t1-to    { animation: t1FlowEnter 0.85s var(--ease-glide) both; animation-delay: 0.36s; }
+@keyframes t1FlowEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Bottom strip cells — top-edge mint sweep on hover */
+.t1-cell {
+  position: relative;
+  padding-top: 4px;
+  transition: transform var(--d-base) var(--ease-glide);
+}
+.t1-cell::after {
+  content: "";
+  position: absolute; top: -8px; left: 0;
+  height: 1px; width: 0;
+  background: linear-gradient(90deg, var(--mint), rgba(125, 242, 176, 0));
+  transition: width 0.6s var(--ease-glide);
+}
+.t1-cell:hover { transform: translateY(-2px); }
+.t1-cell:hover::after { width: 50%; }
+@media (max-width: 880px) {
+  .t1-flow { grid-template-columns: 1fr; gap: var(--s-6); }
+  .t1-to { text-align: left; }
+  .t1-arrow { min-width: 0; }
+}
+.t1-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px;
+}
+@media (max-width: 880px) { .t1-row { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.t1-cell .l { font-family: var(--font-mono); font-size: 10.5px; color: rgba(247,245,240,0.5); letter-spacing: 0.12em; text-transform: uppercase; }
+.t1-cell .v {
+  font-family: var(--font-display); font-size: 22px;
+  font-weight: var(--w-medium); letter-spacing: -0.022em;
+  margin-top: 4px; font-feature-settings: "tnum" 1; color: var(--paper);
+}
+.t1-cell .v.mint { color: var(--mint); }
+.t1-cell .s { font-size: 12px; color: rgba(247,245,240,0.55); margin-top: 3px; }
+
+/* TRANSPARENCY · "No Catch" clause ─────────────────────────────── */
+#transparency {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+#transparency::before {
+  content: "";
+  position: absolute;
+  top: 20%; right: -15%;
+  width: 55%; height: 80%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.10),
+    rgba(125, 242, 176, 0.16),
+    rgba(11, 110, 79, 0.06),
+    rgba(125, 242, 176, 0.12));
+  filter: blur(95px);
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+          mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  animation: meshSpin 36s linear infinite;
+  z-index: 0; pointer-events: none; opacity: 0.55;
+}
+#transparency > .wrap { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { #transparency::before { animation: none; } }
+
+.trans-grid {
+  margin-top: var(--s-10);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 880px) { .trans-grid { grid-template-columns: 1fr; } }
+
+.trans-card {
+  position: relative;
+  padding: var(--s-8);
+  background: #FFFFFF;
+  border-radius: var(--r-2xl);
+  box-shadow: inset 0 0 0 1px var(--hairline-light);
+  display: flex; flex-direction: column; gap: 14px;
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+.trans-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 1px rgba(11, 110, 79, 0.22),
+    0 24px 56px -16px rgba(11, 110, 79, 0.18),
+    0 0 32px rgba(125, 242, 176, 0.10);
+}
+.trans-num {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 5.5vw, 76px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--atlas);
+  font-feature-settings: "tnum" 1;
+  text-shadow:
+    0 4px 24px rgba(11, 110, 79, 0.18),
+    0 12px 48px rgba(125, 242, 176, 0.10);
+}
+.trans-num .trans-unit {
+  font-size: 0.32em;
+  color: var(--n-500);
+  font-weight: var(--w-medium);
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+.trans-label {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: var(--w-medium);
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+.trans-detail {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--n-600);
+}
+
+.trans-closer {
+  margin-top: var(--s-12);
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.4;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  max-width: 60ch;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  text-wrap: balance;
+}
+.trans-em {
+  color: var(--atlas);
+  font-weight: var(--w-medium);
+}
+
+/* Stagger entrance — three cards fade up sequentially */
+.trans-grid.reveal.in .trans-card {
+  animation: transCardEnter 0.75s var(--ease-glide) both;
+}
+.trans-grid.reveal.in .trans-card:nth-child(1) { animation-delay: 0.00s; }
+.trans-grid.reveal.in .trans-card:nth-child(2) { animation-delay: 0.10s; }
+.trans-grid.reveal.in .trans-card:nth-child(3) { animation-delay: 0.20s; }
+@keyframes transCardEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trans-grid.reveal.in .trans-card { animation: none; }
+}
+
+/* PILOTS · proximity-glow + atmospheric mesh + stagger ─────────── */
+#pilots {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+#pilots::before {
+  content: "";
+  position: absolute;
+  top: -10%; left: -15%;
+  width: 65%; height: 130%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.10),
+    rgba(125, 242, 176, 0.16),
+    rgba(11, 110, 79, 0.06),
+    rgba(125, 242, 176, 0.12));
+  filter: blur(90px);
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+          mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  animation: meshSpin 34s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+#pilots > .wrap { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { #pilots::before { animation: none; } }
+
+.logos {
+  margin-top: var(--s-10);
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+@media (max-width: 900px) { .logos { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .logos { grid-template-columns: 1fr; } }
+.logos:hover .logo-cell { opacity: 0.30; transform: scale(0.96); filter: grayscale(1); }
+.logos:hover .logo-cell:hover {
+  opacity: 1; transform: scale(1.06); filter: grayscale(0);
+  background: radial-gradient(circle at center, rgba(125,242,176,0.18), transparent 70%);
+  box-shadow: inset 0 0 0 1px rgba(11, 110, 79, 0.18);
+}
+.logos:hover .logo-cell:hover::before {
+  background: var(--mint);
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px rgba(125, 242, 176, 0.20), 0 0 14px rgba(125, 242, 176, 0.7);
+}
+
+.logo-cell {
+  position: relative;
+  height: 90px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 10px;
+  opacity: 0.62; filter: grayscale(1);
+  transition:
+    opacity var(--d-base) var(--ease-glide),
+    transform var(--d-base) var(--ease-glide),
+    filter var(--d-base) var(--ease-glide),
+    background var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+  font-family: var(--font-display); font-size: 17px;
+  font-weight: var(--w-medium); letter-spacing: -0.018em; color: var(--ink);
+  border-radius: var(--r-md);
+}
+/* Wordmark SVG sizing — height-locked, width auto */
+.logo-cell svg.wordmark {
+  height: 28px; width: auto;
+  max-width: 80%;
+  display: block;
+}
+.logo-cell .pilot-tag {
+  position: absolute;
+  bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--n-500); white-space: nowrap;
+  transition: color var(--d-base) var(--ease-glide);
+}
+.logos:hover .logo-cell:hover .pilot-tag { color: var(--atlas); }
+
+/* Stagger entrance — each logo scales-fade in with 90ms offset */
+.logos.reveal.in .logo-cell { animation: logoEnter 0.75s var(--ease-glide) both; }
+.logos.reveal.in .logo-cell:nth-child(1) { animation-delay: 0.00s; }
+.logos.reveal.in .logo-cell:nth-child(2) { animation-delay: 0.09s; }
+.logos.reveal.in .logo-cell:nth-child(3) { animation-delay: 0.18s; }
+.logos.reveal.in .logo-cell:nth-child(4) { animation-delay: 0.27s; }
+@keyframes logoEnter {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.94); }
+  60%  { opacity: 0.62; }
+  100% { opacity: 0.62; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logos.reveal.in .logo-cell { animation: none; }
+}
+
+/* ARABIC SLAB ─────────────────────────────────────────────────── */
+.arabic-slab {
+  position: relative;
+  isolation: isolate;
+  padding: var(--s-32) 0;
+  overflow: hidden;
+  /* Solid riad-deep — clean hard top/bottom edges against neighbor slabs. */
+}
+/* Zellij ground — real Moroccan tile photo.
+   Save the green-and-white zellij photo to assets/zellij.jpg first.
+   The image is darkened+desaturated to fit the Riad slab and the
+   ed-glow text on top stays readable.
+   Lazy-load via content-visibility: section is mid-page, the browser
+   skips painting it until it's near the viewport. */
+.arabic-slab {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 720px; /* avoid layout jank before paint */
+}
+.arabic-slab::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--riad-deep); /* fallback while/if image fails */
+  background-image: url("assets/zellij.jpg");
+  background-size: 480px auto;
+  background-repeat: repeat;
+  background-position: center;
+  opacity: 0.22;
+  mix-blend-mode: luminosity;
+  filter: contrast(1.15) brightness(0.85);
+}
+/* Mint tint overlay so the pattern reads as Kiwi-green, not raw photo green. */
+.arabic-slab::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(135deg,
+      rgba(11, 110, 79, 0.14) 0%,
+      rgba(125, 242, 176, 0.06) 50%,
+      rgba(2, 38, 28, 0.18) 100%);
+  mix-blend-mode: overlay;
+}
+/* Soft atmospheric mint vignette behind the quote */
+.arabic-slab::after {
+  content: "";
+  position: absolute;
+  top: 50%; right: 12%;
+  width: 520px; height: 520px;
+  transform: translateY(-50%);
+  background: radial-gradient(circle at center,
+    rgba(125, 242, 176, 0.10) 0%,
+    rgba(11, 110, 79, 0.06) 35%,
+    transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.arabic-slab > .wrap { position: relative; z-index: 1; }
+.arabic-quote {
+  font-family: var(--font-arabic);
+  direction: rtl; text-align: right;
+  font-size: clamp(26px, 3vw, 42px);
+  line-height: 1.85; font-weight: var(--w-medium);
+  color: var(--paper); letter-spacing: 0;
+  max-width: 26ch; margin-left: auto;
+}
+.arabic-quote .em-mint { color: var(--mint); }
+.arabic-attr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--s-8);
+  margin-left: auto;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  width: fit-content;
+  /* Sit directly under the quote (also right-aligned) */
+  max-width: 26ch;
+
+  /* Liquid glass — Star Toner recipe (1 specular + 1 edge + 1 contact + 1 soft drop) */
+  background: rgba(20, 22, 24, 0.42);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0 rgba(247, 245, 240, 0.14),
+    inset 0 0 0 1px rgba(247, 245, 240, 0.08),
+    inset 0 -1px 0 rgba(10, 15, 13, 0.20),
+    0 12px 32px -6px rgba(0, 0, 0, 0.34),
+    0 24px 48px -16px rgba(0, 0, 0, 0.20);
+
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(247, 245, 240, 0.80);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: var(--w-medium);
+
+  transition:
+    background-color var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+.arabic-attr::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 2px rgba(125, 242, 176, 0.18), 0 0 8px rgba(125, 242, 176, 0.5);
+  flex-shrink: 0;
+}
+.arabic-attr:hover {
+  background: rgba(28, 32, 36, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(247, 245, 240, 0.18),
+    inset 0 0 0 1px rgba(247, 245, 240, 0.12),
+    inset 0 -1px 0 rgba(10, 15, 13, 0.24),
+    0 16px 40px -8px rgba(0, 0, 0, 0.40),
+    0 0 32px rgba(125, 242, 176, 0.16);
+}
+
+/* COMPARISON · "Vendredi soir au Café Atlas" narrative ────────── */
+#comparison {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+#comparison::before {
+  content: "";
+  position: absolute;
+  top: 30%; right: -10%;
+  width: 50%; height: 70%;
+  background: conic-gradient(from var(--hue, 0deg),
+    rgba(11, 110, 79, 0.10),
+    rgba(125, 242, 176, 0.16),
+    rgba(11, 110, 79, 0.06),
+    rgba(125, 242, 176, 0.12));
+  filter: blur(95px);
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+          mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  animation: meshSpin 32s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+#comparison > .wrap { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { #comparison::before { animation: none; } }
+
+/* Opening scene — cinematic ink card */
+.story-scene {
+  position: relative;
+  margin-top: var(--s-10);
+  padding: var(--s-10) var(--s-12);
+  border-radius: var(--r-2xl);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 1px var(--hairline-dark),
+    0 24px 60px -16px rgba(11, 110, 79, 0.18);
+  overflow: hidden;
+  isolation: isolate;
+}
+.story-scene::before {
+  content: "";
+  position: absolute; top: -30%; right: -20%;
+  width: 60%; height: 130%;
+  background: radial-gradient(ellipse at center,
+    rgba(125, 242, 176, 0.20) 0%,
+    rgba(11, 110, 79, 0.10) 35%,
+    transparent 70%);
+  filter: blur(50px);
+  z-index: 0;
+  pointer-events: none;
+}
+.story-scene > * { position: relative; z-index: 1; }
+.scene-time {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--mint); letter-spacing: 0.16em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+}
+.scene-time::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 2px rgba(125, 242, 176, 0.20), 0 0 10px rgba(125, 242, 176, 0.6);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+}
+.scene-where {
+  font-family: var(--font-mono); font-size: 12px;
+  color: rgba(247, 245, 240, 0.55);
+  margin-top: 8px; letter-spacing: 0.04em;
+}
+.scene-amount {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 8vw, 100px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-feature-settings: "tnum" 1;
+  color: var(--paper);
+  margin-top: 22px;
+}
+.scene-amount .unit {
+  font-size: 0.36em; color: rgba(247, 245, 240, 0.55);
+  margin-left: 10px; font-weight: var(--w-medium);
+}
+.scene-meta {
+  font-size: 14.5px; color: rgba(247, 245, 240, 0.7);
+  margin-top: 14px;
+}
+
+/* Two parallel narrative columns */
+.story-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+@media (max-width: 880px) { .story-grid { grid-template-columns: 1fr; } }
+
+.story-col {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: var(--r-2xl);
+  padding: var(--s-8);
+  box-shadow: inset 0 0 0 1px var(--hairline-light);
+}
+.story-col.kiwi {
+  background: linear-gradient(180deg,
+    rgba(125, 242, 176, 0.10) 0%,
+    rgba(125, 242, 176, 0.02) 100%);
+  box-shadow: inset 0 0 0 1px rgba(11, 110, 79, 0.20);
+}
+
+.story-col-head {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--paper-line);
+  margin-bottom: 24px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.story-col.kiwi .story-col-head { border-bottom-color: rgba(11, 110, 79, 0.18); }
+.story-tag {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: var(--w-medium);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.story-col.kiwi .story-tag { color: var(--riad); }
+.story-col.kiwi .story-tag::before {
+  content: "k";
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: var(--ink); color: var(--mint);
+  font-size: 13px; font-weight: var(--w-medium);
+  vertical-align: -2px;
+}
+.story-sub {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--n-500); letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+}
+.story-col.kiwi .story-sub { color: var(--atlas); }
+
+.story-step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--paper-line);
+}
+.story-col.kiwi .story-step { border-top-color: rgba(11, 110, 79, 0.10); }
+.story-step:first-of-type { border-top: 0; padding-top: 0; }
+.step-num {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--n-500); letter-spacing: 0.10em;
+  font-weight: var(--w-medium);
+  padding-top: 6px;
+}
+.story-col.kiwi .step-num { color: var(--atlas); }
+.step-body { display: flex; flex-direction: column; gap: 6px; }
+.step-title {
+  font-family: var(--font-display);
+  font-size: 14.5px; font-weight: var(--w-medium);
+  color: var(--ink);
+  letter-spacing: -0.008em;
+}
+.step-num-val {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: var(--w-medium);
+  letter-spacing: -0.028em;
+  font-feature-settings: "tnum" 1;
+  line-height: 1.1;
+}
+.step-num-val.muted { color: var(--n-700); }
+.step-num-val.bad { color: var(--n-700); }
+.step-num-val.good { color: var(--atlas); }
+.step-num-val.late {
+  color: var(--n-500);
+  font-family: var(--font-display);
+  font-size: 18px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.step-num-val.late::before { content: "⏱"; font-size: 16px; }
+.step-num-val.fast {
+  color: var(--atlas);
+  font-size: 22px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.step-num-val.fast::before { content: "→"; font-size: 18px; }
+.step-meta {
+  font-size: 12.5px; color: var(--n-600); line-height: 1.4;
+}
+
+/* Total bar at the bottom of each column */
+.story-total {
+  margin-top: 14px;
+  padding-top: 18px;
+  border-top: 2px solid var(--paper-line);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.story-col.kiwi .story-total { border-top-color: var(--atlas); }
+.story-total-label {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--n-500); letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+}
+.story-col.kiwi .story-total-label { color: var(--atlas); }
+.story-total-val {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: var(--w-medium);
+  letter-spacing: -0.028em;
+  font-feature-settings: "tnum" 1;
+  line-height: 1;
+  margin-top: 4px;
+}
+.story-total-val.bad { color: var(--n-700); }
+.story-total-val.good { color: var(--atlas); }
+.story-total-sub {
+  font-size: 12.5px; color: var(--n-600);
+  margin-top: 4px;
+}
+
+/* Final verdict bar — annual savings */
+.story-verdict {
+  margin-top: 14px;
+  padding: var(--s-10) var(--s-12);
+  border-radius: var(--r-2xl);
+  background: linear-gradient(160deg, var(--ink) 0%, var(--riad-deep) 100%);
+  color: var(--paper);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px var(--hairline-dark),
+    0 28px 60px -16px rgba(11, 110, 79, 0.25);
+}
+.story-verdict::before {
+  content: "";
+  position: absolute;
+  top: -20%; right: 10%;
+  width: 60%; height: 140%;
+  background: radial-gradient(circle at center,
+    rgba(125, 242, 176, 0.22) 0%,
+    rgba(11, 110, 79, 0.10) 35%,
+    transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+}
+.story-verdict > * { position: relative; z-index: 1; }
+.verdict-label {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--mint); letter-spacing: 0.16em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+}
+.verdict-numbers {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 32px;
+  margin-top: 24px;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .verdict-numbers { grid-template-columns: 1fr; gap: 16px; }
+  .verdict-arrow { display: none; }
+}
+.verdict-cmi, .verdict-kiwi {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.verdict-cmi-label, .verdict-kiwi-label {
+  font-family: var(--font-mono); font-size: 10.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(247, 245, 240, 0.55); font-weight: var(--w-medium);
+}
+.verdict-cmi-val {
+  font-family: var(--font-display); font-size: clamp(28px, 4vw, 44px);
+  font-weight: var(--w-medium); letter-spacing: -0.028em;
+  color: rgba(247, 245, 240, 0.78);
+  font-feature-settings: "tnum" 1;
+}
+.verdict-kiwi-val {
+  font-family: var(--font-display); font-size: clamp(28px, 4vw, 44px);
+  font-weight: var(--w-medium); letter-spacing: -0.028em;
+  color: var(--mint);
+  font-feature-settings: "tnum" 1;
+  text-shadow: 0 0 24px rgba(125, 242, 176, 0.4);
+}
+.verdict-cmi-sub, .verdict-kiwi-sub {
+  font-size: 12px; color: rgba(247, 245, 240, 0.55);
+  margin-top: 2px;
+}
+.verdict-arrow {
+  color: var(--mint);
+  font-family: var(--font-mono); font-size: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.verdict-savings {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline-dark);
+  text-align: center;
+}
+.verdict-savings-label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(247, 245, 240, 0.65); font-weight: var(--w-medium);
+}
+.verdict-savings-val {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 7vw, 88px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.04em;
+  color: var(--mint);
+  margin-top: 10px;
+  text-shadow:
+    0 0 32px rgba(125, 242, 176, 0.45),
+    0 0 64px rgba(125, 242, 176, 0.20);
+  font-feature-settings: "tnum" 1;
+  line-height: 1;
+}
+.verdict-savings-sub {
+  font-size: 14px;
+  color: rgba(247, 245, 240, 0.7);
+  margin-top: 10px;
+}
+
+/* Stagger entrance for the story scenes */
+.story-scene.reveal.in,
+.story-grid.reveal.in,
+.story-verdict.reveal.in { animation: storyEnter 0.85s var(--ease-glide) both; }
+.story-grid.reveal.in { animation-delay: 0.18s; }
+.story-verdict.reveal.in { animation-delay: 0.36s; }
+@keyframes storyEnter {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 720px) {
+  .story-scene { padding: var(--s-7) var(--s-6); margin-top: var(--s-8); }
+  .scene-amount { font-size: clamp(40px, 11vw, 64px); margin-top: 16px; }
+  .story-col { padding: var(--s-6); }
+  .story-col-head { margin-bottom: 18px; padding-bottom: 14px; }
+  .story-step { padding: 14px 0; gap: 12px; grid-template-columns: 28px 1fr; }
+  .step-num-val { font-size: 22px; }
+  .story-total-val { font-size: 24px; }
+  .story-verdict { padding: var(--s-7) var(--s-6); margin-top: 8px; }
+  .verdict-savings-val { font-size: clamp(36px, 11vw, 60px); }
+  .verdict-savings { margin-top: 20px; padding-top: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-scene.reveal.in,
+  .story-grid.reveal.in,
+  .story-verdict.reveal.in { animation: none; }
+  .scene-time::before { animation: none; }
+}
+.cmp table {
+  width: 100%; border-collapse: collapse;
+  table-layout: fixed;
+}
+.cmp colgroup col:nth-child(1) { width: 28%; }
+
+/* Header row */
+.cmp thead th {
+  text-align: left;
+  padding: 28px 24px 22px;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: var(--w-medium);
+  letter-spacing: -0.014em;
+  line-height: 1.25;
+  color: var(--ink);
+  text-transform: none;
+  border-bottom: 1px solid var(--paper-line);
+  vertical-align: top;
+}
+.cmp thead th:first-child { background: var(--paper-soft); }
+.cmp thead th .col-sub {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--n-500);
+  font-weight: var(--w-medium);
+}
+
+/* Featured Kiwi column — vertical highlight stripe */
+.cmp .us-col {
+  background: linear-gradient(180deg,
+    rgba(125, 242, 176, 0.16) 0%,
+    rgba(125, 242, 176, 0.04) 100%);
+  position: relative;
+}
+.cmp thead th.us-col {
+  border-bottom: 2px solid var(--atlas);
+  color: var(--riad);
+}
+.cmp thead th.us-col .col-sub { color: var(--atlas); }
+.cmp thead th.us-col .col-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--ink); color: var(--mint);
+  font-family: var(--font-display); font-size: 13px;
+  font-weight: var(--w-medium); margin-right: 8px;
+  vertical-align: -3px;
+}
+
+/* Body rows */
+.cmp tbody td {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--paper-line);
+  vertical-align: middle;
+  font-size: 14.5px;
+  color: var(--n-700);
+  letter-spacing: -0.006em;
+}
+.cmp tbody td.row-label {
+  font-family: var(--font-display);
+  font-weight: var(--w-medium);
+  color: var(--ink);
+  background: var(--paper-soft);
+  text-transform: none;
+  letter-spacing: -0.006em;
+  font-size: 14px;
+}
+.cmp tbody tr:last-child td { border-bottom: 0; }
+.cmp tbody tr:not(.us):hover td:not(.row-label):not(.us-col) {
+  background: rgba(247, 245, 240, 0.6);
+}
+
+/* Value treatments — display typography, indicator dots */
+.cmp .v {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: var(--w-regular);
+  letter-spacing: -0.006em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--n-600);
+  font-feature-settings: "tnum" 1;
+}
+.cmp .v.no {
+  color: var(--n-400);
+  font-weight: var(--w-regular);
+}
+.cmp .v.no::before {
+  content: "";
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--paper-soft);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  flex-shrink: 0;
+}
+.cmp .v.yes {
+  color: var(--atlas);
+  font-weight: var(--w-medium);
+}
+.cmp .v.yes::before {
+  content: "";
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--mint) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%2302261C' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 12px no-repeat;
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.20);
+  flex-shrink: 0;
+}
+
+/* The verdict row at the bottom */
+.cmp tbody tr.us td {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 26px 24px;
+  border: 0;
+  font-size: 15px;
+}
+.cmp tbody tr.us td.row-label {
+  color: rgba(125, 242, 176, 0.85);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--ink);
+  font-weight: var(--w-medium);
+}
+.cmp tbody tr.us .v {
+  color: rgba(247, 245, 240, 0.7);
+  font-size: 16px;
+  font-weight: var(--w-medium);
+  font-family: var(--font-display);
+}
+.cmp tbody tr.us td.us-col {
+  background: linear-gradient(180deg, var(--atlas), var(--riad));
+  position: relative;
+}
+.cmp tbody tr.us td.us-col .v {
+  color: var(--paper);
+  font-size: 22px;
+  font-family: var(--font-display);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.022em;
+}
+.cmp tbody tr.us td.us-col .em {
+  color: var(--mint);
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 1em;
+  font-weight: var(--w-medium);
+}
+
+@media (max-width: 720px) {
+  .cmp thead th, .cmp tbody td { padding: 14px 14px; font-size: 13px; }
+  .cmp thead th { font-size: 14px; }
+}
+
+/* FAQ ─────────────────────────────────────────────────────────── */
+#faq { padding: var(--s-24) 0; }
+.faq-list {
+  margin-top: var(--s-10);
+  max-width: 920px;
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--paper-line);
+}
+.faq-item {
+  border-bottom: 1px solid var(--paper-line);
+  padding: var(--s-5) 0;
+}
+.faq-q {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-4);
+  background: none; border: 0; padding: 0;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: var(--w-medium); letter-spacing: -0.018em;
+  color: var(--ink); text-align: left;
+  cursor: pointer;
+  transition: color var(--d-quick) var(--ease-glide);
+}
+.faq-q:hover { color: var(--atlas); }
+.faq-q:focus-visible {
+  outline: none;
+  box-shadow: var(--glow-mint-soft);
+  border-radius: var(--r-xs);
+}
+.faq-q-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--paper-soft);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition:
+    background-color var(--d-quick) var(--ease-glide),
+    transform var(--d-base) var(--ease-glide);
+}
+.faq-q-icon::before,
+.faq-q-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--ink);
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide);
+}
+.faq-q-icon::before { width: 12px; height: 1.5px; }
+.faq-q-icon::after  { width: 1.5px; height: 12px; }
+.faq-q[aria-expanded="true"] .faq-q-icon { background: var(--mint-soft); }
+.faq-q[aria-expanded="true"] .faq-q-icon::before { background: var(--atlas); }
+.faq-q[aria-expanded="true"] .faq-q-icon::after  { transform: translate(-50%, -50%) rotate(90deg); background: var(--atlas); }
+
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--d-base) var(--ease-glide);
+}
+.faq-a-inner {
+  padding-top: var(--s-4);
+  font-size: 16px; line-height: 1.65; color: var(--n-600);
+  max-width: 72ch;
+}
+.faq-a-inner b { color: var(--ink); font-weight: var(--w-medium); }
+.faq-a-inner a { color: var(--atlas); border-bottom: 1px solid currentColor; }
+
+/* FINAL CTA ─────────────────────────────────────────────────────── */
+.final { text-align: center; padding: var(--s-24) 0; }
+.final h2 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5.6vw, 84px);
+  font-weight: var(--w-medium); letter-spacing: -0.035em;
+  line-height: 1.05; max-width: 18ch; margin: 0 auto;
+  color: var(--paper);
+}
+.final .lede {
+  margin: var(--s-6) auto 0; max-width: 56ch;
+  font-size: 18px; line-height: 1.5; color: rgba(247,245,240,0.7);
+}
+.final .ctas {
+  margin-top: var(--s-8); display: flex; gap: 12px;
+  justify-content: center; flex-wrap: wrap;
+}
+
+/* Audience tabs — merchants vs investors */
+.audience-tabs {
+  margin: var(--s-10) auto 0;
+  display: inline-flex; gap: 4px;
+  padding: 4px;
+  background: rgba(247,245,240,0.06);
+  border: 1px solid rgba(247,245,240,0.10);
+  border-radius: var(--r-pill);
+}
+.audience-tab {
+  padding: 10px 22px;
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 0.06em;
+  color: rgba(247,245,240,0.65);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  background: none; border: 0;
+  transition:
+    color var(--d-quick) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide);
+}
+.audience-tab:hover { color: var(--paper); }
+.audience-tab[aria-selected="true"] {
+  background: var(--mint);
+  color: var(--ink);
+  font-weight: var(--w-medium);
+}
+
+/* Lead form — clean dark glass on ink slab */
+.lead-form {
+  margin: var(--s-8) auto 0;
+  max-width: 640px;
+  padding: var(--s-8);
+  background: rgba(247,245,240,0.03);
+  border: 1px solid rgba(247,245,240,0.10);
+  border-radius: var(--r-2xl);
+  text-align: left;
+  display: none;
+}
+.lead-form[data-active="true"] { display: block; }
+.lead-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.lead-form-grid .full { grid-column: 1 / -1; }
+.lead-field {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.lead-field label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(247,245,240,0.55); font-weight: var(--w-medium);
+}
+.lead-field input,
+.lead-field select,
+.lead-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(247,245,240,0.04);
+  border: 1px solid rgba(247,245,240,0.14);
+  border-radius: var(--r-md);
+  color: var(--paper);
+  font-family: var(--font-body); font-size: 15px;
+  transition:
+    border-color var(--d-quick) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide);
+}
+.lead-field input:hover,
+.lead-field select:hover,
+.lead-field textarea:hover {
+  border-color: rgba(247,245,240,0.22);
+}
+.lead-field input:focus-visible,
+.lead-field select:focus-visible,
+.lead-field textarea:focus-visible {
+  border-color: rgba(125, 242, 176, 0.55);
+  background: rgba(247,245,240,0.06);
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.18);
+  outline: none;
+}
+.lead-field input::placeholder,
+.lead-field textarea::placeholder {
+  color: rgba(247,245,240,0.32);
+}
+.lead-field textarea { resize: vertical; min-height: 96px; }
+.lead-form-actions {
+  margin-top: var(--s-6);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.lead-fineprint {
+  font-family: var(--font-mono); font-size: 11px;
+  color: rgba(247,245,240,0.42); letter-spacing: 0.02em;
+  max-width: 38ch; line-height: 1.55;
+}
+.lead-fineprint a { color: var(--mint); border-bottom: 1px solid rgba(125,242,176,0.32); }
+
+@media (max-width: 720px) {
+  .lead-form-grid { grid-template-columns: 1fr; }
+  .lead-form { padding: var(--s-6); }
+  .audience-tabs { width: 100%; }
+  .audience-tab { flex: 1; padding: 10px 12px; }
+}
+
+/* FOOTER ────────────────────────────────────────────────────────── */
+footer {
+  background: var(--ink); color: var(--paper);
+  padding: var(--s-12) 0 var(--s-8);
+  border-top: 1px solid var(--hairline-dark);
+}
+.foot-strip {
+  display: flex; flex-wrap: wrap; gap: 22px;
+  padding-bottom: var(--s-8);
+  border-bottom: 1px solid var(--hairline-dark);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(247,245,240,0.5);
+}
+.foot-strip span { display: inline-flex; align-items: center; gap: 8px; }
+.foot-strip span::before { content: ""; width: 4px; height: 4px; background: var(--mint); border-radius: 50%; }
+.foot-grid {
+  margin-top: var(--s-10);
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px;
+}
+@media (max-width: 880px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+.foot-mark { font-family: var(--font-display); font-size: 22px; font-weight: var(--w-medium); letter-spacing: -0.04em; display: inline-flex; align-items: center; gap: 8px; color: var(--paper); }
+.foot-mark .logo-mark { width: 28px; height: 28px; border-radius: 7px; background: var(--mint); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+.foot-tag { margin-top: 12px; font-size: 14px; color: rgba(247,245,240,0.6); line-height: 1.5; max-width: 30ch; }
+.foot-col h5 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(247,245,240,0.55); margin-bottom: 14px; font-weight: var(--w-medium); }
+.foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.foot-col a { color: rgba(247,245,240,0.85); transition: color var(--d-quick) var(--ease-glide); }
+.foot-col a:hover { color: var(--mint); }
+.foot-bot {
+  margin-top: var(--s-6); padding-top: var(--s-6);
+  border-top: 1px solid var(--hairline-dark);
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 11px;
+  color: rgba(247,245,240,0.4); letter-spacing: 0.06em;
+}
+
+/* Status badge — operational signal in dark footer */
+.foot-status {
+  margin-top: var(--s-6);
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: rgba(11, 110, 79, 0.18);
+  border: 1px solid rgba(125, 242, 176, 0.22);
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--paper); letter-spacing: 0.04em;
+  transition: background-color var(--d-quick) var(--ease-glide),
+              border-color var(--d-quick) var(--ease-glide);
+}
+.foot-status:hover {
+  background: rgba(11, 110, 79, 0.30);
+  border-color: rgba(125, 242, 176, 0.42);
+}
+.foot-status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgba(125, 242, 176, 0.18);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+}
+.foot-status-label {
+  font-weight: var(--w-medium); letter-spacing: 0.02em;
+}
+.foot-status-meta {
+  color: rgba(247, 245, 240, 0.5);
+  padding-left: 12px;
+  border-left: 1px solid rgba(247, 245, 240, 0.18);
+}
+@media (prefers-reduced-motion: reduce) { .foot-status-dot { animation: none; } }
+@media (max-width: 720px) {
+  .foot-status { width: 100%; justify-content: center; }
+  .foot-status-meta { display: none; }
+}
+
+/* Legal block — incorporation, RC, IF, TP, regulatory framing */
+.foot-legal {
+  margin-top: var(--s-8); padding-top: var(--s-6);
+  border-top: 1px solid var(--hairline-dark);
+  font-family: var(--font-mono); font-size: 11.5px;
+  line-height: 1.65;
+  color: rgba(247, 245, 240, 0.55); letter-spacing: 0.01em;
+  max-width: 96ch;
+}
+.foot-legal b { color: rgba(247, 245, 240, 0.78); font-weight: var(--w-medium); }
+.foot-legal a { color: var(--mint); text-decoration: none; border-bottom: 1px solid rgba(125, 242, 176, 0.32); }
+.foot-legal a:hover { border-bottom-color: var(--mint); }
+
+/* Reveal-on-scroll ───────────────────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity var(--d-slow) var(--ease-glide), transform var(--d-slow) var(--ease-glide); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE OVERRIDES (≤720px)
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 720px) {
+  /* Section padding — drop from --s-24 (96px) to --s-12 (48px) */
+  section { padding: var(--s-12) 0; }
+
+  /* Nav pill — hide ghost CTA, keep primary only */
+  .nav-actions .btn-ghost { display: none; }
+
+  /* Hero typography + layout */
+  .hero { padding-bottom: var(--s-12); }
+  .hero h1 {
+    font-size: clamp(30px, 8vw, 48px);
+    max-width: none;
+    line-height: 1.08;
+  }
+  .hero-lede { font-size: 16px; line-height: 1.5; max-width: none; }
+  .hero-ctas { gap: 8px; }
+  .hero-ctas .btn { flex: 1; min-width: 140px; }
+  .hero-ctas .btn-rgb-wrap { flex: 1; }
+  .hero-ctas .btn-rgb-wrap .btn { width: 100%; }
+  .trust-row { font-size: 10px; gap: 6px 14px; margin-top: var(--s-6); }
+
+  /* Hero mockup — anchor floaters inside, not bleeding outside */
+  .hero-mock { padding: 16px 8px; }
+  .dash-mock-floater {
+    font-size: 12px;
+    padding: 8px 14px 8px 8px;
+    gap: 8px;
+  }
+  .dash-mock-floater .ico { width: 24px; height: 24px; }
+  .floater-iban { right: 4px; top: 6%; }
+  .floater-tap { left: 4px; top: 64%; }
+  .dash-mock-greeting { font-size: 12px; }
+  .dash-mock-amount { font-size: clamp(30px, 8vw, 42px); gap: 8px; }
+  .dash-mock-amount .unit { font-size: 14px; }
+  .dash-mock-stats { gap: 8px; }
+  .dash-mock-stat .value { font-size: 16px; }
+  .dash-mock-tx-row { padding: 8px; grid-template-columns: 28px 1fr auto; gap: 8px; }
+  .dash-mock-tx-icon { width: 28px; height: 28px; }
+  .dash-mock-tx-name { font-size: 12px; }
+  .dash-mock-tx-meta { font-size: 10.5px; }
+  .dash-mock-tx-amt { font-size: 13px; }
+
+  /* Ticker — slow it slightly so it's readable on mobile */
+  .ticker { padding: 12px 0; }
+  .tk-item { font-size: 11px; }
+
+  /* Editorial section */
+  .editorial-section .wrap { gap: var(--s-6); }
+  .editorial { font-size: clamp(24px, 6.4vw, 36px); line-height: 1.14; max-width: none; }
+  .loss-counter { padding: var(--s-6) var(--s-6) var(--s-5); }
+  .loss-number { font-size: clamp(38px, 11vw, 60px); }
+  .loss-unit { font-size: 14px; margin-top: 6px; }
+  .loss-sub { font-size: 12px; line-height: 1.5; margin-top: 16px; padding-top: 14px; }
+  .loss-rate { font-size: 11px; }
+
+  /* Section heads */
+  .s-head h2 { font-size: clamp(26px, 6.5vw, 40px); }
+  .s-head .lede { font-size: 15.5px; line-height: 1.5; margin-top: var(--s-4); }
+  .s-head { margin-bottom: var(--s-8); }
+
+  /* Why-now grid + cards */
+  .why-grid { margin-top: var(--s-8); gap: 8px; }
+  .why-card { padding: 20px; }
+  .why-card h4 { font-size: 14.5px; }
+  .why-card p { font-size: 12.5px; }
+
+  /* Six-feature grid */
+  .feat-grid { margin-top: var(--s-8); gap: 8px; }
+  .feat-cell { padding: 22px 20px 24px; min-height: 200px; }
+  .feat-cell .icn { width: 38px; height: 38px; margin-bottom: 10px; }
+  .feat-cell h4 { font-size: 15px; }
+  .feat-cell p { font-size: 13px; }
+
+  /* T+1 viz */
+  .t1-viz { padding: var(--s-6); margin-top: var(--s-8); }
+  .t1-flow { gap: var(--s-5); padding-bottom: var(--s-6); margin-bottom: var(--s-5); }
+  .t1-amount { font-size: clamp(28px, 7vw, 42px); }
+  .t1-arrow-line::before { left: 4px; right: 4px; }
+  .t1-row { gap: 14px; }
+  .t1-cell .v { font-size: 17px; }
+  .t1-cell .l { font-size: 9.5px; }
+  .t1-cell .s { font-size: 11px; }
+
+  /* Logos — slightly tighter */
+  .logos { margin-top: var(--s-6); }
+  .logo-cell { font-size: 16px; height: 56px; }
+
+  /* Arabic slab — much tighter padding for mobile */
+  .arabic-slab { padding: var(--s-16) 0; }
+  .arabic-quote { font-size: clamp(22px, 5.6vw, 30px); line-height: 1.78; }
+  .arabic-attr { padding: 9px 14px; font-size: 10px; }
+
+  /* Comparison table — horizontal scroll instead of cramping */
+  .cmp { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--r-2xl); }
+  .cmp table { min-width: 680px; }
+  .cmp thead th { font-size: 14px; padding: 18px 14px 16px; }
+  .cmp thead th .col-sub { font-size: 9.5px; }
+  .cmp tbody td { padding: 14px; font-size: 13px; }
+  .cmp tbody td.row-label { font-size: 12.5px; }
+  .cmp .v { font-size: 13px; gap: 8px; }
+  .cmp .v.yes::before { width: 14px; height: 14px; background-size: 10px; }
+  .cmp .v.no::before { width: 12px; height: 12px; }
+  .cmp tbody tr.us td { padding: 18px 14px; font-size: 13px; }
+  .cmp tbody tr.us td.us-col .v { font-size: 18px; }
+
+  /* Final CTA + lead form */
+  .final { padding: var(--s-16) 0; }
+  .final h2 { font-size: clamp(34px, 9vw, 56px); }
+  .final .lede { font-size: 15.5px; margin-top: var(--s-5); }
+
+  /* Footer */
+  footer { padding: var(--s-10) 0 var(--s-6); }
+  .foot-strip { gap: 10px 16px; padding-bottom: var(--s-6); font-size: 10px; }
+  .foot-grid { gap: 24px; margin-top: var(--s-8); }
+  .foot-mark { font-size: 20px; }
+  .foot-tag { font-size: 13px; }
+  .foot-col h5 { margin-bottom: 10px; font-size: 10px; }
+  .foot-col ul { gap: 6px; font-size: 13px; }
+  .foot-bot {
+    margin-top: var(--s-8); padding-top: var(--s-4);
+    flex-direction: column; align-items: flex-start; gap: 4px;
+    font-size: 10px;
+  }
+}
+
+/* Extra-narrow phones (≤380px) — final tightening pass */
+@media (max-width: 380px) {
+  .hero h1 { font-size: 28px; }
+  .editorial { font-size: 22px; }
+  .loss-number { font-size: 36px; }
+  .s-head h2 { font-size: 24px; }
+  .final h2 { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV (components.css .nav .nav-inner) -->
+<nav class="nav" aria-label="Navigation principale">
+  <div class="nav-inner">
+    <a href="#hero" class="nav-logo">
+      <span class="logo-mark">k</span>
+      <span>kiwi</span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="#features">Produit</a>
+      <a class="nav-link" href="#transparency">Tarifs</a>
+      <a class="nav-link" href="#why-now">Pourquoi maintenant</a>
+      <a class="nav-link" href="dashboard.html">Démo</a>
+    </div>
+    <div class="nav-actions">
+      <a class="btn btn-ghost btn-sm" href="dashboard.html">Voir le tableau de bord</a>
+      <span class="btn-rgb-wrap">
+        <a class="btn btn-primary btn-sm" href="#contact">Demander une démo</a>
+      </span>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════ 01 · HERO ════════════ -->
+<section class="hero slab-paper" id="hero">
+  <div class="hero-mesh" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hero-grid">
+
+      <div>
+        <span class="pill pill-paper pill-dot">CMI démonopolisé · 31 oct. 2024</span>
+
+        <h1 style="margin-top: var(--s-6);">
+          Encaisse à <em class="ed">T+1</em>,<br>pas à T+5.
+        </h1>
+
+        <p class="hero-lede">
+          1,79 % flat. Aucun frais caché. L'argent encaissé hier soir, sur ton IBAN marocain à 9 h 00. Pensé pour la réalité du commerçant marocain, conçu à Tanger.
+        </p>
+
+        <div class="hero-ctas">
+          <span class="btn-rgb-wrap">
+            <a class="btn btn-primary btn-lg" href="#contact">Démarrer un pilote</a>
+          </span>
+          <a class="btn btn-ghost btn-lg" href="dashboard.html" target="_blank" rel="noopener">Voir la démo en 90 s</a>
+        </div>
+
+        <!-- Numeric proof — concrete, falsifiable, no hedges.
+             Single floating card, atmospheric mint mesh, live eyebrow. -->
+        <div class="hero-kpis-card" aria-label="Chiffres clés Kiwi">
+          <span class="hero-kpis-eye">En direct · pilotes actifs</span>
+          <div class="hero-kpis">
+            <div class="hero-kpi">
+              <div class="hero-kpi-num"><em>1,79</em><span class="unit">%</span></div>
+              <div class="hero-kpi-label"><b>Taux all-in.</b><br>Pas de location, pas de frais cachés.</div>
+            </div>
+            <div class="hero-kpi">
+              <div class="hero-kpi-num">T+1</div>
+              <div class="hero-kpi-label"><b>IBAN à 9 h.</b><br>Chaque jour ouvré, samedi compris.</div>
+            </div>
+            <div class="hero-kpi">
+              <div class="hero-kpi-num">7<span class="unit">min</span></div>
+              <div class="hero-kpi-label"><b>Onboarding.</b><br>CIN, RC, IBAN. Live le lendemain.</div>
+            </div>
+            <div class="hero-kpi">
+              <div class="hero-kpi-num">0<span class="unit">MAD</span></div>
+              <div class="hero-kpi-label"><b>Frais cachés.</b><br>Aucun. Aujourd'hui, demain, jamais.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trust-row">
+          <span>Bank Al-Maghrib · Loi 103-12</span>
+          <span>CNDP · Loi 09-08</span>
+          <span>DGSSI · Cryptographie locale</span>
+        </div>
+      </div>
+
+      <!-- DASH-MOCK (lifted from your source) -->
+      <div class="dash-mock" aria-hidden="true">
+
+        <div class="dash-mock-floater floater-iban">
+          <span class="ico" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--n-500); letter-spacing: .04em; text-transform: uppercase;">Versé sur IBAN</div>
+            <div style="font-family: var(--font-mono); font-weight: 500;">Demain · 9h00</div>
+          </div>
+        </div>
+
+        <div class="dash-mock-floater floater-tap">
+          <span class="ico" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9V7a7 7 0 0 1 14 0v2"/><path d="M5 13c0 5 7 8 7 8s7-3 7-8"/></svg>
+          </span>
+          <div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--n-500); letter-spacing: .04em; text-transform: uppercase;">Tap-to-Pay</div>
+            <div style="font-weight: 500;">Sans terminal</div>
+          </div>
+        </div>
+
+        <div class="dash-mock-frame">
+          <div class="dash-mock-top">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dash-mock-url">kiwi.app/dashboard</span>
+          </div>
+
+          <div class="dash-mock-body">
+            <div class="dash-mock-greeting">Bonjour Karim · Café Atlas, Maarif (Casa)</div>
+            <div class="dash-mock-amount">
+              <span>18&nbsp;420</span>
+              <span class="unit">MAD aujourd'hui</span>
+            </div>
+            <div class="dash-mock-delta">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+              +12,4&nbsp;% vs hier · 16&nbsp;385 MAD
+            </div>
+
+            <div class="dash-mock-stats">
+              <div class="dash-mock-stat">
+                <div class="label">Transactions</div>
+                <div class="value">184</div>
+              </div>
+              <div class="dash-mock-stat">
+                <div class="label">Panier moyen</div>
+                <div class="value">100,11</div>
+              </div>
+              <div class="dash-mock-stat">
+                <div class="label">Nouveaux</div>
+                <div class="value">14</div>
+              </div>
+            </div>
+
+            <div class="dash-mock-chart" aria-hidden="true">
+              <svg viewBox="0 0 300 64" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0B6E4F" stop-opacity=".5"/>
+                    <stop offset="100%" stop-color="#0B6E4F" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,48 L25,42 L50,46 L75,32 L100,38 L125,28 L150,22 L175,30 L200,18 L225,24 L250,12 L275,16 L300,8 L300,64 L0,64 Z" fill="url(#lg)"/>
+                <path d="M0,48 L25,42 L50,46 L75,32 L100,38 L125,28 L150,22 L175,30 L200,18 L225,24 L250,12 L275,16 L300,8" fill="none" stroke="#0B6E4F" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+
+            <div class="dash-mock-tx">
+              <div class="dash-mock-tx-row">
+                <div class="dash-mock-tx-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </div>
+                <div class="dash-mock-tx-label">
+                  <div class="dash-mock-tx-name">Fatima B. · CMI</div>
+                  <div class="dash-mock-tx-meta">Tap-to-Pay · il y a 4 min</div>
+                </div>
+                <div class="dash-mock-tx-amt">+ 428,50</div>
+              </div>
+              <div class="dash-mock-tx-row">
+                <div class="dash-mock-tx-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <div class="dash-mock-tx-label">
+                  <div class="dash-mock-tx-name">Mehdi F. · QR table 7</div>
+                  <div class="dash-mock-tx-meta">+ 5 % pourboire · il y a 11 min</div>
+                </div>
+                <div class="dash-mock-tx-amt">+ 1 240,00</div>
+              </div>
+              <div class="dash-mock-tx-row">
+                <div class="dash-mock-tx-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+                </div>
+                <div class="dash-mock-tx-label">
+                  <div class="dash-mock-tx-name">Touriste DE · DCC EUR</div>
+                  <div class="dash-mock-tx-meta">€ 18,50 → 197 MAD · il y a 18 min</div>
+                </div>
+                <div class="dash-mock-tx-amt">+ 197,00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 02 · TICKER ════════════ -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span class="tk-item">Café Atlas · Casa · <b>encaissé</b> · <span class="amt">47,00 MAD</span> · 0,4 s</span>
+    <span class="tk-item">L'Annexe · Marrakech · <b>encaissé</b> · <span class="amt">312,50 MAD</span> · 1,2 s</span>
+    <span class="tk-item">Riad Anaya · Fès · <b>encaissé</b> · <span class="amt">€ 120,00</span> · 2,1 s</span>
+    <span class="tk-item">Boulangerie Yasmine · Casa · <b>encaissé</b> · <span class="amt">18,00 MAD</span> · 2,8 s</span>
+    <span class="tk-item">Dar Tazi · Rabat · <b>encaissé</b> · <span class="amt">485,00 MAD</span> · 3,4 s</span>
+    <span class="tk-item">Glacier 7 · Tanger · <b>encaissé</b> · <span class="amt">22,00 MAD</span> · 4,0 s</span>
+    <span class="tk-item">Le Petit Beur · Casa · <b>encaissé</b> · <span class="amt">196,00 MAD</span> · 5,1 s</span>
+    <span class="tk-item">Café Hafa · Tanger · <b>encaissé</b> · <span class="amt">35,00 MAD</span> · 5,8 s</span>
+    <!-- duplicate -->
+    <span class="tk-item">Café Atlas · Casa · <b>encaissé</b> · <span class="amt">47,00 MAD</span> · 0,4 s</span>
+    <span class="tk-item">L'Annexe · Marrakech · <b>encaissé</b> · <span class="amt">312,50 MAD</span> · 1,2 s</span>
+    <span class="tk-item">Riad Anaya · Fès · <b>encaissé</b> · <span class="amt">€ 120,00</span> · 2,1 s</span>
+    <span class="tk-item">Boulangerie Yasmine · Casa · <b>encaissé</b> · <span class="amt">18,00 MAD</span> · 2,8 s</span>
+    <span class="tk-item">Dar Tazi · Rabat · <b>encaissé</b> · <span class="amt">485,00 MAD</span> · 3,4 s</span>
+    <span class="tk-item">Glacier 7 · Tanger · <b>encaissé</b> · <span class="amt">22,00 MAD</span> · 4,0 s</span>
+    <span class="tk-item">Le Petit Beur · Casa · <b>encaissé</b> · <span class="amt">196,00 MAD</span> · 5,1 s</span>
+    <span class="tk-item">Café Hafa · Tanger · <b>encaissé</b> · <span class="amt">35,00 MAD</span> · 5,8 s</span>
+  </div>
+</div>
+
+<!-- ════════════ 03 · EDITORIAL ════════════ -->
+<section class="slab-paper editorial-section">
+  <div class="wrap">
+    <div class="ed-content">
+      <div class="s-num"><b>02</b> · L'opportunité</div>
+      <p class="editorial reveal" id="editorialQuote" style="margin-top: var(--s-6);">
+        <span class="em-num draw" id="editorialNum">73&nbsp;305</span> restaurants au Maroc. <span class="em-num">Aucun</span> ne devrait perdre 1,80&nbsp;MAD pour chaque 100&nbsp;MAD encaissé.
+      </p>
+      <div class="attribution">Source · Conseil de la Concurrence · décision 152/D/2024</div>
+    </div>
+
+    <!-- Live commission counter — visible counter ticks every 120ms,
+         a11y region announces a rounded total once per minute -->
+    <div class="loss-counter reveal">
+      <div class="loss-eyebrow" aria-hidden="true">En direct · pertes au Maroc</div>
+      <div class="loss-number num" id="lossNumber" aria-hidden="true">0</div>
+      <div class="loss-unit" aria-hidden="true">MAD perdus aujourd'hui en commissions cachées</div>
+      <p class="loss-sub" aria-hidden="true">
+        Le secteur F&amp;B + retail marocain perd <span class="loss-rate" id="lossRate">~28 MAD/s</span> en commissions sur le volume carte. Calcul basé sur 63 Md MAD/an (Bank Al-Maghrib) à un taux effectif moyen de 1,80 %.
+      </p>
+      <p class="sr-only" id="lossA11y" aria-live="polite" aria-atomic="true">
+        Le secteur F&amp;B et retail marocain perd environ 28 MAD par seconde en commissions cachées.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 04 · WHY NOW ════════════ -->
+<section class="slab-paper-soft" id="why-now">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>03</b> · Pourquoi maintenant</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">Le bon moment, pas une intuition</div>
+      <h2 style="margin-top: var(--s-4);">Le marché marocain a changé en deux ans plus qu'en vingt.</h2>
+      <p class="lede" style="margin-top: var(--s-5);">Six forces convergent. Toutes publiques, toutes vérifiables. Ensemble, elles dessinent une fenêtre de construction qui ne se rouvrira pas.</p>
+    </div>
+
+    <div class="why-grid reveal">
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">31 oct. 2024</div>
+        <h4>Décision 152/D/2024 · fin du monopole</h4>
+        <p>Premier opérateur indépendant peut signer un commerçant depuis 2001. Conseil de la Concurrence.</p>
+      </article>
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">1er nov. 2024</div>
+        <h4>Plafond d'interchange · 0,65 %</h4>
+        <p>Division par deux du coût d'acceptation (vs 1,20–1,30 % auparavant). Le ticket moyen marocain devient viable.</p>
+      </article>
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">1er mai 2025</div>
+        <h4>Acquisition ouverte aux EDP</h4>
+        <p>Bank Al-Maghrib accorde des licences indépendantes des banques. Voie réglementaire tracée pour Kiwi Pay.</p>
+      </article>
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">5 janv. 2026</div>
+        <h4>19,8 M de touristes · record absolu</h4>
+        <p>Maroc clôture 2025 +14 % YoY, déjà au-delà de l'objectif 2026. Pression structurelle d'acceptation carte.</p>
+      </article>
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">31 janv. 2026</div>
+        <h4>Date butoir · transfert des contrats</h4>
+        <p>Tous les commerces du pays sont en train de changer de prestataire, par construction, pas par marketing.</p>
+      </article>
+      <article class="card card-pad why-card card-lift">
+        <div class="ddate">2030</div>
+        <h4>Coupe du Monde FIFA · Maroc + ESP + POR</h4>
+        <p>Investissement national massif dans l'infrastructure de paiement et l'hospitalité touristique.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 05 · SIX-FEATURE GRID ════════════ -->
+<section class="slab-paper" id="features">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>04</b> · Le produit</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">Six fonctionnalités · une seule app</div>
+      <h2 style="margin-top: var(--s-4);">Tout ce qu'un commerçant marocain n'a jamais reçu d'un seul outil.</h2>
+    </div>
+
+    <div class="feat-grid reveal">
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="18" r="1"/><path d="M9 6h6"/></svg></div>
+        <h4>Tap-to-Pay sur iPhone &amp; Android</h4>
+        <p>Le téléphone du serveur devient un terminal sans contact certifié EMV. Onboarding biométrique en 7 minutes. Aucune caisse à déplacer.</p>
+      </article>
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+        <h4>Kiwi IQ · darija &amp; français</h4>
+        <p>« Kanchhal 3la les ventes hier ? » → réponse + action. Édite menu, shifts, prix en chat. Toast IQ ne parle pas darija. Kiwi oui.</p>
+      </article>
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v3M19 14v2M21 17h-3M19 21h-2"/></svg></div>
+        <h4>QR pay-at-table · zéro frais cachés</h4>
+        <p>Le flow Sunday : split par article, pourboire en un tap, avis post-paiement, mais avec frais affichés avant le tap. L'anti-Sunday.</p>
+      </article>
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg></div>
+        <h4>Multi-devise · MAD / EUR / USD / GBP</h4>
+        <p>Le terminal détecte le BIN du touriste, propose le total en devise d'origine avec marge FX transparente. Tickets bilingues arabe + latin.</p>
+      </article>
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/><path d="M9 12l2 2 4-5"/></svg></div>
+        <h4>Financement participatif · option halal</h4>
+        <p>Murabaha sur stock : avance scorée sur l'historique transactionnel, marge fixée à la signature. Calculateur Zakat sur le solde annuel. Méthodologie validée par un conseil de conformité indépendant.</p>
+      </article>
+      <article class="card feat-cell">
+        <div class="icn"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
+        <h4>Mode Ramadan automatique</h4>
+        <p>Bascule horaires Ftour / Souhour, suspend les SKUs alcool en lieu mixte, multiplicateur de fidélité ×2, fenêtre fermeture pour la prière du vendredi. Ramadan, comme une saison.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 06 · SETTLEMENT T+1 ════════════ -->
+<section class="slab-ink">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>05</b> · Règlement</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">T+1 · chaque jour ouvré</div>
+      <h2 style="margin-top: var(--s-4);">L'argent encaissé hier soir arrive ce matin.</h2>
+      <p class="lede" style="margin-top: var(--s-5);">Pas un batch perdu en fin de mois. Pas un appel à la banque. Le règlement T+1 sur ton IBAN marocain. 09 h 00, chaque jour ouvré, y compris après un week-end.</p>
+    </div>
+
+    <div class="card card-ink t1-viz reveal" id="t1Viz">
+      <div class="t1-flow">
+        <div class="t1-from">
+          <div class="t1-stamp">Vendredi · 23 h 47</div>
+          <div class="t1-amount num"><span id="t1AmountFrom">18&nbsp;420</span><span class="t1-unit">MAD</span></div>
+          <div class="t1-note">Encaissé sur Kiwi · clôture caisse</div>
+        </div>
+        <div class="t1-arrow" aria-hidden="true">
+          <span class="t1-arrow-label">8 h 13 plus tard</span>
+          <div class="t1-arrow-line">
+            <span class="t1-dot start"></span>
+            <span class="t1-particle"></span>
+            <span class="t1-dot end"></span>
+          </div>
+        </div>
+        <div class="t1-to">
+          <div class="t1-stamp">Samedi · 09 h 00</div>
+          <div class="t1-amount mint num">+<span id="t1AmountTo">18&nbsp;420</span><span class="t1-unit">MAD</span></div>
+          <div class="t1-note">→ MA64 0071 ••••</div>
+        </div>
+      </div>
+
+      <div class="t1-row">
+        <div class="t1-cell"><div class="l">Cycle</div><div class="v">T+1</div><div class="s">Chaque jour ouvré, 09 h 00</div></div>
+        <div class="t1-cell"><div class="l">Devise</div><div class="v">MAD · EUR</div><div class="s">DCC pour les touristes</div></div>
+        <div class="t1-cell"><div class="l">Visibilité</div><div class="v mint">Avant le service</div><div class="s">Notification SMS + WhatsApp</div></div>
+        <div class="t1-cell"><div class="l">Conformité</div><div class="v">Loi 103-12</div><div class="s">Bank Al-Maghrib · audit annuel</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 07 · TRANSPARENCY · "No Catch" clause ════════════ -->
+<section class="slab-paper" id="transparency">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>06</b> · Tarification</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">Radicalement transparent</div>
+      <h2 style="margin-top: var(--s-4);">Comment Kiwi gagne de l'argent.</h2>
+      <p class="lede" style="margin-top: var(--s-5);">Si tu te demandes comment on peut être 5× moins cher qu'un acquéreur classique, voici la réponse honnête, en trois lignes.</p>
+    </div>
+
+    <!-- Three-card transparency breakdown -->
+    <div class="trans-grid reveal">
+      <article class="trans-card">
+        <div class="trans-num num">1,79 %</div>
+        <div class="trans-label">Commission carte</div>
+        <div class="trans-detail">Taux fixe, all-in. Ni location, ni surtaxe DCC, ni assurance cachée. Le prix affiché est exactement le prix payé.</div>
+      </article>
+
+      <article class="trans-card">
+        <div class="trans-num num">399 <span class="trans-unit">MAD</span></div>
+        <div class="trans-label">Abonnement Kiwi · par mois</div>
+        <div class="trans-detail">L'app caisse, le dashboard, l'IA Kiwi, et le support WhatsApp 7 j/7. Résiliable à tout moment. Le matériel reste prêté gratuitement.</div>
+      </article>
+
+      <article class="trans-card">
+        <div class="trans-num num">0 <span class="trans-unit">MAD</span></div>
+        <div class="trans-label">Tout le reste</div>
+        <div class="trans-detail">Pas de location terminal. Pas de frais d'installation. Pas d'engagement 3 ans. Pas de pénalité de résiliation. Pas de spread FX caché.</div>
+      </article>
+    </div>
+
+    <!-- Editorial closing line -->
+    <p class="trans-closer reveal">
+      Si Kiwi gagne, c'est parce que <span class="trans-em">tu encaisses plus</span>. C'est le seul modèle qu'on connaît qui aligne nos intérêts avec les tiens.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════ 08 · PILOTS ════════════ -->
+<section class="slab-paper-soft" id="pilots">
+  <div class="wrap">
+    <div class="s-num reveal"><b>07</b> · Pilotes</div>
+    <p class="s-eyebrow reveal" style="margin-top: var(--s-3);">En conversation avec · printemps 2026</p>
+    <div class="logos reveal" aria-label="Pilotes Kiwi en discussion">
+
+      <!-- Mix Max — bold geometric sans, all caps -->
+      <div class="logo-cell" aria-label="Mix Max">
+        <svg class="wordmark" viewBox="0 0 168 28" role="img" aria-hidden="true" fill="currentColor">
+          <text x="0" y="22" font-family="Geist, system-ui, sans-serif"
+                font-size="22" font-weight="600" letter-spacing="-0.5"
+                style="text-transform: uppercase;">MIX</text>
+          <circle cx="63" cy="14" r="3.6" />
+          <text x="76" y="22" font-family="Geist, system-ui, sans-serif"
+                font-size="22" font-weight="600" letter-spacing="-0.5"
+                style="text-transform: uppercase;">MAX</text>
+        </svg>
+        <span class="pilot-tag">Pilote signé</span>
+      </div>
+
+      <!-- Recycop — clean lowercase wordmark with eco accent -->
+      <div class="logo-cell" aria-label="Recycop">
+        <svg class="wordmark" viewBox="0 0 156 28" role="img" aria-hidden="true" fill="currentColor">
+          <path d="M9 14 a5 5 0 1 0 5 -5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+          <path d="M14 6 l3 3 -3 3" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="26" y="22" font-family="Geist, system-ui, sans-serif"
+                font-size="20" font-weight="500" letter-spacing="-0.6">Recycop</text>
+        </svg>
+        <span class="pilot-tag">Pilote actif</span>
+      </div>
+
+      <!-- Kandisky — editorial serif energy, lowercase -->
+      <div class="logo-cell" aria-label="Kandisky">
+        <svg class="wordmark" viewBox="0 0 168 28" role="img" aria-hidden="true" fill="currentColor">
+          <text x="0" y="22" font-family="Instrument Serif, Times, serif"
+                font-size="24" font-style="italic" font-weight="400" letter-spacing="-0.2">kandisky</text>
+        </svg>
+        <span class="pilot-tag">Pilote signé</span>
+      </div>
+
+      <!-- Abir's Cookies — handcrafted feel via apostrophe + caps -->
+      <div class="logo-cell" aria-label="Abir's Cookies">
+        <svg class="wordmark" viewBox="0 0 188 28" role="img" aria-hidden="true" fill="currentColor">
+          <text x="0" y="22" font-family="Geist, system-ui, sans-serif"
+                font-size="20" font-weight="500" letter-spacing="-0.4">Abir's</text>
+          <circle cx="74" cy="14" r="2" opacity="0.55"/>
+          <text x="84" y="22" font-family="Geist, system-ui, sans-serif"
+                font-size="20" font-weight="500" letter-spacing="-0.4">Cookies</text>
+        </svg>
+        <span class="pilot-tag">Pilote actif</span>
+      </div>
+
+    </div>
+    <p class="reveal" style="margin-top: var(--s-8); font-family: var(--font-mono); font-size: 12px; color: var(--n-500); letter-spacing: 0.04em; max-width: 64ch;">
+      Logos affichés avec autorisation des partenaires. <b style="color: var(--ink); font-weight: var(--w-medium);">+ 12 autres établissements en discussion avancée</b> au 1<sup>er</sup> mai 2026, dont 4 enseignes multi-sites représentant 31 points de vente.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════ 09 · ARABIC MOMENT ════════════ -->
+<section class="slab-riad arabic-slab" lang="ar" dir="rtl">
+  <div class="wrap">
+    <p class="arabic-quote reveal">
+      كيوي خدمة <span class="em-mint">ديالنا</span>، كاتفهم الحلال، الجمعة، ورمضان، وكاتخلي الفلوس ديالك <span class="em-mint">عندك</span>.
+    </p>
+    <div class="arabic-attr">كيوي · طنجة · 2026</div>
+  </div>
+</section>
+
+<!-- ════════════ 10 · COMPARISON · "Vendredi soir" narrative ════════ -->
+<section class="slab-paper" id="comparison">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>08</b> · Le coût caché</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">Vendredi 23 h 47, à Casablanca</div>
+      <h2 style="margin-top: var(--s-4);">Le coût d'un vendredi soir.</h2>
+      <p class="lede" style="margin-top: var(--s-5);">Café Atlas vient de fermer. La caisse dit 18 420 MAD. Voici exactement ce qui se passe avec ton argent — pendant la nuit, et sur l'année.</p>
+    </div>
+
+    <!-- Opening scene — cinematic ink card -->
+    <div class="story-scene reveal" id="storyScene">
+      <div class="scene-time">Vendredi · 23 h 47 · clôture caisse</div>
+      <div class="scene-where">Café Atlas · Maarif, Casablanca</div>
+      <div class="scene-amount num"><span id="sceneAmount">18 420</span><span class="unit">MAD encaissé ce soir</span></div>
+      <div class="scene-meta">184 transactions · 103,5 MAD ticket moyen · 38 % CMI / 31 % espèces / 18 % Wafacash / 13 % autres</div>
+    </div>
+
+    <!-- Two parallel narrative columns -->
+    <div class="story-grid reveal">
+
+      <!-- LEFT: CMI -->
+      <article class="story-col cmi">
+        <div class="story-col-head">
+          <span class="story-tag">Avec un acquéreur classique</span>
+          <span class="story-sub">CMI · banques traditionnelles</span>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">01</div>
+          <div class="step-body">
+            <div class="step-title">Commission carte</div>
+            <div class="step-num-val bad num">−332 MAD</div>
+            <div class="step-meta">1,80 % facial sur la part carte (CMI + Wafacash)</div>
+          </div>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">02</div>
+          <div class="step-body">
+            <div class="step-title">Frais cachés + location terminal</div>
+            <div class="step-num-val bad num">−185 MAD</div>
+            <div class="step-meta">Location 300 MAD/mois alloué + DCC + spread + ticket thermique</div>
+          </div>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">03</div>
+          <div class="step-body">
+            <div class="step-title">Versement</div>
+            <div class="step-num-val late">Versé mardi</div>
+            <div class="step-meta">T+3 · trésorerie bloquée tout le week-end</div>
+          </div>
+        </div>
+
+        <div class="story-total">
+          <div class="story-total-label">Total cette nuit</div>
+          <div class="story-total-val bad num">−517 MAD</div>
+          <div class="story-total-sub">+ 4 jours sans liquidité pour racheter ton stock</div>
+        </div>
+      </article>
+
+      <!-- RIGHT: Kiwi -->
+      <article class="story-col kiwi">
+        <div class="story-col-head">
+          <span class="story-tag">Avec Kiwi</span>
+          <span class="story-sub">Recommandé · 1,79 % all-in</span>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">01</div>
+          <div class="step-body">
+            <div class="step-title">Commission carte</div>
+            <div class="step-num-val good num">−330 MAD</div>
+            <div class="step-meta">1,79 % flat · aucun frais ajouté</div>
+          </div>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">02</div>
+          <div class="step-body">
+            <div class="step-title">Frais additionnels</div>
+            <div class="step-num-val good num">0 MAD</div>
+            <div class="step-meta">Matériel prêté · pas de DCC caché · pas de location</div>
+          </div>
+        </div>
+
+        <div class="story-step">
+          <div class="step-num">03</div>
+          <div class="step-body">
+            <div class="step-title">Versement</div>
+            <div class="step-num-val fast">Samedi 9 h 00</div>
+            <div class="step-meta">T+1 chaque jour ouvré · liquidité disponible demain</div>
+          </div>
+        </div>
+
+        <div class="story-total">
+          <div class="story-total-label">Total cette nuit</div>
+          <div class="story-total-val good num">−330 MAD</div>
+          <div class="story-total-sub">+ 18 090 MAD disponibles demain matin sur ton IBAN</div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Verdict bar -->
+    <div class="story-verdict reveal" id="storyVerdict">
+      <div class="verdict-label">Sur 250 vendredis soirs par an</div>
+      <div class="verdict-numbers">
+        <div class="verdict-cmi">
+          <div class="verdict-cmi-label">CMI</div>
+          <div class="verdict-cmi-val num">~ <span id="verdictCmi">52 000</span> MAD</div>
+          <div class="verdict-cmi-sub">de frais cachés annuels</div>
+        </div>
+        <div class="verdict-arrow" aria-hidden="true">→</div>
+        <div class="verdict-kiwi">
+          <div class="verdict-kiwi-label">Kiwi</div>
+          <div class="verdict-kiwi-val num">~ <span id="verdictKiwi">5 000</span> MAD</div>
+          <div class="verdict-kiwi-sub">de frais transparents</div>
+        </div>
+      </div>
+      <div class="verdict-savings">
+        <div class="verdict-savings-label">Différence annuelle</div>
+        <div class="verdict-savings-val num">~ <span id="verdictSavings">47 000</span> MAD</div>
+        <div class="verdict-savings-sub">qui restent dans ta caisse, chaque année</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 10b · FAQ ════════════ -->
+<section class="slab-paper-soft" id="faq">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>09</b> · Questions fréquentes</div>
+      <div class="s-eyebrow" style="margin-top: var(--s-3);">Les huit questions qu'on nous pose tous les jours</div>
+      <h2 style="margin-top: var(--s-4);">Tout ce qu'un commerçant veut savoir avant de signer.</h2>
+    </div>
+
+    <div class="faq-list reveal" role="list">
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-1">
+          <span>Vous êtes une banque&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-1" role="region">
+          <div class="faq-a-inner">
+            <b>Non.</b> Kiwi est un établissement de paiement opérant sous la loi 103-12. Nous ne tenons pas de compte bancaire ni n'octroyons de crédit au sens classique. Nous encaissons pour votre compte et versons sur votre <b>IBAN marocain existant</b>, à T+1 chaque jour ouvré. Vous gardez votre banque actuelle ; nous remplaçons votre acquéreur (CMI ou autre) et l'ensemble des outils caisse, paie, reporting.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-2">
+          <span>Le 1,79 % flat, c'est vraiment tout&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-2" role="region">
+          <div class="faq-a-inner">
+            Oui. <b>1,79 % all-in</b> sur le volume carte (CMI, Visa, Mastercard, Wafacash). Aucun frais de location terminal, aucun frais d'installation, aucun frais de transaction unitaire, aucun spread DCC caché. Les seuls coûts additionnels possibles sont les frais réseau pour des cas particuliers (carte hors zone SEPA + MENA), affichés à l'avance avant tout encaissement.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-3">
+          <span>Combien de temps pour démarrer&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-3" role="region">
+          <div class="faq-a-inner">
+            Onboarding biométrique en <b>7 minutes</b> depuis votre téléphone (CIN + RC + IBAN). Premier encaissement live le lendemain matin si l'onboarding est validé avant 17 h. Pour les enseignes multi-sites, comptez 48 h ouvrées pour la configuration des shifts, menus et droits utilisateurs.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-4">
+          <span>Et si je n'ai pas de terminal&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-4" role="region">
+          <div class="faq-a-inner">
+            Pas besoin. Kiwi transforme votre <b>iPhone (XS et plus récent) ou Android NFC</b> en terminal de paiement certifié EMV. Aucun matériel à acheter ni à louer. Si vous voulez un PIN-pad physique pour les transactions de plus de 1&nbsp;000 MAD, nous prêtons un terminal Bluetooth pendant la durée du contrat.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-5">
+          <span>Le T+1, ça marche aussi le week-end&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-5" role="region">
+          <div class="faq-a-inner">
+            Le versement T+1 est garanti chaque <b>jour ouvré</b> à 9 h sur votre IBAN. Vendredi soir → samedi matin (oui, samedi est ouvré pour Kiwi). Samedi soir → lundi 9 h. Pendant un jour férié, l'argent arrive le jour ouvré suivant à 9 h. Aucun batch perdu, aucun appel à la banque pour débloquer une trésorerie.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-6">
+          <span>Mes données restent au Maroc&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-6" role="region">
+          <div class="faq-a-inner">
+            Oui. <b>Hébergement intégral au Maroc</b>, conforme à la loi 09-08 (CNDP, déclaration n° en cours d'attribution). Cryptographie locale validée DGSSI. Aucune donnée client ne quitte le territoire marocain à des fins commerciales. Audit ISO 27001 prévu Q4 2026 ; rapport public sur <a href="status.html">status.kiwi.ma</a>.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-7">
+          <span>Et si je veux quitter Kiwi&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-7" role="region">
+          <div class="faq-a-inner">
+            <b>Aucun engagement de durée.</b> Vous pouvez résilier à tout moment depuis l'application, sans frais ni délai. Export complet de vos données (transactions, fiches clients, historique fiscal) au format CSV et PDF en un clic. Versement final à T+1 du jour de résiliation.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a-8">
+          <span>Pourquoi devrais-je vous faire confiance&nbsp;?</span>
+          <span class="faq-q-icon" aria-hidden="true"></span>
+        </button>
+        <div class="faq-a" id="faq-a-8" role="region">
+          <div class="faq-a-inner">
+            Vous ne devez pas. <b>Démarrez par un pilote</b> sur un seul point de vente, pour le mois en cours. Aucun frais de signature, aucun engagement. Si à la fin du mois Kiwi ne vous a pas fait gagner du temps et de l'argent par rapport à votre acquéreur actuel, nous coupons et vous gardez l'export complet de vos données. Quatre établissements au Maroc nous ont fait confiance dans cette logique. Le cinquième sera peut-être le vôtre.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ 11 · FINAL CTA ════════════ -->
+<section class="slab-ink final" id="contact">
+  <div class="wrap">
+    <h2 class="reveal">Le moment d'<em class="ed">encaisser</em><br>autrement.</h2>
+    <p class="lede reveal">5 minutes pour candidater. Le premier mois est offert pour les pilotes signés avant le 30 juin 2026.</p>
+
+    <!-- Audience selector — merchants (default) vs investors -->
+    <div class="audience-tabs reveal" role="tablist" aria-label="Sélectionner votre profil">
+      <button type="button" class="audience-tab" id="tab-merchant"
+              role="tab" aria-selected="true" aria-controls="form-merchant">
+        Je suis commerçant
+      </button>
+      <button type="button" class="audience-tab" id="tab-investor"
+              role="tab" aria-selected="false" aria-controls="form-investor">
+        Je suis investisseur
+      </button>
+    </div>
+
+    <!-- Merchant form -->
+    <form class="lead-form reveal" id="form-merchant"
+          role="tabpanel" aria-labelledby="tab-merchant"
+          data-active="true"
+          action="https://formspree.io/f/merchants-kiwi" method="POST">
+      <input type="hidden" name="_audience" value="merchant" />
+      <input type="hidden" name="_subject" value="Nouveau pilote commerçant — Kiwi" />
+      <div class="lead-form-grid">
+        <div class="lead-field">
+          <label for="m-name">Nom &amp; prénom</label>
+          <input id="m-name" name="name" type="text" required autocomplete="name" placeholder="Karim Benani" />
+        </div>
+        <div class="lead-field">
+          <label for="m-business">Nom de l'établissement</label>
+          <input id="m-business" name="business" type="text" required placeholder="Café Atlas" />
+        </div>
+        <div class="lead-field">
+          <label for="m-phone">Téléphone (WhatsApp)</label>
+          <input id="m-phone" name="phone" type="tel" required autocomplete="tel" placeholder="+212 6 ##  ##  ##  ##" />
+        </div>
+        <div class="lead-field">
+          <label for="m-city">Ville</label>
+          <input id="m-city" name="city" type="text" required placeholder="Casablanca" />
+        </div>
+        <div class="lead-field">
+          <label for="m-volume">Volume mensuel encaissé</label>
+          <select id="m-volume" name="volume" required>
+            <option value="">Sélectionner</option>
+            <option>&lt; 30 000 MAD</option>
+            <option>30 000 — 100 000 MAD</option>
+            <option>100 000 — 500 000 MAD</option>
+            <option>&gt; 500 000 MAD</option>
+          </select>
+        </div>
+        <div class="lead-field">
+          <label for="m-type">Type d'activité</label>
+          <select id="m-type" name="type" required>
+            <option value="">Sélectionner</option>
+            <option>Café / Restaurant</option>
+            <option>Boulangerie / Pâtisserie</option>
+            <option>Retail / Boutique</option>
+            <option>Hôtellerie / Riad</option>
+            <option>Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="lead-form-actions">
+        <p class="lead-fineprint">
+          En soumettant, vous acceptez d'être recontacté par <b>Kiwi Payments</b> sous 48 h ouvrées. Vos données sont traitées conformément à la <a href="privacy.html">loi 09-08</a>.
+        </p>
+        <span class="btn-rgb-wrap">
+          <button type="submit" class="btn btn-primary btn-lg">Démarrer un pilote</button>
+        </span>
+      </div>
+    </form>
+
+    <!-- Investor form -->
+    <form class="lead-form reveal" id="form-investor"
+          role="tabpanel" aria-labelledby="tab-investor"
+          action="https://formspree.io/f/invest-kiwi" method="POST">
+      <input type="hidden" name="_audience" value="investor" />
+      <input type="hidden" name="_subject" value="Investor inquiry — Kiwi" />
+      <div class="lead-form-grid">
+        <div class="lead-field">
+          <label for="i-name">Name</label>
+          <input id="i-name" name="name" type="text" required autocomplete="name" placeholder="Jane Doe" />
+        </div>
+        <div class="lead-field">
+          <label for="i-firm">Fund / Firm</label>
+          <input id="i-firm" name="firm" type="text" required placeholder="Acme Ventures" />
+        </div>
+        <div class="lead-field">
+          <label for="i-email">Email</label>
+          <input id="i-email" name="email" type="email" required autocomplete="email" placeholder="jane@acme.vc" />
+        </div>
+        <div class="lead-field">
+          <label for="i-stage">Typical stage</label>
+          <select id="i-stage" name="stage" required>
+            <option value="">Select</option>
+            <option>Pre-seed</option>
+            <option>Seed</option>
+            <option>Series A</option>
+            <option>Series B+</option>
+            <option>Strategic / Corporate</option>
+          </select>
+        </div>
+        <div class="lead-field full">
+          <label for="i-msg">Message</label>
+          <textarea id="i-msg" name="message" rows="3" placeholder="What would you like to learn about Kiwi?"></textarea>
+        </div>
+      </div>
+      <div class="lead-form-actions">
+        <p class="lead-fineprint">
+          Investor materials shared under NDA on request. We respond within 2 business days. Or write directly to <a href="mailto:invest@kiwi.ma">invest@kiwi.ma</a>.
+        </p>
+        <span class="btn-rgb-wrap">
+          <button type="submit" class="btn btn-primary btn-lg">Request deck</button>
+        </span>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ════════════ FOOTER ════════════ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-strip">
+      <span>Bank Al-Maghrib · Loi 103-12</span>
+      <span>CNDP · Loi 09-08</span>
+      <span>DGSSI · Cryptographie locale</span>
+      <span>OMPIC · Marque déposée</span>
+      <span>AMMC · Sandbox réglementaire</span>
+      <span>ISO 27001 · roadmap publique</span>
+    </div>
+
+    <!-- Status badge — live operational signal -->
+    <a class="foot-status" href="status.html" aria-label="Statut des services Kiwi">
+      <span class="foot-status-dot" aria-hidden="true"></span>
+      <span class="foot-status-label">Tous les services opérationnels</span>
+      <span class="foot-status-meta mono">status.kiwi.ma</span>
+    </a>
+
+    <div class="foot-grid">
+      <div>
+        <a href="#hero" class="foot-mark">
+          <span class="logo-mark">k</span>
+          <span>kiwi</span>
+        </a>
+        <p class="foot-tag">Le système d'exploitation du commerçant marocain. Encaisse, paie, épargne. Un seul outil. Conçu à Tanger.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Produit</h5>
+        <ul>
+          <li><a href="#features">Fonctionnalités</a></li>
+          <li><a href="#transparency">Tarifs</a></li>
+          <li><a href="dashboard.html">Tableau de bord</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Société</h5>
+        <ul>
+          <li><a href="#why-now">Pourquoi maintenant</a></li>
+          <li><a href="#contact">Contact commerçants</a></li>
+          <li><a href="mailto:invest@kiwi.ma">Contact investisseurs</a></li>
+          <li><a href="status.html">Statut</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Légal</h5>
+        <ul>
+          <li><a href="privacy.html">Confidentialité</a></li>
+          <li><a href="terms.html">Conditions générales</a></li>
+          <li><a href="cookies.html">Cookies</a></li>
+          <li><a href="mentions-legales.html">Mentions légales</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-legal">
+      <p>
+        <b>Kiwi Payments SA</b> · Société anonyme de droit marocain · Capital social en cours de libération.<br>
+        Siège social : 12, rue Ibn Battouta, Tanger 90000, Maroc · RC Tanger n° 142 857 · ICE 003 184 729 000 075 · IF 51 084 217 · TP 78 945 612.<br>
+        Établissement de paiement opérant sous la <a href="https://www.bkam.ma/" target="_blank" rel="noopener">loi 103-12</a> · agrément Bank Al-Maghrib (procédure en cours, dépôt déc. 2025).
+      </p>
+    </div>
+
+    <div class="foot-bot">
+      <span>© 2026 Kiwi Payments SA · Tous droits réservés</span>
+      <span>Conçu &amp; assemblé à Tanger</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && reveals.length) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+    reveals.forEach(el => io.observe(el));
+  } else {
+    reveals.forEach(el => el.classList.add('in'));
+  }
+
+  // Editorial · counter animation on "73 305" when section enters viewport
+  const countEl = document.getElementById('editorialNum');
+  if (countEl && 'IntersectionObserver' in window) {
+    const target = 73305;
+    const duration = 1400;
+    const fmtCount = (n) => Math.round(n).toLocaleString('fr-FR').replace(/\s/g, '\u00a0');
+    const animateCount = () => {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        countEl.textContent = fmtCount(target * eased);
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      countEl.textContent = fmtCount(target);
+    } else {
+      countEl.textContent = '0';
+      const cio = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            animateCount();
+            cio.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.5 });
+      cio.observe(countEl);
+    }
+  }
+
+  // Comparison · "Vendredi soir" narrative count-ups
+  const sceneAmt = document.getElementById('sceneAmount');
+  const verdictCmi = document.getElementById('verdictCmi');
+  const verdictKiwi = document.getElementById('verdictKiwi');
+  const verdictSavings = document.getElementById('verdictSavings');
+  const storyScene = document.getElementById('storyScene');
+  const storyVerdict = document.getElementById('storyVerdict');
+  if (sceneAmt && storyScene && 'IntersectionObserver' in window) {
+    const fmtCmp = (n) => Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ');
+    const countTo = (el, target, duration = 1400, delay = 0) => {
+      setTimeout(() => {
+        const start = performance.now();
+        const step = (now) => {
+          const t = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          el.textContent = fmtCmp(target * eased);
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }, delay);
+    };
+    const reduceCmp = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceCmp) {
+      sceneAmt.textContent = fmtCmp(18420);
+      if (verdictCmi) verdictCmi.textContent = fmtCmp(52000);
+      if (verdictKiwi) verdictKiwi.textContent = fmtCmp(5000);
+      if (verdictSavings) verdictSavings.textContent = fmtCmp(47000);
+    } else {
+      // Scene amount counts up when the opening scene enters viewport
+      const sceneIO = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            sceneAmt.textContent = '0';
+            countTo(sceneAmt, 18420, 1500, 100);
+            sceneIO.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.2, rootMargin: '0px 0px -10% 0px' });
+      sceneIO.observe(storyScene);
+
+      // Verdict numbers count up when the verdict bar enters viewport
+      if (storyVerdict && verdictCmi && verdictKiwi && verdictSavings) {
+        const verdictIO = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              verdictCmi.textContent = '0';
+              verdictKiwi.textContent = '0';
+              verdictSavings.textContent = '0';
+              countTo(verdictCmi, 52000, 1300, 200);
+              countTo(verdictKiwi, 5000, 1100, 400);
+              countTo(verdictSavings, 47000, 1700, 700);
+              verdictIO.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.25, rootMargin: '0px 0px -10% 0px' });
+        verdictIO.observe(storyVerdict);
+      }
+    }
+  }
+
+  // T+1 viz · count-up animation on both amounts when section enters viewport
+  const t1Viz = document.getElementById('t1Viz');
+  const t1From = document.getElementById('t1AmountFrom');
+  const t1To = document.getElementById('t1AmountTo');
+  if (t1Viz && t1From && t1To && 'IntersectionObserver' in window) {
+    const TARGET = 18420;
+    const DURATION = 1400;
+    const fmtT1 = (n) => Math.round(n).toLocaleString('fr-FR').replace(/\s/g, ' ');
+    const animateT1 = () => {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min((now - start) / DURATION, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = fmtT1(TARGET * eased);
+        t1From.textContent = v;
+        t1To.textContent = v;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      t1From.textContent = fmtT1(TARGET);
+      t1To.textContent = fmtT1(TARGET);
+    } else {
+      t1From.textContent = '0';
+      t1To.textContent = '0';
+      const t1io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            animateT1();
+            t1io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.4 });
+      t1io.observe(t1Viz);
+    }
+  }
+
+  // Live commission counter · MAD lost since midnight Casablanca time
+  // Math: ~63 Md MAD card volume/year × 1.8% effective commission ÷ 31.5M sec
+  // = ~36 MAD/sec across the merchant sector. Conservative ~28 MAD/sec.
+  // a11y: visible counter ticks every 120ms (aria-hidden); the sr-only
+  // aria-live region updates once per minute with the rounded total so
+  // screen readers don't get spammed every frame.
+  const lossEl   = document.getElementById('lossNumber');
+  const lossA11y = document.getElementById('lossA11y');
+  if (lossEl) {
+    const RATE = 28.5; // MAD per second
+    const fmtLoss = (n) => Math.floor(n).toLocaleString('fr-FR').replace(/\s/g, '\u00a0');
+    const dailyLoss = () => {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      return ((now - start) / 1000) * RATE;
+    };
+    const tick = () => { lossEl.textContent = fmtLoss(dailyLoss()); };
+    const a11yTick = () => {
+      if (!lossA11y) return;
+      const total = Math.round(dailyLoss() / 1000) * 1000;
+      lossA11y.textContent =
+        'Pertes cumul\u00e9es depuis minuit : environ ' +
+        total.toLocaleString('fr-FR') +
+        ' MAD dans le secteur F&B et retail marocain.';
+    };
+    tick();
+    a11yTick();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setInterval(tick, 120);
+      setInterval(a11yTick, 60000); // once per minute
+    }
+  }
+
+  // Feature cards · cursor-tracked spotlight
+  document.querySelectorAll('.feat-cell').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      const mx = ((e.clientX - r.left) / r.width) * 100;
+      const my = ((e.clientY - r.top) / r.height) * 100;
+      card.style.setProperty('--mx', mx.toFixed(1) + '%');
+      card.style.setProperty('--my', my.toFixed(1) + '%');
+    });
+  });
+
+  // FAQ accordion — animated max-height, accessible aria-expanded
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    const panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!panel) return;
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      if (open) {
+        panel.style.maxHeight = '0';
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+      }
+    });
+  });
+
+  // Audience tabs · split routing for merchant / investor lead forms
+  const tabs  = document.querySelectorAll('.audience-tab');
+  const forms = {
+    'tab-merchant': document.getElementById('form-merchant'),
+    'tab-investor': document.getElementById('form-investor'),
+  };
+  if (tabs.length && forms['tab-merchant'] && forms['tab-investor']) {
+    const select = (tabId) => {
+      tabs.forEach(t => t.setAttribute('aria-selected', t.id === tabId ? 'true' : 'false'));
+      Object.entries(forms).forEach(([id, form]) => {
+        form.dataset.active = (id === tabId) ? 'true' : 'false';
+      });
+    };
+    tabs.forEach(t => t.addEventListener('click', () => select(t.id)));
+    // Keyboard nav: ←/→ between tabs
+    tabs.forEach(t => t.addEventListener('keydown', (e) => {
+      const arr = Array.from(tabs);
+      const i = arr.indexOf(t);
+      if (e.key === 'ArrowRight') { e.preventDefault(); arr[(i + 1) % arr.length].focus(); arr[(i + 1) % arr.length].click(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); arr[(i - 1 + arr.length) % arr.length].focus(); arr[(i - 1 + arr.length) % arr.length].click(); }
+    }));
+  }
+})();
+</script>
+
+</body>
+</html>

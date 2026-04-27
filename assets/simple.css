@@ -1,0 +1,675 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · Simple Mode
+ * Per senior-UX spec: 18px body min, 36px amounts, 56px tap targets,
+ * flat design, 3-tab bottom nav, WhatsApp-first flows, high contrast.
+ * Activated via html[data-mode="simple"]. Default on first open.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-mode="simple"] {
+  /* Amplify contrast — AAA on primary text */
+  --atlas: #0A5B42;
+  --atlas-deep: #053B2C;
+  --success: #1F7A3A;
+  --danger: #B02020;
+  --paper: #FFFFFF;
+  --ink: #0A0F0D;
+  /* No dark mode in simple */
+}
+
+/* ─── Hide every Pro-only chrome element so no dashboard sprawls behind ─── */
+html[data-mode="simple"] .sidebar,
+html[data-mode="simple"] .topbar,
+html[data-mode="simple"] .container,
+html[data-mode="simple"] .status-bar,
+html[data-mode="simple"] .demo-bar,
+html[data-mode="simple"] .ai-drawer,
+html[data-mode="simple"] .ramadan-banner { display: none !important; }
+
+html[data-mode="simple"] .app { display: block; min-height: auto; }
+html[data-mode="simple"] .main { padding: 0; max-width: none; margin: 0; }
+html[data-mode="simple"] body { background: #fff; }
+
+/* ─── SIMPLE SHELL ─── */
+.simple-root { max-width: 520px; margin: 0 auto; padding: 0 20px 140px; font-family: var(--sans); color: var(--ink); min-height: 100vh; position: relative; background: #fff; }
+.simple-root * { box-sizing: border-box; }
+
+/* Top bar — merchant name + Call Kiwi */
+.simple-top { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 28px; position: sticky; top: 0; background: var(--paper); z-index: 10; }
+.simple-top .merchant { display: flex; align-items: center; gap: 12px; }
+.simple-top .merchant .av { width: 44px; height: 44px; border-radius: 50%; background: var(--atlas); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+.simple-top .merchant .n { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
+.simple-top .merchant .shop { font-size: 14px; color: #4B4944; margin-top: 2px; }
+.simple-top .call-kiwi { display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: #fff; font-weight: 600; font-size: 14px; padding: 12px 16px; border-radius: 999px; min-height: 44px; text-decoration: none; border: 0; cursor: pointer; transition: transform 120ms; }
+.simple-top .call-kiwi:hover { transform: scale(1.02); }
+
+/* ─── TAB: LYOUM (Today) ─── */
+.lyoum-hero { text-align: center; padding: 20px 0 30px; }
+.lyoum-hero .eyebrow { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #6F6C65; font-weight: 600; margin-bottom: 14px; }
+.lyoum-hero .eyebrow-ar { font-size: 14px; color: #4B4944; margin-bottom: 8px; font-weight: 500; }
+.lyoum-hero .amount { font-size: 72px; font-weight: 700; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; color: var(--ink); }
+.lyoum-hero .amount .unit { font-size: 28px; color: #4B4944; font-weight: 500; margin-left: 8px; }
+.lyoum-hero .count { font-size: 20px; color: #4B4944; margin-top: 14px; }
+.lyoum-hero .updated { font-size: 14px; color: #6F6C65; margin-top: 10px; }
+
+/* Payout card */
+.lyoum-payout { background: #F0F9F3; border: 2px solid #C9F6DC; border-radius: 16px; padding: 22px 22px 22px 26px; margin-top: 14px; display: flex; align-items: flex-start; gap: 16px; }
+.lyoum-payout .icn { width: 48px; height: 48px; background: var(--success); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lyoum-payout .body { flex: 1; }
+.lyoum-payout .label { font-size: 14px; color: #4B4944; margin-bottom: 4px; }
+.lyoum-payout .when { font-size: 20px; font-weight: 700; color: var(--success); line-height: 1.2; }
+.lyoum-payout .when-ar { font-size: 17px; color: var(--success); margin-top: 4px; font-weight: 500; }
+.lyoum-payout .meta { font-size: 14px; color: #4B4944; margin-top: 8px; }
+
+/* Simple primary button (56px, full-width) */
+.simple-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  border: 0;
+  background: var(--ink);
+  color: #fff;
+  transition: transform 120ms, background 120ms;
+  text-decoration: none;
+  margin-top: 20px;
+}
+.simple-btn:hover { background: var(--atlas-deep); }
+.simple-btn:active { transform: scale(0.98); }
+.simple-btn.atlas { background: var(--atlas); }
+.simple-btn.atlas:hover { background: var(--atlas-deep); }
+.simple-btn.outline { background: #fff; color: var(--ink); border: 2px solid #D4D1C8; }
+.simple-btn.outline:hover { border-color: var(--ink); background: #FAFAF8; }
+.simple-btn.whatsapp { background: #25D366; color: #fff; }
+.simple-btn.whatsapp:hover { background: #1fb357; }
+.simple-btn.danger { background: var(--danger); color: #fff; }
+
+.simple-btn-row { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+
+/* Big amount pad for new sale */
+.amount-pad { padding: 24px 0; }
+.amount-pad .display { font-size: 64px; font-weight: 700; text-align: center; letter-spacing: -0.035em; padding: 30px 0; border-bottom: 2px solid #E8E6E0; margin-bottom: 24px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.amount-pad .display .placeholder { color: #A8A49A; font-weight: 500; }
+.amount-pad .display .unit { font-size: 22px; color: #6F6C65; margin-left: 8px; font-weight: 500; }
+.amount-pad .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+.amount-pad .key { min-height: 68px; border: 2px solid #E8E6E0; border-radius: 14px; font-size: 22px; font-weight: 600; background: #fff; cursor: pointer; transition: all 120ms; }
+.amount-pad .key:hover { background: #F2F0EA; border-color: #A8A49A; }
+.amount-pad .key:active { transform: scale(0.96); }
+
+/* Recent transactions list (plain, big rows) */
+.simple-section { margin-top: 30px; }
+.simple-section .h { font-size: 20px; font-weight: 700; margin-bottom: 14px; letter-spacing: -0.01em; }
+.simple-section .h-ar { font-size: 15px; color: #6F6C65; font-weight: 500; margin-bottom: 14px; margin-top: -10px; }
+.simple-tx { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #E8E6E0; }
+.simple-tx:last-child { border-bottom: 0; }
+.simple-tx .av { width: 44px; height: 44px; border-radius: 12px; background: #F0F9F3; color: var(--success); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex-shrink: 0; border: 2px solid #C9F6DC; }
+.simple-tx .body { flex: 1; min-width: 0; }
+.simple-tx .name { font-size: 17px; font-weight: 600; letter-spacing: -0.005em; }
+.simple-tx .meta { font-size: 14px; color: #4B4944; margin-top: 4px; }
+.simple-tx .amt { font-size: 19px; font-weight: 700; color: var(--success); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* ─── TAB: FLOUSI (My money) ─── */
+.flousi-hero { padding: 24px 0; }
+.flousi-hero .eyebrow { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #6F6C65; font-weight: 600; }
+.flousi-hero .title { font-size: 28px; font-weight: 700; margin-top: 6px; letter-spacing: -0.02em; line-height: 1.1; }
+.flousi-week { display: flex; flex-direction: column; gap: 0; margin-top: 20px; }
+.flousi-day { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; padding: 18px 0; border-bottom: 1px solid #E8E6E0; align-items: center; }
+.flousi-day:last-child { border-bottom: 0; }
+.flousi-day .date { font-size: 17px; font-weight: 600; letter-spacing: -0.005em; }
+.flousi-day .date .sub { display: block; font-size: 13px; color: #6F6C65; font-weight: 500; margin-top: 3px; }
+.flousi-day .amt { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.flousi-day .status { font-size: 13px; font-weight: 600; color: var(--success); white-space: nowrap; }
+.flousi-day .status.pending { color: #8A6210; }
+.flousi-day .status::before { content: "●"; margin-right: 5px; }
+
+/* Share to accountant card */
+.share-card { background: #FAFAF8; border: 2px solid #E8E6E0; border-radius: 16px; padding: 22px; margin-top: 28px; }
+.share-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+.share-card p { font-size: 15px; color: #4B4944; margin: 0 0 16px; line-height: 1.5; }
+
+/* ─── TAB: 3AWN (Help) ─── */
+.help-hero { padding: 24px 0; text-align: center; }
+.help-hero .title { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+.help-hero .title-ar { font-size: 18px; color: #4B4944; margin-top: 10px; font-weight: 500; }
+.help-hero p { font-size: 16px; color: #4B4944; margin-top: 14px; max-width: 360px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+.help-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 28px; }
+.help-card { background: #fff; border: 2px solid #E8E6E0; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; transition: border-color 120ms; min-height: 80px; text-decoration: none; color: var(--ink); }
+.help-card:hover { border-color: var(--atlas); }
+.help-card.whatsapp { background: #F1FDF4; border-color: #25D366; }
+.help-card.whatsapp:hover { background: #E5F9ED; }
+.help-card .icn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.help-card.whatsapp .icn { background: #25D366; color: #fff; }
+.help-card.atlas .icn { background: var(--atlas); color: #fff; }
+.help-card.paper .icn { background: #F2F0EA; color: var(--atlas); }
+.help-card .body { flex: 1; }
+.help-card .n { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.help-card .d { font-size: 15px; color: #4B4944; margin-top: 4px; line-height: 1.4; }
+.help-card .chev { color: #A8A49A; flex-shrink: 0; }
+
+/* ─── 3-TAB BOTTOM NAV ─── */
+.simple-tabs {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff;
+  border-top: 2px solid #E8E6E0;
+  display: flex;
+  z-index: 30;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  max-width: 560px;
+  margin: 0 auto;
+  box-shadow: 0 -8px 30px -10px rgba(10,15,13,0.08);
+}
+.simple-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  background: transparent;
+  border: 0;
+  color: #6F6C65;
+  cursor: pointer;
+  font-family: var(--sans);
+  text-decoration: none;
+  min-height: 56px;
+  transition: color 120ms;
+  border-radius: 12px;
+}
+.simple-tab:hover { color: var(--ink); background: #FAFAF8; }
+.simple-tab.active { color: var(--atlas); }
+.simple-tab svg { width: 26px; height: 26px; stroke-width: 2; }
+.simple-tab .label { font-size: 12px; font-weight: 600; letter-spacing: 0.01em; }
+.simple-tab .label-ar { font-size: 11px; color: inherit; opacity: 0.75; font-weight: 500; }
+
+/* ─── MODE TOGGLE (floating top-right) ─── */
+.mode-tg {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 40;
+  background: #fff;
+  border: 2px solid #E8E6E0;
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+  gap: 2px;
+  box-shadow: 0 4px 12px -4px rgba(10,15,13,0.1);
+}
+.mode-tg button {
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #6F6C65;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 120ms;
+  min-height: 32px;
+}
+.mode-tg button.on { background: var(--ink); color: #fff; }
+
+/* In Pro mode (current dashboard), keep the toggle in topbar */
+html[data-mode="pro"] .simple-root,
+html[data-mode="pro"] .simple-tabs { display: none !important; }
+html[data-mode="simple"] .mode-tg { top: 14px; right: 14px; }
+
+/* First-run help bubble — shown once */
+.help-bubble {
+  position: fixed;
+  bottom: 90px;
+  left: 20px;
+  right: 20px;
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 14px;
+  padding: 16px 18px;
+  z-index: 35;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3);
+  animation: bubble-in 300ms ease-out;
+}
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.help-bubble .icn { flex-shrink: 0; color: var(--mint); }
+.help-bubble .msg { font-size: 14px; line-height: 1.5; flex: 1; }
+.help-bubble .close { background: transparent; border: 0; color: #A8A49A; cursor: pointer; flex-shrink: 0; }
+
+/* Large readable chip */
+.simple-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.simple-chip.ok { background: #E3F7EC; color: var(--success); }
+.simple-chip.wait { background: #FFF4DD; color: #8A6210; }
+
+/* Screen transitions (150ms fade only — no bounce, no slide) */
+.simple-screen { animation: fade-simple 150ms ease-out; }
+@keyframes fade-simple {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── NEW: inline "help" button replaces giant WhatsApp CTA ─── */
+.simple-top .call-kiwi.help-inline { background: #F2F0EA; color: var(--ink); font-weight: 600; font-size: 14px; padding: 10px 14px; min-height: 40px; }
+.simple-top .call-kiwi.help-inline:hover { background: #E8E6E0; }
+
+/* ─── Small button (56 → 40px for secondary) ─── */
+.simple-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.9);
+  color: var(--success);
+  cursor: pointer;
+  transition: all 120ms;
+  font-family: var(--sans);
+}
+.simple-btn-sm:hover { background: #fff; }
+.simple-btn-sm.outline { background: transparent; border: 2px solid #D4D1C8; color: var(--ink); }
+.simple-btn-sm.outline:hover { border-color: var(--ink); background: #FAFAF8; }
+
+/* Payout card actions row */
+.lyoum-payout .payout-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ─── BIG TILE GRID (2×2 secondary actions) ─── */
+.big-tile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+.big-tile {
+  background: #fff;
+  border: 2px solid #E8E6E0;
+  border-radius: 16px;
+  padding: 20px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 160ms;
+  font-family: var(--sans);
+  color: var(--ink);
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+}
+.big-tile:hover { border-color: var(--atlas); transform: translateY(-2px); }
+.big-tile:active { transform: scale(0.98); }
+.big-tile .tile-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #F0F9F3;
+  color: var(--atlas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.big-tile .tile-n { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+.big-tile .tile-d { font-size: 13px; color: #4B4944; margin-top: 4px; line-height: 1.3; }
+
+/* Transaction row method tint */
+.simple-tx .av.visa { background: #EFF3FF; color: #1A1F71; border-color: #D7E2FF; }
+.simple-tx .av.mc { background: #FFF0EC; color: #EB001B; border-color: #FFDAD0; }
+.simple-tx .av.qr { background: #F2F0EA; color: var(--ink); border-color: #E0DCCE; }
+
+/* Section head with link */
+.simple-section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.simple-section-head .h { margin-bottom: 0; }
+.link-atlas { background: none; border: 0; color: var(--atlas); font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--sans); padding: 0; }
+.link-atlas:hover { text-decoration: underline; }
+
+/* ─── Kiwi Compte widget (Flousi tab) ─── */
+.compte-widget {
+  background: linear-gradient(135deg, #053B2C 0%, #0A4A38 40%, #0A5B42 100%);
+  color: #fff;
+  border-radius: 20px;
+  padding: 22px 24px;
+  margin-top: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.compte-widget::after {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(125,242,176,0.3), transparent 60%);
+  pointer-events: none;
+}
+.compte-widget .compte-label {
+  font-size: 11px;
+  color: #a7d5b9;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  font-weight: 500;
+  position: relative;
+}
+.compte-widget .compte-amt {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-top: 8px;
+  font-feature-settings: "tnum" 1;
+  position: relative;
+}
+.compte-widget .compte-amt span { font-size: 16px; color: #a7d5b9; margin-left: 6px; font-weight: 500; }
+.compte-widget .compte-iban {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: #c6ead4;
+  margin-top: 10px;
+  letter-spacing: 0.06em;
+  position: relative;
+}
+.compte-widget .compte-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  position: relative;
+}
+
+/* ─── Kiwi Capital pre-approved card ─── */
+.capital-card {
+  background: linear-gradient(135deg, #FDF9F0, #FFF4DD);
+  border: 2px solid #F5C679;
+  border-radius: 18px;
+  padding: 22px;
+  margin-top: 24px;
+}
+.capital-badge {
+  display: inline-block;
+  background: #8A6210;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--mono);
+}
+.capital-big {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 12px;
+  line-height: 1.1;
+}
+.capital-d {
+  font-size: 14px;
+  color: #4B4944;
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.capital-card .simple-btn { margin-top: 16px; background: #8A6210; }
+.capital-card .simple-btn:hover { background: #6B4B0D; }
+
+/* ─── AI Chat card in 3awn ─── */
+.ai-chat-card {
+  background: var(--ink);
+  color: #fff;
+  border-radius: 18px;
+  padding: 22px;
+  margin-top: 20px;
+}
+.ai-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.ai-chat-av {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #7DF2B0, var(--atlas));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-chat-n { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.ai-chat-s { font-size: 12.5px; color: #8f9591; margin-top: 2px; }
+.ai-chat-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ai-chat-s-btn {
+  background: rgba(125,242,176,0.08);
+  border: 1px solid rgba(125,242,176,0.18);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.ai-chat-s-btn:hover { background: rgba(125,242,176,0.15); border-color: rgba(125,242,176,0.3); }
+.ai-chat-card .simple-btn { background: var(--mint); color: #053B2C; }
+.ai-chat-card .simple-btn:hover { background: #a2f7c5; }
+
+/* WhatsApp card is now subtle (demoted) */
+.help-card.whatsapp.subtle { background: #fff; border-color: #E8E6E0; }
+.help-card.whatsapp.subtle:hover { border-color: #25D366; background: #F1FDF4; }
+.help-card.whatsapp.subtle .icn { background: #F1FDF4; color: #25D366; border: 1px solid #DAF0E2; }
+
+/* Big-pill mode toggle */
+.mode-tg.big { padding: 5px; }
+.mode-tg.big button { padding: 9px 20px; font-size: 13px; min-height: 36px; letter-spacing: 0.02em; }
+.mode-tg.big button.on { background: var(--atlas); color: #fff; }
+
+/* ─── Ghost (link-like) button ─── */
+.simple-btn.ghost { background: transparent; color: var(--n-500); border: 0; font-size: 15px; min-height: 44px; font-weight: 500; }
+.simple-btn.ghost:hover { color: var(--ink); background: transparent; }
+
+/* ─── Help hero (3awn) ─── */
+.help-hero-xl { padding: 26px 0 8px; text-align: left; }
+.help-hero-xl .help-greet { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.help-hero-xl p { font-size: 16px; color: var(--n-600); margin: 12px 0 24px; line-height: 1.55; }
+
+/* ─── Small circular icon button in top bar (help shortcut on Lyoum) ─── */
+.icon-btn-s {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #F2F0EA;
+  border: 0;
+  color: var(--n-600);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 150ms;
+}
+.icon-btn-s:hover { background: #E8E6E0; color: var(--ink); }
+
+/* ─── Mini tile grid (3-col secondary actions on Lyoum) ─── */
+.mini-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mini-tile {
+  background: #fff;
+  border: 1px solid #E8E6E0;
+  border-radius: 14px;
+  padding: 18px 12px;
+  cursor: pointer;
+  transition: all 150ms;
+  font-family: var(--sans);
+  color: var(--ink);
+  text-align: center;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mini-tile:hover { border-color: var(--atlas); background: #FAFAF8; }
+.mini-tile:active { transform: scale(0.97); }
+.mini-tile .mini-ic {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: #F0F9F3;
+  color: var(--atlas);
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-tile .mini-n {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+/* ─── Compte simple widget (Mon argent) ─── */
+.compte-simple {
+  background: linear-gradient(135deg, #053B2C, #0A5B42);
+  color: #fff;
+  border-radius: 18px;
+  padding: 22px 24px;
+  margin-top: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.compte-simple::after {
+  content: "";
+  position: absolute;
+  top: -50px; right: -30px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(125,242,176,0.25), transparent 60%);
+  pointer-events: none;
+}
+.compte-simple .compte-label {
+  font-size: 13px;
+  color: #a7d5b9;
+  position: relative;
+}
+.compte-simple .compte-amt {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.compte-simple .compte-amt span { font-size: 16px; color: #a7d5b9; margin-left: 5px; font-weight: 500; }
+.compte-simple .compte-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  position: relative;
+}
+.chip-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-family: var(--sans);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.chip-btn:hover { background: rgba(255,255,255,0.24); }
+
+/* ─── FAQ accordion (3awn) ─── */
+.faq {
+  border-top: 1px solid #E8E6E0;
+  padding: 2px 0;
+}
+.faq:first-of-type { border-top: 0; padding-top: 4px; }
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--n-500);
+  border-bottom: 2px solid var(--n-500);
+  transform: rotate(45deg);
+  transition: transform 160ms;
+  flex-shrink: 0;
+}
+.faq[open] summary::after { transform: rotate(-135deg); }
+.faq-body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--n-700);
+  padding: 0 0 16px;
+}
+
+/* ─── Section head small tweak ─── */
+.simple-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.simple-section-head .h { margin-bottom: 0; }
+.link-atlas {
+  background: none;
+  border: 0;
+  color: var(--atlas);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  padding: 0;
+}
+.link-atlas:hover { text-decoration: underline; }
+
+/* Hide pro-only interactions when in simple */
+html[data-mode="simple"] .kiwi-modal-backdrop,
+html[data-mode="simple"] .kiwi-drawer-backdrop { }
+/* (modals / drawers still work, just not auto-opened) */
+
+/* Tap target guardrail */
+html[data-mode="simple"] button,
+html[data-mode="simple"] a {
+  min-height: 44px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .simple-screen { animation: none; }
+}
+
+/* Small screens */
+@media (max-width: 400px) {
+  .simple-root { padding: 0 16px 120px; }
+  .lyoum-hero .amount { font-size: 56px; }
+  .amount-pad .display { font-size: 52px; }
+}

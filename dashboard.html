@@ -1,0 +1,1250 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kiwi · Tableau de bord commerçant</title>
+<link rel="icon" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+<link rel="stylesheet" href="assets/polish.css" />
+<link rel="stylesheet" href="assets/simple.css" />
+<link rel="stylesheet" href="assets/ux.css" />
+<style>
+  /* ─────────────── SHELL ─────────────── */
+  body { background: var(--n-50); font-size: 14px; color: var(--ink); }
+
+  /* Demo banner */
+  .demo-bar { background: var(--ink); color: var(--paper); font-size: 12px; padding: 9px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .demo-bar a { color: var(--mint); }
+  .demo-bar .left { display: flex; align-items: center; gap: 10px; }
+  .demo-bar .live-dot { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(125,242,176, 0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(125,242,176, 0); }
+  }
+
+  /* App shell */
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 37px); }
+  @media (max-width: 1100px) { .app { grid-template-columns: 1fr; } }
+
+  /* ─────────────── SIDEBAR ─────────────── */
+  .sidebar { background: var(--ink); color: #b5b9b6; padding: 18px 14px; position: sticky; top: 37px; height: calc(100vh - 37px); overflow-y: auto; display: flex; flex-direction: column; }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 4px; }
+  .sidebar .brand { display: flex; align-items: baseline; gap: 4px; color: var(--paper); font-weight: 700; font-size: 24px; letter-spacing: -0.05em; margin: 4px 10px 18px; }
+  .sidebar .brand i { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+
+  /* Location switcher */
+  .loc-switch { margin: 0 4px 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; cursor: pointer; transition: background 150ms; }
+  .loc-switch:hover { background: rgba(255,255,255,0.06); }
+  .loc-switch .top { display: flex; justify-content: space-between; align-items: center; }
+  .loc-switch .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--mint); letter-spacing: 0.08em; font-family: var(--mono); }
+  .loc-switch .badge i { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+  .loc-switch .name { color: var(--paper); font-weight: 500; font-size: 14px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: -0.01em; }
+  .loc-switch .meta { font-size: 11px; color: #8a9187; margin-top: 3px; }
+
+  .sidebar nav { display: flex; flex-direction: column; gap: 1px; }
+  .sidebar nav a { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; color: #8f9591; transition: all 120ms; position: relative; }
+  .sidebar nav a:hover { background: rgba(255,255,255,0.04); color: var(--paper); }
+  .sidebar nav a.active { background: rgba(125,242,176,0.08); color: var(--mint); }
+  .sidebar nav a.active::before { content: ""; position: absolute; left: -14px; top: 6px; bottom: 6px; width: 3px; background: var(--mint); border-radius: 0 2px 2px 0; }
+  .sidebar nav a svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar nav a .tag { margin-left: auto; font-size: 10px; background: rgba(125,242,176,0.1); color: var(--mint); padding: 2px 6px; border-radius: 999px; font-family: var(--mono); }
+  .sidebar nav a .count { margin-left: auto; font-size: 10.5px; color: #6a6e6c; font-family: var(--mono); }
+  .sidebar .sect { text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; color: #5a605c; margin: 20px 10px 8px; font-weight: 500; }
+
+  .sidebar .upsell { margin-top: auto; padding: 16px; border-radius: 12px; background: linear-gradient(145deg, rgba(125,242,176,0.08), rgba(11,110,79,0.1)); border: 1px solid rgba(125,242,176,0.12); margin-top: 18px; }
+  .sidebar .upsell .t { font-family: var(--mono); font-size: 10px; color: var(--mint); letter-spacing: 0.1em; }
+  .sidebar .upsell h4 { margin: 8px 0 4px; font-size: 14px; color: var(--paper); font-weight: 500; letter-spacing: -0.01em; }
+  .sidebar .upsell p { margin: 0; font-size: 12px; color: #8a9187; line-height: 1.4; }
+  .sidebar .upsell button { margin-top: 12px; width: 100%; background: var(--mint); color: var(--riad); padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+
+  .sidebar .merchant { padding: 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; transition: background 120ms; }
+  .sidebar .merchant:hover { background: rgba(255,255,255,0.04); }
+  .sidebar .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--mint), var(--atlas)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--riad-deep); font-weight: 600; font-size: 12px; }
+  .sidebar .m-info { flex: 1; min-width: 0; }
+  .sidebar .m-info .n { color: var(--paper); font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar .m-info .r { color: #8f9591; font-size: 11px; margin-top: 1px; }
+  .sidebar .m-caret { color: #6a6e6c; }
+
+  /* ─────────────── MAIN ─────────────── */
+  .main { padding: 0; max-width: 1320px; margin: 0 auto; width: 100%; }
+
+  /* ─────────────── TOPBAR · liquid glass float ─────────────── */
+  .topbar {
+    margin: 16px 24px 0;
+    padding: 8px 14px 8px 22px;
+    background: rgba(250,248,242,0.55);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 999px;
+    position: sticky;
+    top: 53px;
+    z-index: 20;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.7),
+      inset 0 -1px 0 rgba(10,15,13,0.04),
+      0 14px 36px -14px rgba(10,15,13,0.22),
+      0 4px 12px -4px rgba(10,15,13,0.08);
+  }
+  @media (max-width: 1100px) { .topbar { margin: 12px 12px 0; } }
+  .topbar > .topbar-inner { max-width: 1320px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 12px; }
+  .breadcrumb { font-size: 13px; color: var(--n-500); display: flex; align-items: center; gap: 8px; font-family: var(--mono); }
+  .breadcrumb b { color: var(--ink); font-family: var(--sans); font-weight: 500; }
+  .breadcrumb .sep { color: var(--n-300); }
+  .search-big {
+    flex: 1; max-width: 460px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.65);
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-size: 13.5px; color: var(--n-500);
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 auto;
+    transition: background 150ms, border-color 150ms, box-shadow 150ms;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .search-big:hover { background: rgba(255,255,255,0.72); border-color: rgba(255,255,255,0.9); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 4px rgba(10,15,13,0.06); }
+  .search-big .k { margin-left: auto; display: flex; gap: 3px; }
+  .search-big .k span { font-family: var(--mono); font-size: 10.5px; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px; color: var(--n-600); border: 1px solid rgba(255,255,255,0.6); }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--n-600); position: relative;
+    transition: all 150ms;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.85); color: var(--ink); transform: translateY(-1px); }
+  .icon-btn .badge { position: absolute; top: -3px; right: -3px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid rgba(250,248,242,0.9); font-family: var(--mono); }
+  .ai-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: var(--ink); color: var(--paper);
+    font-size: 13px; font-weight: 500;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px -2px rgba(10,15,13,0.25);
+    transition: transform 150ms, background 150ms;
+  }
+  .ai-btn:hover { background: var(--ink-soft); transform: translateY(-1px); }
+  .ai-btn svg { color: var(--mint); }
+
+  .container { padding: 28px 32px 80px; }
+
+  /* ─────────────── HERO TODAY CARD ─────────────── */
+  .hero-today { position: relative; background: linear-gradient(135deg, #0A4A38 0%, #0B6E4F 40%, #05301F 100%); color: var(--paper); border-radius: 22px; padding: 36px 40px; overflow: hidden; margin-bottom: 16px; }
+  .hero-today::before { content: ""; position: absolute; top: -100px; right: -80px; width: 360px; height: 360px; background: radial-gradient(circle, rgba(125,242,176,0.3), transparent 60%); pointer-events: none; }
+  .hero-today::after { content: ""; position: absolute; bottom: -60px; left: -60px; width: 260px; height: 260px; background: radial-gradient(circle, rgba(11,110,79,0.4), transparent 60%); pointer-events: none; }
+  .hero-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 50px; position: relative; z-index: 2; align-items: center; }
+  @media (max-width: 1200px) { .hero-grid { grid-template-columns: 1fr; gap: 30px; } }
+
+  .hero-left .greet { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .hero-left .live-badge { display: inline-flex; align-items: center; gap: 7px; background: rgba(125,242,176,0.12); padding: 5px 11px; border-radius: 999px; font-size: 11px; font-family: var(--mono); color: var(--mint); letter-spacing: 0.08em; border: 1px solid rgba(125,242,176,0.2); }
+  .hero-left .live-badge .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; animation: pulse-dot 2s infinite; }
+  .hero-left .meta { font-size: 13px; color: #a7d5b9; font-family: var(--mono); letter-spacing: 0.02em; }
+
+  .hero-amount { font-size: clamp(56px, 8vw, 110px); font-weight: 600; letter-spacing: -0.055em; line-height: 0.92; font-feature-settings: "tnum" 1; color: #fff; margin-top: 6px; white-space: nowrap; overflow: hidden; display: block; }
+  .hero-amount .currency { font-size: 0.28em; opacity: 0.55; margin-left: 10px; font-weight: 500; letter-spacing: 0.04em; }
+  .hero-amount .cents { opacity: 0.5; font-weight: 500; }
+
+  .hero-breakdown { display: flex; gap: 28px; margin-top: 18px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .hero-breakdown .b { font-size: 13px; }
+  .hero-breakdown .b .l { font-family: var(--mono); font-size: 10.5px; color: #a7d5b9; letter-spacing: 0.1em; }
+  .hero-breakdown .b .v { font-size: 17px; font-weight: 500; margin-top: 3px; font-feature-settings: "tnum" 1; letter-spacing: -0.01em; }
+  .hero-breakdown .b .v .d { font-size: 11.5px; color: var(--mint); margin-left: 6px; font-weight: 500; }
+  .hero-breakdown .b .v .d.dn { color: #F29B8F; }
+
+  /* Kiwi AI panel embedded in green hero */
+  .hero-right { position: relative; display: flex; flex-direction: column; gap: 18px; height: 100%; }
+  .hai-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--mint); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+  .hai-title { font-size: 19px; font-weight: 500; color: #fff; letter-spacing: -0.015em; margin-top: 6px; line-height: 1.25; }
+  .hai-recs { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+  .hai-rec { position: relative; padding-left: 16px; }
+  .hai-rec::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; background: var(--mint); border-radius: 1px; }
+  .hai-rec-title { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.4; letter-spacing: -0.005em; }
+  .hai-rec-obs { font-size: 13px; color: rgba(247,245,240,0.8); line-height: 1.55; margin-top: 5px; }
+  .hai-rec-act { font-size: 13px; font-weight: 600; color: var(--mint); line-height: 1.5; margin-top: 7px; }
+  .hai-input { display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.28); border: 1px solid rgba(125,242,176,0.18); border-radius: 999px; padding: 4px 4px 4px 18px; position: relative; }
+  .hai-input input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: #fff; font-family: var(--sans); font-size: 13px; padding: 9px 0; letter-spacing: -0.005em; }
+  .hai-input input::placeholder { color: rgba(247,245,240,0.5); }
+  .hai-send { width: 36px; height: 36px; border-radius: 50%; background: rgba(125,242,176,0.12); color: var(--mint); display: flex; align-items: center; justify-content: center; transition: background 150ms, transform 150ms; flex-shrink: 0; cursor: pointer; }
+  .hai-send:hover { background: rgba(125,242,176,0.22); transform: translateX(1px); }
+  .hai-tooltip { position: absolute; right: 0; bottom: calc(100% + 10px); background: var(--ink); color: var(--paper); font-size: 11.5px; padding: 6px 10px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity 150ms; white-space: nowrap; font-family: var(--mono); letter-spacing: 0.04em; }
+  .hai-tooltip::after { content: ""; position: absolute; top: 100%; right: 16px; border: 5px solid transparent; border-top-color: var(--ink); }
+  .hai-input:focus-within .hai-tooltip { opacity: 1; }
+
+  /* Goal progress */
+  .hero-goal { margin-top: 18px; }
+  .hero-goal .g-head { display: flex; justify-content: space-between; font-size: 12px; color: #a7d5b9; font-family: var(--mono); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .hero-goal .g-bar { height: 6px; background: rgba(0,0,0,0.25); border-radius: 3px; overflow: hidden; }
+  .hero-goal .g-fill { height: 100%; background: linear-gradient(90deg, var(--mint), #5CCFA0); border-radius: 3px; position: relative; transition: width 800ms cubic-bezier(0.32, 0.72, 0, 1); }
+  .hero-goal .g-fill::after { content: ""; position: absolute; top: 0; right: 0; width: 24px; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4)); animation: shimmer 2.5s infinite; }
+  @keyframes shimmer { 0% { transform: translateX(-28px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateX(8px); opacity: 0; } }
+
+  /* ─────────────── KPI BAND ─────────────── */
+  .kpi-band { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 1400px) { .kpi-band { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px) { .kpi-band { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-m { background: #fff; border: 1px solid var(--n-200); border-radius: 12px; padding: 16px 18px; transition: border-color 150ms; cursor: default; position: relative; }
+  .kpi-m:hover { border-color: var(--n-400); }
+  .kpi-m .l { font-size: 10.5px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+  .kpi-m .l .ico { width: 24px; height: 24px; border-radius: 6px; background: var(--paper-soft); color: var(--atlas); display: flex; align-items: center; justify-content: center; }
+  .kpi-m .v { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; margin-top: 10px; font-feature-settings: "tnum" 1; line-height: 1; }
+  .kpi-m .v .u { font-size: 12px; color: var(--n-500); margin-left: 4px; font-weight: 500; }
+  .kpi-m .d { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11.5px; font-weight: 500; color: var(--success); }
+  .kpi-m .d.dn { color: var(--danger); }
+  .kpi-m .d.neutral { color: var(--n-500); }
+  .kpi-m .sp { height: 22px; margin-top: 8px; margin-left: -2px; }
+
+  /* ─────────────── BLOCK STYLE ─────────────── */
+  .block { background: #fff; border: 1px solid var(--n-200); border-radius: 14px; padding: 22px 24px; }
+  .block-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+  .block-head .t { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+  .block-head .t .pulse-dot { width: 7px; height: 7px; background: var(--success); border-radius: 50%; animation: pulse-dot 2s infinite; }
+  .block-head .s { font-size: 12.5px; color: var(--n-500); margin-top: 3px; }
+  .block-head .right-actions { display: flex; gap: 8px; align-items: center; }
+
+  .range { display: inline-flex; background: var(--n-100); border-radius: 8px; padding: 2px; font-size: 12px; }
+  .range span { padding: 5px 10px; color: var(--n-500); border-radius: 6px; cursor: pointer; transition: all 100ms; }
+  .range .on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-weight: 500; }
+  .range span:hover:not(.on) { color: var(--ink); }
+
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+  .chip.ok { background: #E3F7EC; color: var(--atlas-700); }
+  .chip.pend { background: #FFF4DD; color: #8A6210; }
+  .chip.ref { background: #FDE8E4; color: #9B2F22; }
+  .chip.neutral { background: var(--n-100); color: var(--n-600); }
+
+  /* ─────────────── ROW LAYOUT ─────────────── */
+  .row { display: grid; gap: 14px; margin-bottom: 16px; }
+  .row.r-2-1 { grid-template-columns: 2fr 1fr; }
+  .row.r-1-1 { grid-template-columns: 1fr 1fr; }
+  .row.r-3 { grid-template-columns: repeat(3, 1fr); }
+  .row.r-65-35 { grid-template-columns: 1.85fr 1fr; }
+  @media (max-width: 1100px) { .row.r-2-1, .row.r-1-1, .row.r-3, .row.r-65-35 { grid-template-columns: 1fr; } }
+
+  /* ─────────────── REVENUE CHART ─────────────── */
+  .chart-wrap { height: 280px; display: block; }
+  .chart-legend { display: inline-flex; gap: 18px; font-size: 12px; color: var(--n-500); font-weight: 500; margin-top: 14px; flex-wrap: wrap; }
+  .chart-legend label { display: inline-flex; align-items: center; gap: 8px; }
+  .chart-legend .leg-line { display: inline-block; width: 14px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+  .chart-legend .leg-line-primary { background: var(--riad); }
+  .chart-legend .leg-line-compare { background: #9A9A9A; }
+  /* Chart entrance — pathLength=1 trick keeps duration path-length-independent */
+  .rev-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rev-draw 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  @keyframes rev-draw { to { stroke-dashoffset: 0; } }
+  .rev-area { opacity: 0; animation: rev-area 1000ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards; }
+  @keyframes rev-area { to { opacity: 1; } }
+  .rev-cmp {
+    stroke-dasharray: 1; stroke-dashoffset: 1;
+    animation: rev-cmp-draw 1000ms cubic-bezier(0.16, 1, 0.3, 1) 100ms forwards;
+    transition: opacity 400ms ease-out;
+  }
+  @keyframes rev-cmp-draw { to { stroke-dashoffset: 0; } }
+  /* Pointer-driven tooltip + active dots — fade controlled inline via JS */
+  .rev-hit { cursor: crosshair; }
+  .rev-tip { transition: opacity 140ms ease-out; pointer-events: none; }
+  .rev-active { pointer-events: none; }
+  /* Suppress entrance animations on resize-only re-renders */
+  .chart-wrap.no-anim .rev-line,
+  .chart-wrap.no-anim .rev-cmp,
+  .chart-wrap.no-anim .rev-area { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+  /* Compare-toggle re-render: keep the primary line still, only animate the cmp line */
+  .chart-wrap.cmp-toggle .rev-line,
+  .chart-wrap.cmp-toggle .rev-area { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+
+  /* Comparer toggle — sits in the rev-card header right-actions */
+  .cmp-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    background: var(--paper-soft); color: var(--n-600);
+    border: 1px solid transparent;
+    transition: background 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out;
+    cursor: pointer; letter-spacing: -0.005em;
+  }
+  .cmp-btn:hover:not(.on) { background: var(--n-100); color: var(--ink); }
+  .cmp-btn.on {
+    background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%);
+    color: var(--paper);
+    box-shadow: 0 4px 14px -4px rgba(11,110,79,0.45), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .cmp-caption {
+    font-size: 11px; font-style: italic; color: var(--n-500);
+    margin-top: 4px; letter-spacing: 0.01em;
+  }
+
+  /* Donut entrance + smooth range transition */
+  [data-mix-donut] .seg {
+    transition: stroke-dasharray 600ms cubic-bezier(0.32, 0.72, 0, 1),
+                stroke-dashoffset 600ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .ring-center { opacity: 0; transform: scale(0.95); transform-origin: center;
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+  .ring-center.in { opacity: 1; transform: scale(1); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .rev-line, .rev-cmp, .rev-area { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+    [data-mix-donut] .seg { transition: none !important; }
+    .ring-center { transition: none !important; opacity: 1 !important; transform: none !important; }
+    .g-fill { transition: none !important; }
+    .hero-today, .fade-in { animation: none !important; }
+  }
+
+  /* ─────────────── DONUT ─────────────── */
+  .donut-row { display: flex; align-items: center; gap: 28px; }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+  .donut-legend .li { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--n-200); }
+  .donut-legend .li:last-child { border-bottom: 0; }
+  .donut-legend .li .n { display: flex; align-items: center; gap: 9px; color: var(--ink); }
+  .donut-legend .li .n i { width: 10px; height: 10px; border-radius: 3px; }
+  .donut-legend .li .v { font-family: var(--mono); font-weight: 500; font-size: 12.5px; color: var(--ink); }
+  .donut-legend .li .v .d { font-size: 10.5px; color: var(--success); margin-left: 6px; font-weight: 500; }
+
+  /* ─────────────── HOURLY HEATMAP (horizontal) ─────────────── */
+  .hh-row { display: flex; gap: 6px; margin-top: 18px; }
+  .hh-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; }
+  .hh-cell { width: 100%; height: 84px; border-radius: 8px; cursor: pointer; transition: transform 150ms; position: relative; }
+  .hh-cell:hover { transform: scale(1.05); z-index: 2; }
+  .hh-cell.i0 { background: #E8F5EC; }
+  .hh-cell.i1 { background: #B9E5CC; }
+  .hh-cell.i2 { background: #7FD4A4; }
+  .hh-cell.i3 { background: #3FB57A; }
+  .hh-cell.i4 { background: #0B6E4F; }
+  .hh-h { font-size: 11px; color: var(--n-500); font-weight: 500; margin-top: 8px; font-family: var(--mono); text-align: center; letter-spacing: 0.02em; }
+  .hh-tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #fff; border: 1px solid var(--n-200); border-radius: 8px; padding: 8px 12px; box-shadow: 0 8px 20px -8px rgba(10,15,13,0.15), 0 1px 3px rgba(10,15,13,0.06); opacity: 0; pointer-events: none; transition: opacity 150ms; white-space: nowrap; z-index: 3; }
+  .hh-tooltip .hour { font-size: 12px; font-weight: 600; color: var(--ink); }
+  .hh-tooltip .met { font-size: 12px; color: var(--n-500); margin-top: 1px; font-feature-settings: 'tnum' 1; }
+  .hh-tooltip .met b { color: var(--ink); font-weight: 500; }
+  .hh-cell:hover .hh-tooltip { opacity: 1; }
+  .hh-legend { display: flex; justify-content: space-between; margin-top: 14px; font-size: 11px; color: var(--n-400); }
+  /* Heatmap · Kiwi AI hint */
+  .hh-ai {
+    margin-top: 22px;
+    padding: 14px 16px 16px;
+    background: var(--paper-soft);
+    border-radius: 12px;
+    display: flex; gap: 14px; align-items: flex-start;
+    border-left: 3px solid var(--atlas);
+  }
+  .hh-ai-icon {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--atlas), var(--riad));
+    color: var(--mint);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    box-shadow: 0 2px 6px -2px rgba(11,110,79,0.45);
+  }
+  .hh-ai-body { flex: 1; min-width: 0; }
+  .hh-ai-eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--atlas); font-weight: 600; }
+  .hh-ai-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 5px; letter-spacing: -0.01em; line-height: 1.35; }
+  .hh-ai-obs { font-size: 12.5px; color: var(--n-700); margin-top: 6px; line-height: 1.55; }
+  .hh-ai-cta { display: inline-block; margin-top: 9px; font-size: 12.5px; font-weight: 600; color: var(--atlas); }
+  .hh-ai-cta:hover { text-decoration: underline; }
+
+  /* ─────────────── LIVE TX FEED ─────────────── */
+  .feed-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+  .feed { display: flex; flex-direction: column; gap: 2px; }
+  .feed-row { display: grid; grid-template-columns: 56px 1.3fr 1fr 1fr 90px 26px; padding: 11px 0; font-size: 13px; align-items: center; border-bottom: 1px solid var(--n-200); transition: background 120ms; gap: 12px; }
+  .feed-row:last-child { border-bottom: 0; }
+  .feed-row:hover { background: var(--n-50); }
+  .feed-row.new { animation: slide-in 500ms cubic-bezier(0.32, 0.72, 0, 1); }
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-8px); background: rgba(125,242,176,0.1); }
+    to { opacity: 1; transform: translateY(0); background: transparent; }
+  }
+  .feed-row .t { font-family: var(--mono); font-size: 11.5px; color: var(--n-500); }
+  .feed-row .method { display: inline-flex; align-items: center; gap: 9px; }
+  .feed-row .method .ci { width: 28px; height: 19px; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 600; }
+  .feed-row .method .ci.visa { background: linear-gradient(135deg, #1A1F71 50%, #F7B600 50%); }
+  .feed-row .method .ci.mc { background: radial-gradient(circle at 35% 50%, #EB001B 44%, transparent 45%), radial-gradient(circle at 65% 50%, #F79E1B 44%, transparent 45%), #fff; border: 1px solid var(--n-200); }
+  .feed-row .method .ci.tap { background: var(--atlas); color: var(--mint); }
+  .feed-row .method .ci.qr { background: var(--ink); color: var(--mint); }
+  .feed-row .method .ci.cmi { background: linear-gradient(135deg, #C41E3A, #8B1025); color: #fff; }
+  .feed-row .method .desc { line-height: 1.3; }
+  .feed-row .method .desc .primary { color: var(--ink); font-weight: 500; }
+  .feed-row .method .desc .sub { color: var(--n-500); font-size: 11px; margin-top: 1px; display: flex; align-items: center; gap: 5px; }
+  .feed-row .method .flag { display: inline-block; width: 12px; height: 9px; border-radius: 1px; }
+  .feed-row .flag.ma { background: linear-gradient(#C1272D 50%, #006233 50%); }
+  .feed-row .flag.fr { background: linear-gradient(to right, #002395 33%, #FFF 33%, #FFF 66%, #ED2939 66%); }
+  .feed-row .flag.es { background: linear-gradient(#C60B1E 30%, #FFC400 30%, #FFC400 70%, #C60B1E 70%); }
+  .feed-row .flag.us { background: #3C3B6E; }
+  .feed-row .amt { font-family: var(--mono); font-weight: 500; text-align: right; font-feature-settings: "tnum" 1; font-size: 14px; }
+  .feed-row .tip { font-family: var(--mono); font-size: 11.5px; color: var(--success); text-align: right; font-feature-settings: "tnum" 1; }
+  .feed-row .ctx { color: var(--n-500); font-size: 11.5px; }
+  .feed-row .more { color: var(--n-400); display: flex; justify-content: flex-end; }
+  .feed-row .more:hover { color: var(--ink); cursor: pointer; }
+
+  /* ─────────────── SETTLEMENT ─────────────── */
+  .settle { background: linear-gradient(135deg, var(--atlas) 0%, #053B2C 120%); color: var(--paper); border-radius: 14px; padding: 20px 22px; position: relative; overflow: hidden; }
+  .settle::after { content: ""; position: absolute; right: -50px; top: -50px; width: 180px; height: 180px; background: radial-gradient(circle, var(--mint) 0%, transparent 60%); opacity: 0.2; pointer-events: none; }
+  .settle .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--mint); font-weight: 500; font-family: var(--mono); }
+  .settle .big { font-size: 40px; font-weight: 600; letter-spacing: -0.035em; margin-top: 6px; font-feature-settings: "tnum" 1; line-height: 1; }
+  .settle .sub { color: #c6ead4; font-size: 13px; margin-top: 10px; }
+  .settle .detail { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; font-size: 13px; }
+  .settle .instant { margin-top: 14px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 10px 12px; border-radius: 10px; font-size: 12.5px; cursor: pointer; transition: background 150ms; }
+  .settle .instant:hover { background: rgba(0,0,0,0.32); }
+  .settle .instant .ico { color: var(--mint); }
+  .settle .instant .cost { margin-left: auto; color: var(--mint); font-family: var(--mono); }
+
+  /* Settlement timeline */
+  .timeline-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+  .timeline-day { background: var(--n-50); border: 1px solid var(--n-200); border-radius: 8px; padding: 10px 8px; text-align: center; transition: all 150ms; position: relative; }
+  .timeline-day.today { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .timeline-day.tomorrow { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
+  .timeline-day.tomorrow::before { content: ""; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border: 2px solid var(--mint); border-radius: 10px; pointer-events: none; }
+  .timeline-day .d { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); opacity: 0.7; }
+  .timeline-day .n { font-size: 16px; font-weight: 600; margin: 3px 0; letter-spacing: -0.02em; }
+  .timeline-day .a { font-family: var(--mono); font-size: 10.5px; font-weight: 500; }
+  .timeline-day.tomorrow .a { color: var(--mint); }
+  .timeline-day .t { font-size: 9px; letter-spacing: 0.05em; opacity: 0.6; margin-top: 2px; }
+
+  /* ─────────────── HEALTH SCORE + BENCHMARK ─────────────── */
+  .health-grid { display: grid; grid-template-columns: 160px 1fr; gap: 28px; align-items: center; }
+  @media (max-width: 900px) { .health-grid { grid-template-columns: 1fr; text-align: center; } }
+  .ring-svg { width: 160px; height: 160px; }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-center .score { font-size: 42px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+  .ring-center .slash { font-size: 15px; color: var(--n-500); margin-top: 2px; font-family: var(--mono); }
+  .health-check { list-style: none; padding: 0; margin: 0; }
+  .health-check li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--n-200); font-size: 13.5px; }
+  .health-check li:first-child { border-top: 0; padding-top: 0; }
+  .health-check li .status { display: flex; align-items: center; gap: 6px; font-size: 12px; font-family: var(--mono); }
+  .health-check li .status.good { color: var(--success); }
+  .health-check li .status.warn { color: var(--warning); }
+
+  /* Benchmark */
+  .bench-rank { display: flex; align-items: baseline; gap: 10px; }
+  .bench-rank .r { font-size: 58px; font-weight: 600; letter-spacing: -0.04em; color: var(--atlas); font-feature-settings: "tnum" 1; }
+  .bench-rank .s { font-size: 16px; color: var(--n-500); }
+  .bench-rank .s b { color: var(--ink); font-weight: 500; }
+  .bench-comp { display: flex; flex-direction: column; gap: 2px; margin-top: 18px; }
+  .bench-row { display: grid; grid-template-columns: 140px 1fr 80px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--n-200); font-size: 13px; }
+  .bench-row:last-child { border-bottom: 0; }
+  .bench-row .lbl { color: var(--n-500); font-size: 12px; }
+  .bench-bar { height: 6px; background: var(--n-100); border-radius: 3px; overflow: hidden; position: relative; }
+  .bench-bar .you { height: 100%; background: var(--atlas); border-radius: 3px; position: relative; }
+  .bench-bar .peer { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--n-600); }
+  .bench-row .v { font-family: var(--mono); font-weight: 500; font-size: 12.5px; text-align: right; color: var(--atlas); }
+
+  /* ─────────────── PRODUCTS / STAFF ─────────────── */
+  .prod-list { display: flex; flex-direction: column; gap: 2px; }
+  .prod-row { display: grid; grid-template-columns: 30px 1fr 80px 60px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--n-200); font-size: 13.5px; }
+  .prod-row:last-child { border-bottom: 0; }
+  .prod-row .rank { font-family: var(--mono); font-size: 12px; color: var(--n-400); font-weight: 500; }
+  .prod-row .rank.top { color: var(--atlas); font-weight: 600; }
+  .prod-row .info .n { font-weight: 500; letter-spacing: -0.005em; }
+  .prod-row .info .r { font-size: 11.5px; color: var(--n-500); margin-top: 2px; }
+  .prod-row .mini-bar { height: 4px; background: var(--n-100); border-radius: 2px; overflow: hidden; }
+  .prod-row .mini-bar > div { height: 100%; background: var(--atlas); border-radius: 2px; }
+  .prod-row .sales { font-family: var(--mono); font-weight: 500; font-size: 12.5px; text-align: right; }
+
+  /* Staff */
+  .staff-row { display: grid; grid-template-columns: 38px 1fr 50px 70px; gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--n-200); font-size: 13.5px; }
+  .staff-row:last-child { border-bottom: 0; }
+  .staff-row .av { width: 34px; height: 34px; border-radius: 50%; background: var(--atlas); color: var(--paper); font-weight: 600; display: flex; align-items: center; justify-content: center; font-size: 12px; letter-spacing: -0.02em; position: relative; }
+  .staff-row .av.b { background: var(--riad); }
+  .staff-row .av.c { background: #D99A2B; }
+  .staff-row .av.d { background: var(--atlas-700); }
+  .staff-row .av::after { content: ""; position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--success); border: 2px solid #fff; }
+  .staff-row .av.offline::after { background: var(--n-300); }
+  .staff-row .info .n { font-weight: 500; font-size: 13.5px; }
+  .staff-row .info .role { font-size: 11.5px; color: var(--n-500); margin-top: 2px; }
+  .staff-row .shift { font-family: var(--mono); font-size: 11.5px; color: var(--n-500); }
+  .staff-row .tx-n { font-family: var(--mono); font-size: 12.5px; font-weight: 500; text-align: right; }
+
+  /* ─────────────── INTEGRATIONS ─────────────── */
+  .integ-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 4px; }
+  @media (max-width: 1000px) { .integ-grid { grid-template-columns: 1fr 1fr; } }
+  .integ-card { background: #fff; border: 1px solid var(--n-200); border-radius: 12px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; transition: border-color 150ms; }
+  .integ-card:hover { border-color: var(--n-400); }
+  .integ-card .logo { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: -0.04em; color: #fff; flex-shrink: 0; font-size: 15px; }
+  .integ-card .info { flex: 1; min-width: 0; }
+  .integ-card .n { font-weight: 500; font-size: 13.5px; letter-spacing: -0.005em; }
+  .integ-card .s { font-size: 11.5px; color: var(--n-500); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+  .integ-card .s .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .integ-card .s .dot.warn { background: var(--warning); }
+
+  /* ─────────────── ANIMATION ─────────────── */
+  .counter { display: inline-block; }
+  .fade-in { animation: fade-in 600ms ease-out; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Dashboard title area */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 16px; }
+  .page-head h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.032em; margin: 0; line-height: 1.1; }
+  .page-head h1 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+  .page-head .sub { color: var(--n-500); font-size: 13.5px; margin-top: 5px; display: flex; align-items: center; gap: 10px; }
+  .page-head .sub .pip { width: 4px; height: 4px; background: var(--n-300); border-radius: 50%; }
+  .quick-acts { display: flex; gap: 8px; align-items: center; }
+  .btn-slim { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 500; border: 1px solid var(--n-200); background: #fff; color: var(--ink); transition: all 150ms; }
+  .btn-slim:hover { border-color: var(--n-400); }
+  .btn-slim.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .btn-slim.primary:hover { background: var(--atlas); border-color: var(--atlas); }
+
+  /* ─────────────── DATE RANGE SELECTOR ─────────────── */
+  .dash-date-range { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin: 22px 0 26px; flex-wrap: wrap; }
+  .dash-date-range .dr-label { font-size: 34px; font-weight: 600; letter-spacing: -0.028em; color: var(--ink); line-height: 1.1; }
+  .dash-date-range .dr-sub { font-size: 13.5px; color: var(--n-500); margin-top: 6px; font-family: var(--mono); letter-spacing: 0.01em; }
+  .dr-pills { display: inline-flex; gap: 8px; background: var(--paper-soft); padding: 4px; border-radius: 999px; border: 1px solid var(--n-200); flex-wrap: wrap; }
+  .dr-pill { padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--n-500); background: transparent; letter-spacing: -0.005em; transition: background 150ms, color 150ms, box-shadow 150ms; cursor: pointer; white-space: nowrap; }
+  .dr-pill:hover:not(.on) { background: var(--n-100); color: var(--ink); }
+  .dr-pill.on { background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%); color: var(--paper); box-shadow: 0 4px 14px -4px rgba(11,110,79,0.45), 0 1px 2px rgba(0,0,0,0.04); }
+  .dr-pills.compact { padding: 3px; gap: 3px; }
+  .dr-pills.compact .dr-pill { padding: 6px 12px; font-size: 12px; }
+  @media (max-width: 720px) { .dash-date-range .dr-label { font-size: 26px; } }
+
+  /* Footer bar */
+  .status-bar { display: flex; justify-content: space-between; padding: 18px 32px; color: var(--n-500); font-size: 12px; background: var(--n-50); border-top: 1px solid var(--n-200); flex-wrap: wrap; gap: 16px; }
+  .status-bar .pip { width: 6px; height: 6px; background: var(--success); border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-bar a { color: var(--atlas); }
+</style>
+</head>
+<body>
+
+<!-- Demo banner -->
+<div class="demo-bar">
+  <div class="left">
+    <span class="live-dot"></span>
+    <span>Démo live · compte <b style="color:var(--paper);">Café Atlas</b> · données synthétiques mises à jour en temps réel</span>
+  </div>
+  <div><a href="index.html">← Retour au site</a></div>
+</div>
+
+<div class="app">
+
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside class="sidebar">
+    <div class="brand">kiwi<i></i></div>
+
+    <div class="loc-switch">
+      <div class="top">
+        <span class="badge"><i></i>EN SERVICE</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a9187" stroke-width="2"><path d="M7 10l5 5 5-5"/></svg>
+      </div>
+      <div class="name">Café Atlas · Maarif</div>
+      <div class="meta">2 autres emplacements · Casa / Marrakech</div>
+    </div>
+
+    <nav>
+      <a href="#" class="active" data-nav="accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+        Accueil
+      </a>
+      <a href="#" data-nav="transactions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Transactions
+        <span class="count">182</span>
+      </a>
+      <a href="#" data-nav="terminaux">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>
+        Terminaux
+        <span class="count">3</span>
+      </a>
+      <a href="#" data-nav="reglements">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V8a2 2 0 00-2-2H5a2 2 0 00-2 2v7m18 0l-9 6-9-6m18 0v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5"/></svg>
+        Règlements
+      </a>
+      <a href="#" data-nav="conformite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Conformité
+        <span class="tag">AAA</span>
+      </a>
+      <a href="#" data-nav="equipe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg>
+        Équipe
+        <span class="count">8</span>
+      </a>
+      <a href="#" data-nav="payroll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        Paie & planning
+        <span class="tag">NOUV.</span>
+      </a>
+      <a href="#" data-nav="reservations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+        Réservations & RDV
+        <span class="tag">NOUV.</span>
+      </a>
+
+      <div class="sect">Restauration</div>
+      <a href="#" data-nav="tables">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Tables & additions
+        <span class="tag">LIVE</span>
+      </a>
+      <a href="#" data-nav="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        Menu & modificateurs
+      </a>
+      <a href="#" data-nav="kds">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
+        Écran cuisine (KDS)
+      </a>
+      <a href="#" data-nav="stock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 10h12M9 14h6"/></svg>
+        Stock ingrédients
+      </a>
+
+      <div class="sect">Banque commerçant</div>
+      <a href="#" data-action="kiwi-compte">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4"/></svg>
+        Kiwi Compte · IBAN
+      </a>
+      <a href="#" data-action="capital">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Avance trésorerie
+        <span class="tag">NOUV.</span>
+      </a>
+      <a href="#" data-action="loyalty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+        Fidélité clients
+      </a>
+      <a href="#" data-action="payment-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 10a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Liens de paiement
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+        Factures & TVA
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg>
+        Analytiques
+      </a>
+    </nav>
+
+    <div class="upsell">
+      <div class="t">KIWI PRO</div>
+      <h4>699 MAD/mois</h4>
+      <p>Multi-terminal, gestion stock, API et intégrations. Upgrade depuis Basic 399 sans engagement.</p>
+      <button data-action="upgrade-pro">Passer à Pro →</button>
+    </div>
+
+    <div class="merchant">
+      <div class="avatar">RB</div>
+      <div class="m-info">
+        <div class="n">Rachid Benhima</div>
+        <div class="r">Propriétaire · admin</div>
+      </div>
+      <div class="m-caret">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar"><div class="topbar-inner">
+      <div class="breadcrumb">
+        Accueil <span class="sep">/</span> <b>Tableau de bord</b>
+      </div>
+      <div class="search-big">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        Rechercher transaction, produit, client, équipe…
+        <div class="k"><span>⌘</span><span>K</span></div>
+      </div>
+      <button class="icon-btn" aria-label="Notifications">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21a2 2 0 004 0"/></svg>
+        <span class="badge">3</span>
+      </button>
+      <button class="icon-btn" aria-label="Paramètres">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <button class="ai-btn" data-action="agent-mode">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 2l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="currentColor"/></svg>
+        Kiwi AI · Agent
+      </button>
+    </div></div>
+
+    <div class="container">
+
+      <!-- Page head -->
+      <div class="page-head">
+        <div>
+          <h1>Bonjour Rachid, <em>bonne journée ?</em></h1>
+          <div class="sub">Vendredi 24 avril 2026 · Service midi en cours <span class="pip"></span> Dernière maj il y a 4 sec</div>
+        </div>
+        <div class="quick-acts">
+          <button class="btn-slim" data-action="payment-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 10a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            Lien de paiement
+          </button>
+          <button class="btn-slim" data-action="export">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>
+            Exporter
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ DATE RANGE SELECTOR ═══ -->
+      <div class="dash-date-range">
+        <div>
+          <div class="dr-label" data-dr-label>Aujourd'hui</div>
+          <div class="dr-sub" data-dr-sub>24.04.2026</div>
+        </div>
+        <div class="dr-pills" role="tablist">
+          <button class="dr-pill on" data-action="date-range" data-range="aujourdhui" data-i18n="dash.range.pill.today">Aujourd'hui</button>
+          <button class="dr-pill" data-action="date-range" data-range="hier" data-i18n="dash.range.pill.yesterday">Hier</button>
+          <button class="dr-pill" data-action="date-range" data-range="septJours" data-i18n="dash.range.pill.7d">7 jours</button>
+          <button class="dr-pill" data-action="date-range" data-range="trenteJours" data-i18n="dash.range.pill.30d">30 jours</button>
+          <button class="dr-pill" data-action="date-range" data-range="personnalise" data-i18n="dash.range.pill.custom">Personnalisé</button>
+        </div>
+      </div>
+
+      <!-- ═══ HERO TODAY CARD ═══ -->
+      <div class="hero-today fade-in">
+        <div class="hero-grid">
+          <div class="hero-left">
+            <div class="greet">
+              <span class="live-badge"><span class="dot"></span>LIVE · 14:37 GMT+1</span>
+              <span class="meta">24 heures · session continue depuis 08:12</span>
+            </div>
+            <div style="font-size: 13px; color: #a7d5b9; font-family: var(--mono); letter-spacing: 0.06em;" data-hero-label>ENCAISSÉ AUJOURD'HUI</div>
+            <div class="hero-amount" data-hero-amount>27 512<span class="cents">,50</span><span class="currency">MAD</span></div>
+            <div class="hero-breakdown">
+              <div class="b" data-hero-delta="hier">
+                <div class="l">VS HIER</div>
+                <div class="v" data-hero-delta-val>+3 724 MAD <span class="d">↑</span></div>
+              </div>
+              <div class="b" data-hero-delta="semaine">
+                <div class="l">VS SEMAINE</div>
+                <div class="v" data-hero-delta-val>+18 % <span class="d">↑</span></div>
+              </div>
+              <div class="b" data-hero-delta="mois">
+                <div class="l">VS MOIS DERNIER</div>
+                <div class="v" data-hero-delta-val>+9 % <span class="d">↑</span></div>
+              </div>
+              <div class="b">
+                <div class="l">NET APRÈS KIWI</div>
+                <div class="v" data-hero-net-val>23 091 MAD</div>
+              </div>
+            </div>
+            <div class="hero-goal">
+              <div class="g-head">
+                <span data-goal-label>OBJECTIF JOUR · 28 000 MAD</span>
+                <span data-goal-pct>87 %</span>
+              </div>
+              <div class="g-bar">
+                <div class="g-fill" data-goal-fill style="width: 87%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div>
+              <div class="hai-eyebrow" data-i18n="dash.hero.ai.eyebrow">KIWI AI</div>
+              <div class="hai-title" data-i18n="dash.hero.ai.title">Recommandations du jour</div>
+            </div>
+            <div class="hai-recs">
+              <div class="hai-rec">
+                <div class="hai-rec-title" data-i18n="dash.hero.ai.rec1.title">Votre heure creuse de 15h-17h représente un potentiel inexploité</div>
+                <div class="hai-rec-obs" data-i18n="dash.hero.ai.rec1.obs">Entre 15h et 17h, vous réalisez seulement 8% de votre chiffre d'affaires quotidien. Pourtant, c'est l'heure où vos clients restent le plus longtemps assis (temps moyen : 47 minutes, contre 31 minutes au déjeuner).</div>
+                <div class="hai-rec-act" data-i18n="dash.hero.ai.rec1.act">→ Proposer un menu « goûter » avec thé à la menthe et msemen à prix réduit pourrait augmenter la rotation des tables de 20-30%.</div>
+              </div>
+            </div>
+            <form class="hai-input" onsubmit="event.preventDefault();">
+              <input type="text" data-hai-input data-i18n-attr="placeholder:dash.hero.ai.input.placeholder" placeholder="Posez votre question sur votre restaurant..." />
+              <button type="submit" class="hai-send" aria-label="Envoyer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+              </button>
+              <span class="hai-tooltip" data-i18n="dash.hero.ai.soon">Bientôt disponible</span>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ KPI BAND (6 cards) ═══ -->
+      <div class="kpi-band">
+        <div class="kpi-m" data-kpi="tx">
+          <div class="l"><span data-i18n="dash.kpi.tx">Transactions</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div></div>
+          <div class="v" data-kpi-val>182</div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+15,2 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 18 L15 15 L30 16 L45 12 L60 10 L75 7 L90 11 L105 6 L120 4" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kpi-m" data-kpi="panier">
+          <div class="l"><span data-i18n="dash.kpi.basket">Panier moyen</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V5a4 4 0 018 0v3"/></svg></div></div>
+          <div class="v" data-kpi-val>134<span class="u">MAD</span></div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+1,5 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 11 L15 13 L30 10 L45 14 L60 11 L75 12 L90 10 L105 13 L120 11" stroke="#A8A49A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kpi-m" data-kpi="tips">
+          <div class="l"><span data-i18n="dash.kpi.tips">Pourboires</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M15 5H9.5a2.5 2.5 0 000 5h5a2.5 2.5 0 010 5H8"/></svg></div></div>
+          <div class="v" data-kpi-val>1 867<span class="u">MAD</span></div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+32 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 18 L15 16 L30 14 L45 15 L60 10 L75 11 L90 7 L105 4 L120 2" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kpi-m" data-kpi="success">
+          <div class="l"><span data-i18n="dash.kpi.success">Taux succès</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="v" data-kpi-val>99,34<span class="u">%</span></div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+0,2 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 7 L15 6 L30 8 L45 5 L60 6 L75 4 L90 5 L105 3 L120 2" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kpi-m" data-kpi="ratio">
+          <div class="l"><span data-i18n="dash.kpi.ratio">Ratio card / cash</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg></div></div>
+          <div class="v" data-kpi-val>68 / 32<span class="u">%</span></div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+4 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 14 L15 13 L30 12 L45 11 L60 10 L75 9 L90 7 L105 6 L120 5" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kpi-m" data-kpi="regulars">
+          <div class="l"><span data-i18n="dash.kpi.regular">Clients réguliers</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg></div></div>
+          <div class="v" data-kpi-val>47<span class="u">/ 182</span></div>
+          <div class="d" data-kpi-delta><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 15l6-6 6 6"/></svg>+26 % vs hier</div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="M0 15 L15 14 L30 15 L45 13 L60 10 L75 11 L90 9 L105 8 L120 6" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ═══ REVENUE CHART · full width ═══ -->
+      <div class="row">
+        <div class="block rev-card">
+          <div class="block-head">
+            <div>
+              <div class="t">
+                <span data-i18n="dash.rev.title">Revenu & transactions</span>
+                <span class="chip neutral" data-rev-range-badge style="padding: 2px 8px; font-size: 10.5px;">AUJOURD'HUI · LIVE</span>
+              </div>
+              <div class="s" data-rev-sub>Cumul horaire · service en cours</div>
+              <div class="cmp-caption" data-rev-compare-caption hidden>vs. Hier</div>
+            </div>
+            <div class="right-actions">
+              <button type="button" class="cmp-btn" data-action="rev-compare" data-rev-compare-btn aria-pressed="false" data-i18n="dash.compare">Comparer</button>
+            </div>
+          </div>
+          <svg class="chart-wrap" data-rev-svg width="100%" height="280">
+            <defs>
+              <linearGradient id="gfill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#053B2C" stop-opacity="0.20"/>
+                <stop offset="1" stop-color="#053B2C" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="chart-legend" data-rev-legend></div>
+        </div>
+      </div>
+
+      <!-- ═══ HEATMAP (65) + PAYMENT MIX (35) ═══ -->
+      <div class="row r-65-35">
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.hh.title">HEURES DE POINTE</div>
+              <div class="s" data-hh-sub>Intensité horaire aujourd'hui</div>
+            </div>
+          </div>
+          <div class="hh-row" data-hh-row></div>
+          <div class="hh-legend">
+            <span data-i18n="dash.hh.less">Moins d'activité</span>
+            <span data-i18n="dash.hh.more">Plus d'activité</span>
+          </div>
+          <div class="hh-ai">
+            <div class="hh-ai-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M12 2l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="hh-ai-body">
+              <div class="hh-ai-eyebrow" data-i18n="dash.hh.ai.eyebrow">KIWI AI · OPPORTUNITÉ</div>
+              <div class="hh-ai-title" data-i18n="dash.hh.ai.title">Lancer un combo livraison Glovo pour 15h–17h</div>
+              <div class="hh-ai-obs" data-i18n="dash.hh.ai.obs">Pendant cette fenêtre creuse, votre salle tourne à 22 % de capacité mais l'équipe reste disponible. Un combo Tajine kefta + thé à la menthe à 75 MAD sur Glovo capte typiquement 8–12 commandes par après-midi dans les cafés similaires de Maarif.</div>
+              <a href="#" class="hh-ai-cta" data-action="hh-ai-glovo" data-i18n="dash.hh.ai.cta">→ Configurer le combo Glovo</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="block" data-mix-block>
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.mix.title">Mix de paiement</div>
+              <div class="s" data-mix-sub>Aujourd'hui</div>
+            </div>
+          </div>
+          <div class="donut-row">
+            <div style="position: relative; width: 150px; height: 150px;">
+              <svg width="150" height="150" viewBox="0 0 42 42" data-mix-donut>
+                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F2F0EA" stroke-width="7"/>
+              </svg>
+              <div class="ring-center">
+                <div class="score" style="font-size: 22px;" data-mix-center-amt>16 590</div>
+                <div class="slash" data-i18n="dash.mix.center.unit">MAD carte</div>
+              </div>
+            </div>
+            <div class="donut-legend" data-mix-legend></div>
+          </div>
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; font-size: 12.5px;">
+            <div style="color: var(--n-500);">Abonnement Kiwi Basic</div>
+            <div style="font-family: var(--mono); font-weight: 500; color: var(--atlas);">399 MAD/mois · tout inclus</div>
+          </div>
+          <div style="margin-top: 16px; padding: 14px 16px; background: var(--paper-soft); border-radius: 10px; display: flex; gap: 12px; align-items: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--atlas)" stroke-width="2" style="margin-top: 2px; flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <div style="font-size: 12.5px; color: var(--n-700); line-height: 1.45;">
+              <b>Économie vs CMI :</b> ~3 900 MAD ce mois. <a href="#" style="color: var(--atlas); font-weight: 500;">Voir l'an</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ LIVE FEED + SETTLEMENT ═══ -->
+      <div class="row r-2-1">
+        <!-- Live transactions feed -->
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t"><span class="pulse-dot"></span><span data-feed-title>Transactions en direct</span></div>
+              <div class="s" data-feed-sub>6 dernières · flux temps réel</div>
+            </div>
+            <div class="right-actions">
+              <button class="btn-slim" data-action="filter-tx"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filtrer</button>
+              <a href="#" style="font-size: 13px; color: var(--atlas); font-weight: 500;">Tout voir →</a>
+            </div>
+          </div>
+          <div class="feed" data-feed>
+            <div class="feed-row new">
+              <div class="t">14:37</div>
+              <div class="method">
+                <div class="ci visa"></div>
+                <div class="desc">
+                  <div class="primary">Visa •• 4291</div>
+                  <div class="sub"><span class="flag ma"></span>Carte marocaine · Attijariwafa</div>
+                </div>
+              </div>
+              <div class="ctx">Karim B. · T4</div>
+              <div class="amt">240,00</div>
+              <div class="tip">+24,00</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+            <div class="feed-row">
+              <div class="t">14:32</div>
+              <div class="method">
+                <div class="ci tap">NFC</div>
+                <div class="desc">
+                  <div class="primary">Kiwi Tap</div>
+                  <div class="sub"><span class="flag ma"></span>Client #3412 · Kiwi Wallet</div>
+                </div>
+              </div>
+              <div class="ctx">Client #3412 · T7</div>
+              <div class="amt">180,00</div>
+              <div class="tip" style="color: var(--n-400);">—</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+            <div class="feed-row">
+              <div class="t">14:18</div>
+              <div class="method">
+                <div class="ci mc"></div>
+                <div class="desc">
+                  <div class="primary">Mastercard •• 7820</div>
+                  <div class="sub"><span class="flag fr"></span>Carte française · BNP Paribas</div>
+                </div>
+              </div>
+              <div class="ctx">Sara L. · T2</div>
+              <div class="amt">85,50</div>
+              <div class="tip">+8,55</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+            <div class="feed-row">
+              <div class="t">14:03</div>
+              <div class="method">
+                <div class="ci qr">QR</div>
+                <div class="desc">
+                  <div class="primary">Kiwi Wallet QR</div>
+                  <div class="sub"><span class="flag ma"></span>Nawal K. · abonnée</div>
+                </div>
+              </div>
+              <div class="ctx">Nawal K. · T6</div>
+              <div class="amt">62,00</div>
+              <div class="tip" style="color: var(--n-400);">—</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+            <div class="feed-row">
+              <div class="t">13:57</div>
+              <div class="method">
+                <div class="ci visa"></div>
+                <div class="desc">
+                  <div class="primary">Visa •• 0043</div>
+                  <div class="sub"><span class="flag es"></span>Carte espagnole · CaixaBank</div>
+                </div>
+              </div>
+              <div class="ctx">Youssef A. · T1</div>
+              <div class="amt">312,00</div>
+              <div class="tip">+30,00</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+            <div class="feed-row">
+              <div class="t">13:41</div>
+              <div class="method">
+                <div class="ci mc"></div>
+                <div class="desc">
+                  <div class="primary">Mastercard •• 1209</div>
+                  <div class="sub"><span class="flag ma"></span>Remboursement · CMI</div>
+                </div>
+              </div>
+              <div class="ctx">Hassan J. · T3</div>
+              <div class="amt" style="color: var(--danger);">−155,00</div>
+              <div class="tip" style="color: var(--n-400);">—</div>
+              <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settlement -->
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="settle">
+            <div class="lbl" data-settle-lbl>PROCHAIN RÈGLEMENT</div>
+            <div class="big" data-settle-amt>23 091 <span style="font-size:0.42em; opacity: 0.7;">MAD</span></div>
+            <div class="sub" data-settle-sub>Arrive demain matin à 9 h 00 sur votre IBAN BMCE •• 3291.</div>
+            <div class="detail" data-settle-detail>
+              <span>Commission Kiwi déduite</span>
+              <span style="color: var(--mint); font-family: var(--mono);">−289 MAD</span>
+            </div>
+            <div class="instant" data-action="instant-settle">
+              <div class="ico">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <div style="font-weight: 500;" data-i18n="dash.settle.instant">Régler instantanément</div>
+              <div class="cost">1,50 MAD</div>
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head" style="margin-bottom: 4px;">
+              <div>
+                <div class="t" data-i18n="dash.timeline.title">Calendrier des règlements</div>
+                <div class="s" data-i18n="dash.timeline.sub">7 prochains jours</div>
+              </div>
+            </div>
+            <div class="timeline-row">
+              <div class="timeline-day today">
+                <div class="d">VEN</div>
+                <div class="n">24</div>
+                <div class="a">en cours</div>
+                <div class="t">hui</div>
+              </div>
+              <div class="timeline-day tomorrow">
+                <div class="d">SAM</div>
+                <div class="n">25</div>
+                <div class="a">23,1k</div>
+                <div class="t">9h00</div>
+              </div>
+              <div class="timeline-day">
+                <div class="d">DIM</div>
+                <div class="n">26</div>
+                <div class="a" style="color:var(--atlas);">~ 28k</div>
+                <div class="t">estim.</div>
+              </div>
+              <div class="timeline-day">
+                <div class="d">LUN</div>
+                <div class="n">27</div>
+                <div class="a" style="color:var(--atlas);">~ 22k</div>
+                <div class="t">estim.</div>
+              </div>
+              <div class="timeline-day">
+                <div class="d">MAR</div>
+                <div class="n">28</div>
+                <div class="a" style="color:var(--atlas);">~ 24k</div>
+                <div class="t">estim.</div>
+              </div>
+              <div class="timeline-day">
+                <div class="d">MER</div>
+                <div class="n">29</div>
+                <div class="a" style="color:var(--atlas);">~ 26k</div>
+                <div class="t">estim.</div>
+              </div>
+              <div class="timeline-day">
+                <div class="d">JEU</div>
+                <div class="n">30</div>
+                <div class="a" style="color:var(--atlas);">~ 25k</div>
+                <div class="t">estim.</div>
+              </div>
+            </div>
+            <div style="margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; font-size: 12px; color: var(--n-500);">
+              <span data-timeline-week-lbl>Total semaine projeté</span>
+              <b data-timeline-week-total style="color: var(--ink); font-family: var(--mono); font-weight: 500;">~ 172 100 MAD</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ HEALTH + BENCHMARK ═══ -->
+      <div class="row r-1-1">
+        <!-- Health score -->
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.health.title">Score de santé Kiwi</div>
+              <div class="s" data-health-sub>Mesuré sur 90 jours · facteurs activés</div>
+            </div>
+            <span class="chip ok" data-health-chip>EXCELLENT</span>
+          </div>
+          <div class="health-grid">
+            <div style="position: relative; width: 160px; height: 160px;">
+              <svg class="ring-svg" viewBox="0 0 42 42">
+                <circle cx="21" cy="21" r="17" fill="transparent" stroke="#F2F0EA" stroke-width="4"/>
+                <circle cx="21" cy="21" r="17" fill="transparent" stroke="#0B6E4F" stroke-width="4" data-health-arc stroke-dasharray="91 100" stroke-dashoffset="25" transform="rotate(-90 21 21)" stroke-linecap="round"/>
+              </svg>
+              <div class="ring-center">
+                <div class="score" data-health-score>91</div>
+                <div class="slash">/ 100</div>
+              </div>
+            </div>
+            <ul class="health-check">
+              <li>
+                <span>Taux succès transactions</span>
+                <span class="status good">99,34 % ✓</span>
+              </li>
+              <li>
+                <span>Onboarding équipe complet</span>
+                <span class="status good">8/8 ✓</span>
+              </li>
+              <li>
+                <span>KYC à jour</span>
+                <span class="status good">Valide 2027 ✓</span>
+              </li>
+              <li>
+                <span>Rétention clientèle</span>
+                <span class="status good">72 % ✓</span>
+              </li>
+              <li>
+                <span>Pourboire moyen</span>
+                <span class="status warn">8,2 % · cible 10%</span>
+              </li>
+              <li>
+                <span>Diversification paiement</span>
+                <span class="status good">4 méthodes ✓</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Benchmark -->
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.bench.title">Vous vs cafés similaires</div>
+              <div class="s" data-bench-sub>147 cafés casablancais · même gamme de ticket moyen</div>
+            </div>
+          </div>
+          <div class="bench-rank">
+            <span class="r" data-bench-rank>#12</span>
+            <span class="s" data-bench-rank-sub>sur <b>147 cafés</b> à Casablanca · top <b>8 %</b></span>
+          </div>
+          <div class="bench-comp" data-bench-comp></div>
+          <div style="margin-top: 14px; padding: 12px 14px; background: var(--paper-soft); border-radius: 10px; font-size: 12.5px; color: var(--n-700); line-height: 1.45;">
+            Vous surperformez <b>4 cafés sur 5</b> sur Casablanca. Le seul levier faible : le <b>pourboire</b>. <a href="#" style="color: var(--atlas); font-weight: 500;">Activer prompt auto →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PRODUCTS + STAFF ═══ -->
+      <div class="row r-1-1">
+        <!-- Top products -->
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.products.title">Top produits</div>
+              <div class="s" data-products-sub>Aujourd'hui · tous les items</div>
+            </div>
+            <a href="#" style="font-size: 13px; color: var(--atlas); font-weight: 500;">Gérer menu →</a>
+          </div>
+          <div class="prod-list" data-products-list></div>
+        </div>
+
+        <!-- Staff -->
+        <div class="block">
+          <div class="block-head">
+            <div>
+              <div class="t" data-i18n="dash.staff.title">Performance équipe</div>
+              <div class="s" data-staff-sub>Service en cours · PIN connecté</div>
+            </div>
+            <a href="#" style="font-size: 13px; color: var(--atlas); font-weight: 500;">Paramètres équipe →</a>
+          </div>
+          <div data-staff-list></div>
+        </div>
+      </div>
+
+      <!-- ═══ INTEGRATIONS ═══ -->
+      <div class="block">
+        <div class="block-head">
+          <div>
+            <div class="t">Intégrations actives</div>
+            <div class="s">Les outils que Kiwi synchronise pour vous</div>
+          </div>
+          <a href="#" data-action="add-integration" style="font-size: 13px; color: var(--atlas); font-weight: 500;">+ Ajouter une intégration</a>
+        </div>
+        <div class="integ-grid">
+          <div class="integ-card">
+            <div class="logo" style="background: #F29137;">G</div>
+            <div class="info">
+              <div class="n">Glovo</div>
+              <div class="s"><span class="dot"></span>Payout réconcilié · 1 420 MAD</div>
+            </div>
+          </div>
+          <div class="integ-card">
+            <div class="logo" style="background: #E7611A;">J</div>
+            <div class="info">
+              <div class="n">Jumia Food</div>
+              <div class="s"><span class="dot"></span>24 commandes aujourd'hui</div>
+            </div>
+          </div>
+          <div class="integ-card">
+            <div class="logo" style="background: #1D3F6B;">A</div>
+            <div class="info">
+              <div class="n">Comptabilité</div>
+              <div class="s"><span class="dot"></span>Export quotidien OCP-compliant</div>
+            </div>
+          </div>
+          <div class="integ-card">
+            <div class="logo" style="background: #00613E;">B</div>
+            <div class="info">
+              <div class="n">BMCE · Banque</div>
+              <div class="s"><span class="dot"></span>IBAN vérifié · 3291</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div><span class="pip"></span>Opérationnel · aucun incident · Kiwi Status : 99,99 %</div>
+      <div>Café Atlas · ICE 0025938400014 · opéré sous sponsoring Bank Al-Maghrib · Kiwi v2.38.1 · <a href="#">aide WhatsApp</a></div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/i18n.js" defer></script>
+<script src="assets/interactive.js" defer></script>
+<script src="assets/features.js" defer></script>
+<script src="assets/polish.js" defer></script>
+<script src="assets/pages.js" defer></script>
+<script src="assets/simple.js" defer></script>
+<script src="assets/ux.js" defer></script>
+<script src="assets/dateRange.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# macOS metadata
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Per-user Claude Code state — keep team-shared settings.json if you ever add one,
+# but never commit machine-specific permissions.
+.claude/settings.local.json
+
+# OS / system
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local preview / scratch
+/tmp-preview/
+*.pid

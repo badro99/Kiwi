@@ -1,0 +1,2150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kiwi · Business Plan · Édition fondateurs · 2026</title>
+<meta name="description" content="Kiwi · Le système d'exploitation du commerçant marocain. Document fondateurs : Kiwi Systems (caisse F&amp;B), Kiwi Banking + Kiwi Pay (super-app), Kiwi Investing (épargne). Confidentiel." />
+<link rel="icon" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+/* ════════════════════════════════════════════════════════════════
+   Kiwi · Business Plan · 2026 · Self-contained polish layer
+   ════════════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 0;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: 0; background: none; }
+img, svg { display: block; max-width: 100%; }
+::selection { background: var(--mint); color: var(--riad); }
+
+/* Paper grain — invisible but felt */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+
+/* ─── Top progress bar ─── */
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: rgba(11,110,79,0.06); z-index: 80; }
+.progress-bar { height: 100%; background: var(--atlas); width: 0%; transition: width 200ms linear; }
+
+/* ─── Top nav ─── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 70;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px;
+  background: rgba(247,245,240,0.78); backdrop-filter: blur(20px) saturate(140%);
+  border-bottom: 1px solid rgba(11,110,79,0.06);
+}
+.nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 22px; letter-spacing: -0.05em; color: var(--atlas); }
+.nav-logo i { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+.nav-meta { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.12em; text-transform: uppercase; }
+.nav-meta b { color: var(--ink); font-weight: 500; }
+.nav-cta { font-family: var(--mono); font-size: 11px; color: var(--atlas); letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; border: 1px solid rgba(11,110,79,0.18); border-radius: 999px; transition: all 180ms cubic-bezier(0.32,0.72,0,1); }
+.nav-cta:hover { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
+
+/* ─── Side index dots (right edge) ─── */
+.dots { position: fixed; right: 18px; top: 50%; transform: translateY(-50%); z-index: 60; display: flex; flex-direction: column; gap: 10px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(11,110,79,0.18); cursor: pointer; position: relative; transition: all 220ms; }
+.dot:hover, .dot.on { background: var(--atlas); transform: scale(1.4); }
+.dot::after { content: attr(data-l); position: absolute; right: 18px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-600); background: var(--paper); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--n-200); opacity: 0; transition: opacity 180ms; pointer-events: none; }
+.dot:hover::after { opacity: 1; }
+@media (max-width: 980px) { .dots { display: none; } }
+
+/* ─── Wrappers ─── */
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.wrap-tight { max-width: 920px; margin: 0 auto; padding: 0 32px; }
+.wrap-narrow { max-width: 720px; margin: 0 auto; padding: 0 32px; }
+.wrap-wide { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+
+/* ─── Section base ─── */
+section { padding: 120px 0; position: relative; scroll-margin-top: 80px; }
+section.compact { padding: 80px 0; }
+section.tall { padding: 160px 0 140px; }
+
+.s-num { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.18em; text-transform: uppercase; }
+.s-num b { color: var(--atlas); font-weight: 500; }
+.s-eyebrow { font-family: var(--mono); font-size: 12px; color: var(--atlas); letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; }
+.s-head { margin-bottom: 56px; max-width: 880px; }
+.s-head h2 { font-size: clamp(36px, 5vw, 64px); font-weight: 500; letter-spacing: -0.035em; line-height: 1.02; margin: 18px 0 22px; }
+.s-head h2 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.s-head .lede { font-size: clamp(17px, 1.6vw, 21px); color: var(--n-600); line-height: 1.55; max-width: 720px; margin: 0; }
+
+/* ─── Dark / Atlas / Riad section variants ─── */
+section.dark { background: var(--ink); color: var(--paper); }
+section.dark .s-num { color: rgba(247,245,240,0.5); }
+section.dark .s-num b { color: var(--mint); }
+section.dark .s-eyebrow { color: var(--mint); }
+section.dark .s-head h2 em { color: var(--mint); }
+section.dark .s-head .lede { color: rgba(247,245,240,0.65); }
+
+section.atlas { background: var(--atlas); color: var(--paper); }
+section.atlas .s-num { color: rgba(247,245,240,0.6); }
+section.atlas .s-num b { color: var(--mint); }
+section.atlas .s-eyebrow { color: var(--mint); }
+section.atlas .s-head h2 em { color: var(--mint); font-weight: 400; }
+section.atlas .s-head .lede { color: rgba(247,245,240,0.78); }
+
+section.riad { background: var(--riad-deep); color: var(--paper); }
+section.riad .s-num { color: rgba(247,245,240,0.5); }
+section.riad .s-num b { color: var(--mint); }
+section.riad .s-eyebrow { color: var(--mint); }
+section.riad .s-head h2 em { color: var(--mint); }
+section.riad .s-head .lede { color: rgba(247,245,240,0.65); }
+
+section.soft { background: var(--paper-soft); }
+
+/* ════════════ SECTION 01 · COVER ════════════ */
+#cover {
+  min-height: 100vh; padding: 88px 0 56px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--paper);
+  position: relative; overflow: hidden;
+}
+#cover::before {
+  content: ""; position: absolute; right: -10%; top: -20%; width: 70%; height: 90%;
+  background: radial-gradient(ellipse at 60% 50%, rgba(125,242,176,0.18), transparent 65%);
+  filter: blur(60px); pointer-events: none; z-index: 0;
+}
+.cover-top { position: relative; z-index: 1; }
+.cover-mark { display: inline-flex; align-items: baseline; gap: 8px; font-weight: 700; letter-spacing: -0.06em; font-size: clamp(72px, 11vw, 156px); color: var(--atlas); line-height: 1; }
+.cover-mark i { width: clamp(11px, 1.4vw, 16px); height: clamp(11px, 1.4vw, 16px); background: var(--mint); border-radius: 50%; }
+.cover-tag { margin-top: 14px; font-family: var(--mono); font-size: 13px; color: var(--atlas); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; }
+.cover-mid { position: relative; z-index: 1; padding: 60px 0; }
+.cover-mid h1 { font-size: clamp(44px, 6.6vw, 92px); letter-spacing: -0.04em; line-height: 0.97; font-weight: 500; margin: 0 0 28px; max-width: 1080px; }
+.cover-mid h1 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.cover-mid p { font-size: clamp(18px, 1.7vw, 22px); line-height: 1.5; color: var(--n-600); max-width: 640px; margin: 0; }
+.cover-bot { position: relative; z-index: 1; display: flex; gap: 64px; flex-wrap: wrap; padding-top: 36px; border-top: 1px solid rgba(11,110,79,0.15); }
+.cover-bot .col { font-family: var(--mono); font-size: 12px; color: var(--n-500); letter-spacing: 0.06em; }
+.cover-bot .col b { display: block; font-family: var(--sans); font-weight: 500; font-size: 14px; color: var(--ink); margin-bottom: 6px; letter-spacing: -0.005em; }
+
+/* ════════════ TYPE & STAT BLOCKS ════════════ */
+.editorial-block { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.18; letter-spacing: -0.015em; color: var(--ink); }
+.editorial-block .accent { color: var(--atlas); }
+section.dark .editorial-block, section.atlas .editorial-block, section.riad .editorial-block { color: var(--paper); }
+section.dark .editorial-block .accent, section.atlas .editorial-block .accent, section.riad .editorial-block .accent { color: var(--mint); }
+
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid rgba(11,110,79,0.12); border-bottom: 1px solid rgba(11,110,79,0.12); }
+@media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+.stat-row .cell { padding: 32px 24px 32px 0; border-right: 1px solid rgba(11,110,79,0.08); }
+.stat-row .cell:last-child { border-right: 0; }
+@media (max-width: 900px) { .stat-row .cell:nth-child(2n) { border-right: 0; } .stat-row .cell:nth-child(-n+2) { border-bottom: 1px solid rgba(11,110,79,0.08); } }
+.stat-row .v { font-size: clamp(34px, 4.2vw, 56px); font-weight: 500; letter-spacing: -0.035em; line-height: 1; font-feature-settings: "tnum" 1; color: var(--ink); }
+.stat-row .v em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--atlas); }
+.stat-row .l { font-size: 13px; color: var(--n-600); margin-top: 10px; line-height: 1.45; max-width: 220px; }
+.stat-row .src { font-family: var(--mono); font-size: 10px; color: var(--n-400); letter-spacing: 0.06em; margin-top: 8px; text-transform: uppercase; }
+section.dark .stat-row, section.riad .stat-row, section.atlas .stat-row { border-color: rgba(247,245,240,0.16); }
+section.dark .stat-row .cell, section.riad .stat-row .cell, section.atlas .stat-row .cell { border-color: rgba(247,245,240,0.1); }
+section.dark .stat-row .v, section.riad .stat-row .v, section.atlas .stat-row .v { color: var(--paper); }
+section.dark .stat-row .v em, section.riad .stat-row .v em, section.atlas .stat-row .v em { color: var(--mint); }
+section.dark .stat-row .l, section.riad .stat-row .l, section.atlas .stat-row .l { color: rgba(247,245,240,0.7); }
+section.dark .stat-row .src, section.riad .stat-row .src, section.atlas .stat-row .src { color: rgba(247,245,240,0.4); }
+
+/* ════════════ MARKET TIMELINE ════════════ */
+.timeline { margin-top: 56px; border-top: 1px solid var(--n-200); }
+.timeline .row { display: grid; grid-template-columns: 180px 1fr 280px; gap: 32px; padding: 26px 0; border-bottom: 1px solid var(--n-200); align-items: start; }
+@media (max-width: 880px) { .timeline .row { grid-template-columns: 1fr; gap: 8px; } }
+.timeline .date { font-family: var(--mono); font-size: 12px; color: var(--atlas); letter-spacing: 0.08em; padding-top: 4px; }
+.timeline .what { font-size: 17px; font-weight: 500; line-height: 1.4; letter-spacing: -0.015em; }
+.timeline .why { font-size: 13.5px; color: var(--n-600); line-height: 1.5; }
+
+/* ════════════ PROBLEM LIST ════════════ */
+.prob-list { list-style: none; padding: 0; margin: 56px 0 0; }
+.prob-list li { padding: 26px 0; border-top: 1px solid rgba(247,245,240,0.1); display: grid; grid-template-columns: 60px 1fr 220px; gap: 28px; align-items: center; }
+@media (max-width: 880px) { .prob-list li { grid-template-columns: 50px 1fr; } .prob-list li .right { grid-column: 1 / -1; padding-left: 78px; } }
+.prob-list li:first-child { border-top: 0; }
+.prob-list li .num { font-family: var(--mono); color: var(--mint); font-size: 13px; letter-spacing: 0.1em; }
+.prob-list li .text { font-size: 18px; line-height: 1.4; letter-spacing: -0.01em; }
+.prob-list li .text em { font-family: var(--serif); font-style: italic; color: var(--mint); font-weight: 400; }
+.prob-list li .right { font-family: var(--mono); font-size: 13px; color: rgba(247,245,240,0.6); text-align: right; letter-spacing: 0.04em; }
+
+/* ════════════ THESIS — TROIS ACTES ════════════ */
+.acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 56px; }
+@media (max-width: 980px) { .acts { grid-template-columns: 1fr; } }
+.act {
+  background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 22px;
+  padding: 38px 32px; display: flex; flex-direction: column; min-height: 420px;
+  transition: transform 280ms cubic-bezier(0.32,0.72,0,1), border-color 280ms;
+}
+.act:hover { transform: translateY(-3px); border-color: var(--atlas); }
+.act .roman { font-family: var(--serif); font-style: italic; font-size: 60px; color: var(--atlas); line-height: 0.9; margin-bottom: 8px; }
+.act .phase { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18px; }
+.act h3 { font-size: 28px; font-weight: 500; letter-spacing: -0.025em; margin: 0 0 14px; line-height: 1.05; }
+.act h3 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.act p { font-size: 15.5px; line-height: 1.55; color: var(--n-700); margin: 0 0 20px; }
+.act .feats { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--n-200); display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--n-600); }
+.act .feats span { padding: 3px 0; display: flex; gap: 8px; }
+.act .feats span::before { content: "—"; color: var(--atlas); }
+
+/* ════════════ FEATURE GRID ════════════ */
+.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 48px; }
+@media (max-width: 980px) { .feat-grid { grid-template-columns: 1fr; } }
+.feat { background: #fff; border: 1px solid var(--n-200); border-radius: 18px; padding: 28px; min-height: 220px; display: flex; flex-direction: column; }
+.feat .icon { width: 36px; height: 36px; color: var(--atlas); margin-bottom: 18px; }
+.feat .icon svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 1.5; fill: none; }
+.feat h4 { font-size: 18px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 10px; }
+.feat p { font-size: 14px; line-height: 1.55; color: var(--n-600); margin: 0; }
+section.dark .feat, section.riad .feat { background: rgba(247,245,240,0.04); border-color: rgba(247,245,240,0.08); color: var(--paper); }
+section.dark .feat .icon, section.riad .feat .icon { color: var(--mint); }
+section.dark .feat p, section.riad .feat p { color: rgba(247,245,240,0.65); }
+
+/* ════════════ TWO-COL ════════════ */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; margin-top: 48px; }
+.two.tilt { grid-template-columns: 1.05fr 1fr; }
+.two.flip { grid-template-columns: 1fr 1.05fr; }
+@media (max-width: 980px) { .two, .two.tilt, .two.flip { grid-template-columns: 1fr; gap: 40px; } }
+.two h3 { font-size: clamp(26px, 3vw, 38px); font-weight: 500; letter-spacing: -0.025em; line-height: 1.08; margin: 0 0 18px; }
+.two h3 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.two p { font-size: 16.5px; line-height: 1.6; color: var(--n-700); margin: 0 0 16px; }
+section.dark .two p, section.riad .two p, section.atlas .two p { color: rgba(247,245,240,0.78); }
+.two ul { list-style: none; padding: 0; margin: 16px 0 0; }
+.two ul li { padding: 10px 0; border-top: 1px solid var(--n-200); font-size: 15px; line-height: 1.5; display: flex; gap: 12px; }
+.two ul li::before { content: "—"; color: var(--atlas); flex-shrink: 0; }
+section.dark .two ul li, section.riad .two ul li, section.atlas .two ul li { border-color: rgba(247,245,240,0.1); }
+section.dark .two ul li::before, section.riad .two ul li::before, section.atlas .two ul li::before { color: var(--mint); }
+
+/* ════════════ DEVICE FRAME (iframe holder) ════════════ */
+.device-frame {
+  position: relative; border-radius: 24px; overflow: hidden;
+  background: var(--ink); padding: 14px;
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.04),
+    0 8px 24px rgba(0,0,0,0.06),
+    0 36px 80px -20px rgba(11,110,79,0.18);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.device-frame .bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 12px; }
+.device-frame .bar .led { width: 10px; height: 10px; border-radius: 50%; background: rgba(247,245,240,0.18); }
+.device-frame .bar .led:nth-child(1) { background: #FF5F57; }
+.device-frame .bar .led:nth-child(2) { background: #FEBC2E; }
+.device-frame .bar .led:nth-child(3) { background: #28C840; }
+.device-frame .bar .url { margin-left: 14px; font-family: var(--mono); font-size: 11px; color: rgba(247,245,240,0.55); letter-spacing: 0.04em; }
+.device-frame .screen { background: var(--paper); border-radius: 12px; overflow: hidden; aspect-ratio: 16/10; position: relative; }
+.device-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.device-frame.scaled .screen { aspect-ratio: 16/9.6; }
+.device-frame.scaled iframe { position: absolute; top: 0; left: 0; transform-origin: top left; width: 1500px; height: 940px; }
+.device-cap { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 14px; text-align: center; }
+section.dark .device-cap, section.riad .device-cap, section.atlas .device-cap { color: rgba(247,245,240,0.5); }
+
+/* ════════════ MAP / TANGIER ════════════ */
+.map-block { background: #fff; border: 1px solid var(--n-200); border-radius: 24px; padding: 48px; margin-top: 48px; position: relative; overflow: hidden; }
+.map-block .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+@media (max-width: 980px) { .map-block .grid { grid-template-columns: 1fr; gap: 32px; } }
+.map-block svg { width: 100%; max-height: 380px; }
+.map-block .pings circle.r { animation: pingRing 2.4s cubic-bezier(0.32,0.72,0,1) infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes pingRing { 0% { r: 6; opacity: 0.7; } 70% { r: 22; opacity: 0; } 100% { r: 22; opacity: 0; } }
+.map-block .city-list { list-style: none; padding: 0; margin: 0; }
+.map-block .city-list li { padding: 14px 0; border-top: 1px solid var(--n-200); display: grid; grid-template-columns: 1fr auto; gap: 16px; font-size: 14.5px; align-items: baseline; }
+.map-block .city-list li:first-child { border-top: 0; padding-top: 0; }
+.map-block .city-list li .name { font-weight: 500; }
+.map-block .city-list li .name b { display: block; font-weight: 500; font-size: 15px; }
+.map-block .city-list li .name span { font-size: 12px; color: var(--n-500); }
+.map-block .city-list li .tag { font-family: var(--mono); font-size: 11px; color: var(--atlas); padding: 4px 10px; border-radius: 999px; background: var(--mint-soft); letter-spacing: 0.06em; text-transform: uppercase; }
+.map-block .city-list li .tag.next { background: var(--paper-soft); color: var(--n-500); }
+
+/* ════════════ ROUTING DIAGRAM ════════════ */
+.routing { margin-top: 56px; background: rgba(247,245,240,0.04); border: 1px solid rgba(247,245,240,0.08); border-radius: 24px; padding: 40px; }
+section:not(.dark):not(.riad):not(.atlas) .routing { background: var(--paper-soft); border-color: var(--n-200); }
+.routing .grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 24px; align-items: stretch; }
+@media (max-width: 880px) { .routing .grid { grid-template-columns: 1fr; gap: 16px; } .routing .arrow { display: none; } }
+.routing .col { padding: 20px; border-radius: 16px; background: rgba(247,245,240,0.04); border: 1px solid rgba(247,245,240,0.08); }
+section:not(.dark):not(.riad):not(.atlas) .routing .col { background: #fff; border-color: var(--n-200); }
+.routing .col .ttl { font-family: var(--mono); font-size: 11px; color: var(--mint); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+section:not(.dark):not(.riad):not(.atlas) .routing .col .ttl { color: var(--atlas); }
+.routing .col .sub { font-size: 13px; color: rgba(247,245,240,0.55); margin-bottom: 18px; font-family: var(--mono); }
+section:not(.dark):not(.riad):not(.atlas) .routing .col .sub { color: var(--n-500); }
+.routing .node { padding: 12px 14px; background: rgba(247,245,240,0.04); border: 1px solid rgba(247,245,240,0.08); border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; }
+section:not(.dark):not(.riad):not(.atlas) .routing .node { background: var(--paper); border-color: var(--n-200); }
+.routing .node b { font-weight: 500; }
+.routing .node span { font-family: var(--mono); font-size: 11px; color: var(--mint); letter-spacing: 0.04em; }
+section:not(.dark):not(.riad):not(.atlas) .routing .node span { color: var(--atlas); }
+.routing .node.hot { border-color: var(--mint); background: rgba(125,242,176,0.08); }
+.routing .arrow { display: flex; align-items: center; justify-content: center; color: var(--mint); font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; }
+section:not(.dark):not(.riad):not(.atlas) .routing .arrow { color: var(--atlas); }
+
+/* ════════════ COMPETITION TABLE ════════════ */
+.compete { margin-top: 48px; border-radius: 22px; overflow: hidden; border: 1px solid var(--n-200); background: #fff; }
+.compete table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.compete th { text-align: left; font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.08em; padding: 16px 18px; background: var(--paper-soft); text-transform: uppercase; font-weight: 500; border-bottom: 1px solid var(--n-200); white-space: nowrap; }
+.compete td { padding: 18px; border-bottom: 1px solid var(--n-200); vertical-align: top; }
+.compete tr:last-child td { border-bottom: 0; }
+.compete td.who { font-weight: 500; min-width: 130px; }
+.compete td.who span { display: block; font-size: 11px; color: var(--n-500); margin-top: 3px; font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 400; }
+.compete td.where { font-size: 13.5px; color: var(--n-600); line-height: 1.5; }
+.compete tr.us td { background: var(--atlas); color: var(--paper); }
+.compete tr.us td.who { font-weight: 600; }
+.compete tr.us td.who span { color: var(--mint); }
+.compete tr.us td.where { color: rgba(247,245,240,0.78); }
+.compete tr.us td .em { color: var(--mint); font-family: var(--serif); font-style: italic; font-weight: 400; }
+
+/* ════════════ TEAM ════════════ */
+.team { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 48px; }
+@media (max-width: 980px) { .team { grid-template-columns: 1fr; } }
+.team-card { background: rgba(247,245,240,0.04); border: 1px solid rgba(247,245,240,0.08); border-radius: 22px; padding: 36px 32px; }
+.team-card .av { width: 64px; height: 64px; border-radius: 50%; background: var(--mint); color: var(--riad); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 22px; margin-bottom: 22px; letter-spacing: -0.02em; }
+.team-card .av.b { background: var(--atlas); color: var(--mint); }
+.team-card h4 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; }
+.team-card .role { font-family: var(--mono); font-size: 11px; color: var(--mint); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+.team-card p { font-size: 14.5px; color: rgba(247,245,240,0.7); line-height: 1.55; margin: 0 0 14px; }
+.team-card .prev { display: flex; gap: 6px; flex-wrap: wrap; }
+.team-card .prev span { font-family: var(--mono); font-size: 10px; color: rgba(247,245,240,0.55); letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; background: rgba(247,245,240,0.06); text-transform: uppercase; }
+
+/* ════════════ ROADMAP ════════════ */
+.road { margin-top: 56px; position: relative; padding-left: 32px; }
+.road::before { content: ""; position: absolute; left: 7px; top: 12px; bottom: 12px; width: 2px; background: rgba(11,110,79,0.18); }
+.road-item { position: relative; padding: 12px 0 28px; }
+.road-item::before { content: ""; position: absolute; left: -32px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 3px solid var(--atlas); }
+.road-item.now::before { background: var(--mint); border-color: var(--atlas); box-shadow: 0 0 0 6px rgba(125,242,176,0.18); }
+.road-item.next::before { background: var(--paper-soft); }
+.road-item .when { font-family: var(--mono); font-size: 12px; color: var(--atlas); letter-spacing: 0.08em; text-transform: uppercase; }
+.road-item h4 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 10px; }
+.road-item h4 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.road-item p { font-size: 15px; color: var(--n-700); line-height: 1.55; margin: 0; max-width: 720px; }
+
+/* ════════════ DEFENSE PILLARS ════════════ */
+.pillars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 56px; }
+@media (max-width: 980px) { .pillars { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .pillars { grid-template-columns: 1fr; } }
+.pillar { padding: 28px 24px; border-radius: 18px; background: rgba(247,245,240,0.04); border: 1px solid rgba(247,245,240,0.08); display: flex; flex-direction: column; min-height: 240px; }
+.pillar .roman { font-family: var(--serif); font-style: italic; font-size: 38px; color: var(--mint); line-height: 1; margin-bottom: 12px; }
+.pillar h4 { font-size: 17px; font-weight: 500; letter-spacing: -0.018em; margin: 0 0 10px; line-height: 1.2; }
+.pillar p { font-size: 13.5px; line-height: 1.55; color: rgba(247,245,240,0.7); margin: 0; }
+
+/* ════════════ KIWI COMPTE CARD (mirrors .kc-card from features.js) ════════════ */
+.bp-card {
+  position: relative;
+  background: linear-gradient(135deg, #053B2C 0%, #0A4A38 45%, #0B6E4F 100%);
+  color: var(--paper);
+  border-radius: 18px;
+  padding: 32px;
+  overflow: hidden;
+  aspect-ratio: 1.58;
+  max-width: 460px;
+  margin: 0 auto;
+  box-shadow: 0 36px 72px -24px rgba(11,110,79,0.36), 0 6px 18px rgba(0,0,0,0.08);
+}
+.bp-card::before {
+  content: ""; position: absolute; top: -80px; right: -60px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(125,242,176,0.42), transparent 60%);
+}
+.bp-card .brand { position: relative; font-weight: 700; font-size: 24px; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 5px; }
+.bp-card .brand i { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; }
+.bp-card .chip { position: relative; width: 44px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #C9C5BC, #8A867E); margin-top: 30px; }
+.bp-card .num { position: relative; font-family: var(--mono); font-size: 20px; letter-spacing: 0.08em; margin-top: 20px; }
+.bp-card .row { position: relative; display: flex; justify-content: space-between; margin-top: 18px; font-size: 11px; }
+.bp-card .row .t { color: #a7d5b9; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 500; }
+.bp-card .row .v { font-family: var(--mono); font-size: 14px; font-weight: 500; margin-top: 4px; }
+
+.bp-card-strip { margin-top: 24px; padding: 20px 24px; background: #fff; border: 1px solid var(--n-200); border-radius: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 460px; margin-left: auto; margin-right: auto; }
+.bp-card-strip .l { font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; }
+.bp-card-strip .v { font-size: 14px; font-weight: 500; margin-top: 4px; letter-spacing: -0.01em; }
+.bp-card-strip > div:last-child .v { color: var(--atlas); }
+
+/* ════════════ INVEST PORTFOLIO MOCKUP ════════════ */
+.mock-phone { width: 320px; margin: 0 auto; aspect-ratio: 9/19; background: var(--ink); border-radius: 44px; padding: 12px; box-shadow: 0 30px 80px -20px rgba(11,110,79,0.32), 0 6px 16px rgba(0,0,0,0.06); position: relative; }
+.mock-phone::before { content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 90px; height: 24px; background: var(--ink); border-radius: 14px; z-index: 2; }
+.mock-phone .scr { width: 100%; height: 100%; background: var(--paper); border-radius: 32px; padding: 50px 22px 22px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+
+/* ════════════ NEXT-STEPS LIST (footer-ish) ════════════ */
+.appendix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 48px; }
+@media (max-width: 880px) { .appendix-grid { grid-template-columns: 1fr; gap: 32px; } }
+.appendix-grid h4 { font-family: var(--mono); font-size: 11px; color: var(--mint); letter-spacing: 0.16em; text-transform: uppercase; margin: 0 0 14px; }
+.appendix-grid ul { list-style: none; padding: 0; margin: 0; }
+.appendix-grid li { padding: 10px 0; border-top: 1px solid rgba(247,245,240,0.08); font-size: 13.5px; line-height: 1.5; color: rgba(247,245,240,0.78); }
+.appendix-grid li:first-child { border-top: 0; }
+.appendix-grid li b { font-weight: 500; color: var(--paper); }
+
+/* ════════════ FOOTER ════════════ */
+footer { background: var(--ink); color: rgba(247,245,240,0.55); padding: 60px 0 40px; }
+footer .row { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 24px; }
+footer .mark { font-weight: 700; letter-spacing: -0.06em; font-size: 38px; color: var(--paper); display: inline-flex; align-items: baseline; gap: 4px; }
+footer .mark i { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); translate: 0 -2px; }
+footer .meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.8; }
+footer .meta b { color: var(--mint); font-weight: 500; }
+footer .legal { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(247,245,240,0.08); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+
+/* ════════════ REVEAL ANIMATION ════════════ */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms cubic-bezier(0.32,0.72,0,1), transform 700ms cubic-bezier(0.32,0.72,0,1); }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+/* ════════════ WORD STAGGER (big headlines) ════════════ */
+.stagger-words { perspective: 800px; }
+.stagger-words .w {
+  display: inline-block; opacity: 0;
+  transform: translateY(0.5em) rotateX(-25deg);
+  transform-origin: 0 100%;
+  transition: opacity 720ms cubic-bezier(0.32,0.72,0,1), transform 720ms cubic-bezier(0.32,0.72,0,1);
+  will-change: transform, opacity;
+}
+.stagger-words.in .w { opacity: 1; transform: translateY(0) rotateX(0); }
+.stagger-words .w.italic {
+  font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--atlas);
+}
+section.dark .stagger-words .w.italic,
+section.atlas .stagger-words .w.italic,
+section.riad .stagger-words .w.italic { color: var(--mint); }
+
+/* ════════════ STAGGER CHILDREN (grids, lists) ════════════ */
+.stagger-children > * {
+  opacity: 0; transform: translateY(22px);
+  transition: opacity 700ms cubic-bezier(0.32,0.72,0,1), transform 700ms cubic-bezier(0.32,0.72,0,1);
+}
+.stagger-children.in > * { opacity: 1; transform: translateY(0); }
+.stagger-children > *:nth-child(1)  { transition-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { transition-delay: 70ms; }
+.stagger-children > *:nth-child(3)  { transition-delay: 140ms; }
+.stagger-children > *:nth-child(4)  { transition-delay: 210ms; }
+.stagger-children > *:nth-child(5)  { transition-delay: 280ms; }
+.stagger-children > *:nth-child(6)  { transition-delay: 350ms; }
+.stagger-children > *:nth-child(7)  { transition-delay: 420ms; }
+.stagger-children > *:nth-child(8)  { transition-delay: 490ms; }
+.stagger-children > *:nth-child(9)  { transition-delay: 560ms; }
+.stagger-children > *:nth-child(10) { transition-delay: 630ms; }
+.stagger-children > *:nth-child(11) { transition-delay: 700ms; }
+.stagger-children > *:nth-child(12) { transition-delay: 770ms; }
+
+/* ════════════ COUNT-UP NUMBERS ════════════ */
+.cnum { display: inline-block; font-variant-numeric: tabular-nums; min-width: 1.4ch; }
+
+/* ════════════ SVG DRAW-IN ════════════ */
+.svg-draw .draw {
+  stroke-dasharray: var(--len, 2400);
+  stroke-dashoffset: var(--len, 2400);
+  transition: stroke-dashoffset 1800ms cubic-bezier(0.32,0.72,0,1);
+}
+.svg-draw.in .draw { stroke-dashoffset: 0; }
+
+/* ════════════ LIVE PULSE LED (device frame URL bar) ════════════ */
+.live-led {
+  display: inline-block; width: 7px; height: 7px;
+  background: var(--mint); border-radius: 50%;
+  margin-right: 9px; vertical-align: middle;
+  box-shadow: 0 0 0 0 rgba(125,242,176,0.55);
+  animation: livePulse 2.2s cubic-bezier(0.32,0.72,0,1) infinite;
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(125,242,176,0.55); }
+  70%  { box-shadow: 0 0 0 9px rgba(125,242,176,0); }
+  100% { box-shadow: 0 0 0 0 rgba(125,242,176,0); }
+}
+
+/* ════════════ CARD 3D TILT (Kiwi Compte) ════════════ */
+.bp-card {
+  transition: transform 360ms cubic-bezier(0.32,0.72,0,1), box-shadow 360ms cubic-bezier(0.32,0.72,0,1);
+  transform-style: preserve-3d; will-change: transform;
+}
+.bp-card:hover {
+  transform: perspective(1100px) rotateX(2deg) rotateY(-3deg) translateY(-4px);
+  box-shadow: 0 50px 90px -28px rgba(11,110,79,0.42), 0 10px 24px rgba(0,0,0,0.1);
+}
+.bp-card .brand, .bp-card .chip, .bp-card .num, .bp-card .row { transform: translateZ(20px); }
+
+/* ════════════ FEATURE CARD HOVER GLEAM ════════════ */
+.feat { position: relative; overflow: hidden; transition: transform 280ms cubic-bezier(0.32,0.72,0,1), border-color 280ms; }
+.feat:hover { transform: translateY(-3px); border-color: var(--atlas); }
+.feat::after {
+  content: ""; position: absolute; top: 0; left: -100%; width: 70%; height: 100%;
+  background: linear-gradient(110deg, transparent 0%, rgba(125,242,176,0.10) 50%, transparent 100%);
+  transition: left 900ms cubic-bezier(0.32,0.72,0,1); pointer-events: none;
+}
+.feat:hover::after { left: 140%; }
+
+/* ════════════ MARQUEE — REGULATORY BAND ════════════ */
+.marquee-band {
+  background: var(--paper); padding: 22px 0; overflow: hidden; position: relative;
+  border-top: 1px solid rgba(11,110,79,0.10); border-bottom: 1px solid rgba(11,110,79,0.10);
+}
+.marquee-band::before, .marquee-band::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 120px; z-index: 2; pointer-events: none;
+}
+.marquee-band::before { left: 0; background: linear-gradient(90deg, var(--paper), transparent); }
+.marquee-band::after { right: 0; background: linear-gradient(-90deg, var(--paper), transparent); }
+.marquee-eyebrow {
+  position: absolute; left: 50%; top: -10px; transform: translateX(-50%);
+  font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.18em; text-transform: uppercase;
+  background: var(--paper); padding: 0 12px;
+}
+.marquee-track {
+  display: flex; gap: 0; align-items: center; width: max-content;
+  animation: marqueeMove 60s linear infinite;
+}
+.marquee-band:hover .marquee-track { animation-play-state: paused; }
+.marquee-item {
+  font-family: var(--mono); font-size: 13px; color: var(--n-700); letter-spacing: 0.08em;
+  text-transform: uppercase; white-space: nowrap; padding: 0 36px;
+  display: inline-flex; align-items: center;
+}
+.marquee-item .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--atlas); margin-right: 12px; opacity: 0.7; }
+.marquee-item:not(:last-child)::after {
+  content: ""; display: inline-block; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--n-300); margin-left: 36px;
+}
+@keyframes marqueeMove {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ════════════ COVER PARALLAX MINT GLOW ════════════ */
+#cover .glow {
+  position: absolute; right: -10%; top: -20%; width: 70%; height: 90%;
+  background: radial-gradient(ellipse at 60% 50%, rgba(125,242,176,0.22), transparent 65%);
+  filter: blur(60px); pointer-events: none; z-index: 0;
+  transition: transform 600ms cubic-bezier(0.32,0.72,0,1);
+  will-change: transform;
+}
+#cover::before { content: none; } /* moved to .glow element */
+
+/* ════════════ PROBLEM LIST hover row ════════════ */
+.prob-list li { transition: padding-left 280ms cubic-bezier(0.32,0.72,0,1); }
+.prob-list li:hover { padding-left: 8px; }
+.prob-list li:hover .num { color: var(--paper); }
+
+/* ════════════ ROUTING NODE pulse on hot ════════════ */
+.routing .node.hot { position: relative; }
+.routing .node.hot::before {
+  content: ""; position: absolute; left: -1px; top: -1px; right: -1px; bottom: -1px;
+  border-radius: 11px; border: 1px solid var(--mint);
+  animation: hotPulse 2.6s cubic-bezier(0.32,0.72,0,1) infinite; opacity: 0; pointer-events: none;
+}
+@keyframes hotPulse {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.015); }
+}
+
+/* ════════════ ACT card subtle lift ════════════ */
+.act { will-change: transform; }
+.act:hover { transform: translateY(-4px); border-color: var(--atlas); box-shadow: 0 30px 60px -24px rgba(11,110,79,0.18); }
+
+/* ════════════ DOTS — current dot grows ════════════ */
+.dot.on { width: 9px; height: 9px; }
+
+/* ════════════ TOAST ════════════ */
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 999px; font-size: 13px; font-weight: 500; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); opacity: 0; transition: all 280ms cubic-bezier(0.32,0.72,0,1); z-index: 220; letter-spacing: -0.005em; }
+.toast.in { opacity: 1; transform: translate(-50%, 0); }
+.toast .mint { color: var(--mint); margin-left: 8px; font-family: var(--mono); }
+
+:focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; border-radius: 4px; }
+
+/* Print: keep readable */
+@media print {
+  .nav, .dots, .progress, .toast, body::before { display: none; }
+  section { padding: 40px 0; break-inside: avoid; }
+  section.dark, section.atlas, section.riad { background: var(--paper) !important; color: var(--ink) !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Top progress ─── -->
+<div class="progress"><div class="progress-bar" id="pb"></div></div>
+
+<!-- ─── Top nav ─── -->
+<nav class="nav">
+  <a href="#cover" class="nav-logo">kiwi<i></i></a>
+  <div class="nav-meta"><b>Business Plan</b> · Édition fondateurs · 2026</div>
+  <a href="#contact" class="nav-cta">Contact</a>
+</nav>
+
+<!-- ─── Side index dots ─── -->
+<div class="dots" id="dots">
+  <a class="dot" data-l="Couverture" href="#cover"></a>
+  <a class="dot" data-l="Manifeste" href="#manifeste"></a>
+  <a class="dot" data-l="Pourquoi maintenant" href="#why-now"></a>
+  <a class="dot" data-l="Le marché" href="#marche"></a>
+  <a class="dot" data-l="Le commerçant" href="#probleme"></a>
+  <a class="dot" data-l="Trois actes" href="#trois-actes"></a>
+  <a class="dot" data-l="Kiwi Systems" href="#systems"></a>
+  <a class="dot" data-l="Le produit" href="#produit"></a>
+  <a class="dot" data-l="Le routage" href="#routage"></a>
+  <a class="dot" data-l="Hospitality" href="#hospitality"></a>
+  <a class="dot" data-l="Voir le produit" href="#voir-produit"></a>
+  <a class="dot" data-l="Distribution" href="#distribution"></a>
+  <a class="dot" data-l="Banking + Pay" href="#banking-pay"></a>
+  <a class="dot" data-l="Kiwi Pay" href="#pay"></a>
+  <a class="dot" data-l="Kiwi Banking" href="#banking"></a>
+  <a class="dot" data-l="Intelligence marocaine" href="#intelligence"></a>
+  <a class="dot" data-l="Voir le wallet" href="#voir-wallet"></a>
+  <a class="dot" data-l="Investing" href="#investing"></a>
+  <a class="dot" data-l="Concurrence" href="#concurrence"></a>
+  <a class="dot" data-l="Pourquoi Kiwi gagne" href="#defense"></a>
+  <a class="dot" data-l="L'équipe" href="#equipe"></a>
+  <a class="dot" data-l="Feuille de route" href="#feuille"></a>
+  <a class="dot" data-l="Vision" href="#vision"></a>
+  <a class="dot" data-l="Contact" href="#contact"></a>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     01 · COVER
+     ════════════════════════════════════════════════════════════ -->
+<section id="cover">
+  <div class="glow" id="coverGlow"></div>
+  <div class="wrap cover-top">
+    <div class="cover-mark">kiwi<i></i></div>
+    <div class="cover-tag">Business Plan · Édition fondateurs · Avril 2026</div>
+  </div>
+
+  <div class="wrap cover-mid">
+    <h1 class="stagger-words">Le système d'exploitation<br/>du <em>commerçant</em> marocain.</h1>
+    <p>Un document fondateur en trois actes : la caisse qui remplace le papier, la banque qui remplace le contrat de location, l'épargne qui remplace le matelas. Ensemble — Kiwi.</p>
+  </div>
+
+  <div class="wrap cover-bot">
+    <div class="col"><b>Société</b>Kiwi Payments SA · Tanger</div>
+    <div class="col"><b>Fondateurs</b>Badr-Eddin Bakkioui · Zakariae Attahiri</div>
+    <div class="col"><b>Contact</b>invest@kiwi.ma</div>
+    <div class="col"><b>Diffusion</b>Strictement confidentiel</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     02 · MANIFESTE
+     ════════════════════════════════════════════════════════════ -->
+<section id="manifeste" class="tall">
+  <div class="wrap-tight">
+    <div class="s-num"><b>02</b> · Manifeste</div>
+    <p class="editorial-block reveal" style="margin-top: 36px;">
+      Au Maroc, on paie pour être <span class="accent">mal servi</span>. Le commerçant loue un terminal qu'il n'a pas choisi, attend trois jours pour voir son argent, signe un contrat de trois ans pour une commission qu'il ne comprend pas, et n'a pas de logiciel — juste un cahier, un téléphone, et un tiroir-caisse. Ce n'est pas un défaut culturel. C'est un défaut <span class="accent">de marché</span>. Pendant vingt ans, un seul opérateur a tenu la monnaie électronique du pays. Cette époque est terminée.
+    </p>
+    <p class="editorial-block reveal" style="margin-top: 28px;">
+      Kiwi commence là où finit le monopole. Nous construisons trois produits qui s'enchaînent — la caisse, la banque, l'épargne — pour que le commerçant marocain dispose enfin d'<span class="accent">un seul outil</span> qui parle sa langue, respecte ses rythmes, et lui rend l'argent qu'il a gagné <span class="accent">le lendemain matin</span>.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     03 · POURQUOI MAINTENANT
+     ════════════════════════════════════════════════════════════ -->
+<section id="why-now" class="soft">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>03</b> · Pourquoi maintenant</div>
+      <div class="s-eyebrow">Le bon moment, pas une intuition</div>
+      <h2>Le marché marocain a changé en deux ans plus qu'en <em>vingt</em>.</h2>
+      <p class="lede">Quatre forces convergent — toutes publiques, toutes vérifiables. Aucune n'est une opinion. Ensemble, elles dessinent une fenêtre de construction qui n'a jamais existé auparavant et ne se rouvrira pas.</p>
+    </div>
+
+    <div class="timeline reveal">
+      <div class="row">
+        <div class="date">31 oct. 2024</div>
+        <div class="what">Décision 152/D/2024 du Conseil de la Concurrence : fin du monopole de l'acquéreur historique.</div>
+        <div class="why">Première fois depuis 2001 qu'un opérateur indépendant peut signer un commerçant.</div>
+      </div>
+      <div class="row">
+        <div class="date">1er nov. 2024</div>
+        <div class="what">Plafond d'interchange ramené à 0,65 % (vs. 1,20–1,30 % auparavant).</div>
+        <div class="why">L'acceptation carte devient économiquement viable pour le ticket moyen marocain.</div>
+      </div>
+      <div class="row">
+        <div class="date">1er mai 2025</div>
+        <div class="what">Le marché de l'acquisition est officiellement ouvert aux Établissements de Paiement.</div>
+        <div class="why">Bank Al-Maghrib accorde des licences indépendantes des banques traditionnelles.</div>
+      </div>
+      <div class="row">
+        <div class="date">5 janv. 2026</div>
+        <div class="what">Le Maroc clôture 2025 avec un record d'arrivées touristiques, dépassant l'objectif 2026.</div>
+        <div class="why">Pression structurelle d'acceptation carte sur les commerces touristiques — pas une option.</div>
+      </div>
+      <div class="row">
+        <div class="date">31 janv. 2026</div>
+        <div class="what">Date butoir de transfert des contrats commerçants vers les nouveaux opérateurs.</div>
+        <div class="why">Tous les commerces du pays sont, par construction, en train de changer de prestataire.</div>
+      </div>
+      <div class="row">
+        <div class="date">2030</div>
+        <div class="what">Co-organisation de la Coupe du Monde FIFA avec l'Espagne et le Portugal.</div>
+        <div class="why">Investissement national massif dans l'infrastructure de paiement et l'hospitalité.</div>
+      </div>
+    </div>
+
+    <div class="stat-row reveal stagger-children">
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="19.8" data-prec="1">19,8</span> <em>M</em></div>
+        <div class="l">Touristes en 2025 — record absolu, +14 % YoY, déjà au-delà de l'objectif 2026.</div>
+        <div class="src">Ministère du Tourisme</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="26" data-prec="0">26</span> %</div>
+        <div class="l">Espèces en circulation rapportées au PIB — un des ratios les plus élevés du MENA.</div>
+        <div class="src">Bank Al-Maghrib</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="0.65" data-prec="2">0,65</span> %</div>
+        <div class="l">Plafond d'interchange post-réforme — division par deux du coût d'acceptation.</div>
+        <div class="src">Conseil de la Concurrence</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="2030" data-prec="0">2030</span></div>
+        <div class="l">Coupe du Monde FIFA — déclencheur d'infrastructure paiement à l'échelle nationale.</div>
+        <div class="src">FIFA · Royaume du Maroc</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     03·5 · MARQUEE — REGULATORY BAND
+     ════════════════════════════════════════════════════════════ -->
+<div class="marquee-band">
+  <div class="marquee-eyebrow">Cadre · sources publiques</div>
+  <div class="marquee-track" id="marqueeTrack">
+    <span class="marquee-item"><span class="dot"></span>Bank Al-Maghrib</span>
+    <span class="marquee-item">Conseil de la Concurrence</span>
+    <span class="marquee-item">AMMC</span>
+    <span class="marquee-item">CNDP</span>
+    <span class="marquee-item">DGSSI</span>
+    <span class="marquee-item">OMPIC</span>
+    <span class="marquee-item">Ministère du Tourisme</span>
+    <span class="marquee-item">Loi 103-12</span>
+    <span class="marquee-item">Loi 43-05</span>
+    <span class="marquee-item">Loi 09-08</span>
+    <span class="marquee-item">Décision 152/D/2024</span>
+    <span class="marquee-item">Coupe du Monde FIFA 2030</span>
+    <!-- duplicate set for seamless loop -->
+    <span class="marquee-item"><span class="dot"></span>Bank Al-Maghrib</span>
+    <span class="marquee-item">Conseil de la Concurrence</span>
+    <span class="marquee-item">AMMC</span>
+    <span class="marquee-item">CNDP</span>
+    <span class="marquee-item">DGSSI</span>
+    <span class="marquee-item">OMPIC</span>
+    <span class="marquee-item">Ministère du Tourisme</span>
+    <span class="marquee-item">Loi 103-12</span>
+    <span class="marquee-item">Loi 43-05</span>
+    <span class="marquee-item">Loi 09-08</span>
+    <span class="marquee-item">Décision 152/D/2024</span>
+    <span class="marquee-item">Coupe du Monde FIFA 2030</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     04 · LE MARCHÉ
+     ════════════════════════════════════════════════════════════ -->
+<section id="marche">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>04</b> · Le marché</div>
+      <div class="s-eyebrow">L'opportunité commerçant au Maroc</div>
+      <h2>Un pays sous-équipé en logiciels<br/>et <em>sur-équipé</em> en habitudes.</h2>
+      <p class="lede">Le commerçant marocain n'attend pas une nouvelle marque. Il attend un outil qui fonctionne dans une cuisine pleine, à l'heure du Maghreb, en darija, sans technicien à appeler, et qui ne le retient pas par un contrat de trois ans.</p>
+    </div>
+
+    <div class="stat-row reveal stagger-children">
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="800" data-prec="0">800</span><em>K</em></div>
+        <div class="l">PME marocaines — base adressable nationale toutes catégories confondues.</div>
+        <div class="src">Confédération générale</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="94" data-prec="0">94</span><em>K</em></div>
+        <div class="l">Terminaux POS actifs — moins de 12 % de pénétration commerçant.</div>
+        <div class="src">CMI · Bank Al-Maghrib</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="200" data-prec="0">200</span><em>M</em>+</div>
+        <div class="l">Transactions cartes annuelles — sous-utilisées au point de vente, dominées par le retrait DAB.</div>
+        <div class="src">Bank Al-Maghrib</div>
+      </div>
+      <div class="cell">
+        <div class="v"><span class="cnum" data-num="13.8" data-prec="1">13,8</span><em>M</em></div>
+        <div class="l">Comptes mobiles ouverts — seuls 28 % activement utilisés. L'usage attend l'utilité.</div>
+        <div class="src">Bank Al-Maghrib</div>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 80px;">
+      <div>
+        <h3>Pourquoi la <em>restauration</em> en premier.</h3>
+        <p>Trois critères tranchent — fréquence transactionnelle, pression d'acceptation carte côté touriste, et profondeur du problème opérationnel. Aucune autre verticale ne combine les trois. Une caisse F&amp;B traite plus de tickets par jour qu'un commerce de détail, et le café marocain est déjà sur Instagram, déjà sur WhatsApp Business, déjà équipé d'un iPad. La barrière d'adoption logicielle est plus basse qu'on ne croit.</p>
+        <p>La cible de départ n'est pas « les 800 000 PME ». C'est, plus précisément, le sous-ensemble des restaurants et cafés multi-stations en zone touristique de Tanger, Casablanca, Rabat, et Marrakech — là où le client étranger force l'acceptation carte et où la complexité opérationnelle (cuisine + bar + glacier + crêperie) rend le logiciel indispensable.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Volume de tickets quotidien parmi les plus élevés tous secteurs confondus</li>
+          <li>Habitude digitale déjà acquise (iPad, Instagram, WhatsApp Business)</li>
+          <li>Douleur opérationnelle visible — multi-stations, split, plan de salle</li>
+          <li>Pression touristique d'acceptation carte non négociable</li>
+          <li>Réseau de distribution chaud à Tanger via le restaurant familial du fondateur</li>
+          <li>Concurrents généralistes mal armés sur la profondeur métier hospitalité</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     05 · LE COMMERÇANT AUJOURD'HUI (Problem)
+     ════════════════════════════════════════════════════════════ -->
+<section id="probleme" class="dark">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>05</b> · Le commerçant aujourd'hui</div>
+      <div class="s-eyebrow">Le problème, en cinq lignes</div>
+      <h2>Le commerçant marocain paie<br/>pour être <em>mal servi</em>.</h2>
+      <p class="lede">Le statu quo n'est pas neutre. Il a un coût mensuel, un coût opérationnel, et un coût émotionnel — payés silencieusement par chaque restaurant, café, et boutique du pays.</p>
+    </div>
+
+    <ul class="prob-list reveal stagger-children">
+      <li>
+        <div class="num">01</div>
+        <div class="text">Commission effective entre 3 et 4 % une fois la <em>location</em> du terminal incluse</div>
+        <div class="right">Coût mensuel récurrent</div>
+      </li>
+      <li>
+        <div class="num">02</div>
+        <div class="text">Règlement à T+2 ou T+3 — <em>l'argent dort</em> au lieu d'acheter le stock</div>
+        <div class="right">Cycle de trésorerie cassé</div>
+      </li>
+      <li>
+        <div class="num">03</div>
+        <div class="text">Contrat <em>trois ans</em>, résiliation longue, terminal imposé par le prestataire</div>
+        <div class="right">Verrouillage commercial</div>
+      </li>
+      <li>
+        <div class="num">04</div>
+        <div class="text">Onboarding en agence avec CIN, patente, RC, attente plusieurs <em>semaines</em></div>
+        <div class="right">Délai d'activation</div>
+      </li>
+      <li>
+        <div class="num">05</div>
+        <div class="text">Aucun logiciel — pas de plan de salle, pas de split, pas de routage cuisine</div>
+        <div class="right">Vide produit</div>
+      </li>
+      <li>
+        <div class="num">06</div>
+        <div class="text">Aucun support en darija, aucune compréhension du Ramadan, du Vendredi, de la <em>Zakat</em></div>
+        <div class="right">Vide culturel</div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     06 · TROIS ACTES (Thesis)
+     ════════════════════════════════════════════════════════════ -->
+<section id="trois-actes">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>06</b> · La thèse Kiwi</div>
+      <div class="s-eyebrow">En trois actes</div>
+      <h2>Une marque. Trois produits.<br/>Un seul <em>parcours</em>.</h2>
+      <p class="lede">Nous construisons en séquence, pas en parallèle. Chaque acte sert le suivant : la caisse génère la donnée transactionnelle qui justifie la banque ; la banque détient le rapport quotidien qui justifie l'épargne. La défense de chaque acte est le tour suivant.</p>
+    </div>
+
+    <div class="acts stagger-children reveal">
+      <div class="act">
+        <div class="roman">I.</div>
+        <div class="phase">Acte I · maintenant</div>
+        <h3>Kiwi <em>Systems</em></h3>
+        <p>Le système d'exploitation du commerçant. Caisse, plan de salle, routage cuisine multi-stations, écran de cuisine, application serveur, règlement T+1, matériel prêté, support WhatsApp en darija. La porte d'entrée — et le moat.</p>
+        <div class="feats">
+          <span>Caisse iPad &amp; tablette Android</span>
+          <span>Routage cuisine multi-stations</span>
+          <span>Plan de salle &amp; split de l'addition</span>
+          <span>Application serveur sur smartphone</span>
+          <span>Règlement T+1 sur IBAN marocain</span>
+          <span>Matériel prêté gratuitement</span>
+        </div>
+      </div>
+
+      <div class="act">
+        <div class="roman">II.</div>
+        <div class="phase">Acte II · 12–30 mois</div>
+        <h3>Kiwi <em>Banking</em> &amp; Pay</h3>
+        <p>L'argent qui passe par la caisse mérite un compte. Compte courant marocain, carte de débit, financement Murabaha pour le stock, traitement carte direct sous licence Kiwi. La couche financière qui compose au-dessus de la caisse — et qui change l'unit economics du jour au lendemain.</p>
+        <div class="feats">
+          <span>Kiwi Compte · IBAN marocain</span>
+          <span>Carte de débit physique &amp; virtuelle</span>
+          <span>Financement Murabaha sur stock</span>
+          <span>Kiwi Pay · acquisition sous licence propre</span>
+          <span>SoftPOS — encaisser sans terminal</span>
+          <span>Liens de paiement WhatsApp</span>
+        </div>
+      </div>
+
+      <div class="act">
+        <div class="roman">III.</div>
+        <div class="phase">Acte III · au-delà</div>
+        <h3>Kiwi <em>Investing</em></h3>
+        <p>Quand l'argent dort sur le compte, il perd. Investissement fractionné en fonds AMMC, action CSE, ETF mondiaux, filtre halal natif. Pour le commerçant qui dégage de la trésorerie ; pour le client final qui veut sortir du matelas. La super-app se referme.</p>
+        <div class="feats">
+          <span>Fonds OPCVM fractionnés</span>
+          <span>Actions CSE · Bourse de Casablanca</span>
+          <span>ETF internationaux</span>
+          <span>Filtre halal natif &amp; transparent</span>
+          <span>Plan d'épargne automatisé</span>
+          <span>Calculateur de Zakat intégré</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     07 · KIWI SYSTEMS · Partie I opener
+     ════════════════════════════════════════════════════════════ -->
+<section id="systems" class="atlas">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>Partie I</b> · Kiwi Systems</div>
+      <div class="s-eyebrow">Acte I — La porte d'entrée</div>
+      <h2 class="stagger-words">Le système d'exploitation<br/>du <em>commerçant</em> marocain.</h2>
+      <p class="lede">Tout ce qu'un café, un restaurant, ou un groupe hospitality a besoin pour ouvrir le service le matin et fermer la caisse le soir — dans une seule application, conçue pour la cuisine marocaine, pas pour la chaîne américaine.</p>
+    </div>
+
+    <div class="two reveal" style="margin-top: 56px;">
+      <div>
+        <h3>Le moat n'est pas <em>le logiciel</em>. C'est la profondeur métier.</h3>
+        <p>La verticale F&amp;B au Maroc n'a aujourd'hui aucun éditeur logiciel sérieux. Les acteurs présents sont soit des fintechs horizontales (Chari, ADN distribution FMCG), soit des plateformes SME généralistes (Inyad, ADN multi-vertical), soit des filiales bancaires qui louent des terminaux.</p>
+        <p>Aucun ne ship le routage cuisine multi-stations comme une fonctionnalité de premier rang. Aucun ne traite les groupes hospitality comme un client de premier ordre. Aucun ne gère le Vendredi, le Ramadan, ou la Zakat dans le produit. C'est l'écart d'exécution que Kiwi ouvre — et défend.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Un seul logiciel pour la salle, la cuisine, le bar et le management</li>
+          <li>Onboarding inférieur à 30 minutes — pas de technicien, pas de visite</li>
+          <li>Reconfiguration cuisine en 60 secondes par le propriétaire lui-même</li>
+          <li>Support WhatsApp en darija, en français, en anglais — 7 jours sur 7</li>
+          <li>Aucun engagement, aucun contrat de location, aucune caution matériel</li>
+          <li>Pensé Maroc — pas adapté du Maroc</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     08 · LE PRODUIT (Feature grid)
+     ════════════════════════════════════════════════════════════ -->
+<section id="produit">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>07</b> · Le produit</div>
+      <div class="s-eyebrow">Ce qu'on livre — depuis le premier jour</div>
+      <h2>Tout ce qui se passe<br/>entre <em>l'ouverture</em> et la fermeture.</h2>
+      <p class="lede">Le périmètre Kiwi Systems n'est pas un MVP. C'est un produit complet pour ouvrir un service le matin, accompagner les serveurs pendant le coup de feu, fermer la caisse le soir, et lire ses chiffres avant de rentrer dormir.</p>
+    </div>
+
+    <div class="feat-grid reveal stagger-children">
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 8h18M8 13h2M12 13h2"/></svg></div>
+        <h4>Caisse iPad &amp; Android</h4>
+        <p>Application front-of-house pensée pour la vitesse. Un serveur prend une commande complète en moins de 45 secondes. Mode hors-ligne intégré.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="1.5"/><circle cx="14" cy="11" r="1.5"/><path d="M5 14h14"/></svg></div>
+        <h4>Plan de salle</h4>
+        <p>Carte visuelle des tables avec statut temps réel — libre, occupée, en attente d'addition, addition demandée. Glisser-déposer pour réorganiser.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></div>
+        <h4>Constructeur de menu</h4>
+        <p>Articles, catégories, variantes, suppléments, options « sans », photos. Édition en direct pendant le service. Bilingue FR/AR/EN simultané.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 18h6"/></svg></div>
+        <h4>Application serveur</h4>
+        <p>Sur smartphone Android ou iOS du serveur. PIN à 4 chiffres pour la rentrée rapide. Une saisie sur le smartphone, ticket fire automatique en cuisine.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <h4>Écran de cuisine (KDS)</h4>
+        <p>Tablette Android murale en cuisine, codée par couleur selon l'âge des tickets. Le cuisinier valide quand le plat est prêt — le serveur reçoit la notification.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <h4>Règlement T+1</h4>
+        <p>L'argent encaissé arrive sur l'IBAN du commerçant le lendemain matin. Promis chaque jour ouvré — pas un batch perdu en fin de mois.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/></svg></div>
+        <h4>Matériel prêté</h4>
+        <p>Terminal PAX A920, tablette KDS, tablette caisse, lecteur Bluetooth, soft-POS pré-installé. Prêté gratuitement pour la durée de l'abonnement.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><path d="M19 8v6M16 11h6"/></svg></div>
+        <h4>Équipe &amp; rôles</h4>
+        <p>Comptes propriétaire, manager, serveur, cuisine, caissier — chacun avec son périmètre. PIN rapide. Multi-emplacement avec un seul compte.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 11.5V8a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h6"/><circle cx="17" cy="17" r="3"/><path d="M19 19l2 2"/></svg></div>
+        <h4>Stock ingrédients</h4>
+        <p>Décompte automatique à chaque vente d'article. Alertes seuil bas, suggestions de réapprovisionnement. Cohérence stock-vente sans saisie manuelle.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h18"/></svg></div>
+        <h4>Reporting temps réel</h4>
+        <p>Tableau de bord propriétaire sur mobile. Heatmap heure × jour, ticket moyen, rotation des tables, performance par serveur, comparatifs.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div>
+        <h4>Conformité TVA</h4>
+        <p>Taux TVA appliqués automatiquement par catégorie marocaine. Tickets de caisse réglementaires. Export comptable mensuel prêt pour le fiduciaire.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+        <h4>Support WhatsApp</h4>
+        <p>Pas d'agence, pas de hotline payante, pas de ticket. Une conversation WhatsApp, en darija ou en français, avec une réponse humaine sous quelques minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     09 · ROUTAGE CUISINE (Operational wedge)
+     ════════════════════════════════════════════════════════════ -->
+<section id="routage" class="dark">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>08</b> · Le coin opérationnel</div>
+      <div class="s-eyebrow">Multi-station routing</div>
+      <h2>La fonctionnalité que personne<br/>ne savait <em>vouloir</em>.</h2>
+      <p class="lede">La majorité des restaurants marocains sérieux ne sont pas une cuisine — ce sont plusieurs : cuisine principale, bar à crêpes, comptoir glaces, station jus, grill séparé. Les caisses existantes traitent ce besoin comme une configuration premium qui demande un technicien et plusieurs jours d'arrêt. Kiwi en fait une matrice glisser-déposer reconfigurable en 60 secondes par le propriétaire.</p>
+    </div>
+
+    <div class="routing reveal">
+      <div class="grid">
+        <div class="col">
+          <div class="ttl">Avant Kiwi</div>
+          <div class="sub">Une station — un goulot</div>
+          <div class="node"><b>Crêpe nutella</b><span>→ cuisine</span></div>
+          <div class="node"><b>Boule glace pistache</b><span>→ cuisine</span></div>
+          <div class="node"><b>Jus avocat</b><span>→ cuisine</span></div>
+          <div class="node"><b>Tagliatelles</b><span>→ cuisine</span></div>
+          <div class="node"><b>Espresso</b><span>→ cuisine</span></div>
+          <div class="node"><b>Salade verte</b><span>→ cuisine</span></div>
+        </div>
+        <div class="arrow">routage</div>
+        <div class="col">
+          <div class="ttl">Avec Kiwi</div>
+          <div class="sub">Tickets simultanés par station</div>
+          <div class="node hot"><b>Crêpe nutella</b><span>→ crêperie</span></div>
+          <div class="node hot"><b>Boule glace pistache</b><span>→ glacier</span></div>
+          <div class="node hot"><b>Jus avocat</b><span>→ bar à jus</span></div>
+          <div class="node"><b>Tagliatelles</b><span>→ cuisine</span></div>
+          <div class="node hot"><b>Espresso</b><span>→ comptoir</span></div>
+          <div class="node"><b>Salade verte</b><span>→ cuisine froide</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 64px;">
+      <div>
+        <h3>Pourquoi c'est <em>défensif</em>.</h3>
+        <p>La fonctionnalité paraît simple. Elle ne l'est pas. La gestion des cas limites — imprimante de secours, réassignation temps réel, articles combo qui partent vers deux stations en même temps, fallback en cas de panne — demande un engagement métier que les concurrents généralistes n'auront jamais.</p>
+        <p>C'est exactement la posture qui a permis à Toast aux États-Unis de bâtir une capitalisation de plusieurs dizaines de milliards face à Square : refuser l'horizontal, choisir une verticale, et la creuser jusqu'à ce qu'aucun généraliste ne puisse rattraper.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Stations illimitées — cuisine, bar, grill, pâtisserie, froid, glacier, jus, custom</li>
+          <li>Chaque article peut appartenir à plusieurs stations simultanément</li>
+          <li>Ticket par station — uniquement les articles pertinents, pas la commande entière</li>
+          <li>Réassignation temps réel depuis le tableau de bord — effet immédiat</li>
+          <li>Routage de secours si une imprimante tombe en panne, avec alerte</li>
+          <li>Setup auto-service — pas de visite technicien, pas de frais d'intervention</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     10 · HOSPITALITY GROUPS
+     ════════════════════════════════════════════════════════════ -->
+<section id="hospitality" class="soft">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>09</b> · Groupes hospitality</div>
+      <div class="s-eyebrow">Multi-emplacement, staff partagé</div>
+      <h2>Le segment <em>le plus rentable</em><br/>n'est pas le single-shop.</h2>
+      <p class="lede">C'est le groupe qui exploite trois à dix adresses — le restaurateur de Casablanca avec un flagship, deux concepts casual, et un contrat petit-déjeuner d'hôtel. Le riad de Marrakech avec un rooftop, une cour, et une maison d'hôtes. Ces clients ont des besoins qu'aucune caisse marocaine ne sert correctement aujourd'hui.</p>
+    </div>
+
+    <div class="two reveal" style="margin-top: 32px;">
+      <div>
+        <h3>Le compte appartient à <em>l'entreprise</em>, pas à l'emplacement.</h3>
+        <p>Un serveur appartient à la société, pas au flagship. Un manager voit toutes les adresses qu'il pilote, dans une vue consolidée. Un coup de chaud à Casablanca un samedi soir ? Le serveur de Rabat passe en couverture par un toggle — pas par une visite IT.</p>
+        <p>Le reporting reste propre par emplacement. La paie reste propre par employé. La consolidation est instantanée pour le propriétaire. Et l'acquisition d'un nouveau site ne demande pas une nouvelle installation — juste un nouveau toggle.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Comptes équipe à l'échelle de la société, pas du local</li>
+          <li>Sélecteur d'emplacement à la connexion quand plusieurs sont accessibles</li>
+          <li>Couverture temporaire activée par toggle — pas de saisie IT</li>
+          <li>Reporting consolidé multi-site avec drill-down par adresse</li>
+          <li>Catalogue partagé par défaut, avec exceptions locales possibles</li>
+          <li>Politique tarifaire par emplacement (happy hour, jour férié, hôtel partenaire)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     11 · MATÉRIEL & RÈGLEMENT
+     ════════════════════════════════════════════════════════════ -->
+<section id="materiel">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>10</b> · Matériel &amp; règlement</div>
+      <div class="s-eyebrow">La proposition de bascule</div>
+      <h2>Le matériel est <em>prêté</em>.<br/>Le règlement est en T+1.</h2>
+      <p class="lede">Deux décisions structurelles qui font qu'un commerçant peut basculer de son système actuel à Kiwi sans rien décaisser, et sans rien attendre. C'est la simplicité qui fait la conversion — pas le marketing.</p>
+    </div>
+
+    <div class="feat-grid reveal stagger-children" style="grid-template-columns: repeat(2, 1fr); gap: 18px;">
+      <div class="feat" style="min-height: 280px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg></div>
+        <h4>Le matériel — prêté gratuitement</h4>
+        <p>Terminal PAX A920 pour l'encaissement traditionnel, tablette pour le KDS en cuisine, tablette pour la caisse en salle, lecteur Bluetooth de poche pour l'extérieur, et SoftPOS pré-installé sur le smartphone Android du serveur pour encaisser sans terminal physique.</p>
+        <p style="margin-top: 12px; color: var(--n-500); font-size: 13.5px;">Aucune caution. Aucun frais d'installation. Aucun rachat de matériel à la résiliation. Le matériel reste un poste CapEx Kiwi — jamais une ligne de revenu. C'est la position structurelle qui bascule le marchand sans friction de switch.</p>
+      </div>
+      <div class="feat" style="min-height: 280px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <h4>Le règlement — T+1, chaque jour ouvré</h4>
+        <p>L'argent encaissé aujourd'hui arrive sur l'IBAN du commerçant demain matin. Pas un batch perdu, pas un ticket d'appel à la banque, pas d'attente jusqu'au lundi pour le week-end.</p>
+        <p style="margin-top: 12px; color: var(--n-500); font-size: 13.5px;">Le cycle de trésorerie d'un café marocain est cassé par le règlement T+2 ou T+3 du système actuel — qui force le commerçant à acheter ses stocks avec son cash plutôt qu'avec son chiffre d'affaires de la veille. Kiwi rétablit ce cycle.</p>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 64px;">
+      <div>
+        <h3>Le programme <em>« Switch to Kiwi »</em>.</h3>
+        <p>La majorité des restaurants marocains sérieux ont déjà une caisse Windows achetée plusieurs milliers de dirhams il y a quelques années. Ils s'en plaignent — mais ils sont verrouillés par le coût d'achat, par le numéro du technicien, par la peur de perdre leur configuration.</p>
+        <p>Kiwi propose une reprise structurée : nous reprenons l'ancien matériel, créditons un montant correspondant sur l'abonnement, et reconfigurons toute la maison sur Kiwi en moins d'une journée. Le commerçant n'a rien à payer, n'a rien à transférer manuellement, et reçoit son premier règlement T+1 le lendemain de la mise en service.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Reprise du matériel existant sans expertise technique côté commerçant</li>
+          <li>Migration du menu réalisée par l'équipe Kiwi en mode service géré</li>
+          <li>Formation équipe en 30 minutes, en darija ou en français</li>
+          <li>Support hyper-réactif sur les 30 premiers jours de bascule</li>
+          <li>Aucun engagement — le commerçant peut sortir à tout moment</li>
+          <li>Aucune commission cachée, aucun frais de résiliation, aucune location</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     12 · VOIR LE PRODUIT (iframe of dashboard.html)
+     ════════════════════════════════════════════════════════════ -->
+<section id="voir-produit" class="soft">
+  <div class="wrap-wide">
+    <div class="s-head reveal">
+      <div class="s-num"><b>11</b> · Voir le produit</div>
+      <div class="s-eyebrow">Démonstration en direct</div>
+      <h2>Le tableau de bord <em>marchand</em>.</h2>
+      <p class="lede">Mode Simple par défaut pour le quotidien — trois onglets, gros chiffres, gros bouton « Encaisser ». Mode Pro pour le power-user — sidebar dense, KPI sparklines, feed live, drawer IA. Le toggle vit en haut à droite, raccourci ⌘⇧M. Voici l'application réelle, embarquée dans ce document.</p>
+    </div>
+
+    <div class="device-frame scaled reveal">
+      <div class="bar">
+        <div class="led"></div><div class="led"></div><div class="led"></div>
+        <div class="url"><span class="live-led"></span>app.kiwi.ma · Tableau de bord marchand · Casablanca</div>
+      </div>
+      <div class="screen">
+        <iframe src="dashboard.html" loading="lazy" title="Kiwi · Tableau de bord marchand"></iframe>
+      </div>
+    </div>
+    <div class="device-cap">Application Kiwi Systems — Mode Pro · Casablanca · données simulées</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     13 · DISTRIBUTION TANGIER
+     ════════════════════════════════════════════════════════════ -->
+<section id="distribution">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>12</b> · Distribution</div>
+      <div class="s-eyebrow">Aller à la conquête, ville par ville</div>
+      <h2>Tanger d'abord. Casa, Rabat, Marrakech<br/>ensuite. <em>Toujours</em> ville par ville.</h2>
+      <p class="lede">Aucune fintech marocaine n'a gagné en attaquant le pays au scatter-shot. Toutes ont gagné en construisant la densité d'une ville avant de passer à la suivante. Tanger est notre ville-mère — sous-équipée, dense en hospitalité touristique, et où le réseau de distribution est déjà chaud par construction familiale.</p>
+    </div>
+
+    <div class="map-block reveal svg-draw">
+      <div class="grid">
+        <div>
+          <svg viewBox="0 0 480 380">
+            <defs>
+              <linearGradient id="mapGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#0B6E4F" stop-opacity="0.08"/>
+                <stop offset="1" stop-color="#7DF2B0" stop-opacity="0.04"/>
+              </linearGradient>
+            </defs>
+            <path class="draw" style="--len: 1480;" d="M70 60 L120 50 L180 60 L240 80 L320 70 L400 90 L420 130 L440 200 L420 260 L380 310 L320 340 L240 350 L180 340 L130 320 L100 280 L70 230 L60 180 L60 110 Z"
+                  fill="url(#mapGrad)" stroke="#0B6E4F" stroke-width="1.2" stroke-opacity="0.4"/>
+            <g class="pings">
+              <!-- Tanger -->
+              <circle class="r" cx="155" cy="78" r="6" fill="#7DF2B0" opacity="0.3"/>
+              <circle cx="155" cy="78" r="6" fill="#0B6E4F"/>
+              <text x="170" y="74" font-family="Inter Tight" font-weight="500" font-size="13" fill="#0A0F0D">Tanger</text>
+              <text x="170" y="88" font-family="JetBrains Mono" font-size="10" fill="#0B6E4F" letter-spacing="0.04em">PHASE 1 · MAINTENANT</text>
+              <!-- Rabat -->
+              <circle cx="220" cy="135" r="5" fill="#0B6E4F" opacity="0.6"/>
+              <text x="232" y="138" font-family="Inter Tight" font-weight="500" font-size="12" fill="#0A0F0D">Rabat</text>
+              <!-- Casablanca -->
+              <circle cx="195" cy="170" r="5" fill="#0B6E4F" opacity="0.6"/>
+              <text x="208" y="173" font-family="Inter Tight" font-weight="500" font-size="12" fill="#0A0F0D">Casablanca</text>
+              <!-- Marrakech -->
+              <circle cx="240" cy="240" r="5" fill="#0B6E4F" opacity="0.6"/>
+              <text x="252" y="243" font-family="Inter Tight" font-weight="500" font-size="12" fill="#0A0F0D">Marrakech</text>
+              <!-- Agadir -->
+              <circle cx="195" cy="295" r="4" fill="#0B6E4F" opacity="0.35"/>
+              <text x="207" y="297" font-family="Inter Tight" font-size="11" fill="#4B4944">Agadir</text>
+              <!-- Fès -->
+              <circle cx="285" cy="135" r="4" fill="#0B6E4F" opacity="0.35"/>
+              <text x="297" y="137" font-family="Inter Tight" font-size="11" fill="#4B4944">Fès</text>
+              <!-- Tétouan -->
+              <circle cx="180" cy="85" r="3" fill="#0B6E4F" opacity="0.3"/>
+              <text x="190" y="98" font-family="Inter Tight" font-size="10" fill="#6F6C65">Tétouan</text>
+              <!-- Meknès -->
+              <circle cx="248" cy="140" r="3" fill="#0B6E4F" opacity="0.3"/>
+              <text x="220" y="155" font-family="Inter Tight" font-size="10" fill="#6F6C65">Meknès</text>
+            </g>
+          </svg>
+        </div>
+
+        <div>
+          <ul class="city-list">
+            <li>
+              <div class="name"><b>Tanger</b><span>Médina, Malabata, Iberia, Marshan</span></div>
+              <div class="tag">Maintenant</div>
+            </li>
+            <li>
+              <div class="name"><b>Casablanca</b><span>Maarif, Gauthier, Bourgogne, Anfa</span></div>
+              <div class="tag next">+12 mois</div>
+            </li>
+            <li>
+              <div class="name"><b>Rabat</b><span>Agdal, Hassan, Hay Riad</span></div>
+              <div class="tag next">+12 mois</div>
+            </li>
+            <li>
+              <div class="name"><b>Marrakech</b><span>Médina, Gueliz, Hivernage, Palmeraie</span></div>
+              <div class="tag next">+18 mois</div>
+            </li>
+            <li>
+              <div class="name"><b>Agadir</b><span>Marina, Founty, Charaf</span></div>
+              <div class="tag next">+24 mois</div>
+            </li>
+            <li>
+              <div class="name"><b>Fès · Tétouan · Meknès</b><span>Tier 2 sélectif</span></div>
+              <div class="tag next">+30 mois</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 72px;">
+      <div>
+        <h3>La <em>distribution chaude</em> de Tanger.</h3>
+        <p>Le père du fondateur tient un restaurant à Tanger depuis vingt ans. Le réseau étendu — famille, pairs directs, fournisseurs, opérateurs hospitalité locaux — représente le warm-start qu'aucun concurrent fintech marocain ne peut reproduire sans deux ans de relation-building. Chari a construit sa base à travers la distribution FMCG de Casablanca. Inyad joue l'app-store. Aucun n'est branché sur la scène hospitalité indépendante de Tanger comme nous le sommes déjà.</p>
+        <p>Au-delà de la valeur acquisition, Tanger nous donne autre chose : une ville test à taille humaine, où chaque problème produit remonte en moins de 24 heures par la même grand-rue qui sert de canal de distribution.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Onboarding personnalisé par les fondateurs sur les premiers commerçants</li>
+          <li>Études de cas vidéo « avant–après » sur les premiers cafés signataires</li>
+          <li>Programme de parrainage entre commerçants — un mois offert par filleul activé</li>
+          <li>Dîners mensuels Kiwi à Tanger — boucle de feedback produit + brand-building organique</li>
+          <li>Présence directe terrain — pas de hotline, pas de centre d'appel délocalisé</li>
+          <li>Communauté qui devient un canal de référence dans toute la région nord</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     14 · KIWI BANKING + PAY · Partie II opener
+     ════════════════════════════════════════════════════════════ -->
+<section id="banking-pay" class="riad">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>Partie II</b> · Kiwi Banking + Kiwi Pay</div>
+      <div class="s-eyebrow">Acte II — Le flywheel financier</div>
+      <h2 class="stagger-words">L'argent qui passe par la caisse<br/>mérite un <em>compte</em>.</h2>
+      <p class="lede">Quand un commerçant utilise Kiwi Systems pendant six mois, nous voyons quelque chose qu'aucune banque marocaine ne voit : son chiffre d'affaires réel, jour par jour, ticket par ticket, station par station. Cette donnée nous donne le droit — et l'obligation — d'offrir le compte courant et le crédit qu'il n'a jamais reçu.</p>
+    </div>
+
+    <div class="two reveal" style="margin-top: 56px;">
+      <div>
+        <h3>Le flywheel <em>marchand → banque</em>.</h3>
+        <p>Kiwi Systems n'est pas seulement un produit autonome. C'est une machine à acquérir des comptes bancaires. Chaque commerçant abonné est, par construction, un futur titulaire d'un Kiwi Compte. Chaque jour de service génère la donnée de scoring qui justifie un Murabaha sur stock — sans dossier, sans agence, sans garantie immobilière.</p>
+        <p>C'est la même mécanique qui a permis à Square de devenir Cash App, à Toast de devenir Toast Capital, à Mercury de devenir une banque adossée à un produit logiciel. Le logiciel ouvre la porte. Le compte la verrouille. La couche financière compose au-dessus du logiciel — et change l'unit economics du jour au lendemain.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Scoring crédit basé sur la réalité opérationnelle, pas sur la patente</li>
+          <li>Compte d'opérations marchand — séparé des affaires personnelles, par défaut</li>
+          <li>Carte de débit Mastercard/Visa émise sous licence Kiwi</li>
+          <li>Murabaha pour le stock — financement halal, transparent, court</li>
+          <li>Traitement carte sous licence Kiwi — Kiwi Pay capte la commission complète</li>
+          <li>Liens de paiement WhatsApp pour la commande à distance et la livraison directe</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     15 · KIWI PAY
+     ════════════════════════════════════════════════════════════ -->
+<section id="pay">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>13</b> · Kiwi Pay</div>
+      <div class="s-eyebrow">Acquisition sous licence propre</div>
+      <h2>Encaisser <em>partout</em>,<br/>sans terminal séparé.</h2>
+      <p class="lede">En Phase 1, Kiwi Systems s'appuie sur un partenaire acquéreur licencié pour traiter les transactions. En Phase 2, nous obtenons notre propre licence d'Établissement de Paiement auprès de Bank Al-Maghrib et capturons l'intégralité du spread d'acquisition. C'est Kiwi Pay.</p>
+    </div>
+
+    <div class="feat-grid reveal stagger-children" style="grid-template-columns: repeat(2, 1fr); gap: 18px;">
+      <div class="feat" style="min-height: 240px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M9 18h6"/><path d="M8 7h8M8 10h6"/></svg></div>
+        <h4>SoftPOS — encaisser avec un smartphone</h4>
+        <p>L'Android du serveur devient un terminal de paiement sans contact certifié EMV. Plus besoin de courir au comptoir. La table devient le point de paiement.</p>
+      </div>
+      <div class="feat" style="min-height: 240px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20M5 16h2"/></svg></div>
+        <h4>Terminal PAX A920 connecté</h4>
+        <p>Pour les commerces qui préfèrent un terminal dédié — Wi-Fi, 4G, écran tactile, ticket thermique intégré. Prêté gratuitement, comme tout le matériel Kiwi.</p>
+      </div>
+      <div class="feat" style="min-height: 240px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg></div>
+        <h4>Liens de paiement WhatsApp</h4>
+        <p>Pour les commandes catering, pré-réservations, livraisons directes — un lien envoyé au client par WhatsApp ou SMS. Paiement sécurisé en deux clics, hors caisse.</p>
+      </div>
+      <div class="feat" style="min-height: 240px;">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg></div>
+        <h4>Cartes domestiques &amp; internationales</h4>
+        <p>CMI domestique, Visa, Mastercard, contactless, Apple Pay, Google Pay — l'acceptation universelle attendue par le client local et le touriste étranger.</p>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 72px;">
+      <div>
+        <h3>La <em>marge</em> change quand la licence change.</h3>
+        <p>En Phase 1, Kiwi est l'interface marchand mais le partenaire acquéreur conserve la majorité du spread d'acquisition. La logique économique de cette phase repose sur l'abonnement SaaS — pas sur le traitement carte.</p>
+        <p>En Phase 2, avec la licence d'Établissement de Paiement obtenue de Bank Al-Maghrib, Kiwi devient acquéreur direct. Le spread complet est capté par Kiwi. C'est la transition économique qui transforme la profitabilité par marchand — et qui justifie l'investissement réglementaire et capitalistique nécessaire.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Phase 1 — partenariat acquéreur (Lana Cash, Attijari Payment Services)</li>
+          <li>Phase 2 — licence EDP propre, acquisition directe via la plateforme technique CMI</li>
+          <li>Conformité DGSSI · CNDP · LAB-FT cadre Loi 43-05 dès la Phase 1</li>
+          <li>Assurance fraude intégrée sur les liens de paiement à distance</li>
+          <li>Reconciliation automatique vers le Kiwi Compte du marchand</li>
+          <li>Tarification simple — un seul taux affiché, pas de coût caché</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     16 · KIWI BANKING
+     ════════════════════════════════════════════════════════════ -->
+<section id="banking" class="soft">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>14</b> · Kiwi Banking</div>
+      <div class="s-eyebrow">Le compte que le commerçant n'a jamais reçu</div>
+      <h2>Un IBAN, une carte,<br/>un crédit <em>halal</em>.</h2>
+      <p class="lede">Quatre-vingt pour cent des restaurants marocains tournent leurs opérations sur le compte personnel du propriétaire. Pas par choix — par défaut. Aucune banque ne leur a proposé un compte d'exploitation simple, sans frais cachés, sans rendez-vous d'agence, sans dossier de quarante pages. Kiwi Banking est ce compte.</p>
+    </div>
+
+    <div class="two tilt reveal" style="margin-top: 32px;">
+      <div>
+        <h3>Le Kiwi Compte — <em>marchand</em> de naissance.</h3>
+        <p>Compte courant marocain avec IBAN. Carte de débit physique et virtuelle, contactless, Apple Pay et Google Pay. Le règlement T+1 de la caisse arrive directement sur ce compte. Les paiements aux fournisseurs se font depuis ce compte. Le salaire des serveurs part de ce compte. Tout est consolidé — la lecture financière est claire pour la première fois.</p>
+        <p>L'ouverture est entièrement digitale, en quelques minutes, avec CIN et patente. KYC géré sous notre cadre conformité Bank Al-Maghrib Loi 103-12 et CNDP Loi 09-08.</p>
+        <ul>
+          <li>IBAN marocain — virements domestiques et internationaux</li>
+          <li>Carte de débit physique et virtuelle, sous licence Kiwi</li>
+          <li>Apple Pay · Google Pay · Samsung Pay</li>
+          <li>Distinction nette opérations / personnel</li>
+          <li>Comptes secondaires pour les serveurs (pourboires, salaires)</li>
+          <li>Export comptable mensuel prêt pour le fiduciaire</li>
+        </ul>
+      </div>
+
+      <div>
+        <!-- Kiwi Compte card — mirrors the dashboard's .kc-card -->
+        <div class="bp-card">
+          <div class="brand">kiwi<i></i></div>
+          <div class="chip"></div>
+          <div class="num">4982 •••• •••• 3291</div>
+          <div class="row">
+            <div>
+              <div class="t">SOLDE</div>
+              <div class="v">47 281,90 MAD</div>
+            </div>
+            <div>
+              <div class="t">IBAN</div>
+              <div class="v">MA64 0071 ••••</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status strip below card -->
+        <div class="bp-card-strip">
+          <div><div class="l">Règlement</div><div class="v">Demain · 09 h</div></div>
+          <div><div class="l">Carte</div><div class="v">Active · 2 émises</div></div>
+          <div><div class="l">Murabaha</div><div class="v">Préapprouvé</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two flip reveal" style="margin-top: 96px;">
+      <div>
+        <!-- SVG mockup of Murabaha approval -->
+        <div style="background: #fff; border: 1px solid var(--n-200); border-radius: 22px; padding: 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--n-200); margin-bottom: 18px;">
+            <div>
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--atlas); letter-spacing: 0.16em; text-transform: uppercase;">Kiwi Capital · Murabaha</div>
+              <div style="font-size: 18px; font-weight: 500; letter-spacing: -0.02em; margin-top: 4px;">Financement stock — préapprouvé</div>
+            </div>
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--success); padding: 6px 12px; background: rgba(31,181,116,0.1); border-radius: 999px; letter-spacing: 0.06em;">HALAL</div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div>
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase;">Scoring</div>
+              <div style="font-size: 22px; font-weight: 500; margin-top: 4px; color: var(--atlas);">A · 91 / 100</div>
+              <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">214 jours d'historique transactionnel Kiwi</div>
+            </div>
+            <div>
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase;">Garantie</div>
+              <div style="font-size: 22px; font-weight: 500; margin-top: 4px;">Aucune</div>
+              <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">Garanti par flux carte futurs</div>
+            </div>
+          </div>
+
+          <div style="background: var(--paper-soft); border-radius: 12px; padding: 16px;">
+            <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px;">Mécanique Murabaha</div>
+            <div style="font-size: 13.5px; line-height: 1.6; color: var(--n-700);">
+              Kiwi achète le stock auprès du fournisseur agréé, le revend au commerçant à prix transparent et fixé d'avance, remboursable par prélèvement quotidien sur les flux carte. Aucune intérêt — une marge convenue à l'origination.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;">
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.04em;">Décision : instantanée · Décaissement : J+1</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Le crédit qui suit le <em>chiffre d'affaires</em>.</h3>
+        <p>Aucune banque marocaine ne sait scorer un café indépendant correctement. Le bilan ne dit rien. La patente non plus. La seule donnée qui révèle vraiment la santé d'un commerce, c'est son chiffre d'affaires journalier — quotidien, ticket par ticket, station par station. Cette donnée, Kiwi Systems la produit chaque jour.</p>
+        <p>Kiwi Capital propose donc un Murabaha conforme à la finance islamique pour financer le stock — pas un prêt avec intérêt, mais un achat-revente à marge transparente. Décaissé en 24 heures, remboursé par prélèvement quotidien sur les flux carte, sans garantie immobilière, sans visite d'agence. C'est la suite logique du compte, et le moment où Kiwi devient indispensable plutôt qu'utile.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     17 · INTELLIGENCE MAROCAINE
+     ════════════════════════════════════════════════════════════ -->
+<section id="intelligence" class="dark">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>15</b> · L'intelligence marocaine</div>
+      <div class="s-eyebrow">Ce que les fintechs étrangères ne sauront pas faire</div>
+      <h2>Le produit qui parle <em>darija</em>,<br/>respecte les rythmes, et calcule la Zakat.</h2>
+      <p class="lede">La couche transversale de Kiwi est ce qui rend le produit irréductiblement marocain. Aucune fintech étrangère ne s'imposera la peine de la construire correctement — elle est trop fine, trop locale, trop culturelle. C'est aussi ce qui crée le lien émotionnel qui transforme un utilisateur en ambassadeur.</p>
+    </div>
+
+    <div class="feat-grid reveal stagger-children">
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-5"/></svg></div>
+        <h4>Calculateur de Zakat intégré</h4>
+        <p>Calcul automatique sur le solde annuel du compte et des placements, mise à jour en temps réel selon le Nissab. Versement direct vers les associations agréées, en un clic.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19"/></svg></div>
+        <h4>Sadaqa — round-up</h4>
+        <p>Arrondir chaque transaction au dirham supérieur, et reverser la différence à l'association de son choix. Activable, désactivable, justificatif fiscal généré.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 18h18M3 12h18M3 6h18M7 6v12M17 6v12"/></svg></div>
+        <h4>Calendrier Ramadan</h4>
+        <p>Bascule automatique de l'horaire d'ouverture, des recettes attendues, du staffing. Heatmap décalée vers la nuit. Ftour et Souhour traités comme des shifts à part entière.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <h4>Vendredi — pause Salat</h4>
+        <p>Suggestion de fermeture courte pour la prière du Vendredi midi, paramétrable par localisation et par opérateur. Reprise automatique du service avec staffing ajusté.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18M5 8a14 14 0 0114 0M5 16a14 14 0 0114 0"/></svg></div>
+        <h4>Couloir diaspora France ↔ Maroc</h4>
+        <p>Transfert et change EUR/MAD au taux interbancaire, sans frais cachés. Règlement instantané sur le Kiwi Compte. Pour les MRE qui financent leur famille — et leur commerce.</p>
+      </div>
+      <div class="feat">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+        <h4>Support en darija</h4>
+        <p>Interface, support WhatsApp, notifications, et confirmations en darija transcrite (« flousak kayji ghda sbah »). Parce que c'est comme ça qu'on parle au quotidien.</p>
+      </div>
+    </div>
+
+    <p class="editorial-block reveal" style="margin-top: 80px; max-width: 880px;">
+      Une fintech ne devient pas marocaine en traduisant son interface. Elle le devient en construisant les rythmes culturels dans son modèle de données — la Zakat comme catégorie native, le Vendredi comme variante de planning, le Ramadan comme saison opérationnelle. <span class="accent">C'est ce que personne d'autre ne fera correctement.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     18 · VOIR LE WALLET (iframe of wallet.html)
+     ════════════════════════════════════════════════════════════ -->
+<section id="voir-wallet" class="soft">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>16</b> · Voir le wallet</div>
+      <div class="s-eyebrow">Application consommateur — Phase 2</div>
+      <h2>Le wallet <em>consommateur</em>.</h2>
+      <p class="lede">Côté client final — l'application Kiwi qui paie chez le commerçant Kiwi, gère le compte, calcule la Zakat, fait les transferts diaspora, et donne accès à l'épargne dès la Phase 3. La super-app marocaine, vue par l'utilisateur final.</p>
+    </div>
+
+    <div class="device-frame reveal">
+      <div class="bar">
+        <div class="led"></div><div class="led"></div><div class="led"></div>
+        <div class="url"><span class="live-led"></span>kiwi.ma — Wallet · Aperçu consommateur</div>
+      </div>
+      <div class="screen" style="aspect-ratio: 16/10;">
+        <iframe src="wallet.html" loading="lazy" title="Kiwi · Wallet consommateur"></iframe>
+      </div>
+    </div>
+    <div class="device-cap">Application Kiwi · vue consommateur — données simulées</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     19 · KIWI INVESTING · Partie III opener
+     ════════════════════════════════════════════════════════════ -->
+<section id="investing" class="atlas tall">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>Partie III</b> · Kiwi Investing</div>
+      <div class="s-eyebrow">Acte III — La super-app se referme</div>
+      <h2 class="stagger-words">Quand l'argent <em>dort</em>,<br/>il perd.</h2>
+      <p class="lede">Le commerçant marocain qui dégage de la trésorerie a aujourd'hui deux options : la laisser sur un compte qui ne rémunère pas, ou la retirer et la garder en cash. La troisième option — investir en bourse, sur des fonds, ou sur les marchés internationaux — est techniquement réservée à une élite urbaine équipée d'un courtier dédié. Kiwi Investing supprime cette barrière.</p>
+    </div>
+
+    <div class="two flip reveal" style="margin-top: 56px;">
+      <div>
+        <!-- Investing portfolio mockup -->
+        <div class="mock-phone" style="background: var(--ink);">
+          <div class="scr" style="background: var(--paper); padding: 50px 18px 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase;">Mon portefeuille</div>
+              <div style="font-family: var(--mono); font-size: 10px; color: var(--success);">● HALAL</div>
+            </div>
+            <div style="font-size: 38px; font-weight: 500; letter-spacing: -0.03em; margin-top: 6px; line-height: 1;">— —  —  ,—</div>
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--n-500); margin-top: 4px;">MAD · données masquées</div>
+
+            <!-- chart -->
+            <svg viewBox="0 0 280 100" style="margin-top: 16px;" class="svg-draw">
+              <defs>
+                <linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#0B6E4F" stop-opacity="0.28"/>
+                  <stop offset="1" stop-color="#0B6E4F" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0 75 L20 70 L45 78 L72 60 L100 65 L130 50 L160 52 L195 38 L225 42 L255 28 L280 32 L280 100 L0 100 Z" fill="url(#invGrad)"/>
+              <path class="draw" style="--len: 320;" d="M0 75 L20 70 L45 78 L72 60 L100 65 L130 50 L160 52 L195 38 L225 42 L255 28 L280 32" fill="none" stroke="#0B6E4F" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+
+            <!-- positions -->
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--paper-soft); border-radius: 10px;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 500;">Attijariwafa Bank</div>
+                  <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.04em;">CSE · ATW</div>
+                </div>
+                <div style="font-family: var(--mono); font-size: 12px; color: var(--success);">+2,4 %</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--paper-soft); border-radius: 10px;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 500;">OPCVM Wafa Halal</div>
+                  <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.04em;">AMMC · halal</div>
+                </div>
+                <div style="font-family: var(--mono); font-size: 12px; color: var(--success);">+1,1 %</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--paper-soft); border-radius: 10px;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 500;">ETF Global Halal</div>
+                  <div style="font-family: var(--mono); font-size: 10px; color: var(--n-500); letter-spacing: 0.04em;">Sharia-screened</div>
+                </div>
+                <div style="font-family: var(--mono); font-size: 12px; color: var(--danger);">−0,3 %</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Une bourse <em>fractionnée</em>, un filtre halal natif.</h3>
+        <p>Investir, en darija, en montant fractionné, dans des fonds AMMC marocains et des ETF mondiaux — avec un filtre halal qui n'est pas un add-on mais une clé du modèle de données. La conformité Sharia est traitée par défaut, screen par screen, instrument par instrument, mise à jour en continu sur la base des comités de conformité reconnus.</p>
+        <p>Pour le commerçant, c'est la suite logique du Kiwi Compte. Pour le client final, c'est l'entrée en bourse à laquelle il n'avait pas accès — sans courtier, sans dossier, sans frais d'entrée caché. La super-app se referme sur un produit que la concurrence n'a même pas commencé à imaginer.</p>
+        <ul>
+          <li>Fonds OPCVM marocains agréés AMMC, fractionnés au dirham</li>
+          <li>Actions de la Bourse de Casablanca (CSE) en lots fractionnaires</li>
+          <li>ETF mondiaux — actions, obligations, matières premières — via partenaire</li>
+          <li>Filtre halal Sharia-compliant natif, transparent par instrument</li>
+          <li>Plan d'épargne automatisé — round-up, prélèvement mensuel, jour J</li>
+          <li>Calculateur de Zakat appliqué directement sur le portefeuille</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     20 · CONCURRENCE
+     ════════════════════════════════════════════════════════════ -->
+<section id="concurrence">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>17</b> · La concurrence, sans angles morts</div>
+      <div class="s-eyebrow">Le marché n'est pas vide</div>
+      <h2>Quatre catégories d'adversaires.<br/>Une seule <em>victoire</em> possible.</h2>
+      <p class="lede">Toute thèse Kiwi qui prétend partir d'un terrain vierge perd sa crédibilité dès le premier rendez-vous. Le marché marocain est vivant, et les concurrents existent — mais leurs ADN respectifs sont structurellement étrangers à la verticale F&amp;B et à la profondeur métier hospitalité. C'est dans cet écart que nous construisons.</p>
+    </div>
+
+    <div class="compete reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Acteur</th>
+            <th>F&amp;B vertical</th>
+            <th>Routage cuisine</th>
+            <th>Multi-emplacement</th>
+            <th>Banking + Pay</th>
+            <th>Investing halal</th>
+            <th>Où ils gagnent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="who">Chari<span>fintech VC</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>Oui</td>
+            <td>—</td>
+            <td class="where">FMCG distribution. Corner shops. Réseau d'épiciers. Couche bancaire en construction.</td>
+          </tr>
+          <tr>
+            <td class="who">Inyad / Mahaal<span>SaaS horizontal</span></td>
+            <td>Partiel</td>
+            <td>—</td>
+            <td>Partiel</td>
+            <td>—</td>
+            <td>—</td>
+            <td class="where">Caisse mobile multi-vertical. Largeur fonctionnelle, mais aucune profondeur hospitalité.</td>
+          </tr>
+          <tr>
+            <td class="who">Stay Cashless<span>Attijari · Visa · État</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>Bancaire</td>
+            <td>—</td>
+            <td class="where">Déploiement de terminaux dans les zones touristiques. Pas de logiciel marchand.</td>
+          </tr>
+          <tr>
+            <td class="who">Filiales bancaires<span>Lana · Damane · Chaabi</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>Bancaire</td>
+            <td>—</td>
+            <td class="where">Distribution agence. Lent à shipper du logiciel. Utiles comme partenaires acquéreurs Phase 1.</td>
+          </tr>
+          <tr>
+            <td class="who">Glovo · Jumia Food<span>delivery</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td class="where">Détiennent le client final livraison à commission élevée. Complémentaire, pas concurrent.</td>
+          </tr>
+          <tr>
+            <td class="who">Papier + WhatsApp<span>statu quo</span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td class="where">Le vrai concurrent. Cahier, groupe WhatsApp cuisine, tiroir-caisse. Coût d'acquisition zéro.</td>
+          </tr>
+          <tr class="us">
+            <td class="who">Kiwi<span>F&amp;B vertical · Tanger</span></td>
+            <td><span class="em">Natif</span></td>
+            <td><span class="em">Natif</span></td>
+            <td><span class="em">Natif</span></td>
+            <td><span class="em">Phase 2</span></td>
+            <td><span class="em">Phase 3</span></td>
+            <td class="where">La verticale F&amp;B avec profondeur métier complète, plus la couche bancaire, plus l'épargne. Trois actes en séquence. Personne d'autre n'a la combinaison.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     21 · POURQUOI KIWI GAGNE
+     ════════════════════════════════════════════════════════════ -->
+<section id="defense" class="riad">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>18</b> · Pourquoi Kiwi gagne</div>
+      <div class="s-eyebrow">Cinq couches de défense</div>
+      <h2>La défense est <em>réelle</em>,<br/>mais elle se gagne chaque mois.</h2>
+      <p class="lede">Aucune des couches ci-dessous n'est une garantie. C'est une posture qui s'entretient. Mais chacune, prise séparément, demande à un concurrent généraliste plusieurs années de travail produit pour la rattraper. Cumulées, elles tracent l'écart d'exécution que nous défendons.</p>
+    </div>
+
+    <div class="pillars reveal stagger-children">
+      <div class="pillar">
+        <div class="roman">I.</div>
+        <h4>Profondeur F&amp;B verticale</h4>
+        <p>Le menu, le plan de salle, le routage cuisine, le KDS, le split d'addition, la rotation des tables — pensés en premier, pas en second. Toast a fait 30 milliards de capitalisation sur exactement ce choix.</p>
+      </div>
+      <div class="pillar">
+        <div class="roman">II.</div>
+        <h4>Routage multi-stations en self-service</h4>
+        <p>La fonctionnalité que les concurrents rendent payante et compliquée, transformée en matrice glisser-déposer reconfigurable en 60 secondes par le propriétaire lui-même.</p>
+      </div>
+      <div class="pillar">
+        <div class="roman">III.</div>
+        <h4>Orientation groupes hospitality</h4>
+        <p>Le segment le plus rentable de la F&amp;B marocaine. Comptes équipe à l'échelle de la société, pas du local. Couverture cross-emplacement par toggle. Reporting consolidé.</p>
+      </div>
+      <div class="pillar">
+        <div class="roman">IV.</div>
+        <h4>Distribution Tanger</h4>
+        <p>Réseau familial de restaurateurs. Beachhead à Tanger sous-équipé en POS. Ville-test à taille humaine où chaque problème produit remonte en moins de 24 heures.</p>
+      </div>
+      <div class="pillar">
+        <div class="roman">V.</div>
+        <h4>Couche culturelle marocaine</h4>
+        <p>Zakat, Sadaqa, Ramadan, Vendredi, diaspora France-Maroc, support darija. Trop fin et trop local pour qu'une fintech étrangère le construise correctement.</p>
+      </div>
+    </div>
+
+    <p class="editorial-block reveal" style="margin-top: 80px; max-width: 880px;">
+      La défense de Kiwi n'est pas une <span class="accent">brevetabilité</span>. C'est une boucle d'exécution — verticale, culturelle, géographique — que la concurrence devra rattraper sur trois fronts simultanés. Chacun est franchissable seul. Les trois ensemble forment un mur d'exécution que personne d'autre n'a, aujourd'hui, l'intention de bâtir.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     22 · L'ÉQUIPE
+     ════════════════════════════════════════════════════════════ -->
+<section id="equipe" class="dark">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>19</b> · L'équipe</div>
+      <div class="s-eyebrow">Les fondateurs · Tanger</div>
+      <h2>Deux fondateurs.<br/>Une <em>obsession</em> commerçant.</h2>
+      <p class="lede">Le binôme produit / opérations a été calibré pour la profondeur métier — pas pour la presse. Empathie domaine native, exécution technique forte, et la complémentarité nécessaire pour porter un projet de plusieurs années sans s'épuiser.</p>
+    </div>
+
+    <div class="team reveal stagger-children">
+      <div class="team-card">
+        <div class="av b">B</div>
+        <h4>Badr-Eddin Bakkioui</h4>
+        <div class="role">Fondateur · CEO</div>
+        <p>A grandi dans le restaurant familial à Tanger. Empathie domaine constituée à la caisse, en salle, et derrière le pass — pas en formation MBA. Pilote la stratégie produit, la distribution Tanger, et la relation marchand.</p>
+        <p>Profil triple : intuition opérateur F&amp;B, langue maternelle commerçant, et la légitimité réseau qui ouvre les portes des opérateurs hospitalité indépendants du Nord.</p>
+        <div class="prev">
+          <span>Restaurant familial · Tanger</span>
+          <span>Distribution Nord-Maroc</span>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="av">Z</div>
+        <h4>Zakariae Attahiri</h4>
+        <div class="role">Fondateur · CTO &amp; COO</div>
+        <p>Architecte de la pile technique et des opérations Kiwi. Pilote l'ingénierie, l'infrastructure de paiement, l'intégration acquéreur, la conformité technique (DGSSI, CNDP, LAB-FT), et le cadre réglementaire vers la licence d'Établissement de Paiement.</p>
+        <p>Profil ingénieur produit complet — des prototypes à la mise en production, des décisions d'architecture aux choix d'OEM hardware. La main droite et la main gauche du produit.</p>
+        <div class="prev">
+          <span>Software architecture</span>
+          <span>Fintech compliance</span>
+          <span>Hardware sourcing</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="two reveal" style="margin-top: 80px;">
+      <div>
+        <h3>Et après — la suite de l'<em>équipe</em>.</h3>
+        <p>Les profils prioritaires identifiés pour les 18 prochains mois sont volontairement ramenés à l'essentiel : un lead engineering F&amp;B, un responsable acquisition marchand Tanger, un community manager bilingue darija/français, et un advisor réglementaire ex-Bank Al-Maghrib pour préparer la fit-and-proper de la licence Phase 2.</p>
+        <p>Le board s'enrichira en fonction des phases. Pas de noms gonflés pour rassurer un VC ; des profils utiles à chaque étape, recrutés au moment où ils sont effectivement nécessaires.</p>
+      </div>
+      <div>
+        <ul>
+          <li>Lead engineering F&amp;B — verticale produit profonde</li>
+          <li>Responsable acquisition marchand Tanger — terrain hospitalité</li>
+          <li>Community manager bilingue darija / français · WhatsApp natif</li>
+          <li>Advisor réglementaire Bank Al-Maghrib — fit-and-proper Phase 2</li>
+          <li>Lead design verticale F&amp;B — modeleur d'écran de cuisine et plan de salle</li>
+          <li>Responsable conformité Sharia — préparation Kiwi Investing halal</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     23 · FEUILLE DE ROUTE
+     ════════════════════════════════════════════════════════════ -->
+<section id="feuille" class="soft">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <div class="s-num"><b>20</b> · La feuille de route</div>
+      <div class="s-eyebrow">Trois actes, en séquence</div>
+      <h2>Construire <em>en séquence</em>,<br/>pas en parallèle.</h2>
+      <p class="lede">Chaque acte ouvre le suivant — par sa donnée, par sa relation, par son canal. Construire les trois en parallèle dilue l'exécution et tue la profondeur. La feuille de route ci-dessous est un engagement opérationnel — pas un calendrier de communication.</p>
+    </div>
+
+    <div class="road reveal">
+      <div class="road-item now">
+        <div class="when">Maintenant · Phase 1</div>
+        <h4>Kiwi <em>Systems</em> · Tanger</h4>
+        <p>Pilote Tanger — onboarding personnel des premiers cafés et restaurants par les fondateurs. Études de cas vidéo, programme de parrainage, dîners mensuels Kiwi. Partenariat acquéreur Phase 1 (candidat préféré : Lana Cash). Setup légal SARL, enregistrement CNDP, retainer cabinet fintech marocain. Sourcing matériel auprès de Sunmi / PAX / Newland.</p>
+      </div>
+      <div class="road-item">
+        <div class="when">+ 12 mois · Phase 1 → 2</div>
+        <h4>Casablanca · Rabat · <em>Marrakech</em></h4>
+        <p>Expansion vers les trois grandes villes commerciales avec une équipe terrain par ville. Acquisition ciblée des groupes hospitality multi-emplacements pour l'ARPU élevé. Production de contenu marchand (Instagram + LinkedIn) — la story d'opérateur reste l'artefact de vente le plus persuasif en F&amp;B B2B marocaine. Préparation du dossier d'Établissement de Paiement.</p>
+      </div>
+      <div class="road-item">
+        <div class="when">+ 18 mois · Phase 2</div>
+        <h4>Kiwi <em>Banking</em> &amp; Kiwi <em>Pay</em></h4>
+        <p>Obtention de la licence d'Établissement de Paiement auprès de Bank Al-Maghrib. Lancement du Kiwi Compte, de la carte de débit, et du SoftPOS sous licence propre. Murabaha sur stock pour le commerçant — scoring sur historique transactionnel Kiwi. Liens de paiement WhatsApp en Phase 2.</p>
+      </div>
+      <div class="road-item">
+        <div class="when">+ 30 mois · Phase 2 → 3</div>
+        <h4>Couloir <em>diaspora</em> &amp; super-app consommateur</h4>
+        <p>Lancement du couloir France-Maroc EUR/MAD au taux interbancaire. Application Wallet consommateur ouverte au grand public (au-delà du marchand). Cross-cutting Zakat, Sadaqa, Ramadan en production complète. Calendrier 2030 World Cup en ligne de mire — préparation de la couche acceptation touristique nationale.</p>
+      </div>
+      <div class="road-item next">
+        <div class="when">+ 42 mois · Phase 3</div>
+        <h4>Kiwi <em>Investing</em></h4>
+        <p>Agrément AMMC pour l'intermédiation et la distribution de produits financiers. Lancement de l'investissement fractionné — fonds OPCVM marocains, actions CSE, ETF mondiaux. Filtre halal natif, comité de conformité Sharia. Plan d'épargne automatisé. Calculateur de Zakat appliqué au portefeuille.</p>
+      </div>
+      <div class="road-item next">
+        <div class="when">Au-delà</div>
+        <h4>L'<em>infrastructure</em> du commerçant marocain</h4>
+        <p>Expansion vers les villes Tier 2 (Agadir, Fès, Tétouan, Meknès). Ouverture sélective de verticales adjacentes (boutiques de détail, beauté, bien-être). Couche merchant-of-record pour les marketplaces internationales. Le commerçant marocain dispose enfin d'une infrastructure unique — opérationnelle, financière, patrimoniale.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     24 · VISION
+     ════════════════════════════════════════════════════════════ -->
+<section id="vision" class="atlas tall">
+  <div class="wrap-tight">
+    <div class="s-num reveal"><b>21</b> · Vision</div>
+    <p class="editorial-block reveal" style="margin-top: 36px; font-size: clamp(34px, 4.4vw, 64px); line-height: 1.1; color: var(--paper);">
+      Dans dix ans, le commerçant marocain ne devra plus choisir entre une caisse étrangère mal traduite, une banque qui ne lit pas son métier, et un courtier qui ne lui ouvre pas la porte. Il aura <span style="color: var(--mint); font-style: italic;">Kiwi</span> — qui parle sa langue, respecte ses rythmes, et compose au-dessus de chaque dirham qu'il fait passer.
+    </p>
+    <p class="editorial-block reveal" style="margin-top: 32px; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.18; color: rgba(247,245,240,0.78);">
+      Le commerçant <span style="color: var(--mint); font-style: italic;">en sortira plus fort</span>. Le pays aussi.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     25 · CONTACT + APPENDIX
+     ════════════════════════════════════════════════════════════ -->
+<section id="contact" class="dark compact">
+  <div class="wrap">
+    <div class="s-head reveal" style="margin-bottom: 36px;">
+      <div class="s-num"><b>22</b> · Contact &amp; appendice</div>
+      <div class="s-eyebrow">Suite — entrée en discussion</div>
+      <h2>Discutons en <em>direct</em>.</h2>
+      <p class="lede">Ce document est volontairement silencieux sur les éléments financiers — au Maroc, ces sujets se négocient en bilatéral, dans le respect des usages, et avec la confiance préalable. Nous sommes ouverts à toutes les conversations sérieuses.</p>
+    </div>
+
+    <div class="appendix-grid reveal">
+      <div>
+        <h4>Contact direct</h4>
+        <ul>
+          <li><b>Email</b> · invest@kiwi.ma</li>
+          <li><b>Web</b> · kiwi.ma</li>
+          <li><b>Localisation</b> · Tanger, Royaume du Maroc</li>
+          <li><b>Société</b> · Kiwi Payments SA</li>
+          <li><b>Diffusion</b> · strictement confidentielle, sur demande nominative</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Sources publiques citées</h4>
+        <ul>
+          <li>Conseil de la Concurrence · décision 152/D/2024 et extensions 2025</li>
+          <li>Bank Al-Maghrib · Loi 103-12, Loi 43-05, statistiques paiement</li>
+          <li>CNDP · Loi 09-08 sur la protection des données</li>
+          <li>Ministère du Tourisme · arrivées 2025, objectifs 2030</li>
+          <li>FIFA · Coupe du Monde 2030 — Maroc, Espagne, Portugal</li>
+          <li>Cabinets fintech marocains · briefings publics 2025</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="appendix-grid reveal" style="margin-top: 56px;">
+      <div>
+        <h4>Glossaire essentiel</h4>
+        <ul>
+          <li><b>BAM</b> · Bank Al-Maghrib, banque centrale et régulateur</li>
+          <li><b>CMI</b> · Centre Monétique Interbancaire — ex-monopole, plateforme technique neutre depuis 2025</li>
+          <li><b>EDP</b> · Établissement de Paiement, statut Loi 103-12</li>
+          <li><b>AMMC</b> · Autorité Marocaine du Marché des Capitaux</li>
+          <li><b>CSE</b> · Casablanca Stock Exchange · Bourse de Casablanca</li>
+          <li><b>Murabaha</b> · contrat halal d'achat-revente à marge transparente</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Lectures complémentaires</h4>
+        <ul>
+          <li><b>kiwi.ma</b> · site marchand &amp; pitch deck publics</li>
+          <li><b>Kiwi Brand Identity</b> · système de design v1.0</li>
+          <li><b>Tableau de bord marchand</b> · démonstration en direct dans ce document</li>
+          <li><b>Wallet consommateur</b> · démonstration en direct dans ce document</li>
+          <li><b>Pitch fondateurs</b> · disponible sur demande nominative</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     FOOTER
+     ════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <div class="mark">kiwi<i></i></div>
+        <div class="meta" style="margin-top: 16px;">Le système d'exploitation<br/>du commerçant marocain.</div>
+      </div>
+      <div class="meta" style="text-align: right;">
+        <b>invest@kiwi.ma</b><br/>
+        Tanger · Maroc<br/>
+        Édition fondateurs · 2026
+      </div>
+    </div>
+    <div class="legal">
+      © 2026 Kiwi Payments SA · document confidentiel ne pas diffuser · v1.0
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast">Lien copié</div>
+
+<script>
+(() => {
+  // ─── Progress bar ───
+  const pb = document.getElementById('pb');
+  const setProgress = () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop || document.body.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    pb.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  };
+  document.addEventListener('scroll', setProgress, { passive: true });
+  setProgress();
+
+  // ─── Reveal observer ───
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.04 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ─── Word stagger: split each .stagger-words element word-by-word ───
+  function splitWords(el) {
+    if (el.dataset.split === '1') return;
+    const result = document.createDocumentFragment();
+    let wordIdx = 0;
+    function pushSpan(text, italic) {
+      const s = document.createElement('span');
+      s.className = 'w' + (italic ? ' italic' : '');
+      s.textContent = text;
+      s.style.transitionDelay = (wordIdx * 70) + 'ms';
+      wordIdx++;
+      result.appendChild(s);
+    }
+    function walk(node, italic) {
+      if (node.nodeType === 3) {
+        const parts = node.textContent.split(/(\s+)/);
+        parts.forEach(p => {
+          if (!p) return;
+          if (/^\s+$/.test(p)) result.appendChild(document.createTextNode(p));
+          else pushSpan(p, italic);
+        });
+      } else if (node.nodeType === 1) {
+        if (node.tagName === 'BR') {
+          result.appendChild(document.createElement('br'));
+        } else if (node.tagName === 'EM') {
+          node.childNodes.forEach(c => walk(c, true));
+        } else {
+          node.childNodes.forEach(c => walk(c, italic));
+        }
+      }
+    }
+    Array.from(el.childNodes).forEach(c => walk(c, false));
+    el.innerHTML = '';
+    el.appendChild(result);
+    el.dataset.split = '1';
+  }
+  document.querySelectorAll('.stagger-words').forEach(splitWords);
+  // Observe and reveal them
+  const wordIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); wordIO.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
+  document.querySelectorAll('.stagger-words').forEach(el => wordIO.observe(el));
+
+  // ─── Stagger children: parent gets .in when in view ───
+  const childIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); childIO.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
+  document.querySelectorAll('.stagger-children').forEach(el => childIO.observe(el));
+
+  // ─── Count-up animation for .cnum elements ───
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function animateCnum(el) {
+    if (el.dataset.done === '1') return;
+    el.dataset.done = '1';
+    const target = parseFloat(el.dataset.num);
+    const prec = parseInt(el.dataset.prec || '0');
+    const dur = 1700;
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const v = target * easeOutCubic(t);
+      el.textContent = v.toFixed(prec).replace('.', ',');
+      if (t < 1) requestAnimationFrame(frame);
+      else el.textContent = target.toFixed(prec).replace('.', ',');
+    }
+    el.textContent = (0).toFixed(prec).replace('.', ',');
+    requestAnimationFrame(frame);
+  }
+  const numIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { animateCnum(e.target); numIO.unobserve(e.target); }
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll('.cnum').forEach(el => numIO.observe(el));
+
+  // ─── SVG draw-in for .svg-draw .draw paths ───
+  const drawIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); drawIO.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.15 });
+  document.querySelectorAll('.svg-draw').forEach(el => drawIO.observe(el));
+
+  // ─── Cover gradient parallax (subtle mouse follow) ───
+  const coverGlow = document.getElementById('coverGlow');
+  if (coverGlow) {
+    const cover = document.getElementById('cover');
+    cover.addEventListener('mousemove', (e) => {
+      const r = cover.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      coverGlow.style.transform = `translate3d(${x * -22}px, ${y * -16}px, 0)`;
+    }, { passive: true });
+    cover.addEventListener('mouseleave', () => {
+      coverGlow.style.transform = 'translate3d(0,0,0)';
+    });
+  }
+
+  // ─── Side dots: highlight current section ───
+  const dots = Array.from(document.querySelectorAll('.dots .dot'));
+  const sections = dots.map(d => document.querySelector(d.getAttribute('href'))).filter(Boolean);
+  const highlight = () => {
+    let curr = 0;
+    const y = window.scrollY + window.innerHeight * 0.35;
+    sections.forEach((s, i) => { if (s.offsetTop <= y) curr = i; });
+    dots.forEach((d, i) => d.classList.toggle('on', i === curr));
+  };
+  document.addEventListener('scroll', highlight, { passive: true });
+  highlight();
+
+  // ─── Toast ───
+  const toast = document.getElementById('toast');
+  const showToast = (html) => {
+    toast.innerHTML = html;
+    toast.classList.add('in');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('in'), 2400);
+  };
+
+  // ─── Copy email on click ───
+  document.querySelectorAll('a[href="#contact"], .nav-cta').forEach(el => {
+    el.addEventListener('click', (e) => {
+      // Let scroll happen normally; also copy the email for convenience
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText('invest@kiwi.ma').catch(() => {});
+        showToast('Adresse copiée <span class="mint">invest@kiwi.ma</span>');
+      }
+    });
+  });
+
+  // ─── Smooth scroll for in-page anchors ───
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href');
+      if (id.length < 2) return;
+      const t = document.querySelector(id);
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+
+  // ─── Scaled device frames: render iframe at desktop viewport, fit to container ───
+  const fitScaled = (frame) => {
+    const screen = frame.querySelector('.screen');
+    const iframe = screen && screen.querySelector('iframe');
+    if (!screen || !iframe) return;
+    const targetW = parseFloat(iframe.dataset.vw) || 1500;
+    const targetH = parseFloat(iframe.dataset.vh) || 940;
+    const w = screen.clientWidth;
+    const h = screen.clientHeight;
+    const scale = Math.min(w / targetW, h / targetH);
+    iframe.style.transform = `scale(${scale})`;
+    iframe.style.width = targetW + 'px';
+    iframe.style.height = targetH + 'px';
+  };
+  const fitAll = () => document.querySelectorAll('.device-frame.scaled').forEach(fitScaled);
+  fitAll();
+  window.addEventListener('resize', fitAll);
+  document.querySelectorAll('.device-frame.scaled iframe').forEach(f => {
+    f.addEventListener('load', () => fitScaled(f.closest('.device-frame')));
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kiwi · Identité & système de design</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230B6E4F'/><text x='12' y='51' font-family='system-ui,sans-serif' font-weight='800' font-size='55' letter-spacing='-0.08em' fill='%23F7F5F0'>k</text></svg>" />
+<meta name="description" content="Système de design Kiwi · palette Atlas Green, typographie Inter Tight + Instrument Serif, voix, iconographie, grille 8px, motion, règles absolues." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ═══ KIWI DESIGN TOKENS (inlined) ═══ */
+:root {
+  --atlas: #0B6E4F; --atlas-600: #0E805C; --atlas-700: #0A5E43;
+  --riad: #053B2C; --riad-deep: #02261C;
+  --mint: #7DF2B0; --mint-soft: #C9F6DC;
+  --paper: #F7F5F0; --paper-soft: #EFECE3; --paper-muted: #E8E6E0;
+  --ink: #0A0F0D; --ink-soft: #1A201D;
+  --n-50: #FAFAF8; --n-100: #F2F0EA; --n-200: #E8E6E0; --n-300: #D4D1C8;
+  --n-400: #A8A49A; --n-500: #6F6C65; --n-600: #4B4944; --n-700: #2E2D29; --n-800: #1A1917;
+  --success: #1FB574; --warning: #D99A2B; --danger: #C94A3A; --info: #3A6FB8;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-xl: 24px; --r-2xl: 32px;
+  --sans: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --serif: "Instrument Serif", "Times New Roman", serif;
+  --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { font-size: 16px; line-height: 1.55; letter-spacing: -0.005em; scroll-behavior: smooth; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: 0; background: none; }
+
+.eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-500); font-weight: 500; }
+.editorial { font-family: var(--serif); font-weight: 400; font-style: italic; }
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.wrap-sm { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 500; font-size: 15px; letter-spacing: -0.01em; transition: transform 150ms, background 150ms, color 150ms; white-space: nowrap; }
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { background: var(--atlas); transform: translateY(-1px); }
+.btn-lg { padding: 16px 26px; font-size: 16px; }
+
+/* Nav */
+.nav { position: sticky; top: 0; z-index: 60; background: rgba(247,245,240,0.88); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(0,0,0,0.04); }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 26px; letter-spacing: -0.05em; color: var(--atlas); }
+.nav-logo .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+.nav-links { display: flex; gap: 30px; font-size: 14px; color: var(--n-700); }
+
+/* Hero */
+.brand-hero { padding: 110px 0 70px; }
+.brand-hero h1 { font-size: clamp(48px, 7vw, 96px); letter-spacing: -0.04em; line-height: 0.95; margin: 18px 0 20px; font-weight: 600; max-width: 900px; }
+.brand-hero h1 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.brand-hero p { font-size: 20px; color: var(--n-600); line-height: 1.5; max-width: 620px; }
+
+/* Index nav */
+.index-nav { border-top: 1px solid var(--n-200); border-bottom: 1px solid var(--n-200); background: var(--paper-soft); padding: 14px 0; position: sticky; top: 68px; z-index: 40; backdrop-filter: blur(10px); }
+.index-nav-inner { display: flex; gap: 32px; font-size: 13px; font-weight: 500; color: var(--n-500); overflow-x: auto; scrollbar-width: none; }
+.index-nav-inner::-webkit-scrollbar { display: none; }
+.index-nav-inner a { white-space: nowrap; transition: color 150ms; }
+.index-nav-inner a:hover { color: var(--ink); }
+
+/* Sections */
+section { padding: 80px 0; scroll-margin-top: 120px; }
+.sec-head { margin-bottom: 40px; max-width: 720px; }
+.sec-head .num { font-family: var(--mono); font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; }
+.sec-head h2 { font-size: clamp(32px, 4vw, 52px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; margin: 10px 0 16px; }
+.sec-head p { font-size: 18px; color: var(--n-600); line-height: 1.55; margin: 0; }
+
+/* Logo showcase */
+.logo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 900px) { .logo-grid { grid-template-columns: 1fr; } }
+.logo-cell { background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 50px; aspect-ratio: 1.4; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+.logo-cell.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.logo-cell.atlas { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
+.logo-cell.mint { background: var(--mint-soft); border-color: transparent; }
+.logo-cell .lg { display: flex; align-items: center; justify-content: center; flex: 1; }
+.logo-cell .wm { font-weight: 700; letter-spacing: -0.06em; font-size: 110px; display: inline-flex; align-items: baseline; gap: 6px; line-height: 1; }
+.logo-cell .wm i { width: 12px; height: 12px; background: var(--mint); border-radius: 50%; }
+.logo-cell.dark .wm, .logo-cell.atlas .wm { color: var(--paper); }
+.logo-cell.mint .wm, .logo-cell.paper .wm { color: var(--atlas); }
+.logo-cell .lbl { font-size: 11px; color: var(--n-500); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; position: absolute; top: 20px; left: 20px; }
+.logo-cell.dark .lbl { color: #8a8f8d; }
+.logo-cell.atlas .lbl { color: #c6ead4; }
+.logo-cell .meta { font-size: 11px; color: var(--n-500); font-family: var(--mono); position: absolute; bottom: 20px; right: 20px; }
+.logo-cell.dark .meta { color: #8a8f8d; }
+.logo-cell.atlas .meta { color: #c6ead4; }
+
+/* Colors */
+.color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 900px) { .color-grid { grid-template-columns: repeat(2, 1fr); } }
+.color { border-radius: 16px; aspect-ratio: 1.25; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; border: 1px solid rgba(0,0,0,0.04); cursor: pointer; transition: transform 180ms; }
+.color:hover { transform: translateY(-2px); }
+.color .n { font-size: 14px; font-weight: 500; }
+.color .h { font-family: var(--mono); font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.color .r { display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7; font-family: var(--mono); }
+
+/* Type */
+.type-row { display: grid; grid-template-columns: 140px 1fr; gap: 40px; padding: 30px 0; border-bottom: 1px solid var(--n-200); align-items: center; }
+.type-row:last-child { border-bottom: 0; }
+.type-row .label { font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
+.type-row .spec { font-family: var(--mono); font-size: 11px; color: var(--n-500); margin-top: 6px; }
+.type-sample { line-height: 1.0; }
+
+/* Dos / donts */
+.rules { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
+.rule { background: #fff; border-radius: 20px; padding: 34px; border: 1px solid var(--n-200); }
+.rule h3 { font-size: 22px; margin: 0 0 20px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.rule.do h3 { color: var(--atlas); }
+.rule.dont h3 { color: var(--danger); }
+.rule ul { list-style: none; padding: 0; margin: 0; }
+.rule li { padding: 12px 0; border-top: 1px solid var(--n-200); font-size: 15px; display: flex; gap: 10px; line-height: 1.5; }
+.rule li:first-child { border-top: 0; padding-top: 0; }
+.rule li svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Voice */
+.voice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 900px) { .voice-grid { grid-template-columns: 1fr; } }
+.voice-card { background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 30px; }
+.voice-card h4 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+.voice-card h4 .plus { color: var(--atlas); }
+.voice-card h4 .minus { color: var(--n-400); text-decoration: line-through; }
+.voice-card .ex { font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.4; margin: 14px 0; color: var(--ink); }
+.voice-card .ex.bad { color: var(--n-400); }
+
+/* Icons */
+.icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; }
+@media (max-width: 900px) { .icon-grid { grid-template-columns: repeat(4, 1fr); } }
+.icon-cell { background: #fff; border: 1px solid var(--n-200); border-radius: 14px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--atlas); transition: border-color 150ms; }
+.icon-cell:hover { border-color: var(--atlas); }
+
+/* Motion */
+.motion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 900px) { .motion-grid { grid-template-columns: 1fr; } }
+.motion-card { background: var(--ink); color: var(--paper); border-radius: 18px; padding: 24px; }
+.motion-card .t { font-family: var(--mono); color: var(--mint); font-size: 12px; letter-spacing: 0.05em; }
+.motion-card .n { font-size: 18px; font-weight: 600; margin: 6px 0 8px; letter-spacing: -0.02em; }
+.motion-card .d { font-size: 13px; color: #9ea3a0; line-height: 1.5; }
+
+/* Spacing grid */
+.grid-block { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; padding: 30px 0; }
+@media (max-width: 900px) { .grid-block { grid-template-columns: 1fr; } }
+.grid-demo { background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 20px; background-image: linear-gradient(var(--mint-soft) 1px, transparent 1px), linear-gradient(90deg, var(--mint-soft) 1px, transparent 1px); background-size: 8px 8px; aspect-ratio: 1.4; display: flex; align-items: center; justify-content: center; }
+.grid-demo .block { background: var(--atlas); color: var(--paper); padding: 20px 26px; border-radius: 10px; font-weight: 500; font-size: 14px; }
+
+/* Toast for copy feedback */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 500; opacity: 0; transition: all 260ms cubic-bezier(0.32, 0.72, 0, 1); z-index: 200; letter-spacing: -0.005em; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); }
+.toast.in { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast .mint { color: var(--mint); font-family: var(--mono); margin-left: 8px; }
+
+/* Footer */
+footer { background: var(--ink); color: #8a8f8d; padding: 40px 0; font-size: 13px; text-align: center; margin-top: 60px; }
+footer a { color: var(--mint); }
+
+:focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="nav-logo">kiwi<i class="dot"></i></a>
+    <div class="nav-links">
+      <a href="#logo">Logo</a>
+      <a href="#couleurs">Couleurs</a>
+      <a href="#typo">Typographie</a>
+      <a href="#voix">Voix</a>
+      <a href="#regles">Règles</a>
+    </div>
+    <div>
+      <a href="#final" class="btn btn-primary" style="padding:10px 18px; font-size:14px;">Télécharger le kit</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="brand-hero" id="top">
+  <div class="wrap">
+    <span class="eyebrow">Kiwi Design System · v1.0 · 2026</span>
+    <h1>Une <em>identité</em><br/>qui mérite d'être dans un musée.</h1>
+    <p>Le système de design de Kiwi est construit sur une règle : chaque décision visuelle doit renforcer la confiance bancaire, sans jamais trahir nos racines marocaines. Ce guide est vivant — il est votre permis d'expression.</p>
+  </div>
+</section>
+
+<!-- INDEX -->
+<div class="index-nav">
+  <div class="wrap index-nav-inner">
+    <a href="#logo">01. Logo</a>
+    <a href="#couleurs">02. Couleurs</a>
+    <a href="#typo">03. Typographie</a>
+    <a href="#voix">04. Voix</a>
+    <a href="#icones">05. Iconographie</a>
+    <a href="#grille">06. Grille & spacing</a>
+    <a href="#motion">07. Motion</a>
+    <a href="#regles">08. Règles</a>
+  </div>
+</div>
+
+<!-- 01. LOGO -->
+<section id="logo" style="background: var(--paper);">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">01 · IDENTITÉ VISUELLE</div>
+      <h2>Le logo.</h2>
+      <p>Un wordmark lowercase en Inter Tight Bold avec un accent mint. Pas de pictogramme. Pas de feuille de kiwi. La confiance se gagne par la retenue.</p>
+    </div>
+
+    <div class="logo-grid">
+      <div class="logo-cell paper"><div class="lbl">Primaire</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas #0B6E4F</div></div>
+      <div class="logo-cell dark"><div class="lbl">Inverse</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Ink #0A0F0D</div></div>
+      <div class="logo-cell atlas"><div class="lbl">Full brand</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas #0B6E4F</div></div>
+      <div class="logo-cell">
+        <div class="lbl">Mark (app icon)</div>
+        <div class="lg">
+          <div style="width:120px; height:120px; background: var(--atlas); border-radius: 28px; display: flex; align-items: flex-end; justify-content: flex-start; padding: 0 22px 14px;">
+            <div style="font-weight: 700; letter-spacing: -0.08em; font-size: 110px; color: var(--paper); line-height: 1; display: flex; align-items: baseline; gap: 5px;">k<i style="width:10px; height:10px; background: var(--mint); border-radius: 50%;"></i></div>
+          </div>
+        </div>
+        <div class="meta">Radius 28px</div>
+      </div>
+      <div class="logo-cell mint">
+        <div class="lbl">Favicon 64</div>
+        <div class="lg">
+          <div style="width:72px; height:72px; background: var(--atlas); border-radius: 14px; display: flex; align-items: flex-end; padding: 0 10px 5px;">
+            <div style="font-weight: 700; letter-spacing: -0.08em; font-size: 62px; color: var(--paper); line-height: 1;">k</div>
+          </div>
+        </div>
+        <div class="meta">12px min size</div>
+      </div>
+      <div class="logo-cell" style="background: var(--riad-deep); color: var(--paper); border-color: var(--riad-deep);">
+        <div class="lbl" style="color: var(--mint);">Arabic lockup</div>
+        <div class="lg">
+          <div style="font-family: 'IBM Plex Sans Arabic'; font-weight: 600; font-size: 88px; color: var(--paper); line-height: 1; letter-spacing: -0.02em;">كيوي</div>
+        </div>
+        <div class="meta" style="color: #8a9f98;">Plex Sans Arabic</div>
+      </div>
+    </div>
+
+    <!-- Construction -->
+    <div style="margin-top: 60px; background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 40px 50px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="font-family: var(--mono); font-size: 12px; color: var(--n-500); letter-spacing: 0.1em;">CONSTRUCTION</div>
+          <h3 style="font-size: 22px; margin: 6px 0 0; font-weight: 600;">Grille et espace de sécurité</h3>
+        </div>
+        <div style="font-size: 13px; color: var(--n-500);">x = hauteur de la lettre « i »</div>
+      </div>
+      <svg viewBox="0 0 900 240" style="width: 100%;">
+        <g stroke="#E8E6E0" stroke-width="1" stroke-dasharray="3 3">
+          <line x1="50" y1="40" x2="850" y2="40"/><line x1="50" y1="200" x2="850" y2="200"/>
+          <line x1="50" y1="40" x2="50" y2="200"/><line x1="850" y1="40" x2="850" y2="200"/>
+        </g>
+        <g stroke="#7DF2B0" stroke-dasharray="2 4">
+          <line x1="140" y1="20" x2="140" y2="220"/><line x1="760" y1="20" x2="760" y2="220"/>
+          <line x1="50" y1="90" x2="850" y2="90"/><line x1="50" y1="150" x2="850" y2="150"/>
+        </g>
+        <text x="95" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
+        <text x="805" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
+        <text x="450" y="30" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
+        <text x="450" y="218" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
+        <text x="140" y="160" font-family="Inter Tight" font-weight="700" font-size="110" fill="#0B6E4F" letter-spacing="-0.06em">kiwi</text>
+        <circle cx="735" cy="148" r="10" fill="#7DF2B0"/>
+      </svg>
+      <div style="margin-top: 20px; color: var(--n-600); font-size: 14px; line-height: 1.55;">Toujours préserver une zone de sécurité égale à la hauteur de la lettre « i » autour du wordmark. Ne jamais placer le logo sur un arrière-plan qui ne garantit pas un ratio de contraste ≥ 4.5:1.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 02. COULEURS -->
+<section id="couleurs" style="background: #fff;">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">02 · PALETTE</div>
+      <h2>Atlas Green.</h2>
+      <p>Notre vert n'est ni le vert électrique de Cash App ni le vert bouteille de Wise. C'est l'Atlas : profond, mûr, mystérieusement marocain. Il évoque les oasis, la tadelakt, le drapeau — sans jamais l'imiter.</p>
+      <p style="font-size: 13px; color: var(--n-500); margin-top: 10px;">💡 Cliquez sur une couleur pour copier sa valeur hex.</p>
+    </div>
+
+    <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin-bottom: 12px;">MARQUE</div>
+    <div class="color-grid">
+      <div class="color" data-hex="#0B6E4F" style="background: #0B6E4F; color: var(--paper);"><div><div class="n">Atlas Green</div><div class="h">#0B6E4F</div></div><div class="r"><span>PRIMAIRE</span><span>AA</span></div></div>
+      <div class="color" data-hex="#053B2C" style="background: #053B2C; color: var(--paper);"><div><div class="n">Riad Deep</div><div class="h">#053B2C</div></div><div class="r"><span>SECONDAIRE</span><span>AAA</span></div></div>
+      <div class="color" data-hex="#7DF2B0" style="background: #7DF2B0; color: var(--riad);"><div><div class="n">Mint Neon</div><div class="h">#7DF2B0</div></div><div class="r"><span>ACCENT</span><span>USE ≤5%</span></div></div>
+      <div class="color" data-hex="#C9F6DC" style="background: #C9F6DC; color: var(--riad);"><div><div class="n">Mint Soft</div><div class="h">#C9F6DC</div></div><div class="r"><span>PILLS / HL</span></div></div>
+    </div>
+
+    <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin: 40px 0 12px;">SURFACES</div>
+    <div class="color-grid">
+      <div class="color" data-hex="#F7F5F0" style="background: #F7F5F0; color: var(--ink); border-color: var(--n-200);"><div><div class="n">Paper</div><div class="h">#F7F5F0</div></div><div class="r"><span>FOND PRINCIPAL</span></div></div>
+      <div class="color" data-hex="#EFECE3" style="background: #EFECE3; color: var(--ink); border-color: var(--n-200);"><div><div class="n">Paper Soft</div><div class="h">#EFECE3</div></div><div class="r"><span>SECTIONS</span></div></div>
+      <div class="color" data-hex="#0A0F0D" style="background: #0A0F0D; color: var(--paper);"><div><div class="n">Ink</div><div class="h">#0A0F0D</div></div><div class="r"><span>TEXTE / FOND DARK</span></div></div>
+      <div class="color" data-hex="#02261C" style="background: #02261C; color: var(--paper);"><div><div class="n">Riad Noir</div><div class="h">#02261C</div></div><div class="r"><span>DARK SECTIONS</span></div></div>
+    </div>
+
+    <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin: 40px 0 12px;">SÉMANTIQUE</div>
+    <div class="color-grid">
+      <div class="color" data-hex="#1FB574" style="background: #1FB574; color: #fff;"><div><div class="n">Success</div><div class="h">#1FB574</div></div></div>
+      <div class="color" data-hex="#D99A2B" style="background: #D99A2B; color: #fff;"><div><div class="n">Warning</div><div class="h">#D99A2B</div></div></div>
+      <div class="color" data-hex="#C94A3A" style="background: #C94A3A; color: #fff;"><div><div class="n">Danger</div><div class="h">#C94A3A</div></div></div>
+      <div class="color" data-hex="#3A6FB8" style="background: #3A6FB8; color: #fff;"><div><div class="n">Info</div><div class="h">#3A6FB8</div></div></div>
+    </div>
+
+    <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin: 40px 0 12px;">ÉCHELLE NEUTRE</div>
+    <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; border-radius: 12px; overflow: hidden;">
+      <div data-hex="#FAFAF8" style="background: #FAFAF8; padding: 18px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;">50</div>
+      <div data-hex="#F2F0EA" style="background: #F2F0EA; padding: 18px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;">100</div>
+      <div data-hex="#E8E6E0" style="background: #E8E6E0; padding: 18px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;">200</div>
+      <div data-hex="#D4D1C8" style="background: #D4D1C8; padding: 18px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;">300</div>
+      <div data-hex="#A8A49A" style="background: #A8A49A; padding: 18px 10px; font-family: var(--mono); font-size: 11px; color: #fff; cursor: pointer;">400</div>
+      <div data-hex="#6F6C65" style="background: #6F6C65; padding: 18px 10px; font-family: var(--mono); font-size: 11px; color: #fff; cursor: pointer;">500</div>
+      <div data-hex="#4B4944" style="background: #4B4944; padding: 18px 10px; font-family: var(--mono); font-size: 11px; color: #fff; cursor: pointer;">600</div>
+      <div data-hex="#2E2D29" style="background: #2E2D29; padding: 18px 10px; font-family: var(--mono); font-size: 11px; color: #fff; cursor: pointer;">700</div>
+      <div data-hex="#1A1917" style="background: #1A1917; padding: 18px 10px; font-family: var(--mono); font-size: 11px; color: #fff; cursor: pointer;">800</div>
+    </div>
+  </div>
+</section>
+
+<!-- 03. TYPO -->
+<section id="typo" style="background: var(--paper-soft);">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">03 · TYPOGRAPHIE</div>
+      <h2>Un duo. Trois scripts.</h2>
+      <p>Inter Tight porte l'ossature moderne et technique. Instrument Serif apporte la chaleur éditoriale. IBM Plex Sans Arabic signe notre respect pour l'arabe.</p>
+    </div>
+
+    <div style="background: #fff; border-radius: 20px; padding: 40px 50px; border: 1px solid var(--n-200);">
+      <div class="type-row">
+        <div><div class="label">Display</div><div class="spec">Inter Tight · 96/96 · −0.04em</div></div>
+        <div class="type-sample" style="font-size: clamp(40px, 6vw, 84px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95;">La banque du commerçant</div>
+      </div>
+      <div class="type-row">
+        <div><div class="label">Editorial</div><div class="spec">Instrument Serif Italic · 56/56</div></div>
+        <div class="type-sample editorial" style="font-size: clamp(32px, 5vw, 72px); line-height: 1.0;">la banque que vous <i>méritez</i></div>
+      </div>
+      <div class="type-row">
+        <div><div class="label">Heading</div><div class="spec">Inter Tight Medium · 40/44 · −0.03em</div></div>
+        <div class="type-sample" style="font-size: clamp(22px, 3vw, 40px); font-weight: 500; letter-spacing: -0.025em; line-height: 1.1;">Règlement en 24 heures, pas en 72.</div>
+      </div>
+      <div class="type-row">
+        <div><div class="label">Body</div><div class="spec">Inter Tight Regular · 16/25</div></div>
+        <div class="type-sample" style="font-size: 17px; line-height: 1.55; color: var(--n-700); max-width: 540px;">Votre argent arrive sur votre IBAN marocain dès le lendemain matin, toujours, sans batch perdu ni ticket d'appel à la banque.</div>
+      </div>
+      <div class="type-row">
+        <div><div class="label">Arabe</div><div class="spec">IBM Plex Sans Arabic</div></div>
+        <div class="type-sample" style="font-family: 'IBM Plex Sans Arabic'; font-size: 42px; direction: rtl; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em;">بنك التاجر المغربي</div>
+      </div>
+      <div class="type-row">
+        <div><div class="label">Mono · données</div><div class="spec">JetBrains Mono · tnum</div></div>
+        <div class="type-sample mono" style="font-size: 28px; font-weight: 500;">24,380.00 MAD · +18.2%</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px;">
+      <div style="background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
+        <div style="font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">ÉCHELLE</div>
+        <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-family: var(--mono); font-size: 12.5px;">
+          <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">Display 1</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">96 / 96 / −0.04</div>
+          <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">Display 2</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">72 / 72 / −0.035</div>
+          <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">H1</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">40 / 44 / −0.025</div>
+          <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">H2</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">28 / 32 / −0.02</div>
+          <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">Body</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">16 / 25 / 0</div>
+          <div style="padding: 6px 0;">Caption</div><div style="padding: 6px 0; color: var(--n-500);">12 / 18 / 0.04</div>
+        </div>
+      </div>
+      <div style="background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
+        <div style="font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">RÈGLES</div>
+        <ul style="list-style: none; padding: 0; margin: 14px 0 0; font-size: 14px; color: var(--n-700); line-height: 1.6;">
+          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Jamais Bold pour les titres — Medium (500) uniquement</li>
+          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Italic Instrument Serif pour 1 mot sur 3 max</li>
+          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Mono pour chiffres financiers uniquement</li>
+          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Arabe = +15 % de line-height vs latin</li>
+          <li style="padding: 6px 0;">Ne jamais mélanger 2 poids dans un même mot</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04. VOIX -->
+<section id="voix" style="background: #fff;">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">04 · VOIX & TON</div>
+      <h2>Direct. Marocain. Adulte.</h2>
+      <p>Kiwi parle comme un ami qui a étudié la finance à l'étranger et qui est revenu. Pas de jargon. Pas de paternalisme. Pas d'emoji dans les titres.</p>
+    </div>
+    <div class="voice-grid">
+      <div class="voice-card"><h4>On est <span class="plus">direct</span>, pas <span class="minus">pressant</span></h4><div class="ex">Règlement demain, 9 h. Promis.</div><div class="ex bad">Agissez maintenant ! Offre limitée !</div></div>
+      <div class="voice-card"><h4>On est <span class="plus">confiant</span>, pas <span class="minus">arrogant</span></h4><div class="ex">Votre caisse mérite mieux que ce qu'on vous a vendu.</div><div class="ex bad">La meilleure solution POS d'Afrique du Nord.</div></div>
+      <div class="voice-card"><h4>On est <span class="plus">marocain</span>, pas <span class="minus">folklorique</span></h4><div class="ex">Interface en darija transcrite. Parce que c'est comme ça qu'on parle.</div><div class="ex bad">Bienvenue dans notre souk numérique 🧞</div></div>
+      <div class="voice-card"><h4>On est <span class="plus">précis</span>, pas <span class="minus">vague</span></h4><div class="ex">399 MAD/mois. Matériel offert. Zéro engagement.</div><div class="ex bad">Des tarifs compétitifs adaptés à vos besoins.</div></div>
+      <div class="voice-card"><h4>On est <span class="plus">sobre</span>, pas <span class="minus">flashy</span></h4><div class="ex">Vu dans la presse : L'Économiste, TelQuel, Medias24.</div><div class="ex bad">🚀🔥 Nouveau ! Révolutionnaire ! Disruptif ! 🚀🔥</div></div>
+      <div class="voice-card"><h4>On est <span class="plus">humble</span>, pas <span class="minus">pseudo-humble</span></h4><div class="ex">Nous n'avons pas encore notre licence PE. Nous opérons sous sponsoring bancaire, avec la même rigueur.</div><div class="ex bad">Fièrement en phase bêta privée pour une expérience premium.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05. ICÔNES -->
+<section id="icones" style="background: var(--paper);">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">05 · ICONOGRAPHIE</div>
+      <h2>Outline 1,5 px. Rien de plus.</h2>
+      <p>Une famille unique, une épaisseur unique, une grille 24×24. Les icônes ne sont jamais le spectacle — elles sont la ponctuation.</p>
+    </div>
+    <div class="icon-grid">
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18M3 12h18M3 18h10"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12l5 5L20 7"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="3" width="10" height="18" rx="2"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06. GRILLE -->
+<section id="grille" style="background: #fff;">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">06 · GRILLE & SPACING</div>
+      <h2>8 px · partout.</h2>
+      <p>Une grille de 8 pixels. Les radii suivent une gamme géométrique. L'espace n'est jamais le hasard.</p>
+    </div>
+    <div class="grid-block">
+      <div>
+        <h3 style="font-size: 22px; font-weight: 600; margin: 0 0 14px; letter-spacing: -0.02em;">Système à 8 px</h3>
+        <p style="color: var(--n-600); font-size: 16px; line-height: 1.6;">Tous les paddings, margins, et gaps sont des multiples de 8 : 8, 16, 24, 32, 40, 48, 64, 80, 96, 128. Les exceptions sont interdites sauf pour les optical-corrections en typo.</p>
+        <div style="display: flex; gap: 20px; margin-top: 24px; flex-wrap: wrap; font-family: var(--mono); font-size: 13px; color: var(--n-600);">
+          <span><span style="display:inline-block; width:8px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>8</span>
+          <span><span style="display:inline-block; width:16px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>16</span>
+          <span><span style="display:inline-block; width:24px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>24</span>
+          <span><span style="display:inline-block; width:32px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>32</span>
+          <span><span style="display:inline-block; width:40px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>40</span>
+          <span><span style="display:inline-block; width:64px; height:24px; background:var(--atlas); vertical-align: middle; margin-right:8px;"></span>64</span>
+        </div>
+      </div>
+      <div class="grid-demo"><div class="block">padding: 16px 24px</div></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 30px;">
+      <div style="background: var(--paper-soft); border: 1px solid var(--n-200); aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--n-500);">sm · 6</div>
+      <div style="background: var(--paper-soft); border: 1px solid var(--n-200); aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--n-500);">md · 10</div>
+      <div style="background: var(--paper-soft); border: 1px solid var(--n-200); aspect-ratio: 1; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--n-500);">lg · 16</div>
+      <div style="background: var(--paper-soft); border: 1px solid var(--n-200); aspect-ratio: 1; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--n-500);">xl · 24</div>
+      <div style="background: var(--paper-soft); border: 1px solid var(--n-200); aspect-ratio: 1; border-radius: 32px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--n-500);">2xl · 32</div>
+    </div>
+  </div>
+</section>
+
+<!-- 07. MOTION -->
+<section id="motion" style="background: var(--paper);">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">07 · MOTION</div>
+      <h2>Vite. Honnête. Jamais décoratif.</h2>
+      <p>Nos animations servent la compréhension. Elles ne décorent pas, elles guident. Courbes cubic-bezier(0.32, 0.72, 0, 1) par défaut — c'est la « belle courbe ».</p>
+    </div>
+    <div class="motion-grid">
+      <div class="motion-card"><div class="t">DURATION · FAST</div><div class="n">150 ms</div><div class="d">Changements d'état (hover, focus, press). Invisibles mais perçus.</div></div>
+      <div class="motion-card"><div class="t">DURATION · BASE</div><div class="n">300 ms</div><div class="d">Entrées de composants, modals, tooltips. La durée par défaut.</div></div>
+      <div class="motion-card"><div class="t">DURATION · LONG</div><div class="n">600 ms</div><div class="d">Transitions de page, orchestrations complexes. Jamais au-delà.</div></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
+      <div class="motion-card" style="background: var(--riad);"><div class="t">EASE · DEFAULT</div><div class="n" style="font-family: var(--mono); font-size: 15px; font-weight: 500;">cubic-bezier(0.32, 0.72, 0, 1)</div><div class="d">Inspiré d'Apple. Départ naturel, arrivée décisive.</div></div>
+      <div class="motion-card" style="background: var(--atlas);"><div class="t">EASE · SNAPPY</div><div class="n" style="font-family: var(--mono); font-size: 15px; font-weight: 500;">cubic-bezier(0.2, 0, 0, 1)</div><div class="d">Pour les micro-interactions qui doivent donner un sentiment de réactivité.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 08. RÈGLES -->
+<section id="regles" style="background: #fff;">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">08 · RÈGLES ABSOLUES</div>
+      <h2>Les 10 lois de Kiwi.</h2>
+      <p>À afficher dans chaque studio, chaque agence, chaque contrat freelance. Violer une règle demande une réunion formelle.</p>
+    </div>
+    <div class="rules">
+      <div class="rule do">
+        <h3><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Toujours</h3>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B6E4F" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Utiliser une seule couleur de marque par viewport.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B6E4F" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Afficher un chiffre ou un fait en entête de page.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B6E4F" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Traiter l'arabe en priorité RTL, pas en miroir du latin.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B6E4F" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Shoot original · commerçants marocains, éclairage naturel.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B6E4F" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>Poser le logo en wordmark seul (jamais juste l'icône).</li>
+        </ul>
+      </div>
+      <div class="rule dont">
+        <h3><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>Jamais</h3>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C94A3A" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>Pas de dégradé derrière le texte du hero. Papier plat.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C94A3A" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>Pas de photo stock. Pas de tajine, lanterne, chameau.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C94A3A" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>Pas d'emoji dans les titres. Pas de « ✨ » ou « 🚀 ».</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C94A3A" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>Pas de 3D glass-blob, pas de néomorphisme, pas de Lottie.</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C94A3A" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>Pas de Bold pour un titre — Medium uniquement.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section id="final" style="background: var(--paper-soft); text-align: center; padding: 100px 0;">
+  <div class="wrap-sm">
+    <h2 style="font-size: clamp(36px, 5vw, 60px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; margin: 0 0 22px;">Télécharger le kit de marque.</h2>
+    <p style="font-size: 17px; color: var(--n-600); max-width: 520px; margin: 0 auto 32px;">Logo, palette Figma, tokens CSS, typographies, mockups. Tout ce qu'il faut pour parler Kiwi correctement.</p>
+    <a href="#" id="download-kit" class="btn btn-primary btn-lg">Télécharger le brand kit (24 Mo)</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">© 2026 Kiwi Payments SA · Brand system v1.0 · Casablanca · Fichier autonome pour partage</div>
+</footer>
+
+<div class="toast" id="toast">Copié</div>
+
+<script>
+(() => {
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.innerHTML = msg;
+    toast.classList.add('in');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('in'), 2200);
+  }
+  // Click a color → copy its hex
+  document.querySelectorAll('[data-hex]').forEach(el => {
+    el.addEventListener('click', () => {
+      const hex = el.dataset.hex;
+      if (navigator.clipboard) navigator.clipboard.writeText(hex);
+      showToast(`Couleur copiée <span class="mint">${hex}</span>`);
+    });
+  });
+  // Download-kit button (mock — real kit would be hosted)
+  document.getElementById('download-kit')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('Contactez <span class="mint">invest@kiwi.ma</span> pour le kit');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · dark theme
+ * Applied via <html data-theme="dark"> — toggles color tokens only.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-theme="dark"] {
+  /* Surfaces flip */
+  --paper: #0B1210;
+  --paper-soft: #131916;
+  --paper-muted: #1A201D;
+  --ink: #F2F0EA;
+  --ink-soft: #DDE1DE;
+
+  /* Neutrals invert */
+  --n-50: #0F1412;
+  --n-100: #1A1F1C;
+  --n-200: #252A27;
+  --n-300: #3A403C;
+  --n-400: #6B706D;
+  --n-500: #9EA3A0;
+  --n-600: #C6CBC8;
+  --n-700: #DDE2DF;
+  --n-800: #EEF2EF;
+
+  /* Atlas green stays on brand but slightly brightened for contrast */
+  --atlas: #13855F;
+  --atlas-600: #16A574;
+  --atlas-700: #11754F;
+  --riad: #07422E;
+  --riad-deep: #031F16;
+  --mint: #7DF2B0;
+  --mint-soft: rgba(125,242,176,0.12);
+
+  color-scheme: dark;
+}
+
+/* Smooth transitions on theme flip */
+html { transition: background-color 240ms ease, color 240ms ease; }
+html body,
+html .card, html .block, html .kpi-m, html .kpi-c,
+html .btn-ghost, html .pill, html .prod, html .testi-card,
+html .integ-card, html .search-big, html .search,
+html .kiwi-modal, html .kiwi-toast, html .kiwi-drawer,
+html .kp, html .tx-big, html .feed-row,
+html .settle, html .timeline-day,
+html .hero-today, html .kf-input, html .kb.ghost { transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease; }
+
+/* ─── Light things in the dark ───
+ * Explicit overrides for elements that hardcoded light colors.
+ * ──────────────────────────────── */
+
+html[data-theme="dark"] body { background: var(--paper); color: var(--ink); }
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .block,
+html[data-theme="dark"] .kpi-m,
+html[data-theme="dark"] .kpi-c,
+html[data-theme="dark"] .integ-card,
+html[data-theme="dark"] .prod.paper,
+html[data-theme="dark"] .tx-big,
+html[data-theme="dark"] .feed-row,
+html[data-theme="dark"] .testi-card { background: var(--paper-soft); border-color: var(--n-200); }
+
+html[data-theme="dark"] .kpi-m:hover,
+html[data-theme="dark"] .integ-card:hover { border-color: var(--n-400); }
+
+/* Nav / topbar */
+html[data-theme="dark"] .nav { background: rgba(11,18,16,0.82); border-bottom-color: rgba(255,255,255,0.06); }
+html[data-theme="dark"] .topbar { background: rgba(15,20,18,0.9); border-bottom-color: var(--n-200); }
+html[data-theme="dark"] .icon-btn { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-600); }
+html[data-theme="dark"] .icon-btn:hover { border-color: var(--n-400); color: var(--ink); }
+html[data-theme="dark"] .btn-slim { background: var(--paper-soft); border-color: var(--n-200); color: var(--ink); }
+html[data-theme="dark"] .btn-slim:hover { border-color: var(--n-400); }
+html[data-theme="dark"] .btn-slim.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* Search bar in topbar */
+html[data-theme="dark"] .search-big { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
+html[data-theme="dark"] .search-big .k span { background: var(--n-100); color: var(--n-600); }
+
+/* Sidebar — already dark, keep brand color consistent */
+html[data-theme="dark"] .sidebar { background: #05090B; }
+
+/* Stats / Paper Soft sections */
+html[data-theme="dark"] .stats { background: var(--paper-muted); }
+html[data-theme="dark"] .stats-grid { background: var(--n-200); border-color: var(--n-200); }
+html[data-theme="dark"] .stat-cell { background: var(--paper-muted); }
+
+/* Hero (landing) */
+html[data-theme="dark"] .hero::before { background-image: radial-gradient(rgba(125,242,176,0.08) 1px, transparent 1.2px); }
+
+/* Trust bar */
+html[data-theme="dark"] .trust { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .trust-marks { color: var(--n-600); }
+
+/* Feature rows alt bg */
+html[data-theme="dark"] .feat-img { background: var(--paper-muted); border-color: var(--n-200); }
+
+/* Pricing */
+html[data-theme="dark"] .price-card.old { background: var(--paper-soft); border-color: var(--n-200); }
+
+/* Press bar */
+html[data-theme="dark"] .press { background: var(--paper); border-color: var(--n-200); }
+
+/* Final CTA (landing) */
+html[data-theme="dark"] .final { background: linear-gradient(180deg, var(--paper) 0%, rgba(125,242,176,0.08) 100%); }
+
+/* Dashboard specifics */
+html[data-theme="dark"] .range { background: var(--n-100); }
+html[data-theme="dark"] .range .on { background: var(--paper-soft); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+html[data-theme="dark"] .dash-range { background: var(--n-100); }
+html[data-theme="dark"] .dash-range .on { background: var(--paper-soft); }
+html[data-theme="dark"] .container { color: var(--ink); }
+html[data-theme="dark"] .status-bar { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
+
+/* Feed/tx tables */
+html[data-theme="dark"] .feed-row { border-color: var(--n-200); }
+html[data-theme="dark"] .feed-row:hover { background: var(--n-100); }
+html[data-theme="dark"] .tx-big .tx-head { background: var(--n-100); border-bottom-color: var(--n-200); color: var(--n-500); }
+html[data-theme="dark"] .tx-big .tx-row { border-color: var(--n-200); }
+html[data-theme="dark"] .tx-big .tx-row:hover { background: var(--n-100); }
+html[data-theme="dark"] .tx-big .tx-row .method i.mc { background: radial-gradient(circle at 35% 50%, #EB001B 44%, transparent 45%), radial-gradient(circle at 65% 50%, #F79E1B 44%, transparent 45%), var(--paper-soft); border-color: var(--n-300); }
+
+/* Chart grid lines (SVG <line stroke="#E8E6E0">) — can't re-color via CSS on SVG stroke attribute easily,
+ *   but the chart still reads OK in dark. Leave as-is. */
+
+/* Heatmap */
+html[data-theme="dark"] .heatmap .cell { background: var(--n-100); }
+html[data-theme="dark"] .heatmap .cell.i1 { background: rgba(125,242,176,0.08); }
+html[data-theme="dark"] .heatmap .cell.i2 { background: rgba(125,242,176,0.18); }
+html[data-theme="dark"] .heatmap .cell.i3 { background: rgba(125,242,176,0.3); }
+html[data-theme="dark"] .heatmap .cell.i4 { background: rgba(125,242,176,0.5); }
+html[data-theme="dark"] .heatmap .cell.i5 { background: #7DF2B0; }
+html[data-theme="dark"] .heatmap .cell.i6 { background: #1FB574; }
+
+html[data-theme="dark"] .heatmap-legend { color: var(--n-500); }
+
+/* Health ring, benchmark */
+html[data-theme="dark"] .bench-bar { background: var(--n-100); }
+html[data-theme="dark"] .bench-bar .peer { background: var(--n-500); }
+html[data-theme="dark"] .ring-svg circle:first-child { stroke: var(--n-200); }
+
+/* Staff + product rows */
+html[data-theme="dark"] .staff-row { border-color: var(--n-200); }
+html[data-theme="dark"] .prod-row { border-color: var(--n-200); }
+html[data-theme="dark"] .prod-row .mini-bar { background: var(--n-100); }
+
+/* Donut ring bg */
+html[data-theme="dark"] svg circle[fill="transparent"][stroke="#F2F0EA"] { stroke: var(--n-200); }
+
+/* Health check list */
+html[data-theme="dark"] .health-check li { border-color: var(--n-200); }
+
+/* Buttons: primary stays ink-on-paper; flip so primary becomes paper-on-ink */
+html[data-theme="dark"] .btn-primary { background: var(--paper); color: var(--ink-soft); }
+html[data-theme="dark"] .btn-primary:hover { background: var(--atlas); color: var(--paper); }
+html[data-theme="dark"] .btn-ghost { background: transparent; color: var(--ink); border-color: var(--n-300); }
+html[data-theme="dark"] .btn-ghost:hover { border-color: var(--n-500); }
+
+/* Chip backgrounds */
+html[data-theme="dark"] .chip.ok { background: rgba(31,181,116,0.15); color: var(--mint); }
+html[data-theme="dark"] .chip.pend { background: rgba(217,154,43,0.15); color: #F5C679; }
+html[data-theme="dark"] .chip.ref { background: rgba(201,74,58,0.18); color: #F29B8F; }
+html[data-theme="dark"] .chip.neutral { background: var(--n-100); color: var(--n-600); }
+
+/* Modal / drawer / toast backgrounds */
+html[data-theme="dark"] .kiwi-modal { background: var(--paper-muted); color: var(--ink); }
+html[data-theme="dark"] .kiwi-modal-foot { background: rgba(255,255,255,0.02); border-top-color: var(--n-200); }
+html[data-theme="dark"] .kiwi-modal-close { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
+html[data-theme="dark"] .kiwi-modal-close:hover { color: var(--ink); border-color: var(--n-400); }
+
+html[data-theme="dark"] .kiwi-drawer { background: var(--paper); }
+html[data-theme="dark"] .kiwi-drawer-head { border-bottom-color: var(--n-200); }
+html[data-theme="dark"] .kiwi-drawer-foot { border-top-color: var(--n-200); }
+html[data-theme="dark"] .kiwi-drawer-close { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
+
+html[data-theme="dark"] .kiwi-toast { background: var(--paper-muted); border-color: var(--n-300); color: var(--ink); box-shadow: 0 20px 40px -20px rgba(0,0,0,0.6); }
+
+html[data-theme="dark"] .kp { background: var(--paper-muted); }
+html[data-theme="dark"] .kp-head { border-bottom-color: var(--n-200); }
+html[data-theme="dark"] .kp-head input { color: var(--ink); }
+html[data-theme="dark"] .kp-item:hover, html[data-theme="dark"] .kp-item.active { background: rgba(125,242,176,0.08); }
+html[data-theme="dark"] .kp-item .kpi-ic { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .kp-item .kpi-k { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
+html[data-theme="dark"] .kp-foot { background: var(--paper-soft); border-top-color: var(--n-200); }
+html[data-theme="dark"] .kp-foot kbd { background: var(--n-100); border-color: var(--n-200); color: var(--n-600); }
+
+html[data-theme="dark"] .kiwi-menu { background: var(--paper-muted); border-color: var(--n-200); }
+html[data-theme="dark"] .kiwi-menu-item:hover { background: var(--paper-soft); }
+html[data-theme="dark"] .kiwi-menu-sep { background: var(--n-200); }
+
+html[data-theme="dark"] .kf-input { background: var(--paper-soft); border-color: var(--n-200); color: var(--ink); }
+html[data-theme="dark"] .kf-input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(19,133,95,0.22); }
+
+html[data-theme="dark"] .notif { border-color: var(--n-200); }
+html[data-theme="dark"] .notif:hover { background: var(--paper-soft); }
+html[data-theme="dark"] .notif .n-ico { background: var(--paper-soft); }
+
+html[data-theme="dark"] .wiz-step { background: var(--n-200); }
+html[data-theme="dark"] .wiz-choice { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .wiz-choice:hover { border-color: var(--atlas); background: var(--paper-muted); }
+html[data-theme="dark"] .wiz-choice.selected { background: rgba(19,133,95,0.12); }
+html[data-theme="dark"] .wiz-choice .wc-ic { background: var(--paper-muted); }
+
+html[data-theme="dark"] .tx-detail-hero { background: var(--paper-soft); }
+html[data-theme="dark"] .tx-detail-grid dt, html[data-theme="dark"] .tx-detail-grid dd { border-color: var(--n-200); }
+html[data-theme="dark"] .tx-timeline::before { background: var(--n-200); }
+html[data-theme="dark"] .tx-timeline-item::before { border-color: var(--paper); }
+
+/* AI drawer floating (dashboard) */
+html[data-theme="dark"] .ai-drawer { background: var(--paper-muted); border-color: var(--n-200); }
+
+/* Sidebar upsell in dark */
+html[data-theme="dark"] .sidebar .upsell { background: linear-gradient(145deg, rgba(125,242,176,0.06), rgba(19,133,95,0.12)); }
+
+/* Wallet */
+html[data-theme="dark"] .f-card { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .f-card.dark { background: var(--ink-soft); color: var(--paper); border-color: var(--ink-soft); }
+html[data-theme="dark"] .f-card.dark p { color: var(--n-400); }
+html[data-theme="dark"] .rmap-card { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .final-w { background: linear-gradient(180deg, var(--paper) 0%, rgba(125,242,176,0.1) 100%); }
+
+/* Brand guide */
+html[data-theme="dark"] .logo-cell { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .logo-cell.paper .wm { color: var(--mint); }
+html[data-theme="dark"] .index-nav { background: var(--paper-muted); border-color: var(--n-200); }
+html[data-theme="dark"] .voice-card { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .icon-cell { background: var(--paper-soft); border-color: var(--n-200); color: var(--mint); }
+html[data-theme="dark"] .motion-card { background: var(--paper-soft); }
+html[data-theme="dark"] .grid-demo { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .rule { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .rule li { border-color: var(--n-200); }
+
+/* Pitch deck */
+html[data-theme="dark"] .slide { border-color: var(--n-200); }
+html[data-theme="dark"] .bm-card { background: var(--paper-soft); border-color: var(--n-200); }
+html[data-theme="dark"] .compete th { background: var(--paper-muted); border-bottom-color: var(--n-200); color: var(--n-500); }
+html[data-theme="dark"] .compete td { background: var(--paper-soft); border-bottom-color: var(--n-200); color: var(--ink); }
+html[data-theme="dark"] .team-card { background: var(--paper-soft); border-color: var(--n-200); }
+
+/* Phone mockup frames already have deep colors — keep */
+
+/* ═══════════════════ THEME TOGGLE BUTTON ═══════════════════ */
+.theme-tg { width: 36px; height: 36px; border-radius: 10px; background: transparent; border: 1px solid var(--n-200); display: inline-flex; align-items: center; justify-content: center; color: var(--n-600); cursor: pointer; transition: all 160ms; position: relative; flex-shrink: 0; }
+.theme-tg:hover { border-color: var(--n-400); color: var(--ink); }
+.theme-tg .sun, .theme-tg .moon { position: absolute; transition: transform 260ms cubic-bezier(0.32,0.72,0,1), opacity 200ms; }
+.theme-tg .sun { opacity: 1; transform: rotate(0); }
+.theme-tg .moon { opacity: 0; transform: rotate(-90deg); }
+html[data-theme="dark"] .theme-tg .sun { opacity: 0; transform: rotate(90deg); }
+html[data-theme="dark"] .theme-tg .moon { opacity: 1; transform: rotate(0); }
+
+/* ═══════════════════ RTL ADJUSTMENTS (Arabic) ═══════════════════ */
+html[dir="rtl"] { font-family: 'IBM Plex Sans Arabic', var(--sans); }
+html[dir="rtl"] body { font-size: 15px; }
+html[dir="rtl"] .nav-links { flex-direction: row-reverse; }
+html[dir="rtl"] .sidebar nav a.active::before { left: auto; right: -14px; border-radius: 2px 0 0 2px; }
+html[dir="rtl"] .feat-row.flip .feat-txt { order: 1; }
+html[dir="rtl"] .feat-row.flip .feat-img { order: 2; }
+html[dir="rtl"] svg text { direction: ltr; }
+html[dir="rtl"] .mono { direction: ltr; unicode-bidi: embed; }
+html[dir="rtl"] .breadcrumb { flex-direction: row-reverse; }
+html[dir="rtl"] .dash-float { right: auto; left: -14px; }
+/* Flip directional arrow SVGs in CTAs */
+html[dir="rtl"] .btn svg, html[dir="rtl"] .kb svg, html[dir="rtl"] .simple-btn svg, html[dir="rtl"] .link-atlas svg { transform: scaleX(-1); }
+html[dir="rtl"] .chev, html[dir="rtl"] .help-card .chev { transform: scaleX(-1); }
+
+/* Line-height bump for Arabic */
+html[lang="ar"] .display-1 { line-height: 1.1; }
+html[lang="ar"] .display-2 { line-height: 1.15; }
+html[lang="ar"] .display-3 { line-height: 1.15; }
+html[lang="ar"] .title-xl,
+html[lang="ar"] .title-lg { line-height: 1.18; }
+html[lang="ar"] p { line-height: 1.72; }
+
+/* Dark variant of AI drawer specifically (already dark, nothing to do) */
+
+/* Gradient card in dashboard hero — keep dark, works in both modes */

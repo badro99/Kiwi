@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kiwi Wallet · L'app qui remplace votre portefeuille</title>
+<link rel="icon" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+<link rel="stylesheet" href="assets/polish.css" />
+<link rel="stylesheet" href="assets/ux.css" />
+<style>
+  body { background: var(--paper); overflow-x: hidden; }
+
+  .nav { position: sticky; top: 0; z-index: 60; background: rgba(247,245,240,0.85); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(0,0,0,0.04); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 26px; letter-spacing: -0.05em; color: var(--atlas); }
+  .nav-logo .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+  .nav-links { display: flex; gap: 30px; font-size: 14px; color: var(--n-700); }
+
+  /* Hero */
+  .wallet-hero { padding: 80px 0 60px; background: var(--riad-deep); color: var(--paper); border-radius: 0 0 40px 40px; position: relative; overflow: hidden; }
+  .wallet-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 70% 20%, rgba(125,242,176,0.2), transparent 60%); pointer-events: none; }
+  .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; z-index: 2; }
+  @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
+  .wallet-hero h1 { font-size: clamp(44px, 6vw, 88px); letter-spacing: -0.04em; line-height: 0.98; margin: 18px 0 22px; font-weight: 600; }
+  .wallet-hero h1 em { font-family: var(--serif); font-style: italic; color: var(--mint); font-weight: 400; }
+  .wallet-hero p { font-size: 19px; color: #b0c2bb; line-height: 1.55; max-width: 520px; }
+  .wallet-hero .ctas { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
+  .btn-mint { background: var(--mint); color: var(--riad-deep); font-weight: 600; }
+  .btn-mint:hover { background: #a2f7c5; }
+  .store-btns { display: flex; gap: 12px; margin-top: 22px; }
+  .store-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 10px 16px; border-radius: 12px; color: var(--paper); font-size: 12px; display: flex; align-items: center; gap: 10px; }
+  .store-btn strong { font-size: 14px; display: block; }
+
+  /* PHONE */
+  .phone-wrap { display: flex; justify-content: center; position: relative; }
+  .phone { width: 320px; background: linear-gradient(145deg, #1a1f1d, #0a0f0d); border-radius: 42px; padding: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 40px 100px -30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset; position: relative; }
+  .phone::before { content: ""; position: absolute; top: 20px; left: 50%; translate: -50%; width: 90px; height: 28px; background: #000; border-radius: 14px; z-index: 3; }
+  .phone-screen { background: var(--atlas); border-radius: 32px; height: 640px; overflow: hidden; position: relative; padding-top: 58px; }
+  .phone-screen .statusbar { position: absolute; top: 16px; left: 28px; right: 28px; display: flex; justify-content: space-between; color: var(--paper); font-size: 11px; font-weight: 600; z-index: 4; }
+
+  /* Wallet home screen */
+  .w-home { padding: 10px 22px 0; color: var(--paper); height: 100%; overflow: hidden; background: linear-gradient(180deg, var(--atlas) 0%, var(--riad) 100%); }
+  .w-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .w-head .hi { font-size: 13px; color: #c6ead4; }
+  .w-head .hi b { color: var(--paper); font-weight: 500; display: block; font-size: 15px; }
+  .w-head .bell { width: 38px; height: 38px; background: rgba(255,255,255,0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .w-head .bell::after { content: ""; position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--mint); border: 2px solid var(--riad); }
+  .w-bal { background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border-radius: 18px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .w-bal .l { font-size: 12px; color: #c6ead4; letter-spacing: 0.05em; }
+  .w-bal .v { font-size: 36px; font-weight: 600; letter-spacing: -0.035em; margin-top: 4px; font-feature-settings: "tnum" 1; }
+  .w-bal .v .u { font-size: 16px; color: #c6ead4; margin-left: 6px; font-weight: 500; }
+  .w-bal .card-num { margin-top: 14px; font-family: var(--mono); font-size: 13px; color: #c6ead4; display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .w-bal .brand-m { font-weight: 600; color: var(--mint); }
+  .w-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 20px; }
+  .w-act { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--paper); }
+  .w-act i { width: 34px; height: 34px; background: rgba(125,242,176,0.12); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--mint); }
+  .w-sect { display: flex; justify-content: space-between; margin: 22px 0 10px; }
+  .w-sect .t { font-size: 13px; font-weight: 500; }
+  .w-sect .l { font-size: 12px; color: var(--mint); }
+
+  /* Transaction mini rows */
+  .w-tx { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 13px; }
+  .w-tx .av { width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: var(--mint); font-weight: 600; font-size: 11px; flex-shrink: 0; }
+  .w-tx .av.neg { background: rgba(217,154,43,0.15); color: #F5C679; }
+  .w-tx .info { flex: 1; }
+  .w-tx .info .n { font-weight: 500; }
+  .w-tx .info .r { font-size: 11px; color: #9bb5a8; margin-top: 1px; }
+  .w-tx .amt { font-family: var(--mono); font-weight: 500; color: var(--mint); font-size: 12.5px; }
+  .w-tx .amt.out { color: var(--paper); }
+
+  /* Tab bar */
+  .w-tabs { position: absolute; left: 16px; right: 16px; bottom: 16px; background: rgba(5,40,30,0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 12px; display: flex; justify-content: space-around; }
+  .w-tabs .t { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #9bb5a8; font-size: 10px; }
+  .w-tabs .t.on { color: var(--mint); }
+
+  /* Second phone: Pay QR screen */
+  .phone.s2 .phone-screen { background: #fff; padding-top: 58px; }
+  .pay-screen { padding: 20px 22px; height: 100%; color: var(--ink); background: var(--paper); }
+  .pay-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .pay-top .close { width: 34px; height: 34px; border-radius: 50%; background: var(--n-100); display: flex; align-items: center; justify-content: center; }
+  .pay-title { font-size: 15px; font-weight: 600; }
+  .pay-merch { text-align: center; margin-top: 24px; }
+  .pay-merch .av { width: 64px; height: 64px; background: var(--atlas); color: var(--mint); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; }
+  .pay-merch .n { font-size: 18px; font-weight: 600; margin-top: 14px; letter-spacing: -0.02em; }
+  .pay-merch .r { color: var(--n-500); font-size: 12px; margin-top: 3px; }
+  .pay-amt { text-align: center; margin-top: 28px; }
+  .pay-amt .v { font-size: 58px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; font-feature-settings: "tnum" 1; }
+  .pay-amt .u { font-size: 14px; color: var(--n-500); margin-top: 6px; }
+  .pay-from { background: #fff; border: 1px solid var(--n-200); border-radius: 14px; padding: 14px 16px; margin-top: 28px; display: flex; align-items: center; gap: 12px; }
+  .pay-from .ico { width: 40px; height: 26px; background: linear-gradient(135deg, var(--atlas), var(--atlas-700)); border-radius: 5px; }
+  .pay-from .info { flex: 1; font-size: 13px; }
+  .pay-from .info .r { color: var(--n-500); font-size: 11px; margin-top: 2px; }
+  .pay-confirm { background: var(--ink); color: var(--paper); text-align: center; padding: 16px; border-radius: 14px; margin-top: 20px; font-weight: 500; }
+  .pay-biometric { text-align: center; margin-top: 14px; color: var(--n-500); font-size: 12px; }
+
+  /* Third phone: Kiwi Card */
+  .phone.s3 .phone-screen { background: #1a1f1d; padding-top: 58px; }
+  .card-screen { padding: 20px 22px; height: 100%; color: var(--paper); }
+  .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .card-visual { background: linear-gradient(135deg, var(--riad-deep) 0%, var(--atlas-700) 70%, var(--atlas) 100%); border-radius: 20px; padding: 22px; aspect-ratio: 1.585; position: relative; overflow: hidden; border: 1px solid rgba(125,242,176,0.15); }
+  .card-visual::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 80% 10%, rgba(125,242,176,0.3), transparent 60%); pointer-events: none; }
+  .card-visual .brand { font-size: 22px; font-weight: 700; letter-spacing: -0.05em; display: flex; align-items: baseline; gap: 3px; position: relative; }
+  .card-visual .brand i { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; }
+  .card-visual .chip { margin-top: 30px; width: 36px; height: 28px; background: linear-gradient(135deg, #C9C5BC, #8A867E); border-radius: 5px; position: relative; }
+  .card-visual .chip::before, .card-visual .chip::after { content: ""; position: absolute; background: #4B4944; height: 1px; left: 3px; right: 3px; }
+  .card-visual .chip::before { top: 10px; }
+  .card-visual .chip::after { top: 17px; }
+  .card-visual .num { margin-top: 16px; font-family: var(--mono); font-size: 15px; letter-spacing: 0.08em; color: var(--paper); position: relative; }
+  .card-visual .bot { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; font-size: 11px; position: relative; }
+  .card-visual .bot .name { text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; }
+  .card-visual .bot .m-icon { width: 40px; height: 26px; display: flex; align-items: center; }
+  .card-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+  .card-kpi { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 14px; }
+  .card-kpi .l { font-size: 10px; color: #9bb5a8; text-transform: uppercase; letter-spacing: 0.08em; }
+  .card-kpi .v { font-size: 20px; font-weight: 600; margin-top: 4px; letter-spacing: -0.02em; font-feature-settings: "tnum" 1; }
+  .card-kpi .v .u { font-size: 11px; color: #9bb5a8; margin-left: 3px; }
+  .card-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+  .card-action { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; color: #c6ead4; }
+  .card-action i { width: 30px; height: 30px; background: rgba(125,242,176,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--mint); }
+
+  /* Section generic */
+  section { padding: 110px 0; }
+  .sec-head { max-width: 760px; margin: 0 auto 50px; text-align: center; }
+  .sec-head.left { text-align: left; margin: 0 0 50px; }
+  .sec-head h2 { font-size: clamp(36px, 4vw, 60px); letter-spacing: -0.035em; line-height: 1.05; margin: 14px 0 18px; font-weight: 600; }
+  .sec-head p { color: var(--n-600); font-size: 19px; line-height: 1.55; margin: 0; }
+
+  /* Features grid */
+  .f-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .f-grid { grid-template-columns: 1fr; } }
+  .f-card { background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 30px; }
+  .f-card .ico { width: 46px; height: 46px; background: var(--mint-soft); color: var(--atlas); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+  .f-card h3 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .f-card p { font-size: 14.5px; color: var(--n-600); line-height: 1.55; margin: 0; }
+  .f-card.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .f-card.dark .ico { background: rgba(125,242,176,0.1); color: var(--mint); }
+  .f-card.dark p { color: #9ea3a0; }
+  .f-card.atlas { background: var(--atlas); color: var(--paper); border-color: transparent; }
+  .f-card.atlas .ico { background: rgba(125,242,176,0.15); color: var(--mint); }
+  .f-card.atlas p { color: #d0eed9; }
+
+  /* Row split demo */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; padding: 80px 0; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: 50px; } }
+  .split h2 { font-size: clamp(32px, 3.5vw, 48px); letter-spacing: -0.03em; line-height: 1.06; margin: 0 0 20px; font-weight: 600; }
+  .split p { font-size: 17px; color: var(--n-600); line-height: 1.6; margin: 0 0 28px; max-width: 460px; }
+
+  /* Split bill demo */
+  .split-demo { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 20px; padding: 30px; }
+  .split-demo .total { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 22px; }
+  .split-demo .total .l { font-size: 13px; color: var(--n-500); text-transform: uppercase; letter-spacing: 0.1em; }
+  .split-demo .total .v { font-size: 40px; font-weight: 600; letter-spacing: -0.035em; }
+  .split-persons { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .split-person { flex: 1; min-width: 90px; background: #fff; border: 1px solid var(--n-200); border-radius: 14px; padding: 14px; text-align: center; position: relative; }
+  .split-person .av { width: 36px; height: 36px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; color: var(--paper); background: var(--atlas); }
+  .split-person .av.b { background: var(--riad); }
+  .split-person .av.c { background: var(--atlas-700); }
+  .split-person .av.d { background: #D99A2B; }
+  .split-person .n { font-size: 13px; font-weight: 500; margin-top: 10px; }
+  .split-person .v { font-size: 15px; font-weight: 600; margin-top: 4px; font-feature-settings: "tnum" 1; color: var(--atlas); }
+  .split-person.paid::before { content: "✓"; position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; background: var(--atlas); color: var(--paper); font-size: 11px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .split-summary { display: flex; justify-content: space-between; padding: 14px 0 0; border-top: 1px solid var(--n-200); font-size: 13px; color: var(--n-500); margin-top: 8px; }
+  .split-summary b { color: var(--atlas); font-weight: 600; }
+
+  /* Investing block */
+  .inv { background: var(--riad-deep); color: var(--paper); border-radius: 32px; padding: 70px 60px; position: relative; overflow: hidden; }
+  @media (max-width: 900px) { .inv { padding: 40px 28px; border-radius: 24px; } }
+  .inv::before { content: ""; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(125,242,176,0.2), transparent 60%); pointer-events: none; }
+  .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; z-index: 2; }
+  @media (max-width: 900px) { .inv-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .inv h2 { font-size: clamp(36px, 4vw, 56px); letter-spacing: -0.035em; line-height: 1.05; margin: 14px 0 18px; font-weight: 600; }
+  .inv p { color: #b0c2bb; font-size: 17px; line-height: 1.6; margin: 0 0 24px; max-width: 480px; }
+  .inv-assets { background: rgba(255,255,255,0.06); border-radius: 20px; padding: 24px; border: 1px solid rgba(255,255,255,0.08); }
+  .inv-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .inv-row:last-child { border-bottom: 0; }
+  .inv-row .ic { width: 40px; height: 40px; border-radius: 12px; background: rgba(125,242,176,0.1); color: var(--mint); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; }
+  .inv-row .info { flex: 1; }
+  .inv-row .info .n { font-weight: 500; font-size: 14px; }
+  .inv-row .info .r { font-size: 11px; color: #9bb5a8; margin-top: 2px; }
+  .inv-row .v { text-align: right; }
+  .inv-row .v .a { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+  .inv-row .v .d { font-size: 11px; color: var(--mint); margin-top: 2px; }
+  .inv-row .v .d.dn { color: #F29B8F; }
+
+  /* Roadmap strip */
+  .rmap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .rmap { grid-template-columns: 1fr 1fr; } }
+  .rmap-card { background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 24px; position: relative; }
+  .rmap-card.active { background: var(--atlas); color: var(--paper); border-color: transparent; }
+  .rmap-card .phase { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-500); font-weight: 500; }
+  .rmap-card.active .phase { color: var(--mint); }
+  .rmap-card h4 { font-size: 17px; margin: 6px 0 10px; font-weight: 600; letter-spacing: -0.02em; }
+  .rmap-card ul { list-style: none; padding: 0; margin: 0; }
+  .rmap-card li { font-size: 13px; line-height: 1.5; color: var(--n-600); padding: 4px 0; }
+  .rmap-card.active li { color: #d0eed9; }
+
+  /* Final */
+  .final-w { background: var(--mint-soft); border-radius: 32px 32px 0 0; text-align: center; padding: 120px 0 140px; }
+  .final-w h2 { font-size: clamp(44px, 6vw, 88px); line-height: 0.98; letter-spacing: -0.04em; font-weight: 600; margin: 0; }
+  .final-w h2 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+  .final-w p { max-width: 580px; margin: 22px auto 34px; font-size: 18px; color: var(--n-600); }
+
+  footer { background: var(--ink); color: var(--paper-muted); padding: 60px 0 40px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a href="index.html" class="nav-logo">kiwi<i class="dot"></i></a>
+    <div class="nav-links">
+      <a href="index.html#produits" class="link">POS</a>
+      <a href="wallet.html" class="link"><b>Wallet</b></a>
+      <a href="index.html#tarifs" class="link">Tarifs</a>
+      <a href="index.html#securite" class="link">Sécurité</a>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="#" data-action="download-app" class="btn btn-atlas" style="padding:10px 18px; font-size:14px;">Télécharger</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="wallet-hero" style="padding: 80px 0;">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill pill-mint rise">Kiwi Wallet · Disponible 2026 Q3</span>
+      <h1 class="rise-2">Le <em>portefeuille</em><br/>marocain.<br/>Dans votre poche.</h1>
+      <p class="rise-3">Payez chez 2 000+ commerçants avec un QR. Envoyez de l'argent à vos amis en 2 secondes. Partagez l'addition sans calculer. Commandez votre Kiwi Card en 30 secondes.</p>
+      <div class="ctas rise-3">
+        <a href="#" data-action="download-app" class="btn btn-mint btn-lg">Télécharger l'app
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="store-btns rise-3">
+        <a href="#" class="store-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09M12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+          <div>Télécharger sur<strong>App Store</strong></div>
+        </a>
+        <a href="#" class="store-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5V3.5c0-.38.21-.71.53-.88l9.62 9.38-9.62 9.38A1 1 0 013 20.5zm10.81-8.37l2.54 2.48-10.23 5.81 7.69-8.29zM3.91 2.09l10.23 5.81-2.53 2.47-7.7-8.28zm13.4 9.41l-2.93 1.66-2.77-2.66 2.77-2.66 2.93 1.66a1 1 0 010 2z"/></svg>
+          <div>Disponible sur<strong>Google Play</strong></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Phone + decorative -->
+    <div class="phone-wrap">
+      <div class="phone rise-2">
+        <div class="phone-screen">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span style="display:flex; gap:6px;">
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5.5L7 1l6 4.5M3.5 7L7 4.5 10.5 7M6 8.5L7 8l1 .5"/></svg>
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="2" height="8"/><rect x="8" y="4" width="2" height="6"/><rect x="12" y="6" width="2" height="4"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10" fill="none"><rect x="1" y="1" width="16" height="8" rx="2" stroke="currentColor" stroke-width="1"/><rect x="3" y="3" width="12" height="4" rx="0.5" fill="currentColor"/><rect x="18" y="3" width="1.5" height="4" rx="0.5" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="w-home">
+            <div class="w-head">
+              <div>
+                <div class="hi">Bonjour,</div>
+                <b>Imane Mouline</b>
+              </div>
+              <div class="bell">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21a2 2 0 004 0"/></svg>
+              </div>
+            </div>
+            <div class="w-bal">
+              <div class="l">SOLDE DISPONIBLE</div>
+              <div class="v">4 280,50<span class="u">MAD</span></div>
+              <div class="card-num">
+                <span>•••• •••• •••• 8124</span>
+                <span class="brand-m">Kiwi Card</span>
+              </div>
+            </div>
+            <div class="w-acts">
+              <div class="w-act">
+                <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h7v7h-7z"/></svg></i>
+                Payer
+              </div>
+              <div class="w-act">
+                <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></i>
+                Envoyer
+              </div>
+              <div class="w-act">
+                <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 19l-7-7 7-7"/></svg></i>
+                Recevoir
+              </div>
+              <div class="w-act">
+                <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg></i>
+                Factures
+              </div>
+            </div>
+            <div class="w-sect">
+              <span class="t">Activité récente</span>
+              <span class="l">Tout →</span>
+            </div>
+            <div class="w-tx">
+              <div class="av">CA</div>
+              <div class="info"><div class="n">Café Atlas</div><div class="r">Aujourd'hui, 14:32</div></div>
+              <div class="amt out">−152,90</div>
+            </div>
+            <div class="w-tx">
+              <div class="av">YB</div>
+              <div class="info"><div class="n">Youness (remboursement)</div><div class="r">Hier</div></div>
+              <div class="amt">+80,00</div>
+            </div>
+            <div class="w-tx">
+              <div class="av neg">FA</div>
+              <div class="info"><div class="n">Facture Redal</div><div class="r">Il y a 2 jours</div></div>
+              <div class="amt out">−234,00</div>
+            </div>
+          </div>
+          <div class="w-tabs">
+            <div class="t on">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z"/></svg>
+              Accueil
+            </div>
+            <div class="t">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/></svg>
+              Carte
+            </div>
+            <div class="t">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+              Investir
+            </div>
+            <div class="t">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+              Réglages
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 PHONES shortcut row -->
+<section style="background: var(--paper); padding: 90px 0;">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tout ce que vous faites avec du cash</span>
+      <h2>Plus rapide. Plus traçable. Plus marocain.</h2>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start;">
+      <!-- Phone 2: Pay QR -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <div class="phone s2">
+          <div class="phone-screen">
+            <div class="statusbar" style="color: var(--ink);">
+              <span>9:41</span>
+              <span style="display:flex; gap:6px; color: var(--ink);">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5.5L7 1l6 4.5M3.5 7L7 4.5 10.5 7M6 8.5L7 8l1 .5"/></svg>
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="2" height="8"/><rect x="8" y="4" width="2" height="6"/><rect x="12" y="6" width="2" height="4"/></svg>
+                <svg width="20" height="10" viewBox="0 0 20 10" fill="none"><rect x="1" y="1" width="16" height="8" rx="2" stroke="currentColor" stroke-width="1"/><rect x="3" y="3" width="12" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+            <div class="pay-screen">
+              <div class="pay-top">
+                <div class="close">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+                <div class="pay-title">Paiement par QR</div>
+                <div style="width:34px;"></div>
+              </div>
+              <div class="pay-merch">
+                <div class="av">CA</div>
+                <div class="n">Café Atlas</div>
+                <div class="r">Maarif · Casablanca</div>
+              </div>
+              <div class="pay-amt">
+                <div class="v">152<span style="color:var(--n-400); font-weight:500;">,90</span></div>
+                <div class="u">MAD · addition table 6</div>
+              </div>
+              <div class="pay-from">
+                <div class="ico"></div>
+                <div class="info">
+                  <div>Kiwi Wallet</div>
+                  <div class="r">Solde 4 280,50 MAD</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+              <div class="pay-confirm">Glisser pour payer</div>
+              <div class="pay-biometric">🔒 Face ID requis</div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; max-width: 280px;">
+          <div class="eyebrow" style="color: var(--atlas);">Payer en QR</div>
+          <h4 style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em; margin: 6px 0 8px;">Scannez, validez, c'est réglé.</h4>
+          <p style="color: var(--n-500); font-size: 14px; line-height: 1.5;">Compatible CMI QR, Kiwi QR et tout terminal NFC au Maroc.</p>
+        </div>
+      </div>
+
+      <!-- Phone 3: Kiwi Card -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <div class="phone s3">
+          <div class="phone-screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <span style="display:flex; gap:6px;">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5.5L7 1l6 4.5M3.5 7L7 4.5 10.5 7M6 8.5L7 8l1 .5"/></svg>
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="2" height="8"/><rect x="8" y="4" width="2" height="6"/><rect x="12" y="6" width="2" height="4"/></svg>
+                <svg width="20" height="10" viewBox="0 0 20 10" fill="none"><rect x="1" y="1" width="16" height="8" rx="2" stroke="currentColor" stroke-width="1"/><rect x="3" y="3" width="12" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+            <div class="card-screen">
+              <div class="card-top">
+                <div style="font-size: 22px; font-weight: 600; letter-spacing: -0.02em;">Ma carte</div>
+                <div style="width:34px; height:34px; border-radius:50%; background: rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </div>
+              </div>
+              <div class="card-visual">
+                <div class="brand">kiwi<i></i></div>
+                <div class="chip"></div>
+                <div class="num">4921 8834 •••• 8124</div>
+                <div class="bot">
+                  <div>
+                    <div style="font-size:8.5px; letter-spacing:0.14em; color:#9bb5a8;">TITULAIRE</div>
+                    <div class="name">I. MOULINE</div>
+                  </div>
+                  <div>
+                    <div style="font-size:8.5px; letter-spacing:0.14em; color:#9bb5a8;">EXP</div>
+                    <div style="font-family: var(--mono); font-size: 12px;">08 / 30</div>
+                  </div>
+                  <div class="m-icon">
+                    <svg viewBox="0 0 40 24">
+                      <circle cx="16" cy="12" r="9" fill="#EB001B" opacity="0.9"/>
+                      <circle cx="24" cy="12" r="9" fill="#F79E1B" opacity="0.9"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="card-kpis">
+                <div class="card-kpi">
+                  <div class="l">Dépensé ce mois</div>
+                  <div class="v">3 128<span class="u">MAD</span></div>
+                </div>
+                <div class="card-kpi">
+                  <div class="l">Cashback gagné</div>
+                  <div class="v" style="color: var(--mint);">62<span class="u">MAD</span></div>
+                </div>
+              </div>
+              <div class="card-actions">
+                <div class="card-action">
+                  <i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></i>
+                  Geler
+                </div>
+                <div class="card-action">
+                  <i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 6h16M4 18h10"/></svg></i>
+                  Limites
+                </div>
+                <div class="card-action">
+                  <i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></i>
+                  Historique
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; max-width: 280px;">
+          <div class="eyebrow" style="color: var(--atlas);">Kiwi Card</div>
+          <h4 style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em; margin: 6px 0 8px;">Carte virtuelle en 30 secondes.</h4>
+          <p style="color: var(--n-500); font-size: 14px; line-height: 1.5;">Visa ou Mastercard, sans frais cachés. Cashback 1 % chez les commerçants Kiwi.</p>
+        </div>
+      </div>
+
+      <!-- Phone 4: Split bill -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <div class="phone s2">
+          <div class="phone-screen">
+            <div class="statusbar" style="color: var(--ink);">
+              <span>9:41</span>
+              <span style="display:flex; gap:6px; color: var(--ink);">
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5.5L7 1l6 4.5M3.5 7L7 4.5 10.5 7M6 8.5L7 8l1 .5"/></svg>
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="0" width="2" height="10"/><rect x="4" y="2" width="2" height="8"/><rect x="8" y="4" width="2" height="6"/><rect x="12" y="6" width="2" height="4"/></svg>
+                <svg width="20" height="10" viewBox="0 0 20 10" fill="none"><rect x="1" y="1" width="16" height="8" rx="2" stroke="currentColor" stroke-width="1"/><rect x="3" y="3" width="12" height="4" rx="0.5" fill="currentColor"/></svg>
+              </span>
+            </div>
+            <div class="pay-screen" style="background: #fff;">
+              <div class="pay-top">
+                <div class="close">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+                <div class="pay-title">Partager l'addition</div>
+                <div style="width:34px;"></div>
+              </div>
+              <div style="margin-top: 18px; padding: 20px; background: var(--paper-soft); border-radius: 16px;">
+                <div style="font-size: 12px; color: var(--n-500); text-transform: uppercase; letter-spacing: 0.1em;">Addition · Café Atlas</div>
+                <div style="font-size: 36px; font-weight: 600; letter-spacing: -0.035em; margin-top: 4px; font-feature-settings: 'tnum' 1;">344,00 <span style="font-size: 14px; color: var(--n-500);">MAD</span></div>
+                <div style="margin-top: 12px; font-size: 11px; color: var(--n-500);">4 convives · Table T2</div>
+              </div>
+              <div style="margin-top: 22px; font-size: 12.5px; font-weight: 500; color: var(--n-500); text-transform: uppercase; letter-spacing: 0.08em;">Qui paie quoi</div>
+              <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--mint-soft); border-color: var(--mint);">
+                  <div style="width:30px; height:30px; border-radius:50%; background: var(--atlas); color: var(--mint); font-weight: 600; display:flex; align-items:center; justify-content:center; font-size: 11px;">IM</div>
+                  <div style="flex:1; font-size: 13px; font-weight: 500;">Imane (vous)</div>
+                  <div style="font-family: var(--mono); font-weight: 500; font-size: 13px;">86,00</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--n-200); border-radius: 12px;">
+                  <div style="width:30px; height:30px; border-radius:50%; background: var(--riad); color: var(--mint); font-weight: 600; display:flex; align-items:center; justify-content:center; font-size: 11px;">YA</div>
+                  <div style="flex:1; font-size: 13px;">Youssef · <span style="color: var(--success);">payé ✓</span></div>
+                  <div style="font-family: var(--mono); color: var(--success); font-size: 13px;">86,00</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--n-200); border-radius: 12px;">
+                  <div style="width:30px; height:30px; border-radius:50%; background: var(--atlas-700); color: var(--mint); font-weight: 600; display:flex; align-items:center; justify-content:center; font-size: 11px;">SA</div>
+                  <div style="flex:1; font-size: 13px;">Salma · <span style="color: var(--warning);">en attente</span></div>
+                  <div style="font-family: var(--mono); color: var(--n-500); font-size: 13px;">86,00</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--n-200); border-radius: 12px;">
+                  <div style="width:30px; height:30px; border-radius:50%; background: #D99A2B; color: #fff; font-weight: 600; display:flex; align-items:center; justify-content:center; font-size: 11px;">HA</div>
+                  <div style="flex:1; font-size: 13px;">Hassan · <span style="color: var(--n-500);">invitation envoyée</span></div>
+                  <div style="font-family: var(--mono); color: var(--n-500); font-size: 13px;">86,00</div>
+                </div>
+              </div>
+              <div style="margin-top: 20px; padding: 14px; background: var(--ink); color: var(--paper); border-radius: 12px; text-align: center; font-weight: 500; font-size: 14px;">Relancer les invités</div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; max-width: 280px;">
+          <div class="eyebrow" style="color: var(--atlas);">Split bill</div>
+          <h4 style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em; margin: 6px 0 8px;">Partagez en darija, sans calculatrice.</h4>
+          <p style="color: var(--n-500); font-size: 14px; line-height: 1.5;">Chaque convive paie sa part, même sans compte Kiwi. Lien WhatsApp, reçu automatique.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES GRID -->
+<section style="background: #fff; border-top: 1px solid var(--n-200);">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Ce qu'il y a dedans</span>
+      <h2>Pensé pour un pays qui <em class="editorial" style="color:var(--atlas);">mérite mieux</em>.</h2>
+    </div>
+    <div class="f-grid">
+      <div class="f-card" data-action="diaspora">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg></div>
+        <h3>Envoyer depuis l'étranger</h3>
+        <p>Taux interbancaire + 0,5 % seulement. Livraison en 10 secondes sur Kiwi Wallet, ou cash dans 4 000 agences.</p>
+      </div>
+      <div class="f-card dark">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg></div>
+        <h3>Kiwi Card en 30 s.</h3>
+        <p>Carte Visa ou Mastercard, virtuelle immédiatement et physique livrée en 48h. Aucun frais d'émission.</p>
+      </div>
+      <div class="f-card">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 14h.01M12 14h.01"/></svg></div>
+        <h3>Payer les factures</h3>
+        <p>IAM, Inwi, Orange, Lydec, Redal, ONEE, TVA, impôts. Un tap, un reçu, une ligne dans votre historique.</p>
+      </div>
+      <div class="f-card atlas">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></div>
+        <h3>Investir à partir de 50 MAD</h3>
+        <p>Accès fractionné à des fonds AMMC-régulés. Frais 0,5 %/an. Pensé pour commencer, pas pour les traders.</p>
+      </div>
+      <div class="f-card" data-action="zakat">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="currentColor"/></svg></div>
+        <h3>Zakat · Sadaqa intégrées</h3>
+        <p>Calculateur Zakat selon le nisab actuel · arrondis solidaires sur chaque achat · associations agréées CNDH.</p>
+      </div>
+      <div class="f-card" data-action="sadaqa">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4.5v6C21 18 17 21.5 12 22 7 21.5 3 18 3 12.5v-6L12 2z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Chiffré bout-en-bout</h3>
+        <p>Tokenisation réseau, 3-D Secure 2, détection de fraude temps réel. Votre carte gelée en 1 seconde si elle est volée.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INVEST -->
+<section style="background: var(--paper);">
+  <div class="wrap">
+    <div class="inv">
+      <div class="inv-grid">
+        <div>
+          <span class="pill pill-mint">Kiwi Invest · 2027 Q2</span>
+          <h2>Votre premier placement<br/>commence à <em class="editorial" style="color:var(--mint);">50 dirhams</em>.</h2>
+          <p>Le Maroc compte 16 millions d'adultes non-bancarisés, et zéro plateforme qui les invite à investir avec leur téléphone. Kiwi Invest change ça. Accès fractionné à des fonds monétaires, actions casablancaises, et — plus tard — ETF mondiaux, sous le cadre AMMC.</p>
+          <div style="margin-top: 30px; display: flex; gap: 12px;">
+            <a href="#" data-action="signup" class="btn btn-mint">Rejoindre la liste d'attente</a>
+          </div>
+        </div>
+        <div class="inv-assets">
+          <div style="font-size: 12px; color: #9bb5a8; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);">Portefeuille d'Imane</div>
+          <div class="inv-row">
+            <div class="ic">MM</div>
+            <div class="info"><div class="n">Fonds Monétaire Atlas</div><div class="r">AMMC-régulé · risque 1/7</div></div>
+            <div class="v"><div class="a">1 800 MAD</div><div class="d">+3,8 % / an</div></div>
+          </div>
+          <div class="inv-row">
+            <div class="ic">AW</div>
+            <div class="info"><div class="n">Attijariwafa Bank</div><div class="r">ATW · Casablanca Stock Exchange</div></div>
+            <div class="v"><div class="a">850 MAD</div><div class="d">+7,2 % YTD</div></div>
+          </div>
+          <div class="inv-row">
+            <div class="ic">MT</div>
+            <div class="info"><div class="n">Maroc Telecom</div><div class="r">IAM · Casablanca Stock Exchange</div></div>
+            <div class="v"><div class="a">520 MAD</div><div class="d dn">−1,4 % YTD</div></div>
+          </div>
+          <div class="inv-row">
+            <div class="ic">OT</div>
+            <div class="info"><div class="n">OCP International Bond</div><div class="r">Obligation USD · 2032</div></div>
+            <div class="v"><div class="a">1 100 MAD</div><div class="d">+4,1 % / an</div></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 8px;">
+            <div style="font-size: 13px; color: #9bb5a8;">Total</div>
+            <div style="font-family: var(--mono); font-weight: 600; color: var(--mint);">4 270 MAD · +4,3 %</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section style="background: #fff;">
+  <div class="wrap">
+    <div class="sec-head left">
+      <span class="eyebrow">Feuille de route</span>
+      <h2>Trois ans. Une mission.</h2>
+      <p>De l'encaissement par carte à la super-app marocaine. Un chapitre à la fois, sans promesse vide.</p>
+    </div>
+    <div class="rmap">
+      <div class="rmap-card active">
+        <div class="phase">Phase 1 · 2026</div>
+        <h4>POS pour commerçants</h4>
+        <ul>
+          <li>SoftPOS + terminal</li>
+          <li>SaaS 399 MAD/mois · règlement T+1</li>
+          <li>Plan de salle, split, tips</li>
+          <li>Pilote Casablanca</li>
+        </ul>
+      </div>
+      <div class="rmap-card">
+        <div class="phase">Phase 2 · 2027</div>
+        <h4>Wallet consommateur</h4>
+        <ul>
+          <li>P2P, QR, Kiwi Card virtuelle</li>
+          <li>Factures IAM, Redal, ONEE</li>
+          <li>Agent wallet pour non-bancarisés</li>
+          <li>2 villes supplémentaires</li>
+        </ul>
+      </div>
+      <div class="rmap-card">
+        <div class="phase">Phase 3 · 2028</div>
+        <h4>Investir & emprunter</h4>
+        <ul>
+          <li>Kiwi Invest · fonds AMMC</li>
+          <li>Avance trésorerie commerçants</li>
+          <li>Crédit consommateur</li>
+          <li>Corridor France ↔ Maroc</li>
+        </ul>
+      </div>
+      <div class="rmap-card">
+        <div class="phase">Phase 4 · 2029+</div>
+        <h4>La super-app</h4>
+        <ul>
+          <li>Licence bancaire complète</li>
+          <li>Multi-devise EUR / USD</li>
+          <li>Mobilité, livraison, événements</li>
+          <li>Marché pan-maghrébin</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final-w">
+  <div class="wrap-sm">
+    <span class="pill pill-mint" style="background: var(--mint); color: var(--riad); border:0; margin-bottom: 30px;">Liste d'attente · accès prioritaire</span>
+    <h2>La banque qui ne vous <em>ressemblait</em> pas<br/>est enfin là.</h2>
+    <p>Rejoignez 18 400 marocains sur la liste d'attente. Lancement au T3 2026 dans tout le Maroc.</p>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap: wrap;">
+      <a href="#" data-action="signup" class="btn btn-primary btn-lg">Rejoindre Kiwi Wallet
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; font-size: 13px;">
+    <a href="index.html" class="nav-logo" style="color: var(--paper); font-size: 24px;">kiwi<i class="dot"></i></a>
+    <div style="color: #8a8f8d;">© 2026 Kiwi Payments SA — Casablanca, Maroc</div>
+    <div style="display:flex; gap: 24px;">
+      <a href="index.html" class="link">POS</a>
+      <a href="brand.html" class="link">Identité</a>
+      <a href="pitch.html" class="link">Investisseurs</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/i18n.js" defer></script>
+<script src="assets/interactive.js" defer></script>
+<script src="assets/features.js" defer></script>
+<script src="assets/polish.js" defer></script>
+</body>
+</html>
