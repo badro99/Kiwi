@@ -26,6 +26,15 @@
     const eff = range === 'personnalise' ? 'aujourdhui' : range;
     return table?.[v]?.[eff] ?? table?.cafeAtlas?.[eff];
   }
+  // True only on the live "today" range, with the demo clock active.
+  function isLiveDemo() {
+    const eff = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
+    return eff === 'aujourdhui' && !!window.KiwiDemoClock?.isActive?.();
+  }
+  function getSim() { return window.KiwiDemoClock?.getSimState?.() || null; }
+  // Set true while a demoClock tick is fanning out renders — used to suppress
+  // entrance animations on the chart (would otherwise replay every 3s).
+  let liveTickInProgress = false;
 
   /* ═══════════════ STRINGS ═══════════════ */
 
@@ -1155,8 +1164,17 @@
   function renderHero() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = vData(heroDataByVenue, currentRange);
+    let data = vData(heroDataByVenue, currentRange);
     if (!data) return;
+
+    // Live-demo override on aujourdhui — hero amount + net come from the clock,
+    // deltas remain comparative (vs hier / semaine / mois).
+    if (isLiveDemo()) {
+      const sim = getSim();
+      if (sim) {
+        data = { ...data, amount: sim.cumRevenue, netAfterKiwi: Math.round(sim.cumRevenue * 0.839) };
+      }
+    }
 
     const labelEl = document.querySelector('[data-hero-label]');
     if (labelEl) labelEl.textContent = HERO_LABEL[lang]?.[effective] || HERO_LABEL.fr[effective];
@@ -1166,7 +1184,9 @@
       const fromVal = parseAmountFromEl(amtEl);
       // Resize font to fit the wider of from/to so the number never wraps mid-animation.
       fitHeroAmount(amtEl, Math.max(fromVal, data.amount));
-      animateNumber(amtEl, fromVal, data.amount, { duration: 800, format: fmtHeroAmount });
+      // Live-tick: shorter duration so the count keeps up with the 3s cadence
+      const dur = liveTickInProgress ? 600 : 800;
+      animateNumber(amtEl, fromVal, data.amount, { duration: dur, format: fmtHeroAmount });
     }
 
     const breakdown = document.querySelector('.hero-breakdown');
@@ -1244,8 +1264,15 @@
   function renderGoal() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = vData(goalByVenue, currentRange);
+    let data = vData(goalByVenue, currentRange);
     if (!data) return;
+
+    // Live-demo override: goal stays at venue's daily target (matches the
+    // demo target), `current` ticks up from 0 → daily total each real hour.
+    if (isLiveDemo()) {
+      const sim = getSim();
+      if (sim) data = { ...data, goal: sim.target.revenue, current: sim.cumRevenue };
+    }
 
     const labelTxt = GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange];
     const labelEl = document.querySelector('[data-goal-label]');
@@ -1287,11 +1314,24 @@
   function renderHeatmap() {
     const lang = getLang();
     const data = buildHeatmap(currentRange);
+    // Determine sim cursor for past/current/future state on aujourdhui
+    let simIdx = -1;
+    if (isLiveDemo()) {
+      const sim = getSim();
+      if (sim) simIdx = sim.simIdx;
+    }
     const row = document.querySelector('[data-hh-row]');
     if (row) {
-      row.innerHTML = data.map(d => `
+      row.innerHTML = data.map((d, i) => {
+        let stateCls = '';
+        if (simIdx >= 0) {
+          if (i < simIdx) stateCls = 'past';
+          else if (i === simIdx) stateCls = 'now';
+          else stateCls = 'future';
+        }
+        return `
         <div class="hh-col">
-          <div class="hh-cell ${intensityClass(d.intensity)}">
+          <div class="hh-cell ${intensityClass(d.intensity)}${stateCls ? ' ' + stateCls : ''}">
             <div class="hh-tooltip">
               <div class="hour">${d.hour}</div>
               <div class="met"><b>${frInt(d.revenue)} MAD</b></div>
@@ -1300,7 +1340,8 @@
           </div>
           <div class="hh-h">${d.hour}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
     const subEl = document.querySelector('[data-hh-sub]');
     if (subEl) subEl.textContent = HH_SUB[lang]?.[currentRange] || HH_SUB.fr[currentRange];
@@ -1340,12 +1381,28 @@
 
   function renderKpiBand() {
     const lang = getLang();
-    const data = vData(kpiByVenue, currentRange);
+    let data = vData(kpiByVenue, currentRange);
     if (!data) return;
     const suffix = KPI_DELTA_SUFFIX[lang]?.[currentRange] || KPI_DELTA_SUFFIX.fr[currentRange];
 
     const wrap = document.querySelector('[data-kpi-band]');
     if (!wrap) return;
+
+    // Live-demo override: tx/tips/panier/regulars all scale with sim time.
+    // success and ratio stay near their static values (don't ramp from 0%).
+    if (isLiveDemo()) {
+      const sim = getSim();
+      if (sim) {
+        data = {
+          ...data,
+          tx:         data.tx       ? { ...data.tx,       value: sim.cumTx } : data.tx,
+          panier:     data.panier   ? { ...data.panier,   value: sim.panierMoyen || data.panier.value } : data.panier,
+          tips:       data.tips     ? { ...data.tips,     value: Math.round(sim.cumTips) } : data.tips,
+          regulars:   data.regulars ? { ...data.regulars, value: sim.cumRegulars, unit: `/ ${Math.max(1, sim.cumTx)}` } : data.regulars,
+          // success / ratio / tauxRetour stay at their static daily values
+        };
+      }
+    }
 
     // Resolve which 6 KPI keys to render for this venue's vertical
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
@@ -1425,10 +1482,60 @@
   function renderRevChart() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = vData(revChartByVenue, currentRange);
+    let data = vData(revChartByVenue, currentRange);
     if (!data) return;
     const svg = document.querySelector('[data-rev-svg]');
     if (!svg) return;
+
+    // ─── Live-demo override on aujourdhui ────────────────────────────────
+    // Build a "today so far" curve from the demo clock. Line truncates to
+    // the current sim position; pulse + tooltip anchor at that live point.
+    let liveSimIdx = -1;     // -1 = no live cursor
+    let liveSimWithin = 0;   // 0..1 within liveSimIdx hour
+    if (isLiveDemo()) {
+      const sim = getSim();
+      if (sim) {
+        liveSimIdx = sim.simIdx;
+        liveSimWithin = sim.simWithin;
+        // Y-axis is anchored to the daily target so the chart shape doesn't
+        // jump as cumulative grows. yTicks span 0..target with 5 stops.
+        const target = sim.target.revenue;
+        const yMax = Math.ceil(target / 4000) * 4000 + 4000; // round up + headroom
+        const yTicks = [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax].map(v => Math.round(v));
+
+        // Build cumulative point at each hour boundary 0..15, scaled to target.
+        // Then truncate to the live cursor position with an interpolated final point.
+        const w = sim.weights.rev;
+        const fullCum = [];
+        let acc = 0;
+        for (let i = 0; i < 16; i++) {
+          acc += w[i] * target;
+          fullCum.push(acc);
+        }
+        // Truncate: keep [0..simIdx] then interpolate within simIdx
+        const partial = [];
+        partial.push(0);                              // start at 0 at hour 11
+        for (let i = 0; i <= liveSimIdx; i++) {
+          if (i < liveSimIdx) {
+            partial.push(fullCum[i]);
+          } else {
+            // Interpolated last point at sim position
+            const prev = i === 0 ? 0 : fullCum[i - 1];
+            partial.push(prev + (fullCum[i] - prev) * liveSimWithin);
+          }
+        }
+        // Pad with nulls to keep array length 16 so x-axis labels stay positioned
+        const padded = partial.concat(new Array(16 - partial.length).fill(null));
+
+        data = {
+          ...data,
+          rev: padded,
+          yTicks,
+          // Update the legend to reflect the live cumulative
+          legendPrimary: `Cumul aujourd'hui · ${frInt(sim.cumRevenue)} MAD`,
+        };
+      }
+    }
 
     // Measure actual rendered width so 1 viewBox unit = 1 pixel (no stretching).
     const H = 280;
@@ -1437,10 +1544,7 @@
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-    // Detect why we're re-rendering: full (range change) vs resize vs compare-toggle.
-    // - resize → suppress all entrance animations
-    // - compare-toggle (same range, same width, only showComparison flipped) → keep
-    //   the primary line still, only the cmp line draws in / fades out
+    // Detect why we're re-rendering: full (range change) vs resize vs compare-toggle vs live-tick.
     const lastW = parseInt(svg.dataset.lastW || '0', 10);
     const lastRange = svg.dataset.lastRange || '';
     const lastShowCmp = svg.dataset.lastShowCmp === '1';
@@ -1449,10 +1553,12 @@
     const sameW = lastW > 0 && Math.abs(W - lastW) <= 2;
     const isResizeOnly = sameRange && lastW > 0 && Math.abs(W - lastW) > 2;
     const isCmpToggle  = sameRange && sameW && (lastShowCmp !== showCmpFlag);
+    // On live ticks the line GROWS — no draw-in animation, no halo replay.
+    const suppressAnim = isResizeOnly || (sameRange && liveTickInProgress);
     svg.dataset.lastW = String(W);
     svg.dataset.lastRange = effective;
     svg.dataset.lastShowCmp = showCmpFlag ? '1' : '0';
-    svg.classList.toggle('no-anim', isResizeOnly);
+    svg.classList.toggle('no-anim', suppressAnim);
     svg.classList.toggle('cmp-toggle', isCmpToggle);
 
     const PAD = { left: 60, right: 30, top: 22, bottom: 40 };
@@ -1469,9 +1575,15 @@
 
     // Smooth Catmull-Rom-derived cubic Bezier path. Tension 0.18 keeps curves
     // natural without overshoot. Apple Stocks / Robinhood-style continuous flow.
+    // Skips null entries — used for the live-truncated curve where the
+    // post-cursor section of the array is null.
     function smoothPath(arr) {
       if (!arr || !arr.length) return '';
-      const pts = arr.map((v, i) => [xs[i], yScale(v)]);
+      const pts = [];
+      arr.forEach((v, i) => {
+        if (v != null) pts.push([xs[i], yScale(v)]);
+      });
+      if (pts.length === 0) return '';
       if (pts.length === 1) return `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
       let p = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
       const t = 0.18;
@@ -1488,15 +1600,22 @@
       }
       return p;
     }
+    // Last non-null index in data.rev — needed for the area path's right edge
+    // and for positioning the live pulse on the live-truncated curve.
+    let lastIdx = -1;
+    for (let i = 0; i < N; i++) { if (data.rev[i] != null) lastIdx = i; }
     const linePath = smoothPath(data.rev);
     const cmpPath  = smoothPath(data.revPrev);
-    const areaPath = `${linePath} L${xs[N-1].toFixed(1)} ${baseY.toFixed(1)} L${xs[0].toFixed(1)} ${baseY.toFixed(1)} Z`;
+    const areaPath = lastIdx >= 0
+      ? `${linePath} L${xs[lastIdx].toFixed(1)} ${baseY.toFixed(1)} L${xs[0].toFixed(1)} ${baseY.toFixed(1)} Z`
+      : '';
 
-    // Live indicator — only on aujourdhui at the "current" hour (14h = idx 3).
-    const showLive = effective === 'aujourdhui' && N >= 4;
-    const liveIdx = 3;
+    // Live "you are here" indicator — anchors at the truncated curve's tip
+    // when demoClock is active, otherwise stays at the canonical 14h index.
+    const showLive = effective === 'aujourdhui' && lastIdx >= 0;
+    const liveIdx = isLiveDemo() ? lastIdx : Math.min(3, lastIdx);
     const liveX = showLive ? xs[liveIdx] : 0;
-    const liveY = showLive ? yScale(data.rev[liveIdx]) : 0;
+    const liveY = (showLive && data.rev[liveIdx] != null) ? yScale(data.rev[liveIdx]) : 0;
 
     const visibleIdx = data.visibleXIdx || data.rev.map((_, i) => i);
     const xLabelsHtml = visibleIdx.map(i =>
@@ -1579,8 +1698,11 @@
       const rect = svg.getBoundingClientRect();
       if (rect.width === 0) return;
       const xVB = ((evt.clientX - rect.left) / rect.width) * W;
+      // Snap to nearest non-null hour (so hover doesn't land on the empty
+      // future part of the live-truncated curve).
       let idx = 0, best = Infinity;
       for (let i = 0; i < xs.length; i++) {
+        if (data.rev[i] == null) continue;
         const d = Math.abs(xs[i] - xVB);
         if (d < best) { best = d; idx = i; }
       }
@@ -2076,6 +2198,32 @@
     };
     subVenue();
 
+    // Subscribe to the demo clock — every 3 seconds the "today" data ticks
+    // forward (revenue/tx/tips count up); at the top of every real hour the
+    // sim restarts at 11h with 0 MAD. Only re-renders if currently viewing
+    // the live "aujourdhui" range.
+    const subDemo = () => {
+      if (window.KiwiDemoClock?.subscribe) {
+        window.KiwiDemoClock.subscribe((state, isReset) => {
+          const eff = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
+          if (eff !== 'aujourdhui') return;
+          liveTickInProgress = true;
+          try {
+            renderHero();
+            renderGoal();
+            renderKpiBand();
+            renderRevChart();
+            renderHeatmap();
+          } finally {
+            liveTickInProgress = false;
+          }
+        });
+        return;
+      }
+      setTimeout(subDemo, 30);
+    };
+    subDemo();
+
     // Re-fit hero amount + re-flow chart on viewport resize
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -2116,6 +2264,8 @@
 
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */
   function tickLiveRevenue({ amount = 0, tip = 0 } = {}) {
+    // Demo clock owns deterministic ticking on aujourdhui — skip random ticks.
+    if (window.KiwiDemoClock?.isActive?.()) return;
     // Live ticks only make sense on "today" — skip on historical ranges.
     const r = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
     if (r !== 'aujourdhui') return;
