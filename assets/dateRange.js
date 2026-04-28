@@ -19,6 +19,13 @@
   const getLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
   const getDateRange = () => currentRange;
   const getShowComparison = () => showComparison;
+  const getCurrentVenue = () => (window.KiwiVenue?.getVenue?.() || 'cafeAtlas');
+  // Resolve a venue-keyed table for the active venue + range, with cafeAtlas fallback.
+  function vData(table, range) {
+    const v = getCurrentVenue();
+    const eff = range === 'personnalise' ? 'aujourdhui' : range;
+    return table?.[v]?.[eff] ?? table?.cafeAtlas?.[eff];
+  }
 
   /* ═══════════════ STRINGS ═══════════════ */
 
@@ -107,20 +114,50 @@
 
   /* ═══════════════ DATA TABLES ═══════════════ */
 
-  const heroDataByRange = {
-    aujourdhui:  { amount: 27512.50, deltaHier: 3.2,  deltaSemaine: 18,   deltaMois: 9,  netAfterKiwi: 23091  },
-    hier:        { amount: 24820.00, deltaHier: -1.8, deltaSemaine: 12,   deltaMois: 6,  netAfterKiwi: 20640  },
-    septJours:   { amount: 198400.00,deltaHier: null, deltaSemaine: 22,   deltaMois: 11, netAfterKiwi: 165280 },
-    trenteJours: { amount: 842300.00,deltaHier: null, deltaSemaine: null, deltaMois: 15, netAfterKiwi: 702800 },
-    personnalise: null,
+  const heroDataByVenue = {
+    cafeAtlas: {
+      aujourdhui:  { amount: 27512.50, deltaHier: 3.2,  deltaSemaine: 18,   deltaMois: 9,  netAfterKiwi: 23091  },
+      hier:        { amount: 24820.00, deltaHier: -1.8, deltaSemaine: 12,   deltaMois: 6,  netAfterKiwi: 20640  },
+      septJours:   { amount: 198400.00,deltaHier: null, deltaSemaine: 22,   deltaMois: 11, netAfterKiwi: 165280 },
+      trenteJours: { amount: 842300.00,deltaHier: null, deltaSemaine: null, deltaMois: 15, netAfterKiwi: 702800 },
+      personnalise: null,
+    },
+    maisonMansour: {
+      aujourdhui:  { amount: 11820.00, deltaHier: -2.4, deltaSemaine: 11,   deltaMois: 7,  netAfterKiwi: 9920   },
+      hier:        { amount: 12110.00, deltaHier: 1.8,  deltaSemaine: 8,    deltaMois: 5,  netAfterKiwi: 10170  },
+      septJours:   { amount: 84800.00, deltaHier: null, deltaSemaine: 14,   deltaMois: 8,  netAfterKiwi: 71200  },
+      trenteJours: { amount: 358200.00,deltaHier: null, deltaSemaine: null, deltaMois: 12, netAfterKiwi: 300700 },
+      personnalise: null,
+    },
+    spaBahia: {
+      aujourdhui:  { amount: 8950.00,  deltaHier: 6.8,  deltaSemaine: 22,   deltaMois: 14, netAfterKiwi: 7510   },
+      hier:        { amount: 8380.00,  deltaHier: -3.1, deltaSemaine: 16,   deltaMois: 9,  netAfterKiwi: 7035   },
+      septJours:   { amount: 64200.00, deltaHier: null, deltaSemaine: 19,   deltaMois: 11, netAfterKiwi: 53890  },
+      trenteJours: { amount: 269400.00,deltaHier: null, deltaSemaine: null, deltaMois: 16, netAfterKiwi: 226300 },
+      personnalise: null,
+    },
   };
 
-  // Goal bar — current revenue vs target for the selected range.
-  const goalByRange = {
-    aujourdhui:  { goal: 28000,  current: 27512.50 },
-    hier:        { goal: 28000,  current: 24820   },
-    septJours:   { goal: 196000, current: 198400  },
-    trenteJours: { goal: 840000, current: 842300  },
+  // Goal bar — current revenue vs target for the selected venue + range.
+  const goalByVenue = {
+    cafeAtlas: {
+      aujourdhui:  { goal: 28000,  current: 27512.50 },
+      hier:        { goal: 28000,  current: 24820   },
+      septJours:   { goal: 196000, current: 198400  },
+      trenteJours: { goal: 840000, current: 842300  },
+    },
+    maisonMansour: {
+      aujourdhui:  { goal: 12000,  current: 11820   },
+      hier:        { goal: 12000,  current: 12110   },
+      septJours:   { goal: 84000,  current: 84800   },
+      trenteJours: { goal: 360000, current: 358200  },
+    },
+    spaBahia: {
+      aujourdhui:  { goal: 9000,   current: 8950    },
+      hier:        { goal: 9000,   current: 8380    },
+      septJours:   { goal: 63000,  current: 64200   },
+      trenteJours: { goal: 270000, current: 269400  },
+    },
   };
   const GOAL_LABEL = {
     fr: { aujourdhui: 'OBJECTIF JOUR', hier: 'OBJECTIF JOUR', septJours: 'OBJECTIF SEMAINE', trenteJours: 'OBJECTIF MOIS', personnalise: 'OBJECTIF JOUR' },
@@ -129,56 +166,161 @@
   };
 
   const HH_HOURS = ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'];
-  const HH_RAW = {
-    aujourdhui:  [480,1240,1880,1340,620,480,540,920,1620,2040,1880,1480,980,620,380,220],
-    hier:        [440,1160,1780,1240,580,440,500,860,1520,1840,1720,1360,920,580,340,200],
-    septJours:   [380, 880,1140, 920,480,380,440,740,1320,1700,1640,1240,820,500,300,180],
-    trenteJours: [360, 820,1080, 880,460,360,420,720,1280,1620,1560,1180,780,480,280,160],
+  const HH_RAW_BY_VENUE = {
+    cafeAtlas: {
+      aujourdhui:  [480,1240,1880,1340,620,480,540,920,1620,2040,1880,1480,980,620,380,220],
+      hier:        [440,1160,1780,1240,580,440,500,860,1520,1840,1720,1360,920,580,340,200],
+      septJours:   [380, 880,1140, 920,480,380,440,740,1320,1700,1640,1240,820,500,300,180],
+      trenteJours: [360, 820,1080, 880,460,360,420,720,1280,1620,1560,1180,780,480,280,160],
+    },
+    // Boutique pattern: morning peak 11h-13h (tourist arrivals), midday lull,
+    // evening peak 17h-20h (after-work shoppers). Closes around 20h.
+    maisonMansour: {
+      aujourdhui:  [1100,1380,1100, 540, 380, 540,1180,1480,1620,1380, 720, 280, 100,  20,  0,  0],
+      hier:        [1140,1420,1100, 560, 400, 560,1200,1500,1640,1400, 760, 300, 120,  30,  0,  0],
+      septJours:   [1080,1360,1080, 540, 380, 540,1160,1440,1580,1360, 720, 280, 110,  30,  0,  0],
+      trenteJours: [1060,1340,1060, 530, 370, 530,1140,1420,1560,1340, 700, 270, 100,  20,  0,  0],
+    },
+    // Spa pattern: scheduled appointments throughout the day. Peaks 11-13h
+    // and 15-17h. Evening tapering, closes ~22h.
+    spaBahia: {
+      aujourdhui:  [ 600,1100,1300, 800,1000,1300,1100, 800, 500, 300, 150,  50,  0,  0,  0,  0],
+      hier:        [ 560,1040,1220, 750, 940,1220,1040, 750, 480, 280, 140,  50,  0,  0,  0,  0],
+      septJours:   [ 620,1140,1340, 820,1020,1340,1140, 820, 510, 310, 160,  60,  0,  0,  0,  0],
+      trenteJours: [ 600,1100,1300, 800,1000,1300,1100, 800, 500, 300, 150,  60,  0,  0,  0,  0],
+    },
   };
-  const HH_COVERS = {
-    aujourdhui:  [4,11,16,12,6,4,5,8,14,18,16,13,9,6,4,2],
-    hier:        [4,10,15,11,5,4,4,7,13,16,15,12,8,5,3,2],
-    septJours:   [3, 8,10, 8,5,3,4,7,12,15,14,11,7,4,3,2],
-    trenteJours: [3, 7,10, 8,4,3,4,7,11,14,14,11,7,4,2,1],
-  };
-
-  const kpiByRange = {
-    aujourdhui: {
-      tx:       { value: 182,    unit: '',     fmt: 'int',  delta: 15.2 },
-      panier:   { value: 134,    unit: 'MAD',  fmt: 'int',  delta: 1.5 },
-      tips:     { value: 1867,   unit: 'MAD',  fmt: 'int',  delta: 32 },
-      success:  { value: 99.34,  unit: '%',    fmt: 'pct2', delta: 0.2 },
-      ratio:    { text: '68 / 32', unit: '%',                delta: 4 },
-      regulars: { value: 47,     unit: '/ 182',fmt: 'int',  delta: 26 },
+  const HH_COVERS_BY_VENUE = {
+    cafeAtlas: {
+      aujourdhui:  [4,11,16,12,6,4,5,8,14,18,16,13,9,6,4,2],
+      hier:        [4,10,15,11,5,4,4,7,13,16,15,12,8,5,3,2],
+      septJours:   [3, 8,10, 8,5,3,4,7,12,15,14,11,7,4,3,2],
+      trenteJours: [3, 7,10, 8,4,3,4,7,11,14,14,11,7,4,2,1],
     },
-    hier: {
-      tx:       { value: 168,    unit: '',     fmt: 'int',  delta: 8.4 },
-      panier:   { value: 132,    unit: 'MAD',  fmt: 'int',  delta: 0.8 },
-      tips:     { value: 1620,   unit: 'MAD',  fmt: 'int',  delta: 24 },
-      success:  { value: 99.18,  unit: '%',    fmt: 'pct2', delta: 0.1 },
-      ratio:    { text: '64 / 36', unit: '%',                delta: 2 },
-      regulars: { value: 42,     unit: '/ 168',fmt: 'int',  delta: 25 },
+    maisonMansour: {
+      aujourdhui:  [4, 5, 4, 2, 1, 2, 4, 5, 6, 5, 3, 1, 0, 0, 0, 0],
+      hier:        [4, 5, 4, 2, 1, 2, 4, 5, 6, 6, 3, 1, 0, 0, 0, 0],
+      septJours:   [3, 5, 4, 2, 1, 2, 4, 5, 6, 5, 3, 1, 0, 0, 0, 0],
+      trenteJours: [3, 5, 4, 2, 1, 2, 4, 5, 6, 5, 3, 1, 0, 0, 0, 0],
     },
-    septJours: {
-      tx:       { value: 1240,   unit: '',     fmt: 'int',  delta: 18 },
-      panier:   { value: 138,    unit: 'MAD',  fmt: 'int',  delta: 3 },
-      tips:     { value: 11200,  unit: 'MAD',  fmt: 'int',  delta: 35 },
-      success:  { value: 99.28,  unit: '%',    fmt: 'pct2', delta: 0.3 },
-      ratio:    { text: '66 / 34', unit: '%',                delta: 5 },
-      regulars: { value: 286,    unit: '/ 1240',fmt:'int',  delta: 23 },
+    spaBahia: {
+      aujourdhui:  [1, 2, 3, 2, 2, 3, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0],
+      hier:        [1, 2, 3, 2, 2, 3, 2, 1, 1, 0, 1, 0, 0, 0, 0, 0],
+      septJours:   [1, 2, 3, 2, 2, 3, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0],
+      trenteJours: [1, 2, 3, 2, 2, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0],
     },
-    trenteJours: {
-      tx:       { value: 5320,   unit: '',     fmt: 'int',  delta: 21 },
-      panier:   { value: 142,    unit: 'MAD',  fmt: 'int',  delta: 5 },
-      tips:     { value: 48300,  unit: 'MAD',  fmt: 'int',  delta: 40 },
-      success:  { value: 99.32,  unit: '%',    fmt: 'pct2', delta: 0.5 },
-      ratio:    { text: '68 / 32', unit: '%',                delta: 6 },
-      regulars: { value: 1240,   unit: '/ 5320',fmt:'int',  delta: 24 },
-    },
-    personnalise: null,
   };
 
-  const revChartByRange = {
+  const kpiByVenue = {
+    cafeAtlas: {
+      aujourdhui: {
+        tx:       { value: 182,    unit: '',     fmt: 'int',  delta: 15.2 },
+        panier:   { value: 134,    unit: 'MAD',  fmt: 'int',  delta: 1.5 },
+        tips:     { value: 1867,   unit: 'MAD',  fmt: 'int',  delta: 32 },
+        success:  { value: 99.34,  unit: '%',    fmt: 'pct2', delta: 0.2 },
+        ratio:    { text: '68 / 32', unit: '%',                delta: 4 },
+        regulars: { value: 47,     unit: '/ 182',fmt: 'int',  delta: 26 },
+      },
+      hier: {
+        tx:       { value: 168,    unit: '',     fmt: 'int',  delta: 8.4 },
+        panier:   { value: 132,    unit: 'MAD',  fmt: 'int',  delta: 0.8 },
+        tips:     { value: 1620,   unit: 'MAD',  fmt: 'int',  delta: 24 },
+        success:  { value: 99.18,  unit: '%',    fmt: 'pct2', delta: 0.1 },
+        ratio:    { text: '64 / 36', unit: '%',                delta: 2 },
+        regulars: { value: 42,     unit: '/ 168',fmt: 'int',  delta: 25 },
+      },
+      septJours: {
+        tx:       { value: 1240,   unit: '',     fmt: 'int',  delta: 18 },
+        panier:   { value: 138,    unit: 'MAD',  fmt: 'int',  delta: 3 },
+        tips:     { value: 11200,  unit: 'MAD',  fmt: 'int',  delta: 35 },
+        success:  { value: 99.28,  unit: '%',    fmt: 'pct2', delta: 0.3 },
+        ratio:    { text: '66 / 34', unit: '%',                delta: 5 },
+        regulars: { value: 286,    unit: '/ 1240',fmt:'int',  delta: 23 },
+      },
+      trenteJours: {
+        tx:       { value: 5320,   unit: '',     fmt: 'int',  delta: 21 },
+        panier:   { value: 142,    unit: 'MAD',  fmt: 'int',  delta: 5 },
+        tips:     { value: 48300,  unit: 'MAD',  fmt: 'int',  delta: 40 },
+        success:  { value: 99.32,  unit: '%',    fmt: 'pct2', delta: 0.5 },
+        ratio:    { text: '68 / 32', unit: '%',                delta: 6 },
+        regulars: { value: 1240,   unit: '/ 5320',fmt:'int',  delta: 24 },
+      },
+      personnalise: null,
+    },
+    maisonMansour: {
+      aujourdhui: {
+        tx:         { value: 42,    unit: '',     fmt: 'int',  delta: 12 },
+        panier:     { value: 282,   unit: 'MAD',  fmt: 'int',  delta: 4.5 },
+        tauxRetour: { value: 6.2,   unit: '%',    fmt: 'pct1', delta: -1.3 },
+        success:    { value: 99.6,  unit: '%',    fmt: 'pct2', delta: 0.1 },
+        ratio:      { text: '85 / 15', unit: '%',               delta: 3 },
+        regulars:   { value: 11,    unit: '/ 42', fmt: 'int',  delta: 18 },
+      },
+      hier: {
+        tx:         { value: 43,    unit: '',     fmt: 'int',  delta: 8 },
+        panier:     { value: 282,   unit: 'MAD',  fmt: 'int',  delta: 1.2 },
+        tauxRetour: { value: 5.8,   unit: '%',    fmt: 'pct1', delta: -1.8 },
+        success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.0 },
+        ratio:      { text: '83 / 17', unit: '%',               delta: 2 },
+        regulars:   { value: 12,    unit: '/ 43', fmt: 'int',  delta: 20 },
+      },
+      septJours: {
+        tx:         { value: 295,   unit: '',     fmt: 'int',  delta: 14 },
+        panier:     { value: 287,   unit: 'MAD',  fmt: 'int',  delta: 3 },
+        tauxRetour: { value: 6.4,   unit: '%',    fmt: 'pct1', delta: -0.8 },
+        success:    { value: 99.4,  unit: '%',    fmt: 'pct2', delta: 0.2 },
+        ratio:      { text: '84 / 16', unit: '%',               delta: 4 },
+        regulars:   { value: 78,    unit: '/ 295',fmt: 'int',  delta: 16 },
+      },
+      trenteJours: {
+        tx:         { value: 1240,  unit: '',     fmt: 'int',  delta: 18 },
+        panier:     { value: 289,   unit: 'MAD',  fmt: 'int',  delta: 5 },
+        tauxRetour: { value: 6.1,   unit: '%',    fmt: 'pct1', delta: -1.4 },
+        success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.3 },
+        ratio:      { text: '85 / 15', unit: '%',               delta: 5 },
+        regulars:   { value: 320,   unit: '/ 1240',fmt:'int',  delta: 21 },
+      },
+      personnalise: null,
+    },
+    spaBahia: {
+      aujourdhui: {
+        tx:       { value: 20,    unit: '',     fmt: 'int',  delta: 14 },
+        panier:   { value: 447,   unit: 'MAD',  fmt: 'int',  delta: 6.5 },
+        tips:     { value: 1340,  unit: 'MAD',  fmt: 'int',  delta: 28 },
+        success:  { value: 92.5,  unit: '%',    fmt: 'pct1', delta: 3.2 },
+        ratio:    { text: '92 / 8', unit: '%',                 delta: 2 },
+        regulars: { value: 14,    unit: '/ 20', fmt: 'int',  delta: 12 },
+      },
+      hier: {
+        tx:       { value: 18,    unit: '',     fmt: 'int',  delta: 5 },
+        panier:   { value: 466,   unit: 'MAD',  fmt: 'int',  delta: 2 },
+        tips:     { value: 1260,  unit: 'MAD',  fmt: 'int',  delta: 18 },
+        success:  { value: 89.3,  unit: '%',    fmt: 'pct1', delta: -1.5 },
+        ratio:    { text: '90 / 10', unit: '%',                 delta: -2 },
+        regulars: { value: 13,    unit: '/ 18', fmt: 'int',  delta: 14 },
+      },
+      septJours: {
+        tx:       { value: 142,   unit: '',     fmt: 'int',  delta: 19 },
+        panier:   { value: 452,   unit: 'MAD',  fmt: 'int',  delta: 4 },
+        tips:     { value: 9140,  unit: 'MAD',  fmt: 'int',  delta: 24 },
+        success:  { value: 91.8,  unit: '%',    fmt: 'pct1', delta: 2.7 },
+        ratio:    { text: '91 / 9', unit: '%',                 delta: 3 },
+        regulars: { value: 92,    unit: '/ 142',fmt: 'int',  delta: 18 },
+      },
+      trenteJours: {
+        tx:       { value: 580,   unit: '',     fmt: 'int',  delta: 22 },
+        panier:   { value: 464,   unit: 'MAD',  fmt: 'int',  delta: 6 },
+        tips:     { value: 38600, unit: 'MAD',  fmt: 'int',  delta: 34 },
+        success:  { value: 92.1,  unit: '%',    fmt: 'pct1', delta: 4.5 },
+        ratio:    { text: '92 / 8', unit: '%',                 delta: 5 },
+        regulars: { value: 412,   unit: '/ 580',fmt: 'int',  delta: 20 },
+      },
+      personnalise: null,
+    },
+  };
+
+  const revChartByVenue = {
+    cafeAtlas: {
     // Today: hourly cumulative across the full opening band (11h → 02h).
     // Past hours (≤14h) are real cumul; post-14h are projected forward to end of service.
     // Compare line is yesterday's full-day cumul at the same hours.
@@ -249,18 +391,154 @@
       legendCompare: '30 jours précédents · 731 200 MAD',
     },
     personnalise: null,
+    },
+    maisonMansour: {
+      aujourdhui: {
+        rangeBadge: "AUJOURD'HUI · LIVE",
+        sub: 'Cumul horaire · boutique ouverte',
+        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
+        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        rev:    [0, 2400, 6400, 11820, 11900, 12000, 12200, 12500, 12900, 13400, 13800, 14000, 14100, 14200, 14200, 14200],
+        revPrev:[0, 1100, 2400,  3400,  3800,  4100,  4500,  5800,  7400,  9100, 11000, 11800, 12000, 12080, 12100, 12110],
+        yTicks: [0, 4000, 8000, 12000, 16000],
+        legendPrimary: "Cumul aujourd'hui · 11 820 MAD",
+        legendCompare: 'Cumul hier · 12 110 MAD',
+      },
+      hier: {
+        rangeBadge: 'HIER · COMPLET',
+        sub: "Cumul horaire · journée d'hier",
+        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
+        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        rev:    [0, 1100, 2400, 3400, 3800, 4100, 4500, 5800, 7400, 9100, 11000, 11800, 12000, 12080, 12100, 12110],
+        revPrev:[0, 1080, 2380, 3380, 3780, 4080, 4480, 5780, 7380, 9080, 10940, 11700, 11800, 11800, 11800, 11800],
+        yTicks: [0, 3500, 7000, 10500, 14000],
+        legendPrimary: 'Cumul hier · 12 110 MAD',
+        legendCompare: 'Cumul avant-hier · 11 800 MAD',
+      },
+      septJours: {
+        rangeBadge: '7 DERNIERS JOURS',
+        sub: 'Total journalier · 7 derniers jours',
+        xLabels: ['Sam 18','Dim 19','Lun 20','Mar 21','Mer 22','Jeu 23','Ven 24'],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6],
+        rev:    [10800, 13200, 11400, 12100, 12400, 13100, 11800],
+        revPrev:[ 9100, 11400,  9700, 10300, 10500, 11100, 10000],
+        yTicks: [0, 4000, 8000, 12000, 16000],
+        legendPrimary: 'Total 7 jours · 84 800 MAD',
+        legendCompare: '7 jours précédents · 72 100 MAD',
+      },
+      trenteJours: {
+        rangeBadge: '30 DERNIERS JOURS',
+        sub: 'Total journalier · 30 derniers jours',
+        xLabels: [
+          '26 mar','27 mar','28 mar','29 mar','30 mar','31 mar','1 avr','2 avr','3 avr','4 avr',
+          '5 avr','6 avr','7 avr','8 avr','9 avr','10 avr','11 avr','12 avr','13 avr','14 avr',
+          '15 avr','16 avr','17 avr','18 avr','19 avr','20 avr','21 avr','22 avr','23 avr','24 avr',
+        ],
+        visibleXIdx: [0, 5, 10, 15, 20, 25, 29],
+        rev: [
+          10800, 11200, 11400, 11600, 11800, 12000, 12200, 12000, 11800, 11900,
+          12100, 12300, 12400, 12200, 12000, 11900, 12000, 12200, 12400, 12600,
+          12400, 12200, 12000, 11800, 11600, 11400, 11600, 11800, 12000, 12110,
+        ],
+        revPrev: [
+          9700, 10100, 10300, 10500, 10700, 10900, 11000, 10900, 10700, 10800,
+          11000, 11200, 11200, 11000, 10800, 10700, 10800, 11000, 11200, 11400,
+          11200, 11000, 10800, 10600, 10400, 10300, 10500, 10700, 10800, 10900,
+        ],
+        yTicks: [0, 4000, 8000, 12000, 16000],
+        legendPrimary: 'Total 30 jours · 358 200 MAD',
+        legendCompare: '30 jours précédents · 322 100 MAD',
+      },
+      personnalise: null,
+    },
+    spaBahia: {
+      aujourdhui: {
+        rangeBadge: "AUJOURD'HUI · LIVE",
+        sub: 'Cumul horaire · réservations en cours',
+        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
+        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        rev:    [0, 1500, 4200, 8950, 9050, 9300, 9700, 10100, 10500, 10800, 10950, 11000, 11000, 11000, 11000, 11000],
+        revPrev:[0,  600, 1900, 3200, 3700, 4500, 5300,  6100,  7100,  7900,  8200,  8350,  8380,  8380,  8380,  8380],
+        yTicks: [0, 3000, 6000, 9000, 12000],
+        legendPrimary: "Cumul aujourd'hui · 8 950 MAD",
+        legendCompare: 'Cumul hier · 8 380 MAD',
+      },
+      hier: {
+        rangeBadge: 'HIER · COMPLET',
+        sub: "Cumul horaire · journée d'hier",
+        xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
+        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        rev:    [0, 600, 1900, 3200, 3700, 4500, 5300, 6100, 7100, 7900, 8200, 8350, 8380, 8380, 8380, 8380],
+        revPrev:[0, 580, 1850, 3100, 3600, 4400, 5200, 5950, 6900, 7700, 8000, 8100, 8100, 8100, 8100, 8100],
+        yTicks: [0, 2500, 5000, 7500, 10000],
+        legendPrimary: 'Cumul hier · 8 380 MAD',
+        legendCompare: 'Cumul avant-hier · 8 100 MAD',
+      },
+      septJours: {
+        rangeBadge: '7 DERNIERS JOURS',
+        sub: 'Total journalier · 7 derniers jours',
+        xLabels: ['Sam 18','Dim 19','Lun 20','Mar 21','Mer 22','Jeu 23','Ven 24'],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6],
+        rev:    [8200, 9400, 8800, 9100, 9300, 10100, 9300],
+        revPrev:[7000, 8000, 7500, 7800, 7900,  8600, 7900],
+        yTicks: [0, 3000, 6000, 9000, 12000],
+        legendPrimary: 'Total 7 jours · 64 200 MAD',
+        legendCompare: '7 jours précédents · 54 700 MAD',
+      },
+      trenteJours: {
+        rangeBadge: '30 DERNIERS JOURS',
+        sub: 'Total journalier · 30 derniers jours',
+        xLabels: [
+          '26 mar','27 mar','28 mar','29 mar','30 mar','31 mar','1 avr','2 avr','3 avr','4 avr',
+          '5 avr','6 avr','7 avr','8 avr','9 avr','10 avr','11 avr','12 avr','13 avr','14 avr',
+          '15 avr','16 avr','17 avr','18 avr','19 avr','20 avr','21 avr','22 avr','23 avr','24 avr',
+        ],
+        visibleXIdx: [0, 5, 10, 15, 20, 25, 29],
+        rev: [
+          7800, 8100, 8400, 8600, 8800, 9000, 9200, 9000, 8800, 8900,
+          9100, 9300, 9400, 9200, 9000, 8900, 9000, 9200, 9400, 9600,
+          9400, 9200, 9000, 8800, 8600, 8400, 8600, 8800, 9000, 9100,
+        ],
+        revPrev: [
+          6700, 7000, 7200, 7400, 7500, 7700, 7900, 7700, 7500, 7600,
+          7800, 8000, 8000, 7900, 7700, 7600, 7700, 7900, 8100, 8200,
+          8100, 7900, 7700, 7500, 7300, 7200, 7300, 7500, 7700, 7800,
+        ],
+        yTicks: [0, 3000, 6000, 9000, 12000],
+        legendPrimary: 'Total 30 jours · 269 400 MAD',
+        legendCompare: '30 jours précédents · 232 100 MAD',
+      },
+      personnalise: null,
+    },
   };
 
-  const mixByRange = {
-    aujourdhui:  { visa: 48, mc: 24, tap: 18, qr: 10, centerMad: 16590,  fee: '288,50 MAD · 1,19 %' },
-    hier:        { visa: 50, mc: 23, tap: 17, qr: 10, centerMad: 14920,  fee: '264,80 MAD · 1,19 %' },
-    septJours:   { visa: 47, mc: 25, tap: 19, qr:  9, centerMad: 134700, fee: '2 230 MAD · 1,19 %' },
-    trenteJours: { visa: 46, mc: 26, tap: 19, qr:  9, centerMad: 568200, fee: '9 480 MAD · 1,19 %' },
-    personnalise: null,
+  const mixByVenue = {
+    cafeAtlas: {
+      aujourdhui:  { visa: 48, mc: 24, tap: 18, qr: 10, centerMad: 16590,  fee: '288,50 MAD · 1,19 %' },
+      hier:        { visa: 50, mc: 23, tap: 17, qr: 10, centerMad: 14920,  fee: '264,80 MAD · 1,19 %' },
+      septJours:   { visa: 47, mc: 25, tap: 19, qr:  9, centerMad: 134700, fee: '2 230 MAD · 1,19 %' },
+      trenteJours: { visa: 46, mc: 26, tap: 19, qr:  9, centerMad: 568200, fee: '9 480 MAD · 1,19 %' },
+      personnalise: null,
+    },
+    maisonMansour: {
+      aujourdhui:  { visa: 52, mc: 28, tap: 12, qr: 8, centerMad: 6150,   fee: '141 MAD · 1,19 %' },
+      hier:        { visa: 51, mc: 29, tap: 12, qr: 8, centerMad: 6175,   fee: '144 MAD · 1,19 %' },
+      septJours:   { visa: 53, mc: 27, tap: 12, qr: 8, centerMad: 44944,  fee: '1 010 MAD · 1,19 %' },
+      trenteJours: { visa: 52, mc: 28, tap: 12, qr: 8, centerMad: 186264, fee: '4 260 MAD · 1,19 %' },
+      personnalise: null,
+    },
+    spaBahia: {
+      aujourdhui:  { visa: 58, mc: 30, tap: 8, qr: 4, centerMad: 5191,   fee: '107 MAD · 1,19 %' },
+      hier:        { visa: 57, mc: 31, tap: 8, qr: 4, centerMad: 4777,   fee: '100 MAD · 1,19 %' },
+      septJours:   { visa: 59, mc: 29, tap: 8, qr: 4, centerMad: 37878,  fee: '764 MAD · 1,19 %' },
+      trenteJours: { visa: 58, mc: 30, tap: 8, qr: 4, centerMad: 156252, fee: '3 206 MAD · 1,19 %' },
+      personnalise: null,
+    },
   };
 
-  // Live feed: 6 transactions per range
-  const FEED_DATA = {
+  // Live feed: 6 transactions per venue per range
+  const FEED_BY_VENUE = {
+    cafeAtlas: {
     aujourdhui: [
       { t: '14:37', method: 'visa', primary: 'Visa •• 4291',   sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Karim B. · T4',     amt: '240,00',  tip: '+24,00', neg: false, isNew: true },
       { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '—',       neg: false },
@@ -293,13 +571,96 @@
       { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '—',     neg: false },
       { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '—', neg: true },
     ],
+    },
+    maisonMansour: {
+      aujourdhui: [
+        { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false, isNew: true },
+        { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
+        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
+        { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
+        { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
+        { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+      ],
+      hier: [
+        { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '—', neg: false },
+        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '—', neg: false },
+        { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '—', neg: false },
+        { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
+        { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '—', neg: false },
+        { t: '16:48', method: 'visa', primary: 'Visa •• 8801',     sub: 'Carte française · Crédit Agricole', flag: 'fr', ctx: 'Léa M. · Babouches', amt: '450,00',   tip: '—', neg: false },
+      ],
+      septJours: [
+        { t: 'Ven 23', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Top transaction de la semaine', flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
+        { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false },
+        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
+        { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
+        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
+        { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+      ],
+      trenteJours: [
+        { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '—', neg: false },
+        { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
+        { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '—', neg: false },
+        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '—', neg: false },
+        { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '—', neg: false },
+        { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '—', neg: true },
+      ],
+    },
+    spaBahia: {
+      aujourdhui: [
+        { t: '14:30', method: 'visa', primary: 'Visa •• 7741',     sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Fatima B. · Forfait Argan',       amt: '850,00', tip: '+85,00', neg: false, isNew: true },
+        { t: '14:00', method: 'mc',   primary: 'Mastercard •• 3329', sub: 'Carte française · BNP',         flag: 'fr', ctx: 'Sara K. · Massage 60min',         amt: '550,00', tip: '+55,00', neg: false },
+        { t: '13:30', method: 'visa', primary: 'Visa •• 1102',     sub: 'Carte marocaine · BMCE',         flag: 'ma', ctx: 'Karim L. · Hammam',                amt: '350,00', tip: '+35,00', neg: false },
+        { t: '13:00', method: 'visa', primary: 'Visa •• 8826',     sub: 'Carte espagnole · La Caixa',     flag: 'es', ctx: 'Imane S. · Soin du visage',        amt: '650,00', tip: '+65,00', neg: false },
+        { t: '12:30', method: 'mc',   primary: 'Mastercard •• 5530', sub: 'Carte marocaine · CIH',          flag: 'ma', ctx: 'Nadia M. · Gommage corps',         amt: '400,00', tip: '+40,00', neg: false },
+        { t: '12:00', method: 'visa', primary: 'Visa •• 4408',     sub: 'Carte marocaine · CFG',          flag: 'ma', ctx: 'Yasmine T. · Forfait Argan',       amt: '850,00', tip: '+90,00', neg: false },
+      ],
+      hier: [
+        { t: '18:42', method: 'visa', primary: 'Visa •• 9912',     sub: 'Carte américaine · Wells Fargo', flag: 'us', ctx: 'Lisa P. · Forfait Argan',         amt: '850,00', tip: '+100,00', neg: false },
+        { t: '17:50', method: 'mc',   primary: 'Mastercard •• 6611', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Camille R. · Massage 60min',       amt: '550,00', tip: '+50,00',  neg: false },
+        { t: '16:24', method: 'visa', primary: 'Visa •• 2230',     sub: 'Carte marocaine · BCP',          flag: 'ma', ctx: 'Lina C. · Soin du visage',         amt: '650,00', tip: '+65,00',  neg: false },
+        { t: '15:08', method: 'visa', primary: 'Visa •• 7720',     sub: 'Carte marocaine · Attijari',     flag: 'ma', ctx: 'Khadija R. · Hammam',              amt: '350,00', tip: '+35,00',  neg: false },
+        { t: '14:32', method: 'mc',   primary: 'Mastercard •• 1145', sub: 'Carte espagnole · Santander',   flag: 'es', ctx: 'Lucia M. · Gommage corps',         amt: '400,00', tip: '+40,00',  neg: false },
+        { t: '11:46', method: 'visa', primary: 'Visa •• 9933',     sub: 'Carte marocaine · BMCE',         flag: 'ma', ctx: 'Sofia A. · Modelage pieds',        amt: '280,00', tip: '+30,00',  neg: false },
+      ],
+      septJours: [
+        { t: 'Ven 23', method: 'visa', primary: 'Visa •• 4408',     sub: 'Top forfait de la semaine',       flag: 'ma', ctx: 'Yasmine T. · Forfait Argan',       amt: '850,00', tip: '+100,00', neg: false },
+        { t: 'Jeu 22', method: 'mc',   primary: 'Mastercard •• 1145', sub: 'Carte espagnole · Santander',   flag: 'es', ctx: 'Lucia M. · Massage 60min + Hammam', amt: '900,00', tip: '+90,00',  neg: false },
+        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 9912',     sub: 'Cliente VIP · 3e visite',         flag: 'us', ctx: 'Lisa P. · Forfait Argan',         amt: '850,00', tip: '+100,00', neg: false },
+        { t: 'Mar 20', method: 'visa', primary: 'Visa •• 8826',     sub: 'Soin du visage premium',          flag: 'es', ctx: 'Imane S.',                        amt: '650,00', tip: '+65,00',  neg: false },
+        { t: 'Lun 19', method: 'mc',   primary: 'Mastercard •• 5530', sub: 'Gommage corps complet',         flag: 'ma', ctx: 'Nadia M.',                        amt: '400,00', tip: '+40,00',  neg: false },
+        { t: 'Dim 18', method: 'visa', primary: 'Visa •• 1102',     sub: 'Hammam traditionnel',             flag: 'ma', ctx: 'Karim L.',                        amt: '350,00', tip: '+35,00',  neg: false },
+      ],
+      trenteJours: [
+        { t: 'S22 J6', method: 'visa', primary: 'Visa •• 9912',     sub: 'Forfait premium · cliente fidèle', flag: 'us', ctx: 'Lisa P. · Forfait Argan x2',     amt: '1 700,00', tip: '+200,00', neg: false },
+        { t: 'S21 J3', method: 'mc',   primary: 'Mastercard •• 1145', sub: 'Carte espagnole · Santander',    flag: 'es', ctx: 'Lucia M. · Soirée détente',      amt: '1 200,00', tip: '+120,00', neg: false },
+        { t: 'S20 J1', method: 'visa', primary: 'Visa •• 4408',     sub: 'Forfait Argan · cliente VIP',     flag: 'ma', ctx: 'Yasmine T.',                     amt: '850,00',   tip: '+100,00', neg: false },
+        { t: 'S19 J5', method: 'mc',   primary: 'Mastercard •• 3329', sub: 'Massage couple',                 flag: 'fr', ctx: 'Camille & Pierre R.',           amt: '1 100,00', tip: '+110,00', neg: false },
+        { t: 'S18 J2', method: 'visa', primary: 'Visa •• 8826',     sub: 'Soin visage premium',             flag: 'es', ctx: 'Imane S.',                       amt: '650,00',   tip: '+65,00',  neg: false },
+        { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 8821', sub: 'Annulation rendez-vous',         flag: 'ma', ctx: 'Anonyme',                        amt: '−550,00',  tip: '—',       neg: true },
+      ],
+    },
   };
 
-  const settleByRange = {
-    aujourdhui:  { lbl: 'PROCHAIN RÈGLEMENT',    amt: 23091,  sub: 'Arrive demain matin à 9 h 00 sur votre IBAN BMCE •• 3291.', detailVal: '−289 MAD' },
-    hier:        { lbl: 'RÈGLEMENT REÇU',         amt: 20640,  sub: 'Crédité ce matin à 9 h 02 sur votre IBAN BMCE •• 3291.',     detailVal: '−248 MAD' },
-    septJours:   { lbl: 'RÉGLÉ SUR 7 JOURS',      amt: 165280, sub: '7 règlements T+1 cumulés sur la semaine.',                    detailVal: '−2 230 MAD' },
-    trenteJours: { lbl: 'RÉGLÉ SUR 30 JOURS',     amt: 702800, sub: '30 règlements T+1 cumulés sur le mois.',                       detailVal: '−9 480 MAD' },
+  const settleByVenue = {
+    cafeAtlas: {
+      aujourdhui:  { lbl: 'PROCHAIN RÈGLEMENT',    amt: 23091,  sub: 'Arrive demain matin à 9 h 00 sur votre IBAN BMCE •• 3291.', detailVal: '−289 MAD' },
+      hier:        { lbl: 'RÈGLEMENT REÇU',         amt: 20640,  sub: 'Crédité ce matin à 9 h 02 sur votre IBAN BMCE •• 3291.',     detailVal: '−248 MAD' },
+      septJours:   { lbl: 'RÉGLÉ SUR 7 JOURS',      amt: 165280, sub: '7 règlements T+1 cumulés sur la semaine.',                    detailVal: '−2 230 MAD' },
+      trenteJours: { lbl: 'RÉGLÉ SUR 30 JOURS',     amt: 702800, sub: '30 règlements T+1 cumulés sur le mois.',                       detailVal: '−9 480 MAD' },
+    },
+    maisonMansour: {
+      aujourdhui:  { lbl: 'PROCHAIN RÈGLEMENT',    amt: 9920,   sub: 'Arrive demain matin à 9 h 00 sur votre IBAN BMCE •• 8842.', detailVal: '−146 MAD' },
+      hier:        { lbl: 'RÈGLEMENT REÇU',         amt: 10170,  sub: 'Crédité ce matin à 9 h 02 sur votre IBAN BMCE •• 8842.',     detailVal: '−149 MAD' },
+      septJours:   { lbl: 'RÉGLÉ SUR 7 JOURS',      amt: 71200,  sub: '7 règlements T+1 cumulés sur la semaine.',                    detailVal: '−1 020 MAD' },
+      trenteJours: { lbl: 'RÉGLÉ SUR 30 JOURS',     amt: 300700, sub: '30 règlements T+1 cumulés sur le mois.',                       detailVal: '−4 280 MAD' },
+    },
+    spaBahia: {
+      aujourdhui:  { lbl: 'PROCHAIN RÈGLEMENT',    amt: 7510,   sub: 'Arrive demain matin à 9 h 00 sur votre IBAN BMCE •• 4416.', detailVal: '−108 MAD' },
+      hier:        { lbl: 'RÈGLEMENT REÇU',         amt: 7035,   sub: 'Crédité ce matin à 9 h 02 sur votre IBAN BMCE •• 4416.',     detailVal: '−105 MAD' },
+      septJours:   { lbl: 'RÉGLÉ SUR 7 JOURS',      amt: 53890,  sub: '7 règlements T+1 cumulés sur la semaine.',                    detailVal: '−770 MAD' },
+      trenteJours: { lbl: 'RÉGLÉ SUR 30 JOURS',     amt: 226300, sub: '30 règlements T+1 cumulés sur le mois.',                       detailVal: '−3 240 MAD' },
+    },
   };
   const SETTLE_LBL = {
     fr: { aujourdhui: 'PROCHAIN RÈGLEMENT', hier: 'RÈGLEMENT REÇU', septJours: 'RÉGLÉ SUR 7 JOURS', trenteJours: 'RÉGLÉ SUR 30 JOURS', personnalise: 'PROCHAIN RÈGLEMENT' },
@@ -308,18 +669,46 @@
   };
   const SETTLE_DETAIL_LBL = { fr: 'Commission Kiwi déduite', en: 'Kiwi commission deducted', ar: 'عمولة كيوي مخصومة' };
 
-  const timelineWeekTotalByRange = {
-    aujourdhui:  '~ 172 100 MAD',
-    hier:        '~ 165 800 MAD',
-    septJours:   '~ 198 400 MAD',
-    trenteJours: '~ 842 300 MAD',
+  const timelineWeekTotalByVenue = {
+    cafeAtlas: {
+      aujourdhui:  '~ 172 100 MAD',
+      hier:        '~ 165 800 MAD',
+      septJours:   '~ 198 400 MAD',
+      trenteJours: '~ 842 300 MAD',
+    },
+    maisonMansour: {
+      aujourdhui:  '~ 78 600 MAD',
+      hier:        '~ 76 200 MAD',
+      septJours:   '~ 84 800 MAD',
+      trenteJours: '~ 358 200 MAD',
+    },
+    spaBahia: {
+      aujourdhui:  '~ 60 800 MAD',
+      hier:        '~ 58 200 MAD',
+      septJours:   '~ 64 200 MAD',
+      trenteJours: '~ 269 400 MAD',
+    },
   };
 
-  const healthByRange = {
-    aujourdhui:  { score: 91, chip: 'EXCELLENT', chipKey: 'excellent' },
-    hier:        { score: 90, chip: 'EXCELLENT', chipKey: 'excellent' },
-    septJours:   { score: 89, chip: 'TRÈS BON',  chipKey: 'verygood' },
-    trenteJours: { score: 88, chip: 'TRÈS BON',  chipKey: 'verygood' },
+  const healthByVenue = {
+    cafeAtlas: {
+      aujourdhui:  { score: 91, chip: 'EXCELLENT', chipKey: 'excellent' },
+      hier:        { score: 90, chip: 'EXCELLENT', chipKey: 'excellent' },
+      septJours:   { score: 89, chip: 'TRÈS BON',  chipKey: 'verygood' },
+      trenteJours: { score: 88, chip: 'TRÈS BON',  chipKey: 'verygood' },
+    },
+    maisonMansour: {
+      aujourdhui:  { score: 88, chip: 'TRÈS BON',  chipKey: 'verygood' },
+      hier:        { score: 87, chip: 'TRÈS BON',  chipKey: 'verygood' },
+      septJours:   { score: 86, chip: 'TRÈS BON',  chipKey: 'verygood' },
+      trenteJours: { score: 85, chip: 'TRÈS BON',  chipKey: 'verygood' },
+    },
+    spaBahia: {
+      aujourdhui:  { score: 93, chip: 'EXCELLENT', chipKey: 'excellent' },
+      hier:        { score: 92, chip: 'EXCELLENT', chipKey: 'excellent' },
+      septJours:   { score: 91, chip: 'EXCELLENT', chipKey: 'excellent' },
+      trenteJours: { score: 90, chip: 'EXCELLENT', chipKey: 'excellent' },
+    },
   };
   const HEALTH_CHIP = {
     fr: { excellent: 'EXCELLENT', verygood: 'TRÈS BON' },
@@ -327,113 +716,315 @@
     ar: { excellent: 'ممتاز', verygood: 'جيّد جدًا' },
   };
 
-  const benchByRange = {
-    aujourdhui: {
-      rank: 12, total: 147, top: 8,
-      rows: [
-        { lbl: 'Ticket moyen',       you: 74, peer: 58, v: '+16 MAD',   pos: true },
-        { lbl: 'Transactions / jour',you: 82, peer: 62, v: '+34',       pos: true },
-        { lbl: '% clients réguliers',you: 68, peer: 55, v: '+7 pts',    pos: true },
-        { lbl: 'Pourboire moyen',    you: 55, peer: 58, v: '−0,4 pts',  pos: false, warn: true },
-        { lbl: 'Vélocité table',     you: 71, peer: 60, v: '+12 %',     pos: true },
+  const benchByVenue = {
+    cafeAtlas: {
+      aujourdhui: {
+        rank: 12, total: 147, top: 8,
+        rows: [
+          { lbl: 'Ticket moyen',       you: 74, peer: 58, v: '+16 MAD',   pos: true },
+          { lbl: 'Transactions / jour',you: 82, peer: 62, v: '+34',       pos: true },
+          { lbl: '% clients réguliers',you: 68, peer: 55, v: '+7 pts',    pos: true },
+          { lbl: 'Pourboire moyen',    you: 55, peer: 58, v: '−0,4 pts',  pos: false, warn: true },
+          { lbl: 'Vélocité table',     you: 71, peer: 60, v: '+12 %',     pos: true },
+        ],
+      },
+      hier: {
+        rank: 14, total: 147, top: 9,
+        rows: [
+          { lbl: 'Ticket moyen',       you: 71, peer: 58, v: '+13 MAD',   pos: true },
+          { lbl: 'Transactions / jour',you: 78, peer: 62, v: '+28',       pos: true },
+          { lbl: '% clients réguliers',you: 66, peer: 55, v: '+6 pts',    pos: true },
+          { lbl: 'Pourboire moyen',    you: 53, peer: 58, v: '−0,6 pts',  pos: false, warn: true },
+          { lbl: 'Vélocité table',     you: 69, peer: 60, v: '+9 %',      pos: true },
+        ],
+      },
+      septJours: {
+        rank: 11, total: 147, top: 7,
+        rows: [
+          { lbl: 'Ticket moyen',       you: 76, peer: 58, v: '+18 MAD',   pos: true },
+          { lbl: 'Transactions / jour',you: 84, peer: 62, v: '+42',       pos: true },
+          { lbl: '% clients réguliers',you: 70, peer: 55, v: '+9 pts',    pos: true },
+          { lbl: 'Pourboire moyen',    you: 56, peer: 58, v: '−0,3 pts',  pos: false, warn: true },
+          { lbl: 'Vélocité table',     you: 73, peer: 60, v: '+14 %',     pos: true },
+        ],
+      },
+      trenteJours: {
+        rank: 9, total: 147, top: 6,
+        rows: [
+          { lbl: 'Ticket moyen',       you: 78, peer: 58, v: '+22 MAD',   pos: true },
+          { lbl: 'Transactions / jour',you: 86, peer: 62, v: '+58',       pos: true },
+          { lbl: '% clients réguliers',you: 72, peer: 55, v: '+11 pts',   pos: true },
+          { lbl: 'Pourboire moyen',    you: 58, peer: 58, v: '0 pt',      pos: true },
+          { lbl: 'Vélocité table',     you: 75, peer: 60, v: '+18 %',     pos: true },
+        ],
+      },
+    },
+    maisonMansour: {
+      aujourdhui: {
+        rank: 8, total: 89, top: 9,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 76, peer: 60, v: '+34 MAD', pos: true },
+          { lbl: 'Tx / jour',            you: 64, peer: 50, v: '+8',      pos: true },
+          { lbl: 'Conversion visite',    you: 71, peer: 58, v: '+8 pts',  pos: true },
+          { lbl: 'Tx tax-free',          you: 48, peer: 60, v: '−12 pts', pos: false, warn: true },
+          { lbl: 'Marge brute %',        you: 78, peer: 64, v: '+10 pts', pos: true },
+        ],
+      },
+      hier: {
+        rank: 9, total: 89, top: 10,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 75, peer: 60, v: '+32 MAD', pos: true },
+          { lbl: 'Tx / jour',            you: 65, peer: 50, v: '+10',     pos: true },
+          { lbl: 'Conversion visite',    you: 70, peer: 58, v: '+7 pts',  pos: true },
+          { lbl: 'Tx tax-free',          you: 47, peer: 60, v: '−13 pts', pos: false, warn: true },
+          { lbl: 'Marge brute %',        you: 77, peer: 64, v: '+9 pts',  pos: true },
+        ],
+      },
+      septJours: {
+        rank: 7, total: 89, top: 8,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 77, peer: 60, v: '+36 MAD', pos: true },
+          { lbl: 'Tx / jour',            you: 66, peer: 50, v: '+12',     pos: true },
+          { lbl: 'Conversion visite',    you: 73, peer: 58, v: '+10 pts', pos: true },
+          { lbl: 'Tx tax-free',          you: 49, peer: 60, v: '−11 pts', pos: false, warn: true },
+          { lbl: 'Marge brute %',        you: 79, peer: 64, v: '+11 pts', pos: true },
+        ],
+      },
+      trenteJours: {
+        rank: 6, total: 89, top: 7,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 80, peer: 60, v: '+40 MAD', pos: true },
+          { lbl: 'Tx / jour',            you: 68, peer: 50, v: '+15',     pos: true },
+          { lbl: 'Conversion visite',    you: 74, peer: 58, v: '+11 pts', pos: true },
+          { lbl: 'Tx tax-free',          you: 51, peer: 60, v: '−9 pts',  pos: false, warn: true },
+          { lbl: 'Marge brute %',        you: 81, peer: 64, v: '+13 pts', pos: true },
+        ],
+      },
+    },
+    spaBahia: {
+      aujourdhui: {
+        rank: 4, total: 42, top: 9,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 82, peer: 65, v: '+58 MAD', pos: true },
+          { lbl: 'Taux remplissage',     you: 78, peer: 64, v: '+12 pts', pos: true },
+          { lbl: 'RDV / jour',           you: 68, peer: 56, v: '+5',      pos: true },
+          { lbl: 'Pourboire moyen',      you: 62, peer: 50, v: '+3 pts',  pos: true },
+          { lbl: 'Rétention 90j',        you: 71, peer: 58, v: '+13 pts', pos: true },
+        ],
+      },
+      hier: {
+        rank: 5, total: 42, top: 11,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 83, peer: 65, v: '+62 MAD', pos: true },
+          { lbl: 'Taux remplissage',     you: 75, peer: 64, v: '+9 pts',  pos: true },
+          { lbl: 'RDV / jour',           you: 64, peer: 56, v: '+3',      pos: true },
+          { lbl: 'Pourboire moyen',      you: 60, peer: 50, v: '+2 pts',  pos: true },
+          { lbl: 'Rétention 90j',        you: 70, peer: 58, v: '+12 pts', pos: true },
+        ],
+      },
+      septJours: {
+        rank: 3, total: 42, top: 7,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 84, peer: 65, v: '+64 MAD', pos: true },
+          { lbl: 'Taux remplissage',     you: 80, peer: 64, v: '+14 pts', pos: true },
+          { lbl: 'RDV / jour',           you: 70, peer: 56, v: '+6',      pos: true },
+          { lbl: 'Pourboire moyen',      you: 64, peer: 50, v: '+4 pts',  pos: true },
+          { lbl: 'Rétention 90j',        you: 73, peer: 58, v: '+15 pts', pos: true },
+        ],
+      },
+      trenteJours: {
+        rank: 2, total: 42, top: 5,
+        rows: [
+          { lbl: 'Ticket moyen',         you: 86, peer: 65, v: '+68 MAD', pos: true },
+          { lbl: 'Taux remplissage',     you: 82, peer: 64, v: '+16 pts', pos: true },
+          { lbl: 'RDV / jour',           you: 72, peer: 56, v: '+8',      pos: true },
+          { lbl: 'Pourboire moyen',      you: 66, peer: 50, v: '+5 pts',  pos: true },
+          { lbl: 'Rétention 90j',        you: 75, peer: 58, v: '+17 pts', pos: true },
+        ],
+      },
+    },
+  };
+
+  const productsByVenue = {
+    cafeAtlas: {
+      aujourdhui: [
+        { rank: '#1', name: 'Tajine kefta œuf',    sub: '28 portions · 85 MAD chacune', bar: 100, sales: '2 380' },
+        { rank: '#2', name: 'Thé à la menthe',     sub: '94 verres · 12 MAD',           bar: 68,  sales: '1 128' },
+        { rank: '#3', name: 'Msemen beurre & miel',sub: '62 · 12 MAD',                   bar: 44,  sales: '744' },
+        { rank: '#4', name: 'Orange pressée',      sub: '34 · 18 MAD',                   bar: 36,  sales: '612' },
+        { rank: '#5', name: 'Couscous végétarien', sub: '11 · 45 MAD',                   bar: 29,  sales: '495' },
+        { rank: '#6', name: 'Salade marocaine',    sub: '13 · 32 MAD',                   bar: 25,  sales: '416' },
+      ],
+      hier: [
+        { rank: '#1', name: 'Tajine kefta œuf',    sub: '24 portions · 85 MAD',          bar: 100, sales: '2 040' },
+        { rank: '#2', name: 'Thé à la menthe',     sub: '88 verres · 12 MAD',            bar: 70,  sales: '1 056' },
+        { rank: '#3', name: 'Msemen beurre & miel',sub: '54 · 12 MAD',                   bar: 41,  sales: '648' },
+        { rank: '#4', name: 'Orange pressée',      sub: '32 · 18 MAD',                   bar: 36,  sales: '576' },
+        { rank: '#5', name: 'Couscous végétarien', sub: '9 · 45 MAD',                    bar: 25,  sales: '405' },
+        { rank: '#6', name: 'Salade marocaine',    sub: '11 · 32 MAD',                   bar: 22,  sales: '352' },
+      ],
+      septJours: [
+        { rank: '#1', name: 'Tajine kefta œuf',     sub: '198 portions · 85 MAD',         bar: 100, sales: '16 830' },
+        { rank: '#2', name: 'Thé à la menthe',      sub: '648 verres · 12 MAD',           bar: 71,  sales: '7 776' },
+        { rank: '#3', name: 'Msemen beurre & miel', sub: '432 · 12 MAD',                  bar: 47,  sales: '5 184' },
+        { rank: '#4', name: 'Couscous végétarien',  sub: '78 · 45 MAD',                   bar: 38,  sales: '3 510' },
+        { rank: '#5', name: 'Orange pressée',       sub: '218 · 18 MAD',                  bar: 35,  sales: '3 924' },
+        { rank: '#6', name: 'Salade marocaine',     sub: '92 · 32 MAD',                   bar: 27,  sales: '2 944' },
+      ],
+      trenteJours: [
+        { rank: '#1', name: 'Tajine kefta œuf',     sub: '820 portions · 85 MAD',         bar: 100, sales: '69 700' },
+        { rank: '#2', name: 'Thé à la menthe',      sub: '2 760 verres · 12 MAD',         bar: 73,  sales: '33 120' },
+        { rank: '#3', name: 'Msemen beurre & miel', sub: '1 840 · 12 MAD',                bar: 47,  sales: '22 080' },
+        { rank: '#4', name: 'Couscous végétarien',  sub: '348 · 45 MAD',                  bar: 41,  sales: '15 660' },
+        { rank: '#5', name: 'Orange pressée',       sub: '900 · 18 MAD',                  bar: 35,  sales: '16 200' },
+        { rank: '#6', name: 'Salade marocaine',     sub: '420 · 32 MAD',                  bar: 30,  sales: '13 440' },
       ],
     },
-    hier: {
-      rank: 14, total: 147, top: 9,
-      rows: [
-        { lbl: 'Ticket moyen',       you: 71, peer: 58, v: '+13 MAD',   pos: true },
-        { lbl: 'Transactions / jour',you: 78, peer: 62, v: '+28',       pos: true },
-        { lbl: '% clients réguliers',you: 66, peer: 55, v: '+6 pts',    pos: true },
-        { lbl: 'Pourboire moyen',    you: 53, peer: 58, v: '−0,6 pts',  pos: false, warn: true },
-        { lbl: 'Vélocité table',     you: 69, peer: 60, v: '+9 %',      pos: true },
+    maisonMansour: {
+      aujourdhui: [
+        { rank: '#1', name: 'Caftan brodé',         sub: '2 pièces · 1 890 MAD',          bar: 100, sales: '3 780' },
+        { rank: '#2', name: 'Tapis berbère',        sub: '1 · 3 200 MAD',                  bar: 85,  sales: '3 200' },
+        { rank: '#3', name: 'Théière argentée',     sub: '3 · 680 MAD',                    bar: 54,  sales: '2 040' },
+        { rank: '#4', name: 'Babouches en cuir',    sub: '3 paires · 450 MAD',             bar: 36,  sales: '1 350' },
+        { rank: '#5', name: 'Coussin tissé',        sub: '4 · 240 MAD',                    bar: 26,  sales: '960' },
+        { rank: '#6', name: 'Lampe artisanale',     sub: '1 · 920 MAD',                    bar: 24,  sales: '920' },
+      ],
+      hier: [
+        { rank: '#1', name: 'Caftan brodé',         sub: '2 pièces · 1 890 MAD',          bar: 100, sales: '3 780' },
+        { rank: '#2', name: 'Tapis berbère',        sub: '1 · 3 200 MAD',                  bar: 85,  sales: '3 200' },
+        { rank: '#3', name: 'Théière argentée',     sub: '3 · 680 MAD',                    bar: 54,  sales: '2 040' },
+        { rank: '#4', name: 'Babouches en cuir',    sub: '4 paires · 450 MAD',             bar: 48,  sales: '1 800' },
+        { rank: '#5', name: 'Coussin tissé',        sub: '4 · 240 MAD',                    bar: 26,  sales: '960' },
+        { rank: '#6', name: 'Lampe artisanale',     sub: '1 · 920 MAD',                    bar: 24,  sales: '920' },
+      ],
+      septJours: [
+        { rank: '#1', name: 'Caftan brodé',         sub: '12 pièces · 1 890 MAD',         bar: 100, sales: '22 680' },
+        { rank: '#2', name: 'Tapis berbère',        sub: '6 · 3 200 MAD',                  bar: 85,  sales: '19 200' },
+        { rank: '#3', name: 'Babouches en cuir',    sub: '28 paires · 450 MAD',            bar: 56,  sales: '12 600' },
+        { rank: '#4', name: 'Théière argentée',     sub: '18 · 680 MAD',                   bar: 54,  sales: '12 240' },
+        { rank: '#5', name: 'Coussin tissé',        sub: '32 · 240 MAD',                   bar: 34,  sales: '7 680' },
+        { rank: '#6', name: 'Lampe artisanale',     sub: '8 · 920 MAD',                    bar: 32,  sales: '7 360' },
+      ],
+      trenteJours: [
+        { rank: '#1', name: 'Caftan brodé',         sub: '52 pièces · 1 890 MAD',         bar: 100, sales: '98 280' },
+        { rank: '#2', name: 'Tapis berbère',        sub: '26 · 3 200 MAD',                 bar: 85,  sales: '83 200' },
+        { rank: '#3', name: 'Babouches en cuir',    sub: '118 paires · 450 MAD',           bar: 54,  sales: '53 100' },
+        { rank: '#4', name: 'Théière argentée',     sub: '74 · 680 MAD',                   bar: 51,  sales: '50 320' },
+        { rank: '#5', name: 'Coussin tissé',        sub: '140 · 240 MAD',                  bar: 34,  sales: '33 600' },
+        { rank: '#6', name: 'Lampe artisanale',     sub: '32 · 920 MAD',                   bar: 30,  sales: '29 440' },
       ],
     },
-    septJours: {
-      rank: 11, total: 147, top: 7,
-      rows: [
-        { lbl: 'Ticket moyen',       you: 76, peer: 58, v: '+18 MAD',   pos: true },
-        { lbl: 'Transactions / jour',you: 84, peer: 62, v: '+42',       pos: true },
-        { lbl: '% clients réguliers',you: 70, peer: 55, v: '+9 pts',    pos: true },
-        { lbl: 'Pourboire moyen',    you: 56, peer: 58, v: '−0,3 pts',  pos: false, warn: true },
-        { lbl: 'Vélocité table',     you: 73, peer: 60, v: '+14 %',     pos: true },
+    spaBahia: {
+      aujourdhui: [
+        { rank: '#1', name: 'Forfait Argan',        sub: '3 forfaits · 850 MAD',          bar: 100, sales: '2 550' },
+        { rank: '#2', name: 'Massage relaxant 60min',sub: '3 · 550 MAD',                   bar: 65,  sales: '1 650' },
+        { rank: '#3', name: 'Soin du visage',       sub: '2 · 650 MAD',                    bar: 51,  sales: '1 300' },
+        { rank: '#4', name: 'Hammam traditionnel',  sub: '3 · 350 MAD',                    bar: 41,  sales: '1 050' },
+        { rank: '#5', name: 'Gommage corps',        sub: '2 · 400 MAD',                    bar: 31,  sales: '800' },
+        { rank: '#6', name: 'Modelage pieds',       sub: '2 · 280 MAD',                    bar: 22,  sales: '560' },
       ],
-    },
-    trenteJours: {
-      rank: 9, total: 147, top: 6,
-      rows: [
-        { lbl: 'Ticket moyen',       you: 78, peer: 58, v: '+22 MAD',   pos: true },
-        { lbl: 'Transactions / jour',you: 86, peer: 62, v: '+58',       pos: true },
-        { lbl: '% clients réguliers',you: 72, peer: 55, v: '+11 pts',   pos: true },
-        { lbl: 'Pourboire moyen',    you: 58, peer: 58, v: '0 pt',      pos: true },
-        { lbl: 'Vélocité table',     you: 75, peer: 60, v: '+18 %',     pos: true },
+      hier: [
+        { rank: '#1', name: 'Forfait Argan',        sub: '3 forfaits · 850 MAD',          bar: 100, sales: '2 550' },
+        { rank: '#2', name: 'Soin du visage',       sub: '2 · 650 MAD',                    bar: 51,  sales: '1 300' },
+        { rank: '#3', name: 'Massage relaxant 60min',sub: '2 · 550 MAD',                   bar: 43,  sales: '1 100' },
+        { rank: '#4', name: 'Hammam traditionnel',  sub: '3 · 350 MAD',                    bar: 41,  sales: '1 050' },
+        { rank: '#5', name: 'Gommage corps',        sub: '2 · 400 MAD',                    bar: 31,  sales: '800' },
+        { rank: '#6', name: 'Modelage pieds',       sub: '2 · 280 MAD',                    bar: 22,  sales: '560' },
+      ],
+      septJours: [
+        { rank: '#1', name: 'Forfait Argan',        sub: '22 forfaits · 850 MAD',         bar: 100, sales: '18 700' },
+        { rank: '#2', name: 'Massage relaxant 60min',sub: '24 · 550 MAD',                  bar: 71,  sales: '13 200' },
+        { rank: '#3', name: 'Soin du visage',       sub: '16 · 650 MAD',                   bar: 56,  sales: '10 400' },
+        { rank: '#4', name: 'Hammam traditionnel',  sub: '28 · 350 MAD',                   bar: 53,  sales: '9 800' },
+        { rank: '#5', name: 'Gommage corps',        sub: '18 · 400 MAD',                   bar: 38,  sales: '7 200' },
+        { rank: '#6', name: 'Modelage pieds',       sub: '16 · 280 MAD',                   bar: 24,  sales: '4 480' },
+      ],
+      trenteJours: [
+        { rank: '#1', name: 'Forfait Argan',        sub: '90 forfaits · 850 MAD',         bar: 100, sales: '76 500' },
+        { rank: '#2', name: 'Massage relaxant 60min',sub: '98 · 550 MAD',                  bar: 70,  sales: '53 900' },
+        { rank: '#3', name: 'Soin du visage',       sub: '66 · 650 MAD',                   bar: 56,  sales: '42 900' },
+        { rank: '#4', name: 'Hammam traditionnel',  sub: '114 · 350 MAD',                  bar: 52,  sales: '39 900' },
+        { rank: '#5', name: 'Gommage corps',        sub: '74 · 400 MAD',                   bar: 39,  sales: '29 600' },
+        { rank: '#6', name: 'Modelage pieds',       sub: '66 · 280 MAD',                   bar: 24,  sales: '18 480' },
       ],
     },
   };
 
-  const productsByRange = {
-    aujourdhui: [
-      { rank: '#1', name: 'Tajine kefta œuf',    sub: '28 portions · 85 MAD chacune', bar: 100, sales: '2 380' },
-      { rank: '#2', name: 'Thé à la menthe',     sub: '94 verres · 12 MAD',           bar: 68,  sales: '1 128' },
-      { rank: '#3', name: 'Msemen beurre & miel',sub: '62 · 12 MAD',                   bar: 44,  sales: '744' },
-      { rank: '#4', name: 'Orange pressée',      sub: '34 · 18 MAD',                   bar: 36,  sales: '612' },
-      { rank: '#5', name: 'Couscous végétarien', sub: '11 · 45 MAD',                   bar: 29,  sales: '495' },
-      { rank: '#6', name: 'Salade marocaine',    sub: '13 · 32 MAD',                   bar: 25,  sales: '416' },
-    ],
-    hier: [
-      { rank: '#1', name: 'Tajine kefta œuf',    sub: '24 portions · 85 MAD',          bar: 100, sales: '2 040' },
-      { rank: '#2', name: 'Thé à la menthe',     sub: '88 verres · 12 MAD',            bar: 70,  sales: '1 056' },
-      { rank: '#3', name: 'Msemen beurre & miel',sub: '54 · 12 MAD',                   bar: 41,  sales: '648' },
-      { rank: '#4', name: 'Orange pressée',      sub: '32 · 18 MAD',                   bar: 36,  sales: '576' },
-      { rank: '#5', name: 'Couscous végétarien', sub: '9 · 45 MAD',                    bar: 25,  sales: '405' },
-      { rank: '#6', name: 'Salade marocaine',    sub: '11 · 32 MAD',                   bar: 22,  sales: '352' },
-    ],
-    septJours: [
-      { rank: '#1', name: 'Tajine kefta œuf',     sub: '198 portions · 85 MAD',         bar: 100, sales: '16 830' },
-      { rank: '#2', name: 'Thé à la menthe',      sub: '648 verres · 12 MAD',           bar: 71,  sales: '7 776' },
-      { rank: '#3', name: 'Msemen beurre & miel', sub: '432 · 12 MAD',                  bar: 47,  sales: '5 184' },
-      { rank: '#4', name: 'Couscous végétarien',  sub: '78 · 45 MAD',                   bar: 38,  sales: '3 510' },
-      { rank: '#5', name: 'Orange pressée',       sub: '218 · 18 MAD',                  bar: 35,  sales: '3 924' },
-      { rank: '#6', name: 'Salade marocaine',     sub: '92 · 32 MAD',                   bar: 27,  sales: '2 944' },
-    ],
-    trenteJours: [
-      { rank: '#1', name: 'Tajine kefta œuf',     sub: '820 portions · 85 MAD',         bar: 100, sales: '69 700' },
-      { rank: '#2', name: 'Thé à la menthe',      sub: '2 760 verres · 12 MAD',         bar: 73,  sales: '33 120' },
-      { rank: '#3', name: 'Msemen beurre & miel', sub: '1 840 · 12 MAD',                bar: 47,  sales: '22 080' },
-      { rank: '#4', name: 'Couscous végétarien',  sub: '348 · 45 MAD',                  bar: 41,  sales: '15 660' },
-      { rank: '#5', name: 'Orange pressée',       sub: '900 · 18 MAD',                  bar: 35,  sales: '16 200' },
-      { rank: '#6', name: 'Salade marocaine',     sub: '420 · 32 MAD',                  bar: 30,  sales: '13 440' },
-    ],
-  };
-
-  const staffByRange = {
-    aujourdhui: [
-      { av: 'FK', cls: '',         name: 'Fatima Khalki',  role: 'Serveuse senior · service en salle', shift: '5h 32', amt: '5 240 MAD', tx: '42 tx' },
-      { av: 'HJ', cls: 'b',        name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '5h 10', amt: '4 680 MAD', tx: '38 tx' },
-      { av: 'SB', cls: 'c',        name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '4h 48', amt: '3 920 MAD', tx: '54 tx' },
-      { av: 'YA', cls: 'd',        name: 'Youssef Amrani', role: 'Serveur · pause depuis 14:12',          shift: '3h 22', amt: '2 110 MAD', tx: '25 tx' },
-      { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '—',     amt: '—',         tx: '' },
-    ],
-    hier: [
-      { av: 'FK', cls: 'offline', name: 'Fatima Khalki',  role: 'Serveuse senior · service de hier',   shift: '8h 12', amt: '7 420 MAD', tx: '58 tx' },
-      { av: 'HJ', cls: 'offline', name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '7h 48', amt: '6 980 MAD', tx: '52 tx' },
-      { av: 'SB', cls: 'offline', name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '6h 30', amt: '5 240 MAD', tx: '64 tx' },
-      { av: 'YA', cls: 'offline', name: 'Youssef Amrani', role: 'Serveur · service du soir',            shift: '5h 50', amt: '3 240 MAD', tx: '38 tx' },
-      { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '—',         tx: '' },
-    ],
-    septJours: [
-      { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 6 jours de service',   shift: '48h 20', amt: '36 800 MAD', tx: '298 tx' },
-      { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 6 jours',                       shift: '46h 10', amt: '32 400 MAD', tx: '256 tx' },
-      { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 7 jours',                       shift: '42h 00', amt: '28 700 MAD', tx: '342 tx' },
-      { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 5 jours',                       shift: '34h 40', amt: '18 200 MAD', tx: '184 tx' },
-      { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '—',          tx: '' },
-    ],
-    trenteJours: [
-      { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 26 jours',              shift: '208h 40', amt: '152 600 MAD', tx: '1 240 tx' },
-      { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 25 jours',                      shift: '198h 20', amt: '138 800 MAD', tx: '1 086 tx' },
-      { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 28 jours',                      shift: '174h 00', amt: '118 400 MAD', tx: '1 458 tx' },
-      { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 21 jours',                      shift: '146h 20', amt: '76 400 MAD',  tx: '784 tx' },
-      { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '—',           tx: '' },
-    ],
+  const staffByVenue = {
+    cafeAtlas: {
+      aujourdhui: [
+        { av: 'FK', cls: '',         name: 'Fatima Khalki',  role: 'Serveuse senior · service en salle', shift: '5h 32', amt: '5 240 MAD', tx: '42 tx' },
+        { av: 'HJ', cls: 'b',        name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '5h 10', amt: '4 680 MAD', tx: '38 tx' },
+        { av: 'SB', cls: 'c',        name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '4h 48', amt: '3 920 MAD', tx: '54 tx' },
+        { av: 'YA', cls: 'd',        name: 'Youssef Amrani', role: 'Serveur · pause depuis 14:12',          shift: '3h 22', amt: '2 110 MAD', tx: '25 tx' },
+        { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '—',     amt: '—',         tx: '' },
+      ],
+      hier: [
+        { av: 'FK', cls: 'offline', name: 'Fatima Khalki',  role: 'Serveuse senior · service de hier',   shift: '8h 12', amt: '7 420 MAD', tx: '58 tx' },
+        { av: 'HJ', cls: 'offline', name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '7h 48', amt: '6 980 MAD', tx: '52 tx' },
+        { av: 'SB', cls: 'offline', name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '6h 30', amt: '5 240 MAD', tx: '64 tx' },
+        { av: 'YA', cls: 'offline', name: 'Youssef Amrani', role: 'Serveur · service du soir',            shift: '5h 50', amt: '3 240 MAD', tx: '38 tx' },
+        { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '—',         tx: '' },
+      ],
+      septJours: [
+        { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 6 jours de service',   shift: '48h 20', amt: '36 800 MAD', tx: '298 tx' },
+        { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 6 jours',                       shift: '46h 10', amt: '32 400 MAD', tx: '256 tx' },
+        { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 7 jours',                       shift: '42h 00', amt: '28 700 MAD', tx: '342 tx' },
+        { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 5 jours',                       shift: '34h 40', amt: '18 200 MAD', tx: '184 tx' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '—',          tx: '' },
+      ],
+      trenteJours: [
+        { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 26 jours',              shift: '208h 40', amt: '152 600 MAD', tx: '1 240 tx' },
+        { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 25 jours',                      shift: '198h 20', amt: '138 800 MAD', tx: '1 086 tx' },
+        { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 28 jours',                      shift: '174h 00', amt: '118 400 MAD', tx: '1 458 tx' },
+        { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 21 jours',                      shift: '146h 20', amt: '76 400 MAD',  tx: '784 tx' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '—',           tx: '' },
+      ],
+    },
+    maisonMansour: {
+      aujourdhui: [
+        { av: 'KI', cls: '',  name: 'Karima Idrissi', role: 'Vendeuse principale · service en cours', shift: '5h 30', amt: '6 200 MAD', tx: '18 tx' },
+        { av: 'AB', cls: 'b', name: 'Aicha Benali',   role: 'Vendeuse · pause depuis 14:30',          shift: '4h 12', amt: '3 100 MAD', tx: '14 tx' },
+        { av: 'RT', cls: 'c', name: 'Rania Tazi',     role: 'Vendeuse · vitrine',                     shift: '4h 48', amt: '2 520 MAD', tx: '10 tx' },
+      ],
+      hier: [
+        { av: 'KI', cls: 'offline', name: 'Karima Idrissi', role: 'Vendeuse principale · service de hier', shift: '8h 30', amt: '6 850 MAD', tx: '20 tx' },
+        { av: 'AB', cls: 'offline', name: 'Aicha Benali',   role: 'Vendeuse · journée complète',           shift: '7h 50', amt: '3 280 MAD', tx: '15 tx' },
+        { av: 'RT', cls: 'offline', name: 'Rania Tazi',     role: 'Vendeuse · vitrine',                    shift: '7h 30', amt: '1 980 MAD', tx: '8 tx' },
+      ],
+      septJours: [
+        { av: 'KI', cls: '',  name: 'Karima Idrissi', role: 'Vendeuse principale · 6 jours', shift: '48h 30', amt: '38 200 MAD', tx: '128 tx' },
+        { av: 'AB', cls: 'b', name: 'Aicha Benali',   role: 'Vendeuse · 6 jours',            shift: '44h 10', amt: '24 800 MAD', tx: '102 tx' },
+        { av: 'RT', cls: 'c', name: 'Rania Tazi',     role: 'Vendeuse · 5 jours',            shift: '36h 50', amt: '15 400 MAD', tx: '65 tx' },
+      ],
+      trenteJours: [
+        { av: 'KI', cls: '',  name: 'Karima Idrissi', role: 'Vendeuse principale · 26 jours', shift: '210h 30', amt: '162 800 MAD', tx: '548 tx' },
+        { av: 'AB', cls: 'b', name: 'Aicha Benali',   role: 'Vendeuse · 25 jours',             shift: '194h 50', amt: '105 200 MAD', tx: '432 tx' },
+        { av: 'RT', cls: 'c', name: 'Rania Tazi',     role: 'Vendeuse · 22 jours',             shift: '162h 30', amt: '64 800 MAD',  tx: '260 tx' },
+      ],
+    },
+    spaBahia: {
+      aujourdhui: [
+        { av: 'NH', cls: '',  name: 'Nour El Hassan',     role: 'Praticienne senior · soins du visage',   shift: '6h 30', amt: '3 850 MAD', tx: '8 RDV' },
+        { av: 'SB', cls: 'b', name: 'Salma Benkirane',    role: 'Praticienne · massages',                 shift: '5h 50', amt: '3 200 MAD', tx: '7 RDV' },
+        { av: 'YB', cls: 'c', name: 'Yasmine Bouchikhi',  role: 'Praticienne · hammam & gommage',         shift: '4h 30', amt: '1 900 MAD', tx: '5 RDV' },
+      ],
+      hier: [
+        { av: 'NH', cls: 'offline', name: 'Nour El Hassan',     role: 'Praticienne senior · journée complète', shift: '8h 00', amt: '3 600 MAD', tx: '7 RDV' },
+        { av: 'SB', cls: 'offline', name: 'Salma Benkirane',    role: 'Praticienne · massages',                shift: '7h 30', amt: '3 050 MAD', tx: '6 RDV' },
+        { av: 'YB', cls: 'offline', name: 'Yasmine Bouchikhi',  role: 'Praticienne · hammam',                  shift: '6h 30', amt: '1 730 MAD', tx: '5 RDV' },
+      ],
+      septJours: [
+        { av: 'NH', cls: '',  name: 'Nour El Hassan',     role: 'Praticienne senior · 6 jours', shift: '46h 00', amt: '26 800 MAD', tx: '54 RDV' },
+        { av: 'SB', cls: 'b', name: 'Salma Benkirane',    role: 'Praticienne · 6 jours',        shift: '42h 30', amt: '22 400 MAD', tx: '48 RDV' },
+        { av: 'YB', cls: 'c', name: 'Yasmine Bouchikhi',  role: 'Praticienne · 5 jours',        shift: '32h 00', amt: '15 000 MAD', tx: '40 RDV' },
+      ],
+      trenteJours: [
+        { av: 'NH', cls: '',  name: 'Nour El Hassan',     role: 'Praticienne senior · 27 jours', shift: '198h 00', amt: '112 800 MAD', tx: '224 RDV' },
+        { av: 'SB', cls: 'b', name: 'Salma Benkirane',    role: 'Praticienne · 26 jours',        shift: '184h 30', amt: '94 200 MAD',  tx: '198 RDV' },
+        { av: 'YB', cls: 'c', name: 'Yasmine Bouchikhi',  role: 'Praticienne · 23 jours',        shift: '142h 00', amt: '62 400 MAD',  tx: '158 RDV' },
+      ],
+    },
   };
 
   /* ═══════════════ STATE + EVENTS ═══════════════ */
@@ -564,7 +1155,7 @@
   function renderHero() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = heroDataByRange[effective];
+    const data = vData(heroDataByVenue, currentRange);
     if (!data) return;
 
     const labelEl = document.querySelector('[data-hero-label]');
@@ -622,12 +1213,38 @@
     }
   }
 
+  /* ═══════════════ RENDER: HERO AI PANEL (per venue) ═══════════════ */
+
+  function renderHeroAi() {
+    const rec = window.KiwiVenue?.getHeroAiRec?.();
+    if (!rec) return;
+    const titleEl = document.querySelector('.hai-rec-title');
+    const obsEl   = document.querySelector('.hai-rec-obs');
+    const actEl   = document.querySelector('.hai-rec-act');
+    if (titleEl) titleEl.textContent = rec.title;
+    if (obsEl)   obsEl.textContent = rec.obs;
+    if (actEl)   actEl.textContent = rec.act;
+  }
+
+  /* ═══════════════ RENDER: HEATMAP AI HINT (per venue) ═══════════════ */
+
+  function renderHeatmapAi() {
+    const rec = window.KiwiVenue?.getHeatmapAiRec?.();
+    if (!rec) return;
+    const titleEl = document.querySelector('.hh-ai-title');
+    const obsEl   = document.querySelector('.hh-ai-obs');
+    const ctaEl   = document.querySelector('.hh-ai-cta');
+    if (titleEl) titleEl.textContent = rec.title;
+    if (obsEl)   obsEl.textContent = rec.obs;
+    if (ctaEl)   ctaEl.textContent = rec.cta;
+  }
+
   /* ═══════════════ RENDER: HERO GOAL BAR ═══════════════ */
 
   function renderGoal() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = goalByRange[effective];
+    const data = vData(goalByVenue, currentRange);
     if (!data) return;
 
     const labelTxt = GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange];
@@ -658,7 +1275,9 @@
   }
   function buildHeatmap(rng) {
     if (rng === 'personnalise') rng = 'aujourdhui';
-    const rev = HH_RAW[rng], cov = HH_COVERS[rng];
+    const v = getCurrentVenue();
+    const rev = (HH_RAW_BY_VENUE[v]?.[rng]) || HH_RAW_BY_VENUE.cafeAtlas[rng];
+    const cov = (HH_COVERS_BY_VENUE[v]?.[rng]) || HH_COVERS_BY_VENUE.cafeAtlas[rng];
     const max = Math.max(...rev);
     return HH_HOURS.map((h, i) => ({
       hour: h, revenue: rev[i], covers: cov[i],
@@ -698,29 +1317,96 @@
     return frInt(v) + unit;
   }
 
+  // Per-key icon glyphs (single SVG path per key, restyled per render).
+  const KPI_ICONS = {
+    tx:           '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+    panier:       '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V5a4 4 0 018 0v3"/>',
+    tips:         '<path d="M12 2v20M15 5H9.5a2.5 2.5 0 000 5h5a2.5 2.5 0 010 5H8"/>',
+    success:      '<path d="M5 12l5 5L20 7"/>',
+    ratio:        '<circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/>',
+    regulars:     '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/>',
+    tauxRetour:   '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
+  };
+  // One sparkline path per key. Colour stays atlas; deltas drive the up/down chip.
+  const KPI_SPARKS = {
+    tx:         'M0 18 L15 15 L30 16 L45 12 L60 10 L75 7 L90 11 L105 6 L120 4',
+    panier:     'M0 11 L15 13 L30 10 L45 14 L60 11 L75 12 L90 10 L105 13 L120 11',
+    tips:       'M0 18 L15 16 L30 14 L45 15 L60 10 L75 11 L90 7 L105 4 L120 2',
+    success:    'M0 7 L15 6 L30 8 L45 5 L60 6 L75 4 L90 5 L105 3 L120 2',
+    ratio:      'M0 14 L15 13 L30 12 L45 11 L60 10 L75 9 L90 7 L105 6 L120 5',
+    regulars:   'M0 15 L15 14 L30 15 L45 13 L60 10 L75 11 L90 9 L105 8 L120 6',
+    tauxRetour: 'M0 4 L15 6 L30 5 L45 8 L60 9 L75 11 L90 10 L105 13 L120 14',
+  };
+
   function renderKpiBand() {
     const lang = getLang();
-    const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = kpiByRange[effective];
+    const data = vData(kpiByVenue, currentRange);
     if (!data) return;
     const suffix = KPI_DELTA_SUFFIX[lang]?.[currentRange] || KPI_DELTA_SUFFIX.fr[currentRange];
 
-    Object.entries(data).forEach(([key, spec]) => {
-      const card = document.querySelector(`[data-kpi="${key}"]`);
+    const wrap = document.querySelector('[data-kpi-band]');
+    if (!wrap) return;
+
+    // Resolve which 6 KPI keys to render for this venue's vertical
+    const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
+    const spec = window.KiwiVenue?.getKpiSpec?.(venueType) || [];
+
+    // Read previous values (for count-up animation continuity within same venue)
+    const prevVals = {};
+    wrap.querySelectorAll('.kpi-m').forEach(card => {
+      const k = card.dataset.kpi;
+      const v = card.querySelector('[data-kpi-val]');
+      if (k && v) prevVals[k] = parseAmountFromEl(v);
+    });
+    const prevVenue = wrap.dataset.venue || '';
+    const currentVenue = getCurrentVenue();
+    const isVenueSwitch = prevVenue !== currentVenue;
+
+    // Build tiles for each KPI key in the spec, skipping missing data
+    const tiles = spec.map(s => {
+      const tileData = data[s.key];
+      if (!tileData) return ''; // tile hidden for this vertical/range
+      const sparkPath = KPI_SPARKS[s.key] || KPI_SPARKS.tx;
+      const iconPath = KPI_ICONS[s.key] || KPI_ICONS.tx;
+      const i18nAttr = s.i18n ? ` data-i18n="${s.i18n}"` : '';
+      // If a translation exists in T, use it as initial label; otherwise the FR label.
+      const T = window.KiwiI18n?.T?.[lang] || {};
+      const label = T[s.i18n] || s.label;
+      return `
+        <div class="kpi-m" data-kpi="${s.key}">
+          <div class="l"><span${i18nAttr}>${label}</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconPath}</svg></div></div>
+          <div class="v" data-kpi-val></div>
+          <div class="d" data-kpi-delta></div>
+          <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
+            <path d="${sparkPath}" stroke="#0B6E4F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+      `;
+    }).join('');
+    wrap.innerHTML = tiles;
+    wrap.dataset.venue = currentVenue;
+
+    // Populate values + deltas (count-up animation only when same venue)
+    spec.forEach(s => {
+      const tileSpec = data[s.key];
+      if (!tileSpec) return;
+      const card = wrap.querySelector(`[data-kpi="${s.key}"]`);
       if (!card) return;
       const valEl = card.querySelector('[data-kpi-val]');
       const deltaEl = card.querySelector('[data-kpi-delta]');
-
       if (valEl) {
-        if (spec.text != null) {
-          valEl.innerHTML = fmtKpiVal(spec, 0);
+        if (tileSpec.text != null) {
+          valEl.innerHTML = fmtKpiVal(tileSpec, 0);
+        } else if (isVenueSwitch) {
+          // Venue change: set value instantly (DOM was rebuilt anyway)
+          valEl.innerHTML = fmtKpiVal(tileSpec, tileSpec.value);
         } else {
-          const from = parseAmountFromEl(valEl);
-          animateNumber(valEl, from, spec.value, { duration: 700, format: v => fmtKpiVal(spec, v) });
+          const from = prevVals[s.key] ?? 0;
+          animateNumber(valEl, from, tileSpec.value, { duration: 700, format: v => fmtKpiVal(tileSpec, v) });
         }
       }
       if (deltaEl) {
-        const d = spec.delta;
+        const d = tileSpec.delta;
         deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
         deltaEl.innerHTML = `${arrowSvg(d >= 0)}${fmtPct(d)} ${suffix}`;
       }
@@ -739,7 +1425,7 @@
   function renderRevChart() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = revChartByRange[effective];
+    const data = vData(revChartByVenue, currentRange);
     if (!data) return;
     const svg = document.querySelector('[data-rev-svg]');
     if (!svg) return;
@@ -957,7 +1643,7 @@
 
   function renderMix() {
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = mixByRange[effective];
+    const data = vData(mixByVenue, currentRange);
     if (!data) return;
     const lang = getLang();
 
@@ -1026,6 +1712,10 @@
     const center = document.querySelector('[data-mix-center-amt]');
     if (center) animateNumber(center, parseAmountFromEl(center), data.centerMad, { duration: 700, format: v => frInt(v) });
 
+    // Per-venue CMI savings line under the donut
+    const savingsEl = document.querySelector('[data-mix-savings]');
+    if (savingsEl) savingsEl.textContent = window.KiwiVenue?.getMixCmiSavings?.() || '~3 900 MAD ce mois';
+
     const sub = document.querySelector('[data-mix-sub]');
     if (sub) sub.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange];
 
@@ -1058,7 +1748,7 @@
   function renderFeed() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const rows = FEED_DATA[effective];
+    const rows = vData(FEED_BY_VENUE, currentRange);
     const wrap = document.querySelector('[data-feed]');
     if (wrap && rows) {
       wrap.innerHTML = rows.map(r => `
@@ -1089,7 +1779,7 @@
   function renderSettle() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = settleByRange[effective];
+    const data = vData(settleByVenue, currentRange);
     if (!data) return;
 
     const lblEl = document.querySelector('[data-settle-lbl]');
@@ -1114,7 +1804,7 @@
 
   function renderTimeline() {
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const total = timelineWeekTotalByRange[effective];
+    const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
     const totalEl = document.querySelector('[data-timeline-week-total]');
     if (totalEl && total) totalEl.textContent = total;
   }
@@ -1124,7 +1814,7 @@
   function renderHealth() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = healthByRange[effective];
+    const data = vData(healthByVenue, currentRange);
     if (!data) return;
 
     const subEl = document.querySelector('[data-health-sub]');
@@ -1145,17 +1835,25 @@
   function renderBench() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = benchByRange[effective];
+    const data = vData(benchByVenue, currentRange);
     if (!data) return;
 
+    // Title + sub vary by venue type (cafés / boutiques / spas similaires)
+    const benchLabels = window.KiwiVenue?.getBenchLabels?.() || { title: 'Vous vs cafés similaires', sub: BENCH_SUB.fr[currentRange] };
+    const titleEl = document.querySelector('[data-bench-title]');
+    if (titleEl) titleEl.textContent = benchLabels.title;
     const subEl = document.querySelector('[data-bench-sub]');
-    if (subEl) subEl.textContent = BENCH_SUB[lang]?.[currentRange] || BENCH_SUB.fr[currentRange];
+    if (subEl) subEl.textContent = benchLabels.sub || BENCH_SUB[lang]?.[currentRange] || BENCH_SUB.fr[currentRange];
 
     const rankEl = document.querySelector('[data-bench-rank]');
     if (rankEl) rankEl.textContent = `#${data.rank}`;
 
+    // Match the rank-sub wording to the vertical
+    const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
+    const peerLabel = venueType === 'boutique' ? 'boutiques' : venueType === 'spa' ? 'spas' : 'cafés';
+    const cityLabel = venueType === 'spa' ? 'Casa / Marrakech' : 'Casablanca';
     const rankSubEl = document.querySelector('[data-bench-rank-sub]');
-    if (rankSubEl) rankSubEl.innerHTML = `sur <b>${data.total} cafés</b> à Casablanca · top <b>${data.top} %</b>`;
+    if (rankSubEl) rankSubEl.innerHTML = `sur <b>${data.total} ${peerLabel}</b> à ${cityLabel} · top <b>${data.top} %</b>`;
 
     const comp = document.querySelector('[data-bench-comp]');
     if (comp) {
@@ -1177,7 +1875,7 @@
   function renderProducts() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = productsByRange[effective];
+    const data = vData(productsByVenue, currentRange);
     const list = document.querySelector('[data-products-list]');
     if (list && data) {
       list.innerHTML = data.map((p, i) => `
@@ -1201,7 +1899,7 @@
   function renderStaff() {
     const lang = getLang();
     const effective = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-    const data = staffByRange[effective];
+    const data = vData(staffByVenue, currentRange);
     const list = document.querySelector('[data-staff-list]');
     if (list && data) {
       list.innerHTML = data.map(s => `
@@ -1292,8 +1990,10 @@
     });
 
     subscribe(renderHero);
+    subscribe(renderHeroAi);
     subscribe(renderGoal);
     subscribe(renderHeatmap);
+    subscribe(renderHeatmapAi);
     subscribe(renderKpiBand);
     subscribe(renderRevChart);
     subscribe(renderMix);
@@ -1305,6 +2005,33 @@
     subscribe(renderProducts);
     subscribe(renderStaff);
 
+    // Subscribe to venue changes — refire all renders so dashboard
+    // reskins when user picks a different venue from the sidebar.
+    const subVenue = () => {
+      if (window.KiwiVenue?.subscribe) {
+        window.KiwiVenue.subscribe(() => {
+          renderHero();
+          renderHeroAi();
+          renderGoal();
+          renderHeatmap();
+          renderHeatmapAi();
+          renderKpiBand();
+          renderRevChart();
+          renderMix();
+          renderFeed();
+          renderSettle();
+          renderTimeline();
+          renderHealth();
+          renderBench();
+          renderProducts();
+          renderStaff();
+        });
+        return;
+      }
+      setTimeout(subVenue, 30);
+    };
+    subVenue();
+
     // Re-fit hero amount + re-flow chart on viewport resize
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -1313,7 +2040,7 @@
         const amtEl = document.querySelector('[data-hero-amount]');
         if (amtEl) {
           const eff = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
-          const data = heroDataByRange[eff];
+          const data = vData(heroDataByVenue, eff);
           if (data) fitHeroAmount(amtEl, data.amount);
         }
         // Re-render chart at the new pixel width — no entrance animation
@@ -1324,8 +2051,10 @@
 
     renderSelector();
     renderHero();
+    renderHeroAi();
     renderGoal();
     renderHeatmap();
+    renderHeatmapAi();
     renderKpiBand();
     renderRevChart();
     renderMix();
@@ -1346,21 +2075,25 @@
     // Live ticks only make sense on "today" — skip on historical ranges.
     const r = currentRange === 'personnalise' ? 'aujourdhui' : currentRange;
     if (r !== 'aujourdhui') return;
+    // And only mutate the currently active venue's data (each venue has its own).
+    const v = getCurrentVenue();
+    const hero = heroDataByVenue[v]?.aujourdhui;
+    const goal = goalByVenue[v]?.aujourdhui;
+    const kpi  = kpiByVenue[v]?.aujourdhui;
+    if (!hero || !goal || !kpi) return;
 
-    // Mutate the single source of truth for today's revenue
-    heroDataByRange.aujourdhui.amount += amount;
-    goalByRange.aujourdhui.current = heroDataByRange.aujourdhui.amount;
+    hero.amount += amount;
+    goal.current = hero.amount;
     // Keep "Net après Kiwi" roughly proportional (~83.9 % after commission)
-    heroDataByRange.aujourdhui.netAfterKiwi = Math.round(heroDataByRange.aujourdhui.amount * 0.839);
+    hero.netAfterKiwi = Math.round(hero.amount * 0.839);
 
     // Bump KPI counters that the live tx affects
-    const kpi = kpiByRange.aujourdhui;
-    if (kpi?.tx)     kpi.tx.value += 1;
-    if (kpi?.tips)   kpi.tips.value += tip;
-    if (kpi?.panier && kpi?.tx?.value > 0) {
-      kpi.panier.value = Math.round(heroDataByRange.aujourdhui.amount / kpi.tx.value);
+    if (kpi.tx)     kpi.tx.value += 1;
+    if (kpi.tips)   kpi.tips.value += tip;
+    if (kpi.panier && kpi.tx?.value > 0) {
+      kpi.panier.value = Math.round(hero.amount / kpi.tx.value);
     }
-    if (kpi?.regulars) kpi.regulars.unit = `/ ${kpi.tx.value}`;
+    if (kpi.regulars) kpi.regulars.unit = `/ ${kpi.tx.value}`;
 
     // Re-render the affected blocks (each respects its own animation)
     renderHero();
