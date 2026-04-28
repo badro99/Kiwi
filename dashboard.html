@@ -85,6 +85,115 @@
   [data-vertical-section] { transition: opacity 150ms ease-out; }
   [data-vertical-section].vert-fading { opacity: 0; }
 
+  /* ─────────────── KIWI ULTRA upsell modal ─────────────── */
+  .upgrade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .upgrade-grid { grid-template-columns: 1fr; } }
+
+  /* Pro card (current plan / entry tier) */
+  .upgrade-pro-card { padding: 22px 20px; background: var(--paper-soft); border-radius: 16px; position: relative; border: 1px solid var(--n-200); }
+  .upgrade-pro-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.12em; font-weight: 500; }
+  .upgrade-pro-price { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; margin-top: 6px; color: var(--ink); font-feature-settings: "tnum" 1; }
+  .upgrade-pro-price-unit { font-size: 13px; opacity: 0.6; font-weight: 500; margin-left: 2px; }
+  .upgrade-pro-tag { font-size: 12.5px; color: var(--n-500); margin-top: 4px; }
+  .upgrade-pro-features { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13px; color: var(--n-700); line-height: 1.95; }
+  .upgrade-pro-current { position: absolute; top: -10px; left: 14px; background: #fff; color: var(--n-600); font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.12em; border: 1px solid var(--n-200); }
+
+  /* ULTRA card — rich dark green, animated mesh, mint shimmer */
+  .ultra-card {
+    position: relative;
+    padding: 24px 22px 26px;
+    background: linear-gradient(135deg, #053B2C 0%, #0A4A38 40%, #02261C 100%);
+    color: var(--paper);
+    border-radius: 18px;
+    overflow: hidden;
+    isolation: isolate;
+    box-shadow: 0 22px 56px -18px rgba(2,38,28,0.7), 0 4px 14px rgba(2,38,28,0.4);
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms;
+  }
+  .ultra-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 28px 64px -18px rgba(2,38,28,0.78), 0 6px 18px rgba(2,38,28,0.5);
+  }
+  /* Slowly rotating conic mesh — premium "depth" feeling */
+  .ultra-card::before {
+    content: ""; position: absolute; inset: -50%;
+    background: conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, rgba(125,242,176,0.10) 60deg,
+      transparent 130deg, rgba(125,242,176,0.06) 200deg,
+      transparent 270deg, rgba(125,242,176,0.12) 340deg, transparent 360deg);
+    animation: ultra-mesh 28s linear infinite;
+    z-index: 0; pointer-events: none;
+  }
+  @keyframes ultra-mesh { to { transform: rotate(360deg); } }
+  /* Mint shimmer that sweeps across periodically */
+  .ultra-card::after {
+    content: ""; position: absolute; top: 0; left: -120%;
+    width: 70%; height: 100%; z-index: 1;
+    background: linear-gradient(105deg, transparent 30%, rgba(125,242,176,0.10) 50%, transparent 70%);
+    animation: ultra-shimmer 7s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes ultra-shimmer {
+    0%, 70% { left: -120%; }
+    85%, 100% { left: 130%; }
+  }
+  .ultra-card > * { position: relative; z-index: 2; }
+
+  .ultra-eyebrow {
+    font-family: var(--mono); font-size: 11.5px; font-weight: 700;
+    letter-spacing: 0.20em; text-transform: uppercase;
+    color: var(--mint);
+    text-shadow: 0 0 18px rgba(125,242,176,0.45);
+  }
+  .ultra-badge {
+    position: absolute; top: -10px; right: 14px; z-index: 4;
+    background: linear-gradient(135deg, var(--mint), #5CCFA0);
+    color: var(--riad);
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    padding: 5px 11px; border-radius: 999px;
+    letter-spacing: 0.14em;
+    box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 0 rgba(125,242,176,0.4);
+    animation: ultra-badge 2.4s ease-in-out infinite;
+  }
+  @keyframes ultra-badge {
+    0%, 100% { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 0 rgba(125,242,176,0.4); }
+    50%      { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 12px rgba(125,242,176,0); }
+  }
+  .ultra-price {
+    font-size: 34px; font-weight: 600; letter-spacing: -0.03em;
+    margin-top: 6px; line-height: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #d0eed9 90%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-feature-settings: "tnum" 1;
+  }
+  .ultra-price-unit { font-size: 14px; -webkit-text-fill-color: #c6ead4; color: #c6ead4; opacity: 0.85; font-weight: 500; margin-left: 2px; }
+  .ultra-tag { font-size: 12.5px; color: #c6ead4; margin-top: 6px; letter-spacing: 0.005em; }
+  .ultra-features { list-style: none; padding: 0; margin: 18px 0 0; font-size: 13px; color: #e0eee5; line-height: 1.85; display: flex; flex-direction: column; gap: 4px; }
+  .ultra-features li { display: flex; align-items: flex-start; gap: 10px; }
+  .ultra-features li::before {
+    content: ""; display: inline-block; flex-shrink: 0;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--mint); margin-top: 8px;
+    box-shadow: 0 0 8px rgba(125,242,176,0.65);
+  }
+
+  /* Footnote tip below the cards */
+  .upgrade-tip { margin-top: 18px; padding: 16px; background: var(--mint-soft); border-radius: 12px; font-size: 13px; display: flex; gap: 10px; line-height: 1.5; }
+
+  /* ULTRA-flavored CTA button — replaces the default .kb.atlas inside the upsell modal */
+  .kb.ultra {
+    background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%);
+    color: var(--paper);
+    box-shadow: 0 6px 18px -6px rgba(11,110,79,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+    transition: transform 150ms, box-shadow 150ms;
+  }
+  .kb.ultra:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -6px rgba(11,110,79,0.55), inset 0 1px 0 rgba(255,255,255,0.18); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ultra-card::before, .ultra-card::after, .ultra-badge { animation: none !important; }
+  }
+
   .sidebar nav { display: flex; flex-direction: column; gap: 1px; }
   .sidebar nav a { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; color: #8f9591; transition: all 120ms; position: relative; }
   .sidebar nav a:hover { background: rgba(255,255,255,0.04); color: var(--paper); }
@@ -653,10 +762,10 @@
     </nav>
 
     <div class="upsell">
-      <div class="t">KIWI PRO</div>
-      <h4>699 MAD/mois</h4>
-      <p>Multi-terminal, gestion stock, API et intégrations. Upgrade depuis Basic 399 sans engagement.</p>
-      <button data-action="upgrade-pro">Passer à Pro →</button>
+      <div class="t">KIWI ULTRA</div>
+      <h4>1 499 MAD/mois</h4>
+      <p>Multi-pays, API enterprise, account manager dédié. Upgrade depuis Pro 399 sans engagement.</p>
+      <button data-action="upgrade-pro">Passer à Ultra →</button>
     </div>
 
     <div class="merchant">
@@ -873,7 +982,7 @@
             <div class="donut-legend" data-mix-legend></div>
           </div>
           <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; font-size: 12.5px;">
-            <div style="color: var(--n-500);">Abonnement Kiwi Basic</div>
+            <div style="color: var(--n-500);">Abonnement Kiwi Pro</div>
             <div style="font-family: var(--mono); font-weight: 500; color: var(--atlas);">399 MAD/mois · tout inclus</div>
           </div>
           <div style="margin-top: 16px; padding: 14px 16px; background: var(--paper-soft); border-radius: 10px; display: flex; gap: 12px; align-items: flex-start;">

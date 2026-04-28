@@ -763,45 +763,50 @@
     },
 
     'upgrade-pro': () => modal({
-      tag: 'KIWI PRO',
-      title: 'Passez à Pro pour 300 MAD de plus par mois.',
-      desc: 'Multi-terminal, routing par sous-catégorie, gestion stock, API et intégrations.',
-      width: 560,
+      tag: 'KIWI ULTRA',
+      title: 'Passez à Ultra et amplifiez Kiwi à l\'échelle entreprise.',
+      desc: 'Au-delà de l\'opérationnel : API enterprise illimitée, multi-pays, account manager dédié 24/7 et conseil stratégique trimestriel.',
+      width: 640,
       body: `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div style="padding:20px; background:var(--paper-soft); border-radius:14px;">
-            <div style="font-size:11px; color:var(--n-500); letter-spacing:0.08em; font-family:var(--mono);">KIWI BASIC</div>
-            <div style="font-size:28px; font-weight:600; letter-spacing:-0.025em; margin-top:4px;">399 MAD<span style="font-size:13px; opacity:0.7;">/mois</span></div>
-            <div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Matériel offert · tout inclus</div>
-            <ul style="list-style:none; padding:0; margin:14px 0 0; font-size:13px; color:var(--n-700); line-height:1.9;">
-              <li>✓ Caisse restaurant</li>
-              <li>✓ Règlement T+1</li>
+        <div class="upgrade-grid">
+          <div class="upgrade-pro-card">
+            <div class="upgrade-pro-current">PLAN ACTUEL</div>
+            <div class="upgrade-pro-eyebrow">KIWI PRO</div>
+            <div class="upgrade-pro-price">399 MAD<span class="upgrade-pro-price-unit">/mois</span></div>
+            <div class="upgrade-pro-tag">Matériel offert · tout inclus</div>
+            <ul class="upgrade-pro-features">
+              <li>✓ Caisse complète · multi-vertical</li>
+              <li>✓ Règlement T+1 garanti</li>
               <li>✓ Support WhatsApp</li>
-              <li>✓ 8 membres staff max</li>
+              <li>✓ Jusqu'à 8 membres d'équipe</li>
+              <li>✓ Multi-site (3 venues)</li>
             </ul>
           </div>
-          <div style="padding:20px; background:var(--atlas); color:var(--paper); border-radius:14px; position:relative;">
-            <div style="position:absolute; top:-10px; right:14px; background:var(--mint); color:var(--riad); font-size:10px; font-weight:700; padding:4px 10px; border-radius:999px; letter-spacing:0.05em;">RECOMMANDÉ</div>
-            <div style="font-size:11px; color:var(--mint); letter-spacing:0.08em; font-family:var(--mono);">KIWI PRO</div>
-            <div style="font-size:28px; font-weight:600; letter-spacing:-0.025em; margin-top:4px;">699 MAD<span style="font-size:13px; opacity:0.7;">/mois</span></div>
-            <div style="font-size:12.5px; color:#c6ead4; margin-top:4px;">Multi-terminal · multi-site</div>
-            <ul style="list-style:none; padding:0; margin:14px 0 0; font-size:13px; color:#d0eed9; line-height:1.9;">
-              <li>✓ Routing par sous-catégorie</li>
-              <li>✓ Équipe illimitée</li>
-              <li>✓ Gestion stock ingrédients</li>
-              <li>✓ Analytics avancés + API</li>
-              <li>✓ Support prioritaire</li>
+          <div class="ultra-card">
+            <div class="ultra-badge">RECOMMANDÉ</div>
+            <div class="ultra-eyebrow">KIWI ULTRA</div>
+            <div class="ultra-price">1 499 MAD<span class="ultra-price-unit">/mois</span></div>
+            <div class="ultra-tag">Sur-mesure · multi-pays · 24/7</div>
+            <ul class="ultra-features">
+              <li>Tout Kiwi Pro inclus</li>
+              <li>API enterprise illimitée · SLA 99,99 %</li>
+              <li>Multi-pays · corridor diaspora France ↔ Maroc</li>
+              <li>Équipe illimitée · venues illimitées</li>
+              <li>Account manager dédié 24/7</li>
+              <li>Conseil stratégique trimestriel</li>
+              <li>Onboarding white-glove sur place</li>
+              <li>Reporting C-suite personnalisé</li>
             </ul>
           </div>
         </div>
-        <div style="margin-top:18px; padding:16px; background:var(--mint-soft); border-radius:12px; font-size:13px; display:flex; gap:10px;">
+        <div class="upgrade-tip">
           <div>💡</div>
-          <div style="flex:1;"><b>Quand passer à Pro :</b> dès qu'on ouvre une seconde zone de préparation (Crêpes Bar, Pâtisserie, Terrasse dédiée) ou qu'on dépasse 8 membres d'équipe.</div>
+          <div style="flex:1;"><b>Pourquoi Ultra :</b> votre compte multi-venues (Café Atlas · Maison Mansour · Spa Bahia) tire déjà parti du multi-site. Ultra ajoute le multi-pays, l'API enterprise et l'account manager dédié — le palier qu'utilisent les groupes hôteliers et chaînes premium au Maroc.</div>
         </div>
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Plus tard</button>
-        <button class="kb atlas" data-upgrade>Passer à Pro maintenant →</button>
+        <button class="kb ultra" data-upgrade>Passer à Ultra maintenant →</button>
       `
     }),
 
