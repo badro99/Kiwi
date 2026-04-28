@@ -194,9 +194,11 @@ section.dark .two ul li::before, section.riad .two ul li::before, section.atlas 
 .feat .icon svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 1.5; fill: none; }
 .feat h4 { font-size: 18px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 10px; }
 .feat p { font-size: 14px; line-height: 1.55; color: var(--n-600); margin: 0; }
-section.dark .feat, section.riad .feat { background: rgba(247,245,240,0.04); border-color: rgba(247,245,240,0.08); color: var(--paper); }
-section.dark .feat .icon, section.riad .feat .icon { color: var(--mint); }
-section.dark .feat p, section.riad .feat p { color: rgba(247,245,240,0.65); }
+section.dark .feat, section.riad .feat, section.atlas .feat { background: rgba(247,245,240,0.06); border-color: rgba(247,245,240,0.14); color: var(--paper); }
+section.dark .feat .icon, section.riad .feat .icon, section.atlas .feat .icon { color: var(--mint); }
+section.dark .feat h4, section.riad .feat h4, section.atlas .feat h4 { color: var(--paper); }
+section.dark .feat p, section.riad .feat p, section.atlas .feat p { color: rgba(247,245,240,0.75); }
+section.dark .feat:hover, section.riad .feat:hover, section.atlas .feat:hover { border-color: var(--mint); }
 
 /* DEVICE FRAME */
 .device-frame { position: relative; border-radius: 24px; overflow: hidden; background: var(--ink); padding: 14px; box-shadow: 0 1px 1px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06), 0 36px 80px -20px rgba(11,110,79,0.18); border: 1px solid rgba(0,0,0,0.05); }
