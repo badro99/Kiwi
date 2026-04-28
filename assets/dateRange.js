@@ -972,6 +972,8 @@
         { stroke: '#D99A2B', pct: data.qr,   offset: -(data.visa + data.mc + data.tap - 25) },       // qr
       ];
       const built = donut.dataset.built === '1';
+      const STAGGER_MS = 150;
+      const FILL_MS = 850; // matches CSS transition duration
 
       if (!built) {
         donut.innerHTML = `
@@ -987,30 +989,37 @@
           `).join('')}
         `;
         donut.dataset.built = '1';
-        // Stagger 100ms between segments (CSS handles 600ms ease-out per segment)
+        // Initial entrance: segments wipe in clockwise, sequentially from visa → qr.
         segs.forEach((s, i) => {
           setTimeout(() => {
             const el = donut.querySelector(`[data-seg="${i}"]`);
             if (el) el.setAttribute('stroke-dasharray', `${s.pct} 100`);
-          }, 60 + i * 100);
+          }, 80 + i * STAGGER_MS);
         });
       } else {
-        // Range change: just update each segment — CSS transition glides to new value.
+        // Range change: stagger the per-segment update so the user sees the donut
+        // redistribute sector by sector rather than morph all 4 at once (too subtle).
         segs.forEach((s, i) => {
           const el = donut.querySelector(`[data-seg="${i}"]`);
           if (!el) return;
           el.setAttribute('stroke', s.stroke);
-          el.setAttribute('stroke-dasharray', `${s.pct} 100`);
-          el.setAttribute('stroke-dashoffset', String(s.offset));
+          setTimeout(() => {
+            el.setAttribute('stroke-dasharray', `${s.pct} 100`);
+            el.setAttribute('stroke-dashoffset', String(s.offset));
+          }, i * STAGGER_MS);
         });
       }
 
-      // Center text fade-in / re-trigger on render
+      // Center text re-fade on every render (load + range change). Force a reflow
+      // between the .in removal and re-add so the transition actually replays.
       const ringCenter = donut.parentElement?.querySelector('.ring-center');
       if (ringCenter) {
         ringCenter.classList.remove('in');
-        const total = built ? 0 : (60 + (segs.length - 1) * 100 + 600 - 200);
-        setTimeout(() => ringCenter.classList.add('in'), total);
+        // eslint-disable-next-line no-unused-expressions
+        ringCenter.offsetWidth; // force reflow
+        const startOffset = built ? 0 : 80;
+        const totalMs = startOffset + (segs.length - 1) * STAGGER_MS + FILL_MS - 280;
+        setTimeout(() => ringCenter.classList.add('in'), totalMs);
       }
     }
 
