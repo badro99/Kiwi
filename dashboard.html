@@ -96,7 +96,15 @@
   .upgrade-pro-price-unit { font-size: 13px; opacity: 0.6; font-weight: 500; margin-left: 2px; }
   .upgrade-pro-tag { font-size: 12.5px; color: var(--n-500); margin-top: 4px; }
   .upgrade-pro-features { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13px; color: var(--n-700); line-height: 1.95; }
-  .upgrade-pro-current { position: absolute; top: -10px; left: 14px; background: #fff; color: var(--n-600); font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.12em; border: 1px solid var(--n-200); }
+  .upgrade-pro-current {
+    position: absolute; top: 16px; right: 16px;
+    background: #fff; color: var(--n-600);
+    font-family: var(--sans);
+    font-size: 10px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    border: 1px solid var(--n-200);
+  }
 
   /* ULTRA card — rich dark green, animated mesh, mint shimmer */
   .ultra-card {
@@ -139,25 +147,29 @@
   }
   .ultra-card > * { position: relative; z-index: 2; }
 
+  /* Eyebrow — refined, not neon. White at 70% opacity, Inter Tight. */
   .ultra-eyebrow {
-    font-family: var(--mono); font-size: 11.5px; font-weight: 700;
-    letter-spacing: 0.20em; text-transform: uppercase;
-    color: var(--mint);
-    text-shadow: 0 0 18px rgba(125,242,176,0.45);
+    font-family: var(--sans);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(255,255,255,0.72);
   }
+  /* RECOMMANDÉ pill — inside the card so the modal's overflow can't clip it.
+   * Solid mint with riad ink, sans-serif, soft pulse ring. */
   .ultra-badge {
-    position: absolute; top: -10px; right: 14px; z-index: 4;
-    background: linear-gradient(135deg, var(--mint), #5CCFA0);
+    position: absolute; top: 16px; right: 16px; z-index: 4;
+    background: var(--mint);
     color: var(--riad);
-    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    font-family: var(--sans);
+    font-size: 10px; font-weight: 600;
     padding: 5px 11px; border-radius: 999px;
-    letter-spacing: 0.14em;
-    box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 0 rgba(125,242,176,0.4);
-    animation: ultra-badge 2.4s ease-in-out infinite;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    box-shadow: 0 4px 12px -2px rgba(125,242,176,0.45), 0 0 0 0 rgba(125,242,176,0.35);
+    animation: ultra-badge 2.6s ease-in-out infinite;
   }
   @keyframes ultra-badge {
-    0%, 100% { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 0 rgba(125,242,176,0.4); }
-    50%      { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.55), 0 0 0 12px rgba(125,242,176,0); }
+    0%, 100% { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.45), 0 0 0 0 rgba(125,242,176,0.35); }
+    50%      { box-shadow: 0 4px 12px -2px rgba(125,242,176,0.45), 0 0 0 6px rgba(125,242,176,0); }
   }
   .ultra-price {
     font-size: 34px; font-weight: 600; letter-spacing: -0.03em;
