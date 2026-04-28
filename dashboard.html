@@ -411,17 +411,57 @@
     transition: opacity 400ms ease-out;
   }
   @keyframes rev-cmp-draw { to { stroke-dashoffset: 0; } }
-  /* Pointer-driven tooltip + active dots — fade controlled inline via JS */
+  /* Pointer-driven hover layer — smooth tracking, Apple/Robinhood feel */
   .rev-hit { cursor: crosshair; }
-  .rev-tip { transition: opacity 140ms ease-out; pointer-events: none; }
-  .rev-active { pointer-events: none; }
+  .rev-tip {
+    pointer-events: none; opacity: 0;
+    transition: opacity 160ms ease-out, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .rev-active { pointer-events: none; opacity: 0; transition: opacity 160ms ease-out; }
+  /* Smooth-track the active dots + crosshair line as the cursor moves between hours.
+   * Modern Chrome/FF/Safari animate cx/cy/x1/x2 attribute changes via these transitions. */
+  .rev-active-dot, .rev-active-cmp {
+    transition: cx 160ms cubic-bezier(0.16, 1, 0.3, 1), cy 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .rev-cross-line {
+    pointer-events: none; opacity: 0;
+    transition: x1 160ms cubic-bezier(0.16, 1, 0.3, 1), x2 160ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease-out;
+  }
+  .chart-wrap.is-hover .rev-active,
+  .chart-wrap.is-hover .rev-tip { opacity: 1; }
+  .chart-wrap.is-hover .rev-cross-line { opacity: 0.4; }
+  /* On hover, the live pulse fades back so the cursor takes focus */
+  .chart-wrap.is-hover .rev-live { opacity: 0.35; transition: opacity 200ms; }
+
+  /* "Live now" indicator — concentric mint rings expanding + core dot.
+   * Renders only on the aujourdhui range at the current-hour data point. */
+  .rev-live-dot { fill: #0B6E4F; stroke: #fff; stroke-width: 2; }
+  .rev-live-ring {
+    fill: rgba(11,110,79,0.55);
+    transform-origin: center; transform-box: fill-box;
+    animation: rev-live-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  .rev-live-ring.delay { animation-delay: 0.6s; }
+  @keyframes rev-live-pulse {
+    0%   { r: 4;  opacity: 0.55; }
+    100% { r: 16; opacity: 0;    }
+  }
+  /* Halo behind the primary line — a wider, semi-transparent, blurred stroke
+   * that creates an Apple Stocks-style soft glow under the line. */
+  .rev-line-halo { pointer-events: none; }
+
   /* Suppress entrance animations on resize-only re-renders */
   .chart-wrap.no-anim .rev-line,
   .chart-wrap.no-anim .rev-cmp,
-  .chart-wrap.no-anim .rev-area { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+  .chart-wrap.no-anim .rev-area,
+  .chart-wrap.no-anim .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: var(--final-op, 1) !important; }
   /* Compare-toggle re-render: keep the primary line still, only animate the cmp line */
   .chart-wrap.cmp-toggle .rev-line,
-  .chart-wrap.cmp-toggle .rev-area { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+  .chart-wrap.cmp-toggle .rev-area,
+  .chart-wrap.cmp-toggle .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: var(--final-op, 1) !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .rev-live-ring { animation: none !important; opacity: 0 !important; }
+  }
 
   /* Comparer toggle — sits in the rev-card header right-actions */
   .cmp-btn {

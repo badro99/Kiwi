@@ -328,7 +328,7 @@
       rangeBadge: "AUJOURD'HUI · LIVE",
       sub: 'Cumul horaire · service en cours',
       xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-      visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15], // every 2h: 12h, 14h, 16h, 18h, 20h, 22h, 00h, 02h
+      visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // every 2h: 12h, 14h, 16h, 18h, 20h, 22h, 00h, 02h
       rev:    [0, 4800, 12200, 27512.50, 29400, 30600, 31800, 35200, 39400, 43000, 45200, 47000, 48200, 49000, 49600, 50000],
       revPrev:[0,  600,  2200,  4400,    5400,  6000,  6800,  9400, 13800, 18200, 21400, 23200, 24200, 24600, 24800, 24820],
       yTicks: [0, 12500, 25000, 37500, 50000],
@@ -339,7 +339,7 @@
       rangeBadge: 'HIER · COMPLET',
       sub: "Cumul horaire · journée d'hier",
       xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-      visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+      visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
       rev:    [0,  600,  2200,  4400,  5400,  6000,  6800,  9400, 13800, 18200, 21400, 23200, 24200, 24600, 24800, 24820],
       revPrev:[0,  500,  1900,  3800,  4700,  5300,  6000,  8400, 12500, 16400, 19400, 21000, 21800, 22200, 22600, 22800],
       yTicks: [0, 6500, 13000, 19500, 26000],
@@ -397,7 +397,7 @@
         rangeBadge: "AUJOURD'HUI · LIVE",
         sub: 'Cumul horaire · boutique ouverte',
         xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         rev:    [0, 2400, 6400, 11820, 11900, 12000, 12200, 12500, 12900, 13400, 13800, 14000, 14100, 14200, 14200, 14200],
         revPrev:[0, 1100, 2400,  3400,  3800,  4100,  4500,  5800,  7400,  9100, 11000, 11800, 12000, 12080, 12100, 12110],
         yTicks: [0, 4000, 8000, 12000, 16000],
@@ -408,7 +408,7 @@
         rangeBadge: 'HIER · COMPLET',
         sub: "Cumul horaire · journée d'hier",
         xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         rev:    [0, 1100, 2400, 3400, 3800, 4100, 4500, 5800, 7400, 9100, 11000, 11800, 12000, 12080, 12100, 12110],
         revPrev:[0, 1080, 2380, 3380, 3780, 4080, 4480, 5780, 7380, 9080, 10940, 11700, 11800, 11800, 11800, 11800],
         yTicks: [0, 3500, 7000, 10500, 14000],
@@ -456,7 +456,7 @@
         rangeBadge: "AUJOURD'HUI · LIVE",
         sub: 'Cumul horaire · réservations en cours',
         xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         rev:    [0, 1500, 4200, 8950, 9050, 9300, 9700, 10100, 10500, 10800, 10950, 11000, 11000, 11000, 11000, 11000],
         revPrev:[0,  600, 1900, 3200, 3700, 4500, 5300,  6100,  7100,  7900,  8200,  8350,  8380,  8380,  8380,  8380],
         yTicks: [0, 3000, 6000, 9000, 12000],
@@ -467,7 +467,7 @@
         rangeBadge: 'HIER · COMPLET',
         sub: "Cumul horaire · journée d'hier",
         xLabels: ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'],
-        visibleXIdx: [1, 3, 5, 7, 9, 11, 13, 15],
+        visibleXIdx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         rev:    [0, 600, 1900, 3200, 3700, 4500, 5300, 6100, 7100, 7900, 8200, 8350, 8380, 8380, 8380, 8380],
         revPrev:[0, 580, 1850, 3100, 3600, 4400, 5200, 5950, 6900, 7700, 8000, 8100, 8100, 8100, 8100, 8100],
         yTicks: [0, 2500, 5000, 7500, 10000],
@@ -1467,10 +1467,36 @@
     const yScale = v => PAD.top + innerH * (1 - (v - yMin) / (yMax - yMin));
     const baseY = yScale(yMin);
 
-    const pathFor = arr => arr.map((v, i) => `${i ? 'L' : 'M'}${xs[i].toFixed(1)} ${yScale(v).toFixed(1)}`).join(' ');
-    const linePath = pathFor(data.rev);
-    const cmpPath  = data.revPrev ? pathFor(data.revPrev) : '';
+    // Smooth Catmull-Rom-derived cubic Bezier path. Tension 0.18 keeps curves
+    // natural without overshoot. Apple Stocks / Robinhood-style continuous flow.
+    function smoothPath(arr) {
+      if (!arr || !arr.length) return '';
+      const pts = arr.map((v, i) => [xs[i], yScale(v)]);
+      if (pts.length === 1) return `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      let p = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      const t = 0.18;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[Math.max(0, i - 1)];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[Math.min(pts.length - 1, i + 2)];
+        const cp1x = p1[0] + (p2[0] - p0[0]) * t;
+        const cp1y = p1[1] + (p2[1] - p0[1]) * t;
+        const cp2x = p2[0] - (p3[0] - p1[0]) * t;
+        const cp2y = p2[1] - (p3[1] - p1[1]) * t;
+        p += ` C${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+      }
+      return p;
+    }
+    const linePath = smoothPath(data.rev);
+    const cmpPath  = smoothPath(data.revPrev);
     const areaPath = `${linePath} L${xs[N-1].toFixed(1)} ${baseY.toFixed(1)} L${xs[0].toFixed(1)} ${baseY.toFixed(1)} Z`;
+
+    // Live indicator — only on aujourdhui at the "current" hour (14h = idx 3).
+    const showLive = effective === 'aujourdhui' && N >= 4;
+    const liveIdx = 3;
+    const liveX = showLive ? xs[liveIdx] : 0;
+    const liveY = showLive ? yScale(data.rev[liveIdx]) : 0;
 
     const visibleIdx = data.visibleXIdx || data.rev.map((_, i) => i);
     const xLabelsHtml = visibleIdx.map(i =>
@@ -1487,11 +1513,15 @@
 
     svg.innerHTML = `
       <defs>
+        <!-- 3-stop gradient: punchy near the line, fades fast — Robinhood depth -->
         <linearGradient id="gfill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#053B2C" stop-opacity="0.20"/>
-          <stop offset="1" stop-color="#053B2C" stop-opacity="0"/>
+          <stop offset="0"    stop-color="#053B2C" stop-opacity="0.28"/>
+          <stop offset="0.55" stop-color="#053B2C" stop-opacity="0.07"/>
+          <stop offset="1"    stop-color="#053B2C" stop-opacity="0"/>
         </linearGradient>
-        <!-- Layered Apple-style soft shadow -->
+        <filter id="rev-line-glow" x="-2%" y="-30%" width="104%" height="160%">
+          <feGaussianBlur stdDeviation="3"/>
+        </filter>
         <filter id="rev-tip-shadow" x="-50%" y="-50%" width="200%" height="240%">
           <feDropShadow dx="0" dy="2"  stdDeviation="2"  flood-color="#0A0F0D" flood-opacity="0.06"/>
           <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0A0F0D" flood-opacity="0.10"/>
@@ -1499,14 +1529,23 @@
       </defs>
       ${yLabelsHtml}
       <g font-family="Inter Tight" font-size="11" fill="#9A9A9A">${xLabelsHtml}</g>
+      <line class="rev-cross-line" x1="${PAD.left}" x2="${PAD.left}" y1="${PAD.top}" y2="${(PAD.top + innerH).toFixed(1)}" stroke="#0B6E4F" stroke-width="1" stroke-dasharray="3 5"/>
       ${cmpPath ? `<path class="rev-cmp" d="${cmpPath}" stroke="#9A9A9A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" pathLength="1" style="opacity:${showCmp ? 1 : 0};"/>` : ''}
       <path class="rev-area" d="${areaPath}" fill="url(#gfill)"/>
+      <!-- Halo: wider, blurred sibling of the line — Apple Stocks soft glow -->
+      <path class="rev-line-halo" d="${linePath}" stroke="#0B6E4F" stroke-width="6" stroke-opacity="0.18" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#rev-line-glow)" pathLength="1"/>
       <path class="rev-line" d="${linePath}" stroke="#053B2C" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>
-      <g class="rev-active" style="display:none;">
-        <circle class="rev-active-cmp" cx="0" cy="0" r="4" fill="#9A9A9A" stroke="#fff" stroke-width="2"/>
-        <circle class="rev-active-dot" cx="0" cy="0" r="5.5" fill="#053B2C" stroke="#fff" stroke-width="2"/>
+      ${showLive ? `
+      <g class="rev-live" transform="translate(${liveX.toFixed(1)} ${liveY.toFixed(1)})">
+        <circle class="rev-live-ring" cx="0" cy="0" r="4"/>
+        <circle class="rev-live-ring delay" cx="0" cy="0" r="4"/>
+        <circle class="rev-live-dot" cx="0" cy="0" r="4"/>
+      </g>` : ''}
+      <g class="rev-active">
+        <circle class="rev-active-cmp" cx="${PAD.left}" cy="${PAD.top}" r="4" fill="#9A9A9A" stroke="#fff" stroke-width="2"/>
+        <circle class="rev-active-dot" cx="${PAD.left}" cy="${PAD.top}" r="5.5" fill="#053B2C" stroke="#fff" stroke-width="2"/>
       </g>
-      <g class="rev-tip" style="opacity:0;">
+      <g class="rev-tip">
         <rect class="rev-tip-rect" rx="14" ry="14" fill="#fff" stroke="rgba(10,15,13,0.06)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
         <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9A9A9A" letter-spacing="1.6"></text>
         <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#0A0F0D" letter-spacing="-0.01em"></text>
@@ -1515,11 +1554,12 @@
       <rect class="rev-hit" x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="transparent" pointer-events="all"/>
     `;
 
-    // Pointer-driven tooltip + active dots
+    // Pointer-driven tooltip + active dots — hover state controlled by .is-hover
+    // class on the SVG; element opacity transitions in CSS handle the fade.
     const hit = svg.querySelector('.rev-hit');
-    const active = svg.querySelector('.rev-active');
     const aDot = svg.querySelector('.rev-active-dot');
     const aCmp = svg.querySelector('.rev-active-cmp');
+    const cross = svg.querySelector('.rev-cross-line');
     const tip = svg.querySelector('.rev-tip');
     const tipRect  = svg.querySelector('.rev-tip-rect');
     const tipLabel = svg.querySelector('.rev-tip-label');
@@ -1549,7 +1589,7 @@
       const cmpY = data.revPrev ? yScale(data.revPrev[idx]) : null;
       const showCmpNow = !!showComparison && cmpY != null;
 
-      // Active dots
+      // Active dots — CSS transitions on cx/cy smooth-track the cursor
       aDot.setAttribute('cx', sx.toFixed(1));
       aDot.setAttribute('cy', sy.toFixed(1));
       aCmp.style.display = showCmpNow ? '' : 'none';
@@ -1557,7 +1597,11 @@
         aCmp.setAttribute('cx', sx.toFixed(1));
         aCmp.setAttribute('cy', cmpY.toFixed(1));
       }
-      active.style.display = '';
+      // Vertical crosshair — full-height dashed line, smooth-tracking
+      if (cross) {
+        cross.setAttribute('x1', sx.toFixed(1));
+        cross.setAttribute('x2', sx.toFixed(1));
+      }
 
       // Tooltip — two heights: compact (180×54) when no compare, expanded (224×84) with compare
       const tipW = showCmpNow ? 224 : 180;
@@ -1603,9 +1647,9 @@
       } else {
         tipCmp.style.display = 'none';
       }
-      tip.style.opacity = '1';
+      svg.classList.add('is-hover');
     }
-    function leave() { active.style.display = 'none'; tip.style.opacity = '0'; }
+    function leave() { svg.classList.remove('is-hover'); }
     hit.addEventListener('pointermove', move);
     hit.addEventListener('pointerenter', move);
     hit.addEventListener('pointerleave', leave);
