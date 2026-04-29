@@ -1641,9 +1641,15 @@
         <filter id="rev-line-glow" x="-2%" y="-30%" width="104%" height="160%">
           <feGaussianBlur stdDeviation="3"/>
         </filter>
+        <!-- Atlas → riad gradient for the tooltip card -->
+        <linearGradient id="rev-tip-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#0B6E4F"/>
+          <stop offset="100%" stop-color="#053B2C"/>
+        </linearGradient>
+        <!-- Green-tinted soft shadow under the tooltip -->
         <filter id="rev-tip-shadow" x="-50%" y="-50%" width="200%" height="240%">
-          <feDropShadow dx="0" dy="2"  stdDeviation="2"  flood-color="#0A0F0D" flood-opacity="0.06"/>
-          <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0A0F0D" flood-opacity="0.10"/>
+          <feDropShadow dx="0" dy="2"  stdDeviation="2"  flood-color="#053B2C" flood-opacity="0.18"/>
+          <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#053B2C" flood-opacity="0.32"/>
         </filter>
       </defs>
       ${yLabelsHtml}
@@ -1665,9 +1671,9 @@
         <circle class="rev-active-dot" cx="${PAD.left}" cy="${PAD.top}" r="5.5" fill="#053B2C" stroke="#fff" stroke-width="2"/>
       </g>
       <g class="rev-tip">
-        <rect class="rev-tip-rect" rx="14" ry="14" fill="#fff" stroke="rgba(10,15,13,0.06)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
-        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9A9A9A" letter-spacing="1.6"></text>
-        <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#0A0F0D" letter-spacing="-0.01em"></text>
+        <rect class="rev-tip-rect" rx="14" ry="14" fill="url(#rev-tip-gradient)" stroke="rgba(125,242,176,0.18)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
+        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7DF2B0" letter-spacing="1.6" opacity="0.88"></text>
+        <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
         <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
       </g>
       <rect class="rev-hit" x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="transparent" pointer-events="all"/>
@@ -1694,21 +1700,79 @@
       return `${sign}${txt} %`;
     }
 
+    // True if the x-axis labels are hourly (e.g. "11h"). Daily ranges keep
+    // the snap-to-day behavior; hourly ranges get per-minute interpolation.
+    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
+
     function move(evt) {
       const rect = svg.getBoundingClientRect();
       if (rect.width === 0) return;
       const xVB = ((evt.clientX - rect.left) / rect.width) * W;
-      // Snap to nearest non-null hour (so hover doesn't land on the empty
-      // future part of the live-truncated curve).
-      let idx = 0, best = Infinity;
-      for (let i = 0; i < xs.length; i++) {
-        if (data.rev[i] == null) continue;
-        const d = Math.abs(xs[i] - xVB);
-        if (d < best) { best = d; idx = i; }
+
+      let sx, sy, cmpY, valueAtCursor, prevAtCursor, timeLabel, refIdx;
+
+      if (isHourly) {
+        // ─── PER-MINUTE: linear interpolation between hour boundaries ───
+        const fx = Math.max(0, Math.min(1, (xVB - PAD.left) / innerW));
+        const TOTAL_MIN = (xs.length - 1) * 60;          // 15h × 60 = 900 min
+        const totalMin = Math.round(fx * TOTAL_MIN);
+        let hourIdx = Math.min(xs.length - 1, Math.floor(totalMin / 60));
+        let minWithin = totalMin - hourIdx * 60;
+        // Handle the rightmost edge
+        if (hourIdx >= xs.length - 1) { hourIdx = xs.length - 1; minWithin = 0; }
+
+        const vLow  = data.rev[hourIdx];
+        const vHigh = data.rev[hourIdx + 1];
+
+        // If we're past the live cursor (vLow null), don't render the hover.
+        if (vLow == null) { svg.classList.remove('is-hover'); return; }
+
+        // Interpolate value (linear) between the two surrounding hour boundaries.
+        if (vHigh == null || hourIdx >= xs.length - 1) {
+          valueAtCursor = vLow;
+        } else {
+          valueAtCursor = vLow + (vHigh - vLow) * (minWithin / 60);
+        }
+
+        // Interpolate compare line too if active.
+        if (data.revPrev) {
+          const pLow  = data.revPrev[hourIdx];
+          const pHigh = data.revPrev[hourIdx + 1];
+          if (pLow != null && pHigh != null && hourIdx < xs.length - 1) {
+            prevAtCursor = pLow + (pHigh - pLow) * (minWithin / 60);
+          } else if (pLow != null) {
+            prevAtCursor = pLow;
+          }
+        }
+
+        // Snap cursor x to the exact minute (60 minutes per hour-segment).
+        const fSnap = totalMin / TOTAL_MIN;
+        sx = PAD.left + fSnap * innerW;
+        sy = yScale(valueAtCursor);
+        cmpY = (prevAtCursor != null) ? yScale(prevAtCursor) : null;
+
+        // Build "11h32" / "14h27" / "01h05" — wraps past 23h to 00h/01h/02h.
+        const baseHour = parseInt((data.xLabels[hourIdx] || '11h').replace('h', ''), 10);
+        const safeHour = isNaN(baseHour) ? 11 : baseHour;
+        timeLabel = `${String(safeHour).padStart(2, '0')}h${String(minWithin).padStart(2, '0')}`;
+        refIdx = hourIdx;
+      } else {
+        // ─── DAILY: snap to nearest non-null point (existing behavior) ───
+        let best = Infinity, idx = 0;
+        for (let i = 0; i < xs.length; i++) {
+          if (data.rev[i] == null) continue;
+          const d = Math.abs(xs[i] - xVB);
+          if (d < best) { best = d; idx = i; }
+        }
+        sx = xs[idx];
+        sy = yScale(data.rev[idx]);
+        cmpY = data.revPrev ? yScale(data.revPrev[idx]) : null;
+        valueAtCursor = data.rev[idx];
+        prevAtCursor  = data.revPrev ? data.revPrev[idx] : null;
+        timeLabel = data.xLabels[idx] || '';
+        refIdx = idx;
       }
-      const sx = xs[idx];
-      const sy = yScale(data.rev[idx]);
-      const cmpY = data.revPrev ? yScale(data.revPrev[idx]) : null;
+
       const showCmpNow = !!showComparison && cmpY != null;
 
       // Active dots — CSS transitions on cx/cy smooth-track the cursor
@@ -1756,14 +1820,15 @@
       else if (sx + halfW > W - 4) tipDx = -((sx + halfW) - (W - 4)); // push left
       tip.setAttribute('transform', `translate(${(sx + tipDx).toFixed(1)}, ${tipDy.toFixed(1)})`);
 
-      // Content
-      tipLabel.textContent = (data.xLabels[idx] || '').toUpperCase();
-      tipValue.textContent = `${frInt(data.rev[idx])} MAD`;
-      if (showCmpNow) {
-        const delta = fmtDeltaPct(data.rev[idx], data.revPrev[idx]);
-        const deltaColor = (data.rev[idx] >= data.revPrev[idx]) ? '#0B6E4F' : '#C94A3A';
+      // Content — time label + interpolated value
+      tipLabel.textContent = timeLabel.toUpperCase();
+      tipValue.textContent = `${frInt(valueAtCursor)} MAD`;
+      if (showCmpNow && prevAtCursor != null) {
+        const delta = fmtDeltaPct(valueAtCursor, prevAtCursor);
+        // Green tooltip bg: positive delta = mint, negative = warm red. Label muted mint.
+        const deltaColor = (valueAtCursor >= prevAtCursor) ? '#7DF2B0' : '#FCA597';
         tipCmp.innerHTML =
-          `<tspan fill="#9A9A9A">${captionShort} · ${frInt(data.revPrev[idx])} MAD&#160;&#160;</tspan>` +
+          `<tspan fill="rgba(199,234,212,0.85)">${captionShort} · ${frInt(prevAtCursor)} MAD&#160;&#160;</tspan>` +
           `<tspan fill="${deltaColor}" font-weight="600">${delta}</tspan>`;
         tipCmp.style.display = '';
       } else {
