@@ -452,13 +452,15 @@
 
   /* Suppress entrance animations on resize-only re-renders */
   .chart-wrap.no-anim .rev-line,
-  .chart-wrap.no-anim .rev-cmp,
   .chart-wrap.no-anim .rev-area,
-  .chart-wrap.no-anim .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: var(--final-op, 1) !important; }
+  .chart-wrap.no-anim .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+  /* Cmp line: suppress the dasharray draw-in animation but DO NOT force opacity —
+   * inline style="opacity:0/1" toggles based on the Comparer button. */
+  .chart-wrap.no-anim .rev-cmp { animation: none !important; stroke-dashoffset: 0 !important; }
   /* Compare-toggle re-render: keep the primary line still, only animate the cmp line */
   .chart-wrap.cmp-toggle .rev-line,
   .chart-wrap.cmp-toggle .rev-area,
-  .chart-wrap.cmp-toggle .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: var(--final-op, 1) !important; }
+  .chart-wrap.cmp-toggle .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
   @media (prefers-reduced-motion: reduce) {
     .rev-live-ring { animation: none !important; opacity: 0 !important; }
   }
