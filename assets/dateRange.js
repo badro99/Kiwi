@@ -1533,6 +1533,11 @@
           yTicks,
           // Update the legend to reflect the live cumulative
           legendPrimary: `Cumul aujourd'hui · ${frInt(sim.cumRevenue)} MAD`,
+          // Live cursor markers — used by smoothPath, live-pulse, area path,
+          // and hover-clamp logic so the live tip lands at the EXACT sim x
+          // (not at the next hour boundary).
+          _simIdx: liveSimIdx,
+          _simWithin: liveSimWithin,
         };
       }
     }
@@ -1573,6 +1578,17 @@
     const yScale = v => PAD.top + innerH * (1 - (v - yMin) / (yMax - yMin));
     const baseY = yScale(yMin);
 
+    // Live cursor x — when in live demo, the truncated curve's tip should
+    // land at the EXACT sim x position (between two hour boundaries), not at
+    // the next hour's x. xForIdx() returns sim x for the live-tip entry,
+    // canonical xs[i] otherwise.
+    const hasSim = (data._simIdx != null && data._simIdx >= 0 && data._simIdx < xs.length - 1);
+    const liveTipIdx = hasSim ? data._simIdx + 1 : -1;
+    const liveTipX = hasSim
+      ? xs[data._simIdx] + (xs[data._simIdx + 1] - xs[data._simIdx]) * data._simWithin
+      : 0;
+    const xForIdx = i => (i === liveTipIdx) ? liveTipX : xs[i];
+
     // Smooth Catmull-Rom-derived cubic Bezier path. Tension 0.18 keeps curves
     // natural without overshoot. Apple Stocks / Robinhood-style continuous flow.
     // Skips null entries — used for the live-truncated curve where the
@@ -1581,7 +1597,7 @@
       if (!arr || !arr.length) return '';
       const pts = [];
       arr.forEach((v, i) => {
-        if (v != null) pts.push([xs[i], yScale(v)]);
+        if (v != null) pts.push([xForIdx(i), yScale(v)]);
       });
       if (pts.length === 0) return '';
       if (pts.length === 1) return `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
@@ -1606,15 +1622,17 @@
     for (let i = 0; i < N; i++) { if (data.rev[i] != null) lastIdx = i; }
     const linePath = smoothPath(data.rev);
     const cmpPath  = smoothPath(data.revPrev);
+    // Area's right edge follows the line's actual tip — sim x in live mode.
+    const areaTipX = lastIdx >= 0 ? xForIdx(lastIdx) : 0;
     const areaPath = lastIdx >= 0
-      ? `${linePath} L${xs[lastIdx].toFixed(1)} ${baseY.toFixed(1)} L${xs[0].toFixed(1)} ${baseY.toFixed(1)} Z`
+      ? `${linePath} L${areaTipX.toFixed(1)} ${baseY.toFixed(1)} L${xs[0].toFixed(1)} ${baseY.toFixed(1)} Z`
       : '';
 
     // Live "you are here" indicator — anchors at the truncated curve's tip
     // when demoClock is active, otherwise stays at the canonical 14h index.
     const showLive = effective === 'aujourdhui' && lastIdx >= 0;
     const liveIdx = isLiveDemo() ? lastIdx : Math.min(3, lastIdx);
-    const liveX = showLive ? xs[liveIdx] : 0;
+    const liveX = showLive ? xForIdx(liveIdx) : 0;
     const liveY = (showLive && data.rev[liveIdx] != null) ? yScale(data.rev[liveIdx]) : 0;
 
     const visibleIdx = data.visibleXIdx || data.rev.map((_, i) => i);
@@ -1715,7 +1733,15 @@
         // ─── PER-MINUTE: linear interpolation between hour boundaries ───
         const fx = Math.max(0, Math.min(1, (xVB - PAD.left) / innerW));
         const TOTAL_MIN = (xs.length - 1) * 60;          // 15h × 60 = 900 min
-        const totalMin = Math.round(fx * TOTAL_MIN);
+        let totalMin = Math.round(fx * TOTAL_MIN);
+
+        // Live demo: reject hover positions past the sim cursor (you can't peek
+        // at hours that haven't happened yet).
+        if (data._simIdx != null) {
+          const simTotalMin = data._simIdx * 60 + Math.round(data._simWithin * 60);
+          if (totalMin > simTotalMin) { svg.classList.remove('is-hover'); return; }
+        }
+
         let hourIdx = Math.min(xs.length - 1, Math.floor(totalMin / 60));
         let minWithin = totalMin - hourIdx * 60;
         // Handle the rightmost edge
