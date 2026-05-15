@@ -31,3 +31,6 @@ npm-debug.log*
 # Local preview tooling (machine-specific dev server)
 .claude/launch.json
 .claude/static-server.js
+
+# claude-mem generated context artifact (machine-local, not project code)
+AGENTS.md
