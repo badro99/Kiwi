@@ -1280,7 +1280,11 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 @media (max-width: 720px) {
   .why-event-body h4 { align-items: flex-start; flex-wrap: nowrap; }
   .why-event-body .marker { align-self: flex-start; margin-top: 1px; }
-  .why-event-body h4 a { flex: 1 1 auto; flex-wrap: wrap; }
+  /* Block (not flex) so the headline text and its trailing ↗ icon flow
+     as normal inline content — the icon stays after the last word
+     instead of wrapping onto its own line. */
+  .why-event-body h4 a { display: block; flex: 1 1 auto; }
+  .why-event-body h4 a .why-event-extlink { margin-left: 4px; }
 }
 /* Hover — subtle rotation when hovering anywhere in the headline row */
 .why-event-body h4:hover .marker img,
