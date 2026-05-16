@@ -1246,16 +1246,15 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
    pixel-perfectly. */
 .why-event-body h4 {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  flex-wrap: wrap;
 }
 .why-event-body .marker {
   display: inline-flex;
   width: 24px; height: 24px;
   flex-shrink: 0;
-  align-self: center;
-  margin: 0;
+  align-self: flex-start;
+  margin: 1px 0 0;
 }
 .why-event-body .marker img {
   width: 100%;
@@ -1271,8 +1270,10 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  /* fit content; don't expand to fill the flex row */
-  flex: 0 1 auto;
+  flex-wrap: wrap;
+  /* grow to fill the row so the headline wraps INSIDE the link instead
+     of pushing the whole link below the marker on narrow screens */
+  flex: 1 1 auto;
   min-width: 0;
 }
 /* Hover — subtle rotation when hovering anywhere in the headline row */
