@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Kiwi v2 — Design Tokens
+   The single source of truth for color, typography, spacing, motion.
+   If you find yourself writing a hex value or a px value outside this file,
+   stop and add a token first.
+   ========================================================================== */
+
+:root {
+
+  /* ----- BRAND PALETTE (locked) ----------------------------------------- */
+  --atlas:        #0B6E4F;   /* Primary brand green */
+  --atlas-600:    #0E805C;   /* Hover/active brand */
+  --atlas-700:    #0A5E43;   /* Pressed brand */
+  --riad:         #053B2C;   /* Deep brand, dark sections */
+  --riad-deep:    #02261C;   /* Deepest brand surface */
+  --mint:         #7DF2B0;   /* THE accent — used ≤5% of viewport */
+  --mint-soft:    #C9F6DC;   /* Mint tint for backgrounds */
+
+  /* ----- SURFACE -------------------------------------------------------- */
+  --paper:        #F7F5F0;   /* Warm off-white page bg (NOT pure white) */
+  --paper-soft:   #EFECE3;   /* Subtle elevation on paper */
+  --paper-muted:  #E4E1D7;   /* Card on paper */
+  --paper-line:   #DCD9D0;   /* Hairline divider on paper */
+  --ink:          #0A0F0D;   /* Near-black text + dark sections */
+  --ink-soft:     #14181A;   /* Card on ink */
+  --ink-elevated: #1C2225;   /* Elevated card on ink */
+  --ink-line:     #25292B;   /* Hairline on ink */
+
+  /* ----- NEUTRALS (cool slate scale, derived) --------------------------- */
+  --n-50:  #FAFAF8;
+  --n-100: #F2F0EA;
+  --n-200: #E8E6E0;
+  --n-300: #D4D1C8;
+  --n-400: #A8A49A;
+  --n-500: #6F6C65;
+  --n-600: #4B4944;
+  --n-700: #2E2D29;
+  --n-800: #1A1917;
+
+  /* ----- SEMANTIC (single warmth accent, used <1%) ---------------------- */
+  --ochre:        #C97B2D;   /* Marrakech ochre desaturated 30% — Aid, milestone, Daret payout only */
+  --success:      #1FB574;
+  --warning:      #D99A2B;
+  --danger:       #C94A3A;
+  --info:         #3A6FB8;
+
+  /* ----- HAIRLINES & DEPTH ---------------------------------------------- */
+  --hairline-light: rgba(10, 15, 13, 0.06);
+  --hairline-dark:  rgba(247, 245, 240, 0.08);
+
+  --shadow-sm:    0 1px 0 rgba(10, 15, 13, 0.04);
+  --shadow-card:  0 1px 0 rgba(10, 15, 13, 0.04),
+                  0 12px 40px -12px rgba(10, 15, 13, 0.18);
+  --shadow-lg:    0 1px 0 rgba(10, 15, 13, 0.04),
+                  0 24px 64px -16px rgba(10, 15, 13, 0.22);
+
+  --glow-mint:    0 0 0 1px rgba(125, 242, 176, 0.4),
+                  0 0 24px 0 rgba(125, 242, 176, 0.25);
+  --glow-mint-soft: 0 0 0 1px rgba(125, 242, 176, 0.3),
+                    0 0 12px 0 rgba(125, 242, 176, 0.15);
+
+  /* ----- TYPOGRAPHY ----------------------------------------------------- */
+  --font-display:   "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-body:      "Geist", -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --font-editorial: "Instrument Serif", "Times New Roman", serif;
+  --font-mono:      "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --font-arabic:    "Cairo", "IBM Plex Sans Arabic", "Tajawal", sans-serif;
+
+  /* Type scale — paired with weight + line-height + letter-spacing */
+  --t-hero:    clamp(56px, 7.2vw, 112px);
+  --t-display: clamp(40px, 4.8vw, 72px);
+  --t-h2:      clamp(32px, 3.6vw, 48px);
+  --t-h3:      24px;
+  --t-h4:      20px;
+  --t-lead:    20px;
+  --t-body:    16px;
+  --t-small:   14px;
+  --t-meta:    13px;
+  --t-eyebrow: 11px;
+
+  /* Tracking (letter-spacing) per scale */
+  --ls-hero:    -0.035em;
+  --ls-display: -0.030em;
+  --ls-h2:      -0.025em;
+  --ls-h3:      -0.015em;
+  --ls-lead:    -0.011em;
+  --ls-body:    -0.014em;
+  --ls-meta:     0;
+  --ls-eyebrow:  0.14em;
+
+  /* Line-heights per scale */
+  --lh-hero:    1.02;
+  --lh-display: 1.04;
+  --lh-h2:      1.08;
+  --lh-h3:      1.20;
+  --lh-lead:    1.45;
+  --lh-body:    1.55;
+  --lh-meta:    1.40;
+
+  /* Weight discipline — 400 / 500 / 600 max. NEVER 700+. */
+  --w-regular:  400;
+  --w-medium:   500;
+  --w-semibold: 600;
+
+  /* ----- SPACING (8px base) --------------------------------------------- */
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   12px;
+  --s-4:   16px;
+  --s-5:   20px;
+  --s-6:   24px;
+  --s-8:   32px;
+  --s-10:  40px;
+  --s-12:  48px;
+  --s-16:  64px;
+  --s-20:  80px;
+  --s-24:  96px;
+  --s-32: 128px;
+
+  /* ----- RADII ---------------------------------------------------------- */
+  --r-xs:  4px;
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  16px;
+  --r-xl:  20px;
+  --r-2xl: 28px;
+  --r-3xl: 36px;
+  --r-pill: 999px;
+
+  /* ----- LAYOUT --------------------------------------------------------- */
+  --wrap-max: 1320px;
+  --wrap-pad: 32px;
+  --wrap-pad-mobile: 20px;
+  --nav-h: 64px;
+
+  /* ----- MOTION CURVES & DURATIONS -------------------------------------- */
+  --ease-glide:    cubic-bezier(0.16, 1, 0.30, 1);     /* Apple — fast start, long settle */
+  --ease-natural:  cubic-bezier(0.40, 0, 0.20, 1);     /* Natural object weight */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);  /* Springy overshoot */
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);     /* Heavy entrance */
+  --ease-snap:     cubic-bezier(0.32, 0.72, 0, 1);     /* Hover/press */
+  --ease-counter:  cubic-bezier(0.45, 0, 0.55, 1);     /* Progress bars / counters */
+
+  --d-instant: 120ms;
+  --d-quick:   220ms;
+  --d-base:    420ms;
+  --d-slow:    720ms;
+  --d-cinema:  1200ms;
+
+  /* ----- Z-INDEX -------------------------------------------------------- */
+  --z-base:      1;
+  --z-elevated:  10;
+  --z-nav:      100;
+  --z-drawer:   200;
+  --z-modal:    300;
+  --z-toast:    400;
+  --z-tooltip:  500;
+}
+
+/* ==========================================================================
+   Reduced-motion contract — non-negotiable.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   @property declarations for animatable custom properties.
+   Used by hero mesh + conic-gradient CTA borders.
+   ========================================================================== */
+@property --hue {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --rgb-spin {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}

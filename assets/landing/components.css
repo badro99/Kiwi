@@ -1,0 +1,761 @@
+/* ==========================================================================
+   Kiwi v2 — Components
+   Buttons, pills, cards, nav, badges. Single-source.
+   Every component obeys: token-only colors, weight 500 max, motion via vars.
+   ========================================================================== */
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 44px;
+  padding: 0 var(--s-5);
+  border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  transition:
+    transform var(--d-quick) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide),
+    color var(--d-quick) var(--ease-glide),
+    box-shadow var(--d-quick) var(--ease-glide);
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+  transition-duration: var(--d-instant);
+}
+
+/* The universal CTA glow — defined as a CSS variable so it can be COMPOSED
+   with each variant's existing inset border (instead of overwriting it).
+   Box-shadow has exponential alpha falloff: stacking 6 radii from 18px → 240px
+   gives a true atmospheric leak with no hard edge. */
+:root {
+  --btn-glow:
+    0 0 0 1px rgba(125, 242, 176, 0.55),
+    0 0 18px rgba(125, 242, 176, 0.45),
+    0 0 44px rgba(125, 242, 176, 0.25),
+    0 0 90px rgba(11, 110, 79, 0.18),
+    0 0 160px rgba(125, 242, 176, 0.10),
+    0 0 240px rgba(11, 110, 79, 0.06);
+}
+
+.btn-primary,
+.btn-ghost,
+.btn-atlas {
+  position: relative;
+  transition:
+    transform var(--d-quick) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide),
+    color var(--d-quick) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+
+/* Primary — Ink fill, the trustworthy default */
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-primary:hover {
+  background: var(--atlas);
+  box-shadow: var(--btn-glow);
+}
+
+/* On dark slabs, primary inverts */
+.slab-ink .btn-primary,
+.slab-riad .btn-primary {
+  background: var(--paper);
+  color: var(--ink);
+}
+.slab-ink .btn-primary:hover,
+.slab-riad .btn-primary:hover {
+  background: var(--mint);
+  box-shadow: var(--btn-glow);
+}
+
+/* Atlas — the brand fill, used when the action IS a brand statement */
+.btn-atlas {
+  background: var(--atlas);
+  color: var(--paper);
+}
+.btn-atlas:hover {
+  background: var(--atlas-600);
+  box-shadow: var(--btn-glow);
+}
+
+/* Ghost — paper background, hairline border */
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--paper-line);
+}
+.btn-ghost:hover {
+  background: var(--paper-soft);
+  box-shadow: inset 0 0 0 1px var(--ink), var(--btn-glow);
+}
+
+.slab-ink .btn-ghost,
+.slab-riad .btn-ghost {
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hairline-dark);
+}
+.slab-ink .btn-ghost:hover,
+.slab-riad .btn-ghost:hover {
+  background: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px var(--paper), var(--btn-glow);
+}
+
+/* Sizes */
+.btn-lg {
+  height: 52px;
+  padding: 0 var(--s-6);
+  font-size: var(--t-body);
+}
+
+.btn-sm {
+  height: 36px;
+  padding: 0 var(--s-4);
+  font-size: var(--t-meta);
+}
+
+/* ==========================================================================
+   CTA EFFECTS — Star Toner WRAPPER pattern, exact production mechanic.
+   The gradient lives on a wrapper span. The button sits on top opaque.
+   The ring shows ONLY at the edges (the 2px wrapper padding reveals it).
+   Multi-luminance gradient (white → mint → atlas → riad-deep) creates the
+   shimmer that same-family greens couldn't deliver.
+
+   HTML pattern:
+     <span class="btn-rgb-wrap">
+       <a class="btn btn-primary btn-lg">Demander une démo</a>
+     </span>
+   ========================================================================== */
+
+@keyframes rgbSpin {
+  to { --rgb-spin: 360deg; }
+}
+
+.btn-rgb-wrap {
+  position: relative;
+  display: inline-flex;
+  border-radius: var(--r-pill);
+  padding: 2px;
+  transition:
+    transform var(--d-quick) var(--ease-glide),
+    box-shadow var(--d-slow) var(--ease-glide);
+  /* Robinhood-style continuous neon halo at rest — invites the click */
+  animation: btnNeonHalo 3.6s ease-in-out infinite;
+}
+@keyframes btnNeonHalo {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(125, 242, 176, 0),
+      0 4px 14px rgba(11, 110, 79, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(125, 242, 176, 0.12),
+      0 6px 24px rgba(125, 242, 176, 0.18),
+      0 0 40px rgba(125, 242, 176, 0.10);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-rgb-wrap { animation: none; }
+}
+/* The visible spinning Atlas-green ring — pure rotational character */
+.btn-rgb-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  z-index: 0;
+  background: conic-gradient(
+    from var(--rgb-spin),
+    var(--atlas) 0deg,
+    var(--mint) 90deg,
+    #FFFFFF 140deg,
+    var(--mint) 200deg,
+    var(--atlas) 280deg,
+    var(--riad-deep) 320deg,
+    var(--atlas) 360deg
+  );
+  animation: rgbSpin 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-glide);
+  pointer-events: none;
+}
+.btn-rgb-wrap:hover { transform: scale(1.02); animation: none; }
+.btn-rgb-wrap:hover::before { opacity: 1; }
+/* Multi-layer box-shadow halo — exponential falloff, no hard edge ever.
+   Each layer fades naturally to invisible because box-shadow alpha decays
+   smoothly. Stacking 5 radii from 18px → 240px gives an atmospheric leak. */
+.btn-rgb-wrap:hover {
+  box-shadow:
+    0 0 0 1px rgba(125, 242, 176, 0.55),
+    0 0 18px rgba(125, 242, 176, 0.50),
+    0 0 48px rgba(125, 242, 176, 0.32),
+    0 0 96px rgba(11, 110, 79, 0.28),
+    0 0 160px rgba(125, 242, 176, 0.14),
+    0 0 240px rgba(11, 110, 79, 0.10);
+}
+
+/* The actual button inside the wrapper sits on top, opaque, masking the
+   gradient under it. The ring is only visible at the edges. */
+.btn-rgb-wrap > .btn {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+/* Lock the inner button's hover-bg so the gradient doesn't get tinted */
+.btn-rgb-wrap > .btn-primary:hover { background: var(--ink); color: var(--paper); }
+.slab-ink .btn-rgb-wrap > .btn-primary:hover,
+.slab-riad .btn-rgb-wrap > .btn-primary:hover { background: var(--paper); color: var(--ink); }
+
+
+/* ==========================================================================
+   .btn-glow-wrap — secondary CTA with single-highlight spotlight sweep
+   Lighter mechanic: no full ring, just a bright spot rotating around.
+   ========================================================================== */
+
+.btn-glow-wrap {
+  position: relative;
+  display: inline-flex;
+  border-radius: var(--r-pill);
+  padding: 1.5px;
+  transition:
+    transform var(--d-quick) var(--ease-glide),
+    box-shadow var(--d-slow) var(--ease-glide);
+}
+.btn-glow-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  z-index: 0;
+  background: conic-gradient(
+    from var(--rgb-spin),
+    rgba(11, 110, 79, 0.40) 0deg,
+    rgba(125, 242, 176, 0.80) 140deg,
+    var(--mint) 180deg,
+    rgba(125, 242, 176, 0.80) 220deg,
+    rgba(11, 110, 79, 0.40) 360deg
+  );
+  animation: rgbSpin 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-glide);
+  pointer-events: none;
+}
+.btn-glow-wrap:hover { transform: scale(1.02); }
+.btn-glow-wrap:hover::before { opacity: 1; }
+.btn-glow-wrap:hover {
+  box-shadow:
+    0 0 0 1px rgba(125, 242, 176, 0.50),
+    0 0 16px rgba(125, 242, 176, 0.40),
+    0 0 40px rgba(125, 242, 176, 0.22),
+    0 0 80px rgba(11, 110, 79, 0.18),
+    0 0 140px rgba(125, 242, 176, 0.08);
+}
+
+.btn-glow-wrap > .btn {
+  position: relative;
+  z-index: 1;
+}
+
+/* Backward-compat shims: if .btn-rgb / .btn-glow are still on a button
+   (no wrapper), they're a no-op. Use the wrapper for the real effect. */
+.btn-rgb, .btn-glow {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-rgb-wrap::before, .btn-rgb-wrap::after,
+  .btn-glow-wrap::before, .btn-glow-wrap::after { animation: none; }
+}
+
+/* ==========================================================================
+   LIQUID GLASS — Star Toner recipe, distilled.
+   2 shadows max: ONE soft drop + ONE inner top highlight.
+   The premium signal is restraint: subtle border, single specular line, blur.
+   Three variants: light (on paper), dark (on ink/riad), mint (action surface).
+   ========================================================================== */
+
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),       /* top specular */
+    0 24px 48px -8px rgba(10, 15, 13, 0.14);        /* single soft drop */
+}
+
+.glass-dark {
+  background: rgba(20, 22, 24, 0.45);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(247, 245, 240, 0.06);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(247, 245, 240, 0.08),       /* subtle top highlight */
+    0 24px 48px rgba(0, 0, 0, 0.30);               /* single soft drop */
+}
+
+.glass-mint {
+  background: rgba(125, 242, 176, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(125, 242, 176, 0.30);
+  color: var(--riad);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    0 8px 24px -4px rgba(11, 110, 79, 0.20),
+    0 0 24px rgba(125, 242, 176, 0.18);            /* mint ambient */
+}
+
+/* Hover lift — adds brightness, no transform unless .glass-lift */
+.glass:hover,
+.glass-lift:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 32px 56px -8px rgba(10, 15, 13, 0.18);
+}
+.glass-dark:hover,
+.glass-dark.glass-lift:hover {
+  background: rgba(28, 32, 36, 0.55);
+  border-color: rgba(247, 245, 240, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(247, 245, 240, 0.16),
+    0 32px 64px rgba(0, 0, 0, 0.40);
+}
+.glass-lift {
+  transition:
+    transform var(--d-base) var(--ease-glide),
+    background-color var(--d-base) var(--ease-glide),
+    border-color var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+.glass-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* Bento float — gentle 8s breathing for grouped glass blocks (Star Toner) */
+.glass-float {
+  animation: bentoFloat 8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes bentoFloat {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-float { animation: none; }
+}
+
+/* ==========================================================================
+   PILLS — small chips, badges, status indicators
+   ========================================================================== */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 28px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  font-size: var(--t-meta);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.005em;
+  background: var(--paper-muted);
+  color: var(--ink);
+}
+
+.pill-mint {
+  background: var(--mint-soft);
+  color: var(--riad);
+}
+
+.pill-ink {
+  background: var(--ink-soft);
+  color: var(--paper);
+}
+
+.pill-paper {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--paper-line);
+}
+
+.pill-outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--paper-line);
+}
+
+.slab-ink .pill,
+.slab-riad .pill {
+  background: var(--ink-soft);
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hairline-dark);
+}
+
+.slab-ink .pill-mint,
+.slab-riad .pill-mint {
+  background: rgba(125, 242, 176, 0.12);
+  color: var(--mint);
+  box-shadow: inset 0 0 0 1px rgba(125, 242, 176, 0.25);
+}
+
+/* Live dot — standalone primitive. The brand pulse, used in nav, dashboard,
+   wallet, pitch — anywhere we need to signal "this is alive right now." */
+.live-dot,
+.pill-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow:
+    0 0 0 1.5px rgba(10, 15, 13, 0.85),
+    0 0 12px rgba(125, 242, 176, 0.55);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+/* The .pill-dot variant inside paper pills wants a smaller dot, no inner ring */
+.pill-dot::before {
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 0 0 rgba(125, 242, 176, 0.7);
+}
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1.5px rgba(10, 15, 13, 0.85),
+      0 0 12px rgba(125, 242, 176, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1.5px rgba(10, 15, 13, 0.85),
+      0 0 18px rgba(125, 242, 176, 0.95),
+      0 0 0 8px rgba(125, 242, 176, 0);
+  }
+}
+.pill-dot::before {
+  animation: pillDotPulse 2.4s var(--ease-counter) infinite;
+}
+@keyframes pillDotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(125, 242, 176, 0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(125, 242, 176, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(125, 242, 176, 0); }
+}
+
+/* ==========================================================================
+   CARDS
+   ========================================================================== */
+
+.card {
+  background: #fff;
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--hairline-light);
+  overflow: hidden;
+  transition: transform var(--d-quick) var(--ease-glide),
+              box-shadow var(--d-quick) var(--ease-glide);
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px var(--hairline-light), var(--shadow-card);
+}
+
+.card-ink {
+  background: var(--ink-soft);
+  color: var(--paper);
+  border-radius: var(--r-lg);
+  box-shadow: inset 0 0 0 1px var(--hairline-dark);
+}
+
+.card-riad {
+  background: var(--riad);
+  color: var(--paper);
+  border-radius: var(--r-lg);
+}
+
+.card-atlas {
+  background: var(--atlas);
+  color: var(--paper);
+  border-radius: var(--r-lg);
+}
+
+.card-pad {
+  padding: var(--s-6);
+}
+
+.card-pad-lg {
+  padding: var(--s-8);
+}
+
+/* ==========================================================================
+   NAV — the floating glass pill (Star Toner transplant)
+   The .nav element is a fixed full-width LAYER (pointer-events: none in gutters).
+   The .nav-inner is the actual pill — dark glass, max 1200, mint ambient glow.
+   Content scrolls UNDER the pill — that's the floating premium signal.
+   ========================================================================== */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-nav);
+  pointer-events: none;
+  padding: 20px var(--wrap-pad);
+  display: flex;
+  justify-content: center;
+  background: transparent;
+}
+
+.nav-inner {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 1200px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 14px 0 12px;
+  background: rgba(10, 15, 13, 0.62);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-radius: var(--r-pill);
+  box-shadow:
+    inset 0 0 0 1px rgba(247, 245, 240, 0.08),
+    0 24px 48px rgba(10, 15, 13, 0.40),
+    0 12px 24px rgba(10, 15, 13, 0.30),
+    0 0 80px rgba(125, 242, 176, 0.06);
+  transition:
+    background-color var(--d-base) var(--ease-glide),
+    box-shadow var(--d-base) var(--ease-glide);
+}
+
+.nav-inner:hover {
+  background: rgba(14, 18, 16, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(247, 245, 240, 0.14),
+    0 32px 64px rgba(10, 15, 13, 0.50),
+    0 12px 24px rgba(10, 15, 13, 0.30),
+    0 0 100px rgba(125, 242, 176, 0.10);
+}
+
+.nav-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: var(--w-medium);
+  letter-spacing: -0.02em;
+  color: var(--paper);
+  padding: 0 8px;
+}
+
+.nav-logo .logo-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--mint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: var(--w-medium);
+  font-size: 15px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--s-3);
+}
+
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  font-size: 13.5px;
+  font-weight: var(--w-medium);
+  letter-spacing: -0.005em;
+  color: rgba(247, 245, 240, 0.65);
+  transition:
+    color var(--d-quick) var(--ease-glide),
+    background-color var(--d-quick) var(--ease-glide);
+  z-index: 1;
+}
+.nav-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(247, 245, 240, 0.08);
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity var(--d-quick) var(--ease-glide),
+    transform var(--d-quick) var(--ease-glide);
+  z-index: -1;
+}
+.nav-link:hover {
+  color: var(--paper);
+}
+.nav-link:hover::before,
+.nav-link.active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+.nav-link.active {
+  color: var(--paper);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* Buttons inside the dark pill — invert the color rules */
+.nav .btn {
+  height: 36px;
+  font-size: 13px;
+}
+.nav .btn-ghost {
+  background: transparent;
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px rgba(247, 245, 240, 0.18);
+}
+.nav .btn-ghost:hover {
+  background: rgba(247, 245, 240, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(247, 245, 240, 0.32), var(--btn-glow);
+}
+.nav .btn-primary {
+  background: var(--paper);
+  color: var(--ink);
+}
+.nav .btn-primary:hover {
+  background: var(--mint);
+  color: var(--ink);
+  box-shadow: var(--btn-glow);
+}
+
+/* Push first content below the floating pill on pages that have a nav */
+.nav + .hero,
+.nav + section,
+.nav + main > section:first-of-type {
+  padding-top: calc(64px + 32px + var(--s-6));
+}
+
+/* Mobile compaction */
+@media (max-width: 760px) {
+  .nav { padding: 12px 16px; }
+  .nav-inner {
+    height: 52px;
+    padding: 0 8px 0 8px;
+    background: rgba(10, 15, 13, 0.78);
+  }
+  .nav-links { display: none; }
+  .nav-logo { font-size: 15px; padding: 0 4px; }
+  .nav .btn { height: 32px; padding: 0 12px; font-size: 12px; }
+  .nav + .hero,
+  .nav + section,
+  .nav + main > section:first-of-type {
+    padding-top: calc(52px + 24px + var(--s-4));
+  }
+}
+
+/* ==========================================================================
+   BADGES (small inline labels)
+   ========================================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--paper-muted);
+  color: var(--ink);
+}
+
+.badge-ai {
+  background: linear-gradient(135deg, var(--atlas), var(--mint));
+  color: var(--ink);
+  font-weight: var(--w-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.badge-mint {
+  background: var(--mint-soft);
+  color: var(--riad);
+}
+
+.badge-ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ==========================================================================
+   KBD — keyboard shortcut chip
+   ========================================================================== */
+
+kbd, .kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--w-medium);
+  color: var(--n-600);
+  background: var(--paper);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 -1.5px 0 var(--paper-line),
+              inset 0 0 0 1px var(--hairline-light);
+}
+
+/* ==========================================================================
+   DIVIDERS
+   ========================================================================== */
+
+.hr {
+  height: 1px;
+  background: var(--hairline-light);
+  width: 100%;
+  border: 0;
+}
+
+.slab-ink .hr,
+.slab-riad .hr {
+  background: var(--hairline-dark);
+}
