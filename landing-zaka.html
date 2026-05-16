@@ -756,6 +756,12 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 @media (prefers-reduced-motion: reduce) {
   .floater-iban, .floater-tap { animation: none; }
 }
+/* Once the hero stacks (≤1100px) the floaters have no horizontal gutter —
+   they would bleed off-screen or cover the mockup. Hide them; the
+   dash-mock reads cleaner and more composed on its own. */
+@media (max-width: 1100px) {
+  .dash-mock-floater { display: none; }
+}
 
 /* TICKER ─────────────────────────────────────────────────────────── */
 .ticker {
@@ -4560,16 +4566,8 @@ footer {
   .hero-ctas .btn-rgb-wrap .btn { width: 100%; }
   .trust-row { font-size: 10px; gap: 6px 14px; margin-top: var(--s-6); }
 
-  /* Hero mockup — anchor floaters inside, not bleeding outside */
+  /* Hero mockup (floaters are hidden ≤1100px — see rule above) */
   .hero-mock { padding: 16px 8px; }
-  .dash-mock-floater {
-    font-size: 12px;
-    padding: 8px 14px 8px 8px;
-    gap: 8px;
-  }
-  .dash-mock-floater .ico { width: 24px; height: 24px; }
-  .floater-iban { right: 4px; top: 6%; }
-  .floater-tap { left: 4px; top: 64%; }
   .dash-mock-greeting { font-size: 12px; }
   .dash-mock-amount { font-size: clamp(30px, 8vw, 42px); gap: 8px; }
   .dash-mock-amount .unit { font-size: 14px; }
