@@ -376,6 +376,12 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
     0 4px 28px rgba(11, 110, 79, 0.16),
     0 14px 56px rgba(11, 110, 79, 0.08);
 }
+/* Once the hero stacks (≤1100px) the headline no longer needs the full
+   display scale — keep it from dominating the first screen. Placed after
+   the base rule so it wins the cascade. */
+@media (max-width: 1100px) {
+  .hero h1 { font-size: clamp(36px, 5vw, 54px); }
+}
 .hero h1::before {
   content: ""; position: absolute;
   inset: -18% -10% -18% -8%;
@@ -4557,7 +4563,7 @@ footer {
   /* Hero typography + layout */
   .hero { padding-bottom: var(--s-12); }
   .hero h1 {
-    font-size: clamp(30px, 8vw, 48px);
+    font-size: clamp(26px, 6.6vw, 36px);
     max-width: none;
     line-height: 1.08;
   }
@@ -4663,7 +4669,7 @@ footer {
 
 /* Extra-narrow phones (≤380px) — final tightening pass */
 @media (max-width: 380px) {
-  .hero h1 { font-size: 28px; }
+  .hero h1 { font-size: 24px; }
   .editorial { font-size: 22px; }
   .loss-number { font-size: 36px; }
   .s-head h2 { font-size: 24px; }
