@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Statut · Kiwi</title>
+<meta name="description" content="Statut opérationnel des services Kiwi en temps réel : encaissement, versement T+1, dashboard, API." />
+<meta name="theme-color" content="#0B6E4F" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://kiwi.ma/status.html" />
+
+<link rel="icon" type="image/png" href="assets/landing/kiwi-favicon.png" />
+<link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/landing/tokens.css" />
+<link rel="stylesheet" href="assets/landing/base.css" />
+<link rel="stylesheet" href="assets/landing/components.css" />
+
+<style>
+  body { background: var(--paper); }
+  .status-page { padding: var(--s-16) 0 var(--s-24); }
+  .status-page h1 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 4.4vw, 56px);
+    font-weight: var(--w-medium); letter-spacing: -0.028em;
+    line-height: 1.05; max-width: 22ch;
+  }
+  .status-hero {
+    margin-top: var(--s-8);
+    padding: var(--s-8);
+    background: #FFFFFF;
+    border-radius: var(--r-2xl);
+    box-shadow: inset 0 0 0 1px var(--hairline-light);
+    display: flex; align-items: center; gap: var(--s-6);
+  }
+  .status-hero-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 6px rgba(31, 181, 116, 0.18);
+    animation: livePulse 2.4s var(--ease-counter) infinite;
+    flex-shrink: 0;
+  }
+  .status-hero-text {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: var(--w-medium);
+    letter-spacing: -0.018em;
+  }
+  .status-hero-meta {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--n-500); letter-spacing: 0.04em;
+  }
+  .status-list {
+    margin-top: var(--s-8);
+    background: #FFFFFF;
+    border-radius: var(--r-lg);
+    box-shadow: inset 0 0 0 1px var(--hairline-light);
+    overflow: hidden;
+  }
+  .status-row {
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .status-row:last-child { border-bottom: 0; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 4px rgba(31, 181, 116, 0.18);
+  }
+  .status-row.warn .status-dot { background: var(--warning); box-shadow: 0 0 0 4px rgba(217, 154, 43, 0.20); }
+  .status-row.down .status-dot { background: var(--danger);  box-shadow: 0 0 0 4px rgba(201, 74, 58, 0.20); }
+  .status-name {
+    font-family: var(--font-display);
+    font-size: 16px; font-weight: var(--w-medium);
+    letter-spacing: -0.014em;
+  }
+  .status-name .desc {
+    display: block; margin-top: 2px;
+    font-family: var(--font-body); font-size: 13px;
+    font-weight: var(--w-regular); color: var(--n-500);
+    letter-spacing: 0;
+  }
+  .status-uptime {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--success); font-weight: var(--w-medium);
+    letter-spacing: 0.02em;
+  }
+  .status-row.warn .status-uptime { color: var(--warning); }
+  .status-row.down .status-uptime { color: var(--danger); }
+  .status-tag {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--n-500); letter-spacing: 0.06em;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    background: var(--paper-soft);
+  }
+
+  .status-incidents {
+    margin-top: var(--s-12);
+  }
+  .status-incidents h2 {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: var(--w-medium);
+    letter-spacing: -0.018em;
+  }
+  .incident {
+    margin-top: var(--s-5);
+    padding: var(--s-5) var(--s-6);
+    background: #FFFFFF;
+    border-radius: var(--r-lg);
+    box-shadow: inset 0 0 0 1px var(--paper-line);
+  }
+  .incident-head {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .incident-tag {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    color: var(--success); font-weight: var(--w-medium);
+    padding: 3px 9px; border-radius: var(--r-pill);
+    background: rgba(31, 181, 116, 0.10);
+  }
+  .incident-title {
+    font-family: var(--font-display);
+    font-size: 17px; font-weight: var(--w-medium);
+    letter-spacing: -0.014em;
+  }
+  .incident-meta {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--n-500);
+  }
+  .incident-body {
+    margin-top: 10px;
+    font-size: 14.5px; line-height: 1.55;
+    color: var(--n-700); max-width: 72ch;
+  }
+
+  .legal-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--n-500); letter-spacing: 0.04em;
+    margin-bottom: var(--s-8);
+    transition: color var(--d-quick) var(--ease-glide);
+  }
+  .legal-back:hover { color: var(--atlas); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .status-hero-dot { animation: none; }
+  }
+  @media (max-width: 720px) {
+    .status-row { grid-template-columns: 24px 1fr auto; }
+    .status-tag { display: none; }
+    .status-hero { flex-wrap: wrap; }
+    .status-hero-meta { margin-left: 0; flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Navigation principale">
+  <div class="nav-inner">
+    <a href="landing-zaka.html" class="nav-logo">
+      <span class="logo-mark">k</span>
+      <span>kiwi</span>
+    </a>
+    <div class="nav-actions">
+      <a class="btn btn-ghost btn-sm" href="landing-zaka.html">Retour au site</a>
+    </div>
+  </div>
+</nav>
+
+<section class="slab-paper status-page">
+  <div class="wrap-narrow">
+    <a href="landing-zaka.html" class="legal-back">← Retour à kiwi.ma</a>
+    <span class="pill pill-paper pill-dot">status.kiwi.ma</span>
+
+    <h1 style="margin-top: var(--s-4);">Statut opérationnel.</h1>
+
+    <!-- Hero status banner -->
+    <div class="status-hero">
+      <span class="status-hero-dot" aria-hidden="true"></span>
+      <span class="status-hero-text">Tous les services opérationnels.</span>
+      <span class="status-hero-meta">Dernière vérification : il y a 12 secondes</span>
+    </div>
+
+    <!-- Service-by-service breakdown -->
+    <div class="status-list">
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Encaissement carte
+          <span class="desc">Acquisition CMI · Visa · Mastercard · Wafacash</span>
+        </div>
+        <span class="status-uptime">99,98 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Versement T+1
+          <span class="desc">Settlement quotidien sur IBAN marocain · 9 h</span>
+        </div>
+        <span class="status-uptime">100,0 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Tableau de bord
+          <span class="desc">app.kiwi.ma · web et mobile</span>
+        </div>
+        <span class="status-uptime">99,96 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          API publique
+          <span class="desc">api.kiwi.ma · v1 · webhooks</span>
+        </div>
+        <span class="status-uptime">99,99 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Tap-to-Pay (iOS)
+          <span class="desc">EMV NFC · iPhone XS et plus récent</span>
+        </div>
+        <span class="status-uptime">99,97 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Tap-to-Pay (Android)
+          <span class="desc">EMV NFC · Android 11+ · 28 modèles certifiés</span>
+        </div>
+        <span class="status-uptime">99,95 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Support multilingue
+          <span class="desc">FR · AR · darija · EN · 8 h–22 h, lun.–sam.</span>
+        </div>
+        <span class="status-uptime">100,0 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+    </div>
+
+    <!-- Recent incidents -->
+    <div class="status-incidents">
+      <h2>Incidents récents (90 derniers jours)</h2>
+
+      <div class="incident">
+        <div class="incident-head">
+          <span class="incident-tag">Résolu</span>
+          <span class="incident-title">Latence accrue · API webhooks</span>
+          <span class="incident-meta">12 avr. 2026 · 14 h 22 → 14 h 47 (25 min)</span>
+        </div>
+        <div class="incident-body">
+          Les webhooks sortants ont connu une latence moyenne de 8 secondes pendant
+          25 minutes en raison d'un pic de charge sur le routeur DNS primaire.
+          Mitigé par bascule sur le secondaire. Aucune transaction perdue.
+          <b>Post-mortem publié</b> le 13 avril.
+        </div>
+      </div>
+
+      <div class="incident">
+        <div class="incident-head">
+          <span class="incident-tag">Résolu</span>
+          <span class="incident-title">Maintenance planifiée · base versement</span>
+          <span class="incident-meta">28 mars 2026 · 02 h 00 → 03 h 30 (90 min)</span>
+        </div>
+        <div class="incident-body">
+          Migration trimestrielle du moteur de settlement vers la nouvelle
+          partition. Communiqué 7 jours à l'avance par email à tous les
+          commerçants actifs. Aucun versement T+1 affecté.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
