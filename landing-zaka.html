@@ -1246,15 +1246,16 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
    pixel-perfectly. */
 .why-event-body h4 {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .why-event-body .marker {
   display: inline-flex;
   width: 24px; height: 24px;
   flex-shrink: 0;
-  align-self: flex-start;
-  margin: 1px 0 0;
+  align-self: center;
+  margin: 0;
 }
 .why-event-body .marker img {
   width: 100%;
@@ -1270,11 +1271,16 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  flex-wrap: wrap;
-  /* grow to fill the row so the headline wraps INSIDE the link instead
-     of pushing the whole link below the marker on narrow screens */
-  flex: 1 1 auto;
+  /* fit content; don't expand to fill the flex row */
+  flex: 0 1 auto;
   min-width: 0;
+}
+/* Phone only: stop the marker icon being pushed onto its own line above
+   the headline — let the link fill the row and wrap its text inside. */
+@media (max-width: 720px) {
+  .why-event-body h4 { align-items: flex-start; flex-wrap: nowrap; }
+  .why-event-body .marker { align-self: flex-start; margin-top: 1px; }
+  .why-event-body h4 a { flex: 1 1 auto; flex-wrap: wrap; }
 }
 /* Hover — subtle rotation when hovering anywhere in the headline row */
 .why-event-body h4:hover .marker img,
@@ -3524,10 +3530,6 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   margin-top: 24px;
   align-items: center;
 }
-@media (max-width: 720px) {
-  .verdict-numbers { grid-template-columns: 1fr; gap: 16px; }
-  .verdict-arrow { display: none; }
-}
 .verdict-cmi, .verdict-kiwi {
   display: flex; flex-direction: column; gap: 4px;
 }
@@ -3557,6 +3559,12 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   color: var(--mint);
   font-family: var(--font-mono); font-size: 22px;
   display: inline-flex; align-items: center; justify-content: center;
+}
+/* Phone only: stack the two columns and drop the now-meaningless
+   horizontal arrow. Placed after the base rule so display:none wins. */
+@media (max-width: 720px) {
+  .verdict-numbers { grid-template-columns: 1fr; gap: 16px; }
+  .verdict-arrow { display: none; }
 }
 .verdict-savings {
   margin-top: 28px;
@@ -3601,6 +3609,9 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 
 @media (max-width: 720px) {
   .story-scene { padding: 28px var(--s-6); margin-top: var(--s-8); }
+  /* Phone only: the header text reaches the top-right edge, so move the
+     avatar to the bottom-right corner where it sits clear of all copy. */
+  .scene-avatar { top: auto; bottom: 22px; right: 22px; width: 34px; height: 34px; }
   .scene-amount { font-size: clamp(40px, 11vw, 64px); margin-top: 16px; }
   .story-col { padding: var(--s-6); }
   .story-col-head { margin-bottom: 18px; padding-bottom: 14px; }
