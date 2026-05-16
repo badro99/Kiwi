@@ -1,0 +1,570 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   KIWI · PREMIUM BRAND OVERLAY (dashboard.html)
+   ─────────────────────────────────────────────────────────────────────
+   Loaded AFTER tokens.css / theme.css / polish.css / simple.css / ux.css.
+   Pulls the merchant dashboard onto the same identity as index.html
+   and brand.html: Geist as primary sans, mint-gradient signature rule
+   under every section title, atlas-tinted shadows, single live-pulse
+   pattern, Tifinagh ⵣ as Moroccan locality stamp, conic-gradient
+   orbiting border on the hero amount (signature moment).
+   ─────────────────────────────────────────────────────────────────────
+   Mint discipline: the mint colour is a signature, not a backdrop.
+   Total mint surface stays well under 5 % of viewport.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── 0 · Animated angle for orbiting border ─── */
+@property --kiwi-spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* ─── 1 · Token overrides ─── */
+:root {
+  /* Pull dashboard onto Geist (primary brand sans).
+     Fallback to Inter Tight so existing rendering survives if Geist fails. */
+  --sans: "Geist", "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  /* Mint gradient signature — used under headers, on rails, on dividers */
+  --mint-rule: linear-gradient(90deg,
+    rgba(125, 242, 176, 0.05) 0%,
+    var(--mint) 25%,
+    var(--mint) 75%,
+    rgba(125, 242, 176, 0.05) 100%);
+
+  /* Atlas-tinted shadows replace flat neutral ones */
+  --shadow-atlas-soft: 0 1px 2px rgba(11, 110, 79, 0.05),
+                       0 8px 24px -12px rgba(11, 110, 79, 0.10);
+  --shadow-atlas-md:   0 2px 4px rgba(11, 110, 79, 0.07),
+                       0 14px 36px -16px rgba(11, 110, 79, 0.18);
+  --shadow-atlas-lg:   0 4px 12px rgba(11, 110, 79, 0.10),
+                       0 28px 60px -20px rgba(11, 110, 79, 0.24);
+
+  /* Tifinagh font stack — small, used as locality glyph */
+  --tifinagh: "Noto Sans Tifinagh", "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+
+/* ─── 2 · Font discipline: weight ceiling = 500 (matches index.html) ─── */
+body { font-family: var(--sans); letter-spacing: -0.005em; }
+
+.page-head h1            { font-weight: 500; letter-spacing: -0.035em; }
+.block-head .t           { font-weight: 500; letter-spacing: -0.018em; }
+.kpi-m .v                { font-weight: 500; letter-spacing: -0.028em; }
+.hero-amount             { font-weight: 500; }
+.hero-breakdown .b .v    { font-weight: 500; }
+.settle .big             { font-weight: 500; }
+.bench-rank .r           { font-weight: 500; }
+.ring-center .score      { font-weight: 500; }
+.upsell h4               { font-weight: 500; }
+.sidebar .brand          { font-weight: 600; letter-spacing: -0.04em; }   /* wordmark exception */
+
+/* ─── 3 · Tabular harmony — every number row enforces tnum ─── */
+.kpi-m .v, .kpi-m .d,
+.feed-row .amt, .feed-row .tip, .feed-row .t, .feed-row .ctx,
+.bench-row .v, .prod-row .sales, .staff-row .tx-n, .staff-row .shift,
+.timeline-day .a, .timeline-day .n,
+.ring-center .score, .ring-center .slash,
+.hero-amount, .hero-breakdown .b .v, .settle .big {
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4 · DEMO BAR — Tifinagh ⵣ locality stamp
+   ═══════════════════════════════════════════════════════════════════════ */
+.demo-bar .left::before {
+  content: "ⵣ";
+  font-family: var(--tifinagh);
+  color: var(--mint);
+  font-size: 14px;
+  margin-right: 2px;
+  margin-left: -2px;
+  text-shadow: 0 0 4px rgba(125, 242, 176, 0.45);
+  font-weight: 500;
+}
+
+/* Standardise demo-bar live-dot to the unified pulse */
+.demo-bar .live-dot {
+  background: var(--mint);
+  box-shadow: 0 0 0 0 rgba(125, 242, 176, 0.55);
+  animation: kiwi-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5 · UNIFIED LIVE-PULSE — used everywhere there's a mint dot
+   ═══════════════════════════════════════════════════════════════════════ */
+@keyframes kiwi-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(125, 242, 176, 0.55); }
+  60%  { box-shadow: 0 0 0 8px rgba(125, 242, 176, 0); }
+  100% { box-shadow: 0 0 0 8px rgba(125, 242, 176, 0); }
+}
+
+.hero-left .live-badge .dot,
+.loc-switch .badge i,
+.block-head .t .pulse-dot,
+.status-bar .pip,
+.sidebar .brand i {
+  animation: kiwi-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Status bar pip — bring it onto the mint pulse */
+.status-bar .pip {
+  background: var(--mint);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6 · BLOCK-HEAD GRADIENT MINT RULE — the brand signature
+   Same pattern as the Arabic quote bar / audience tabs / FAQ rail in index.html
+   ═══════════════════════════════════════════════════════════════════════ */
+.block-head {
+  position: relative;
+  padding-bottom: 22px;
+}
+.block-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 6px;
+  width: 96px;
+  height: 1px;
+  background: var(--mint-rule);
+  filter: drop-shadow(0 0 4px rgba(125, 242, 176, 0.45));
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Page-head title gets the same rule */
+.page-head { position: relative; }
+.page-head > div:first-child { position: relative; padding-bottom: 14px; }
+.page-head > div:first-child::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 96px;
+  height: 1px;
+  background: var(--mint-rule);
+  filter: drop-shadow(0 0 4px rgba(125, 242, 176, 0.45));
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7 · HERO AMOUNT — orbiting conic-gradient neon border (signature moment)
+   ═══════════════════════════════════════════════════════════════════════ */
+.hero-amount {
+  position: relative;
+  display: inline-block;
+  padding: 4px 20px 8px;
+  margin-left: -20px;
+  border-radius: 18px;
+  isolation: isolate;
+}
+.hero-amount::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 1.2px;
+  background:
+    conic-gradient(from var(--kiwi-spin),
+      transparent 0deg,
+      transparent 70deg,
+      rgba(125, 242, 176, 0.10) 100deg,
+      var(--mint) 140deg,
+      rgba(125, 242, 176, 0.10) 180deg,
+      transparent 210deg,
+      transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  filter: drop-shadow(0 0 14px rgba(125, 242, 176, 0.40));
+  animation: kiwi-orbit 6s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-amount > * { position: relative; z-index: 1; }
+
+@keyframes kiwi-orbit { to { --kiwi-spin: 360deg; } }
+
+/* Hero currency: mint gradient text instead of opacity wash */
+.hero-amount .currency {
+  background: linear-gradient(135deg, var(--mint) 0%, #C9F6DC 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  opacity: 1;
+  font-weight: 500;
+}
+
+/* Hero today card: atlas radial bloom intensified, lift shadow */
+.hero-today {
+  box-shadow: var(--shadow-atlas-lg),
+              inset 0 1px 0 rgba(125, 242, 176, 0.10);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8 · KPI BAND — atlas-tinted hover lift + mint accent line
+   ═══════════════════════════════════════════════════════════════════════ */
+.kpi-m {
+  transition: border-color 200ms ease-out,
+              transform 200ms ease-out,
+              box-shadow 200ms ease-out;
+  box-shadow: 0 1px 2px rgba(10, 15, 13, 0.02);
+}
+.kpi-m:hover {
+  transform: translateY(-2px);
+  border-color: rgba(11, 110, 79, 0.22);
+  box-shadow: var(--shadow-atlas-md);
+}
+/* Subtle mint underline on KPI label rows for visual harmony */
+.kpi-m .l .ico {
+  background: linear-gradient(135deg, var(--paper-soft) 0%, rgba(125, 242, 176, 0.10) 100%);
+  border: 1px solid rgba(11, 110, 79, 0.08);
+  transition: background 200ms ease-out, border-color 200ms ease-out;
+}
+.kpi-m:hover .l .ico {
+  background: linear-gradient(135deg, var(--paper-soft) 0%, rgba(125, 242, 176, 0.20) 100%);
+  border-color: rgba(11, 110, 79, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   9 · BLOCK CARDS — atlas-tinted depth on hover
+   ═══════════════════════════════════════════════════════════════════════ */
+.block {
+  transition: box-shadow 220ms ease-out, border-color 220ms ease-out;
+  box-shadow: var(--shadow-atlas-soft);
+}
+.block:hover {
+  box-shadow: var(--shadow-atlas-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   10 · TOPBAR — atlas-tinted glass float
+   ═══════════════════════════════════════════════════════════════════════ */
+.topbar {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(10, 15, 13, 0.04),
+    0 14px 36px -14px rgba(11, 110, 79, 0.20),
+    0 4px 12px -4px rgba(11, 110, 79, 0.08);
+}
+
+/* AI button uses mint star with subtle glow */
+.ai-btn svg { filter: drop-shadow(0 0 4px rgba(125, 242, 176, 0.55)); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   11 · SIDEBAR — Moroccan PNG icons replace generic strokes
+   Icons injected by kiwi-premium.js based on data-nav / data-action
+   ═══════════════════════════════════════════════════════════════════════ */
+.sidebar nav a { padding: 9px 10px; }
+
+/* Hide replaced SVGs once JS swaps them */
+.sidebar nav a > svg { display: none; }
+
+/* PNG nav icon — black-PNG → mint chain via filter */
+.sidebar nav a > .nav-ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  filter: brightness(0) saturate(100%) invert(95%) sepia(36%) saturate(326%)
+          hue-rotate(75deg) brightness(102%) contrast(96%);
+  opacity: 0.40;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+.sidebar nav a:hover > .nav-ico { opacity: 0.72; }
+.sidebar nav a.active > .nav-ico {
+  opacity: 1;
+  filter: brightness(0) saturate(100%) invert(95%) sepia(36%) saturate(326%)
+          hue-rotate(75deg) brightness(102%) contrast(96%)
+          drop-shadow(0 0 5px rgba(125, 242, 176, 0.55));
+}
+
+/* Active rail: gradient mint instead of solid */
+.sidebar nav a.active::before {
+  background: var(--mint-rule);
+  width: 2px;
+  filter: drop-shadow(0 0 4px rgba(125, 242, 176, 0.55));
+}
+
+/* Active row pill with mint-glow inset */
+.sidebar nav a.active {
+  background: rgba(125, 242, 176, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(125, 242, 176, 0.10),
+              inset 0 0 18px rgba(125, 242, 176, 0.05);
+}
+
+/* Section headers carry a tiny Tifinagh ⵣ as Moroccan glyph */
+.sidebar .sect {
+  position: relative;
+  padding-left: 16px;
+}
+.sidebar .sect::before {
+  content: "ⵣ";
+  font-family: var(--tifinagh);
+  position: absolute;
+  left: 0;
+  color: rgba(125, 242, 176, 0.55);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   12 · MERCHANT AVATAR — PNG with atlas backdrop, no more "RB" initials
+   ═══════════════════════════════════════════════════════════════════════ */
+.sidebar .merchant {
+  border: 1px solid transparent;
+  transition: background 180ms ease-out, border-color 180ms ease-out;
+}
+.sidebar .merchant:hover {
+  background: rgba(125, 242, 176, 0.06);
+  border-color: rgba(125, 242, 176, 0.10);
+}
+.sidebar .merchant .avatar {
+  background: linear-gradient(135deg, var(--atlas) 0%, var(--riad-deep) 100%);
+  position: relative;
+  overflow: hidden;
+  text-indent: -9999px;        /* swallow any text fallback like "RB" */
+  box-shadow: 0 2px 6px -2px rgba(11, 110, 79, 0.45),
+              inset 0 1px 0 rgba(125, 242, 176, 0.16);
+}
+.sidebar .merchant .avatar::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: url("../icons/merchant.png") center/contain no-repeat;
+  filter: brightness(0) saturate(100%) invert(95%) sepia(36%) saturate(326%)
+          hue-rotate(75deg) brightness(102%) contrast(96%);
+  text-indent: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   13 · LOC-SWITCH — gradient lift, atlas-tinted hover
+   ═══════════════════════════════════════════════════════════════════════ */
+.loc-switch {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(125, 242, 176, 0.04) 100%);
+  transition: background 180ms ease-out, border-color 180ms ease-out;
+}
+.loc-switch:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(125, 242, 176, 0.08) 100%);
+  border-color: rgba(125, 242, 176, 0.18);
+}
+
+/* Upsell card: tighter mint-on-atlas */
+.sidebar .upsell {
+  background: linear-gradient(145deg, rgba(125, 242, 176, 0.10) 0%, rgba(11, 110, 79, 0.14) 100%);
+  border-color: rgba(125, 242, 176, 0.16);
+  box-shadow: inset 0 1px 0 rgba(125, 242, 176, 0.10);
+}
+.sidebar .upsell button {
+  transition: transform 150ms, box-shadow 150ms;
+  box-shadow: 0 4px 12px -4px rgba(125, 242, 176, 0.55);
+}
+.sidebar .upsell button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -4px rgba(125, 242, 176, 0.70);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   14 · KIWI AI EYEBROW — tea-glass hint
+   ═══════════════════════════════════════════════════════════════════════ */
+.hai-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hai-eyebrow::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: url("../icons/tea-glass.png") center/contain no-repeat;
+  filter: brightness(0) saturate(100%) invert(95%) sepia(36%) saturate(326%)
+          hue-rotate(75deg) brightness(102%) contrast(96%)
+          drop-shadow(0 0 3px rgba(125, 242, 176, 0.45));
+  flex-shrink: 0;
+}
+
+/* hh-ai (heatmap intelligence panel) — atlas-mint tighten */
+.hh-ai {
+  background: linear-gradient(135deg, var(--paper-soft) 0%, rgba(125, 242, 176, 0.06) 100%);
+  border-left: 3px solid;
+  border-image: var(--mint-rule) 1;
+}
+.hh-ai-icon {
+  background: linear-gradient(135deg, var(--atlas) 0%, var(--riad-deep) 100%);
+  box-shadow: 0 4px 14px -4px rgba(11, 110, 79, 0.45),
+              inset 0 1px 0 rgba(125, 242, 176, 0.16);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   15 · FEED ROWS — mint flash on new entry, soft hover
+   ═══════════════════════════════════════════════════════════════════════ */
+.feed-row { transition: background 180ms ease-out; }
+.feed-row.new {
+  animation: kiwi-feed-enter 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes kiwi-feed-enter {
+  0%   { opacity: 0; transform: translateY(-6px);
+         background: rgba(125, 242, 176, 0.18);
+         box-shadow: inset 3px 0 0 var(--mint); }
+  60%  { background: rgba(125, 242, 176, 0.06);
+         box-shadow: inset 3px 0 0 rgba(125, 242, 176, 0.4); }
+  100% { opacity: 1; transform: translateY(0);
+         background: transparent;
+         box-shadow: inset 0 0 0 transparent; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   16 · SETTLEMENT — orbit shimmer on the value
+   ═══════════════════════════════════════════════════════════════════════ */
+.settle {
+  box-shadow: var(--shadow-atlas-md),
+              inset 0 1px 0 rgba(125, 242, 176, 0.16);
+}
+.settle .big {
+  background: linear-gradient(135deg, #fff 0%, var(--mint) 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Settle "instant payout" pill: mint-edge on hover */
+.settle .instant {
+  border: 1px solid transparent;
+  transition: background 180ms, border-color 180ms;
+}
+.settle .instant:hover {
+  border-color: rgba(125, 242, 176, 0.30);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   17 · INTEGRATION CARDS — atlas-glow on hover
+   ═══════════════════════════════════════════════════════════════════════ */
+.integ-card {
+  transition: border-color 180ms ease-out,
+              box-shadow 180ms ease-out,
+              transform 180ms ease-out;
+}
+.integ-card:hover {
+  border-color: rgba(11, 110, 79, 0.22);
+  box-shadow: var(--shadow-atlas-soft);
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   18 · COMPARE BUTTON — atlas-mint depth when active
+   ═══════════════════════════════════════════════════════════════════════ */
+.cmp-btn.on {
+  box-shadow: 0 4px 14px -4px rgba(11, 110, 79, 0.55),
+              inset 0 1px 0 rgba(125, 242, 176, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   19 · FOCUS — atlas ring everywhere
+   ═══════════════════════════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid var(--atlas);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   20 · VENUE DROPDOWN — atlas-tinted card, mint hover, Tifinagh on active
+   (component imported from badro99 ─ multi-venue switcher)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Loc-switch open state: subtle mint outline, no harsh borders */
+.loc-switch.open {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(125,242,176,0.10) 100%);
+  border-color: rgba(125, 242, 176, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(125, 242, 176, 0.10),
+              0 0 18px rgba(125, 242, 176, 0.06);
+}
+.loc-switch .chev { transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* Dropdown card: atlas-tinted depth, mint kiss on top edge */
+.venue-dropdown {
+  background: #fff;
+  border: 1px solid rgba(11, 110, 79, 0.10) !important;
+  box-shadow: 0 1px 2px rgba(11, 110, 79, 0.05),
+              0 14px 36px -14px rgba(11, 110, 79, 0.22),
+              0 4px 12px -4px rgba(11, 110, 79, 0.10) !important;
+}
+.venue-dropdown::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: -1px;
+  height: 1px;
+  background: var(--mint-rule);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Venue rows: mint hover, Tifinagh ⵣ on the active row */
+.venue-row {
+  transition: background 180ms ease-out, transform 180ms ease-out;
+  position: relative;
+}
+.venue-row:hover:not(.active) {
+  background: rgba(125, 242, 176, 0.08) !important;
+}
+.venue-row.active {
+  background: rgba(125, 242, 176, 0.10) !important;
+}
+.venue-row.active::after {
+  content: "ⵣ";
+  font-family: var(--tifinagh);
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--atlas);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Venue row icon: atlas tint on hover */
+.venue-row-icon { color: var(--n-500); transition: color 180ms ease-out; }
+.venue-row:hover .venue-row-icon,
+.venue-row.active .venue-row-icon { color: var(--atlas); }
+
+/* Venue status dot: unified mint pulse */
+.venue-row-status i {
+  background: var(--mint) !important;
+  box-shadow: 0 0 0 0 rgba(125, 242, 176, 0.55);
+  animation: kiwi-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Vertical-section fade tweak: smoother curve */
+[data-vertical-section] { transition: opacity 180ms cubic-bezier(0.32, 0.72, 0, 1); }
+[data-vertical-section].vert-fading { opacity: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   21 · REDUCED MOTION — kill all animations
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .hero-amount::before { animation: none; }
+  .demo-bar .live-dot,
+  .hero-left .live-badge .dot,
+  .loc-switch .badge i,
+  .block-head .t .pulse-dot,
+  .status-bar .pip,
+  .sidebar .brand i,
+  .venue-row-status i {
+    animation: none;
+  }
+  .feed-row.new { animation: none; }
+  [data-vertical-section] { transition: none; }
+}

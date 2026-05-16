@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kiwi · Brand · Le système de conception</title>
+<meta name="description" content="Le système de conception Kiwi : palette Atlas / Mint / Riad, typographie Geist + Reem Kufi, mouvement, composants, iconographie marocaine, voix de marque." />
+<meta name="theme-color" content="#0B6E4F" />
+
+<link rel="icon" type="image/png" href="assets/icons/kiwi-fruit.png" />
+<link rel="apple-touch-icon" href="assets/icons/kiwi-fruit.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600&display=swap" />
+
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/base.css" />
+<link rel="stylesheet" href="assets/components.css" />
+
+<style>
+/* ════════════════════════════════════════════════════════════════
+   Brand-page specific layout — sticky TOC sidebar + content rail.
+   Reuses the site's locked design tokens; this page is itself a
+   working demonstration of the system.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Page top bar — simpler than the marketing nav */
+.bnav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  background: rgba(247, 245, 240, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--paper-line);
+}
+.bnav-inner {
+  max-width: var(--wrap-max);
+  margin: 0 auto;
+  padding: 0 var(--wrap-pad);
+  height: var(--nav-h);
+  display: flex; align-items: center; gap: var(--s-6);
+}
+.bnav-mark {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: var(--w-medium);
+  font-size: 18px; letter-spacing: -0.02em; color: var(--ink);
+  text-decoration: none;
+}
+.bnav-mark .logo-mark {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--mint); color: var(--ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: var(--w-medium); font-size: 14px;
+  letter-spacing: -0.04em;
+}
+.bnav-tag {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--n-500);
+  padding-left: var(--s-4);
+  border-left: 1px solid var(--paper-line);
+}
+.bnav-back {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--n-700); text-decoration: none;
+  transition: all var(--d-quick) var(--ease-glide);
+}
+.bnav-back:hover {
+  color: var(--atlas); border-color: var(--atlas);
+  transform: translateY(-1px);
+}
+
+/* Page hero */
+.brand-hero {
+  padding: var(--s-20) 0 var(--s-12);
+  background: var(--paper);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.brand-hero::before {
+  content: "";
+  position: absolute;
+  top: -20%; right: -10%;
+  width: 60%; height: 140%;
+  background: radial-gradient(ellipse 60% 60% at center,
+    rgba(125, 242, 176, 0.18) 0%,
+    rgba(11, 110, 79, 0.06) 40%,
+    transparent 70%);
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+}
+.brand-hero > .wrap { position: relative; z-index: 1; }
+.brand-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 6vw, 96px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--ink);
+  text-wrap: balance;
+  max-width: 18ch;
+}
+.brand-hero h1 em {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--atlas);
+}
+.brand-hero p {
+  margin-top: var(--s-6);
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--n-700);
+  max-width: 56ch;
+}
+
+/* Layout — sticky sidebar TOC + content */
+.brand-layout {
+  max-width: var(--wrap-max);
+  margin: 0 auto;
+  padding: 0 var(--wrap-pad);
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--s-12);
+  align-items: start;
+}
+.brand-toc {
+  position: sticky;
+  top: calc(var(--nav-h) + var(--s-8));
+  padding: var(--s-6) 0;
+}
+.brand-toc-eye {
+  font-family: var(--font-mono);
+  font-size: 10.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+  color: var(--n-500);
+  margin-bottom: var(--s-4);
+}
+.brand-toc ol {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  counter-reset: toc;
+}
+.brand-toc li { counter-increment: toc; }
+.brand-toc a {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: var(--w-medium);
+  letter-spacing: -0.012em;
+  color: var(--n-600);
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  transition: all var(--d-quick) var(--ease-glide);
+  position: relative;
+}
+.brand-toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--n-400);
+  font-weight: var(--w-medium);
+}
+.brand-toc a:hover { color: var(--ink); background: rgba(11, 110, 79, 0.04); }
+.brand-toc a:hover::before { color: var(--atlas); }
+.brand-toc a.is-active {
+  color: var(--ink);
+  background: linear-gradient(90deg, rgba(125, 242, 176, 0.10) 0%, transparent 100%);
+}
+.brand-toc a.is-active::after {
+  content: "";
+  position: absolute;
+  left: -2px; top: 18%; bottom: 18%;
+  width: 2px;
+  background: linear-gradient(180deg,
+    rgba(125, 242, 176, 0.05),
+    var(--mint) 25%, var(--mint) 75%,
+    rgba(125, 242, 176, 0.05));
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(125, 242, 176, 0.45);
+}
+.brand-toc a.is-active::before { color: var(--atlas); }
+
+/* Main content rail */
+.brand-content { padding-bottom: var(--s-24); min-width: 0; }
+.brand-section {
+  scroll-margin-top: calc(var(--nav-h) + var(--s-8));
+  padding: var(--s-16) 0;
+  border-bottom: 1px solid var(--paper-line);
+}
+.brand-section:last-child { border-bottom: 0; }
+.brand-section-num {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+  color: var(--atlas);
+  margin-bottom: var(--s-3);
+}
+.brand-section-h {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.6vw, 52px);
+  font-weight: var(--w-medium);
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.brand-section-lede {
+  margin-top: var(--s-4);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--n-700);
+  max-width: 60ch;
+}
+.brand-rule {
+  height: 2px;
+  border: 0;
+  width: 96px;
+  background: linear-gradient(90deg,
+    rgba(125, 242, 176, 0.05) 0%,
+    var(--mint) 25%, var(--mint) 75%,
+    rgba(125, 242, 176, 0.05) 100%);
+  border-radius: 2px;
+  box-shadow:
+    0 0 12px rgba(125, 242, 176, 0.45),
+    0 0 28px rgba(125, 242, 176, 0.20);
+  margin: var(--s-6) 0 var(--s-8);
+}
+
+/* Manifesto principles */
+.principles {
+  margin-top: var(--s-8);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-4);
+  list-style: none; padding: 0;
+  counter-reset: pri;
+}
+.principles li {
+  counter-increment: pri;
+  padding: var(--s-5);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--r-md);
+  background: #FFFFFF;
+}
+.principles li::before {
+  content: counter(pri, decimal-leading-zero);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.06em;
+  color: var(--atlas); font-weight: var(--w-medium);
+  margin-bottom: 8px;
+}
+.principles h4 {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: var(--w-medium);
+  letter-spacing: -0.018em;
+  color: var(--ink); margin-bottom: 6px;
+}
+.principles p {
+  font-size: 14.5px; line-height: 1.55;
+  color: var(--n-600);
+}
+
+/* === PALETTE === */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.swatch {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform var(--d-base) var(--ease-glide), box-shadow var(--d-base) var(--ease-glide);
+}
+.swatch:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 48px -16px rgba(11, 110, 79, 0.22);
+}
+.swatch-color {
+  height: 140px;
+  position: relative;
+}
+.swatch-meta {
+  padding: var(--s-4) var(--s-5);
+  background: #FFFFFF;
+  border: 1px solid var(--paper-line);
+  border-top: 0;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+.swatch-name {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: var(--w-medium);
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+.swatch-hex {
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.04em;
+  color: var(--n-500);
+  margin-top: 4px;
+}
+.swatch-rule {
+  font-size: 12.5px; line-height: 1.45;
+  color: var(--n-600);
+  margin-top: 8px;
+}
+/* Each swatch's color */
+.s-atlas .swatch-color   { background: var(--atlas); }
+.s-mint .swatch-color    { background: var(--mint); }
+.s-riad .swatch-color    { background: var(--riad-deep); }
+.s-paper .swatch-color   { background: var(--paper); border: 1px solid var(--paper-line); border-bottom: 0; }
+.s-ink .swatch-color     { background: var(--ink); }
+
+/* Discipline callout */
+.discipline {
+  margin-top: var(--s-8);
+  padding: var(--s-6) var(--s-8);
+  background: linear-gradient(135deg, rgba(125, 242, 176, 0.10) 0%, rgba(11, 110, 79, 0.04) 100%);
+  border-left: 2px solid var(--mint);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.discipline-eye {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--atlas); font-weight: var(--w-medium);
+  margin-bottom: 6px;
+}
+.discipline p {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ink);
+  max-width: 64ch;
+}
+
+/* === TYPOGRAPHY === */
+.type-ladder {
+  display: flex; flex-direction: column;
+  gap: var(--s-6);
+}
+.type-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--s-6);
+  align-items: baseline;
+  padding-bottom: var(--s-5);
+  border-bottom: 1px dashed var(--paper-line);
+}
+.type-row:last-child { border-bottom: 0; }
+.type-spec {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.04em;
+  color: var(--n-500); font-weight: var(--w-medium);
+  line-height: 1.5;
+}
+.type-spec b { color: var(--ink); font-weight: var(--w-medium); display: block; margin-bottom: 4px; }
+.type-sample { color: var(--ink); }
+.type-sample.t-hero { font-size: clamp(40px, 5vw, 72px); line-height: var(--lh-hero); letter-spacing: var(--ls-hero); font-weight: var(--w-medium); font-family: var(--font-display); }
+.type-sample.t-display { font-size: clamp(32px, 3.6vw, 52px); line-height: var(--lh-display); letter-spacing: var(--ls-display); font-weight: var(--w-medium); font-family: var(--font-display); }
+.type-sample.t-h2 { font-size: clamp(26px, 2.8vw, 38px); line-height: var(--lh-h2); letter-spacing: var(--ls-h2); font-weight: var(--w-medium); font-family: var(--font-display); }
+.type-sample.t-h3 { font-size: 22px; line-height: var(--lh-h3); letter-spacing: var(--ls-h3); font-weight: var(--w-medium); font-family: var(--font-display); }
+.type-sample.t-lead { font-size: 19px; line-height: var(--lh-lead); letter-spacing: var(--ls-lead); font-family: var(--font-body); color: var(--n-600); }
+.type-sample.t-body { font-size: 16px; line-height: var(--lh-body); letter-spacing: var(--ls-body); font-family: var(--font-body); color: var(--n-700); }
+.type-sample.t-mono { font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.02em; color: var(--ink); font-feature-settings: "tnum" 1, "lnum" 1; }
+.type-sample.t-editorial { font-family: var(--font-editorial); font-style: italic; font-size: 26px; color: var(--atlas); }
+.type-sample.t-arabic { font-family: var(--font-arabic); font-size: 26px; direction: rtl; font-weight: var(--w-medium); color: var(--ink); }
+
+/* === SPACING === */
+.spacing-list {
+  display: flex; flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+}
+.spacing-row {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--paper-line);
+}
+.spacing-name {
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: var(--w-medium);
+  color: var(--atlas);
+  letter-spacing: 0.02em;
+}
+.spacing-px {
+  font-family: var(--font-mono);
+  font-size: 13px; color: var(--n-500);
+  letter-spacing: 0.02em;
+}
+.spacing-bar {
+  height: 8px;
+  background: var(--atlas);
+  border-radius: 2px;
+}
+
+/* === MOTION === */
+.motion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+}
+.motion-card {
+  padding: var(--s-5);
+  background: var(--ink);
+  border-radius: var(--r-md);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.motion-card-eye {
+  font-family: var(--font-mono); font-size: 10.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--mint); font-weight: var(--w-medium);
+  margin-bottom: 4px;
+}
+.motion-card-name {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: var(--w-medium);
+  color: var(--paper);
+  letter-spacing: -0.012em;
+  margin-bottom: 4px;
+}
+.motion-card-spec {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: rgba(247, 245, 240, 0.55);
+  letter-spacing: 0.02em;
+}
+.motion-card-track {
+  margin-top: var(--s-4);
+  position: relative;
+  height: 24px;
+  background: rgba(247, 245, 240, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.motion-card-dot {
+  position: absolute;
+  top: 50%; left: 4px;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 12px rgba(125, 242, 176, 0.65);
+  animation: motionTravel 3s var(--ease-glide) infinite alternate;
+}
+.motion-card[data-ease="natural"] .motion-card-dot { animation-timing-function: var(--ease-natural); }
+.motion-card[data-ease="spring"] .motion-card-dot { animation-timing-function: var(--ease-spring); }
+.motion-card[data-ease="counter"] .motion-card-dot { animation-timing-function: var(--ease-counter); }
+.motion-card[data-ease="snap"] .motion-card-dot { animation-timing-function: var(--ease-snap); animation-duration: 1.6s; }
+@keyframes motionTravel {
+  to { left: calc(100% - 20px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-card-dot { animation: none; }
+}
+
+/* === COMPONENTS === */
+.comp-block {
+  margin-top: var(--s-6);
+  padding: var(--s-8);
+  background: #FFFFFF;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--r-lg);
+  display: flex; flex-direction: column;
+  gap: var(--s-4);
+}
+.comp-block-title {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+  color: var(--n-500);
+}
+.comp-row {
+  display: flex; gap: var(--s-3); flex-wrap: wrap;
+  align-items: center;
+}
+.btn-demo {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: var(--w-medium);
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  transition: all var(--d-quick) var(--ease-glide);
+}
+.btn-demo.primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-demo.primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px -6px rgba(11, 110, 79, 0.30),
+    0 0 36px rgba(125, 242, 176, 0.20);
+}
+.btn-demo.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--paper-line);
+}
+.btn-demo.ghost:hover {
+  border-color: var(--atlas);
+  color: var(--atlas);
+}
+.btn-demo.mint {
+  background: var(--mint);
+  color: var(--ink);
+}
+.btn-demo.mint:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 4px rgba(125, 242, 176, 0.18), 0 12px 32px -8px rgba(125, 242, 176, 0.55);
+}
+.pill-demo {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.10em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+}
+.pill-demo.atlas { background: rgba(11, 110, 79, 0.10); color: var(--atlas); }
+.pill-demo.mint { background: var(--mint); color: var(--ink); }
+.pill-demo.ink { background: var(--ink); color: var(--paper); }
+.pill-demo.live::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 2px rgba(125, 242, 176, 0.18), 0 0 8px rgba(125, 242, 176, 0.7);
+  animation: livePulse 2.4s var(--ease-counter) infinite;
+}
+.gradient-rule-demo {
+  height: 2px;
+  width: 200px;
+  background: linear-gradient(90deg,
+    rgba(125, 242, 176, 0.05),
+    var(--mint) 25%, var(--mint) 75%,
+    rgba(125, 242, 176, 0.05));
+  border-radius: 2px;
+  box-shadow: 0 0 14px rgba(125, 242, 176, 0.45), 0 0 32px rgba(125, 242, 176, 0.18);
+}
+.neon-card-demo {
+  position: relative;
+  padding: var(--s-5);
+  border-radius: var(--r-md);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(160deg, var(--ink), var(--riad-deep)) padding-box,
+    conic-gradient(
+      from var(--rgb-spin, 0deg),
+      rgba(125, 242, 176, 0.04) 0deg,
+      var(--mint) 80deg,
+      rgba(255, 255, 255, 0.95) 95deg,
+      var(--mint) 110deg,
+      rgba(125, 242, 176, 0.04) 200deg,
+      rgba(125, 242, 176, 0.04) 360deg
+    ) border-box;
+  color: var(--paper);
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 0.04em;
+  animation: lossOrbit 9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .neon-card-demo { animation: none; } }
+
+/* === ICONOGRAPHY === */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+}
+.icon-tile {
+  background: #FFFFFF;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--r-md);
+  padding: var(--s-4) var(--s-3);
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform var(--d-base) var(--ease-glide), box-shadow var(--d-base) var(--ease-glide);
+}
+.icon-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px -10px rgba(11, 110, 79, 0.18);
+  border-color: var(--atlas);
+}
+.icon-tile img {
+  width: 36px; height: 36px;
+  filter:
+    brightness(0) saturate(100%)
+    invert(31%) sepia(27%) saturate(1490%)
+    hue-rotate(118deg) brightness(94%) contrast(89%);
+  transition: filter var(--d-base) var(--ease-glide), transform var(--d-base) var(--ease-glide);
+}
+.icon-tile:hover img {
+  filter:
+    brightness(0) saturate(100%)
+    invert(85%) sepia(31%) saturate(469%)
+    hue-rotate(70deg) brightness(102%) contrast(91%)
+    drop-shadow(0 0 8px rgba(125, 242, 176, 0.55));
+  transform: scale(1.08);
+}
+.icon-tile-name {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.04em;
+  color: var(--n-600); text-align: center;
+  word-break: break-word;
+}
+
+/* === VOICE === */
+.voice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+}
+.voice-col {
+  padding: var(--s-6);
+  border-radius: var(--r-md);
+  background: #FFFFFF;
+  border: 1px solid var(--paper-line);
+}
+.voice-col h4 {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: var(--w-medium);
+  margin-bottom: var(--s-4);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.voice-col.do h4    { color: var(--atlas); }
+.voice-col.dont h4  { color: var(--danger); }
+.voice-col h4::before {
+  content: "";
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.voice-col.do h4::before   { background: var(--mint); box-shadow: 0 0 0 2px rgba(125, 242, 176, 0.18); }
+.voice-col.dont h4::before { background: rgba(201, 74, 58, 0.85); box-shadow: 0 0 0 2px rgba(201, 74, 58, 0.18); }
+.voice-col ul {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.voice-col li {
+  padding-left: 22px;
+  position: relative;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--n-700);
+}
+.voice-col.do li::before  { content: "✓"; position: absolute; left: 0; top: 0; color: var(--atlas); font-weight: var(--w-medium); }
+.voice-col.dont li::before { content: "✗"; position: absolute; left: 0; top: 0; color: var(--danger); font-weight: var(--w-medium); }
+.voice-col li b { color: var(--ink); font-weight: var(--w-medium); }
+.voice-sample {
+  margin-top: var(--s-3);
+  padding: 10px 14px;
+  background: var(--paper-soft);
+  border-left: 2px solid;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--n-700); letter-spacing: 0.01em;
+}
+.voice-col.do .voice-sample { border-color: var(--atlas); }
+.voice-col.dont .voice-sample {
+  border-color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-color: rgba(201, 74, 58, 0.6);
+}
+
+/* === ANTI-PATTERNS === */
+.anti-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+}
+.anti-tile {
+  padding: var(--s-5);
+  background: rgba(247, 245, 240, 0.06);
+  border: 1px solid rgba(247, 245, 240, 0.10);
+  border-radius: var(--r-md);
+}
+.anti-tile h4 {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: var(--w-medium);
+  letter-spacing: -0.012em;
+  color: var(--paper);
+  margin-bottom: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.anti-tile h4::before {
+  content: "✗";
+  color: rgba(201, 74, 58, 0.85);
+  font-weight: var(--w-medium);
+}
+.anti-tile p {
+  font-size: 13.5px; line-height: 1.55;
+  color: rgba(247, 245, 240, 0.65);
+}
+
+.brand-section.dark {
+  background: linear-gradient(160deg, var(--ink) 0%, var(--riad-deep) 100%);
+  margin: var(--s-12) calc(-1 * var(--wrap-pad));
+  padding: var(--s-16) var(--wrap-pad);
+  border-radius: var(--r-2xl);
+  border-bottom: 0;
+}
+.brand-section.dark .brand-section-num { color: rgba(125, 242, 176, 0.85); }
+.brand-section.dark .brand-section-h { color: var(--paper); }
+.brand-section.dark .brand-section-lede { color: rgba(247, 245, 240, 0.65); }
+
+/* Footer */
+.brand-foot {
+  padding: var(--s-12) 0;
+  background: var(--paper-soft);
+  border-top: 1px solid var(--paper-line);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--n-500);
+  text-align: center;
+}
+.brand-foot a {
+  color: var(--atlas);
+  text-decoration: none;
+  transition: color var(--d-quick);
+}
+.brand-foot a:hover { color: var(--ink); }
+
+/* Mobile */
+@media (max-width: 880px) {
+  .brand-layout {
+    grid-template-columns: 1fr;
+    gap: var(--s-6);
+    padding-top: 0;
+  }
+  .brand-toc {
+    position: static;
+    padding: var(--s-4) 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .brand-toc ol {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding-bottom: 4px;
+  }
+  .brand-toc li { flex-shrink: 0; }
+  .brand-toc a {
+    grid-template-columns: auto auto;
+    padding: 6px 10px;
+    border: 1px solid var(--paper-line);
+    border-radius: var(--r-pill);
+    font-size: 12px;
+  }
+  .brand-toc a.is-active::after { display: none; }
+  .brand-toc a.is-active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .voice-grid { grid-template-columns: 1fr; }
+  .type-row { grid-template-columns: 1fr; gap: var(--s-2); }
+  .brand-section.dark { margin: var(--s-8) calc(-1 * var(--wrap-pad-mobile)); padding: var(--s-12) var(--wrap-pad-mobile); border-radius: 0; }
+}
+</style>
+</head>
+<body>
+
+<nav class="bnav">
+  <div class="bnav-inner">
+    <a href="index.html" class="bnav-mark">
+      <span class="logo-mark">k</span>
+      <span>kiwi</span>
+    </a>
+    <span class="bnav-tag">Brand · Système de conception</span>
+    <a href="index.html" class="bnav-back">← Retour au site</a>
+  </div>
+</nav>
+
+<header class="brand-hero">
+  <div class="wrap">
+    <div style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--atlas); font-weight: 500; margin-bottom: var(--s-4);">
+      Kiwi · Brand Book · v1.0
+    </div>
+    <h1>Le système de conception derrière <em>chaque pixel</em>.</h1>
+    <p>La palette, la typographie, le mouvement, les composants, la voix. Tout ce qui rend Kiwi reconnaissable au premier regard. Pensé pour la rigueur de Stripe et la spécificité culturelle d'une marque conçue à Tanger.</p>
+  </div>
+</header>
+
+<div class="brand-layout">
+  <aside class="brand-toc">
+    <div class="brand-toc-eye">Sommaire</div>
+    <ol>
+      <li><a href="#mission">Mission</a></li>
+      <li><a href="#palette">Palette</a></li>
+      <li><a href="#typography">Typographie</a></li>
+      <li><a href="#spacing">Espacement</a></li>
+      <li><a href="#motion">Mouvement</a></li>
+      <li><a href="#components">Composants</a></li>
+      <li><a href="#iconography">Iconographie</a></li>
+      <li><a href="#voice">Voix &amp; ton</a></li>
+      <li><a href="#anti">Anti-patterns</a></li>
+    </ol>
+  </aside>
+
+  <main class="brand-content">
+
+    <!-- ════════════ 1 · MISSION ════════════ -->
+    <section id="mission" class="brand-section">
+      <div class="brand-section-num">01 · Mission</div>
+      <h2 class="brand-section-h">Le système d'exploitation du commerçant marocain.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Kiwi remplace l'acquéreur classique, la caisse, et l'outil de pilotage par un seul produit. Conçu à Tanger, vendu en français, en darija, en arabe. Les commerçants reconnaissent leur réalité avant de reconnaître leur fournisseur.</p>
+
+      <ul class="principles">
+        <li>
+          <h4>Rigueur Stripe</h4>
+          <p>Chaque chiffre vérifié à la source. Aucun « en cours », aucun tiret cadratin, aucune copie hedgée. Si on ne peut pas prouver, on ne dit pas.</p>
+        </li>
+        <li>
+          <h4>Spécificité Tanger</h4>
+          <p>Les références marocaines doivent être maghrébines, pas pan-arabes. Tifinagh ⵣ avant l'arabesque. Atay avant le café. Caftan avant l'abaya.</p>
+        </li>
+        <li>
+          <h4>Discipline mint ≤ 5 %</h4>
+          <p>Le mint est l'accent de la marque. Jamais plus de 5 % d'un viewport. Plus on l'utilise, moins il signifie. Un seul mint par moment.</p>
+        </li>
+        <li>
+          <h4>Poids 500 maximum</h4>
+          <p>Geist 500, jamais 600 ni 700. La typographie respire grâce à l'espacement et au letter-spacing négatif, pas à la graisse.</p>
+        </li>
+        <li>
+          <h4>Bilingue par construction</h4>
+          <p>FR + darija pour les commerçants, EN pour les investisseurs, AR pour les moments éditoriaux. Reem Kufi pour l'arabe, jamais un Arial fallback.</p>
+        </li>
+        <li>
+          <h4>Test à deux lecteurs</h4>
+          <p>Un café-owner à Casa et un GP chez a16z doivent tous deux faire confiance. Si un seul des deux passe, on retravaille.</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ════════════ 2 · PALETTE ════════════ -->
+    <section id="palette" class="brand-section">
+      <div class="brand-section-num">02 · Palette</div>
+      <h2 class="brand-section-h">Cinq couleurs. Aucune négociation.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Une palette restreinte est un langage clair. Atlas est le portail, Mint est l'accent, Riad est la nuit, Paper est le silence, Ink est le mot.</p>
+
+      <div class="palette-grid">
+        <div class="swatch s-atlas">
+          <div class="swatch-color"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Atlas</div>
+            <div class="swatch-hex">#0B6E4F · rgb(11, 110, 79)</div>
+            <div class="swatch-rule">Couleur primaire de la marque. Tous les CTA, toutes les emphases. Nommé d'après les montagnes de l'Atlas.</div>
+          </div>
+        </div>
+        <div class="swatch s-mint">
+          <div class="swatch-color"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Mint</div>
+            <div class="swatch-hex">#7DF2B0 · rgb(125, 242, 176)</div>
+            <div class="swatch-rule">L'accent. ≤ 5 % du viewport, toujours. Le vert de la menthe dans l'atay. Le pouls de la marque.</div>
+          </div>
+        </div>
+        <div class="swatch s-riad">
+          <div class="swatch-color"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Riad deep</div>
+            <div class="swatch-hex">#02261C · rgb(2, 38, 28)</div>
+            <div class="swatch-rule">Surface profonde, slabs nocturnes, fonds éditoriaux. La nuit dans une cour de riad.</div>
+          </div>
+        </div>
+        <div class="swatch s-paper">
+          <div class="swatch-color"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Paper</div>
+            <div class="swatch-hex">#F7F5F0 · rgb(247, 245, 240)</div>
+            <div class="swatch-rule">Fond chaud. Jamais de blanc pur. Le papier d'un livre lu sous la lampe.</div>
+          </div>
+        </div>
+        <div class="swatch s-ink">
+          <div class="swatch-color"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Ink</div>
+            <div class="swatch-hex">#0A0F0D · rgb(10, 15, 13)</div>
+            <div class="swatch-rule">Texte de corps, surfaces sombres. Le noir n'est jamais 100 % pur.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="discipline">
+        <div class="discipline-eye">Règle de discipline</div>
+        <p>Le mint est précieux parce qu'on le réserve. Mesurez-le sur chaque écran. S'il dépasse 5 % du viewport, retirez-le quelque part avant de l'ajouter ailleurs.</p>
+      </div>
+    </section>
+
+    <!-- ════════════ 3 · TYPOGRAPHY ════════════ -->
+    <section id="typography" class="brand-section">
+      <div class="brand-section-num">03 · Typographie</div>
+      <h2 class="brand-section-h">Quatre familles. Un langage unifié.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Geist pour le corps, JetBrains Mono pour les nombres, Instrument Serif italic pour l'éditorial, Reem Kufi pour l'arabe. Aucune autre famille n'est tolérée.</p>
+
+      <div class="type-ladder">
+        <div class="type-row">
+          <div class="type-spec"><b>t-hero</b>Geist 500<br>112px / 1.02<br>tracking -0.035em</div>
+          <div class="type-sample t-hero">Encaisse à T+1.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-display</b>Geist 500<br>72px / 1.04<br>tracking -0.030em</div>
+          <div class="type-sample t-display">Conçu à Tanger.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-h2</b>Geist 500<br>48px / 1.08<br>tracking -0.025em</div>
+          <div class="type-sample t-h2">Le marché marocain a changé.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-h3</b>Geist 500<br>22px / 1.20<br>tracking -0.015em</div>
+          <div class="type-sample t-h3">Décision 152/D/2024 · fin du monopole</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-lead</b>Geist 400<br>19px / 1.45<br>tracking -0.011em</div>
+          <div class="type-sample t-lead">1,79 % flat. Aucun frais caché. L'argent encaissé hier soir, sur ton IBAN à 9 h 00.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-body</b>Geist 400<br>16px / 1.55<br>tracking -0.014em</div>
+          <div class="type-sample t-body">Kiwi remplace votre acquéreur classique et l'ensemble des outils caisse, paie, reporting. Vous gardez votre banque actuelle.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>t-mono</b>JetBrains Mono 500<br>14px<br>tnum + lnum</div>
+          <div class="type-sample t-mono">18 420 MAD · +14 % YoY · 1,79 %</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>editorial</b>Instrument Serif italic<br>26px<br>color: atlas</div>
+          <div class="type-sample t-editorial">— le bon moment, pas une intuition</div>
+        </div>
+        <div class="type-row">
+          <div class="type-spec"><b>arabic</b>Reem Kufi 500<br>26px<br>direction RTL</div>
+          <div class="type-sample t-arabic">عشرين عام وانا خايف ندير TPE</div>
+        </div>
+      </div>
+
+      <div class="discipline">
+        <div class="discipline-eye">Règle de poids</div>
+        <p>Geist 500 est le plafond. Jamais 600, jamais 700. La hiérarchie est portée par l'échelle (clamp), le letter-spacing négatif et l'espacement vertical, pas par la graisse de la fonte.</p>
+      </div>
+    </section>
+
+    <!-- ════════════ 4 · SPACING ════════════ -->
+    <section id="spacing" class="brand-section">
+      <div class="brand-section-num">04 · Espacement</div>
+      <h2 class="brand-section-h">Une grille de 8 px. Pas d'exception.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Toutes les valeurs d'espacement (padding, margin, gap) viennent du jeu de tokens. Chaque écart entre éléments doit pouvoir s'écrire avec un --s-N.</p>
+
+      <div class="spacing-list">
+        <div class="spacing-row"><div class="spacing-name">--s-1</div><div class="spacing-px">4 px</div><div class="spacing-bar" style="width: 4px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-2</div><div class="spacing-px">8 px</div><div class="spacing-bar" style="width: 8px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-3</div><div class="spacing-px">12 px</div><div class="spacing-bar" style="width: 12px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-4</div><div class="spacing-px">16 px</div><div class="spacing-bar" style="width: 16px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-5</div><div class="spacing-px">20 px</div><div class="spacing-bar" style="width: 20px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-6</div><div class="spacing-px">24 px</div><div class="spacing-bar" style="width: 24px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-8</div><div class="spacing-px">32 px</div><div class="spacing-bar" style="width: 32px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-10</div><div class="spacing-px">40 px</div><div class="spacing-bar" style="width: 40px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-12</div><div class="spacing-px">48 px</div><div class="spacing-bar" style="width: 48px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-16</div><div class="spacing-px">64 px</div><div class="spacing-bar" style="width: 64px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-20</div><div class="spacing-px">80 px</div><div class="spacing-bar" style="width: 80px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-24</div><div class="spacing-px">96 px</div><div class="spacing-bar" style="width: 96px;"></div></div>
+        <div class="spacing-row"><div class="spacing-name">--s-32</div><div class="spacing-px">128 px</div><div class="spacing-bar" style="width: 128px;"></div></div>
+      </div>
+
+      <div class="discipline">
+        <div class="discipline-eye">Tokens manquants</div>
+        <p>Il n'y a pas de --s-7, --s-9, --s-11, --s-13, --s-14, --s-15. Si vous en avez besoin, vous avez choisi le mauvais voisin. Re-mesurez : presque toujours --s-6 ou --s-8 fonctionne.</p>
+      </div>
+    </section>
+
+    <!-- ════════════ 5 · MOTION ════════════ -->
+    <section id="motion" class="brand-section dark">
+      <div class="brand-section-num">05 · Mouvement</div>
+      <h2 class="brand-section-h">Six courbes. Quatre durées. Un contrat reduced-motion.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Le mouvement est une typographie temporelle. Chaque animation a une raison. Les utilisateurs avec prefers-reduced-motion: reduce voient toujours l'état final, jamais une animation tronquée.</p>
+
+      <div class="motion-grid">
+        <div class="motion-card" data-ease="glide">
+          <div class="motion-card-eye">--ease-glide</div>
+          <div class="motion-card-name">Apple curve</div>
+          <div class="motion-card-spec">cubic-bezier(0.16, 1, 0.30, 1)<br>Démarrage rapide, atterrissage long</div>
+          <div class="motion-card-track"><div class="motion-card-dot"></div></div>
+        </div>
+        <div class="motion-card" data-ease="natural">
+          <div class="motion-card-eye">--ease-natural</div>
+          <div class="motion-card-name">Object weight</div>
+          <div class="motion-card-spec">cubic-bezier(0.40, 0, 0.20, 1)<br>Poids naturel d'un objet réel</div>
+          <div class="motion-card-track"><div class="motion-card-dot"></div></div>
+        </div>
+        <div class="motion-card" data-ease="spring">
+          <div class="motion-card-eye">--ease-spring</div>
+          <div class="motion-card-name">Springy overshoot</div>
+          <div class="motion-card-spec">cubic-bezier(0.34, 1.56, 0.64, 1)<br>Pour les pop-in, entrées d'icônes</div>
+          <div class="motion-card-track"><div class="motion-card-dot"></div></div>
+        </div>
+        <div class="motion-card" data-ease="counter">
+          <div class="motion-card-eye">--ease-counter</div>
+          <div class="motion-card-name">Counter / progress</div>
+          <div class="motion-card-spec">cubic-bezier(0.45, 0, 0.55, 1)<br>Compteurs, jauges, livePulse</div>
+          <div class="motion-card-track"><div class="motion-card-dot"></div></div>
+        </div>
+      </div>
+
+      <div class="discipline" style="margin-top: var(--s-8); background: rgba(125, 242, 176, 0.08); border-color: var(--mint);">
+        <div class="discipline-eye" style="color: var(--mint);">Durées · 4 valeurs</div>
+        <p style="color: var(--paper);"><span style="font-family: var(--font-mono); color: var(--mint);">--d-instant: 120ms</span> · <span style="font-family: var(--font-mono); color: var(--mint);">--d-quick: 220ms</span> · <span style="font-family: var(--font-mono); color: var(--mint);">--d-base: 420ms</span> · <span style="font-family: var(--font-mono); color: var(--mint);">--d-slow: 720ms</span>. Hors animations cinématiques (1200ms maximum), aucune animation ne doit dépasser 720ms.</p>
+      </div>
+    </section>
+
+    <!-- ════════════ 6 · COMPONENTS ════════════ -->
+    <section id="components" class="brand-section">
+      <div class="brand-section-num">06 · Composants</div>
+      <h2 class="brand-section-h">Le vocabulaire d'interface.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Boutons, pilules, séparateurs néon, cartes orbitantes. Chaque composant existe parce qu'un moment de la page le demande, pas l'inverse.</p>
+
+      <div class="comp-block">
+        <div class="comp-block-title">Boutons</div>
+        <div class="comp-row">
+          <button type="button" class="btn-demo primary">Démarrer un pilote</button>
+          <button type="button" class="btn-demo ghost">Voir la démo</button>
+          <button type="button" class="btn-demo mint">Contacter le support →</button>
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-block-title">Pilules &amp; badges</div>
+        <div class="comp-row">
+          <span class="pill-demo atlas">CMI démonopolisé</span>
+          <span class="pill-demo mint live">En direct · pilotes actifs</span>
+          <span class="pill-demo ink">Conçu à Tanger</span>
+        </div>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-block-title">Séparateur néon · règle signature</div>
+        <div class="gradient-rule-demo"></div>
+        <p class="t-meta" style="color: var(--n-500); margin-top: 8px;">Utilisé entre les statements du manifesto, sous les titres de section, dans les chips de filtre. Toujours 96px par défaut, parfois 200px pour les CTA.</p>
+      </div>
+
+      <div class="comp-block">
+        <div class="comp-block-title">Carte avec néon orbitant</div>
+        <div class="neon-card-demo">
+          Le compteur de pertes vit dans une carte avec une bordure conic-gradient qui orbite la carte en 9 secondes. Réservé aux moments « live data » critiques.
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════ 7 · ICONOGRAPHY ════════════ -->
+    <section id="iconography" class="brand-section">
+      <div class="brand-section-num">07 · Iconographie</div>
+      <h2 class="brand-section-h">51 icônes. Toutes marocaines.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Chaque icône est un PNG noir recoloré via CSS filter en atlas, mint ou ink selon le contexte. La référence est marocaine spécifique : kasbah, riad, kaftan, atay, halal — jamais des clichés pan-arabes.</p>
+
+      <div class="icon-grid">
+        <div class="icon-tile"><img src="assets/icons/kasbah.png" alt=""><span class="icon-tile-name">kasbah</span></div>
+        <div class="icon-tile"><img src="assets/icons/khatam.png" alt=""><span class="icon-tile-name">khatam</span></div>
+        <div class="icon-tile"><img src="assets/icons/medina-gate.png" alt=""><span class="icon-tile-name">medina-gate</span></div>
+        <div class="icon-tile"><img src="assets/icons/arched-window.png" alt=""><span class="icon-tile-name">arched-window</span></div>
+        <div class="icon-tile"><img src="assets/icons/map-pin-star.png" alt=""><span class="icon-tile-name">map-pin-star</span></div>
+        <div class="icon-tile"><img src="assets/icons/world-cup-trophy.png" alt=""><span class="icon-tile-name">world-cup-trophy</span></div>
+        <div class="icon-tile"><img src="assets/icons/halal.png" alt=""><span class="icon-tile-name">halal</span></div>
+        <div class="icon-tile"><img src="assets/icons/merchant.png" alt=""><span class="icon-tile-name">merchant</span></div>
+        <div class="icon-tile"><img src="assets/icons/teapot.png" alt=""><span class="icon-tile-name">teapot</span></div>
+        <div class="icon-tile"><img src="assets/icons/tea-glass.png" alt=""><span class="icon-tile-name">tea-glass</span></div>
+        <div class="icon-tile"><img src="assets/icons/lantern.png" alt=""><span class="icon-tile-name">lantern</span></div>
+        <div class="icon-tile"><img src="assets/icons/lantern-tall.png" alt=""><span class="icon-tile-name">lantern-tall</span></div>
+        <div class="icon-tile"><img src="assets/icons/morocco-shape.png" alt=""><span class="icon-tile-name">morocco-shape</span></div>
+        <div class="icon-tile"><img src="assets/icons/mosque-fill.png" alt=""><span class="icon-tile-name">mosque-fill</span></div>
+        <div class="icon-tile"><img src="assets/icons/mosque-line.png" alt=""><span class="icon-tile-name">mosque-line</span></div>
+        <div class="icon-tile"><img src="assets/icons/mosque-small.png" alt=""><span class="icon-tile-name">mosque-small</span></div>
+        <div class="icon-tile"><img src="assets/icons/hassan-tower.png" alt=""><span class="icon-tile-name">hassan-tower</span></div>
+        <div class="icon-tile"><img src="assets/icons/argan-tree.png" alt=""><span class="icon-tile-name">argan-tree</span></div>
+        <div class="icon-tile"><img src="assets/icons/argan-nuts.png" alt=""><span class="icon-tile-name">argan-nuts</span></div>
+        <div class="icon-tile"><img src="assets/icons/atlas-mountain.png" alt=""><span class="icon-tile-name">atlas-mountain</span></div>
+        <div class="icon-tile"><img src="assets/icons/olive-branch-line.png" alt=""><span class="icon-tile-name">olive-branch</span></div>
+        <div class="icon-tile"><img src="assets/icons/khamsa.png" alt=""><span class="icon-tile-name">khamsa</span></div>
+        <div class="icon-tile"><img src="assets/icons/tagine.png" alt=""><span class="icon-tile-name">tagine</span></div>
+        <div class="icon-tile"><img src="assets/icons/star.png" alt=""><span class="icon-tile-name">star</span></div>
+        <div class="icon-tile"><img src="assets/icons/rosette.png" alt=""><span class="icon-tile-name">rosette</span></div>
+        <div class="icon-tile"><img src="assets/icons/souk-basket.png" alt=""><span class="icon-tile-name">souk-basket</span></div>
+        <div class="icon-tile"><img src="assets/icons/restaurant-building.png" alt=""><span class="icon-tile-name">restaurant</span></div>
+        <div class="icon-tile"><img src="assets/icons/restaurant-table.png" alt=""><span class="icon-tile-name">restaurant-table</span></div>
+        <div class="icon-tile"><img src="assets/icons/storefront.png" alt=""><span class="icon-tile-name">storefront</span></div>
+        <div class="icon-tile"><img src="assets/icons/plate.png" alt=""><span class="icon-tile-name">plate</span></div>
+        <div class="icon-tile"><img src="assets/icons/handshake.png" alt=""><span class="icon-tile-name">handshake</span></div>
+        <div class="icon-tile"><img src="assets/icons/vault.png" alt=""><span class="icon-tile-name">vault</span></div>
+        <div class="icon-tile"><img src="assets/icons/lightning.png" alt=""><span class="icon-tile-name">lightning</span></div>
+        <div class="icon-tile"><img src="assets/icons/heartbeat.png" alt=""><span class="icon-tile-name">heartbeat</span></div>
+        <div class="icon-tile"><img src="assets/icons/clock.png" alt=""><span class="icon-tile-name">clock</span></div>
+        <div class="icon-tile"><img src="assets/icons/briefcase.png" alt=""><span class="icon-tile-name">briefcase</span></div>
+        <div class="icon-tile"><img src="assets/icons/person.png" alt=""><span class="icon-tile-name">person</span></div>
+        <div class="icon-tile"><img src="assets/icons/dirham-bill.png" alt=""><span class="icon-tile-name">dirham-bill</span></div>
+        <div class="icon-tile"><img src="assets/icons/terminal-hand.png" alt=""><span class="icon-tile-name">terminal-hand</span></div>
+        <div class="icon-tile"><img src="assets/icons/tap-to-pay.png" alt=""><span class="icon-tile-name">tap-to-pay</span></div>
+        <div class="icon-tile"><img src="assets/icons/phone-212.png" alt=""><span class="icon-tile-name">phone-212</span></div>
+        <div class="icon-tile"><img src="assets/icons/kiwi-fruit.png" alt=""><span class="icon-tile-name">kiwi-fruit</span></div>
+      </div>
+
+      <div class="discipline">
+        <div class="discipline-eye">Règle de recoloration</div>
+        <p>Aucune icône colorée par défaut. Toutes les icônes sont en noir et recolorées au point d'utilisation via filter. Atlas pour le rest, mint pour les états actifs ou « live », ink pour fond mint.</p>
+      </div>
+    </section>
+
+    <!-- ════════════ 8 · VOICE ════════════ -->
+    <section id="voice" class="brand-section">
+      <div class="brand-section-num">08 · Voix &amp; ton</div>
+      <h2 class="brand-section-h">Direct. Vérifié. Sans hedge.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">La voix de Kiwi parle au commerçant comme à un égal. Pas de jargon fintech, pas de promesses vagues, pas de tirets cadratins. Si on ne peut pas le prouver, on ne le dit pas.</p>
+
+      <div class="voice-grid">
+        <div class="voice-col do">
+          <h4>Ce qu'on dit</h4>
+          <ul>
+            <li><b>Chiffres précis</b> avec leur source. « 19,8 M de touristes en 2025 (+14 % YoY). »
+              <div class="voice-sample">Source · Ministère du Tourisme · communiqué de bilan 2025</div>
+            </li>
+            <li><b>Verbe actif au présent</b>. « Encaisse à T+1 », pas « Permet d'encaisser à T+1 ».</li>
+            <li><b>Code-switch FR / darija</b> quand le contexte est marocain. « Kanchhal 3la les ventes hier ? » dans la démo IQ.</li>
+            <li><b>Citations primaires</b> entre guillemets. Une seule par section.</li>
+            <li><b>Comparaisons concrètes</b>. « 1,80 % CMI vs 1,79 % Kiwi », pas « moins cher ».</li>
+          </ul>
+        </div>
+        <div class="voice-col dont">
+          <h4>Ce qu'on évite</h4>
+          <ul>
+            <li><b>Tirets cadratins</b> (—). Toujours remplaçables par un point-virgule, une virgule, ou un « : ».
+              <div class="voice-sample">« 1,79 % flat — tout inclus »</div>
+            </li>
+            <li><b>« en cours »</b> et autres hedges. Si l'agrément n'est pas obtenu, on ne le mentionne pas.
+              <div class="voice-sample">« Agrément AMMC en cours d'obtention »</div>
+            </li>
+            <li><b>Adjectifs marketing</b> non vérifiables. « Premium », « innovant », « simple ».</li>
+            <li><b>Tropes pan-arabes</b>. Pas de « 1001 nuits », pas d'arabesque générique. Maghrébin spécifique.</li>
+            <li><b>Sigles non expliqués</b>. CMI, AMMC, EDP : toujours développés au premier usage.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════ 9 · ANTI-PATTERNS ════════════ -->
+    <section id="anti" class="brand-section dark">
+      <div class="brand-section-num">09 · Anti-patterns</div>
+      <h2 class="brand-section-h">Ce qu'on ne fait jamais.</h2>
+      <hr class="brand-rule">
+      <p class="brand-section-lede">Une marque se définit autant par ce qu'elle refuse que par ce qu'elle adopte. Cette liste est aussi importante que la palette.</p>
+
+      <div class="anti-grid">
+        <div class="anti-tile">
+          <h4>Glass morphism</h4>
+          <p>Les dégradés flous transparents façon iOS Big Sur. Kiwi utilise du verre liquide RARE et seulement pour les chips d'attribution citationnelles, jamais pour les CTA.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Fond bleu fintech générique</h4>
+          <p>#3B82F6 et ses cousins violets. Kiwi est vert atlas, point. Aucun bleu-vert hybride, aucun « SaaS purple ».</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Khatam Sulaymani comme ancrage culturel</h4>
+          <p>L'étoile à 8 branches est pan-islamique (Maroc → Indonésie). Pas spécifiquement marocaine. Préférer Tifinagh ⵣ, motifs zellij, broderie de caftan.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Fonts par défaut</h4>
+          <p>Inter, Roboto, Helvetica, Arial, Space Grotesk. Geist 500 max, JetBrains Mono pour les nombres. Aucune exception, jamais.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Drop-shadows douces et dégradés à 3 stops</h4>
+          <p>Les ombres sont mathématiques (atlas-tinted, exponentielles), pas décoratives. Les dégradés sont plats ou très subtils.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>« K » dans un cercle</h4>
+          <p>200 fintechs ont déjà ce logo. Le mark de Kiwi peut être une feuille de menthe, un yaz Tifinagh, un geste d'atay. Jamais un K générique.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Em-dash (—)</h4>
+          <p>Le tiret cadratin trahit un brouillon non revu. Toujours remplaçable. La copie de Kiwi n'en contient aucun.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>« Built in Africa » ou silhouette du continent</h4>
+          <p>Kiwi est marocain. Pas africain générique. Pas de silhouettes du continent, pas de « pan-African fintech » framing.</p>
+        </div>
+        <div class="anti-tile">
+          <h4>Copy générée par AI sans relecture</h4>
+          <p>Les tells : « En somme », « Il est important de noter », bullets parallèles trop symétriques, listes de 3 par défaut, « moreover ». Toute copie passe par une relecture humaine en darija + français.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="brand-foot">
+  <div class="wrap">
+    <p>Kiwi Brand Book · v1.0 · Conçu &amp; assemblé à Tanger · <a href="index.html">Retour au site →</a></p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Smooth scroll handled by browser; this only updates the active TOC link.
+  const links = document.querySelectorAll('.brand-toc a[href^="#"]');
+  const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  if (!sections.length) return;
+  const setActive = (id) => links.forEach(l => l.classList.toggle('is-active', l.getAttribute('href') === '#' + id));
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) setActive(e.target.id);
+      });
+    }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+    sections.forEach(s => io.observe(s));
+  }
+  // Pre-select the first link
+  setActive(sections[0].id);
+})();
+</script>
+
+</body>
+</html>

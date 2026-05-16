@@ -1,0 +1,124 @@
+/* Kiwi — Atlas Green design tokens */
+:root {
+  /* Brand */
+  --atlas: #0B6E4F;
+  --atlas-600: #0E805C;
+  --atlas-700: #0A5E43;
+  --riad: #053B2C;
+  --riad-deep: #02261C;
+  --mint: #7DF2B0;
+  --mint-soft: #C9F6DC;
+
+  /* Surface */
+  --paper: #F7F5F0;
+  --paper-soft: #EFECE3;
+  --paper-muted: #E8E6E0;
+  --ink: #0A0F0D;
+  --ink-soft: #1A201D;
+
+  /* Neutrals */
+  --n-50: #FAFAF8;
+  --n-100: #F2F0EA;
+  --n-200: #E8E6E0;
+  --n-300: #D4D1C8;
+  --n-400: #A8A49A;
+  --n-500: #6F6C65;
+  --n-600: #4B4944;
+  --n-700: #2E2D29;
+  --n-800: #1A1917;
+
+  /* Semantic */
+  --success: #1FB574;
+  --warning: #D99A2B;
+  --danger: #C94A3A;
+  --info: #3A6FB8;
+
+  /* Radii / spacing */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-2xl: 32px;
+
+  /* Type */
+  --sans: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --serif: "Instrument Serif", "Times New Roman", serif;
+  --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { font-size: 16px; line-height: 1.55; letter-spacing: -0.005em; }
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: 0; background: none; }
+
+/* Type scale */
+.display-1 { font-family: var(--sans); font-weight: 600; font-size: clamp(48px, 8vw, 104px); line-height: 0.96; letter-spacing: -0.04em; }
+.display-2 { font-family: var(--sans); font-weight: 600; font-size: clamp(40px, 6vw, 72px); line-height: 1.0; letter-spacing: -0.035em; }
+.display-3 { font-family: var(--sans); font-weight: 600; font-size: clamp(32px, 4.5vw, 56px); line-height: 1.05; letter-spacing: -0.03em; }
+.h-1 { font-weight: 600; font-size: clamp(28px, 3.5vw, 40px); line-height: 1.1; letter-spacing: -0.025em; }
+.h-2 { font-weight: 600; font-size: 22px; line-height: 1.2; letter-spacing: -0.02em; }
+.editorial { font-family: var(--serif); font-weight: 400; font-style: italic; }
+.eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-500); font-weight: 500; }
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 500; font-size: 15px; letter-spacing: -0.01em; transition: transform 150ms, background 150ms, color 150ms; white-space: nowrap; }
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { background: var(--atlas); transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--n-300); }
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-atlas { background: var(--atlas); color: var(--paper); }
+.btn-atlas:hover { background: var(--riad); }
+.btn-lg { padding: 16px 26px; font-size: 16px; }
+
+/* Layout */
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.wrap-sm { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+.stack-8 > * + * { margin-top: 8px; }
+.stack-16 > * + * { margin-top: 16px; }
+.stack-24 > * + * { margin-top: 24px; }
+.stack-32 > * + * { margin-top: 32px; }
+
+/* Card */
+.card { background: #fff; border: 1px solid var(--n-200); border-radius: var(--r-lg); }
+.card-dark { background: var(--ink); color: var(--paper); border-radius: var(--r-lg); }
+.card-atlas { background: var(--atlas); color: var(--paper); border-radius: var(--r-lg); }
+.card-riad { background: var(--riad); color: var(--paper); border-radius: var(--r-lg); }
+
+/* Pill / Chip */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid var(--n-200); background: #fff; color: var(--ink); }
+.pill-mint { background: var(--mint-soft); color: var(--riad); border-color: transparent; }
+.pill-dark { background: var(--ink-soft); color: var(--paper); border-color: transparent; }
+.pill-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+
+/* Section rhythm */
+section { padding: 96px 0; }
+section.tight { padding: 64px 0; }
+section.loose { padding: 128px 0; }
+.divider { height: 1px; background: var(--n-200); width: 100%; }
+
+/* Subtle grid texture used on hero */
+.grid-texture { background-image: radial-gradient(var(--n-200) 1px, transparent 1px); background-size: 24px 24px; }
+
+/* Animated ticker */
+@keyframes scroll-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.rise { animation: rise 700ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.rise-2 { animation: rise 700ms 120ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.rise-3 { animation: rise 700ms 240ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Link w/ underline animation */
+.link { position: relative; }
+.link::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: right; transition: transform 300ms; }
+.link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* Focus */
+:focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; border-radius: 4px; }
+
+/* Mini tabular */
+table.tab { width: 100%; border-collapse: collapse; }
+table.tab th, table.tab td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--n-200); font-size: 14px; }
+table.tab th { font-weight: 500; color: var(--n-500); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }

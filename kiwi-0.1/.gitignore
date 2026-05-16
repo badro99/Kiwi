@@ -1,0 +1,32 @@
+# Dependencies (regenerable from package.json)
+node_modules/
+
+# Local Claude / playwright workspace
+.claude/
+.playwright-mcp/
+
+# OneDrive sync conflict folders
+OneDrive_*/
+
+# Local debug screenshots produced during development
+active-marker.png
+audience-tabs-gradient.png
+tabs-close.png
+tabs-zoomed.png
+why-now-rendered.png
+why-now-after-fix.png
+why-now-active-fixed.png
+why-now-fixed.png
+dashboard-after-*.png
+dashboard-before-*.png
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
