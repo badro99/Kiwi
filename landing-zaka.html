@@ -746,7 +746,9 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   animation: floatY 6s var(--ease-glide) infinite alternate;
 }
 .floater-tap {
-  top: 56%; left: -64px;
+  /* Sits over the decorative chart band (≈49–61% of the frame) so it
+     never covers a transaction row. */
+  top: 49%; left: -64px;
   animation: floatY 7s var(--ease-glide) infinite alternate-reverse;
 }
 @keyframes floatY {
