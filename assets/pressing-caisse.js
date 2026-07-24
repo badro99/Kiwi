@@ -192,7 +192,14 @@
   const NOTES = ['Tache col', 'Tache manche', 'Bouton manquant', 'Ourlet à reprendre', 'Fermeture abîmée', 'Délicat'];
 
   /* ───────────────────────── clients (Tanger) ───────────────────────── */
-  const CUSTOMERS = [
+  /* Real/paired store never shows the demo "Pressing Marshan" customers, orders
+     or name — it opens on its own empty counter. Local pitch demo unchanged.
+     (Mirrors the pvReal() gate every other vertical uses.) */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { var p = pvPaired(); return (p && p.name) || (pvReal() ? 'Mon pressing' : demo); }
+
+  const CUSTOMERS = pvReal() ? [] : [
     { id: 'c1', name: 'Amal Berrada',         phone: '0661 23 45 67', orders: 23, prefs: ['Repassage sur cintre', 'Sans amidon'] },
     { id: 'c2', name: 'Youssef El Khattabi',  phone: '0670 11 22 33', orders: 14, prefs: ['Costumes pliés en housse'] },
     { id: 'hb', name: 'Hôtel Bab El Bahr',    phone: '0539 33 44 55', orders: 46, b2b: true, prefs: ['Facture fin de mois', 'Remise –15 % négociée'], contact: 'Gouvernante · Mme Rkia' },
@@ -277,7 +284,7 @@
     return o;
   }
 
-  const ORDERS = [
+  const ORDERS = pvReal() ? [] : [
     /* ── reçu ── */
     mkOrder({ id: 'P-1044', custId: 'c4', droppedH: 0.6, readyH: 47, status: 'recu',
       pay: { mode: 'pickup', method: null, paid: 0 },
@@ -372,8 +379,8 @@
       <aside class="px-rail">
         <div class="px-brand">kiwi<i></i></div>
         <div class="px-venue">
-          <div class="px-venue-name">Pressing Marshan</div>
-          <div class="px-venue-sub">Tanger · Marshan<br>Le même Kiwi que <b>votre restaurant</b>, un seul compte.</div>
+          <div class="px-venue-name">${esc(pvName('Pressing Marshan'))}</div>
+          <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi que <b>votre restaurant</b>, un seul compte.'}</div>
         </div>
         <nav class="px-nav" id="px-nav">
           <button class="px-nav-it on" data-px-view="comptoir"><i data-lucide="shirt"></i><span>Comptoir</span></button>
@@ -455,8 +462,8 @@
     g.className = 'kiwi-greet';
     g.setAttribute('aria-hidden', 'true');
     g.innerHTML = `<div class="kiwi-greet-inner">
-      <h1>Sba7 lkhir Sanae, <em>marhba.</em></h1>
-      <div class="kiwi-greet-sub">Pressing Marshan <em>·</em> comptoir de dépôt</div>
+      <h1>Sba7 lkhir${pvReal() ? '' : ' Sanae'}, <em>marhba.</em></h1>
+      <div class="kiwi-greet-sub">${esc(pvName('Pressing Marshan'))} <em>·</em> comptoir de dépôt</div>
     </div>`;
     document.body.appendChild(g);
     requestAnimationFrame(() => { g.classList.add('is-visible'); g.setAttribute('aria-hidden', 'false'); });
@@ -1512,7 +1519,7 @@
     const first = c.b2b ? c.name : c.name.split(' ')[0];
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
-    return `Sba7 lkhir ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez Pressing Marshan.`
+    return `Sba7 lkhir ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant, jusqu'à 20h00.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
       + `\n— envoyé via Kiwi`;
