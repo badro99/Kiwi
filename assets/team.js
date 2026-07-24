@@ -685,7 +685,16 @@
     const root = window.__kiwiTeamV2;
     const key = teamKey(venue);
     if (!root.byVenue[key]) root.byVenue[key] = (venue && venue.custom) ? [] : seedFor((venue && venue.type) || 'restaurant');
-    if (!root.hoursByVenue[key]) root.hoursByVenue[key] = seedHours(root.byVenue[key], buildPeriod(root.periodKind).days);
+    // seedHours() invents 4–8 h a day so the pitch demo looks staffed. A REAL
+    // store must never be handed hours nobody worked: those hours are now money
+    // on Paie & planning ("à payer · période" = base salaries + hours × rate), so
+    // seeding one would quote the owner a wage bill for a shift that never
+    // happened. A real store starts at zero and fills in from the planning grid.
+    if (!root.hoursByVenue[key]) {
+      root.hoursByVenue[key] = (venue && venue.custom)
+        ? {}
+        : seedHours(root.byVenue[key], buildPeriod(root.periodKind).days);
+    }
     return root;
   }
   function getMembers(venueType) { return window.__kiwiTeamV2.byVenue[venueType] || []; }
