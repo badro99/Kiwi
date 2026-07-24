@@ -71,13 +71,31 @@
   /* OrderPro has exactly two verticals. Everything that sells a plate is
    * 'restaurant'; everything that sells a garment off a rail is 'boutique'. An
    * unrecognised trade gets the restaurant flow, which degrades to a plain list
-   * of items and prices — never to a broken screen. */
+   * of items and prices — never to a broken screen.
+   *
+   * The SERVER's answer wins. merchant_config.type is what the operator picked
+   * in god mode ("Type d'activité"), it survives a cleared browser, and it is
+   * the same value the console shows — so a store the operator marked Boutique
+   * can never publish itself as a restaurant because a local key was stale. */
   var BOUTIQUE_TRADES = ['boutique', 'pret-a-porter', 'pretaporter', 'mode', 'friperie',
-                         'chaussures', 'maroquinerie', 'bijouterie', 'concept-store'];
-  function orderProType(v) {
-    var raw = String((v && (v.subtype || v.type)) || ls(K.bizType) || '').toLowerCase();
+                         'chaussures', 'maroquinerie', 'bijouterie', 'concept-store',
+                         'sport', 'vetement', 'habillement'];
+  function looksBoutique(raw) {
+    raw = String(raw || '').toLowerCase();
+    if (!raw) return false;
     for (var i = 0; i < BOUTIQUE_TRADES.length; i++) {
-      if (raw.indexOf(BOUTIQUE_TRADES[i]) !== -1) return 'boutique';
+      if (raw.indexOf(BOUTIQUE_TRADES[i]) !== -1) return true;
+    }
+    return false;
+  }
+  function serverType() {
+    try { return (window.KiwiConfig && window.KiwiConfig.type) || ''; } catch (_) { return ''; }
+  }
+  function orderProType(v) {
+    // Server first, then the venue record, then the onboarding key.
+    var candidates = [serverType(), (v && v.subtype), (v && v.type), ls(K.bizType)];
+    for (var i = 0; i < candidates.length; i++) {
+      if (looksBoutique(candidates[i])) return 'boutique';
     }
     return 'restaurant';
   }
@@ -121,14 +139,44 @@
   var lastSent = '';                                 // skip identical re-publishes
   var state = { publishing: false, lastOk: 0, lastError: '' };
 
+  /* Why is nothing being published? Answers in one call, so a silent no-op is
+   * never a mystery: KiwiOrderPro.diagnose() in the console. */
+  function diagnose() {
+    var v = venueData();
+    var biz = currentBiz();
+    var C = window.KiwiBoutiqueCatalog;
+    var products = [];
+    try { products = (C && C.listProducts({ includeArchived: false })) || []; } catch (_) {}
+    return {
+      blocker: !isCustom() ? 'venue-not-custom'
+             : !biz ? 'no-business-name'
+             : !isRealSession() ? 'not-a-real-session'
+             : biz.type !== 'boutique' ? 'type-is-' + biz.type
+             : !products.length ? 'catalogue-empty'
+             : 'none — should publish',
+      merchant: biz && biz.merchant,
+      name: biz && biz.name,
+      resolvedType: biz && biz.type,
+      serverType: serverType(),
+      venueType: v && (v.subtype || v.type),
+      localBizType: ls(K.bizType),
+      catalogueVenue: C && C.currentVenue && C.currentVenue(),
+      productCount: products.length,
+      isCustom: isCustom(),
+      isReal: isRealSession(),
+      lastError: state.lastError,
+      lastOk: state.lastOk,
+    };
+  }
+
   function publishNow() {
     var biz = currentBiz();
     // Restaurants are already published by menu-catalog.js — nothing to do here.
-    if (!biz || biz.type !== 'boutique' || !isRealSession()) {
-      return Promise.resolve({ ok: false, error: 'nothing-to-publish' });
-    }
+    if (!biz) return Promise.resolve({ ok: false, error: 'no-store' });
+    if (!isRealSession()) return Promise.resolve({ ok: false, error: 'not-real-session' });
+    if (biz.type !== 'boutique') return Promise.resolve({ ok: false, error: 'not-a-boutique' });
     var catalog = boutiqueSnapshot();
-    if (!catalog) return Promise.resolve({ ok: false, error: 'nothing-to-publish' });
+    if (!catalog) return Promise.resolve({ ok: false, error: 'catalogue-empty' });
 
     var body = JSON.stringify({ name: biz.name, type: 'boutique', data: catalog });
     if (body === lastSent) return Promise.resolve({ ok: true, skipped: true });
@@ -188,13 +236,35 @@
       .catch(function () { return false; });
   }
 
-  /* ───────────────── wire-up ───────────────── */
-  function start() {
+  /* ───────────────── wire-up ─────────────────
+   * The first version checked once at DOMContentLoaded and gave up. That is too
+   * early: venues.js hasn't settled the venue yet and /api/config (which carries
+   * the authoritative business type) hasn't answered, so `currentBiz()` was null
+   * or typed 'restaurant', the function returned, and the store NEVER published —
+   * which is exactly how a stocked boutique ended up serving "carte pas encore
+   * publiée" with a restaurant icon.
+   *
+   * So: bind to every signal that says the picture just changed, and re-attempt.
+   * publishNow() is idempotent (it skips an identical payload), so extra
+   * attempts are free. */
+  var subscribed = false;
+  function attempt() {
     var biz = currentBiz();
-    if (!biz || biz.type !== 'boutique') return;     // demo venue / restaurant / no store
-    try { if (window.KiwiBoutiqueCatalog) window.KiwiBoutiqueCatalog.subscribe(schedule); } catch (_) {}
-    // Publish once on load so a store stocked before this shipped catches up.
-    setTimeout(publishNow, 2000);
+    if (!biz || biz.type !== 'boutique') return;     // demo venue / restaurant / not ready yet
+    if (!subscribed) {
+      subscribed = true;
+      try { if (window.KiwiBoutiqueCatalog) window.KiwiBoutiqueCatalog.subscribe(schedule); } catch (_) {}
+    }
+    publishNow();
+  }
+
+  function start() {
+    // The venue can settle late, and the server type lands later still.
+    try { if (window.KiwiVenue && KiwiVenue.subscribe) KiwiVenue.subscribe(attempt); } catch (_) {}
+    document.addEventListener('kiwi-config', attempt);
+    // Catch-up passes for a store stocked before this shipped, spread out so at
+    // least one lands after venues.js and /api/config have both answered.
+    [1500, 4000, 9000].forEach(function (ms) { setTimeout(attempt, ms); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
@@ -202,6 +272,7 @@
 
   window.KiwiOrderPro = {
     publishNow: publishNow,
+    diagnose: diagnose,
     schedule: schedule,
     uploadMedia: uploadMedia,
     mediaReady: mediaReady,

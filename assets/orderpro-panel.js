@@ -42,6 +42,33 @@
 
   var nfcSupported = (typeof window.NDEFReader !== 'undefined');
 
+  /* Force a publish for whichever vertical this store is.
+   *   boutique   → KiwiOrderPro owns the stock snapshot.
+   *   restaurant → assets/menu-catalog.js publishes automatically on edit but
+   *                exposes no manual trigger, so send the same payload it does
+   *                (POST /api/menu {name, type, data}; the server derives the
+   *                merchant from the session, so no slug travels). */
+  function publish() {
+    var P = window.KiwiOrderPro;
+    if (P && P.type() === 'boutique') return P.publishNow();
+
+    var S = window.KiwiMenuStore;
+    if (!S) return Promise.resolve({ ok: false, error: 'menu-module-absent' });
+    var v = null;
+    try { v = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); } catch (_) {}
+    var data = S.data(v && v.id);
+    if (!data || !(data.items || []).length) return Promise.resolve({ ok: false, error: 'carte-vide' });
+    return fetch('/api/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: (v && v.name) || '', type: (v && v.type) || '', data: data }),
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (j) {
+        return (r.ok && j && j.ok) ? j : { ok: false, error: (j && j.error) || ('http-' + r.status) };
+      });
+    }).catch(function () { return { ok: false, error: 'network' }; });
+  }
+
   /* ── write one tag (Android/Chrome only) ─────────────────────────────────── */
   var writing = false;
   async function writeTag(url, msgEl) {
@@ -86,6 +113,16 @@
       }
     }
     return '' +
+      // Publishing is what puts the carte / le stock on the customer's phone. It
+      // happens automatically on every edit, but it is invisible — so show its
+      // state and give a way to force it, rather than leaving a merchant staring
+      // at "carte pas encore publiée" with nothing to press.
+      '<div class="opp-pub">' +
+        '<div class="opp-pub-row">' +
+          '<div><b>Ce que voient vos clients</b><span data-opp-pub-state>Vérification…</span></div>' +
+          '<button class="kb atlas" type="button" data-opp-publish>Publier maintenant</button>' +
+        '</div>' +
+      '</div>' +
       '<div class="opp-intro">' +
         '<p>Un seul lien par tag. Le tag connaît votre établissement : un client chez vous ne peut pas commander ailleurs.</p>' +
         (nfcSupported
@@ -115,6 +152,12 @@
     var s = document.createElement('style');
     s.id = 'opp-css';
     s.textContent = [
+      '.opp-pub{background:var(--paper-soft,#F7F5F0);border:1px solid var(--n-200,#e4e0d7);border-radius:13px;padding:13px 15px;margin:0 0 16px}',
+      '.opp-pub-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}',
+      '.opp-pub-row>div{flex:1;min-width:180px}',
+      '.opp-pub-row b{display:block;font-size:13.5px;letter-spacing:-.01em}',
+      '.opp-pub-row span{display:block;font-size:12px;color:var(--n-500,#6c766e);margin-top:3px;line-height:1.45}',
+      '.opp-pub-row .kb{padding:9px 14px;font-size:12.5px;flex:none}',
       '.opp-intro p{margin:0 0 8px;font-size:13.5px;line-height:1.55;color:var(--n-600,#4a544d)}',
       '.opp-intro .opp-ok{color:var(--atlas,#0B6E4F);font-weight:600}',
       '.opp-intro .opp-note{background:var(--paper-soft,#F7F5F0);border:1px solid var(--n-200,#e4e0d7);border-radius:11px;padding:11px 13px}',
@@ -146,7 +189,37 @@
     var el = d && d.el;
     if (!el || !el.querySelector) return;
     var msg = el.querySelector('[data-opp-msg]');
+    var pubState = el.querySelector('[data-opp-pub-state]');
+
+    /* Ask the server what a customer would actually see right now — the only
+     * answer that matters, and the same URL their phone hits. */
+    function refreshPublished() {
+      if (!pubState) return;
+      fetch('/api/menu?merchant=' + encodeURIComponent(merchant()), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j) { pubState.textContent = 'État inconnu (hors ligne ?)'; return; }
+          var count = (j.shop && j.shop.products || []).length || (j.menu && j.menu.items || []).length;
+          if (!count) { pubState.textContent = 'Rien de publié — vos clients voient une page vide.'; return; }
+          pubState.textContent = count + (j.shop ? ' produit' : ' article') + (count > 1 ? 's' : '') +
+            ' en ligne · ' + (j.name || '—');
+        })
+        .catch(function () { pubState.textContent = 'État inconnu (hors ligne ?)'; });
+    }
+    refreshPublished();
+
     el.addEventListener('click', function (e) {
+      if (e.target.closest('[data-opp-publish]')) {
+        if (pubState) pubState.textContent = 'Publication…';
+        publish().then(function (res) {
+          if (res && res.ok === false && pubState) {
+            pubState.textContent = 'Publication impossible (' + res.error + ')';
+            return;
+          }
+          setTimeout(refreshPublished, 800);
+        });
+        return;
+      }
       var w = e.target.closest('[data-opp-write]');
       if (w) { writeTag(w.dataset.oppWrite, msg); return; }
       var c = e.target.closest('[data-opp-copy]');
