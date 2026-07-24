@@ -35,7 +35,18 @@
   .top button:hover{background:rgba(255,255,255,.26)}
   .wrap{max-width:1120px; margin:0 auto; padding:22px}
   section{background:var(--surface); border:1px solid var(--line); border-radius:14px; margin:0 0 20px; overflow:hidden}
-  .sec-head{padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+  .sec-head{padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  /* Everything in the management panel — trade, modules, staff codes — belongs to
+     exactly ONE établissement, so when a client has several the panel has to say
+     which, and let you move between them without going back up to the roster. */
+  /* flex:0 0 auto because overflow-x:auto sets min-width:0 on a flex item, which
+     would otherwise let the row shrink below its own names on a narrow panel
+     instead of wrapping to its own line. The overflow is the last resort, for a
+     client with more shop names than the header is wide. */
+  .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:#eef2ee; max-width:100%; overflow-x:auto}
+  .store-switch button{font:inherit; font-size:.78rem; font-weight:600; border:0; border-radius:999px; padding:6px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color .2s}
+  .store-switch button:hover{color:var(--riad)}
+  .store-switch button.on{color:#eafff4}
   .sec-head h2{font-size:.86rem; margin:0; text-transform:uppercase; letter-spacing:.06em; color:var(--riad)}
   .sec-head .count{font:600 11px/1 var(--mono); color:var(--muted)}
   table{width:100%; border-collapse:collapse; font-size:.9rem}
@@ -134,6 +145,8 @@
     .owner-row .who{color:#cfeeda}
     .count-chip{color:#bfe8cf; background:#1c2420}
     tr.store-row td:first-child{border-left-color:#26302b}
+    .store-switch{background:#1c2420}
+    .store-switch button:hover{color:#cfeeda}
   }
 </style>
 </head>
@@ -163,7 +176,13 @@
     </section>
 
     <section id="manage" hidden>
-      <div class="sec-head"><h2>Gestion, <span class="selname" id="sel-name"></span></h2></div>
+      <div class="sec-head">
+        <h2>Gestion, <span class="selname" id="sel-name"></span></h2>
+        <!-- Which of this client's établissements am I configuring? Rendered only
+             when they have more than one. data-lens-demo/-item is the sanctioned
+             opt-in for the brand's selection motion (assets/liquid-lens.js). -->
+        <div class="store-switch" id="store-switch" data-lens-demo hidden></div>
+      </div>
       <div class="panel">
         <div class="grid2">
           <div>
@@ -221,6 +240,10 @@
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
   <script src="assets/staff-roles.js"></script>
+  <!-- The brand's one selection motion, for the établissement switcher. Self-
+       contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
+       does not load the pills still switch, just without the travelling lens. -->
+  <script src="assets/liquid-lens.js"></script>
 
 <script>
 (function(){
@@ -367,7 +390,11 @@
 
   // ── store: real /api/admin/* when reachable, else seeded mock + localStorage ─
   var LIVE = null; // null=unknown, true/false once probed
-  var MOCK_KEY = 'kiwiAdminMock';
+  // Versioned: the seed is cached in localStorage, so an operator who has opened
+  // the console before keeps the OLD roster for good and never sees a change to
+  // the demo data. Bump the suffix whenever seedMock() changes.
+  var MOCK_KEY = 'kiwiAdminMock2';
+  try { localStorage.removeItem('kiwiAdminMock'); } catch(_){}
 
   function seedMock(){
     var now = Date.now();
@@ -522,8 +549,8 @@
       });
       g.head = g.stores[0];
       // Stamped on the row itself so "Gérer" can tell a lone shop from one of
-      // several without re-deriving the grouping.
-      g.stores.forEach(function(c){ c.siblings = g.stores.length; });
+      // several, and can offer the others, without re-deriving the grouping.
+      g.stores.forEach(function(c){ c.siblings = g.stores.length; c.shops = g.stores; });
       g.amount = g.stores.reduce(function(s,c){ return s + (c.today_amount||0); }, 0);
       g.count  = g.stores.reduce(function(s,c){ return s + (c.today_count||0); }, 0);
       g.last   = g.stores.reduce(function(s,c){ return Math.max(s, c.last_ts||0); }, 0);
@@ -646,15 +673,49 @@
     }
   }
 
+  /* The établissement switcher. One client, several shops — and every control in
+     this panel belongs to exactly one of them, so you must be able to see which,
+     and move between them, without scrolling back up to the roster. */
+  function renderStoreSwitch(c){
+    var box = document.getElementById('store-switch');
+    if (!box) return;
+    // Remove the buttons but KEEP the lens node — it is a child of the container,
+    // so clearing outright would delete the travelling highlight for good.
+    [].slice.call(box.children).forEach(function(n){
+      if (!n.classList || !n.classList.contains('kw-lens')) box.removeChild(n);
+    });
+    var shops = (c.shops && c.shops.length > 1) ? c.shops : null;
+    box.hidden = !shops;
+    if (!shops) return;
+    shops.forEach(function(s){
+      box.appendChild(h('button', {
+        type:'button', 'data-lens-item':'', title: s.merchant,
+        class: s.merchant === c.merchant ? 'on' : '',
+        onClick: function(){ if (s.merchant !== c.merchant) select(s); },
+      }, s.business || s.merchant));
+    });
+    // Place the lens now — layout is already settled, since the panel is unhidden
+    // before this runs — and again on the next frame for the case where it isn't.
+    // Not on rAF alone: a background tab never fires one, so the console opened
+    // in a second tab would show no highlight until something was clicked.
+    try {
+      if (window.KiwiLens) {
+        window.KiwiLens.refresh();
+        requestAnimationFrame(function(){ window.KiwiLens.refresh(); });
+      }
+    } catch(_){}
+  }
+
   async function select(c){
     selected = c;
-    // Name the SHOP, and — when its owner has more than one — say whose it is.
-    // Every setting below this line (trade, modules, staff codes) belongs to this
-    // one établissement, so the header has to be unambiguous about which.
+    // With one shop the header names it. With several, the switcher names them,
+    // so the header names the PERSON instead — otherwise the shop is written
+    // twice and whose it is, not at all.
     var owner = ((c.owner_name || c.name || '') + (c.owner ? ' · ' + c.owner : '')).trim();
     document.getElementById('sel-name').textContent =
-      (c.business || c.merchant) + ((c.siblings > 1 && owner) ? '  —  ' + owner : '');
+      (c.siblings > 1 && owner) ? owner : (c.business || c.merchant);
     document.getElementById('manage').hidden = false;
+    renderStoreSwitch(c);
     renderClients();
     await Promise.all([renderPins(), renderFeatures()]);
     renderDanger();

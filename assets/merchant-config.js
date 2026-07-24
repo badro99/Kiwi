@@ -208,9 +208,31 @@
    * The short poll is the safety net for load order — it stops the moment a store
    * resolves, and gives up after ~4 s (a caisse, a demo, or a login with no
    * établissement of its own, where there is nothing to follow). */
+  /* Claim the store on sight.
+   *
+   * Registration used to be a side effect of syncing something else — the trade
+   * at onboarding, or the staff codes when the team page republished them. That
+   * covers a shop created from today on and nothing else: an établissement the
+   * merchant opened last month has no reason to sync again, so it would stay
+   * unknown to the server, and a store the operator cannot see is a store they
+   * cannot configure. So the dashboard claims whichever store is on screen, once
+   * per store per session.
+   *
+   * Cheap and safe: the body carries only the slug and the name, the server's
+   * upsert leaves features, plan and type alone, a slug belonging to someone else
+   * is refused (403), and with no backend the POST fails and nothing changes. */
+  var claimed = {};
+  function registerStore() {
+    var slug = storeSlug();
+    if (!slug || claimed[slug]) return;
+    claimed[slug] = true;
+    post({}).catch(function () { claimed[slug] = false; });   // retry on the next switch
+  }
+
   function refetchStore() {
     var s = storeSlug();
     if (!s) return false;
+    registerStore();
     if (s !== lastSlug) fetchConfig();
     return true;
   }
