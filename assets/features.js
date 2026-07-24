@@ -69,13 +69,13 @@
   .dx-cmp { margin: 14px 0; padding: 14px 16px; background: var(--mint-soft); border-radius: 12px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; color: var(--riad); }
   html[data-theme="dark"] .dx-cmp { background: rgba(125,242,176,0.1); color: var(--mint); }
   .dx-methods { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
-  .dx-method { padding: 14px 10px; border: 1px solid var(--n-200); border-radius: 12px; text-align: center; cursor: pointer; font-size: 12px; transition: all 150ms; }
+  .dx-method { padding: 14px 10px; border: 1px solid var(--n-200); border-radius: 12px; text-align: center; cursor: pointer; font-size: 12px; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; }
   .dx-method:hover, .dx-method.selected { border-color: var(--atlas); background: var(--mint-soft); }
   .dx-method strong { display: block; margin: 6px 0 3px; font-size: 13px; }
   .dx-method .time { color: var(--atlas); font-weight: 500; font-size: 11.5px; }
 
   /* Ramadan mode banner */
-  .ramadan-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: linear-gradient(90deg, #7C4A1E, #D99A2B, #7C4A1E); color: #FFF4DD; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; animation: rb-glow 4s ease-in-out infinite; }
+  .ramadan-banner { position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-overlay, 600); background: linear-gradient(90deg, #7C4A1E, #D99A2B, #7C4A1E); color: #FFF4DD; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; animation: rb-glow 4s ease-in-out infinite; }
   .app .ramadan-banner { top: 37px; left: 260px; }
   @media (max-width: 1100px) { .app .ramadan-banner { left: 0; top: 37px; } }
   .ramadan-banner .left-s { display: flex; align-items: center; gap: 12px; }
@@ -687,7 +687,7 @@
           <label style="position:relative; display:inline-block; width:48px; height:28px;">
             <input type="checkbox" ${enabled?'checked':''} data-en style="opacity:0; width:0; height:0;" />
             <span style="position:absolute; inset:0; background:${enabled?'var(--atlas)':'var(--n-300)'}; border-radius:14px; cursor:pointer; transition: background 200ms;"></span>
-            <span style="position:absolute; top:3px; left:${enabled?'23px':'3px'}; width:22px; height:22px; background:#fff; border-radius:50%; transition: left 200ms;"></span>
+            <span style="position:absolute; top:3px; left:${enabled?'23px':'3px'}; width:22px; height:22px; background:var(--surface); border-radius:50%; transition: left 200ms;"></span>
           </label>
           <div style="flex:1;">
             <div style="font-weight:500;">${T.roundupEnabled}</div>

@@ -955,7 +955,7 @@
 .bq-sell-cam:hover { border-color: var(--forest); color: var(--forest); background: var(--mint-tint); }
 
 .bq-cam {
-  position: fixed; inset: 0; z-index: 9999;
+  position: fixed; inset: 0; z-index: var(--z-overlay, 600);
   background: rgba(4, 12, 9, 0.92);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;

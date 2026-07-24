@@ -805,7 +805,7 @@
   /* Floor plan */
   .floor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
   .floor-zone { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); margin: 14px 0 10px; grid-column: 1 / -1; }
-  .tbl { aspect-ratio: 1; border: 2px solid var(--n-200); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: all 200ms; background: var(--paper-soft); }
+  .tbl { aspect-ratio: 1; border: 2px solid var(--n-200); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: transform 200ms, opacity 200ms, background-color 200ms, border-color 200ms, color 200ms, box-shadow 200ms; background: var(--paper-soft); }
   html[data-theme="dark"] .tbl { background: var(--paper-muted); }
   .tbl:hover { border-color: var(--atlas); transform: translateY(-2px); }
   .tbl .tbl-n { font-weight: 700; font-size: 22px; letter-spacing: -0.02em; }
@@ -844,7 +844,7 @@
   .kds-col-head .count { font-family: var(--mono); color: var(--mint); }
   .kds-col-body { background: var(--paper-soft); border: 1px solid var(--n-200); border-top: 0; border-radius: 0 0 10px 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 280px; }
   html[data-theme="dark"] .kds-col-body { background: var(--paper-muted); }
-  .kds-ticket { background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; padding: 12px; border-left: 4px solid var(--atlas); cursor: pointer; transition: all 150ms; }
+  .kds-ticket { background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; padding: 12px; border-left: 4px solid var(--atlas); cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; }
   html[data-theme="dark"] .kds-ticket { background: var(--paper-soft); }
   .kds-ticket.glovo { border-left-color: #F29137; }
   .kds-ticket.jumia { border-left-color: #E7611A; }
@@ -891,7 +891,7 @@
   /* Settlement calendar */
   .settle-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 14px; }
   .settle-dow { font-size: 11px; text-align: center; color: var(--n-500); font-family: var(--mono); padding: 4px 0; letter-spacing: 0.1em; }
-  .settle-cell { aspect-ratio: 1.1; border: 1px solid var(--n-200); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; cursor: pointer; transition: all 140ms; background: var(--paper-soft); }
+  .settle-cell { aspect-ratio: 1.1; border: 1px solid var(--n-200); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; cursor: pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; background: var(--paper-soft); }
   html[data-theme="dark"] .settle-cell { background: var(--paper-muted); }
   .settle-cell:hover { border-color: var(--atlas); }
   .settle-cell.pad { opacity: 0.3; pointer-events: none; }
@@ -1011,7 +1011,7 @@
   .sh-week .head { font-family: var(--mono); font-size: 10.5px; color: var(--n-500); padding: 6px 4px; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; }
   .sh-week .head.today { color: var(--atlas); font-weight: 600; }
   .sh-week .name { font-size: 12px; font-weight: 500; padding: 14px 4px; color: var(--n-700); display: flex; align-items: center; }
-  .sh-week .cell { padding: 8px 4px; border-radius: 8px; background: var(--surface); border: 1px solid var(--n-200); text-align: center; min-height: 56px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: all 140ms; }
+  .sh-week .cell { padding: 8px 4px; border-radius: 8px; background: var(--surface); border: 1px solid var(--n-200); text-align: center; min-height: 56px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; }
   html[data-theme="dark"] .sh-week .cell { background: var(--paper); }
   .sh-week .cell:hover { border-color: var(--atlas); transform: translateY(-1px); }
   .sh-week .cell.morning { background: var(--mint-soft); border-color: rgba(11,110,79,0.18); color: var(--riad); }

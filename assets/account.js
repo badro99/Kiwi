@@ -44,7 +44,7 @@
       .acc-venue b { font-weight:600; } .acc-venue span { color:var(--n-500); font-size:12px; }
       .acc-cta { background:var(--atlas); color:#fff; border:0; border-radius:9px; padding:9px 16px; font-size:12.5px; font-weight:600; font-family:var(--sans); cursor:pointer; }
       .acc-cta.ghost { background:transparent; color:var(--ink); border:1px solid var(--n-300); }
-      .acc-cta.light { background:#fff; color:#08311f; }
+      .acc-cta.light { background:var(--surface); color:#08311f; }
       .acc-cta:hover { filter:brightness(1.06); }
       .acc-plan { display:flex; align-items:center; gap:18px; padding:22px; border-radius:16px; background:linear-gradient(150deg,#0c4a35,#08311f); color:#fff; margin-bottom:16px; flex-wrap:wrap; }
       .acc-plan-price { font-size:30px; font-weight:600; letter-spacing:-0.02em; }

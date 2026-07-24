@@ -2070,9 +2070,9 @@ handlers['nav-equipe'] = () => {
           .kw-eq-row.active { background: var(--surface); }
           .kw-eq-row.active:hover { box-shadow: 0 1px 0 rgba(10,15,13,0.04), 0 12px 24px -14px rgba(10,15,13,0.16); transform: translateY(-1px); }
           .kw-eq-row.inactive { background: var(--paper-soft); }
-          .kw-eq-iconbtn { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); cursor: pointer; transition: all 120ms; }
+          .kw-eq-iconbtn { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
           .kw-eq-iconbtn:hover { color: var(--ink); border-color: var(--n-300); }
-          .kw-eq-detailbtn { padding: 5px 11px; font-size: 11.5px; border-radius: 7px; border: 1px solid var(--n-200); background: var(--surface); color: var(--ink); cursor: pointer; transition: all 120ms; }
+          .kw-eq-detailbtn { padding: 5px 11px; font-size: 11.5px; border-radius: 7px; border: 1px solid var(--n-200); background: var(--surface); color: var(--ink); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
           .kw-eq-detailbtn:hover { background: var(--paper-soft); }
         </style>
         ${sorted.map(m => {
@@ -2816,7 +2816,7 @@ handlers['nav-reservations'] = () => {
             <div><h4>${T.waitTitle}</h4><div class="sub">${T.waitSub}</div></div>
             <label style="display:inline-flex; align-items:center; gap:8px; font-size:11.5px; color:var(--n-600);">
               <span style="position:relative; display:inline-block; width:32px; height:18px; background:var(--atlas); border-radius:999px;">
-                <span style="position:absolute; top:2px; left:16px; width:14px; height:14px; background:var(--paper); border-radius:50%; transition:all 200ms;"></span>
+                <span style="position:absolute; top:2px; left:16px; width:14px; height:14px; background:var(--paper); border-radius:50%; transition: transform 200ms, opacity 200ms, background-color 200ms, border-color 200ms, color 200ms, box-shadow 200ms;"></span>
               </span>
               ${T.autoOn}
             </label>
@@ -5582,7 +5582,7 @@ const PDS_INLINE_CSS = `
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
   .pds-legend-item { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--n-700); letter-spacing:0.01em; font-family:var(--sans, inherit); font-weight:500; }
   .pds-legend-swatch { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid transparent; box-shadow:0 1px 2px rgba(10,15,13,0.12); }
-  .pds-sw-free      { background:#FFFFFF; border-color:#C8C5BD; }
+  .pds-sw-free      { background:var(--surface); border-color:#C8C5BD; }
   .pds-sw-occupied  { background:#EBF5F0; border-color:#C5E0D3; }
   .pds-sw-reserved  { background:#FFF1D6; border-color:#E8C88A; }
   .pds-sw-cleaning  { background:#1F5D3C; }
@@ -5769,7 +5769,7 @@ const PDS_INLINE_CSS = `
 
   /* Status color encodings — mirrors caisse khawya / ka-yaklo etc. */
   .pds-tbl[data-status="free"] {
-    background:#FFFFFF;
+    background:var(--surface);
     border:1.5px solid #C8C5BD;
     color:#1A1F1C;
   }
@@ -9650,7 +9650,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-gift .ac { display: flex; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
 
     .sc-amounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
-    .sc-amount { padding: 12px 8px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; text-align: center; cursor: pointer; transition: all 150ms; font-family: var(--mono); font-size: 13px; font-weight: 500; }
+    .sc-amount { padding: 12px 8px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; text-align: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; font-family: var(--mono); font-size: 13px; font-weight: 500; }
     html[data-theme="dark"] .sc-amount { background: var(--paper-soft); }
     .sc-amount:hover { border-color: var(--atlas); }
     .sc-amount.on { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
@@ -10162,7 +10162,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .menu-row .kiwi-st-chips { margin-top: 5px; }
 
       .kiwi-st-pick { display: flex; gap: 7px; flex-wrap: wrap; padding: 4px 0 2px; }
-      .kiwi-st-opt { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--n-200); background: var(--paper-soft); color: var(--n-600); font-size: 12.5px; cursor: pointer; transition: all 140ms; user-select: none; }
+      .kiwi-st-opt { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--n-200); background: var(--paper-soft); color: var(--n-600); font-size: 12.5px; cursor: pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; user-select: none; }
       html[data-theme="dark"] .kiwi-st-opt { background: var(--paper-muted); }
       .kiwi-st-opt:hover { border-color: var(--ink); color: var(--ink); }
       .kiwi-st-opt.on { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
@@ -11142,7 +11142,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-served-at svg { width: 13px; height: 13px; }
       .kit-zoom-backdrop { position: fixed; inset: 0; z-index: 9995; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,15,13,0.46); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); opacity: 0; transition: opacity 220ms ease; }
       .kit-zoom-backdrop.in { opacity: 1; }
-      .kit-zoom { width: 420px; max-width: 100%; background: var(--surface); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 32px 70px -20px rgba(10,15,13,0.6); transform: scale(0.86); transition: transform 280ms cubic-bezier(0.34,1.3,0.64,1); }
+      .kit-zoom { width: 420px; max-width: 100%; background: var(--surface); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 32px 70px -20px rgba(10,15,13,0.6); transform: scale(0.86); transition: transform 280ms cubic-bezier(0.34, 1.45, 0.5, 1); }
       .kit-zoom-backdrop.in .kit-zoom { transform: scale(1); }
       .kit-zoom .kit-order-top { padding: 22px 22px 0; }
       .kit-zoom .kit-order-num { font-size: 38px; }
@@ -11174,7 +11174,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-zoom .kit-item.has-recipe:hover .kit-recipe-ico { opacity: 1; }
       .kit-recipe-backdrop { position: fixed; inset: 0; z-index: 9996; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,15,13,0.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); opacity: 0; transition: opacity 200ms ease; }
       .kit-recipe-backdrop.in { opacity: 1; }
-      .kit-recipe { width: 480px; max-width: 100%; max-height: calc(100vh - 48px); background: var(--surface); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 32px 70px -20px rgba(10,15,13,0.6); transform: scale(0.86); transition: transform 260ms cubic-bezier(0.34,1.3,0.64,1); font-family: var(--sans, system-ui); color: var(--ink); }
+      .kit-recipe { width: 480px; max-width: 100%; max-height: calc(100vh - 48px); background: var(--surface); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 32px 70px -20px rgba(10,15,13,0.6); transform: scale(0.86); transition: transform 260ms cubic-bezier(0.34, 1.45, 0.5, 1); font-family: var(--sans, system-ui); color: var(--ink); }
       .kit-recipe-backdrop.in .kit-recipe { transform: scale(1); }
       html[data-theme="dark"] .kit-recipe { background: var(--paper-soft); }
       .kit-recipe-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 22px 16px; border-bottom: 1px solid var(--n-200); }

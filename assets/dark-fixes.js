@@ -2,7 +2,7 @@
  * Kiwi · dark-mode completion pass.
  *
  * Several older surfaces (the fullpage destination drawers — Menu, Tables, KDS,
- * Stock, Conformité…) hardcode `background:#fff` on their inner cards instead of
+ * Stock, Conformité…) hardcode `background:var(--surface)` on their inner cards instead of
  * using a token, so they stay bright white when the rest of the app is dark —
  * and any token text (var(--ink) → light in dark) becomes light-on-white.
  *

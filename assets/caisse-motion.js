@@ -57,7 +57,7 @@
     var colors = ['#0B6E4F', '#7DF2B0', '#3FB67A', '#F7F5F0'];
     for (var i = 0; i < 24; i++) {
       var p = document.createElement('span');
-      p.style.cssText = 'position:fixed;z-index:9999;width:8px;height:8px;border-radius:2px;pointer-events:none;left:' +
+      p.style.cssText = 'position:fixed;z-index: var(--z-overlay, 600);width:8px;height:8px;border-radius:2px;pointer-events:none;left:' +
         cx + 'px;top:' + cy + 'px;background:' + colors[i % colors.length];
       document.body.appendChild(p);
       var ang = (Math.PI * 2 * i) / 24, dist = 80 + (i % 5) * 22;

@@ -59,7 +59,7 @@
 
   const CSS = `
   .crm-segs { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-  .crm-seg { background:#fff; border:1px solid var(--n-200); border-radius:16px; padding:16px 17px; cursor:pointer; position:relative; transition:border-color .15s, box-shadow .15s, transform .15s; }
+  .crm-seg { background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:16px 17px; cursor:pointer; position:relative; transition:border-color .15s, box-shadow .15s, transform .15s; }
   .crm-seg:hover { box-shadow:0 10px 24px -16px rgba(10,15,13,.3); transform:translateY(-2px); }
   .crm-seg.sel { border-color:var(--atlas); box-shadow:0 0 0 1px var(--atlas); }
   .crm-seg .dot { position:absolute; top:16px; inset-inline-end:16px; width:8px; height:8px; border-radius:50%; }
@@ -68,22 +68,22 @@
 
   .crm-grid { display:grid; grid-template-columns:1fr 360px; gap:18px; margin-top:20px; align-items:start; }
   .crm-colt { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--n-500); margin-bottom:10px; }
-  .crm-tbl { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--n-200); border-radius:16px; overflow:hidden; }
+  .crm-tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--n-200); border-radius:16px; overflow:hidden; }
   .crm-tbl th { font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--n-500); text-align:start; padding:11px 14px; background:var(--paper-soft); font-weight:500; }
   .crm-tbl td { padding:12px 14px; font-size:13px; border-top:1px solid var(--n-200); transition: background-color 180ms cubic-bezier(0.32, 0.72, 0, 1); }
   .crm-tbl td.mono { font-family:var(--mono); font-size:12px; } .crm-tbl tr:hover td { background:var(--paper-soft); }
   .crm-tag { font-size:10.5px; font-family:var(--mono); padding:3px 9px; border-radius:999px; }
   .crm-tag.reg { background:var(--mint-soft); color:#075238; } .crm-tag.vip { background:#FBF0D6; color:#8A6210; } .crm-tag.new { background:#E4ECF8; color:#3E78C9; } .crm-tag.win { background:#FBE3DD; color:#C0492F; }
 
-  .crm-comp { background:#fff; border:1px solid var(--n-200); border-radius:18px; padding:18px; }
+  .crm-comp { background:var(--surface); border:1px solid var(--n-200); border-radius:18px; padding:18px; }
   .crm-comp h4 { margin:0 0 14px; font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--n-500); font-weight:500; }
   .crm-f { margin-bottom:12px; } .crm-f .fl { font-size:11px; color:var(--n-500); margin-bottom:6px; }
   .crm-chips { display:flex; gap:7px; flex-wrap:wrap; }
-  .crm-chip { font-size:12px; padding:6px 12px; border-radius:9px; border:1px solid var(--n-200); background:var(--surface); cursor:pointer; transition: background-color 150ms cubic-bezier(0.32,0.72,0,1), border-color 150ms cubic-bezier(0.32,0.72,0,1), color 150ms ease, transform 150ms cubic-bezier(0.34,1.45,0.5,1); }
+  .crm-chip { font-size:12px; padding:6px 12px; border-radius:9px; border:1px solid var(--n-200); background:var(--surface); cursor:pointer; transition: background-color 150ms cubic-bezier(0.32,0.72,0,1), border-color 150ms cubic-bezier(0.32,0.72,0,1), color 150ms ease, transform 150ms cubic-bezier(0.34, 1.45, 0.5, 1); }
   .crm-chip:hover:not(.on) { border-color:var(--n-300); background:var(--paper-soft); }
   .crm-chip:active { transform:scale(0.96); }
   .crm-chip.on { background:var(--atlas); color:#fff; border-color:var(--atlas); }
-  .crm-sel { width:100%; font-size:13px; padding:9px 12px; border:1px solid var(--n-200); border-radius:10px; background:#fff; color:var(--ink); font-family:inherit; }
+  .crm-sel { width:100%; font-size:13px; padding:9px 12px; border:1px solid var(--n-200); border-radius:10px; background:var(--surface); color:var(--ink); font-family:inherit; }
   .crm-bubble { background:#DCF8C6; color:#0A1F12; border-radius:4px 14px 14px 14px; padding:11px 13px; font-size:12.5px; line-height:1.5; position:relative; box-shadow:0 1px 2px rgba(10,15,13,.12); }
   html[data-theme="dark"] .crm-bubble { background:#114b35; color:#eafff3; }
   .crm-wa { display:flex; align-items:center; gap:7px; font-size:10.5px; color:var(--n-500); margin-bottom:7px; font-family:var(--mono); letter-spacing:.04em; }

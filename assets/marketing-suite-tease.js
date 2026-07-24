@@ -33,7 +33,7 @@
   const CSS = `
   .kw-msu {
     position: fixed; inset: 0;
-    z-index: 99999;
+    z-index: var(--z-overlay, 600);
     overflow: hidden;
     color: #F7F5F0;
     font-family: 'Inter Tight', system-ui, sans-serif;

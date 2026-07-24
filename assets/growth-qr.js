@@ -73,7 +73,7 @@
   .qro-ph-cart .c { font-size:12.5px; } .qro-ph-cart .pay { background:var(--mint); color:var(--riad); font-weight:600; font-size:13px; padding:7px 16px; border-radius:9px; }
 
   .qro-tables { margin-top:12px; display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:12px; }
-  .qro-tile { background:#fff; border:1px solid var(--n-200); border-radius:16px; padding:14px 12px 12px; text-align:center; transition:border-color .15s, box-shadow .15s, transform .15s; }
+  .qro-tile { background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:14px 12px 12px; text-align:center; transition:border-color .15s, box-shadow .15s, transform .15s; }
   .qro-tile:hover { border-color:var(--n-300); box-shadow:0 10px 24px -16px rgba(10,15,13,.3); transform:translateY(-2px); }
   .qro-tile .t { font-family:var(--mono); font-size:12px; color:var(--n-600); margin-bottom:9px; }
   .qro-tile .gk-qr { padding:7px; border-radius:12px; }

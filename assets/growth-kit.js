@@ -56,7 +56,7 @@
   const CSS = `
   /* ── Branded QR ── */
   .gk-qr { position:relative; display:inline-flex; align-items:center; justify-content:center;
-    background:#fff; border-radius:16px; padding:11px;
+    background:var(--surface); border-radius:16px; padding:11px;
     box-shadow:0 4px 16px -6px rgba(10,15,13,.22), inset 0 0 0 1px rgba(10,15,13,.05); }
   .gk-qr svg { display:block; }
   .gk-qr-mark { position:absolute; inset:0; margin:auto; width:24%; height:24%; border-radius:50%;
@@ -80,7 +80,7 @@
   .gk-tg { position:relative; width:42px; height:24px; border-radius:999px; flex:0 0 auto;
     background:var(--n-300); cursor:pointer; transition:background .2s cubic-bezier(.32,.72,0,1); border:0; padding:0; }
   .gk-tg::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%;
-    background:#fff; box-shadow:0 1px 3px rgba(10,15,13,.3); transition:transform .2s cubic-bezier(.32,.72,0,1); }
+    background:var(--surface); box-shadow:0 1px 3px rgba(10,15,13,.3); transition:transform .2s cubic-bezier(.32,.72,0,1); }
   .gk-tg.on { background:var(--atlas); }
   .gk-tg.on::after { transform:translateX(18px); }
   /* On the dark hero, use mint for contrast against the green gradient. */

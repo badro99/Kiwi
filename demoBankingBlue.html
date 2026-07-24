@@ -750,7 +750,7 @@
     width: 96px; height: 96px; border-radius: 50%;
     background: rgba(91,213,255,0.12); border: 2px solid var(--mint);
     display: flex; align-items: center; justify-content: center; color: var(--mint);
-    animation: pop .5s cubic-bezier(0.32,1.6,0.32,1);
+    animation: pop .5s cubic-bezier(0.34, 1.45, 0.5, 1);
   }
   @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
   .splash h3 { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; margin: 6px 0 0; }
@@ -1988,7 +1988,7 @@
   $('#newVaultConfirm').addEventListener('click', () => {
     const name = $('#newVaultName').value.trim() || 'Nouvel objectif';
     const target = parseAmt($('#newVaultTarget').value) || 10000;
-    state.vaults.push({ id: 'v'+Date.now(), emoji:'🎯', n:name, v:0, t:target, apy:4.2, due:'—' });
+    state.vaults.push({ id: 'v'+Date.now(), emoji:'◆', n:name, v:0, t:target, apy:4.2, due:'—' });
     renderVaults();
     closeS();
     splash('Coffre créé', `${name} · objectif ${fmt(target,0)} MAD`);

@@ -155,8 +155,11 @@ select {
 
 /* Editorial accent — floating word with Atlas glow leaking from behind.
    Same typeface as the heading (Geist). The "specialness" comes from light,
-   not from font-swap. Atlas-green glow on light slabs, Mint on dark slabs.
-   text-shadow gives the float; ::before is the leaking aurora. */
+   not from font-swap, and never from italic. Atlas on light slabs, Mint on dark.
+
+   The animated blur-blob that sat behind this word is gone: the hero already
+   carries one atmospheric layer (.hero-mesh), and three stacked independently
+   animated blobs behind one headline is the aurora-blob pattern. */
 .ed {
   position: relative;
   display: inline-block;
@@ -166,36 +169,10 @@ select {
   font-weight: inherit;
   letter-spacing: inherit;
   text-shadow:
-    0 4px 16px rgba(11, 110, 79, 0.22),
-    0 8px 32px rgba(11, 110, 79, 0.10);
+    0 4px 16px rgba(11, 110, 79, 0.26),
+    0 8px 32px rgba(11, 110, 79, 0.13);
 }
 
-.ed::before {
-  content: "";
-  position: absolute;
-  inset: -55% -45%;
-  background: radial-gradient(ellipse 60% 100% at 50% 50%,
-    rgba(11, 110, 79, 0.62) 0%,
-    rgba(125, 242, 176, 0.38) 22%,
-    rgba(11, 110, 79, 0.14) 45%,
-    transparent 70%
-  );
-  filter: blur(38px);
-  z-index: -1;
-  pointer-events: none;
-  animation: edGlow 5s var(--ease-counter) infinite;
-  border-radius: 50%;
-  will-change: transform, opacity;
-}
-
-@keyframes edGlow {
-  0%, 100% { opacity: 0.72; transform: scale(0.94); }
-  50%      { opacity: 1.00; transform: scale(1.10); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ed::before { animation: none; opacity: 0.85; transform: none; }
-}
 
 /* On dark slabs (Ink, Riad, pitch deck dark slides) — Mint primary for contrast */
 .slab-ink .ed,
@@ -209,19 +186,6 @@ select {
     0 12px 40px rgba(125, 242, 176, 0.16);
 }
 
-.slab-ink .ed::before,
-.slab-riad .ed::before,
-.s-title .ed::before,
-.cta-final .ed::before,
-.iq-card .ed::before,
-.app-cta .ed::before {
-  background: radial-gradient(ellipse 60% 100% at 50% 50%,
-    rgba(125, 242, 176, 0.55) 0%,
-    rgba(125, 242, 176, 0.30) 22%,
-    rgba(11, 110, 79, 0.16) 45%,
-    transparent 70%
-  );
-}
 
 /* The number primitive — Geist's tabular figures by default.
    Inherits font/weight/spacing from parent so headlines stay coherent.

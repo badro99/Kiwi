@@ -58,7 +58,7 @@
 
     var card = el('div');
     card.setAttribute('style',
-      'width:100%;max-width:320px;background:#fff;color:#0A0F0D;border-radius:16px;padding:22px 20px;' +
+      'width:100%;max-width:320px;background:var(--surface);color:#0A0F0D;border-radius:16px;padding:22px 20px;' +
       'box-shadow:0 24px 60px -20px rgba(5,48,31,.6);text-align:center');
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       card.style.background = '#151b18'; card.style.color = '#e8efe9';

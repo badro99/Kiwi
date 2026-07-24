@@ -188,7 +188,7 @@
       .mx-grid { display: grid; grid-template-columns: 264px 1fr; gap: 18px; align-items: start; }
       @media (max-width: 860px) { .mx-grid { grid-template-columns: 1fr; } }
       .mx-rail { display: flex; flex-direction: column; gap: 8px; }
-      .mx-cat-add, .mx-sub-add { display: inline-flex; align-items: center; gap: 7px; justify-content: center; width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 12px; border: 1.5px dashed var(--n-300); background: transparent; color: var(--n-600); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 140ms; }
+      .mx-cat-add, .mx-sub-add { display: inline-flex; align-items: center; gap: 7px; justify-content: center; width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 12px; border: 1.5px dashed var(--n-300); background: transparent; color: var(--n-600); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; }
       .mx-cat-add:hover, .mx-sub-add:hover { border-color: var(--atlas); color: var(--atlas); background: var(--mint-soft); }
       .mx-cat { border: 1px solid var(--mx-line); border-radius: 12px; background: var(--surface); overflow: hidden; }
       .mx-cat-head { display: flex; align-items: center; gap: 8px; padding: 11px 12px; cursor: pointer; transition: background 140ms; }
@@ -201,7 +201,7 @@
       .mx-cat-head .ed { display: inline-flex; color: var(--n-400); padding: 2px; border-radius: 6px; }
       .mx-cat-head .ed:hover { color: var(--ink); background: var(--surface); }
       .mx-subs { padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 4px; }
-      .mx-sub { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--n-600); cursor: pointer; transition: all 120ms; }
+      .mx-sub { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--n-600); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
       .mx-sub:hover { background: var(--paper-soft); color: var(--ink); }
       .mx-sub.on { background: var(--atlas); color: #fff; }
       .mx-sub-add { border: none; border-radius: 8px; padding: 7px 10px; justify-content: flex-start; font-size: 12px; }
@@ -218,10 +218,10 @@
       .mx-item .pr { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
       .mx-item .sw { width: 34px; height: 20px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; transition: background 160ms; flex-shrink: 0; }
       .mx-item .sw.on { background: var(--atlas); }
-      .mx-item .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 160ms; }
+      .mx-item .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform 160ms; }
       .mx-item .sw.on::after { transform: translateX(14px); }
       .mx-item .act { display: inline-flex; gap: 4px; }
-      .mx-item .act button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--mx-line); background: var(--surface); color: var(--n-500); cursor: pointer; transition: all 130ms; }
+      .mx-item .act button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--mx-line); background: var(--surface); color: var(--n-500); cursor: pointer; transition: transform 130ms, opacity 130ms, background-color 130ms, border-color 130ms, color 130ms, box-shadow 130ms; }
       .mx-item .act button:hover { color: var(--ink); border-color: var(--n-400); }
       .mx-item .act button.del:hover { color: var(--danger); border-color: var(--danger); }
       .mx-empty-items { padding: 40px 16px; text-align: center; color: var(--n-500); font-size: 13.5px; }

@@ -64,18 +64,18 @@
   .gft-card .amt { font-family:var(--serif); font-size:34px; line-height:1; }
 
   .gft-amts { display:flex; gap:8px; margin:16px 0 12px; flex-wrap:wrap; }
-  .gft-amt { font-family:var(--mono); font-size:13px; padding:9px 14px; border-radius:11px; border:1px solid var(--n-200); background:var(--surface); cursor:pointer; transition: background-color 150ms cubic-bezier(0.32,0.72,0,1), border-color 150ms cubic-bezier(0.32,0.72,0,1), color 150ms ease, transform 150ms cubic-bezier(0.34,1.45,0.5,1); }
+  .gft-amt { font-family:var(--mono); font-size:13px; padding:9px 14px; border-radius:11px; border:1px solid var(--n-200); background:var(--surface); cursor:pointer; transition: background-color 150ms cubic-bezier(0.32,0.72,0,1), border-color 150ms cubic-bezier(0.32,0.72,0,1), color 150ms ease, transform 150ms cubic-bezier(0.34, 1.45, 0.5, 1); }
   .gft-amt:hover:not(.on) { border-color:var(--n-300); background:var(--paper-soft); }
   .gft-amt:active { transform:scale(0.96); }
   .gft-amt.on { background:var(--atlas); color:#fff; border-color:var(--atlas); }
-  .gft-in { width:100%; font-size:13px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; margin-bottom:9px; background:#fff; color:var(--ink); font-family:inherit; }
+  .gft-in { width:100%; font-size:13px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; margin-bottom:9px; background:var(--surface); color:var(--ink); font-family:inherit; }
   .gft-send { width:100%; margin-top:4px; }
 
   .gft-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-  .gft-stat { background:#fff; border:1px solid var(--n-200); border-radius:15px; padding:15px 16px; }
+  .gft-stat { background:var(--surface); border:1px solid var(--n-200); border-radius:15px; padding:15px 16px; }
   .gft-stat .v { font-family:var(--serif); font-size:26px; line-height:1; } .gft-stat .l { font-size:11.5px; color:var(--n-500); margin-top:6px; }
 
-  .gft-tbl { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--n-200); border-radius:16px; overflow:hidden; margin-top:14px; }
+  .gft-tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--n-200); border-radius:16px; overflow:hidden; margin-top:14px; }
   .gft-tbl th { font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--n-500); text-align:start; padding:11px 14px; background:var(--paper-soft); font-weight:500; }
   .gft-tbl td { padding:12px 14px; font-size:13px; border-top:1px solid var(--n-200); transition: background-color 180ms cubic-bezier(0.32, 0.72, 0, 1); } .gft-tbl td.mono { font-family:var(--mono); font-size:12px; }
   .gft-tbl tr:hover td { background:var(--paper-soft); }

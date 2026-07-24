@@ -207,7 +207,7 @@
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
-        html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+        html, body { background: var(--surface) !important; margin: 0 !important; padding: 0 !important; }
         body > *:not(#kbl-print-root) { display: none !important; }
         #kbl-print-root { display: block !important; position: static; }
         .kbl-sheet { display: block; }
@@ -352,13 +352,13 @@
     if (document.getElementById('kbl-choose-css')) return;
     const st = document.createElement('style'); st.id = 'kbl-choose-css';
     st.textContent =
-      '#kbl-choose-ov{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '#kbl-choose-ov{position:fixed;inset:0;z-index: var(--z-overlay, 600);display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
       '#kbl-choose{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:380px;max-width:94vw;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
       '#kbl-choose h3{margin:0 0 4px;font-size:1.12rem;}' +
       '#kbl-choose p{margin:0 0 16px;font-size:.9rem;opacity:.65;line-height:1.5;}' +
       '.kbl-cbtn{width:100%;font:inherit;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;border:0;margin:0 0 10px;}' +
       '.kbl-cbtn.print{background:var(--atlas,#0B6E4F);color:#fff;}.kbl-cbtn.print:hover{filter:brightness(1.06);}' +
-      '.kbl-cbtn.pdf{background:#fff;border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
+      '.kbl-cbtn.pdf{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
       '.kbl-cbtn.cancel{background:none;color:var(--ink,#0A0F0D);opacity:.55;margin:2px 0 0;padding:6px;font-weight:600;}' +
       '#kbl-choose .kbl-chint{margin:12px 0 0;font-size:.78rem;opacity:.6;}';
     document.head.appendChild(st);

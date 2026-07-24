@@ -471,13 +471,13 @@ body.is-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bezier(
   position: absolute; top: 22px; left: 0; right: 0;
   text-align: center; color: rgba(255,255,255,0.65); font-size: 12px;
 }
-.px-vf-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.px-vf-flash { position: absolute; inset: 0; background: var(--surface); opacity: 0; pointer-events: none; }
 .px-vf-flash.go { animation: px-flash 360ms ease-out; }
 @keyframes px-flash { 0% { opacity: 0; } 18% { opacity: 0.9; } 100% { opacity: 0; } }
 .px-vf-foot { display: flex; align-items: center; justify-content: center; padding: 16px 0 20px; gap: 26px; position: relative; }
 .px-shutter {
   width: 62px; height: 62px; border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 0 0 4px rgba(255,255,255,0.25);
   transition: transform 120ms;
 }

@@ -707,7 +707,7 @@
     width: 96px; height: 96px; border-radius: 50%;
     background: rgba(125,242,176,0.12); border: 2px solid var(--mint);
     display: flex; align-items: center; justify-content: center; color: var(--mint);
-    animation: pop .5s cubic-bezier(0.32,1.6,0.32,1);
+    animation: pop .5s cubic-bezier(0.34, 1.45, 0.5, 1);
   }
   @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
   .splash h3 { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; margin: 6px 0 0; }
@@ -803,7 +803,7 @@
           <div style="height:34%" class="live"></div>
         </div>
         <div class="cats">
-          <span class="cat"><i style="background:#7DF2B0"></i>Resto 1 240</span>
+          <span class="cat"><i style="background:var(--mint)"></i>Resto 1 240</span>
           <span class="cat"><i style="background:#F5C679"></i>Courses 820</span>
           <span class="cat"><i style="background:#9BC4FF"></i>Transport 480</span>
           <span class="cat"><i style="background:#E8A0E8"></i>Loisirs 318</span>
@@ -1254,34 +1254,34 @@
       { id:'atlas', tier:'Atlas Metal', name:'Visa Infinite', num:'•••• 9712', frozen:true, theme:'cc-atlas', monthSpend:0, limit:200000 }
     ],
     transactions: [
-      { id:1, n:'Café Atlas',      cat:'Resto',     when:'Aujourd\'hui · 14:32', v:-42.40,  c:'#0B6E4F', i:'CA' },
+      { id:1, n:'Café Atlas',      cat:'Resto',     when:'Aujourd\'hui · 14:32', v:-42.40,  c:'var(--atlas)', i:'CA' },
       { id:2, n:'Spotify',         cat:'Abonnement',when:'Hier · auto',          v:-59.00,  c:'#E84A5F', i:'SP' },
-      { id:3, n:'Youssef Amrani',  cat:'Transfert', when:'Hier · split addition',v:+86.00,  c:'#7DF2B0', i:'YA', fg:'#053B2C' },
+      { id:3, n:'Youssef Amrani',  cat:'Transfert', when:'Hier · split addition',v:+86.00,  c:'var(--mint)', i:'YA', fg:'var(--riad)' },
       { id:4, n:'BIM Maarif',      cat:'Courses',   when:'Hier · 19:08',         v:-87.30,  c:'#F5A623', i:'BI' },
-      { id:5, n:'Salaire mai',     cat:'Revenu',    when:'1 mai · ACOMA SARL',   v:+18400.00,c:'#0B6E4F',i:'SA', up:true },
+      { id:5, n:'Salaire mai',     cat:'Revenu',    when:'1 mai · ACOMA SARL',   v:+18400.00,c:'var(--atlas)',i:'SA', up:true },
       { id:6, n:'Carrefour',       cat:'Courses',   when:'2 mai',                v:-218.15, c:'#F5A623', i:'CA' },
       { id:7, n:'IAM facture',     cat:'Factures',  when:'3 mai',                v:-248.00, c:'#1A4D80', i:'IA' },
       { id:8, n:'Uber Casablanca', cat:'Transport', when:'4 mai',                v:-38.50,  c:'#1F1F1F', i:'UB' },
       { id:9, n:'Pharmacie Al Andalus',cat:'Santé', when:'5 mai',                v:-72.00,  c:'#26A269', i:'PH' },
-      { id:10,n:'Coffre Tokyo',    cat:'Épargne',   when:'5 mai',                v:-500.00, c:'#7DF2B0', i:'TK', fg:'#053B2C' },
-      { id:11,n:'Achat ATW · 1 frac.',cat:'Invest', when:'6 mai',                v:-528.40, c:'#0B6E4F', i:'AT' },
-      { id:12,n:'Intérêts coffre', cat:'Revenu',    when:'7 mai',                v:+12.40,  c:'#7DF2B0', i:'IN', fg:'#053B2C' },
+      { id:10,n:'Coffre Tokyo',    cat:'Épargne',   when:'5 mai',                v:-500.00, c:'var(--mint)', i:'TK', fg:'var(--riad)' },
+      { id:11,n:'Achat ATW · 1 frac.',cat:'Invest', when:'6 mai',                v:-528.40, c:'var(--atlas)', i:'AT' },
+      { id:12,n:'Intérêts coffre', cat:'Revenu',    when:'7 mai',                v:+12.40,  c:'var(--mint)', i:'IN', fg:'var(--riad)' },
     ],
     contacts: [
       { i:'FB', n:'Fatima Bakkali · Maman',     r:'RIB •••• 4218 · Tanger',     bg:'linear-gradient(135deg,#FF8FC8,#C1487E)' },
-      { i:'YA', n:'Youssef Amrani',             r:'+212 661 23 45 67',           bg:'#7DF2B0', fg:'#053B2C' },
+      { i:'YA', n:'Youssef Amrani',             r:'+212 661 23 45 67',           bg:'var(--mint)', fg:'var(--riad)' },
       { i:'SA', n:'Sara El Idrissi',            r:'sara@kiwi.ma',                bg:'#9BC4FF', fg:'#0a2540' },
       { i:'MK', n:'Mehdi Kabbaj',               r:'IBAN FR76 •••• 8821',         bg:'#F5A623' },
       { i:'AL', n:'Amine Loubaris',             r:'+212 612 78 90 12',           bg:'#26A269' },
       { i:'RJ', n:'Rachida Jelloun · soeur',    r:'RIB •••• 0042 · Rabat',       bg:'#E84A5F' },
-      { i:'ZA', n:'Zakariae Attahiri',          r:'zak@kiwi.ma',                 bg:'linear-gradient(135deg,#0B6E4F,#7DF2B0)', fg:'#053B2C' },
-      { i:'IM', n:'IBAN externe, nouveau',     r:'Ajouter un bénéficiaire',     bg:'transparent', fg:'#7DF2B0', border:true },
+      { i:'ZA', n:'Zakariae Attahiri',          r:'zak@kiwi.ma',                 bg:'linear-gradient(135deg,var(--atlas),var(--mint))', fg:'var(--riad)' },
+      { i:'IM', n:'IBAN externe, nouveau',     r:'Ajouter un bénéficiaire',     bg:'transparent', fg:'var(--mint)', border:true },
     ],
     stocks: [
-      { i:'ATW', n:'Attijariwafa Bank', r:'CSE · 0,5 frac',  v:264.20,   d:'+1,82 %', c:'linear-gradient(135deg,#0B6E4F,#053B2C)', fg:'#7DF2B0', spark:'M0,16 L8,15 L16,12 L24,10 L32,8 L40,5 L50,2' },
+      { i:'ATW', n:'Attijariwafa Bank', r:'CSE · 0,5 frac',  v:264.20,   d:'+1,82 %', c:'linear-gradient(135deg,var(--atlas),var(--riad))', fg:'var(--mint)', spark:'M0,16 L8,15 L16,12 L24,10 L32,8 L40,5 L50,2' },
       { i:'IAM', n:'Maroc Telecom',     r:'CSE · 2 frac',    v:188.24,   d:'-0,42 %', dn:true, c:'#1A4D80', spark:'M0,8 L8,10 L16,9 L24,12 L32,11 L40,14 L50,15' },
       { i:'OCP', n:'OCP',               r:'CSE · 0,2 frac',  v:249.60,   d:'+0,42 %', c:'#26A269', spark:'M0,14 L8,13 L16,11 L24,10 L32,8 L40,7 L50,5' },
-      { i:'BCP', n:'BCP',               r:'CSE · 1 frac',    v:286.50,   d:'+0,65 %', c:'#053B2C', fg:'#7DF2B0', spark:'M0,12 L8,11 L16,12 L24,10 L32,9 L40,7 L50,6' },
+      { i:'BCP', n:'BCP',               r:'CSE · 1 frac',    v:286.50,   d:'+0,65 %', c:'var(--riad)', fg:'var(--mint)', spark:'M0,12 L8,11 L16,12 L24,10 L32,9 L40,7 L50,6' },
       { i:'AAPL',n:'Apple',             r:'NASDAQ · 0,1 frac',v:184.20, d:'+0,82 %', c:'#1F1F1F', spark:'M0,12 L8,10 L16,11 L24,8 L32,9 L40,5 L50,3' },
       { i:'TSL',n:'Tesla',              r:'NASDAQ · 0,05 frac',v:121.40,d:'-1,18 %', dn:true, c:'#E84A5F', spark:'M0,4 L8,6 L16,8 L24,7 L32,10 L40,12 L50,14' },
     ],
@@ -1406,7 +1406,7 @@
       state.balanceMAD += amt;
       renderBalance();
       renderTx();
-      state.transactions.unshift({ id: Date.now(), n: `Recharge · ${src}`, cat:'Recharge', when:'À l\'instant', v:+amt, c:'#7DF2B0', i:'+€', fg:'#053B2C', up:true });
+      state.transactions.unshift({ id: Date.now(), n: `Recharge · ${src}`, cat:'Recharge', when:'À l\'instant', v:+amt, c:'var(--mint)', i:'+€', fg:'var(--riad)', up:true });
       renderTx(); renderAllTx();
       closeS();
       splash(`+${fmt(amt)} MAD ajoutés`, `Source : ${src} · disponibles immédiatement`);
@@ -1495,7 +1495,7 @@
   const CB_RATE = 0.01; // 1% Kiwi Pro
   const CB_ELIGIBLE = new Set(['Resto','Courses','Transport','Loisirs','Santé','Factures','Abonnement']);
   const CB_CAT_COLOR = {
-    Resto:       '#7DF2B0',
+    Resto:       'var(--mint)',
     Courses:     '#F5C679',
     Transport:   '#9BC4FF',
     Loisirs:     '#E8A0E8',
@@ -1544,7 +1544,7 @@
     } else {
       $('#cbBreakdown').innerHTML = cats.map(([cat, v]) => `
         <div class="cb-row">
-          <span class="cb-cat-dot" style="background:${CB_CAT_COLOR[cat]||'#7DF2B0'};"></span>
+          <span class="cb-cat-dot" style="background:${CB_CAT_COLOR[cat]||'var(--mint)'};"></span>
           <span style="flex:1;">
             <div class="cb-cat-n">${cat}</div>
             <div class="cb-cat-spent">${fmt(v.spent)} MAD dépensés</div>
@@ -1568,7 +1568,7 @@
     closeS();
     if (kind === 'balance') {
       state.balanceMAD += amt;
-      state.transactions.unshift({ id: Date.now(), n:'Cashback versé', cat:'Revenu', when:'À l\'instant', v:+amt, c:'#7DF2B0', i:'✦', fg:'#053B2C', up:true });
+      state.transactions.unshift({ id: Date.now(), n:'Cashback versé', cat:'Revenu', when:'À l\'instant', v:+amt, c:'var(--mint)', i:'✦', fg:'var(--riad)', up:true });
       // wipe the carry by zeroing eligible spend isn't trivial — for demo, just refresh
       renderBalance(); renderTx(); renderAllTx();
       splash(`+${fmt(amt)} MAD versés`, 'Votre cashback est désormais sur votre compte.');
@@ -1622,7 +1622,7 @@
             <div class="cc-num">${c.num}</div>
             <div class="cc-name">I. MOULINE</div>
           </div>
-          <svg class="cc-visa" viewBox="0 0 40 24"><circle cx="14" cy="12" r="9" fill="${c.theme==='cc-atlas'?'#B89B5E':(c.theme==='cc-pro'?'#fff':'#1A1F71')}" opacity="0.9"/><path d="M22 6h6v12h-6z" fill="${c.theme==='cc-atlas'?'#E6D9B5':(c.theme==='cc-pro'?'#7DF2B0':'#F7B600')}" opacity="0.9"/></svg>
+          <svg class="cc-visa" viewBox="0 0 40 24"><circle cx="14" cy="12" r="9" fill="${c.theme==='cc-atlas'?'#B89B5E':(c.theme==='cc-pro'?'#fff':'#1A1F71')}" opacity="0.9"/><path d="M22 6h6v12h-6z" fill="${c.theme==='cc-atlas'?'#E6D9B5':(c.theme==='cc-pro'?'var(--mint)':'#F7B600')}" opacity="0.9"/></svg>
         </div>
       </button>`).join('') + `
       <div class="card-meta"><span>Glissez vers le bas pour fermer · tapez pour gérer</span></div>`;
@@ -1703,7 +1703,7 @@
       <button class="hold" data-hold-kind="${kind}" data-hold-i="${h.i}">
         <span class="hold-av" style="background:${h.c};${h.fg?`color:${h.fg};`:''}">${h.i}</span>
         <span class="hold-info"><span class="hold-n">${h.n}</span><span class="hold-r">${h.r}</span></span>
-        <span class="hold-spark"><svg viewBox="0 0 50 22" preserveAspectRatio="none"><path d="${h.spark}" fill="none" stroke="${h.dn?'#F29B8F':'#7DF2B0'}" stroke-width="1.5"/></svg></span>
+        <span class="hold-spark"><svg viewBox="0 0 50 22" preserveAspectRatio="none"><path d="${h.spark}" fill="none" stroke="${h.dn?'#F29B8F':'var(--mint)'}" stroke-width="1.5"/></svg></span>
         <span class="hold-v"><span class="a num">${fmt(h.v,0)}</span><span class="d ${h.dn?'dn':''}">${h.d}</span></span>
       </button>`;
   }
@@ -1877,7 +1877,7 @@
   $('#newVaultConfirm').addEventListener('click', () => {
     const name = $('#newVaultName').value.trim() || 'Nouvel objectif';
     const target = parseAmt($('#newVaultTarget').value) || 10000;
-    state.vaults.push({ id: 'v'+Date.now(), emoji:'🎯', n:name, v:0, t:target, apy:4.2, due:'—' });
+    state.vaults.push({ id: 'v'+Date.now(), emoji:'◆', n:name, v:0, t:target, apy:4.2, due:'—' });
     renderVaults();
     closeS();
     splash('Coffre créé', `${name} · objectif ${fmt(target,0)} MAD`);

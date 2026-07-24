@@ -724,7 +724,7 @@ body.is-pos-boulangerie #toast-stack { z-index: 120; }
 .bl-switch::after {
   content: ""; position: absolute; top: 3px; left: 3px;
   width: 21px; height: 21px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   transition: transform 220ms cubic-bezier(0.34, 1.45, 0.5, 1);
 }
 .bl-switch.on { background: var(--forest); }

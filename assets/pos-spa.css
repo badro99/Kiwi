@@ -132,7 +132,7 @@
 .sp-leg i { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
 .sp-leg i.done { background: var(--line); }
 .sp-leg i.now { background: var(--emerald); }
-.sp-leg i.todo { background: #fff; border: 1.5px solid var(--ink-4); }
+.sp-leg i.todo { background: var(--surface); border: 1.5px solid var(--ink-4); }
 .sp-leg i.due { background: var(--danger-mute); }
 
 .sp-plan-scroll { flex: 1; min-height: 0; overflow: auto; padding: 12px 22px 26px; overscroll-behavior: contain; }
@@ -472,7 +472,7 @@
 }
 .sp-punch.is-used svg { width: 15px; height: 15px; }
 .sp-punch.is-next { border-color: var(--forest); color: var(--forest); }
-.sp-punch.pop { animation: sp-punch-pop 540ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.sp-punch.pop { animation: sp-punch-pop 540ms cubic-bezier(0.34, 1.45, 0.5, 1); }
 @keyframes sp-punch-pop {
   0% { transform: scale(0.4); box-shadow: 0 0 0 0 rgba(125,242,176,0.8); }
   60% { transform: scale(1.18); }

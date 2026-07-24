@@ -355,7 +355,7 @@
   width: 20px; height: 20px; border-radius: 6px;
   border: 1.5px solid var(--line);
   display: flex; align-items: center; justify-content: center;
-  color: #fff; flex-shrink: 0; background: #fff;
+  color: #fff; flex-shrink: 0; background: var(--surface);
 }
 .pz-half-toggle.on .tick { background: var(--forest); border-color: var(--forest); }
 .pz-half-toggle .tick svg { width: 12px; height: 12px; }

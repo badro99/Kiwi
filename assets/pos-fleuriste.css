@@ -265,7 +265,7 @@
 .fl-bq-size-val { font-size: 13px; font-weight: 700; color: var(--forest); }
 .fl-bq-size-val b { font-family: var(--mono); }
 .fl-bq-bar { height: 7px; border-radius: 999px; background: var(--paper-mute); margin-top: 7px; overflow: hidden; }
-.fl-bq-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--emerald), var(--forest)); transition: width 320ms cubic-bezier(0.34, 1.2, 0.5, 1); }
+.fl-bq-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--emerald), var(--forest)); transition: width 320ms cubic-bezier(0.34, 1.45, 0.5, 1); }
 .fl-bq-bar.reduce i { transition: none; }
 .fl-bq-ticks { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); font-family: var(--mono); margin-top: 4px; }
 .fl-bq-ticks b.on { color: var(--forest); }
@@ -627,11 +627,11 @@
 .fl-vf-corner.bl { bottom: 18px; left: 18px; border-right: 0; border-top: 0; border-radius: 0 0 0 6px; }
 .fl-vf-corner.br { bottom: 18px; right: 18px; border-left: 0; border-top: 0; border-radius: 0 0 6px 0; }
 .fl-vf-hint { position: absolute; top: 22px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.65); font-size: 12px; }
-.fl-vf-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.fl-vf-flash { position: absolute; inset: 0; background: var(--surface); opacity: 0; pointer-events: none; }
 .fl-vf-flash.go { animation: fl-flash 360ms ease-out; }
 @keyframes fl-flash { 0% { opacity: 0; } 18% { opacity: 0.9; } 100% { opacity: 0; } }
 .fl-vf-foot { display: flex; align-items: center; justify-content: center; padding: 16px 0 20px; gap: 26px; position: relative; }
-.fl-shutter { width: 62px; height: 62px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,0.25); transition: transform 120ms; }
+.fl-shutter { width: 62px; height: 62px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 4px rgba(255,255,255,0.25); transition: transform 120ms; }
 .fl-shutter:active { transform: scale(0.9); }
 .fl-vf-close { position: absolute; right: 18px; color: rgba(255,255,255,0.6); font-size: 12.5px; padding: 8px; }
 .fl-vf-close:hover { color: #fff; }

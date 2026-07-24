@@ -152,7 +152,7 @@
     border-radius: 10px; padding: 8px 12px; margin-bottom: 18px; }
   .oq-card { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center;
     background: var(--surface); border: 1px solid var(--n-200); border-radius: 18px; padding: 20px; }
-  .oq-qr { width: 168px; height: 168px; background: #fff; border-radius: 14px; padding: 10px;
+  .oq-qr { width: 168px; height: 168px; background: var(--surface); border-radius: 14px; padding: 10px;
     box-shadow: 0 8px 22px -12px rgba(10,15,13,.28), inset 0 0 0 1px rgba(10,15,13,.05); }
   .oq-qr svg { width: 100%; height: 100%; display: block; }
   .oq-card h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: -0.01em; color: var(--ink); }
@@ -184,7 +184,7 @@
   .oq-tile .dl { font-size: 11.5px; color: var(--atlas); cursor: pointer; background: none; border: 0; font-family: var(--sans); }
   .oq-tile .dl:hover { text-decoration: underline; }
   .oq-foot { display: flex; justify-content: flex-end; gap: 10px; margin: 22px 0 6px; }
-  html[data-theme="dark"] .oq-qr { background: #fff; }
+  html[data-theme="dark"] .oq-qr { background: var(--surface); }
   @media (max-width: 640px){ .oq-card { grid-template-columns: 1fr; text-align: center; } .oq-qr { margin: 0 auto; } .oq-url span { max-width: 60vw; } }
   `;
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);

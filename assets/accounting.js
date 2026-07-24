@@ -472,7 +472,7 @@
     .ac-eyebrow { font-size:10.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--atlas); }
     .ac-h { font-family:'Instrument Serif',serif; font-weight:400; font-size:24px; color:var(--ink); margin:3px 0 2px; }
     .ac-sub { font-size:12.5px; color:var(--n-500); }
-    .ac-card { background:#fff; border:1px solid var(--n-200); border-radius:18px; padding:18px 18px;
+    .ac-card { background:var(--surface); border:1px solid var(--n-200); border-radius:18px; padding:18px 18px;
       box-shadow:0 1px 2px rgba(10,15,13,.04), 0 18px 34px -26px rgba(10,15,13,.2); }
     .ac-card + .ac-card { margin-top:14px; }
     .ac-card-t { font-size:13.5px; font-weight:600; color:var(--ink); display:flex; justify-content:space-between;
@@ -488,7 +488,7 @@
 
     /* module grid (Aperçu) */
     .ac-mods { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .ac-mod { text-align:start; background:#fff; border:1px solid var(--n-200); border-radius:16px;
+    .ac-mod { text-align:start; background:var(--surface); border:1px solid var(--n-200); border-radius:16px;
       padding:16px 15px; cursor:pointer; font:inherit; transition:transform 140ms var(--ac-ease), border-color 140ms;
       box-shadow:0 1px 2px rgba(10,15,13,.04), 0 14px 26px -22px rgba(10,15,13,.2); }
     .ac-mod:hover { border-color:var(--atlas); }
@@ -558,7 +558,7 @@
 
     /* attention list */
     .ac-todo { display:flex; gap:11px; align-items:center; width:100%; text-align:start; font:inherit;
-      background:#fff; border:1px solid var(--n-200); border-radius:13px; padding:13px 14px; cursor:pointer;
+      background:var(--surface); border:1px solid var(--n-200); border-radius:13px; padding:13px 14px; cursor:pointer;
       transition:border-color 140ms; }
     .ac-todo + .ac-todo { margin-top:9px; }
     .ac-todo:hover { border-color:var(--atlas); }
@@ -588,7 +588,7 @@
     .ac-insight svg { width:16px; height:16px; color:var(--mint); flex-shrink:0; margin-top:2px; }
     .ac-acts { display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
     .ac-btn { font-size:12.5px; font-weight:600; padding:11px 16px; border-radius:11px; cursor:pointer;
-      border:1px solid var(--n-300); background:#fff; color:var(--ink); transition:all 140ms var(--ac-ease); }
+      border:1px solid var(--n-300); background:var(--surface); color:var(--ink); transition: transform 140ms var(--ac-ease), opacity 140ms var(--ac-ease), background-color 140ms var(--ac-ease), border-color 140ms var(--ac-ease), color 140ms var(--ac-ease), box-shadow 140ms var(--ac-ease); }
     .ac-btn:hover { border-color:var(--n-400); }
     .ac-btn:active { transform:scale(.97); }
     .ac-btn.primary { background:var(--atlas); border-color:var(--atlas); color:#fff; }

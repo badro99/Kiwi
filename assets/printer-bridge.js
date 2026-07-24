@@ -415,12 +415,12 @@
       '.kpr-status button.kpr-recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-left:2px;}' +
       '.kpr-field{margin:0 0 13px;}' +
       '.kpr-field label{display:block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--riad,#053B2C);margin:0 0 6px;}' +
-      '.kpr-field input,.kpr-field select{width:100%;font:inherit;padding:11px 13px;border:1.5px solid rgba(0,0,0,.12);border-radius:11px;background:#fff;color:var(--ink,#0A0F0D);}' +
+      '.kpr-field input,.kpr-field select{width:100%;font:inherit;padding:11px 13px;border:1.5px solid rgba(0,0,0,.12);border-radius:11px;background:var(--surface);color:var(--ink,#0A0F0D);}' +
       '.kpr-field input:focus,.kpr-field select:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}' +
       '.kpr-two{display:flex;gap:12px;}.kpr-two>*{flex:1;}' +
       '.kpr-actions{display:flex;gap:10px;margin-top:20px;}' +
       '.kpr-btn{flex:1;font:inherit;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;border:0;}' +
-      '.kpr-test{background:#fff;border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
+      '.kpr-test{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
       '.kpr-test:disabled{opacity:.45;cursor:default;}' +
       '.kpr-save{background:var(--atlas,#0B6E4F);color:#fff;}' +
       '.kpr-save:hover{filter:brightness(1.06);}' +
@@ -430,7 +430,7 @@
       '.kpr-quick .kpr-btn{flex:1;width:auto;margin:0;}' +
       '.kpr-quick .kpr-browser{background:var(--atlas,#0B6E4F);color:#fff;border:0;opacity:1;}' +
       '.kpr-quick .kpr-browser:hover{filter:brightness(1.06);border:0;}' +
-      '.kpr-quick .kpr-pdf{background:#fff;border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
+      '.kpr-quick .kpr-pdf{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
       '.kpr-bt{border:1.5px solid rgba(11,110,79,.25);border-radius:14px;padding:15px 16px;margin:0 0 14px;background:rgba(11,110,79,.045);}' +
       '.kpr-bt h3{margin:0 0 3px;font-size:1rem;}' +
       '.kpr-bt>p{margin:0 0 12px;font-size:.82rem;opacity:.7;line-height:1.45;}' +

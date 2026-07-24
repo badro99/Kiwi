@@ -399,27 +399,10 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 @media (max-width: 1100px) {
   .hero h1 { font-size: clamp(36px, 5vw, 54px); }
 }
-.hero h1::before {
-  content: ""; position: absolute;
-  inset: -18% -10% -18% -8%;
-  z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(ellipse 55% 70% at 22% 40%,
-      rgba(11, 110, 79, 0.26) 0%,
-      rgba(125, 242, 176, 0.22) 30%,
-      transparent 65%),
-    radial-gradient(ellipse 50% 65% at 78% 60%,
-      rgba(125, 242, 176, 0.18) 0%,
-      rgba(11, 110, 79, 0.16) 35%,
-      transparent 70%);
-  filter: blur(48px);
-  border-radius: 50%;
-  animation: heroH1Glow 9s var(--ease-counter) infinite;
-}
-@keyframes heroH1Glow {
-  0%, 100% { opacity: 0.72; transform: scale(0.96) translateX(-2%); }
-  50%      { opacity: 1.00; transform: scale(1.06) translateX(2%); }
-}
+/* The headline sits on the paper, unglazed. A second animated blur-blob used
+   to live here (two radial ellipses, blur(48px), 9s loop) on top of .hero-mesh
+   and .ed::before — three stacked auroras behind one headline. .hero-mesh is
+   the single atmospheric layer now; the h1 anchors the hero typographically. */
 
 .hero-lede {
   margin-top: var(--s-6); max-width: 56ch;
@@ -585,7 +568,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-mesh, .hero h1::before { animation: none; }
+  .hero-mesh { animation: none; }
 }
 
 /* DASH-MOCK (lifted from v2 pages.css) ─────────────────────────── */
@@ -4776,7 +4759,7 @@ footer {
             </div>
             <div class="hero-kpi">
               <div class="hero-kpi-num">
-                <img class="hero-kpi-bolt" src="assets/landing/icons/lightning.png" alt="" width="22" height="22" loading="lazy" decoding="async"/>
+                <img class="hero-kpi-bolt" src="assets/landing/icons/lightning.png" alt="" width="22" height="22" fetchpriority="high" decoding="async"/>
                 7<span class="unit">min</span>
               </div>
               <div class="hero-kpi-label"><b>Pour démarrer.</b><br>Opérationnel dès le lendemain.</div>
@@ -4804,7 +4787,7 @@ footer {
 
         <div class="dash-mock-floater floater-iban">
           <span class="ico" aria-hidden="true">
-            <img class="floater-star" src="assets/landing/icons/star.png" alt="" width="16" height="16" loading="lazy" decoding="async"/>
+            <img class="floater-star" src="assets/landing/icons/star.png" alt="" width="16" height="16" fetchpriority="high" decoding="async"/>
           </span>
           <div>
             <div style="font-family: var(--font-mono); font-size: 11px; color: var(--n-500); letter-spacing: .04em; text-transform: uppercase;">Stock</div>
@@ -4814,7 +4797,7 @@ footer {
 
         <div class="dash-mock-floater floater-tap">
           <span class="ico" aria-hidden="true">
-            <img class="floater-tap-icon" src="assets/landing/icons/tap-to-pay.png" alt="" width="16" height="16" loading="lazy" decoding="async"/>
+            <img class="floater-tap-icon" src="assets/landing/icons/tap-to-pay.png" alt="" width="16" height="16" fetchpriority="high" decoding="async"/>
           </span>
           <div>
             <div style="font-family: var(--font-mono); font-size: 11px; color: var(--n-500); letter-spacing: .04em; text-transform: uppercase;">Mode hors-ligne</div>
@@ -4896,7 +4879,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>03</b> · Pourquoi maintenant</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Le bon moment, pas une intuition</div>
       <h2 style="margin-top: var(--s-4);">Le marché marocain a changé en deux ans plus qu'en vingt.</h2>
       <p class="lede" style="margin-top: var(--s-5);">Six forces convergent. Toutes publiques, toutes vérifiables. Ensemble, elles dessinent une fenêtre de construction qui ne se rouvrira pas.</p>
     </div>
@@ -5197,7 +5179,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>04</b> · Le produit</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Six fonctionnalités · une seule app</div>
       <h2 style="margin-top: var(--s-4);">Tout ce qu'un commerçant marocain n'a jamais reçu d'un seul outil.</h2>
     </div>
 
@@ -5325,7 +5306,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>05</b> · Service</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Du salon à la cuisine</div>
       <h2 style="margin-top: var(--s-4);">Le service du soir, sans une seconde perdue.</h2>
       <p class="lede" style="margin-top: var(--s-5);">La commande est prise en salle, envoyée en cuisine, préparée, encaissée puis enregistrée au tableau de bord. Un seul fil, du premier couvert au dernier ticket.</p>
     </div>
@@ -5367,7 +5347,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>06</b> · Tarification</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Radicalement transparent</div>
       <h2 style="margin-top: var(--s-4);">Comment Kiwi gagne de l'argent.</h2>
       <p class="lede" style="margin-top: var(--s-5);">Un abonnement. Pas une commission. Kiwi facture son logiciel, ne prend jamais une part de tes ventes et ne touche jamais à ton chiffre d'affaires.</p>
     </div>
@@ -5563,7 +5542,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>08</b> · Le coût caché</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Vendredi 23 h 47, à Casablanca</div>
       <h2 style="margin-top: var(--s-4);">Faire tourner un vendredi soir.</h2>
       <p class="lede" style="margin-top: var(--s-5);">Café Atlas vient de fermer. La caisse dit 18 420 MAD. Voici la différence entre gérer au carnet, WhatsApp et Excel, ou piloter le service sur Kiwi.</p>
     </div>
@@ -5693,7 +5671,6 @@ footer {
   <div class="wrap">
     <div class="s-head reveal">
       <div class="s-num"><b>09</b> · Questions fréquentes</div>
-      <div class="s-eyebrow" style="margin-top: var(--s-3);">Les neuf questions qu'on nous pose tous les jours</div>
       <h2 style="margin-top: var(--s-4);">Tout ce qu'un commerçant veut savoir avant de signer.</h2>
     </div>
 
@@ -5982,11 +5959,11 @@ footer {
       <div class="lead-form-grid">
         <div class="lead-field">
           <label for="i-name">Name</label>
-          <input id="i-name" name="name" type="text" required autocomplete="name" placeholder="Jane Doe" />
+          <input id="i-name" name="name" type="text" required autocomplete="name" placeholder="Yasmine El Amrani" />
         </div>
         <div class="lead-field">
           <label for="i-firm">Fund / Firm</label>
-          <input id="i-firm" name="firm" type="text" required placeholder="Acme Ventures" />
+          <input id="i-firm" name="firm" type="text" required placeholder="Maghreb Capital Partners" />
         </div>
         <div class="lead-field">
           <label for="i-email">Email</label>

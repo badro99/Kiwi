@@ -376,7 +376,7 @@ ar: {
   /* ─────────── INJECTED STYLES ─────────── */
   const CSS = `
   /* Toasts */
-  .kiwi-toasts { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; pointer-events: none; max-width: 360px; }
+  .kiwi-toasts { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: var(--z-toast, 400); pointer-events: none; max-width: 360px; }
   .kiwi-toast { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; padding: 14px 16px; min-width: 280px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 20px 40px -20px rgba(10,15,13,0.25), 0 2px 4px rgba(10,15,13,0.04); pointer-events: all; opacity: 0; transform: translateY(-10px); transition: opacity 220ms, transform 220ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
   .kiwi-toast.in { opacity: 1; transform: translateY(0); }
   .kiwi-toast .ti { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -402,7 +402,7 @@ ar: {
   .kiwi-modal-head .tag { display: inline-block; margin-bottom: 10px; padding: 4px 10px; background: var(--mint-soft); color: var(--riad); border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
   .kiwi-modal-body { padding: 0 28px 24px; overscroll-behavior: contain; }
   .kiwi-modal-foot { padding: 16px 28px; border-top: 1px solid var(--n-200); display: flex; justify-content: flex-end; gap: 10px; background: color-mix(in srgb, var(--surface) 50%, transparent); border-radius: 0 0 22px 22px; }
-  .kiwi-modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 150ms; z-index: 2; }
+  .kiwi-modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; z-index: 2; }
   .kiwi-modal-close:hover { color: var(--ink); border-color: var(--n-400); }
 
   /* Drawer */
@@ -438,7 +438,7 @@ ar: {
   html.kiwi-locked { overflow: hidden; }
   html.kiwi-locked body { animation-play-state: paused; }
   .kiwi-drawer-foot { padding: 16px 24px; border-top: 1px solid var(--n-200); }
-  .kiwi-drawer-close { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 150ms; }
+  .kiwi-drawer-close { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; }
   .kiwi-drawer-close:hover { color: var(--ink); border-color: var(--n-400); }
 
   /* ── Fullpage drawer · used for Tables/Menu/KDS/Stock ───────────────────
@@ -554,7 +554,7 @@ ar: {
   .wiz-step { flex: 1; height: 4px; background: var(--n-200); border-radius: 2px; transition: background 220ms; }
   .wiz-step.done { background: var(--atlas); }
   .wiz-step.active { background: var(--atlas); }
-  .wiz-choice { border: 1px solid var(--n-200); border-radius: 14px; padding: 18px 18px; cursor: pointer; transition: all 160ms; display: flex; gap: 14px; align-items: flex-start; }
+  .wiz-choice { border: 1px solid var(--n-200); border-radius: 14px; padding: 18px 18px; cursor: pointer; transition: transform 160ms, opacity 160ms, background-color 160ms, border-color 160ms, color 160ms, box-shadow 160ms; display: flex; gap: 14px; align-items: flex-start; }
   .wiz-choice:hover { border-color: var(--atlas); background: var(--surface); }
   .wiz-choice.selected { border-color: var(--atlas); background: var(--mint-soft); }
   .wiz-choice .wc-ic { width: 40px; height: 40px; border-radius: 10px; background: var(--paper-soft); color: var(--atlas); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -615,11 +615,11 @@ ar: {
   .ord-pay .ci svg { display: block; max-width: 100%; max-height: 100%; }
   .ord-pay .ci img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
   .ord-pay .ci.visa { background: transparent; border: 0; padding: 0; }
-  .ord-pay .ci.mc { background: #fff; border: 1px solid var(--n-200); padding: 2px; }
+  .ord-pay .ci.mc { background: var(--surface); border: 1px solid var(--n-200); padding: 2px; }
   .ord-pay .ci.tap { background: var(--atlas); color: var(--mint); }
   .ord-pay .ci.tap svg { width: 18px; height: 18px; }
-  .ord-pay .ci.qr { background: #fff; border: 1px solid var(--n-200); padding: 2px; }
-  .ord-pay .ci.cash { background: #fff; border: 1px solid var(--n-200); padding: 2px; }
+  .ord-pay .ci.qr { background: var(--surface); border: 1px solid var(--n-200); padding: 2px; }
+  .ord-pay .ci.cash { background: var(--surface); border: 1px solid var(--n-200); padding: 2px; }
   .ord-pay .pay-prim { font-weight: 500; font-size: 13.5px; }
   .ord-pay .pay-sub { font-size: 11.5px; color: var(--n-500); margin-top: 1px; display: flex; align-items: center; gap: 6px; }
   .ord-pay .pay-flag { display: inline-block; width: 12px; height: 9px; border-radius: 1px; }
@@ -629,7 +629,7 @@ ar: {
   .ord-pay .pay-amt { font-family: var(--mono); font-weight: 600; font-size: 14px; font-feature-settings: "tnum" 1; }
 
   /* Button base for modals */
-  .kb { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-family: var(--sans); font-weight: 500; font-size: 14px; letter-spacing: -0.005em; cursor: pointer; transition: all 150ms; border: 1px solid transparent; }
+  .kb { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-family: var(--sans); font-weight: 500; font-size: 14px; letter-spacing: -0.005em; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; border: 1px solid transparent; }
   .kb.primary { background: var(--ink); color: var(--paper); }
   .kb.primary:hover { background: var(--atlas); }
   .kb.ghost { background: var(--surface); color: var(--ink); border-color: var(--n-200); }
@@ -1468,7 +1468,7 @@ ar: {
           .kset-chev { opacity:0.8; flex-shrink:0; }
           .kset-toggle { width:36px; height:21px; background:var(--n-300); border-radius:999px; position:relative; transition:background 160ms; flex-shrink:0; }
           .kset-toggle.on { background:var(--atlas); }
-          .kset-knob { position:absolute; top:2px; inset-inline-start:2px; width:17px; height:17px; background:#fff; border-radius:50%; transition:inset-inline-start 160ms; box-shadow:0 1px 3px rgba(10,15,13,0.28); }
+          .kset-knob { position:absolute; top:2px; inset-inline-start:2px; width:17px; height:17px; background:var(--surface); border-radius:50%; transition:inset-inline-start 160ms; box-shadow:0 1px 3px rgba(10,15,13,0.28); }
           .kset-toggle.on .kset-knob { inset-inline-start:17px; }
           .kset-badge { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:0.1em; color:var(--atlas); background:rgba(11,110,79,0.10); border:1px solid rgba(11,110,79,0.22); padding:4px 8px; border-radius:999px; flex-shrink:0; }
         </style>
@@ -1942,7 +1942,7 @@ ar: {
             const ML = { card: 'carte', qr: 'QR Wallet', link: 'lien de paiement' };
             // Pulse the hero number so the merchant SEES their money land — a
             // spring scale via Web Animations (no CSS dependency).
-            const pulseHero = () => { try { const h = document.querySelector('[data-hero-amount]'); if (h && h.animate) h.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.055)' }, { transform: 'scale(1)' }], { duration: 720, easing: 'cubic-bezier(0.34,1.45,0.5,1)' }); } catch (_) {} };
+            const pulseHero = () => { try { const h = document.querySelector('[data-hero-amount]'); if (h && h.animate) h.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.055)' }, { transform: 'scale(1)' }], { duration: 720, easing: 'cubic-bezier(0.34, 1.45, 0.5, 1)' }); } catch (_) {} };
             if (first) {
               let owner = ''; try { owner = (localStorage.getItem('kiwiOwnerName') || '').trim(); } catch (_) {}
               try { confetti(); } catch (_) {}
@@ -2284,9 +2284,9 @@ ar: {
             .kup-feats li { font-size:12px; line-height:1.35; padding-inline-start:18px; position:relative; }
             .kup-feats li::before { content:'✓'; position:absolute; inset-inline-start:0; color:var(--atlas); font-weight:700; }
             .kup-card.is-reco .kup-feats li::before { color:var(--mint); }
-            .kup-cta { width:100%; padding:9px 10px; border-radius:9px; font-size:12.5px; font-weight:600; font-family:var(--sans); cursor:pointer; border:1px solid var(--n-300); background:transparent; color:var(--ink); transition:all 130ms; }
+            .kup-cta { width:100%; padding:9px 10px; border-radius:9px; font-size:12.5px; font-weight:600; font-family:var(--sans); cursor:pointer; border:1px solid var(--n-300); background:transparent; color:var(--ink); transition: transform 130ms, opacity 130ms, background-color 130ms, border-color 130ms, color 130ms, box-shadow 130ms; }
             .kup-cta:hover:not([disabled]) { border-color:var(--atlas); color:var(--atlas); }
-            .kup-card.is-reco .kup-cta { background:#fff; color:#08311f; border-color:#fff; }
+            .kup-card.is-reco .kup-cta { background:var(--surface); color:#08311f; border-color:#fff; }
             .kup-card.is-reco .kup-cta:hover { background:var(--mint); border-color:var(--mint); color:#06371f; }
             .kup-cta[disabled] { opacity:0.5; cursor:default; }
             .kup-tip { display:flex; gap:11px; align-items:flex-start; margin-top:16px; padding:13px 15px; background:var(--mint-soft); border-radius:12px; font-size:12.5px; line-height:1.5; color:var(--ink); }
@@ -3090,7 +3090,7 @@ ar: {
             ].map(([lbl, n, c]) => `
               <div style="display:grid; grid-template-columns:80px 1fr 36px; gap:10px; align-items:center; padding:5px 0; font-size:12.5px;">
                 <div style="color:var(--n-600);">${lbl}</div>
-                <div style="height:8px; background:#fff; border-radius:4px; overflow:hidden;"><div style="width:${(n/58)*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
+                <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${(n/58)*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
                 <div style="font-family:var(--mono); text-align:end; font-weight:500;">${n}</div>
               </div>
             `).join('')}
@@ -3119,7 +3119,7 @@ ar: {
               <div style="font-size:11.5px; color:var(--n-500); margin-top:3px;">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).tips_prompt_auto_sub}</div>
             </div>
             <div style="width:38px; height:22px; background:var(--atlas); border-radius:999px; position:relative;">
-              <div style="position:absolute; top:2px; right:2px; width:18px; height:18px; background:#fff; border-radius:50%;"></div>
+              <div style="position:absolute; top:2px; right:2px; width:18px; height:18px; background:var(--surface); border-radius:50%;"></div>
             </div>
           </div>
         `)}
@@ -3177,7 +3177,7 @@ ar: {
             ].map(([lbl, pct, c]) => `
               <div style="display:grid; grid-template-columns:160px 1fr 50px; gap:10px; align-items:center; padding:6px 0; font-size:12.5px;">
                 <div style="color:var(--n-600);">${lbl}</div>
-                <div style="height:8px; background:#fff; border-radius:4px; overflow:hidden;"><div style="width:${(pct - 97) / 2.5 * 100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
+                <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${(pct - 97) / 2.5 * 100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
                 <div style="font-family:var(--mono); text-align:end; font-weight:500;">${pct.toFixed(2).replace('.',',')} %</div>
               </div>
             `).join('')}
@@ -3190,7 +3190,7 @@ ar: {
                 <div style="font-weight:500; font-size:13.5px;">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).success_failure_card}</div>
                 <div style="font-size:11.5px; color:#9B2F22; margin-top:3px;">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).success_failure_reason}</div>
               </div>
-              <span style="background:#fff; color:#9B2F22; padding:2px 8px; border-radius:999px; font-size:10.5px; font-family:var(--mono); font-weight:600;">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).success_failure_status}</span>
+              <span style="background:var(--surface); color:#9B2F22; padding:2px 8px; border-radius:999px; font-size:10.5px; font-family:var(--mono); font-weight:600;">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).success_failure_status}</span>
             </div>
             <div style="font-size:12px; color:var(--n-700);">${(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).success_failure_recovery}</div>
           </div>
@@ -3222,7 +3222,7 @@ ar: {
             ].map(([lbl, pct, c, mad]) => `
               <div style="display:grid; grid-template-columns:120px 1fr 50px 100px; gap:10px; align-items:center; padding:6px 0; font-size:12.5px;">
                 <div style="display:flex; align-items:center; gap:8px; color:var(--n-700);"><i style="width:10px; height:10px; border-radius:3px; background:${c}; display:inline-block;"></i>${lbl}</div>
-                <div style="height:8px; background:#fff; border-radius:4px; overflow:hidden;"><div style="width:${pct/48*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
+                <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${pct/48*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
                 <div style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</div>
                 <div style="font-family:var(--mono); text-align:end; color:var(--n-500); font-size:11.5px;">${mad}</div>
               </div>
@@ -3263,7 +3263,7 @@ ar: {
             ].map(([lbl, n, c]) => `
               <div style="display:grid; grid-template-columns:160px 1fr 36px; gap:10px; align-items:center; padding:5px 0; font-size:12.5px;">
                 <div style="color:var(--n-700);">${lbl}</div>
-                <div style="height:8px; background:#fff; border-radius:4px; overflow:hidden;"><div style="width:${n/68*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
+                <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${n/68*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
                 <div style="font-family:var(--mono); text-align:end; font-weight:500;">${n}</div>
               </div>
             `).join('')}

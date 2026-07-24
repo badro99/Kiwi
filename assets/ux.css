@@ -132,7 +132,7 @@
   border-radius: 999px;
   cursor: pointer;
   font-family: var(--sans);
-  transition: all 160ms;
+  transition: transform 160ms, opacity 160ms, background-color 160ms, border-color 160ms, color 160ms, box-shadow 160ms;
   letter-spacing: 0.02em;
 }
 .calc-tier-toggle button.on { background: var(--mint); color: var(--ink); }
@@ -188,7 +188,7 @@
 /* Make city dots hoverable */
 .ma-map svg circle.ma-dot,
 .ma-map svg .ma-city-hit { cursor: pointer; }
-.ma-map svg .ma-city-ring { transition: all 200ms; }
+.ma-map svg .ma-city-ring { transition: transform 200ms, opacity 200ms, background-color 200ms, border-color 200ms, color 200ms, box-shadow 200ms; }
 .ma-map svg g.ma-city-group:hover .ma-city-ring { stroke-width: 2.5; r: 14; }
 
 /* ─────── 5. KEYBOARD SHORTCUTS OVERLAY ─────── */
@@ -230,7 +230,7 @@
   font-family: var(--mono);
   font-size: 11.5px;
   padding: 3px 8px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--n-300);
   border-radius: 6px;
   color: var(--ink);
@@ -320,15 +320,15 @@ body.grabbing { cursor: grabbing; user-select: none; }
   font-size: 10.5px;
   color: var(--n-500);
   cursor: pointer;
-  transition: all 160ms;
+  transition: transform 160ms, opacity 160ms, background-color 160ms, border-color 160ms, color 160ms, box-shadow 160ms;
   min-height: 28px;
 }
-.kbd-hint:hover { background: #fff; border-color: var(--n-400); color: var(--ink); }
+.kbd-hint:hover { background: var(--surface); border-color: var(--n-400); color: var(--ink); }
 .kbd-hint kbd {
   font-family: var(--mono);
   font-size: 10px;
   padding: 1px 5px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--n-300);
   border-radius: 4px;
   color: var(--ink);

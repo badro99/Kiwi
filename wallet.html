@@ -32,7 +32,7 @@
   .nav-links a { color: inherit; transition: color .2s; }
   .nav-links a:hover { color: var(--mint); }
   .nav-cta { display: flex; gap: 10px; align-items: center; }
-  .btn-ghost-light { color: var(--paper); padding: 9px 16px; font-size: 13.5px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; transition: all .2s; }
+  .btn-ghost-light { color: var(--paper); padding: 9px 16px; font-size: 13.5px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; transition: transform .2s, opacity .2s, background-color .2s, border-color .2s, color .2s, box-shadow .2s; }
   .btn-ghost-light:hover { background: rgba(255,255,255,0.06); border-color: var(--mint); }
   .btn-mint { background: var(--mint); color: var(--riad-deep); font-weight: 600; padding: 10px 18px; border-radius: 999px; font-size: 13.5px; transition: transform .2s, background .2s; display: inline-flex; align-items: center; gap: 8px; }
   .btn-mint:hover { background: #a2f7c5; transform: translateY(-1px); }
@@ -574,7 +574,7 @@
   /* Stocks */
   .phone.s-stocks .phone-screen { background: linear-gradient(180deg, #002C40, #001520); }
   .iv-stock-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; }
-  .iv-stock-head .av { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0B6E4F, #053B2C); color: var(--mint); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .iv-stock-head .av { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--atlas), var(--riad)); color: var(--mint); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
   .iv-stock-head .n { font-size: 14px; font-weight: 500; }
   .iv-stock-head .r { font-size: 10.5px; color: rgba(255,255,255,0.55); font-family: var(--mono); }
   .iv-price { font-size: 38px; font-weight: 600; letter-spacing: -0.04em; font-feature-settings: "tnum" 1; margin-top: 8px; }
@@ -741,7 +741,7 @@
                 <div style="height:34%; background: var(--mint);"></div>
               </div>
               <div class="rv-cats">
-                <span class="rv-cat"><i style="background:#7DF2B0"></i>Resto 1 240</span>
+                <span class="rv-cat"><i style="background:var(--mint)"></i>Resto 1 240</span>
                 <span class="rv-cat"><i style="background:#F5C679"></i>Courses 820</span>
                 <span class="rv-cat"><i style="background:#9BC4FF"></i>Transport 480</span>
               </div>
@@ -751,7 +751,7 @@
               <span>Transactions</span><span class="m">Voir tout →</span>
             </div>
             <div class="rv-tx">
-              <div class="rv-tx-av" style="background:#0B6E4F;">CA</div>
+              <div class="rv-tx-av" style="background:var(--atlas);">CA</div>
               <div class="rv-tx-info"><div class="n">Café Atlas</div><div class="r">Aujourd'hui · 14:32</div></div>
               <div class="rv-tx-v">−42,40</div>
             </div>
@@ -761,7 +761,7 @@
               <div class="rv-tx-v">−59,00</div>
             </div>
             <div class="rv-tx">
-              <div class="rv-tx-av" style="background:#7DF2B0;color:#053B2C;">YA</div>
+              <div class="rv-tx-av" style="background:var(--mint);color:var(--riad);">YA</div>
               <div class="rv-tx-info"><div class="n">Youssef Amrani</div><div class="r">Hier · Split addition</div></div>
               <div class="rv-tx-v up">+86,00</div>
             </div>
@@ -1549,7 +1549,7 @@
       if (window.Kiwi && window.Kiwi.toast) return window.Kiwi.toast(title, opts);
       // tiny fallback
       const c = document.createElement('div');
-      c.style.cssText = 'position:fixed;top:20px;right:20px;background:#0A0F0D;color:#F7F5F0;padding:14px 18px;border-radius:14px;font-size:14px;z-index:9999;box-shadow:0 20px 40px -10px rgba(0,0,0,0.4);max-width:320px;';
+      c.style.cssText = 'position:fixed;top:20px;right:20px;background:var(--ink);color:var(--paper);padding:14px 18px;border-radius:14px;font-size:14px;z-index: var(--z-toast, 400);box-shadow:0 20px 40px -10px rgba(0,0,0,0.4);max-width:320px;';
       c.innerHTML = `<div style="font-weight:600;">${title}</div>${opts.desc ? `<div style="font-size:12px;color:#9aaaa3;margin-top:4px;">${opts.desc}</div>` : ''}`;
       document.body.appendChild(c);
       setTimeout(() => c.remove(), opts.duration || 2800);
@@ -1648,7 +1648,7 @@
       const orig = xferCta.textContent;
       const origBg = xferCta.style.background;
       xferCta.innerHTML = '✓ Envoyé · ~10 sec.';
-      xferCta.style.background = '#7DF2B0';
+      xferCta.style.background = 'var(--mint)';
       toast('Transfert envoyé', { type:'success', desc:`${eur} EUR → ${mad} MAD · Fatima Bakkali · 0 frais` });
       setTimeout(() => { xferCta.textContent = orig; xferCta.style.background = origBg; }, 3200);
     });
@@ -1731,7 +1731,7 @@
       const email = input?.value.trim();
       if (!email) { toast('Saisissez votre email', { type:'warn' }); return; }
       input.value = '';
-      toast('Place réservée 🎉', { type:'success', desc: `${email} · vous serez parmi les premiers · 1 an Kiwi Pro offert` });
+      toast('Place réservée', { type:'success', desc: `${email} · vous serez parmi les premiers · 1 an Kiwi Pro offert` });
       if (window.Kiwi?.confetti) window.Kiwi.confetti();
     }));
 

@@ -18,7 +18,7 @@
   --paper: #F7F5F0;
   --paper-soft: #EFECE3;
   --paper-muted: #E8E6E0;
-  --surface: #FFFFFF;        /* card/panel fill — stays bright in light, darkens in dark (see theme.css) */
+  --surface: #FFFDFA;        /* card/panel fill — stays bright in light, darkens in dark (see theme.css) */
   --paper-elev: #FFFDFA;     /* warm elevated card fill — cards read as lit paper, never cold #fff */
   --ink: #0A0F0D;
   --ink-soft: #1A201D;
@@ -64,6 +64,21 @@
   --serif: "Instrument Serif", "Times New Roman", serif;
   --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  /* Stacking order — the named scale. Mirrors assets/landing/tokens.css and
+     extends it with the three app-only layers. Arbitrary values (9999, 99998,
+     99999) were how the app used to say "on top"; they don't compose, and the
+     next person just picks a bigger number. Every new layer belongs here. */
+  --z-base:      1;
+  --z-elevated: 10;
+  --z-nav:     100;
+  --z-drawer:  200;
+  --z-modal:   300;
+  --z-toast:   400;
+  --z-tooltip: 500;
+  --z-overlay: 600;   /* full-screen scan / camera / venue-switch overlays */
+  --z-greeting:700;   /* the greeting flash, over those */
+  --z-lock:    800;   /* auth lock — above everything */
 }
 
 * { box-sizing: border-box; }

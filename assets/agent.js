@@ -2971,7 +2971,7 @@
     .fa-msg.agent .fa-bubble { flex:1; min-width:0; max-width:632px; padding-top:3px;
       font-size:14px; line-height:1.62; color:var(--ink); }
     /* user message — soft white card */
-    .fa-msg.user .fa-bubble { max-width:78%; background:#fff; border:1px solid var(--n-200);
+    .fa-msg.user .fa-bubble { max-width:78%; background:var(--surface); border:1px solid var(--n-200);
       border-radius:18px 18px 6px 18px; padding:11px 16px; font-size:13.5px; line-height:1.55;
       color:var(--ink); box-shadow:0 4px 16px -10px rgba(10,15,13,.22); }
     [dir="rtl"] .fa-msg.user .fa-bubble { border-radius:18px 18px 18px 6px; }
@@ -2980,7 +2980,7 @@
 
     /* stat cards */
     .fa-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
-    .fa-stat { background:#fff; border:1px solid var(--n-200); border-radius:14px; padding:12px 14px;
+    .fa-stat { background:var(--surface); border:1px solid var(--n-200); border-radius:14px; padding:12px 14px;
       transition:border-color 150ms; }
     .fa-stat:hover { border-color:var(--n-300); }
     .fa-stat .l { font-size:9.5px; letter-spacing:.085em; text-transform:uppercase; color:var(--n-500); font-weight:600; }
@@ -2999,7 +2999,7 @@
     /* suggestion chips */
     .fa-follow { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
     .fa-follow button { font-size:12px; font-weight:450; padding:8px 14px; border-radius:999px;
-      border:1px solid var(--n-200); background:#fff; color:var(--ink); cursor:pointer;
+      border:1px solid var(--n-200); background:var(--surface); color:var(--ink); cursor:pointer;
       transition:transform 160ms var(--fa-ease), border-color 160ms, color 160ms, box-shadow 160ms; }
     .fa-follow button:hover { border-color:var(--atlas); color:var(--atlas); transform:translateY(-1px);
       box-shadow:0 8px 18px -12px rgba(11,110,79,.55); }
@@ -3014,7 +3014,7 @@
     .fa-dock { border-top:1px solid var(--n-200); background:var(--paper);
       padding:15px clamp(20px,8%,120px) 19px; }
     .fa-dock-in { max-width:730px; margin:0 auto; }
-    .fa-inputwrap { display:flex; align-items:flex-end; gap:8px; background:#fff;
+    .fa-inputwrap { display:flex; align-items:flex-end; gap:8px; background:var(--surface);
       border:1px solid var(--n-300); border-radius:21px; padding:6px; padding-inline-start:18px;
       box-shadow:0 8px 26px -16px rgba(10,15,13,.26); transition:border-color 170ms, box-shadow 170ms; }
     .fa-inputwrap:focus-within { border-color:var(--atlas); box-shadow:0 10px 30px -16px rgba(11,110,79,.4); }
@@ -3029,7 +3029,7 @@
     [dir="rtl"] .fa-send svg { transform:scaleX(-1); }
     .fa-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:11px; padding:0 4px; }
     .fa-tool { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:500;
-      color:var(--n-600); background:#fff; border:1px solid var(--n-200); border-radius:999px;
+      color:var(--n-600); background:var(--surface); border:1px solid var(--n-200); border-radius:999px;
       padding:7px 14px; cursor:pointer; transition: transform 150ms var(--fa-ease), opacity 150ms var(--fa-ease), background-color 150ms var(--fa-ease), border-color 150ms var(--fa-ease), color 150ms var(--fa-ease), box-shadow 150ms var(--fa-ease); }
     .fa-tool:hover { border-color:var(--n-400); color:var(--ink); transform:translateY(-1px); }
     .fa-tool.on { background:var(--atlas); border-color:var(--atlas); color:#fff; }
@@ -3040,7 +3040,7 @@
     .fa-keypad { display:none; }
     .fa-keypad.open { display:block; animation:fa-kp-in 300ms var(--ease-out,cubic-bezier(.32,.72,0,1)) both; }
     @keyframes fa-kp-in { from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
-    .fa-keypad-card { background:#fff; border:1px solid var(--n-200); border-radius:22px; padding:14px;
+    .fa-keypad-card { background:var(--surface); border:1px solid var(--n-200); border-radius:22px; padding:14px;
       margin-bottom:14px; box-shadow:0 18px 44px -26px rgba(10,15,13,.35); }
     .fa-kpdisplay { background:var(--ink); color:#fff; border-radius:14px; padding:16px 18px;
       text-align:right; direction:ltr;
@@ -3108,7 +3108,7 @@
     .fa-hero-p { font-size:14px; color:var(--n-600); line-height:1.62; margin-top:9px; max-width:540px; }
     .fa-hero-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-top:24px; }
     .fa-hero-card { display:flex; flex-direction:column; align-items:flex-start; text-align:start;
-      background:#fff; border:1px solid var(--n-200); border-radius:16px; padding:15px 14px; cursor:pointer;
+      background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:15px 14px; cursor:pointer;
       font:inherit; transition:transform 160ms var(--fa-ease), border-color 160ms, box-shadow 160ms;
       box-shadow:0 1px 2px rgba(10,15,13,.04), 0 18px 32px -26px rgba(10,15,13,.24); }
     .fa-hero-card:hover { border-color:var(--atlas); transform:translateY(-2px);

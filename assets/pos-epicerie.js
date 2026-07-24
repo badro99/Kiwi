@@ -352,7 +352,7 @@
                 <span class="ep-scan-kbd">Entrée</span>
               </div>
               <button class="ep-scan-btn" id="ep-scan-mock"><i data-lucide="scan-line"></i>Scanner</button>
-              <button class="ep-scan-btn" id="ep-search-open" style="background:#fff;color:var(--ink-2);border:1px solid var(--line);box-shadow:none;"><i data-lucide="search"></i>Chercher</button>
+              <button class="ep-scan-btn" id="ep-search-open" style="background:var(--surface);color:var(--ink-2);border:1px solid var(--line);box-shadow:none;"><i data-lucide="search"></i>Chercher</button>
             </div>
             <div class="ep-cats" id="ep-cats"></div>
             <div class="ep-grid-scroll" id="ep-gridwrap"></div>

@@ -210,7 +210,7 @@
       display:flex;align-items:center;justify-content:center;margin:0 0 22px;box-shadow:0 12px 30px -10px rgba(11,110,79,.8);}
     .kob-hero-mark svg{width:32px;height:32px;}
     .kob-celebrate{text-align:center;padding:12px 0;}
-    .kob-celebrate .kob-hero-mark{margin:0 auto 22px;animation:kob-pop .5s cubic-bezier(.34,1.45,.5,1) both;}
+    .kob-celebrate .kob-hero-mark{margin:0 auto 22px;animation:kob-pop .5s cubic-bezier(0.34, 1.45, 0.5, 1) both;}
     @keyframes kob-pop{from{opacity:0;transform:scale(.4);}to{opacity:1;transform:none;}}
     @media (max-width:560px){
       .kob-card{padding:24px 20px 20px;border-radius:22px;}

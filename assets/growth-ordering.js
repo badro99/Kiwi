@@ -63,7 +63,7 @@
   .ord-tag { font-size:13px; color:#cdeed9; line-height:1.5; max-width:34ch; }
   .ord-link { margin-top:16px; display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:11px 14px; }
   .ord-link .u { font-family:var(--mono); font-size:13px; color:var(--paper); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ord-link .cp { font-size:12.5px; color:var(--mint); font-weight:600; cursor:pointer; background:none; border:0; white-space:nowrap; transition: color 150ms cubic-bezier(0.32,0.72,0,1), transform 150ms cubic-bezier(0.34,1.45,0.5,1); }
+  .ord-link .cp { font-size:12.5px; color:var(--mint); font-weight:600; cursor:pointer; background:none; border:0; white-space:nowrap; transition: color 150ms cubic-bezier(0.32,0.72,0,1), transform 150ms cubic-bezier(0.34, 1.45, 0.5, 1); }
   .ord-link .cp:hover { color:#fff; }
   .ord-link .cp:active { transform:scale(0.95); }
   .ord-statusrow { margin-top:14px; display:flex; align-items:center; gap:12px; }
@@ -93,7 +93,7 @@
   .ord-sec-t { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--n-500); }
   .ord-sec-h { font-size:11.5px; color:var(--n-500); }
   .ord-chs { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .ord-ch { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--n-200); border-radius:14px; padding:13px 15px; transition:border-color .15s, box-shadow .15s; }
+  .ord-ch { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--n-200); border-radius:14px; padding:13px 15px; transition:border-color .15s, box-shadow .15s; }
   .ord-ch:hover { border-color:var(--n-300); box-shadow:0 6px 18px -12px rgba(10,15,13,.25); }
   .ord-ch-ic { width:38px; height:38px; border-radius:11px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; }
   .ord-ch-b { flex:1; min-width:0; } .ord-ch-n { font-size:13.5px; font-weight:600; } .ord-ch-s { font-size:11.5px; color:var(--n-500); margin-top:1px; }
@@ -101,7 +101,7 @@
   .ord-connect { font-size:12px; font-weight:600; color:var(--atlas); background:var(--mint-soft); border:0; border-radius:9px; padding:7px 13px; cursor:pointer; transition:background .15s; white-space:nowrap; }
   .ord-connect:hover { background:#c8ecd6; }
 
-  .ord-feed { margin-top:12px; border:1px solid var(--n-200); border-radius:16px; overflow:hidden; background:#fff; }
+  .ord-feed { margin-top:12px; border:1px solid var(--n-200); border-radius:16px; overflow:hidden; background:var(--surface); }
   .ord-o { display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; align-items:center; padding:13px 16px; cursor:pointer; transition: background-color 180ms cubic-bezier(0.32,0.72,0,1); }
   .ord-o:active { background:var(--paper-muted, var(--paper-soft)); }
   .ord-o + .ord-o { border-top:1px solid var(--n-200); }

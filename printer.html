@@ -8,7 +8,7 @@
 <style>
   :root{
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
-    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e7e3da; --muted:#5d6b63; --surface:#fff;
+    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e7e3da; --muted:#5d6b63; --surface:#FFFDFA;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -27,7 +27,7 @@
   .status .dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px}
   .status.off{background:#fbeceb;border:1px solid #f2cdc8;color:#8f2c1e}
   .status.off .dot{background:#c0392b;box-shadow:0 0 0 4px rgba(192,57,43,.14)}
-  .status.on{background:#e7f6ee;border:1px solid #bfe6cf;color:#0B6E4F}
+  .status.on{background:#e7f6ee;border:1px solid #bfe6cf;color:var(--atlas)}
   .status.on .dot{background:var(--atlas);box-shadow:0 0 0 4px rgba(11,110,79,.16)}
   .status b{font-weight:700}
   .recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-left:2px}
@@ -88,7 +88,7 @@
           <li><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
             <span class="mono">Win + R</span> → <code>shell:startup</code> → dans le dossier qui s'ouvre, créez un fichier
             <code>kiwi-printer.cmd</code> contenant :
-            <br><code style="display:block;white-space:pre;margin-top:6px;padding:8px;background:#0A0F0D;color:#7DF2B0;border-radius:6px;overflow-x:auto">@echo off
+            <br><code style="display:block;white-space:pre;margin-top:6px;padding:8px;background:var(--ink);color:var(--mint);border-radius:6px;overflow-x:auto">@echo off
 set KIWI_BRIDGE_PORT=9110
 start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             Adaptez le chemin si vous avez déplacé le <code>.exe</code>. Le pont démarrera seul, en fenêtre réduite.</li>

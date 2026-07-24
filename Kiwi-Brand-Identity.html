@@ -149,7 +149,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 .grid-demo .block { background: var(--atlas); color: var(--paper); padding: 20px 26px; border-radius: 10px; font-weight: 500; font-size: 14px; }
 
 /* Toast for copy feedback */
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 500; opacity: 0; transition: all 260ms cubic-bezier(0.32, 0.72, 0, 1); z-index: 200; letter-spacing: -0.005em; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 500; opacity: 0; transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 260ms cubic-bezier(0.32, 0.72, 0, 1), background-color 260ms cubic-bezier(0.32, 0.72, 0, 1), border-color 260ms cubic-bezier(0.32, 0.72, 0, 1), color 260ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 260ms cubic-bezier(0.32, 0.72, 0, 1); z-index: 200; letter-spacing: -0.005em; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); }
 .toast.in { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast .mint { color: var(--mint); font-family: var(--mono); margin-left: 8px; }
 
@@ -211,9 +211,9 @@ footer a { color: var(--mint); }
     </div>
 
     <div class="logo-grid">
-      <div class="logo-cell paper"><div class="lbl">Primaire</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas #0B6E4F</div></div>
-      <div class="logo-cell dark"><div class="lbl">Inverse</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Ink #0A0F0D</div></div>
-      <div class="logo-cell atlas"><div class="lbl">Full brand</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas #0B6E4F</div></div>
+      <div class="logo-cell paper"><div class="lbl">Primaire</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas var(--atlas)</div></div>
+      <div class="logo-cell dark"><div class="lbl">Inverse</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Ink var(--ink)</div></div>
+      <div class="logo-cell atlas"><div class="lbl">Full brand</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas var(--atlas)</div></div>
       <div class="logo-cell">
         <div class="lbl">Mark (app icon)</div>
         <div class="lg">
@@ -278,22 +278,22 @@ footer a { color: var(--mint); }
       <div class="num">02 · PALETTE</div>
       <h2>Atlas Green.</h2>
       <p>Notre vert n'est ni le vert électrique de Cash App ni le vert bouteille de Wise. C'est l'Atlas : profond, mûr, mystérieusement marocain. Il évoque les oasis, la tadelakt, le drapeau, sans jamais l'imiter.</p>
-      <p style="font-size: 13px; color: var(--n-500); margin-top: 10px;">💡 Cliquez sur une couleur pour copier sa valeur hex.</p>
+      <p style="font-size: 13px; color: var(--n-500); margin-top: 10px;">Cliquez sur une couleur pour copier sa valeur hex.</p>
     </div>
 
     <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin-bottom: 12px;">MARQUE</div>
     <div class="color-grid">
-      <div class="color" data-hex="#0B6E4F" style="background: #0B6E4F; color: var(--paper);"><div><div class="n">Atlas Green</div><div class="h">#0B6E4F</div></div><div class="r"><span>PRIMAIRE</span><span>AA</span></div></div>
-      <div class="color" data-hex="#053B2C" style="background: #053B2C; color: var(--paper);"><div><div class="n">Riad Deep</div><div class="h">#053B2C</div></div><div class="r"><span>SECONDAIRE</span><span>AAA</span></div></div>
-      <div class="color" data-hex="#7DF2B0" style="background: #7DF2B0; color: var(--riad);"><div><div class="n">Mint Neon</div><div class="h">#7DF2B0</div></div><div class="r"><span>ACCENT</span><span>USE ≤5%</span></div></div>
+      <div class="color" data-hex="var(--atlas)" style="background: var(--atlas); color: var(--paper);"><div><div class="n">Atlas Green</div><div class="h">var(--atlas)</div></div><div class="r"><span>PRIMAIRE</span><span>AA</span></div></div>
+      <div class="color" data-hex="var(--riad)" style="background: var(--riad); color: var(--paper);"><div><div class="n">Riad Deep</div><div class="h">var(--riad)</div></div><div class="r"><span>SECONDAIRE</span><span>AAA</span></div></div>
+      <div class="color" data-hex="var(--mint)" style="background: var(--mint); color: var(--riad);"><div><div class="n">Mint Neon</div><div class="h">var(--mint)</div></div><div class="r"><span>ACCENT</span><span>USE ≤5%</span></div></div>
       <div class="color" data-hex="#C9F6DC" style="background: #C9F6DC; color: var(--riad);"><div><div class="n">Mint Soft</div><div class="h">#C9F6DC</div></div><div class="r"><span>PILLS / HL</span></div></div>
     </div>
 
     <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-500); font-weight: 500; margin: 40px 0 12px;">SURFACES</div>
     <div class="color-grid">
-      <div class="color" data-hex="#F7F5F0" style="background: #F7F5F0; color: var(--ink); border-color: var(--n-200);"><div><div class="n">Paper</div><div class="h">#F7F5F0</div></div><div class="r"><span>FOND PRINCIPAL</span></div></div>
+      <div class="color" data-hex="var(--paper)" style="background: var(--paper); color: var(--ink); border-color: var(--n-200);"><div><div class="n">Paper</div><div class="h">var(--paper)</div></div><div class="r"><span>FOND PRINCIPAL</span></div></div>
       <div class="color" data-hex="#EFECE3" style="background: #EFECE3; color: var(--ink); border-color: var(--n-200);"><div><div class="n">Paper Soft</div><div class="h">#EFECE3</div></div><div class="r"><span>SECTIONS</span></div></div>
-      <div class="color" data-hex="#0A0F0D" style="background: #0A0F0D; color: var(--paper);"><div><div class="n">Ink</div><div class="h">#0A0F0D</div></div><div class="r"><span>TEXTE / FOND DARK</span></div></div>
+      <div class="color" data-hex="var(--ink)" style="background: var(--ink); color: var(--paper);"><div><div class="n">Ink</div><div class="h">var(--ink)</div></div><div class="r"><span>TEXTE / FOND DARK</span></div></div>
       <div class="color" data-hex="#02261C" style="background: #02261C; color: var(--paper);"><div><div class="n">Riad Noir</div><div class="h">#02261C</div></div><div class="r"><span>DARK SECTIONS</span></div></div>
     </div>
 
