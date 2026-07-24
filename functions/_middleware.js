@@ -628,12 +628,19 @@ function authPage(opts) {
   function fail(code){ return MSG[code] || 'Une erreur est survenue. Réessayez.'; }
   function val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
 
-  function post(u, data, errEl, btn){
+  // On success we go straight INTO the product, never a bare location.reload()
+  // (users land on the auth screen at "/", so a reload dropped them back on the
+  // marketing landing page instead of the dashboard). Login → the dashboard
+  // (their PIN lock). Signup → the dashboard with ?onboarding=1, which forces
+  // the setup wizard to open (assets/onboarding.js) even over any stale demo
+  // state — a brand-new merchant has no PIN yet and must reach setup, not a
+  // PIN prompt for a code they never chose.
+  function post(u, data, errEl, btn, dest){
     errEl.textContent = '';
     btn.disabled = true;
     fetch(u, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
       .then(function(r){
-        if (r.ok){ location.reload(); return; }
+        if (r.ok){ location.assign(dest || '/dashboard'); return; }
         return r.json().then(function(j){ errEl.textContent = fail(j && j.error); btn.disabled = false; },
                              function(){ errEl.textContent = fail(); btn.disabled = false; });
       })
@@ -643,12 +650,12 @@ function authPage(opts) {
   fLogin.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/login', { email: val('li-email'), password: val('li-pass') },
-         document.getElementById('li-err'), fLogin.querySelector('.go'));
+         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard');
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
-         document.getElementById('su-err'), fSignup.querySelector('.go'));
+         document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1');
   });
 
   var staffToggle = document.getElementById('staff-toggle');
