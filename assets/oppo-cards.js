@@ -205,11 +205,24 @@
       </div>`;
   }
 
+  /* Cards whose CTA opens a Phase 2-3 surface that cannot actually complete:
+   * Capital would "approve" an advance and Zakat would confirm a payment to a
+   * named charity, with no lending or payment rail behind either. Fine in the
+   * pitch demo — that is what the demo is for — but a real merchant must never
+   * be offered them. Same rule the Kiwi Compte handler already applies. */
+  const PHASE_2 = { capital: 1, zakat: 1 };
+  function isReal() {
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
+  }
+
   function render() {
     const band = document.querySelector('[data-oppo-band]');
     if (!band) return;
     const gone = dismissed();
-    const cards = POOL.filter((c) => !gone.includes(c.id)).slice(0, SLOTS);
+    const real = isReal();
+    const cards = POOL
+      .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]))
+      .slice(0, SLOTS);
     if (!cards.length) { setHtml(band, ''); band.style.display = 'none'; return; }
     band.style.display = '';
     setHtml(band, `

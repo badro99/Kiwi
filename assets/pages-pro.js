@@ -6780,7 +6780,7 @@ function _bqxGridHtml() {
       </div>
       <div class="kx-sku-body">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
-        <div class="kx-sku-sku mono">${data.colors.length} coul. · ${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${data.variants.length} variantes</div>
+        <div class="kx-sku-sku mono">${data.colors.length} coul. · ${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
           <div class="kx-sku-price mono">${_mad(p.priceMAD)} MAD</div>
           <div class="kx-sku-stock ${stockClass} mono">${stock} en stock</div>
@@ -6820,6 +6820,23 @@ function _bqxVenue() {
   return (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'maisonMansour';
 }
 
+/* Display name for a modal eyebrow — the store's OWN name. Identity first (it is
+ * what the merchant signed up as), then the venue label, then a neutral word.
+ * In the demo KiwiMe is absent and the venue IS Maison Mansour, so the demo tag
+ * is unchanged. */
+function _bqxTag() {
+  try {
+    var biz = (window.KiwiMe && window.KiwiMe.business) || '';
+    if (biz) return String(biz).toUpperCase();
+    var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+    if (vd.name) return String(vd.name).toUpperCase();
+  } catch (_) {}
+  return 'BOUTIQUE';
+}
+
+/* fr pluralisation for the boutique counters — "1 produit", "2 produits". */
+function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : (many || one + 's')); }
+
 function _renderInventory() {
   const cat = CAT();
   cat.use(_bqxVenue());
@@ -6827,7 +6844,7 @@ function _renderInventory() {
   const cats = cat.listCategories();
   window.Kiwi.appPage('inventory', {
     title: 'Inventaire produits',
-    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · ${st.products} produits · ${st.variants} variantes · base partagée avec la caisse`,
+    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · ${_bqxN(st.products, 'produit')} · ${_bqxN(st.variants, 'variante')} · base partagée avec la caisse`,
     body: `
       <div class="kx-kpi-strip">
         <div class="kx-kpi"><div class="l">PRODUITS</div><div class="v">${st.products}<span class="u">/ ${st.variants} var.</span></div><div class="d">${st.ruptures} en rupture</div></div>
@@ -6929,7 +6946,7 @@ function _bqxProductBody(pid) {
   return `
     <div class="kx-stat-3">
       <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">Marge ${margin} %</div></div>
-      <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${data.variants.length} variantes</div></div>
+      <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
       <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${data.colors.length} couleurs</div></div>
     </div>
     <div class="bqx-vwrap">
@@ -7120,7 +7137,9 @@ handlers['bqx-var-add-save'] = (_el, arg) => {
 /* new product */
 handlers['bqx-new'] = () => {
   _bqxModal = modal({
-    title: 'Nouveau produit', tag: 'INVENTAIRE · MAISON MANSOUR',
+    // The store's OWN name — this modal is reachable by every real boutique, and
+    // a hardcoded demo tag put "MAISON MANSOUR" on a real client's screen.
+    title: 'Nouveau produit', tag: 'INVENTAIRE · ' + _bqxTag(),
     desc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
     width: 520,
     body: `
@@ -7216,7 +7235,7 @@ function _renderCategories() {
   const st = cat.stats();
   window.Kiwi.appPage('categories', {
     title: 'Catégories',
-    subtitle: `${cats.length} catégories · ${st.products} produits référencés · base partagée avec la caisse`,
+    subtitle: `${_bqxN(cats.length, 'catégorie')} · ${_bqxN(st.products, 'produit')} référencé${st.products === 1 ? '' : 's'} · base partagée avec la caisse`,
     body: `
       <div class="kx-kpi-strip cols-3">
         <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${cats.length}</div><div class="d">Créez / supprimez librement</div></div>

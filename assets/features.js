@@ -274,6 +274,7 @@
       otherRecipientDesc: "Saisir le RIB / ICE d'une association",
       close: 'Fermer',
       payZakat: 'Verser la Zakat →',
+      payoutSoon: 'Le versement direct depuis Kiwi n’est pas encore ouvert. Ce calcul est le vôtre : versez votre Zakat par votre canal habituel, et gardez ce montant comme référence.',
       chooseRecipient: 'Choisissez un bénéficiaire',
       zakatPaid: 'Zakat versée · reçu envoyé par WhatsApp',
       zakatAccepted: 'Que Dieu accepte votre aumône.',
@@ -307,6 +308,7 @@
       otherRecipientDesc: 'Enter the IBAN / ICE of an association',
       close: 'Close',
       payZakat: 'Pay Zakat →',
+      payoutSoon: 'Paying directly from Kiwi isn\'t open yet. This calculation is yours to keep: pay your Zakat through your usual channel and use this amount as the reference.',
       chooseRecipient: 'Choose a recipient',
       zakatPaid: 'Zakat paid · receipt sent via WhatsApp',
       zakatAccepted: 'May God accept your charity.',
@@ -340,6 +342,7 @@
       otherRecipientDesc: 'أدخل RIB / ICE لجمعية',
       close: 'إغلاق',
       payZakat: 'أداء الزكاة →',
+      payoutSoon: 'الأداء المباشر من Kiwi غير متاح بعد. هذا الحساب لك: أدِّ زكاتك عبر قناتك المعتادة واعتمد هذا المبلغ مرجعًا.',
       chooseRecipient: 'اختر مستفيدًا',
       zakatPaid: 'تم أداء الزكاة · تم إرسال الإيصال عبر واتساب',
       zakatAccepted: 'تقبل الله منكم.',
@@ -349,6 +352,28 @@
   /* ═══════════════════ PAYMENT LINK ═══════════════════ */
   handlers['payment-link'] = () => {
     let step = 'form';
+    /* The generated link is `kiwi.ma/p/<random>`, which nothing serves, the
+     * "QR" is a CSS stripe pattern rather than a real code, and the WhatsApp /
+     * email / SMS share buttons only raise a toast. This control sits in the
+     * dashboard header for EVERY merchant, so a real client would send a paying
+     * customer a URL that 404s. Honest "coming soon" until there is a rail
+     * behind it; the pitch demo keeps the full flow. */
+    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      const _T = PL_STR[trLang()] || PL_STR.fr;
+      const c = ({
+        fr: { h: 'Les liens de paiement arrivent bientôt', p: 'Encaisser à distance par lien WhatsApp, email ou SMS sera disponible ici. Nous vous préviendrons dès l’ouverture — en attendant, encaissez sur la caisse.' },
+        en: { h: 'Payment links are coming soon', p: 'Getting paid remotely over WhatsApp, email or SMS will live here. We\'ll let you know the moment it opens — until then, take payment on the till.' },
+        ar: { h: 'روابط الدفع قريبًا', p: 'سيتوفّر هنا التحصيل عن بُعد عبر واتساب أو البريد أو الرسائل. سنخبرك فور فتحه — وحتى ذلك الحين، حصّل عبر الصندوق.' },
+      })[trLang()] || { h: 'Payment links are coming soon', p: '' };
+      modal({
+        tag: _T.tag, title: _T.title, width: 480,
+        body: `<div style="padding:32px 12px;text-align:center;">
+          <div style="font-size:15.5px;font-weight:640;letter-spacing:-.01em;">${c.h}</div>
+          <div style="font-size:12.5px;color:var(--n-500);margin-top:8px;line-height:1.55;max-width:380px;margin-inline:auto;">${c.p}</div>
+        </div>`,
+      });
+      return;
+    }
     const _plBiz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     let data = { amount: '', desc: _plBiz ? `Commande ${_plBiz}` : (window.KiwiEnv?.isReal?.() ? 'Nouvelle commande' : 'Commande Café Atlas'), expiry: '7j', method: 'all' };
     const T = PL_STR[trLang()] || PL_STR.fr;
@@ -466,6 +491,14 @@
     let v = { cash: 0, bank: 0, gold: 0, silver: 0, inventory: 0, receivables: 0, debts: 0 };
     let recipient = null;
     const T = ZK_STR[trLang()] || ZK_STR.fr;
+    /* The CALCULATION is real and useful — it fabricates nothing. The payout is
+     * not: choosing "Fondation Mohammed V" / "Bayti" / "AMC" and confirming ends
+     * in "Zakat versée · reçu envoyé par WhatsApp" with no payment rail behind
+     * it, so a merchant could believe a religious obligation was discharged when
+     * no money moved. For a real merchant, keep the calculator and replace the
+     * recipient picker + payout button with an honest note. Demo unchanged. */
+    let zkReal = false;
+    try { zkReal = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
 
     const m = modal({
       tag: T.tag,
@@ -509,7 +542,11 @@
           <div class="zk-field"><span class="l">${T.debts}</span><span><input type="number" data-f="debts" value="${v.debts||''}" placeholder="0" /> MAD</span></div>
           <div class="zk-total"><span>${T.taxableTotal}</span><span>${tot.toLocaleString(numLocale,{maximumFractionDigits:0})} MAD</span></div>
         </div>
-        ${due > 0 ? `
+        ${due > 0 && zkReal ? `
+        <div style="margin-top:20px;padding:14px 16px;background:var(--paper-soft);border-radius:12px;">
+          <div style="font-size:12.5px;color:var(--n-600);line-height:1.55;">${T.payoutSoon}</div>
+        </div>` : ''}
+        ${due > 0 && !zkReal ? `
         <div style="margin-top:20px;">
           <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-family:var(--mono); margin-bottom:10px;">${T.recipient}</div>
           <div class="zk-recipients">
@@ -533,7 +570,7 @@
         </div>` : ''}
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">
           <button class="kb ghost" data-close>${T.close}</button>
-          ${due > 0 ? `<button class="kb atlas" data-pay>${T.payZakat}</button>` : ''}
+          ${due > 0 && !zkReal ? `<button class="kb atlas" data-pay>${T.payZakat}</button>` : ''}
         </div>
       `;
     }
@@ -988,6 +1025,28 @@
     const max = 120000;
     const min = 5000;
     const T = CAPITAL_STR[trLang()] || CAPITAL_STR.fr;
+
+    /* Kiwi Capital is a Phase 2-3 surface with NO lending rail behind it: the
+     * flow below ends in "demande acceptée · 45 000 MAD crédités d'ici 24h",
+     * which is a fabricated credit decision — and it carries Murabaha / AAOIFI
+     * compliance claims. A real merchant must never be shown that. Show an
+     * honest "coming soon" instead, exactly as the Kiwi Compte handler does.
+     * The pitch demo (isReal() false) keeps the full flow, byte-identical. */
+    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      const c = ({
+        fr: { h: 'Kiwi Capital arrive bientôt', p: 'L’avance sur vos ventes n’est pas encore ouverte. Dès qu’elle le sera, votre éligibilité sera calculée sur vos encaissements réels et nous vous préviendrons.' },
+        en: { h: 'Kiwi Capital is coming soon', p: 'Advances on your sales aren\'t open yet. When they are, your eligibility will be based on your real takings and we\'ll let you know.' },
+        ar: { h: 'كيوي كابيتال قريبًا', p: 'السلفة على مبيعاتك ليست متاحة بعد. عند فتحها، ستُحتسب أهليتك من مداخيلك الفعلية وسنخبرك.' },
+      })[trLang()] || { h: 'Kiwi Capital is coming soon', p: '' };
+      modal({
+        tag: T.tag, title: T.title, width: 480,
+        body: `<div style="padding:32px 12px;text-align:center;">
+          <div style="font-size:15.5px;font-weight:640;letter-spacing:-.01em;">${c.h}</div>
+          <div style="font-size:12.5px;color:var(--n-500);margin-top:8px;line-height:1.55;max-width:380px;margin-inline:auto;">${c.p}</div>
+        </div>`,
+      });
+      return;
+    }
 
     const m = modal({
       tag: T.tag,
