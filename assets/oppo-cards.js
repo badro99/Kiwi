@@ -94,7 +94,7 @@
       t: { fr: 'Maîtrisez vos sorties', en: 'Control what goes out', ar: 'تحكّم في مصاريفك' },
       d: { fr: 'Des cartes Kiwi pour votre équipe, un plafond par catégorie, et chaque dirham qui sort, net de ce qui rentre.',
            en: 'Kiwi cards for your team, a per-category limit, and every dirham going out, net of what comes in.',
-           ar: 'بطاقات Kiwi لفريقك، حدّ لكل فئة، وكل درهم يخرج, مقابل ما يدخل.' },
+           ar: 'بطاقات Kiwi لفريقك، حدّ لكل فئة، وكل درهم يخرج، مقابل ما يدخل.' },
       cta: { fr: 'Voir Dépenses', en: 'Open Spend', ar: 'فتح المصاريف' },
     },
     {
@@ -102,7 +102,7 @@
       t: { fr: 'Encaissez à distance', en: 'Get paid remotely', ar: 'حصّل عن بُعد' },
       d: { fr: 'Envoyez un lien de paiement par WhatsApp, acomptes, commandes, réservations. L\'argent arrive avant le client.',
            en: 'Send a payment link over WhatsApp, deposits, orders, bookings. The money arrives before the customer does.',
-           ar: 'أرسل رابط دفع عبر واتساب, عربون، طلبات، حجوزات. يصل المال قبل وصول العميل.' },
+           ar: 'أرسل رابط دفع عبر واتساب، عربون، طلبات، حجوزات. يصل المال قبل وصول العميل.' },
       cta: { fr: 'Créer un lien', en: 'Create a link', ar: 'إنشاء رابط' },
     },
     {
@@ -110,7 +110,7 @@
       t: { fr: 'Vos habitués valent de l\'or', en: 'Your regulars are gold', ar: 'زبناؤك الأوفياء ذهب' },
       d: { fr: 'Un programme de fidélité directement sur la caisse, points, récompenses, et des clients qui reviennent.',
            en: 'A loyalty program built into the till, points, rewards, and customers who come back.',
-           ar: 'برنامج ولاء مدمج في الصندوق, نقاط ومكافآت وعملاء يعودون.' },
+           ar: 'برنامج ولاء مدمج في الصندوق، نقاط ومكافآت وعملاء يعودون.' },
       cta: { fr: 'Activer la fidélité', en: 'Turn on loyalty', ar: 'تفعيل الولاء' },
     },
     {
@@ -118,7 +118,7 @@
       t: { fr: 'Posez la question, Kiwi répond', en: 'Ask anything, Kiwi answers', ar: 'اسأل، وKiwi يجيب' },
       d: { fr: '« C\'était comment, mardi ? », votre activité, vos marges, vos heures creuses. En français, darija ou anglais.',
            en: '"How was Tuesday?", your sales, margins and quiet hours. In French, Darija or English.',
-           ar: '«كيف كان الثلاثاء؟», مبيعاتك وهوامشك وساعاتك الهادئة. بالفرنسية أو الدارجة أو الإنجليزية.' },
+           ar: '«كيف كان الثلاثاء؟»، مبيعاتك وهوامشك وساعاتك الهادئة. بالفرنسية أو الدارجة أو الإنجليزية.' },
       cta: { fr: 'Essayer l\'agent', en: 'Try the agent', ar: 'جرّب المساعد' },
     },
     {
@@ -134,7 +134,7 @@
       t: { fr: 'Votre Zakat, calculée pour vous', en: 'Your Zakat, calculated for you', ar: 'زكاتك، محسوبة لك' },
       d: { fr: 'Kiwi suit votre activité toute l\'année et calcule la Zakat au jour près, plus d\'estimation au doigt mouillé.',
            en: 'Kiwi tracks your activity all year and computes Zakat to the day, no more rough guesses.',
-           ar: 'يتتبع Kiwi نشاطك طوال العام ويحسب الزكاة بدقة, لا مزيد من التقديرات الجزافية.' },
+           ar: 'يتتبع Kiwi نشاطك طوال العام ويحسب الزكاة بدقة، لا مزيد من التقديرات الجزافية.' },
       cta: { fr: 'Voir le calcul', en: 'See the math', ar: 'عرض الحساب' },
     },
   ];

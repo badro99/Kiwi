@@ -663,7 +663,7 @@
       payrollHeroLabel: (date) => `${date} · اليد العاملة`,
       payrollHeroBig: (present, total) => `${present} / ${total}`,
       payrollHeroBigUnit: "موظفين مسجلين",
-      payrollHeroSub: (cost, ratio) => `التكلفة اليوم <b style="color:var(--mint);">${cost} درهم</b> · نسبة ${ratio}% من المبيعات, صحية`,
+      payrollHeroSub: (cost, ratio) => `التكلفة اليوم <b style="color:var(--mint);">${cost} درهم</b> · نسبة ${ratio}% من المبيعات، صحية`,
       payrollLiveClocking: "تسجيل الحضور المباشر · خدمة المساء",
       payrollLiveClockingSub: (present, exited) => `انقر على بطاقة كيوي أو أدخل رقم التعريف الشخصي لتسجيل الحضور · ${present} نشطين · ${exited} خرج`,
       payrollManualClock: "+ تسجيل يدوي",

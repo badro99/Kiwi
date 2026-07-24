@@ -301,7 +301,7 @@
       const T = ({
         fr: { s: 'Compte en démarrage', h: 'Vos marges se calculent toutes seules', d: 'Dès vos premières ventes, Kiwi croise prix et coûts pour afficher la marge réelle de chaque produit, et signaler ceux dont le prix ou le coût est à revoir.' },
         en: { s: 'Account starting up', h: 'Your margins compute themselves', d: 'From your first sales, Kiwi crosses prices and costs to show each product\'s real margin, and flags the ones whose price or cost needs a second look.' },
-        ar: { s: 'حساب في بدايته', h: 'هوامشك تُحسب تلقائيًا', d: 'منذ أول مبيعاتك، يقاطع Kiwi الأسعار والتكاليف ليعرض الهامش الحقيقي لكل منتج, وينبّهك إلى ما يستحق مراجعة سعره أو تكلفته.' },
+        ar: { s: 'حساب في بدايته', h: 'هوامشك تُحسب تلقائيًا', d: 'منذ أول مبيعاتك، يقاطع Kiwi الأسعار والتكاليف ليعرض الهامش الحقيقي لكل منتج، وينبّهك إلى ما يستحق مراجعة سعره أو تكلفته.' },
       })[lang] || { s: 'Compte en démarrage', h: 'Vos marges se calculent toutes seules', d: '' };
       drawer({
         title: str.title,

@@ -204,7 +204,7 @@
   const HERO_LABEL = {
     fr: { aujourdhui: "ENCAISSÉ AUJOURD'HUI", hier: 'ENCAISSÉ HIER', septJours: 'ENCAISSÉ 7 JOURS', trenteJours: 'ENCAISSÉ 30 JOURS', moisDernier: 'ENCAISSÉ, MOIS DERNIER', trimestre: 'ENCAISSÉ, TRIMESTRE', annee: 'ENCAISSÉ, ANNÉE', personnalise: 'ENCAISSÉ, PÉRIODE' },
     en: { aujourdhui: 'CASHED TODAY', hier: 'CASHED YESTERDAY', septJours: 'CASHED 7 DAYS', trenteJours: 'CASHED 30 DAYS', moisDernier: 'CASHED, LAST MONTH', trimestre: 'CASHED, QUARTER', annee: 'CASHED, YEAR', personnalise: 'CASHED, PERIOD' },
-    ar: { aujourdhui: 'المقبوض اليوم', hier: 'المقبوض أمس', septJours: 'المقبوض في 7 أيام', trenteJours: 'المقبوض في 30 يومًا', moisDernier: 'المقبوض, الشهر الماضي', trimestre: 'المقبوض, الربع', annee: 'المقبوض, السنة', personnalise: 'المقبوض, الفترة' },
+    ar: { aujourdhui: 'المقبوض اليوم', hier: 'المقبوض أمس', septJours: 'المقبوض في 7 أيام', trenteJours: 'المقبوض في 30 يومًا', moisDernier: 'المقبوض، الشهر الماضي', trimestre: 'المقبوض، الربع', annee: 'المقبوض، السنة', personnalise: 'المقبوض، الفترة' },
   };
 
   const DELTA_LABELS = {
@@ -266,7 +266,7 @@
     // than claim period-exact data.
     fr: { aujourdhui: "Intensité horaire aujourd'hui", hier: 'Intensité horaire hier', septJours: 'Intensité horaire moyenne, 7 derniers jours', trenteJours: 'Intensité horaire moyenne, 30 derniers jours', moisDernier: 'Profil horaire type, moyenne longue période', trimestre: 'Profil horaire type, moyenne longue période', annee: 'Profil horaire type, moyenne longue période', personnalise: 'Intensité horaire, période personnalisée' },
     en: { aujourdhui: 'Hourly intensity today', hier: 'Hourly intensity yesterday', septJours: 'Average hourly intensity, last 7 days', trenteJours: 'Average hourly intensity, last 30 days', moisDernier: 'Typical hourly profile, long-run average', trimestre: 'Typical hourly profile, long-run average', annee: 'Typical hourly profile, long-run average', personnalise: 'Hourly intensity, custom period' },
-    ar: { aujourdhui: 'كثافة الساعات اليوم', hier: 'كثافة الساعات أمس', septJours: 'متوسط الكثافة الساعية, آخر 7 أيام', trenteJours: 'متوسط الكثافة الساعية, آخر 30 يومًا', moisDernier: 'النمط الساعي النموذجي, متوسط طويل المدى', trimestre: 'النمط الساعي النموذجي, متوسط طويل المدى', annee: 'النمط الساعي النموذجي, متوسط طويل المدى', personnalise: 'كثافة الساعات, فترة مخصصة' },
+    ar: { aujourdhui: 'كثافة الساعات اليوم', hier: 'كثافة الساعات أمس', septJours: 'متوسط الكثافة الساعية، آخر 7 أيام', trenteJours: 'متوسط الكثافة الساعية، آخر 30 يومًا', moisDernier: 'النمط الساعي النموذجي، متوسط طويل المدى', trimestre: 'النمط الساعي النموذجي، متوسط طويل المدى', annee: 'النمط الساعي النموذجي، متوسط طويل المدى', personnalise: 'كثافة الساعات، فترة مخصصة' },
   };
   const COVERS_LABEL = { fr: 'couverts', en: 'guests', ar: 'زبون' };
 
@@ -3629,7 +3629,7 @@
   const HEALTH_EMPTY = {
     fr: { title: 'Score de santé Kiwi', head: 'Votre score se construit', msg: 'Le score de santé Kiwi s’affiche après vos premières semaines d’activité, succès des paiements, conformité, fidélité.' },
     en: { title: 'Kiwi health score', head: 'Your score is building', msg: 'Your Kiwi health score appears after your first weeks of activity, payment success, compliance, loyalty.' },
-    ar: { title: 'نقاط صحة Kiwi', head: 'يُبنى مؤشّرك', msg: 'تظهر نقاط صحة Kiwi بعد أسابيعك الأولى من النشاط, نجاح المدفوعات والامتثال والولاء.' },
+    ar: { title: 'نقاط صحة Kiwi', head: 'يُبنى مؤشّرك', msg: 'تظهر نقاط صحة Kiwi بعد أسابيعك الأولى من النشاط، نجاح المدفوعات والامتثال والولاء.' },
   };
   const BENCH_EMPTY = {
     fr: { title: 'Vous vs établissements similaires', head: 'Comparaison à venir', msg: 'Dès que vous accumulez de l’activité, comparez vos performances aux établissements similaires près de chez vous.' },

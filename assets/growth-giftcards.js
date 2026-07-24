@@ -35,7 +35,7 @@
       redeem: 'Check a balance', redeemPh: 'Enter a gift code', check: 'Check',
       sent: 'Gift card sent', sentD: (a) => `${fmt(a)} MAD · WhatsApp link ready to share.`,
       bal: (b) => `Balance: ${fmt(b)} MAD · valid until 31/12/2026`, close: 'Close' },
-    ar: { title: 'بطاقات الهدايا', sub: 'أصدر بطاقة في ثوانٍ, مدفوعة مسبقًا، تُنفق عندك.',
+    ar: { title: 'بطاقات الهدايا', sub: 'أصدر بطاقة في ثوانٍ، مدفوعة مسبقًا، تُنفق عندك.',
       issue: 'إصدار بطاقة', amount: 'المبلغ', free: 'مبلغ حر', recipient: 'المستفيد',
       namePh: 'الاسم', phonePh: 'الهاتف (واتساب)', send: 'إرسال عبر واتساب',
       statsEm: 'صادرة هذا الشهر', statsCirc: 'قيد التداول', statsUse: 'معدل الاستخدام',

@@ -6008,7 +6008,7 @@
     if (helpEl) {
       let lang = 'fr';
       try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
-      const msg = { fr: 'Code incorrect, réessayez.', en: 'Wrong code, try again.', ar: 'رمز غير صحيح, أعد المحاولة.' };
+      const msg = { fr: 'Code incorrect, réessayez.', en: 'Wrong code, try again.', ar: 'رمز غير صحيح، أعد المحاولة.' };
       helpEl.textContent = msg[lang] || msg.fr;
       helpEl.classList.add('is-error');
     }

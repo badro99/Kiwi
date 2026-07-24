@@ -347,7 +347,7 @@
       if (!e.target.closest('[data-confirm]')) return;
       try { localStorage.setItem('kiwiSet:plan', target); } catch (_) {}
       m.close(); setTimeout(openProfile, 80);
-      Kiwi.toast(pick({ fr: `Demande enregistrée, ${ti.name} au prochain cycle.`, en: `Saved, ${ti.name} from next cycle.`, ar: `تم الحفظ, ${ti.name} من الدورة القادمة.` }), { type: 'success', force: true });
+      Kiwi.toast(pick({ fr: `Demande enregistrée, ${ti.name} au prochain cycle.`, en: `Saved, ${ti.name} from next cycle.`, ar: `تم الحفظ، ${ti.name} من الدورة القادمة.` }), { type: 'success', force: true });
     });
   }
   function planCancelModal() {
@@ -368,7 +368,7 @@
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-callback]')) return;
       m.close();
-      Kiwi.toast(pick({ fr: 'Demande envoyée, votre account manager vous rappelle sous 24 h.', en: 'Request sent, your account manager will call you within 24h.', ar: 'تم إرسال الطلب, سيتصل بك مدير حسابك خلال 24 ساعة.' }), { type: 'success', force: true });
+      Kiwi.toast(pick({ fr: 'Demande envoyée, votre account manager vous rappelle sous 24 h.', en: 'Request sent, your account manager will call you within 24h.', ar: 'تم إرسال الطلب، سيتصل بك مدير حسابك خلال 24 ساعة.' }), { type: 'success', force: true });
     });
   }
 

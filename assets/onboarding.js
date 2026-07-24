@@ -468,8 +468,8 @@
       for (const p of S.pins) {
         if (!p.code) continue;
         if (!/^\d{4}$/.test(p.code)) return tr({ fr: 'Chaque code doit faire exactement 4 chiffres.', en: 'Each code must be exactly 4 digits.', ar: 'كل رمز يجب أن يكون 4 أرقام.' });
-        if (RESERVED.includes(p.code)) return tr({ fr: 'Le code ' + p.code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + p.code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + p.code + ' محجوز, اختر غيره.' });
-        if (seen[p.code]) return tr({ fr: 'Deux personnes ont le même code, chaque code doit être unique.', en: 'Two people share a code, each must be unique.', ar: 'رمزان متطابقان, يجب أن يكون كل رمز فريداً.' });
+        if (RESERVED.includes(p.code)) return tr({ fr: 'Le code ' + p.code + ' est réservé à la démo, choisissez-en un autre.', en: 'Code ' + p.code + ' is reserved for the demo, pick another.', ar: 'الرمز ' + p.code + ' محجوز، اختر غيره.' });
+        if (seen[p.code]) return tr({ fr: 'Deux personnes ont le même code, chaque code doit être unique.', en: 'Two people share a code, each must be unique.', ar: 'رمزان متطابقان، يجب أن يكون كل رمز فريداً.' });
         seen[p.code] = 1;
       }
     }
@@ -588,7 +588,7 @@
     try {
       if (window.Kiwi && Kiwi.toast) Kiwi.toast(tr({ fr: 'Bienvenue' + (name ? ' ' + name : ''), en: 'Welcome' + (name ? ' ' + name : ''), ar: 'مرحباً' + (name ? ' ' + name : '') }), {
         type: 'success', force: true,
-        desc: tr({ fr: 'Votre espace est prêt, enregistrez votre première vente.', en: 'Your space is ready, record your first sale.', ar: 'مساحتك جاهزة, سجّل أول بيع.' }),
+        desc: tr({ fr: 'Votre espace est prêt, enregistrez votre première vente.', en: 'Your space is ready, record your first sale.', ar: 'مساحتك جاهزة، سجّل أول بيع.' }),
       });
     } catch (_) {}
     /* Brand-new business: surface the "Connectez votre caisse" panel so the owner

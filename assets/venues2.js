@@ -494,7 +494,7 @@
                          ar: { title: 'أفضل المخبوزات', manage: 'إدارة التشكيلة ←', msg: 'ستظهر أكثر أنواع الخبز والمعجنات مبيعًا هنا بعد أول عملية بيع.' } },
         eveningEmpty: { fr: { lbl: 'DEMAIN · PRÉCOMMANDES', head: 'Aucune précommande', msg: 'Vos commandes clients, gâteaux, pièces montées, s\'afficheront ici.' },
                         en: { lbl: 'TOMORROW · PRE-ORDERS', head: 'No pre-orders', msg: 'Your customer orders, cakes, celebration pieces, will appear here.' },
-                        ar: { lbl: 'غدًا · الطلبات المسبقة', head: 'لا طلبات مسبقة', msg: 'ستظهر طلبات عملائك, الكعك وقطع المناسبات, هنا.' } },
+                        ar: { lbl: 'غدًا · الطلبات المسبقة', head: 'لا طلبات مسبقة', msg: 'ستظهر طلبات عملائك، الكعك وقطع المناسبات، هنا.' } },
         navOrders: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' },
         askPlaceholder: { fr: 'Posez votre question sur votre boulangerie...', en: 'Ask a question about your bakery...', ar: 'اطرح سؤالاً حول مخبزتك...' },
       } },
@@ -703,7 +703,7 @@
                       ar: { msg: 'بمجرد تتبّع عناوينك وقرطاسيتك، يقدّر Kiwi AI ما يجب إعادة طلبه.' } },
         productsEmpty: { fr: { title: 'Top titres', msg: 'Vos meilleures ventes, livres, presse, fournitures, s\'afficheront ici dès la première vente.' },
                          en: { title: 'Top titles', msg: 'Your best sellers, books, press, supplies, will appear here after the first sale.' },
-                         ar: { title: 'أفضل العناوين', msg: 'ستظهر أفضل مبيعاتك, كتب وصحافة وقرطاسية, هنا بعد أول عملية بيع.' } },
+                         ar: { title: 'أفضل العناوين', msg: 'ستظهر أفضل مبيعاتك، كتب وصحافة وقرطاسية، هنا بعد أول عملية بيع.' } },
         askPlaceholder: { fr: 'Posez votre question sur votre librairie...', en: 'Ask a question about your bookshop...', ar: 'اطرح سؤالاً حول مكتبتك...' },
       } },
     fleuriste: { base: 'boutique',
@@ -949,6 +949,15 @@
 
   /* ═══════════════ HEADER + DEMO BAR + FOOTER PER VENUE ═══════════════ */
 
+  /* Location-switcher sub-line — was read straight off `v.siblings`, which only
+   * existed in French, so an Arabic dashboard showed "3 autres emplacements".
+   * The fusion entry is proper nouns and stays identical in all three. */
+  const SIBLINGS = {
+    fr: { cafeAtlas: '3 autres emplacements · Casa / Marrakech', maisonMansour: '3 autres emplacements · Casa / Marrakech', spaBahia: '3 autres emplacements · Casa / Marrakech', riadYasmina: '3 autres emplacements · Casa / Marrakech', fusion: 'Café Atlas · Maison Mansour · Spa Bahia' },
+    en: { cafeAtlas: '3 other locations · Casa / Marrakech', maisonMansour: '3 other locations · Casa / Marrakech', spaBahia: '3 other locations · Casa / Marrakech', riadYasmina: '3 other locations · Casa / Marrakech', fusion: 'Café Atlas · Maison Mansour · Spa Bahia' },
+    ar: { cafeAtlas: '3 مواقع أخرى · الدار البيضاء / مراكش', maisonMansour: '3 مواقع أخرى · الدار البيضاء / مراكش', spaBahia: '3 مواقع أخرى · الدار البيضاء / مراكش', riadYasmina: '3 مواقع أخرى · الدار البيضاء / مراكش', fusion: 'Café Atlas · Maison Mansour · Spa Bahia' },
+  };
+
   const HEADER_SUB = {
     fr: { cafeAtlas: 'Service midi en cours', maisonMansour: 'Boutique ouverte · 10h–20h', spaBahia: 'Espace ouvert · réservations en cours', riadYasmina: 'Riad ouvert · 7 arrivées attendues ce soir', fusion: '3 emplacements actifs · vue consolidée' },
     en: { cafeAtlas: 'Lunch service in progress', maisonMansour: 'Boutique open · 10am–8pm', spaBahia: 'Spa open · bookings in progress', riadYasmina: 'Riad open · 7 arrivals expected tonight', fusion: '3 active locations · consolidated view' },
@@ -1028,12 +1037,12 @@
       },
       riadYasmina: {
         title: 'Booking.com اقتطع ~56 000 درهم من العمولات خلال 30 يومًا',
-        obs: '54٪ من لياليكم تمرّ عبر Booking.com (عمولة 17٪)، مقابل 25٪ حجزًا مباشرًا. ومع ذلك، 22 من نزلاء هذا الشهر سبق أن أقاموا عندكم, وحجزوا مجددًا عبر المنصة. كل إقامة تتحوّل إلى الحجز المباشر توفّر ~1 280 درهمًا.',
+        obs: '54٪ من لياليكم تمرّ عبر Booking.com (عمولة 17٪)، مقابل 25٪ حجزًا مباشرًا. ومع ذلك، 22 من نزلاء هذا الشهر سبق أن أقاموا عندكم، وحجزوا مجددًا عبر المنصة. كل إقامة تتحوّل إلى الحجز المباشر توفّر ~1 280 درهمًا.',
         act: '→ تفعيل رسالة واتساب « احجزوا مباشرة بخصم -10٪ » للنزلاء السابقين: حتى 4 100 درهم من العمولات الموفَّرة شهريًا.',
       },
       fusion: {
         title: 'مقهى أطلس يحقّق 58٪ من المداخيل · تركّز يجب تنويعه',
-        obs: 'خلال الـ30 يومًا الأخيرة، يقود مقهى أطلس (58٪) المحفظة، متقدّمًا على ميزون منصور (24٪) وسبا باهية (18٪). تتقاسم المواقع الثلاثة 312 زبونًا مشتركًا, أوفياء للمنظومة, يمكن تفعيلهم عبر البيع المتقاطع.',
+        obs: 'خلال الـ30 يومًا الأخيرة، يقود مقهى أطلس (58٪) المحفظة، متقدّمًا على ميزون منصور (24٪) وسبا باهية (18٪). تتقاسم المواقع الثلاثة 312 زبونًا مشتركًا، أوفياء للمنظومة، يمكن تفعيلهم عبر البيع المتقاطع.',
         act: '→ إطلاق بطاقة وفاء كيوي موحّدة للزبناء الـ312 المشتركين بين المواقع قد يرفع المداخيل الإجمالية بـ 4-7٪.',
       },
     },
@@ -1112,7 +1121,7 @@
       },
       riadYasmina: {
         title: 'تقديم 3 مغادرات متأخرة يحرّر الغرف قبل ذروة الوصول',
-        obs: 'تتركّز وصولاتكم بين 15h و18h، بينما تتحرّر 3 غرف في المتوسط بعد 13h, ينتهي التنظيف حوالي 15h40 وانتظر نزيلان أمس في الفناء. مغادرة صارمة في 11h، أو مغادرة متأخرة مدفوعة بـ150 درهمًا، تُسلّس الدوران.',
+        obs: 'تتركّز وصولاتكم بين 15h و18h، بينما تتحرّر 3 غرف في المتوسط بعد 13h، ينتهي التنظيف حوالي 15h40 وانتظر نزيلان أمس في الفناء. مغادرة صارمة في 11h، أو مغادرة متأخرة مدفوعة بـ150 درهمًا، تُسلّس الدوران.',
         cta: '→ تفعيل المغادرة المتأخرة المدفوعة',
       },
       fusion: {
@@ -1272,7 +1281,8 @@
     const nameEl = document.querySelector('[data-loc-name]');
     const metaEl = document.querySelector('[data-loc-meta]');
     if (nameEl) nameEl.textContent = v.fullDisplay;
-    if (metaEl) metaEl.textContent = v.siblings;
+    const slang = window.KiwiI18n?.getLang?.() || 'fr';
+    if (metaEl) metaEl.textContent = SIBLINGS[slang]?.[currentVenue] || SIBLINGS.fr[currentVenue] || v.siblings;
     // ✦ Kiwi Ultra · only visible when fusion + ultra plan
     const ultraEl = document.querySelector('[data-loc-ultra]');
     if (ultraEl) {
@@ -2106,22 +2116,22 @@
       apiToastD: 'Full reference: endpoints, webhooks, SFTP exports.',
     },
     ar: {
-      roi: '1 499 درهم/شهر ≈ 0,1 % من مداخيل المحفظة (1,47 مليون درهم/شهر)',
+      roi: '1 499 درهم/شهر ≈ 0,1% من مداخيل المحفظة (1,47 مليون درهم/شهر)',
       aiEyebrow: '✦ ذكاء المحفظة · إجراء مقترح',
       aiTitle: 'نقل فريق · الجمعة 19:00–22:00',
-      aiBody: 'مقهى أطلس يرفض ~12 مقعدًا كل جمعة مساءً بينما سبا باهية يعمل بـ 54 % من طاقته. حميد ج. وصوفيا ب. (مدرّبان على الصالة) متاحان في تلك الفترة.',
+      aiBody: 'مقهى أطلس يرفض ~12 مقعدًا كل جمعة مساءً بينما سبا باهية يعمل بـ 54% من طاقته. حميد ج. وصوفيا ب. (مدرّبان على الصالة) متاحان في تلك الفترة.',
       aiProj: '≈ +3 800 درهم/أسبوع · +15 200 درهم/شهر',
       aiCta: 'جدولة النقل ←',
       amEyebrow: 'مديرة حساب مخصصة',
       amRole: 'تعرف مؤسساتك الثلاث · الدار البيضاء',
-      amNote: 'خط مباشر 24/7, متوسط الرد 11 دقيقة خلال آخر 30 يومًا. مراجعة استراتيجية فصلية مشمولة.',
+      amNote: 'خط مباشر 24/7، متوسط الرد 11 دقيقة خلال آخر 30 يومًا. مراجعة استراتيجية فصلية مشمولة.',
       amCall: 'جدولة مكالمة',
       apiEyebrow: 'API للمؤسسات · في الوقت الفعلي',
       apiKey: 'مفتاح الإنتاج', apiActive: 'نشطة',
       apiExport: 'تصدير محاسبي', apiDocs: 'وثائق الـ API ←',
-      transferToast: 'تمت جدولة النقل, اقتُرح على حميد ج. وصوفيا ب.',
+      transferToast: 'تمت جدولة النقل، اقتُرح على حميد ج. وصوفيا ب.',
       transferToastD: 'في انتظار تأكيدهما عبر واتساب. ياسمين في النسخة.',
-      callToast: 'تم طلب المكالمة, ياسمين ستتصل بك',
+      callToast: 'تم طلب المكالمة، ياسمين ستتصل بك',
       callToastD: 'تأكيد الموعد عبر واتساب خلال 30 دقيقة.',
       apiToast: 'docs.kiwi.ma/api',
       apiToastD: 'مرجع كامل: النقاط، الويبهوكس، تصدير SFTP.',
@@ -7692,7 +7702,7 @@
         const W = {
           fr: { title: 'Votre tableau de bord est prêt', obs: "Aucune donnée pour l'instant, enregistrez vos ventes et Kiwi AI commencera à repérer vos heures fortes, vos marges et vos opportunités.", act: '→ Enregistrez votre première vente pour démarrer.' },
           en: { title: 'Your dashboard is ready', obs: 'No data yet, record your sales and Kiwi AI will start spotting your peak hours, margins and opportunities.', act: '→ Record your first sale to get started.' },
-          ar: { title: 'لوحة التحكم جاهزة', obs: 'لا توجد بيانات بعد, سجّل مبيعاتك وسيبدأ Kiwi AI في رصد ساعات الذروة والهوامش والفرص.', act: '→ سجّل أول عملية بيع للبدء.' },
+          ar: { title: 'لوحة التحكم جاهزة', obs: 'لا توجد بيانات بعد، سجّل مبيعاتك وسيبدأ Kiwi AI في رصد ساعات الذروة والهوامش والفرص.', act: '→ سجّل أول عملية بيع للبدء.' },
         };
         return W[fusionLang()] || W.fr;
       }
