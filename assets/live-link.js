@@ -4,14 +4,24 @@
  * with  localStorage.kiwiLive = '1'  (or add  ?live=1  to the URL once). When on:
  *   • the CAISSE POSTs every confirmed sale to  /api/sale
  *   • the SERVEUR POSTs every settled table (card · cash · split) to  /api/sale
- *   • the DASHBOARD polls  /api/feed  and shows real sales in an "EN DIRECT"
- *     card — so a sale rung on one device appears on the owner's dashboard on
- *     another device, for real. Each row self-identifies (table vs. caisse).
+ *   • the DASHBOARD polls  /api/feed  and pushes what it gets into KiwiSales, so
+ *     a sale rung on a till appears in the owner's real numbers — hero, objectif,
+ *     KPI band, revenue chart, transactions feed — on whatever device they are on.
+ *
+ * This module paints no surface of its own (beyond a toast). It is a pump: sales
+ * out on the till, sales in on the dashboard.
+ *
+ * Getting there without a refresh takes three things, all here:
+ *   1. an OFFLINE QUEUE on the till, so a sale survives a WiFi drop and is
+ *      retried — idempotently — until D1 confirms it;
+ *   2. a LOCAL PING (BroadcastChannel + a localStorage key) so a dashboard open
+ *      in the same browser polls the instant a sale is rung, instead of waiting;
+ *   3. an ATTENTION-AWARE POLL — 2.5 s on screen, 20 s hidden, and an immediate
+ *      poll on every wake-up (tab focus, bfcache restore, network back, ping).
  *
  * Same-origin fetch carries the passcode-gate cookie, so it works behind the
  * Cloudflare edge gate. Vanilla, no dependencies. The simulated dashboard feed is
- * left untouched — the live card is a separate surface this module fully owns, so
- * the demo still works with the flag off and nothing here can corrupt it.
+ * left untouched, so the demo still works with the flag off.
  */
 (function () {
   'use strict';
@@ -78,11 +88,6 @@
 
   var METHOD_LABEL = { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', split: 'Partagée' };
   function fmtMAD(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
-  function hhmm(ts) {
-    var d = new Date(ts || Date.now());
-    var h = d.getHours(), m = d.getMinutes();
-    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
-  }
 
   // Tiny DOM helper — no innerHTML anywhere (safe by construction).
   function el(tag, cls, text) {
@@ -92,7 +97,78 @@
     return n;
   }
 
-  /* ─── caisse → server ─── */
+  /* ─── the instant local channel (same browser, cross-tab) ───
+   * A till and a dashboard open in the SAME browser must not wait for a poll. The
+   * client book already felt instant because KiwiStore fires a `storage` event on
+   * every write; a sale only ever travelled through the timed poll, which is
+   * exactly why a new client appeared at once and the sale that created it did
+   * not. So ringing a sale now also drops a ping every other tab hears
+   * immediately — BroadcastChannel where it exists, a localStorage key everywhere
+   * else — and the receiving dashboard polls AT ONCE.
+   *
+   * The ping carries NO sale data on purpose: the server stays the single source
+   * of truth, the ping only says "look now". So a tab can never inject a sale
+   * into another tab's totals, and nothing can be double-counted. */
+  var PING_KEY = 'kiwiSalePing';
+  var chan = null;
+  try { if (window.BroadcastChannel) chan = new BroadcastChannel('kiwi-live'); } catch (_) {}
+  function pingLocal() {
+    try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
+    try { if (chan) chan.postMessage('sale'); } catch (_) {}
+  }
+
+  /* ─── caisse → server, with an offline queue ───
+   * WiFi in a boutique drops. A sale that failed to reach D1 used to be lost for
+   * good ("best-effort; offline queue is a later phase") and the owner's
+   * dashboard silently under-counted the day. Every sale now carries a stable id
+   * and waits in localStorage until the server confirms it, then retries on
+   * reconnect and on every feed poll. That id is the row's PRIMARY KEY and
+   * /api/sale does INSERT OR IGNORE, so retrying after a lost response can never
+   * write the same sale twice. */
+  var Q_KEY = 'kiwiSaleQueue';
+  var Q_MAX = 200;
+  function qRead() {
+    try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+    catch (_) { return []; }
+  }
+  function qWrite(a) { try { localStorage.setItem(Q_KEY, JSON.stringify(a.slice(-Q_MAX))); } catch (_) {} }
+  function uid() {
+    try {
+      var c = window.crypto || window.msCrypto;
+      if (c && c.randomUUID) return 'sale-' + c.randomUUID();
+    } catch (_) {}
+    return 'sale-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  var flushing = false;
+  function flushQueue() {
+    if (flushing) return;
+    var q = qRead();
+    if (!q.length) return;
+    flushing = true;
+    var body = q[0];
+    function done(settled) {
+      flushing = false;
+      if (!settled) return;                    // still offline → keep it, retry later
+      var rest = qRead().filter(function (x) { return x && x.id !== body.id; });
+      qWrite(rest);
+      pingLocal();                             // the row exists now — tell the dashboards
+      if (rest.length) flushQueue();
+    }
+    try {
+      fetch('/api/sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        keepalive: true,
+      }).then(function (r) {
+        // 2xx = stored. 4xx = the server will never accept this sale (bad amount,
+        // no merchant) → drop it instead of retrying forever. 5xx / offline → keep.
+        done(!!r && (r.ok || (r.status >= 400 && r.status < 500)));
+      }).catch(function () { done(false); });
+    } catch (_) { done(false); }
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var amt = Math.round(entry.amount || 0);
@@ -102,122 +178,117 @@
     // this just skips a guaranteed 400 rather than changing behaviour.
     var m = merchant();
     if (!m) return;
-    var body = {
+    var q = qRead();
+    q.push({
+      id: uid(),                                              // idempotency key = row PK
       merchant: m,
       amount: amt,                                            // MAD, integer
       method: entry.method || 'cash',                         // cash|card|tap|qr|wallet
       label: entry.label || 'Vente',
       ref: entry.ref || '',
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
-    };
-    try {
-      fetch('/api/sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        keepalive: true,
-      }).catch(function () { /* best-effort; offline queue is a later phase */ });
-    } catch (_) {}
+    });
+    qWrite(q);
+    pingLocal();     // a dashboard in this browser starts polling before the POST lands
+    flushQueue();
   }
 
-  /* ─── dashboard ← server (poll) ─── */
+  /* ─── dashboard ← server (poll) ───
+   * Two things turn this from "reload to see your sale" into live:
+   *  • the interval follows attention — 2.5 s while the dashboard is on screen,
+   *    20 s once it is hidden. A hidden tab is throttled by the browser anyway
+   *    (Chrome clamps background timer chains hard, down to about once a minute
+   *    after a few minutes hidden), so the old fixed 3.5 s chain simply stalled
+   *    while the owner was ringing the sale on the till tab — and the sale only
+   *    turned up on the next manual reload. That was the bug.
+   *  • every wake-up polls AT ONCE: returning to the tab, refocusing the window,
+   *    a bfcache restore, the network coming back, or a ping from a till in this
+   *    same browser. Whatever happened while we were away lands immediately. */
+  var FAST_MS = 2500, SLOW_MS = 20000;
   function watchFeed(onSales, intervalMs) {
     if (!on()) return function () {};
-    var since = 0, stopped = false, timer = null;
+    var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
+    var bound = [];
+    function delay() {
+      if (intervalMs) return intervalMs;
+      try { return document.hidden ? SLOW_MS : FAST_MS; } catch (_) { return FAST_MS; }
+    }
+    function arm(ms) {
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (!stopped) timer = setTimeout(tick, ms == null ? delay() : ms);
+    }
     function tick() {
       if (stopped) return;
+      if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
+      busy = true; again = false;
+      flushQueue();                            // this device may still owe the server a sale
       fetch('/api/feed?merchant=' + encodeURIComponent(merchant()) + '&since=' + since, { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (data) {
-          if (data && Array.isArray(data.sales) && data.sales.length) {
+          if (!data) return;                   // network/gate failure → still the first batch
+          if (Array.isArray(data.sales) && data.sales.length) {
             since = data.cursor || since;
-            try { onSales(data.sales); } catch (_) {}
+            try { onSales(data.sales, backfill); } catch (_) {}
           }
+          // Only a real answer retires "backfill": the first successful poll
+          // replays everything already banked today, which must not be announced
+          // as if it just happened.
+          backfill = false;
         })
         .catch(function () {})
-        .then(function () { if (!stopped) timer = setTimeout(tick, intervalMs || 3500); });
+        .then(function () {
+          busy = false;
+          if (stopped) return;
+          if (again) { again = false; arm(0); } else arm();
+        });
     }
+    function poke() { if (stopped) return; if (busy) { again = true; return; } arm(0); }
+    function listen(target, type, fn) {
+      try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) {}
+    }
+    listen(document, 'visibilitychange', function () {
+      try { if (document.hidden) { arm(); return; } } catch (_) {}
+      poke();
+    });
+    listen(window, 'focus', poke);
+    listen(window, 'pageshow', poke);
+    listen(window, 'online', function () { flushQueue(); poke(); });
+    listen(window, 'storage', function (e) { if (e && e.key === PING_KEY) poke(); });
+    if (chan) listen(chan, 'message', poke);
+
     tick();
-    return function () { stopped = true; if (timer) clearTimeout(timer); };
+    return function () {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) {} });
+      bound = [];
+    };
   }
 
-  /* ─── dashboard live card (this module owns it entirely) ─── */
-  function ensureStyles() {
-    if (document.getElementById('kiwi-live-style')) return;
-    var s = el('style');
-    s.id = 'kiwi-live-style';
-    s.textContent =
-      '#kiwi-live-card{background:linear-gradient(135deg,#0A4A38,#0B6E4F 55%,#05301F);color:#F7F5F0;border-radius:18px;padding:18px 20px;margin-bottom:16px;box-shadow:0 18px 40px -22px rgba(5,48,31,.7);position:relative;overflow:hidden}' +
-      '#kiwi-live-card .klc-head{display:flex;align-items:center;gap:10px;font-family:var(--mono,ui-monospace,monospace);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(247,245,240,.86)}' +
-      '#kiwi-live-card .klc-dot{width:8px;height:8px;border-radius:50%;background:#7DF2B0;animation:klc-pulse 2s infinite}' +
-      '@keyframes klc-pulse{0%{box-shadow:0 0 0 0 rgba(125,242,176,.5)}70%{box-shadow:0 0 0 8px rgba(125,242,176,0)}100%{box-shadow:0 0 0 0 rgba(125,242,176,0)}}' +
-      '#kiwi-live-card .klc-total{margin-inline-start:auto;font-family:var(--mono,ui-monospace,monospace);font-size:12px;color:#fff}' +
-      '#kiwi-live-card .klc-total b{font-size:15px}' +
-      '#kiwi-live-card .klc-list{margin-top:12px;display:flex;flex-direction:column;gap:2px}' +
-      '#kiwi-live-card .klc-empty{font-size:13px;color:rgba(247,245,240,.62);padding:6px 0}' +
-      '#kiwi-live-card .klc-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:12px;padding:9px 0;border-top:1px solid rgba(255,255,255,.08);animation:klc-in .45s cubic-bezier(.32,.72,0,1)}' +
-      '@keyframes klc-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +
-      '#kiwi-live-card .klc-t{font-family:var(--mono,ui-monospace,monospace);font-size:12px;color:rgba(247,245,240,.6)}' +
-      '#kiwi-live-card .klc-m{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:rgba(125,242,176,.16);color:#7DF2B0;white-space:nowrap}' +
-      '#kiwi-live-card .klc-l{font-size:13.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-      '#kiwi-live-card .klc-a{font-family:var(--mono,ui-monospace,monospace);font-size:14px;font-weight:600;color:#fff;white-space:nowrap}' +
-      '#kiwi-live-card .klc-a .cur{font-size:10px;color:rgba(247,245,240,.6);margin-inline-start:3px}';
-    document.head.appendChild(s);
-  }
-
-  function buildCard() {
-    var card = el('section');
-    card.id = 'kiwi-live-card';
-    card.setAttribute('aria-live', 'polite');
-
-    var head = el('div', 'klc-head');
-    head.appendChild(el('span', 'klc-dot'));
-    head.appendChild(document.createTextNode('En direct · ventes'));
-    var total = el('span', 'klc-total');
-    total.appendChild(document.createTextNode('Encaissé · '));
-    var totalB = el('b', null, '0');
-    totalB.setAttribute('data-klc-total', '');
-    total.appendChild(totalB);
-    total.appendChild(document.createTextNode(' MAD'));
-    head.appendChild(total);
-    card.appendChild(head);
-
-    var list = el('div', 'klc-list');
-    list.setAttribute('data-klc-list', '');
-    list.appendChild(el('div', 'klc-empty', 'En attente d’une vente…'));
-    card.appendChild(list);
-    return card;
-  }
-
-  var runningTotal = 0;
-
-  function renderSale(listEl, totalEl, s) {
-    var empty = listEl.querySelector('.klc-empty');
-    if (empty) empty.remove();
+  /* ─── announce a sale that just landed ───
+   * All this module paints now. It used to own a green "En direct · ventes" card
+   * pinned above the hero, which said the same thing twice: the hero already
+   * reads "Encaissé aujourd'hui" off the same total, and the transactions feed
+   * already lists the same rows off the same store. The card is gone; the toast
+   * stays, because a sale rung on a till in the next room should announce itself
+   * on the owner's screen. Backfill never toasts — see `backfill` in watchFeed. */
+  function notifySale(s) {
+    if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
     var mlabel = METHOD_LABEL[s.method] || (s.method || 'Vente');
-    var row = el('div', 'klc-row');
-    row.appendChild(el('span', 'klc-t', hhmm(s.ts)));
-    row.appendChild(el('span', 'klc-m', mlabel));
-    row.appendChild(el('span', 'klc-l', s.label || 'Vente'));
-    var amt = el('span', 'klc-a', fmtMAD(s.amount));
-    amt.appendChild(el('span', 'cur', 'MAD'));
-    row.appendChild(amt);
-    listEl.insertBefore(row, listEl.firstChild);
-    while (listEl.children.length > 8) listEl.removeChild(listEl.lastChild);   // keep it tidy
-    runningTotal += Math.round(s.amount) || 0;
-    if (totalEl) totalEl.textContent = fmtMAD(runningTotal);
-    if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
-      try { window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', { desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success' }); } catch (_) {}
-    }
+    try {
+      window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', {
+        desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success',
+      });
+    } catch (_) {}
   }
 
   /* ─── bridge: real feed sales → the dashboard's sales store ───
-   * The live card above is DISPLAY-ONLY. Every OTHER dashboard surface —
+   * Every dashboard surface —
    * "Encaissé aujourd'hui", the objectif bar, "Net après Kiwi", the vs-hier/
    * semaine/mois deltas, the sidebar order/revenue counts, the revenue chart —
    * recomputes from window.KiwiSales (see dateRange.js). So a Live-Link sale must
-   * ALSO land in that store, or it shows on the card and nowhere else — which was
-   * exactly the bug (a real cashier sale, dashboard numbers frozen at zero).
+   * land in that store or it reaches no surface at all — which was exactly the bug
+   * (a real cashier sale, dashboard numbers frozen at zero).
    * Only custom (onboarded, real) venues read KiwiSales for their KPIs, so gate on
    * that — mirrors the local-caisse quick-sale path in interactive.js.
    * Dedup against the sales ALREADY in the store, keyed by the feed's monotonic
@@ -261,19 +332,18 @@
     });
   }
 
-  function initDashboard() {
-    if (!on()) return;
-    var host = document.querySelector('.dash-standard') || document.querySelector('main');
-    if (!host || document.getElementById('kiwi-live-card')) return;
-    ensureStyles();
-    var card = buildCard();
-    host.insertBefore(card, host.firstChild);
-    var listEl = card.querySelector('[data-klc-list]');
-    var totalEl = card.querySelector('[data-klc-total]');
-    watchFeed(function (sales) {
-      sales.forEach(function (s) { renderSale(listEl, totalEl, s); });
+  /* The pump. Deliberately DOM-free: it no longer needs a host element to mount a
+   * card into, so a layout the module doesn't recognise can never silently stop
+   * the dashboard from receiving sales. */
+  var pumping = false;
+  function initPump() {
+    if (!on() || pumping) return;
+    pumping = true;
+    flushQueue();             // a sale this device banked offline, still owed to the server
+    watchFeed(function (sales, backfill) {
       accumulateFeed(sales);
-      bridgeToStore();        // ← keep the real dashboard numbers in sync, not just the card
+      bridgeToStore();        // ← this is what moves the dashboard's real numbers
+      if (!backfill) sales.forEach(notifySale);
     });
     // Re-run the bridge whenever the venue settles/changes — the operator scoped
     // venue and the real-merchant "own" venue both resolve AFTER this first poll,
@@ -331,9 +401,27 @@
     })();
   }
 
-  function boot() { initDashboard(); initOperatorBanner(); opSkipLock(); }
+  function boot() {
+    // The feed pump belongs to the DASHBOARD — it is the only page with a sales
+    // store to fill (KiwiSales lives in venues.js, which the tills don't load).
+    // A till still runs everything else here: postSale, the offline queue, the
+    // ping that wakes the owner's dashboard. It used to mount the "En direct"
+    // card and poll the feed on the caisse and the serveur too, purely because
+    // those pages happen to have a <main> — a card the cashier had no use for
+    // and a poll for data the page never read.
+    if (window.KiwiSales) initPump();
+    // Retry the queue whenever the network comes back, on every page (a till is
+    // where the sales are, and it is the device most likely to be offline).
+    try { window.addEventListener('online', flushQueue); } catch (_) {}
+    flushQueue();
+    initOperatorBanner();
+    opSkipLock();
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.KiwiLive = { isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed };
+  window.KiwiLive = {
+    isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
+    flush: flushQueue, pending: function () { return qRead().length; },
+  };
 })();

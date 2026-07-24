@@ -4250,14 +4250,19 @@
     };
     subDemo();
 
-    // Subscribe to the sales store — when the merchant rings up a sale on a
-    // user-created venue, the hero / KPI band / feed recompute live.
+    // Subscribe to the sales store — when a sale is rung on a user-created venue,
+    // whether on this device's keypad or on a till across the room (Live Link
+    // bridges those into the same store), every surface that reads it recomputes
+    // live. The revenue chart is in that list: it buckets the same KiwiSales rows
+    // (see renderRevChart), so leaving it out meant the hero moved on a new sale
+    // and the graph underneath it stayed on the last reload's shape.
     const subSales = () => {
       if (window.KiwiSales?.subscribe) {
         window.KiwiSales.subscribe(() => {
           renderHero();
           renderGoal();
           renderKpiBand();
+          renderRevChart();
           renderFeed();
           renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
         });

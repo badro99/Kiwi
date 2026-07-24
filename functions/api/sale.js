@@ -34,11 +34,18 @@ export async function onRequestPost({ request, env }) {
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
   const ts = Number(b && b.ts) || Date.now();
-  const id = 'sale-' + ts + '-' + Math.random().toString(36).slice(2, 8);
+
+  // The row id is the caller's idempotency key. A till that loses WiFi mid-POST
+  // cannot know whether the sale landed, so it retries from its offline queue —
+  // and with a server-invented id every retry would have written the day's
+  // takings twice. The client now sends a stable id per sale (see the queue in
+  // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
+  // that send no id keep the old behaviour: a fresh row every time.
+  const id = String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8));
 
   try {
     await env.DB.prepare(
-      'INSERT INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).bind(id, merchant, amount, method, label, ref, ts).run();
   } catch (e) {
     return json({ error: 'db', detail: String(e && e.message || e) }, 500);
