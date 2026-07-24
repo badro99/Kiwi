@@ -206,10 +206,18 @@
     /* Real / paired store → the 2s unlock flash must not name a demo employee
        ("Sba7 lkhir Salma / Reda") or a demo venue ("Maison Mansour · …"). Show
        a neutral greeting, subtitled with the real store name when we have it.
-       Local demo (unpaired localhost) keeps the full flavoured greeting. */
+       Local demo (unpaired localhost) keeps the full flavoured greeting.
+
+       Unless we know WHO just unlocked: the staff code they entered names them
+       (assets/caisse-pairing.js → window.KiwiStaff), and greeting the actual
+       person is the whole point of asking for a personal code. That beats both
+       the neutral real-store line and the demo's hardcoded cast. */
     const p = pvPaired();
     const real = !!p || (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
-    const line1 = real ? 'Sba7 lkhir,' : (greet.line1 || 'Sba7 lkhir,');
+    const me = window.KiwiStaff || null;
+    const who = me && (me.first || me.name);
+    const line1 = who ? ('Sba7 lkhir ' + escGreet(who) + ',')
+      : (real ? 'Sba7 lkhir,' : (greet.line1 || 'Sba7 lkhir,'));
     const sub   = real ? (p && p.name ? escGreet(p.name) : '') : (greet.sub || '');
     g.innerHTML = `<div class="kiwi-greet-inner">
       <h1>${line1} <em>${greet.em || 'marhba.'}</em></h1>

@@ -7867,8 +7867,13 @@
       // "Caissier". Also drops the demo roster so handover only lists real staff.
       let staff = null;
       try { const p = window.KiwiConfig && window.KiwiConfig.pins; if (Array.isArray(p) && p.length) staff = p; } catch (_) {}
-      const cashName = (staff && staff[0] && staff[0].name) || 'Caissier';
-      const cashRole = (staff && staff[0] && staff[0].role) || 'Caissier';
+      // WHO unlocked this till — the staff code they entered identifies them
+      // (assets/caisse-pairing.js → window.KiwiStaff). Falling back to staff[0]
+      // meant the register greeted the first name on the roster, printed it on
+      // tickets and filed the shift under it, whoever had actually signed in.
+      const me = window.KiwiStaff || null;
+      const cashName = (me && me.name) || (staff && staff[0] && staff[0].name) || 'Caissier';
+      const cashRole = (me && me.role) || (staff && staff[0] && staff[0].role) || 'Caissier';
       currentCashier = { id: 'me', name: cashName, role: cashRole };
       if (Array.isArray(CASHIER_ROSTER)) {
         CASHIER_ROSTER.length = 0;
@@ -7911,6 +7916,9 @@
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyStoreIdentity);
     else applyStoreIdentity();
+    // This runs at load, BEFORE anyone has entered their code — so re-run it the
+    // moment the till learns who is on shift, and again when they hand over.
+    document.addEventListener('kiwi-staff', applyStoreIdentity);
 
     /* Render a journal entry as a printed thermal ticket. */
     function renderReceipt(entry) {

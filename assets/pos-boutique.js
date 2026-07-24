@@ -262,6 +262,20 @@
     caissiere: { name: 'Salma',        role: 'Caisse' },
   };
 
+  /* The person who entered their code owns this session: their name goes on the
+     ticket header and on every sale's `by`, so the day's takings are attributable
+     to whoever actually rang them. Mutates the existing object rather than
+     replacing it, because the render paths read STAFF.caissiere directly — and it
+     re-runs on every unlock, so a handover follows the person, not the module's
+     first load. Real stores only; the local demo keeps its named cast. */
+  function syncTillStaff() {
+    if (!pvReal()) return;
+    const me = window.KiwiStaff;
+    if (!me || !me.name) return;
+    STAFF.caissiere.name = me.name;
+    STAFF.caissiere.role = me.role || '';
+  }
+
   /* A REAL boutique starts with an empty client book (its own clientes are read
      from KiwiClients / captured at the till). Only the local demo seeds this cast. */
   const CLIENTES = pvReal() ? [] : [
@@ -429,6 +443,7 @@
 
   function mount(rootEl) {
     root = rootEl;
+    syncTillStaff();
     /* A PAIRED caisse shows the real store's name/city (from onboarding); the
        unpaired demo (PIN 0002) keeps the Maison Mansour identity. */
     const _pv = (function () { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } })();
@@ -579,6 +594,7 @@
 
   function onShow() {
     if (!root) return;
+    syncTillStaff();                       // a new shift may have unlocked the till
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();

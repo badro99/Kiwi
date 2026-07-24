@@ -125,6 +125,7 @@
   function unpair() {
     ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'].forEach(del);
     window.__kiwiPairedBoutiqueVenue = null;
+    setStaff(null);                     // this device is nobody's till any more
     try { if (window.KiwiPosDispatch && window.KiwiPosDispatch.lock) window.KiwiPosDispatch.lock(); } catch (_) {}
     showPad();
   }
@@ -229,6 +230,38 @@
   var pinBuf = '';
   var pinVenue = null;
   var pinList = null;   // [{pin,name,role}] once fetched
+
+  /* ── who is at the till right now ─────────────────────────────────────────
+   * A staff code is a PERSON, not just a door code: the list /api/config serves
+   * carries {pin, name, role}, so matching one says exactly who opened the
+   * register. That was thrown away — submitPin only asked "is this code in the
+   * list?" — and every surface downstream fell back to pins[0]. So the register
+   * greeted the first name on the roster, printed it on tickets and filed every
+   * sale under it, whoever had actually unlocked it.
+   *
+   * Published as window.KiwiStaff (+ a `kiwi-staff` event for surfaces already
+   * painted by the time the code is entered). Session-scoped: a reload re-asks
+   * for the code anyway. The code itself is never stored — only the identity it
+   * proved. */
+  var STAFF_KEY = 'kiwiTillStaff';
+  function firstNameOf(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
+  function setStaff(p) {
+    var s = null;
+    if (p) {
+      var name = String(p.name || '').trim() || 'Caissier';
+      s = { name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
+    }
+    window.KiwiStaff = s;
+    try {
+      if (s) sessionStorage.setItem(STAFF_KEY, JSON.stringify(s));
+      else sessionStorage.removeItem(STAFF_KEY);
+    } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('kiwi-staff', { detail: s })); } catch (_) {}
+    return s;
+  }
+  // Survive a re-render inside the same tab (the boot sequence repaints a lot).
+  try { window.KiwiStaff = JSON.parse(sessionStorage.getItem(STAFF_KEY) || 'null') || null; }
+  catch (_) { window.KiwiStaff = null; }
   function keyP(n) { return '<button class="pin-key" data-cpp="' + n + '">' + n + '</button>'; }
   function pinsFor(merchant) {
     if (!merchant) return Promise.resolve([]);
@@ -240,13 +273,34 @@
   // Gate a fresh register entry behind a staff PIN, then bootVertical. The single
   // choke point every entry path (redeem, ?pair=1, resume, already-paired boot)
   // routes through so the hosted caisse always asks who is opening the till.
-  function bootWithPin(venue) {
+  function askStaff(venue, onNoPins) {
     var merchant = (venue && venue.merchant) || '';
     pinsFor(merchant).then(function (pins) {
-      if (!pins || !pins.length) { bootVertical(venue); return; }   // none configured → fail-soft
+      if (!pins || !pins.length) { if (onNoPins) onNoPins(); return; }
       pinVenue = venue; pinList = pins; pinBuf = '';
       showPinPad(venue);
     });
+  }
+  function bootWithPin(venue) {
+    askStaff(venue, function () { bootVertical(venue); });          // none configured → fail-soft
+  }
+
+  /* A locked terminal must re-ask WHO is taking over, not just "a code".
+   * KiwiPosDispatch.lock() calls __kiwiPinReset(), which restores the NATIVE pad
+   * — the one that accepts any four digits and identifies nobody — so a shift
+   * change on a real store dropped back to an anonymous till and the greeting
+   * lost the name it had. On a paired store, resetting now means: forget the
+   * cashier who just left, and show the staff pad again. A store with no codes
+   * configured keeps the native pad exactly as before. */
+  function hookPinReset() {
+    var native = window.__kiwiPinReset;
+    window.__kiwiPinReset = function () {
+      var pv = pairedVenue();
+      if (typeof native === 'function') { try { native.apply(this, arguments); } catch (_) {} }
+      if (!pv) return;
+      setStaff(null);
+      askStaff(pv, null);
+    };
   }
   function pinDotsHtml() {
     var out = '';
@@ -291,8 +345,16 @@
   }
   function submitPin() {
     var code = pinBuf;
-    var ok = (pinList || []).some(function (p) { return String((p && (p.pin || p.code)) || '') === code; });
-    if (ok) { var s = document.getElementById('cp-pin-screen'); if (s) s.style.display = 'none'; bootVertical(pinVenue); return; }
+    var who = null;
+    (pinList || []).forEach(function (p) {
+      if (!who && String((p && (p.pin || p.code)) || '') === code) who = p;
+    });
+    if (who) {
+      setStaff(who);                                  // the till now knows whose shift this is
+      var s = document.getElementById('cp-pin-screen'); if (s) s.style.display = 'none';
+      bootVertical(pinVenue);
+      return;
+    }
     var scr = document.getElementById('cp-pin-screen');
     if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
     toast('Code incorrect.');
@@ -325,6 +387,7 @@
    * Hosted + paired: boot straight into the bound store.
    * Hosted + unpaired: show the pairing pad. */
   function boot() {
+    hookPinReset();
     // A terminal that locks its store returns to the pairing pad (which offers a
     // one-tap "reprendre" when still bound). Hosted always; local only once bound.
     try {
@@ -357,7 +420,12 @@
     showPad();               // hosted + unpaired → pairing pad
   }
 
-  window.KiwiCaissePairing = { isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem, unpair: unpair, bootVertical: bootVertical };
+  window.KiwiCaissePairing = {
+    isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
+    unpair: unpair, bootVertical: bootVertical,
+    // Who unlocked this till, for any surface that needs to name them.
+    staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
