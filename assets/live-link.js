@@ -181,14 +181,35 @@
    * rowid cursor (persisted on each entry), NOT a standalone counter: watchFeed
    * replays from since=0 on every load, so we must skip sales the store already
    * holds — but reading that fact FROM the store means a cleared or re-keyed store
-   * re-ingests, and the dashboard total can never silently fall behind the feed. */
-  function bridgeToStore(sales) {
+   * re-ingests, and the dashboard total can never silently fall behind the feed.
+   *
+   * Self-healing against a venue-resolution RACE: the real venue id settles
+   * ASYNCHRONOUSLY after boot — operator scoped view via applyScopedVenue() and a
+   * real signed-in merchant via ensureOwnEmptyVenue() are both wired by identity.js
+   * only after a server round-trip, i.e. AFTER the first feed poll has already
+   * advanced its cursor. If we bridged only at poll time, that first batch would
+   * land in whatever venue was current then (a demo venue ⇒ isCustom() false ⇒
+   * dropped, or a stale/other id) and never reach the venue the dashboard reads.
+   * So we accumulate every feed sale for the session and re-run the (idempotent,
+   * cursor-deduped) bridge BOTH on each poll AND on every KiwiVenue change — the
+   * moment the venue becomes the real one, the whole backlog lands in its store. */
+  var feedSales = [];   // every sale the feed has returned this session
+  var feedSeen = {};    // cursor -> 1 (dedup accumulation across polls)
+  function accumulateFeed(sales) {
+    (sales || []).forEach(function (s) {
+      var cur = Number(s && s.cursor) || 0;
+      if (!cur || feedSeen[cur]) return;
+      feedSeen[cur] = 1;
+      feedSales.push(s);
+    });
+  }
+  function bridgeToStore() {
     var KV = window.KiwiVenue;
     if (!KV || !KV.isCustom || !KV.isCustom() || !window.KiwiSales || !window.KiwiSales.add) return;
     var vid = (KV.getVenue && KV.getVenue()) || null;
     var have = {};
     try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = 1; }); } catch (_) {}
-    sales.forEach(function (s) {
+    feedSales.forEach(function (s) {
       var cur = Number(s.cursor) || 0;
       if (!cur || have[cur]) return;                // no cursor, or already stored → skip
       var amt = Math.round(s.amount) || 0;
@@ -208,8 +229,18 @@
     var totalEl = card.querySelector('[data-klc-total]');
     watchFeed(function (sales) {
       sales.forEach(function (s) { renderSale(listEl, totalEl, s); });
-      bridgeToStore(sales);   // ← keep the real dashboard numbers in sync, not just the card
+      accumulateFeed(sales);
+      bridgeToStore();        // ← keep the real dashboard numbers in sync, not just the card
     });
+    // Re-run the bridge whenever the venue settles/changes — the operator scoped
+    // venue and the real-merchant "own" venue both resolve AFTER this first poll,
+    // so without this the pre-resolution sales would never reach the venue the
+    // dashboard reads. Idempotent (cursor-deduped), so extra calls never double-count.
+    try {
+      if (window.KiwiVenue && window.KiwiVenue.subscribe) {
+        window.KiwiVenue.subscribe(function () { bridgeToStore(); });
+      }
+    } catch (_) {}
   }
 
   /* ─── operator view banner ─── */
