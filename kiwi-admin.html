@@ -203,6 +203,11 @@
     </section>
   </div>
 
+  <!-- The staff-role catalogue, shared with the staff apps: the console offers a
+       role here and kiwi-serveur.html honours it there. Loaded synchronously —
+       the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
+  <script src="assets/staff-roles.js"></script>
+
 <script>
 (function(){
   'use strict';
@@ -271,64 +276,23 @@
   function typeLabel(id){ var t=typeMeta(id); return t ? t.label : ''; }
 
   // ── Staff roles, per type of activity ──────────────────────────────────────
-  // The PIN role used to be a fixed restaurant list (Serveur / Plongeur / Caisse
-  // / Manager), so a boutique owner was asked to file a salesperson as a
-  // dishwasher. Roles now follow the SUBTYPE, not the base vertical — a
-  // boulangerie hires boulangers, a pharmacie hires préparateurs, and neither is
-  // a relabeled restaurant. Stored value = the lowercase id (D1 `role` is 24
-  // chars); the label is display only. `plongeur` must keep its id: it is the one
-  // role kiwi-serveur.html gates on (resolveRole → limited dishwasher access).
-  var ROLE_LABELS = {
-    serveur:'Serveur', chefrang:'Chef de rang', maitre:'Maître d’hôtel', barman:'Barman',
-    cuisinier:'Cuisinier', chef:'Chef de cuisine', commis:'Commis', plongeur:'Plongeur',
-    caisse:'Caisse', accueil:'Hôte d’accueil', barista:'Barista', patissier:'Pâtissier',
-    equipier:'Équipier', grillardin:'Grillardin', preparateur:'Préparateur', livreur:'Livreur',
-    boulanger:'Boulanger', pizzaiolo:'Pizzaïolo',
-    conseiller:'Vendeur conseil', vendeur:'Vendeur', magasinier:'Magasinier',
-    merch:'Visual merchandiser', reassort:'Réassortisseur', rayon:'Responsable rayon',
-    titulaire:'Pharmacien titulaire', pharmacien:'Pharmacien assistant', fleuriste:'Fleuriste',
-    praticien:'Praticien·ne', masseur:'Masseur', esthetique:'Esthéticienne', manucure:'Manucure',
-    reception:'Réceptionniste', coiffeur:'Coiffeur', coloriste:'Coloriste', barbier:'Barbier',
-    coach:'Coach sportif', coachperso:'Coach personnel', coursco:'Cours collectifs',
-    entretien:'Agent d’entretien', concierge:'Concierge', gouvernante:'Gouvernante',
-    menage:'Ménage & étages', bagagiste:'Bagagiste', veilleur:'Veilleur de nuit',
-    manager:'Manager', proprietaire:'Propriétaire',
-  };
-  // Every business has a boss, so these close every list. Trade roles come first:
-  // option 1 is the default, and it should be the hire you actually add most.
-  var UNIVERSAL_ROLES = ['manager', 'proprietaire'];
-  var ROLES_BY_TYPE = {
-    restaurant: ['serveur','chefrang','maitre','barman','cuisinier','chef','commis','plongeur','caisse','accueil'],
-    cafe:       ['barista','serveur','caisse','patissier','plongeur','accueil'],
-    fastfood:   ['equipier','caisse','grillardin','preparateur','livreur','plongeur'],
-    bakery:     ['vendeur','boulanger','patissier','commis','caisse'],
-    pizzeria:   ['pizzaiolo','serveur','livreur','commis','caisse','plongeur'],
-    foodtruck:  ['equipier','cuisinier','caisse','livreur'],
-    boutique:   ['conseiller','caisse','magasinier','merch'],
-    epicerie:   ['vendeur','caisse','magasinier','reassort','rayon'],
-    pharmacie:  ['titulaire','pharmacien','preparateur','conseiller','caisse'],
-    fleuriste:  ['fleuriste','vendeur','caisse','livreur'],
-    spa:        ['praticien','masseur','esthetique','manucure','reception','caisse'],
-    coiffure:   ['coiffeur','coloriste','barbier','esthetique','manucure','reception','caisse'],
-    sport:      ['coach','coachperso','coursco','reception','caisse','entretien'],
-    hotel:      ['reception','concierge','gouvernante','menage','bagagiste','veilleur','serveur','caisse'],
-    autre:      ['vendeur','caisse','magasinier','equipier'],
-  };
-  // No type set yet ⇒ the neutral list, not the restaurant one. The operator can
-  // set the type right next to it, and the roles follow immediately.
+  // The catalogue lives in assets/staff-roles.js because the console is not its
+  // only reader: kiwi-serveur.html decides from the SAME list whether a PIN opens
+  // the floor interface or only the shift-and-profile view. Handing out a role
+  // the staff app has never heard of is how a cook ends up taking orders.
+  // Fail-soft — if that file is missing (opened straight off disk, cache miss),
+  // fall back to the four roles this panel always had, so PINs can still be filed.
+  var LEGACY_FALLBACK = ['serveur', 'plongeur', 'caisse', 'manager'];
+  var LEGACY_LABELS = { serveur:'Serveur', plongeur:'Plongeur', caisse:'Caisse', manager:'Manager' };
   function rolesForType(typeId){
-    return (ROLES_BY_TYPE[typeId] || ROLES_BY_TYPE.autre).concat(UNIVERSAL_ROLES);
+    var R = window.KiwiRoles;
+    return R ? R.forType(typeId) : LEGACY_FALLBACK.slice();
   }
-  // A stored role can predate this catalogue or come from another surface: the
-  // onboarding wizard writes owner/manager/staff, the Équipe page publishes the
-  // job title itself ("Propriétaire"). Show something readable in every case,
-  // never a raw token, and never overwrite what is already stored.
-  var LEGACY_ROLES = { owner:'Propriétaire', staff:'Équipe', admin:'Manager' };
   function roleLabel(raw){
+    var R = window.KiwiRoles;
+    if (R) return R.label(raw);
     var v = String(raw == null ? '' : raw).trim();
-    if (!v) return 'Équipe';
-    var k = v.toLowerCase();
-    return ROLE_LABELS[k] || LEGACY_ROLES[k] || v;
+    return LEGACY_LABELS[v.toLowerCase()] || v || 'Équipe';
   }
 
   // Modules per base vertical (the sidebar sections in venues.js) + the universal

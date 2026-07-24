@@ -3399,6 +3399,9 @@
   <script src="assets/live-link.js" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
+  <!-- The staff-role catalogue the operator console files PINs against — it says
+       which roles work the floor and which only clock in. Missing ⇒ old rule. -->
+  <script src="assets/staff-roles.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -3829,25 +3832,53 @@
       ROLES.serveur.fullName = 'Serveur'; ROLES.serveur.initials = 'S';
       ROLES.plongeur.name = 'Plongeur'; ROLES.plongeur.fullName = 'Plongeur';
       ROLES.plongeur.initials = 'P';
+      // The id is also the SCHEDULE_DATA key, and 'mounir' is a demo week
+      // (08:00–16:00, Mounir A.). The serveur was moved off it above; the
+      // restricted role kept it, so a real store's employee opened their profile
+      // on a schedule that belongs to Café Atlas. Now that EVERY non-floor role
+      // lands here — cook, cashier, magasinier — it must be blank too:
+      // renderSchedule() no-ops on an unknown id, renderHours() already does.
+      ROLES.plongeur.id = 'plongeur';
     }
 
-    // Managed PINs (from the operator console via /api/config) win over the demo
-    // rule, additively — if none match, behavior is exactly as before. A managed
-    // PIN's role picks plongeur vs serveur, and its name personalizes the greeting.
+    /* Managed PINs (from the operator console via /api/config) win over the demo
+       rule, additively — if none match, behavior is exactly as before.
+
+       WHO GETS THE FLOOR. This used to read `role === 'plongeur'`, so the
+       dishwasher was the only employee held back and EVERY other role walked
+       into the tables view: a cook, a cashier, a stockroom hand, a hairdresser.
+       They are not waiters. The decision now comes from assets/staff-roles.js —
+       floor service and management open the full app, everyone else lands on the
+       restricted view (clock-in, shift, hours, profile), which is all they need.
+
+       The restricted role object is the plongeur one, so it keeps `restricted`,
+       its single tab and its schedule id — but never its NAME: a cashier is
+       shown "Caissier", not "Plongeur". Unknown roles stay on the floor (see
+       KiwiRoles.isService) so nobody loses access they have today, and the file
+       failing to load falls straight back to the old rule. */
     function resolveRole(entered) {
       try {
         const pins = (window.KiwiConfig && window.KiwiConfig.pins) || [];
+        const R = window.KiwiRoles;
         for (let i = 0; i < pins.length; i++) {
           if (String(pins[i].pin) === entered) {
-            const base = (pins[i].role === 'plongeur') ? ROLES.plongeur : ROLES.serveur;
+            const raw = pins[i].role;
+            const floor = R ? R.isService(raw) : (raw !== 'plongeur');
+            const base = floor ? ROLES.serveur : ROLES.plongeur;
+            const over = {};
+            // Say the job they actually do — on the clock-in card and the profile.
+            // Both tiers: the owner is not "Serveur" and a cook is not "Plongeur".
+            // No stored role ⇒ keep the base wording rather than invent one.
+            if (raw && R) over.role = R.label(raw);
+            else if (!floor) over.role = 'Plongeur';
             const nm = (pins[i].name || '').trim();
-            if (!nm) return base;
-            const parts = nm.split(/\s+/);
-            return Object.assign({}, base, {
-              name: parts[0],
-              fullName: nm,
-              initials: parts.map(w => w[0]).join('').slice(0, 2).toUpperCase(),
-            });
+            if (nm) {
+              const parts = nm.split(/\s+/);
+              over.name = parts[0];
+              over.fullName = nm;
+              over.initials = parts.map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            }
+            return Object.keys(over).length ? Object.assign({}, base, over) : base;
           }
         }
       } catch (_) { /* fall through to the demo rule */ }
