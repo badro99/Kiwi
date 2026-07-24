@@ -105,7 +105,10 @@
     return {
       categories: (C.listCategories() || []).map(function (c) { return { id: c.id, name: c.name }; }),
       products: products.map(function (p) {
-        return { id: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD, photo: p.photo || '' };
+        return {
+          id: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD,
+          photo: p.photo || '', video: p.video || '',
+        };
       }),
       variants: variants,
       colors: C.colors(),

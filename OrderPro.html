@@ -2579,7 +2579,8 @@
       color: var(--ink-4);
       overflow: hidden;
     }
-    .bq-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .bq-thumb img,
+    .bq-thumb video { width: 100%; height: 100%; object-fit: cover; }
     .bq-thumb svg { width: 22px; height: 22px; }
     .bq-name {
       font-size: 14.5px;
@@ -2660,6 +2661,18 @@
       background: var(--line);
       margin: 6px auto 14px;
     }
+    /* Product hero — the merchant's own photo or clip, above the stock detail. */
+    .bq-d-hero {
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--paper-mute);
+      margin: 0 0 14px;
+      max-height: 46vh;
+      display: flex;
+    }
+    .bq-d-hero[hidden] { display: none; }
+    .bq-d-hero img,
+    .bq-d-hero video { width: 100%; max-height: 46vh; object-fit: cover; display: block; }
     .bq-d-name {
       font-size: 19px;
       font-weight: 700;
@@ -3092,6 +3105,7 @@
       <div class="cart-sheet-backdrop" data-close-bq></div>
       <div class="bq-panel">
         <div class="bq-grip"></div>
+        <div class="bq-d-hero" id="bq-d-hero" hidden></div>
         <div class="bq-d-name" id="bq-d-name">—</div>
         <div class="bq-d-price" id="bq-d-price">—</div>
         <div id="bq-d-body"></div>
@@ -5114,6 +5128,7 @@
         name: String(p.name || ''),
         price: Math.max(0, Math.round(Number(p.priceMAD != null ? p.priceMAD : p.price) || 0)),
         photo: p.photo || '',
+        video: p.video || '',
         category: cats.get(String(p.categoryId)) || '',
         variants: [],
       }));
@@ -5161,9 +5176,12 @@
       list.innerHTML = rows.map(p => {
         const n = stockOf(p);
         const pill = stockPill(n);
-        const thumb = p.photo
-          ? `<img src="${escapeHtml(p.photo)}" alt="" loading="lazy" />`
-          : `<i data-lucide="shirt"></i>`;
+        // A clip autoplays muted in the thumbnail — a garment sells on movement.
+        const thumb = p.video
+          ? `<video src="${escapeHtml(p.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>`
+          : (p.photo
+            ? `<img src="${escapeHtml(p.photo)}" alt="" loading="lazy" />`
+            : `<i data-lucide="shirt"></i>`);
         return `
         <button class="bq-card" type="button" data-bq="${escapeHtml(p.id)}">
           <span class="bq-thumb">${thumb}</span>
@@ -5183,6 +5201,15 @@
       if (!p) return;
       $('#bq-d-name').textContent = p.name;
       $('#bq-d-price').textContent = `${p.price} ${cur()}`;
+
+      // The merchant's own photo or clip, full width above the stock detail.
+      const hero = $('#bq-d-hero');
+      if (hero) {
+        hero.innerHTML = p.video
+          ? `<video src="${escapeHtml(p.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>`
+          : (p.photo ? `<img src="${escapeHtml(p.photo)}" alt="" />` : '');
+        hero.hidden = !(p.video || p.photo);
+      }
 
       // Sizes: summed across colours, because "is my size left?" is the question.
       const bySize = new Map();

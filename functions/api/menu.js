@@ -79,6 +79,7 @@ function sanitizeShop(raw) {
       categoryId: str(p && p.categoryId, 40) || null,
       priceMAD: Math.max(0, Math.min(1e7, Number(p && p.priceMAD) || 0)),
       photo: mediaUrl(p && p.photo),
+      video: mediaUrl(p && p.video),
     }))
     .filter((p) => p.id && p.name);
   out.variants = (Array.isArray(raw.variants) ? raw.variants.slice(0, 6000) : [])

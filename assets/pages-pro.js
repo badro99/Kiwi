@@ -7158,50 +7158,62 @@ function _orderProOn() {
   catch (_) { return false; }
 }
 
-/* ── product photo (shown to shoppers on the phone) ──────────────────────────
-   The picker is always live. Storage is R2 via KiwiOrderPro.uploadMedia, and we
-   keep the URL only — the catalogue lives in localStorage, where a base64 image
-   would burn the whole quota in a handful of products. If media storage isn't
-   enabled on the account yet the button says so instead of failing mute. */
+/* ── product photo OR video (shown to shoppers on the phone) ─────────────────
+   Same deal as a menu item: a garment sells on movement, so a boutique gets a
+   clip as well as a still. One medium per product — a video supersedes a photo
+   and vice-versa — so the card can never show two competing things.
+
+   Both pickers are always live. Storage is R2 via KiwiOrderPro.uploadMedia and
+   we keep the URL only: the catalogue lives in localStorage, where a base64
+   image would burn the whole quota in a handful of products. If media storage
+   isn't enabled on the account yet the button says so instead of failing mute. */
 let _bqxPhoto = '';
-function _bqxPhotoField(url) {
+let _bqxVideo = '';
+function _bqxMediaPreview() {
+  if (_bqxVideo) return `<video class="bqx-photo-prev" src="${_esc(_bqxVideo)}" muted playsinline preload="metadata"></video>`;
+  if (_bqxPhoto) return `<img class="bqx-photo-prev" src="${_esc(_bqxPhoto)}" alt="" />`;
+  return '';
+}
+function _bqxMediaActions() {
+  const has = _bqxPhoto || _bqxVideo;
   return `
-    <div class="kf-group">
-      <label class="kf-label">Photo (option)</label>
-      <div class="bqx-photo" data-bqx-photo-box>
-        ${url ? `<img class="bqx-photo-prev" src="${_esc(url)}" alt="" />` : ''}
-        <div class="bqx-photo-actions">
-          <button class="kb ghost" type="button" data-bqx-photo-pick style="padding:8px 12px;font-size:12.5px;">Ajouter une photo</button>
-          ${url ? `<button class="kb ghost" type="button" data-bqx-photo-del style="padding:8px 12px;font-size:12.5px;">Retirer</button>` : ''}
-        </div>
-      </div>
-      <div class="bqx-photo-msg" data-bqx-photo-msg>Visible par vos clients sur le téléphone.</div>
-      <input type="file" accept="image/*" data-bqx-photo-input hidden />
+    <div class="bqx-photo-actions">
+      <button class="kb ghost" type="button" data-bqx-pick="photo" style="padding:8px 12px;font-size:12.5px;">Ajouter une photo</button>
+      <button class="kb ghost" type="button" data-bqx-pick="video" style="padding:8px 12px;font-size:12.5px;">Ajouter une vidéo</button>
+      ${has ? `<button class="kb ghost" type="button" data-bqx-media-del style="padding:8px 12px;font-size:12.5px;">Retirer</button>` : ''}
     </div>`;
 }
-function _bqxWirePhoto(initial) {
-  _bqxPhoto = initial || '';
+function _bqxPhotoField(photo, video) {
+  _bqxPhoto = photo || '';
+  _bqxVideo = video || '';
+  return `
+    <div class="kf-group">
+      <label class="kf-label">Photo / vidéo (option)</label>
+      <div class="bqx-photo" data-bqx-photo-box>${_bqxMediaPreview()}${_bqxMediaActions()}</div>
+      <div class="bqx-photo-msg" data-bqx-photo-msg>Visible par vos clients sur le téléphone.</div>
+      <input type="file" accept="image/*" data-bqx-photo-input hidden />
+      <input type="file" accept="video/*" data-bqx-video-input hidden />
+    </div>`;
+}
+function _bqxWirePhoto(photo, video) {
+  _bqxPhoto = photo || '';
+  _bqxVideo = video || '';
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
   const box = b.querySelector('[data-bqx-photo-box]');
   const msg = b.querySelector('[data-bqx-photo-msg]');
-  const input = b.querySelector('[data-bqx-photo-input]');
-  if (!box || !input) return;
+  const photoInput = b.querySelector('[data-bqx-photo-input]');
+  const videoInput = b.querySelector('[data-bqx-video-input]');
+  if (!box || !photoInput || !videoInput) return;
 
-  const paint = () => {
-    box.innerHTML = `
-      ${_bqxPhoto ? `<img class="bqx-photo-prev" src="${_esc(_bqxPhoto)}" alt="" />` : ''}
-      <div class="bqx-photo-actions">
-        <button class="kb ghost" type="button" data-bqx-photo-pick style="padding:8px 12px;font-size:12.5px;">${_bqxPhoto ? 'Remplacer' : 'Ajouter une photo'}</button>
-        ${_bqxPhoto ? `<button class="kb ghost" type="button" data-bqx-photo-del style="padding:8px 12px;font-size:12.5px;">Retirer</button>` : ''}
-      </div>`;
-  };
+  const paint = () => { box.innerHTML = _bqxMediaPreview() + _bqxMediaActions(); };
   box.addEventListener('click', (e) => {
-    if (e.target.closest('[data-bqx-photo-pick]')) { input.click(); return; }
-    if (e.target.closest('[data-bqx-photo-del]')) { _bqxPhoto = ''; paint(); return; }
+    const pick = e.target.closest('[data-bqx-pick]');
+    if (pick) { (pick.dataset.bqxPick === 'video' ? videoInput : photoInput).click(); return; }
+    if (e.target.closest('[data-bqx-media-del]')) { _bqxPhoto = ''; _bqxVideo = ''; paint(); return; }
   });
-  input.addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
+
+  const upload = async (file, kind) => {
     if (!file) return;
     if (!window.KiwiOrderPro || !window.KiwiOrderPro.uploadMedia) {
       msg.textContent = "Stockage média pas encore activé sur votre compte."; return;
@@ -7216,10 +7228,13 @@ function _bqxWirePhoto(initial) {
         : 'Envoi impossible, réessayez.';
       return;
     }
-    _bqxPhoto = res.url;
+    if (kind === 'video') { _bqxVideo = res.url; _bqxPhoto = ''; }
+    else { _bqxPhoto = res.url; _bqxVideo = ''; }
     msg.textContent = 'Visible par vos clients sur le téléphone.';
     paint();
-  });
+  };
+  photoInput.addEventListener('change', (e) => upload(e.target.files && e.target.files[0], 'photo'));
+  videoInput.addEventListener('change', (e) => upload(e.target.files && e.target.files[0], 'video'));
 }
 
 /* new product */
@@ -7240,10 +7255,10 @@ handlers['bqx-new'] = () => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="1890" data-bqx-price /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" placeholder="optionnel" data-bqx-cost /></div>
       </div>
-      ${_bqxPhotoField('')}`,
+      ${_bqxPhotoField('', '')}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-new-save">Créer le produit</button>`,
   });
-  _bqxWirePhoto('');
+  _bqxWirePhoto('', '');
   setTimeout(() => { const i = document.querySelector('.kiwi-backdrop [data-bqx-name]'); if (i) i.focus(); }, 60);
 };
 handlers['bqx-new-save'] = () => {
@@ -7257,6 +7272,7 @@ handlers['bqx-new-save'] = () => {
     priceMAD: parseInt(b.querySelector('[data-bqx-price]').value, 10) || 0,
     cost: parseInt(b.querySelector('[data-bqx-cost]').value, 10) || 0,
     photo: _bqxPhoto,
+    video: _bqxVideo,
   });
   if (_bqxModal) _bqxModal.close();
   toast('Produit créé', { desc: 'Ajoutez maintenant ses variantes couleur × taille.', type: 'success' });
@@ -7280,10 +7296,10 @@ handlers['bqx-prod-edit'] = (_el, arg) => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" value="${p.priceMAD}" data-bqx-eprice /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" value="${p.cost || 0}" data-bqx-ecost /></div>
       </div>
-      ${_bqxPhotoField(p.photo)}`,
+      ${_bqxPhotoField(p.photo, p.video)}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${arg}">Enregistrer</button>`,
   });
-  _bqxWirePhoto(p.photo || '');
+  _bqxWirePhoto(p.photo || '', p.video || '');
 };
 handlers['bqx-prod-edit-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
@@ -7295,6 +7311,7 @@ handlers['bqx-prod-edit-save'] = (_el, arg) => {
     priceMAD: parseInt(b.querySelector('[data-bqx-eprice]').value, 10) || 0,
     cost: parseInt(b.querySelector('[data-bqx-ecost]').value, 10) || 0,
     photo: _bqxPhoto,
+    video: _bqxVideo,
   });
   if (_bqxModal) _bqxModal.close();
   toast('Produit mis à jour', { type: 'success', duration: 2000 });

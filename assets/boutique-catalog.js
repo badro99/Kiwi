@@ -273,16 +273,18 @@
       id: nextId('prod'), name: String(data.name || 'Nouvel article').trim() || 'Nouvel article',
       categoryId: data.categoryId || null, priceMAD: +data.priceMAD || 0, cost: +data.cost || 0,
       art: data.art || '', kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
-      // `photo` is a URL (uploaded to R2 via KiwiOrderPro.uploadMedia), never
-      // bytes — the catalogue lives in localStorage and base64 would eat it.
+      // `photo` / `video` are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia),
+      // never bytes — the catalogue lives in localStorage and base64 would eat it.
+      // One medium per product: a video supersedes a photo and vice-versa.
       photo: String(data.photo || ''),
+      video: String(data.video || ''),
       createdAt: Date.now(), archived: false,
     };
     db.products.push(p); commit(); return p;
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
-    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo'].forEach((k) => {
+    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video'].forEach((k) => {
       if (patch[k] !== undefined) p[k] = (k === 'priceMAD' || k === 'cost') ? (+patch[k] || 0) : patch[k];
     });
     commit(); return p;
