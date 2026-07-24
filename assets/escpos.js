@@ -93,10 +93,14 @@
    *   58 mm  → 32  both are offered rather than making the owner guess
    *   76 mm  → 40  dot-matrix kitchen printers (Epson TM-U220 and friends)
    *   80 mm  → 48  the standard thermal receipt roll
-   *   112 mm → 64  wide report rolls (conservative; some heads do 69)
+   *   110 mm → 64  wide rolls
+   *   112 mm → 64  wide report rolls
+   * The wide sizes are deliberately CONSERVATIVE: those heads are usually 832
+   * dots (69 columns Font A) but some are 720 (60). Under-counting prints a
+   * slightly narrow ticket; over-counting wraps every line and garbles it.
    * Anything unknown falls back to 48 so a bad value can never produce a garbled
    * ticket — it just prints as standard 80 mm. */
-  var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '112': 64 };
+  var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '110': 64, '112': 64 };
   function cols(paper) { return COLS[String(paper)] || 48; }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
@@ -195,6 +199,7 @@
       { value: '58', label: '58 mm' },
       { value: '57', label: '57 mm' },
       { value: '76', label: '76 mm (matricielle / cuisine)' },
+      { value: '110', label: '110 mm (large)' },
       { value: '112', label: '112 mm (large)' },
       { value: '44', label: '44 mm (étiquettes)' },
     ],

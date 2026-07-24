@@ -43,9 +43,13 @@
       return '<option value="' + p.value + '"' + (cur === p.value ? ' selected' : '') + '>' + p.label + '</option>';
     }).join('');
   }
-  // Thermal-printer brands common with Moroccan merchants. All are ESC/POS-
-  // compatible, so they share the generic encoder — the choice is for the owner's
-  // confidence (and future per-brand tuning). "Générique" stays the safe default.
+  /* Makes sold into Moroccan / North-African POS. All of these speak ESC/POS,
+   * which is what KiwiEscPos emits — the field is a label for the owner, not a
+   * driver, so an unlisted make that speaks ESC/POS works on "Générique".
+   * `note` carries a real caveat shown under the picker when that make is
+   * chosen. Deliberately NOT listed: Zebra / TSC / Godex, which are label
+   * printers speaking ZPL / TSPL / EZPL — offering them would promise something
+   * these bytes cannot drive. */
   var MODELS = [
     { id: 'escpos', label: 'Générique (ESC/POS)' },
     { id: 'epson', label: 'Epson' },
@@ -55,8 +59,27 @@
     { id: 'bixolon', label: 'Bixolon' },
     { id: 'hprt', label: 'HPRT' },
     { id: 'citizen', label: 'Citizen' },
-    { id: 'star', label: 'Star' },
+    { id: 'goojprt', label: 'Goojprt' },
+    { id: 'munbyn', label: 'Munbyn' },
+    { id: 'gainscha', label: 'Gainscha' },
+    { id: 'zjiang', label: 'Zjiang (ZJ)' },
+    { id: 'snbc', label: 'SNBC' },
+    { id: 'sprt', label: 'SPRT' },
+    { id: 'posiflex', label: 'Posiflex' },
+    { id: 'nexa', label: 'Nexa' },
+    { id: 'milestone', label: 'Milestone' },
+    /* First Kiwi client's hardware. WD8260 (reçus, 80 mm, USB + LAN) déclare
+     * "Command Support: ESC/POS" sur sa plaque, donc il marche tel quel, tiroir
+     * 24 V compris. WD8210 (étiquettes, 110 mm, USB + Bluetooth) ne déclare PAS
+     * son langage : beaucoup d'imprimantes d'étiquettes parlent TSPL et non
+     * ESC/POS. À vérifier par un ticket test avant de compter dessus. */
+    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué — beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.' },
+    { id: 'star', label: 'Star', note: 'Les Star impriment en mode Star Line, pas en ESC/POS. Activez l\'émulation ESC/POS sur l\'imprimante, sinon le ticket sortira illisible.' },
   ];
+  function modelNote(id) {
+    for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i].note || '';
+    return '';
+  }
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
@@ -146,7 +169,95 @@
     return step();
   }
 
-  // ── transport B: the network bridge (loopback helper → TCP printer) ──────────
+  // ── transport B: WebUSB (the printer plugged straight into the till) ─────────
+  // Both of the first client's printers are USB (WD8260 = USB+LAN, WD8210 =
+  // USB+Bluetooth), and a USB receipt printer is the most common setup in a
+  // small shop: no IP to type, no bridge to install, no pairing.
+  //
+  // USB printers expose interface class 7 (printer) with a bulk OUT endpoint —
+  // ESC/POS bytes go straight down it. The browser shows its own device picker
+  // (needs a user gesture) and remembers the grant per origin.
+  //
+  // Caveat worth knowing before promising this to a client: the OS may already
+  // own the device. macOS/Linux hand printer-class devices to CUPS, and Windows
+  // needs a WinUSB-flavoured driver. When claiming fails we say so and fall
+  // through to the other transports rather than dying.
+  var usb = { device: null, ep: 0, iface: 0, name: '' };
+  function usbSupported() { try { return !!(navigator.usb && navigator.usb.requestDevice); } catch (_) { return false; } }
+  function usbConnected() { return !!(usb.device && usb.device.opened && usb.ep); }
+
+  // Find a claimable printer-class interface with a bulk OUT endpoint.
+  function usbPickEndpoint(device) {
+    var cfg = device.configuration;
+    if (!cfg) return null;
+    for (var i = 0; i < cfg.interfaces.length; i++) {
+      var itf = cfg.interfaces[i];
+      for (var a = 0; a < itf.alternates.length; a++) {
+        var alt = itf.alternates[a];
+        // class 7 = printer. Some cheap units mis-declare as vendor-specific (0xFF),
+        // so those are accepted too when they carry a bulk OUT.
+        if (alt.interfaceClass !== 7 && alt.interfaceClass !== 0xFF) continue;
+        for (var e = 0; e < alt.endpoints.length; e++) {
+          var ep = alt.endpoints[e];
+          if (ep.direction === 'out' && ep.type === 'bulk') {
+            return { iface: itf.interfaceNumber, ep: ep.endpointNumber };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function connectUsb() {
+    if (!usbSupported()) return Promise.reject(new Error('no-webusb'));
+    return navigator.usb.requestDevice({ filters: [{ classCode: 7 }] })
+      .then(function (device) {
+        usb.device = device;
+        usb.name = [device.manufacturerName, device.productName].filter(Boolean).join(' ') || 'Imprimante USB';
+        return device.open();
+      })
+      .then(function () {
+        if (!usb.device.configuration) return usb.device.selectConfiguration(1);
+        return null;
+      })
+      .then(function () {
+        var pick = usbPickEndpoint(usb.device);
+        if (!pick) throw new Error('no-bulk-out');
+        usb.iface = pick.iface; usb.ep = pick.ep;
+        return usb.device.claimInterface(pick.iface);
+      })
+      .then(function () { return { ok: true, name: usb.name }; })
+      .catch(function (e) {
+        try { if (usb.device && usb.device.opened) usb.device.close(); } catch (_) {}
+        usb.device = null; usb.ep = 0;
+        throw e;
+      });
+  }
+
+  function disconnectUsb() {
+    try {
+      if (usb.device && usb.device.opened) {
+        usb.device.releaseInterface(usb.iface).catch(function () {}).then(function () {
+          try { usb.device.close(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
+    usb.device = null; usb.ep = 0;
+  }
+
+  // Chunked so a long ticket doesn't overrun a small printer buffer.
+  function usbWrite(bytes) {
+    if (!usbConnected()) return Promise.reject(new Error('usb-not-connected'));
+    var CH = 4096, i = 0;
+    function step() {
+      if (i >= bytes.length) return Promise.resolve();
+      var chunk = bytes.slice(i, i + CH); i += CH;
+      return usb.device.transferOut(usb.ep, chunk).then(step);
+    }
+    return step();
+  }
+
+  // ── transport C: the network bridge (loopback helper → TCP printer) ──────────
   function bridgePrintBytes(bytes) {
     var cfg = getConfig();
     if (!cfg.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
@@ -161,7 +272,7 @@
     }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
   }
 
-  // Route ESC/POS bytes to whichever printer is connected: Bluetooth first, else
+  // Route ESC/POS bytes to whichever printer is live: Bluetooth, then USB, then
   // the network bridge. Callers fail soft when this resolves { ok:false }.
   function printBytes(bytes) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
@@ -169,11 +280,15 @@
       return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
         function (e) { return { ok: false, reason: 'bt-' + ((e && e.message) || 'write-failed') }; });
     }
+    if (usbConnected()) {
+      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
+        function (e) { return { ok: false, reason: 'usb-' + ((e && e.message) || 'write-failed') }; });
+    }
     return bridgePrintBytes(bytes);
   }
 
-  // A printer is "connected" if Bluetooth is live OR the network bridge is set up.
-  function isConnected() { return btConnected() || isConfigured(); }
+  // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up.
+  function isConnected() { return btConnected() || usbConnected() || isConfigured(); }
 
   function printReceipt(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.receipt(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
   function printKitchen(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.kitchenTicket(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
@@ -249,6 +364,7 @@
     ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Connecter une imprimante');
     var opts = MODELS.map(function (m) { return '<option value="' + m.id + '"' + (m.id === cfg.model ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
     var btLive = btConnected();
+    var usbLive = usbConnected();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
     ov.innerHTML =
       '<div id="kpr-card">' +
@@ -268,6 +384,13 @@
           '<button class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' +
+        (usbSupported() ? '<div class="kpr-bt">' +
+          '<h3>Imprimante USB</h3>' +
+          '<p>Branchée en USB sur la caisse. Sans installation, sans adresse IP.</p>' +
+          '<div class="kpr-status ' + (usbLive ? 'on' : 'off') + '" id="kpr-usb-status"><span class="kpr-d"></span><span id="kpr-usb-status-t">' + (usbLive ? esc('Connectée · ' + usb.name) : 'Aucune imprimante USB connectée.') + '</span></div>' +
+          '<button class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
+          '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
+        '</div>' : '') +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
@@ -276,7 +399,8 @@
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
           '</div>' +
-          '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select></div>' +
+          '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
+            '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p></div>' +
           '<div class="kpr-actions">' +
             '<button class="kpr-btn kpr-test" type="button" id="kpr-test" disabled>Imprimer un ticket test</button>' +
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
@@ -352,6 +476,47 @@
       });
     });
 
+    // ── USB (WebUSB): same shape as Bluetooth, different transport ──
+    if ($('#kpr-usb-connect')) {
+      $('#kpr-usb-connect').addEventListener('click', function () {
+        var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = this;
+        btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Recherche…';
+        connectUsb().then(function (r) {
+          btn.disabled = false; btn.textContent = 'Changer d’imprimante';
+          st.className = 'kpr-status on'; t.textContent = 'Connectée · ' + (r.name || 'Imprimante USB');
+          $('#kpr-usb-test').disabled = false;
+          toast('Imprimante USB connectée');
+        }, function (e) {
+          btn.disabled = false; btn.textContent = orig; st.className = 'kpr-status off';
+          var m = (e && e.message) || '';
+          /* The honest failure here is "the operating system already owns this
+             printer" — macOS/Linux hand printer-class devices to CUPS and Windows
+             wants a WinUSB driver. Say that instead of a raw DOMException. */
+          if (/no-webusb/.test(m)) t.textContent = 'USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
+          else if (/cancel|NotFound|chooser|No device selected/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
+          else if (/no-bulk-out/.test(m)) t.textContent = 'Appareil trouvé mais ce n’est pas une imprimante USB standard.';
+          else if (/SecurityError|NotAllowed/i.test(m)) t.textContent = 'Accès USB refusé par le navigateur.';
+          else if (/access denied|claim|busy|InvalidState/i.test(m)) t.textContent = 'Imprimante déjà utilisée par le système. Retirez-la des imprimantes installées (ou utilisez le port réseau), puis réessayez.';
+          else t.textContent = 'Connexion impossible : ' + m;
+        });
+      });
+      $('#kpr-usb-test').addEventListener('click', function () {
+        var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
+        printBytes(window.KiwiEscPos.testSlip({ paper: getConfig().paper })).then(function (res) {
+          btn.textContent = orig; btn.disabled = !usbConnected();
+          toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + (res.reason || 'inconnu')));
+        });
+      });
+    }
+
+    // Model caveats (Star emulation, WD8210 language) surface as they're picked.
+    $('#kpr-model').addEventListener('change', function () {
+      var el = $('#kpr-model-note'); if (!el) return;
+      var n = modelNote(this.value);
+      el.textContent = n;
+      el.style.display = n ? '' : 'none';
+    });
+
     // ── Network bridge (advanced): test targets the bridge explicitly ──
     $('#kpr-test').addEventListener('click', function () {
       setConfig(readForm());
@@ -375,6 +540,7 @@
     getConfig: getConfig, setConfig: setConfig, isConfigured: isConfigured, isConnected: isConnected,
     ping: ping, printBytes: printBytes,
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
+    connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     openSetup: openSetup, BRIDGE_URL: BRIDGE_URL,
   };
