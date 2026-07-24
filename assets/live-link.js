@@ -55,11 +55,29 @@
     try {
       var q = new URLSearchParams(location.search).get('merchant');
       if (q) { try { localStorage.setItem('kiwiLiveMerchant', q); } catch (_) {} return q; }
-      // The signed-in identity (dashboard only — the caisse has no KiwiMe) is
-      // authoritative: prefer the merchant's OWN slug over any pinned
-      // kiwiLiveMerchant. This heals a stale pin a previous SAME-account test left
-      // behind (e.g. 'vix'), which F1's account-switch purge can't reach. The
-      // caisse has no KiwiMe, so it falls through to the pinned slug its pairing set.
+      // The ACTIVE STORE owns the tenant, not the account. One account can hold
+      // several stores (a boutique and a restaurant), and each has its own till,
+      // its own feed and its own money — but KiwiMe.business is a single
+      // account-level name, so deriving from it pointed every store on the account
+      // at ONE feed: a sale rung up on the boutique till surfaced in the
+      // restaurant's "Encaissé aujourd'hui". Slug the current store's own name,
+      // exactly as caisse-link.js currentBiz() does when it issues the pairing
+      // code — the two must agree or the till posts where the dashboard isn't
+      // listening. Falls through on the caisse (no KiwiVenue) and on demo venues.
+      var vd = null;
+      try {
+        var KV = window.KiwiVenue;
+        if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) vd = KV.getCurrentVenueData();
+      } catch (_) {}
+      if (vd && vd.name) {
+        var vs = slugify(vd.name);
+        if (vs) { try { localStorage.setItem('kiwiLiveMerchant', vs); } catch (_) {} return vs; }
+      }
+      // No store yet (fresh account, identity resolved but onboarding unfinished) —
+      // the account name is the best answer, and heals a stale pin a previous
+      // SAME-account test left behind (e.g. 'vix'), which F1's account-switch purge
+      // can't reach. The caisse has no KiwiMe, so it falls through to the pinned
+      // slug its pairing set.
       var me = window.KiwiMe;
       if (me && me.business) {
         var s = slugify(me.business);
@@ -208,6 +226,7 @@
   function watchFeed(onSales, intervalMs) {
     if (!on()) return function () {};
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
+    var lastTenant = null;
     var bound = [];
     function delay() {
       if (intervalMs) return intervalMs;
@@ -222,13 +241,18 @@
       if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
       busy = true; again = false;
       flushQueue();                            // this device may still owe the server a sale
-      fetch('/api/feed?merchant=' + encodeURIComponent(merchant()) + '&since=' + since, { headers: { Accept: 'application/json' } })
+      /* `since` is a per-tenant cursor. Switching store switches tenant, so a
+       * cursor carried over from the previous one would skip the new store's
+       * whole history — it starts again from the beginning of its own feed. */
+      var tenant = merchant();
+      if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
+      fetch('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since, { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (data) {
           if (!data) return;                   // network/gate failure → still the first batch
           if (Array.isArray(data.sales) && data.sales.length) {
             since = data.cursor || since;
-            try { onSales(data.sales, backfill); } catch (_) {}
+            try { onSales(data.sales, backfill, tenant); } catch (_) {}
           }
           // Only a real answer retires "backfill": the first successful poll
           // replays everything already banked today, which must not be announced
@@ -306,24 +330,36 @@
    * dropped, or a stale/other id) and never reach the venue the dashboard reads.
    * So we accumulate every feed sale for the session and re-run the (idempotent,
    * cursor-deduped) bridge BOTH on each poll AND on every KiwiVenue change — the
-   * moment the venue becomes the real one, the whole backlog lands in its store. */
+   * moment the venue becomes the real one, the whole backlog lands in its store.
+   *
+   * The backlog is TENANT-STAMPED. On a multi-store account the merchant slug
+   * changes when the owner switches store, and this accumulator outlives the
+   * switch — replaying it blind poured the boutique's whole day into the
+   * restaurant's store the moment the restaurant was opened. Each entry now
+   * carries the merchant it was polled from, and only matching entries bridge. */
   var feedSales = [];   // every sale the feed has returned this session
-  var feedSeen = {};    // cursor -> 1 (dedup accumulation across polls)
-  function accumulateFeed(sales) {
+  var feedSeen = {};    // merchant + '#' + cursor -> 1 (dedup across polls)
+  function accumulateFeed(sales, tenant) {
     (sales || []).forEach(function (s) {
       var cur = Number(s && s.cursor) || 0;
-      if (!cur || feedSeen[cur]) return;
-      feedSeen[cur] = 1;
-      feedSales.push(s);
+      if (!cur) return;
+      var k = tenant + '#' + cur;
+      if (feedSeen[k]) return;
+      feedSeen[k] = 1;
+      feedSales.push({ s: s, tenant: tenant });
     });
   }
   function bridgeToStore() {
     var KV = window.KiwiVenue;
     if (!KV || !KV.isCustom || !KV.isCustom() || !window.KiwiSales || !window.KiwiSales.add) return;
     var vid = (KV.getVenue && KV.getVenue()) || null;
+    var tenant = merchant();
+    if (!tenant) return;                            // identity unresolved → bridge nothing
     var have = {};
     try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = 1; }); } catch (_) {}
-    feedSales.forEach(function (s) {
+    feedSales.forEach(function (row) {
+      if (row.tenant !== tenant) return;             // another store's money — never this one's
+      var s = row.s;
       var cur = Number(s.cursor) || 0;
       if (!cur || have[cur]) return;                // no cursor, or already stored → skip
       var amt = Math.round(s.amount) || 0;
@@ -340,8 +376,8 @@
     if (!on() || pumping) return;
     pumping = true;
     flushQueue();             // a sale this device banked offline, still owed to the server
-    watchFeed(function (sales, backfill) {
-      accumulateFeed(sales);
+    watchFeed(function (sales, backfill, tenant) {
+      accumulateFeed(sales, tenant);
       bridgeToStore();        // ← this is what moves the dashboard's real numbers
       if (!backfill) sales.forEach(notifySale);
     });
