@@ -404,3 +404,64 @@ Apply with:
 ```sql
 -- the menus + orders blocks from schema.sql, verbatim
 ```
+
+---
+
+## Pass 3 — 24 Jul 2026, night (cache v68 → v69)
+
+Swept the surfaces no live test had ever opened: **Paie & planning**, **Réservations
+& RDV**, **Dépenses & cartes** on the dashboard, and **Échanges & avoirs**,
+**Clientes**, **Scan** in the boutique caisse. Driven as a real paired store
+("Test Boutique · Casablanca"), never as the demo.
+
+### ✅ #33 — Paie & planning hid the staff you had hired  (FIXED, by the partner)
+A merchant with two people on the roster opened Paie and read "Encore rien ici, et
+c'est normal." venues.js already built that page from the Équipe roster. The
+starter gate intercepted it — the same shape as #24 (Conformité/Stock/Finance).
+Found independently on both sides within minutes; the partner's `b8a5dff` moved
+the page into team.js and it is strictly better than my patch (period band, hours
+grid, and a real empty state). Mine was withdrawn in `6ab3f20`.
+
+### ✅ #34 — a real boutique printed the demo's initials on every receipt  (FIXED)
+`MM-` is Maison Mansour, the pitch boutique. A real store's very first ticket
+printed **MM-1208** — another business's initials and a fabricated starting
+number. Real stores now take their own initials and start at 1 (`TB-1`);
+`restoreDay()` already stripped any prefix, so resumed counters still work.
+
+### ✅ #35 — Échanges & avoirs opened on a failed search nobody ran  (FIXED)
+With no sale yet today the page rendered « Rien pour «  », vérifiez le n° de
+ticket ou le téléphone » — a not-found error before the cashier had typed
+anything. It now asks for the ticket or the phone, and only reports "rien" once
+something was actually searched.
+
+### Checked and found CORRECT (no change made)
+- **Dépenses & cartes** — a real store gets the honest Phase-2 teaser, not Café
+  Atlas's 248 600 MAD. `depenses.js` already branches.
+- **Réservations & RDV** — correctly left on the starter: the module is still
+  demo-only (it keeps Café Atlas's 38 couverts even when the venue name changes).
+- **Clientes (caisse)** — the tab is deliberately redirected to the shared Carnet
+  clients by `clients-book.js` (one client book across every vertical). Working as
+  designed; `renderClientes()` in pos-boutique.js is now dead code.
+- **Scan (caisse)** — correct empty state, no demo leak.
+
+### Two false positives worth recording, so the next sweep doesn't re-raise them
+- **"Bonjour Rachid · Café Atlas" on a real store.** Gated by `isRealSession()`,
+  which is false on the local static server (no `/api/me`), so `neutralize()`
+  no-ops there. Hosted sessions are patched. Same for the venue picker listing the
+  three demo venues — filtered by `kiwiOnboarded` / `demosAllowed`.
+- **"The Carnet opens invisible and bricks the till."** `#kcb-root` really does sit
+  at `opacity: 0`, full-screen, `z-index: 940` — but only because the test tab is
+  backgrounded: `visibilityState: hidden`, rAF never fires, so the `kcb-fade`
+  keyframe never advances past `from`. Any CSS-animated reveal looks broken under
+  this harness. Check `document.visibilityState` before believing one.
+
+### #32 — OrderPro tables: now actively blocking, not merely dormant
+Re-checked the live D1 tonight — still `accounts · merchant_config · operators ·
+pair_attempts · pairings · sales · staff_pins`. No `menus`, no `orders`.
+
+This stopped being dormant. The partner's `c1cafcb` fixes the *publisher* so it
+finally fires (it was giving up before venues.js settled). `POST /api/menu` then
+runs `INSERT INTO menus …`, which is wrapped in a `catch` returning
+`{"error":"write-failed"}` **500**. So every publish from that new code path now
+fails server-side. Still the partner's call to apply, but the cost of waiting
+changed.
