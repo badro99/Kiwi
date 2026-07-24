@@ -25,7 +25,7 @@
   'use strict';
 
   var BRIDGE_URL = 'http://127.0.0.1:9110';
-  var BRIDGE_DOWNLOAD = 'https://github.com/badro99/Kiwi/releases/latest';
+  var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
   // Thermal-printer brands common with Moroccan merchants. All are ESC/POS-
   // compatible, so they share the generic encoder — the choice is for the owner's

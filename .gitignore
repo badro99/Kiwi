@@ -34,3 +34,6 @@ npm-debug.log*
 
 # Agent scratch file (machine-local, not part of the shipped project)
 AGENTS.md
+
+# Kiwi Printer Bridge build artifacts (published to GitHub Releases)
+bridge/dist/

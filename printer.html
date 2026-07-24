@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Kiwi · Pont d'impression</title>
+<style>
+  :root{
+    --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
+    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e7e3da; --muted:#5d6b63; --surface:#fff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 600px at 50% -12%, rgba(125,242,176,.18), transparent 60%), var(--paper);
+    color:var(--ink); font:16px/1.6 'Inter Tight', system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  .wrap{max-width:620px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin:8px 0 4px}
+  .brand .k{width:34px;height:34px;border-radius:10px;background:var(--riad);display:grid;place-items:center;color:var(--mint);font-weight:800;font-size:20px;line-height:1}
+  h1{font-size:1.75rem;letter-spacing:-.02em;text-align:center;margin:6px 0 4px}
+  .lede{text-align:center;color:var(--muted);margin:0 auto 26px;max-width:440px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin:0 0 16px;box-shadow:0 20px 50px -34px rgba(5,59,44,.4)}
+  .status{display:flex;align-items:flex-start;gap:12px;padding:15px 17px;border-radius:14px;font-size:.92rem;line-height:1.45;margin:0 0 18px}
+  .status .dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px}
+  .status.off{background:#fbeceb;border:1px solid #f2cdc8;color:#8f2c1e}
+  .status.off .dot{background:#c0392b;box-shadow:0 0 0 4px rgba(192,57,43,.14)}
+  .status.on{background:#e7f6ee;border:1px solid #bfe6cf;color:#0B6E4F}
+  .status.on .dot{background:var(--atlas);box-shadow:0 0 0 4px rgba(11,110,79,.16)}
+  .status b{font-weight:700}
+  .recheck{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;margin-left:2px}
+  .step{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--atlas);margin:0 0 10px}
+  h2{font-size:1.06rem;margin:0 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .dl{display:inline-flex;align-items:center;justify-content:center;gap:9px;width:100%;background:var(--atlas);color:#fff;font-weight:700;padding:15px 18px;border-radius:13px;text-decoration:none;border:0;cursor:pointer;font-size:1rem}
+  .dl:hover{filter:brightness(1.06)}
+  .others{margin:12px 0 0;font-size:.9rem;color:var(--muted);text-align:center}
+  .others a{color:var(--atlas);font-weight:600;text-decoration:none}
+  .others a:hover{text-decoration:underline}
+  ol.run{margin:0;padding-left:20px}
+  ol.run li{margin:0 0 9px}
+  code,.mono{font-family:'JetBrains Mono', ui-monospace, monospace;font-size:.86em;background:rgba(11,110,79,.08);border:1px solid rgba(11,110,79,.14);padding:2px 6px;border-radius:6px;word-break:break-all}
+  .os-tabs{display:flex;gap:8px;margin:0 0 16px}
+  .os-tab{flex:1;font:inherit;font-weight:700;font-size:.85rem;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+  .os-tab.on{border-color:var(--atlas);color:var(--atlas);background:rgba(11,110,79,.05)}
+  .os-body{display:none}.os-body.on{display:block}
+  .foot{text-align:center;color:var(--muted);font-size:.82rem;margin:22px auto 0;max-width:460px;line-height:1.5}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand"><span class="k">k</span><strong>Kiwi</strong></div>
+    <h1>Pont d'impression</h1>
+    <p class="lede">Imprimez reçus, tickets cuisine et étiquettes code-barres sur votre imprimante thermique réseau, directement depuis Kiwi.</p>
+
+    <div class="card">
+      <div class="status off" id="status"><span class="dot"></span><span id="status-t">Recherche du pont sur cet ordinateur…</span></div>
+
+      <div class="step">Qu'est-ce que c'est ?</div>
+      <p class="muted">Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur — aucune donnée ne sort de votre machine.</p>
+    </div>
+
+    <div class="card">
+      <div class="step">1 · Télécharger</div>
+      <a class="dl" id="dl-primary" href="#" download>Télécharger pour Windows</a>
+      <p class="others">Autres plateformes ·
+        <a id="dl-win"   href="#" download>Windows</a> ·
+        <a id="dl-mac"   href="#" download>macOS</a> ·
+        <a id="dl-linux" href="#" download>Linux</a>
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="step">2 · Lancer</div>
+      <div class="os-tabs">
+        <button class="os-tab" data-os="win">Windows</button>
+        <button class="os-tab" data-os="mac">macOS</button>
+        <button class="os-tab" data-os="linux">Linux</button>
+      </div>
+      <div class="os-body" data-os="win">
+        <ol class="run">
+          <li>Double-cliquez le fichier téléchargé <code>kiwi-printer-bridge-win.exe</code>.</li>
+          <li>Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. L'application est sûre — elle n'est simplement pas signée.</li>
+          <li>Laissez la fenêtre ouverte. Pour un lancement automatique au démarrage : <span class="mono">Win + R</span> → tapez <code>shell:startup</code> → déposez-y le <code>.exe</code> (ou un raccourci).</li>
+        </ol>
+      </div>
+      <div class="os-body" data-os="mac">
+        <ol class="run">
+          <li>Ouvrez le <b>Terminal</b> (Spotlight → « Terminal »).</li>
+          <li>Copiez-collez cette ligne puis Entrée :<br><code>chmod +x ~/Downloads/kiwi-printer-bridge-macos && xattr -dr com.apple.quarantine ~/Downloads/kiwi-printer-bridge-macos; ~/Downloads/kiwi-printer-bridge-macos</code></li>
+          <li>Laissez cette fenêtre ouverte. (Sur Mac Apple Silicon, macOS peut proposer d'installer Rosetta — acceptez, un clic.)</li>
+        </ol>
+      </div>
+      <div class="os-body" data-os="linux">
+        <ol class="run">
+          <li>Dans un terminal :<br><code>chmod +x ~/Downloads/kiwi-printer-bridge-linux && ~/Downloads/kiwi-printer-bridge-linux</code></li>
+          <li>Laissez le terminal ouvert tant que vous imprimez.</li>
+        </ol>
+      </div>
+    </div>
+
+    <p class="foot">Une fois lancé, revenez dans Kiwi → « Connecter une imprimante » → saisissez l'adresse IP de votre imprimante et lancez un ticket test. Le voyant passe au vert.</p>
+  </main>
+
+  <script>
+  (function(){
+    var BASE = 'https://github.com/badro99/Kiwi/releases/latest/download/';
+    var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos', linux: 'kiwi-printer-bridge-linux' };
+    var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux' };
+    function $(s){ return document.querySelector(s); }
+
+    document.getElementById('dl-win').href   = BASE + FILES.win;
+    document.getElementById('dl-mac').href   = BASE + FILES.mac;
+    document.getElementById('dl-linux').href = BASE + FILES.linux;
+
+    function detectOS(){
+      var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+      var ua = navigator.userAgent || '';
+      if (/Mac/i.test(p) || /Mac OS X/i.test(ua)) return 'mac';
+      if (/Linux/i.test(p) && !/Android/i.test(ua)) return 'linux';
+      return 'win';
+    }
+    var os = detectOS();
+    var prim = document.getElementById('dl-primary');
+    prim.href = BASE + FILES[os];
+    prim.setAttribute('download', '');
+    prim.textContent = 'Télécharger pour ' + LABEL[os];
+
+    // OS tabs for the "Lancer" instructions
+    function selectOs(o){
+      Array.prototype.forEach.call(document.querySelectorAll('.os-tab'), function(t){ t.classList.toggle('on', t.getAttribute('data-os') === o); });
+      Array.prototype.forEach.call(document.querySelectorAll('.os-body'), function(b){ b.classList.toggle('on', b.getAttribute('data-os') === o); });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.os-tab'), function(t){ t.addEventListener('click', function(){ selectOs(t.getAttribute('data-os')); }); });
+    selectOs(os);
+
+    // Live bridge detection — turns the status card green once the bridge is up.
+    function ping(){
+      var c = new AbortController(); var to = setTimeout(function(){ c.abort(); }, 1500);
+      return fetch('http://127.0.0.1:9110/kiwi/ping', { signal: c.signal, cache: 'no-store' })
+        .then(function(r){ clearTimeout(to); return r.ok ? r.json() : null; })
+        .then(function(j){ return (j && j.ok) ? j : null; })
+        .catch(function(){ clearTimeout(to); return null; });
+    }
+    var st = $('#status'), stt = $('#status-t');
+    function render(j){
+      if (j){ st.className = 'status on'; stt.innerHTML = 'Pont connecté sur cet ordinateur · v' + (j.version || '?') + '. Tout est prêt.'; }
+      else { st.className = 'status off'; stt.innerHTML = 'Pont non détecté sur cet ordinateur. Téléchargez-le et lancez-le ci-dessous — ce voyant passe au vert une fois lancé. <button type="button" class="recheck" id="recheck">Revérifier</button>';
+        var rc = document.getElementById('recheck'); if (rc) rc.addEventListener('click', function(){ stt.textContent = 'Nouvelle vérification…'; check(); }); }
+    }
+    function check(){ return ping().then(render); }
+    check();
+    setInterval(check, 4000);
+  })();
+  </script>
+</body>
+</html>
