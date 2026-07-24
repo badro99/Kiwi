@@ -45,13 +45,18 @@
     try {
       var q = new URLSearchParams(location.search).get('merchant');
       if (q) { try { localStorage.setItem('kiwiLiveMerchant', q); } catch (_) {} return q; }
-      var pinned = localStorage.getItem('kiwiLiveMerchant');
-      if (pinned) return pinned;
+      // The signed-in identity (dashboard only — the caisse has no KiwiMe) is
+      // authoritative: prefer the merchant's OWN slug over any pinned
+      // kiwiLiveMerchant. This heals a stale pin a previous SAME-account test left
+      // behind (e.g. 'vix'), which F1's account-switch purge can't reach. The
+      // caisse has no KiwiMe, so it falls through to the pinned slug its pairing set.
       var me = window.KiwiMe;
       if (me && me.business) {
         var s = slugify(me.business);
         if (s) { try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {} return s; }
       }
+      var pinned = localStorage.getItem('kiwiLiveMerchant');
+      if (pinned) return pinned;
       var real = false;
       try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
       return real ? '' : 'cafe-atlas';
