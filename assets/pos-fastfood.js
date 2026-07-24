@@ -299,7 +299,13 @@
 
   /* le service en chiffres — vit avec chaque vente (coup de feu + caisse) */
   /* invariant tenu : especes + carte + glovo + soldes dus = revenue */
-  const tally = {
+  const tally = pvReal() ? {
+    orders: 0, revenue: 0, menus: 0, especes: 0, carte: 0, glovo: 0, items: {},
+    hours: [
+      { t: '10h', n: 0 }, { t: '10h30', n: 0 }, { t: '11h', n: 0 }, { t: '11h30', n: 0 },
+      { t: '12h', n: 0 }, { t: '12h30', n: 0 }, { t: '13h', n: 0, now: true },
+    ],
+  } : {
     orders: 46,
     revenue: 2530,
     menus: 29,
@@ -321,9 +327,9 @@
   /* ───────────────────────── state ───────────────────────── */
   const state = {
     view: 'vente',
-    seq: 47,                 /* prochain numéro de commande */
+    seq: pvReal() ? 1 : 47,  /* prochain numéro de commande */
     ticket: null,
-    lastCalled: 42,
+    lastCalled: pvReal() ? 0 : 42,
     offline: false,
     queued: 0,
   };

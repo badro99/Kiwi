@@ -142,12 +142,15 @@
   ];
 
   /* recette du jour (agrégat — inclut la file déjà encaissée) */
-  const recette = {
+  const recette = pvReal() ? {
+    marina:  { orders: 0, especes: 0, carte: 0 },
+    achakar: { orders: 0, especes: 0, carte: 0 },
+  } : {
     marina:  { orders: 26, especes: 1386, carte: 400 },
     achakar: { orders: 0,  especes: 0,    carte: 0 },
   };
-  const sold = { burger: 18, tacos: 9, hotdog: 7, frites: 21, jus: 14, the: 11, limonada: 8, msemen: 5 };
-  const HIER_TOTAL = 3120;
+  const sold = pvReal() ? {} : { burger: 18, tacos: 9, hotdog: 7, frites: 21, jus: 14, the: 11, limonada: 8, msemen: 5 };
+  const HIER_TOTAL = pvReal() ? 0 : 3120;
 
   const state = {
     view: 'vente',

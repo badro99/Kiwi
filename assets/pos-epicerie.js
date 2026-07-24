@@ -262,7 +262,7 @@
   /* ───────────────────────── journée (recette du jour, seed mid-shift) ─────
      Il est ~17h : la recette tourne déjà. On garde un agrégat réaliste + on y
      ajoute en direct les ventes que l'utilisateur encaisse pendant la démo. */
-  const day = {
+  const day = pvReal() ? { especes: 0, carte: 0, creditAdded: 0, tickets: 0, top: [] } : {
     especes: 1840,
     carte: 720,
     creditAdded: 90,        /* mis à l'ardoise aujourd'hui */

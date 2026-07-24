@@ -204,8 +204,8 @@
     view: 'comptoir',
     cat: 'tous',
     ticket: [],                       /* [{prodId, qty}] */
-    seq: 90,                          /* prochain ticket T-090 */
-    day: { especes: 530.5, carte: 81.5, tickets: 89, gateaux: 0 },
+    seq: pvReal() ? 1 : 90,           /* prochain ticket T-090 */
+    day: pvReal() ? { especes: 0, carte: 0, tickets: 0, gateaux: 0 } : { especes: 530.5, carte: 81.5, tickets: 89, gateaux: 0 },
     lastHour: false,
     invAdjust: {},                    /* prodId → invendus comptés (défaut = stock) */
     donForm: { assoc: null, note: '' },

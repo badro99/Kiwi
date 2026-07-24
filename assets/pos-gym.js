@@ -184,7 +184,10 @@
      Le club entier dépasse les 10 membres nommés (échantillon) : base ~247.
      Les compteurs « du jour » sont seedés mid-shift puis montent en live à
      chaque vente — la démo respire. */
-  const CLUB = {
+  const CLUB = pvReal() ? {
+    activeBase: 0, newThisMonth: 0, churnThisMonth: 0, mrr: 0, capacity: 120,
+    attend7: [0, 0, 0, 0, 0, 0, 0], mix: [],
+  } : {
     activeBase: 247,
     newThisMonth: 18,
     churnThisMonth: 6,
@@ -260,9 +263,9 @@
     memberQuery: '',
     offline: false, queued: 0,
     /* recette du jour (seedée mid-shift, monte en live à chaque vente) */
-    dayRevenue: { abos: 3150, shop: 740, coaching: 600, pass: 160 },
-    inGym: 38,                 /* présents dans la salle maintenant */
-    passesToday: 3,            /* séances uniques / pass journée vendus */
+    dayRevenue: pvReal() ? { abos: 0, shop: 0, coaching: 0, pass: 0 } : { abos: 3150, shop: 740, coaching: 600, pass: 160 },
+    inGym: pvReal() ? 0 : 38,  /* présents dans la salle maintenant */
+    passesToday: pvReal() ? 0 : 3,   /* séances uniques / pass journée vendus */
   };
 
   const addRevenue = (bucket, amount) => { state.dayRevenue[bucket] = (state.dayRevenue[bucket] || 0) + amount; };
