@@ -709,7 +709,20 @@
 
   /* ── Auto-launch decision ────────────────────────────────────────────── */
   function hasCustomVenue() {
-    try { return !!(window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom()); } catch (_) { return false; }
+    try {
+      if (!(window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom())) return false;
+      // The synthetic 'own' placeholder venue (venues.js ensureOwnEmptyVenue) makes
+      // isCustom() true for EVERY authenticated merchant from the first paint — it is
+      // created precisely so demo surfaces zero out, and its own comment notes "the
+      // onboarding CTA can still show". Reusing isCustom() as "already has a venue"
+      // wrongly denies a BRAND-NEW merchant the setup wizard, stranding them on the
+      // PIN lock with no valid code (fresh signup → dashboard gate, no onboarding).
+      // Ignore 'own' here; only a GENUINE user-created venue suppresses auto-launch.
+      // ('scoped' = operator God-mode → keep suppressing so the wizard never opens in
+      // the operator's face.)
+      var v = (KiwiVenue.getVenue && KiwiVenue.getVenue()) || '';
+      return v !== 'own';
+    } catch (_) { return false; }
   }
   function shouldAutoLaunch() {
     const q = new URLSearchParams(location.search);
