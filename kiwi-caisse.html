@@ -5343,7 +5343,10 @@
     // A REAL / paired store opens with an EMPTY floor — every table free (khawya),
     // no demo occupancy or timers. KiwiEnv loads before this script, so isReal() is
     // ready here; the local demo (unpaired localhost) keeps its mid-service floor.
-    try { if (storeIsReal()) Object.keys(tables).forEach((k) => { tables[k].status = 'khawya'; tables[k].elapsed = 0; }); } catch (_) {}
+    // Also drop the demo server assignment: otherwise the floor paints a section
+    // avatar (MK / KB / SL — Mehdi K. / Karim B. / Sofia L.) on every empty table,
+    // and applyStoreIdentity's roster rename can't reach the already-rendered DOM.
+    try { if (storeIsReal()) Object.keys(tables).forEach((k) => { tables[k].status = 'khawya'; tables[k].elapsed = 0; tables[k].server = null; }); } catch (_) {}
 
     /* ---------- Mock orders per table ---------- */
     /* T2 hand-spec'd. Others generated from a small menu so the demo doesn't break. */
@@ -7871,6 +7874,13 @@
       const tx = document.getElementById('stat-txns'); if (tx) tx.textContent = '0';
       const txd = document.getElementById('stat-txns-delta'); if (txd) txd.textContent = 'Carte 0% · Cash 0%';
       try { if (typeof renderShiftStats === 'function') renderShiftStats(); } catch (_) {}
+      // Static demo defaults inside modals (server-row, message-target, and the
+      // clôture card "Café Atlas · Othmane N.") — shown before their render fns
+      // run. Neutralize to the real store / generic staff.
+      const rpsn = document.getElementById('rp-server-name'); if (rpsn) rpsn.textContent = 'Serveur';
+      const mtn  = document.getElementById('msg-target-name'); if (mtn) mtn.textContent = 'Serveur';
+      const clo  = document.getElementById('clo-meta');
+      if (clo) clo.textContent = (storeName() || '') + ' · ' + (currentCashier && currentCashier.name || 'Caissier');
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyStoreIdentity);
     else applyStoreIdentity();
