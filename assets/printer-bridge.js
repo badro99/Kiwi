@@ -27,6 +27,22 @@
   var BRIDGE_URL = 'http://127.0.0.1:9110';
   var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
+
+  /* Roll widths come from the encoder (window.KiwiEscPos.paperWidths) so the list
+   * the owner picks from and the list the encoder can actually lay out stay the
+   * same list. escpos.js loads alongside this file, but the fallback keeps the
+   * settings panel usable if it ever doesn't. */
+  var PAPER_FALLBACK = [
+    { value: '80', label: '80 mm (standard)' },
+    { value: '58', label: '58 mm' },
+  ];
+  function paperOptions(sel) {
+    var list = (window.KiwiEscPos && window.KiwiEscPos.paperWidths) || PAPER_FALLBACK;
+    var cur = String(sel || '80');
+    return list.map(function (p) {
+      return '<option value="' + p.value + '"' + (cur === p.value ? ' selected' : '') + '>' + p.label + '</option>';
+    }).join('');
+  }
   // Thermal-printer brands common with Moroccan merchants. All are ESC/POS-
   // compatible, so they share the generic encoder — the choice is for the owner's
   // confidence (and future per-brand tuning). "Générique" stays the safe default.
@@ -258,7 +274,7 @@
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
-            '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper"><option value="80"' + (cfg.paper === '80' ? ' selected' : '') + '>80 mm (standard)</option><option value="58"' + (cfg.paper === '58' ? ' selected' : '') + '>58 mm</option></select></div>' +
+            '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
           '</div>' +
           '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select></div>' +
           '<div class="kpr-actions">' +

@@ -86,7 +86,18 @@
   Builder.prototype.bytes = function () { return new Uint8Array(this._); };
 
   // ── helpers ────────────────────────────────────────────────────────────────
-  function cols(paper) { return String(paper) === '58' ? 32 : 48; }
+  /* Character columns per roll width, Font A (12 dots wide). These are the widths
+   * actually sold for POS in Morocco, plus the impact/kitchen sizes:
+   *   44 mm  → 24  small label / parking-style rolls
+   *   57 mm  → 32  the SAME roll as 58 mm — suppliers label it either way, so
+   *   58 mm  → 32  both are offered rather than making the owner guess
+   *   76 mm  → 40  dot-matrix kitchen printers (Epson TM-U220 and friends)
+   *   80 mm  → 48  the standard thermal receipt roll
+   *   112 mm → 64  wide report rolls (conservative; some heads do 69)
+   * Anything unknown falls back to 48 so a bad value can never produce a garbled
+   * ticket — it just prints as standard 80 mm. */
+  var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '112': 64 };
+  function cols(paper) { return COLS[String(paper)] || 48; }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
     var w = cols(paper);
@@ -177,5 +188,16 @@
     kitchenTicket: kitchenTicket,
     label: label,
     testSlip: testSlip,
+    /* Single source of truth for the settings dropdown, so the widths the owner
+     * can pick and the widths the encoder knows how to lay out can never drift. */
+    paperWidths: [
+      { value: '80', label: '80 mm (standard)' },
+      { value: '58', label: '58 mm' },
+      { value: '57', label: '57 mm' },
+      { value: '76', label: '76 mm (matricielle / cuisine)' },
+      { value: '112', label: '112 mm (large)' },
+      { value: '44', label: '44 mm (étiquettes)' },
+    ],
+    paperCols: cols,
   };
 })();
