@@ -392,7 +392,9 @@ of their sales list.
 accounts · merchant_config · operators · pairings · sales · staff_pins · pair_attempts
 ```
 
-`GET /api/menu?merchant=…` answers `{"menu":null,"orderpro":false}` — it fails
+**RESOLVED 24 Jul, night — tables applied to the live D1 on the owner's go-ahead.**
+
+`GET /api/menu?merchant=…` answered `{"menu":null,"orderpro":false}` — it fails
 soft, so a customer who taps an NFC tag reaches the page (fixed in 890584c) and
 finds an empty carte instead of an error. Nothing can be published and no order
 can be stored. NOT provisioned unilaterally: these tables belong to the partner's
@@ -465,3 +467,17 @@ runs `INSERT INTO menus …`, which is wrapped in a `catch` returning
 `{"error":"write-failed"}` **500**. So every publish from that new code path now
 fails server-side. Still the partner's call to apply, but the cost of waiting
 changed.
+
+### ✅ #32 — RESOLVED, 24 Jul night
+Applied to the live D1 on the owner's explicit go-ahead: the `menus` and `orders`
+blocks from `schema.sql` verbatim, plus `idx_orders_merchant`. Confirmed present:
+
+```
+sqlite_master → idx_orders_merchant · menus · orders
+```
+
+**Not yet proven end-to-end.** Publishing needs an authenticated merchant session,
+which this sweep could not create, and `GET /api/menu` fails soft either way
+(`{"menu":null}` whether or not the table exists) — so the 200 it returns proves
+nothing on its own. Someone signed in should press "publier" once and check a row
+lands: `SELECT merchant, type, updated_ts FROM menus;`
