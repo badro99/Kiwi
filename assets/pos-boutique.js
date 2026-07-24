@@ -458,7 +458,17 @@
        uses the real store's own catalogue — the same per-venue key the dashboard
        writes — so a real boutique shows its real stock. Unpaired demo (PIN 0002)
        stays Maison Mansour. When either side edits the inventory, rebuild. */
-    if (window.KiwiBoutiqueCatalog) window.KiwiBoutiqueCatalog.use(window.__kiwiPairedBoutiqueVenue || 'maisonMansour');
+    if (window.KiwiBoutiqueCatalog) {
+      /* A real/paired store keys its OWN catalogue (venueId, else the merchant slug —
+         the identity spine) and NEVER falls back to the Maison Mansour demo, even when
+         the pairing record carries no venueId (a non-custom merchant). Only the unpaired
+         local demo (PIN 0002) stays on Maison Mansour. */
+      var _bqPv = pvPaired();
+      var _bqKey = window.__kiwiPairedBoutiqueVenue
+        || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
+        || (pvReal() ? 'boutique-live' : 'maisonMansour');
+      window.KiwiBoutiqueCatalog.use(_bqKey);
+    }
     rebuildCatalog();
     injectInvCss();
     if (window.KiwiBoutiqueCatalog && !mount._subbed) {

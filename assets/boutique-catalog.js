@@ -102,6 +102,15 @@
 
   function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0 }; }
 
+  // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
+  // only. A real signed-in / hosted merchant or a paired till must never inherit
+  // it — not even if the active venue key resolves to the demo store.
+  function hostedOrPaired() {
+    try {
+      return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
+        || (localStorage.getItem('kiwiPaired') === '1');
+    } catch (e) { return false; }
+  }
   function load() {
     if (db) return db;
     let raw = null;
@@ -111,7 +120,7 @@
     }
     if (!db || !db.products) {
       db = blank();
-      if (VENUE === DEMO_VENUE) seed();   // only the demo store is pre-filled; new boutiques start empty
+      if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
     }
     return db;
