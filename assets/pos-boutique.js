@@ -434,6 +434,9 @@
               <i data-lucide="scan-line"></i>
               <input id="bq-sell-ean" placeholder="Scannez un code-barres pour l'ajouter au ticket…" autocomplete="off" />
               <span class="bq-sell-scan-tag">Entrée</span>
+              ${pvReal() && camSupported()
+                ? `<button class="bq-sell-cam" id="bq-sell-cam" title="Scanner avec la caméra" aria-label="Scanner avec la caméra"><i data-lucide="camera"></i></button>`
+                : ''}
             </div>
             <div class="bq-cats" id="bq-cats"></div>
             <div class="bq-grid-scroll" id="bq-gridwrap"></div>
@@ -474,6 +477,9 @@
       sellEan.value = '';
       if (v) commitEan(v);
     });
+    /* Même barre, sans douchette : la caméra dépose l'article sur le ticket. */
+    const sellCam = $('#bq-sell-cam', root);
+    if (sellCam) sellCam.onclick = () => openCamScan(commitEan);
 
     /* live catalogue → the sale grid, the sheet and the douchette track the DB.
        A PAIRED caisse (assets/caisse-pairing.js sets __kiwiPairedBoutiqueVenue)
@@ -1209,6 +1215,151 @@
       </div>`;
   }
 
+  /* ── Caméra : lecture RÉELLE d'un code-barres ──────────────────────────────
+     La douchette USB n'a jamais eu besoin de code : c'est un clavier, elle tape
+     dans le champ et valide par Entrée. Ce qui manquait, c'est de pouvoir
+     scanner SANS douchette, avec le téléphone ou la tablette qui sert de caisse.
+     Zéro dépendance et zéro build : l'API navigateur BarcodeDetector décode
+     directement le flux getUserMedia. Elle n'existe pas partout (Chrome
+     Android / macOS / ChromeOS oui, Safari iOS non) : quand elle manque on le
+     dit franchement plutôt que d'ouvrir une caméra qui ne déchiffrerait rien. */
+  const CAM_WANT = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code'];
+  function camSupported() {
+    try { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.BarcodeDetector); }
+    catch (_) { return false; }
+  }
+  /* Bip court : la caissière doit ENTENDRE que ça a mordu sans quitter le client
+     des yeux — c'est ce que fait une vraie douchette. */
+  function camBlip() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        const ac = new AC();
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'square';
+        o.frequency.value = 2100;
+        g.gain.setValueAtTime(0.05, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.12);
+        o.connect(g); g.connect(ac.destination);
+        o.start(); o.stop(ac.currentTime + 0.13);
+        setTimeout(() => { try { ac.close(); } catch (_) {} }, 320);
+      }
+    } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(35); } catch (_) {}
+  }
+
+  let camBusy = false;
+  function openCamScan(onCode) {
+    if (camBusy) return;
+    if (!camSupported()) {
+      toast('Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code');
+      return;
+    }
+    camBusy = true;
+    const veil = document.createElement('div');
+    veil.className = 'bq-cam';
+    veil.innerHTML = `
+      <div class="bq-cam-box">
+        <video class="bq-cam-video" playsinline muted></video>
+        <div class="bq-cam-frame"><i></i><i></i><i></i><i></i><div class="bq-cam-laser"></div></div>
+        <div class="bq-cam-bar">
+          <div class="bq-cam-hint" id="bq-cam-hint">Placez le code-barres dans le cadre</div>
+          <div class="bq-cam-acts">
+            <button class="bq-cam-btn" id="bq-cam-torch" hidden>Lampe</button>
+            <button class="bq-cam-btn is-close" id="bq-cam-close">Fermer</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(veil);
+    const video = $('.bq-cam-video', veil);
+    const hint = $('#bq-cam-hint', veil);
+    video.muted = true;
+    let stream = null, raf = 0, stopped = false;
+
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      camBusy = false;
+      if (raf) cancelAnimationFrame(raf);
+      try { if (stream) stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      try { video.srcObject = null; } catch (_) {}
+      veil.remove();
+      document.removeEventListener('keydown', onKey);
+    };
+    function onKey(e) { if (e.key === 'Escape') stop(); }
+    document.addEventListener('keydown', onKey);
+    $('#bq-cam-close', veil).onclick = stop;
+    veil.addEventListener('click', (e) => { if (e.target === veil) stop(); });
+
+    (async () => {
+      let detector;
+      try {
+        let fmts = CAM_WANT;
+        try {
+          const sup = await window.BarcodeDetector.getSupportedFormats();
+          const inter = CAM_WANT.filter((f) => sup.indexOf(f) >= 0);
+          if (inter.length) fmts = inter;
+        } catch (_) {}
+        detector = new window.BarcodeDetector({ formats: fmts });
+      } catch (_) {
+        hint.textContent = 'Lecture caméra indisponible sur cet appareil';
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch (err) {
+        const n = err && err.name;
+        hint.textContent = n === 'NotAllowedError' || n === 'SecurityError'
+          ? 'Accès caméra refusé, autorisez-le dans le navigateur puis réessayez'
+          : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'Aucune caméra utilisable sur cet appareil'
+          : 'Caméra indisponible';
+        return;
+      }
+      if (stopped) { try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} return; }
+      video.srcObject = stream;
+      try { await video.play(); } catch (_) {}
+
+      /* Lampe — une réserve ou une cabine d'essayage est rarement bien éclairée.
+         Seuls certains téléphones l'exposent ; sinon le bouton reste caché. */
+      try {
+        const track = stream.getVideoTracks()[0];
+        const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+        if (caps && caps.torch) {
+          const tb = $('#bq-cam-torch', veil);
+          let on = false;
+          tb.hidden = false;
+          tb.onclick = () => {
+            on = !on;
+            try { track.applyConstraints({ advanced: [{ torch: on }] }); } catch (_) {}
+            tb.classList.toggle('is-on', on);
+          };
+        }
+      } catch (_) {}
+
+      let last = 0;
+      const tick = async (ts) => {
+        if (stopped) return;
+        /* ~8 lectures/seconde : assez vif pour mordre tout de suite, assez lâche
+           pour ne pas saturer le CPU d'une tablette d'entrée de gamme. */
+        if (ts - last > 120 && video.readyState >= 2) {
+          last = ts;
+          try {
+            const hits = await detector.detect(video);
+            if (hits && hits.length) {
+              const code = String(hits[0].rawValue || '').trim();
+              if (code) { camBlip(); stop(); onCode(code); return; }
+            }
+          } catch (_) { /* une frame illisible n'interrompt pas la boucle */ }
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    })();
+  }
+
   function renderScan() {
     const panel = $('[data-bq-panel="scan"]', root);
     panel.innerHTML = `
@@ -1221,7 +1372,11 @@
             <input id="bq-ean" placeholder="Scannez ou tapez un code-barres…" autocomplete="off" />
           </div>
           <div class="bq-scan-or">ou</div>
-          <button class="bq-scan-mock" id="bq-scan-mock"><i data-lucide="scan-line"></i>Scanner un article (douchette démo)</button>
+          ${pvReal()
+            ? (camSupported()
+                ? `<button class="bq-scan-mock" id="bq-scan-cam"><i data-lucide="camera"></i>Scanner avec la caméra</button>`
+                : `<div class="bq-scan-nocam">Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.</div>`)
+            : `<button class="bq-scan-mock" id="bq-scan-mock"><i data-lucide="scan-line"></i>Scanner un article (douchette démo)</button>`}
           <div class="bq-scan-stage" id="bq-scan-stage"><span id="bq-scan-stage-ean"></span><div class="bq-scan-laser"></div></div>
           ${lookupCardHtml()}
           ${state.scanLog.length ? `
@@ -1248,7 +1403,11 @@
         if (i) i.focus();
       }, 120);
     };
-    $('#bq-scan-mock', panel).onclick = mockScan;
+    /* Un seul des deux existe selon le contexte (vraie boutique vs démo). */
+    const mk = $('#bq-scan-mock', panel);
+    if (mk) mk.onclick = mockScan;
+    const cam = $('#bq-scan-cam', panel);
+    if (cam) cam.onclick = () => openCamScan(lookupScan);
     const sell = $('#bq-look-sell', panel);
     if (sell) sell.onclick = () => {
       const lk = state.lookup;
