@@ -199,7 +199,7 @@
   function submit() {
     var code = buf;
     redeem(code).then(function (res) {
-      if (res && res.ok) { hidePad(); bootVertical(res.venue); return; }
+      if (res && res.ok) { hidePad(); bootWithPin(res.venue); return; }
       var scr = document.getElementById('cp-screen');
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
       toast(res && res.error === 'expired' ? 'Code expiré, régénérez-en un.' : 'Code invalide.');
@@ -213,13 +213,101 @@
     } catch (_) {}
   }
 
-  // Delegated pad handling (survives re-renders of #cp-screen).
+  /* ── staff PIN gate (F8) ─────────────────────────────────────────────────
+   * Pairing binds the DEVICE to a store; it must not also authenticate the
+   * PERSON. Before the register becomes usable, require one of the store's staff
+   * PINs — the same PINs the dashboard lock validates, served by
+   * /api/config?merchant=slug. Fail-soft: a store with no PINs configured, or an
+   * unreachable endpoint (offline / local, no backend), boots straight through so
+   * a real merchant can never be locked out of their own till. */
+  var pinBuf = '';
+  var pinVenue = null;
+  var pinList = null;   // [{pin,name,role}] once fetched
+  function keyP(n) { return '<button class="pin-key" data-cpp="' + n + '">' + n + '</button>'; }
+  function pinsFor(merchant) {
+    if (!merchant) return Promise.resolve([]);
+    return fetch('/api/config?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
+      .then(function (r) { return (r && r.ok) ? r.json() : null; })
+      .then(function (d) { return (d && Array.isArray(d.pins)) ? d.pins : []; })
+      .catch(function () { return []; });
+  }
+  // Gate a fresh register entry behind a staff PIN, then bootVertical. The single
+  // choke point every entry path (redeem, ?pair=1, resume, already-paired boot)
+  // routes through so the hosted caisse always asks who is opening the till.
+  function bootWithPin(venue) {
+    var merchant = (venue && venue.merchant) || '';
+    pinsFor(merchant).then(function (pins) {
+      if (!pins || !pins.length) { bootVertical(venue); return; }   // none configured → fail-soft
+      pinVenue = venue; pinList = pins; pinBuf = '';
+      showPinPad(venue);
+    });
+  }
+  function pinDotsHtml() {
+    var out = '';
+    for (var i = 0; i < 4; i++) out += '<span class="pin-dot' + (i < pinBuf.length ? ' is-filled' : '') + '"></span>';
+    return out;
+  }
+  function renderPinDots() { var d = document.getElementById('cp-pin-dots'); if (d) d.innerHTML = pinDotsHtml(); }
+  function showPinPad(venue) {
+    injectCss(); hidePad(); hideNativePin();
+    var scr = document.getElementById('cp-pin-screen');
+    if (!scr) {
+      scr = document.createElement('div');
+      scr.className = 'pin-screen';
+      scr.id = 'cp-pin-screen';
+      scr.setAttribute('role', 'dialog');
+      scr.setAttribute('aria-modal', 'true');
+      scr.setAttribute('aria-label', 'Code personnel');
+      document.body.appendChild(scr);
+    }
+    scr.style.display = '';
+    scr.innerHTML =
+      '<div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>' +
+      '<div class="pin-greet">' + esc((venue && venue.name) || 'Votre magasin') + '</div>' +
+      '<div class="pin-prompt">CODE PERSONNEL · 4 CHIFFRES</div>' +
+      '<div class="pin-dots" id="cp-pin-dots" aria-hidden="true">' + pinDotsHtml() + '</div>' +
+      '<div class="pin-pad" id="cp-pin-pad">' +
+        keyP(1) + keyP(2) + keyP(3) + keyP(4) + keyP(5) + keyP(6) + keyP(7) + keyP(8) + keyP(9) +
+        '<button class="pin-key is-action" data-cpp="clear" aria-label="Effacer tout">C</button>' + keyP(0) +
+        '<button class="pin-key is-action" data-cpp="back" aria-label="Effacer">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div class="pin-foot">Code personnel géré depuis votre tableau de bord Kiwi</div>';
+    renderPinDots();
+  }
+  function feedPin(d) {
+    if (d === 'clear') { pinBuf = ''; }
+    else if (d === 'back') { pinBuf = pinBuf.slice(0, -1); }
+    else if (/^[0-9]$/.test(d) && pinBuf.length < 4) { pinBuf += d; }
+    renderPinDots();
+    if (pinBuf.length === 4) submitPin();
+  }
+  function submitPin() {
+    var code = pinBuf;
+    var ok = (pinList || []).some(function (p) { return String((p && (p.pin || p.code)) || '') === code; });
+    if (ok) { var s = document.getElementById('cp-pin-screen'); if (s) s.style.display = 'none'; bootVertical(pinVenue); return; }
+    var scr = document.getElementById('cp-pin-screen');
+    if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
+    toast('Code incorrect.');
+    pinBuf = ''; renderPinDots();
+  }
+
+  // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
   document.addEventListener('click', function (e) {
     var k = e.target.closest && e.target.closest('#cp-pad [data-cp]');
     if (k) { feed(k.getAttribute('data-cp')); return; }
-    if (e.target.closest && e.target.closest('#cp-resume')) { var pv = pairedVenue(); if (pv) { hidePad(); bootVertical(pv); } }
+    var kp = e.target.closest && e.target.closest('#cp-pin-pad [data-cpp]');
+    if (kp) { feedPin(kp.getAttribute('data-cpp')); return; }
+    if (e.target.closest && e.target.closest('#cp-resume')) { var pv = pairedVenue(); if (pv) { hidePad(); bootWithPin(pv); } }
   });
   document.addEventListener('keydown', function (e) {
+    var pinScr = document.getElementById('cp-pin-screen');
+    if (pinScr && pinScr.style.display !== 'none') {
+      if (/^[0-9]$/.test(e.key)) { feedPin(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { feedPin('back'); e.preventDefault(); }
+      return;
+    }
     var scr = document.getElementById('cp-screen');
     if (!scr || scr.style.display === 'none') return;
     if (/^[0-9]$/.test(e.key)) { feed(e.key); e.preventDefault(); }
@@ -246,14 +334,15 @@
     } catch (_) {}
 
     // Once a device is bound to a store, it stays that store — on ANY environment,
-    // so the owner's real caisse works when they test on their Mac too.
-    if (isPaired()) { bootVertical(pairedVenue()); return; }
+    // so the owner's real caisse works when they test on their Mac too. A staff PIN
+    // is still required each session on hosted (fail-soft where no backend/PINs).
+    if (isPaired()) { bootWithPin(pairedVenue()); return; }
 
     // Explicit same-device hand-off from the dashboard ("Ouvrir la caisse sur cet
     // appareil"): redeem the freshly-issued code with no typing, on any env.
     if (wantsPair()) {
       var code = newestPending();
-      if (code) redeem(code).then(function (res) { if (res && res.ok) bootVertical(res.venue); else showPad(true); });
+      if (code) redeem(code).then(function (res) { if (res && res.ok) bootWithPin(res.venue); else showPad(true); });
       else showPad(true);
       return;
     }

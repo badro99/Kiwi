@@ -6806,9 +6806,15 @@ function _bqxSlug(s) {
 function _bqxVenue() {
   try {
     if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      // Canonical key = slugMerchant(business) — the SAME slug the caisse's paired
+      // venue carries (functions/api/pair/create.js) and clients-store uses, so a
+      // product added on either surface lands under ONE key and inventory syncs
+      // across devices. Prefer identity over the venue display name (which a rename
+      // or a stale venue could desync); fall back to the name only pre-identity. F4.
+      var biz = (window.KiwiMe && window.KiwiMe.business) || '';
+      if (biz) return _bqxSlug(biz);
       var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
-      var name = vd.name || (window.KiwiMe && window.KiwiMe.business) || '';
-      if (name) return _bqxSlug(name);
+      if (vd.name) return _bqxSlug(vd.name);
     }
   } catch (_) {}
   return (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'maisonMansour';

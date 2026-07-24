@@ -1669,6 +1669,13 @@
         } catch (_) {}
         let ptsLine = '';
         if (c) {
+          // Persist the purchase to the SHARED client book (spend + points + visit)
+          // so the owner's dashboard client directory + loyalty reflect it — a real
+          // store's sale must attach to the real client, not a throwaway in-memory
+          // object. Real store only; the local demo keeps its in-memory client. F5.
+          if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
+            try { window.KiwiClients.recordPurchase(c.id, { amount: total }); } catch (_) {}
+          }
           const pts = Math.round(total / 10);
           c.points += pts;
           c.achats += 1;
