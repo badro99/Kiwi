@@ -25,7 +25,10 @@
   }
 
   function init() {
-    if (isOn()) document.body.classList.add('design-2026');
+    // Default ON — the Liquid Glass skin is the standard product look now.
+    // A merchant who runs KiwiDesign2026.disable() (persists '0') opts back out.
+    var v; try { v = localStorage.getItem(KEY); } catch (e) {}
+    if (v !== '0') document.body.classList.add('design-2026');
     cleanup();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

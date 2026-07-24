@@ -36,7 +36,12 @@
       document.body.classList.remove('glass-clear', 'glass-frosted', 'glass-opaque');
     }
   }
-  function init() { if (isOn()) apply(true); }
+  function init() {
+    // Default ON — the iOS-27 liquid-glass tier is the standard dashboard look now.
+    // KiwiDesignIOS27.disable() (persists '0') opts a merchant back out.
+    var v; try { v = localStorage.getItem(KEY); } catch (e) {}
+    if (v !== '0') apply(true);
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 

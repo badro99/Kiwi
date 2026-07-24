@@ -535,6 +535,19 @@ function authPage(opts) {
         0 40px 80px -34px rgba(0,0,0,.55),
         0 8px 24px -14px rgba(0,0,0,.40);
     }
+    /* Liquid Glass — DARK MODE ONLY. Here the card floats over the dark green-tinted
+       gradient, so real refraction reads beautifully. Light mode keeps its crisp
+       white card (glass would wash out on cream). Fill stays high (70%) so the login
+       form remains a legible reading/input surface. Falls back to the opaque dark
+       card wherever url() backdrop filters aren't supported. */
+    @supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
+      .card {
+        background: color-mix(in srgb, var(--surface) 70%, transparent);
+        border-color: rgba(255,255,255,.10);
+        -webkit-backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+                backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+      }
+    }
     .tab[aria-selected="true"] { color: var(--paper); }
     .pill { background: #1c2622; box-shadow: 0 2px 10px rgba(0,0,0,.5), 0 0 0 1px rgba(125,242,176,.08); }
     input::placeholder { color: #6a7770; }
@@ -546,6 +559,15 @@ function authPage(opts) {
 </style>
 </head>
 <body>
+  <!-- Liquid Glass displacement filter (inline — this page is served pre-auth, so it
+       can't depend on /assets/*). Drives the dark-mode .card glass in the <style> above. -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <filter id="kiwi-lg" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="12" result="n"/>
+      <feGaussianBlur in="n" stdDeviation="1.4" result="nb"/>
+      <feDisplacementMap in="SourceGraphic" in2="nb" scale="46" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
   <main class="card">
     <div class="brand" id="brand-mark" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
     <div class="head">
