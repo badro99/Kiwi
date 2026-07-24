@@ -188,14 +188,22 @@
    * so it works without popups. Each label carries name · size · colour · price
    * and the scannable barcode + its human-readable number. */
   function ensurePrintCss() {
-    if (document.getElementById('kbl-print-css')) return;
+    const L = labelSize();
+    const stamp = L.w + 'x' + L.h;
+    const prev = document.getElementById('kbl-print-css');
+    // Rebuild when the shop changes its label stock — a cached stylesheet would
+    // otherwise keep printing the previous size forever.
+    if (prev) {
+      if (prev.getAttribute('data-size') === stamp) return;
+      prev.remove();
+    }
     const st = document.createElement('style');
     st.id = 'kbl-print-css';
-    // ONE label per page, the page sized to the label itself (50 × 30 mm — the
-    // common retail barcode-label size). This is what makes a browser/PDF print
-    // look like a real étiquette instead of a 48 mm sticker lost on an A4 sheet
-    // (the "empty page" problem). Each label force-breaks to its own page, so
-    // "print all" yields a tidy multi-page PDF, one label per page.
+    st.setAttribute('data-size', stamp);
+    // ONE label per page, the page sized to the label stock itself. This is what
+    // makes a browser/PDF print look like a real étiquette instead of a small
+    // sticker lost on an A4 sheet (the "empty page" problem). Each label
+    // force-breaks to its own page, so "print all" yields a tidy multi-page job.
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
@@ -204,7 +212,7 @@
         #kbl-print-root { display: block !important; position: static; }
         .kbl-sheet { display: block; }
         .kbl {
-          width: 50mm; height: 30mm; box-sizing: border-box; overflow: hidden;
+          width: ${L.w}mm; height: ${L.h}mm; box-sizing: border-box; overflow: hidden;
           padding: 2mm 2.5mm 1.5mm;
           display: flex; flex-direction: column; align-items: center; justify-content: space-between;
           page-break-after: always; break-after: page; text-align: center;
@@ -220,9 +228,27 @@
         .kbl-m b { color: #0A0F0D; font-size: 8.5pt; }
         .kbl-bc { width: 100%; line-height: 0; margin-top: 0.5mm; }
         .kbl-bc svg { width: 100%; height: auto; max-height: 15mm; }
-        @page { size: 50mm 30mm; margin: 0; }
+        @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
     document.head.appendChild(st);
+  }
+
+  /* Physical label stock, in mm. A shop's roll is whatever they bought — the
+   * WD8210 alone takes 110 mm-wide stock — and printing a 50 x 30 page onto it
+   * scales or clips every sticker. So the size is a setting (kiwiPrinterCfg.label)
+   * and BOTH renderers (browser @page and the PDF) read it from here, so they can
+   * never disagree. Falls back to the long-standing 50 x 30 default. */
+  const LABEL_DEFAULT = { w: 50, h: 30 };
+  function labelSize() {
+    try {
+      const cfg = (window.KiwiPrinter && window.KiwiPrinter.getConfig && window.KiwiPrinter.getConfig()) || {};
+      const l = cfg.label || {};
+      const w = Number(l.w) || LABEL_DEFAULT.w;
+      const h = Number(l.h) || LABEL_DEFAULT.h;
+      // Guard against a nonsense value bricking every print.
+      if (w < 10 || w > 210 || h < 10 || h > 297) return LABEL_DEFAULT;
+      return { w: w, h: h };
+    } catch (_) { return LABEL_DEFAULT; }
   }
 
   function labelHTML(l) {
@@ -259,7 +285,8 @@
    * with no print dialog at all. */
   function buildLabelPdf(flat) {
     const MM = 72 / 25.4;                 // points per mm
-    const PW = +(50 * MM).toFixed(2), PH = +(30 * MM).toFixed(2);
+    const L = labelSize();
+    const PW = +(L.w * MM).toFixed(2), PH = +(L.h * MM).toFixed(2);
     const objs = ['', '', '', ''];        // slots: 1 catalog, 2 pages, 3 font, 4 bold
     objs[2] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
     objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';

@@ -54,6 +54,22 @@
       return '<option value="' + p.value + '"' + (cur === p.value ? ' selected' : '') + '>' + p.label + '</option>';
     }).join('');
   }
+  /* Label stock the shop actually loaded, in mm. This drives the printed page
+   * size for BOTH the browser/Windows-driver route and the PDF (assets/barcode.js
+   * labelSize()), so a 110 mm roll stops being printed as a 50 mm sticker. */
+  var LABEL_SIZES = [
+    { w: 50, h: 30 }, { w: 40, h: 30 }, { w: 40, h: 25 }, { w: 30, h: 20 },
+    { w: 60, h: 40 }, { w: 58, h: 40 },
+    { w: 110, h: 30 }, { w: 110, h: 50 }, { w: 100, h: 50 }, { w: 100, h: 150 },
+  ];
+  function labelOptions(sel) {
+    var cur = (sel && sel.w ? sel.w : 50) + 'x' + (sel && sel.h ? sel.h : 30);
+    return LABEL_SIZES.map(function (l) {
+      var v = l.w + 'x' + l.h;
+      return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + l.w + ' × ' + l.h + ' mm</option>';
+    }).join('');
+  }
+
   /* Makes sold into Moroccan / North-African POS. All of these speak ESC/POS,
    * which is what KiwiEscPos emits — the field is a label for the owner, not a
    * driver, so an unlisted make that speaks ESC/POS works on "Générique".
@@ -97,7 +113,7 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
   function getConfig() {
-    var d = { ip: '', port: 9100, model: 'escpos', paper: '80' };
+    var d = { ip: '', port: 9100, model: 'escpos', paper: '80', label: { w: 50, h: 30 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
   function setConfig(cfg) { set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {}))); }
@@ -473,6 +489,7 @@
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
+            '<div class="kpr-field"><label for="kpr-label">Format d\'étiquette</label><select id="kpr-label">' + labelOptions(cfg.label) + '</select></div>' +
           '</div>' +
           '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
             '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p></div>' +
@@ -487,7 +504,12 @@
 
     var $ = function (id) { return ov.querySelector(id); };
     function readForm() {
-      return { ip: $('#kpr-ip').value.trim(), port: $('#kpr-port').value.trim() || '9100', model: $('#kpr-model').value, paper: $('#kpr-paper').value };
+      var lv = ($('#kpr-label') ? $('#kpr-label').value : '50x30').split('x');
+      return {
+        ip: $('#kpr-ip').value.trim(), port: $('#kpr-port').value.trim() || '9100',
+        model: $('#kpr-model').value, paper: $('#kpr-paper').value,
+        label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 30 },
+      };
     }
     function close() { ov.remove(); }
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
