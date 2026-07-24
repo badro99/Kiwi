@@ -1588,6 +1588,88 @@
     });
   }
 
+  /* ═══════════════ REAL SALES · time-windowed (user-created venues) ═══════════════
+   * KiwiSales entries carry a real `ts` (millis). The hero, KPI band, goal bar
+   * and revenue chart all derive from the SAME window here — so a single sale
+   * moves every surface and the figures can never disagree with each other.
+   * Placed before renderHero but hoisted as function declarations, so every
+   * renderer below can call them. */
+  function dayStartMs(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function realSalesList() {
+    try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+  }
+  // Window bounds [from, to) in ms for a range, relative to now.
+  function rangeBounds(range) {
+    const today = dayStartMs(Date.now());
+    if (range === 'aujourdhui') return [today, Infinity];
+    if (range === 'hier')       return [today - 864e5, today];
+    const days = RANGE_DAYS[range] || 1;
+    return [today - (days - 1) * 864e5, Infinity];
+  }
+  // Windowed revenue / count / basket from the merchant's real sales.
+  function realSalesTotals(range) {
+    const [from, to] = rangeBounds(range || effRange());
+    let revenue = 0, count = 0;
+    realSalesList().forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= from && ts < to) { revenue += Math.max(0, +e.amount || 0); count++; }
+    });
+    return { revenue, count, basket: count ? revenue / count : 0 };
+  }
+  // Round a max value up to a clean axis ceiling (1/2/5 × 10ⁿ).
+  function niceCeil(v) {
+    if (!(v > 0)) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(v)));
+    const n = v / mag;
+    const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return step * mag;
+  }
+  const DAY_ABBR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  // Build a REAL revenue-chart series for the active range from KiwiSales — the
+  // custom-venue replacement for the zeroed demo clone (which plots a flat line
+  // and leaks the demo legend total). Hourly-cumulative on day ranges, daily
+  // totals on 7/30-day ranges; axis + legend computed from the real numbers.
+  function realRevSeries(range) {
+    range = range || effRange();
+    const list = realSalesList();
+    const hourly = (range === 'aujourdhui' || range === 'hier');
+    let rev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', total = 0;
+
+    if (hourly) {
+      const base = (range === 'hier') ? dayStartMs(Date.now()) - 864e5 : dayStartMs(Date.now());
+      const end = base + 864e5;
+      const per = new Array(24).fill(0);
+      list.forEach(e => { const ts = +e.ts || 0; if (ts >= base && ts < end) per[new Date(ts).getHours()] += Math.max(0, +e.amount || 0); });
+      let acc = 0;
+      for (let h = 0; h < 24; h++) { acc += per[h]; rev.push(acc); xLabels.push((h < 10 ? '0' : '') + h + 'h'); }
+      visibleXIdx = [0, 3, 6, 9, 12, 15, 18, 21];
+      total = acc;
+      rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
+      sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
+    } else {
+      const days = RANGE_DAYS[range] || 7;
+      const start = dayStartMs(Date.now()) - (days - 1) * 864e5;
+      const buckets = new Array(days).fill(0);
+      list.forEach(e => {
+        const ts = +e.ts || 0;
+        if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) buckets[idx] += Math.max(0, +e.amount || 0); }
+      });
+      rev = buckets;
+      for (let i = 0; i < days; i++) { const d = new Date(start + i * 864e5); xLabels.push(DAY_ABBR[d.getDay()] + ' ' + d.getDate()); }
+      const step = Math.max(1, Math.round(days / 6));
+      for (let i = 0; i < days; i += step) visibleXIdx.push(i);
+      if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
+      total = buckets.reduce((s, x) => s + x, 0);
+      rangeBadge = days + ' DERNIERS JOURS';
+      sub = 'Total journalier · ' + days + ' derniers jours';
+    }
+
+    const top = niceCeil(Math.max(1, ...rev));
+    const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
+    const legendPrimary = (hourly ? 'Cumul' : ('Total ' + (RANGE_DAYS[range] || rev.length) + ' jours')) + ' · ' + frInt(total) + ' MAD';
+    return { rev, revPrev: rev.map(() => 0), yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary, legendCompare: '' };
+  }
+
   /* ═══════════════ RENDER: HERO ═══════════════ */
 
   function renderHero() {
@@ -1604,9 +1686,10 @@
         data = { ...data, amount: sim.cumRevenue, netAfterKiwi: Math.round(sim.cumRevenue * 0.839) };
       }
     }
-    // User-created venue — hero figures come from the merchant's real sales.
+    // User-created venue — hero figures come from the merchant's real sales,
+    // windowed to the active range so the number tracks the selected period.
     if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
-      const t = window.KiwiSales.totals(getCurrentVenue());
+      const t = realSalesTotals();
       data = { ...data, amount: t.revenue, netAfterKiwi: Math.round(t.revenue * 0.839) };
     }
 
@@ -1729,7 +1812,7 @@
     // from their recorded sales.
     if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
       const vd = window.KiwiVenue.getCurrentVenueData?.() || {};
-      data = { ...data, goal: +vd.goal || 0, current: window.KiwiSales.totals(getCurrentVenue()).revenue };
+      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals().revenue };
     }
 
     // Settings → "Objectif journalier" override for the default demo venue: the
@@ -2007,7 +2090,7 @@
     // User-created venue — tx / panier (and the revenue derived from them)
     // come from the merchant's recorded sales.
     if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
-      const t = window.KiwiSales.totals(getCurrentVenue());
+      const t = realSalesTotals();
       data = {
         ...data,
         tx:     { ...(data.tx || {}),     value: t.count,              delta: 0 },
@@ -2248,6 +2331,13 @@
     if (!data) return;
     const svg = document.querySelector('[data-rev-svg]');
     if (!svg) return;
+
+    // User-created venue — plot the merchant's REAL sales for the active range
+    // (bucketed from KiwiSales), replacing the zeroed demo clone that draws a
+    // flat line AND leaks the demo legend total. Matches the hero / KPI window.
+    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+      data = { ...data, ...realRevSeries(effRange()) };
+    }
 
     // ─── Live-demo override on aujourdhui ────────────────────────────────
     // Build a "today so far" curve from the demo clock. Line truncates to

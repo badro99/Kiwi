@@ -177,26 +177,24 @@
    * exactly the bug (a real cashier sale, dashboard numbers frozen at zero).
    * Only custom (onboarded, real) venues read KiwiSales for their KPIs, so gate on
    * that — mirrors the local-caisse quick-sale path in interactive.js.
-   * Dedup by the feed's monotonic rowid cursor, persisted per merchant: watchFeed
-   * replays from since=0 on every page load, so without this guard a reload would
-   * re-count every historical sale and inflate the totals. */
-  function ingestKey() { return 'kiwiLiveIngested:' + merchant(); }
-  function ingestedCursor() { try { return Number(localStorage.getItem(ingestKey())) || 0; } catch (_) { return 0; } }
-  function setIngestedCursor(v) { try { localStorage.setItem(ingestKey(), String(v)); } catch (_) {} }
+   * Dedup against the sales ALREADY in the store, keyed by the feed's monotonic
+   * rowid cursor (persisted on each entry), NOT a standalone counter: watchFeed
+   * replays from since=0 on every load, so we must skip sales the store already
+   * holds — but reading that fact FROM the store means a cleared or re-keyed store
+   * re-ingests, and the dashboard total can never silently fall behind the feed. */
   function bridgeToStore(sales) {
     var KV = window.KiwiVenue;
     if (!KV || !KV.isCustom || !KV.isCustom() || !window.KiwiSales || !window.KiwiSales.add) return;
     var vid = (KV.getVenue && KV.getVenue()) || null;
-    var mark = ingestedCursor(), max = mark;
+    var have = {};
+    try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = 1; }); } catch (_) {}
     sales.forEach(function (s) {
       var cur = Number(s.cursor) || 0;
-      if (!cur || cur <= mark) return;              // no cursor, or already counted → skip
+      if (!cur || have[cur]) return;                // no cursor, or already stored → skip
       var amt = Math.round(s.amount) || 0;
       if (amt <= 0) return;
-      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash' }); } catch (_) {}
-      if (cur > max) max = cur;
+      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts }); have[cur] = 1; } catch (_) {}
     });
-    if (max > mark) setIngestedCursor(max);
   }
 
   function initDashboard() {

@@ -6946,7 +6946,10 @@
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);
-    const entry = { ts: Date.now(), amount: Math.max(0, +(sale && sale.amount) || 0), method: (sale && sale.method) || 'card' };
+    const entry = { ts: (sale && +sale.ts) || Date.now(), amount: Math.max(0, +(sale && sale.amount) || 0), method: (sale && sale.method) || 'card' };
+    // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
+    // dedups against the store itself and can never double-count or drift below it.
+    if (sale && sale.cursor) entry.cursor = sale.cursor;
     list.push(entry);
     try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) {}
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
