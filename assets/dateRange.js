@@ -3830,7 +3830,36 @@
     if (!el) return;
     if (_stockOrig == null) _stockOrig = el['inner' + 'HTML'];
     if (window.KiwiVenue?.isCustom?.()) {
-      const t = tradeStr('stockEmpty', STOCK_EMPTY[getLang()] || STOCK_EMPTY.fr);
+      const lang = getLang();
+      const t = tradeStr('stockEmpty', STOCK_EMPTY[lang] || STOCK_EMPTY.fr);
+      /* L'accueil porte DEUX cartes « Stock à recommander » : celle-ci, dans la
+       * colonne de droite, et la liste [data-products-list]. Seule la seconde
+       * avait été rebranchée sur le catalogue — le commerçant lisait donc
+       * « Aucune alerte de stock » à droite pendant que la gauche affichait
+       * l'article sous le seuil. Même source, même seuil, plus de contradiction. */
+      const low = realLowStock();
+      if (low && low.rows.length) {
+        el['inner' + 'HTML'] =
+          `<div class="block-head" style="margin-bottom:6px;"><div>` +
+          `<div class="t">${STOCK_TITLE_STR[lang] || STOCK_TITLE_STR.fr}</div>` +
+          `<div class="s">${(STOCK_SUB_STR[lang] || STOCK_SUB_STR.fr)(low.rows.length)}</div>` +
+          `</div></div>` +
+          low.rows.map((r) => {
+            const dead = r.stock === 0;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;` +
+              `padding:9px 2px;border-top:1px solid var(--n-200);">` +
+              `<div style="min-width:0;">` +
+              `<div style="font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;` +
+              `text-overflow:ellipsis;white-space:nowrap;">${escTxt(r.name)}</div>` +
+              `<div style="font-size:11.5px;margin-top:2px;color:${dead ? 'var(--danger)' : 'var(--n-500)'};">` +
+              `${dead ? (RUPTURE_STR[lang] || RUPTURE_STR.fr) : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>` +
+              `</div>` +
+              `<div style="font-family:var(--mono);font-size:15px;font-weight:600;` +
+              `color:${dead ? 'var(--danger)' : 'var(--ink)'};">${r.stock}</div>` +
+              `</div>`;
+          }).join('');
+        return;
+      }
       el['inner' + 'HTML'] =
         `<div class="block-head" style="margin-bottom:14px;"><div>` +
         `<div class="t">${t.title}</div></div></div>` +
@@ -4623,6 +4652,7 @@
   window.addEventListener('kiwi-catalog-key', () => {
     try { renderKpiBand(); } catch (_) {}
     try { renderProducts(); } catch (_) {}
+    try { renderStock(); } catch (_) {}
   }, { once: true });
 
   /* Même problème pour l'équipe : team.js est chargé après pages-pro.js, donc

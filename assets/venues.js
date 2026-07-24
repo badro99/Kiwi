@@ -7218,6 +7218,45 @@
     const count = list.length;
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
+  /* Le pendant de miCustomHeroRec pour la bande sous la heatmap. Renvoie null
+   * seulement si la boutique n'a vraiment aucune vente — sinon on lit ses
+   * heures réelles. Annoncer « vos heures de pointe apparaîtront ici » au-dessus
+   * d'une heatmap qui affiche déjà trois barres, c'est apprendre au commerçant
+   * à ne plus croire la carte. */
+  function miCustomHeatmapRec(venueId) {
+    let list = [];
+    try { list = salesList(venueId) || []; } catch (_) { return null; }
+    if (!list.length) return null;
+    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+    const today = list.filter((s) => (+s.ts || 0) >= t0);
+    const src = today.length ? today : list;
+    const isToday = today.length > 0;
+    const byHour = {};
+    let rev = 0;
+    src.forEach((s) => {
+      const amt = Math.max(0, +s.amount || 0);
+      if (!amt) return;
+      rev += amt;
+      const h = new Date(+s.ts || 0).getHours();
+      byHour[h] = (byHour[h] || 0) + amt;
+    });
+    const keys = Object.keys(byHour);
+    if (!keys.length || !rev) return null;
+    const peak = keys.reduce((b, k) => (byHour[k] > byHour[b] ? k : b), keys[0]);
+    const share = Math.round((byHour[peak] / rev) * 100);
+    const n = keys.length;
+    const num = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const W = {
+      fr: { title: `Votre pic : ${peak}h`,
+            obs: `${num(byHour[peak])} MAD encaissés à ${peak}h, soit ${share} % ${isToday ? 'de la journée' : 'du total'}, réparti sur ${n} heure${n > 1 ? 's' : ''} d'activité.`, cta: '' },
+      en: { title: `Your peak: ${peak}h`,
+            obs: `${num(byHour[peak])} MAD taken at ${peak}h — ${share} % of ${isToday ? 'the day' : 'the total'}, spread over ${n} active hour${n > 1 ? 's' : ''}.`, cta: '' },
+      ar: { title: `ذروتك: ${peak}h`,
+            obs: `${num(byHour[peak])} درهم عند الساعة ${peak}، أي ${share} % ${isToday ? 'من اليوم' : 'من المجموع'}، موزّعة على ${n} ساعة نشاط.`, cta: '' },
+    };
+    return W[fusionLang()] || W.fr;
+  }
+
   /* A real, data-derived hero recommendation for a merchant-created venue.
    * Returns null when the store genuinely has no sales — the caller then keeps
    * its welcome copy. Everything here is read off the merchant's OWN sales, so
@@ -8046,6 +8085,10 @@
     getHeatmapAiRec: id => {
       const v = id || currentVenue;
       if (isCustom(v)) {
+        // Des ventes existent ⇒ on dit quelque chose de vrai. Seule une boutique
+        // réellement vide garde le message d'accueil.
+        const real = miCustomHeatmapRec(v);
+        if (real) return real;
         const W = {
           fr: { title: 'Vos heures de pointe apparaîtront ici', obs: 'Dès vos premières ventes, Kiwi AI repère vos creux et vos pics de la journée et suggère quoi lancer, et quand.', cta: '' },
           en: { title: 'Your peak hours will show up here', obs: 'As soon as you record sales, Kiwi AI spots your daily lulls and rushes and suggests what to run, and when.', cta: '' },
