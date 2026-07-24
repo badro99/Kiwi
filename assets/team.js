@@ -80,7 +80,7 @@
       lastName:  'Nom',
       email:     'Email',
       phone:     'Téléphone',
-      password:  'Mot de passe',
+      password:  'Code caisse · 4 chiffres',
       generate:  'Générer',
       copy:      'Copier',
       function:  'Fonction',
@@ -106,6 +106,7 @@
       vRequired: 'Prénom, nom et fonction requis',
       vInvalidEmail: 'Email invalide',
       vEndAfterStart: "La date de fin doit être après la date de début",
+      vCode: "Le code caisse doit faire 4 chiffres",
       submitAdd:  'Ajouter le membre',
       submitEdit: 'Enregistrer les modifications',
       cancel: 'Annuler',
@@ -113,11 +114,11 @@
       delDesc:  'Action irréversible. Le compte Kiwi Caisse sera désactivé immédiatement.',
       delConfirm: 'Supprimer',
       tAdded:    (n) => `${n} ajouté·e à l'équipe`,
-      tAddedDesc:(p) => `Identifiants envoyés · mot de passe ${p}`,
+      tAddedDesc:(p) => `Code caisse ${p} · utilisable tout de suite sur la caisse`,
       tUpdated:  (n) => `${n} · profil mis à jour`,
       tDeleted:  (n) => `${n} a été retiré·e de l'équipe`,
-      tPwdCopied:'Mot de passe copié',
-      tPwdGen:   'Nouveau mot de passe généré',
+      tPwdCopied:'Code caisse copié',
+      tPwdGen:   'Nouveau code caisse généré',
       // Hours pane
       hPeriodWeek: 'Cette semaine',
       hPeriodFort: 'Quinzaine',
@@ -145,7 +146,7 @@
       tImportDesc:'Glissez votre fichier · vérification automatique des en-têtes.',
       tValidated: (start, end) => `Période verrouillée · du ${start} au ${end}`,
       tValidatedDesc: 'Heures envoyées à Paie & Planning · masse salariale recalculée.',
-      placeholderPwd: '••••••••',
+      placeholderPwd: '····',
       monthName: ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
       dayName:   ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],
     },
@@ -196,7 +197,7 @@
       lastName:  'Last name',
       email:     'Email',
       phone:     'Phone',
-      password:  'Password',
+      password:  'Till code · 4 digits',
       generate:  'Generate',
       copy:      'Copy',
       function:  'Function',
@@ -222,6 +223,7 @@
       vRequired: 'First name, last name and function are required',
       vInvalidEmail: 'Invalid email',
       vEndAfterStart: 'End date must be after the start date',
+      vCode: 'The till code must be 4 digits',
       submitAdd:  'Add member',
       submitEdit: 'Save changes',
       cancel: 'Cancel',
@@ -229,11 +231,11 @@
       delDesc:  'Permanent. The Kiwi Caisse account will be disabled immediately.',
       delConfirm: 'Remove',
       tAdded:    (n) => `${n} added to the team`,
-      tAddedDesc:(p) => `Credentials sent · password ${p}`,
+      tAddedDesc:(p) => `Till code ${p} · usable on the register right away`,
       tUpdated:  (n) => `${n} · profile updated`,
       tDeleted:  (n) => `${n} has been removed from the team`,
-      tPwdCopied:'Password copied',
-      tPwdGen:   'New password generated',
+      tPwdCopied:'Till code copied',
+      tPwdGen:   'New till code generated',
       hPeriodWeek: 'This week',
       hPeriodFort: 'Fortnight',
       hPeriodMonth:'This month',
@@ -260,7 +262,7 @@
       tImportDesc:'Drop your file · headers checked automatically.',
       tValidated: (start, end) => `Period locked · from ${start} to ${end}`,
       tValidatedDesc: 'Hours sent to Payroll & Planning · wage cost recomputed.',
-      placeholderPwd: '••••••••',
+      placeholderPwd: '····',
       monthName: ['January','February','March','April','May','June','July','August','September','October','November','December'],
       dayName:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     },
@@ -311,7 +313,7 @@
       lastName:  'النسب',
       email:     'البريد الإلكتروني',
       phone:     'الهاتف',
-      password:  'كلمة السر',
+      password:  'رمز الصندوق · 4 أرقام',
       generate:  'إنشاء',
       copy:      'نسخ',
       function:  'الوظيفة',
@@ -337,6 +339,7 @@
       vRequired: 'الاسم الأول والنسب والوظيفة مطلوبة',
       vInvalidEmail: 'بريد إلكتروني غير صالح',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
+      vCode: 'رمز الصندوق يجب أن يكون 4 أرقام',
       submitAdd:  'إضافة العضو',
       submitEdit: 'حفظ التعديلات',
       cancel: 'إلغاء',
@@ -344,11 +347,11 @@
       delDesc:  'إجراء نهائي. سيتم تعطيل حساب Kiwi Caisse فورًا.',
       delConfirm: 'إزالة',
       tAdded:    (n) => `تمت إضافة ${n} إلى الفريق`,
-      tAddedDesc:(p) => `تم إرسال بيانات الاعتماد · كلمة السر ${p}`,
+      tAddedDesc:(p) => `رمز الصندوق ${p} · جاهز للاستعمال فوراً`,
       tUpdated:  (n) => `${n} · تم تحديث الملف`,
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
-      tPwdCopied:'تم نسخ كلمة السر',
-      tPwdGen:   'تم إنشاء كلمة سر جديدة',
+      tPwdCopied:'تم نسخ رمز الصندوق',
+      tPwdGen:   'تم إنشاء رمز صندوق جديد',
       hPeriodWeek: 'هذا الأسبوع',
       hPeriodFort: 'نصف شهر',
       hPeriodMonth:'هذا الشهر',
@@ -375,7 +378,7 @@
       tImportDesc:'أفلت ملفك · يتم التحقق من الرؤوس تلقائيًا.',
       tValidated: (start, end) => `الفترة مقفلة · من ${start} إلى ${end}`,
       tValidatedDesc: 'تم إرسال الساعات إلى الرواتب والتخطيط · أعيد حساب كتلة الأجور.',
-      placeholderPwd: '••••••••',
+      placeholderPwd: '····',
       monthName: ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'],
       dayName:   ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
     },
@@ -445,12 +448,53 @@
   const AVATAR_TONES = ['a', 'b', 'c', 'd'];
   const AVATAR_COLORS = { a: 'var(--atlas)', b: 'var(--riad)', c: '#B26B0F', d: '#2B5C68' };
 
-  function makePwd(len = 12) {
-    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ', a = 'abcdefghijkmnopqrstuvwxyz', n = '23456789', s = '@!#$%&*';
-    const pick = (alpha) => alpha[Math.floor(Math.random() * alpha.length)];
-    let p = pick(A) + pick(a) + pick(n) + pick(s);
-    while (p.length < len) p += pick(A + a + n);
-    return p.split('').sort(() => Math.random() - 0.5).join('');
+  /* The code under "Accès Kiwi Caisse" is what the cashier taps on the till, and
+   * the till's pad takes FOUR DIGITS — nothing else can be entered on it. This
+   * used to generate a 12-character password, so the value the owner read on a
+   * staff profile was one a cashier could not physically type. It is a 4-digit
+   * code now, and publishPins() below sends it to the till. */
+  function makeCode() {
+    try {
+      const c = window.crypto || window.msCrypto;
+      if (c && c.getRandomValues) {
+        const a = new Uint32Array(1); c.getRandomValues(a);
+        return String(1000 + (a[0] % 9000));
+      }
+    } catch (_) {}
+    return String(1000 + Math.floor(Math.random() * 9000));
+  }
+  function isCode(v) { return /^\d{4}$/.test(String(v || '').trim()); }
+
+  /* ═══════════════ PUBLISH THE ROSTER'S CODES TO THE TILL ═══════════════
+   * The till does not read this roster: it asks /api/config for the store's
+   * staff codes (see the PIN gate in assets/caisse-pairing.js). Only the
+   * onboarding wizard ever wrote there, so a cashier hired afterwards had a code
+   * on their profile that the till had never heard of — the owner typed it and
+   * got "Code incorrect". Every roster change now republishes.
+   *
+   * /api/config REPLACES the store's whole code list, so we always send the FULL
+   * roster — sending only the new hire would silently revoke everyone else,
+   * including the owner's own code from onboarding. Real (custom, onboarded)
+   * venues only: a demo venue has no session, and pushing seeded demo staff into
+   * a real merchant's row is exactly the leak the venue split exists to prevent.
+   * Fail-soft — no endpoint, no session, offline: the roster is still saved
+   * locally and this is a no-op. */
+  function publishPins() {
+    try {
+      const venue = window.KiwiVenue?.getCurrentVenueData?.();
+      if (!venue || !venue.custom) return;                  // demo seed never leaves the browser
+      if (!window.KiwiConfig || !window.KiwiConfig.syncPins) return;
+      const seen = Object.create(null);
+      const pins = [];
+      getMembers(teamKey(venue)).forEach((m) => {
+        const code = isCode(m.pinCode) ? String(m.pinCode).trim()
+          : (isCode(m.password) ? String(m.password).trim() : '');
+        if (!code || seen[code]) return;                    // no code yet, or a duplicate
+        seen[code] = 1;
+        pins.push({ code, name: memberFullName(m), role: m.function || m.department || 'staff' });
+      });
+      window.KiwiConfig.syncPins(pins);
+    } catch (_) {}
   }
 
   function initials(first, last) {
@@ -529,7 +573,7 @@
         lastName: last,
         email: (first + '.' + last).toLowerCase().replace(/[^a-z.]/g, '') + '@kiwi.ma',
         phone: '+212 6 ' + (10 + i) + ' ' + (40 + i * 3) + ' ' + (10 + i * 2) + ' ' + (20 + i),
-        password: makePwd(),
+        password: makeCode(),
         function: fn,
         department: dept,
         contract,
@@ -594,6 +638,9 @@
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
     } catch (_) {}
+    // Every roster change reaches the till from here — one place, so a future
+    // mutation path can't forget to publish and quietly leave a cashier locked out.
+    publishPins();
   }
   loadCustomTeams();
   window.addEventListener('pagehide', saveCustomTeams);
@@ -1089,7 +1136,7 @@
     const m = existing || {
       id: 'mem-' + Math.random().toString(36).slice(2, 9),
       firstName: '', lastName: '', email: '', phone: '',
-      password: makePwd(),
+      password: makeCode(),
       function: cat.functions[0] || '',
       department: cat.departments[0] || '',
       contract: 'CDI',
@@ -1154,7 +1201,8 @@
             <label class="kt-pwd-label">
               <span class="l">${esc(T.password)}</span>
               <div class="kt-pwd-row">
-                <input type="text" name="password" value="${esc(m.password)}" data-kt-pwd />
+                <input type="text" name="password" value="${esc(m.password)}" data-kt-pwd
+                  inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" />
                 <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 11)} ${esc(T.generate)}</button>
                 <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-copy">${svgIcon(IC.copy, 11)} ${esc(T.copy)}</button>
               </div>
@@ -1243,7 +1291,7 @@
   handlers['kt-pwd-gen'] = () => {
     const mdl = window.__kiwiTeamModal; if (!mdl || !mdl.el) return;
     const input = mdl.el.querySelector('[data-kt-pwd]');
-    if (input) input.value = makePwd();
+    if (input) input.value = makeCode();
     Kiwi.toast(t().tPwdGen, { type: 'success' });
   };
   handlers['kt-pwd-copy'] = () => {
@@ -1315,6 +1363,10 @@
     if ((data.contract === 'CDD' || data.contract === 'Stage') && data.endDate && data.startDate && data.endDate < data.startDate) {
       Kiwi.toast(T.vEndAfterStart, { type: 'pend' }); return;
     }
+    // The till's pad is four digits — accepting anything else here hands the
+    // owner a code their cashier physically cannot enter.
+    const code = (data.password || '').trim();
+    if (code && !isCode(code)) { Kiwi.toast(T.vCode, { type: 'pend' }); return; }
 
     const venueType = st.venueType;
     const members = getMembers(venueType);
@@ -1324,7 +1376,8 @@
       lastName: data.lastName.trim(),
       email: (data.email || '').trim(),
       phone: (data.phone || '').trim(),
-      password: (data.password || '').trim() || makePwd(),
+      password: code || makeCode(),
+      pinCode: code || '',                    // kept in step so the till and the profile agree
       function: data.function,
       department: data.department,
       contract: data.contract,
@@ -1742,7 +1795,10 @@
         id,
         firstName: sp >= 0 ? name.slice(0, sp) : name,
         lastName: sp >= 0 ? name.slice(sp + 1).trim() : '',
-        email: '', phone: '', password: makePwd(), pinCode: code,
+        // One code per person: what onboarding collected IS their till code, so
+        // the profile shows the same value the cashier types (it used to show a
+        // separate generated password, which opened nothing).
+        email: '', phone: '', password: code || makeCode(), pinCode: code || '',
         function: rm.fn, department: rm.dept, contract: 'CDI',
         startDate: '', endDate: '', baseSalary: 0, hourlyRate: 0,
         languages: [], address: '', cin: '', emergencyName: '', emergencyPhone: '', notes: '',
