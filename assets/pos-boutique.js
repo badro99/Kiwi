@@ -1448,6 +1448,7 @@
                 ? `<button class="bq-scan-mock" id="bq-scan-cam"><i data-lucide="camera"></i>Scanner avec la caméra</button>`
                 : `<div class="bq-scan-nocam">Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.</div>`)
             : `<button class="bq-scan-mock" id="bq-scan-mock"><i data-lucide="scan-line"></i>Scanner un article (douchette démo)</button>`}
+          <button class="bq-scan-diag" id="bq-scan-diag"><i data-lucide="activity"></i>Tester la douchette</button>
           <div class="bq-scan-stage" id="bq-scan-stage"><span id="bq-scan-stage-ean"></span><div class="bq-scan-laser"></div></div>
           ${lookupCardHtml()}
           ${state.scanLog.length ? `
@@ -1463,6 +1464,8 @@
           </div>` : (state.lookup ? '' : `<div class="bq-empty">Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.</div>`)}
         </div>
       </div>`;
+    const diag = $('#bq-scan-diag', panel);
+    if (diag) diag.onclick = () => openScannerTest();
     const input = $('#bq-ean', panel);
     input.onkeydown = (e) => { if (e.key === 'Enter') { const v = input.value; input.value = ''; lookupScan(v); } };
     input.oninput = () => { if (input.value.replace(/\D/g, '').length >= 13) { const v = input.value; input.value = ''; lookupScan(v); } };
@@ -2303,6 +2306,30 @@
       .bqi-vact { display: flex; gap: 5px; justify-content: flex-end; }
       .bqi-modfoot { display: flex; gap: 8px; padding: 14px 24px 22px; flex-wrap: wrap; }
       .bqi-modfoot .bq-btn.danger { color: #9B2F22; }
+
+      /* Douchette · diagnostic */
+      .bq-scan-diag { display: inline-flex; align-items: center; gap: 8px; margin: 12px auto 0; padding: 9px 15px; background: transparent; border: 1px solid var(--n-200, #e7e3da); border-radius: 11px; font: inherit; font-size: 13px; color: var(--n-600, #5d6b63); cursor: pointer; }
+      .bq-scan-diag:hover { border-color: var(--atlas); color: var(--atlas); }
+      .bq-scan-diag svg { width: 15px; height: 15px; }
+      .bqsd { padding: 4px 24px 0; }
+      .bqsd-wait { display: flex; align-items: center; gap: 10px; padding: 26px 18px; color: var(--n-500, #7c8a80); background: var(--paper); border-radius: 14px; }
+      .bqsd-wait svg { width: 20px; height: 20px; }
+      .bqsd-v { padding: 13px 15px; border-radius: 12px; line-height: 1.5; font-size: 14px; }
+      .bqsd-v.good { background: rgba(11,110,79,.07); color: var(--riad, #053B2C); }
+      .bqsd-v.warn { background: rgba(184,124,32,.09); color: #7a5310; }
+      .bqsd-v.bad  { background: rgba(155,47,34,.08); color: #9B2F22; }
+      .bqsd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin-top: 12px; }
+      .bqsd-grid > div { background: var(--paper); border-radius: 11px; padding: 9px 12px; }
+      .bqsd-grid span { display: block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-500, #7c8a80); }
+      .bqsd-grid b { font-family: var(--mono, monospace); font-size: 14px; font-weight: 600; word-break: break-all; }
+      .bqsd-ok, .bqsd-no { margin-top: 12px; padding: 11px 14px; border-radius: 11px; font-size: 14px; }
+      .bqsd-ok { background: rgba(11,110,79,.07); color: var(--riad, #053B2C); }
+      .bqsd-no { background: var(--paper); color: var(--n-600, #5d6b63); }
+      .bqsd-det { margin-top: 12px; font-size: 13px; }
+      .bqsd-det summary { cursor: pointer; color: var(--n-600, #5d6b63); padding: 4px 0; }
+      .bqsd-t { width: 100%; border-collapse: collapse; margin-top: 8px; font-family: var(--mono, monospace); font-size: 12px; }
+      .bqsd-t th { text-align: left; font-weight: 500; color: var(--n-500, #7c8a80); padding: 4px 8px; border-bottom: 1px solid var(--n-200, #e7e3da); }
+      .bqsd-t td { padding: 3px 8px; border-bottom: 1px solid rgba(0,0,0,.04); }
       .bqi-form { padding: 20px 24px 8px; }
       .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
       .bqi-fg input, .bqi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
@@ -2355,12 +2382,22 @@
     if (/^Numpad[0-9]$/.test(c)) return c.slice(6);
     return (e.key && e.key.length === 1) ? e.key : '';
   }
+  /* Non-null while the douchette diagnostic is open — see openScannerTest().
+   * Declared here rather than beside it because the wedge listener below reads
+   * it, and a `let` further down would sit in the temporal dead zone. */
+  let scanDiagOff = null;
+
   function installWedgeScanner() {
     if (installWedgeScanner._done) return;
     installWedgeScanner._done = true;
     let buf = '', last = 0, started = 0;
     document.addEventListener('keydown', (e) => {
       if (!document.body.classList.contains('is-pos-boutique')) return;
+      /* While the diagnostic is open the scan belongs to it and to nothing else.
+       * Without this the same keystrokes ALSO ran the normal route — dropping
+       * the article on the ticket, or (on an unknown code) switching to the
+       * inventory and opening "rattacher ce code". A test must not sell. */
+      if (scanDiagOff) return;
       const tag = (e.target && e.target.tagName) || '';
       const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
       const now = Date.now();
@@ -2384,6 +2421,132 @@
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
     commitEan(code);                                                     /* vente → ticket */
+  }
+
+  /* ─── Douchette · diagnostic ─────────────────────────────────────────────
+   * "La douchette ne marche pas" is, at the counter, always one of five things,
+   * and from the merchant's side they look identical — nothing happens:
+   *   1. the device sends nothing at all (cable/HID mode),
+   *   2. it types through a keyboard layout that mangles the digits (a US-mode
+   *      scanner on a French Windows sends &é"' where we expect 1234),
+   *   3. it never sends the Enter suffix, so no scan is ever committed,
+   *   4. it is genuinely too slow / it was a human typing,
+   *   5. it reads perfectly and the code simply is not in the catalogue yet.
+   * Guessing between those costs a shop visit. This captures one raw burst and
+   * names which one it is. It also dumps code→key per character, because that
+   * is the only way to tell a US-mode scanner from a locale-matched one — and
+   * that determines whether letters (Code 128) need the same fix digits got. */
+  function openScannerTest() {
+    let ev = [], last = 0, burst = null;
+
+    const finish = () => {
+      const chars = ev.filter((x) => x.ch !== '');
+      const raw = chars.map((x) => x.ch).join('');
+      /* What the OS actually delivered, before wedgeChar() reads the key by its
+       * physical position. On a US-mode scanner plugged into a French Windows
+       * these differ (é000000000&( vs 2000000000015) — and that difference is
+       * the ONLY way to show the merchant that a layout fix happened, since
+       * `raw` is already corrected by the time we see it. */
+      const typed = chars.map((x) => (x.key && x.key.length === 1) ? x.key : '').join('');
+      burst = {
+        ev: ev.slice(), raw, typed, norm: normScan(raw),
+        n: chars.length,
+        span: ev.length ? (ev[ev.length - 1].t - ev[0].t) : 0,
+        enter: ev.some((x) => x.key === 'Enter'),
+      };
+      ev = [];
+      paint();
+    };
+
+    const onKey = (e) => {
+      const now = Date.now();
+      if (now - last > 400) ev = [];        // new burst
+      last = now;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        ev.push({ code: e.code || '', key: 'Enter', ch: '', t: now });
+        finish();
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      ev.push({ code: e.code || '', key: e.key, ch: wedgeChar(e), shift: !!e.shiftKey, t: now });
+      // A scanner with no Enter suffix never calls finish() — settle it ourselves.
+      clearTimeout(onKey._t);
+      onKey._t = setTimeout(() => { if (ev.length) finish(); }, 500);
+    };
+
+    function verdict(b) {
+      if (!b) return null;
+      if (!b.n) return { tone: 'bad', t: 'Aucun caractère reçu. La douchette n\'est pas vue comme un clavier : vérifiez le câble USB, ou remettez-la en mode « HID / clavier » avec son code de configuration.' };
+      const perChar = b.n > 1 ? b.span / b.n : 0;
+      if (!b.enter) return { tone: 'warn', t: `${b.n} caractères lus, mais aucune touche Entrée. Kiwi valide un scan sur Entrée : configurez le suffixe « CR / Entrée » de la douchette (code de configuration dans sa notice).` };
+      if (b.n >= 4 && perChar >= 55) return { tone: 'warn', t: `Lecture correcte mais lente (${Math.round(perChar)} ms/caractère). À cette vitesse Kiwi la prend pour une saisie au clavier. Si c'est bien la douchette, dites-le-nous, on relèvera le seuil.` };
+      if (b.typed && b.typed !== b.raw) return { tone: 'good', t: `Douchette détectée. Elle est en clavier US sur un Windows français — Kiwi corrige toute seule (${esc(b.typed)} → ${esc(b.norm)}). Il n'y a rien à reconfigurer sur la douchette.` };
+      return { tone: 'good', t: `Douchette détectée et lue correctement (${Math.round(perChar)} ms/caractère).` };
+    }
+
+    function match(code) {
+      if (!code) return '';
+      const cat = window.KiwiBoutiqueCatalog;
+      const hit = cat && cat.resolveScan ? cat.resolveScan(code) : null;
+      const pid = hit ? hit.pid : BY_EAN[code];
+      if (pid && P[pid]) return `<div class="bqsd-ok">Article trouvé : <b>${esc(P[pid].name)}</b></div>`;
+      return `<div class="bqsd-no">Code lu correctement, mais aucun article ne le porte encore. Enregistrez-le depuis l'inventaire.</div>`;
+    }
+
+    function paint() {
+      const b = burst, v = verdict(b);
+      const sym = (b && b.norm && window.KiwiBarcode && window.KiwiBarcode.detect) ? window.KiwiBarcode.detect(b.norm) : '';
+      const rows = b ? b.ev.filter((x) => x.key !== 'Enter').map((x) =>
+        `<tr><td>${esc(x.code || '—')}</td><td>${esc(x.key)}</td><td>${esc(x.ch || '—')}</td></tr>`).join('') : '';
+      invSetModal(`
+        <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+        <div class="bqi-modh"><div><h3>Test de la douchette</h3><span>Scannez n'importe quel article. Rien n'est vendu, rien n'est modifié.</span></div></div>
+        <div class="bqsd">
+          ${!b ? `<div class="bqsd-wait"><i data-lucide="scan-line"></i>En attente d'un scan…</div>` : `
+            <div class="bqsd-v ${v.tone}">${v.t}</div>
+            <div class="bqsd-grid">
+              <div><span>Code lu</span><b>${esc(b.norm) || '—'}</b></div>
+              <div><span>Caractères</span><b>${b.n}</b></div>
+              <div><span>Vitesse</span><b>${b.n > 1 ? Math.round(b.span / b.n) + ' ms/car.' : '—'}</b></div>
+              <div><span>Touche Entrée</span><b>${b.enter ? 'oui' : 'non'}</b></div>
+              <div><span>Symbologie</span><b>${esc(sym || '—')}</b></div>
+              <div><span>Frappe clavier</span><b>${esc(b.typed) || '—'}</b></div>
+            </div>
+            ${b.n ? match(b.norm) : ''}
+            <details class="bqsd-det"><summary>Détail touche par touche</summary>
+              <table class="bqsd-t"><thead><tr><th>code physique</th><th>caractère reçu</th><th>lu par Kiwi</th></tr></thead><tbody>${rows}</tbody></table>
+            </details>`}
+        </div>
+        <div class="bqi-modfoot">
+          <button class="bq-btn secondary" id="bqsd-copy">Copier le diagnostic</button>
+          <button class="bq-btn" data-inv-x>Terminer</button>
+        </div>`, (el) => {
+        const cp = $('#bqsd-copy', el);
+        if (cp) cp.onclick = () => {
+          const txt = JSON.stringify({ ua: navigator.userAgent, burst: burst && { raw: burst.raw, norm: burst.norm, n: burst.n, span: burst.span, enter: burst.enter, ev: burst.ev.map((x) => [x.code, x.key, x.ch]) } }, null, 1);
+          (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(
+            () => toast('Diagnostic copié'), () => toast('Copie impossible sur cet appareil'));
+        };
+      });
+    }
+
+    if (scanDiagOff) scanDiagOff();
+    document.addEventListener('keydown', onKey, true);
+    // The panel must keep listening while it is open, and stop the moment the
+    // veil closes — by the X, the footer button, Escape or a click outside.
+    const veil = $('#bq-inv-veil', root);
+    const obs = veil ? new MutationObserver(() => {
+      if (!veil.classList.contains('is-open') && scanDiagOff) scanDiagOff();
+    }) : null;
+    if (obs) obs.observe(veil, { attributes: true, attributeFilter: ['class'] });
+    scanDiagOff = () => {
+      document.removeEventListener('keydown', onKey, true);
+      clearTimeout(onKey._t);
+      if (obs) obs.disconnect();
+      scanDiagOff = null;
+    };
+    paint();
   }
   function invScanHandle(raw) {
     const code = normScan(raw);
