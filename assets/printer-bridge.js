@@ -204,6 +204,11 @@
       '.kpr-save:hover{filter:brightness(1.06);}' +
       '.kpr-browser{width:100%;margin-top:10px;background:none;border:1.5px solid rgba(0,0,0,.14);color:var(--ink,#0A0F0D);opacity:.85;}' +
       '.kpr-browser:hover{opacity:1;border-color:rgba(0,0,0,.28);}' +
+      '.kpr-quick{display:flex;gap:10px;margin:0 0 16px;}' +
+      '.kpr-quick .kpr-btn{flex:1;width:auto;margin:0;}' +
+      '.kpr-quick .kpr-browser{background:var(--atlas,#0B6E4F);color:#fff;border:0;opacity:1;}' +
+      '.kpr-quick .kpr-browser:hover{filter:brightness(1.06);border:0;}' +
+      '.kpr-quick .kpr-pdf{background:#fff;border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
       '.kpr-bt{border:1.5px solid rgba(11,110,79,.25);border-radius:14px;padding:15px 16px;margin:0 0 14px;background:rgba(11,110,79,.045);}' +
       '.kpr-bt h3{margin:0 0 3px;font-size:1rem;}' +
       '.kpr-bt>p{margin:0 0 12px;font-size:.82rem;opacity:.7;line-height:1.45;}' +
@@ -228,11 +233,18 @@
     ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Connecter une imprimante');
     var opts = MODELS.map(function (m) { return '<option value="' + m.id + '"' + (m.id === cfg.model ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
     var btLive = btConnected();
+    var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
     ov.innerHTML =
       '<div id="kpr-card">' +
         '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer">×</button>' +
-        '<h2>Connecter une imprimante</h2>' +
-        '<p class="kpr-sub">Le plus simple : une imprimante déjà installée s’imprime directement via « Imprimer ». Pour imprimer sans boîte de dialogue, connectez une imprimante Bluetooth.</p>' +
+        '<h2>' + (fromPrint ? 'Imprimer l’étiquette' : 'Connecter une imprimante') + '</h2>' +
+        '<p class="kpr-sub">' + (fromPrint
+          ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
+          : 'Le plus simple : une imprimante déjà installée s’imprime directement via « Imprimer ». Pour imprimer sans boîte de dialogue, connectez une imprimante Bluetooth.') + '</p>' +
+        (fromPrint ? '<div class="kpr-quick">' +
+          (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
+          (context.onSavePdf ? '<button class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
+        '</div>' : '') +
         '<div class="kpr-bt">' +
           '<h3>Imprimante Bluetooth</h3>' +
           '<p>Sans installation. Kiwi imprime le reçu directement.</p>' +
@@ -240,7 +252,6 @@
           '<button class="kpr-btc" type="button" id="kpr-bt-connect">' + (btLive ? 'Changer d’imprimante' : 'Rechercher une imprimante Bluetooth') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-bt-test"' + (btLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' +
-        (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer maintenant (imprimante système)</button>' : '') +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
@@ -292,6 +303,10 @@
     if (context.onBrowserPrint) {
       var bp = $('#kpr-browser');
       if (bp) bp.addEventListener('click', function () { close(); try { context.onBrowserPrint(); } catch (_) {} });
+    }
+    if (context.onSavePdf) {
+      var sp = $('#kpr-savepdf');
+      if (sp) sp.addEventListener('click', function () { close(); try { context.onSavePdf(); } catch (_) {} });
     }
 
     // ── Bluetooth: connect + test ──

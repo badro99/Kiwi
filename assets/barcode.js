@@ -365,11 +365,23 @@
     });
   }
 
+  // Clicking print with no printer connected opens the connect-a-printer modal
+  // (Klit-style): connect a Bluetooth or network printer, or use the quick actions
+  // to print now / save a real PDF. Falls back to the standalone chooser only if
+  // the printer module isn't loaded.
+  function openConnect(flat) {
+    const KP = window.KiwiPrinter;
+    if (KP && typeof KP.openSetup === 'function') {
+      KP.openSetup({ onBrowserPrint: () => browserPrint(flat), onSavePdf: () => downloadPdf(flat) });
+    } else {
+      printChooser(flat);
+    }
+  }
+
   // labels: [{ title, sub, price, code, format }]. opts: { copies }
-  // When a printer is actively CONNECTED (Bluetooth one-tap or the network bridge)
-  // we send ESC/POS straight to it. Otherwise we present an explicit chooser —
-  // Imprimer (native print) or Enregistrer en PDF (real downloadable PDF) — rather
-  // than dumping the owner into the browser's Save-as-PDF dialog.
+  // When a printer is actively CONNECTED (Bluetooth or the network bridge) we send
+  // ESC/POS straight to it. Otherwise clicking print opens the connect-a-printer
+  // modal (with Imprimer / Enregistrer-en-PDF quick actions inside it).
   function printLabels(labels, opts) {
     opts = opts || {};
     const copies = Math.max(1, opts.copies || 1);
@@ -382,12 +394,12 @@
     if (KP && KP.isConnected && KP.isConnected() && window.KiwiEscPos) {
       return KP.printLabels(flat).then((res) => {
         if (res && res.ok) return res;
-        printChooser(flat);                       // connected printer failed → choose
+        openConnect(flat);                        // connected printer failed → modal
         return res || { ok: false };
-      }, () => { printChooser(flat); return { ok: false }; });
+      }, () => { openConnect(flat); return { ok: false }; });
     }
-    printChooser(flat);
-    return Promise.resolve({ ok: true, chooser: true });
+    openConnect(flat);
+    return Promise.resolve({ ok: true, connect: true });
   }
 
   const api = {
