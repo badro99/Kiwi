@@ -6793,7 +6793,26 @@ function _bqxGridHtml() {
 
 /* the boutique inventory follows the dashboard's active venue, so every boutique
    (Maison Mansour or any future store) gets its OWN catalogue automatically. */
-function _bqxVenue() { return (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'maisonMansour'; }
+/* One brain: a REAL merchant keys its catalogue by its MERCHANT SLUG — the identity
+   spine mirrored byte-for-byte across dashboard/caisse/D1 (see caisse-link.js) — so the
+   dashboard and the paired caisse read/write the SAME inventory. Venue ids ('own' /
+   custom / cafeAtlas) are timing-dependent and diverge between the two surfaces; the
+   slug never does. Demo (localhost, not signed in) keeps the venue id so the pitch
+   catalogue still shows. */
+function _bqxSlug(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'client';
+}
+function _bqxVenue() {
+  try {
+    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+      var name = vd.name || (window.KiwiMe && window.KiwiMe.business) || '';
+      if (name) return _bqxSlug(name);
+    }
+  } catch (_) {}
+  return (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'maisonMansour';
+}
 
 function _renderInventory() {
   const cat = CAT();
