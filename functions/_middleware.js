@@ -95,19 +95,27 @@ export async function onRequest(context) {
   // Reads are open; the ONLY public write is placing an order, and that handler
   // independently refuses unless the merchant has Order Pro switched on — being
   // allow-listed past the gate is not the same as being enabled.
+  // Both spellings of each page are listed on purpose. Cloudflare Pages serves
+  // `/foo.html` by 308-redirecting to the extension-less `/foo`, so a customer
+  // who opens the .html link we generate arrives a second time on a path that
+  // never matched this list — and met the staff login screen. Allow-listing the
+  // clean URL adds no surface: it is the same document, GET/HEAD only.
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
-  if (isRead && (path === '/kiwi-order.html' || path === '/api/menu')) return next();
-  if (isRead && (path === '/OrderPro.html' || path === '/api/order' || path.startsWith('/api/media/'))) return next();
+  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
+  if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
+    || path === '/api/order' || path.startsWith('/api/media/'))) return next();
   if (method === 'POST' && path === '/api/order') return next();
 
   // /order is the short link written onto NFC tags — every byte counts on an
   // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite
   // (not redirect) so the query survives untouched and there is no extra round
-  // trip. Before the auth checks so it behaves the same on an open dev deploy.
+  // trip. Target the clean URL, not OrderPro.html, or Pages answers the rewrite
+  // with the 308 we just went out of our way to avoid.
+  // Before the auth checks so it behaves the same on an open dev deploy.
   if (isRead && path === '/order') {
     const rewritten = new URL(request.url);
-    rewritten.pathname = '/OrderPro.html';
+    rewritten.pathname = '/OrderPro';
     return next(new Request(rewritten, request));
   }
 
