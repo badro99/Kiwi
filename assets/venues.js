@@ -2397,16 +2397,13 @@
       if (snap.deltaHier    != null) items.push({ k: 'hier',    label: lbl, value: snap.deltaHier });
       if (snap.deltaSemaine != null) items.push({ k: 'semaine', label: 'vs semaine dernière', value: snap.deltaSemaine });
       if (snap.deltaMois    != null) items.push({ k: 'mois',    label: 'vs mois dernier',    value: snap.deltaMois });
-      const netVal = isToday && live ? Math.round(live.portfolio.revenue * KIWI_NET_RATIO) : snap.netAfterKiwi;
+      // "Net après Kiwi" removed by product decision (same rationale as the
+      // single-venue hero) — no "what's left after Kiwi's cut" line.
       deltaWrap.innerHTML = items.map(it => `
         <div class="b">
           <div class="l">${it.label.toUpperCase()}</div>
           <div class="v ${it.value >= 0 ? 'up' : 'down'}">${fusionFmtPct(it.value)}</div>
-        </div>`).join('') + `
-        <div class="b net">
-          <div class="l">NET APRÈS KIWI</div>
-          <div class="v" data-fs-net-val>${fusionFmtMad(netVal)}</div>
-        </div>`;
+        </div>`).join('');
     }
 
     // Progress bar — only when objectifJour not null
@@ -2684,13 +2681,6 @@
     if (liveTime) {
       const t = new Date();
       liveTime.textContent = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
-    }
-
-    // ── NET APRÈS KIWI ──
-    const netEl = root.querySelector('[data-fs-net-val]');
-    if (netEl) {
-      const netTarget = Math.round(live.portfolio.revenue * KIWI_NET_RATIO);
-      fusionAnimateNumber(netEl, fusionParseAmount(netEl), netTarget, { duration: 600, format: fusionFmtMad });
     }
 
     // ── Progress bar ──

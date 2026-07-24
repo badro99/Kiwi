@@ -1722,24 +1722,20 @@
         const v = el.querySelector('[data-hero-delta-val]');
         if (v) existing[k] = parsePctFromEl(v);
       });
-      const existingNet = parseIntFromEl(breakdown.querySelector('[data-hero-net-val]'));
-
       const items = [];
       if (data.deltaHier    != null) items.push({ key: 'hier',    value: data.deltaHier,    label: labels.hier });
       if (data.deltaSemaine != null) items.push({ key: 'semaine', value: data.deltaSemaine, label: labels.semaine });
       if (data.deltaMois    != null) items.push({ key: 'mois',    value: data.deltaMois,    label: labels.mois });
 
+      // "Net après Kiwi" removed by product decision — the dashboard is the
+      // merchant's own takings; a "what's left after Kiwi's cut" line is an
+      // unwanted reminder of the fee and adds no operational value.
       breakdown.innerHTML = items.map(it => `
         <div class="b" data-hero-delta="${it.key}">
           <div class="l">${it.label}</div>
           <div class="v" data-hero-delta-val></div>
         </div>
-      `).join('') + `
-        <div class="b">
-          <div class="l">${NET_LABEL[lang] || NET_LABEL.fr}</div>
-          <div class="v" data-hero-net-val></div>
-        </div>
-      `;
+      `).join('');
 
       items.forEach(it => {
         const valEl = breakdown.querySelector(`[data-hero-delta="${it.key}"] [data-hero-delta-val]`);
@@ -1750,9 +1746,6 @@
           format: v => `${fmtPct(v)} <span class="d${v < 0 ? ' dn' : ''}">${arrowSvg(v >= 0)}</span>`,
         });
       });
-
-      const netEl = breakdown.querySelector('[data-hero-net-val]');
-      if (netEl) animateNumber(netEl, existingNet || 0, data.netAfterKiwi, { duration: 800, format: fmtNetAmount });
     }
   }
 
