@@ -7077,6 +7077,12 @@
     id = id || currentVenue;
     const list = salesList(id);
     const entry = { ts: (sale && +sale.ts) || Date.now(), amount: Math.max(0, +(sale && sale.amount) || 0), method: (sale && sale.method) || 'card' };
+    // What was actually sold. The till sends it and the live card shows it, but it
+    // used to stop there — so the Ventes list read "Vente · Vente · Vente" and the
+    // owner could not tell which row was the shirt a customer now wants to return.
+    // Capped to match the server's own 80-char column.
+    const lbl = String((sale && sale.label) || '').trim().slice(0, 80);
+    if (lbl) entry.label = lbl;
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;
@@ -7091,6 +7097,66 @@
     const count = list.length;
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
+  /* A real, data-derived hero recommendation for a merchant-created venue.
+   * Returns null when the store genuinely has no sales — the caller then keeps
+   * its welcome copy. Everything here is read off the merchant's OWN sales, so
+   * it can never contradict the hero figure sitting next to it. */
+  function miCustomHeroRec(venueId) {
+    let list = [];
+    try { list = salesList(venueId) || []; } catch (_) { return null; }
+    if (!list.length) return null;
+    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+    const today = list.filter((s) => (+s.ts || 0) >= t0);
+    const src = today.length ? today : list;
+    const isToday = today.length > 0;
+
+    let rev = 0;
+    const byHour = {}, byMethod = {};
+    src.forEach((s) => {
+      const amt = Math.max(0, +s.amount || 0);
+      rev += amt;
+      const h = new Date(+s.ts || 0).getHours();
+      byHour[h] = (byHour[h] || 0) + amt;
+      const m = String((s && s.method) || 'card');
+      byMethod[m] = (byMethod[m] || 0) + amt;
+    });
+    if (!rev) return null;
+    const basket = Math.round(rev / src.length);
+    const top = (o) => Object.keys(o).reduce((b, k) => (o[k] > (o[b] === undefined ? -1 : o[b]) ? k : b), Object.keys(o)[0]);
+    const peakH = +top(byHour);
+    const topM = top(byMethod);
+    const share = Math.round((byMethod[topM] / rev) * 100);
+
+    const num = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const M = {
+      fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'lien de paiement' },
+      en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'payment link' },
+      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR', wallet: 'محفظة', link: 'رابط الدفع' },
+    };
+    const lang = fusionLang();
+    const mName = (M[lang] || M.fr)[topM] || (M[lang] || M.fr).card;
+    const n = src.length;
+
+    const W = {
+      fr: {
+        title: isToday ? 'Votre journée en cours' : 'Vos premières tendances',
+        obs: `${n} vente${n > 1 ? 's' : ''} ${isToday ? "aujourd'hui" : 'enregistrée' + (n > 1 ? 's' : '')} pour ${num(rev)} MAD, panier moyen ${num(basket)} MAD. Votre meilleure heure : ${peakH}h. ${share} % encaissé en ${mName}.`,
+        act: '→ Kiwi AI affine ses repères à chaque vente encaissée.',
+      },
+      en: {
+        title: isToday ? 'Your day so far' : 'Your first trends',
+        obs: `${n} sale${n > 1 ? 's' : ''} ${isToday ? 'today' : 'recorded'} for ${num(rev)} MAD, average basket ${num(basket)} MAD. Your best hour: ${peakH}:00. ${share}% taken by ${mName}.`,
+        act: '→ Kiwi AI sharpens its read with every sale you take.',
+      },
+      ar: {
+        title: isToday ? 'يومك حتى الآن' : 'اتجاهاتك الأولى',
+        obs: `${n} عملية بيع ${isToday ? 'اليوم' : 'مسجّلة'} بقيمة ${num(rev)} درهم, متوسط السلة ${num(basket)} درهم. أفضل ساعة: ${peakH}. ${share} % عبر ${mName}.`,
+        act: '→ يزداد تحليل Kiwi AI دقة مع كل عملية بيع.',
+      },
+    };
+    return W[lang] || W.fr;
+  }
+
   window.KiwiSales = {
     add: salesAdd,
     list: salesList,
@@ -7833,6 +7899,14 @@
     getHeroAiRec: id => {
       const v = id || currentVenue;
       if (isCustom(v)) {
+        /* This panel used to return "Aucune donnée pour l'instant" unconditionally
+         * — it sat in the same viewport as a live 450 MAD / 1 commande hero and
+         * flatly contradicted it. A merchant who is told their own sales do not
+         * exist stops trusting every other number on the page. So: once there ARE
+         * sales, read them and say something true; only a genuinely empty store
+         * gets the welcome copy. */
+        const real = miCustomHeroRec(v);
+        if (real) return real;
         const W = {
           fr: { title: 'Votre tableau de bord est prêt', obs: "Aucune donnée pour l'instant, enregistrez vos ventes et Kiwi AI commencera à repérer vos heures fortes, vos marges et vos opportunités.", act: '→ Enregistrez votre première vente pour démarrer.' },
           en: { title: 'Your dashboard is ready', obs: 'No data yet, record your sales and Kiwi AI will start spotting your peak hours, margins and opportunities.', act: '→ Record your first sale to get started.' },

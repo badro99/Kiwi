@@ -257,7 +257,7 @@
       if (!cur || have[cur]) return;                // no cursor, or already stored → skip
       var amt = Math.round(s.amount) || 0;
       if (amt <= 0) return;
-      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts }); have[cur] = 1; } catch (_) {}
+      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts, label: s.label }); have[cur] = 1; } catch (_) {}
     });
   }
 

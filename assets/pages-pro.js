@@ -6837,6 +6837,22 @@ function _bqxTag() {
 /* fr pluralisation for the boutique counters — "1 produit", "2 produits". */
 function _bqxN(n, one, many) { return n + ' ' + (Math.abs(n) === 1 ? one : (many || one + 's')); }
 
+/* Base d'affichage de « VALEUR DE STOCK ». Une boutique RÉELLE voit ce que sa
+   marchandise a COÛTÉ — le seul chiffre exploitable en compta, en assurance ou
+   pour un besoin en fonds de roulement — avec le potentiel de vente rappelé en
+   dessous. La démo de présentation garde son chiffre au prix de vente, inchangé.
+   `costed` vaut 0 quand aucun produit n'a de coût saisi : la base coût est alors
+   un repli sur le prix, on ne promet donc pas un potentiel qui serait le même
+   nombre affiché deux fois. */
+function _bqxStockKPI(st) {
+  const real = !!(window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.());
+  if (!real) return { amount: st.stockValue, note: '' };
+  return {
+    amount: st.stockCost,
+    note: st.costed ? ` · potentiel ${_mad(st.stockValue)} MAD` : '',
+  };
+}
+
 function _renderInventory() {
   const cat = CAT();
   cat.use(_bqxVenue());
@@ -6848,7 +6864,7 @@ function _renderInventory() {
     body: `
       <div class="kx-kpi-strip">
         <div class="kx-kpi"><div class="l">PRODUITS</div><div class="v">${st.products}<span class="u">/ ${st.variants} var.</span></div><div class="d">${st.ruptures} en rupture</div></div>
-        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(st.stockValue)}<span class="u">MAD</span></div><div class="d">${st.totalStock} pièces</div></div>
+        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">${st.totalStock} pièces${_bqxStockKPI(st).note}</div></div>
         <div class="kx-kpi ${st.low ? 'warn' : ''}"><div class="l">STOCK BAS / RUPTURES</div><div class="v">${st.low}<span class="u">+ ${st.ruptures}</span></div><div class="d">Seuil ≤ 5 unités</div></div>
         <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${st.categories}</div><div class="d">Créer / supprimer côté Catégories</div></div>
       </div>
@@ -7318,7 +7334,7 @@ function _renderCategories() {
       <div class="kx-kpi-strip cols-3">
         <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${cats.length}</div><div class="d">Créez / supprimez librement</div></div>
         <div class="kx-kpi"><div class="l">PRODUITS RÉFÉRENCÉS</div><div class="v">${st.products}</div><div class="d">${cat.listProducts({ categoryId: 'all' }).filter((p) => !p.categoryId).length} sans catégorie</div></div>
-        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(st.stockValue)}<span class="u">MAD</span></div><div class="d">Toutes catégories</div></div>
+        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">Toutes catégories${_bqxStockKPI(st).note}</div></div>
       </div>
 
       <div class="p-toolbar" style="margin-top:4px;">
@@ -11645,7 +11661,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      'payroll' & 'practitioners' stay OUT: their handlers still hardcode demo
      staff (Fatima/Sofia… / Spa Bahia's PRACS), so a custom venue must get the
      zeroed starter, not the demo roster, until they become genuinely per-venue. */
-  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables']);
+  /* 'conformite', 'stock' and 'finance' were building a correct per-venue page
+     that nobody could reach: each module already detects a real/custom venue
+     (conformite.js:877, stock.js:719, finance.js:866) and renders its own honest
+     empty register instead of Café Atlas's fixtures — but this gate intercepted
+     the nav first and swapped in the generic "Encore rien ici" starter. Their own
+     empty state is strictly better: it names the register, keeps the tabs, and
+     tells the merchant what will fill it. */
+  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
+    'conformite', 'stock', 'finance']);
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button
@@ -11668,7 +11692,22 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     addHint:   { fr: 'Ajoutez-en autant que vous voulez, enregistré pour votre établissement.', en: 'Add as many as you like, saved to your business.', ar: 'أضف ما تشاء, محفوظ لنشاطك.' },
     footSale:  { fr: 'Cette page se construit automatiquement avec vos données réelles, dès vos premières ventes sur la caisse.', en: 'This page builds itself from your real data, starting with your first sales on the register.', ar: 'تُبنى هذه الصفحة تلقائياً من بياناتك الحقيقية بمجرد أول عملية بيع.' },
     footAdd:   { fr: 'Ajoutez vos éléments maintenant, ou laissez-les se créer tout seuls dès la première vente.', en: 'Add your items now, or let them create themselves on the first sale.', ar: 'أضف عناصرك الآن، أو دعها تُنشأ تلقائياً عند أول عملية بيع.' },
+    seeSales:  { fr: 'Voir mes ventes', en: 'View my sales', ar: 'عرض مبيعاتي' },
+    footBuilt: { fr: 'Cette page se remplit automatiquement à mesure que vous encaissez.', en: 'This page fills itself as you keep taking payments.', ar: 'تمتلئ هذه الصفحة تلقائياً كلما واصلت البيع.' },
   };
+
+  /* The one device Kiwi is CERTAIN about is the caisse the merchant paired: the
+     sidebar chip already says "Caisse connectée" while Terminaux — the page whose
+     entire job is listing devices — said "Encore rien ici". Read straight from the
+     pairing and never written into the editable list, so unpairing removes it on
+     its own and a "Terminé" in the add-modal cannot freeze a stale device in. */
+  function pairedDeviceLines(nav) {
+    if (nav !== 'terminaux') return [];
+    let pv = null;
+    try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return []; }
+    if (!pv || !pv.name) return [];
+    return ['Caisse Kiwi · ' + pv.name + (pv.location ? ' · ' + pv.location : '') + ' · connectée'];
+  }
 
   /* Direct-add destinations — trade-neutral noun/placeholder for each. */
   const ADD = {
@@ -11841,31 +11880,39 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const vd = KV?.getCurrentVenueData?.() || {};
     const cfg = ADD[nav];
     const items = cfg ? getItems(nav) : [];
-    const hasItems = items.length > 0;
+    const linked = pairedDeviceLines(nav);
+    const hasItems = (items.length + linked.length) > 0;
 
     /* What this page becomes (kept — the honest framing). */
     const capRows = meta.b.map(x => `<div class="gp-starter-row">${CHECK}<span>${x}</span></div>`).join('');
 
     /* What the client has already added — real, persisted, shown right back. */
     const prep = hasItems ? `
-      <div class="gp-starter-eyebrow">${escS(T(cfg.plural))} · ${items.length}</div>
+      <div class="gp-starter-eyebrow">${escS(T(cfg.plural))} · ${items.length + linked.length}</div>
       <div class="gp-starter-prep">
-        ${items.map(x => `<div class="gp-prep-row">${CHECK}<span>${escS(x)}</span></div>`).join('')}
+        ${linked.concat(items).map(x => `<div class="gp-prep-row">${CHECK}<span>${escS(x)}</span></div>`).join('')}
       </div>` : '';
 
     /* Concrete ways to add data. Config pages get an "Add {noun}" button + the
      * universal first-sale action; output pages get first-sale as the primary. */
+    /* "Encaisser ma première vente" stops being true the moment the first sale
+     * exists — Promotions and Retours both kept offering it to a store that had
+     * already rung two. Once there are sales, the useful next step is the sales
+     * list itself. Same for the footer: stop promising a page that will build
+     * "dès vos premières ventes" to someone who has made them. */
+    const hasSales = !!(window.KiwiSales?.list && window.KiwiSales.list().length);
+    const saleBtn = hasSales
+      ? `<button class="kb ${cfg ? 'ghost' : 'atlas'}" type="button" data-action="nav-transactions">${escS(T(UI.seeSales))}</button>`
+      : `<button class="kb ${cfg ? 'ghost' : 'atlas'}" type="button" data-action="new-sale">${escS(T(UI.firstSale))}</button>`;
     const actions = cfg
       ? `<div class="gp-starter-actions">
            <button class="kb atlas" type="button" data-action="starter-add" data-arg="${nav}">${escS(T(cfg.title))}</button>
-           <button class="kb ghost" type="button" data-action="new-sale">${escS(T(UI.firstSale))}</button>
+           ${saleBtn}
          </div>`
-      : `<div class="gp-starter-actions">
-           <button class="kb atlas" type="button" data-action="new-sale">${escS(T(UI.firstSale))}</button>
-         </div>`;
+      : `<div class="gp-starter-actions">${saleBtn}</div>`;
 
     const h3 = escS(hasItems ? T(UI.started) : T(UI.normal));
-    const foot = cfg ? T(UI.footAdd) : T(UI.footSale);
+    const foot = cfg ? T(UI.footAdd) : (hasSales ? T(UI.footBuilt) : T(UI.footSale));
     const startingUp = T({ fr: 'compte en démarrage', en: 'account getting started', ar: 'حساب قيد الإعداد' });
 
     window.Kiwi.appPage(nav, {

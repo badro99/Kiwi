@@ -2854,11 +2854,69 @@
 
   /* ═══════════════ RENDER: PAYMENT MIX DONUT ═══════════════ */
 
+  /* Ventilation réelle des encaissements (venues créées par le marchand).
+   * La caisse enregistre un MODE DE PAIEMENT — espèces, carte, tap, QR, lien —
+   * et jamais le réseau de la carte : le partage Visa / Mastercard de la démo ne
+   * peut pas exister ici. La carte n'avait aucune branche « venue personnalisée »,
+   * donc un vrai magasin voyait un anneau vide et quatre rails figés à 0 % malgré
+   * ses ventes, et surtout AUCUNE ligne Espèces — le tender dominant d'une
+   * boutique marocaine. */
+  const REAL_MIX = [
+    { key: 'cash', color: '#0B6E4F', fr: 'Espèces',          en: 'Cash',         ar: 'نقدًا' },
+    { key: 'card', color: '#46A878', fr: 'Carte bancaire',   en: 'Bank card',    ar: 'بطاقة بنكية' },
+    { key: 'tap',  color: '#7DF2B0', fr: 'Kiwi Tap',         en: 'Kiwi Tap',     ar: 'Kiwi Tap' },
+    { key: 'qr',   color: '#D99A2B', fr: 'QR / Wallet',      en: 'QR / Wallet',  ar: 'QR / محفظة' },
+    { key: 'link', color: '#B08CC8', fr: 'Lien de paiement', en: 'Payment link', ar: 'رابط الدفع' },
+  ];
+  const MIX_EMPTY = {
+    fr: 'Aucun encaissement sur la période',
+    en: 'No payments in this period',
+    ar: 'لا توجد مدفوعات في هذه الفترة',
+  };
+  // Rows for the active range: only tenders actually used, so a store that takes
+  // cash only is not told it has four dead card rails.
+  function realMixRows(lang, range) {
+    const [from, to] = rangeBounds(range || effRange());
+    const by = {};
+    let total = 0;
+    realSalesList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.max(0, +e.amount || 0);
+      if (!amt) return;
+      let k = String((e && e.method) || 'card');
+      if (k === 'wallet') k = 'qr';                             // même rail côté client
+      if (!REAL_MIX.some((m) => m.key === k)) k = 'card';       // mode inconnu → carte, jamais une tranche fantôme
+      by[k] = (by[k] || 0) + amt;
+      total += amt;
+    });
+    if (!total) return { rows: [], total: 0 };
+    return {
+      total,
+      rows: REAL_MIX.filter((m) => by[m.key] > 0).map((m) => ({
+        color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / total) * 100,
+      })),
+    };
+  }
+
   function renderMix() {
     const effective = effRange();
     const data = vData(mixByVenue, currentRange);
     if (!data) return;
     const lang = getLang();
+
+    /* Une venue réelle recompose ses tranches depuis ses ventes ; la démo garde
+     * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
+     * `rows`, donc les deux chemins partagent le même rendu. */
+    const custom = !!(window.KiwiVenue?.isCustom?.() && window.KiwiSales);
+    const real = custom ? realMixRows(lang, effective) : null;
+    const rows = custom ? real.rows : [
+      { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
+      { color: '#46A878', label: 'Mastercard', pct: data.mc   },
+      { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
+      { color: '#D99A2B', label: 'QR',         pct: data.qr   },
+    ];
+    const centerMad = custom ? real.total : data.centerMad;
 
     const donut = document.querySelector('[data-mix-donut]');
     if (donut) {
@@ -2867,17 +2925,22 @@
       // Clockwise from 12 o'clock. pathLength=100 → dash/offset are exact
       // percentages; a hairline GAP between segments keeps them legible. A
       // light→deep green ramp + amber makes all four methods distinguishable.
-      const MIX_COLORS = { visa: '#0B6E4F', mc: '#46A878', tap: '#7DF2B0', qr: '#D99A2B' };
       const GAP = 1.6;
       const SW = 4.6;
       let acc = 0;
-      const segs = [['visa', MIX_COLORS.visa], ['mc', MIX_COLORS.mc], ['tap', MIX_COLORS.tap], ['qr', MIX_COLORS.qr]]
-        .map(([k, stroke]) => {
-          const pct = data[k] || 0;
-          const seg = { stroke, pct, dash: Math.max(0, pct - GAP), offset: 25 - acc };
-          acc += pct;
-          return seg;
-        });
+      const segs = rows.map((r) => {
+        const pct = r.pct || 0;
+        const seg = { stroke: r.color, pct, dash: Math.max(0, pct - GAP), offset: 25 - acc };
+        acc += pct;
+        return seg;
+      });
+      /* The built DOM caches one <circle> per segment, addressed by index. A real
+       * store's tender set grows as it takes its first card or QR payment, so the
+       * cached ring must be discarded whenever the shape changes — otherwise the
+       * new tranche would have no element to draw into. */
+      const sig = segs.map((s) => s.stroke).join('|');
+      if (donut.dataset.sig !== sig) donut.dataset.built = '';
+      donut.dataset.sig = sig;
       const built = donut.dataset.built === '1';
       const STAGGER_MS = 150;
       const FILL_MS = 850; // matches CSS transition duration
@@ -2930,20 +2993,25 @@
     }
 
     const center = document.querySelector('[data-mix-center-amt]');
-    if (center) animateNumber(center, parseAmountFromEl(center), data.centerMad, { duration: 700, format: v => frInt(v) });
+    if (center) animateNumber(center, parseAmountFromEl(center), centerMad, { duration: 700, format: v => frInt(v) });
 
     const sub = document.querySelector('[data-mix-sub]');
     if (sub) sub.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange];
 
     const legend = document.querySelector('[data-mix-legend]');
     if (legend) {
+      // No sales yet is a real answer — say so, rather than print rails at 0 %.
+      if (!rows.length) {
+        legend.innerHTML = `<div class="li"><div class="n" style="color:var(--n-500,#77807b);">${MIX_EMPTY[lang] || MIX_EMPTY.fr}</div></div>`;
+        legend.dataset.built = '';
+        legend.dataset.sig = '';
+        return;
+      }
+      // Rows are addressed by label, so a changed tender set needs a fresh build.
+      const lsig = rows.map((r) => r.label).join('|');
+      if (legend.dataset.sig !== lsig) legend.dataset.built = '';
+      legend.dataset.sig = lsig;
       const built = legend.dataset.built === '1';
-      const rows = [
-        { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
-        { color: '#46A878', label: 'Mastercard', pct: data.mc   },
-        { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
-        { color: '#D99A2B', label: 'QR',         pct: data.qr   },
-      ];
       if (!built) {
         legend.innerHTML = rows.map(r =>
           `<div class="li"><div class="n"><i style="background:${r.color};"></i>${r.label}</div><div class="v" data-mix-pct="${r.label}">0 %</div></div>`
@@ -3147,8 +3215,14 @@
         t,
         method: ICON_FOR[s.method] || 'cmi',
         primary: L[s.method] || L.card,
-        sub: L.sub, flag: '', ctx: '',
-        amt: (s.amount || 0).toFixed(2).replace('.', ',') + ' MAD',
+        /* The "who/what" column. On a boutique the useful identifier is the item,
+         * which the sale now carries — a row reading "Chemise en lin" is what the
+         * owner needs to find the original sale when that customer returns. Falls
+         * back to the generic subtitle only when the till sent no label. */
+        sub: L.sub, flag: '', ctx: s.label || '',
+        // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
+        // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
+        amt: (s.amount || 0).toFixed(2).replace('.', ','),
         tip: '—', neg: false, isNew: i === 0,
       };
     });
@@ -4159,6 +4233,7 @@
           renderGoal();
           renderKpiBand();
           renderFeed();
+          renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
         });
         return;
       }

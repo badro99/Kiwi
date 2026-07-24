@@ -57,7 +57,11 @@
   // Device/UI chrome that is NOT tenant data — must survive an account switch.
   var PRESERVE = {
     kiwiAccountKey: 1, kiwiLang: 1, kiwiTheme: 1, kiwiMode: 1, kiwiDesign2026: 1,
-    kiwiDesignIOS27: 1, kiwiRamadan: 1, kiwiDateRange: 1, kiwiRevCompare: 1,
+    // kiwiDateRange is deliberately NOT preserved. It is a view into ONE tenant's
+    // data, not a device preference: carrying it across an account switch landed a
+    // brand-new store on "Hier", printing ENCAISSÉ HIER 0,00 MAD directly above a
+    // live 450 MAD sale. A store that has just been created has no yesterday.
+    kiwiDesignIOS27: 1, kiwiRamadan: 1, kiwiRevCompare: 1,
     kiwiHeroView: 1, kiwiKpiLayout: 1, kiwiGlassLevel: 1, cafeAtlasLang: 1, kiwiDemos: 1,
   };
   function slugish(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }

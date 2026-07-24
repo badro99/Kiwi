@@ -348,6 +348,44 @@
 
   /* ───────────────────────── state ───────────────────────── */
   let saleSeq = 1208;            /* MM-1203…1207 vendues — MM-1208 = ticket en cours */
+
+  /* ── le journal du jour survit à un rechargement (boutiques réelles) ───────
+     SALES ne vivait qu'en mémoire : recharger la caisse remettait son en-tête à
+     « 0 vente · 0 MAD aujourd'hui » alors que le dashboard, qui lit le serveur,
+     affichait toujours la recette du jour. Une caissière et la gérante ne doivent
+     jamais lire deux chiffres différents pour la même journée.
+     Rangé sous le préfixe `kiwi:` pour qu'un changement de compte le purge (voir
+     TENANT_PREFIXES dans identity.js), et filtré sur aujourd'hui au chargement :
+     le compteur bascule donc tout seul à minuit. saleSeq est repris au-delà du
+     dernier numéro restauré, sinon le ticket suivant réutiliserait un numéro déjà
+     encaissé. La démo garde ses ventes en mémoire, inchangée. */
+  const DAY_KEY = 'kiwi:bqDay';
+  function isToday(d) {
+    const x = new Date(d), n = new Date();
+    return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
+  }
+  function persistDay() {
+    if (IS_DEMO) return;
+    try { localStorage.setItem(DAY_KEY, JSON.stringify(SALES.filter((s) => s && isToday(s.at)))); } catch (_) {}
+  }
+  (function restoreDay() {
+    if (IS_DEMO) return;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(DAY_KEY) || '[]'); } catch (_) { return; }
+    if (!Array.isArray(saved) || !saved.length) return;
+    let maxSeq = 0;
+    saved.forEach((s) => {
+      if (!s || !s.at || !isToday(s.at)) return;              // le journal d'hier n'est pas le compteur d'aujourd'hui
+      s.at = new Date(s.at);
+      s.lines = Array.isArray(s.lines) ? s.lines : [];
+      s.total = +s.total || s.lines.reduce((t, l) => t + (+l.unit || 0) * (+l.qty || 0), 0);
+      const n = parseInt(String(s.id || '').replace(/^\D+/, ''), 10);
+      if (n > maxSeq) maxSeq = n;
+      SALES.push(s);
+    });
+    SALES.sort((a, b) => b.at - a.at);                        // le plus récent d'abord, comme unshift
+    if (maxSeq >= saleSeq) saleSeq = maxSeq + 1;
+  })();
   const state = {
     view: 'vente',
     rayon: 'tous',
@@ -1656,6 +1694,7 @@
       // Returned pieces go back into the real inventory too, not just the display.
       persistStock(ln.pid, ln.size, ln.color, ln.qty);
     });
+    persistDay();   // le retour change la recette du jour, pas seulement l'affichage
   }
 
   function issueAvoir(amount, cliente, motif, fromSaleId) {
@@ -1776,6 +1815,7 @@
       ln.returned = true;
       ln.note = `échangée → ${newP.name} · ${newSize}`;
       state.exchange = null;
+      persistDay();
       queueIfOffline(`Échange ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
     };
@@ -1798,6 +1838,7 @@
               total: diff,
             };
             SALES.unshift(rec);
+            persistDay();
             $('#bq-today', root).textContent = headSubVente();
             refreshOps();
             return { ref: rec.id, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
@@ -1837,6 +1878,7 @@
           total,
         };
         SALES.unshift(sale);
+        persistDay();
         saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
@@ -2275,7 +2317,9 @@
           ${cats.map((c) => `<button class="bqi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${esc(c.name)} · ${cat.categoryCount(c.id)}</button>`).join('')}
         </div>
         <div class="bqi-kpis">
-          <div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(st.stockValue)} MAD</span></div>
+          <!-- boutique réelle : ce que le stock a COÛTÉ (chiffre de compta / assurance).
+               La démo garde sa valeur au prix de vente. Voir stats() dans boutique-catalog.js. -->
+          <div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>
           <div class="bqi-kpi"><span class="l">Pièces en stock</span><span class="v">${st.totalStock}</span></div>
           <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
         </div>

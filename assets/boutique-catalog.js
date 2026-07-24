@@ -366,13 +366,26 @@
   /* ───────────────── stats / caisse compat ───────────────── */
   function stats() {
     const products = db.products.filter((p) => !p.archived);
-    let totalStock = 0, stockValue = 0, ruptures = 0, low = 0;
+    /* Deux bases, jamais confondues :
+       - stockCost  : ce que la marchandise a COÛTÉ. C'est le chiffre d'une compta,
+                      d'une assurance ou d'un besoin en fonds de roulement.
+       - stockValue : ce qu'elle rapporterait vendue au prix affiché (potentiel).
+       « Valeur de stock » affichait le potentiel : 9 pièces achetées 1 800 MAD
+       étaient présentées à 4 050 MAD, soit 2,25× de trop. Repli sur le prix de
+       vente quand aucun coût n'est saisi — mieux vaut trop haut que zéro, et
+       `costed` dit au rendu s'il peut se fier à la base coût. */
+    let totalStock = 0, stockValue = 0, stockCost = 0, ruptures = 0, low = 0, costed = 0;
     products.forEach((p) => {
       const s = productStock(p.id);
-      totalStock += s; stockValue += s * (p.priceMAD || 0);
+      const price = p.priceMAD || 0;
+      const cost = +p.cost || 0;
+      totalStock += s;
+      stockValue += s * price;
+      stockCost += s * (cost > 0 ? cost : price);
+      if (cost > 0) costed++;
       if (s === 0) ruptures++; else if (s <= 5) low++;
     });
-    return { products: products.length, variants: db.variants.length, totalStock, stockValue, ruptures, low, categories: db.categories.length };
+    return { products: products.length, variants: db.variants.length, totalStock, stockValue, stockCost, costed, ruptures, low, categories: db.categories.length };
   }
 
   // Reconstruct the caisse's { RAYONS, P, BY_EAN } shape from the DB so
