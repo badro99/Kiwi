@@ -4498,6 +4498,16 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
+  /* Ce fichier est `defer` : à son exécution readyState vaut déjà 'interactive',
+   * donc init() part TOUT DE SUITE — avant pages-pro.js, chargé plus bas, qui
+   * publie la clé du catalogue. Le premier rendu de la bande ne pouvait donc pas
+   * résoudre les coûts et retombait sur la marge forfaitaire : le commerçant
+   * voyait 729 MAD, puis 736 dès qu'il touchait une pastille de période. On
+   * rejoue la bande une fois, quand la clé est publiée. */
+  window.addEventListener('kiwi-catalog-key', () => {
+    try { renderKpiBand(); } catch (_) {}
+  }, { once: true });
+
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */
   function tickLiveRevenue({ amount = 0, tip = 0 } = {}) {
     // Demo clock owns deterministic ticking on aujourdhui — skip random ticks.

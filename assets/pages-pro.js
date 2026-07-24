@@ -6895,6 +6895,9 @@ function _bqxVenue() {
  * exister qu'ici : une deuxième copie dériverait tôt ou tard de celle-ci, et
  * les deux surfaces liraient alors deux inventaires différents. */
 window.KiwiBoutiqueVenueKey = _bqxVenue;
+/* Ce fichier s'exécute APRÈS dateRange.js, dont le premier rendu est déjà passé
+ * sans la clé. On le prévient une fois pour qu'il rejoue sa bande de KPI. */
+try { window.dispatchEvent(new Event('kiwi-catalog-key')); } catch (_) {}
 
 /* Display name for a modal eyebrow — the store's OWN name. Identity first (it is
  * what the merchant signed up as), then the venue label, then a neutral word.
