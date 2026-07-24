@@ -1897,6 +1897,39 @@
   /* ═══════════════════════ ENCAISSEMENT ═══════════════════════
      Réutilise le kit caisse : .modal-amount, .cash-grid, .reader-stage.
      L'avoir est un moyen de paiement à part entière — il se déduit. */
+  /* Real receipt printing.
+     This button used to be a bare toast that announced "Envoyé, reçu 80 mm sur
+     l'imprimante caisse" whether or not a printer existed — so on a real till
+     with nothing connected it told the merchant a receipt had printed that never
+     did, every single time. It now actually prints, and when it cannot it says
+     so and opens the printer setup instead of pretending. */
+  function printReceiptNow(opts, parts) {
+    const KP = window.KiwiPrinter;
+    if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+    if (!KP.isConnected || !KP.isConnected()) {
+      toast('Aucune imprimante connectée');
+      try { KP.openSetup({}); } catch (_) {}
+      return;
+    }
+    const pv = pvPaired();
+    const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces' };
+    const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
+    toast('Impression du reçu…');
+    KP.printReceipt({
+      shop: (pv && pv.name) || 'Kiwi',
+      ref: opts.ref || '',
+      date: fmtDT(new Date()),
+      lines: lines.length ? lines : [{ name: opts.title || 'Vente', price: fmtMAD(opts.amount) }],
+      total: fmtMAD(opts.amount),
+      method: (parts || []).map((x) => label[x.m] || x.m).join(' + '),
+    }).then(
+      (r) => toast(r && r.ok
+        ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau'))
+        : ('Impression échouée : ' + ((r && r.reason) || 'inconnu'))),
+      (e) => toast('Impression échouée : ' + ((e && e.message) || 'erreur'))
+    );
+  }
+
   function checkout() {
     const t = state.ticket;
     if (!t.lines.length) return;
@@ -1906,6 +1939,14 @@
       amount: total,
       title: 'Encaissement',
       subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
+      // Real ticket contents, so the printed receipt itemises the sale instead
+      // of showing a single lump sum.
+      ref: t.num,
+      lines: t.lines.map((ln) => ({
+        qty: ln.qty,
+        name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
+        amount: lineUnit(ln) * ln.qty,
+      })),
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
         const sale = {
@@ -2142,10 +2183,31 @@
           <button class="ma-btn primary" id="bq-pay-done"><i data-lucide="check"></i>${esc(opts.doneLabel || 'Nouvelle vente')}</button>
         </div>`;
       icons(); closeBtns();
-      $('#bq-pay-print', el).onclick = () => toast('Envoyé, reçu 80 mm sur l\'imprimante caisse');
-      $('#bq-pay-wa', el).onclick = () => toast(opts.waPhone
-        ? `Reçu envoyé sur WhatsApp à ${opts.waName} (${opts.waPhone})`
-        : 'Cliente de passage, pas de numéro WhatsApp sur le ticket');
+      $('#bq-pay-print', el).onclick = () => printReceiptNow(opts, parts);
+      /* Same problem as the 80 mm button: this claimed "Reçu envoyé sur WhatsApp"
+         while sending nothing at all. WhatsApp cannot be sent silently from a web
+         page, and it shouldn't be — the merchant should see what goes to their
+         client. So we open a real pre-filled WhatsApp draft; they press send. */
+      $('#bq-pay-wa', el).onclick = () => {
+        if (!opts.waPhone) { toast('Cliente de passage, pas de numéro WhatsApp sur le ticket'); return; }
+        const pv = pvPaired();
+        const body = [
+          (pv && pv.name) || 'Kiwi',
+          opts.ref ? ('Reçu ' + opts.ref) : 'Reçu',
+          '',
+          ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} — ${fmtMAD(l.amount)}`),
+          '',
+          `TOTAL ${fmtMAD(opts.amount)}`,
+          (parts || []).map((x) => x.m === 'carte' ? 'Carte' : x.m === 'avoir' ? 'Avoir' : 'Espèces').join(' + '),
+          '',
+          'Merci !',
+        ].filter((x) => x !== undefined).join('\n');
+        const num = String(opts.waPhone).replace(/\D/g, '');
+        try {
+          window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+          toast(`WhatsApp ouvert pour ${opts.waName || 'la cliente'}, appuyez sur envoyer`);
+        } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
+      };
       $('#bq-pay-done', el).onclick = () => closeVeil('#bq-pay-veil');
     };
 
