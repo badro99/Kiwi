@@ -183,7 +183,21 @@ export async function onRequestPost(context) {
   // publishes its stock. `type` decides which sanitizer runs, so a boutique's
   // products can never be flattened by the menu sanitizer (or vice-versa).
   const shop = isShop(type);
-  const data = shop ? sanitizeShop(body && body.data) : sanitizeMenu(body && body.data);
+  const raw = (body && body.data) || {};
+
+  // Shape guard. Two modules publish into this row (menu-catalog.js for a carte,
+  // orderpro-publish.js for stock) and they run in the same page. If one of them
+  // posts the WRONG shape for the declared type — a boutique labelled payload
+  // carrying {cats,items} instead of {products} — the sanitizer would happily
+  // reduce it to empty and wipe the store's real catalogue. That is a silent
+  // data loss, so refuse it rather than write it. An honestly empty catalogue
+  // still publishes: this only rejects a mismatch, never emptiness.
+  const looksShop = Array.isArray(raw.products) || Array.isArray(raw.variants);
+  const looksMenu = Array.isArray(raw.items) || Array.isArray(raw.cats);
+  if (shop && !looksShop && looksMenu) return json({ error: 'shape-mismatch', expected: 'shop' }, 409);
+  if (!shop && !looksMenu && looksShop) return json({ error: 'shape-mismatch', expected: 'menu' }, 409);
+
+  const data = shop ? sanitizeShop(raw) : sanitizeMenu(raw);
 
   try {
     await env.DB.prepare(

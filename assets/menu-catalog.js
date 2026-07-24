@@ -563,12 +563,30 @@
   function isRealSession() {
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
   }
+  /* A boutique has no carte. It publishes STOCK to the same row, through
+   * assets/orderpro-publish.js — so if this published too, its empty
+   * { cats:[], items:[] } would land as type='boutique', the server would run
+   * the boutique sanitizer over it, and the shop's real products would be
+   * overwritten with nothing. The two publishers share one row; this one owns
+   * restaurants, the other owns boutiques. Server type wins, same precedence as
+   * orderpro-publish.js, so a stale local key can't misroute the decision. */
+  const BOUTIQUE_TRADES = ['boutique', 'pret-a-porter', 'pretaporter', 'mode', 'friperie',
+                           'chaussures', 'maroquinerie', 'bijouterie', 'concept-store',
+                           'sport', 'vetement', 'habillement'];
+  function isBoutiqueVenue(vd) {
+    let serverType = '';
+    try { serverType = (window.KiwiConfig && window.KiwiConfig.type) || ''; } catch (_) {}
+    const raw = String(serverType || (vd && (vd.subtype || vd.type)) || '').toLowerCase();
+    return !!raw && BOUTIQUE_TRADES.some((t) => raw.indexOf(t) !== -1);
+  }
+
   let syncTimer = null;
   function publish(vid) {
     if (!isRealSession()) return;                 // local demo → never touch the network
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
                (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    if (isBoutiqueVenue(vd)) return;              // stock is published by orderpro-publish.js
     const data = store.get(vid);
     try {
       fetch('/api/menu', {
