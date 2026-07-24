@@ -93,14 +93,16 @@
    *   58 mm  → 32  both are offered rather than making the owner guess
    *   76 mm  → 40  dot-matrix kitchen printers (Epson TM-U220 and friends)
    *   80 mm  → 48  the standard thermal receipt roll
-   *   110 mm → 64  wide rolls
+   *   110 mm → 66  measured, not guessed: the WD8210 datasheet gives a 104 mm
+   *                 print width at 203 dpi = 800 dots max, and Font A is 12 dots
+   *                 wide, so 800/12 = 66 columns (792 dots, inside the head)
    *   112 mm → 64  wide report rolls
    * The wide sizes are deliberately CONSERVATIVE: those heads are usually 832
    * dots (69 columns Font A) but some are 720 (60). Under-counting prints a
    * slightly narrow ticket; over-counting wraps every line and garbles it.
    * Anything unknown falls back to 48 so a bad value can never produce a garbled
    * ticket — it just prints as standard 80 mm. */
-  var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '110': 64, '112': 64 };
+  var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '110': 66, '112': 64 };
   function cols(paper) { return COLS[String(paper)] || 48; }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
