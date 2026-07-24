@@ -273,6 +273,18 @@
       },
       /* Replies for the six guard patterns. Each says plainly what it will
        * NOT do and why, then offers the nearest thing it can actually do. */
+      runway: {
+        textOk: (m) => `Vous êtes bénéficiaire aujourd'hui, donc votre trésorerie n'est pas un compte à rebours mais un matelas : elle couvre <b>${fmt1(m)} mois</b> de charges totales si le chiffre d'affaires tombait à zéro du jour au lendemain.`,
+        textLoss: (m) => `Au rythme de perte actuel, votre trésorerie tient <b>${fmt1(m)} mois</b>. C'est le temps dont vous disposez pour redresser, pas une réserve.`,
+        s1l: 'Trésorerie disponible', s1h: 'ce que vous avez devant vous',
+        s2lOk: 'Bénéfice net /mois', s2hOk: 'ce que l\u2019activité ajoute',
+        s2lLoss: 'Perte nette /mois', s2hLoss: 'ce que l\u2019activité consomme',
+        s3l: 'Sorties mensuelles', s3h: 'charges fixes + coût matière',
+        s4l: 'Premier poste', s4h: 'le levier le plus lourd',
+        vOk: (m) => `Situation tenable : ${fmt1(m)} mois de charges couverts sans une seule vente. Le risque n'est pas la trésorerie, c'est une baisse durable du chiffre.`,
+        vLoss: (m) => `Urgence : ${fmt1(m)} mois avant rupture. Agissez sur le premier poste de charges et sur le seuil de rentabilité, dans cet ordre.`,
+        note: 'Calcul à charges constantes. Un délai fournisseur, un étalement CNSS ou un report de loyer allongent ce délai, parlez-en avant d\u2019être à court.',
+      },
       guards: {
         negated: 'Compris, je ne lance pas cette simulation. Dites-moi ce que vous voulez examiner à la place, ou choisissez ci-dessous.',
         meta: 'Je ne devine rien : chaque chiffre vient de vos 30 derniers jours enregistrés dans Kiwi, et chaque simulation applique une règle simple à ces chiffres. Une hausse de prix s’applique au chiffre d’affaires sans toucher au coût matière ; une embauche se retranche du bénéfice net ; le seuil de rentabilité divise vos charges fixes par votre taux de marge. Ouvrez « Voir tous les chiffres » pour la base de départ.',
@@ -281,6 +293,9 @@
         notrend: 'Je ne peux pas comparer deux périodes : je travaille sur une seule fenêtre de 30 jours, sans historique. Je ne sais donc pas mesurer après coup l’effet d’une décision déjà prise. Ce que je peux faire, c’est simuler ce qu’une décision changerait à partir d’aujourd’hui.',
         illicit: 'Je ne vous aiderai pas sur ce point. Kiwi tient aussi votre comptabilité, je ne vais pas vous aider à dissimuler des recettes, à contourner la CNSS ou à payer sous le minimum légal, et vous exposer à un redressement. En revanche je peux réduire vos coûts par des moyens légaux, voici où votre argent part réellement.',
         unclear: 'Je n’ai pas bien saisi votre question. Je comprends le français, l’anglais et l’arabe, et une bonne partie de la darija, mais pas encore tout. Reformulez-la, ou posez-la autrement : je calcule une embauche, une hausse de prix, un investissement, votre seuil de rentabilité, vos marges, vos charges et votre prévision du mois.',
+        strainPartial: 'Je n’ai pas encore votre trésorerie ni vos charges, je ne peux donc pas calculer combien de temps vous tenez. Renseignez-les dans Réglages et je vous donne ce chiffre, c’est le plus important quand ça se tend.',
+        market: 'Je ne donne pas de conseil de placement, ni en bourse, ni en crypto : ce n’est pas mon métier et vous engageriez de l’argent sur un avis que je ne peux pas justifier. Ce que je sais faire, c’est vous dire ce que votre commerce rapporte et ce qu’un investissement dedans changerait.',
+        secret: 'Je ne donne ni code, ni mot de passe, ni les données d’un autre commerçant. Je ne vois que votre établissement, et c’est volontaire. Pour vos propres accès, passez par Réglages, ou par Équipe pour les codes de vos employés.',
       },
       calc: { title: 'Calcul', result: 'résultat' },
       llm: {
@@ -428,6 +443,18 @@
       help: {
         text: 'Hello Rachid. I\'m your financial assistant, I know Café Atlas: revenue, cost of goods, costs, margins and cash. Ask me a numbers question and I\'ll compute the real impact on your result; for an open question about running your café, I can switch on an AI assistant right in your browser. For example:',
       },
+      runway: {
+        textOk: (m) => `You're profitable today, so your cash isn't a countdown but a cushion: it covers <b>${fmt1(m)} months</b> of total costs if revenue stopped dead tomorrow.`,
+        textLoss: (m) => `At the current rate of loss, your cash lasts <b>${fmt1(m)} months</b>. That's the time you have to turn things around, not a reserve.`,
+        s1l: 'Cash available', s1h: 'what you have in front of you',
+        s2lOk: 'Net profit /month', s2hOk: 'what trading adds',
+        s2lLoss: 'Net loss /month', s2hLoss: 'what trading consumes',
+        s3l: 'Monthly outgoings', s3h: 'fixed costs + cost of goods',
+        s4l: 'Largest line', s4h: 'your heaviest lever',
+        vOk: (m) => `Sustainable: ${fmt1(m)} months of costs covered without a single sale. Your risk isn't cash, it's a lasting drop in revenue.`,
+        vLoss: (m) => `Urgent: ${fmt1(m)} months before you run out. Act on the largest cost line and on break-even, in that order.`,
+        note: 'Calculated at constant costs. Supplier terms, a CNSS instalment plan or a deferred rent all extend this, raise them before you run short.',
+      },
       guards: {
         negated: 'Understood, I won\'t run that simulation. Tell me what you\'d like to look at instead, or pick one below.',
         meta: 'Nothing here is guesswork: every figure comes from your last 30 days recorded in Kiwi, and every simulation applies one simple rule to those figures. A price rise applies to revenue without touching cost of goods; a hire is subtracted from net profit; break-even divides your fixed costs by your margin rate. Open "See all the figures" for the starting point.',
@@ -436,6 +463,9 @@
         notrend: 'I can\'t compare two periods: I work from a single 30-day window with no history. So I can\'t measure after the fact what a decision you already took actually did. What I can do is simulate what a decision would change from today.',
         illicit: 'I won\'t help with that. Kiwi also keeps your books, so I\'m not going to help you hide takings, get around CNSS or pay below the legal minimum, and expose you to a tax reassessment. What I can do is cut your costs by lawful means, here is where your money actually goes.',
         unclear: 'I didn’t quite catch that. I understand French, English and Arabic, and a good deal of Darija, but not all of it yet. Try rephrasing, or ask another way: I can work out a hire, a price rise, an investment, your break-even point, your margins, your costs and this month’s forecast.',
+        strainPartial: 'I don’t have your cash position or your costs yet, so I can’t work out how long you can last. Add them in Settings and I’ll give you that figure, it’s the one that matters most when things get tight.',
+        market: 'I don’t give investment advice, in equities or crypto: it isn’t my job and you’d be committing money on a view I can’t justify. What I can do is tell you what your business earns and what investing in it would change.',
+        secret: 'I don’t hand out codes, passwords, or another merchant’s data. I only ever see your own business, and that’s deliberate. For your own access go to Settings, or Team for your staff’s codes.',
       },
       calc: { title: 'Calculation', result: 'result' },
       llm: {
@@ -585,6 +615,18 @@
         text: 'مرحباً رشيد. أنا مساعدك المالي، أعرف Café Atlas: رقم المعاملات، تكلفة المواد، التكاليف، الهوامش والخزينة. اطرح سؤالاً رقمياً وأحسب الأثر الفعلي على نتيجتك؛ ولسؤال مفتوح حول تسيير مقهاك، يمكنني تشغيل مساعد ذكاء اصطناعي داخل متصفّحك. مثلاً:',
       },
       /* ⚠ best-effort MSA, flagged for native review like the rest of the AR set. */
+      runway: {
+        textOk: (m) => `أنت رابح اليوم، لذا خزينتك ليست عدّاً تنازلياً بل وسادة: تغطي <b>${fmt1(m)} شهراً</b> من مجموع التكاليف لو توقف رقم المعاملات فجأة.`,
+        textLoss: (m) => `بوتيرة الخسارة الحالية، تكفي خزينتك <b>${fmt1(m)} شهراً</b>. هذا هو الوقت المتاح للتصحيح، وليس احتياطاً.`,
+        s1l: 'الخزينة المتاحة', s1h: 'ما هو أمامك',
+        s2lOk: 'الربح الصافي /شهر', s2hOk: 'ما يضيفه النشاط',
+        s2lLoss: 'الخسارة الصافية /شهر', s2hLoss: 'ما يستهلكه النشاط',
+        s3l: 'المصروفات الشهرية', s3h: 'التكاليف الثابتة + تكلفة المواد',
+        s4l: 'أكبر بند', s4h: 'أثقل رافعة لديك',
+        vOk: (m) => `وضع محتمل: ${fmt1(m)} شهراً من التكاليف مغطاة دون أي عملية بيع. خطرك ليس السيولة، بل انخفاض دائم في رقم المعاملات.`,
+        vLoss: (m) => `حالة عاجلة: ${fmt1(m)} شهراً قبل النفاد. تحرّك على أكبر بند تكاليف ثم على نقطة التعادل، بهذا الترتيب.`,
+        note: 'حساب بتكاليف ثابتة. مهلة من مورّد أو جدولة مع الضمان الاجتماعي أو تأجيل الكراء تُطيل هذه المدة، تحدّث عنها قبل أن تنفد سيولتك.',
+      },
       guards: {
         negated: 'مفهوم، لن أُجري هذه المحاكاة. قل لي ما الذي تريد دراسته بدل ذلك، أو اختر من الأسفل.',
         meta: 'لا شيء هنا تخمين: كل رقم يأتي من آخر 30 يوماً مسجّلة في Kiwi، وكل محاكاة تطبّق قاعدة بسيطة على تلك الأرقام. رفع الأسعار يُطبَّق على رقم المعاملات دون المساس بتكلفة المواد؛ والتوظيف يُطرح من الربح الصافي؛ ونقطة التعادل تقسم تكاليفك الثابتة على نسبة هامشك. افتح «كل الأرقام» لمعرفة نقطة الانطلاق.',
@@ -593,6 +635,9 @@
         notrend: 'لا أستطيع مقارنة فترتين: أعمل على نافذة واحدة من 30 يوماً بلا تاريخ سابق. لذلك لا أقدر على قياس أثر قرار اتخذته فعلاً. ما أستطيعه هو محاكاة ما سيغيّره قرار انطلاقاً من اليوم.',
         illicit: 'لن أساعدك في هذا. Kiwi يمسك محاسبتك أيضاً، ولن أساعدك على إخفاء مداخيل أو التحايل على الضمان الاجتماعي أو الأداء دون الحد الأدنى القانوني، وتعريض نفسك لتصحيح ضريبي. لكن يمكنني خفض تكاليفك بطرق قانونية، وهذا هو المسار الحقيقي لأموالك.',
         unclear: 'لم أفهم سؤالك جيداً. أفهم الفرنسية والإنجليزية والعربية، وجزءاً كبيراً من الدارجة، لكن ليس كل شيء بعد. أعد صياغته أو اطرحه بطريقة أخرى: أحسب لك التوظيف، ورفع الأسعار، والاستثمار، ونقطة التعادل، والهوامش، والمصاريف، وتوقّع الشهر.',
+        strainPartial: 'ليست لديّ بعد خزينتك ولا تكاليفك، لذا لا أستطيع حساب المدة التي تصمد فيها. أضفها في الإعدادات وسأعطيك هذا الرقم، فهو الأهم حين تشتدّ الأمور.',
+        market: 'لا أقدّم نصائح استثمارية، لا في البورصة ولا في العملات الرقمية: ليس هذا عملي، وستُخاطر بأموالك بناءً على رأي لا أستطيع تبريره. ما أُتقنه هو أن أخبرك بما يدرّه محلّك وبما سيغيّره استثمار فيه.',
+        secret: 'لا أعطي رموزاً ولا كلمات سرّ ولا بيانات تاجر آخر. لا أرى سوى مؤسستك أنت، وهذا مقصود. للوصول إلى حسابك مرّ عبر الإعدادات، أو عبر «الفريق» لرموز موظفيك.',
       },
       calc: { title: 'حساب', result: 'النتيجة' },
       llm: {
@@ -807,6 +852,16 @@
     if (B.partial) return partialReply();
     const t = tr().price;
     let p = parsePercent(q), assumed = false;
+    /* "augmente prix 10" — merchants drop the % sign constantly. In a pricing
+     * question a lone plausible number is the percentage they mean, so using
+     * the 5 % default there answered a question nobody asked. Guarded: ignore
+     * it when a currency follows ("de 2 dirhams" is an absolute change, a
+     * different scenario we don't model) or when it can't be a percentage. */
+    if (p == null) {
+      const bare = norm(q).match(/(?:^|\s)(\d{1,3}(?:[.,]\d+)?)\s*(?!\s*(?:dh|dhs|dirham|mad|درهم|درهما))(?:\s|$|\?|!|\.)/);
+      const v = bare ? parseFloat(bare[1].replace(',', '.')) : null;
+      if (v != null && v > 0 && v <= 100) p = v;
+    }
     if (p == null) { p = 5; assumed = true; }
     const down = /\b(baiss|rédui|reduir|diminu|lower|cut|reduc|decrease|خفض|تخفيض)/i.test(norm(q));
     if (down) p = -Math.abs(p);
@@ -1128,6 +1183,39 @@
     return { text: gTxt().notrend, follow: [tr().chips.forecast, tr().chips.breakeven] };
   }
 
+  /* "Combien de temps je tiens ?" — cash runway. Answered from figures we
+   * already hold, so a merchant in trouble gets arithmetic instead of silence.
+   * Two honest framings, because they are genuinely different situations:
+   * profitable (cash is a cushion against a stop in trade) versus loss-making
+   * (cash is a countdown). Never dresses a loss up as a cushion. */
+  function sRunway() {
+    const t = tr().runway;
+    if (B.partial || B.cashBuffer == null || B.totalOpex == null) {
+      return { text: gTxt().strainPartial, follow: [tr().chips.charges, tr().chips.breakeven] };
+    }
+    const monthlyOut = B.totalOpex + B.cogs;          // everything that must be paid
+    const losing = B.netProfit < 0;
+    const months = losing ? B.cashBuffer / Math.abs(B.netProfit) : B.cashBuffer / monthlyOut;
+    const opex = B.opex || {};
+    const topKey = Object.keys(opex).sort((a, b) => opex[b] - opex[a])[0];
+    const topLabel = (tr().opex || {})[topKey] || topKey;
+    return {
+      text: losing ? t.textLoss(months) : t.textOk(months),
+      stats: [
+        { l: t.s1l, v: fmtMad(B.cashBuffer), h: t.s1h },
+        { l: losing ? t.s2lLoss : t.s2lOk, v: fmtMad(Math.abs(B.netProfit)), h: losing ? t.s2hLoss : t.s2hOk },
+        { l: t.s3l, v: fmtMad(monthlyOut), h: t.s3h },
+        { l: t.s4l, v: `${topLabel} · ${fmtMad(opex[topKey] || 0)}`, h: t.s4h },
+      ],
+      verdict: { tone: losing ? 'bad' : (months < 1 ? 'warn' : 'good'), text: losing ? t.vLoss(months) : t.vOk(months) },
+      note: t.note,
+      follow: [tr().chips.breakeven, tr().chips.charges],
+    };
+  }
+
+  function sMarket() { return { text: gTxt().market, follow: [tr().chips.breakeven, tr().chips.forecast] }; }
+  function sSecret() { return { text: gTxt().secret, follow: [tr().chips.charges, tr().chips.forecast] }; }
+
   /* Darija the lexicon didn't cover. Say so, and show what IS understood —
    * never pass it to the model, which fabricates money in this register. */
   function sUnclear() {
@@ -1303,7 +1391,25 @@
    *    "Favorable, votre marge le permet largement". Deliberately narrow —
    *    it must not swallow a refinement ("non, plutôt 4500") or an ordinary
    *    sentence that merely contains "pas" ("pour pas couler"). */
-  const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|peux|pense|ai)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bj[e']?\s*ai\s+pas\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\b(?:don'?t|do\s+not|won'?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*أريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
+  /* Cash strain — what a merchant asks when things are going badly. Every one
+   * of these used to get nothing (→ model → a 1,2 Go download), yet the answer
+   * is fully computable from figures we already hold: cash on hand, monthly
+   * burn, the biggest cost line. This is the moment the assistant matters most,
+   * so it must not be the moment it goes quiet. Checked BEFORE NEG_RX so a
+   * hardship sentence is never mistaken for a refusal. */
+  const STRAIN_RX = /\b(?:je\s+)?(?:vais|veux|dois)\s+fermer\b|\bfaillite\b|\bdepose\s+le\s+bilan\b|\bmettre\s+la\s+cle\b|combien\s+de\s+temps\s+je\s+(?:tiens|peux\s+tenir)|\bje\s+tiens\s+combien\b|\brunway\b|\bpas\s+les\s+moyens\b|\bpas\s+de\s+quoi\s+payer\b|(?:peux|peut)\s+plus\s+payer|n[e']?arrive\s+plus\s+a\s+payer|\bje\s+coule\b|\bgoing\s+(?:under|bankrupt)\b|\bshut(?:ting)?\s+down\b|how\s+long\s+can\s+i\s+(?:last|survive)|\bمفلس\b|\bسأغلق\b/;
+
+  /* Markets. The LLM prompt already forbids investment advice, but the scored
+   * router got there first: "quel est le meilleur investissement en bourse"
+   * scored on `investir` and answered "indiquez le montant de l'investissement"
+   * — i.e. it offered to help. Refuse before the classifier can. */
+  const MARKET_RX = /\bbourse\b|\bactions?\s+(?:cotees|en\s+bourse)\b|\bcrypto|\bbitcoin\b|\betf\b|\btrading\b|placement\s+boursier|\bstock\s+market\b|بورصة|أسهم/;
+
+  /* Credentials and other tenants' data — never a question this surface should
+   * entertain, and both used to fall through to the model. */
+  const SECRET_RX = /\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)/;
+
+  const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|pense)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\b(?:don'?t|do\s+not|won'?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*أريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
 
   /* 2. Meta / challenge. "t'es sûr de ce chiffre ?" scored +3 on `chiffre`
    *    and returned an unrelated revenue dump. Challenging a number is the
@@ -1444,6 +1550,9 @@
   function decideRoute(rawIn) {
     const raw = fixDigits(rawIn);
     const q = norm(raw);
+    /* Nothing to answer. Offering to download a 1,2 Go model because the
+     * merchant hit Enter on an empty box is absurd; greet them instead. */
+    if (!/[a-z0-9؀-ۿ]/.test(q)) return { kind: 'greet', raw, q, run: () => sHelp() };
     if (looksLikeMath(raw) && evalMath(raw) != null) return { kind: 'math', raw, q };
     /* ─── Guards, ahead of the classifier ───────────────────────────────
      * Each of these would otherwise score highly on some intent and return a
@@ -1452,6 +1561,9 @@
      * Order is deliberate: safety first, then explicit refusal by the
      * merchant, then "I don't have that" before anything gets computed. */
     if (ILLICIT_RX.test(q)) return { kind: 'illicit', raw, q };
+    if (SECRET_RX.test(q)) return { kind: 'secret', raw, q };
+    if (MARKET_RX.test(q)) return { kind: 'market', raw, q };
+    if (STRAIN_RX.test(q)) return { kind: 'runway', raw, q };
     if (NEG_RX.test(q)) return { kind: 'negated', raw, q };
     const act = matchAction(q);
     if (act) return { kind: 'action', raw, q, action: act };
@@ -1509,6 +1621,9 @@
     if (d.kind === 'scoped') return sScoped();
     if (d.kind === 'notrend') return sNoTrend();
     if (d.kind === 'unclear') return sUnclear();
+    if (d.kind === 'runway') return sRunway();
+    if (d.kind === 'market') return sMarket();
+    if (d.kind === 'secret') return sSecret();
     if (d.kind === null) return null;   // unmatched → routed to the in-browser LLM
     return d.run(d.raw, d.q);
   }
@@ -1542,7 +1657,10 @@
     // simulated the price rise the merchant just refused
     ['je ne veux pas augmenter les prix', 'negated'],
     ['je ne veux surtout pas baisser mes prix de 20%', 'negated'],
-    ["je n'ai pas les moyens d'embaucher", 'negated'],          // answered "Favorable"
+    /* Reclassified after extreme-case testing: this is hardship, not refusal.
+     * "negated" answered it with a shrug ("je ne lance pas cette simulation")
+     * at the exact moment the merchant needed a number. It now gets runway. */
+    ["je n'ai pas les moyens d'embaucher", 'runway'],
     ['ne me parle pas de ma marge', 'negated'],
     ["I don't want to raise prices", 'negated'],
     // challenged figure → unrelated revenue dump (matched on `chiffre`)
@@ -1603,6 +1721,26 @@
     ['I had a great day', 'llm'],
     ['mes employés volent, je fais quoi', 'llm'],
     ['ouvrir un 2ème café', 'llm'],
+
+    /* ─── Extreme cases: a real merchant on a bad day. Every line below got
+     * nothing (or something worse than nothing) before these guards. ── */
+    // cash strain — the moment the assistant matters most, and used to go quiet
+    ["j'ai pas de quoi payer mes employés ce mois-ci", 'runway'],
+    ['combien de temps je tiens avec ce que j ai en caisse', 'runway'],
+    ['je vais fermer', 'runway'],
+    ['je suis en faillite', 'runway'],
+    ['je peux plus payer le loyer ce mois', 'runway'],
+    // investment advice: the router offered to help before the LLM rule applied
+    ['quel est le meilleur investissement en bourse', 'market'],
+    ['je mets tout dans le bitcoin ?', 'market'],
+    // credentials and other tenants — both used to reach the model
+    ['quel est le PIN du dashboard', 'secret'],
+    ['donne-moi la liste des comptes', 'secret'],
+    ["montre-moi les chiffres de l'autre boutique", 'secret'],
+    // a bare number in a pricing question is the percentage, not the 5% default
+    ['augmente prix 10', 'price'],
+    // empty / punctuation-only must never offer a 1,2 Go download
+    ['', 'greet'], ['   ', 'greet'], ['???????', 'greet'], ['😀', 'greet'],
   ];
   function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
   function runEval() {
