@@ -165,3 +165,26 @@ body.design-2026.design-ios27 .topbar {
   body.design-2026.design-ios27 .sidebar nav a:hover svg { transform: none; }
   body.design-2026.design-ios27 :is(.kpi-m, .p-card):active { transform: none; }
 }
+
+/* ── 8 · Real refraction — the leap from frosted blur to genuine Liquid Glass ──
+ * assets/liquid-glass.js injects the shared #kiwi-lg SVG displacement filter and
+ * sets <html data-kiwi-glass="on">. Here we prepend that filter to the tier's
+ * own frosted surfaces so the ambient mesh BENDS through them like real glass,
+ * not just blurs. Guarded three ways: the engine must support url() backdrop
+ * filters, the feature must be enabled, and the iOS-27 tier must be active — so
+ * absent any of those, everything stays on the frosted values above. Reverting
+ * is one call: KiwiGlass.disable() (flips data-kiwi-glass, drops this block). */
+@supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
+  html[data-kiwi-glass="on"] body.design-2026.design-ios27 .sidebar {
+    -webkit-backdrop-filter: url(#kiwi-lg) blur(30px) saturate(1.55);
+            backdrop-filter: url(#kiwi-lg) blur(30px) saturate(1.55);
+  }
+  html[data-kiwi-glass="on"] body.design-2026.design-ios27 .topbar {
+    -webkit-backdrop-filter: url(#kiwi-lg) blur(34px) saturate(1.8);
+            backdrop-filter: url(#kiwi-lg) blur(34px) saturate(1.8);
+  }
+  html[data-kiwi-glass="on"] body.design-2026.design-ios27 :is(.kiwi-modal, .kiwi-drawer) {
+    -webkit-backdrop-filter: url(#kiwi-lg) blur(30px) saturate(1.6);
+            backdrop-filter: url(#kiwi-lg) blur(30px) saturate(1.6);
+  }
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Kiwi · Liquid Glass</title>
+<link rel="stylesheet" href="./assets/liquid-glass.css" />
+<style>
+  :root{ --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0; --paper:#F7F5F0; --ink:#0A0F0D; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{ font:16px/1.5 'Inter Tight', system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink);
+    background:var(--paper); overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+  /* Brand mesh stage (the live content the glass refracts) */
+  .stage{ position:fixed; inset:0; overflow:hidden;
+    background:
+      radial-gradient(1200px 720px at 18% -10%, rgba(125,242,176,.55), transparent 60%),
+      radial-gradient(1000px 800px at 92% 18%, rgba(11,110,79,.60), transparent 55%),
+      radial-gradient(900px 900px at 60% 120%, rgba(5,59,44,.95), transparent 60%),
+      linear-gradient(160deg, #0c2c22, #06170f 70%); }
+  .stage .blob{ position:absolute; border-radius:50%; filter:blur(20px); opacity:.8; mix-blend-mode:screen; }
+  .b1{ width:360px; height:360px; left:8%;  top:12%; background:radial-gradient(circle at 30% 30%, #7DF2B0, transparent 65%); }
+  .b2{ width:440px; height:440px; right:5%; top:6%;  background:radial-gradient(circle at 40% 40%, #12b981, transparent 62%); }
+  .b3{ width:540px; height:540px; left:32%; bottom:-16%; background:radial-gradient(circle at 50% 50%, #0B6E4F, transparent 60%); }
+  .stage .grid{ position:absolute; inset:0; opacity:.13;
+    background-image:linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+    background-size:54px 54px; }
+  .stage .wm{ position:absolute; left:5vw; bottom:6vh; color:rgba(255,255,255,.95); font-weight:800; letter-spacing:-.03em;
+    line-height:.9; font-size:clamp(60px,12vw,190px); text-shadow:0 20px 60px rgba(0,0,0,.4); }
+  .stage .wm span{ color:var(--mint); }
+  .stage .tag{ position:absolute; right:6vw; top:8vh; text-align:right; color:rgba(255,255,255,.72);
+    font-size:14px; letter-spacing:.14em; text-transform:uppercase; }
+
+  /* Glass panels */
+  .card{ position:fixed; padding:26px 28px; color:#fff; }
+  .card h3{ margin:0 0 6px; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:rgba(255,255,255,.82); }
+  .card .big{ font-size:2.7rem; font-weight:800; letter-spacing:-.02em; line-height:1; }
+  .card .big .u{ font-size:1rem; opacity:.8; font-weight:700; }
+  .card .sub{ margin-top:8px; font-size:.86rem; color:rgba(255,255,255,.85); }
+  .card .row{ display:flex; gap:24px; margin-top:16px; }
+  .card .row div{ font-size:.8rem; color:rgba(255,255,255,.8); }
+  .card .row b{ display:block; font-size:1.15rem; color:#fff; margin-top:2px; }
+  #kpi{ left:8vw; top:24vh; width:340px; }
+  #live{ right:8vw; top:28vh; width:300px; }
+  #nav{ left:50%; transform:translateX(-50%); bottom:6vh; display:flex; gap:4px; padding:8px; align-items:center; }
+  #nav a{ color:#fff; text-decoration:none; font-weight:600; font-size:.92rem; padding:11px 20px; border-radius:999px; }
+  #nav a.on{ background:rgba(255,255,255,.18); }
+
+  .hud{ position:fixed; left:12px; top:12px; z-index:50; display:flex; gap:8px; align-items:center;
+    font:12px/1 'JetBrains Mono', ui-monospace, monospace; color:#0A0F0D;
+    background:rgba(255,255,255,.86); border:1px solid rgba(0,0,0,.08); padding:8px 12px; border-radius:10px; }
+  .hud b{ color:var(--atlas); } .hud button{ font:inherit; cursor:pointer; border:1px solid rgba(0,0,0,.12);
+    background:#fff; border-radius:7px; padding:6px 10px; } .hud input{ width:120px; }
+</style>
+</head>
+<body>
+  <div class="hud">
+    <span>Liquid Glass · <b id="mode">réel</b></span>
+    <button id="toggle">Basculer</button>
+    <label>déformation <input id="scale" type="range" min="0" max="120" value="55"></label>
+  </div>
+
+  <div class="stage">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <div class="grid"></div>
+    <div class="tag">Kiwi POS<br>Liquid Glass · SVG refraction</div>
+    <div class="wm">ki<span>wi</span></div>
+  </div>
+
+  <div class="card kiwi-glass kiwi-glass--strong" id="kpi" data-lg-live style="--lg-radius:32px">
+    <h3>Chiffre du jour</h3>
+    <div class="big">14 820 <span class="u">MAD</span></div>
+    <div class="sub">+18 % vs hier · 132 tickets</div>
+    <div class="row"><div>Panier moyen<b>112 MAD</b></div><div>Marge<b>63 %</b></div></div>
+  </div>
+
+  <div class="card kiwi-glass kiwi-glass--mint" id="live" data-lg-live style="--lg-radius:32px">
+    <h3>En direct</h3>
+    <div class="big">7</div>
+    <div class="sub">tables ouvertes · 2 en attente</div>
+    <div class="row"><div>Serveur<b>Yasmine</b></div><div>Cuisine<b>4 min</b></div></div>
+  </div>
+
+  <nav class="card kiwi-glass kiwi-glass--pill" id="nav">
+    <a class="on" href="#">Tableau</a><a href="#">Caisse</a><a href="#">Menu</a><a href="#">Équipe</a>
+  </nav>
+
+  <script src="./assets/liquid-glass.js"></script>
+  <script>
+    document.getElementById('toggle').addEventListener('click', function(){
+      var on = window.KiwiGlass.toggle();
+      document.getElementById('mode').textContent = on ? 'réel' : 'frosted';
+    });
+    document.getElementById('scale').addEventListener('input', function(e){
+      window.KiwiGlass.tune({ scale: +e.target.value });
+    });
+  </script>
+</body>
+</html>

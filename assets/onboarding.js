@@ -107,6 +107,11 @@
     .kob-card{width:100%;max-width:560px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;
       background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:26px;
       padding:30px 32px 26px;box-shadow:0 40px 90px -30px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);}
+    /* Liquid Glass — real refraction when assets/liquid-glass.js is present and enabled.
+       Same fill/blur (legibility preserved); only adds the #kiwi-lg displacement. Inert otherwise. */
+    @supports ((-webkit-backdrop-filter:url("#k")) or (backdrop-filter:url("#k"))){
+      html[data-kiwi-glass="on"] .kob-card{-webkit-backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);}
+    }
     .kob-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;min-height:24px;}
     .kob-brand{font-family:var(--sans);font-weight:600;font-size:19px;letter-spacing:-.03em;display:inline-flex;align-items:center;}
     .kob-brand i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:inline-block;margin-left:3px;transform:translateY(1px);}

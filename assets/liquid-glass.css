@@ -1,0 +1,84 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * KIWI · LIQUID GLASS — real refraction, dependency-free.
+ *
+ * The Apple "Liquid Glass" look done the robust way: an SVG feDisplacementMap
+ * warps the LIVE content behind the panel (via backdrop-filter: url()), so the
+ * glass genuinely bends what's underneath — 60fps, no screenshotting, no WebGL,
+ * works over live/scrolling surfaces (unlike DOM-rasterizing libraries).
+ *
+ * Apply the `.kiwi-glass` class to any panel. Tune per-surface with the CSS vars
+ * below (or the .kiwi-glass--pill / --strong / --subtle modifiers).
+ *
+ * LAYERS OF SAFETY:
+ *   1 · Base rule = plain frosted glass (blur+saturate). Works everywhere,
+ *       even browsers without SVG-filter backdrop support.
+ *   2 · The refraction override only applies when the browser supports
+ *       `backdrop-filter: url()` AND <html data-kiwi-glass="on"> is set
+ *       (assets/liquid-glass.js sets it; KiwiGlass.disable() clears it).
+ *   3 · prefers-reduced-motion keeps everything static (the effect is static
+ *       by default anyway — only the specular sheen animates, and that stops).
+ *
+ * REVERSIBLE: KiwiGlass.disable() in the console (or remove the <link>+<script>)
+ * drops every panel back to plain frosted glass with zero layout change.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.kiwi-glass{
+  /* ── tunables (override per element/surface) ── */
+  --lg-blur: 14px;        /* backdrop blur radius            */
+  --lg-sat: 1.7;          /* backdrop saturation             */
+  --lg-bright: 1.05;      /* backdrop brightness             */
+  --lg-radius: 30px;      /* corner radius                   */
+  --lg-tint: rgba(255,255,255,.10);   /* glass body wash     */
+  --lg-rim: rgba(255,255,255,.55);    /* top edge highlight  */
+  --lg-hairline: rgba(255,255,255,.14);
+  --lg-shadow: 0 26px 64px -28px rgba(5,32,24,.55);
+
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--lg-radius);
+  background: linear-gradient(135deg, var(--lg-tint), rgba(255,255,255,.02) 55%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+          backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  box-shadow:
+    inset 0 1px 0 var(--lg-rim),
+    inset 0 0 0 1px var(--lg-hairline),
+    inset 0 -22px 44px -34px rgba(255,255,255,.30),
+    var(--lg-shadow);
+}
+
+/* Specular sheen — a soft diagonal light streak across the top-left corner. */
+.kiwi-glass::before{
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+  border-radius:inherit;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,0) 30%),
+    radial-gradient(120% 90% at 8% 4%, rgba(255,255,255,.22), transparent 45%);
+  opacity:.85;
+}
+/* Keep panel content above the sheen. */
+.kiwi-glass > *{ position:relative; z-index:1; }
+
+/* ── Real refraction: warp the backdrop with the displacement filter ──
+ * Only when the engine supports url() backdrop filters AND the feature is on. */
+@supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))){
+  html[data-kiwi-glass="on"] .kiwi-glass{
+    -webkit-backdrop-filter: url(#kiwi-lg) blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+            backdrop-filter: url(#kiwi-lg) blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  }
+}
+
+/* ── Variants ── */
+.kiwi-glass--pill{ --lg-radius: 999px; --lg-blur: 10px; }
+.kiwi-glass--subtle{ --lg-blur: 10px; --lg-sat: 1.4; --lg-tint: rgba(255,255,255,.06); }
+.kiwi-glass--strong{ --lg-blur: 20px; --lg-sat: 1.9; --lg-bright: 1.08; --lg-tint: rgba(255,255,255,.14); }
+/* Mint-tinted glass (uses brand accent instead of neutral white wash). */
+.kiwi-glass--mint{ --lg-tint: rgba(125,242,176,.16); --lg-rim: rgba(180,255,214,.6); }
+
+/* Animated living shimmer on the sheen (cheap transform, opt-in via --lg-live). */
+@media (prefers-reduced-motion: no-preference){
+  .kiwi-glass[data-lg-live]::before{ animation: kiwiGlassSheen 7s ease-in-out infinite alternate; }
+}
+@keyframes kiwiGlassSheen{
+  from{ transform: translate3d(-2%,-1%,0) scale(1.02); opacity:.7; }
+  to  { transform: translate3d( 2%, 1%,0) scale(1.06); opacity:.92; }
+}
