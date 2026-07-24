@@ -7141,6 +7141,59 @@
     try { const a = JSON.parse(localStorage.getItem(SALES_KEY(id || currentVenue)) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
   }
+
+  /* Une vente encaissée pendant que le tableau de bord tenait encore un id
+   * transitoire — 'own', le placeholder d'une session réelle dont la venue
+   * n'est pas encore en cache — atterrissait dans kiwiSales:own. La vraie venue
+   * prenait ensuite la main, et cet argent disparaissait des livres : encaissé
+   * pour de bon, invisible partout. Ici on adopte ces ventes orphelines dans la
+   * venue réelle.
+   *
+   * Déduplication par `cursor` (le rowid du flux Live-Link, déjà persisté pour
+   * cette raison) et, pour une vente saisie à la main qui n'en a pas, par
+   * ts+montant. On efface ensuite la clé transitoire : l'adoption ne peut donc
+   * pas se rejouer et rien ne peut être compté deux fois. Ne tourne JAMAIS
+   * quand la venue courante est elle-même transitoire — ce sont alors les
+   * ventes de la session en cours, pas des orphelines. */
+  function adoptTransientSales(realId) {
+    if (!realId || TRANSIENT_IDS.indexOf(realId) >= 0) return 0;
+    let movedTotal = 0;
+    TRANSIENT_IDS.forEach((tid) => {
+      let orphans = [];
+      try { orphans = JSON.parse(localStorage.getItem(SALES_KEY(tid)) || '[]'); } catch (_) { orphans = []; }
+      if (!Array.isArray(orphans) || !orphans.length) return;
+      const target = salesList(realId);
+      const seenCursor = new Set(target.map((s) => s.cursor).filter((c) => c != null));
+      const seenStamp = new Set(target.map((s) => `${s.ts}|${s.amount}`));
+      let moved = 0;
+      orphans.forEach((o) => {
+        if (!o || !(+o.amount > 0)) return;
+        if (o.cursor != null) { if (seenCursor.has(o.cursor)) return; }
+        else if (seenStamp.has(`${o.ts}|${o.amount}`)) return;
+        target.push(o);
+        if (o.cursor != null) seenCursor.add(o.cursor);
+        seenStamp.add(`${o.ts}|${o.amount}`);
+        moved++;
+      });
+      if (moved) {
+        target.sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
+        try { localStorage.setItem(SALES_KEY(realId), JSON.stringify(target)); } catch (_) {}
+        movedTotal += moved;
+      }
+      try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
+    });
+    if (movedTotal) salesSubs.forEach((fn) => { try { fn(realId); } catch (_) {} });
+    return movedTotal;
+  }
+  /* init() a déjà arrêté currentVenue plus haut (venues.js est `defer`, donc la
+   * branche synchrone a tourné). Le hook DOMContentLoaded couvre le cas où elle
+   * a été différée. */
+  try { adoptTransientSales(currentVenue); } catch (_) {}
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      try { adoptTransientSales(currentVenue); } catch (_) {}
+    });
+  }
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);

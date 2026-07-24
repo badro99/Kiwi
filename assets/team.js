@@ -655,13 +655,20 @@
      own team and it survives a reload, with no demo staff leaking in. */
   function teamKey(venue) { return (venue && venue.custom) ? venue.id : ((venue && venue.type) || 'restaurant'); }
   const DEMO_TYPE_KEYS = new Set(['restaurant', 'boutique', 'spa', 'hotel']);
+  /* venues.js les déclare transitoires et « never persisted » : 'scoped' est la
+   * vue opérateur sur le client de quelqu'un d'autre, 'own' un placeholder de
+   * session. Ils arrivaient pourtant dans kiwiTeamV2:custom — de l'état
+   * opérateur écrit dans le stockage d'un commerçant. On ne les lit ni ne les
+   * écrit plus, ce qui purge aussi les seaux déjà déposés. */
+  const TRANSIENT_KEYS = new Set(['scoped', 'own']);
+  const persistableTeamKey = (k) => !DEMO_TYPE_KEYS.has(k) && !TRANSIENT_KEYS.has(k);
   const LS_TEAM = 'kiwiTeamV2:custom';
   function loadCustomTeams() {
     try {
       const raw = JSON.parse(localStorage.getItem(LS_TEAM) || '{}');
       const root = window.__kiwiTeamV2;
       Object.keys(raw.byVenue || {}).forEach((k) => {
-        if (!DEMO_TYPE_KEYS.has(k)) { root.byVenue[k] = raw.byVenue[k]; root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {}; }
+        if (persistableTeamKey(k)) { root.byVenue[k] = raw.byVenue[k]; root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {}; }
       });
     } catch (_) {}
   }
@@ -670,7 +677,7 @@
       const root = window.__kiwiTeamV2;
       const out = { byVenue: {}, hoursByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
-        if (!DEMO_TYPE_KEYS.has(k)) { out.byVenue[k] = root.byVenue[k]; out.hoursByVenue[k] = root.hoursByVenue[k] || {}; }
+        if (persistableTeamKey(k)) { out.byVenue[k] = root.byVenue[k]; out.hoursByVenue[k] = root.hoursByVenue[k] || {}; }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
     } catch (_) {}
