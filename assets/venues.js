@@ -2655,8 +2655,6 @@
       fusionResetIntradayBuffer();
       const heroAmt = root.querySelector('[data-fs-hero-amount]');
       if (heroAmt) heroAmt.innerHTML = fusionFmtMadCents(0);
-      const netEl = root.querySelector('[data-fs-net-val]');
-      if (netEl) netEl.textContent = fusionFmtMad(0);
       const fill = root.querySelector('[data-fs-progress-bar]');
       if (fill) fill.style.width = '0%';
       const pctEl = root.querySelector('[data-fs-progress-pct]');
