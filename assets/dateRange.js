@@ -3641,6 +3641,70 @@
     en: { sub: 'No sales recorded', msg: 'Your best sellers will appear here after the first order.' },
     ar: { sub: 'لا مبيعات مسجّلة', msg: 'ستظهر أفضل مبيعاتك هنا بعد أوّل طلب.' },
   };
+  /* ── Stock à recommander · boutique réelle ──────────────────────────────
+   * Le seuil reprend celui de boutique-catalog.stats() (0 = rupture, ≤ 5 = bas).
+   * Les deux doivent bouger ensemble : sinon l'Inventaire annonce « 1 stock bas »
+   * pendant que l'accueil jure n'avoir rien à recommander. */
+  const LOW_STOCK_SEUIL = 5;
+  const RUPTURE_STR = { fr: 'Rupture · à racheter', en: 'Out of stock · reorder', ar: 'نفد المخزون · أعد الطلب' };
+  const LOWSTK_STR = {
+    fr: (s) => `Stock bas · seuil ${s}`,
+    en: (s) => `Low stock · threshold ${s}`,
+    ar: (s) => `مخزون منخفض · العتبة ${s}`,
+  };
+  const STOCK_SUB_STR = {
+    fr: (n) => `${n} article${n > 1 ? 's' : ''} sous le seuil`,
+    en: (n) => `${n} item${n > 1 ? 's' : ''} below threshold`,
+    ar: (n) => `${n} منتج تحت العتبة`,
+  };
+  const STOCK_OK_STR = {
+    fr: (n, s) => `Rien à racheter : vos ${n} article${n > 1 ? 's sont tous' : ' est'} au-dessus de ${s} unités.`,
+    en: (n, s) => `Nothing to reorder: all ${n} item${n > 1 ? 's are' : ' is'} above ${s} units.`,
+    ar: (n, s) => `لا شيء لإعادة طلبه: ${n} منتج فوق ${s} وحدة.`,
+  };
+  /* Les noms d'articles sont saisis par le commerçant : ils passent par du HTML,
+   * donc ils s'échappent. dateRange.js n'avait pas d'esc() — les autres listes
+   * n'affichent que des libellés de démo. */
+  const escTxt = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  /* Une vraie boutique a un catalogue, donc la carte peut dire quoi racheter.
+   * Avant, renderProducts faisait `isCustom ? []` et TOUT commerçant tombait sur
+   * « dès que vous suivez vos articles » — y compris celui qui en suivait un, à
+   * 5 unités, déjà sous le seuil. null = catalogue vide ou absent : le message
+   * d'origine redevient le bon. Le catalogue démarre sur la venue de démo, d'où
+   * le bind sur la clé canonique (même chemin que le coût matière). */
+  function realLowStock() {
+    try {
+      if (window.KiwiVenue?.getVenueType?.() !== 'boutique') return null;
+      const cat = window.KiwiBoutiqueCatalog;
+      if (!cat) return null;
+      const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
+      if (key) cat.use(key);
+      const prods = cat.listProducts() || [];
+      if (!prods.length) return null;
+      const rows = prods
+        .map((p) => ({ name: p.name, stock: cat.productStock(p.id) }))
+        .filter((r) => r.stock <= LOW_STOCK_SEUIL)
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 5);
+      return { rows, tracked: prods.length };
+    } catch (_) { return null; }
+  }
+
+  const STAFF_ONDUTY_STR = {
+    fr: (n, tot) => `${n} sur ${tot} en service aujourd'hui`,
+    en: (n, tot) => `${n} of ${tot} on shift today`,
+    ar: (n, tot) => `${n} من ${tot} في الخدمة اليوم`,
+  };
+  const fmtHeures = (h) => `${h.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} h`;
+  /* team.js se charge APRÈS ce fichier : au premier rendu KiwiTeam n'existe pas
+   * encore et on renvoie null, ce qui laisse l'état vide d'origine. Le listener
+   * 'kiwi-team-ready' plus bas repeint la carte dès que le roster est publié. */
+  function realRoster() {
+    try { return (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : null; }
+    catch (_) { return null; }
+  }
+
   const STAFF_EMPTY = {
     fr: { sub: 'Aucun membre d’équipe', msg: 'Ajoutez votre équipe pour suivre les performances par personne.' },
     en: { sub: 'No team members', msg: 'Add your team to track performance per person.' },
@@ -3890,7 +3954,27 @@
     const manageEl = document.querySelector('[data-products-manage]');
     if (manageEl) manageEl.textContent = (isCustom && pe.manage) || PRODUCTS_MANAGE[lang] || PRODUCTS_MANAGE.fr;
     const list = document.querySelector('[data-products-list]');
-    if (list && isCustom) {
+    const low = isCustom ? realLowStock() : null;
+    if (list && low && low.rows.length) {
+      /* Le rang est le degré d'urgence : rupture d'abord, puis le stock le plus
+       * faible. La barre se lit « ce qu'il reste sur le seuil », donc une barre
+       * courte = à racheter — l'inverse des meilleures ventes, où longue = bien. */
+      const cap = Math.max(LOW_STOCK_SEUIL, ...low.rows.map((r) => r.stock));
+      list.innerHTML = low.rows.map((r, i) => `
+        <div class="prod-row" style="--i:${i};">
+          <div class="rank${r.stock === 0 ? ' top' : ''}">${i + 1}</div>
+          <div class="info">
+            <div class="n">${escTxt(r.name)}</div>
+            <div class="r">${r.stock === 0 ? RUPTURE_STR[lang] || RUPTURE_STR.fr : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>
+          </div>
+          <div class="mini-bar"><div style="width: 0%;" data-grow="${Math.round((r.stock / cap) * 100)}%"></div></div>
+          <div class="sales">${r.stock}</div>
+        </div>
+      `).join('');
+      growBars(list);
+    } else if (list && low) {
+      list.innerHTML = emptyListBody((STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked, LOW_STOCK_SEUIL));
+    } else if (list && isCustom) {
       list.innerHTML = emptyListBody(pe.msg);
     } else if (list && data) {
       list.innerHTML = data.map((p, i) => `
@@ -3907,9 +3991,11 @@
       growBars(list);
     }
     const sub = document.querySelector('[data-products-sub]');
-    if (sub) sub.textContent = isCustom
-      ? pe.sub
-      : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]);
+    if (sub) sub.textContent = (low && low.rows.length)
+      ? (STOCK_SUB_STR[lang] || STOCK_SUB_STR.fr)(low.rows.length)
+      : (isCustom
+        ? pe.sub
+        : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]));
   }
 
   /* ═══════════════ RENDER: STAFF ═══════════════ */
@@ -3923,7 +4009,27 @@
     const titleEl = document.querySelector('[data-staff-title]');
     if (titleEl) titleEl.textContent = (isCustom && se.title) || STAFF_TITLE[lang] || STAFF_TITLE.fr;
     const list = document.querySelector('[data-staff-list]');
-    if (list && isCustom) {
+    /* Une équipe existe dès qu'un membre est saisi côté Équipe — la carte ne peut
+     * plus prétendre le contraire. Les heures viennent de la grille de Paie, donc
+     * « en service » veut dire ici exactement ce qu'il veut dire là-bas.
+     * Le montant reste « — » : Kiwi ne rattache pas encore une vente à un
+     * vendeur, et inventer un chiffre par personne serait pire que le tiret. */
+    const roster = isCustom ? realRoster() : null;
+    if (list && roster && roster.length) {
+      list.innerHTML = roster.map((s, i) => {
+        const on = s.hoursToday > 0;
+        return `
+        <div class="staff-row" style="--i:${i};">
+          <div class="av${on ? '' : ' offline'}"${on ? '' : ' style="background: var(--n-400);"'}>${escTxt(s.avatar)}</div>
+          <div class="info">
+            <div class="n">${escTxt(s.name)}</div>
+            <div class="role">${escTxt(s.role)}</div>
+          </div>
+          <div class="shift"${on ? '' : ' style="color: var(--n-400);"'}>${on ? fmtHeures(s.hoursToday) : '—'}</div>
+          <div class="tx-n" style="color: var(--n-400);">—</div>
+        </div>`;
+      }).join('');
+    } else if (list && isCustom) {
       list.innerHTML = emptyListBody(se.msg);
     } else if (list && data) {
       list.innerHTML = data.map((s, i) => `
@@ -3939,9 +4045,11 @@
       `).join('');
     }
     const sub = document.querySelector('[data-staff-sub]');
-    if (sub) sub.textContent = isCustom
-      ? se.sub
-      : (STAFF_SUB[lang]?.[currentRange] || STAFF_SUB.fr[currentRange]);
+    if (sub) sub.textContent = (roster && roster.length)
+      ? (STAFF_ONDUTY_STR[lang] || STAFF_ONDUTY_STR.fr)(roster.filter((s) => s.hoursToday > 0).length, roster.length)
+      : (isCustom
+        ? se.sub
+        : (STAFF_SUB[lang]?.[currentRange] || STAFF_SUB.fr[currentRange]));
   }
 
   /* ═══════════════ ACTION HANDLER + I18N HOOK ═══════════════ */
@@ -4506,6 +4614,13 @@
    * rejoue la bande une fois, quand la clé est publiée. */
   window.addEventListener('kiwi-catalog-key', () => {
     try { renderKpiBand(); } catch (_) {}
+    try { renderProducts(); } catch (_) {}
+  }, { once: true });
+
+  /* Même problème pour l'équipe : team.js est chargé après pages-pro.js, donc
+   * encore plus tard. Il annonce son roster et la carte se repeint une fois. */
+  window.addEventListener('kiwi-team-ready', () => {
+    try { renderStaff(); } catch (_) {}
   }, { once: true });
 
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */

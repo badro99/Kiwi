@@ -1997,5 +1997,28 @@
     if (added) { saveCustomTeams(); if (pageActive) { try { render(); } catch (_) {} } }
     return added;
   }
-  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers });
+  /* L'accueil du tableau de bord veut afficher « qui est là aujourd'hui », mais
+   * dateRange.js s'exécute AVANT ce fichier. Il lit donc le roster par cette API
+   * et se repeint sur l'événement plus bas, plutôt que d'aller fouiller
+   * __kiwiTeamV2 — un global privé qu'un refactor d'ici casserait en silence.
+   * Les heures du jour viennent de la même grille que Paie, donc les trois
+   * surfaces content la même chose. */
+  function roster() {
+    try {
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const vt = teamKey(venue);
+      const members = getMembers(vt) || [];
+      const hours = getHours(vt) || {};
+      const todayKey = toISO(new Date());
+      return members.map((m) => ({
+        id: m.id,
+        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '—',
+        role: m.function || m.department || '',
+        avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
+        hoursToday: +((hours[m.id] || {})[todayKey]) || 0,
+      }));
+    } catch (_) { return []; }
+  }
+  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster });
+  try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
 })();
