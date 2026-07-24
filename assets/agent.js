@@ -129,7 +129,10 @@
   const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
   const fmtMad = (n) => fmt(n) + ' MAD';
   const fmt1 = (n) => n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  /* Typographic apostrophes fold to ASCII: a merchant's keyboard (and our own
+   * UI copy) emits ’, so a pattern written with ' would silently miss
+   * "réduire l’effectif" while matching "reduire l'effectif". */
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’‘`´]/g, "'");
   const escAttr = (s) => String(s).replace(/"/g, '&quot;');
   // Full HTML-text escaper — use for any user-derived value (venue name/location)
   // interpolated into an innerHTML string. escAttr only neutralises quotes; this
@@ -179,7 +182,9 @@
         invest150: 'Puis-je investir 150 000 MAD ?',
       },
       hire: {
-        text: (c) => `Une embauche à <b>${fmtMad(c)}/mois</b> en coût chargé représente <b>${fmtMad(c * 12)}/an</b>.`,
+        text: (c, per, n) => n > 1
+          ? `<b>${n} embauches</b> à ${fmtMad(per)}/mois chacune, soit <b>${fmtMad(c)}/mois</b> en coût chargé, représentent <b>${fmtMad(c * 12)}/an</b>.`
+          : `Une embauche à <b>${fmtMad(c)}/mois</b> en coût chargé représente <b>${fmtMad(c * 12)}/an</b>.`,
         s1l: 'Pour s’autofinancer', s1v: (o) => `${fmt1(o / 30)} cmd/jour`, s1h: (o) => `soit ${fmt(o)} commandes/mois`,
         s2l: 'CA additionnel requis', s2h: 'au panier moyen actuel',
         s3l: 'Bénéfice net après', s3h: () => `vs ${fmtMad(B.netProfit)} aujourd’hui`,
@@ -188,6 +193,7 @@
         vWarn: 'Faisable, mais ce poste pèse lourd dans le résultat. Assurez-vous que l’embauche génère bien du chiffre additionnel.',
         vBad: 'Prudence, ce coût dépasse votre marge de manœuvre actuelle. À envisager seulement avec une hausse d’activité confirmée.',
         note: 'Hypothèse : 7 200 MAD/mois en coût chargé pour un serveur (salaire net + CNSS + primes). Indiquez un montant précis pour affiner.',
+        noteLoaded: (per, n) => `Je compte ${fmtMad(per)}/mois ${n > 1 ? 'par personne ' : ''}en coût <i>chargé</i>. Si c’est le salaire net, ajoutez environ 21 % de CNSS et AMO employeur avant de décider.`,
       },
       price: {
         text: (p) => `Une ${p >= 0 ? 'hausse' : 'baisse'} de <b>${fmt1(Math.abs(p))} %</b> sur l’ensemble de la carte, à volume constant, ne touche pas le coût matière, l’écart tombe presque entièrement dans le résultat.`,
@@ -197,8 +203,11 @@
         s4l: 'Nouveau CA /mois', s4h: (b) => `panier moyen ${fmtMad(b)}`,
         vUp: (p, d) => `Levier puissant, ${fmt1(p)} % de prix en plus = ${fmtMad(d)} de bénéfice mensuel sans dépense supplémentaire.`,
         vDown: (need) => `Une baisse de prix ne se finance que par du volume : il faudrait +${fmt1(need)} % de commandes pour préserver le résultat.`,
+        vFlat: 'Aucun changement de prix, votre résultat reste identique. Indiquez un pourcentage pour voir l’effet.',
+        textDegenerate: (p, cogs) => `À −${fmt1(p)} %, votre chiffre d’affaires passerait sous votre coût matière (${fmtMad(cogs)}) : vous vendriez à perte sur chaque commande. Je ne simule pas au-delà, le résultat n’aurait aucun sens.`,
         note: 'Calcul à volume constant. En pratique une hausse de prix réduit souvent la fréquentation de 2 à 4 %, surveillez le nombre de commandes les deux semaines suivantes.',
         noteAssumed: ' (Hypothèse : 5 %.)',
+        noteClamped: ' Pourcentage ramené dans une plage réaliste (−100 % à +200 %) : au-delà, l’hypothèse « à volume constant » n’a plus de sens.',
       },
       afford: {
         ask: 'Indiquez le montant de l’investissement et je vous dis s’il est à votre portée, par exemple : <i>« puis-je investir 80 000 MAD dans une terrasse ? »</i>',
@@ -261,6 +270,16 @@
       help: {
         text: 'Bonjour Rachid. Je suis votre assistant financier, je connais Café Atlas : chiffre d’affaires, coût matière, charges, marges et trésorerie. Posez-moi une question chiffrée et je calcule l’impact réel sur votre résultat ; pour une question ouverte sur la gestion de votre café, je peux activer un assistant IA dans votre navigateur. Par exemple :',
       },
+      /* Replies for the six guard patterns. Each says plainly what it will
+       * NOT do and why, then offers the nearest thing it can actually do. */
+      guards: {
+        negated: 'Compris, je ne lance pas cette simulation. Dites-moi ce que vous voulez examiner à la place, ou choisissez ci-dessous.',
+        meta: 'Je ne devine rien : chaque chiffre vient de vos 30 derniers jours enregistrés dans Kiwi, et chaque simulation applique une règle simple à ces chiffres. Une hausse de prix s’applique au chiffre d’affaires sans toucher au coût matière ; une embauche se retranche du bénéfice net ; le seuil de rentabilité divise vos charges fixes par votre taux de marge. Ouvrez « Voir tous les chiffres » pour la base de départ.',
+        layoff: 'Je ne peux pas chiffrer une réduction d’effectif : je connais votre masse salariale globale, pas le salaire de chaque personne. Voici ce que je peux vous montrer, le poids réel de la masse salariale dans vos charges. Pour un départ, la loi marocaine impose préavis et indemnités, faites valider le calcul par votre comptable.',
+        scoped: 'Je n’ai pas ce détail. Je raisonne sur des totaux, pas par article, par jour de semaine ni par personne. Le chiffre global ne s’applique pas à un produit précis, ce serait vous induire en erreur de vous le donner comme tel. Le détail par article se trouve dans la page Menu, et le détail par vente dans Transactions.',
+        notrend: 'Je ne peux pas comparer deux périodes : je travaille sur une seule fenêtre de 30 jours, sans historique. Je ne sais donc pas mesurer après coup l’effet d’une décision déjà prise. Ce que je peux faire, c’est simuler ce qu’une décision changerait à partir d’aujourd’hui.',
+        illicit: 'Je ne vous aiderai pas sur ce point. Kiwi tient aussi votre comptabilité, je ne vais pas vous aider à dissimuler des recettes, à contourner la CNSS ou à payer sous le minimum légal, et vous exposer à un redressement. En revanche je peux réduire vos coûts par des moyens légaux, voici où votre argent part réellement.',
+      },
       calc: { title: 'Calcul', result: 'résultat' },
       llm: {
         noGpu: 'Cette question sort de mes calculs, je suis votre copilote chiffres : embauche, prix, investissement, seuil de rentabilité, prévisions, marges et charges. Demandez-moi l’un de ceux-là et la réponse arrive aussitôt. Et pour savoir quels articles de votre menu marchent, ou non, ouvrez la page Menu du tableau de bord.',
@@ -318,7 +337,9 @@
         invest150: 'Can I invest 150,000 MAD?',
       },
       hire: {
-        text: (c) => `A hire at <b>${fmtMad(c)}/month</b> loaded cost works out to <b>${fmtMad(c * 12)}/year</b>.`,
+        text: (c, per, n) => n > 1
+          ? `<b>${n} hires</b> at ${fmtMad(per)}/month each, i.e. <b>${fmtMad(c)}/month</b> loaded cost, work out to <b>${fmtMad(c * 12)}/year</b>.`
+          : `A hire at <b>${fmtMad(c)}/month</b> loaded cost works out to <b>${fmtMad(c * 12)}/year</b>.`,
         s1l: 'To pay for itself', s1v: (o) => `${fmt1(o / 30)} orders/day`, s1h: (o) => `i.e. ${fmt(o)} orders/month`,
         s2l: 'Extra revenue needed', s2h: 'at the current average basket',
         s3l: 'Net profit after', s3h: () => `vs ${fmtMad(B.netProfit)} today`,
@@ -327,6 +348,7 @@
         vWarn: 'Doable, but this role weighs heavily on the result. Make sure the hire genuinely drives extra revenue.',
         vBad: 'Caution, this cost exceeds your current room to manoeuvre. Only consider it with a confirmed rise in activity.',
         note: 'Assumption: 7,200 MAD/month loaded cost for a waiter (net pay + CNSS + bonuses). Give a precise figure to refine.',
+        noteLoaded: (per, n) => `I'm counting ${fmtMad(per)}/month ${n > 1 ? 'per person ' : ''}as <i>loaded</i> cost. If that's net pay, add roughly 21% employer CNSS and AMO before you decide.`,
       },
       price: {
         text: (p) => `A <b>${fmt1(Math.abs(p))}%</b> ${p >= 0 ? 'increase' : 'decrease'} across the whole menu, at constant volume, doesn't touch cost of goods, the difference falls almost entirely into your result.`,
@@ -336,8 +358,11 @@
         s4l: 'New revenue /month', s4h: (b) => `average basket ${fmtMad(b)}`,
         vUp: (p, d) => `Powerful lever, ${fmt1(p)}% more on price = ${fmtMad(d)} of monthly profit with no extra spend.`,
         vDown: (need) => `A price cut is only funded by volume: you'd need +${fmt1(need)}% orders to keep the result steady.`,
+        vFlat: 'No price change, your result stays exactly the same. Give me a percentage to see the effect.',
+        textDegenerate: (p, cogs) => `At −${fmt1(p)}%, your revenue would fall below your cost of goods (${fmtMad(cogs)}): you'd sell at a loss on every order. I don't simulate past that, the result would be meaningless.`,
         note: 'Calculated at constant volume. In practice a price rise often trims footfall by 2–4%, watch order counts over the next two weeks.',
         noteAssumed: ' (Assumption: 5%.)',
+        noteClamped: ' Percentage pulled back into a realistic range (−100% to +200%): beyond that, the constant-volume assumption stops meaning anything.',
       },
       afford: {
         ask: 'Tell me the investment amount and I\'ll say whether it\'s within reach, for example: <i>"can I invest 80,000 MAD in a terrace?"</i>',
@@ -400,6 +425,14 @@
       help: {
         text: 'Hello Rachid. I\'m your financial assistant, I know Café Atlas: revenue, cost of goods, costs, margins and cash. Ask me a numbers question and I\'ll compute the real impact on your result; for an open question about running your café, I can switch on an AI assistant right in your browser. For example:',
       },
+      guards: {
+        negated: 'Understood, I won\'t run that simulation. Tell me what you\'d like to look at instead, or pick one below.',
+        meta: 'Nothing here is guesswork: every figure comes from your last 30 days recorded in Kiwi, and every simulation applies one simple rule to those figures. A price rise applies to revenue without touching cost of goods; a hire is subtracted from net profit; break-even divides your fixed costs by your margin rate. Open "See all the figures" for the starting point.',
+        layoff: 'I can\'t put a number on cutting headcount: I know your total payroll, not what each person earns. Here\'s what I can show you, the real weight of payroll in your costs. For a departure, Moroccan law requires notice and severance, have your accountant check the calculation.',
+        scoped: 'I don\'t have that breakdown. I reason on totals, not per item, per weekday or per person. The global figure doesn\'t apply to one specific product, and handing it to you as if it did would mislead you. Per-item detail is on the Menu page, per-sale detail in Transactions.',
+        notrend: 'I can\'t compare two periods: I work from a single 30-day window with no history. So I can\'t measure after the fact what a decision you already took actually did. What I can do is simulate what a decision would change from today.',
+        illicit: 'I won\'t help with that. Kiwi also keeps your books, so I\'m not going to help you hide takings, get around CNSS or pay below the legal minimum, and expose you to a tax reassessment. What I can do is cut your costs by lawful means, here is where your money actually goes.',
+      },
       calc: { title: 'Calculation', result: 'result' },
       llm: {
         noGpu: 'That’s outside what I calculate, I’m your numbers copilot: hiring, pricing, investment, break-even, forecasts, margins and charges. Ask me any of those and the answer comes right back. And to see which menu items are working, or not, open the Menu page in your dashboard.',
@@ -428,13 +461,13 @@
       /* AR: best-effort MSA — needs native review */
       ui: {
         title: 'المساعد المالي',
-        subtitle: 'يعرف مقهاك, المداخيل، التكاليف، الهوامش، الخزينة',
-        placeholder: 'اطرح سؤالاً, توظيف، أسعار، استثمار، توقّعات…',
+        subtitle: 'يعرف مقهاك، المداخيل، التكاليف، الهوامش، الخزينة',
+        placeholder: 'اطرح سؤالاً، توظيف، أسعار، استثمار، توقّعات…',
         calc: 'الآلة الحاسبة', enterToSend: 'اضغط Enter للإرسال', send: 'إرسال',
         kpError: 'خطأ', kpUse: 'استعمل هذه النتيجة',
         ctxEyebrow: 'ما أعرفه',
         ctxSub: 'آخر 30 يوماً · انقر للإدراج',
-        ctxNote: 'انقر على أي رقم لإضافته إلى رسالتك, وسيحلّله المساعد.',
+        ctxNote: 'انقر على أي رقم لإضافته إلى رسالتك، وسيحلّله المساعد.',
         ctxTrust: 'كل شيء يعمل محلياً. لا تغادر أي بيانات هذا الجهاز.',
         gActivity: 'النشاط', gProfit: 'الربحية', gFixed: 'التكاليف الثابتة', gCash: 'الخزينة والفريق',
         perMonth: '/ شهر', days: 'يوم', employees: (n) => `${n} موظفين`,
@@ -458,36 +491,42 @@
         invest150: 'هل يمكنني استثمار 150 000 MAD؟',
       },
       hire: {
-        text: (c) => `توظيف بتكلفة محمّلة قدرها <b>${fmtMad(c)}/شهر</b> يعادل <b>${fmtMad(c * 12)}/سنة</b>.`,
+        text: (c, per, n) => n > 1
+          ? `<b>${n} توظيفات</b> بـ${fmtMad(per)}/شهر لكل واحد، أي <b>${fmtMad(c)}/شهر</b> بتكلفة محمّلة، تعادل <b>${fmtMad(c * 12)}/سنة</b>.`
+          : `توظيف بتكلفة محمّلة قدرها <b>${fmtMad(c)}/شهر</b> يعادل <b>${fmtMad(c * 12)}/سنة</b>.`,
         s1l: 'لتمويل نفسه', s1v: (o) => `${fmt1(o / 30)} طلب/يوم`, s1h: (o) => `أي ${fmt(o)} طلب/شهر`,
         s2l: 'المداخيل الإضافية المطلوبة', s2h: 'بمتوسط السلة الحالي',
         s3l: 'الربح الصافي بعد ذلك', s3h: () => `مقابل ${fmtMad(B.netProfit)} اليوم`,
         s4l: 'حصة من الربح', s4h: 'من نتيجتك الشهرية',
-        vGood: (o) => `مناسب, يكفي ${fmt1(o / 30)} طلب إضافي في اليوم لتغطية هذا المنصب. هامشك يسمح بذلك بأريحية.`,
+        vGood: (o) => `مناسب، يكفي ${fmt1(o / 30)} طلب إضافي في اليوم لتغطية هذا المنصب. هامشك يسمح بذلك بأريحية.`,
         vWarn: 'ممكن، لكن هذا المنصب يثقل النتيجة. تأكد من أن التوظيف يولّد مداخيل إضافية فعلية.',
-        vBad: 'حذار, هذه التكلفة تتجاوز هامش مناورتك الحالي. لا تأخذها بعين الاعتبار إلا مع ارتفاع مؤكد في النشاط.',
+        vBad: 'حذار، هذه التكلفة تتجاوز هامش مناورتك الحالي. لا تأخذها بعين الاعتبار إلا مع ارتفاع مؤكد في النشاط.',
         note: 'افتراض: 7 200 MAD/شهر تكلفة محمّلة لنادل (الأجر الصافي + CNSS + المكافآت). حدّد مبلغاً دقيقاً للتحسين.',
+        noteLoaded: (per, n) => `أحتسب ${fmtMad(per)}/شهر ${n > 1 ? 'لكل شخص ' : ''}كتكلفة <i>محمّلة</i>. إن كان هذا هو الأجر الصافي، أضف نحو 21 % من مساهمات الضمان الاجتماعي والتأمين الصحي قبل أن تقرّر.`,
       },
       price: {
-        text: (p) => `${p >= 0 ? 'رفع' : 'خفض'} الأسعار بنسبة <b>${fmt1(Math.abs(p))} %</b> على كامل القائمة، بحجم ثابت، لا يمسّ تكلفة المواد, والفارق يذهب كله تقريباً إلى النتيجة.`,
+        text: (p) => `${p >= 0 ? 'رفع' : 'خفض'} الأسعار بنسبة <b>${fmt1(Math.abs(p))} %</b> على كامل القائمة، بحجم ثابت، لا يمسّ تكلفة المواد، والفارق يذهب كله تقريباً إلى النتيجة.`,
         s1l: 'الربح الصافي / شهر', s1h: (d) => `${d >= 0 ? '+' : ''}${fmtMad(d)}`,
         s2l: 'الأثر على 12 شهراً', s2h: 'بنشاط مماثل',
         s3l: 'الهامش الصافي الجديد', s3h: () => `مقابل ${fmt1(B.netMargin)} % اليوم`,
         s4l: 'رقم المعاملات الجديد / شهر', s4h: (b) => `متوسط السلة ${fmtMad(b)}`,
-        vUp: (p, d) => `رافعة قوية, ${fmt1(p)} % زيادة في السعر = ${fmtMad(d)} ربحاً شهرياً دون أي إنفاق إضافي.`,
+        vUp: (p, d) => `رافعة قوية، ${fmt1(p)} % زيادة في السعر = ${fmtMad(d)} ربحاً شهرياً دون أي إنفاق إضافي.`,
         vDown: (need) => `خفض السعر لا يموّله إلا الحجم: ستحتاج إلى +${fmt1(need)} % من الطلبات للحفاظ على النتيجة.`,
-        note: 'حساب بحجم ثابت. عملياً، رفع الأسعار يقلّص الإقبال غالباً بنسبة 2 إلى 4 %, راقب عدد الطلبات خلال الأسبوعين التاليين.',
-        noteAssumed: ' (افتراض: 5 %.)',
+        vFlat: 'لا تغيير في الأسعار، ونتيجتك تبقى كما هي. حدّد نسبة لترى الأثر.',
+        textDegenerate: (p, cogs) => `عند −${fmt1(p)} %، سينزل رقم معاملاتك تحت تكلفة المواد (${fmtMad(cogs)}): ستبيع بخسارة في كل طلب. لا أحاكي أبعد من ذلك، فالنتيجة لن تعني شيئاً.`,
+        note: 'حساب بحجم ثابت. عملياً، رفع الأسعار يقلّص الإقبال غالباً بنسبة 2 إلى 4%، راقب عدد الطلبات خلال الأسبوعين التاليين.',
+        noteAssumed: ' (افتراض: 5%.)',
+        noteClamped: ' تمّ إرجاع النسبة إلى مجال واقعي (−100 % إلى +200 %): أبعد من ذلك يفقد افتراض «الحجم الثابت» معناه.',
       },
       afford: {
-        ask: 'حدّد مبلغ الاستثمار وسأخبرك إن كان في متناولك, مثلاً: <i>«هل يمكنني استثمار 80 000 MAD في تيراس؟»</i>',
+        ask: 'حدّد مبلغ الاستثمار وسأخبرك إن كان في متناولك، مثلاً: <i>«هل يمكنني استثمار 80 000 MAD في تيراس؟»</i>',
         text: (a) => `استثمار قدره <b>${fmtMad(a)}</b> يُقارَن بخزينتك المتاحة (${fmtMad(B.cashBuffer)}) وبربحك الصافي (${fmtMad(B.netProfit)}/شهر).`,
         s1l: 'يُسترَدّ في', s1v: (m) => `${fmt1(m)} شهراً`, s1h: 'بالربح الصافي الحالي',
         s2l: 'الخزينة بعد ذلك', s2hOk: (p) => `${fmt1(p)} % مُلتزَم بها`, s2hNo: 'يتطلب تمويلاً',
         s3l: 'ما يعادل', s3v: (d) => `${fmt1(d)} يوماً`, s3h: 'من ربح التشغيل',
         s4l: 'الوزن السنوي', s4h: 'من الربح على 12 شهراً',
-        vGood: (m, cash) => `في المتناول, يُدفع نقداً، ويُسترَدّ في ${fmt1(m)} شهراً، ويبقى ${fmtMad(cash)} في الخزينة.`,
-        vWarn: (m, p) => `يُدفع نقداً، لكن الاسترداد يستغرق ${fmt1(m)} شهراً ويجمّد ${fmt1(p)} % من خزينتك, احتفظ بهامش أمان.`,
+        vGood: (m, cash) => `في المتناول، يُدفع نقداً، ويُسترَدّ في ${fmt1(m)} شهراً، ويبقى ${fmtMad(cash)} في الخزينة.`,
+        vWarn: (m, p) => `يُدفع نقداً، لكن الاسترداد يستغرق ${fmt1(m)} شهراً ويجمّد ${fmt1(p)} % من خزينتك، احتفظ بهامش أمان.`,
         vBad: () => `يتجاوز خزينتك المتاحة (${fmtMad(B.cashBuffer)}). سيلزم تمويل أو تقسيط للتكلفة.`,
       },
       forecast: {
@@ -496,17 +535,17 @@
         s2l: 'ربح متوقّع · الشهر', s2h: () => `هامش صافٍ ${fmt1(B.netMargin)} %`,
         s3l: 'رقم معاملات متوقّع · 12 شهراً', s3h: 'بالوتيرة الحالية',
         s4l: 'الربح · 12 شهراً', s4h: 'قبل الضريبة على الشركات',
-        vGood: (v) => `اتجاه إيجابي, الشهر يتجاوز متوسط 30 يوماً بنسبة ${fmt1(v)} %. إن صمدت الوتيرة، فهو أفضل شهر لك.`,
-        vWarn: (v) => `الشهر أدنى بـ${fmt1(v)} % من متوسط 30 يوماً, دفعة في أمسيات نهاية الأسبوع تعيد التوازن.`,
+        vGood: (v) => `اتجاه إيجابي، الشهر يتجاوز متوسط 30 يوماً بنسبة ${fmt1(v)} %. إن صمدت الوتيرة، فهو أفضل شهر لك.`,
+        vWarn: (v) => `الشهر أدنى بـ${fmt1(v)} % من متوسط 30 يوماً، دفعة في أمسيات نهاية الأسبوع تعيد التوازن.`,
         note: 'توقّع خطّي: يوم عطلة أو نهاية أسبوع ممطرة أو عملية خاصة قد تغيّر النتيجة الفعلية.',
       },
       breakeven: {
-        text: () => `نقطة تعادلك, رقم المعاملات الذي يغطّي تماماً تكاليفك الثابتة (${fmtMad(B.totalOpex)}) بهامش مساهمة قدره ${fmt1(B.contribRatio * 100)} %.`,
+        text: () => `نقطة تعادلك، رقم المعاملات الذي يغطّي تماماً تكاليفك الثابتة (${fmtMad(B.totalOpex)}) بهامش مساهمة قدره ${fmt1(B.contribRatio * 100)} %.`,
         s1l: 'العتبة · رقم معاملات شهري', s1h: () => `مقابل ${fmtMad(B.revenue)} مُحقّق`,
         s2l: 'العتبة · طلبات/يوم', s2h: () => `مقابل ${fmt(B.ordersPerDay)} اليوم`,
         s3l: 'هامش الأمان', s3h: 'تراجع في النشاط يمكن استيعابه',
         s4l: 'العتبة · رقم معاملات يومي', s4h: () => `مقابل ${fmtMad(B.dailyRev)} مُحقّق`,
-        vGood: () => `وضع متين, تشتغل بنسبة ${fmt1(B.marginOfSafety)} % فوق نقطة التعادل. ستحتاج إلى خسارة ثُلث النشاط تقريباً للوصول إليها.`,
+        vGood: () => `وضع متين، تشتغل بنسبة ${fmt1(B.marginOfSafety)} % فوق نقطة التعادل. ستحتاج إلى خسارة ثُلث النشاط تقريباً للوصول إليها.`,
       },
       margin: {
         text: 'هامشاك، على مدى آخر 30 يوماً:',
@@ -514,7 +553,7 @@
         s2l: 'الهامش الصافي', s2h: () => `${fmtMad(B.netProfit)} بعد كل التكاليف`,
         s3l: 'تكلفة المواد', s3h: () => fmtMad(B.cogs),
         s4l: 'الربح لكل طلب', s4h: () => `متوسط السلة ${fmtMad(B.avgBasket)}`,
-        vGood: () => `هامش صافٍ قدره ${fmt1(B.netMargin)} %, أعلى بكثير من متوسط قطاع المقاهي والمطاعم (8 إلى 12 %). تكلفة موادك مضبوطة جيداً.`,
+        vGood: () => `هامش صافٍ قدره ${fmt1(B.netMargin)} %, أعلى بكثير من متوسط قطاع المقاهي والمطاعم (8 إلى 12%). تكلفة موادك مضبوطة جيداً.`,
         note: 'الهامش الإجمالي يقيس ربحية القائمة؛ والهامش الصافي يقيس ربحية الاستغلال بأكمله.',
       },
       charges: {
@@ -538,29 +577,38 @@
         vGood: () => `مقهى رابح وسليم: تحقّق ${fmtMad(B.dailyNet)} ربحاً صافياً عن كل يوم عمل.`,
       },
       help: {
-        text: 'مرحباً رشيد. أنا مساعدك المالي, أعرف Café Atlas: رقم المعاملات، تكلفة المواد، التكاليف، الهوامش والخزينة. اطرح سؤالاً رقمياً وأحسب الأثر الفعلي على نتيجتك؛ ولسؤال مفتوح حول تسيير مقهاك، يمكنني تشغيل مساعد ذكاء اصطناعي داخل متصفّحك. مثلاً:',
+        text: 'مرحباً رشيد. أنا مساعدك المالي، أعرف Café Atlas: رقم المعاملات، تكلفة المواد، التكاليف، الهوامش والخزينة. اطرح سؤالاً رقمياً وأحسب الأثر الفعلي على نتيجتك؛ ولسؤال مفتوح حول تسيير مقهاك، يمكنني تشغيل مساعد ذكاء اصطناعي داخل متصفّحك. مثلاً:',
+      },
+      /* ⚠ best-effort MSA, flagged for native review like the rest of the AR set. */
+      guards: {
+        negated: 'مفهوم، لن أُجري هذه المحاكاة. قل لي ما الذي تريد دراسته بدل ذلك، أو اختر من الأسفل.',
+        meta: 'لا شيء هنا تخمين: كل رقم يأتي من آخر 30 يوماً مسجّلة في Kiwi، وكل محاكاة تطبّق قاعدة بسيطة على تلك الأرقام. رفع الأسعار يُطبَّق على رقم المعاملات دون المساس بتكلفة المواد؛ والتوظيف يُطرح من الربح الصافي؛ ونقطة التعادل تقسم تكاليفك الثابتة على نسبة هامشك. افتح «كل الأرقام» لمعرفة نقطة الانطلاق.',
+        layoff: 'لا أستطيع تقدير أثر تقليص العمالة: أعرف كتلة أجورك الإجمالية، لا أجر كل شخص. هذا ما يمكنني عرضه، الوزن الحقيقي لكتلة الأجور في تكاليفك. وفي حالة إنهاء عقد، يفرض القانون المغربي الإشعار والتعويض، فليتحقق محاسبك من الحساب.',
+        scoped: 'ليس لديّ هذا التفصيل. أشتغل على المجاميع، لا حسب الصنف ولا حسب يوم الأسبوع ولا حسب الشخص. الرقم الإجمالي لا ينطبق على منتج بعينه، وإعطاؤه لك على هذا الأساس سيضلّلك. تفصيل الأصناف في صفحة القائمة، وتفصيل المبيعات في المعاملات.',
+        notrend: 'لا أستطيع مقارنة فترتين: أعمل على نافذة واحدة من 30 يوماً بلا تاريخ سابق. لذلك لا أقدر على قياس أثر قرار اتخذته فعلاً. ما أستطيعه هو محاكاة ما سيغيّره قرار انطلاقاً من اليوم.',
+        illicit: 'لن أساعدك في هذا. Kiwi يمسك محاسبتك أيضاً، ولن أساعدك على إخفاء مداخيل أو التحايل على الضمان الاجتماعي أو الأداء دون الحد الأدنى القانوني، وتعريض نفسك لتصحيح ضريبي. لكن يمكنني خفض تكاليفك بطرق قانونية، وهذا هو المسار الحقيقي لأموالك.',
       },
       calc: { title: 'حساب', result: 'النتيجة' },
       llm: {
-        noGpu: 'هذا السؤال خارج نطاق حساباتي, أنا مساعدك في الأرقام: التوظيف، الأسعار، الاستثمار، عتبة الربحية، التوقّعات، الهوامش والمصاريف. اسألني عن أيٍّ منها وتصلك الإجابة فوراً. ولمعرفة أصناف قائمتك الناجحة من غيرها، افتح صفحة القائمة في لوحة التحكم.',
+        noGpu: 'هذا السؤال خارج نطاق حساباتي، أنا مساعدك في الأرقام: التوظيف، الأسعار، الاستثمار، عتبة الربحية، التوقّعات، الهوامش والمصاريف. اسألني عن أيٍّ منها وتصلك الإجابة فوراً. ولمعرفة أصناف قائمتك الناجحة من غيرها، افتح صفحة القائمة في لوحة التحكم.',
         loading: (p) => `مساعد الذكاء الاصطناعي يكمل التحميل (${p}%). سأجيب فور جاهزيته.`,
-        offerLead: 'هذا السؤال خارج حساباتي المُعدّة مسبقاً, لكن يمكنني الإجابة عنه بحرية عبر <b>مساعد ذكاء اصطناعي مفتوح المصدر</b> يعمل <b>كلياً داخل متصفّحك</b>: لا تغادر أي بيانات.',
+        offerLead: 'هذا السؤال خارج حساباتي المُعدّة مسبقاً، لكن يمكنني الإجابة عنه بحرية عبر <b>مساعد ذكاء اصطناعي مفتوح المصدر</b> يعمل <b>كلياً داخل متصفّحك</b>: لا تغادر أي بيانات.',
         offerSize: (sz) => `الإطلاق الأول: تنزيل واحد بحجم ${sz}، ثم فوري بعد ذلك.`,
         activate: 'تشغيل مساعد الذكاء الاصطناعي',
-        installing: 'تثبيت مساعد الذكاء الاصطناعي, نموذج مفتوح المصدر يعمل في متصفّحك.',
+        installing: 'تثبيت مساعد الذكاء الاصطناعي، نموذج مفتوح المصدر يعمل في متصفّحك.',
         initializing: 'جارٍ التهيئة…',
         ready: 'مساعد الذكاء الاصطناعي جاهز.',
-        readyMsg: 'مساعد الذكاء الاصطناعي جاهز. اسألني عن تسيير مقهاك وتمويله وفريقه وتسويقه, أبقى مركّزاً على نشاطك.',
+        readyMsg: 'مساعد الذكاء الاصطناعي جاهز. اسألني عن تسيير مقهاك وتمويله وفريقه وتسويقه، أبقى مركّزاً على نشاطك.',
         loadFail: 'فشل التحميل.',
         loadFailMsg: 'تعذّر تحميل مساعد الذكاء الاصطناعي (الاتصال أو الذاكرة أو متصفّح غير متوافق). تبقى حساباتي المالية متاحة بالكامل.',
         runErr: 'حدث خطأ من جهة مساعد الذكاء الاصطناعي. أعد المحاولة، أو اطلب مني حساباً دقيقاً.',
       },
       acct: {
-        hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك, كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
+        hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك، كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
         tva: (D) => `سأتكفّل بضرائبك. لـ ${D.period}: الضريبة المستحقة <b>${fmtMad(D.tva.aPayer)}</b>، الأجل ${D.tva.echeance}. الضريبة على الشركات المقدّرة للسنة: ${fmtMad(D.is.estimeAnnuel)}. أفتح الوحدة لتحضير التصريح.`,
         paie: (D) => `بخصوص الأجور: <b>${D.payroll.headcount} موظفين</b>، ${fmtMad(D.payroll.totalNet)} صافٍ للدفع عن ${D.period}. تصريح CNSS مستحق في ${D.payroll.echeance}, يمكنني إنشاء كشوف الرواتب.`,
         etats: (D) => `قوائم ${D.period}: النتيجة الصافية <b>${fmtMad(D.netProfit)}</b>، الخزينة ${fmtMad(D.cash)}، ميزانية متوازنة. أفتح قوائمك المالية.`,
-        livre: (D) => `<b>${fmt(D.entriesThisMonth)} قيد</b> هذا الشهر, كل عملية بيع ونفقة، مسجّلة ومصنّفة تلقائياً.`,
+        livre: (D) => `<b>${fmt(D.entriesThisMonth)} قيد</b> هذا الشهر، كل عملية بيع ونفقة، مسجّلة ومصنّفة تلقائياً.`,
       },
     },
   };
@@ -577,12 +625,15 @@
     else if (suf[0] === 'm') n *= 1000000;
     return isFinite(n) ? n : null;
   }
+  /* Darija says "فالمية" / "f l mia", not the MSA "بالمئة". Missing it used to
+   * silently drop the merchant's figure and fall back to the 5% default — so
+   * "raise prices by 10%" was answered as 5%. */
   function parsePercent(q) {
-    const m = q.match(/(\d+(?:[.,]\d+)?)\s*(?:%|pour\s?cent|pourcent|percent|بالمئة|بالمائة|في المئة)/i);
+    const m = q.match(/(\d+(?:[.,]\d+)?)\s*(?:%|pour\s?cent|pourcent|percent|بالمئة|بالمائة|في المئة|فالمية|فلمية|فالمائة|\bf\s?l\s?mia\b|\bfelmia\b|\bfa?l?miya\b|\bflmiya\b|\bfelmiya\b|\bfilmia\b|\bb?almia\b)/i);
     return m ? parseFloat(m[1].replace(',', '.')) : null;
   }
   /* Every amount in the string (not just the first) — lets a compound query
-   * like "augmente les prix de 8 % et embauche à 6000" separate the percent
+   * like "augmente les prix de 8% et embauche à 6000" separate the percent
    * from the salary figure. */
   function parseAllAmounts(q) {
     const out = [];
@@ -641,14 +692,14 @@
       railEmpty: 'Your costs, margins and cash will show up here once you record them.',
     },
     ar: {
-      costsNeeded: (n) => `${n} بدأ للتو على Kiwi. أعتمد على مبيعاتك الحقيقية المسجّلة, لكن ليس لديّ بعد هيكل تكاليفك (الكراء، الأجور، الهامش، السيولة). أفضّل ألّا أحاكي شيئًا على أن أخترع أرقامًا.`,
-      costsCta: 'سجّل مبيعاتك يومًا بيوم وأضف تكاليفك في الإعدادات, عندها أفتح محاكاة التوظيف والأسعار ونقطة التعادل والتوقعات.',
+      costsNeeded: (n) => `${n} بدأ للتو على Kiwi. أعتمد على مبيعاتك الحقيقية المسجّلة، لكن ليس لديّ بعد هيكل تكاليفك (الكراء، الأجور، الهامش، السيولة). أفضّل ألّا أحاكي شيئًا على أن أخترع أرقامًا.`,
+      costsCta: 'سجّل مبيعاتك يومًا بيوم وأضف تكاليفك في الإعدادات، عندها أفتح محاكاة التوظيف والأسعار ونقطة التعادل والتوقعات.',
       noSales: (n) => `${n} ليس لديه بعد أي عملية بيع مسجّلة. بمجرد تسجيل أول عملية بيع، أبدأ بتتبّع رقم معاملاتك ومتوسط السلة والاتجاهات.`,
       revIntro: 'هذه مبيعاتك الحقيقية المسجّلة حتى الآن.',
       revLabel: 'المبيعات المسجّلة', ordLabel: 'عدد المبيعات', basketLabel: 'متوسط السلة',
       heroGreet: 'مرحبًا.',
       heroLead: (n) => `أنا مديرك المالي. ${n} يبدأ على Kiwi, أعمل انطلاقًا من مبيعاتك الحقيقية. اطرح سؤالاً أو ابدأ من هنا.`,
-      heroIns: 'سجّل مبيعاتك وأضف تكاليفك, عندها أفتح هوامشك ونقطة التعادل والمحاكاة.',
+      heroIns: 'سجّل مبيعاتك وأضف تكاليفك، عندها أفتح هوامشك ونقطة التعادل والمحاكاة.',
       railEmpty: 'ستظهر تكاليفك وهوامشك وسيولتك هنا بمجرد تسجيلها.',
     },
   };
@@ -669,16 +720,32 @@
     return r;
   }
 
+  /* How many people. "embaucher 2 personnes à 5000 chacune" used to be priced
+   * as ONE hire at the 7 200 default, because parseAmount grabbed the leading
+   * "2", rejected it as below a plausible salary, and fell back — quoting
+   * 7 200 for a 10 000 MAD/month commitment. Bounded at 50 so a stray number
+   * can't inflate the sim. */
+  function hireCount(q) {
+    const m = q.match(/(\d{1,2})\s*(?:personnes?|serveurs?|serveuses?|employ[eé]?e?s?|salari[eé]s?|cuisiniers?|baristas?|vendeu|caissi|staff|people|workers?|waiters?|cooks?|خدام|عمال|نادل|موظف)/);
+    const n = m ? parseInt(m[1], 10) : 1;
+    return (n >= 1 && n <= 50) ? n : 1;
+  }
+
   function sHire(q) {
     if (B.partial) return partialReply();
     const t = tr().hire;
-    let c = parseAmount(q), assumed = false;
-    if (!c || c < 1800) { c = 7200; assumed = true; }
+    /* Take the first figure that could plausibly be a monthly salary, not the
+     * first number in the string — the leading number is usually the count. */
+    const unit = parseAllAmounts(q).filter((v) => v >= 1800)[0];
+    const n = hireCount(q);
+    let per = unit, assumed = false;
+    if (!per) { per = 7200; assumed = true; }
+    const c = per * n;
     const ordersMo = c / (B.avgBasket * B.contribRatio);
     const newNet = B.netProfit - c;
     const tone = c < B.netProfit * 0.4 ? 'good' : c < B.netProfit * 0.8 ? 'warn' : 'bad';
     return {
-      text: t.text(c),
+      text: t.text(c, per, n),
       stats: [
         { l: t.s1l, v: t.s1v(ordersMo), h: t.s1h(ordersMo) },
         { l: t.s2l, v: fmtMad(c / B.contribRatio), h: t.s2h },
@@ -686,7 +753,11 @@
         { l: t.s4l, v: `${fmt1(c / B.netProfit * 100)} %`, h: t.s4h },
       ],
       verdict: { tone, text: tone === 'good' ? t.vGood(ordersMo) : tone === 'warn' ? t.vWarn : t.vBad },
-      note: assumed ? t.note : '',
+      /* Always disclose the loaded-cost reading: a merchant who types 4 500
+       * usually means net salary, and CNSS + AMO employer share adds ~21%
+       * on top. Silently treating their figure as fully loaded understated
+       * every hire. When we assumed the whole figure, say that instead. */
+      note: assumed ? t.note : t.noteLoaded(per, n),
       follow: [tr().chips.price5, tr().chips.breakeven],
     };
   }
@@ -698,6 +769,23 @@
     if (p == null) { p = 5; assumed = true; }
     const down = /\b(baiss|rédui|reduir|diminu|lower|cut|reduc|decrease|خفض|تخفيض)/i.test(norm(q));
     if (down) p = -Math.abs(p);
+    /* Clamp before any arithmetic. Unclamped, "baisse les prix de 200%"
+     * returned a 177,7% net margin and a MINUS 142 MAD average basket,
+     * stated with the same confidence as a real answer. A cut cannot exceed
+     * 100%, and beyond +200% the constant-volume assumption is fiction. */
+    const clamped = p < -100 || p > 200;
+    p = Math.max(-100, Math.min(200, p));
+    /* Degenerate cut: below this the new revenue no longer covers the food
+     * cost, so every stat downstream is meaningless — at exactly -100 % the
+     * margin divides by zero and printed "-∞ %". A sentence the merchant can
+     * act on beats four impossible numbers. */
+    if (B.revenue * (1 + p / 100) <= B.cogs) {
+      return {
+        text: t.textDegenerate(Math.abs(p), B.cogs),
+        note: t.note + (clamped ? t.noteClamped : ''),
+        follow: [tr().chips.breakeven, tr().chips.charges],
+      };
+    }
     const deltaNet = B.revenue * p / 100;
     const newNet = B.netProfit + deltaNet;
     const newRev = B.revenue * (1 + p / 100);
@@ -711,8 +799,13 @@
         { l: t.s3l, v: `${fmt1(newNetMargin)} %`, h: t.s3h() },
         { l: t.s4l, v: fmtMad(newRev), h: t.s4h(B.avgBasket * (1 + p / 100)) },
       ],
-      verdict: { tone, text: p > 0 ? t.vUp(p, deltaNet) : t.vDown(Math.abs(p) / B.contribRatio) },
-      note: t.note + (assumed ? t.noteAssumed : ''),
+      /* p === 0 used to fall through to vDown and announce "une BAISSE de
+       * prix" right under a headline reading "une hausse de 0,0 %". */
+      verdict: {
+        tone,
+        text: p === 0 ? t.vFlat : p > 0 ? t.vUp(p, deltaNet) : t.vDown(Math.abs(p) / B.contribRatio),
+      },
+      note: t.note + (assumed ? t.noteAssumed : '') + (clamped ? t.noteClamped : ''),
       follow: [tr().chips.forecast, tr().chips.charges],
     };
   }
@@ -751,7 +844,7 @@
     const t = tr().forecast;
     const runRate = B.mtdRevenue / B.mtdDays;
     const projRev = runRate * B.daysInMonth;
-    // Use the exact net-margin ratio (net ÷ revenue), not the rounded 22.3 %
+    // Use the exact net-margin ratio (net ÷ revenue), not the rounded 22.3%
     // display constant, so the projection reconciles to the P&L to the dirham.
     const projNet = projRev * (B.netProfit / B.revenue);
     const vsAvg = (projRev - B.revenue) / B.revenue * 100;
@@ -915,12 +1008,12 @@
     },
     ar: {
       greet: 'مرحبا رشيد.',
-      lead: 'أنا مديرك المالي, أعرف مقهى أطلس بالتفصيل. اطرح سؤالاً بالأرقام أو ابدأ من هنا.',
+      lead: 'أنا مديرك المالي، أعرف مقهى أطلس بالتفصيل. اطرح سؤالاً بالأرقام أو ابدأ من هنا.',
       c1t: 'محاكاة توظيف', c1s: 'التكلفة على الهامش',
       c2t: 'اختبار رفع الأسعار', c2s: 'الأثر على الربح',
       c3t: 'محاسبتي', c3s: 'الدفتر · الضريبة · الأجور',
       insT: 'اليوم ·',
-      ins: (m, s) => `مقهى أطلس في وضع جيد, هامش صافٍ ${m}٪، أي ${s}٪ فوق نقطة التعادل.`,
+      ins: (m, s) => `مقهى أطلس في وضع جيد، هامش صافٍ ${m}٪، أي ${s}٪ فوق نقطة التعادل.`,
       autres: 'أخرى', more: 'عرض كل الأرقام', less: 'إخفاء',
     },
   };
@@ -965,6 +1058,45 @@
       open: [{ label: acctLabel('open'), handler: 'open-comptabilite' }],
     };
   }
+
+  /* ─── GUARD REPLIES ────────────────────────────────────────────────────
+   * The six cases where the honest answer is "I won't run that". Each states
+   * the limit plainly and offers the nearest thing it CAN do — a dead end is
+   * worse than a wrong answer only if it leaves the merchant with nothing. */
+  const gTxt = () => (tr().guards || T.fr.guards);
+
+  function sNegated() {
+    return {
+      text: gTxt().negated,
+      follow: [tr().chips.breakeven, tr().chips.charges, tr().chips.forecast],
+    };
+  }
+
+  function sMeta() {
+    return {
+      text: gTxt().meta,
+      follow: [tr().chips.charges, tr().chips.breakeven],
+    };
+  }
+
+  function sScoped() {
+    return { text: gTxt().scoped, follow: [tr().chips.charges, tr().chips.forecast] };
+  }
+
+  function sNoTrend() {
+    return { text: gTxt().notrend, follow: [tr().chips.forecast, tr().chips.breakeven] };
+  }
+
+  /* Layoff and illicit both land on the same constructive alternative: show
+   * where the money actually goes. On a partial profile there are no costs
+   * to show, so the guard text stands alone rather than inventing a table. */
+  function withCharges(text) {
+    if (B.partial) return { text };
+    const c = sCharges();
+    return { text, stats: c.stats, verdict: c.verdict, follow: [tr().chips.breakeven, tr().chips.forecast] };
+  }
+  function sLayoff() { return withCharges(gTxt().layoff); }
+  function sIllicit() { return withCharges(gTxt().illicit); }
 
   function sAccounting(q) {
     const D = window.KiwiComptable && window.KiwiComptable.data;
@@ -1015,7 +1147,7 @@
           priceUp: (p) => `رفع الأسعار · +${p}%`, priceDown: (p) => `خفض الأسعار · −${p}%`,
           hire: 'تكلفة التوظيف', newNet: 'الربح الصافي الجديد', annual: 'الأثر الصافي على السنة',
           vGood: (a) => `الاثنان متماسكان: الربح الصافي يبقى متينًا (${a} على مدى السنة).`,
-          vWarn: 'ممكن, لكن رفع الأسعار هو ما يموّل التوظيف. راقب حجم المبيعات.',
+          vWarn: 'ممكن، لكن رفع الأسعار هو ما يموّل التوظيف. راقب حجم المبيعات.',
           vBad: 'مجتمعين، يدفعان الربح الصافي إلى الخسارة. وزّعهما على الوقت.' },
   };
   function sCompound(raw) {
@@ -1025,7 +1157,7 @@
     let p = pct == null ? 5 : pct;
     if (/baiss|rédui|reduir|diminu|lower|cut|reduc|decrease|خفض|تخفيض/.test(norm(raw))) p = -Math.abs(p);
     /* Separate the salary from the percent: a hire cost is a salary-scale
-     * figure (≥ 1800 MAD), so the 8 in "8 %" can never be mistaken for it. */
+     * figure (≥ 1800 MAD), so the 8 in "8%" can never be mistaken for it. */
     const salaries = parseAllAmounts(raw).filter((n) => n >= 1800);
     const hireCost = salaries.length ? Math.max.apply(null, salaries) : 7200;
     const deltaPrice = B.revenue * p / 100;
@@ -1101,7 +1233,64 @@
    * combinable scenarios joined by "et / and / +" trigger a compound sim. */
   const MIN_SCORE = 2;
   const CONJ_RX = /(\bet\b|\band\b|\+|aussi|also|ainsi que|en plus|as well|و )/;
-  const PRICE_VERB = /augment|hauss|baiss|monter|raise|increase|lower|cut|reduce|رفع|خفض|زيادة|تخفيض/;
+  const PRICE_VERB = /augment|hauss|baiss|monter|raise|increase|lower|cut|reduce|رفع|خفض|زيادة|تخفيض|\bnzid\b|\bzid\b|\bne9es\b|\bnn9es\b|نزيد|نقص/;
+  /* "wach n9der nzid wahed lkhdam" is a HIRING question, but "n9der" scores 3
+   * on `afford` while the worker noun only scores 2 on `hire` — so afford won
+   * and the merchant got "indiquez le montant de l'investissement". A worker
+   * noun together with an add/hire verb is unambiguous, so it lifts hire above
+   * a bare capability verb. */
+  const WORKER_RX = /serveur|cuisinier|barista|waiter|cook|نادل|طباخ|عامل|موظف|\bkhdam\b|\blkhdam\b|\bkhaddam\b|\b3amel\b|خدام/;
+  const ADD_VERB = /\bnzid\b|\bzid\b|embauch|recrut|engag|hire|recruit|نزيد|زيد|نوظف/;
+
+  /* ─── GUARD PATTERNS ───────────────────────────────────────────────────
+   * Six things a keyword router gets confidently wrong. Each is checked in
+   * decideRoute BEFORE the scored classifier, because in every case the right
+   * answer is "don't run that simulation" — and a scored match would happily
+   * run it. Patterns are written accent-free: norm() strips diacritics. */
+
+  /* 1. Negation. "je ne veux pas augmenter les prix" used to return a full
+   *    price-rise simulation; "je n'ai pas les moyens d'embaucher" answered
+   *    "Favorable, votre marge le permet largement". Deliberately narrow —
+   *    it must not swallow a refinement ("non, plutôt 4500") or an ordinary
+   *    sentence that merely contains "pas" ("pour pas couler"). */
+  const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|peux|pense|ai)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bj[e']?\s*ai\s+pas\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\b(?:don'?t|do\s+not|won'?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*أريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
+
+  /* 2. Meta / challenge. "t'es sûr de ce chiffre ?" scored +3 on `chiffre`
+   *    and returned an unrelated revenue dump. Challenging a number is the
+   *    single most likely follow-up, so it gets a real answer instead. */
+  const META_RX = /\b(?:t[' ]?es|tu\s+es|es[- ]?tu)\s+s[uû]r|\bare\s+you\s+sure|d[' ]?ou\s+(?:sort|vient|viennent|sortent)|comment\s+(?:tu\s+)?(?:calcul|fais|obtiens|arrives)|comment\s+(?:est|sont)\s+calcul|explique.{0,24}(?:calcul|chiffre|nombre|resultat|comment)|explique[- ]?moi\s+comment|sur\s+quoi\s+(?:tu\s+te\s+bases|te\s+bases)|c[' ]?est\s+quoi\s+ce\s+chiffre|pourquoi\s+ce\s+chiffre|where\s+does\s+(?:that|it)\s+come\s+from|how\s+do\s+you\s+calculate|من\s*اين|كيف\s*حسبت/;
+
+  /* 3. Layoff. "je veux licencier 3 serveurs, combien j'économise" matched
+   *    `serveur` and returned a HIRING simulation verdicted "Favorable". */
+  const LAYOFF_RX = /licenci|\bvirer\b|renvoyer|degraisser|reduire\s+l[' ]?effectif|se\s+separer\s+de|\bfire\s+(?:someone|a|an|my|the)|\blay[- ]?off|\bsack\b|طرد|تسريح/;
+
+  /* 4. Scope narrower than the data. "ma marge sur le thé à la menthe"
+   *    returned the GLOBAL 69% as if it were the mint tea margin — the
+   *    exact "never emit a number we don't have" violation. */
+  const WEEKDAY = 'samedi|dimanche|lundi|mardi|mercredi|jeudi|vendredi';
+  const SCOPE_ENTITY_RX = new RegExp(
+    '\\b(?:quel|quelle|quels|quelles|which|what)\\s+(?:serveur|employe|produit|plat|article|categorie|jour|item|product|dish)'
+    + '|(?:produit|plat|article|vente)\\s+le\\s+plus|meilleure?\\s+vente|top\\s+(?:produit|plat|vente|item)'
+    + '|heure\\s+de\\s+pointe|\\bpar\\s+(?:serveur|employe|produit|article|plat|heure|categorie)|best\\s*[- ]?\\s*sell'
+    /* "combien je fais le samedi" clears no intent at all, so the qualifier
+     * check below (which needs a winning global intent) never fired. A
+     * quantity question naming a weekday is a per-day breakdown, full stop. */
+    + '|(?:combien|chhal|quel|how\\s+much)\\b[^?]{0,30}\\ble\\s+(?:' + WEEKDAY + ')\\b');
+  const SCOPE_QUAL_RX = new RegExp("\\bsur\\s+(?:le|la|l'|mon|ma)\\s*[a-z؀-ۿ]|\\ble\\s+(?:" + WEEKDAY + ')\\b');
+  const GLOBAL_SCENARIOS = { margin: 1, revenue: 1, profit: 1 };
+
+  /* 5. No history. The engine holds ONE static 30-day window, so every
+   *    period comparison was either answered with that window (wrong) or
+   *    silently dropped. "j'ai augmenté les prix de 10% le mois dernier,
+   *    ça a marché ?" was simulated as a fresh decision. `tendance` is
+   *    deliberately absent — that belongs to forecast, which is forward. */
+  const TREND_RX = /mois\s+dernier|mois\s+passe|semaine\s+derniere|annee\s+derniere|an\s+dernier|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|\bامس\b/;
+
+  /* 6. Illicit. "combien je peux sortir de la caisse sans que ça se voie"
+   *    returned a full revenue + profit dump. Kiwi is also this merchant's
+   *    bookkeeping system; it must not help hide takings. Note "payer moins
+   *    de TVA" is NOT here — lawful optimisation is a fair question. */
+  const ILLICIT_RX = /sans\s+que\s+ca\s+se\s+(?:voie|voit|remarque)|non\s+declar|ne\s+pas\s+declarer|pas\s+declarer|sous[- ]?declarer|\bau\s+noir\b|dissimul|frauder|\bfraude\b|evasion|eviter\s+(?:la\s+|le\s+|les\s+)?(?:tva|cnss|impot|taxe)|echapper\s+a\s+(?:la\s+|l[' ])?(?:tva|cnss|impot)|contourner\s+(?:la\s+)?(?:tva|cnss)|en\s+dessous\s+du\s+smig|moins\s+que\s+le\s+smig|sans\s+(?:cnss|contrat|declaration)|undeclared|off\s+the\s+books|tax\s+evasion|غير\s*مصرح|التهرب/;
   /* One-slot conversational memory: the last amount-driven scenario, so a
    * follow-up correction can refine it instead of being mis-routed. */
   let lastScenario = null;
@@ -1110,27 +1299,29 @@
 
   const INTENTS = [
     { id: 'greet', run: () => sHelp(), sig: [
-      [/bonjour|salut|coucou|hello|^hi$|^hey|مرحبا|سلام|اهلا/, 3],
+      [/bonjour|salut|coucou|hello|^hi$|^hey|مرحبا|سلام|اهلا|\bsalam\b|\bslam\b|\blabas\b|\bahlan\b|\bsbah\s*lkhir\b|لاباس|صباح الخير/, 3],
       [/qui es|who are you|من انت|que (peux|sais)|what can you|ماذا تفعل/, 3],
       [/comment ca/, 3], [/\baide\b|\bhelp\b|مساعدة/, 2],
     ] },
     { id: 'advice', run: (raw, q) => sAdvice(raw), sig: [
-      [/recommand|conseil|sugg[eé]r|suggestion|astuce|\btips?\b|\badvice\b|recommend|نصيحة|نصائح|توصية|اقتراح/, 3],
+      [/recommand|conseil|sugg[eé]r|suggestion|astuce|\btips?\b|\badvice\b|recommend|نصيحة|نصائح|توصية|اقتراح|\bkifach\b|\bkifash\b|كيفاش|\bnasiha\b|\bnsiha\b|\btawsiya\b/, 3],
       [/(augment|boost|d[eé]velopp|am[eé]lior|grow|increase|booster).{0,18}(vente|chiffre|\bca\b|marge|business|revenue|sales)|vendre plus|gagner plus|comment.*plus/, 3],
       [/\bid[eé]es?\b|opportunit/, 2],
     ] },
     { id: 'hire', run: (raw) => sHire(raw), sig: [
-      [/embauch|recrut|engag|hire|recruit|توظيف|تشغيل|استخدام/, 3],
-      [/serveur|cuisinier|barista|waiter|cook|نادل|طباخ|عامل/, 2],
-      [/salarie|nouvel employe|main d.?oeuvre|une personne en plus|staff|employee|موظف/, 2],
-    ] },
+      [/embauch|recrut|engag|hire|recruit|توظيف|تشغيل|استخدام|نوظف/, 3],
+      [/serveur|cuisinier|barista|waiter|cook|نادل|طباخ|عامل|\bkhdam\b|\blkhdam\b|\bkhaddam\b|\b3amel\b|خدام/, 2],
+      /* "j'ai besoin de quelqu'un en cuisine" is a hiring question, but only
+       * `cuisinier` was listed, so `ca passe` won it for revenue instead. */
+      [/salarie|nouvel employe|main d.?oeuvre|une personne en plus|staff|employee|موظف|besoin de (quelqu.un|monde|bras|renfort)|quelqu.un en (cuisine|salle)|un extra\b/, 2],
+    ], boost: (q) => (WORKER_RX.test(q) && ADD_VERB.test(q)) ? 2 : 0 },
     { id: 'afford', run: (raw) => sAfford(raw), sig: [
-      [/puis.?je|peux.?je|ai.?je les moyens|me permettre|abordable|can i|afford|هل يمكن|اقدر|في متناول/, 3],
-      [/investir|acheter|invest|buy|purchase|استثمار|شراء|اشتري/, 2],
+      [/puis.?je|peux.?je|ai.?je les moyens|me permettre|abordable|can i|afford|هل يمكن|اقدر|في متناول|\bn9der\b|\bnqder\b|\bngder\b|\bwach n9der\b|نقدر/, 3],
+      [/investir|acheter|invest|buy|purchase|استثمار|شراء|اشتري|\bnchri\b|\bnshri\b|\b3ndi flous\b|نشري/, 2],
       [/coute|cost of/, 1],
     ] },
     { id: 'price', run: (raw) => sPrice(raw), sig: [
-      [/prix|tarif|price|pricing|سعر|اسعار|ثمن|تسعير/, 3],
+      [/prix|tarif|price|pricing|سعر|اسعار|ثمن|تسعير|\btaman\b|\bthaman\b|\bataman\b|\bfataman\b|الثمن|السومة/, 3],
       [PRICE_VERB, 1],
     ], boost: (q, x) => (x.pct != null && PRICE_VERB.test(q)) ? 3 : 0 },
     { id: 'forecast', run: () => sForecast(), sig: [
@@ -1139,21 +1330,23 @@
       [/combien.*(vais|gagner|ferai)/, 2],
     ] },
     { id: 'breakeven', run: () => sBreakEven(), sig: [
-      [/seuil|rentab|equilibre|break.?even|point mort|breakeven|threshold|نقطة التعادل|عتبة|التعادل/, 3],
+      /* "nkhrej rasi" (lit. get my head out) is how a Moroccan owner says
+       * break-even; "pour pas couler" is the French equivalent. */
+      [/seuil|rentab|equilibre|break.?even|point mort|breakeven|threshold|نقطة التعادل|عتبة|التعادل|nkhrej rasi|khrej rasi|نخرج راسي|pour (ne )?pas couler|sans couler|\bt?tawazon\b|\bt?tawazun\b|التوازن/, 3],
     ] },
-    { id: 'margin', run: () => sMargin(), sig: [[/marge|margin|هامش/, 3]] },
+    { id: 'margin', run: () => sMargin(), sig: [[/marge|margin|هامش|مارج/, 3]] },
     { id: 'charges', run: () => sCharges(), sig: [
-      [/charge|depense|frais|opex|expense|overhead|spend|spending|تكاليف|مصاريف|نفقات/, 3],
+      [/charge|depense|frais|opex|expense|overhead|spend|spending|تكاليف|مصاريف|نفقات|\bmasarif\b|\bmasaruf\b|\bkankhelles\b|\blkra\b|\bkanserf\w*\b|\bnserf\b|\bsraf\b|كنصرف|نصرف|الكرا|\bloyer\b|\brent\b|كراء/, 3],
       [/\bcout\b|\bcost\b|تكلفة/, 1],
     ] },
     { id: 'revenue', run: () => sRevenue(), sig: [
-      [/chiffre|revenu|encaiss|vente|recette|revenue|sales|turnover|income|مداخيل|مبيعات|دخل|معاملات/, 3],
+      [/chiffre|revenu|encaiss|vente|recette|revenue|sales|turnover|income|مداخيل|مبيعات|دخل|معاملات|\bmbi3\b|\bmbi3at\b|\bnbi3\b|\bkanbi3\b|\bdkhl\b|نبيع|مبيعاتي|\bdayer\b|\bdayra\b|\bdert\b|\bkhdmt\b/, 3],
       // "ca" = chiffre d'affaires, but skip the French pronoun "ça" (ça va / ça
       // coûte / ça nous…) so a casual sentence isn't force-fit into revenue.
-      [/\bca\b(?!\s*(va|coute|fait|sera|nous|me|te|vous|donne|rapporte|ira|peut))|رقم المعاملات/, 2],
+      [/\bca\b(?!\s*(va|coute|fait|sera|nous|me|te|vous|donne|rapporte|ira|peut|passe|marche|suffit|craint|vaut))|رقم المعاملات/, 2],
     ] },
     { id: 'profit', run: () => sProfit(), sig: [
-      [/benefice|profit|resultat|earn|bottom line|net income|make money|ربح|ارباح|صافي|نتيجة/, 3],
+      [/benefice|profit|resultat|earn|bottom line|net income|make money|ربح|ارباح|صافي|نتيجة|\brbe7\b|\brbah\b|\bribh\b|\bkanrbe7\b|\bnrbe7\b|\brbe7t\b|\bkhsser\b|\bkankhsser\b|ربحت|نربح/, 3],
       [/gagne|rentre|combien je gagne/, 2],
     ] },
     { id: 'accounting', run: (raw, q) => sAccounting(q), sig: [[RX_ACCT, 3]] },
@@ -1179,9 +1372,27 @@
     const raw = fixDigits(rawIn);
     const q = norm(raw);
     if (looksLikeMath(raw) && evalMath(raw) != null) return { kind: 'math', raw, q };
+    /* ─── Guards, ahead of the classifier ───────────────────────────────
+     * Each of these would otherwise score highly on some intent and return a
+     * confident simulation of the wrong thing. They are checked here rather
+     * than inside an intent because each has to beat EVERY intent, not one.
+     * Order is deliberate: safety first, then explicit refusal by the
+     * merchant, then "I don't have that" before anything gets computed. */
+    if (ILLICIT_RX.test(q)) return { kind: 'illicit', raw, q };
+    if (NEG_RX.test(q)) return { kind: 'negated', raw, q };
     const act = matchAction(q);
     if (act) return { kind: 'action', raw, q, action: act };
+    if (META_RX.test(q)) return { kind: 'meta', raw, q };
+    if (LAYOFF_RX.test(q)) return { kind: 'layoff', raw, q };
+    if (TREND_RX.test(q)) return { kind: 'notrend', raw, q };
+    if (SCOPE_ENTITY_RX.test(q)) return { kind: 'scoped', raw, q };
     const ranked = classify(q, raw);
+    /* A qualifier like "sur le thé à la menthe" or "le samedi" only matters
+     * when the winning intent reports a GLOBAL total — handing back the
+     * whole-business margin as if it were one product's is the failure. */
+    if (ranked.length && GLOBAL_SCENARIOS[ranked[0].id] && SCOPE_QUAL_RX.test(q)) {
+      return { kind: 'scoped', raw, q };
+    }
     const combos = ranked.filter((r) => (r.id === 'hire' || r.id === 'price') && r.score >= 3);
     if (combos.length >= 2 && CONJ_RX.test(' ' + q + ' ')) return { kind: 'compound', raw, q };
     // Conversational refinement: a correction carrying a new number right after an
@@ -1206,6 +1417,12 @@
     if (d.kind === 'math') return sCalc(d.raw, evalMath(d.raw));
     if (d.kind === 'action') return sAction(d.action);
     if (d.kind === 'compound') return sCompound(d.raw);
+    if (d.kind === 'illicit') return sIllicit();
+    if (d.kind === 'negated') return sNegated();
+    if (d.kind === 'meta') return sMeta();
+    if (d.kind === 'layoff') return sLayoff();
+    if (d.kind === 'scoped') return sScoped();
+    if (d.kind === 'notrend') return sNoTrend();
     if (d.kind === null) return null;   // unmatched → routed to the in-browser LLM
     return d.run(d.raw, d.q);
   }
@@ -1233,6 +1450,58 @@
     ['donne-moi des recommandations', 'advice'], ['comment augmenter mes ventes', 'advice'], ['any tips to grow my sales', 'advice'], ['نصيحة لزيادة مبيعاتي', 'advice'],
     ['2500 * 1.2', 'math'], ['(842300-261000)/842300', 'math'],
     ['quelle est la météo demain', 'llm'], ['raconte-moi une blague', 'llm'],
+
+    /* ─── Guard regressions. Every line below returned a confident, wrong
+     * answer before the guards existed; the comment is what it used to do. ── */
+    // simulated the price rise the merchant just refused
+    ['je ne veux pas augmenter les prix', 'negated'],
+    ['je ne veux surtout pas baisser mes prix de 20%', 'negated'],
+    ["je n'ai pas les moyens d'embaucher", 'negated'],          // answered "Favorable"
+    ['ne me parle pas de ma marge', 'negated'],
+    ["I don't want to raise prices", 'negated'],
+    // challenged figure → unrelated revenue dump (matched on `chiffre`)
+    ["t'es sûr de ce chiffre ?", 'meta'],
+    ["d'où sort ce chiffre", 'meta'],
+    ['explique-moi comment tu calcules', 'meta'],
+    ['how do you calculate that', 'meta'],
+    // firing → HIRING simulation, verdict "Favorable"
+    ["je veux licencier 3 serveurs, combien j'économise", 'layoff'],
+    ['réduire l’effectif', 'layoff'],
+    // per-item/day/person → the global figure, presented as if it were theirs
+    ['ma marge sur le thé à la menthe', 'scoped'],
+    ['quel serveur vend le plus', 'scoped'],                     // → hire
+    ['quel est mon produit le plus vendu', 'scoped'],
+    ['combien je fais le samedi', 'scoped'],
+    ['quelle est mon heure de pointe', 'scoped'],
+    // period comparison → the one static 30-day window, or a fresh simulation
+    ['compare ce mois au mois dernier', 'notrend'],
+    ["j'ai augmenté les prix de 10% le mois dernier, ça a marché ?", 'notrend'],
+    ['évolution de ma marge sur 6 mois', 'notrend'],
+    ["combien j'ai fait hier", 'notrend'],
+    ['mes ventes ont baissé de combien cette semaine', 'notrend'],
+    // asked how to hide money → full revenue + profit dump
+    ['combien je peux sortir de la caisse sans que ça se voie', 'illicit'],
+    ['comment ne pas déclarer une partie du cash', 'illicit'],
+    ['comment éviter la CNSS', 'illicit'],
+    ['puis-je payer mes serveurs en dessous du SMIG', 'illicit'],
+    ['comment payer moins de TVA', 'accounting'],   // lawful — must NOT be refused
+
+    /* ─── Darija. The register Moroccan owners actually type in: 9 of these
+     * 10 used to fall through to a 1,2 Go download instead of an answer. ── */
+    ['chhal rbe7t had chher', 'profit'],
+    ['wach kanrbe7 wla kankhsser', 'profit'],
+    ['wach n9der nzid wahed lkhdam', 'hire'],
+    ['3ndi flous bach nchri machine b 80000', 'afford'],
+    ['chhal khassni nbi3 bach nkhrej rasi', 'breakeven'],
+    ['bghit nzid fataman b 10%', 'price'],
+    ['chnu hia lmarge dyali', 'margin'],
+    ['kifach nzid lmbi3at dyali', 'advice'],
+    ['chhal kankhelles f lkra kol chher', 'charges'],
+    ['واش نقدر نزيد خدام', 'hire'],
+    ['شحال خاصني نبيع باش نخرج راسي', 'breakeven'],
+    ['شنو هي المارج ديالي', 'margin'],
+    ['بغيت نزيد فالثمن ب ١٠ فالمية', 'price'],
+    ['combien je dois vendre par jour pour pas couler', 'breakeven'],
   ];
   function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
   function runEval() {
@@ -1267,7 +1536,7 @@
     t('extract integer MAD', JSON.stringify(extractMad('TVA à payer 38 309 MAD')) === '[38309]');
     t('extract decimal MAD', JSON.stringify(extractMad('total 1 234,50 MAD')) === '[1234.5]');
     t('extract dh suffix', extractMad('café 15 dh')[0] === 15);
-    t('ignore bare percent', extractMad('marge 22,3 %').length === 0);
+    t('ignore bare percent', extractMad('marge 22,3%').length === 0);
     t('grounding figure passes', auditNumbers('votre chiffre d’affaires est 842 300 MAD').uncited.length === 0);
     t('rounded restatement passes', auditNumbers('environ 842 000 MAD').uncited.length === 0);
     t('fabricated figure flagged', auditNumbers('vous gagnez 999 000 MAD ce mois').uncited.length === 1);
@@ -1285,22 +1554,29 @@
    * open-source model running fully in the browser via WebGPU — no backend,
    * no API key, no data leaves the device. Opt-in download. */
   const LLM = {
-    /* Qwen3-4B — best small open-source model for this assistant: stronger
-     * multilingual (FR/AR/EN), tool-calling and multi-step reasoning than
-     * Llama-3.2-3B, and present in WebLLM's prebuilt list. Thinking mode is
-     * disabled below (see runLlm) so answers stay snappy for the merchant.
+    /* Qwen3.5-2B — Qwen stays the strongest small family for FR/AR (Phi is
+     * English-centric, Llama/Gemma are weak on Arabic), and 3.5-2B is a
+     * generation newer than the 4B it replaces at roughly HALF the download.
+     * Download size is the real adoption blocker on a shop till, so a smaller
+     * newer model beats a bigger older one here.
+     * Thinking: Qwen3.5 dropped Qwen3's `/no_think` prompt switch. Its chat
+     * template now emits a pre-closed `<think></think>` block unless the
+     * caller passes enable_thinking:true — i.e. NON-thinking is the default
+     * and needs no flag. Passing `/no_think` would just be dead text in the
+     * system prompt. stripThink() below stays as the safety net.
      * CDN is version-pinned so model availability/behaviour can't drift. */
-    model: 'Qwen3-4B-q4f16_1-MLC',
-    sizeLabel: '≈ 2,4 Go',
+    model: 'Qwen3.5-2B-q4f16_1-MLC',
+    sizeLabel: '≈ 1,2 Go',
     cdn: 'https://esm.run/@mlc-ai/web-llm@0.2.84',
     status: 'idle',
     engine: null,
     progress: 0,
   };
 
-  /* Qwen3 can emit <think>…</think> reasoning blocks. We run it in
-   * non-thinking mode, but strip defensively so the merchant never sees a
-   * stray tag — handles both a closed block and one still mid-stream. */
+  /* Qwen can emit <think>…</think> reasoning blocks. Qwen3.5 defaults to
+   * non-thinking (see LLM above), but we strip defensively so the merchant
+   * never sees a stray tag — handles both a closed block, the empty
+   * `<think></think>` the template itself emits, and one still mid-stream. */
   function stripThink(s) {
     return String(s)
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -1312,7 +1588,7 @@
   const SP_DIR = {
     fr: 'IMPÉRATIF : rédige ta réponse entièrement en FRANÇAIS.',
     en: `CRITICAL: the notes below are written in French, but you MUST write your entire reply in ENGLISH, the language of the user's question. Do not reply in French.`,
-    ar: 'إلزامي: الملاحظات أدناه مكتوبة بالفرنسية، لكن يجب أن تكتب ردّك بالكامل بالعربية, لغة سؤال المستخدم. لا تُجب بالفرنسية.',
+    ar: 'إلزامي: الملاحظات أدناه مكتوبة بالفرنسية، لكن يجب أن تكتب ردّك بالكامل بالعربية، لغة سؤال المستخدم. لا تُجب بالفرنسية.',
   };
 
   /* Real menu of the active venue (via window.KiwiMenu, exposed by venues.js)
@@ -1386,7 +1662,7 @@
   const GUARD = {
     fr: 'Chiffres dérivés de vos données, vérifiez les montants exacts dans votre tableau de bord.',
     en: 'Figures derived from your data, verify the exact amounts in your dashboard.',
-    ar: 'أرقام مُشتقّة من بياناتك, تحقّق من المبالغ الدقيقة في لوحة التحكم.',
+    ar: 'أرقام مُشتقّة من بياناتك، تحقّق من المبالغ الدقيقة في لوحة التحكم.',
   };
   /* Every MAD-denominated amount in a block of text. */
   function extractMad(text) {
@@ -1431,6 +1707,13 @@
     return { uncited };
   }
 
+  /* The deterministic engine refuses these outright (ILLICIT_RX), but anything
+   * it doesn't recognise reaches the model instead — and the prompt used to
+   * forbid stock tips and off-topic chat while saying nothing about helping a
+   * merchant hide takings. Kiwi keeps this merchant's books; it cannot be the
+   * thing that helps them cook them. */
+  const INTEGRITY_RULE = `- Tu n'aides JAMAIS à dissimuler des recettes, à sous-déclarer la TVA ou le chiffre d'affaires, à contourner la CNSS, à employer sans contrat ou à payer sous le SMIG. Si on te le demande, refuse en une phrase, sans jugement, et propose une piste légale de réduction des coûts. L'optimisation fiscale légale, elle, reste une question légitime.`;
+
   function buildSystemPrompt(lang) {
     const dir = SP_DIR[lang] || SP_DIR.fr;
     if (B.partial) {
@@ -1447,6 +1730,7 @@
         `- Tu peux donner des conseils de gestion généraux et qualitatifs, sans chiffrer ce que tu ne connais pas.`,
         `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
         `- Ne donne jamais de conseil d'investissement boursier. Ne réponds pas aux questions sans lien avec l'activité.`,
+        INTEGRITY_RULE,
         '',
         dir,
       ].join('\n');
@@ -1490,6 +1774,7 @@
       `- N'invente JAMAIS un chiffre, un plat ou une statistique : appuie-toi uniquement sur les données ci-dessus. Si une information manque, dis-le simplement.`,
       `- Tu NE réponds PAS aux questions sans lien avec l'activité (sport, célébrités, actualité). Décline poliment en une phrase.`,
       `- Tu n'as pas accès à Internet ni à des données en temps réel ; ne donne jamais de conseil d'investissement boursier.`,
+      INTEGRITY_RULE,
       '',
       dir
     );
@@ -2042,16 +2327,19 @@
     async function runLlm(question) {
       const typing = pushTyping();
       llmHistory.push({ role: 'user', content: question });
-      /* `/no_think` is Qwen3's soft switch for non-thinking mode — a
-       * prompt-only mechanism (no API plumbing to depend on), with
-       * stripThink() as the safety net if a block slips through. */
-      const sys = buildSystemPrompt(detectQLang(question)) + '\n\n/no_think';
+      /* No `/no_think` suffix: that was Qwen3's switch and Qwen3.5 removed it
+       * (its template is non-thinking unless enable_thinking:true is passed).
+       * Appending it now would only pollute the system prompt. */
+      const sys = buildSystemPrompt(detectQLang(question));
       const messages = [{ role: 'system', content: sys }, ...llmHistory.slice(-8)];
       try {
         const stream = await LLM.engine.chat.completions.create({
           messages,
-          /* Qwen3 non-thinking sampling, per the model card (temp 0.7, top_p
-           * 0.8) — avoids the repetition that greedy/low-temp triggers. */
+          /* Deliberately below Qwen3.5's packaged default (temp 1.0 / top_p
+           * 1.0): this assistant answers with the merchant's real money, so
+           * the failure we most need to suppress is an invented MAD figure.
+           * 0.7/0.8 stays clear of the repetition that greedy decoding
+           * triggers while keeping output tight against the grounding. */
           temperature: 0.7,
           top_p: 0.8,
           stream: true,
