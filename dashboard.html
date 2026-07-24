@@ -5116,6 +5116,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </div>
+    <!-- Merchant escape hatch: plain <a> so it works even if the app JS
+         breaks or the server has revoked the session. Server-side /auth/logout
+         clears the kiwi_sess cookie and lands the user on the login screen. -->
+    <a class="merchant-logout" href="/auth/logout" style="display:block;margin:8px 4px 0;padding:6px 10px;font-size:12px;color:var(--n-500,#5d6b63);text-decoration:none;text-align:center;border-radius:8px;border:1px solid transparent;transition:background 120ms,border-color 120ms;" onmouseover="this.style.background='rgba(11,110,79,.06)';this.style.borderColor='var(--n-200,#e7e3da)'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'" data-i18n="dash.sidebar.logout">Se déconnecter</a>
   </aside>
 
   <!-- ══════════════ MAIN ══════════════ -->
@@ -5835,6 +5839,10 @@
 <!-- Real logged-in identity — swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
 <script defer src="assets/identity.js"></script>
+<!-- Auth guard: redirects to the auth page the moment the server signals
+     the account has been deleted / suspended, so a revoked merchant never
+     gets stranded in a half-broken shell (see assets/auth-guard.js). -->
+<script defer src="assets/auth-guard.js"></script>
 <!-- Global operator access — long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js"></script>
 <script src="assets/liquid-lens.js" defer></script>
