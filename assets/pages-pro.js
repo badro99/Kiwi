@@ -11686,7 +11686,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      empty state is strictly better: it names the register, keeps the tabs, and
      tells the merchant what will fill it. */
   const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
-    'conformite', 'stock', 'finance']);
+    'conformite', 'stock', 'finance', 'payroll']);
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button

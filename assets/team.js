@@ -107,6 +107,18 @@
       vInvalidEmail: 'Email invalide',
       vEndAfterStart: "La date de fin doit être après la date de début",
       vCode: "Le code caisse doit faire 4 chiffres",
+      payTitle: 'Paie & planning',
+      paySub: 'planning, heures et paie de la période',
+      payEmptyH: 'Ajoutez votre équipe pour commencer',
+      payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici — les totaux et le coût de la période se calculent tout seuls.",
+      payStatDue: 'À payer · période',
+      payStatDueSub: (a, b) => `salaires de base + heures, ${a} au ${b}`,
+      payStatHours: 'Heures de la période',
+      payStatHoursSub: 'total saisi sur le planning',
+      payStatVar: 'Coût des heures',
+      payStatVarSub: 'heures × taux horaire',
+      payStatBase: 'Salaires de base',
+      payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
       submitAdd:  'Ajouter le membre',
       submitEdit: 'Enregistrer les modifications',
       cancel: 'Annuler',
@@ -224,6 +236,18 @@
       vInvalidEmail: 'Invalid email',
       vEndAfterStart: 'End date must be after the start date',
       vCode: 'The till code must be 4 digits',
+      payTitle: 'Payroll & scheduling',
+      paySub: 'schedule, hours and pay for the period',
+      payEmptyH: 'Add your team to get started',
+      payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here — period totals and cost work themselves out.',
+      payStatDue: 'Due · period',
+      payStatDueSub: (a, b) => `base salaries + hours, ${a} to ${b}`,
+      payStatHours: 'Hours this period',
+      payStatHoursSub: 'total entered on the schedule',
+      payStatVar: 'Cost of hours',
+      payStatVarSub: 'hours × hourly rate',
+      payStatBase: 'Base salaries',
+      payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
       submitAdd:  'Add member',
       submitEdit: 'Save changes',
       cancel: 'Cancel',
@@ -340,6 +364,18 @@
       vInvalidEmail: 'بريد إلكتروني غير صالح',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
       vCode: 'رمز الصندوق يجب أن يكون 4 أرقام',
+      payTitle: 'الأجور والتخطيط',
+      paySub: 'التخطيط والساعات وأجور الفترة',
+      payEmptyH: 'أضف فريقك للبدء',
+      payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا — تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
+      payStatDue: 'المستحق · الفترة',
+      payStatDueSub: (a, b) => `الأجور الأساسية + الساعات، من ${a} إلى ${b}`,
+      payStatHours: 'ساعات الفترة',
+      payStatHoursSub: 'المجموع المُدخل في التخطيط',
+      payStatVar: 'تكلفة الساعات',
+      payStatVarSub: 'الساعات × الأجر بالساعة',
+      payStatBase: 'الأجور الأساسية',
+      payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
       submitAdd:  'إضافة العضو',
       submitEdit: 'حفظ التعديلات',
       cancel: 'إلغاء',
@@ -690,12 +726,18 @@
   let activeTab = 'profiles';
   let activeFilters = { search: '', dept: '', contract: '', lang: '' };
   let pageActive = false;
+  // Which of this module's two pages is on screen: 'equipe' | 'payroll' | null.
+  // Every handler already re-renders through `if (pageActive) render()`, so
+  // routing inside render() is what lets editing hours from Paie repaint Paie
+  // instead of silently repainting the hidden Équipe section.
+  let pageMode = null;
   let unsubscribeVenue = null;
   let unsubscribeLang = null;
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '—';
+  function isCustomVenue() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
 
   function fmtMad(n) {
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0)) + ' MAD';
@@ -739,7 +781,8 @@
   function showPage() {
     const T = t();
     pageActive = true;
-    document.body.classList.remove('page-menu', 'page-payroll', 'page-stock');
+    pageMode = 'equipe';
+    document.body.classList.remove('page-menu', 'page-payroll', 'page-stock', 'page-genpage');
     document.body.classList.add('page-equipe');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(T.breadcrumb)}</b>`;
@@ -770,6 +813,7 @@
   function showDashboard() {
     if (!pageActive) return;
     pageActive = false;
+    pageMode = null;
     document.body.classList.remove('page-equipe');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
@@ -779,6 +823,7 @@
 
   /* ═══════════════ RENDER ═══════════════ */
   function render() {
+    if (pageMode === 'payroll') { showPayroll(); return; }
     const root = document.querySelector('[data-equipe-root]');
     if (!root) return;
     root.removeAttribute('hidden');
@@ -1628,11 +1673,108 @@
     Kiwi.toast(T.tValidated(period.startFr, period.endFr), { type: 'success', desc: T.tValidatedDesc });
   };
 
+  /* ═══════════════ PAIE & PLANNING ═══════════════
+   * Same roster, second surface. Équipe answers "who works here"; this answers
+   * "who worked when, and what do I owe them". It was the last page in the
+   * sidebar still showing the "Encore rien ici" starter no matter how many people
+   * the owner had hired — because the starter layer never released it AND the old
+   * payroll code read the demo STAFF literal in venues.js, not this roster. So
+   * even unlocking it would have shown Café Atlas's waiters to a boutique.
+   *
+   * Built from what already exists and is already correct: buildPeriod for the
+   * pay period, hoursByVenue for the grid, and each member's own hourlyRate /
+   * baseSalary. The planning grid IS the hours grid — one number per person per
+   * day is both "who is on Tuesday" and "what Tuesday costs" — so entering hours
+   * here and in Équipe → Heures travaillées writes the same record, and validating
+   * a period locks it in both places. */
+  function payrollFigures(members, venueType, period) {
+    const hours = getHours(venueType);
+    let totalHours = 0, variablePay = 0, baseMass = 0, onDuty = 0;
+    members.forEach((m) => {
+      const row = hours[m.id] || {};
+      let h = 0;
+      period.days.forEach((d) => { h += (+row[d] || 0); });
+      if (h > 0) onDuty++;
+      totalHours += h;
+      variablePay += h * (+m.hourlyRate || 0);
+      baseMass += (+m.baseSalary || 0);
+    });
+    return { totalHours, variablePay, baseMass, onDuty };
+  }
+
+  function renderPayrollBody(T, venue, venueType, members) {
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    if (!members.length) {
+      return `
+        <div class="dash-equipe">
+          <div class="eq-section" style="text-align:center; padding:44px 18px;">
+            <h3 style="margin:0 0 8px;">${esc(T.payEmptyH)}</h3>
+            <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55;">${esc(T.payEmptyP)}</p>
+            <button class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+          </div>
+        </div>`;
+    }
+    const f = payrollFigures(members, venueType, period);
+    const tile = (label, value, sub) => `
+      <div class="eq-stat">
+        <div class="eq-stat-l"><span>${esc(label)}</span></div>
+        <div class="eq-stat-v">${value}</div>
+        <div class="eq-stat-sub">${esc(sub)}</div>
+      </div>`;
+    return `
+      <div class="dash-equipe">
+        <div class="eq-stats">
+          ${tile(T.payStatDue,   fmtMad(f.baseMass + f.variablePay), T.payStatDueSub(period.startFr, period.endFr))}
+          ${tile(T.payStatHours, f.totalHours.toFixed(1).replace('.', ',') + ' h', T.payStatHoursSub)}
+          ${tile(T.payStatVar,   fmtMad(f.variablePay),              T.payStatVarSub)}
+          ${tile(T.payStatBase,  fmtMad(f.baseMass),                 T.payStatBaseSub(f.onDuty, members.length))}
+        </div>
+        ${renderHoursPane(T, venue, venueType, members)}
+      </div>`;
+  }
+
+  function showPayroll() {
+    if (!window.Kiwi || !window.Kiwi.appPage) return;
+    const T = t();
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
+    ensureVenueData(venue);
+    const venueType = teamKey(venue);
+    const members = getMembers(venueType);
+    pageActive = true;
+    pageMode = 'payroll';
+    window.Kiwi.appPage('payroll', {
+      title: T.payTitle,
+      subtitle: `${venue.name || 'Votre établissement'} · ${T.paySub}`,
+      body: renderPayrollBody(T, venue, venueType, members),
+    });
+    // The venue/language subscriptions live on showPage(); mirror the venue one so
+    // switching store while on Paie repaints instead of showing the old roster.
+    if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
+      unsubscribeVenue = window.KiwiVenue.subscribe(() => {
+        if (!pageActive) return;
+        ensureVenueData(window.KiwiVenue.getCurrentVenueData());
+        render();
+      });
+    }
+  }
+
   /* ═══════════════ NAV HANDLERS — override venues.js ═══════════════ */
   function installNavHandlers() {
     if (!window.Kiwi || !window.Kiwi.handlers) return;
     const H = window.Kiwi.handlers;
     H['nav-equipe'] = () => showPage();
+    // Paie & planning: ours for a REAL store, venues.js's demo payroll otherwise,
+    // so the pitch demo (Café Atlas & co.) is untouched. Captured on each install
+    // so venues.js's late 'load' re-assertion becomes the fallback, not the winner.
+    const prevPayroll = H['nav-payroll'];
+    if (!prevPayroll || !prevPayroll.__ktOwned) {
+      const wrapped = function () {
+        if (isCustomVenue()) { showPayroll(); return; }
+        if (prevPayroll) { try { return prevPayroll.apply(this, arguments); } catch (_) {} }
+      };
+      wrapped.__ktOwned = true;
+      H['nav-payroll'] = wrapped;
+    }
     const origAccueil = H['nav-accueil'];
     H['nav-accueil'] = function () {
       showDashboard();
