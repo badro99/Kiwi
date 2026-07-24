@@ -30,8 +30,29 @@
     } catch (_) { return 'cafe-atlas'; }
   }
 
-  var cfg = { features: {}, pins: [], type: '', loaded: false, apply: applyFeatures, syncPins: syncPins, syncType: syncType };
+  /* `pins` is the ACTIVE store's staff list — the till pad's answer to "who is
+   * standing here". `seenPins` is every pin list this session has been handed,
+   * across every store of this account, deduped by code.
+   *
+   * The dashboard needs the second one. It is the OWNER's surface and it spans
+   * all their shops, so the code that opens it cannot be scoped to whichever
+   * shop happens to be selected: once the staff list went per-store, an owner
+   * whose code was filed under their first shop could no longer open the
+   * dashboard from their second, while that second shop's cashier could. */
+  var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
+    apply: applyFeatures, syncPins: syncPins, syncType: syncType };
   window.KiwiConfig = cfg;
+
+  var pinSeen = Object.create(null);
+  function rememberPins(list) {
+    if (!Array.isArray(list)) return;
+    list.forEach(function (x) {
+      var code = String((x && (x.code || x.pin)) || '').trim();
+      if (!/^\d{4}$/.test(code) || pinSeen[code]) return;
+      pinSeen[code] = 1;
+      cfg.seenPins.push({ code: code, name: (x && x.name) || '', role: (x && x.role) || '' });
+    });
+  }
 
   /* ── WHICH store is on screen ──────────────────────────────────────────────
    * One login can hold several établissements — a boutique and a restaurant —
@@ -183,6 +204,7 @@
         if (!data) return;                     // no backend → keep defaults
         cfg.features = data.features || {};
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
+        rememberPins(cfg.pins);
         cfg.type = data.type || '';
         cfg.loaded = true;
         applyFeatures();
@@ -258,7 +280,24 @@
     }, 400);
   }
 
-  function boot() { fetchConfig(); watchStore(); }
+  /* One extra read, on the dashboard only: the ACCOUNT's own config, with no
+   * store named. It feeds nothing but seenPins.
+   *
+   * The owner's code was filed once, against whichever store existed at the
+   * time. Ask only about the shop currently on screen and you will not find it
+   * from the other one — which is exactly how an owner ended up locked out of
+   * their own dashboard while their newest shop's cashier could walk in. This
+   * costs one request and is session-derived, so it can only ever return codes
+   * belonging to the person already signed in. */
+  function fetchAccountPins() {
+    if (isScoped() || !onDashboard()) return;
+    fetch('/api/config', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return (r && r.ok) ? r.json() : null; })
+      .then(function (d) { if (d && Array.isArray(d.pins)) rememberPins(d.pins); })
+      .catch(function () {});
+  }
+
+  function boot() { fetchConfig(); fetchAccountPins(); watchStore(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

@@ -5912,6 +5912,10 @@
 <script src="assets/team.js" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
+<!-- The shared staff-role catalogue: the login gate needs it to tell an owner
+     from a barista whatever wording the role was filed under. Fail-soft — the
+     gate falls back to its own small map for the access-critical values. -->
+<script src="assets/staff-roles.js" defer></script>
 <script src="assets/account.js" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
@@ -5973,26 +5977,69 @@
   const pinRow   = document.querySelector('[data-kiwi-pin]');
   const helpEl   = document.querySelector('.kiwi-lock-help');
   const helpHTML = helpEl ? helpEl.innerHTML : '';
-  function configuredPins() {
-    /* Operator wins when online: if the server config (managed in God mode) has
-     * loaded a non-empty PIN set for this merchant, that is the authoritative
-     * list the lock validates against. Offline / not-yet-loaded / operator-
-     * emptied → fall back to the client's own last-known local set, so a wiped
-     * server never bricks a legitimate client. Server rows use `pin`; the local
-     * set uses `code`. */
+  /* Which ACCESS TIER a stored role means. Roles reach us in three shapes from
+   * three places: the onboarding wizard writes owner/manager/staff, the operator
+   * console files a catalogue id (proprietaire, caisse, serveur…), and the Équipe
+   * page publishes the person's JOB TITLE ("Barista", "Caissier"). They all have
+   * to collapse onto one of three tiers before anything can be decided.
+   *
+   * assets/staff-roles.js already knows every spelling; the small map is the
+   * fallback for the access-critical values if it hasn't loaded. Anything we do
+   * not recognise is STAFF — the safe end. It used to be the opposite: the gate
+   * read `role === 'manager' || role === 'staff' ? role : 'owner'`, so a job
+   * title it had never seen — "Barista" — became a full owner. */
+  function accessTier(raw) {
+    let id = '';
+    try { if (window.KiwiRoles && KiwiRoles.idOf) id = KiwiRoles.idOf(raw) || ''; } catch (_) {}
+    if (!id) {
+      let n = String(raw == null ? '' : raw).trim().toLowerCase();
+      try { n = n.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) {}
+      if (n === 'owner' || n === 'proprietaire' || n === 'direction' || n === 'patron') id = 'proprietaire';
+      else if (n === 'manager' || n === 'admin' || n === 'gerant' || n === 'management') id = 'manager';
+    }
+    if (id === 'proprietaire') return 'owner';
+    if (id === 'manager') return 'manager';
+    return 'staff';
+  }
+
+  /* Every 4-digit code this ACCOUNT is known to have, from both sources, each
+   * tagged with its tier. `seenPins` is the union across all of the account's
+   * stores (see assets/merchant-config.js); `kiwiPins` is what the onboarding
+   * wizard wrote locally, and is usually where the owner's own code lives. */
+  function allPins() {
+    const out = [], seen = Object.create(null);
+    const add = (x) => {
+      const code = String((x && (x.code || x.pin)) || '').trim();
+      if (!/^\d{4}$/.test(code) || seen[code]) return;
+      seen[code] = 1;
+      out.push({ code, name: (x && x.name) || '', access: accessTier(x && x.role) });
+    };
     try {
       const kc = window.KiwiConfig;
-      if (kc && kc.loaded && Array.isArray(kc.pins) && kc.pins.length) {
-        const s = kc.pins
-          .map((x) => ({ code: String((x && (x.code || x.pin)) || ''), name: (x && x.name) || '', role: (x && x.role) || 'staff' }))
-          .filter((x) => /^\d{4}$/.test(x.code));
-        if (s.length) return s;
-      }
+      if (kc) { (kc.seenPins || []).forEach(add); if (kc.loaded) (kc.pins || []).forEach(add); }
     } catch (_) {}
     try {
       const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
-      return Array.isArray(p) ? p.filter((x) => x && /^\d{4}$/.test(x.code)) : [];
-    } catch (_) { return []; }
+      if (Array.isArray(p)) p.forEach(add);
+    } catch (_) {}
+    return out;
+  }
+
+  /* THE CODES THAT MAY OPEN THIS DASHBOARD.
+   *
+   * The dashboard is the owner's surface — the money, the margins, the payroll —
+   * and it spans every shop on the account. A staff code is for the till, not
+   * for this. Managers keep it because they already have their own deliberately
+   * restricted view (assets/roleGate.js hides the financial sections).
+   *
+   * The escape hatch matters as much as the rule: if we can find no owner or
+   * manager code ANYWHERE, we do not know enough to enforce it, and refusing
+   * everything would lock a merchant out of their own business. In that case the
+   * full set stands, exactly as before. */
+  function configuredPins() {
+    const all = allPins();
+    const privileged = all.filter((p) => p.access !== 'staff');
+    return privileged.length ? privileged : all;
   }
   function clearPinError() {
     if (pinRow) pinRow.classList.remove('is-wrong');
@@ -6083,14 +6130,19 @@
       c.textContent = filled ? '•' : '';
     });
     if (val.length === 4) {
-      /* Hosted product gate — reject any code that isn't one of the client's
-       * own configured PINs. A fresh, never-configured session (no kiwiPins)
-       * is never rejected: it still has to reach setup. Only an already-
+      /* Hosted product gate — reject any code that isn't one this account may
+       * open the dashboard with. A fresh, never-configured session (no codes at
+       * all) is never rejected: it still has to reach setup. Only an already-
        * configured client typing a non-matching code (e.g. 0000) is turned
-       * away — no demo, no magic codes, no Café Atlas. */
+       * away — no demo, no magic codes, no Café Atlas.
+       *
+       * "Has this account been configured" must be asked of ALL its codes, not
+       * of the privileged ones: a shop whose only codes are its cashiers is very
+       * much configured, and testing the short list would have read as "nothing
+       * set up yet" and let any four digits through. */
       if (!demosOn()) {
-        const pins = configuredPins();
-        if (pins.length && !pins.some((p) => p.code === val)) { rejectPin(); return; }
+        const allowed = configuredPins();
+        if (allPins().length && !allowed.some((p) => p.code === val)) { rejectPin(); return; }
       }
       /* PIN 0000 is the doorway to "your own dashboard" — any other
        * 4-digit PIN unlocks the Café Atlas demo. */
@@ -6125,12 +6177,12 @@
        * non-reserved PIN — each maps to the role + person the owner assigned. */
       try {
         if (val !== '0000' && val !== '0505' && val !== '0909' && val !== '1111') {
-          /* Same authoritative set the gate validated against (server when online,
-           * else local) — so an operator-added PIN also gets its assigned role. */
-          const pins = configuredPins();
-          const hit = Array.isArray(pins) && pins.find((p) => p && p.code === val);
+          /* Same set the gate validated against — so an operator-added PIN also
+           * gets its assigned tier. accessTier() has already resolved whatever
+           * wording the role was stored in; no second guess here. */
+          const hit = configuredPins().find((p) => p && p.code === val);
           if (hit) {
-            role = (hit.role === 'manager' || hit.role === 'staff') ? hit.role : 'owner';
+            role = hit.access;
             if (hit.name) setGreetName(hit.name);
           }
         }
