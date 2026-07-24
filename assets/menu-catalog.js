@@ -56,7 +56,25 @@
     unavail:    { fr: 'Indisponible', en: 'Unavailable', ar: 'غير متاح' },
     saved:      { fr: 'Menu mis à jour', en: 'Menu updated', ar: 'تم تحديث القائمة' },
     firstCat:   { fr: 'Commencez par créer une catégorie (ex. Entrées, Plats, Boissons).', en: 'Start by creating a category (e.g. Starters, Mains, Drinks).', ar: 'ابدأ بإنشاء فئة (مثل مقبلات، أطباق، مشروبات).' },
+    mediaL:     { fr: 'Photo / vidéo (option)', en: 'Photo / video (optional)', ar: 'صورة / فيديو (اختياري)' },
+    mediaAdd:   { fr: 'Ajouter une photo', en: 'Add a photo', ar: 'إضافة صورة' },
+    mediaVid:   { fr: 'Ajouter une vidéo', en: 'Add a video', ar: 'إضافة فيديو' },
+    mediaDel:   { fr: 'Retirer', en: 'Remove', ar: 'إزالة' },
+    mediaUp:    { fr: 'Envoi…', en: 'Uploading…', ar: 'كيتصيفط…' },
+    mediaHint:  { fr: 'Visible par vos clients sur la carte en ligne.', en: 'Visible to your customers on the online menu.', ar: 'كيبان لكليانتك فالقائمة أونلاين.' },
+    mediaOff:   { fr: 'Stockage média pas encore activé sur votre compte.', en: 'Media storage isn\'t enabled on your account yet.', ar: 'تخزين الميديا مازال ماتفعّلش فالحساب ديالك.' },
+    mediaBig:   { fr: 'Fichier trop lourd.', en: 'File too large.', ar: 'الملف ثقيل بزاف.' },
+    mediaBad:   { fr: 'Format non pris en charge.', en: 'Format not supported.', ar: 'الصيغة ماخدامة.' },
+    mediaErr:   { fr: 'Envoi impossible, réessayez.', en: 'Upload failed, try again.', ar: 'التصويفط مامشاش، عاود جرّب.' },
+    tags:       { fr: 'Tags NFC', en: 'NFC tags', ar: 'تاڭات NFC' },
   };
+
+  /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only
+   * exists once an operator switched it on for this merchant. */
+  function orderProOn() {
+    try { return !!(window.KiwiOrderProPanel && window.KiwiOrderProPanel.enabled()); }
+    catch (_) { return false; }
+  }
 
   /* ───────────────── example template (a small café/resto starter) ───────────────── */
   function example() {
@@ -129,6 +147,10 @@
         subId: data.subId || null,
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
+        // Media are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia), never
+        // bytes — base64 here would blow the localStorage quota in a dozen items.
+        photo: String(data.photo || ''),
+        video: String(data.video || ''),
       });
       return d;
     });
@@ -142,6 +164,8 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
+      if ('photo' in patch) it.photo = String(patch.photo || '');
+      if ('video' in patch) it.video = String(patch.video || '');
       return d;
     });
   }
@@ -209,6 +233,14 @@
       .mx-field input:focus, .mx-field select:focus, .mx-field textarea:focus { border-color: var(--atlas); }
       .mx-field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .mx-field textarea { resize: vertical; min-height: 60px; }
+      /* media picker — the file inputs stay hidden, these are the affordances */
+      .mx-media { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .mx-media-prev { width: 64px; height: 64px; border-radius: 11px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); flex: 0 0 auto; }
+      .mx-media-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+      .mx-media-btn { padding: 8px 12px; font-size: 12.5px; }
+      .mx-media-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }
+      /* item row thumbnail — only present once the merchant adds media */
+      .mx-item .th { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); }
     `;
     document.head.appendChild(s);
   }
@@ -276,9 +308,13 @@
       const sub = (cat.sub || []).find((s) => s.id === it.subId);
       return `
         <div class="mx-item ${it.avail === false ? 'off' : ''}">
-          <div>
-            <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}</div>
-            ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+            ${it.video ? `<video class="th" src="${esc(it.video)}" muted playsinline preload="metadata"></video>`
+              : (it.photo ? `<img class="th" src="${esc(it.photo)}" alt="" loading="lazy" />` : '')}
+            <div style="min-width:0;">
+              <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}</div>
+              ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
+            </div>
           </div>
           <div class="pr">${fmt(it.price)} MAD</div>
           <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
@@ -302,7 +338,10 @@
                 <h3>${cat ? esc(cat.name) : esc(tr(T.title))}${subName ? ' · ' + esc(subName.name) : ''}</h3>
                 <div class="sub">${shown.length} ${esc(tr(shown.length === 1 ? T.product : T.products))}</div>
               </div>
-              <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
+              <div style="display:flex;gap:8px;align-items:center;">
+                ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+                <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
+              </div>
             </div>
             ${itemRows}
           </div>
@@ -361,7 +400,9 @@
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true };
+    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '' };
+    // Live media state for this modal — mutated by the picker, read on save.
+    const media = { photo: it.photo || '', video: it.video || '' };
 
     const catOpts = cats.map((c) => `<option value="${c.id}" ${c.id === it.catId ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
     const subsFor = (cid) => (catById(d, cid) ? (catById(d, cid).sub || []) : []);
@@ -378,17 +419,75 @@
           <div><label>${esc(tr(T.catL))}</label><select data-f-cat>${catOpts}</select></div>
         </div>
         <div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
-        <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>`,
+        <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
+        <div class="mx-field">
+          <label>${esc(tr(T.mediaL))}</label>
+          <div class="mx-media" data-f-media></div>
+          <div class="mx-media-msg" data-f-media-msg>${esc(tr(T.mediaHint))}</div>
+          <input type="file" data-f-photo-input accept="image/*" hidden />
+          <input type="file" data-f-video-input accept="video/*" hidden />
+        </div>`,
       foot: `<button class="kb ghost" type="button" data-f-cancel style="flex:1;justify-content:center;">${esc(tr(T.cancel))}</button>
              <button class="kb atlas" type="button" data-f-save style="flex:1.3;justify-content:center;">${esc(tr(T.save))}</button>`,
     });
     const q = (s) => m.el.querySelector(s);
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
+
+    /* ── media: pick a file → it goes to R2 → we keep the URL ──
+       The buttons are always live. If the account has no media storage yet the
+       upload answers `no-media` and we say so in one line — an honest "not
+       switched on" beats a button that looks broken. */
+    const msg = (text) => { const el = q('[data-f-media-msg]'); if (el) el.textContent = text; };
+    function renderMedia() {
+      const box = q('[data-f-media]');
+      if (!box) return;
+      const preview = media.video
+        ? `<video class="mx-media-prev" src="${esc(media.video)}" muted playsinline preload="metadata"></video>`
+        : (media.photo ? `<img class="mx-media-prev" src="${esc(media.photo)}" alt="" />` : '');
+      const del = (media.photo || media.video)
+        ? `<button class="kb ghost mx-media-btn" type="button" data-f-media-del>${esc(tr(T.mediaDel))}</button>` : '';
+      box.innerHTML = `
+        ${preview}
+        <div class="mx-media-actions">
+          <button class="kb ghost mx-media-btn" type="button" data-f-pick-photo>${esc(tr(T.mediaAdd))}</button>
+          <button class="kb ghost mx-media-btn" type="button" data-f-pick-video>${esc(tr(T.mediaVid))}</button>
+          ${del}
+        </div>`;
+    }
+    function uploadErr(error) {
+      if (error === 'no-media' || error === 'not-configured') return tr(T.mediaOff);
+      if (error === 'too-large') return tr(T.mediaBig);
+      if (error === 'bad-type') return tr(T.mediaBad);
+      return tr(T.mediaErr);
+    }
+    async function handleFile(file, kind) {
+      if (!file) return;
+      if (!window.KiwiOrderPro || !window.KiwiOrderPro.uploadMedia) { msg(tr(T.mediaOff)); return; }
+      msg(tr(T.mediaUp));
+      const res = await window.KiwiOrderPro.uploadMedia(file);
+      if (!res || !res.ok) { msg(uploadErr(res && res.error)); return; }
+      // One medium per item: a video supersedes a photo and vice-versa, so the
+      // card can never show two competing things.
+      if (kind === 'video') { media.video = res.url; media.photo = ''; }
+      else { media.photo = res.url; media.video = ''; }
+      msg(tr(T.mediaHint));
+      renderMedia();
+    }
+    m.el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-f-pick-photo]')) { q('[data-f-photo-input]').click(); return; }
+      if (e.target.closest('[data-f-pick-video]')) { q('[data-f-video-input]').click(); return; }
+      if (e.target.closest('[data-f-media-del]')) { media.photo = ''; media.video = ''; renderMedia(); return; }
+    });
+    q('[data-f-photo-input]').addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0], 'photo'));
+    q('[data-f-video-input]').addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0], 'video'));
+    renderMedia();
+
     q('[data-f-cancel]').addEventListener('click', () => m.close());
     q('[data-f-save]').addEventListener('click', () => {
       const data = {
         name: q('[data-f-name]').value, price: q('[data-f-price]').value,
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
+        photo: media.photo, video: media.video,
       };
       if (!data.name.trim()) { q('[data-f-name]').focus(); return; }
       if (existing) updateItem(existing.id, data); else { addItem(data); activeCat = data.catId; activeSub = data.subId || null; }

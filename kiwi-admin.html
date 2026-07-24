@@ -95,6 +95,9 @@
   .feat{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
   .feat:last-child{border-bottom:0}
   .feat .fl{font-size:.9rem}
+  /* Paid add-on — set apart so nobody flips it thinking it's a normal module. */
+  .feat.addon{border-top:1px solid var(--line); margin-top:6px; padding-top:14px}
+  .feat .fl .fh{display:block; font-size:.74rem; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
   .sw{position:relative; width:44px; height:26px; border-radius:999px; background:#cfd6d1; border:0; cursor:pointer; transition:background .2s; flex:none}
   .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
   .sw[aria-checked="true"]{background:var(--atlas)}
@@ -305,10 +308,22 @@
     { key:'loyalty',  label:'Fidélité' },
     { key:'depenses', label:'Dépenses' },
   ];
+  // Paid add-ons — the ONLY modules that default to OFF. Everything above is part
+  // of the interface a client already has, so an absent key means ON; an add-on is
+  // the reverse, because switching it on has consequences outside the dashboard.
+  // Order Pro turns a customer's phone into an ordering terminal against this
+  // merchant, so it must never appear by accident: the key has to be explicitly
+  // true. functions/api/menu.js and functions/api/order/index.js enforce the same
+  // rule server-side — this switch is the UI for it, not the guard.
+  var ADDON_MODULES = [
+    { key:'orderpro', label:'Order Pro', off:true,
+      hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
+  ];
   function modulesForType(typeId){
     var meta = typeMeta(typeId);
     var base = (meta && meta.base) || 'restaurant';
-    return (VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant).concat(UNIVERSAL_MODULES);
+    return (VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant)
+      .concat(UNIVERSAL_MODULES).concat(ADDON_MODULES);
   }
 
   // ── store: real /api/admin/* when reachable, else seeded mock + localStorage ─
@@ -621,16 +636,21 @@
     var wrap = document.getElementById('feat-list'); clear(wrap);
     var feats = await store.config(selected.merchant);
     modulesForType(selected.type).forEach(function(mod){
-      var on = feats[mod.key] !== false; // absent ⇒ ON
+      // Standard module: absent ⇒ ON. Paid add-on (mod.off): absent ⇒ OFF.
+      var isOn = function(f){ return mod.off ? f[mod.key] === true : f[mod.key] !== false; };
+      var on = isOn(feats);
       var sw = h('button', { class:'sw', role:'switch', 'aria-checked': on ? 'true':'false', 'aria-label':mod.label });
       sw.addEventListener('click', async function(){
         var cur = await store.config(selected.merchant);
-        var isOn = cur[mod.key] !== false;   // current state
-        cur[mod.key] = !isOn;                 // flip
-        sw.setAttribute('aria-checked', (!isOn) ? 'true':'false');
+        var next = !isOn(cur);
+        cur[mod.key] = next;
+        sw.setAttribute('aria-checked', next ? 'true':'false');
         await store.setConfig(selected.merchant, cur, selected.plan || '');
       });
-      wrap.appendChild(h('div', { class:'feat' }, h('span', { class:'fl' }, mod.label), sw));
+      var label = mod.hint
+        ? h('span', { class:'fl' }, mod.label, h('small', { class:'fh' }, mod.hint))
+        : h('span', { class:'fl' }, mod.label);
+      wrap.appendChild(h('div', { class:'feat' + (mod.off ? ' addon' : '') }, label, sw));
     });
   }
 

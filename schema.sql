@@ -126,3 +126,44 @@ CREATE TABLE IF NOT EXISTS menus (
   data       TEXT NOT NULL,            -- JSON: { cats:[…], items:[…] }
   updated_ts INTEGER NOT NULL
 );
+-- OrderPro reuses this row rather than adding a second published-catalogue
+-- table. Two things changed, both additive and both backward-compatible with
+-- every menu published before them:
+--   · items may carry `photo` / `video` — /api/media/… URLs, never bytes (the
+--     files live in R2; see functions/api/media/).
+--   · when `type` = 'boutique', `data` holds STOCK instead of a carte:
+--       { categories:[{id,name}],
+--         products:  [{id,name,categoryId,priceMAD,photo}],
+--         variants:  [{id,productId,colorId,size,stock,barcodes:[…]}],
+--         colors:    [{id,label,hex}] }
+--     `type` decides which sanitizer runs on write and read, so the two shapes
+--     can never be confused (functions/api/menu.js).
+
+-- ── OrderPro · order relay (customer phone → caisse → kitchen) ───────────────
+-- One row per order a phone sends after tapping an NFC tag. The customer's phone
+-- and the till share no browser, no storage and no Bluetooth — this table is the
+-- entire link between them.
+--
+-- The caisse polls its own slug for rows that changed, staff ACCEPT one, and only
+-- then is it a kitchen ticket. Nothing auto-accepts and no timeout ever promotes
+-- an order: a ticket the kitchen never saw is worse than a customer who waited to
+-- be told. The phone polls the same row, so what it shows is the real state.
+--
+-- `number` is the per-day human ticket number the customer reads out at the
+-- counter ("commande 047"). It is assigned inside the INSERT (one statement), so
+-- two phones ordering in the same second can never be handed the same number.
+CREATE TABLE IF NOT EXISTS orders (
+  id         TEXT PRIMARY KEY,   -- "ord-<ts>-<rand>"
+  merchant   TEXT NOT NULL,      -- tenant key (slugMerchant — same spine as sales/menus)
+  number     INTEGER NOT NULL,   -- human ticket number (per merchant, per day)
+  mode       TEXT NOT NULL,      -- 'table' | 'takeout'
+  table_no   TEXT,               -- table number for dine-in, empty for takeout
+  total      INTEGER NOT NULL,   -- MAD, whole dirhams
+  lines      TEXT NOT NULL,      -- JSON: [{id,name,qty,unitPrice,options,note}]
+  status     TEXT NOT NULL,      -- 'pending' | 'accepted' | 'ready' | 'rejected'
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+-- The caisse polls "WHERE merchant = ? AND updated_ts > ?" — this index covers
+-- both that and the per-merchant daily number lookup.
+CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders (merchant, updated_ts);

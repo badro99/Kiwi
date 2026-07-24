@@ -3071,3 +3071,11 @@ html[data-theme="dark"] .kw-item .thumb { background: var(--paper-muted); }
 .gp-add-item .x { margin-inline-start: auto; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .gp-add-item .x:hover { color: var(--danger); }
 .gp-add-empty { font-size: 12.5px; color: var(--n-500); text-align: center; padding: 14px 0 4px; }
+
+/* ── Boutique · product photo picker (shown to shoppers on their phone) ──────
+   The file input stays hidden; these are the affordances. Photos are stored as
+   R2 URLs on the product, never as bytes in localStorage. */
+.bqx-photo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bqx-photo-prev { width: 64px; height: 64px; border-radius: 11px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--n-200); flex: none; }
+.bqx-photo-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.bqx-photo-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }

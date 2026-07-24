@@ -82,9 +82,34 @@ export async function onRequest(context) {
   // sales, or account data — see functions/api/menu.js). POST /api/menu is NOT
   // here: publishing still requires the merchant's authenticated dashboard
   // session, which passes the normal gate below.
+  //
+  // OrderPro (the NFC white-label app) extends the same allow-list, on the same
+  // terms. Its capability is the merchant slug written into the tag's URL — the
+  // model /api/pair/redeem already uses for its 6-digit code. Every entry is an
+  // EXACT path: '/api/order' is open, '/api/order/queue' — the staff view that
+  // lists tickets with items and totals, and accepts them — is NOT, because
+  // nothing here does a prefix match on it. /api/media/ is the one prefix, and
+  // only because uploaded files have generated keys; it is a read-only object
+  // fetch under a merchant-namespaced path (functions/api/media/[[key]].js).
+  //
+  // Reads are open; the ONLY public write is placing an order, and that handler
+  // independently refuses unless the merchant has Order Pro switched on — being
+  // allow-listed past the gate is not the same as being enabled.
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
   if (isRead && (path === '/kiwi-order.html' || path === '/api/menu')) return next();
+  if (isRead && (path === '/OrderPro.html' || path === '/api/order' || path.startsWith('/api/media/'))) return next();
+  if (method === 'POST' && path === '/api/order') return next();
+
+  // /order is the short link written onto NFC tags — every byte counts on an
+  // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite
+  // (not redirect) so the query survives untouched and there is no extra round
+  // trip. Before the auth checks so it behaves the same on an open dev deploy.
+  if (isRead && path === '/order') {
+    const rewritten = new URL(request.url);
+    rewritten.pathname = '/OrderPro.html';
+    return next(new Request(rewritten, request));
+  }
 
   // Nothing configured → open site (local dev / preview without secrets).
   if (!authSecret && !sitePassword) return next();
