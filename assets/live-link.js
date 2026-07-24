@@ -194,9 +194,19 @@
         body: JSON.stringify(body),
         keepalive: true,
       }).then(function (r) {
-        // 2xx = stored. 4xx = the server will never accept this sale (bad amount,
-        // no merchant) → drop it instead of retrying forever. 5xx / offline → keep.
-        done(!!r && (r.ok || (r.status >= 400 && r.status < 500)));
+        // 2xx = stored. Otherwise: only drop when the server has genuinely
+        // REJECTED this sale and always will — a bad body, a merchant it won't
+        // accept, or a duplicate. Everything else is kept and retried.
+        //
+        // "Any 4xx" used to count as rejected, which quietly threw away real
+        // money: a 404 means the endpoint isn't reachable (a bad deploy, a wrong
+        // route, a stale service worker answering for it), not that the sale is
+        // invalid — and 408/429 are explicitly retryable. The cashier rang it up
+        // and the drawer opened; a sale we cannot deliver yet must wait, not
+        // vanish. The queue is capped, and retries ride the existing poll, so a
+        // lasting outage costs nothing and heals the moment the route is back.
+        var DROP = { 400: 1, 401: 1, 403: 1, 409: 1, 422: 1 };
+        done(!!r && (r.ok || !!DROP[r.status]));
       }).catch(function () { done(false); });
     } catch (_) { done(false); }
   }
