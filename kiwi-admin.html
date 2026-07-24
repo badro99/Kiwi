@@ -82,7 +82,10 @@
   .pin-list, .op-list{display:flex; flex-direction:column; gap:8px; margin:0 0 12px}
   .pin, .op-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#faf8f3}
   .pin b, .op-item b{font-family:var(--mono); font-size:.92rem}
-  .pin .role{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#eef2ee; padding:2px 7px; border-radius:5px}
+  /* Trade roles can be two words ("Pharmacien titulaire"), so the chip holds its
+     line and the name beside it gives way instead of the badge breaking. */
+  .pin .role{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#eef2ee; padding:2px 7px; border-radius:5px; white-space:nowrap; flex:none}
+  .pin .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
   .pin .nm, .op-item .nm{color:var(--muted); font-size:.85rem}
   .pin .spacer, .op-item .spacer{margin-left:auto}
   .addrow{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
@@ -156,12 +159,9 @@
             <div class="addrow">
               <input class="pin" id="pin-new" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="Nouveau PIN" />
               <input class="nm" id="pin-name" placeholder="Nom" aria-label="Nom" />
-              <select id="pin-role" aria-label="Rôle">
-                <option value="serveur">Serveur</option>
-                <option value="plongeur">Plongeur</option>
-                <option value="caisse">Caisse</option>
-                <option value="manager">Manager</option>
-              </select>
+              <!-- Filled by renderPinRoles() from the client's type of activity —
+                   a boutique is offered vendeurs, never serveurs and plongeurs. -->
+              <select id="pin-role" aria-label="Rôle"></select>
               <button class="add" id="pin-add">Ajouter</button>
             </div>
             <p class="err" id="pin-err"></p>
@@ -269,6 +269,67 @@
   ];
   function typeMeta(id){ for (var i=0;i<TYPES.length;i++) if (TYPES[i].id===id) return TYPES[i]; return null; }
   function typeLabel(id){ var t=typeMeta(id); return t ? t.label : ''; }
+
+  // ── Staff roles, per type of activity ──────────────────────────────────────
+  // The PIN role used to be a fixed restaurant list (Serveur / Plongeur / Caisse
+  // / Manager), so a boutique owner was asked to file a salesperson as a
+  // dishwasher. Roles now follow the SUBTYPE, not the base vertical — a
+  // boulangerie hires boulangers, a pharmacie hires préparateurs, and neither is
+  // a relabeled restaurant. Stored value = the lowercase id (D1 `role` is 24
+  // chars); the label is display only. `plongeur` must keep its id: it is the one
+  // role kiwi-serveur.html gates on (resolveRole → limited dishwasher access).
+  var ROLE_LABELS = {
+    serveur:'Serveur', chefrang:'Chef de rang', maitre:'Maître d’hôtel', barman:'Barman',
+    cuisinier:'Cuisinier', chef:'Chef de cuisine', commis:'Commis', plongeur:'Plongeur',
+    caisse:'Caisse', accueil:'Hôte d’accueil', barista:'Barista', patissier:'Pâtissier',
+    equipier:'Équipier', grillardin:'Grillardin', preparateur:'Préparateur', livreur:'Livreur',
+    boulanger:'Boulanger', pizzaiolo:'Pizzaïolo',
+    conseiller:'Vendeur conseil', vendeur:'Vendeur', magasinier:'Magasinier',
+    merch:'Visual merchandiser', reassort:'Réassortisseur', rayon:'Responsable rayon',
+    titulaire:'Pharmacien titulaire', pharmacien:'Pharmacien assistant', fleuriste:'Fleuriste',
+    praticien:'Praticien·ne', masseur:'Masseur', esthetique:'Esthéticienne', manucure:'Manucure',
+    reception:'Réceptionniste', coiffeur:'Coiffeur', coloriste:'Coloriste', barbier:'Barbier',
+    coach:'Coach sportif', coachperso:'Coach personnel', coursco:'Cours collectifs',
+    entretien:'Agent d’entretien', concierge:'Concierge', gouvernante:'Gouvernante',
+    menage:'Ménage & étages', bagagiste:'Bagagiste', veilleur:'Veilleur de nuit',
+    manager:'Manager', proprietaire:'Propriétaire',
+  };
+  // Every business has a boss, so these close every list. Trade roles come first:
+  // option 1 is the default, and it should be the hire you actually add most.
+  var UNIVERSAL_ROLES = ['manager', 'proprietaire'];
+  var ROLES_BY_TYPE = {
+    restaurant: ['serveur','chefrang','maitre','barman','cuisinier','chef','commis','plongeur','caisse','accueil'],
+    cafe:       ['barista','serveur','caisse','patissier','plongeur','accueil'],
+    fastfood:   ['equipier','caisse','grillardin','preparateur','livreur','plongeur'],
+    bakery:     ['vendeur','boulanger','patissier','commis','caisse'],
+    pizzeria:   ['pizzaiolo','serveur','livreur','commis','caisse','plongeur'],
+    foodtruck:  ['equipier','cuisinier','caisse','livreur'],
+    boutique:   ['conseiller','caisse','magasinier','merch'],
+    epicerie:   ['vendeur','caisse','magasinier','reassort','rayon'],
+    pharmacie:  ['titulaire','pharmacien','preparateur','conseiller','caisse'],
+    fleuriste:  ['fleuriste','vendeur','caisse','livreur'],
+    spa:        ['praticien','masseur','esthetique','manucure','reception','caisse'],
+    coiffure:   ['coiffeur','coloriste','barbier','esthetique','manucure','reception','caisse'],
+    sport:      ['coach','coachperso','coursco','reception','caisse','entretien'],
+    hotel:      ['reception','concierge','gouvernante','menage','bagagiste','veilleur','serveur','caisse'],
+    autre:      ['vendeur','caisse','magasinier','equipier'],
+  };
+  // No type set yet ⇒ the neutral list, not the restaurant one. The operator can
+  // set the type right next to it, and the roles follow immediately.
+  function rolesForType(typeId){
+    return (ROLES_BY_TYPE[typeId] || ROLES_BY_TYPE.autre).concat(UNIVERSAL_ROLES);
+  }
+  // A stored role can predate this catalogue or come from another surface: the
+  // onboarding wizard writes owner/manager/staff, the Équipe page publishes the
+  // job title itself ("Propriétaire"). Show something readable in every case,
+  // never a raw token, and never overwrite what is already stored.
+  var LEGACY_ROLES = { owner:'Propriétaire', staff:'Équipe', admin:'Manager' };
+  function roleLabel(raw){
+    var v = String(raw == null ? '' : raw).trim();
+    if (!v) return 'Équipe';
+    var k = v.toLowerCase();
+    return ROLE_LABELS[k] || LEGACY_ROLES[k] || v;
+  }
 
   // Modules per base vertical (the sidebar sections in venues.js) + the universal
   // trio every business shares. A missing type ⇒ restaurant (the historic default).
@@ -593,14 +654,28 @@
     };
   }
 
+  // The role list follows the selected client's type of activity. Re-rendered on
+  // select and whenever the operator changes the type, keeping the operator's
+  // current choice when that role exists in the new vertical (Caisse and Manager
+  // survive a restaurant → boutique switch; Plongeur does not).
+  function renderPinRoles(){
+    var sel = document.getElementById('pin-role'); if (!sel) return;
+    var keep = sel.value;
+    clear(sel);
+    var ids = rolesForType(selected && selected.type);
+    ids.forEach(function(id){ sel.appendChild(h('option', { value:id }, roleLabel(id))); });
+    sel.value = (ids.indexOf(keep) >= 0) ? keep : ids[0];
+  }
+
   async function renderPins(){
+    renderPinRoles();
     var wrap = document.getElementById('pin-list'); clear(wrap);
     var pins = await store.pins(selected.merchant);
     if (!pins.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun PIN, l’app utilise ses codes par défaut.')); return; }
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
         h('b', null, p.pin),
-        h('span', { class:'role' }, p.role || 'serveur'),
+        h('span', { class:'role' }, roleLabel(p.role)),
         p.name ? h('span', { class:'nm' }, p.name) : null,
         h('span', { class:'spacer' }),
         h('button', { class:'mini danger', onClick:async function(){ await store.delPin(selected.merchant, p.id); renderPins(); } }, 'Supprimer')
@@ -623,6 +698,7 @@
         await store.setType(selected.merchant, v);
         selected.type = v;
         renderClients();          // roster reflects the new type
+        renderPinRoles();          // staff roles switch to the new trade
         await renderFeatures();    // module set switches to the new vertical
         notify(v ? ('Type : ' + typeLabel(v) + ', modules adaptés.') : 'Type effacé.');
       } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
