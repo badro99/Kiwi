@@ -51,17 +51,36 @@
   }
 
   /* ── the tenant key both surfaces agree on ─────────────────────────────── */
+  // slugMerchant() twin (functions/auth/_lib.js · caisse-link.js) — a store's name
+  // must produce the SAME book id on the dashboard as the slug its till was paired
+  // under, or the two ends keep separate client books.
+  function slugStore(s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
   function bookId() {
-    // 1) the merchant slug, written on both sides at pairing — the reliable spine.
+    // 1) DASHBOARD: the store currently being looked at. This outranks the pin
+    //    below because kiwiLiveMerchant is a single global — on an account with
+    //    two shops it holds whichever was last active, so leading with it served
+    //    the boutique's client book while the restaurant was on screen.
+    try {
+      var KV = window.KiwiVenue;
+      if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
+        var cvd = KV.getCurrentVenueData();
+        var cs = cvd && cvd.name && slugStore(cvd.name);
+        if (cs) return cs;
+      }
+    } catch (_) {}
+    // 2) the merchant slug, written on both sides at pairing — the reliable spine.
     var m = ls('kiwiLiveMerchant'); if (m) return m;
-    // 2) caisse: the paired venue.
+    // 3) caisse: the paired venue.
     try {
       var pv = window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue();
       if (pv && (pv.merchant || pv.venueId)) return pv.merchant || pv.venueId;
     } catch (_) {}
-    // 3) dashboard: the current venue.
+    // 4) dashboard: the current venue id (pre-identity fallback).
     try { var v = KiwiStore.currentVenue && KiwiStore.currentVenue(); if (v) return v; } catch (_) {}
-    // 4) demo verticals (unpaired PIN 0002-0015). A boutique/spa/resto demo maps to
+    // 5) demo verticals (unpaired PIN 0002-0015). A boutique/spa/resto demo maps to
     //    the SAME dashboard venue id its catalogue already uses (maisonMansour…), so
     //    the caisse and the dashboard share ONE client book per store — one brain,
     //    exactly like the boutique inventory. Verticals with no dashboard twin get a

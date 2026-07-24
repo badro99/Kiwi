@@ -374,7 +374,10 @@
       });
       return;
     }
-    const _plBiz = (window.KiwiMe && window.KiwiMe.business || '').trim();
+    // Name the STORE the customer is paying, not the account behind it.
+    let _plBiz = '';
+    try { const _plVd = window.KiwiVenue?.isCustom?.() && window.KiwiVenue.getCurrentVenueData?.(); if (_plVd) _plBiz = String(_plVd.name || '').trim(); } catch (_) {}
+    if (!_plBiz) _plBiz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     let data = { amount: '', desc: _plBiz ? `Commande ${_plBiz}` : (window.KiwiEnv?.isReal?.() ? 'Nouvelle commande' : 'Commande Café Atlas'), expiry: '7j', method: 'all' };
     const T = PL_STR[trLang()] || PL_STR.fr;
 
@@ -1318,7 +1321,10 @@
     const T = LOYALTY_STR[trLang()] || LOYALTY_STR.fr;
     // The preview card names the demo venue ("· CAFÉ ATLAS"). For a real merchant,
     // swap in their own business name so the illustration is theirs, not the demo's.
-    const _biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
+    // Per STORE: a loyalty programme belongs to the shop, not to the account.
+    let _biz = '';
+    try { const _lVd = window.KiwiVenue?.isCustom?.() && window.KiwiVenue.getCurrentVenueData?.(); if (_lVd) _biz = String(_lVd.name || '').trim(); } catch (_) {}
+    if (!_biz) _biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     const _prog = _biz ? T.previewProgram.replace(/·.*$/, '· ' + _biz.toUpperCase())
       : (window.KiwiEnv?.isReal?.() ? T.previewProgram.replace(/·.*$/, '').trim() : T.previewProgram);
     const m = modal({

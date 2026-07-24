@@ -64,8 +64,12 @@
   }
   function biz() {
     let name = '';
-    try { if (window.KiwiMe && KiwiMe.business) name = String(KiwiMe.business).trim(); } catch (_) {}
-    if (!name) { try { const vd = window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom() && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); if (vd && vd.name) name = String(vd.name).trim(); } catch (_) {} }
+    // The STORE this code is being printed for, ahead of the account that owns
+    // it. The slug goes into the customer-facing ordering link, so deriving it
+    // from the single account name made every store on the account print the
+    // same URL — a diner scanning the restaurant's code reached the boutique.
+    try { const vd = window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom() && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); if (vd && vd.name) name = String(vd.name).trim(); } catch (_) {}
+    if (!name) { try { if (window.KiwiMe && KiwiMe.business) name = String(KiwiMe.business).trim(); } catch (_) {} }
     if (!name) { try { name = (localStorage.getItem('kiwiBizName') || '').trim(); } catch (_) {} }
     if (!name) name = isReal() ? 'Votre établissement' : 'Café Atlas';
     const slug = (window.KiwiCaisseLink && KiwiCaisseLink.slugMerchant) ? KiwiCaisseLink.slugMerchant(name) : localSlug(name);

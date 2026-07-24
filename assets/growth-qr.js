@@ -91,9 +91,11 @@
 
   const bizLabel = () => {
     try {
+      // Label the STORE on screen, not the account — two shops on one account
+      // would otherwise both be captioned with the same name.
+      if (window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); if (vd && (vd.fullDisplay || vd.name)) return vd.fullDisplay || vd.name; }
       const b = (window.KiwiMe && window.KiwiMe.business || '').trim();
       if (b) return b;
-      if (window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); if (vd) return vd.fullDisplay || vd.name || ''; }
     } catch (_) {}
     return (window.KiwiEnv?.isReal?.() ? 'Votre établissement' : 'Café Atlas · Maarif');
   };

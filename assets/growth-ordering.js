@@ -131,9 +131,11 @@
   const ordReal = () => { try { return !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.()); } catch (_) { return false; } };
   const ordBiz = () => {
     try {
+      // Store before account: ordSlug() feeds the customer-facing link, and one
+      // account can run several stores that must not share it.
+      if (window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); if (vd && (vd.fullDisplay || vd.name)) return vd.fullDisplay || vd.name; }
       const b = (window.KiwiMe && window.KiwiMe.business || '').trim();
       if (b) return b;
-      if (window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); if (vd) return vd.fullDisplay || vd.name || ''; }
     } catch (_) {}
     return ordReal() ? 'Votre établissement' : 'Café Atlas · Maarif';
   };

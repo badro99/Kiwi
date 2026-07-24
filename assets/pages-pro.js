@@ -6806,14 +6806,22 @@ function _bqxSlug(s) {
 function _bqxVenue() {
   try {
     if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
-      // Canonical key = slugMerchant(business) — the SAME slug the caisse's paired
-      // venue carries (functions/api/pair/create.js) and clients-store uses, so a
-      // product added on either surface lands under ONE key and inventory syncs
-      // across devices. Prefer identity over the venue display name (which a rename
-      // or a stale venue could desync); fall back to the name only pre-identity. F4.
+      // Canonical key = slugMerchant(store name) — the SAME slug the caisse's
+      // paired venue carries (functions/api/pair/create.js) and clients-store
+      // uses, so a product added on either surface lands under ONE key and
+      // inventory syncs across devices.
+      //
+      // It must be the STORE's name, not the account's. KiwiMe.business is a
+      // single account-level name, so on an account with two shops both would
+      // share one inventory — and worse, the till keys off its paired venue
+      // (pos-boutique.js `_bqPv.merchant`), so for any store whose name differs
+      // from the account name the two ends silently disagreed: stock scanned in
+      // at the register never appeared on the dashboard. Identity is only the
+      // fallback, for an account that has no store record yet.
+      var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+      if (vd.custom && vd.name) return _bqxSlug(vd.name);
       var biz = (window.KiwiMe && window.KiwiMe.business) || '';
       if (biz) return _bqxSlug(biz);
-      var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
       if (vd.name) return _bqxSlug(vd.name);
     }
   } catch (_) {}
@@ -6826,9 +6834,12 @@ function _bqxVenue() {
  * is unchanged. */
 function _bqxTag() {
   try {
+    // The STORE being looked at, not the account that owns it — otherwise both
+    // shops on one account are labelled with the same name.
+    var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+    if (vd.custom && vd.name) return String(vd.name).toUpperCase();
     var biz = (window.KiwiMe && window.KiwiMe.business) || '';
     if (biz) return String(biz).toUpperCase();
-    var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
     if (vd.name) return String(vd.name).toUpperCase();
   } catch (_) {}
   return 'BOUTIQUE';

@@ -126,8 +126,10 @@
     const raw = T.msg(seg);
     let biz = '';
     try {
-      biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
-      if (!biz && window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); biz = (vd && (vd.fullDisplay || vd.name)) || ''; }
+      // The STORE the campaign is being sent from — an owner with two shops must
+      // not sign the restaurant's message with the boutique's name.
+      if (window.KiwiVenue?.isCustom?.()) { const vd = window.KiwiVenue.getCurrentVenueData?.(); biz = (vd && (vd.fullDisplay || vd.name)) || ''; }
+      if (!biz) biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     } catch (_) {}
     if (!biz && isRealTenant()) biz = 'votre établissement';
     return biz ? raw.replace(/Café Atlas|مقهى أطلس/g, biz) : raw;
