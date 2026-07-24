@@ -271,6 +271,33 @@
       });
   }
 
+  /* Silent re-attach. Chrome remembers a USB grant per origin, so after the
+   * owner has picked the printer once, navigator.usb.getDevices() hands it back
+   * on every later load with NO picker and no user gesture. Without this the
+   * cashier had to re-pick the printer every single morning — the permission was
+   * still there, Kiwi just wasn't asking for it. Best-effort: any failure simply
+   * leaves the panel showing "aucune imprimante", exactly as before. */
+  function reconnectUsb() {
+    if (!usbSupported() || !navigator.usb.getDevices) return Promise.resolve(null);
+    if (usbConnected()) return Promise.resolve({ ok: true, name: usb.name });
+    return navigator.usb.getDevices().then(function (list) {
+      var dev = (list || [])[0];
+      if (!dev) return null;
+      usb.device = dev;
+      usb.name = [dev.manufacturerName, dev.productName].filter(Boolean).join(' ') || 'Imprimante USB';
+      return dev.open()
+        .then(function () { return dev.configuration ? null : dev.selectConfiguration(1); })
+        .then(function () {
+          var pick = usbPickEndpoint(dev);
+          if (!pick) throw new Error('no-bulk-out');
+          usb.iface = pick.iface; usb.ep = pick.ep;
+          return dev.claimInterface(pick.iface);
+        })
+        .then(function () { return { ok: true, name: usb.name }; })
+        .catch(function () { usb.device = null; usb.ep = 0; return null; });
+    }).catch(function () { return null; });
+  }
+
   function disconnectUsb() {
     try {
       if (usb.device && usb.device.opened) {
@@ -577,6 +604,19 @@
     });
 
     refreshStatus();
+
+    /* A printer granted on an earlier visit is re-attached silently; reflect it
+     * here so the panel never claims "aucune imprimante" for one that is in fact
+     * connected and ready to print. */
+    reconnectUsb().then(function (r) {
+      if (!r || !ov.isConnected) return;
+      var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = $('#kpr-usb-connect');
+      if (!st || !t) return;
+      st.className = 'kpr-status on';
+      t.textContent = 'Connectée · ' + (r.name || 'Imprimante USB');
+      if (btn) btn.textContent = 'Changer d’imprimante';
+      var test = $('#kpr-usb-test'); if (test) test.disabled = false;
+    });
   }
 
   document.addEventListener('click', function (e) {
@@ -584,11 +624,16 @@
     if (t) { e.preventDefault(); openSetup(); }
   });
 
+  /* Re-attach an already-granted USB printer as soon as the till loads, so the
+   * first receipt of the day prints without anyone opening this panel. */
+  try { reconnectUsb(); } catch (_) {}
+
   window.KiwiPrinter = {
     getConfig: getConfig, setConfig: setConfig, isConfigured: isConfigured, isConnected: isConnected,
     ping: ping, printBytes: printBytes,
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
+    reconnectUsb: reconnectUsb,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
