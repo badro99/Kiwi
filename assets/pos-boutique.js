@@ -1427,7 +1427,7 @@
      supermarket lane. Resolves EAN-13 or any old/alphanumeric code registered on
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
-    const code = String(raw || '').trim();
+    const code = normScan(raw);
     if (!code) return;
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;
     const pid = hit ? hit.pid : BY_EAN[code];
@@ -1455,7 +1455,7 @@
   /* LOOKUP path — the Scan tab: an employee scans/types a code to SEE the article
      (price, sizes, live stock, colours). Read-only — nothing touches the ticket. */
   function lookupScan(raw) {
-    const code = String(raw || '').trim();
+    const code = normScan(raw);
     if (!code) return;
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;
     const pid = hit ? hit.pid : BY_EAN[code];
@@ -2179,24 +2179,64 @@
     document.head.appendChild(st);
   }
 
-  /* ─── global keyboard-wedge : a USB scanner types fast + Enter, from anywhere ─── */
+  /* ─── global keyboard-wedge : a USB scanner types fast + Enter, from anywhere ───
+     A HID scanner (USB or Bluetooth — both enumerate as a keyboard, no driver) is
+     just a very fast typist. Two things separate it from a human, and we use both:
+     speed, and the terminating Enter.
+
+     AZERTY: a scanner ships configured for a US layout and sends US SCANCODES. On
+     a French/Moroccan AZERTY till the unshifted number row is & é " ' ( - è _ ç à,
+     so reading e.key turned "2000000000015" into "é000000000015" and every scan
+     came back "code inconnu" — the classic AZERTY failure in FR/MA shops. e.code
+     is the PHYSICAL key and is layout-independent, so digits are read from it.
+     That is correct for BOTH configurations: a US-layout scanner sends Digit2 for
+     "2", and an AZERTY-configured one sends Shift+Digit2 — e.code is Digit2 either
+     way. Letters stay on e.key (for a letter the two configurations genuinely
+     disagree, and EAN/UPC/ITF — everything Kiwi prints and nearly all retail
+     barcodes — are pure digits, so this is the safe side to err on). */
+  /* Same AZERTY damage, other route: when a scan FIELD has focus (the Scan tab
+     focuses one on open), the scanner's keystrokes arrive as normal text and the
+     browser has already applied the layout — so the box literally contains
+     "é000000000015". e.code can't help after the fact, but the corruption is a
+     fixed, reversible substitution: the French unshifted number row. Only applied
+     when the string is made ENTIRELY of those symbols and carries no digit at all,
+     so a genuine alphanumeric code containing a "-" is never touched. */
+  const AZ_ROW = { '&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '-': '6', 'è': '7', '_': '8', 'ç': '9', 'à': '0' };
+  function normScan(raw) {
+    const s = String(raw || '').trim();
+    if (!s || /\d/.test(s)) return s;
+    if (!/^[&é"'(\-è_çà]+$/.test(s)) return s;
+    return s.replace(/./g, (ch) => AZ_ROW[ch] || ch);
+  }
+  function wedgeChar(e) {
+    const c = e.code || '';
+    if (/^Digit[0-9]$/.test(c)) return c.slice(5);
+    if (/^Numpad[0-9]$/.test(c)) return c.slice(6);
+    return (e.key && e.key.length === 1) ? e.key : '';
+  }
   function installWedgeScanner() {
     if (installWedgeScanner._done) return;
     installWedgeScanner._done = true;
-    let buf = '', last = 0;
+    let buf = '', last = 0, started = 0;
     document.addEventListener('keydown', (e) => {
       if (!document.body.classList.contains('is-pos-boutique')) return;
       const tag = (e.target && e.target.tagName) || '';
       const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
       const now = Date.now();
-      if (now - last > 120) buf = '';
+      if (now - last > 120) { buf = ''; started = now; }
       last = now;
       if (e.key === 'Enter') {
-        const code = buf; buf = '';
-        if (code.length >= 4 && !typing) { e.preventDefault(); handleWedge(code); }
+        const code = buf, span = now - started, n = code.length;
+        buf = '';
+        /* Average gap per character. A scanner runs ~2-15 ms; sustained sub-55 ms
+           is ~220 WPM, which no one types. Without this a human pressing Enter
+           after any 4 quick keys fired a phantom scan. */
+        const fast = n >= 4 && (span / n) < 55;
+        if (fast && !typing) { e.preventDefault(); handleWedge(code); }
         return;
       }
-      if (e.key && e.key.length === 1) buf += e.key;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      buf += wedgeChar(e);
     }, true);
   }
   function handleWedge(code) {
@@ -2204,7 +2244,8 @@
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
     commitEan(code);                                                     /* vente → ticket */
   }
-  function invScanHandle(code) {
+  function invScanHandle(raw) {
+    const code = normScan(raw);
     const cat = catDB(); if (!cat) return;
     const hit = cat.findByBarcode(code);
     if (hit) { toast(`${hit.product.name} · ${hit.variant.colorLabel} ${hit.variant.size}`); openInvProduct(hit.product.id); }
