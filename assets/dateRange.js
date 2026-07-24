@@ -1764,6 +1764,32 @@
           : lang === 'ar' ? 'اطرح سؤالاً حول مطعمك...'
           : 'Posez votre question sur votre restaurant...');
     }
+    /* The three starter questions are hard-coded in dashboard.html for a
+     * restaurant — a clothing shop was being invited to ask "Quel plat retirer
+     * de ma carte ?". Swap them for the trade's own when the venue has one; a
+     * demo venue keeps the captured originals so i18n still owns them. */
+    const chipEls = document.querySelectorAll('.hai-chips .hai-chip');
+    if (chipEls.length) {
+      const chipTexts = window.KiwiVenue?.getVocab?.('aiChips');
+      chipEls.forEach((btn, i) => {
+        // Stash the captured original (and its i18n key) once, so switching back
+        // to a demo venue restores the stock question instead of stranding the
+        // trade copy. i18n owns the chip again the moment the key is back.
+        if (btn.dataset.haiOrig == null) {
+          btn.dataset.haiOrig = btn.textContent.trim();
+          btn.dataset.haiKey = btn.getAttribute('data-i18n') || '';
+        }
+        const trade = Array.isArray(chipTexts) ? chipTexts[i] : null;
+        if (trade) {
+          btn.textContent = trade;
+          btn.removeAttribute('data-i18n');   // sinon un changement de langue restaure la question restaurant
+        } else {
+          btn.textContent = btn.dataset.haiOrig;
+          if (btn.dataset.haiKey) btn.setAttribute('data-i18n', btn.dataset.haiKey);
+        }
+      });
+    }
+
     const rec = window.KiwiVenue?.getHeroAiRec?.();
     if (!rec) return;
     const titleEl = document.querySelector('.hai-rec-title');

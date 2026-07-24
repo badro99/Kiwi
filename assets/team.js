@@ -425,6 +425,19 @@
   function catalogFor(venueType) {
     return CATALOG[venueType] || unionCatalog();
   }
+  /* The TRADE, which is not the storage key. teamKey() returns a custom venue's
+     id so each store keeps its own roster — correct for storage, but it was also
+     what picked the role catalogue, and CATALOG['v1mrz…'] misses. Every custom
+     venue therefore fell through to unionCatalog(), and a clothing shop was
+     offered Bar, Cuisine, Coiffure, Manucure, Massage, Pâtisserie and Plonge as
+     departments. Resolve the subtype first (a boulangerie is not a generic
+     boutique), then the base family. */
+  function tradeKey(venue) {
+    if (!venue) return 'restaurant';
+    if (venue.subtype && CATALOG[venue.subtype]) return venue.subtype;
+    if (venue.type && CATALOG[venue.type]) return venue.type;
+    return venue.custom ? 'boutique' : 'restaurant';
+  }
 
   /* ═══════════════ MOCK SEED ═══════════════ */
   const CONTRACT_TYPES = ['CDI', 'CDD', 'Stage', 'Freelance', 'Intérim'];
@@ -791,7 +804,7 @@
 
   /* ═══════════════ PROFILES PANE ═══════════════ */
   function renderProfilesPane(T, venue, venueType, members) {
-    const cat = catalogFor(venueType);
+    const cat = catalogFor(tradeKey(venue));
     /* Stats */
     const totalMembers = members.length;
     const present = Math.max(0, Math.round(totalMembers * 0.75));
@@ -1069,7 +1082,7 @@
     const T = t();
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant', name: 'Votre établissement' };
     const venueType = teamKey(venue);
-    const cat = catalogFor(venueType);
+    const cat = catalogFor(tradeKey(venue));
     const editing = !!memberId;
     const existing = editing ? (getMembers(venueType).find(m => m.id === memberId) || null) : null;
     if (editing && !existing) return;

@@ -832,14 +832,22 @@
       productsEmpty: { fr: { title: 'Top articles', manage: 'Gérer le catalogue →', msg: 'Vos meilleures ventes s\'afficheront ici dès la première vente.' },
                        en: { title: 'Top items', manage: 'Manage catalog →', msg: 'Your best sellers will appear here after the first sale.' },
                        ar: { title: 'أفضل المنتجات', manage: 'إدارة الكتالوج ←', msg: 'ستظهر أفضل مبيعاتك هنا بعد أول عملية بيع.' } },
-      eveningEmpty: { fr: { lbl: 'CE SOIR', head: 'Aucune activité planifiée', msg: 'Les temps forts de votre soirée s\'afficheront ici.' },
-                      en: { lbl: 'TONIGHT', head: 'Nothing scheduled', msg: 'Your evening highlights will appear here.' },
-                      ar: { lbl: 'الليلة', head: 'لا نشاط مجدول', msg: 'ستظهر أبرز أحداث مسائك هنا.' } },
+      /* A shop's day ends at closing, not with an evening service — "CE SOIR"
+         belonged to the restaurant this vocabulary was cloned from. */
+      eveningEmpty: { fr: { lbl: 'FIN DE JOURNÉE', head: 'Rien de planifié', msg: 'Les temps forts de votre journée s\'afficheront ici.' },
+                      en: { lbl: 'END OF DAY', head: 'Nothing scheduled', msg: 'Your day\'s highlights will appear here.' },
+                      ar: { lbl: 'نهاية اليوم', head: 'لا شيء مجدول', msg: 'ستظهر أبرز أحداث يومك هنا.' } },
       staffEmpty: { fr: { title: 'Performance vendeurs', sub: 'Aucun vendeur', msg: 'Ajoutez votre équipe pour suivre les ventes par personne.' },
                     en: { title: 'Sales team performance', sub: 'No salespeople yet', msg: 'Add your team to track sales per person.' },
                     ar: { title: 'أداء البائعين', sub: 'لا بائعون بعد', msg: 'أضِف فريقك لتتبّع المبيعات لكل شخص.' } },
       navOrders: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' },
       askPlaceholder: { fr: 'Posez votre question sur votre boutique...', en: 'Ask a question about your shop...', ar: 'اطرح سؤالاً حول متجرك...' },
+      /* The three starter questions above the ask bar were hard-coded in
+         dashboard.html for a restaurant, so a clothing shop was invited to ask
+         "Quel plat retirer de ma carte ?". They follow the trade now. */
+      aiChips: { fr: ['Quel article ne se vend pas ?', 'Prévision des ventes cette semaine', 'Pourquoi mon panier moyen baisse ?'],
+                 en: ['Which item is not selling?', 'Sales forecast this week', 'Why is my average basket falling?'],
+                 ar: ['أي منتج لا يُباع ؟', 'توقّع المبيعات هذا الأسبوع', 'لماذا ينخفض متوسط سلّتي ؟'] },
     },
     spa: {
       feedEmpty: { fr: { badge: 'INSTITUT OUVERT', title: 'Premier encaissement à venir', sub: 'Le flux s\'active dès le premier rendez-vous encaissé.' },
@@ -860,6 +868,9 @@
                     ar: { title: 'أداء الممارسين', sub: 'لا ممارسون بعد', msg: 'أضِف ممارسيك لتتبّع الأداء لكل غرفة.' } },
       navOrders: { fr: 'Encaissements', en: 'Checkouts', ar: 'التحصيلات' },
       askPlaceholder: { fr: 'Posez votre question sur votre institut...', en: 'Ask a question about your spa...', ar: 'اطرح سؤالاً حول معهدك...' },
+      aiChips: { fr: ['Quelle prestation remplit mes creux ?', 'Prévision des encaissements cette semaine', 'Pourquoi mon panier moyen baisse ?'],
+                 en: ['Which service fills my quiet hours?', 'Revenue forecast this week', 'Why is my average basket falling?'],
+                 ar: ['أي خدمة تملأ ساعات الركود ؟', 'توقّع المداخيل هذا الأسبوع', 'لماذا ينخفض متوسط سلّتي ؟'] },
     },
     hotel: {
       feedEmpty: { fr: { badge: 'RÉCEPTION OUVERTE', title: 'Premier encaissement à venir', sub: 'Le flux s\'active dès le premier check-in ou la première vente encaissée.' },
@@ -880,6 +891,9 @@
                     ar: { title: 'أداء الفريق', sub: 'لا موظفون بعد', msg: 'أضِف الاستقبال والتنظيف والمطعم لتتبّع النشاط لكل شخص.' } },
       navOrders: { fr: 'Encaissements', en: 'Checkouts', ar: 'التحصيلات' },
       askPlaceholder: { fr: 'Posez votre question sur votre établissement...', en: 'Ask a question about your property...', ar: 'اطرح سؤالاً حول منشأتك...' },
+      aiChips: { fr: ['Comment remplir mes chambres vides ?', 'Prévision des arrivées cette semaine', 'Pourquoi mon panier moyen baisse ?'],
+                 en: ['How do I fill my empty rooms?', 'Arrivals forecast this week', 'Why is my average basket falling?'],
+                 ar: ['كيف أملأ غرفي الشاغرة ؟', 'توقّع الوصول هذا الأسبوع', 'لماذا ينخفض متوسط سلّتي ؟'] },
     },
   };
 
@@ -1543,6 +1557,9 @@
     const pickSec = sec => (sec == null ? null : (sec[lang] ?? sec.fr ?? null));
     const b = pickSec(fromBase), p = pickSec(fromProf);
     if (typeof p === 'string' || typeof b === 'string') return p || b;
+    // Lists (aiChips…) are replaced wholesale, never merged — spreading an array
+    // into the object branch below would hand the caller {0:…,1:…,2:…}.
+    if (Array.isArray(p) || Array.isArray(b)) return p || b;
     return { ...(b || {}), ...(p || {}) };
   }
 
