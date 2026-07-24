@@ -3807,8 +3807,13 @@
        (Yassir / Mehdi / Karim / Sofia) or pre-seeded tables/orders. Local demo
        (unpaired localhost) is untouched — svReal() is false there. */
     if (svReal()) {
-      // Floor: keep the table layout but clear every occupancy (empty register).
-      Object.keys(tables).forEach(function (id) { tables[id].status = 'khawya'; tables[id].elapsed = 0; });
+      // Floor: BLANK it — not Café Atlas's specific T1-T21 layout (that geometry —
+      // Yassir's salle, Karim's terrasse, Sofia's étage — is demo data, and showing
+      // one venue's floor inside another is the P7 leak). Delete every seeded table
+      // so the waiter opens an empty floor until the store builds its own; every
+      // renderer here iterates Object.keys(tables) or guards tables[id], so empty is
+      // safe. currentUser still resolves in `servers` (kept, renamed generic below).
+      Object.keys(tables).forEach(function (id) { delete tables[id]; });
       // No pre-seeded orders on a clean floor.
       Object.keys(seedOrders).forEach(function (id) { delete seedOrders[id]; });
       // Roster: generic, all on-duty (drops the "en pause" colleague alert too).

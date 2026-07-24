@@ -5359,13 +5359,16 @@
       T23: { floor: 1, zone: 'etage', shape: 'round', covers: 6, size: 6, x: 73, y: 71, w: 14, h: 22, anchor: 'banquette-ronde', status: 'khawya', elapsed: 0,  server: 'SO' },
     };
 
-    // A REAL / paired store opens with an EMPTY floor — every table free (khawya),
-    // no demo occupancy or timers. KiwiEnv loads before this script, so isReal() is
-    // ready here; the local demo (unpaired localhost) keeps its mid-service floor.
-    // Also drop the demo server assignment: otherwise the floor paints a section
-    // avatar (MK / KB / SL — Mehdi K. / Karim B. / Sofia L.) on every empty table,
-    // and applyStoreIdentity's roster rename can't reach the already-rendered DOM.
-    try { if (storeIsReal()) Object.keys(tables).forEach((k) => { tables[k].status = 'khawya'; tables[k].elapsed = 0; tables[k].server = null; }); } catch (_) {}
+    // A REAL / paired store opens with a BLANK floor — NOT Café Atlas's specific
+    // 24-table geometry (its named layout — T7 terrasse, the banquette ronde, the
+    // 1er étage rows — is demo data, and rendering one venue's floor inside another
+    // is the P7 leak). Delete every seeded table so the plan renders empty
+    // ("0 / 0 occupées") until the store builds its own floor; the roster rename in
+    // applyStoreIdentity then has no demo tables left to paint a section avatar on.
+    // KiwiEnv loads before this script, so isReal() is ready here; the local demo
+    // (unpaired localhost, storeIsReal false) keeps its full mid-service floor
+    // byte-for-byte. renderSalle() and the occupancy counters tolerate empty tables.
+    try { if (storeIsReal()) Object.keys(tables).forEach((k) => delete tables[k]); } catch (_) {}
 
     /* ---------- Mock orders per table ---------- */
     /* T2 hand-spec'd. Others generated from a small menu so the demo doesn't break. */

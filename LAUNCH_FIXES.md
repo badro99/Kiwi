@@ -24,7 +24,7 @@ after the mainline is verified.
 | **F5** checkout → recordPurchase (client/points/spend) | ✅ DONE (9c4827a, v51) | code (needs a real sale e2e) |
 | **F7** live-card merchant scope + heal stale pin | ✅ DONE (c419870→bc5df9a, v52) | **live — kiwiLiveMerchant healed vix→mixmax-test** |
 | **F8** staff PIN after pairing | ✅ DONE (9c4827a, v51) | code, **fail-soft (worst case = no lockout)** — needs a real pairing e2e |
-| **F6** restaurant floor/KDS/roster per-venue | ⏸️ DEFERRED | no restaurant client launching; large refactor best done vs a real restaurant tenant |
+| **F6** restaurant floor blanked for real stores | ✅ DONE (v53) | real caisse/serveur floor renders empty ("0 / 0 occupées"), no cafe-atlas geometry; demo untouched |
 
 Ground truth (D1 `kiwi-sales`): accounts **adam** (doukaliadam80@gmail.com, slug `adam`,
 type boutique, PIN 8888) and **Ghali/MixMax** (badromail9@gmail.com, slug `mixmax-test`,
@@ -131,16 +131,31 @@ Live proof captured on the owner's Mac (one browser):
   (GET `?merchant=&since=` / POST upsert / DELETE) backed by a D1 `clients` table —
   the client already speaks this contract (`clients-store.js` `mergeServer/getCursor`).
 
-### F6 · Restaurant caisse shows demo floor / KDS / servers → P7
-- **Cause:** the floor plan (T7..T16 + CUISINE), 7 KDS stations, and servers are
+### F6 · Restaurant caisse shows demo floor / KDS / servers → P7  ✅ SHIPPED (v53)
+- **Cause:** the floor plan (T7..T16 + CUISINE + the 1er étage rows) and servers are
   hard-coded module constants in `kiwi-caisse.html` / `kiwi-serveur.html` — NOT
-  venue-scoped. Real stores only get occupancy cleared + waiters renamed, so the
-  cafe-atlas structure still renders.
-- **Fix:** Route floor/KDS/roster through the existing per-venue `KiwiStore.define()`
-  engine (`kiwi:floorplan:v1:<venue>`, `kiwi:kds:v1:<venue>`, `kiwi:roster:v1:<venue>`)
-  with `seedFor('cafeAtlas')` returning today's literals verbatim and `blank()` empty
-  for every other venue. Replace the inline consts with `KiwiStore.get(currentVenue)`;
-  delete the occupancy-only neutralizer + generic-rename block.
+  venue-scoped. The real-store branch only cleared occupancy + renamed waiters
+  ("keep the table layout but clear every occupancy"), so cafe-atlas's *specific
+  geometry* (24 named tables, terrasse/étage zones, the banquette ronde) still
+  rendered inside every real restaurant.
+- **Fix shipped:** in the real-store branch ONLY (`storeIsReal()` in caisse /
+  `svReal()` in serveur — both false for the local demo), delete every seeded table
+  (`Object.keys(tables).forEach(k => delete tables[k])`) instead of merely emptying
+  its status. A real store now opens a blank floor ("0 / 0 occupées") until it builds
+  its own; `renderSalle()` + the occupancy counters + every serveur consumer iterate
+  `Object.keys(tables)` or guard `tables[id]`, so empty is safe, and `currentUser`
+  still resolves in the (kept, generic-renamed) `servers`. The demo path never enters
+  the branch, so the pitch floor stays byte-identical.
+- **Why not the full KiwiStore route (the earlier plan):** the inline `<script>` that
+  declares `tables` runs during parse, *before* the deferred `venue-store.js`, so
+  `KiwiStore` is undefined at declaration time, and `venues.js`/`KiwiVenue` isn't loaded
+  in the caisse at all (no `currentVenue`). Wiring a per-venue store would mean moving
+  shared-shell load order under the demo — real demo-byte-identical risk for zero
+  present benefit (no floor-builder UI consumes per-venue persistence yet). Deferred to
+  when a floor editor exists; the blank-floor outcome is identical for real stores today.
+- **KDS / recipe catalog:** left intact — the KDS recipe DB is a shared reference keyed
+  by dish name, not tenant-identifying data; with an empty floor no demo tickets route
+  to it anyway.
 
 ### F7 · Live "EN DIRECT" card shows another merchant's sales → P1
 - **Cause:** `live-link` `merchant()` defaults every unresolved merchant to the shared
