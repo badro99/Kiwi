@@ -224,6 +224,135 @@ paired caisse has no account and legitimately needs exactly that call.
 to match `?merchant=` on the no-session path. Needs a re-pair or a grace window for the
 tills already deployed — owner's call before shipping.
 
+---
+
+## Dashboard sweep — live, on the real Claude's Moneys account
+
+Owner unlocked both surfaces (PIN 1234). Every finding below was seen on screen by a
+signed-in real merchant, not inferred from code.
+
+### 🟢 Verified working end-to-end
+- **Stock fix (#6) confirmed live.** Rang a 2nd sale (Chemise en lin · M, **Carte** this
+  time). Variant stock **10 → 9** in storage, caisse Inventaire, *and* the dashboard's
+  Inventaire produits (9 pièces · 4 050 MAD), plus a live "Vente encaissée · 450 MAD ·
+  Carte" toast on the dashboard. Caisse → shared catalogue → dashboard all reconcile.
+- **KPI bridge.** Aujourd'hui = 450,00 MAD · 1 commande · panier moyen 450 · 15 % of the
+  3 000 MAD goal. After the 2nd sale: **Ventes = 2 ventes · 900 MAD**, correct methods
+  (CARTE + ESPÈCES) and times. No demo leakage in that list.
+- **Catégories write path.** Created "Chemises" → persisted to
+  `kiwiBoutiqueCatalog:v1:claude-s-moneys`, toast *"disponible en caisse et au dashboard"*,
+  filter chip + `CATÉGORIES 1` updated. No in-memory-only bug here.
+- **Équipe.** Both onboarding PINs became real staff rows (Claude · Propriétaire ·
+  Direction · CDI; Hamza · Équipier · Service · CDI). Correct, no demo staff.
+- **Clients & Marketing / Promotions / Retours.** Honest all-zero empty states.
+
+### 🔴 #14 — Live feed told the store it had **98 commandes aujourd'hui** (FIXED)
+The "Commandes en direct" subtitle read
+`window.KiwiDemoClock.getSimState().cumTx` (`dateRange.js` `renderFeed`). The demo
+simulator keeps running behind a real session, so its counter was printed as the
+merchant's own order count — **98** on a store that had rung **2**. A custom venue now
+counts its own sales since midnight from `KiwiSales`; the demo still reads the sim.
+
+### 🔴 #15 — Every **cash** sale was labelled "Carte bancaire" (FIXED)
+`buildCustomFeed`'s label map had `card/qr/link` but **no `cash`**, so
+`L[s.method] || L.card` relabelled cash as *Carte bancaire*, and the chip icon
+(`(qr|link) ? 'qr' : 'tap'`) gave cash the NFC mark while an unused cash icon sat in
+`ICONS`. On a Moroccan boutique — where cash is the dominant tender — the owner could not
+tell cash from card on their own feed. Added cash/tap/wallet labels (fr/en/ar) and a
+per-tender icon map, with a **neutral** card chip: the till records the tender, never the
+network, so a Visa/Mastercard mark there would invent a fact the sale doesn't carry.
+
+### 🔴 #16 — Kiwi Capital completed a **fabricated credit decision** (FIXED)
+`features.js handlers['capital']` was ungated. A real merchant could reach
+*"Pré-qualifié jusqu'à 120 000 MAD"* → *"Confirmer · fonds d'ici 24h"* → toast
+**"Kiwi Capital · demande acceptée — 45 000 MAD seront crédités d'ici 24h"**, carrying
+*"Conforme Murabaha · Agréé AAOIFI"* claims. No lending rail exists; nothing is sent
+anywhere. Now an honest "bientôt" for real merchants (the same gate `kiwi-compte` used).
+
+### 🔴 #17 — Zakat confirmed a **payment to a named real charity** (FIXED)
+Ungated `handlers['zakat']`: pick *Fondation Mohammed V*, *Bayti* or *AMC* → confirm →
+**"Zakat versée · reçu envoyé par WhatsApp"**. No payment rail — a merchant could believe
+a religious obligation was discharged when no money moved. The **calculation is real and
+useful, so it stays**; for a real merchant the recipient picker and payout button are
+replaced with an honest note pointing them at their usual channel.
+
+### 🔴 #18 — "Lien de paiement" hands the client a URL that 404s (FIXED)
+In the dashboard header for **every** merchant. Generated `kiwi.ma/p/<random>` (nothing
+serves `/p/`), the "QR" is a CSS stripe pattern rather than a scannable code, and the
+WhatsApp/email/SMS share buttons only toast. A merchant would send a paying customer a
+dead link. Gated to an honest "bientôt" for real merchants.
+
+### 🟠 #19 — "Pour vous" band promoted Capital + Zakat to real merchants (FIXED)
+`oppo-cards.js render()` had no phase check; dismissing two cards promoted
+*"Kiwi Capital avance jusqu'à 200 000 MAD"*. Both dropped from the pool for real
+merchants; demo pool unchanged.
+
+### 🟠 #20 — "INVENTAIRE · MAISON MANSOUR" on a real client's dashboard (FIXED)
+Verified live: *Inventaire produits → Nouveau produit* showed the demo store's name as the
+modal eyebrow (hardcoded `tag:`). Now the store's own name via `_bqxTag()`.
+
+### 🟠 #21 — Stock is valued at **retail price, not cost** (OPEN — needs a call)
+`boutique-catalog.js:369` — `stockValue += s * (p.priceMAD || 0)`. Every product stores a
+`cost` (the owner typed 200 MAD against a 450 MAD sale price) that is never used here, so
+"VALEUR DE STOCK" read **4 050 MAD** for 9 pieces that cost **1 800 MAD** — 2.25×
+overstated. A merchant using that for accounting, insurance or working capital is
+materially wrong. Not fixed unilaterally: the demo seeds `cost = 55 % of price`, so
+switching the basis changes the demo's visible number, and "which basis" is a product
+decision. Recommend: value at cost, and show retail as a secondary "potentiel de vente".
+
+### 🟠 #22 — Payment-mix card is dead + has **no cash row** (OPEN — needs a call)
+`renderMix` has no custom-venue branch, so a real store sees a blank ring and Visa /
+Mastercard / Kiwi Tap / QR all at **0 %** forever despite real sales. Worse, the four
+categories are **card rails only — there is no Espèces row at all**, which is the
+boutique's actual dominant tender. Fixing means adding a 5th segment, which also changes
+the demo card, and relabelling "Visa/Mastercard" (the till only knows *card*, not the
+network). Owner's call on the shape.
+
+### 🟠 #23 — Terminaux shows "Encore rien ici" although a caisse **is** paired
+The sidebar chip says "Caisse connectée" and `kiwiPairedVenue` is set, but the Terminaux
+destination is a starter placeholder. The one device the client definitely has does not
+appear on the page whose whole job is listing devices.
+
+### 🟡 #24 — Most destinations are starter placeholders for a real boutique
+`pages-pro.js REAL_FOR_CUSTOM = {inventory, categories, equipe, menu, tables}` — every
+other destination (**Terminaux, Conformité, Paie & planning, Réservations & RDV,
+Promotions, Retours & échanges**) renders "Encore rien ici". `conformite.js`, `stock.js`
+and `finance.js` each already build a correct real empty-state page that is currently
+unreachable — adding those navs to the set is close to a one-line unlock.
+
+### 🟡 #25 — Restaurant copy on a boutique dashboard
+Kiwi AI suggestion chip **"Quel plat retirer de ma carte ?"**; Promotions placeholder
+**"Ex. −10 % happy hour"**; hero card "CE SOIR · Aucune activité planifiée"; Équipe
+department list offering *Bar, Cuisine, Coiffure, Manucure, Massage, Pâtisserie, Plonge*
+to a clothing shop; `agent.js NAV_TARGETS` routing "ouvre le menu" / "plan de salle" to
+live restaurant surfaces. Kiwi is boutique-heavy at launch — this reads as the wrong product.
+
+### 🟡 #26 — Dashboard opened on **"Hier"**, showing 0,00 MAD next to a live 450 MAD sale
+`kiwiDateRange` is in identity.js's `PRESERVE` list, so a range chosen in a previous
+session (or by a previous account on that browser) carries over. The first thing the
+owner saw was *ENCAISSÉ HIER 0,00 MAD* directly under an *EN DIRECT · 450 MAD* card.
+A brand-new store should land on Aujourd'hui.
+
+### 🟡 #27 — KIWI AI panel contradicts the data on the same screen
+"Votre tableau de bord est prêt · **Aucune donnée pour l'instant**, enregistrez vos ventes"
+while the same viewport showed 450 MAD / 1 commande. Same class: Promotions and Retours
+both still offer "Encaisser ma première vente" after two sales.
+
+### 🟡 #28 — Ventes rows are unidentifiable and not clickable
+Rows read "Vente", not "Chemise en lin" — the label IS sent to the server and shown in the
+live card, but the local `kiwiSales:<venue>` record keeps only `{ts, amount, method}`. For
+a boutique processing a return, finding the original sale is the core task.
+
+### 🟡 #29 — Caisse day counter resets on reload
+After reloading the till, its header read "0 vente · 0 MAD aujourd'hui" while the dashboard
+correctly showed 450 MAD. The server has the sales; the caisse's own list does not survive
+a reload, so a cashier and the owner see different numbers for the same day.
+
+### 🟡 #30 — fr plurals (FIXED)
+"1 produits · 1 variantes · 1 catégories" → singular via a small `_bqxN()` helper.
+
+---
+
 ### 🟡 #13 — Pairing codes are brute-forceable (OPEN, low)
 `/api/pair/redeem` is unauthenticated (site gate only), single-use, 15-min TTL, 6 digits =
 900 000 codes, **no rate limit**. A script could grind a live code and bind its own till to
