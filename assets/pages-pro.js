@@ -6803,6 +6803,63 @@ function _bqxSlug(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'client';
 }
+/* One-time carry-over. Until now the catalogue key was slugged from the ACCOUNT
+ * name; it is now slugged from the STORE name. For the common case (one store,
+ * named like the account) the two are identical and nothing happens. Where they
+ * differ, the merchant's existing stock lives under the old key — adopt it
+ * rather than showing them an empty inventory. Copy, never move: the old key is
+ * left untouched so nothing is destroyed if this is wrong. */
+var _bqxAdopted = {};
+/* Every slug the catalogue could have been filed under before it was keyed by
+ * store. Order does not matter — each is tried and only a non-empty catalogue is
+ * taken. kiwiLiveMerchant is checked both as it stands (live-link may not have
+ * repointed it, or may be off entirely) and as it stood before it did
+ * (kiwiLiveMerchantPrev), so this never depends on script load order. */
+function _bqxLegacyPins() {
+  var out = [];
+  try {
+    ['kiwiLiveMerchantPrev', 'kiwiLiveMerchant'].forEach(function (k) {
+      var v = localStorage.getItem(k); if (v) out.push(v);
+    });
+  } catch (_) {}
+  return out;
+}
+/* Only carry over when the account has exactly ONE store. With two, there is no
+ * way to tell which of them the account-keyed data belonged to, and guessing
+ * would drop the boutique's stock into the restaurant. One store is the upgrade
+ * path this exists for; anything else is left alone. */
+function _bqxSoleStore() {
+  try {
+    var a = JSON.parse(localStorage.getItem('kiwiCustomVenues') || '[]');
+    return Array.isArray(a) && a.length === 1;
+  } catch (_) { return false; }
+}
+function _bqxHasStock(raw) {
+  try { var d = JSON.parse(raw || 'null'); return !!(d && d.products && d.products.length); } catch (_) { return false; }
+}
+function _bqxAdoptLegacy(slug, legacySlug) {
+  if (!slug || _bqxAdopted[slug]) return;
+  _bqxAdopted[slug] = 1;
+  if (!_bqxSoleStore()) return;
+  try {
+    var pre = 'kiwiBoutiqueCatalog:v1:';
+    // A BLANK record does not count as "already has its own" — opening the page
+    // once materialises an empty catalogue, which would otherwise permanently
+    // block the carry-over for a merchant who had stock under the old key.
+    if (_bqxHasStock(localStorage.getItem(pre + slug))) return;
+    var cands = [legacySlug].concat(_bqxLegacyPins());
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      if (!c || c === slug) continue;
+      var old = localStorage.getItem(pre + c);
+      if (!_bqxHasStock(old)) continue;                    // nothing worth carrying
+      localStorage.setItem(pre + slug, old);
+      var seq = localStorage.getItem('kiwiBarcodeSeq:' + c);
+      if (seq && !localStorage.getItem('kiwiBarcodeSeq:' + slug)) localStorage.setItem('kiwiBarcodeSeq:' + slug, seq);
+      return;
+    }
+  } catch (_) {}
+}
 function _bqxVenue() {
   try {
     if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
@@ -6819,8 +6876,12 @@ function _bqxVenue() {
       // at the register never appeared on the dashboard. Identity is only the
       // fallback, for an account that has no store record yet.
       var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
-      if (vd.custom && vd.name) return _bqxSlug(vd.name);
       var biz = (window.KiwiMe && window.KiwiMe.business) || '';
+      if (vd.custom && vd.name) {
+        var slug = _bqxSlug(vd.name);
+        _bqxAdoptLegacy(slug, biz && _bqxSlug(biz));
+        return slug;
+      }
       if (biz) return _bqxSlug(biz);
       if (vd.name) return _bqxSlug(vd.name);
     }

@@ -44,9 +44,23 @@
     return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
       .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
+  /* Pin the active tenant, preserving whatever was pinned before it — ONCE, the
+   * first time the value actually changes. Modules that need to find data filed
+   * under the previous (account-derived) slug read kiwiLiveMerchantPrev; they
+   * load after this one, so by the time they run the live value has already been
+   * rewritten and snapshotting it themselves is too late. */
+  function pin(v) {
+    try {
+      var cur = localStorage.getItem('kiwiLiveMerchant');
+      if (cur && cur !== v && localStorage.getItem('kiwiLiveMerchantPrev') == null) {
+        localStorage.setItem('kiwiLiveMerchantPrev', cur);
+      }
+      localStorage.setItem('kiwiLiveMerchant', v);
+    } catch (_) {}
+  }
   // Which tenant this dashboard is showing. Priority: an explicit ?merchant= (the
-  // operator's "Ouvrir dashboard", pinned to localStorage) → a pinned slug a paired
-  // caisse/operator already set → the signed-in merchant's OWN slug (from KiwiMe).
+  // operator's "Ouvrir dashboard", pinned to localStorage) → the ACTIVE STORE's own
+  // slug → the signed-in account's slug (from KiwiMe) → a paired till's store.
   // A REAL dashboard must NEVER fall back to the shared 'cafe-atlas' demo tenant —
   // that made a brand-new store poll another merchant's feed (P1). Unknown-yet real
   // session ⇒ '' (polls nothing until identity resolves); only the local demo keeps
@@ -54,7 +68,7 @@
   function merchant() {
     try {
       var q = new URLSearchParams(location.search).get('merchant');
-      if (q) { try { localStorage.setItem('kiwiLiveMerchant', q); } catch (_) {} return q; }
+      if (q) { pin(q); return q; }
       // The ACTIVE STORE owns the tenant, not the account. One account can hold
       // several stores (a boutique and a restaurant), and each has its own till,
       // its own feed and its own money — but KiwiMe.business is a single
@@ -71,7 +85,7 @@
       } catch (_) {}
       if (vd && vd.name) {
         var vs = slugify(vd.name);
-        if (vs) { try { localStorage.setItem('kiwiLiveMerchant', vs); } catch (_) {} return vs; }
+        if (vs) { pin(vs); return vs; }
       }
       // No store yet (fresh account, identity resolved but onboarding unfinished) —
       // the account name is the best answer, and heals a stale pin a previous
@@ -81,7 +95,7 @@
       var me = window.KiwiMe;
       if (me && me.business) {
         var s = slugify(me.business);
-        if (s) { try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {} return s; }
+        if (s) { pin(s); return s; }
       }
       // A PAIRED till owns its tenant: redeeming a code bound this device to that
       // store, and the caisse has no KiwiMe to derive from. This is the caisse's

@@ -58,6 +58,48 @@
     return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
       .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
+  /* One-time carry-over, for the same reason as the boutique catalogue: the book
+   * used to be named by whatever kiwiLiveMerchant held (an account-level slug),
+   * and is now named for the store. Identical in the one-store case; where they
+   * differ, adopt the existing book instead of showing an empty client list.
+   * Copy, never move. */
+  var adopted = {};
+  function hasClients(raw) {
+    try { var d = JSON.parse(raw || 'null'); return !!(d && d.list && d.list.length); } catch (_) { return false; }
+  }
+  /* Same one-store-only rule as the boutique catalogue: with two stores there is
+   * no way to tell which of them the account-keyed book belonged to. */
+  function soleStore() {
+    try {
+      var a = JSON.parse(localStorage.getItem('kiwiCustomVenues') || '[]');
+      return Array.isArray(a) && a.length === 1;
+    } catch (_) { return false; }
+  }
+  function adoptLegacyBook(slug) {
+    if (!slug || adopted[slug]) return;
+    adopted[slug] = 1;
+    if (!soleStore()) return;
+    try {
+      var pre = 'kiwi:clients:v1:';
+      // An EMPTY book does not count as "already has one" — otherwise merely
+      // opening the page once would permanently block the carry-over.
+      if (hasClients(localStorage.getItem(pre + slug))) return;
+      // Where the book could have been filed before: the pin as it stood before
+      // live-link.js repointed it (it preserves that for us — it loads first, so
+      // we cannot snapshot in time), and the account name it derived from.
+      var biz = '';
+      try { biz = (window.KiwiMe && window.KiwiMe.business) || ''; } catch (_) {}
+      var cands = [biz && slugStore(biz), ls('kiwiLiveMerchantPrev'), ls('kiwiLiveMerchant')];
+      for (var i = 0; i < cands.length; i++) {
+        var c = cands[i];
+        if (!c || c === slug) continue;
+        var old = localStorage.getItem(pre + c);
+        if (!hasClients(old)) continue;                    // nothing worth carrying
+        localStorage.setItem(pre + slug, old);
+        return;
+      }
+    } catch (_) {}
+  }
   function bookId() {
     // 1) DASHBOARD: the store currently being looked at. This outranks the pin
     //    below because kiwiLiveMerchant is a single global — on an account with
@@ -68,7 +110,7 @@
       if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
         var cvd = KV.getCurrentVenueData();
         var cs = cvd && cvd.name && slugStore(cvd.name);
-        if (cs) return cs;
+        if (cs) { adoptLegacyBook(cs); return cs; }
       }
     } catch (_) {}
     // 2) the merchant slug, written on both sides at pairing — the reliable spine.
