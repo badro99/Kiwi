@@ -1373,9 +1373,22 @@
     };
     const isCddOrStage = (c) => c === 'CDD' || c === 'Stage';
 
-    const fnOpts   = cat.functions.map(f => `<option value="${esc(f)}"${m.function === f ? ' selected' : ''}>${esc(f)}</option>`).join('');
-    const deptOpts = cat.departments.map(d => `<option value="${esc(d)}"${m.department === d ? ' selected' : ''}>${esc(d)}</option>`).join('');
-    const ctOpts   = CONTRACT_TYPES.map(c => `<option value="${esc(c)}"${m.contract === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    /* Le catalogue de postes dépend du métier de la boutique, mais la valeur
+     * DÉJÀ enregistrée peut ne pas s'y trouver : le propriétaire est
+     * « Propriétaire · Direction », un poste qu'aucune liste de vente ne
+     * propose, et un membre importé ou créé sous un autre métier garde le sien.
+     * Un <select> qui ne contient pas sa valeur affiche silencieusement la
+     * première option — donc ouvrir la fiche du patron et l'enregistrer, sans
+     * rien toucher, le rétrogradait en « Vendeur conseil · Vente ». On injecte
+     * la valeur courante en tête quand elle manque : le formulaire ne peut plus
+     * modifier ce que l'utilisateur n'a pas modifié. */
+    const optsWithCurrent = (listed, current) => {
+      const all = (current && listed.indexOf(current) < 0) ? [current].concat(listed) : listed;
+      return all.map((v) => `<option value="${esc(v)}"${current === v ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    };
+    const fnOpts   = optsWithCurrent(cat.functions, m.function);
+    const deptOpts = optsWithCurrent(cat.departments, m.department);
+    const ctOpts   = optsWithCurrent(CONTRACT_TYPES, m.contract);
     const langChips = LANGS.map(l => {
       const on = (m.languages || []).includes(l);
       return `<button type="button" class="kt-lang-chip${on ? ' on' : ''}" data-action="kt-lang-toggle" data-arg="${esc(l)}">${esc(l)}</button>`;
