@@ -452,18 +452,56 @@
     owned = true;
   }
 
+  /* ───────────────── publish to the customer QR page (real merchants only) ───
+   * The customer self-order page (kiwi-order.html) runs on the diner's own phone
+   * — it can't read this localStorage record. So a real, signed-in merchant
+   * mirrors its carte up to the server (POST /api/menu; the server derives the
+   * merchant from the session, we only send the data). GET /api/menu?merchant=
+   * <slug> then serves it to the customer. Gated to KiwiEnv.isReal() so the local
+   * pitch demo never makes a network call and stays byte-identical; fail-soft so
+   * a static host (GitHub Pages) or offline just no-ops. Debounced so a burst of
+   * edits publishes once. */
+  function isRealSession() {
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
+  }
+  let syncTimer = null;
+  function publish(vid) {
+    if (!isRealSession()) return;                 // local demo → never touch the network
+    const KV = window.KiwiVenue;
+    const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
+               (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    const data = store.get(vid);
+    try {
+      fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ name: vd.name || '', type: vd.type || '', data: data }),
+      }).catch(function () {});                    // fire-and-forget, fail-soft
+    } catch (_) {}
+  }
+  function schedulePublish(vid) {
+    if (!isRealSession()) return;
+    if (syncTimer) { try { clearTimeout(syncTimer); } catch (_) {} }
+    syncTimer = setTimeout(function () { syncTimer = null; publish(vid); }, 800);
+  }
+
   /* ───────────────── boot ───────────────── */
   function boot() {
     registerHandlers();
     // venues.js re-asserts nav-menu at 'load'; own it just after, before the
     // starter layer wraps at load+150ms (it lets 'menu' through via REAL_FOR_CUSTOM).
     setTimeout(ownNav, 60);
-    // re-render the open menu page live when this venue's menu changes elsewhere (caisse).
-    store.subscribe(() => {
+    // re-render the open menu page live when this venue's menu changes elsewhere
+    // (caisse), and — for a real merchant — publish the new carte to the server so
+    // the customer QR page picks it up.
+    store.subscribe((vid) => {
       if (isCustom() && document.querySelector('.dash-genpage [data-page="menu"], .kw-app [data-genpage="menu"]')) {
         try { render(); } catch (_) {}
       }
+      schedulePublish(vid);
     });
+    // Publish once on boot so a merchant who never edits still has its carte live.
+    if (isRealSession()) setTimeout(function () { try { publish(); } catch (_) {} }, 1500);
   }
   if (document.readyState === 'complete') boot();
   else window.addEventListener('load', boot);
@@ -479,6 +517,7 @@
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, addItem, updateItem, deleteItem, renameCategory, deleteCategory,
     render,
+    publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)
     _store: store,
   };
 })();

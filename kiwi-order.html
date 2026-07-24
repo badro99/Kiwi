@@ -2455,6 +2455,21 @@
     [dir="rtl"] .prep-eta strong,
     [dir="rtl"] #cart-grand { direction: ltr; unicode-bidi: isolate; }
     /* Greeting em-clip behaves the same in RTL — just measured by the script */
+
+    /* Real merchant with no published carte yet (tenant path only) */
+    .menu-comingsoon {
+      margin: 48px 20px;
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--ink-3);
+      font-family: var(--serif);
+      font-size: 22px;
+      font-style: italic;
+      line-height: 1.4;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      background: var(--paper-soft);
+    }
   </style>
 </head>
 
@@ -2971,6 +2986,7 @@
         table_hint: "Le numéro est gravé sur le bois de la table",
         btn_continue: "Continuer",
         menu_loc: "Médina · Tanger",
+        coming_soon: "Menu bientôt disponible",
         badge_takeout: "À emporter",
         badge_table: "Table",
         tab_top: "Top",
@@ -3128,6 +3144,7 @@
         table_hint: "The number is engraved on the table",
         btn_continue: "Continue",
         menu_loc: "Médina · Tangier",
+        coming_soon: "Menu coming soon",
         badge_takeout: "Takeout",
         badge_table: "Table",
         tab_top: "Top",
@@ -3285,6 +3302,7 @@
         table_hint: "الرقم مكتوب على الطاولة",
         btn_continue: "كمل",
         menu_loc: "المدينة · طنجة",
+        coming_soon: "القائمة قريبا",
         badge_takeout: "للأخذ",
         badge_table: "طاولة",
         tab_top: "توب",
@@ -3596,7 +3614,10 @@
     };
 
     /* ============ menu data ============ */
-    const MENU = [
+    // MENU is `let` (not const): for a real merchant resolved from the QR's
+    // ?merchant= slug, KiwiTenant replaces it with that venue's published carte.
+    // Untouched on the local demo — the array below stays exactly as-is.
+    let MENU = [
       { id: 'espresso',     cat: 'coffee', name: 'Espresso',           desc: 'Court, intense, torréfaction du jour',           price: 12, icon: 'coffee',      options: [OPT.sucre, OPT.shot], video: 'menu_try_video/v24044gl0000d47044vog65jf7h8q560.mov' },
       { id: 'noss-noss',    cat: 'coffee', name: 'Noss-noss',           desc: 'Moitié café, moitié lait chaud, la fierté locale', price: 16, icon: 'coffee',   options: [OPT.sucre] },
       { id: 'cappuccino',   cat: 'coffee', name: 'Cappuccino',         desc: 'Mousse onctueuse, cacao en option',              price: 22, icon: 'coffee',      options: [OPT.sucre, OPT.lait, OPT.shot], video: 'menu_try_video/v09044g40000cbokh6rc77uem774h4fg.mov' },
@@ -3617,7 +3638,14 @@
       cookie: 'pastry',
       sandwich: 'savory',
       'glass-water': 'drink',
+      utensils: 'savory',
     };
+
+    // Venue identity — the demo defaults. KiwiTenant overwrites these for a real
+    // merchant (see the tenant block near the bottom of this script); on the local
+    // demo they stay 'Café Atlas' / 'cafe-atlas-ready', so the demo is unchanged.
+    let VENUE_NAME = 'Café Atlas';
+    let NOTIF_TAG  = 'cafe-atlas-ready';
 
     /* ============ state ============ */
     let orderMode = null;        // 'table' | 'takeout'
@@ -4060,7 +4088,7 @@
 
       // Update bill subtitle (e.g. "Table 7 · Café Atlas")
       const subtitleEl = $('#bill-subtitle');
-      if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span> · Café Atlas`;
+      if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span> · ${VENUE_NAME}`;
 
       $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
       setTipPercent(billItems.length === 0 ? 0 : 15);
@@ -4430,7 +4458,7 @@
         try {
           new Notification(t('notif_ready_title'), {
             body: `${t('notif_ready_body_pre')}${orderNumber} ${t('notif_ready_body_post')}`,
-            tag: 'cafe-atlas-ready',
+            tag: NOTIF_TAG,
           });
         } catch (_) { /* iOS Safari throws unless installed as PWA */ }
       }
@@ -4503,13 +4531,150 @@
       refreshPermBanner();
     }
 
+    /* ============ tenant resolution (QR → real merchant) ============
+       This page serves two worlds from one file:
+         · the LOCAL pitch demo — no ?merchant, on localhost/file → the hardcoded
+           "Café Atlas" carte above, byte-for-byte unchanged; the tenant code below
+           never runs.
+         · a REAL merchant — the table QR encodes ?merchant=<slug>; we fetch that
+           venue's published carte + name from GET /api/menu and swap it in. Mirrors
+           the KiwiEnv.isReal() convention used across the app: a demo is a
+           localhost-only affordance and can never surface for a real tenant. */
+    const KiwiTenant = (function () {
+      let h = ''; try { h = (location.hostname || '').toLowerCase(); } catch (_) {}
+      const local = (location.protocol === 'file:') ||
+        ['localhost', '127.0.0.1', '::1', '0.0.0.0', ''].indexOf(h) >= 0 || /\.local$/.test(h);
+      let slug = ''; try { slug = (new URLSearchParams(location.search).get('merchant') || '').trim(); } catch (_) {}
+      return { slug: slug, hasTenant: !!slug, local: local };
+    })();
+
+    // Pristine snapshot of the demo copy, so identity patching is idempotent and
+    // re-appliable (interim slug name → real name once the fetch lands).
+    const I18N_ORIG = JSON.parse(JSON.stringify(I18N));
+    const prettySlug = (s) => String(s || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    // Rewrite every demo-identity string to this venue: the café name (both case
+    // variants) becomes VENUE_NAME, and the demo location keys are blanked so no
+    // "Médina · Tanger" leaks. Always derived from the pristine snapshot.
+    function patchTenantIdentity(name) {
+      VENUE_NAME = name || 'Kiwi Order';
+      NOTIF_TAG = (KiwiTenant.slug || 'kiwi') + '-ready';
+      ['fr', 'en', 'ar'].forEach((l) => {
+        const src = I18N_ORIG[l], d = I18N[l];
+        if (!src || !d) return;
+        Object.keys(src).forEach((k) => {
+          if (typeof src[k] !== 'string') return;
+          d[k] = src[k].split('Café Atlas').join(VENUE_NAME).split('café Atlas').join(VENUE_NAME);
+        });
+        ['menu_loc', 'brand_tag', 'greet_sub_loc'].forEach((k) => { if (k in d) d[k] = ''; });
+      });
+      // Brand wordmarks (keep the trailing accent dot <i>)
+      $$('.brand-mark').forEach((el) => {
+        const dot = el.querySelector('i');
+        el.textContent = VENUE_NAME;
+        if (dot) el.appendChild(dot);
+      });
+      const nm = $('.menu-cafe .name'); if (nm) nm.textContent = VENUE_NAME;
+      const ctx = $('.menu-cafe .ctx'); if (ctx) ctx.textContent = '';
+      try { document.title = 'Kiwi Order · ' + VENUE_NAME; } catch (_) {}
+      const m1 = $('meta[name="apple-mobile-web-app-title"]'); if (m1) m1.setAttribute('content', VENUE_NAME);
+      const m2 = $('meta[name="description"]'); if (m2) m2.setAttribute('content', 'Commandez depuis votre table · ' + VENUE_NAME);
+    }
+
+    // Convert the server carte { cats, items } into the order page's MENU shape,
+    // keeping only available items, and return the categories that actually have
+    // one (for the tab bar). The rich demo affordances (per-item videos, options,
+    // Lucide icons) simply aren't present for a real merchant — items degrade to
+    // name · desc · price with a direct add-to-cart.
+    function adaptServerMenu(menu) {
+      const items = (menu.items || []).filter((it) => it.avail !== false);
+      MENU = items.map((it) => ({
+        id: it.id, cat: it.catId || 'uncat',
+        name: it.name, desc: it.desc || '', price: Number(it.price) || 0,
+        icon: 'utensils', options: [],
+      }));
+      // The menu isn't translated server-side → the same text serves every lang.
+      ['fr', 'en', 'ar'].forEach((l) => {
+        MENU_I18N[l] = MENU_I18N[l] || {};
+        items.forEach((it) => { MENU_I18N[l][it.id] = { name: it.name, desc: it.desc || '' }; });
+      });
+      const used = {}; MENU.forEach((m) => { used[m.cat] = true; });
+      return (menu.cats || []).filter((c) => used[c.id]);
+    }
+
+    function buildTenantTabs(cats) {
+      const tabsEl = $('.menu-tabs'); if (!tabsEl) return;
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      let html = `<button class="menu-tab is-active" data-tab="all">${esc(t('tab_all'))}</button>`;
+      cats.forEach((c) => { html += `<button class="menu-tab" data-tab="${esc(c.id)}">${esc(c.name)}</button>`; });
+      tabsEl.style.display = '';
+      tabsEl.innerHTML = html;
+    }
+
+    function showComingSoon() {
+      MENU = [];
+      const tabsEl = $('.menu-tabs'); if (tabsEl) tabsEl.style.display = 'none';
+      const list = $('#menu-list');
+      if (list) { list.classList.remove('is-video-grid'); list.innerHTML = `<div class="menu-comingsoon">${t('coming_soon')}</div>`; }
+    }
+
+    // Called once the /api/menu fetch resolves.
+    function applyTenant(payload) {
+      const menu = payload && payload.menu;
+      patchTenantIdentity((payload && payload.name) || prettySlug(KiwiTenant.slug));
+      if (menu && menu.items && menu.items.length) {
+        const cats = adaptServerMenu(menu);
+        buildTenantTabs(cats);
+        applyLang(currentLang);      // re-render static i18n + menu from patched data
+        renderMenu('all');
+      } else {
+        applyLang(currentLang);
+        showComingSoon();            // real venue, carte not published yet
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Synchronous pre-paint hygiene + async resolve. Clears the demo carte and
+    // patches identity to the slug immediately (no "Café Atlas" flash), then fills
+    // in the real name/menu when the fetch lands. Fail-soft → coming-soon.
+    function bootTenant() {
+      MENU = [];
+      patchTenantIdentity(prettySlug(KiwiTenant.slug));
+      applyLang(currentLang);
+      if (window.lucide) window.lucide.createIcons();
+      fetch('/api/menu?merchant=' + encodeURIComponent(KiwiTenant.slug), { headers: { Accept: 'application/json' } })
+        .then((r) => (r && r.ok) ? r.json() : null)
+        .then((data) => applyTenant(data || { name: '', menu: null }))
+        .catch(() => applyTenant({ name: '', menu: null }));
+    }
+
+    // Hosted with NO ?merchant — a misconfigured QR. Never fall back to the demo
+    // café on a real host; show a neutral shell instead.
+    function applyNoVenue() {
+      patchTenantIdentity('Kiwi Order');
+      applyLang(currentLang);
+      showComingSoon();
+    }
+
     /* ============ wire it up ============ */
     document.addEventListener('DOMContentLoaded', () => {
-      // Apply saved language FIRST so the greeting flash measures the right em width
-      applyLang(currentLang);
-      renderMenu('all');
-      refreshCartUI();
-      if (window.lucide) window.lucide.createIcons();
+      if (KiwiTenant.hasTenant) {
+        // Real merchant — resolve identity + carte from the server.
+        bootTenant();
+        refreshCartUI();
+      } else if (!KiwiTenant.local) {
+        // Hosted, no ?merchant — neutral shell, never the demo café.
+        applyNoVenue();
+        refreshCartUI();
+      } else {
+        // Local pitch demo — original init, byte-for-byte unchanged.
+        // Apply saved language FIRST so the greeting flash measures the right em width
+        applyLang(currentLang);
+        renderMenu('all');
+        refreshCartUI();
+        if (window.lucide) window.lucide.createIcons();
+      }
 
       // Browsers auto-scroll the offset-parent to bring a focused button into view
       // (even with overflow:hidden) — this made the cart-sheet panel peek up from
@@ -4618,8 +4783,11 @@
         if (e.target.closest('#restart-btn')) { restartMenu(); return; }
       });
 
-      // Greeting plays on landing
-      requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
+      // Greeting plays on landing — demo-only flourish (its hero copy names the
+      // demo café/location); a real tenant skips it.
+      if (!KiwiTenant.hasTenant && KiwiTenant.local) {
+        requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
+      }
     });
   </script>
 </body>

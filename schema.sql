@@ -106,3 +106,23 @@ CREATE TABLE IF NOT EXISTS pairings (
   used_ts     INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS pairings_code_live ON pairings(code) WHERE used_ts IS NULL;
+
+-- ── Published menu (customer QR self-order → kiwi-order.html) ────────────────
+-- One row per merchant: the carte a customer sees after scanning the table QR.
+-- The merchant's dashboard menu lives client-side (localStorage, per-venue, via
+-- assets/menu-catalog.js) — a record NO customer device can read. This table is
+-- the PUBLISHED copy: the dashboard mirrors its menu up here (functions/api/menu
+-- .js POST, merchant derived from the session) and the customer page reads it
+-- back (GET, public — see the allow-list in functions/_middleware.js). It holds
+-- ONLY what a customer is meant to see: the display name, the trade type, and the
+-- menu itself. Never PINs, sales, or any account data.
+--   data JSON shape (mirrors assets/menu-catalog.js's store):
+--     { cats:  [{ id, name, sub:[{id,name}] }],
+--       items: [{ id, name, price, catId, subId, desc, avail }] }
+CREATE TABLE IF NOT EXISTS menus (
+  merchant   TEXT PRIMARY KEY,         -- slugMerchant(business) — the QR's ?merchant=
+  name       TEXT,                     -- display name shown to the customer
+  type       TEXT,                     -- trade (cafe|restaurant|…), for future theming
+  data       TEXT NOT NULL,            -- JSON: { cats:[…], items:[…] }
+  updated_ts INTEGER NOT NULL
+);

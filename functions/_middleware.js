@@ -72,6 +72,20 @@ export async function onRequest(context) {
   const sitePassword = env.SITE_PASSWORD;
   const isApi = path.indexOf('/api/') === 0;
 
+  // ── Public customer surface (unauthenticated by design) ────────────────────
+  // A diner who scans a table QR has NO account and NO gate cookie, so the whole
+  // gate below would lock them out. The self-order page and its READ-ONLY menu
+  // endpoint are the only surfaces a customer legitimately reaches with no
+  // session — allow-list them precisely (exact path, GET/HEAD only) and nothing
+  // else. The page carries no merchant secrets (it fetches its menu by slug), and
+  // GET /api/menu returns only the published carte + display name (never PINs,
+  // sales, or account data — see functions/api/menu.js). POST /api/menu is NOT
+  // here: publishing still requires the merchant's authenticated dashboard
+  // session, which passes the normal gate below.
+  const method = request.method;
+  const isRead = method === 'GET' || method === 'HEAD';
+  if (isRead && (path === '/kiwi-order.html' || path === '/api/menu')) return next();
+
   // Nothing configured → open site (local dev / preview without secrets).
   if (!authSecret && !sitePassword) return next();
 
