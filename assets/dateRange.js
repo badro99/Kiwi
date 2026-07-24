@@ -1616,6 +1616,43 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
+  /* Same numbers over an EXPLICIT window, plus the tender split. Every
+   * real-venue comparison below is built on this one primitive so the KPI
+   * band, the hero deltas and the card/cash tile can never disagree. */
+  function realWindowStats(from, to) {
+    let revenue = 0, count = 0, card = 0, cash = 0;
+    realSalesList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.max(0, +e.amount || 0);
+      revenue += amt; count++;
+      if (String(e.method || 'card') === 'cash') cash += amt; else card += amt;
+    });
+    return { revenue, count, basket: count ? revenue / count : 0, card, cash };
+  }
+  /* rangeBounds leaves `to` open at Infinity for live ranges; a comparison
+   * needs a closed window it can shift backwards, so pin the open end to now. */
+  function closedBounds(range) {
+    const [from, to] = rangeBounds(range || effRange());
+    return [from, to === Infinity ? Date.now() + 1 : to];
+  }
+  /* A percentage change needs something to change FROM. A merchant on their
+   * first day has no yesterday, and printing « 0 % vs hier » beside their
+   * opening sales claims the day was flat when it was in fact their first.
+   * null means "no baseline" — every caller hides the comparison rather than
+   * inventing one. Without `backDays` the baseline is the window immediately
+   * before this one; with it, the SAME slice N days earlier — so at 14h « vs
+   * semaine » weighs today-so-far against last week up to 14h, not against a
+   * full day it hasn't finished yet. */
+  function realDeltaPct(range, pick, backDays) {
+    const [from, to] = closedBounds(range);
+    const span = Math.max(1, to - from);
+    const off = backDays ? backDays * 864e5 : span;
+    const base = pick(realWindowStats(from - off, to - off));
+    if (!base) return null;
+    const cur = pick(realWindowStats(from, to));
+    return Math.round(((cur - base) / base) * 1000) / 10;
+  }
   // Round a max value up to a clean axis ceiling (1/2/5 × 10ⁿ).
   function niceCeil(v) {
     if (!(v > 0)) return 1;
@@ -1690,7 +1727,21 @@
     // windowed to the active range so the number tracks the selected period.
     if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
       const t = realSalesTotals();
-      data = { ...data, amount: t.revenue, netAfterKiwi: Math.round(t.revenue * 0.839) };
+      /* Les trois comparaisons du hero sortent des ventes réelles. Une période
+       * de référence vide renvoie null, et le bloc entier disparaît au lieu
+       * d'annoncer « 0 % » : le premier jour d'un commerçant n'a pas de veille,
+       * et prétendre le contraire est la seule chose que ce chiffre ne doit
+       * jamais faire. Les lignes reviennent d'elles-mêmes dès qu'il y a un
+       * historique à comparer. */
+      const rev = (s) => s.revenue;
+      data = {
+        ...data,
+        amount: t.revenue,
+        netAfterKiwi: Math.round(t.revenue * 0.839),
+        deltaHier:    realDeltaPct(effRange(), rev),
+        deltaSemaine: realDeltaPct(effRange(), rev, 7),
+        deltaMois:    realDeltaPct(effRange(), rev, 28),
+      };
     }
 
     const labelEl = document.querySelector('[data-hero-label]');
@@ -1877,10 +1928,27 @@
     // the closest one so it never crashes on moisDernier/trimestre/annee.
     rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
     const v = getCurrentVenue();
-    // A user-created venue has no hourly history — a flat, empty heatmap
-    // instead of borrowing Café Atlas's intensity pattern.
+    /* A real merchant's peak hours come from their OWN tickets: every sale
+     * carries a `ts`, so bucket the active window by hour of day. Before the
+     * first sale this still draws flat — the honest answer — but it no longer
+     * STAYS flat once the till has rung, which is the one thing a merchant
+     * opens this card to find out. Never borrows Café Atlas's shape. */
     if (window.KiwiVenue?.isCustom?.(v)) {
-      return HH_HOURS.map(h => ({ hour: h, revenue: 0, covers: 0, intensity: 0 }));
+      const [from, to] = closedBounds(rng);
+      const rev = new Array(HH_HOURS.length).fill(0);
+      const cov = new Array(HH_HOURS.length).fill(0);
+      realSalesList().forEach((e) => {
+        const ts = +e.ts || 0;
+        if (ts < from || ts >= to) return;
+        const i = (new Date(ts).getHours() - 11 + 24) % 24;  // 11h → 0 … 02h → 15
+        if (i >= HH_HOURS.length) return;                    // hors de la bande affichée
+        rev[i] += Math.max(0, +e.amount || 0);
+        cov[i] += 1;
+      });
+      const max = Math.max(...rev);
+      return HH_HOURS.map((h, i) => ({
+        hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
+      }));
     }
     const rev = HH_RAW_BY_VENUE[v]?.[rng] || HH_RAW_BY_VENUE.cafeAtlas[rng]
       || HH_RAW_BY_VENUE.cafeAtlas.trenteJours || HH_RAW_BY_VENUE.cafeAtlas.aujourdhui;
@@ -2004,6 +2072,12 @@
   const TIP_RATE = { restaurant: 0.072, spa: 0.055, boutique: 0, fusion: 0.06 };
   const RANGE_DAYS = { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30, moisDernier: 30, trimestre: 90, annee: 365, personnalise: 1 };
   const r1 = (n) => Math.round(n * 10) / 10;
+  /* Derived tiles combine the deltas of their inputs. A null input means "no
+   * baseline to compare against" — and `null + null` is 0 in JS, which would
+   * quietly resurrect the « 0 % » the null exists to suppress. So: any missing
+   * component ⇒ the derived tile has no comparison either. With demo data
+   * every component is a number, so this behaves exactly like the old r1(sum). */
+  const withDelta = (parts, fn) => parts.some((p) => p == null) ? null : r1(fn(...parts));
   const revOf = (d) => (d.tx && d.panier) ? d.tx.value * d.panier.value : null;
   const margeOf = (d, ctx) => d.marge ? d.marge.value : (DEFAULT_MARGIN[ctx.venueType] ?? null);
 
@@ -2013,17 +2087,17 @@
     panier:     { labels: { default: 'Panier moyen' }, i18n: 'dash.kpi.basket',
                   desc: 'Montant moyen dépensé par vente', derive: (d) => d.panier || null },
     revenue:    { labels: { default: 'Chiffre d’affaires' }, i18n: 'dash.kpi.revenue',
-                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: r1(d.tx.delta + d.panier.delta) }; } },
+                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b) }; } },
     revPerDay:  { labels: { default: 'CA par jour' }, i18n: 'dash.kpi.revPerDay',
-                  desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: r1(d.tx.delta + d.panier.delta) }; } },
+                  desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b) }; } },
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
                   desc: 'Part du CA conservée après coût matière', derive: (d) => d.marge || null },
     profit:     { labels: { default: 'Bénéfice brut' }, i18n: 'dash.kpi.grossProfit',
-                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: r1(d.tx.delta + d.panier.delta + (d.marge ? d.marge.delta : 0)) }; } },
+                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta, d.marge ? d.marge.delta : 0], (a, b, c) => a + b + c) }; } },
     cogs:       { labels: { default: 'Coût matière' }, i18n: 'dash.kpi.cogs',
-                  desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: r1(d.tx.delta + d.panier.delta - (d.marge ? d.marge.delta : 0)) }; } },
+                  desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta, d.marge ? d.marge.delta : 0], (a, b, c) => a + b - c) }; } },
     tips:       { labels: { default: 'Pourboires' }, i18n: 'dash.kpi.tips',
-                  desc: 'Pourboires estimés encaissés', derive: (d, ctx) => { const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0; return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: r1(d.tx.delta + d.panier.delta + 5) }; } },
+                  desc: 'Pourboires estimés encaissés', derive: (d, ctx) => { const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0; return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b + 5) }; } },
     success:    { labels: { default: 'Taux succès', spa: 'Taux remplissage' }, i18n: 'dash.kpi.success',
                   desc: 'Paiements aboutis · créneaux remplis', derive: (d) => d.success || null },
     ratio:      { labels: { default: 'Ratio card / cash' }, i18n: 'dash.kpi.ratio',
@@ -2031,9 +2105,9 @@
     regulars:   { labels: { default: 'Clients réguliers', boutique: 'Clients fidèles', spa: 'Clients fidèles' }, i18n: 'dash.kpi.regular',
                   desc: 'Clients déjà venus sur la période', derive: (d) => d.regulars || null },
     retention:  { labels: { default: 'Taux de fidélité' }, i18n: 'dash.kpi.retention',
-                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: r1(d.regulars.delta - d.tx.delta) }; } },
+                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
     newClients: { labels: { default: 'Nouveaux clients' }, i18n: 'dash.kpi.newClients',
-                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: r1(d.tx.delta - d.regulars.delta * 0.3) }; } },
+                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
     txPerDay:   { labels: { default: 'Ventes par jour', spa: 'RDV par jour' }, i18n: 'dash.kpi.txPerDay',
                   desc: 'Nombre de ventes moyen par jour', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
     occupation: { labels: { default: "Taux d'occupation" }, i18n: 'dash.kpi.occupancy',
@@ -2110,13 +2184,23 @@
     // come from the merchant's recorded sales.
     if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
       const t = realSalesTotals();
+      const rng = effRange();
+      const [wFrom, wTo] = closedBounds(rng);
+      const w = realWindowStats(wFrom, wTo);
+      /* Le ratio se lit « card / cash ». Les deux parts sortent des ventes
+       * encaissées — la même source que l'anneau Mix de paiement juste à côté,
+       * pour que deux cartes affichant la même donnée ne puissent plus se
+       * contredire. La part espèces est le complément à 100, donc l'addition
+       * tombe toujours juste. Sans encaissement : le tiret, il n'y a rien à
+       * répartir. */
+      const tender = w.card + w.cash;
+      const cardPct = tender ? Math.round((w.card / tender) * 100) : 0;
       data = {
         ...data,
-        tx:     { ...(data.tx || {}),     value: t.count,              delta: 0 },
-        panier: { ...(data.panier || {}), value: Math.round(t.basket), delta: 0 },
-        // Blank the string-valued KPIs zeroClone can't zero (text / unit).
-        ratio:    data.ratio    ? { ...data.ratio,    text: '—', unit: '', delta: 0 } : data.ratio,
-        regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: 0 } : data.regulars,
+        tx:     { ...(data.tx || {}),     value: t.count,              delta: realDeltaPct(rng, (s) => s.count) },
+        panier: { ...(data.panier || {}), value: Math.round(t.basket), delta: realDeltaPct(rng, (s) => s.basket) },
+        ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
+        regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
       };
       // A custom HOTEL's band needs the hotel tiles — there is no hotel demo
       // sibling on this dashboard to zero-clone, so build them blank here.
@@ -2125,12 +2209,12 @@
         const rooms = +((window.KiwiVenue?.getCurrentVenueData?.() || {}).profileInfo?.rooms) || 0;
         data = {
           ...data,
-          occupation: { value: 0, unit: '%',   fmt: 'pct1', delta: 0 },
-          adr:        { value: 0, unit: 'MAD', fmt: 'int',  delta: 0 },
-          revpar:     { value: 0, unit: 'MAD', fmt: 'int',  delta: 0 },
-          arrdep:     { text: '0 / 0', unit: '', delta: 0 },
-          menage:     { value: 0, unit: rooms ? `/ ${rooms}` : '', fmt: 'int', delta: 0 },
-          mixRev:     { text: '—', unit: '', delta: 0 },
+          occupation: { value: 0, unit: '%',   fmt: 'pct1', delta: null },
+          adr:        { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
+          revpar:     { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
+          arrdep:     { text: '0 / 0', unit: '', delta: null },
+          menage:     { value: 0, unit: rooms ? `/ ${rooms}` : '', fmt: 'int', delta: null },
+          mixRev:     { text: '—', unit: '', delta: null },
         };
       }
     }
@@ -2224,8 +2308,17 @@
       }
       if (deltaEl) {
         const d = tileSpec.delta;
-        deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
-        deltaEl.innerHTML = `${arrowSvg(d >= 0)}${fmtPct(d)} ${suffix}`;
+        /* Pas de période précédente = pas de comparaison. On écrit le tiret
+         * plutôt qu'un « 0 % » qui affirmerait que rien n'a bougé, alors que
+         * c'est le premier jour du commerçant. Pas de flèche non plus : elle
+         * pointerait dans une direction inventée. */
+        if (d == null) {
+          deltaEl.className = 'd neutral';
+          deltaEl.innerHTML = `— ${suffix}`;
+        } else {
+          deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
+          deltaEl.innerHTML = `${arrowSvg(d >= 0)}${fmtPct(d)} ${suffix}`;
+        }
       }
     });
   }
@@ -2901,6 +2994,12 @@
   };
   // Rows for the active range: only tenders actually used, so a store that takes
   // cash only is not told it has four dead card rails.
+  /* Au centre de l'anneau, la démo affiche le total CARTE — d'où « MAD carte »
+   * dans le HTML. Une venue réelle y affiche le total TOUS MODES, donc la même
+   * légende ferait lire « 1 350 MAD carte » à un commerçant qui n'a encaissé
+   * que 450 MAD par carte. Deux légendes, un seul centre. */
+  const MIX_CENTER_ALL = { fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' };
+
   function realMixRows(lang, range) {
     const [from, to] = rangeBounds(range || effRange());
     const by = {};
@@ -3020,6 +3119,22 @@
 
     const center = document.querySelector('[data-mix-center-amt]');
     if (center) animateNumber(center, parseAmountFromEl(center), centerMad, { duration: 700, format: v => frInt(v) });
+
+    /* On retire data-i18n côté venue réelle, sinon i18n.js réimposerait la
+     * légende démo au prochain changement de langue ; on le remet pour la démo
+     * afin qu'un retour en arrière retrouve sa traduction. */
+    const centerUnit = center && center.parentElement
+      ? center.parentElement.querySelector('.slash') : null;
+    if (centerUnit) {
+      if (custom) {
+        centerUnit.removeAttribute('data-i18n');
+        centerUnit.textContent = MIX_CENTER_ALL[lang] || MIX_CENTER_ALL.fr;
+      } else {
+        const T = window.KiwiI18n?.T?.[lang] || {};
+        centerUnit.setAttribute('data-i18n', 'dash.mix.center.unit');
+        centerUnit.textContent = T['dash.mix.center.unit'] || 'MAD carte';
+      }
+    }
 
     const sub = document.querySelector('[data-mix-sub]');
     if (sub) sub.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange];
