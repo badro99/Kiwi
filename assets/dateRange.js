@@ -4631,6 +4631,13 @@
     try { renderStaff(); } catch (_) {}
   }, { once: true });
 
+  /* Et à CHAQUE changement de roster ou d'heures — pas une seule fois : on
+   * saisit les heures sur Paie puis on revient à l'accueil, la carte doit déjà
+   * le savoir. */
+  window.addEventListener('kiwi-team-changed', () => {
+    try { renderStaff(); } catch (_) {}
+  });
+
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */
   function tickLiveRevenue({ amount = 0, tip = 0 } = {}) {
     // Demo clock owns deterministic ticking on aujourdhui — skip random ticks.

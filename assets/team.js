@@ -747,6 +747,11 @@
     // Every roster change reaches the till from here — one place, so a future
     // mutation path can't forget to publish and quietly leave a cashier locked out.
     publishPins();
+    /* La carte Équipe de l'accueil lit ce roster. Sans ce signal elle gardait
+     * l'état du chargement : on saisissait les heures sur Paie, on revenait à
+     * l'accueil, et elle annonçait encore « 0 sur 3 en service » jusqu'au
+     * prochain rechargement. */
+    try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
   loadCustomTeams();
   window.addEventListener('pagehide', saveCustomTeams);
