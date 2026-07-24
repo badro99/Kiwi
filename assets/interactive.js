@@ -3518,8 +3518,7 @@ ar: {
     host.appendChild(bodyEl);
     if (o.foot) { const f = document.createElement('div'); f.className = 'genpage-foot'; f.insertAdjacentHTML('beforeend', o.foot); host.appendChild(f); }
     // Swap into the page: clear any active page class, mark this one.
-    [...document.body.classList].forEach((c) => { if (c.indexOf('page-') === 0) document.body.classList.remove(c); });
-    document.body.classList.add('page-genpage');
+    pageShell('genpage');
     const bc = document.querySelector('.breadcrumb');
     if (bc) {
       bc.textContent = 'Accueil ';
@@ -3541,9 +3540,26 @@ ar: {
     return { el: host, close: () => { if (handlers['nav-accueil']) handlers['nav-accueil'](); } };
   }
 
+  /* Switch the dashboard's page shell. Exactly ONE body.page-* class may be set:
+   * each shell hides its siblings with `display: none !important`, so two at once
+   * means the page you navigated TO renders at zero height and the merchant sees
+   * the page they left — or nothing at all.
+   *
+   * Every page module used to hand-maintain its own list of siblings to remove,
+   * and none of the lists was complete: team.js didn't clear page-conformite, so
+   * Conformité → Équipe showed Conformité; stock.js didn't clear page-finance;
+   * finance.js didn't clear page-conformite; nobody cleared page-genpage. This
+   * sweeps whatever is there, which is what appPage() has always done, so a new
+   * shell can never be forgotten by an older module. Pass no name to clear. */
+  function pageShell(name) {
+    const b = document.body;
+    [...b.classList].forEach((c) => { if (c.indexOf('page-') === 0) b.classList.remove(c); });
+    if (name) b.classList.add('page-' + name);
+  }
+
   window.Kiwi = {
     toast, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
-    setActivePage, syncSidebar,
+    setActivePage, syncSidebar, pageShell,
     get activePage() { return activePage; },
   };
 

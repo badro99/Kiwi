@@ -800,8 +800,9 @@
    * ═══════════════════════════════════════════════════════════════════════ */
   function showPage() {
     stPageActive = true;
-    document.body.classList.remove('page-equipe', 'page-menu', 'page-payroll');
-    document.body.classList.add('page-stock');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('stock');
+    else document.body.classList.add('page-stock');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(t('breadcrumb'))}</b>`;
     /* Pin sidebar selector on Stock via Kiwi.setActivePage — drawers/modals

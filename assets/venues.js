@@ -3056,8 +3056,9 @@
   function eqShowPage() {
     eqCurrentPage = 'equipe';
     /* Clear any sibling full-page view so two page-* classes never coexist. */
-    document.body.classList.remove('page-menu', 'page-payroll');
-    document.body.classList.add('page-equipe');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('equipe');
+    else document.body.classList.add('page-equipe');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Équipe</b>';
     /* Pin the sidebar selector on Équipe via the single source of truth so
@@ -4279,8 +4280,9 @@
      * also reset the Équipe module's page flag so its clock/venue
      * subscribers don't keep re-rendering a now-hidden section. */
     eqCurrentPage = 'dashboard';
-    document.body.classList.remove('page-equipe', 'page-payroll');
-    document.body.classList.add('page-menu');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('menu');
+    else document.body.classList.add('page-menu');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Menu &amp; modificateurs</b>';
     /* Pin sidebar selector on Menu via Kiwi.setActivePage — drawers/modals
@@ -6813,8 +6815,9 @@
 
   function payShowPage() {
     payCurrentPage = 'payroll';
-    document.body.classList.remove('page-equipe', 'page-menu');
-    document.body.classList.add('page-payroll');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('payroll');
+    else document.body.classList.add('page-payroll');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Paie &amp; Planning</b>';
     /* Pin sidebar selector on Paie via Kiwi.setActivePage — drawers/modals

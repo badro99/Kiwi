@@ -791,8 +791,9 @@
     const T = t();
     pageActive = true;
     pageMode = 'equipe';
-    document.body.classList.remove('page-menu', 'page-payroll', 'page-stock', 'page-genpage');
-    document.body.classList.add('page-equipe');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('equipe');
+    else document.body.classList.add('page-equipe');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(T.breadcrumb)}</b>`;
     window.Kiwi?.setActivePage?.('equipe');

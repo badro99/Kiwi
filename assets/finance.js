@@ -910,8 +910,9 @@
    * ═══════════════════════════════════════════════════════════════════════ */
   function showPage() {
     pageActive = true;
-    document.body.classList.remove('page-equipe', 'page-menu', 'page-payroll', 'page-stock');
-    document.body.classList.add('page-finance');
+    // Exactly one page shell at a time — see Kiwi.pageShell.
+    if (window.Kiwi && Kiwi.pageShell) Kiwi.pageShell('finance');
+    else document.body.classList.add('page-finance');
     const bc = document.querySelector('.breadcrumb');
     if (bc) bc.innerHTML = `Accueil <span class="sep">/</span> <b>${esc(t('breadcrumb'))}</b>`;
     window.Kiwi?.setActivePage?.('finance');
