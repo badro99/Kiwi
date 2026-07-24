@@ -152,10 +152,79 @@ merchant-slug key so inventory syncs, but the sales mirror lives under a *differ
 Needs a pass to confirm the caisse sale actually surfaces on the dashboard "En direct" feed
 under the right venue. _To verify on the dashboard side._
 
-### 🟠 #8 — Stale phantom sale in `kiwiSales:own` (cross-account leftover, to investigate)
+### 🟠 #8 — Stale phantom sale in `kiwiSales:own` → traced to a real cross-tenant leak (FIXED)
 `kiwiSales:own` held `[{ts, amount:189, method:"cash", cursor:5}]` — a single sale
-timestamped ~3 h **before** this account created its first product, i.e. not one of Claude's
-Moneys' sales. `kiwiSales:own` is keyed by the generic "own" venue (not account-scoped by
-email), so a prior account's live-mirrored sale can bleed into a fresh store's KPI sum.
-Needs confirming against F1 isolation + the live-feed→KPI bridge. _To investigate on the
-dashboard._
+timestamped ~3 h **before** this account created its first product. Traced to the server:
+
+```
+GET /api/feed?merchant=claude-s-moneys → cursor 6 · 450 MAD · "Chemise en lin"   ← ours
+GET /api/feed?merchant=mixmax-test     → cursor 5 · 189 MAD · "Jean"             ← Ghali's
+```
+
+The 189 MAD sale belongs to **`mixmax-test`** on the server, but it was sitting in Claude's
+Moneys' browser, counted into this store's KPIs. Not a display glitch — a real
+cross-tenant ingest. Root cause + fix: see 🔴 #9 below. **The 450 MAD caisse sale filed
+correctly** under `kiwiSales:vmrza3s4g`, so the caisse→dashboard path itself is sound;
+what leaked came in through the feed poll.
+
+_Note: #7's catalogue half is a false alarm._ `_bqxVenue()` (pages-pro.js:6806) resolves to
+`_bqxSlug(KiwiMe.business)` = `claude-s-moneys` on a real session — the same key the caisse
+writes. Confirmed live: `KiwiBoutiqueCatalog.use('claude-s-moneys').stats()` → 1 produit ·
+10 pièces · 4 500 MAD from the **dashboard** tab. Inventory sync is correct. Only the
+*sales* keys are per-venue (`venues.js:7071 SALES_KEY = id => 'kiwiSales:' + id`), which is
+what let an ingested foreign sale land in the `own` bucket.
+
+---
+
+## Security — multi-tenant isolation (found while chasing #8)
+
+### 🔴 #9 — Any merchant could read any other merchant's sales feed (FIXED)
+**Symptom:** `GET /api/feed?merchant=<slug>` returned that store's sales to *any* caller
+past the site gate. Demonstrated live: from Claude's Moneys' authenticated session I read
+`mixmax-test`'s full feed. Slugs are `slugMerchant(business name)`, so they're guessable.
+
+**Root cause:** `functions/api/feed.js` took the tenant straight from the query string with
+no ownership check. The site gate admits *every* signed-in merchant plus the shared
+`SITE_PASSWORD` staff passcode, so "past the gate" was being treated as "entitled to this
+store's data". The same missing check is what let the leak in #8 happen automatically: the
+feed poll starts at boot, `merchant()` fell back to a stale `kiwiLiveMerchant` a previous
+account left in the browser, and the server happily served that other merchant's sales.
+
+**Fix:** the server now decides the tenant, not the client — account session → always that
+account's own slug (`?merchant=` ignored); operator (`kiwi_op`, God mode) → `?merchant=`
+honoured, that's what the console is for; gate-only caller (pitch demo) → demo tenant only.
+Unknown ⇒ empty feed. Demo path unchanged.
+
+### 🔴 #10 — Shared `'default'` tenant bucket on sale + feed (FIXED)
+Both `/api/sale` and `/api/feed` defaulted a missing/empty merchant to the literal string
+`'default'`. Every device whose identity hadn't resolved yet **wrote real sales into one
+shared bucket**, which any other unresolved device then **read back as its own**. A
+cross-tenant channel by construction, and unattributed money is unrecoverable once there.
+**Fix:** `/api/sale` refuses an unnamed sale (400 `no-merchant`); `/api/feed` returns an
+empty feed; `live-link.js postSale()` skips the post instead of firing a guaranteed 400.
+
+### 🔴 #11 — Feed poll ingested a previous account's sales (FIXED)
+`live-link.js merchant()` fell back to the pinned `kiwiLiveMerchant` whenever `KiwiMe`
+hadn't resolved — and the poll starts *before* `/api/me` answers. On a browser that had
+held another account, the first ticks polled the **previous merchant's** slug. This is the
+mechanism behind #8. **Fix:** a paired till still trusts its own binding
+(`kiwiPairedVenue.merchant` — account-scoped, purged on switch); a real session with
+unresolved identity now polls **nothing** and self-heals a tick later. The local demo is
+untouched.
+
+### 🟠 #12 — A till's staff PINs are still readable without an account (OPEN, needs a call)
+`GET /api/config?merchant=<slug>` returns `pins:[{pin,name,role}]` — the codes that open a
+till. Half-fixed: a **signed-in** merchant can no longer read another merchant's PINs (the
+session slug now overrides `?merchant=`; operator still honoured). Still open: a caller with
+**no** session but past the site gate can pass any `?merchant=` and get its PINs, because a
+paired caisse has no account and legitimately needs exactly that call.
+
+**Proposed fix (not applied — would de-authorise tills already paired in the field):** have
+`/api/pair/redeem` set a signed, HttpOnly per-merchant cookie (`kiwi_till`), and require it
+to match `?merchant=` on the no-session path. Needs a re-pair or a grace window for the
+tills already deployed — owner's call before shipping.
+
+### 🟡 #13 — Pairing codes are brute-forceable (OPEN, low)
+`/api/pair/redeem` is unauthenticated (site gate only), single-use, 15-min TTL, 6 digits =
+900 000 codes, **no rate limit**. A script could grind a live code and bind its own till to
+a merchant. Low urgency at pilot scale; wants a per-IP attempt cap before real volume.

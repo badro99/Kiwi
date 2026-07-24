@@ -8,7 +8,7 @@
 // falls back to its current hardcoded behavior — so this endpoint being missing
 // (GitHub Pages, local static) changes nothing.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -18,24 +18,32 @@ export async function onRequestGet(context) {
   if (!env.DB) return json({ features: {}, pins: [] }); // no backend → neutral
   let merchant = (url.searchParams.get('merchant') || '').trim();
 
-  // No explicit ?merchant= slug → a real merchant reading its OWN config on the
-  // dashboard. Derive the slug from the authenticated session (the SAME rule the
-  // POST uses), so a signed-in merchant always resolves ITS OWN pins/features
-  // without depending on a client-supplied slug — which can be a stale
-  // kiwiLiveMerchant left by a different account in the same browser (the exact
-  // cause of "code incorrect" when the lock fell back to another account's PINs).
-  // An operator (God mode) or a paired caisse passes ?merchant= explicitly and
-  // keeps that path untouched. No slug AND no session → neutral empty, so the
-  // local/hosted demo is byte-identical.
-  if (!merchant && env.AUTH_SECRET) {
+  // Whose config is this? The response carries staff PINs — the credential that
+  // opens a till — so the slug must never be taken on the client's word when we
+  // can do better. The signed-in account is authoritative and OVERRIDES an
+  // explicit ?merchant=: the site gate admits every merchant (and the shared
+  // staff passcode), so honouring the parameter let any account read any other
+  // account's till PINs just by knowing its slug. It also fixes the "code
+  // incorrect" case where a stale kiwiLiveMerchant from a different account in
+  // the same browser made the lock validate against the wrong store's PINs.
+  //   · account session → that account's own slug, always.
+  //   · operator (God mode) → ?merchant= honoured; that is what the console is.
+  //   · no session (a paired caisse) → ?merchant= as before, so pairing still
+  //     boots a till with its store's PINs. Closing that last case needs the
+  //     redeem step to hand the till a signed per-merchant token — tracked as
+  //     the remaining item, deliberately not changed here because it would
+  //     de-authorise tills already paired in the field.
+  let sessionMerchant = '';
+  if (env.AUTH_SECRET) {
     try {
       const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-        if (acc && acc.business) merchant = slugMerchant(acc.business);
+        if (acc && acc.business) sessionMerchant = slugMerchant(acc.business);
       }
     } catch (_) { /* fall through to neutral */ }
   }
+  if (sessionMerchant && !(await isOperator(request, env))) merchant = sessionMerchant;
   if (!merchant) return json({ features: {}, pins: [] });
 
   let features = {};

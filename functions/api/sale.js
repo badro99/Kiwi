@@ -23,7 +23,13 @@ export async function onRequestPost({ request, env }) {
   const amount = Math.round(Number(b && b.amount) || 0);
   if (amount <= 0) return json({ error: 'bad-amount' }, 400);
 
-  const merchant = String((b && b.merchant) || 'default').slice(0, 64);
+  // A sale MUST name its store. The old fallback to a literal 'default' bucket
+  // meant every device whose identity had not resolved yet wrote into one shared
+  // tenant — which any other unresolved device then read back as its own (see the
+  // tenant-scoping note in feed.js). Refusing is strictly safer than mis-filing:
+  // an unattributed sale in a shared bucket is unrecoverable, a 400 is visible.
+  const merchant = String((b && b.merchant) || '').slice(0, 64);
+  if (!merchant) return json({ error: 'no-merchant' }, 400);
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);

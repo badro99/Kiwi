@@ -55,11 +55,24 @@
         var s = slugify(me.business);
         if (s) { try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {} return s; }
       }
-      var pinned = localStorage.getItem('kiwiLiveMerchant');
-      if (pinned) return pinned;
+      // A PAIRED till owns its tenant: redeeming a code bound this device to that
+      // store, and the caisse has no KiwiMe to derive from. This is the caisse's
+      // real answer — and it is account-scoped (kiwiPairedVenue is purged on an
+      // account switch), so it can never be another merchant's leftover.
+      try {
+        var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if (pv && pv.merchant) return pv.merchant;
+      } catch (_) {}
       var real = false;
       try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
-      return real ? '' : 'cafe-atlas';
+      // A real session whose identity has NOT resolved yet polls NOTHING. The old
+      // fallback to a bare kiwiLiveMerchant pin was a cross-tenant leak: the feed
+      // poll starts at boot, before /api/me answers, so a pin left by a PREVIOUS
+      // account in this browser made the new merchant ingest the previous
+      // merchant's sales into its own KPIs (observed: a foreign 189 MAD sale in a
+      // brand-new store). Identity resolves a tick later and the poll self-heals.
+      if (real) return '';
+      return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas';
     } catch (_) { return 'cafe-atlas'; }
   }
 
@@ -84,8 +97,13 @@
     if (!on() || !entry) return;
     var amt = Math.round(entry.amount || 0);
     if (amt <= 0) return;
+    // No resolved tenant ⇒ don't post. The server refuses an unattributed sale
+    // (it used to file it under a shared 'default' bucket other stores read), so
+    // this just skips a guaranteed 400 rather than changing behaviour.
+    var m = merchant();
+    if (!m) return;
     var body = {
-      merchant: merchant(),
+      merchant: m,
       amount: amt,                                            // MAD, integer
       method: entry.method || 'cash',                         // cash|card|tap|qr|wallet
       label: entry.label || 'Vente',
