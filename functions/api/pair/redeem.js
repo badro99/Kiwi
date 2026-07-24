@@ -18,7 +18,56 @@
 // No DB ⇒ 503 (a static host has no pairings table; the client's 404-style
 // fallback isn't reached here, but 503 still keeps it away from the 422 path).
 
-import { json } from '../../auth/_lib.js';
+import { json, tillToken, tillCookie } from '../../auth/_lib.js';
+
+/* ── Brute-force cap ────────────────────────────────────────────────────────
+ * This endpoint has no session to check — a till has no login — so a 6-digit
+ * code was the only thing between a script and binding its own device to
+ * someone else's store. 900 000 codes, unlimited guesses and a 15-minute window
+ * is a tractable grind for whichever codes happen to be live.
+ *
+ * Counting is per client IP (CF-Connecting-IP, set by the edge and not
+ * spoofable by the client). A SUCCESSFUL redeem clears the counter, so a shop
+ * fumbling its own code is never locked out for long. Counter failures are
+ * swallowed: if the table is missing the endpoint keeps working exactly as it
+ * did — pairing a real store must not depend on the rate limiter being healthy.
+ */
+const WINDOW_MS = 10 * 60 * 1000;   // rolling window a burst is measured over
+const MAX_FAILS = 10;               // wrong codes tolerated in that window
+const BLOCK_MS  = 15 * 60 * 1000;   // lockout once the cap is passed
+
+function clientIp(request) {
+  return request.headers.get('CF-Connecting-IP')
+      || request.headers.get('X-Forwarded-For')
+      || '';
+}
+
+/* Record one wrong guess. The window is rolling by restart, not sliding: once
+ * first_ts is older than WINDOW_MS the row is reset to a fresh single failure,
+ * so old rows expire themselves and no sweeper is needed. Best-effort — any
+ * error here is swallowed so a limiter problem can never block a real pairing. */
+async function noteFail(env, ip, now) {
+  if (!ip || !env.DB) return;
+  try {
+    const a = await env.DB.prepare(
+      'SELECT fails, first_ts FROM pair_attempts WHERE ip = ?'
+    ).bind(ip).first();
+
+    if (!a || (now - a.first_ts) > WINDOW_MS) {
+      await env.DB.prepare(
+        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
+         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
+      ).bind(ip, now).run();
+      return;
+    }
+
+    const fails = (a.fails || 0) + 1;
+    const blocked = fails >= MAX_FAILS ? (now + BLOCK_MS) : null;
+    await env.DB.prepare(
+      'UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?'
+    ).bind(fails, blocked, ip).run();
+  } catch (_) { /* limiter unavailable → fail open, pairing still works */ }
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -27,9 +76,25 @@ export async function onRequestPost(context) {
   let body = {};
   try { body = (await request.json()) || {}; } catch (_) { body = {}; }
   const code = String(body.code || '').replace(/\D/g, '').slice(0, 6);
-  if (code.length !== 6) return json({ error: 'invalid_or_expired' }, 422);
 
   const now = Date.now();
+  const ip = clientIp(request);
+
+  // Are we already locked out? Checked BEFORE the code is even shaped, so a
+  // blocked source cannot use malformed input as a free probe.
+  if (ip) {
+    try {
+      const a = await env.DB.prepare(
+        'SELECT fails, first_ts, blocked_until FROM pair_attempts WHERE ip = ?'
+      ).bind(ip).first();
+      if (a && a.blocked_until && a.blocked_until > now) {
+        return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
+      }
+    } catch (_) { /* no table → no limiter, pairing still works */ }
+  }
+
+  if (code.length !== 6) { await noteFail(env, ip, now); return json({ error: 'invalid_or_expired' }, 422); }
+
   let row = null;
   try {
     row = await env.DB.prepare(
@@ -43,12 +108,26 @@ export async function onRequestPost(context) {
     return json({ error: 'invalid_or_expired' }, 422);
   }
 
-  if (!row) return json({ error: 'invalid_or_expired' }, 422);
-  return json({
+  if (!row) { await noteFail(env, ip, now); return json({ error: 'invalid_or_expired' }, 422); }
+
+  // Genuine pairing — wipe the counter so an honest shop that mistyped twice
+  // starts clean again.
+  if (ip) { try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(ip).run(); } catch (_) {} }
+
+  const res = json({
     ok: true,
     merchant: row.merchant,
     type: row.type || '',
     subtype: row.subtype || '',
     name: row.name || '',
   });
+
+  /* Hand the till proof of WHICH store it just became, so /api/config can answer
+   * a session-less caisse without taking ?merchant= on the client's word. Set as
+   * an httpOnly cookie: no page script can read it, and it rides along on the
+   * same-origin config fetch automatically — the client needs no change. */
+  if (env.AUTH_SECRET) {
+    try { res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant))); } catch (_) {}
+  }
+  return res;
 }

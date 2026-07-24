@@ -87,6 +87,32 @@ export const OP_COOKIE = 'kiwi_op';
 export async function staffToken(sitePassword) {
   return hmacHex(sitePassword, 'kiwi-gate-v1');
 }
+
+// ── Till token ──────────────────────────────────────────────────────────────
+// Proof that THIS device redeemed a pairing code for THIS merchant. A till has
+// no account login, so before this the only way /api/config could answer a
+// session-less caisse was to trust ?merchant= on the client's word — which meant
+// anyone who knew a slug could read that store's staff PINs. The token is a
+// per-merchant HMAC handed out by /api/pair/redeem and returned as an httpOnly
+// cookie, so a page script cannot read it and a different merchant's token does
+// not verify. Unforgeable without AUTH_SECRET; carries no expiry because a
+// pairing is meant to last until the merchant unpairs.
+export const TILL_COOKIE = 'kiwi_till';
+
+export async function tillToken(authSecret, merchant) {
+  return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
+}
+export function tillCookie(value) {
+  return `${TILL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
+}
+// True when the request proves it is the till of `merchant`.
+export async function isTillFor(request, env, merchant) {
+  const secret = env && env.AUTH_SECRET;
+  if (!secret || !merchant) return false;
+  const got = readCookie(request, TILL_COOKIE);
+  if (!got) return false;
+  return timingSafeEqualHex(got, await tillToken(secret, merchant));
+}
 export async function operatorToken(authSecret) {
   return hmacHex(authSecret, 'kiwi-operator-v1');
 }

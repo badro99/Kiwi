@@ -8,7 +8,7 @@
 // falls back to its current hardcoded behavior — so this endpoint being missing
 // (GitHub Pages, local static) changes nothing.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor } from '../auth/_lib.js';
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -28,11 +28,21 @@ export async function onRequestGet(context) {
   // the same browser made the lock validate against the wrong store's PINs.
   //   · account session → that account's own slug, always.
   //   · operator (God mode) → ?merchant= honoured; that is what the console is.
-  //   · no session (a paired caisse) → ?merchant= as before, so pairing still
-  //     boots a till with its store's PINs. Closing that last case needs the
-  //     redeem step to hand the till a signed per-merchant token — tracked as
-  //     the remaining item, deliberately not changed here because it would
-  //     de-authorise tills already paired in the field.
+  //   · no session (a paired caisse) → ?merchant= is still honoured for the
+  //     FEATURE FLAGS and the type, which are not secrets and which a till needs
+  //     to hide modules the operator switched off. PINs, however, are now only
+  //     returned when the caller can PROVE it is that merchant: an account
+  //     session, an operator, or the httpOnly till token that /api/pair/redeem
+  //     hands out (see isTillFor). Knowing a slug is no longer enough to read a
+  //     store's staff PINs.
+  //
+  //     Tills paired BEFORE this shipped carry no token, so they receive an
+  //     empty `pins` until they re-pair. That degrades gracefully and opens
+  //     nothing: the only PIN-validating surface is the dashboard lock, which
+  //     always has an account session and is unaffected. A session-less caisse
+  //     uses these rows for staff NAMES (kiwi-caisse.html) and for the optional
+  //     role match in kiwi-serveur.html, both of which already fall back to
+  //     "Caissier" / "Serveur N" when the list is empty.
   let sessionMerchant = '';
   if (env.AUTH_SECRET) {
     try {
@@ -43,8 +53,13 @@ export async function onRequestGet(context) {
       }
     } catch (_) { /* fall through to neutral */ }
   }
-  if (sessionMerchant && !(await isOperator(request, env))) merchant = sessionMerchant;
+  const operator = await isOperator(request, env);
+  if (sessionMerchant && !operator) merchant = sessionMerchant;
   if (!merchant) return json({ features: {}, pins: [] });
+
+  // May this caller read THIS merchant's staff PINs? Its own session, the
+  // operator console, or a till that redeemed a pairing code for this store.
+  const mayReadPins = (merchant === sessionMerchant) || operator || (await isTillFor(request, env, merchant));
 
   let features = {};
   let pins = [];
@@ -56,10 +71,12 @@ export async function onRequestGet(context) {
     if (cfg && cfg.features) { try { features = JSON.parse(cfg.features) || {}; } catch (_) {} }
     if (cfg && cfg.type) type = cfg.type;
 
-    const rows = await env.DB.prepare(
-      `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
-    ).bind(merchant).all();
-    pins = rows.results || [];
+    if (mayReadPins) {
+      const rows = await env.DB.prepare(
+        `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
+      ).bind(merchant).all();
+      pins = rows.results || [];
+    }
   } catch (_) { /* table missing / db error → neutral config */ }
 
   return json({ features, pins, type });

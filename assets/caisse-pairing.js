@@ -202,7 +202,13 @@
       if (res && res.ok) { hidePad(); bootWithPin(res.venue); return; }
       var scr = document.getElementById('cp-screen');
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
-      toast(res && res.error === 'expired' ? 'Code expiré, régénérez-en un.' : 'Code invalide.');
+      /* "too_many_attempts" is the server's brute-force cap (429). Say so
+       * plainly: a shop that mistyped its way into the lockout must know to
+       * wait, not keep retrying a code it thinks is wrong. */
+      toast(res && res.error === 'too_many_attempts'
+              ? 'Trop de tentatives. Réessayez dans quelques minutes.'
+          : res && res.error === 'expired' ? 'Code expiré, régénérez-en un.'
+          : 'Code invalide.');
       buf = ''; renderDots();
     });
   }

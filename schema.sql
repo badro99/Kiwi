@@ -107,6 +107,20 @@ CREATE TABLE IF NOT EXISTS pairings (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS pairings_code_live ON pairings(code) WHERE used_ts IS NULL;
 
+-- Failed-redeem counter, one row per client IP. /api/pair/redeem cannot require a
+-- session (a till has no login), so a 6-digit code was the only thing standing
+-- between a script and binding its own device to somebody else's store: 900 000
+-- codes with no attempt cap is a few hours of grinding for whatever codes happen
+-- to be live. This caps the guessing per source. A SUCCESSFUL redeem clears the
+-- row, so a shop fumbling its own code is never punished for long, and rows older
+-- than the window are ignored (and overwritten) rather than needing a sweeper.
+CREATE TABLE IF NOT EXISTS pair_attempts (
+  ip            TEXT PRIMARY KEY,
+  fails         INTEGER NOT NULL DEFAULT 0,
+  first_ts      INTEGER NOT NULL,
+  blocked_until INTEGER
+);
+
 -- ── Published menu (customer QR self-order → kiwi-order.html) ────────────────
 -- One row per merchant: the carte a customer sees after scanning the table QR.
 -- The merchant's dashboard menu lives client-side (localStorage, per-venue, via
