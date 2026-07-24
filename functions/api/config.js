@@ -15,9 +15,28 @@ const VALID_PIN = /^\d{4}$/;
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
-  const merchant = (url.searchParams.get('merchant') || '').trim();
-  if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!env.DB) return json({ features: {}, pins: [] }); // no backend → neutral
+  let merchant = (url.searchParams.get('merchant') || '').trim();
+
+  // No explicit ?merchant= slug → a real merchant reading its OWN config on the
+  // dashboard. Derive the slug from the authenticated session (the SAME rule the
+  // POST uses), so a signed-in merchant always resolves ITS OWN pins/features
+  // without depending on a client-supplied slug — which can be a stale
+  // kiwiLiveMerchant left by a different account in the same browser (the exact
+  // cause of "code incorrect" when the lock fell back to another account's PINs).
+  // An operator (God mode) or a paired caisse passes ?merchant= explicitly and
+  // keeps that path untouched. No slug AND no session → neutral empty, so the
+  // local/hosted demo is byte-identical.
+  if (!merchant && env.AUTH_SECRET) {
+    try {
+      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      if (sess && sess.aid) {
+        const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+        if (acc && acc.business) merchant = slugMerchant(acc.business);
+      }
+    } catch (_) { /* fall through to neutral */ }
+  }
+  if (!merchant) return json({ features: {}, pins: [] });
 
   let features = {};
   let pins = [];

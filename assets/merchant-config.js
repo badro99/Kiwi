@@ -95,8 +95,22 @@
     try { if (window.KiwiVenue && window.KiwiVenue.applyServerType) window.KiwiVenue.applyServerType(cfg.type); } catch (_) {}
   }
 
+  // Where to read config from. An operator (God mode, ?op/?merchant) reads a
+  // specific client by slug. A real merchant on their OWN dashboard reads WITHOUT
+  // a slug so the server derives it from the session cookie — never from a stale
+  // kiwiLiveMerchant a previous account left in this browser (that mismatch is
+  // what made the lock validate against another merchant's PINs → "code
+  // incorrect"). A paired caisse/serveur has no account session, so it keeps
+  // passing its paired slug explicitly.
+  function onDashboard() { try { return /\/dashboard(?:\.html)?$/.test(location.pathname); } catch (_) { return false; } }
+  function configUrl() {
+    if (isScoped()) return '/api/config?merchant=' + encodeURIComponent(merchant());
+    if (onDashboard()) return '/api/config';
+    return '/api/config?merchant=' + encodeURIComponent(merchant());
+  }
+
   function fetchConfig() {
-    fetch('/api/config?merchant=' + encodeURIComponent(merchant()), { headers: { Accept: 'application/json' } })
+    fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
         if (!data) return;                     // no backend → keep defaults
