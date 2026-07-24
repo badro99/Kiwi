@@ -3160,6 +3160,20 @@
   /* padding:24px 0 0 overrides the global `section { padding:96px 0 }`
      marketing rule that .dash-equipe (a <section>) would otherwise inherit. */
   body.page-equipe .dash-equipe { min-width: 0; padding: 24px 0 0; }
+  /* Paie & planning (assets/team.js → Kiwi.appPage) reuses this whole stylesheet
+     by wrapping its body in .dash-equipe — same roster, same tables, same tokens.
+     But appPage mounts under body.page-genpage, and the gate above only un-hides
+     .dash-equipe under body.page-equipe, so the page rendered its header and then
+     nothing: the stat band and the planning grid were in the DOM at height 0.
+     Scoped to a wrapper inside .dash-genpage, which only that page creates.
+     The genpage gate (assets/interactive.js) lists .dash-equipe among the sibling
+     page sections it hides with `display: none !important` — correct for the
+     <section> up in the shell, wrong for a wrapper nested INSIDE the genpage,
+     which is the genpage's own content. Hence the extra specificity + !important:
+     it says "this one is mine", it does not weaken the gate for the section. */
+  body.page-genpage .dash-genpage .dash-equipe {
+    display: block !important; min-width: 0; padding: 0;
+  }
 
   /* ── Page header ──────────────────────────────────────────────────────── */
   .eq-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 18px 0 20px; }

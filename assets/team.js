@@ -1144,16 +1144,27 @@
     const mid = t2.getAttribute('data-mid');
     const day = t2.getAttribute('data-day');
     const venue = window.KiwiVenue?.getCurrentVenueData?.();
-    const vt = venue?.type || 'restaurant';
+    // teamKey(), NOT venue.type. A real store is keyed by its venue ID; keying the
+    // WRITE by type parked every hour the owner typed in hoursByVenue['boutique']
+    // while every READ (getHours → teamKey) looked under the venue id. So the cell
+    // accepted the number, the totals never moved, and nothing survived a reload —
+    // on this page and on Équipe → Heures travaillées alike.
+    const vt = teamKey(venue || { type: 'restaurant' });
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
     const val = Math.max(0, Math.min(24, parseFloat(t2.value) || 0));
     hours[mid][day] = val;
     updateHourTotals();
+    saveCustomTeams();          // an hour typed is payroll data — persist it
   });
 
   function updateHourTotals() {
-    const root = document.querySelector('[data-equipe-root]');
+    // The grid lives in the Équipe section OR in the Paie & planning genpage —
+    // same markup, two hosts. Looking only for [data-equipe-root] meant editing an
+    // hour on Paie updated the store and refreshed nothing.
+    const root = (pageMode === 'payroll'
+      ? document.querySelector('.dash-genpage .dash-equipe')
+      : null) || document.querySelector('[data-equipe-root]');
     if (!root) return;
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const vt = teamKey(venue);
@@ -1176,6 +1187,18 @@
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
     if (footTot[0]) footTot[0].textContent = grandH.toFixed(2).replace('.', ',');
     if (footTot[1]) footTot[1].textContent = grandP.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+
+    // On Paie & planning the band above the grid is the headline the owner reads
+    // ("à payer · période"). Keep it in step with the cell they just typed in,
+    // rather than making them leave the page and come back to see the new total.
+    if (pageMode === 'payroll') {
+      const baseMass = members.reduce((a, m) => a + (+m.baseSalary || 0), 0);
+      const vals = root.querySelectorAll('.eq-stats .eq-stat-v');
+      if (vals[0]) vals[0].textContent = fmtMad(baseMass + grandP);
+      if (vals[1]) vals[1].textContent = grandH.toFixed(1).replace('.', ',') + ' h';
+      if (vals[2]) vals[2].textContent = fmtMad(grandP);
+      if (vals[3]) vals[3].textContent = fmtMad(baseMass);
+    }
   }
 
   /* ═══════════════ ADD / EDIT MEMBER MODAL (UNCHANGED) ═══════════════ */
