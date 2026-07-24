@@ -2819,6 +2819,31 @@
       renderUpsell(); renderDropdown();
       renderVerticalSection({ skipFade: true });
     });
+
+    /* Operator (God-mode) scoped view (?op=1 &/or ?merchant=slug) — DO NOT
+     * initialize the venue from THIS browser's localStorage. That path was
+     * leaking the operator's own last-active venue (in particular a deleted
+     * account's stale custom venue) into every scoped client dashboard: the
+     * operator clicked "Ouvrir dashboard" on Client B and saw their own dead
+     * Client A because init() picked up kiwiCustomVenues/kiwiVenue before
+     * identity.js finished /api/me. Start with a transient empty venue so the
+     * initial paint has no data to leak, then applyScopedVenue (called from
+     * identity.js the moment /api/me confirms the operator cookie) hands us
+     * the real client. Nothing is written back to STORAGE_KEY. */
+    try {
+      var qs = new URLSearchParams(location.search);
+      if (qs.has('op') || qs.has('merchant')) {
+        currentVenue = ensureOwnEmptyVenue();
+        document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
+        document.documentElement.removeAttribute('data-theme');
+        registerHandlers();
+        setupDropdownClosers();
+        hookI18n();
+        renderAll({ skipFade: true });
+        return;
+      }
+    } catch (_) { /* URLSearchParams missing → fall through to normal init */ }
+
     let stored = null;
     try { stored = localStorage.getItem(STORAGE_KEY); } catch (_) {}
     // Fusion mode is intentionally NOT persisted across reloads — the merchant
