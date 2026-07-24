@@ -89,9 +89,9 @@
       </div>
       <div class="os-body" data-os="mac">
         <ol class="run">
-          <li>Ouvrez le <b>Terminal</b> (Spotlight → « Terminal »).</li>
-          <li>Copiez-collez cette ligne puis Entrée :<br><code>chmod +x ~/Downloads/kiwi-printer-bridge-macos && xattr -dr com.apple.quarantine ~/Downloads/kiwi-printer-bridge-macos; ~/Downloads/kiwi-printer-bridge-macos</code></li>
-          <li>Laissez cette fenêtre ouverte. (Sur Mac Apple Silicon, macOS peut proposer d'installer Rosetta — acceptez, un clic.)</li>
+          <li>Double-cliquez le fichier téléchargé — il se décompresse et laisse apparaître <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.</li>
+          <li>Faites un <b>clic droit</b> sur <b>Kiwi Printer</b> → <b>Ouvrir</b>, puis confirmez <b>Ouvrir</b> dans la fenêtre. C'est nécessaire une seule fois — l'application est sûre, elle n'est simplement pas signée.</li>
+          <li>Laissez-la tourner. (Sur un Mac récent, macOS proposera d'<b>installer Rosetta</b> au premier lancement — cliquez <b>Installer</b>, c'est automatique.) Pour l'arrêter : clic droit sur son icône dans le Dock → <b>Quitter</b>.</li>
         </ol>
       </div>
       <div class="os-body" data-os="linux">
@@ -108,7 +108,7 @@
   <script>
   (function(){
     var BASE = 'https://github.com/badro99/Kiwi/releases/latest/download/';
-    var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos', linux: 'kiwi-printer-bridge-linux' };
+    var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos.zip', linux: 'kiwi-printer-bridge-linux' };
     var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux' };
     function $(s){ return document.querySelector(s); }
 
