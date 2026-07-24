@@ -2217,6 +2217,21 @@
           mixRev:     { text: '—', unit: '', delta: null },
         };
       }
+
+      /* Tout le reste de la bande vient du clone démo remis à zéro : la valeur
+       * affichée est bien neutre, mais son delta, lui, est resté le chiffre de
+       * Café Atlas. « Taux retour 0,0 % · 0 % vs hier » se lisait donc comme un
+       * taux stable alors qu'il n'y a jamais eu de retour à comparer. On coupe
+       * la comparaison partout où elle n'a PAS été recalculée depuis les ventes
+       * réelles, plutôt que d'énumérer les tuiles une à une — une tuile ajoutée
+       * demain est couverte sans y penser. */
+      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio']);
+      Object.keys(data).forEach((k) => {
+        const tile = data[k];
+        if (tile && typeof tile === 'object' && 'delta' in tile && !REAL_DELTAS.has(k)) {
+          data[k] = { ...tile, delta: null };
+        }
+      });
     }
 
     // Resolve which 6 KPI keys to render — owner's saved layout, or the
