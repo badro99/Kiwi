@@ -104,10 +104,19 @@
       m[code] = { merchant: biz.merchant, venueId: biz.venueId, type: biz.type, subtype: biz.subtype, name: biz.name, location: biz.location, exp: now + CODE_TTL, status: 'pending', createdAt: now };
       writeMap(m);
     }
-    set(K.liveMerchant, biz.merchant);
-    set(K.live, '1');
+    enableLive(biz);
     backendCreate(biz, code);
     return code;
+  }
+
+  /* Point THIS browser's live feed at this store. It used to happen only as a
+   * side effect of minting a pairing code; now that the panel no longer mints
+   * one, it has to be explicit — otherwise the dashboard would quietly stop
+   * polling its own sales feed and "En direct" would never fill. */
+  function enableLive(biz) {
+    if (!biz) return;
+    set(K.liveMerchant, biz.merchant);
+    set(K.live, '1');
   }
 
   /* Cross-device path, fail-soft. Absent endpoint (404/offline) → the localStorage
@@ -190,18 +199,17 @@
     document.head.appendChild(s);
   }
 
-  function panelBody(code, biz) {
+  /* The 6-digit pairing code is no longer shown. A till reaches this app through
+   * the account gate anyway, so signing in on the second device already binds it
+   * to this merchant — the code was a second, manual way to say the same thing.
+   * The pairing endpoints stay in place: tills already paired in the field hold a
+   * kiwiPairedVenue from a code, and removing the backend would unbind them. */
+  function panelBody(biz) {
     return '' +
       '<p class="kcl-lead">La caisse est la ou vos ventes entrent. Reliez votre terminal a ce commerce, chaque encaissement remontera aussitot sur ce tableau de bord.</p>' +
-      '<div class="kcl-codewrap">' +
-        '<div class="kcl-codelbl">Code d\'appairage</div>' +
-        '<div class="kcl-code" id="kcl-code">' + esc(code) + '</div>' +
-        '<div class="kcl-meta"><span>Expire dans <span id="kcl-cd">--:--</span></span><button type="button" id="kcl-regen">Nouveau code</button></div>' +
-        '<button class="kcl-copy" type="button" id="kcl-copy">Copier le code</button>' +
-      '</div>' +
       '<div class="kcl-status" id="kcl-status"><span class="kcl-d kcl-pulse"></span><span id="kcl-status-t">En attente de la caisse…</span></div>' +
       '<button class="kcl-open" type="button" id="kcl-open">Ouvrir la caisse sur cet appareil</button>' +
-      '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez l\'app Caisse Kiwi et saisissez ce code. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
+      '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
   }
 
   function openPanel() {
@@ -209,11 +217,13 @@
     var biz = currentBiz(); if (!biz) return;
     css();
     remoteState = null;                       // fresh panel → re-learn from this open's create call
+    enableLive(biz);                       // was a side effect of generateCode()
     var connected = connectedCodeFor(biz.merchant);
-    var code = connected || generateCode();
-    if (!code) return;
+    // No code is minted just to open the panel any more — it isn't displayed, so
+    // generating one would be a pointless server round-trip every time.
+    var code = connected || '';
 
-    var d = Kiwi.drawer({ title: 'Connectez votre caisse', subtitle: biz.name, body: panelBody(code, biz), width: 440 });
+    var d = Kiwi.drawer({ title: 'Connectez votre caisse', subtitle: biz.name, body: panelBody(biz), width: 440 });
     var el = d.el, cur = code, tick = null;
 
     function $(sel) { return el.querySelector(sel); }
@@ -251,10 +261,8 @@
       updateChip();  // keep the corner launcher truthful even if state shifts under us
       // connected?
       if (connectedCodeFor(biz.merchant)) { markConnected(); return; }
-      // countdown / auto-regen
-      var left = codeExp(cur) - Date.now();
-      var cd = $('#kcl-cd'); if (cd) cd.textContent = fmtCountdown(left);
-      if (left <= 0) { var n = generateCode(); if (n) setCode(n); }
+      // The countdown and auto-regeneration went with the code display; without a
+      // visible code there is nothing to expire and nothing to refresh.
     }
     if (connected) markConnected(); else { refresh(); setRemote(remoteState); }
     tick = setInterval(refresh, 1000);
