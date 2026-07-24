@@ -212,6 +212,25 @@
       '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
   }
 
+  /* Same-device hand-off. "Ouvrir la caisse sur cet appareil" opens the till in
+   * THIS browser, so there is nothing to negotiate with a server: name the store
+   * outright and let the till read it.
+   *
+   * This used to ride on the 6-digit code the panel minted on open. That minting
+   * was dropped once the code stopped being displayed — sensible, but it left
+   * ?pair=1 with nothing to identify the store by, so the till just kept whatever
+   * store it was already bound to. On an account with a second shop that meant
+   * the restaurant's dashboard opening the boutique's till, which is precisely
+   * the confusion this button exists to avoid. */
+  var HANDOFF = 'kiwiPairHandoff';
+  function handOff(biz) {
+    if (!biz) return;
+    set(HANDOFF, JSON.stringify({
+      merchant: biz.merchant, venueId: biz.venueId, type: biz.type,
+      subtype: biz.subtype, name: biz.name, location: biz.location, ts: Date.now(),
+    }));
+  }
+
   function openPanel() {
     if (!window.Kiwi || !Kiwi.drawer) return;
     var biz = currentBiz(); if (!biz) return;
@@ -275,6 +294,7 @@
       }
       if (e.target.closest('#kcl-regen')) { var n = generateCode(true); if (n) { setCode(n); refresh(); } return; }
       if (e.target.closest('#kcl-open')) {
+        handOff(biz);   // say WHICH store, explicitly — see handOff()
         try { window.open('kiwi-caisse.html?pair=1', '_blank'); } catch (_) { location.href = 'kiwi-caisse.html?pair=1'; }
         return;
       }

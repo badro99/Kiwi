@@ -39,8 +39,24 @@
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
-  // browser, where its freshly-issued code is already sitting in kiwiPairings.
+  // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
+  /* Read and CONSUME the hand-off. Consuming it matters: it is a one-shot
+   * instruction from a specific click, and leaving it behind would re-bind the
+   * device on some later unrelated visit. Stale ones are ignored — a record older
+   * than a few minutes is a leftover, not an intent. */
+  var HANDOFF = 'kiwiPairHandoff';
+  function takeHandoff() {
+    var raw = ls(HANDOFF);
+    if (!raw) return null;
+    del(HANDOFF);
+    try {
+      var h = JSON.parse(raw);
+      if (!h || !h.merchant) return null;
+      if (h.ts && (Date.now() - h.ts) > 10 * 60 * 1000) return null;
+      return h;
+    } catch (_) { return null; }
+  }
   function newestPending() {
     var m = readMap(), now = Date.now(), best = null, bestT = -1;
     for (var c in m) { var e = m[c]; if (e && e.status === 'pending' && (!e.exp || e.exp > now)) { var t = e.createdAt || 0; if (t >= bestT) { bestT = t; best = c; } } }
@@ -109,10 +125,18 @@
      * binding so they can repaint. */
     try { document.dispatchEvent(new CustomEvent('kiwi-paired', { detail: venue })); } catch (_) {}
     // Reflect "connected" back into the map so the dashboard tab's storage
-    // listener flips its status pill to "Caisse connectée" (same-browser).
+    // listener flips its status pill to "Caisse connectée" (same-browser). The
+    // hand-off path carries no code, so record one against the store itself —
+    // connectedCodeFor() only looks at merchant + status, and without a row the
+    // panel would sit on "En attente de la caisse…" next to a working till.
     try {
       var map = readMap();
-      if (map[code]) { map[code].status = 'connected'; map[code].connectedAt = Date.now(); set('kiwiPairings', JSON.stringify(map)); }
+      var key = code || ('dev:' + venue.merchant);
+      map[key] = map[key] || { merchant: venue.merchant, venueId: venue.venueId, type: venue.type,
+        subtype: venue.subtype, name: venue.name, location: venue.location, createdAt: Date.now() };
+      map[key].status = 'connected';
+      map[key].connectedAt = Date.now();
+      set('kiwiPairings', JSON.stringify(map));
     } catch (_) {}
     return { ok: true, venue: venue };
   }
@@ -445,6 +469,11 @@
      * no code pending there is nothing to hand off, so we fall through and the
      * existing pairing still resumes as before. */
     if (wantsPair()) {
+      // The dashboard named the store on its way here — no server round-trip is
+      // needed or wanted for a hand-off inside one browser.
+      var h = takeHandoff();
+      if (h) { bootWithPin(applyPairing('', h).venue); return; }
+      // Older path: a 6-digit code still pending in this browser.
       var code = newestPending();
       if (code) {
         redeem(code).then(function (res) {
