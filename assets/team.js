@@ -1271,9 +1271,47 @@
     const shifts = window.__kiwiTeamV2.shiftsByVenue[vt] || (window.__kiwiTeamV2.shiftsByVenue[vt] = {});
     if (!shifts[mid]) shifts[mid] = {};
     if (el.value) shifts[mid][day] = el.value; else delete shifts[mid][day];
+    /* Surtout PAS render() : reconstruire toute la page à chaque cellule mettait
+     * plusieurs secondes par choix, et remplir la semaine de trois personnes
+     * devenait une minute d'attente — sans compter que le <select> qu'on venait
+     * d'utiliser était détruit sous le curseur. Même approche que la grille des
+     * heures : on repeint les totaux sur place. */
+    const td = el.closest('td');
+    if (td) {
+      td.classList.toggle('on', !!el.value && el.value !== 'repos');
+      td.classList.toggle('off', el.value === 'repos');
+    }
+    updateShiftTotals();
     saveCustomTeams();
-    render();
   });
+
+  /* Totaux du planning recalculés en place — jumeau de updateHourTotals(). */
+  function updateShiftTotals() {
+    const root = document.querySelector('.dash-genpage .dash-equipe');
+    if (!root) return;
+    const vt = teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+    const members = getMembers(vt);
+    const shifts = getShifts(vt);
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    const rows = root.querySelectorAll('table.kt-h-table tbody tr');
+    let grandH = 0, grandC = 0;
+    members.forEach((m, idx) => {
+      const row = shifts[m.id] || {};
+      let h = 0;
+      period.days.forEach((d) => { h += shiftHours(row[d]); });
+      const cost = h * (+m.hourlyRate || 0);
+      grandH += h; grandC += cost;
+      const tr = rows[idx];
+      if (!tr) return;
+      const tb = tr.querySelector('.kt-h-total b');
+      if (tb) tb.textContent = h.toFixed(2).replace('.', ',');
+      const pb = tr.querySelector('.kt-h-pay b');
+      if (pb) pb.textContent = cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+    });
+    const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
+    if (foot[0]) foot[0].textContent = grandH.toFixed(2).replace('.', ',');
+    if (foot[1]) foot[1].textContent = grandC.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+  }
 
   handlers['kt-filter-dept']     = (_el, v) => { activeFilters.dept = v || ''; render(); };
   handlers['kt-filter-contract'] = (_el, v) => { activeFilters.contract = v || ''; render(); };
