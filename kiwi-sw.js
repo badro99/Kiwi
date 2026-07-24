@@ -56,6 +56,7 @@ var SHELL = [
   '/assets/identity.js',
   '/assets/caisse-link.js',
   '/assets/operator-access.js',
+  '/assets/auth-guard.js',
   '/assets/caisse-hardware.js',
   '/assets/escpos.js',
   '/assets/printer-bridge.js',
