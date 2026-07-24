@@ -48,9 +48,37 @@
     } catch (_) { return false; }
   }
 
+  // Merchant-scoped identity + venue + pairing keys. When the server confirms
+  // the account is gone, these leftover values are what drive the "deleted
+  // account still logs in" and "operator God-mode opens Client B, sees dead
+  // Client A" symptoms — the app reads them at boot before /api/me answers,
+  // paints the dead identity, and never fully recovers. Business data (menu,
+  // catalog, sales) is deliberately NOT wiped: a suspended-then-reactivated
+  // merchant keeps their working state; only the identity spine is nuked.
+  var REVOKED_KEYS = [
+    'kiwiOnboarded',
+    'kiwiVenue', 'kiwiCustomVenues',
+    'kiwiOwnerName', 'kiwiBizName',
+    'kiwiSet:ownerName', 'kiwiSet:ownerEmail', 'kiwiOwnerEmail',
+    'kiwiBizType', 'kiwiCity',
+    'kiwiLiveMerchant', 'kiwiLive', 'kiwiPairings'
+  ];
+
+  function purgeLocalIdentity() {
+    try {
+      for (var i = 0; i < REVOKED_KEYS.length; i++) {
+        try { localStorage.removeItem(REVOKED_KEYS[i]); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   function purgeAndRedirect() {
     if (redirecting) return;
     redirecting = true;
+    // Wipe local identity SYNCHRONOUSLY so a race between the async purges and
+    // the navigation can't leave the auth page reading stale kiwiBizName /
+    // kiwiVenue and re-painting the dead account.
+    purgeLocalIdentity();
     var done = false;
     var finish = function () {
       if (done) return;
