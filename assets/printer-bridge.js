@@ -24,7 +24,18 @@
 (function () {
   'use strict';
 
-  var BRIDGE_URL = 'http://127.0.0.1:9110';
+  /* The bridge's own port. 9110 is the default, but on a Windows till it is not
+   * guaranteed free — and the bridge exits when the port is taken, which on
+   * Windows means a console flash the owner never sees, then "pont non détecté"
+   * with no way forward. So the shop can start it on another port
+   * (KIWI_BRIDGE_PORT, see the .cmd on /printer) and we FIND it instead of
+   * insisting on 9110. The winning port is remembered so later loads go straight
+   * to it and we never scan again. */
+  var BRIDGE_PORTS = [9110, 9111, 9112, 9113, 9114];
+  var PORT_KEY = 'kiwiBridgePort';
+  var bridgePort = 0;
+  function bridgeBase(p) { return 'http://127.0.0.1:' + (p || bridgePort || BRIDGE_PORTS[0]); }
+  var BRIDGE_URL = bridgeBase();   // kept for compatibility; prefer bridgeBase()
   var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
 
@@ -99,12 +110,38 @@
     return { signal: ctrl.signal, done: function () { clearTimeout(t); } };
   }
 
-  function ping() {
-    var to = withTimeout(null, 1400);
-    return fetch(BRIDGE_URL + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
+  function pingPort(p, ms) {
+    var to = withTimeout(null, ms || 1400);
+    return fetch(bridgeBase(p) + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
       .then(function (r) { to.done(); return r.ok ? r.json() : null; })
       .then(function (j) { return (j && j.ok) ? j : null; })
       .catch(function () { to.done(); return null; });
+  }
+
+  /* Try the remembered port, then the rest of the range. Each miss is a refused
+   * connection on loopback, which fails in about a millisecond, so a full scan
+   * is imperceptible — and it only ever happens once per browser. */
+  function ping() {
+    var remembered = 0;
+    try { remembered = Number(ls(PORT_KEY)) || 0; } catch (_) {}
+    var order = BRIDGE_PORTS.slice();
+    if (remembered && order.indexOf(remembered) !== -1) {
+      order.splice(order.indexOf(remembered), 1);
+      order.unshift(remembered);
+    }
+    var i = 0;
+    function step() {
+      if (i >= order.length) { bridgePort = 0; return null; }
+      var p = order[i++];
+      return pingPort(p, i === 1 ? 1400 : 600).then(function (j) {
+        if (!j) return step();
+        bridgePort = p;
+        BRIDGE_URL = bridgeBase(p);
+        try { set(PORT_KEY, String(p)); } catch (_) {}
+        return j;
+      });
+    }
+    return step();
   }
 
   // ── transport A: Web Bluetooth (preferred — appless, no IP) ──────────────────
@@ -261,8 +298,19 @@
   function bridgePrintBytes(bytes) {
     var cfg = getConfig();
     if (!cfg.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    // Locate the bridge before the first job if we haven't yet (or if it moved
+    // ports since — a restart on a busy 9110 lands somewhere else).
+    if (!bridgePort) {
+      return ping().then(function (j) {
+        return j ? bridgePrintNow(bytes) : { ok: false, reason: 'bridge-unreachable' };
+      });
+    }
+    return bridgePrintNow(bytes);
+  }
+  function bridgePrintNow(bytes) {
+    var cfg = getConfig();
     var to = withTimeout(null, 9000);
-    return fetch(BRIDGE_URL + '/kiwi/print', {
+    return fetch(bridgeBase() + '/kiwi/print', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
       body: JSON.stringify({ printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
     }).then(function (r) {
@@ -542,6 +590,7 @@
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
-    openSetup: openSetup, BRIDGE_URL: BRIDGE_URL,
+    // A function, not a snapshot: the port is only known after discovery.
+    openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
   };
 })();

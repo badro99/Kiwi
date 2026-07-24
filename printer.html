@@ -84,7 +84,15 @@
         <ol class="run">
           <li>Double-cliquez le fichier téléchargé <code>kiwi-printer-bridge-win.exe</code>.</li>
           <li>Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. L'application est sûre — elle n'est simplement pas signée.</li>
-          <li>Laissez la fenêtre ouverte. Pour un lancement automatique au démarrage : <span class="mono">Win + R</span> → tapez <code>shell:startup</code> → déposez-y le <code>.exe</code> (ou un raccourci).</li>
+          <li>Laissez la fenêtre ouverte. Si vous la fermez, l'impression s'arrête.</li>
+          <li><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
+            <span class="mono">Win + R</span> → <code>shell:startup</code> → dans le dossier qui s'ouvre, créez un fichier
+            <code>kiwi-printer.cmd</code> contenant :
+            <br><code style="display:block;white-space:pre;margin-top:6px;padding:8px;background:#0A0F0D;color:#7DF2B0;border-radius:6px;overflow-x:auto">@echo off
+set KIWI_BRIDGE_PORT=9110
+start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
+            Adaptez le chemin si vous avez déplacé le <code>.exe</code>. Le pont démarrera seul, en fenêtre réduite.</li>
+          <li><b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le <code>.cmd</code> ci-dessus, remplacez <code>9110</code> par <code>9111</code> (ou 9112 / 9113 / 9114) — Kiwi cherche automatiquement sur cette plage.</li>
         </ol>
       </div>
       <div class="os-body" data-os="mac">
@@ -139,12 +147,25 @@
     selectOs(os);
 
     // Live bridge detection — turns the status card green once the bridge is up.
-    function ping(){
-      var c = new AbortController(); var to = setTimeout(function(){ c.abort(); }, 1500);
-      return fetch('http://127.0.0.1:9110/kiwi/ping', { signal: c.signal, cache: 'no-store' })
+    // Scan the same small range assets/printer-bridge.js does: 9110 is the
+    // default, but a till where that port is taken runs the bridge on the next
+    // one up (see the .cmd above). A refused loopback port fails in about a
+    // millisecond, so trying five is imperceptible.
+    var PORTS = [9110, 9111, 9112, 9113, 9114];
+    function pingPort(p){
+      var c = new AbortController(); var to = setTimeout(function(){ c.abort(); }, 1200);
+      return fetch('http://127.0.0.1:' + p + '/kiwi/ping', { signal: c.signal, cache: 'no-store' })
         .then(function(r){ clearTimeout(to); return r.ok ? r.json() : null; })
         .then(function(j){ return (j && j.ok) ? j : null; })
         .catch(function(){ clearTimeout(to); return null; });
+    }
+    function ping(){
+      var i = 0;
+      function step(){
+        if (i >= PORTS.length) return null;
+        return pingPort(PORTS[i++]).then(function(j){ return j || step(); });
+      }
+      return step();
     }
     var st = $('#status'), stt = $('#status-t');
     function render(j){
