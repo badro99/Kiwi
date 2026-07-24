@@ -119,6 +119,14 @@
       payStatVarSub: 'heures × taux horaire',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
+      tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
+      plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
+      plApply: 'Reporter sur les heures', plClear: 'Vider le planning',
+      plFooter: 'Total planifié',
+      plHint: 'Affectez un service à chaque personne, puis reportez-le sur les heures une fois la semaine faite.',
+      plApplied: (n) => `${n} journée${n > 1 ? 's' : ''} reportée${n > 1 ? 's' : ''} sur les heures.`,
+      plNothing: 'Rien à reporter : aucun service planifié sur cette période.',
+      plCleared: 'Planning vidé pour cette période.',
       submitAdd:  'Ajouter le membre',
       submitEdit: 'Enregistrer les modifications',
       cancel: 'Annuler',
@@ -248,6 +256,14 @@
       payStatVarSub: 'hours × hourly rate',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
+      tabPlanning: 'Schedule', tabRealised: 'Hours worked',
+      plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
+      plApply: 'Copy onto hours', plClear: 'Clear schedule',
+      plFooter: 'Total scheduled',
+      plHint: 'Assign a shift to each person, then copy it onto hours once the week is done.',
+      plApplied: (n) => `${n} day${n > 1 ? 's' : ''} copied onto hours.`,
+      plNothing: 'Nothing to copy: no shift scheduled this period.',
+      plCleared: 'Schedule cleared for this period.',
       submitAdd:  'Add member',
       submitEdit: 'Save changes',
       cancel: 'Cancel',
@@ -376,6 +392,14 @@
       payStatVarSub: 'الساعات × الأجر بالساعة',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
+      tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
+      plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
+      plApply: 'نقل إلى الساعات', plClear: 'مسح الجدول',
+      plFooter: 'إجمالي المجدول',
+      plHint: 'عيّن وردية لكل شخص، ثم انقلها إلى الساعات بعد انتهاء الأسبوع.',
+      plApplied: (n) => `تم نقل ${n} يوم إلى الساعات.`,
+      plNothing: 'لا شيء للنقل: لا توجد ورديات مجدولة في هذه الفترة.',
+      plCleared: 'تم مسح الجدول لهذه الفترة.',
       submitAdd:  'إضافة العضو',
       submitEdit: 'حفظ التعديلات',
       cancel: 'إلغاء',
@@ -647,7 +671,35 @@
   }
 
   /* ═══════════════ ROOT STATE ═══════════════ */
-  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, periodKind: 'week', periodLocked: false };
+  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, periodKind: 'week', periodLocked: false };
+  if (!window.__kiwiTeamV2.shiftsByVenue) window.__kiwiTeamV2.shiftsByVenue = {};
+
+  /* ── PLANNING ────────────────────────────────────────────────────────────
+   * La page s'appelle « Paie & planning » et ne savait que constater : une
+   * grille d'heures DÉJÀ faites. Impossible d'affecter qui que ce soit à un
+   * service — le commerçant ne pouvait pas planifier, seulement compter après
+   * coup. Un poste = un créneau nommé, avec sa durée, pour que le planning
+   * puisse être chiffré avant la semaine et reporté sur les heures après. */
+  const SHIFTS = [
+    { id: 'matin',   h: 4, fr: 'Matin · 9h-13h',    en: 'Morning · 9-1',    ar: 'صباح · 9-13' },
+    { id: 'aprem',   h: 5, fr: 'Après-midi · 13h-18h', en: 'Afternoon · 1-6', ar: 'بعد الظهر · 13-18' },
+    { id: 'journee', h: 8, fr: 'Journée · 9h-18h',  en: 'Full day · 9-6',   ar: 'يوم كامل · 9-18' },
+    { id: 'soir',    h: 6, fr: 'Soir · 18h-00h',    en: 'Evening · 6-12',   ar: 'مساء · 18-00' },
+    { id: 'repos',   h: 0, fr: 'Repos',             en: 'Day off',          ar: 'راحة' },
+  ];
+  const SHIFT_BY_ID = Object.fromEntries(SHIFTS.map((s) => [s.id, s]));
+  const shiftHours = (id) => (SHIFT_BY_ID[id] ? SHIFT_BY_ID[id].h : 0);
+  function getShifts(venueType) { return window.__kiwiTeamV2.shiftsByVenue[venueType] || {}; }
+  /* Les deux grilles — planifié et réalisé — partagent le même sélecteur de
+   * période : elles doivent toujours parler de la même semaine. */
+  function periodPillsHtml(T) {
+    const kind = window.__kiwiTeamV2.periodKind || 'week';
+    return [
+      ['week',      T.hPeriodWeek],
+      ['fortnight', T.hPeriodFort],
+      ['month',     T.hPeriodMonth],
+    ].map(([k, label]) => `<button class="eq-pill${kind === k ? ' on' : ''}" type="button" data-action="kt-period" data-arg="${k}">${esc(label)}</button>`).join('');
+  }
 
   /* A team is stored per venue. DEMO venues keep their type-keyed, in-memory
      demo seed (unchanged). A REAL (custom/onboarded) venue is keyed by its own
@@ -668,16 +720,24 @@
       const raw = JSON.parse(localStorage.getItem(LS_TEAM) || '{}');
       const root = window.__kiwiTeamV2;
       Object.keys(raw.byVenue || {}).forEach((k) => {
-        if (persistableTeamKey(k)) { root.byVenue[k] = raw.byVenue[k]; root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {}; }
+        if (persistableTeamKey(k)) {
+          root.byVenue[k] = raw.byVenue[k];
+          root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
+          root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
+        }
       });
     } catch (_) {}
   }
   function saveCustomTeams() {
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {} };
+      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
-        if (persistableTeamKey(k)) { out.byVenue[k] = root.byVenue[k]; out.hoursByVenue[k] = root.hoursByVenue[k] || {}; }
+        if (persistableTeamKey(k)) {
+          out.byVenue[k] = root.byVenue[k];
+          out.hoursByVenue[k] = root.hoursByVenue[k] || {};
+          out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
+        }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
     } catch (_) {}
@@ -740,6 +800,9 @@
 
   /* ═══════════════ STATE ═══════════════ */
   let activeTab = 'profiles';
+  /* Paie & planning ouvre sur le PLANNING : c'est la moitié de la page qui
+   * n'existait pas, et les heures réelles restent à un clic. */
+  let payTab = 'planning';
   let activeFilters = { search: '', dept: '', contract: '', lang: '' };
   let pageActive = false;
   // Which of this module's two pages is on screen: 'equipe' | 'payroll' | null.
@@ -1094,11 +1157,7 @@
       `;
     }).join('');
 
-    const periodPills = [
-      ['week',      T.hPeriodWeek],
-      ['fortnight', T.hPeriodFort],
-      ['month',     T.hPeriodMonth],
-    ].map(([k, label]) => `<button class="eq-pill${periodKind === k ? ' on' : ''}" type="button" data-action="kt-period" data-arg="${k}">${esc(label)}</button>`).join('');
+    const periodPills = periodPillsHtml(T);
 
     return `
       <div class="eq-section">
@@ -1151,6 +1210,68 @@
       render();
     }
   };
+  handlers['kt-paytab'] = (_el, kind) => {
+    if (kind !== 'planning' && kind !== 'hours') return;
+    payTab = kind;
+    render();
+  };
+  /* Reporter le planifié sur le réel. Le planning ne paie personne tout seul :
+   * la paie ne lit QUE la grille des heures, sinon une semaine prévue puis
+   * annulée partirait quand même en salaire. Un jour laissé vide au planning
+   * n'écrase pas l'heure déjà saisie — on ne remplace que ce qui a été décidé. */
+  handlers['kt-plan-apply'] = () => {
+    const root = window.__kiwiTeamV2;
+    if (root.periodLocked) return;
+    const T = t();
+    const vt = teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+    const period = buildPeriod(root.periodKind || 'week');
+    const shifts = root.shiftsByVenue[vt] || {};
+    const hours = root.hoursByVenue[vt] || (root.hoursByVenue[vt] = {});
+    let n = 0;
+    getMembers(vt).forEach((m) => {
+      const row = shifts[m.id] || {};
+      period.days.forEach((d) => {
+        if (!row[d]) return;
+        if (!hours[m.id]) hours[m.id] = {};
+        hours[m.id][d] = shiftHours(row[d]);
+        n++;
+      });
+    });
+    if (!n) { Kiwi.toast(T.plNothing, { type: 'pend' }); return; }
+    saveCustomTeams();
+    payTab = 'hours';                    // montrer le résultat, pas le formulaire
+    render();
+    Kiwi.toast(T.plApplied(n), { type: 'success' });
+  };
+  handlers['kt-plan-clear'] = () => {
+    const root = window.__kiwiTeamV2;
+    if (root.periodLocked) return;
+    const vt = teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+    const period = buildPeriod(root.periodKind || 'week');
+    const shifts = root.shiftsByVenue[vt] || {};
+    Object.keys(shifts).forEach((mid) => { period.days.forEach((d) => { delete shifts[mid][d]; }); });
+    saveCustomTeams();
+    render();
+    Kiwi.toast(t().plCleared, { type: 'info' });
+  };
+
+  /* Un service choisi est une décision d'organisation : on la persiste tout de
+   * suite, comme une heure saisie. */
+  document.addEventListener('change', (e) => {
+    const el = e.target;
+    if (!el.matches || !el.matches('[data-kt-shift]')) return;
+    if (!pageActive) return;
+    if (window.__kiwiTeamV2.periodLocked) return;
+    const mid = el.getAttribute('data-mid');
+    const day = el.getAttribute('data-day');
+    const vt = teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+    const shifts = window.__kiwiTeamV2.shiftsByVenue[vt] || (window.__kiwiTeamV2.shiftsByVenue[vt] = {});
+    if (!shifts[mid]) shifts[mid] = {};
+    if (el.value) shifts[mid][day] = el.value; else delete shifts[mid][day];
+    saveCustomTeams();
+    render();
+  });
+
   handlers['kt-filter-dept']     = (_el, v) => { activeFilters.dept = v || ''; render(); };
   handlers['kt-filter-contract'] = (_el, v) => { activeFilters.contract = v || ''; render(); };
 
@@ -1753,6 +1874,97 @@
     return { totalHours, variablePay, baseMass, onDuty };
   }
 
+  /* La grille de planning : une personne par ligne, un service par jour. Le
+   * coût prévu tombe du taux horaire du membre, donc le commerçant voit ce que
+   * la semaine va coûter AVANT de la faire — c'est tout l'intérêt de planifier
+   * plutôt que de constater. « Reporter sur les heures » recopie le planifié
+   * dans la grille des heures réelles, seule à alimenter la paie : le planning
+   * ne paie personne tout seul, sinon une semaine prévue mais pas travaillée
+   * partirait en salaire. */
+  function renderPlanningPane(T, venue, venueType, members) {
+    const root = window.__kiwiTeamV2;
+    const period = buildPeriod(root.periodKind || 'week');
+    const shifts = root.shiftsByVenue[venueType] || (root.shiftsByVenue[venueType] = {});
+    const locked = root.periodLocked;
+    const lang = trLang();
+    let grandH = 0, grandCost = 0;
+
+    const headDays = period.days.map((d) => {
+      const dt = new Date(d);
+      const dayLbl = dt.toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short' });
+      return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
+    }).join('');
+
+    const rows = members.map((m) => {
+      const row = shifts[m.id] || {};
+      let h = 0;
+      const cells = period.days.map((d) => {
+        const cur = row[d] || '';
+        h += shiftHours(cur);
+        const isToday = (d === toISO(new Date()));
+        const opts = [`<option value=""${cur ? '' : ' selected'}>${esc(T.plNone)}</option>`]
+          .concat(SHIFTS.map((s) => `<option value="${s.id}"${cur === s.id ? ' selected' : ''}>${esc(s[lang] || s.fr)}</option>`))
+          .join('');
+        return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${cur && cur !== 'repos' ? ' on' : ''}${cur === 'repos' ? ' off' : ''}">
+          <select data-kt-shift data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''}>${opts}</select>
+        </td>`;
+      }).join('');
+      const cost = h * (+m.hourlyRate || 0);
+      grandH += h; grandCost += cost;
+      const tone = m.avatarTone || 'a';
+      return `
+        <tr>
+          <td class="kt-h-member">
+            <span class="eq-av sm" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName))}</span>
+            <div>
+              <div class="n">${esc(memberFullName(m))}</div>
+              <div class="r">${esc(m.function)}</div>
+            </div>
+          </td>
+          ${cells}
+          <td class="kt-h-total mono"><b>${h.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+          <td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div class="eq-section">
+        <div class="eq-section-head">
+          <h3>${esc(T.tabPlanning)}</h3>
+          <span class="eq-count-badge">${esc(T.hPeriodLabel(period.startFr, period.endFr))}${locked ? ' · ' + esc(T.hLocked) : ''}</span>
+        </div>
+        <div class="kt-hbar">
+          <div class="eq-pill-row">${periodPillsHtml(T)}</div>
+          <div class="kt-hbar-right">
+            <button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked ? 'disabled' : ''}>${esc(T.plClear)}</button>
+            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-plan-apply" ${locked ? 'disabled' : ''}>${svgIcon(IC.check, 13)}<span>${esc(T.plApply)}</span></button>
+          </div>
+        </div>
+        <p style="margin:0 0 12px; font-size:12.5px; color:var(--n-500);">${esc(T.plHint)}</p>
+        <div class="kt-h-tablewrap">
+          <table class="kt-h-table">
+            <thead>
+              <tr>
+                <th class="kt-h-memberhead">${esc(T.plMember)}</th>
+                ${headDays}
+                <th class="kt-h-totalhead">${esc(T.plPlanned)}</th>
+                <th class="kt-h-totalhead">${esc(T.plCost)}</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+              <tr>
+                <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
+                <td colspan="${period.days.length}"></td>
+                <td class="kt-h-foot-tot mono"><b>${grandH.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+                <td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>`;
+  }
+
   function renderPayrollBody(T, venue, venueType, members) {
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     if (!members.length) {
@@ -1780,7 +1992,15 @@
           ${tile(T.payStatVar,   fmtMad(f.variablePay),              T.payStatVarSub)}
           ${tile(T.payStatBase,  fmtMad(f.baseMass),                 T.payStatBaseSub(f.onDuty, members.length))}
         </div>
-        ${renderHoursPane(T, venue, venueType, members)}
+        <div class="eq-filters">
+          <div class="eq-pill-row">
+            <button class="eq-pill${payTab === 'planning' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="planning">${esc(T.tabPlanning)}</button>
+            <button class="eq-pill${payTab === 'hours' ? ' on' : ''}" type="button" data-action="kt-paytab" data-arg="hours">${esc(T.tabRealised)}</button>
+          </div>
+        </div>
+        ${payTab === 'planning'
+          ? renderPlanningPane(T, venue, venueType, members)
+          : renderHoursPane(T, venue, venueType, members)}
       </div>`;
   }
 
@@ -1838,6 +2058,21 @@
 
   /* ═══════════════ SCOPED CSS — only patches what .eq-* doesn't cover ═══════════════ */
   const PAGE_CSS = `
+    /* Planning · une cellule = un service. Le fond teinté fait lire la semaine
+       d'un coup d'œil : qui est posté, qui est en repos, quels jours sont vides. */
+    .kt-plan-cell select {
+      width: 100%; min-width: 92px; padding: 6px 4px; border: 1px solid var(--n-200);
+      border-radius: 8px; background: var(--surface); color: var(--ink);
+      font-family: var(--sans); font-size: 11.5px; outline: none; cursor: pointer;
+      transition: border-color 140ms, box-shadow 140ms;
+    }
+    .kt-plan-cell select:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
+    .kt-plan-cell select:disabled { opacity: 0.55; cursor: default; }
+    .kt-plan-cell.on  { background: rgba(11,110,79,0.055); }
+    .kt-plan-cell.off { background: var(--paper-soft, rgba(0,0,0,0.025)); }
+    .kt-plan-cell.on select  { border-color: rgba(11,110,79,0.35); font-weight: 500; }
+    .kt-plan-cell.off select { color: var(--n-500); }
+
     /* Search bar */
     .dash-equipe .kt-searchbar { position: relative; }
     .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-400); pointer-events: none; }

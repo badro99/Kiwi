@@ -3646,6 +3646,7 @@
    * Les deux doivent bouger ensemble : sinon l'Inventaire annonce « 1 stock bas »
    * pendant que l'accueil jure n'avoir rien à recommander. */
   const LOW_STOCK_SEUIL = 5;
+  const STOCK_TITLE_STR = { fr: 'Stock à recommander', en: 'Stock to reorder', ar: 'مخزون لإعادة الطلب' };
   const RUPTURE_STR = { fr: 'Rupture · à racheter', en: 'Out of stock · reorder', ar: 'نفد المخزون · أعد الطلب' };
   const LOWSTK_STR = {
     fr: (s) => `Stock bas · seuil ${s}`,
@@ -3949,12 +3950,19 @@
     const isCustom = !!window.KiwiVenue?.isCustom?.();
     const data = isCustom ? [] : vData(productsByVenue, currentRange);
     const pe = tradeStr('productsEmpty', PRODUCTS_EMPTY[lang] || PRODUCTS_EMPTY.fr);
+    const lowEarly = isCustom ? realLowStock() : null;
     const titleEl = document.querySelector('[data-products-title]');
-    if (titleEl) titleEl.textContent = (isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr;
+    /* Quand la carte liste ce qu'il faut racheter, elle doit le DIRE. Le titre
+     * retombait sur « Top articles » — l'en-tête des meilleures ventes — au-dessus
+     * d'une liste de stocks bas, soit exactement le contraire : une barre courte
+     * y veut dire « à racheter », pas « se vend mal ». */
+    if (titleEl) titleEl.textContent = (lowEarly && lowEarly.rows.length)
+      ? (STOCK_TITLE_STR[lang] || STOCK_TITLE_STR.fr)
+      : ((isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr);
     const manageEl = document.querySelector('[data-products-manage]');
     if (manageEl) manageEl.textContent = (isCustom && pe.manage) || PRODUCTS_MANAGE[lang] || PRODUCTS_MANAGE.fr;
     const list = document.querySelector('[data-products-list]');
-    const low = isCustom ? realLowStock() : null;
+    const low = lowEarly;
     if (list && low && low.rows.length) {
       /* Le rang est le degré d'urgence : rupture d'abord, puis le stock le plus
        * faible. La barre se lit « ce qu'il reste sur le seuil », donc une barre
