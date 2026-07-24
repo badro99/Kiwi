@@ -30,6 +30,74 @@
     if (el.removeAttribute) el.removeAttribute('data-i18n');  // don't let langchange revert it
   }
 
+  /* ══════════════ ACCOUNT-SCOPED TENANT ISOLATION ══════════════
+   * Tenant data (the establishment list, PINs, pairing, live-feed target,
+   * onboarding flag, and every per-venue store) lives in browser-GLOBAL
+   * localStorage keys. When a DIFFERENT account signs in on this browser, the
+   * previous account's state must be purged, or the new merchant inherits it —
+   * foreign stores in the switcher, another store's PINs, leaked sales, a stale
+   * venue/type. Same account reload = untouched (no data loss, no re-onboarding).
+   *
+   * Safety: we purge ONLY when we can positively tell the active account differs
+   * from what this browser last held (a set kiwiAccountKey that differs, or a
+   * prior owner email/business that mismatches). On the very first run after this
+   * ships, an existing client whose local identity matches their session is
+   * ADOPTED, not wiped. kiwiAccountKey is written BEFORE any reload, so a reload
+   * loop is impossible (the next load sees key===email). Never runs on the demo
+   * (no account → not authenticated). */
+  var TENANT_KEYS = [
+    'kiwiCustomVenues', 'kiwiVenue', 'kiwiVenueCount', 'kiwiOnboarded', 'kiwiSkipOnboard',
+    'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiTeamSize', 'kiwiGoals',
+    'kiwiPins', 'kiwiLiveMerchant', 'kiwiLive', 'kiwiPaired', 'kiwiPairedVenue', 'kiwiPairings',
+    'kiwiBizExtra', 'kiwiTeamV2:custom', 'kiwiSet:ownerName', 'kiwiSet:ownerEmail',
+    'kiwiOwnerEmail', 'kiwiRole',
+  ];
+  // Any key starting with one of these is per-venue tenant data → purge on switch.
+  var TENANT_PREFIXES = ['kiwi:', 'kiwiSales:', 'kiwiBoutiqueCatalog:', 'kiwiLiveIngested:', 'kiwiBarcodeSeq:', 'kiwiSet:biz:'];
+  // Device/UI chrome that is NOT tenant data — must survive an account switch.
+  var PRESERVE = {
+    kiwiAccountKey: 1, kiwiLang: 1, kiwiTheme: 1, kiwiMode: 1, kiwiDesign2026: 1,
+    kiwiDesignIOS27: 1, kiwiRamadan: 1, kiwiDateRange: 1, kiwiRevCompare: 1,
+    kiwiHeroView: 1, kiwiKpiLayout: 1, kiwiGlassLevel: 1, cafeAtlasLang: 1, kiwiDemos: 1,
+  };
+  function slugish(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  function purgeTenantState() {
+    try {
+      TENANT_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+      var kill = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || PRESERVE[k]) continue;
+        for (var p = 0; p < TENANT_PREFIXES.length; p++) {
+          if (k.indexOf(TENANT_PREFIXES[p]) === 0) { kill.push(k); break; }
+        }
+      }
+      kill.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    } catch (_) {}
+  }
+  // Returns true when it purged (caller should reload for a clean re-init).
+  function reconcileAccount(me) {
+    var email = String(me && me.email || '').trim().toLowerCase();
+    if (!email) return false;
+    var key = null; try { key = localStorage.getItem('kiwiAccountKey'); } catch (_) {}
+    if (key && key.toLowerCase() === email) return false;   // same account → keep everything
+    var different;
+    if (key) {
+      different = true;                                     // key set and differs → different account
+    } else {                                                // first run / migration: infer from prior identity
+      var priorEmail = null, priorBiz = null;
+      try { priorEmail = localStorage.getItem('kiwiOwnerEmail'); } catch (_) {}
+      try { priorBiz = localStorage.getItem('kiwiBizName'); } catch (_) {}
+      if (priorEmail) different = priorEmail.trim().toLowerCase() !== email;
+      else if (priorBiz && me.business) different = slugish(priorBiz) !== slugish(me.business);
+      else different = false;                               // can't tell → keep (safe for existing clients)
+    }
+    try { localStorage.setItem('kiwiAccountKey', email); } catch (_) {}  // BEFORE any reload → no loop
+    if (!different) return false;
+    purgeTenantState();
+    return true;
+  }
+
   function apply(id) {
     var first = firstName(id.name);
 
@@ -170,6 +238,9 @@
 
       // A real merchant on their own device.
       if (!me.authenticated) { runNeutral(); return; }   // hosted-no-account → neutral, not demo; local demo → isReal false, untouched
+      // Isolate accounts: if a DIFFERENT account previously used this browser,
+      // purge its tenant state now so foreign stores / PINs / sales can't leak in.
+      var purged = reconcileAccount(me);
       var id = {
         name: (me.name || '').trim(),
         business: (me.business || '').trim(),
@@ -181,6 +252,13 @@
       if (id.business) { ls('kiwiBizName', id.business); }
       if (id.email) { ls('kiwiSet:ownerEmail', id.email); ls('kiwiOwnerEmail', id.email); }
       window.KiwiMe = id;
+      if (purged) {
+        // We wiped a different account's local state → reload so the venue engine,
+        // onboarding gate and caisse re-initialise clean for THIS account. The new
+        // kiwiAccountKey is already written, so this reload cannot loop.
+        try { location.reload(); } catch (_) {}
+        return;
+      }
       run(id, false);
     })
     .catch(function () { /* offline / missing endpoint → keep the demo locally, but a real (hosted) session still gets neutralized */ runNeutral(); });
