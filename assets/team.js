@@ -1834,6 +1834,14 @@
       if (!hours[m.id]) hours[m.id] = {};
       period.days.forEach(d => {
         if (hours[m.id][d] == null) {
+          /* La démo se remplit d'heures plausibles pour montrer une grille
+           * vivante. Une VRAIE boutique doit rester à zéro : ce back-fill
+           * inventait 4 à 8 h par personne et par jour dès qu'on touchait une
+           * pastille de période, et payrollFigures les additionnait ensuite en
+           * « à payer · période » — un salaire chiffré sur des services que
+           * personne n'a faits. ensureVenueData() se garde déjà de ça ; ce
+           * second chemin avait été oublié. */
+          if (isCustomVenue()) { hours[m.id][d] = 0; return; }
           const isOff = (Math.floor(Math.random() * 7) === 0);
           hours[m.id][d] = isOff ? 0 : (4 + Math.floor(Math.random() * 5)) + (Math.random() < 0.3 ? 0.5 : 0);
         }

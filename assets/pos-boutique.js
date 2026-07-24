@@ -37,6 +37,17 @@
      clientes/ventes/avoirs) are neutralized whenever pvReal() is true so a real
      store never inherits the Maison Mansour cast. Local demo ⇒ pvReal() false. */
   function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+
+  /* Prix et coûts saisis par le commerçant. C'était `parseInt(v, 10)`, qui coupe
+   * tout ce qui suit la virgule : une chemise à 129,90 était enregistrée à 129 —
+   * 0,90 MAD offert à chaque vente, et une marge fausse pour toujours. Le champ
+   * est un `type=number` sans `step`, donc il ACCEPTE les décimales : seule la
+   * lecture les jetait. On accepte aussi la virgule, que tape un clavier
+   * français, et on arrête aux centimes — l'unité réelle du dirham. */
+  function bqMoney(v) {
+    const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+  }
   function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
 
   function toast(msg, ms) {
@@ -2714,7 +2725,7 @@
         let catId = $('#bqi-n-cat', el).value || null;
         const newCat = $('#bqi-n-newcat', el).value.trim();
         if (newCat) catId = cat.addCategory(newCat).id;
-        const p = cat.addProduct({ name, categoryId: catId, kind: $('#bqi-n-kind', el).value, art: icon, priceMAD: parseInt($('#bqi-n-price', el).value, 10) || 0, cost: parseInt($('#bqi-n-cost', el).value, 10) || 0 });
+        const p = cat.addProduct({ name, categoryId: catId, kind: $('#bqi-n-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
         toast(`${name} créé, ajoutez ses variantes`);
         openInvProduct(p.id);
       });
@@ -2745,7 +2756,7 @@
       wireIconPicker(el, (k) => { icon = k; });
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-e-save', el).addEventListener('click', () => {
-        cat.updateProduct(pid, { name: $('#bqi-e-name', el).value.trim() || undefined, categoryId: $('#bqi-e-cat', el).value || null, kind: $('#bqi-e-kind', el).value, art: icon, priceMAD: parseInt($('#bqi-e-price', el).value, 10) || 0, cost: parseInt($('#bqi-e-cost', el).value, 10) || 0 });
+        cat.updateProduct(pid, { name: $('#bqi-e-name', el).value.trim() || undefined, categoryId: $('#bqi-e-cat', el).value || null, kind: $('#bqi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-e-price', el).value), cost: bqMoney($('#bqi-e-cost', el).value) });
         toast('Produit mis à jour');
         openInvProduct(pid);
       });
