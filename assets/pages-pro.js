@@ -9470,7 +9470,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             `).join('')}
           </div>
         `).join('')}
-        <button class="kb atlas" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Synthèse RH générée', { desc: 'Export Excel envoyé sur themoubadir@gmail.com', type: 'success' })">Exporter le tableau de bord RH</button>
+        <button class="kb atlas" style="width:100%; justify-content:center; margin-top:10px;" onclick="window.Kiwi.toast('Export RH · bientôt', { desc: 'La synthèse RH sera exportable quand la paie sera branchée sur vos heures réelles.', type: 'pend' })">Exporter le tableau de bord RH</button>
       `,
     });
   }
