@@ -909,10 +909,21 @@
     const cat = catalogFor(tradeKey(venue));
     /* Stats */
     const totalMembers = members.length;
-    const present = Math.max(0, Math.round(totalMembers * 0.75));
     const monthlyPayroll = members.reduce((acc, m) => acc + (m.baseSalary || 0), 0);
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     const hours = getHours(venueType);
+    /* « En service aujourd'hui » valait headcount × 0,75 arrondi : un nombre
+     * inventé, présenté au commerçant comme un pointage. Sur deux personnes il
+     * affichait donc toujours 2 — y compris quand personne n'avait saisi la
+     * moindre heure — pendant que Paie & planning comptait honnêtement 0 à
+     * partir des mêmes données. Deux pages, un seul effectif, deux réponses
+     * opposées, et c'est celle d'Équipe qui était fausse. Une vraie boutique
+     * compte les membres ayant des heures aujourd'hui, avec EXACTEMENT la
+     * définition de Paie (onDuty) ; la démo garde son estimation. */
+    const todayKey = toISO(new Date());
+    const present = isCustomVenue()
+      ? members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length
+      : Math.max(0, Math.round(totalMembers * 0.75));
     let totalHours = 0;
     members.forEach(m => {
       const row = hours[m.id] || {};
