@@ -1630,6 +1630,50 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0, card, cash };
   }
+  /* Coût matière RÉEL. Le commerçant saisit un coût par produit ; chaque vente
+   * porte le libellé de ce qu'elle a vendu, donc on relit le coût dans le
+   * catalogue au moment du rendu. Une vente sans libellé — ou dont le produit a
+   * été supprimé depuis — retombe sur la marge type du métier : une seule ligne
+   * non résolue ne doit pas faire chuter le bénéfice de la journée.
+   * Compromis assumé de la résolution au rendu : ce sont les coûts d'AUJOURD'HUI
+   * qui s'appliquent à l'historique, donc corriger un coût réécrit le bénéfice
+   * passé. Pour figer l'histoire il faudrait que la caisse copie le coût sur le
+   * ticket au moment de la vente. */
+  function realGrossProfit(from, to, venueType) {
+    /* Le module catalogue démarre sur la venue de démo et n'est rebasculé que
+     * par les pages Inventaire / Catégories. Sans ce bind, l'accueil lisait le
+     * catalogue de Maison Mansour — vide — et concluait qu'aucun coût n'était
+     * connu. On passe par la clé canonique de pages-pro.js, celle-là même que
+     * l'inventaire et la caisse utilisent. */
+    let prods = [];
+    try {
+      const cat = window.KiwiBoutiqueCatalog;
+      if (cat) {
+        const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
+        if (key) cat.use(key);
+        prods = cat.listProducts({ includeArchived: true }) || [];
+      }
+    } catch (_) { prods = []; }
+    const byName = new Map();
+    prods.forEach((p) => {
+      const n = String(p.name || '').trim().toLowerCase();
+      if (n && !byName.has(n)) byName.set(n, p);
+    });
+    const fallback = (DEFAULT_MARGIN[venueType] ?? DEFAULT_MARGIN.boutique) / 100;
+    let profit = 0, resolved = 0, total = 0;
+    realSalesList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.max(0, +e.amount || 0);
+      if (!amt) return;
+      total++;
+      const p = byName.get(String(e.label || '').trim().toLowerCase());
+      const cost = (p && p.cost != null) ? Math.max(0, +p.cost || 0) : null;
+      if (cost != null) { profit += Math.max(0, amt - cost); resolved++; }
+      else profit += amt * fallback;
+    });
+    return { profit, resolved, total };
+  }
   /* rangeBounds leaves `to` open at Infinity for live ranges; a comparison
    * needs a closed window it can shift backwards, so pin the open end to now. */
   function closedBounds(range) {
@@ -2202,6 +2246,16 @@
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
       };
+
+      /* Bénéfice brut, Coût matière et Marge brute dérivent TOUS de `marge` via
+       * margeOf(). En injectant ici la marge réellement constatée, les trois
+       * tuiles sortent d'une seule source et ne peuvent plus se contredire —
+       * au lieu des 54 % forfaitaires qui ignoraient le coût que le commerçant
+       * avait pris la peine de saisir. */
+      if (w.revenue > 0) {
+        const gp = realGrossProfit(wFrom, wTo, window.KiwiVenue?.getVenueType?.() || 'boutique');
+        data.marge = { value: (gp.profit / w.revenue) * 100, unit: '%', fmt: 'pct1', delta: null };
+      }
       // A custom HOTEL's band needs the hotel tiles — there is no hotel demo
       // sibling on this dashboard to zero-clone, so build them blank here.
       // The ménage denominator follows the step-2 « Nombre de chambres ».

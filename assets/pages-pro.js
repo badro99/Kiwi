@@ -6889,6 +6889,13 @@ function _bqxVenue() {
   return (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'maisonMansour';
 }
 
+/* Exposé pour les autres surfaces du tableau de bord — dateRange.js relit le
+ * coût matière du catalogue pour calculer le bénéfice brut de l'accueil. La
+ * règle de clé, et l'adoption des clés héritées qu'elle déclenche, ne doit
+ * exister qu'ici : une deuxième copie dériverait tôt ou tard de celle-ci, et
+ * les deux surfaces liraient alors deux inventaires différents. */
+window.KiwiBoutiqueVenueKey = _bqxVenue;
+
 /* Display name for a modal eyebrow — the store's OWN name. Identity first (it is
  * what the merchant signed up as), then the venue label, then a neutral word.
  * In the demo KiwiMe is absent and the venue IS Maison Mansour, so the demo tag
