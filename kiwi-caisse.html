@@ -5943,8 +5943,10 @@
     let stockTab = 'apercu';
     let skSearch = '', skCat = 'all', skStatus = 'all';
     let skOrderSeq = 2843;
-    /* suppliers — read-only picklist (cashier picks, doesn't edit) */
-    const suppliers = [
+    /* suppliers — read-only picklist (cashier picks, doesn't edit).
+       A REAL store starts with an empty book (builds its own stock); only the
+       local demo seeds this café's suppliers/inventory/orders. */
+    const suppliers = storeIsReal() ? [] : [
       { id: 's1', name: 'Marché Central · Port',     cat: 'Frais'    },
       { id: 's2', name: 'Métro Cash & Carry',        cat: 'Épicerie' },
       { id: 's3', name: 'Boissons Atlas',            cat: 'Boissons' },
@@ -5952,7 +5954,7 @@
       { id: 's5', name: 'Boucherie Zerktouni',       cat: 'Viandes'  },
       { id: 's6', name: 'Café & Torréfaction Riad',  cat: 'Café'     },
     ];
-    const stockItems = [
+    const stockItems = storeIsReal() ? [] : [
       { id:'i1',  name:'Tomates fraîches', cat:'legumes',     unit:'kg',      supplier:'Marché Central · Port',    stock:8,  par:20, reorder:8,  cost:9 },
       { id:'i2',  name:'Oignons',          cat:'legumes',     unit:'kg',      supplier:'Marché Central · Port',    stock:22, par:25, reorder:10, cost:6 },
       { id:'i3',  name:'Pommes de terre',  cat:'legumes',     unit:'kg',      supplier:'Marché Central · Port',    stock:35, par:30, reorder:12, cost:5 },
@@ -5972,7 +5974,7 @@
       { id:'i17', name:'Eau minérale 1L',  cat:'boissons',    unit:'casier',  supplier:'Boissons Atlas',           stock:18, par:20, reorder:8,  cost:48 },
       { id:'i18', name:'Gobelets carton',  cat:'consommables',unit:'paquet',  supplier:'Métro Cash & Carry',       stock:12, par:20, reorder:8,  cost:35 },
     ];
-    const supplyOrders = [
+    const supplyOrders = storeIsReal() ? [] : [
       { id:'2841', supplier:'Boucherie Zerktouni',   items:[{name:'Poulet entier',qty:18,unit:'kg'},{name:'Viande hachée',qty:12,unit:'kg'}], total:1584, status:'confirmee',  when:'Demain · 06h' },
       { id:'2842', supplier:'Boissons Atlas',        items:[{name:'Coca-Cola 33cl',qty:10,unit:'casier'},{name:'Eau minérale 1L',qty:8,unit:'casier'}], total:1284, status:'en-attente', when:'Jeu. · 08h' },
       { id:'2838', supplier:'Marché Central · Port', items:[{name:'Tomates fraîches',qty:20,unit:'kg'},{name:'Oignons',qty:15,unit:'kg'}], total:270, status:'recue', when:'Reçue hier' },
@@ -10229,7 +10231,7 @@
           <div class="sk-field"><label>Catégorie</label><select class="sk-select" id="sk-f-cat">${skCatOptions('legumes')}</select></div>
           <div class="sk-field"><label>Unité</label><input class="sk-input" id="sk-f-unit" value="kg"></div>
         </div>
-        <div class="sk-field"><label>Fournisseur</label><select class="sk-select" id="sk-f-supplier">${skSupplierOptions(suppliers[0].name)}</select></div>
+        <div class="sk-field"><label>Fournisseur</label><select class="sk-select" id="sk-f-supplier">${skSupplierOptions((suppliers[0] || {}).name || '')}</select></div>
         <div class="sk-field-row">
           <div class="sk-field"><label>Stock</label><input class="sk-input" id="sk-f-stock" type="number" min="0" value="0"></div>
           <div class="sk-field"><label>Par</label><input class="sk-input" id="sk-f-par" type="number" min="0" value="10"></div>
@@ -10256,7 +10258,7 @@
       }).join('');
     }
     function openNewOrder(prefillSupplier, prefillId){
-      const sup = prefillSupplier || suppliers[0].name;
+      const sup = prefillSupplier || (suppliers[0] || {}).name || '';
       openSkModal(`<div class="split-badge">Approvisionnement</div><h3 class="modal-title" style="margin-bottom:12px;">Nouvelle commande</h3>
         <div class="sk-field"><label>Fournisseur</label><select class="sk-select" id="sk-order-supplier">${skSupplierOptions(sup)}</select></div>
         <div class="sk-field"><label>Articles &amp; quantités</label><div id="sk-order-lines">${skOrderLinesHTML(sup, prefillId)}</div></div>
@@ -10345,7 +10347,7 @@
         if (!name || qty <= 0) return;
         const it = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
         if (it){ it.stock += qty; added++; }
-        else { stockItems.push({ id:'i'+(++skItemSeq), name, cat:'epicerie', unit:'unité', supplier:suppliers[0].name, stock:qty, par:Math.max(qty,5), reorder:Math.max(1,Math.round(qty*0.4)), cost:0 }); created++; }
+        else { stockItems.push({ id:'i'+(++skItemSeq), name, cat:'epicerie', unit:'unité', supplier:(suppliers[0] || {}).name || '', stock:qty, par:Math.max(qty,5), reorder:Math.max(1,Math.round(qty*0.4)), cost:0 }); created++; }
       });
       if (!added && !created){ toast('Aucune ligne valide'); return; }
       closeSkModal(); stockTab = 'articles'; renderStock();

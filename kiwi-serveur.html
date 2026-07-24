@@ -5152,8 +5152,11 @@
     }
 
     function renderHours() {
+      /* A REAL waiter has no demo schedule/history: keep today's live elapsed,
+         but never sum a demo week or show the demo month total ('142h 30').
+         Local demo (svReal() false, id always in SCHEDULE_DATA) is unchanged. */
+      const real = svReal();
       const sched = SCHEDULE_DATA[activeRole.id];
-      if (!sched) return;
       // Today — live elapsed since shift start.
       const todayEl = $('#kg-h-today');
       let todayMin = 0;
@@ -5162,17 +5165,17 @@
       }
       if (todayEl) todayEl.textContent = `${Math.floor(todayMin / 60)}h ${String(todayMin % 60).padStart(2, '0')}`;
 
-      // This week — sum of completed earlier days + today's elapsed.
+      // This week — real: today's elapsed only; demo: + completed earlier days.
       const today    = new Date();
       const todayIdx = (today.getDay() + 6) % 7;
       let weekMin = todayMin;
-      for (let i = 0; i < todayIdx; i++) weekMin += shiftMinutes(sched.week[i]);
+      if (!real && sched) { for (let i = 0; i < todayIdx; i++) weekMin += shiftMinutes(sched.week[i]); }
       const weekEl = $('#kg-h-week');
       if (weekEl) weekEl.textContent = `${Math.floor(weekMin / 60)}h ${String(weekMin % 60).padStart(2, '0')}`;
 
-      // This month — demo static.
+      // This month — demo static; a real waiter has no month history yet.
       const monthEl = $('#kg-h-month');
-      if (monthEl) monthEl.textContent = sched.monthHours;
+      if (monthEl) monthEl.textContent = real ? '—' : (sched ? sched.monthHours : '—');
     }
 
     /* Update topbar shift meta every minute */

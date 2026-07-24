@@ -543,16 +543,22 @@
   function render() {
     const KV = window.KiwiVenue;
     const custom = !!(KV && KV.isCustom && KV.isCustom());
+    /* A REAL session (hosted, signed-in merchant, operator-scoped client, or a
+     * custom venue) must never see the Café Atlas demo cards (Rachid Benhima,
+     * Salma Ait, Métro Cash…). Mirror finance.js/accounting.js which gate on
+     * isReal() || isCustom(); depenses previously checked isCustom() only, so a
+     * hosted / signed-in merchant on a non-custom venue fell through to bodyHtml(). */
+    const real = custom || !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
     /* Portfolio (fusion) venue → the consolidated Ultra view. A custom venue
      * is never the fusion demo, so custom wins the branch. */
     const fusion = !custom && !!(KV && KV.getVenue && KV.getVenue() === 'fusion');
     const r = window.Kiwi.appPage('depenses', {
-      title: fusion ? pick(T.uTitle) : pick(T.title),
-      subtitle: custom ? ((KV.getCurrentVenueData && KV.getCurrentVenueData().name) || '') + ' · compte en démarrage'
+      title: fusion && !real ? pick(T.uTitle) : pick(T.title),
+      subtitle: real ? (((custom && KV.getCurrentVenueData && KV.getCurrentVenueData().name) || '') + ' · compte en démarrage')
               : fusion ? pick(T.uSub) : pick(T.subtitle),
-      body: custom ? starterHtml() : fusion ? fusionBodyHtml() : bodyHtml(),
+      body: real ? starterHtml() : fusion ? fusionBodyHtml() : bodyHtml(),
     });
-    if (!custom && r && r.el) growBars(r.el);
+    if (!real && r && r.el) growBars(r.el);
   }
 
   handlers['nav-depenses'] = render;
