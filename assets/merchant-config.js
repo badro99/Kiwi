@@ -33,41 +33,96 @@
   var cfg = { features: {}, pins: [], type: '', loaded: false, apply: applyFeatures, syncPins: syncPins, syncType: syncType };
   window.KiwiConfig = cfg;
 
-  /* Push this merchant's business type (onboarding kiwiBizType) up to the server
-   * so the operator console shows the RIGHT module set (a boutique gets boutique
-   * modules, not restaurant ones). Same contract as syncPins: server derives the
-   * merchant from the session, we only send the type. Fire-and-forget + fail-safe. */
-  function syncType(type) {
-    if (!type) return Promise.resolve(false);
+  /* ── WHICH store is on screen ──────────────────────────────────────────────
+   * One login can hold several établissements — a boutique and a restaurant —
+   * and each is its own store: its own type, its own modules, its own staff, its
+   * own till, its own money. The session says who is signed in; it cannot say
+   * which shop they are currently looking at. So every sync names the active
+   * store, and the server accepts the name only after checking the store really
+   * belongs to that account.
+   *
+   * Without this the server had one slug per LOGIN, so a client who added a
+   * second shop had its type overwrite the first shop's and its staff PINs merge
+   * into one list. Empty on the caisse/serveur (no venue engine) and before the
+   * venue engine settles — both fall back to the session-derived slug, which is
+   * exactly the old behaviour. */
+  function slugMerchant(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  /* Two venue ids are synthetic and must never be registered as a store:
+   * 'own' is the empty placeholder shown to a merchant who has not created one
+   * yet (it borrows the account name, or reads "Mon établissement" when there
+   * isn't one), and 'scoped' is the operator's view of somebody else's client.
+   * Registering either would invent a shop in the console that nobody owns. */
+  var TRANSIENT = { own: 1, scoped: 1 };
+  function storeName() {
+    try {
+      var KV = window.KiwiVenue;
+      if (!KV || !KV.isCustom || !KV.isCustom() || !KV.getCurrentVenueData) return '';
+      var v = KV.getCurrentVenueData();
+      if (!v || !v.custom || !v.name || TRANSIENT[v.id]) return '';
+      return String(v.name).trim();
+    } catch (_) { return ''; }
+  }
+  function storeSlug() { return slugMerchant(storeName()); }
+
+  function post(payload) {
+    var name = storeName();
+    var slug = slugMerchant(name);
+    if (slug) { payload.merchant = slug; payload.name = name; }
     return fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ type: String(type) }),
-    }).then(function (r) { return !!(r && r.ok); }).catch(function () { return false; });
+      body: JSON.stringify(payload),
+    });
   }
 
-  /* Push this merchant's own staff PINs up to the server so the operator console
-   * (God mode) can see and manage them. The server derives the merchant from the
-   * session — we never send a slug. Fire-and-forget + fail-safe: on a static host
-   * (GitHub Pages, local) or offline the POST just fails and nothing changes.
-   * `pins` is the client's local shape [{ role, name, code }]. */
+  /* Push this store's business type (onboarding kiwiBizType) up to the server so
+   * the operator console shows the RIGHT module set (a boutique gets boutique
+   * modules, not restaurant ones). This POST is also what REGISTERS a newly
+   * created établissement against its owner, which is how a client's second shop
+   * reaches God mode at all. Fire-and-forget + fail-safe. */
+  function syncType(type) {
+    if (!type) return Promise.resolve(false);
+    return post({ type: String(type) })
+      .then(function (r) { return !!(r && r.ok); }).catch(function () { return false; });
+  }
+
+  /* Push this store's own staff PINs up to the server so the operator console
+   * (God mode) can see and manage them. The server still decides WHO is writing
+   * from the session cookie — the slug we send only says which of this account's
+   * stores, and is refused if it is not one of them. Fire-and-forget + fail-safe:
+   * on a static host (GitHub Pages, local) or offline the POST just fails and
+   * nothing changes. `pins` is the client's local shape [{ role, name, code }]. */
   function syncPins(pins) {
     if (!Array.isArray(pins)) return Promise.resolve(false);
-    return fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ pins: pins }),
-    }).then(function (r) {
+    return post({ pins: pins }).then(function (r) {
       if (r && r.ok) { cfg.loaded = true; try { return r.json().then(function (d) { if (d && Array.isArray(d.pins)) cfg.pins = d.pins; return true; }).catch(function () { return true; }); } catch (_) { return true; } }
       return false;
     }).catch(function () { return false; });
   }
 
+  var appliedOff = [];
   function applyFeatures() {
     var features = cfg.features || {};
     if (!document.body) return;
+    // First, un-hide anything a PREVIOUS store had switched off. The venue
+    // switcher moves between shops that don't buy the same modules, so a hide
+    // left over from the boutique would blank a section the restaurant pays for.
+    appliedOff.forEach(function (key) {
+      if (features[key] === false) return;                 // still off — leave it
+      document.body.classList.remove('feat-off-' + key);
+      var was = document.querySelectorAll('[data-feature="' + key + '"]');
+      for (var j = 0; j < was.length; j++) { was[j].removeAttribute('hidden'); was[j].style.display = ''; }
+    });
+    appliedOff = [];
     Object.keys(features).forEach(function (key) {
       if (features[key] === false) {
+        appliedOff.push(key);
         document.body.classList.add('feat-off-' + key);
         var nodes = document.querySelectorAll('[data-feature="' + key + '"]');
         for (var i = 0; i < nodes.length; i++) {
@@ -100,20 +155,28 @@
   }
 
   // Where to read config from. An operator (God mode, ?op/?merchant) reads a
-  // specific client by slug. A real merchant on their OWN dashboard reads WITHOUT
-  // a slug so the server derives it from the session cookie — never from a stale
-  // kiwiLiveMerchant a previous account left in this browser (that mismatch is
-  // what made the lock validate against another merchant's PINs → "code
-  // incorrect"). A paired caisse/serveur has no account session, so it keeps
-  // passing its paired slug explicitly.
+  // specific client by slug. A real merchant on their OWN dashboard names the
+  // STORE they are looking at — one login can hold several, and the boutique's
+  // modules are not the restaurant's. The server verifies the store belongs to
+  // this account and otherwise falls back to the account's own; that check is why
+  // naming a slug here is safe, where taking the client's word used to let a
+  // stale kiwiLiveMerchant read another merchant's PINs → "code incorrect". No
+  // store resolved yet (venue engine still booting) ⇒ the bare, session-derived
+  // URL, exactly as before. A paired caisse/serveur has no account session, so it
+  // keeps passing its paired slug explicitly.
   function onDashboard() { try { return /\/dashboard(?:\.html)?$/.test(location.pathname); } catch (_) { return false; } }
   function configUrl() {
     if (isScoped()) return '/api/config?merchant=' + encodeURIComponent(merchant());
-    if (onDashboard()) return '/api/config';
+    if (onDashboard()) {
+      var s = storeSlug();
+      return s ? '/api/config?merchant=' + encodeURIComponent(s) : '/api/config';
+    }
     return '/api/config?merchant=' + encodeURIComponent(merchant());
   }
 
+  var lastSlug = null;
   function fetchConfig() {
+    lastSlug = storeSlug();
     fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
@@ -136,6 +199,44 @@
       .catch(function () { /* offline / missing endpoint → app keeps its defaults */ });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fetchConfig);
-  else fetchConfig();
+  /* Follow the venue switcher. Two reasons this can't be a one-shot fetch:
+   *   · the venue engine settles AFTER this file's first read, so the first
+   *     answer is the account-level one and has to be corrected once the store
+   *     resolves;
+   *   · switching from the boutique to the restaurant switches store, and with it
+   *     the modules, the type and the staff list.
+   * The short poll is the safety net for load order — it stops the moment a store
+   * resolves, and gives up after ~4 s (a caisse, a demo, or a login with no
+   * établissement of its own, where there is nothing to follow). */
+  function refetchStore() {
+    var s = storeSlug();
+    if (!s) return false;
+    if (s !== lastSlug) fetchConfig();
+    return true;
+  }
+  function watchStore() {
+    if (!onDashboard() || isScoped()) return;
+    var subscribed = false;
+    function trySubscribe() {
+      if (subscribed) return true;
+      try {
+        if (window.KiwiVenue && window.KiwiVenue.subscribe) {
+          window.KiwiVenue.subscribe(refetchStore);
+          subscribed = true;
+        }
+      } catch (_) {}
+      return subscribed;
+    }
+    trySubscribe();                      // venues.js may already be up
+    var tries = 0;
+    var t = setInterval(function () {
+      var subbed = trySubscribe();       // …or it may load after this file
+      var resolved = refetchStore();
+      if ((subbed && resolved) || ++tries > 10) clearInterval(t);
+    }, 400);
+  }
+
+  function boot() { fetchConfig(); watchStore(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

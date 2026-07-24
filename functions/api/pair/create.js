@@ -43,14 +43,22 @@ export async function onRequestPost(context) {
   let name = String(body.name || '').trim().slice(0, 120) || null;
 
   // Who is issuing this code, and for which store?
-  //   · A real account session owns exactly ITS OWN store: the merchant is
-  //     derived from the account (never the body), so a client can only pair
+  //   · A real account session owns its stores — possibly SEVERAL of them, a
+  //     boutique and a restaurant under one login. The account decides WHO; the
+  //     `name` the panel sends decides WHICH, but only after the registry
+  //     confirms that store belongs to this account. An unrecognised name falls
+  //     back to the account's own store, so a client can still only ever pair
   //     itself. This is the primary path for a signed-in merchant.
   //   · Kiwi staff / operator (God mode) has NO account but is already fully
   //     privileged across every merchant. It pairs a demo store it declares by
   //     name — the same slug the dashboard and caisse compute (slugMerchant of
   //     the venue name) — so the pitch demo (staff-gated, no login) works too.
   //   · Anyone else → 401. (This is what the caisse's fail-soft path expects.)
+  //
+  // Getting the store right matters here more than anywhere: the till redeems
+  // this code and then posts every sale under the merchant it carries. Deriving
+  // it from the account alone sent a second shop's till into the FIRST shop's
+  // books, while its dashboard sat listening on a slug nothing was writing to.
   let merchant = '';
   let accountId = null;
   if (sess && sess.aid) {
@@ -59,6 +67,16 @@ export async function onRequestPost(context) {
     if (!acc) return json({ error: 'unauthorized' }, 401);
     merchant = slugMerchant(acc.business || acc.email);
     accountId = sess.aid;
+    if (name) {
+      const wanted = slugMerchant(name);
+      if (wanted && wanted !== merchant) {
+        try {
+          const owned = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+            .bind(wanted).first();
+          if (owned && owned.account_id === sess.aid) merchant = wanted;
+        } catch (_) { /* no registry yet → the account's own store, as before */ }
+      }
+    }
     if (!name) name = String(acc.business || '').trim().slice(0, 120) || null;
   } else if (await isOperator(request, env)) {
     if (!name) return json({ error: 'name-required' }, 400);

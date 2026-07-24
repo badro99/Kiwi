@@ -60,6 +60,15 @@
   .mini.warn:hover{background:#f6e8c2}
   .sus-badge{display:inline-block; margin-left:8px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:#8a5a00; background:#fbeecb; border:1px solid #e8d9b0; padding:3px 6px; border-radius:5px; vertical-align:middle}
   tr.suspended{background:rgba(180,140,0,.06)}
+  /* One client, several établissements. The band names the PERSON and totals the
+     whole account; the rows under it are their individual shops, each with its
+     own trade, its own key and its own money. A client with a single shop gets no
+     band at all — the grouping only appears when there is something to tell apart. */
+  .owner-row td, .owner-row:hover td{background:#f1f5f2; cursor:default}
+  .owner-row .who{font-weight:640; color:var(--riad)}
+  .owner-row .mail{color:var(--muted); font-size:.78rem; margin-top:2px}
+  .count-chip{display:inline-block; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:4px 7px; white-space:nowrap}
+  tr.store-row td:first-child{padding-left:30px; border-left:3px solid #dfe9e2}
   .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:#eafff4; padding:11px 18px; border-radius:11px; font-size:.86rem; font-weight:560; box-shadow:0 10px 30px rgba(5,59,44,.35); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
   .op-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px dashed var(--line)}
@@ -121,6 +130,10 @@
     tr.suspended{background:rgba(200,160,40,.08)}
     .type-select{background:#151b18; color:#cfeeda}
     .type-chip{color:#bfe8cf; background:#1c2420}
+    .owner-row td, .owner-row:hover td{background:#141a17}
+    .owner-row .who{color:#cfeeda}
+    .count-chip{color:#bfe8cf; background:#1c2420}
+    tr.store-row td:first-child{border-left-color:#26302b}
   }
 </style>
 </head>
@@ -179,6 +192,7 @@
           <p class="dz-desc">Supprime définitivement <b id="dz-name"></b> et toutes ses données,
             compte de connexion, ventes, PINs du personnel et configuration. Le client repart de zéro.
             <b>Action irréversible.</b></p>
+          <p class="dz-desc" id="dz-multi" hidden></p>
           <div class="addrow">
             <input id="del-confirm" class="dz-input" placeholder="Tapez le nom pour confirmer" aria-label="Confirmer le nom de l’établissement" autocomplete="off" spellcheck="false" />
             <button class="mini danger" id="del-account" disabled>Supprimer le compte</button>
@@ -360,9 +374,12 @@
     return {
       clients: [
         { merchant:'cafe-atlas', business:'Café Atlas', email:'contact@cafeatlas.ma', name:'Yassine', plan:'pro', today_amount:4820, today_count:63, last_ts:now-1000*60*4, demo:true },
-        { merchant:'snack-medina', business:'Snack Medina', email:'medina@snack.ma', name:'Karim', plan:'basic', today_amount:1240, today_count:22, last_ts:now-1000*60*38 },
-        { merchant:'riad-noor', business:'Riad Noor', email:'noor@riad.ma', name:'Salma', plan:'ultra', today_amount:9630, today_count:12, last_ts:now-1000*60*2 },
-        { merchant:'boulangerie-zitoun', business:'Boulangerie Zitoun', email:'zitoun@pain.ma', name:'Omar', plan:'basic', today_amount:2075, today_count:88, last_ts:now-1000*60*71 },
+        { merchant:'snack-medina', business:'Snack Medina', email:'medina@snack.ma', name:'Karim', plan:'basic', type:'fastfood', today_amount:1240, today_count:22, last_ts:now-1000*60*38, owner:'medina@snack.ma', owner_name:'Karim', primary:true },
+        { merchant:'riad-noor', business:'Riad Noor', email:'noor@riad.ma', name:'Salma', plan:'ultra', type:'hotel', today_amount:9630, today_count:12, last_ts:now-1000*60*2, owner:'noor@riad.ma', owner_name:'Salma', primary:true },
+        { merchant:'boulangerie-zitoun', business:'Boulangerie Zitoun', email:'zitoun@pain.ma', name:'Omar', plan:'basic', type:'bakery', today_amount:2075, today_count:88, last_ts:now-1000*60*71, owner:'zitoun@pain.ma', owner_name:'Omar', primary:true },
+        // One client, two trades — the case the grouping exists for.
+        { merchant:'boutique-sport', business:'Boutique Sport', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'boutique', today_amount:3410, today_count:17, last_ts:now-1000*60*9, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:true },
+        { merchant:'cafe-nord', business:'Café Nord', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'cafe', today_amount:860, today_count:31, last_ts:now-1000*60*23, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:false },
       ],
       pins: {
         'cafe-atlas': [ { id:'m1', pin:'0000', name:'Plongeur', role:'plongeur' }, { id:'m2', pin:'1234', name:'Yassine', role:'serveur' } ],
@@ -483,7 +500,60 @@
   function isDemoClient(c){ return (c.demo != null) ? !!c.demo : !c.email; }
   var demosOpen = false;
 
-  function clientRow(c){
+  /* Group the roster by CLIENT, not by store. One login can hold several
+     établissements — a boutique and a restaurant — and each is its own store with
+     its own trade, its own till and its own money. Shown flat they read as two
+     unrelated merchants, which is exactly the confusion this fixes: rows that
+     share an owner are drawn under one band naming the person.
+
+     Rows with no owner (demos, and stores that predate the registry) each get
+     their own group, so they render exactly as they always did. */
+  function groupByOwner(rows){
+    var order = [], byKey = {};
+    rows.forEach(function(c){
+      var key = c.owner || c.email || ('#' + c.merchant);   // no owner ⇒ alone
+      if (!byKey[key]){ byKey[key] = { key:key, stores:[] }; order.push(byKey[key]); }
+      byKey[key].stores.push(c);
+    });
+    order.forEach(function(g){
+      // The shop they signed up with leads; the rest by most recent sale.
+      g.stores.sort(function(a,b){
+        return (b.primary?1:0) - (a.primary?1:0) || (b.last_ts||0) - (a.last_ts||0);
+      });
+      g.head = g.stores[0];
+      // Stamped on the row itself so "Gérer" can tell a lone shop from one of
+      // several without re-deriving the grouping.
+      g.stores.forEach(function(c){ c.siblings = g.stores.length; });
+      g.amount = g.stores.reduce(function(s,c){ return s + (c.today_amount||0); }, 0);
+      g.count  = g.stores.reduce(function(s,c){ return s + (c.today_count||0); }, 0);
+      g.last   = g.stores.reduce(function(s,c){ return Math.max(s, c.last_ts||0); }, 0);
+    });
+    return order;
+  }
+
+  /* The band above a multi-store client: who they are, and the whole account's
+     day. Deliberately not clickable — there is nothing to "manage" at account
+     level, every setting belongs to one shop. */
+  function ownerRow(g){
+    var c = g.head;
+    var live = g.last && (Date.now() - g.last < 1000*60*15);
+    var mail = c.owner || c.email || '';
+    var who = c.owner_name || c.name || mail || c.owner_business || '—';
+    var tr = h('tr', { class:'owner-row' + (c.status === 'suspended' ? ' suspended' : '') },
+      h('td', { colspan:'3' },
+        h('div', { class:'who' }, who,
+          c.status === 'suspended' ? h('span', { class:'sus-badge' }, 'suspendu') : null),
+        mail ? h('div', { class:'mail' }, mail) : null),
+      h('td', { class:'num' }, fmt(g.amount) + ' MAD'),
+      h('td', { class:'num' }, String(g.count)),
+      h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(g.last))),
+      h('td', null, h('div', { class:'row-actions' },
+        h('span', { class:'count-chip' }, g.stores.length + ' établissements')))
+    );
+    return tr;
+  }
+
+  function clientRow(c, inGroup){
     var live = c.last_ts && (Date.now() - c.last_ts < 1000*60*15);
     var suspended = c.status === 'suspended';
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
@@ -501,11 +571,15 @@
 
     var cls = (selected && selected.merchant === c.merchant) ? 'sel' : '';
     if (suspended) cls += (cls ? ' ' : '') + 'suspended';
+    if (inGroup) cls += (cls ? ' ' : '') + 'store-row';
     var tr = h('tr', { class: cls },
       h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
-                      suspended ? h('span', { class:'sus-badge' }, 'suspendu') : null),
+                      (suspended && !inGroup) ? h('span', { class:'sus-badge' }, 'suspendu') : null),
                     c.type ? h('div', null, h('span', { class:'type-chip' }, typeLabel(c.type) || c.type)) : null,
-                    c.name ? h('div', { class:'nm', style:'color:var(--muted);font-size:.78rem' }, c.name + (c.email ? ' · ' + c.email : '')) : null),
+                    // The contact sits on the band when the client has several
+                    // shops — repeating it on every row would bury the one thing
+                    // that differs between them, which is the shop itself.
+                    (!inGroup && c.name) ? h('div', { class:'nm', style:'color:var(--muted);font-size:.78rem' }, c.name + (c.email ? ' · ' + c.email : '')) : null),
       h('td', null, h('code', { style:'font-family:var(--mono);font-size:.82rem;color:var(--muted)' }, c.merchant)),
       h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '—')),
       h('td', { class:'num' }, fmt(c.today_amount) + ' MAD'),
@@ -539,11 +613,20 @@
     var list = await store.clients();
     var real = list.filter(function(c){ return !isDemoClient(c); });
     var demos = list.filter(isDemoClient);
+    var groups = groupByOwner(real);
+    // Count CLIENTS and their STORES separately — with multi-shop merchants the
+    // two numbers diverge, and "5 clients" for 3 people would be a lie.
+    var multi = groups.filter(function(g){ return g.stores.length > 1; }).length;
     document.getElementById('cli-count').textContent =
-      real.length + ' client' + (real.length === 1 ? '' : 's') +
+      groups.length + ' client' + (groups.length === 1 ? '' : 's') +
+      (real.length !== groups.length ? ' · ' + real.length + ' établissements' : '') +
+      (multi ? ' · ' + multi + ' multi-site' + (multi === 1 ? '' : 's') : '') +
       (demos.length ? ' · ' + demos.length + ' démo' + (demos.length === 1 ? '' : 's') : '');
 
-    real.forEach(function(c){ body.appendChild(clientRow(c)); });
+    groups.forEach(function(g){
+      if (g.stores.length > 1) body.appendChild(ownerRow(g));
+      g.stores.forEach(function(c){ body.appendChild(clientRow(c, g.stores.length > 1)); });
+    });
     if (!real.length){
       body.appendChild(h('tr', null, h('td', { colspan:'7', style:'padding:20px 12px;color:var(--muted)' },
         'Aucun client réel pour l’instant, les comptes créés par vos clients apparaîtront ici.')));
@@ -565,7 +648,12 @@
 
   async function select(c){
     selected = c;
-    document.getElementById('sel-name').textContent = c.business || c.merchant;
+    // Name the SHOP, and — when its owner has more than one — say whose it is.
+    // Every setting below this line (trade, modules, staff codes) belongs to this
+    // one établissement, so the header has to be unambiguous about which.
+    var owner = ((c.owner_name || c.name || '') + (c.owner ? ' · ' + c.owner : '')).trim();
+    document.getElementById('sel-name').textContent =
+      (c.business || c.merchant) + ((c.siblings > 1 && owner) ? '  —  ' + owner : '');
     document.getElementById('manage').hidden = false;
     renderClients();
     await Promise.all([renderPins(), renderFeatures()]);
@@ -594,6 +682,16 @@
     var btn = document.getElementById('del-account');
     var err = document.getElementById('del-err');
     document.getElementById('dz-name').textContent = name;
+    // Deleting is per-CLIENT, not per-shop: the account row goes, and with it
+    // every établissement it owns. Typing the boutique's name would also take the
+    // restaurant down, so say so rather than let the operator find out after.
+    var multi = document.getElementById('dz-multi');
+    if (multi){
+      var n = selected.siblings || 1;
+      multi.hidden = n < 2;
+      multi.textContent = n < 2 ? '' :
+        'Ce client tient ' + n + ' établissements. Les ' + n + ' seront supprimés, pas seulement ' + name + '.';
+    }
     input.value = ''; err.textContent = '';
     btn.disabled = true; btn.textContent = 'Supprimer le compte';
 

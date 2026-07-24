@@ -66,21 +66,45 @@ CREATE TABLE IF NOT EXISTS staff_pins (
 );
 CREATE INDEX IF NOT EXISTS idx_pins_merchant ON staff_pins (merchant);
 
--- Per-merchant feature flags — operator-only (maps to pricing tiers). `features`
--- is a JSON object of module→bool; a missing key means the module is ON (current
--- behavior), so an absent row = the full interface. Toggling a module OFF hides
--- it in that merchant's real app on next load.
+-- Per-STORE config, and the store registry. One row per merchant slug, two jobs:
+--
+--  1. FEATURE FLAGS — operator-only (maps to pricing tiers). `features` is a JSON
+--     object of module→bool; a missing key means the module is ON (current
+--     behavior), so an absent row = the full interface. Toggling a module OFF
+--     hides it in that merchant's real app on next load.
+--
+--  2. WHO OWNS THE STORE — account_id + name. One login can hold SEVERAL
+--     établissements (a boutique and a restaurant): the dashboard's venue
+--     switcher creates them, and each has its own slug, its own till, its own
+--     staff and its own money. Without an owner column the server could not tell
+--     a client's second shop from a stranger's, so every store on an account was
+--     forced onto the ONE slug derived from accounts.business — which meant the
+--     second store silently overwrote the first one's type, shared its staff
+--     PINs, and reached the operator console as a nameless, ownerless row filed
+--     under "démos". account_id is claimed first-write-wins by the account that
+--     syncs the slug (functions/api/config.js) and is what lets a store be read
+--     and written by its owner and only its owner. name is the store's own
+--     display name, so the console prints "Café Nord", not a bare slug.
+--
+-- account_id NULL = a row from before the registry, or a demo store an operator
+-- seeded. Those keep working exactly as before; the first sync from the matching
+-- account adopts them.
 CREATE TABLE IF NOT EXISTS merchant_config (
-  merchant   TEXT PRIMARY KEY,
+  merchant   TEXT PRIMARY KEY,       -- slugMerchant(store name)
   features   TEXT NOT NULL,          -- JSON: {"stock":false,"reservations":false,…}
   plan       TEXT,                   -- basic | pro | ultra | ultimate (optional)
   type       TEXT,                   -- business subtype from onboarding kiwiBizType
                                      -- (restaurant|cafe|boutique|pharmacie|spa|coiffure|…);
                                      -- decides which module set the operator console shows
+  account_id TEXT,                   -- accounts.id of the owner ("acc-<uuid>"); NULL = unclaimed
+  name       TEXT,                   -- the store's own name ("Café Nord")
   updated_ts INTEGER NOT NULL
 );
--- Existing databases (table already created): add the column once —
+-- Existing databases (table already created): add the columns once —
 --   ALTER TABLE merchant_config ADD COLUMN type TEXT;
+--   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
+--   ALTER TABLE merchant_config ADD COLUMN name TEXT;
+CREATE INDEX IF NOT EXISTS idx_config_account ON merchant_config (account_id);
 -- Mirrored up from the client at onboarding (assets/onboarding.js → KiwiConfig
 -- .syncType → POST /api/config); the console reads it to show boutique modules
 -- for a boutique, restaurant modules for a restaurant, etc.

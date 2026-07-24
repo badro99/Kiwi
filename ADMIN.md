@@ -62,6 +62,35 @@ Functions (all under the site gate; the `/admin/*` ones additionally require an
 `functions/auth/_lib.js`): "Café Atlas" → `cafe-atlas`, which is also the Live
 Link default, so an account lines up with its sales without a stored mapping.
 
+### One client, several établissements
+
+A login can hold more than one store — a boutique and a restaurant — created from
+the dashboard's venue switcher. **A store is not a client.** Each store has its
+own slug, till, staff, modules and money; the client is the account that owns
+them. `merchant_config` carries that link:
+
+- `account_id` — the owning account, claimed **first-write-wins** the first time
+  a store syncs (`POST /api/config`), then locked to it. A sync naming a store
+  that belongs to someone else is answered `403 merchant-not-yours`, never
+  silently redirected.
+- `name` — the store's own display name, so the console shows "Café Nord" rather
+  than a slug.
+
+`POST /api/config` takes `{merchant, name}` to say **which** store it is syncing;
+the session still decides **who** is writing. `GET /api/config?merchant=…` is
+honoured for a merchant's own stores and otherwise falls back to the account's
+own slug (that fallback is what keeps one merchant from reading another's staff
+PINs). `/api/pair/create` resolves the store the same way, so a second shop's
+till posts into the second shop's books.
+
+Without this, every store on an account was forced onto the one slug derived from
+`accounts.business`: a second shop's onboarding overwrote the first's business
+type, the two shared a single staff PIN list, its till paired into the wrong
+tenant, and the roster showed it as a nameless ownerless row under "démos".
+
+The console groups the roster by owner: one band per client, its shops beneath.
+Deleting a client removes **every** store it owns, and the confirmation says so.
+
 ### Client-app consumption (`assets/merchant-config.js`)
 
 Loaded by `dashboard.html`, `kiwi-caisse.html`, `kiwi-serveur.html`. On load it
@@ -84,8 +113,22 @@ enable the console in production:
 1. Apply the new tables: re-run [`schema.sql`](schema.sql) (all `CREATE TABLE IF
    NOT EXISTS` — safe to re-apply) in the D1 console, or
    `npx wrangler d1 execute kiwi-sales --file=schema.sql --remote`.
-2. Deploy (push, or Create deployment — not "Retry").
-3. First entry: staff bypass → `/kiwi-admin.html` → Opérateurs → add your codes.
+2. **Multi-store registry — run once on an existing database.** `CREATE TABLE IF
+   NOT EXISTS` will not add columns to a table that already exists, so these two
+   `ALTER`s have to be run by hand (each is safe to run once; re-running errors
+   harmlessly with "duplicate column name"):
+
+   ```sql
+   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
+   ALTER TABLE merchant_config ADD COLUMN name TEXT;
+   ```
+
+   Until they are run, everything keeps working exactly as before — a client's
+   second établissement simply stays folded into their first, which is the old
+   behaviour, not a new failure. Nothing 500s, and no data is written anywhere the
+   apps can't read it back.
+3. Deploy (push, or Create deployment — not "Retry").
+4. First entry: staff bypass → `/kiwi-admin.html` → Opérateurs → add your codes.
 
 No new secret is needed — the operator cookie reuses `AUTH_SECRET`.
 

@@ -12,6 +12,44 @@ import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, i
 
 const VALID_PIN = /^\d{4}$/;
 
+/* Who owns a store slug?
+ *   '<acc-id>' → claimed by that account
+ *   ''         → a row exists but is unclaimed (a pre-registry row, or a store an
+ *                operator seeded) — adoptable by the first account that syncs it
+ *   null       → no row at all (a brand-new store, or the registry columns aren't
+ *                migrated yet) — also adoptable
+ * Never throws: on a database that hasn't run the ALTERs, the SELECT fails and we
+ * answer null, which lands every caller back on exactly today's behaviour. */
+async function storeOwner(env, slug) {
+  try {
+    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return row ? (row.account_id || '') : null;
+  } catch (_) { return null; }
+}
+
+/* Stamp the store's identity — owner + display name — without touching its
+ * features, plan or type. First write wins on account_id: once a store belongs to
+ * an account it is locked to it, so a second merchant can never take over a slug
+ * that is already someone's shop. (Two merchants who pick the identical store
+ * name still race for the free slug, exactly as they already race for it in
+ * `sales`; the loser's sync is refused with 403 rather than silently merged.)
+ * Fail-soft: pre-migration this throws and is swallowed — the config write that
+ * follows still works, we just cannot group the store under its owner yet. */
+async function claimStore(env, merchant, accountId, name) {
+  try {
+    await env.DB.prepare(
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
+       VALUES (?, '{}', NULL, NULL, ?, ?, ?)
+       ON CONFLICT(merchant) DO UPDATE SET
+         account_id = COALESCE(merchant_config.account_id, excluded.account_id),
+         name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
+         updated_ts = excluded.updated_ts`
+    ).bind(merchant, accountId, String(name || ''), Date.now()).run();
+    return true;
+  } catch (_) { return false; }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -44,22 +82,37 @@ export async function onRequestGet(context) {
   //     role match in kiwi-serveur.html, both of which already fall back to
   //     "Caissier" / "Serveur N" when the list is empty.
   let sessionMerchant = '';
+  let sessionAid = '';
   if (env.AUTH_SECRET) {
     try {
       const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-        if (acc && acc.business) sessionMerchant = slugMerchant(acc.business);
+        if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
       }
     } catch (_) { /* fall through to neutral */ }
   }
   const operator = await isOperator(request, env);
-  if (sessionMerchant && !operator) merchant = sessionMerchant;
+
+  // A login can hold SEVERAL établissements, and each one is its own store with
+  // its own type, its own modules and its own staff. So the account slug is no
+  // longer the only slug a merchant may read — it may read any store it OWNS.
+  // That is what the registry is for: ownership is checked against the database,
+  // never taken on the client's word, so this widens what a merchant can reach by
+  // exactly their own shops and nothing else. An unowned slug still snaps back to
+  // the account's own store, which is what closed the cross-account PIN read.
+  let ownsRequested = false;
+  if (sessionAid && merchant && merchant !== sessionMerchant) {
+    ownsRequested = (await storeOwner(env, merchant)) === sessionAid;
+  }
+  if (sessionMerchant && !operator && !ownsRequested) merchant = sessionMerchant;
   if (!merchant) return json({ features: {}, pins: [] });
 
-  // May this caller read THIS merchant's staff PINs? Its own session, the
-  // operator console, or a till that redeemed a pairing code for this store.
-  const mayReadPins = (merchant === sessionMerchant) || operator || (await isTillFor(request, env, merchant));
+  // May this caller read THIS merchant's staff PINs? Its own session, another of
+  // its own stores, the operator console, or a till that redeemed a pairing code
+  // for this store.
+  const mayReadPins = (merchant === sessionMerchant) || ownsRequested || operator
+    || (await isTillFor(request, env, merchant));
 
   let features = {};
   let pins = [];
@@ -82,12 +135,24 @@ export async function onRequestGet(context) {
   return json({ features, pins, type });
 }
 
-// POST /api/config — a merchant syncs ITS OWN state up to the server so the
-// operator console (God mode) can see it. The merchant is derived from the
-// authenticated session, NEVER from the request body — a client can only ever
-// write its own slug. Body JSON (both fields optional, sent independently):
-//   { pins: [{ code|pin, name, role }] }   — full replace of this merchant's PINs
+// POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the
+// operator console (God mode) can see it. Body JSON (all fields optional, sent
+// independently):
+//   { merchant: "cafe-nord" }              — WHICH store this sync is about
+//   { name: "Café Nord" }                  — that store's display name
+//   { pins: [{ code|pin, name, role }] }   — full replace of this store's PINs
 //   { type: "boutique" }                   — the onboarding business subtype
+//
+// `merchant` is a request, not a fact: the server accepts it only when the slug
+// is free or already belongs to this account (see storeOwner/claimStore), and
+// answers 403 otherwise. Anything else — absent, or another merchant's shop —
+// falls back to the account's own slug, which is the pre-registry behaviour.
+//
+// It has to work this way because one login holds several établissements. The
+// merchant used to be derived from accounts.business alone, so a client who added
+// a second shop wrote BOTH shops into one row: the boutique's onboarding
+// overwrote the restaurant's type, and the two shared a single staff list. The
+// session still decides WHO is writing; the body now says WHICH of their stores.
 //
 // Each field is applied ONLY when present: a type-only sync never touches PINs,
 // and a pins-only sync never touches the type. (Before, an absent `pins` was read
@@ -102,10 +167,41 @@ export async function onRequestPost(context) {
 
   const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
   if (!acc) return json({ error: 'unauthorized' }, 401);
-  const merchant = slugMerchant(acc.business);
+  const accSlug = slugMerchant(acc.business);
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  // Which of this account's stores is being synced?
+  let merchant = accSlug;
+  let storeName = String(acc.business || '').trim().slice(0, 120);
+  const wanted = String((body && body.merchant) || '').trim().slice(0, 80);
+  const wantedName = String((body && body.name) || '').trim().slice(0, 120);
+  if (wanted && wanted !== accSlug) {
+    const owner = await storeOwner(env, wanted);
+    // null (no row) and '' (unclaimed) are both adoptable; a slug already claimed
+    // by someone else is refused outright rather than quietly redirected — a sync
+    // that lands on the wrong store is how the two-shop corruption happened.
+    if (owner !== null && owner !== '' && owner !== sess.aid) {
+      return json({ error: 'merchant-not-yours' }, 403);
+    }
+    merchant = wanted;
+    storeName = wantedName || wanted;
+  } else if (wantedName) {
+    storeName = wantedName;
+  }
+  // Register the store against its owner before writing anything into it, so a
+  // shop the console has never seen shows up under the right client the moment it
+  // syncs — even if this particular call carries neither pins nor a type.
+  //
+  // If the claim CANNOT be recorded (the registry columns aren't migrated yet on
+  // this database), stay on the account's own slug. There would otherwise be a
+  // window — new code deployed, ALTERs not yet run — where writes went to the
+  // store slug while reads still came from the account slug, and a merchant would
+  // watch their own PINs and modules vanish. Better to keep the old single-store
+  // behaviour intact until the column exists.
+  const claimed = await claimStore(env, merchant, sess.aid, storeName);
+  if (!claimed && merchant !== accSlug) merchant = accSlug;
 
   const result = { ok: true, merchant };
 
