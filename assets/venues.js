@@ -1152,18 +1152,31 @@
   const CUSTOM_KEY = 'kiwiCustomVenues';
   const customIds = new Set();
 
+  /* Ids that exist only for the lifetime of a page: 'scoped' is the operator's
+   * God-mode view of someone else's client, 'own' is the empty placeholder we
+   * synthesize for a real merchant with nothing cached yet. Neither is a store
+   * the merchant created, so neither may ever be written to localStorage. */
+  const TRANSIENT_IDS = ['scoped', 'own'];
   function loadCustomVenues() {
     let saved = [];
     try { saved = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch (_) {}
     if (!Array.isArray(saved)) saved = [];
-    saved.forEach(v => { if (v && v.id) { VENUES[v.id] = v; customIds.add(v.id); } });
+    /* Drop any transient id an older build leaked into storage. 'own' used to be
+     * persisted by the next persistCustomVenues() call after ensureOwnEmptyVenue()
+     * ran — so creating a second store wrote the placeholder alongside it and the
+     * merchant grew a phantom "Mon établissement · Restaurant" they never made,
+     * which then sat in the switcher for good. Heal it on read. */
+    const clean = saved.filter(v => v && v.id && TRANSIENT_IDS.indexOf(v.id) < 0);
+    clean.forEach(v => { VENUES[v.id] = v; customIds.add(v.id); });
+    if (clean.length !== saved.length) {
+      try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(clean)); } catch (_) {}
+    }
   }
   function persistCustomVenues() {
-    // 'scoped' is the transient operator-God-mode venue (see applyScopedVenue) —
-    // it is a view of someone else's client and must NEVER be written into THIS
-    // browser's localStorage, or the operator's own copy would inherit it.
-    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify([...customIds].filter(id => id !== 'scoped').map(id => VENUES[id]))); }
-    catch (_) {}
+    try {
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(
+        [...customIds].filter(id => TRANSIENT_IDS.indexOf(id) < 0).map(id => VENUES[id])));
+    } catch (_) {}
   }
   const isCustom = id => customIds.has(id || currentVenue);
 
@@ -1437,7 +1450,12 @@
     const listIds = scopedActive
       ? ['scoped']
       : onboard
-        ? Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom && id !== 'scoped')
+        /* Transient ids ('own' placeholder, 'scoped' operator view) are listed
+         * only while one of them IS the active venue — i.e. the genuine empty
+         * state. Once the merchant has real stores, the placeholder must not sit
+         * in the switcher next to them pretending to be a fourth business. */
+        ? Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom &&
+            (TRANSIENT_IDS.indexOf(id) < 0 || id === currentVenue))
         : REAL_VENUES;
     /* Custom venue names/locations are merchant-typed — escape them. */
     const escD = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1743,7 +1761,11 @@
   function onVenueToggle() { toggleDropdown(); }
   function onVenuePick(el) {
     const id = el?.dataset?.venue;
-    if (id && REAL_VENUES.includes(id)) {
+    // The merchant's OWN stores are custom ids, not REAL_VENUES (that list is the
+    // three demo venues). Gating on REAL_VENUES alone made every row in a real
+    // merchant's switcher inert — a second store could be created but never
+    // opened, and there was no way back to the first.
+    if (id && (REAL_VENUES.includes(id) || customIds.has(id))) {
       // If switching from fusion → real venue: also tear down fusion mode.
       if (currentVenue === 'fusion') {
         exitFusion({ targetVenue: id });
