@@ -208,3 +208,46 @@ export async function mirrorLead(env, lead) {
     });
   } catch (_) { /* best-effort */ }
 }
+
+/* ── TENANT ENTITLEMENT ──────────────────────────────────────────────────────
+ * feed.js worked this out first, and documented it at length: being past the
+ * site gate is NOT the same as being entitled to a tenant, because the gate
+ * admits EVERY signed-in merchant plus a shared staff passcode. An endpoint that
+ * honours a client-supplied `merchant` therefore hands any caller any store —
+ * and slugs are derived from business names, so they are guessable.
+ *
+ * That reasoning was written once, in one file, and never propagated: /api/sale
+ * and /api/order/queue still took the tenant from the request body and query.
+ * It lives here now, so the next endpoint inherits the rule instead of having to
+ * rediscover it.
+ *
+ *   · paired till     → the store it was bound to (checked FIRST: on a
+ *                       multi-store account the till, not the session, knows
+ *                       which établissement is ringing)
+ *   · account session → that account's own slug, whatever was asked for
+ *   · operator        → whatever was asked; that is the point of God mode
+ *   · gate only       → demo tenants, nothing else
+ *
+ * Returns '' when the caller is entitled to nothing — callers must refuse. */
+export const DEMO_MERCHANTS = { 'cafe-atlas': 1, 'maison-mansour': 1, 'spa-bahia': 1 };
+
+export async function entitledMerchant(request, env, asked, opts) {
+  asked = String(asked || '').slice(0, 64);
+  /* No auth configured at all (local static server, preview without secrets):
+   * the gate is inert there, so keep the historical behaviour rather than
+   * bricking local development. */
+  if (!env || !env.AUTH_SECRET) return asked;
+
+  if (opts && opts.allowTill && asked) {
+    try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
+  }
+  try {
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (sess && sess.aid && env.DB) {
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+      return (acc && acc.business) ? slugMerchant(acc.business) : '';
+    }
+  } catch (_) { /* fall through to operator / demo */ }
+  try { if (await isOperator(request, env)) return asked; } catch (_) {}
+  return DEMO_MERCHANTS[asked] ? asked : '';
+}

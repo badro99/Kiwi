@@ -7,6 +7,8 @@
 // Requires a D1 binding named DB (see wrangler.toml / LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
+import { entitledMerchant } from '../auth/_lib.js';
+
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status: status || 200,
@@ -28,8 +30,17 @@ export async function onRequestPost({ request, env }) {
   // tenant — which any other unresolved device then read back as its own (see the
   // tenant-scoping note in feed.js). Refusing is strictly safer than mis-filing:
   // an unattributed sale in a shared bucket is unrecoverable, a 400 is visible.
-  const merchant = String((b && b.merchant) || '').slice(0, 64);
-  if (!merchant) return json({ error: 'no-merchant' }, 400);
+  const asked = String((b && b.merchant) || '').slice(0, 64);
+  if (!asked) return json({ error: 'no-merchant' }, 400);
+
+  /* …and it must be a store this caller is actually entitled to. Until now the
+   * slug was taken from the body and never checked, so anyone past the gate
+   * could inject revenue into any merchant's books — and there is no delete
+   * path to undo it. The rule is feed.js's, now shared (auth/_lib.js). A paired
+   * till writes to the store it was bound to; a signed-in merchant to its own,
+   * whatever the body claimed. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);

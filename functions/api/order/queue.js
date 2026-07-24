@@ -16,7 +16,7 @@
 // Status flow:  pending → accepted → ready
 //                   └──→ rejected            (staff declined; terminal)
 
-import { json } from '../../auth/_lib.js';
+import { json, entitledMerchant } from '../../auth/_lib.js';
 
 const NEXT = { accepted: 1, ready: 1, rejected: 1 };
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
@@ -25,9 +25,16 @@ const MAX_ROWS = 100;
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
-  const merchant = (url.searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 64);
-  if (!merchant) return json({ error: 'merchant-required' }, 400);
+  const asked = (url.searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 64);
+  if (!asked) return json({ error: 'merchant-required' }, 400);
   if (!env.DB) return json({ error: 'not-configured' }, 503);
+
+  /* The gate admits every signed-in merchant plus a shared staff passcode, so
+   * "reached this endpoint" never meant "owns this store". Reading the slug from
+   * the query let any caller pull another restaurant's live queue — items,
+   * notes, totals, table numbers. Server decides now. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   // `since` is the caisse's cursor: it polls for anything that changed after the
   // last answer, so a long shift costs one small response per poll.
@@ -68,17 +75,24 @@ export async function onRequestPost(context) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = String((b && b.merchant) || '').trim().toLowerCase().slice(0, 64);
+  const asked = String((b && b.merchant) || '').trim().toLowerCase().slice(0, 64);
   const id = String((b && b.id) || '').trim();
   const status = String((b && b.status) || '').trim();
-  if (!merchant || !ORDER_ID.test(id)) return json({ error: 'bad-request' }, 400);
+  if (!asked || !ORDER_ID.test(id)) return json({ error: 'bad-request' }, 400);
   if (!NEXT[status]) return json({ error: 'bad-status' }, 400);
+
+  /* Same hole on the write side: accepting or rejecting another store's tickets
+   * only ever required knowing its slug. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   const now = Date.now();
   let row;
   try {
-    // merchant in the WHERE keeps one store from touching another's tickets,
-    // and RETURNING tells us whether the row really existed.
+    // merchant in the WHERE keeps one store from touching another's tickets —
+    // which is only true now that `merchant` is server-derived. It used to come
+    // straight from this request body, so the clause was filled in by whoever
+    // was attacking it. RETURNING tells us whether the row really existed.
     row = await env.DB.prepare(
       `UPDATE orders SET status = ?, updated_ts = ?
         WHERE id = ? AND merchant = ?

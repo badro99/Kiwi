@@ -10,7 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
+       chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
+       terminal de paiement du commerçant et sur le téléphone du client, sans
+       relecture. Le fichier était déjà vendu dans assets/. -->
+  <script src="assets/lucide.min.js" defer></script>
 
   <style>
     /* =========================================================

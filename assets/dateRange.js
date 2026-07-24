@@ -3876,9 +3876,19 @@
 
   function renderTimeline() {
     const effective = effRange();
-    const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
     const totalEl = document.querySelector('[data-timeline-week-total]');
-    if (totalEl && total) totalEl.textContent = total;
+    if (!totalEl) return;
+    /* Le repli `|| timelineWeekTotalByVenue.cafeAtlas` servait le total du CAFÉ
+     * ATLAS à tout commerçant absent de cette table — c'est-à-dire à tous les
+     * vrais. Ce n'était pas un état vide, c'était le chiffre d'affaires de
+     * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
+     * propres ventes ; le tilde disparaît, ce total-là est exact. */
+    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+      totalEl.textContent = `${frInt(realSalesTotals(effective).revenue)} MAD`;
+      return;
+    }
+    const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
+    if (total) totalEl.textContent = total;
   }
 
   /* ═══════════════ RENDER: HEALTH SCORE ═══════════════ */

@@ -22,7 +22,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
+       chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
+       terminal de paiement du commerçant et sur le téléphone du client, sans
+       relecture. Le fichier était déjà vendu dans assets/. -->
+  <script src="assets/lucide.min.js" defer></script>
 
   <style>
     /* =========================================================
@@ -3756,14 +3760,14 @@
         return `
         <article class="menu-item">
           <div class="item-img ${ICON_CLASS[m.icon] || 'coffee'}">
-            <i data-lucide="${m.icon}"></i>
+            <i data-lucide="${escapeHtml(m.icon)}"></i>
           </div>
           <div class="item-body">
-            <div class="item-name">${i.name}</div>
-            <div class="item-desc">${i.desc}</div>
-            <div class="item-price">${m.price} ${cur()}</div>
+            <div class="item-name">${escapeHtml(i.name)}</div>
+            <div class="item-desc">${escapeHtml(i.desc)}</div>
+            <div class="item-price">${escapeHtml(m.price)} ${cur()}</div>
           </div>
-          <button class="item-add" type="button" data-add="${m.id}" aria-label="${t('btn_add')} ${i.name}">+</button>
+          <button class="item-add" type="button" data-add="${escapeHtml(m.id)}" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
         </article>
       `;}).join('');
       if (window.lucide) window.lucide.createIcons();
@@ -3778,15 +3782,15 @@
         const i = itemI18n(m.id);
         const newTag = m.tag === 'new' ? `<span class="video-tag-new">${t('tag_new')}</span>` : '';
         return `
-        <article class="video-card" data-add="${m.id}">
+        <article class="video-card" data-add="${escapeHtml(m.id)}">
           <div class="video-thumb">
             ${newTag}
-            <video src="${m.video}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>
+            <video src="${escapeHtml(m.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>
           </div>
           <div class="video-meta">
-            <div class="video-name">${i.name}</div>
+            <div class="video-name">${escapeHtml(i.name)}</div>
             <div class="video-foot">
-              <span class="video-price">${m.price} ${cur()}</span>
+              <span class="video-price">${escapeHtml(m.price)} ${cur()}</span>
               <button type="button" class="video-add" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
             </div>
           </div>
