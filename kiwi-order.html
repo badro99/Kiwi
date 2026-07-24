@@ -4544,8 +4544,13 @@
       let h = ''; try { h = (location.hostname || '').toLowerCase(); } catch (_) {}
       const local = (location.protocol === 'file:') ||
         ['localhost', '127.0.0.1', '::1', '0.0.0.0', ''].indexOf(h) >= 0 || /\.local$/.test(h);
-      let slug = ''; try { slug = (new URLSearchParams(location.search).get('merchant') || '').trim(); } catch (_) {}
-      return { slug: slug, hasTenant: !!slug, local: local };
+      let slug = '', table = '';
+      try {
+        const q = new URLSearchParams(location.search);
+        slug = (q.get('merchant') || '').trim();
+        table = (q.get('table') || '').replace(/\D/g, '').slice(0, 3).replace(/^0+(?=\d)/, '');
+      } catch (_) {}
+      return { slug: slug, hasTenant: !!slug, local: local, table: table };
     })();
 
     // Pristine snapshot of the demo copy, so identity patching is idempotent and
@@ -4783,9 +4788,21 @@
         if (e.target.closest('#restart-btn')) { restartMenu(); return; }
       });
 
+      // Per-table QR (?table=N): skip the mode + numpad screens and open straight
+      // on the menu for that table. Works for the demo and a real tenant alike.
+      if (KiwiTenant.table) {
+        orderMode = 'table';
+        tableNumber = KiwiTenant.table;
+        const modeScreen = document.getElementById('screen-mode');
+        const menuScreen = document.getElementById('screen-menu');
+        if (modeScreen) modeScreen.classList.remove('is-active');
+        if (menuScreen) menuScreen.classList.add('is-active');
+        if (typeof applyMenuMode === 'function') applyMenuMode();
+      }
+
       // Greeting plays on landing — demo-only flourish (its hero copy names the
-      // demo café/location); a real tenant skips it.
-      if (!KiwiTenant.hasTenant && KiwiTenant.local) {
+      // demo café/location); a real tenant or a table-preset entry skips it.
+      if (!KiwiTenant.hasTenant && KiwiTenant.local && !KiwiTenant.table) {
         requestAnimationFrame(() => setTimeout(runGreetingFlash, 280));
       }
     });

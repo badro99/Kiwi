@@ -144,10 +144,16 @@
 
     const d = drawer({ title: T.title, subtitle: T.sub, fullpage: true, body });
     if (KIT) KIT.reveal(d.el.querySelector('.gk-reveal-root'));
+    // The real generator lives in order-qr.js. The two action buttons here open
+    // it (real, scannable QR + per-table sheets); the tease above stays the intro.
+    const openGenerator = () => {
+      const gen = window.Kiwi.handlers['order-qr'];
+      if (gen) { if (d.close) d.close(); gen(); }
+      else { toast(T.toastP, { type: 'info' }); } // fail-soft if the module didn't load
+    };
     d.el.addEventListener('click', (e) => {
       if (e.target.closest('[data-qro-add]')) { toast(T.add, { type: 'success' }); }
-      else if (e.target.closest('[data-qro-print]')) { toast(T.toastP, { type: 'info' }); }
-      else if (e.target.closest('[data-qro-cta]')) { confetti && confetti(); toast(T.toastA, { type: 'success', desc: T.toastAD }); }
+      else if (e.target.closest('[data-qro-print]') || e.target.closest('[data-qro-cta]')) { openGenerator(); }
     });
   };
 })();
