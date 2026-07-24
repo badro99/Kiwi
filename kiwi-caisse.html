@@ -10752,15 +10752,26 @@
     (function () {
       const saved = loadPersistedShift();
       if (!saved) return;
-      // A REAL / paired store must never restore a DEMO shift — a device that once
-      // ran the pitch demo (or dev residue) persists a shift whose journal is all
-      // seeded 'seed-*' entries. On a real store, discard it so the caisse opens
-      // clean (0 transactions). A genuine real shift has 'sale-*' ids and restores.
+      // A REAL / paired store must never surface DEMO shift data. A device that once
+      // ran the pitch demo (or dev residue) persists a shift whose journal carries
+      // seeded 'seed-*' entries (cashier "Othmane N.", café tables). On a real store,
+      // STRIP every seed-* entry — FILTERING, not all-or-nothing: the earlier guard
+      // used `.every(seed)`, so a single genuine 'sale-*' entry let all 47 demo seeds
+      // ride along and the demo shift restored (the bug this hardens). Keep only
+      // genuine entries; if none survive, discard the shift so the caisse opens clean
+      // (0 transactions). When seeds are dropped, also reset the seed-derived
+      // aggregates (tablesPaid + tables/orders) so the counters recompute from the
+      // real journal. The next 5s autosave then rewrites the stored shift seed-free
+      // (self-healing). The demo path (storeIsReal false) is untouched — verbatim.
       try {
-        if (storeIsReal() && (!saved.journal || !saved.journal.length ||
-            saved.journal.every((e) => String(e && e.id || '').indexOf('seed-') === 0))) {
-          localStorage.removeItem('kiwi-caisse-shift');
-          return;
+        if (storeIsReal()) {
+          const genuine = (saved.journal || []).filter((e) => String(e && e.id || '').indexOf('seed-') !== 0);
+          if (!genuine.length) { localStorage.removeItem('kiwi-caisse-shift'); return; }
+          if (genuine.length !== (saved.journal || []).length) {
+            saved.journal = genuine;
+            saved.tables = {}; saved.tableOrders = {}; saved.orders = {};
+            if (saved.shift) saved.shift.tablesPaid = 0;
+          }
         }
       } catch (_) {}
       restoreShift(saved);
