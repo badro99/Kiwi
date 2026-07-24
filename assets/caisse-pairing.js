@@ -89,10 +89,25 @@
       merchant: d.merchant || '', venueId: d.venueId || '', type: d.type || '',
       subtype: d.subtype || '', name: d.name || '', location: d.location || '',
     };
+    // Re-binding to a DIFFERENT store: the cashier who unlocked the old till is
+    // not standing at this one, and their code belongs to the other store's
+    // roster. Forget them so the staff pad asks again.
+    try {
+      var was = pairedVenue();
+      if (was && was.merchant && was.merchant !== venue.merchant) {
+        setStaff(null);
+        window.__kiwiPairedBoutiqueVenue = null;
+      }
+    } catch (_) {}
     set('kiwiLiveMerchant', venue.merchant);
     set('kiwiLive', '1');
     set('kiwiPaired', '1');
     set('kiwiPairedVenue', JSON.stringify(venue));
+    /* Surfaces paint their store name at DOMContentLoaded, which is BEFORE redeem()
+     * has answered — so on a re-pair they kept the previous store's name (the till
+     * said "Caissier · Amira Boutique" while bound to the restaurant). Announce the
+     * binding so they can repaint. */
+    try { document.dispatchEvent(new CustomEvent('kiwi-paired', { detail: venue })); } catch (_) {}
     // Reflect "connected" back into the map so the dashboard tab's storage
     // listener flips its status pill to "Caisse connectée" (same-browser).
     try {
@@ -418,19 +433,35 @@
       }
     } catch (_) {}
 
+    /* Explicit same-device hand-off from the dashboard ("Ouvrir la caisse sur cet
+     * appareil"): redeem the freshly-issued code with no typing, on any env.
+     *
+     * This is checked BEFORE an existing pairing. A device is one till at a time,
+     * but an owner sitting on their SECOND store's dashboard and clicking "open
+     * the caisse here" is asking for exactly one thing: re-bind this device to
+     * THIS store. Letting the old pairing win meant the restaurant's dashboard
+     * opened the boutique's till — two businesses, one register, sales landing in
+     * the wrong books. A fresh pending code is the owner's explicit intent; with
+     * no code pending there is nothing to hand off, so we fall through and the
+     * existing pairing still resumes as before. */
+    if (wantsPair()) {
+      var code = newestPending();
+      if (code) {
+        redeem(code).then(function (res) {
+          if (res && res.ok) bootWithPin(res.venue);
+          else if (isPaired()) bootWithPin(pairedVenue());   // redeem failed → keep the till we had
+          else showPad(true);
+        });
+        return;
+      }
+    }
+
     // Once a device is bound to a store, it stays that store — on ANY environment,
     // so the owner's real caisse works when they test on their Mac too. A staff PIN
     // is still required each session on hosted (fail-soft where no backend/PINs).
     if (isPaired()) { bootWithPin(pairedVenue()); return; }
 
-    // Explicit same-device hand-off from the dashboard ("Ouvrir la caisse sur cet
-    // appareil"): redeem the freshly-issued code with no typing, on any env.
-    if (wantsPair()) {
-      var code = newestPending();
-      if (code) redeem(code).then(function (res) { if (res && res.ok) bootWithPin(res.venue); else showPad(true); });
-      else showPad(true);
-      return;
-    }
+    if (wantsPair()) { showPad(true); return; }   // asked to pair, nothing pending → type a code
 
     if (!hosted()) return;   // local + unpaired + no hand-off → native demo pad, unchanged
     showPad();               // hosted + unpaired → pairing pad

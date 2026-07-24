@@ -7922,6 +7922,10 @@
     // This runs at load, BEFORE anyone has entered their code — so re-run it the
     // moment the till learns who is on shift, and again when they hand over.
     document.addEventListener('kiwi-staff', applyStoreIdentity);
+    // Same for WHICH store: the pairing is redeemed after this file has painted,
+    // so a device handed over from a second store's dashboard kept showing the
+    // first store's name everywhere until reload.
+    document.addEventListener('kiwi-paired', applyStoreIdentity);
 
     /* Render a journal entry as a printed thermal ticket. */
     function renderReceipt(entry) {
