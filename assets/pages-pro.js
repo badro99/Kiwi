@@ -11677,9 +11677,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      window.KiwiMenuStore), so it renders functionally for custom venues.
      'practitioners' stays OUT: its handler still hardcodes demo staff (Spa
      Bahia's PRACS), so a custom venue must get the zeroed starter, not the demo
-     roster, until it becomes genuinely per-venue. 'payroll' caught up — it now
-     reads the merchant's own roster, so it moved to REAL_WHEN below (allowed
-     once somebody has actually been hired). */
+     roster, until it becomes genuinely per-venue. 'payroll' caught up: team.js
+     now owns it for a real store, builds it from that store's own roster, and
+     ships its own empty state ("Ajoutez votre équipe pour commencer"), so it
+     belongs in the set outright — same reasoning as conformite/stock/finance. */
   /* 'conformite', 'stock' and 'finance' were building a correct per-venue page
      that nobody could reach: each module already detects a real/custom venue
      (conformite.js:877, stock.js:719, finance.js:866) and renders its own honest
@@ -11690,23 +11691,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
     'conformite', 'stock', 'finance', 'payroll']);
 
-  /* Data-conditional destinations: the module DOES build a real per-venue page,
-     but has no empty state of its own, so the starter is the better answer until
-     the data exists. Payroll is the case — venues.js' customPayStaff() builds the
-     roster from the employees added on Équipe and never falls back to the demo
-     staff, yet a merchant who had hired two people still got "Encore rien ici"
-     while their own payslips sat one gate away. With nobody hired, the module
-     renders an empty table and an empty planner, which is worse than the starter
-     and its "Ajouter un employé" — so gate on the roster, not on the venue. */
-  const REAL_WHEN = {
-    payroll() {
-      try {
-        const root = window.__kiwiTeamV2;
-        const v = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
-        return !!(root && root.byVenue && (root.byVenue[v] || []).length);
-      } catch (_) { return false; }
-    },
-  };
+  /* Data-conditional destinations: a module that builds a real per-venue page but
+     has NO empty state of its own belongs here rather than in the set above, so
+     the starter still answers until there is something to show. Empty for now —
+     payroll was the candidate until team.js gave it a proper empty state. */
+  const REAL_WHEN = {};
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button
