@@ -119,6 +119,7 @@
       payStatVarSub: 'heures × taux horaire',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
+      codeKeep: 'Inchangé — 4 chiffres pour le modifier',
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
       plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
       plApply: 'Reporter sur les heures', plClear: 'Vider le planning',
@@ -256,6 +257,7 @@
       payStatVarSub: 'hours × hourly rate',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
+      codeKeep: 'Unchanged — enter 4 digits to change it',
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
       plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
       plApply: 'Copy onto hours', plClear: 'Clear schedule',
@@ -392,6 +394,7 @@
       payStatVarSub: 'الساعات × الأجر بالساعة',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
+      codeKeep: 'دون تغيير — أدخل 4 أرقام لتغييره',
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
       plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
       plApply: 'نقل إلى الساعات', plClear: 'مسح الجدول',
@@ -1431,8 +1434,9 @@
             <label class="kt-pwd-label">
               <span class="l">${esc(T.password)}</span>
               <div class="kt-pwd-row">
-                <input type="text" name="password" value="${esc(m.password)}" data-kt-pwd
-                  inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" />
+                <input type="text" name="password" value="${esc(isCode(m.password) ? m.password : '')}" data-kt-pwd
+                  inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off"
+                  placeholder="${esc(isCode(m.password) ? '' : T.codeKeep)}" />
                 <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-gen">${svgIcon(IC.refresh, 11)} ${esc(T.generate)}</button>
                 <button type="button" class="kt-fbtn-ghost" data-action="kt-pwd-copy">${svgIcon(IC.copy, 11)} ${esc(T.copy)}</button>
               </div>
@@ -1600,14 +1604,20 @@
 
     const venueType = st.venueType;
     const members = getMembers(venueType);
+    const prev = st.editing ? members.find((x) => x.id === st.memberId) : null;
     const member = {
       id: st.memberId,
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
       email: (data.email || '').trim(),
       phone: (data.phone || '').trim(),
-      password: code || makeCode(),
-      pinCode: code || '',                    // kept in step so the till and the profile agree
+      /* Champ laissé vide = « ne touche pas au code ». En modification on
+       * reprend donc celui du membre : sinon corriger un numéro de téléphone
+       * régénérait en douce le code du caissier, qui se retrouvait bloqué
+       * devant la caisse sans savoir pourquoi. Seule une VRAIE création
+       * (aucun code existant) en fabrique un. */
+      password: code || (prev && prev.password) || makeCode(),
+      pinCode: code || (prev && prev.pinCode) || '',   // en phase avec la caisse
       function: data.function,
       department: data.department,
       contract: data.contract,
