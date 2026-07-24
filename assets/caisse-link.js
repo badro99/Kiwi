@@ -88,10 +88,12 @@
   function isPaired() { var b = currentBiz(); return !!(b && connectedCodeFor(b.merchant)); }
 
   /* Issue (or reuse) a live 6-digit code for this store, and point THIS browser's
-   * live feed at the store so the dashboard's "En direct" card shows its sales. */
-  function generateCode() {
+   * live feed at the store so the dashboard's "En direct" card shows its sales.
+   * force=true always mints a fresh code (the "Nouveau code" button) — otherwise
+   * it reuses the current pending code, which is what we want on panel open. */
+  function generateCode(force) {
     var biz = currentBiz(); if (!biz) return null;
-    var code = pendingCodeFor(biz.merchant);
+    var code = force ? null : pendingCodeFor(biz.merchant);
     if (!code) {
       var m = readMap(), now = Date.now();
       Object.keys(m).forEach(function (c) {
@@ -114,9 +116,17 @@
   function backendCreate(biz, localCode) {
     try {
       fetch('/api/pair/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: biz.type, subtype: biz.subtype, name: biz.name, location: biz.location }) })
-        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (r) {
+          // 401/403 = server is present but won't mint this store's code (caller
+          // is neither the signed-in merchant nor an authed operator). The local
+          // code can't be redeemed on another device → be honest in the panel.
+          if (r.status === 401 || r.status === 403) { remoteState = 'reject'; applyRemoteState(); return null; }
+          remoteState = r.ok ? 'ok' : 'absent';    // else: adopted, or fail-soft same-browser
+          applyRemoteState();
+          return r.ok ? r.json() : null;
+        })
         .then(function (j) { if (j && j.ok && j.code && j.code !== localCode) adoptServerCode(localCode, j.code, biz); })
-        .catch(function () {});
+        .catch(function () { remoteState = 'absent'; applyRemoteState(); });   // offline/static host → same-browser demo
     } catch (_) {}
   }
   function adoptServerCode(localCode, serverCode, biz) {
@@ -136,6 +146,15 @@
 
   /* ── The side panel ─────────────────────────────────────────────────────── */
   var panel = null;
+  // Last outcome of /api/pair/create, so the panel can be honest about whether a
+  // REMOTE (cross-device) pair is actually possible from here:
+  //   null    unknown / in-flight       → default "waiting" state
+  //   'ok'    server issued a code       → cross-device works
+  //   'reject' server present but 401/403 (not signed in as this store / operator)
+  //           → cross-device won't work; only "Ouvrir la caisse sur cet appareil"
+  //   'absent' 404/503/offline (static host, pitch demo) → same-browser demo works
+  var remoteState = null;
+  function applyRemoteState() { if (panel && panel.setRemote) { try { panel.setRemote(remoteState); } catch (_) {} } }
   function css() {
     if (document.getElementById('kcl-style')) return;
     var s = document.createElement('style'); s.id = 'kcl-style';
@@ -152,6 +171,8 @@
       '.kcl-status .kcl-d{width:9px;height:9px;border-radius:50%;background:#D99A2B;box-shadow:0 0 0 4px rgba(217,154,43,.16);flex:none;}' +
       '.kcl-status.on .kcl-d{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.18);}' +
       '.kcl-status.on{color:var(--atlas,#0B6E4F);}' +
+      '.kcl-status.kcl-warn{color:#8a5a00;background:rgba(217,154,43,.10);border-color:rgba(217,154,43,.30);line-height:1.4;}' +
+      '.kcl-status.kcl-warn .kcl-d{background:#D99A2B;box-shadow:none;}' +
       '.kcl-pulse{animation:kcl-pulse 1.6s ease-in-out infinite;}' +
       '@keyframes kcl-pulse{0%,100%{opacity:1}50%{opacity:.35}}' +
       '.kcl-open{width:100%;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;cursor:pointer;transition:filter .15s;}' +
@@ -187,6 +208,7 @@
     if (!window.Kiwi || !Kiwi.drawer) return;
     var biz = currentBiz(); if (!biz) return;
     css();
+    remoteState = null;                       // fresh panel → re-learn from this open's create call
     var connected = connectedCodeFor(biz.merchant);
     var code = connected || generateCode();
     if (!code) return;
@@ -200,11 +222,29 @@
       var c = $('#kcl-code'); if (c) c.textContent = next;
     }
     function markConnected() {
-      var st = $('#kcl-status'); if (st) { st.classList.add('on'); }
+      var st = $('#kcl-status'); if (st) { st.classList.add('on'); st.classList.remove('kcl-warn'); }
       var dot = st && st.querySelector('.kcl-d'); if (dot) dot.classList.remove('kcl-pulse');
       var t = $('#kcl-status-t'); if (t) t.textContent = 'Caisse connectée';
       updateChip();
       try { if (window.Kiwi && Kiwi.confetti) Kiwi.confetti(); } catch (_) {}
+    }
+    // Reflect whether a cross-device pair is actually possible from here. Only the
+    // 'reject' case changes anything — 'ok'/'absent'/null keep the default waiting
+    // state (both cross-device and the same-browser demo path work in those cases).
+    function setRemote(state) {
+      if (connectedCodeFor(biz.merchant)) return;         // a live connection wins over any hint
+      var st = $('#kcl-status'), t = $('#kcl-status-t'), hint = $('.kcl-hint'), dot = st && st.querySelector('.kcl-d');
+      if (state === 'reject') {
+        if (st) st.classList.add('kcl-warn');
+        if (dot) dot.classList.remove('kcl-pulse');
+        if (t) t.textContent = 'Appairage à distance indisponible ici — utilisez « Ouvrir la caisse sur cet appareil » ci-dessous.';
+        if (hint) hint.style.display = 'none';            // the "type this code on another device" path won't work
+      } else {
+        if (st) st.classList.remove('kcl-warn');
+        if (dot) dot.classList.add('kcl-pulse');
+        if (t) t.textContent = 'En attente de la caisse…';
+        if (hint) hint.style.display = '';
+      }
     }
     function refresh() {
       if (!document.body.contains(el)) { if (tick) clearInterval(tick); tick = null; panel = null; return; }
@@ -216,7 +256,7 @@
       var cd = $('#kcl-cd'); if (cd) cd.textContent = fmtCountdown(left);
       if (left <= 0) { var n = generateCode(); if (n) setCode(n); }
     }
-    if (connected) markConnected(); else refresh();
+    if (connected) markConnected(); else { refresh(); setRemote(remoteState); }
     tick = setInterval(refresh, 1000);
 
     el.addEventListener('click', function (e) {
@@ -225,7 +265,7 @@
         var b = $('#kcl-copy'); if (b) { var o = b.textContent; b.textContent = 'Copié'; setTimeout(function () { b.textContent = o; }, 1400); }
         return;
       }
-      if (e.target.closest('#kcl-regen')) { var n = generateCode(); if (n) { setCode(n); refresh(); } return; }
+      if (e.target.closest('#kcl-regen')) { var n = generateCode(true); if (n) { setCode(n); refresh(); } return; }
       if (e.target.closest('#kcl-open')) {
         try { window.open('kiwi-caisse.html?pair=1', '_blank'); } catch (_) { location.href = 'kiwi-caisse.html?pair=1'; }
         return;
@@ -233,7 +273,7 @@
     });
 
     markDismissed();  // opening then closing shouldn't re-nag this session; the chip stays
-    panel = { close: d.close, setCode: setCode, el: el, onStorage: refresh };
+    panel = { close: d.close, setCode: setCode, setRemote: setRemote, el: el, onStorage: refresh };
   }
 
   /* ── Corner launcher (so the caisse is never "lost" after a dismiss) ─────── */
