@@ -464,7 +464,8 @@
          the pairing record carries no venueId (a non-custom merchant). Only the unpaired
          local demo (PIN 0002) stays on Maison Mansour. */
       var _bqPv = pvPaired();
-      var _bqKey = window.__kiwiPairedBoutiqueVenue
+      var _bqKey = (pvReal() && _bqPv && _bqPv.merchant)          /* real → merchant slug — SAME key the dashboard uses (pages-pro.js _bqxVenue) */
+        || window.__kiwiPairedBoutiqueVenue
         || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
         || (pvReal() ? 'boutique-live' : 'maisonMansour');
       window.KiwiBoutiqueCatalog.use(_bqKey);
