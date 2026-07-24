@@ -194,6 +194,7 @@
         vBad: 'Prudence, ce coût dépasse votre marge de manœuvre actuelle. À envisager seulement avec une hausse d’activité confirmée.',
         note: 'Hypothèse : 7 200 MAD/mois en coût chargé pour un serveur (salaire net + CNSS + primes). Indiquez un montant précis pour affiner.',
         noteLoaded: (per, n) => `Je compte ${fmtMad(per)}/mois ${n > 1 ? 'par personne ' : ''}en coût <i>chargé</i>. Si c’est le salaire net, ajoutez environ 21 % de CNSS et AMO employeur avant de décider.`,
+        noteCnss: (per, n) => `J’ai ajouté environ 21 % de CNSS et AMO employeur : ${fmtMad(per)}/mois ${n > 1 ? 'par personne ' : ''}en coût réellement supporté. Le taux exact dépend du plafond CNSS et de votre convention, votre comptable le confirmera.`,
       },
       price: {
         text: (p) => `Une ${p >= 0 ? 'hausse' : 'baisse'} de <b>${fmt1(Math.abs(p))} %</b> sur l’ensemble de la carte, à volume constant, ne touche pas le coût matière, l’écart tombe presque entièrement dans le résultat.`,
@@ -279,6 +280,7 @@
         scoped: 'Je n’ai pas ce détail. Je raisonne sur des totaux, pas par article, par jour de semaine ni par personne. Le chiffre global ne s’applique pas à un produit précis, ce serait vous induire en erreur de vous le donner comme tel. Le détail par article se trouve dans la page Menu, et le détail par vente dans Transactions.',
         notrend: 'Je ne peux pas comparer deux périodes : je travaille sur une seule fenêtre de 30 jours, sans historique. Je ne sais donc pas mesurer après coup l’effet d’une décision déjà prise. Ce que je peux faire, c’est simuler ce qu’une décision changerait à partir d’aujourd’hui.',
         illicit: 'Je ne vous aiderai pas sur ce point. Kiwi tient aussi votre comptabilité, je ne vais pas vous aider à dissimuler des recettes, à contourner la CNSS ou à payer sous le minimum légal, et vous exposer à un redressement. En revanche je peux réduire vos coûts par des moyens légaux, voici où votre argent part réellement.',
+        unclear: 'Je n’ai pas bien saisi votre question. Je comprends le français, l’anglais et l’arabe, et une bonne partie de la darija, mais pas encore tout. Reformulez-la, ou posez-la autrement : je calcule une embauche, une hausse de prix, un investissement, votre seuil de rentabilité, vos marges, vos charges et votre prévision du mois.',
       },
       calc: { title: 'Calcul', result: 'résultat' },
       llm: {
@@ -349,6 +351,7 @@
         vBad: 'Caution, this cost exceeds your current room to manoeuvre. Only consider it with a confirmed rise in activity.',
         note: 'Assumption: 7,200 MAD/month loaded cost for a waiter (net pay + CNSS + bonuses). Give a precise figure to refine.',
         noteLoaded: (per, n) => `I'm counting ${fmtMad(per)}/month ${n > 1 ? 'per person ' : ''}as <i>loaded</i> cost. If that's net pay, add roughly 21% employer CNSS and AMO before you decide.`,
+        noteCnss: (per, n) => `I've added roughly 21% employer CNSS and AMO: ${fmtMad(per)}/month ${n > 1 ? 'per person ' : ''}as the cost you actually carry. The exact rate depends on the CNSS ceiling and your agreement, your accountant will confirm it.`,
       },
       price: {
         text: (p) => `A <b>${fmt1(Math.abs(p))}%</b> ${p >= 0 ? 'increase' : 'decrease'} across the whole menu, at constant volume, doesn't touch cost of goods, the difference falls almost entirely into your result.`,
@@ -432,6 +435,7 @@
         scoped: 'I don\'t have that breakdown. I reason on totals, not per item, per weekday or per person. The global figure doesn\'t apply to one specific product, and handing it to you as if it did would mislead you. Per-item detail is on the Menu page, per-sale detail in Transactions.',
         notrend: 'I can\'t compare two periods: I work from a single 30-day window with no history. So I can\'t measure after the fact what a decision you already took actually did. What I can do is simulate what a decision would change from today.',
         illicit: 'I won\'t help with that. Kiwi also keeps your books, so I\'m not going to help you hide takings, get around CNSS or pay below the legal minimum, and expose you to a tax reassessment. What I can do is cut your costs by lawful means, here is where your money actually goes.',
+        unclear: 'I didn’t quite catch that. I understand French, English and Arabic, and a good deal of Darija, but not all of it yet. Try rephrasing, or ask another way: I can work out a hire, a price rise, an investment, your break-even point, your margins, your costs and this month’s forecast.',
       },
       calc: { title: 'Calculation', result: 'result' },
       llm: {
@@ -503,6 +507,7 @@
         vBad: 'حذار، هذه التكلفة تتجاوز هامش مناورتك الحالي. لا تأخذها بعين الاعتبار إلا مع ارتفاع مؤكد في النشاط.',
         note: 'افتراض: 7 200 MAD/شهر تكلفة محمّلة لنادل (الأجر الصافي + CNSS + المكافآت). حدّد مبلغاً دقيقاً للتحسين.',
         noteLoaded: (per, n) => `أحتسب ${fmtMad(per)}/شهر ${n > 1 ? 'لكل شخص ' : ''}كتكلفة <i>محمّلة</i>. إن كان هذا هو الأجر الصافي، أضف نحو 21 % من مساهمات الضمان الاجتماعي والتأمين الصحي قبل أن تقرّر.`,
+        noteCnss: (per, n) => `أضفتُ نحو 21 % من مساهمات الضمان الاجتماعي والتأمين الصحي: ${fmtMad(per)}/شهر ${n > 1 ? 'لكل شخص ' : ''}كتكلفة تتحمّلها فعلاً. النسبة الدقيقة تتوقف على سقف الضمان الاجتماعي واتفاقيتك، ومحاسبك سيؤكدها.`,
       },
       price: {
         text: (p) => `${p >= 0 ? 'رفع' : 'خفض'} الأسعار بنسبة <b>${fmt1(Math.abs(p))} %</b> على كامل القائمة، بحجم ثابت، لا يمسّ تكلفة المواد، والفارق يذهب كله تقريباً إلى النتيجة.`,
@@ -587,6 +592,7 @@
         scoped: 'ليس لديّ هذا التفصيل. أشتغل على المجاميع، لا حسب الصنف ولا حسب يوم الأسبوع ولا حسب الشخص. الرقم الإجمالي لا ينطبق على منتج بعينه، وإعطاؤه لك على هذا الأساس سيضلّلك. تفصيل الأصناف في صفحة القائمة، وتفصيل المبيعات في المعاملات.',
         notrend: 'لا أستطيع مقارنة فترتين: أعمل على نافذة واحدة من 30 يوماً بلا تاريخ سابق. لذلك لا أقدر على قياس أثر قرار اتخذته فعلاً. ما أستطيعه هو محاكاة ما سيغيّره قرار انطلاقاً من اليوم.',
         illicit: 'لن أساعدك في هذا. Kiwi يمسك محاسبتك أيضاً، ولن أساعدك على إخفاء مداخيل أو التحايل على الضمان الاجتماعي أو الأداء دون الحد الأدنى القانوني، وتعريض نفسك لتصحيح ضريبي. لكن يمكنني خفض تكاليفك بطرق قانونية، وهذا هو المسار الحقيقي لأموالك.',
+        unclear: 'لم أفهم سؤالك جيداً. أفهم الفرنسية والإنجليزية والعربية، وجزءاً كبيراً من الدارجة، لكن ليس كل شيء بعد. أعد صياغته أو اطرحه بطريقة أخرى: أحسب لك التوظيف، ورفع الأسعار، والاستثمار، ونقطة التعادل، والهوامش، والمصاريف، وتوقّع الشهر.',
       },
       calc: { title: 'حساب', result: 'النتيجة' },
       llm: {
@@ -725,11 +731,34 @@
    * "2", rejected it as below a plausible salary, and fell back — quoting
    * 7 200 for a 10 000 MAD/month commitment. Bounded at 50 so a stray number
    * can't inflate the sim. */
+  /* Merchants write counts as words at least as often as digits, and the
+   * commonest hiring follow-up of all — "et si j'en prends deux" — carries no
+   * digit at all, so it used to fall through to the model. */
+  const NUM_WORD = {
+    deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10,
+    two: 2, three: 3, four: 4, five: 5, seven: 7, eight: 8, nine: 9, ten: 10,
+    zouj: 2, juj: 2, tlata: 3, rb3a: 4, khamsa: 5,
+  };
+  const NUM_WORD_RX = new RegExp('\\b(' + Object.keys(NUM_WORD).join('|') + ')\\b');
+  function wordCount(q) {
+    const m = q.match(NUM_WORD_RX);
+    return m ? NUM_WORD[m[1]] : null;
+  }
+
+  /* Returns null when the query expresses NO count at all, so the caller can
+   * tell "un cuisinier" (explicitly one) from "et avec la CNSS ?" (unstated,
+   * therefore still however many we were just discussing). */
   function hireCount(q) {
     const m = q.match(/(\d{1,2})\s*(?:personnes?|serveurs?|serveuses?|employ[eé]?e?s?|salari[eé]s?|cuisiniers?|baristas?|vendeu|caissi|staff|people|workers?|waiters?|cooks?|خدام|عمال|نادل|موظف)/);
-    const n = m ? parseInt(m[1], 10) : 1;
+    const n = m ? parseInt(m[1], 10) : wordCount(q);
+    if (n == null) return null;
     return (n >= 1 && n <= 50) ? n : 1;
   }
+
+  /* "et avec la CNSS ça fait combien" — the merchant is asking to gross their
+   * own figure up to employer cost. Morocco: CNSS + AMO employer share ≈ 21 %. */
+  const LOADED_RX = /\bcnss\b|\bamo\b|charges? (?:sociale|patronale)|cout charge|coût chargé|employer (?:cost|charges)|الضمان الاجتماعي/;
+  const CNSS_UPLIFT = 1.21;
 
   function sHire(q) {
     if (B.partial) return partialReply();
@@ -737,9 +766,21 @@
     /* Take the first figure that could plausibly be a monthly salary, not the
      * first number in the string — the leading number is usually the count. */
     const unit = parseAllAmounts(q).filter((v) => v >= 1800)[0];
-    const n = hireCount(q);
+    /* Count: explicit wins. Otherwise, a message that also states a NEW salary
+     * is a fresh spec ("un cuisinier à 6000" → one), while a bare follow-up
+     * ("et avec la CNSS ?") still refers to however many we were discussing. */
+    const said = hireCount(q);
+    const n = said != null ? said : (unit ? 1 : (lastHire.n || 1));
     let per = unit, assumed = false;
+    /* A follow-up rarely repeats the salary: "et si j'en prends deux" means
+     * two AT THE FIGURE WE JUST DISCUSSED. Carry it rather than silently
+     * resetting to the 7 200 default, which would understate the answer. */
+    if (!per && lastHire.per) per = lastHire.per;
     if (!per) { per = 7200; assumed = true; }
+    /* "et avec la CNSS ?" — gross their net figure up to employer cost. */
+    const loaded = LOADED_RX.test(norm(q)) && !assumed;
+    if (loaded) per = Math.round(per * CNSS_UPLIFT);
+    lastHire = { per: per, n: n };
     const c = per * n;
     const ordersMo = c / (B.avgBasket * B.contribRatio);
     const newNet = B.netProfit - c;
@@ -757,7 +798,7 @@
        * usually means net salary, and CNSS + AMO employer share adds ~21%
        * on top. Silently treating their figure as fully loaded understated
        * every hire. When we assumed the whole figure, say that instead. */
-      note: assumed ? t.note : t.noteLoaded(per, n),
+      note: assumed ? t.note : (loaded ? t.noteCnss(per, n) : t.noteLoaded(per, n)),
       follow: [tr().chips.price5, tr().chips.breakeven],
     };
   }
@@ -1087,6 +1128,15 @@
     return { text: gTxt().notrend, follow: [tr().chips.forecast, tr().chips.breakeven] };
   }
 
+  /* Darija the lexicon didn't cover. Say so, and show what IS understood —
+   * never pass it to the model, which fabricates money in this register. */
+  function sUnclear() {
+    return {
+      text: gTxt().unclear,
+      follow: [tr().chips.hire, tr().chips.price5, tr().chips.breakeven, tr().chips.charges],
+    };
+  }
+
   /* Layoff and illicit both land on the same constructive alternative: show
    * where the money actually goes. On a partial profile there are no costs
    * to show, so the guard text stands alone rather than inventing a table. */
@@ -1286,6 +1336,19 @@
    *    deliberately absent — that belongs to forecast, which is forward. */
   const TREND_RX = /mois\s+dernier|mois\s+passe|semaine\s+derniere|annee\s+derniere|an\s+dernier|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|\bامس\b/;
 
+  /* 7. Darija we didn't understand. Measured, not assumed: Qwen3.5-2B was
+   *    asked "chhal dayer lyoum f had lqahwa?" and answered with five invented
+   *    dirham figures (133 600, 140 000, 6 400, 100 000, 20 000 MAD) wrapped in
+   *    non-words, on a repeat loop. auditNumbers() does flag all five — but the
+   *    same model also returns pure gibberish carrying NO number, which no
+   *    numeric guard can catch. Handing a merchant invented money about their
+   *    own shop is the worst thing this assistant can do, so unrecognised
+   *    Darija gets an honest "rephrase" instead of the model.
+   *    Markers are chosen to be low-false-positive against FR/EN: the arabizi
+   *    letter-digits (3=ع 7=ح 9=ق 2=ء) plus function words with no French or
+   *    English homograph — "dial" and bare "had" are deliberately excluded. */
+  const DARIJA_RX = /\b[a-z]{1,6}[2379][a-z]{1,6}\b|\b(?:wach|chhal|ch7al|chnu|chno|kifach|kifash|bghit|bghina|dyal|dyali|daba|bezzaf|chwiya|mzyan|khassni|khass|hadchi|lyoum|ghadi|kayn|kayna|bach|wla|zouj|juj)\b|واش|شحال|بغيت|ديالي|ديال|دابا|كيفاش|بزاف|شنو|هادشي|غادي|خاصني/;
+
   /* 6. Illicit. "combien je peux sortir de la caisse sans que ça se voie"
    *    returned a full revenue + profit dump. Kiwi is also this merchant's
    *    bookkeeping system; it must not help hide takings. Note "payer moins
@@ -1294,8 +1357,18 @@
   /* One-slot conversational memory: the last amount-driven scenario, so a
    * follow-up correction can refine it instead of being mis-routed. */
   let lastScenario = null;
+  /* Last hire parameters, so a bare follow-up ("et si j'en prends deux")
+   * refines the figure just discussed instead of resetting to the default. */
+  let lastHire = { per: null, n: 1 };
   const REFINE_LEAD = /^\s*(non|nan|nope|no\b|en fait|plutot|disons|mettons|admettons|sinon|ok\b|d.?accord|et\b|et si|and\b|actually|rather|make it|let.?s say|lets say|si c.?etait|what if)/;
-  const isRefinement = (raw, q) => (parseAmount(raw) != null || parsePercent(raw) != null) && REFINE_LEAD.test(q);
+  /* A refinement carries a NEW parameter for the scenario just run. That used
+   * to mean a digit, which missed the two commonest hiring follow-ups there
+   * are: "et si j'en prends deux" (count as a word) and "et avec la CNSS ça
+   * fait combien" (gross my figure up to employer cost). */
+  const isRefinement = (raw, q) => (
+    parseAmount(raw) != null || parsePercent(raw) != null
+    || wordCount(q) != null || LOADED_RX.test(q)
+  ) && REFINE_LEAD.test(q);
 
   const INTENTS = [
     { id: 'greet', run: () => sHelp(), sig: [
@@ -1399,6 +1472,15 @@
     // amount-driven scenario re-runs THAT scenario ("non ça va nous coûter 3000 dh",
     // "plutôt 5000", "et à 4000 ?") — unless the message states a new strong intent.
     const strong = ranked.length && ranked[0].score >= 3;
+    /* "et avec la CNSS ça fait combien" scores 3 on `accounting` (RX_ACCT owns
+     * "cnss"), so the generic !strong guard below sent it to the accounting
+     * blurb. Right after a hire it is unambiguously a refinement of that hire,
+     * so it is allowed to win. Kept deliberately narrow — it needs the refine
+     * lead AND a loaded-cost word AND hire as the last scenario. */
+    if (lastScenario === 'hire' && LOADED_RX.test(q) && REFINE_LEAD.test(q)) {
+      const hi = INTENTS.find((i) => i.id === 'hire');
+      if (hi) return { kind: 'hire', raw, q, run: hi.run, refine: true };
+    }
     if (lastScenario && !strong && isRefinement(raw, q)) {
       if (lastScenario === 'compound') return { kind: 'compound', raw, q, refine: true };
       const it = INTENTS.find((i) => i.id === lastScenario);
@@ -1406,6 +1488,9 @@
     }
     if (ranked.length && ranked[0].score >= MIN_SCORE) return { kind: ranked[0].id, raw, q, run: ranked[0].run };
     if (evalMath(raw) != null) return { kind: 'math', raw, q };
+    /* Nothing matched. If it reads as Darija, answering honestly beats handing
+     * it to a model that invents dirham figures in this exact register. */
+    if (DARIJA_RX.test(q)) return { kind: 'unclear', raw, q };
     return { kind: null, raw, q };
   }
 
@@ -1423,6 +1508,7 @@
     if (d.kind === 'layoff') return sLayoff();
     if (d.kind === 'scoped') return sScoped();
     if (d.kind === 'notrend') return sNoTrend();
+    if (d.kind === 'unclear') return sUnclear();
     if (d.kind === null) return null;   // unmatched → routed to the in-browser LLM
     return d.run(d.raw, d.q);
   }
@@ -1502,6 +1588,21 @@
     ['شنو هي المارج ديالي', 'margin'],
     ['بغيت نزيد فالثمن ب ١٠ فالمية', 'price'],
     ['combien je dois vendre par jour pour pas couler', 'breakeven'],
+
+    /* Darija we DON'T cover must never reach the model. Measured: asked
+     * "chhal dayer lyoum f had lqahwa?", Qwen3.5-2B invented five dirham
+     * figures about the merchant's own shop, and its gibberish answers carry
+     * no number at all, so auditNumbers() cannot catch them either. */
+    ['wach hadchi mzyan', 'unclear'],
+    ['chnu ndir daba', 'unclear'],
+    ['bghit chi haja dyal daba', 'unclear'],
+    ['واش هادشي مزيان', 'unclear'],
+    /* …while ordinary FR/EN must still reach it — the guard has to be precise,
+     * not merely safe. "I had a great day" is the trap: `had` is a Darija
+     * marker AND an English verb, which is why it is not in DARIJA_RX. */
+    ['I had a great day', 'llm'],
+    ['mes employés volent, je fais quoi', 'llm'],
+    ['ouvrir un 2ème café', 'llm'],
   ];
   function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
   function runEval() {
@@ -1523,6 +1624,11 @@
     check('afford', 'non plutôt 90000', 'afford');
     check('hire', "et si j'augmente les prix de 5%", 'price');  // new strong intent wins
     check('hire', 'montre mes charges', 'charges');             // no number → not a refinement
+    /* The two commonest hiring follow-ups, both dead before: neither carries a
+     * digit, so the old isRefinement (which required one) sent "deux" to the
+     * model and "CNSS" to the accounting blurb (RX_ACCT owns that word). */
+    check('hire', "et si j'en prends deux", 'hire');
+    check('hire', 'et avec la CNSS ça fait combien', 'hire');
     check('price', 'non', 'llm');                               // correction without a number can't hijack
     check(null, 'ça va aujourd’hui ?', 'llm');                  // standalone "ça va" is not revenue
     lastScenario = null;
