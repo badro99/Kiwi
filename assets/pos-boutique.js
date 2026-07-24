@@ -32,6 +32,13 @@
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
+  /* ── real-store detection ── a REAL merchant has paired their boutique (or the
+     shared KiwiEnv marks the session real). Demo people (staff roster + seeded
+     clientes/ventes/avoirs) are neutralized whenever pvReal() is true so a real
+     store never inherits the Maison Mansour cast. Local demo ⇒ pvReal() false. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+
   function toast(msg, ms) {
     const stack = $('#toast-stack');
     if (!stack) return;
@@ -220,13 +227,22 @@
   const firstFree = (p) => sizesOf(p).find((k) => p.sizes[k] > 0) || null;
 
   /* ───────────────────────── équipe & clientes (Casa · Maarif) ───────────── */
-  const STAFF = {
+  /* A REAL boutique never inherits Maison Mansour's staff — the roster is
+     neutralized (« Vendeur N », blank role) while keeping the same shape/length.
+     Local demo (pvReal() false) keeps the named cast, byte-identical. */
+  const STAFF = pvReal() ? {
+    gerante:   { name: 'Vendeur 1', role: '' },
+    conseil:   { name: 'Vendeur 2', role: '' },
+    caissiere: { name: 'Vendeur 3', role: '' },
+  } : {
     gerante:   { name: 'Aicha Benali', role: 'Gérante boutique' },
     conseil:   { name: 'Rania Tazi',   role: 'Conseillère de vente' },
     caissiere: { name: 'Salma',        role: 'Caisse' },
   };
 
-  const CLIENTES = [
+  /* A REAL boutique starts with an empty client book (its own clientes are read
+     from KiwiClients / captured at the till). Only the local demo seeds this cast. */
+  const CLIENTES = pvReal() ? [] : [
     { id: 'c1', name: 'Lalla Khadija El Fassi', phone: '0661 42 18 30', points: 1240, taille: 'M',  achats: 9,  spent: 18400, vip: true,
       prefs: ['Caftans brodés main, jamais de machine', 'Retouches chez Maalem Hassan'],
       history: [{ when: '24 mai', what: 'Caftan Velours · M · bordeaux', amt: 1850 }, { when: '12 avr.', what: 'Takchita Zellige · M · émeraude', amt: 2800 }, { when: '2 mars', what: 'Mdamma dorée', amt: 650 }] },
@@ -1579,7 +1595,7 @@
           onPaid: (parts) => {
             apply();
             const rec = {
-              id: `MM-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: 'Salma', kind: 'echange',
+              id: `MM-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
               methods: parts.map((x) => x.m).join(' + '),
               lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
               total: diff,
@@ -1618,7 +1634,7 @@
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
         const sale = {
-          id: t.num, at: new Date(), clientId: c ? c.id : null, by: 'Salma', kind: 'vente',
+          id: t.num, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, unit: lineUnit(ln), returned: false, note: '' })),
           total,

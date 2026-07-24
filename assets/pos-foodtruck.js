@@ -17,6 +17,14 @@
 (function () {
   'use strict';
 
+  /* ───────────────────────── real-store gate ─────────────────────────
+     A paired / real venue must never see demo customer names. Local demo
+     (pvReal()===false) keeps every seed byte-identical. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   /* ───────────────────────── helpers ───────────────────────── */
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -115,16 +123,16 @@
     };
   }
 
-  const QUEUE = [
+  const QUEUE = pvReal() ? [] : [
     mkSeed(43, 'Bilal',   [['hotdog', 1], ['limonada', 1]], 'especes', -12, 'ready', -3),
     mkSeed(44, 'Omar',    [['burger', 2], ['frites', 1]],   'especes', -9,  'prep'),
     mkSeed(45, 'Hamid',   [['tacos', 1], ['the', 1]],       null,      -7,  'prep'),
     mkSeed(46, 'Salma',   [['jus', 1], ['msemen', 1]],      'carte',   -4,  'prep'),
     mkSeed(47, 'Khadija', [['burger', 1]],                  'especes', -2,  'prep'),
   ];
-  QUEUE[2].hint = 'taxi du port, paie au retrait, comme d\'hab';
+  if (QUEUE[2]) QUEUE[2].hint = 'taxi du port, paie au retrait, comme d\'hab';
 
-  const SERVED = [
+  const SERVED = pvReal() ? [] : [
     mkSeed(42, 'Yassine', [['tacos', 1], ['frites', 1]],                 'carte',   -16, 'served', -10, -8),
     mkSeed(41, 'Meriem',  [['jus', 2]],                                  'especes', -21, 'served', -15, -13),
     mkSeed(40, 'Anas',    [['burger', 1], ['frites', 1], ['limonada', 1]], 'especes', -25, 'served', -19, -16),
@@ -193,8 +201,8 @@
       <aside class="ft-rail">
         <div class="ft-brand">kiwi<i></i></div>
         <div class="ft-venue">
-          <div class="ft-venue-name">Karavan</div>
-          <div class="ft-venue-sub">Food truck · Tanger<br>Le même Kiwi, <b>un seul compte</b>.</div>
+          <div class="ft-venue-name">${pvName('Karavan') || 'Mon food truck'}</div>
+          <div class="ft-venue-sub">${pvReal() ? (pvCity('') || '') : 'Food truck · Tanger'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="ft-nav" id="ft-nav">
           <button class="ft-nav-it on" data-ft-view="vente"><i data-lucide="zap"></i><span>Vente éclair</span><b class="ft-nav-badge" id="ft-badge-vente"></b></button>
@@ -892,7 +900,7 @@
       .map((m) => ({ m, ct: sold[m.id] || 0 }))
       .sort((a, b) => b.ct - a.ct);
 
-    $('#ft-rec-sub', root).textContent = `${fmtDT(new Date())} · caisse Karavan`;
+    $('#ft-rec-sub', root).textContent = `${fmtDT(new Date())}${pvReal() ? (pvName('') ? ' · caisse ' + pvName('') : '') : ' · caisse Karavan'}`;
     $('#ft-rec-body', root).innerHTML = `
       <div class="ft-rec-hero">
         <div class="ft-rec-lbl">Recette du jour · ${orders} commandes</div>

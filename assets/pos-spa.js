@@ -116,6 +116,9 @@
     { id: 'SB', name: 'Salma Benkirane',   short: 'Salma',   role: 'Certifiée CIDESCO',     color: '#3FB67A' },
     { id: 'YB', name: 'Yasmine Bouchikhi', short: 'Yasmine', role: 'Spécialiste hammam',    color: '#D99A2B' },
   ];
+  /* Real spa (paired/hosted) → neutralize the demo praticiennes: a real merchant
+     names their own team, we never leak the Spa Bahia cast. Local demo unchanged. */
+  if (pvReal()) PRACTS.forEach((p, i) => { p.name = 'Praticien ' + (i + 1); p.short = 'P' + (i + 1); p.role = ''; });
   const PR = Object.fromEntries(PRACTS.map((p) => [p.id, p]));
 
   /* ───────────────────────── prestations & produits ───────────────────────── */
@@ -163,7 +166,7 @@
   const ffSaving = (f, size) => PRESTA[f.presta].price * size - f.sizes[size];
 
   /* ───────────────────────── clientes (fiche phone-first) ───────────────── */
-  const CLIENTES = [
+  const CLIENTES = pvReal() ? [] : [
     { id: 'c1', name: 'Samira Chraïbi',    phone: '0661 32 18 47', visits: 18,
       allergies: ["Huile d'amande douce"], prefs: ['Pression forte', 'Praticienne : Nour'],
       lastDays: 5, lastWhat: 'Rituel complet · Nour',
@@ -198,7 +201,7 @@
 
   /* ───────────────────────── cures en cours (seed) ───────────────────────── */
   let cureSeq = 2062;
-  const CURES = [
+  const CURES = pvReal() ? [] : [
     { id: 'CU-2041', clientId: 'c1', familyId: 'fh', size: 10, used: 6, boughtDays: -64, expiresDays: 120 },
     { id: 'CU-2057', clientId: 'c2', familyId: 'fm', size: 5,  used: 4, boughtDays: -88, expiresDays: 42 },
   ];
@@ -224,7 +227,7 @@
       paid: paid || null,                      /* { via: 'espèces'|'carte'|'cure' } */
     };
   }
-  const APPTS = [
+  const APPTS = pvReal() ? [] : [
     /* Nour */
     mkAppt('NH', 600,  'rituel',    'c1', 'done', { via: 'espèces' }),
     mkAppt('NH', 705,  'argan60',   'c5', 'done', null),               /* Kenza — au vestiaire, à encaisser */

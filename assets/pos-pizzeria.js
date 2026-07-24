@@ -181,13 +181,22 @@
     { id: 'california', label: 'California',   fee: 15, eta: '25–35 min' },
   ];
   const ZONE = Object.fromEntries(ZONES.map((z) => [z.id, z]));
-  const COURIERS = [
-    { id: 'mehdi', name: 'Mehdi', sub: 'scooter rouge' },
-    { id: 'anas',  name: 'Anas',  sub: 'scooter bleu' },
-  ];
+  /* Staff/livreurs roster — a real store never shows the demo cast. Real ⇒
+   * neutral "Serveur N", blank role; ids/length kept so the board still works. */
+  const COURIERS = pvReal()
+    ? [
+        { id: 'mehdi', name: 'Serveur 1', sub: '' },
+        { id: 'anas',  name: 'Serveur 2', sub: '' },
+      ]
+    : [
+        { id: 'mehdi', name: 'Mehdi', sub: 'scooter rouge' },
+        { id: 'anas',  name: 'Anas',  sub: 'scooter bleu' },
+      ];
   const COURIER = Object.fromEntries(COURIERS.map((c) => [c.id, c]));
 
-  const CUSTOMERS = [
+  /* Client fiches — real store starts with an empty carnet (no demo people);
+   * new clients are created live via openClient(). Local demo keeps the cast. */
+  const CUSTOMERS = pvReal() ? [] : [
     { id: 'k1', name: 'Karim Benjelloun',   phone: '0661 45 23 89', address: 'Rés. Marina Bay, imm. 3, apt 12', zone: 'malabata',   orders: 17 },
     { id: 'k2', name: 'Salma El Idrissi',   phone: '0670 88 12 34', address: '14 rue de Hollande',              zone: 'centre',     orders: 9 },
     { id: 'k3', name: 'Hicham Drissi',      phone: '0650 33 21 70', address: 'Lot. California, villa 22',       zone: 'california', orders: 26, pref: 'toujours moitié-moitié' },
@@ -290,7 +299,7 @@
 
   /* Service du soir, en plein rush — 3 pizzas au four, 2 commandes dans le
      circuit livraison, une à encaisser au retrait, une file qui pousse. */
-  const ORDERS = [
+  const ORDERS = pvReal() ? [] : [
     seedOrder({ id: 'M-207', mode: 'surplace', table: 'T5', agoMin: 2,
       pay: { method: null, paid: 0, deferred: 'table' },
       lines: [

@@ -161,7 +161,9 @@
   const fidTier = (pts) => pts >= FID_TIER;
 
   /* ───────────────────────── clients (Tanger) ─────────────────────────────── */
-  const CUSTOMERS = [
+  /* Demo people never surface for a real, paired bookshop — the seeded client
+     roster is emptied when pvReal(). Local demo keeps the full cast, unchanged. */
+  const CUSTOMERS = pvReal() ? [] : [
     { id: 'c1', name: 'Naima El Fassi',     phone: '0661 30 21 14', points: 640, visits: 19, school: false, note: 'Lectrice, romans & essais' },
     { id: 'c2', name: 'Karim Benani',       phone: '0670 44 18 02', points: 410, visits: 12, school: false, note: 'Deux enfants au collège' },
     { id: 'sc', name: 'G.S. Ibn Khaldoun',  phone: '0539 94 33 18', points: 1280, visits: 31, school: true, note: 'Listes scolaires · facture établissement', contact: 'Intendance · M. Saïdi' },
@@ -197,7 +199,9 @@
       pickedAt:   cfg.pickedD  != null ? new Date(NOW - cfg.pickedD  * DAY) : null,
     };
   }
-  const CMDS = [
+  /* Seeded special orders carry client names/phones — a real bookshop starts
+     with an empty board when pvReal(). Local demo keeps every seed, unchanged. */
+  const CMDS = pvReal() ? [] : [
     /* arrivée, PAS notifiée → le demo moment */
     mkCmd({ n: 312, title: 'Les Misérables, intégrale', author: 'Victor Hugo', isbn: '9782253xxx201',
       custId: 'c1', qty: 1, price: 145, acompte: 50, status: 'arrivee', notified: false, orderedD: 6, arrivedD: 0 }),

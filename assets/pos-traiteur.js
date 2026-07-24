@@ -224,7 +224,7 @@
     return ev;
   }
 
-  const EVENTS = [
+  const EVENTS = pvReal() ? [] : [
     /* livraison de CE SOIR — la moitié du camion est déjà chargée */
     mkEvent({
       id: 'EV-238', devisRef: 'DV-1019', name: 'Iftar entreprise Tanger Med', type: 'entreprise',
@@ -306,7 +306,7 @@
     date: localDate(new Date(NOW + 30 * DAY)), lieu: '',
     menu: [], extras: [],
   });
-  let draft = {
+  let draft = pvReal() ? blankDraft() : {
     client: 'Salma Bennis', phone: '0661 58 24 39', type: 'mariage', guests: 150,
     date: localDate(new Date(NOW + 34 * DAY)), lieu: 'Villa Harris · Malabata',
     menu: ['pastilla', 'tajine_agneau', 'the'], extras: ['service', 'livraison'],
@@ -1036,7 +1036,9 @@
     const due = dueTotal(ev);
     const depart = new Date(ev.date.getTime() - 90 * 60000);
     const delivered = ev.status === 'livre';
-    const team = ev.team || [{ n: 'Chef Abdellah', lead: true }, { n: 'Saïd · maître d’hôtel', lead: true }];
+    const team = ev.team || (pvReal()
+      ? [{ n: 'Équipe 1', lead: true }, { n: 'Équipe 2', lead: true }]
+      : [{ n: 'Chef Abdellah', lead: true }, { n: 'Saïd · maître d’hôtel', lead: true }]);
     return `<div class="tr-bl" style="margin-bottom:12px;">
       <div class="tr-bl-head">
         <div class="tr-bl-when"><b>${timeOf(ev.date)}</b><span>service</span></div>

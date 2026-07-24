@@ -23,6 +23,15 @@
 (function () {
   'use strict';
 
+  /* ───────────────────────── real-store guard ─────────────────────────
+     A real merchant paired their bakery → do NOT seed the demo cast
+     (customer cake orders, hardcoded greet name). Local demo path (no
+     pairing / not real) stays byte-identical to before. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   /* ───────────────────────── helpers ───────────────────────── */
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -166,7 +175,10 @@
   const PARFUMS = ['Chocolat', 'Vanille-framboise', 'Amande-miel', 'Fruits de saison'];
 
   let cakeSeq = 116;
-  const CAKES = [
+  /* Seeded cake orders carry real-looking customer names + phone numbers —
+     a real bakery starts with an empty carnet (renders the "Carnet vide"
+     empty state); only the local demo keeps the sample commandes. */
+  const CAKES = pvReal() ? [] : [
     { id: 'G-112', name: 'Yasmine Benjelloun', phone: '0661 42 87 30', occasion: 'anniv',
       inscription: '3id milad sa3id Yasmine', parts: 'p20', parfum: 'Chocolat',
       price: 350, paid: 150, retrait: dayAt(0, 17, 0), status: 'encours', notified: false },
@@ -223,8 +235,8 @@
       <aside class="bl-rail">
         <div class="bl-brand">kiwi<i></i></div>
         <div class="bl-venue">
-          <div class="bl-venue-name">Boulangerie Bab Kasbah</div>
-          <div class="bl-venue-sub">Tanger · Kasbah<br>Le même Kiwi, <b>un seul compte</b>.</div>
+          <div class="bl-venue-name">${pvName('Boulangerie Bab Kasbah') || 'Ma boulangerie'}</div>
+          <div class="bl-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Kasbah'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="bl-nav" id="bl-nav">
           <button class="bl-nav-it on" data-bl-view="comptoir"><i data-lucide="croissant"></i><span>Comptoir</span></button>
@@ -1338,7 +1350,7 @@
   window.KiwiPosDispatch.register({
     id: 'boulangerie',
     greet: {
-      line1: 'Sba7 lkhir Abdelkader,',
+      line1: pvReal() ? 'Sba7 lkhir,' : 'Sba7 lkhir Abdelkader,',
       em: 'marhba.',
       sub: 'Boulangerie Bab Kasbah <em>·</em> fournée du matin sortie, le msemen est au four',
     },

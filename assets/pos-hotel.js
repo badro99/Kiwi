@@ -109,7 +109,7 @@
     walkin:  { label: 'Walk-in',     cls: 'direct' },
   };
   const ONLINE_SRC = { booking: 'Booking.com', airbnb: 'Airbnb' };
-  const HOUSEKEEPERS = ['Naima Bouziane', 'Fatiha Zerouali'];
+  const HOUSEKEEPERS = pvReal() ? ['l’équipe', 'l’équipe'] : ['Naima Bouziane', 'Fatiha Zerouali'];
 
   /* extras — the visual quick-grid posted onto the folio */
   const CHARGES = [
@@ -160,7 +160,8 @@
 
   function setRoom(n, status, note) { ROOMS[n].status = status; ROOMS[n].note = note || ''; }
 
-  /* En maison (j-courant) — 5 chambres sur 8 ≈ 60 % */
+  /* En maison (j-courant) — 5 chambres sur 8 ≈ 60 % · demo seed only, a real riad starts empty */
+  if (!pvReal()) {
   setRoom(1, 'occ');
   mkStay(1, { guest: 'Hind & Omar Bennani', src: 'booking', pax: 2, nights: 3, day: 2,
     charges: [['minibar', 2, 'hier 21h10'], ['diner', 2, 'hier 20h30']], payments: [] });
@@ -191,9 +192,11 @@
     payments: [['carte', 2800, 'Acompte à la réservation']] });
 
   setRoom(8, 'hs', 'Fuite SDB, plombier vendredi');
+  }
 
   /* ───────────────────────── arrivées / départs du jour ───────────────────────── */
-  const ARRIVALS = [
+  /* demo guest book — a real riad starts with zero arrivals/departures */
+  const ARRIVALS = pvReal() ? [] : [
     { id: 'a1', t: '15h30', guest: 'Famille Rossi', room: 5, src: 'booking', nights: 4, pax: 4, adults: 2,
       note: 'Lit bébé demandé, 2 adultes, 2 enfants', done: false },
     { id: 'a2', t: '16h00', guest: 'Marta & Diego Gómez', room: 3, src: 'direct', nights: 3, pax: 2, adults: 2,
@@ -201,7 +204,7 @@
     { id: 'a3', t: '18h30', guest: 'Lucía Marín', room: 2, src: 'booking', nights: 2, pax: 1, adults: 1,
       note: 'Étage calme demandé', done: false },
   ];
-  const DEPARTURES = [
+  const DEPARTURES = pvReal() ? [] : [
     { id: 'd1', t: '10h30', guest: 'Claire Dubois', room: 5, total: 3120, done: true, doneAt: '10h26' },
     { id: 'd2', t: '12h00', guest: 'Karim Bennis',  room: 2, done: false, late: true },
   ];

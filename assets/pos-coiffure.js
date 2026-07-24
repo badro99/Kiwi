@@ -36,6 +36,12 @@
   const initials = (name) => name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   const moveCaretEnd = (input) => { const v = input.value; input.value = ''; input.value = v; };
 
+  /* real-store detection — neutralize demo PEOPLE when a merchant is paired */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   function toast(msg, ms) {
     const stack = $('#toast-stack');
     if (!stack) return;
@@ -70,6 +76,8 @@
     { id: 'karim',   name: 'Karim',   role: 'Coupe homme · barbe · bac',  short: 'Kar', color: '#33588C' },
     { id: 'sara',    name: 'Sara',    role: 'Coloriste · mèches & soin',  short: 'Sar', color: '#A8423A' },
   ];
+  /* real store: strip staff identities, keep id/color/length so assignment & commission logic holds */
+  if (pvReal()) STAFF.forEach((s, i) => { s.name = 'Coiffeur ' + (i + 1); s.short = 'C' + (i + 1); s.role = ''; });
   const SF = Object.fromEntries(STAFF.map((s) => [s.id, s]));
   const COMMISSION = 0.40;
 
@@ -144,7 +152,7 @@
   /* ───────────────────────── clientèle (Tanger) ───────────────────────── */
   const NOW = Date.now();
   const dAgo = (days) => new Date(NOW - days * 24 * 60 * MIN);
-  const CUSTOMERS = [
+  const CUSTOMERS = pvReal() ? [] : [
     { id: 'cl1', name: 'Salma Bennani', phone: '0661 24 18 07', visits: 14, last: dAgo(38),
       prefs: ['Raie à gauche', 'N\'aime pas trop court', 'Thé sans sucre'],
       formula: { name: 'Doré chaud', base: '7.3', tone: 'doré', ox: 6, pose: 35, brand: 'Inoa', notes: 'Couvre bien les racines blanches du contour' },
@@ -222,7 +230,7 @@
   }
 
   /* file d'attente (walk-in + en cours) */
-  const PASSAGES = [
+  const PASSAGES = pvReal() ? [] : [
     mkPass({ id: 1041, custId: 'cl3', staffId: 'yasmine', state: 'cours', arrivedMin: 65,
       lines: [['couleur', 'complete', ['olaplex'], 'yasmine', { base: '4.1', tone: 'cendré', ox: 6, pose: 40, brand: 'Majirel' }], ['coupe_f', null, [], 'yasmine']] }),
     mkPass({ id: 1042, custId: 'cl1', staffId: 'sara', state: 'bac', arrivedMin: 40,
@@ -237,7 +245,7 @@
      ancrées sur l'horloge du salon pour rester crédibles toute la démo. */
   const dayBase = new Date(NOW); dayBase.setHours(9, 0, 0, 0);
   const at = (h, m) => { const d = new Date(dayBase); d.setHours(h, m, 0, 0); return d; };
-  const RDV = [
+  const RDV = pvReal() ? [] : [
     { staffId: 'yasmine', time: at(14, 0),  custId: 'cl3', svc: 'Couleur + Coupe', dur: 130, state: 'cours' },
     { staffId: 'yasmine', time: at(16, 30), custId: 'cl5', svc: 'Coupe femme + Brushing', dur: 70, state: 'attente' },
     { staffId: 'yasmine', time: at(18, 0),  custId: 'cl6', svc: 'Chignon essai mariage', dur: 60, state: 'attente' },
@@ -253,7 +261,7 @@
     const sub = priceOf(item, variantId) + (addons || []).reduce((s, a) => s + ADDON[a].price, 0);
     return { custId, staffId, label: item.label, amt: sub, tip: tip || 0 };
   }
-  const DONE_TODAY = [
+  const DONE_TODAY = pvReal() ? [] : [
     mkDone('cl4', 'karim', 'coupe_h', null, [], 10),
     mkDone('cl7', 'karim', 'coupe_h', null, [], 0),
     mkDone('cl7', 'karim', 'barbe', null, [], 5),
@@ -301,8 +309,8 @@
       <aside class="cf-rail">
         <div class="cf-brand">kiwi<i></i></div>
         <div class="cf-venue">
-          <div class="cf-venue-name">Salon Yasmine</div>
-          <div class="cf-venue-sub">Tanger · Iberia<br>Le même Kiwi, <b>un seul compte</b>.</div>
+          <div class="cf-venue-name">${pvName('Salon Yasmine') || 'Salon'}</div>
+          <div class="cf-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Iberia'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="cf-nav" id="cf-nav">
           <button class="cf-nav-it on" data-cf-view="file"><i data-lucide="users"></i><span>File &amp; RDV</span><b class="cf-nav-badge" id="cf-badge-file"></b></button>

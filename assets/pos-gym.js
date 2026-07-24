@@ -28,6 +28,13 @@
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
   const icons  = () => { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} };
+
+  /* real-store detection : neutralize seeded demo PEOPLE for a paired merchant,
+     while the local demo (pvReal() === false) stays byte-identical. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -88,11 +95,16 @@
      Objets désormais (id, tag spécialité). Les membres référencent toujours
      le coach par son `name` ('Coach Amine'…) ou la valeur sentinelle
      'Sans coach' — rétro-compatible. */
-  const COACHES = [
-    { id: 'amine', name: 'Coach Amine', tag: 'Force & hypertrophie' },
-    { id: 'salma', name: 'Coach Salma', tag: 'Cardio & cross-training' },
-    { id: 'reda',  name: 'Coach Réda',  tag: 'Boxe & condition physique' },
-  ];
+  const COACHES = (() => {
+    const seed = [
+      { id: 'amine', name: 'Coach Amine', tag: 'Force & hypertrophie' },
+      { id: 'salma', name: 'Coach Salma', tag: 'Cardio & cross-training' },
+      { id: 'reda',  name: 'Coach Réda',  tag: 'Boxe & condition physique' },
+    ];
+    /* real store : keep id/length so member.coach references + filters hold,
+       but blank the named identities (name → "Coach N", tag → ''). */
+    return pvReal() ? seed.map((c, i) => ({ id: c.id, name: 'Coach ' + (i + 1), tag: '' })) : seed;
+  })();
   const COACH = Object.fromEntries(COACHES.map((c) => [c.id, c]));
   const COACH_BY_NAME = Object.fromEntries(COACHES.map((c) => [c.name, c]));
 
@@ -127,15 +139,22 @@
      le CrossFit de 17 h est EN COURS, et la soirée se réserve (un RPM complet
      avec liste d'attente, le moment « la salle tourne »). booked = ids membres
      nommés + `extra` (réservations anonymes) pour des compteurs crédibles. */
-  const SCHEDULE = [
-    { id: 's1', classId: 'rpm',      time: '07:00', state: 'done',     cap: 18, booked: ['m6', 'm1'],          extra: 12, checkedIn: ['m6', 'm1'], wait: [], waitExtra: 0 },
-    { id: 's2', classId: 'bodypump', time: '09:00', state: 'done',     cap: 20, booked: ['m1', 'm5'],          extra: 13, checkedIn: ['m1', 'm5'], wait: [], waitExtra: 0 },
-    { id: 's3', classId: 'yoga',     time: '12:30', state: 'done',     cap: 14, booked: ['m4', 'm8'],          extra: 8,  checkedIn: ['m4', 'm8'], wait: [], waitExtra: 0 },
-    { id: 's4', classId: 'crossfit', time: '17:00', state: 'live',     cap: 16, booked: ['m6', 'm1', 'm7'],    extra: 9,  checkedIn: ['m6', 'm1'],  wait: [], waitExtra: 0 },
-    { id: 's5', classId: 'boxe',     time: '18:00', state: 'soon',     cap: 12, booked: ['m7', 'm5'],          extra: 8,  checkedIn: [],            wait: [], waitExtra: 0 },
-    { id: 's6', classId: 'rpm',      time: '19:00', state: 'upcoming', cap: 18, booked: ['m4', 'm6', 'm10'],   extra: 15, checkedIn: [],            wait: ['m8'], waitExtra: 1 },
-    { id: 's7', classId: 'zumba',    time: '20:00', state: 'upcoming', cap: 22, booked: ['m4', 'm10'],         extra: 6,  checkedIn: [],            wait: [], waitExtra: 0 },
-  ];
+  const SCHEDULE = (() => {
+    const seed = [
+      { id: 's1', classId: 'rpm',      time: '07:00', state: 'done',     cap: 18, booked: ['m6', 'm1'],          extra: 12, checkedIn: ['m6', 'm1'], wait: [], waitExtra: 0 },
+      { id: 's2', classId: 'bodypump', time: '09:00', state: 'done',     cap: 20, booked: ['m1', 'm5'],          extra: 13, checkedIn: ['m1', 'm5'], wait: [], waitExtra: 0 },
+      { id: 's3', classId: 'yoga',     time: '12:30', state: 'done',     cap: 14, booked: ['m4', 'm8'],          extra: 8,  checkedIn: ['m4', 'm8'], wait: [], waitExtra: 0 },
+      { id: 's4', classId: 'crossfit', time: '17:00', state: 'live',     cap: 16, booked: ['m6', 'm1', 'm7'],    extra: 9,  checkedIn: ['m6', 'm1'],  wait: [], waitExtra: 0 },
+      { id: 's5', classId: 'boxe',     time: '18:00', state: 'soon',     cap: 12, booked: ['m7', 'm5'],          extra: 8,  checkedIn: [],            wait: [], waitExtra: 0 },
+      { id: 's6', classId: 'rpm',      time: '19:00', state: 'upcoming', cap: 18, booked: ['m4', 'm6', 'm10'],   extra: 15, checkedIn: [],            wait: ['m8'], waitExtra: 1 },
+      { id: 's7', classId: 'zumba',    time: '20:00', state: 'upcoming', cap: 22, booked: ['m4', 'm10'],         extra: 6,  checkedIn: [],            wait: [], waitExtra: 0 },
+    ];
+    /* real store : keep the class catalog (times/caps) but strip the seeded
+       attendance that references demo member ids — a real gym starts empty. */
+    return pvReal()
+      ? seed.map((s) => ({ id: s.id, classId: s.classId, time: s.time, state: s.state, cap: s.cap, booked: [], extra: 0, checkedIn: [], wait: [], waitExtra: 0 }))
+      : seed;
+  })();
 
   /* ───────────────────────── coaching personnel (PT) ─────────────────────────
      Packs de séances perso + séances 1:1 du jour par coach. Les cours collectifs
@@ -145,7 +164,8 @@
     { id: 'pt5',  n: 5,  price: 650,  sub: '5 séances · 130 MAD/séance', flag: 'populaire' },
     { id: 'pt10', n: 10, price: 1200, sub: '10 séances · 120 MAD/séance', flag: 'le malin' },
   ];
-  const PT_TODAY = {
+  /* real store : no seeded 1:1 sessions (they embed demo member ids). */
+  const PT_TODAY = pvReal() ? {} : {
     amine: [
       { time: '08:00', mid: 'm1',  state: 'done',     focus: 'Prise de masse' },
       { time: '18:30', mid: 'm7',  state: 'upcoming', focus: 'Hypertrophie haut du corps' },
@@ -194,7 +214,8 @@
     };
   }
 
-  const MEMBERS = [
+  /* real store : start with zero members (no seeded roster leak). */
+  const MEMBERS = pvReal() ? [] : [
     mkMember({ id: 'm1', code: '20418', name: 'Omar Sefrioui',        phone: '0661 23 45 67', plan: 'annuel',      startD: -288, endD: 78,  visits: 14, lastVisitD: -1, coach: 'Coach Amine', goal: 'Prise de masse, +5 kg', checkedToday: false, ptCredits: 6 }),
     mkMember({ id: 'm2', code: '20419', name: 'Yassine El Khattabi',  phone: '0670 11 22 33', plan: 'mensuel',     startD: -30,  endD: 0,   visits: 11, lastVisitD: -1, coach: 'Coach Réda',  goal: 'Cardio, semi-marathon' }),
     mkMember({ id: 'm3', code: '20420', name: 'Karim Bennani',        phone: '0662 09 18 27', plan: 'mensuel',     startD: -42,  endD: -12, visits: 3,  lastVisitD: -14, coach: 'Sans coach',  goal: 'Remise en forme' }),
@@ -306,8 +327,8 @@
       <aside class="gy-rail">
         <div class="gy-brand">kiwi<i></i></div>
         <div class="gy-venue">
-          <div class="gy-venue-name">Atlas Fitness</div>
-          <div class="gy-venue-sub">Tanger · Route de Rabat<br>Le même Kiwi, <b>un seul compte</b>.</div>
+          <div class="gy-venue-name">${pvName('Atlas Fitness') || 'Ma salle'}</div>
+          <div class="gy-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Route de Rabat'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="gy-nav" id="gy-nav">
           <button class="gy-nav-it on" data-gy-view="checkin"><i data-lucide="scan-line"></i><span>Check-in</span><b class="gy-nav-badge" id="gy-badge-checkin"></b></button>
@@ -428,7 +449,7 @@
 
         <section class="gy-view" data-gy-panel="pilotage">
           <header class="gy-head">
-            <div><h1>Pilotage</h1><div class="gy-head-sub">Atlas Fitness en un coup d'œil, l'état du club, aujourd'hui.</div></div>
+            <div><h1>Pilotage</h1><div class="gy-head-sub">${pvName('Atlas Fitness') || 'La salle'} en un coup d'œil, l'état du club, aujourd'hui.</div></div>
             <div class="gy-head-right"><span class="gy-pilot-live"><i class="gy-live-dot"></i> en direct</span></div>
           </header>
           <div class="gy-pilot-scroll" id="gy-pilot-body"></div>
@@ -623,6 +644,8 @@
   /* raccourcis de démo : un membre valide, celui qui expire aujourd'hui, l'expiré */
   function renderQuickCodes() {
     const valid = MEMBER.m1, today = MEMBER.m2, expired = MEMBER.m3;
+    /* real store : no seeded members → no demo quick-badges to surface. */
+    if (!valid || !today || !expired) { $('#gy-ci-quick', root).innerHTML = ''; return; }
     $('#gy-ci-quick', root).innerHTML =
       `<span class="gy-ci-hint-lbl">Démo, badges sous la main :</span>` +
       [[valid, 'à jour'], [today, 'expire aujourd\'hui'], [expired, 'expiré']]
@@ -665,7 +688,9 @@
     /* simulate the badge reader landing on a code, then run the check-in */
     const el = $('#gy-scanm', root);
     /* pick a member to "scan": prefer the today-expiring one for the demo moment */
-    const target = MEMBER.m2;
+    const target = MEMBER.m2 || MEMBERS[0];
+    /* real store : no seeded member to demo-scan → nothing to simulate. */
+    if (!target) { toast('Aucun membre à simuler, saisissez un code badge.'); return; }
     el.innerHTML = `
       <h3 class="modal-title">Lecture du badge…</h3>
       <p class="modal-subtle">Approchez le badge du lecteur sans contact.</p>

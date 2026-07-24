@@ -195,7 +195,10 @@
   ];
 
   /* ───────────────────────── médecins prescripteurs (Tanger) ──────────────── */
-  const MEDECINS = [
+  /* Demo prescribers carry real-looking doctor names — a real paired pharmacy
+     starts with an empty prescriber book (they type each médecin via the free
+     input in openMedecinPicker). Local demo (unpaired) is byte-identical. */
+  const MEDECINS = pvReal() ? [] : [
     { id: 'm1', name: 'Dr Khalid Benjelloun', spec: 'Médecine générale · Iberia' },
     { id: 'm2', name: 'Dr Salma Bennani', spec: 'Pédiatrie · Centre' },
     { id: 'm3', name: 'Dr Rachid Alaoui', spec: 'Cardiologie · Clinique Tanger' },
@@ -206,7 +209,11 @@
   /* ───────────────────────── patients (Tanger) ─────────────────────────
      mutuelle variée, dont un sans mutuelle ; un traitement chronique à
      renouveler aujourd'hui (Mustapha). due = solde patient en attente. */
-  const PATIENTS = [
+  /* Demo patients carry real-looking names, phones, mutuelle IDs and chronic
+     treatments. A real paired pharmacy starts with an EMPTY patient book (staff
+     add fiches via openPatientPicker → « Nouveau patient »). Local demo is
+     byte-identical. */
+  const PATIENTS = pvReal() ? [] : [
     { id: 'p1', name: 'Mustapha El Fassi', phone: '0661 24 88 19', mut: 'cnops', aff: 'CN-4471902', age: 64,
       chronic: { item: 'glucophage', label: 'Glucophage 850, diabète', every: 30, dueIn: 0 },
       allergies: ['Pénicilline'], visits: 38 },
@@ -400,7 +407,7 @@
   }
 
   function renderAll() {
-    $('#ph-today', root).textContent = `${fmtDT(new Date())} · Dr Wafae au comptoir`;
+    $('#ph-today', root).textContent = `${fmtDT(new Date())}${pvReal() ? '' : ' · Dr Wafae au comptoir'}`;
     setMode(state.mode);
     renderGrid();
     renderTicket();
@@ -1304,7 +1311,7 @@
     renderBadges();
     if (state.view === 'garde') renderGarde();
     icons();
-    toast(state.night ? 'Garde de nuit armée, bon courage Dr Wafae' : 'Garde de nuit désarmée, service de jour');
+    toast(state.night ? ('Garde de nuit armée, bon courage' + (pvReal() ? '' : ' Dr Wafae')) : 'Garde de nuit désarmée, service de jour');
   }
   function renderNight() {
     const note = $('#ph-night-note', root);
@@ -1448,7 +1455,7 @@
     mount(rootEl) { build(rootEl); },
     onShow() {
       if (!root) return;
-      $('#ph-today', root).textContent = `${fmtDT(new Date())} · Dr Wafae au comptoir`;
+      $('#ph-today', root).textContent = `${fmtDT(new Date())}${pvReal() ? '' : ' · Dr Wafae au comptoir'}`;
       renderBadges();
       renderNet();
       icons();

@@ -20,6 +20,15 @@
 (function () {
   'use strict';
 
+  /* ───────────────────────── real-store detection ─────────────────────────
+     A paired/real merchant must never inherit the demo cast (seeded ardoises).
+     When pvReal() is TRUE we start the carnet EMPTY so the hanout begins clean;
+     when FALSE the local demo is 100% unchanged. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   /* ───────────────────────── helpers ───────────────────────── */
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -188,7 +197,7 @@
   const NOW = Date.now();
   const dAgo = (days, h, m) => { const d = new Date(NOW - days * DAY); d.setHours(h != null ? h : 11, m != null ? m : 0, 0, 0); return d; };
 
-  const CARNET = [
+  const CARNET = pvReal() ? [] : [
     { id: 'k1', name: 'Mme Rkia', phone: '0661 44 21 87', note: 'voisine du 2e, paie souvent le vendredi',
       hist: [
         { type: 'debt', label: 'Courses (huile, sucre, thé)', amt: 55, at: dAgo(21, 18, 10) },
@@ -312,8 +321,8 @@
       <aside class="ep-rail">
         <div class="ep-brand">kiwi<i></i></div>
         <div class="ep-venue">
-          <div class="ep-venue-name">Épicerie Si Brahim</div>
-          <div class="ep-venue-sub">Tanger · Souk Dakhli<br>Le même Kiwi, <b>un seul compte.</b></div>
+          <div class="ep-venue-name">${pvName('Épicerie Si Brahim') || 'Mon épicerie'}</div>
+          <div class="ep-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Souk Dakhli'}<br>Le même Kiwi, <b>un seul compte.</b></div>
         </div>
         <nav class="ep-nav" id="ep-nav">
           <button class="ep-nav-it on" data-ep-view="caisse"><i data-lucide="scan-line"></i><span>Caisse</span></button>
@@ -1417,7 +1426,7 @@
       <div class="ep-journee">
         <div class="ep-jr-inner">
           <header class="ep-head" style="padding:22px 0 0;">
-            <div><h1>Journée</h1><div class="ep-head-sub">${fmtDT(new Date())}, Épicerie Si Brahim</div></div>
+            <div><h1>Journée</h1><div class="ep-head-sub">${fmtDT(new Date())}${pvReal() ? (pvName('') ? ', ' + pvName('') : '') : ', Épicerie Si Brahim'}</div></div>
           </header>
           <div class="ep-jr-stats">
             <div class="ep-jr-stat">

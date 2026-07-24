@@ -21,6 +21,13 @@
 (function () {
   'use strict';
 
+  /* ── demo-people guard : a real store (paired venue / KiwiEnv) starts clean,
+     local demo stays byte-identical (pvReal() === false → same output). ── */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   /* ───────────────────────── helpers ───────────────────────── */
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -125,7 +132,7 @@
   const OCC = Object.fromEntries(OCCASIONS.map((o) => [o.id, o]));
 
   /* ───────────────────────── clients (Tanger) ───────────────────────── */
-  const CUSTOMERS = [
+  const CUSTOMERS = pvReal() ? [] : [
     { id: 'c1', name: 'Salma Bennani',       phone: '0661 24 88 10', orders: 12, prefs: ['Aime les pivoines', 'Emballage satin'] },
     { id: 'c2', name: 'Karim Idrissi',       phone: '0670 55 21 09', orders: 5,  prefs: ['Toujours roses rouges'] },
     { id: 'rh', name: 'Hôtel Rif · Réception', phone: '0539 34 11 22', orders: 38, b2b: true, prefs: ['Compositions hall chaque lundi', 'Facture fin de mois'], contact: 'Concierge · M. Tarik' },
@@ -176,7 +183,7 @@
     };
   }
 
-  const DELIVERIES = [
+  const DELIVERIES = pvReal() ? [] : [
     /* ── créneau matin (déjà avancé) ── */
     mkDelivery({ id: 'F-1058', slot: 's1', occ: 'naissance', status: 'done', doneMin: -40, photo: true,
       recipient: { name: 'Famille Berrada', phone: '0661 70 21 55', addr: '14 rue de Belgique, Appt 3', district: 'Iberia' },
@@ -321,8 +328,8 @@
       <aside class="fl-rail">
         <div class="fl-brand">kiwi<i></i></div>
         <div class="fl-venue">
-          <div class="fl-venue-name">Fleurs du Détroit</div>
-          <div class="fl-venue-sub">Tanger · Marché central<br>Le même Kiwi, <b>un seul compte</b>.</div>
+          <div class="fl-venue-name">${pvName('Fleurs du Détroit') || 'Ma boutique'}</div>
+          <div class="fl-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Marché central'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
         </div>
         <nav class="fl-nav" id="fl-nav">
           <button class="fl-nav-it on" data-fl-view="composer"><i data-lucide="flower"></i><span>Composer</span><b class="fl-nav-badge" id="fl-badge-bq"></b></button>
@@ -752,7 +759,7 @@
         <div class="fl-cp-occ">${esc(occ.deuil ? 'Avec nos condoléances' : occ.label)}</div>
         <div class="fl-cp-body ${has ? '' : 'placeholder'}">${has ? esc(b.message) : (occ.deuil ? 'Le mot du client apparaîtra ici.' : 'Le message du client apparaîtra ici, dans cette police.')}</div>
         ${signer ? `<div class="fl-cp-sign">— ${esc(signer)}</div>` : ''}
-        <div class="fl-cp-foot">Fleurs du Détroit · Tanger</div>
+        <div class="fl-cp-foot">${pvReal() ? (esc(pvName('')) + (pvCity('') ? ' · ' + esc(pvCity('')) : '')) : 'Fleurs du Détroit · Tanger'}</div>
         <div class="fl-cp-actions">
           <button class="fl-btn secondary" id="fl-cp-print" style="flex:1;"><i data-lucide="printer"></i>Imprimer la carte</button>
         </div>

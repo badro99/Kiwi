@@ -19,6 +19,15 @@
 (function () {
   'use strict';
 
+  /* ───────────────────────── real-store guard ─────────────────────────
+     Un vrai snack appairé ne doit jamais voir de noms de démo (clients,
+     livreurs, équipe). En démo locale : pvReal() === false ⇒ sortie
+     strictement identique. */
+  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
+  function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
+
   /* ───────────────────────── helpers ───────────────────────── */
   let root = null;
   const $  = (s, r) => (r || root || document).querySelector(s);
@@ -234,7 +243,7 @@
     };
   }
 
-  const ORDERS = [
+  const ORDERS = pvReal() ? [] : [
     mkOrder({ num: 46, channel: 'surplace', minAgo: 2, status: 'prep',
       pay: { method: 'carte', paid: 80 },
       lines: [
@@ -342,8 +351,8 @@
       <aside class="ff-rail">
         <div class="ff-brand">kiwi<i></i></div>
         <div class="ff-venue">
-          <div class="ff-venue-name">Snack Chamal</div>
-          <div class="ff-venue-sub">Tanger · Boulevard Pasteur<br>Le même Kiwi, <b>un seul compte.</b></div>
+          <div class="ff-venue-name">${pvName('Snack Chamal') || 'Mon snack'}</div>
+          <div class="ff-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Boulevard Pasteur'}<br>Le même Kiwi, <b>un seul compte.</b></div>
         </div>
         <nav class="ff-nav" id="ff-nav">
           <button class="ff-nav-it on" data-ff-view="vente"><i data-lucide="utensils"></i><span>Vente rapide</span></button>
@@ -1322,7 +1331,7 @@
   window.KiwiPosDispatch.register({
     id: 'fastfood',
     greet: {
-      line1: 'Sba7 lkhir Bilal,',
+      line1: pvReal() ? 'Sba7 lkhir,' : 'Sba7 lkhir Bilal,',
       em: 'marhba.',
       sub: 'Snack Chamal <em>·</em> coup de feu de midi, 5 commandes en file',
     },
