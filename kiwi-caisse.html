@@ -3875,6 +3875,13 @@
       </button>
     </div>
     <div class="pin-foot">Démo · 0000 pressing · 0001 cuisine · 0002–0015 métiers, toucher ici pour la liste · autre = caissier</div>
+    <!-- Escape hatch: merchant / operator on this PIN screen who wants to sign
+         in with a different account. /auth/logout clears kiwi_sess server-side
+         and lands on the login page. Plain <a> so it works even if JS is dead. -->
+    <a class="pin-switch" href="/auth/logout" aria-label="Se déconnecter et changer de compte" style="margin-top:14px;display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.42);font:11.5px/1 var(--sans);letter-spacing:.02em;padding:7px 12px;border-radius:8px;text-decoration:none;transition:color 140ms,background 140ms" onmouseover="this.style.color='rgba(255,255,255,.85)';this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.color='rgba(255,255,255,.42)';this.style.background='transparent'">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Changer de compte
+    </a>
   </div>
 
   <!-- ============ CLOCK-IN SCREEN (post-PIN — ouverture de caisse) ============ -->
