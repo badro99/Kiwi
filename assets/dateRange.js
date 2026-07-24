@@ -3125,18 +3125,27 @@
   function buildCustomFeed(venue) {
     const sales = (window.KiwiSales?.list?.(venue) || []).slice(-8).reverse();
     const lang = getLang();
+    /* Every method the till can actually record (see live-link METHOD_LABEL).
+     * `cash` was missing, so `L[s.method] || L.card` relabelled EVERY cash sale
+     * as "Carte bancaire" — on a Moroccan boutique dashboard, where cash is the
+     * dominant tender, the owner could not tell cash from card on their own
+     * feed. */
     const ML = {
-      fr: { card: 'Carte bancaire', qr: 'QR Kiwi Wallet', link: 'Lien de paiement', sub: 'Vente encaissée' },
-      en: { card: 'Bank card', qr: 'QR Kiwi Wallet', link: 'Payment link', sub: 'Sale recorded' },
-      ar: { card: 'بطاقة بنكية', qr: 'QR Kiwi Wallet', link: 'رابط الدفع', sub: 'عملية بيع مسجّلة' },
+      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', sub: 'Vente encaissée' },
+      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', sub: 'Sale recorded' },
+      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', sub: 'عملية بيع مسجّلة' },
     };
+    /* Chip art per method. The till records the TENDER, never the card network,
+     * so a card sale gets the neutral card chip — printing a Visa or Mastercard
+     * mark here would invent a fact the sale does not carry. */
+    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr' };
     const L = ML[lang] || ML.fr;
     return sales.map((s, i) => {
       const d = new Date(s.ts);
       const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       return {
         t,
-        method: (s.method === 'qr' || s.method === 'link') ? 'qr' : 'tap',
+        method: ICON_FOR[s.method] || 'cmi',
         primary: L[s.method] || L.card,
         sub: L.sub, flag: '', ctx: '',
         amt: (s.amount || 0).toFixed(2).replace('.', ',') + ' MAD',
@@ -3216,6 +3225,9 @@
             cash: `<img src="assets/icons/cash.webp" alt="Espèces">`,
             tap:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M8.5 8a5 5 0 0 1 0 8M12 5a8 8 0 0 1 0 14M15.5 2a11 11 0 0 1 0 20"/></svg>`,
             qr:   `<img src="assets/icons/qr-code.png" alt="QR">`,
+            /* Neutral card chip — used when we know a card was tapped/inserted
+             * but not which network. Never substitute a Visa/MC mark here. */
+            cmi:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
           };
           const chipInner = ICONS[r.method] || '';
 
@@ -3254,9 +3266,21 @@
           : lang === 'ar' ? 'الخدمة مفتوحة · في انتظار الطلب الأول'
           : 'Service ouvert · en attente de la 1ʳᵉ commande');
       } else if (isLive) {
-        /* Live subtitle reflects the actual row count + total today. */
-        const sim = window.KiwiDemoClock?.getSimState?.();
-        const cumTx = sim?.cumTx ?? 0;
+        /* Live subtitle reflects the actual row count + total today.
+         * A REAL merchant's count must come from their OWN sales: the demo
+         * clock keeps simulating in the background, so reading its cumTx here
+         * printed "98 commandes aujourd'hui" on a store that had rung 2. */
+        let cumTx;
+        if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+          const start = new Date(); start.setHours(0, 0, 0, 0);
+          const t0 = start.getTime();
+          let sales = [];
+          try { sales = window.KiwiSales.list(getCurrentVenue()) || []; } catch (_) { sales = []; }
+          cumTx = sales.filter((s) => (s && s.ts) >= t0).length;
+        } else {
+          const sim = window.KiwiDemoClock?.getSimState?.();
+          cumTx = sim?.cumTx ?? 0;
+        }
         const n = rows.length;
         const word = lang === 'en' ? 'last' : lang === 'ar' ? 'آخر' : 'dernières';
         const total = lang === 'en' ? `· ${cumTx} today`
