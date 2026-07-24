@@ -1104,7 +1104,7 @@
     const { pp, total } = evTotals(ev);
     const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
     if (kind === 'devis') {
-      return `Sba7 lkhir ${first}, voici votre devis Dar Zellij (${ev.devisRef}) :`
+      return `Sba7 lkhir ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
         + `\n${TYPES[ev.type].label} · ${ev.guests} invités · ${fmtDay(ev.date)} · ${ev.lieu}`
         + `\nMenu ${pp} MAD / personne : ${ev.menu.map((id) => DISH[id].label.toLowerCase()).join(', ')}.`
         + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
@@ -1113,25 +1113,25 @@
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'relance') {
-      return `Sba7 lkhir ${first}, petit rappel de Dar Zellij : votre devis ${ev.devisRef}`
+      return `Sba7 lkhir ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
         + ` (${TYPES[ev.type].label.toLowerCase()} · ${ev.guests} invités · ${fmtDay(ev.date)}) est toujours réservé.`
         + `\nLa date du ${fmtDay(ev.date)} part vite en saison, répondez OUI pour la bloquer définitivement.`
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'route') {
       const arr = new Date(ev.date.getTime() - 45 * 60000);
-      return `Sba7 lkhir ${first}, l’équipe Dar Zellij est en route pour ${ev.lieu}.`
+      return `Sba7 lkhir ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
         + `\nArrivée prévue vers ${timeOf(arr)}, installation puis service à ${timeOf(ev.date)}.`
         + `\nTout est chargé et contrôlé. À tout de suite !`
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     /* rappel d'échéance */
     const t = nextTranche(ev);
-    return `Sba7 lkhir ${first}, rappel de Dar Zellij pour ${ev.name} du ${fmtDay(ev.date)} :`
+    return `Sba7 lkhir ${first}, rappel de ${pvName('Dar Zellij') || 'le traiteur'} pour ${ev.name} du ${fmtDay(ev.date)} :`
       + `\nla tranche « ${t ? t.label : 'solde'} » de ${t ? fmtMAD(t.amount) : ''} arrive à échéance.`
       + `\nVous pouvez régler en espèces au labo, par carte ou par virement.`
       + `\nChoukran, l’lah ikhellik.`
-      + `\n— Traiteur Dar Zellij · envoyé via Kiwi`;
+      + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
   }
 
   function openWa(ev, kind) {
@@ -1266,7 +1266,7 @@
     el.innerHTML = `
       <button class="tr-modal-x" data-tr-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">${esc(titles[kind] || 'Document')}</h3>
-      <p class="modal-subtle">Aperçu avant impression, format A4, papier à en-tête Dar Zellij.</p>
+      <p class="modal-subtle">Aperçu avant impression, format A4, papier à en-tête ${esc(pvName('Dar Zellij') || 'du traiteur')}.</p>
       <div class="tr-doc-wrap">${docHTML(kind, ev)}</div>
       <div class="tr-doc-foot">
         <button class="tr-btn secondary" data-tr-close>Fermer</button>

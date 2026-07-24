@@ -234,7 +234,7 @@
 
   /* ───────────────────────── garde — pharmacies de Tanger cette semaine ───── */
   const PHARMA_GARDE = [
-    { name: 'Pharmacie Ibn Batouta', zone: 'Centre · Bd Pasteur', me: true },
+    { name: pvName('Pharmacie Ibn Batouta') || 'Ma pharmacie', zone: 'Centre · Bd Pasteur', me: true },
     { name: 'Pharmacie du Détroit', zone: 'Marshan' },
     { name: 'Pharmacie Al Andalous', zone: 'Iberia' },
     { name: 'Pharmacie de la Plage', zone: 'Malabata' },

@@ -1323,13 +1323,14 @@
   function waMessage(d) {
     const occ = OCC[d.occ];
     const first = recipFirst(d);
+    const shopNm = pvName('Fleurs du Détroit') || 'notre boutique';
     if (occ.deuil) {
       return `Bonjour, une composition de la part de ${buyerLabel(d)} sera remise aujourd'hui (${SLOT[d.slot].hours}) à l'adresse indiquée.`
-        + `\nAvec nos sincères pensées, Fleurs du Détroit.`;
+        + `\nAvec nos sincères pensées, ${shopNm}.`;
     }
     return `Sba7 lkhir ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
       + `\nLivraison prévue aujourd'hui, créneau ${SLOT[d.slot].hours}.`
-      + `\n— Fleurs du Détroit, via Kiwi`;
+      + `\n— ${shopNm}, via Kiwi`;
   }
 
   function openWa(d) {
@@ -1524,7 +1525,7 @@
       <div class="fl-reco-rows">
         ${(c.prefs || []).map((p) => `<div class="fl-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
         ${c.contact ? `<div class="fl-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
-        <div class="fl-reco-row"><i data-lucide="history"></i>${c.orders} commande${c.orders > 1 ? 's' : ''} chez Fleurs du Détroit</div>
+        <div class="fl-reco-row"><i data-lucide="history"></i>${c.orders} commande${c.orders > 1 ? 's' : ''} chez ${esc(pvName('Fleurs du Détroit') || 'la boutique')}</div>
       </div>
     </div>`;
   }

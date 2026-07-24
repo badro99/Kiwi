@@ -655,7 +655,7 @@
     const el = $('#bq-ticket', root);
     el.innerHTML = `
       <div class="bq-tk-head">
-        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num} · par Salma</span></div>
+        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num} · par ${esc(STAFF.caissiere.name)}</span></div>
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
       <div class="bq-tk-meta">${clientRow(t)}</div>

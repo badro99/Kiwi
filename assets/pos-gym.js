@@ -1392,23 +1392,24 @@
   /* ═══════════════════════ WHATSAPP — relance / suivi ═══════════════════════ */
   function waMessage(m) {
     const first = firstName(m.name);
+    const gymVenue = pvName('Atlas Fitness') || 'notre salle';
     const s = memberStatus(m);
     const d = daysLeft(m);
     if (s === 'expired') {
-      return `Salam ${first} ! On ne t'a pas vu à Atlas Fitness depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} jours.`
+      return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} jours.`
         + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${planPrice(m.plan, m.student)} MAD) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
         + `\nUne séance et on repart fort, nchallah.`
-        + `\n— Atlas Fitness, via Kiwi`;
+        + `\n— ${gymVenue}, via Kiwi`;
     }
     if (s === 'expiring') {
-      return `Salam ${first} ! Ton abonnement Atlas Fitness se termine ${d === 0 ? "aujourd'hui" : 'dans ' + d + ' jour' + (d > 1 ? 's' : '')}.`
+      return `Salam ${first} ! Ton abonnement ${gymVenue} se termine ${d === 0 ? "aujourd'hui" : 'dans ' + d + ' jour' + (d > 1 ? 's' : '')}.`
         + `\nRenouvelle dès maintenant pour ne pas couper ton élan, ${PLAN[m.plan].label.toLowerCase()} à ${planPrice(m.plan, m.student)} MAD.`
         + `\nObjectif « ${m.goal} » : on y est presque, lâche rien !`
-        + `\n— Atlas Fitness, via Kiwi`;
+        + `\n— ${gymVenue}, via Kiwi`;
     }
-    return `Salam ${first} ! Petit message d'Atlas Fitness, continue comme ça, ${m.visits} passages ce mois, c'est du sérieux.`
+    return `Salam ${first} ! Petit message d'${gymVenue}, continue comme ça, ${m.visits} passages ce mois, c'est du sérieux.`
       + `\nBesoin d'un coup de main sur ton objectif « ${m.goal} » ? ${m.coach !== 'Sans coach' ? m.coach : 'Un coach'} est dispo cette semaine.`
-      + `\n— Atlas Fitness, via Kiwi`;
+      + `\n— ${gymVenue}, via Kiwi`;
   }
 
   function openWa(m) {
@@ -1455,13 +1456,14 @@
 
   function toneMessage(m, tone) {
     const first = firstName(m.name);
+    const gymVenue = pvName('Atlas Fitness') || 'notre salle';
     if (tone === 'court') {
-      return `Salam ${first} ! Ton abonnement Atlas Fitness ${memberStatus(m) === 'expired' ? 'a expiré' : 'expire bientôt'}. On te garde ta place, passe quand tu veux., Atlas Fitness, via Kiwi`;
+      return `Salam ${first} ! Ton abonnement ${gymVenue} ${memberStatus(m) === 'expired' ? 'a expiré' : 'expire bientôt'}. On te garde ta place, passe quand tu veux., ${gymVenue}, via Kiwi`;
     }
     if (tone === 'offre') {
-      return `Salam ${first} ! Offre fidélité Atlas Fitness : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
+      return `Salam ${first} ! Offre fidélité ${gymVenue} : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
         + `\n${PLAN[m.plan].label} à ${planPrice(m.plan, m.student)} MAD. On t'attend !`
-        + `\n— Atlas Fitness, via Kiwi`;
+        + `\n— ${gymVenue}, via Kiwi`;
     }
     return waMessage(m);
   }

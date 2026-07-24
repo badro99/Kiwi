@@ -1269,7 +1269,7 @@
     const bal = balanceOf(c);
     const first = politeName(c.name);
     return `Sba7 lkhir ${first}, j'espère que vous allez bien.`
-      + `\nPetit rappel tout doux de l'Épicerie Si Brahim : il reste ${bal} MAD sur le carnet, quand ça vous arrange, aucune urgence.`
+      + `\nPetit rappel tout doux de ${pvName("l'Épicerie Si Brahim") || "l'épicerie"} : il reste ${bal} MAD sur le carnet, quand ça vous arrange, aucune urgence.`
       + `\nBaraka Allah o fik, et bonne journée.`;
   }
   function openWa(c) {
@@ -1328,7 +1328,7 @@
         <aside class="ep-reassort">
           <div class="ep-reassort-head">
             <h2><i data-lucide="truck"></i>Liste de réassort</h2>
-            <div class="sub">Pour Si Brahim quand il va au grossiste du Souk. Ajoutez ce qui manque.</div>
+            <div class="sub">${pvReal() ? 'Pour le passage' : 'Pour Si Brahim quand il va'} au grossiste du Souk. Ajoutez ce qui manque.</div>
           </div>
           <div class="ep-reassort-list" id="ep-reassort-list">
             ${reassortCount ? Object.keys(state.reassort).filter((k) => state.reassort[k] > 0).map(reassortRow).join('') : `

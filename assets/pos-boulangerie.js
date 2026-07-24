@@ -1136,7 +1136,7 @@
   /* ---------- WhatsApp « votre gâteau est prêt » ---------- */
   function waMessage(c) {
     const due = cakeDue(c);
-    return `Sba7 lkhir ${firstName(c.name)}, votre gâteau « ${c.inscription || OCC[c.occasion]} » est prêt chez Boulangerie Bab Kasbah.`
+    return `Sba7 lkhir ${firstName(c.name)}, votre gâteau « ${c.inscription || OCC[c.occasion]} » est prêt chez ${pvName('Boulangerie Bab Kasbah') || 'la boulangerie'}.`
       + `\nRetrait ${fmtWhen(c.retrait)}, on vous le garde au frais.`
       + (due > 0 ? `\nSolde à régler au retrait : ${fmtN(due)} MAD.` : '')
       + '\n— envoyé via Kiwi';
