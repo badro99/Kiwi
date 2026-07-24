@@ -2309,9 +2309,9 @@
   function labelToast(p, what) {
     if (!p || !p.then) return;
     p.then((res) => {
-      if (res && res.ok && !res.browser) toast(`${what} envoyée à l'imprimante`);
-      else if (res && res.browser) toast(`${what} prête à imprimer`);
-      // reason 'not-configured' → the connect-printer modal is open; stay silent.
+      // Only announce a real send to a connected printer (res.via = bluetooth/bridge).
+      // For the chooser (Imprimer / Enregistrer en PDF), the modal speaks for itself.
+      if (res && res.ok && res.via) toast(`${what} envoyée à l'imprimante`);
     });
   }
 

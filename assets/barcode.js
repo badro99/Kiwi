@@ -252,13 +252,124 @@
     setTimeout(() => { try { window.print(); } catch (e) {} setTimeout(() => root.remove(), 600); }, 60);
   }
 
+  /* ── real PDF (no library) ────────────────────────────────────────────────
+   * Build a downloadable PDF, one 50 × 30 mm page per label, drawn as VECTOR:
+   * Helvetica text + black rectangles for the barcode (crisp + scannable, no
+   * raster). Lets the "Enregistrer en PDF" button hand the merchant a real file
+   * with no print dialog at all. */
+  function buildLabelPdf(flat) {
+    const MM = 72 / 25.4;                 // points per mm
+    const PW = +(50 * MM).toFixed(2), PH = +(30 * MM).toFixed(2);
+    const objs = ['', '', '', ''];        // slots: 1 catalog, 2 pages, 3 font, 4 bold
+    objs[2] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    const put = (body) => { objs.push(body); return objs.length; };   // → obj number
+    // WinAnsi-safe text: map common typographic chars to their WinAnsi byte, drop
+    // anything else >255, escape PDF string metacharacters. (é/è/à… are ≤255 and
+    // pass straight through since Latin-1 aligns with WinAnsi for them.)
+    const WA = { '—': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
+    const tx = (s) => String(s == null ? '' : s).split('').map((c) => WA[c] || (c.charCodeAt(0) > 255 ? '?' : c)).join('').replace(/[\\()]/g, '\\$&');
+    const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '.' : s; };
+    const wid = (s, sz, bold) => s.length * sz * (bold ? 0.56 : 0.52);   // rough Helvetica width
+    const cx = (s, sz, bold) => Math.max(4, (PW - wid(s, sz, bold)) / 2);
+    const pageRefs = [];
+    flat.forEach((l) => {
+      let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
+      let s = '';
+      const title = clip(l.title || '', 26);
+      if (title) s += 'BT /F2 8 Tf ' + cx(title, 8, true).toFixed(1) + ' ' + (PH - 12).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
+      let meta = l.sub || '';
+      if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
+      if (meta) s += 'BT /F1 6.5 Tf ' + cx(meta, 6.5, false).toFixed(1) + ' ' + (PH - 21).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (enc && enc.modules) {
+        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barH = 30, barY = 15;
+        s += '0 0 0 rg\n';
+        let x = pad, run = 0;
+        for (let i = 0; i <= bits.length; i++) {
+          if (bits[i] === '1') { run++; }
+          else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
+        }
+        const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
+        s += 'BT /F1 6.5 Tf ' + cx(num, 6.5, false).toFixed(1) + ' 6.5 Td (' + tx(num) + ') Tj ET\n';
+      }
+      const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
+      pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
+    });
+    objs[0] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[1] = '<< /Type /Pages /Kids [' + pageRefs.map((n) => n + ' 0 R').join(' ') + '] /Count ' + pageRefs.length + ' >>';
+    let pdf = '%PDF-1.4\n%\xFF\xFF\xFF\xFF\n';
+    const off = [];
+    for (let i = 0; i < objs.length; i++) { off[i] = pdf.length; pdf += (i + 1) + ' 0 obj\n' + objs[i] + '\nendobj\n'; }
+    const xref = pdf.length;
+    pdf += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n';
+    for (let i = 0; i < objs.length; i++) pdf += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+    pdf += 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+    const bytes = new Uint8Array(pdf.length);
+    for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
+    return new Blob([bytes], { type: 'application/pdf' });
+  }
+
+  function downloadPdf(flat) {
+    try {
+      const url = URL.createObjectURL(buildLabelPdf(flat));
+      const a = document.createElement('a');
+      a.href = url; a.download = flat.length > 1 ? 'etiquettes.pdf' : 'etiquette.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return true;
+    } catch (e) { browserPrint(flat); return false; }   // fail soft to native print
+  }
+
+  function ensureChooseCss() {
+    if (document.getElementById('kbl-choose-css')) return;
+    const st = document.createElement('style'); st.id = 'kbl-choose-css';
+    st.textContent =
+      '#kbl-choose-ov{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '#kbl-choose{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:380px;max-width:94vw;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
+      '#kbl-choose h3{margin:0 0 4px;font-size:1.12rem;}' +
+      '#kbl-choose p{margin:0 0 16px;font-size:.9rem;opacity:.65;line-height:1.5;}' +
+      '.kbl-cbtn{width:100%;font:inherit;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;border:0;margin:0 0 10px;}' +
+      '.kbl-cbtn.print{background:var(--atlas,#0B6E4F);color:#fff;}.kbl-cbtn.print:hover{filter:brightness(1.06);}' +
+      '.kbl-cbtn.pdf{background:#fff;border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
+      '.kbl-cbtn.cancel{background:none;color:var(--ink,#0A0F0D);opacity:.55;margin:2px 0 0;padding:6px;font-weight:600;}' +
+      '#kbl-choose .kbl-chint{margin:12px 0 0;font-size:.78rem;opacity:.6;}';
+    document.head.appendChild(st);
+  }
+
+  // Explicit two-way choice instead of dropping the owner into Chrome's raw dialog
+  // (where "Save as PDF" is a confusing default): print to a printer, or save a PDF.
+  function printChooser(flat) {
+    ensureChooseCss();
+    const ov = document.createElement('div'); ov.id = 'kbl-choose-ov';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    const n = flat.length;
+    ov.innerHTML =
+      '<div id="kbl-choose">' +
+        '<h3>' + (n > 1 ? n + ' étiquettes prêtes' : 'Étiquette prête') + '</h3>' +
+        '<p>Comment souhaitez-vous l’obtenir ?</p>' +
+        '<button class="kbl-cbtn print" type="button" data-k="print">Imprimer</button>' +
+        '<button class="kbl-cbtn pdf" type="button" data-k="pdf">Enregistrer en PDF</button>' +
+        '<button class="kbl-cbtn cancel" type="button" data-k="cancel">Annuler</button>' +
+        '<p class="kbl-chint">Pas d’imprimante ? Enregistrez en PDF pour imprimer plus tard.</p>' +
+      '</div>';
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) return close();
+      const k = e.target && e.target.getAttribute && e.target.getAttribute('data-k');
+      if (!k) return;
+      close();
+      if (k === 'print') browserPrint(flat);
+      else if (k === 'pdf') downloadPdf(flat);
+    });
+  }
+
   // labels: [{ title, sub, price, code, format }]. opts: { copies }
-  // REAL path: when a thermal printer is paired (KiwiPrinter + KiwiEscPos), relay
-  // the ESC/POS label bytes to the Kiwi Printer Bridge — the same routing receipts
-  // use in assets/caisse-hardware.js. If that bridge is unreachable, fall soft to
-  // the browser print sheet so a label still comes out. When NO printer is paired,
-  // open the connect-a-printer modal instead of dumping the owner into the OS
-  // Save-as-PDF dialog (a 48 mm label on a Letter page reads as an empty sheet).
+  // When a printer is actively CONNECTED (Bluetooth one-tap or the network bridge)
+  // we send ESC/POS straight to it. Otherwise we present an explicit chooser —
+  // Imprimer (native print) or Enregistrer en PDF (real downloadable PDF) — rather
+  // than dumping the owner into the browser's Save-as-PDF dialog.
   function printLabels(labels, opts) {
     opts = opts || {};
     const copies = Math.max(1, opts.copies || 1);
@@ -268,19 +379,15 @@
     if (!flat.length) return Promise.resolve({ ok: false, reason: 'no-labels' });
 
     const KP = window.KiwiPrinter;
-    // Native print is the DEFAULT — zero install, prints to whatever printer the
-    // machine already has (USB / driver / AirPrint) through the browser dialog.
-    // Only when a printer is actively CONNECTED (Bluetooth one-tap, or the network
-    // bridge) do we send ESC/POS straight to it, failing soft back to native print.
     if (KP && KP.isConnected && KP.isConnected() && window.KiwiEscPos) {
       return KP.printLabels(flat).then((res) => {
         if (res && res.ok) return res;
-        browserPrint(flat);                       // connected printer failed → native
+        printChooser(flat);                       // connected printer failed → choose
         return res || { ok: false };
-      }, () => { browserPrint(flat); return { ok: false }; });
+      }, () => { printChooser(flat); return { ok: false }; });
     }
-    browserPrint(flat);
-    return Promise.resolve({ ok: true, browser: true });
+    printChooser(flat);
+    return Promise.resolve({ ok: true, chooser: true });
   }
 
   const api = {
@@ -294,6 +401,7 @@
     encode,
     svg,
     labelHTML,
+    buildLabelPdf,
     printLabels,
   };
   window.KiwiBarcode = api;
