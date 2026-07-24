@@ -14,6 +14,16 @@
   let currentTab = 'lyoum';
   const SUPPORT_WA = '212522123456';
 
+  /* A real session is the hosted app or any signed-in merchant (window.KiwiMe).
+     In a real session we never surface the demo cast (Rachid · Café Atlas ·
+     Mehdi Alami), the demo revenue, or the demo Kiwi-account balance. */
+  const isReal = () => !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+  const meAvatar = () => {
+    const nm = ((window.KiwiMe || {}).name || '').trim();
+    if (nm) return ((nm.split(/\s+/)[0] || '')[0] + ((nm.split(/\s+/)[1] || '')[0] || '')).toUpperCase();
+    return isReal() ? '·' : 'RB';
+  };
+
   /* ═══ LYOUM (Today) ═══ */
   SIMPLE_PAGES.lyoum = () => {
     /* Real session → never surface the demo identity ("Rachid" / "Café Atlas"),
@@ -118,7 +128,16 @@
 
   /* ═══ FLOUSI (My money) ═══ */
   SIMPLE_PAGES.flousi = () => {
-    const days = [
+    /* Real session → never surface the demo week (24 380…), the demo Kiwi-account
+       balance (47 281,90) or the demo "RB" avatar. The weekly total comes from the
+       merchant's own sales when we have them, else zero; the day-by-day history
+       needs a real per-day feed we don't have yet, so it shows an empty state.
+       Local demo (no real session) keeps the full pitch screen, byte-identical. */
+    const real = isReal();
+    const av = meAvatar();
+    const vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+    const tot = real && window.KiwiSales && window.KiwiSales.totals ? (window.KiwiSales.totals(vid) || {}) : null;
+    const days = real ? [] : [
       { date: "Aujourd'hui", sub: 'Vendredi 24 avril', amt: '24 380', pending: true },
       { date: 'Hier', sub: 'Jeudi 23 avril', amt: '19 824' },
       { date: 'Mercredi', sub: '22 avril', amt: '17 290' },
@@ -127,12 +146,12 @@
       { date: 'Dimanche', sub: '19 avril', amt: '24 102' },
       { date: 'Samedi', sub: '18 avril', amt: '22 850' },
     ];
-    const total = days.reduce((s, d) => s + parseInt(d.amt.replace(/\s/g, ''), 10), 0);
+    const total = real ? Number(tot && tot.revenue || 0) : days.reduce((s, d) => s + parseInt(d.amt.replace(/\s/g, ''), 10), 0);
     return `
       <div class="simple-screen">
         <div class="simple-top">
           <div class="merchant">
-            <div class="av">RB</div>
+            <div class="av">${av}</div>
             <div>
               <div class="n">Mon argent</div>
               <div class="shop">7 derniers jours</div>
@@ -143,12 +162,12 @@
         <div class="lyoum-hero">
           <div class="eyebrow">TOTAL CETTE SEMAINE</div>
           <div class="amount" style="font-size: 60px;">${total.toLocaleString('fr-FR').replace(/,/g,' ')}<span class="unit">MAD</span></div>
-          <div class="count">+18 % vs semaine dernière</div>
+          ${real ? '' : '<div class="count">+18 % vs semaine dernière</div>'}
         </div>
 
         <div class="compte-simple">
           <div class="compte-label">Solde de mon compte Kiwi</div>
-          <div class="compte-amt">47 281,90 <span>MAD</span></div>
+          <div class="compte-amt">${real ? '0,00' : '47 281,90'} <span>MAD</span></div>
           <div class="compte-actions">
             <button class="chip-btn" data-simple-action="compte">Voir détails</button>
             <button class="chip-btn" data-simple-action="transfer">Virer</button>
@@ -157,14 +176,14 @@
 
         <div class="simple-section">
           <div class="h">Jour par jour</div>
-          <div class="flousi-week">
+          ${real ? `<div class="simple-tx-empty" style="color:var(--n-500); font-size:13.5px; padding:14px 4px;">Pas encore d'historique. Tes ventes s'afficheront ici jour par jour.</div>` : `<div class="flousi-week">
             ${days.map(d => `
               <div class="flousi-day">
                 <div class="date">${d.date}<span class="sub">${d.sub}${d.pending ? ' · en cours' : ' · reçu'}</span></div>
                 <div class="amt">${d.amt} MAD</div>
               </div>
             `).join('')}
-          </div>
+          </div>`}
         </div>
 
         <button class="simple-btn outline" data-simple-action="share-comptable" style="margin-top: 22px;">
@@ -180,7 +199,7 @@
     <div class="simple-screen">
       <div class="simple-top">
         <div class="merchant">
-          <div class="av">RB</div>
+          <div class="av">${meAvatar()}</div>
           <div>
             <div class="n">Aide</div>
             <div class="shop">On est là pour toi</div>
@@ -304,7 +323,7 @@
       return;
     }
     if (action === 'share-comptable') {
-      toast('Rapport envoyé à Mehdi Alami', { type: 'success', desc: 'PDF signé · totaux de la semaine.' });
+      toast(isReal() ? 'Rapport envoyé à ton comptable' : 'Rapport envoyé à Mehdi Alami', { type: 'success', desc: 'PDF signé · totaux de la semaine.' });
       return;
     }
     if (action === 'call') {
@@ -320,7 +339,7 @@
           <svg width="72" height="72" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="rgba(125,242,176,0.1)"/><path d="M9 7v10l8-5z"/></svg>
           <div style="position: absolute; bottom: 16px; left: 16px; font-size: 12px; color: #c6ead4; font-family: var(--mono);">1 MIN 32</div>
         </div>
-        <p style="margin-top: 16px; font-size: 16px; color: var(--n-700); line-height: 1.55;">Rachid, 58 ans, tient Café Atlas depuis 22 ans. Il montre comment Kiwi lui fait gagner 30 minutes par jour.</p>`,
+        <p style="margin-top: 16px; font-size: 16px; color: var(--n-700); line-height: 1.55;">${isReal() ? 'Un tour rapide de Kiwi : encaisser un paiement, envoyer un lien, suivre ton argent, le tout en une main.' : 'Rachid, 58 ans, tient Café Atlas depuis 22 ans. Il montre comment Kiwi lui fait gagner 30 minutes par jour.'}</p>`,
       });
       return;
     }
