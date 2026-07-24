@@ -223,6 +223,28 @@
   const sizesOf   = (p) => Object.keys(p.sizes);
   const stockOf   = (p) => sizesOf(p).reduce((s, k) => s + p.sizes[k], 0);
   const stockAdd  = (pid, size, d) => { P[pid].sizes[size] = Math.max(0, (P[pid].sizes[size] || 0) + d); };
+  /* Persist a COMMITTED stock movement (real vente / retour / échange) to the SHARED
+     catalogue — the same base the owner's dashboard reads. stockAdd() above only moves
+     the in-memory projection (live display + oversell guard for the open ticket); that
+     projection is rebuilt from the base on the next catalogue sync, so a real store's
+     stock never actually moved on a sale. This writes the net change through so stock
+     counts, low-stock / rupture alerts and stock valuation stay truthful across reloads
+     and on the dashboard. The local pitch demo (pvReal() false) keeps the legacy
+     in-memory-only behaviour, so Maison Mansour still resets to full stock each load.
+     Resolves the exact variant (produit × couleur × taille); guarded so a miss can never
+     break the sale. adjustStock() commit fires the subscribe → rebuildCatalog, which
+     re-sets P from the base, so this never double-counts the in-memory hold. */
+  function persistStock(pid, size, color, delta) {
+    if (!delta || !pvReal()) return;
+    try {
+      const cat = window.KiwiBoutiqueCatalog;
+      if (!cat || !cat.listVariants || !cat.adjustStock) return;
+      const vs = cat.listVariants(pid) || [];
+      const v = vs.find((x) => x.colorId === color && String(x.size) === String(size))
+             || vs.find((x) => String(x.size) === String(size));
+      if (v) cat.adjustStock(v.id, delta);
+    } catch (_) {}
+  }
   const sizeWord  = (p) => p.kind === 'pointure' ? 'Pointure' : p.kind === 'tu' ? 'Taille unique' : 'Taille';
   const firstFree = (p) => sizesOf(p).find((k) => p.sizes[k] > 0) || null;
 
@@ -1472,6 +1494,8 @@
       ln.returned = true;
       ln.note = note;
       stockAdd(ln.pid, ln.size, ln.qty);
+      // Returned pieces go back into the real inventory too, not just the display.
+      persistStock(ln.pid, ln.size, ln.color, ln.qty);
     });
   }
 
@@ -1587,6 +1611,9 @@
     const apply = () => {
       stockAdd(ln.pid, ln.size, 1);
       stockAdd(newPid, newSize, -1);
+      // Commit the swap to the shared inventory: rendered piece back in, replacement out.
+      persistStock(ln.pid, ln.size, ln.color, 1);
+      persistStock(newPid, newSize, newColor, -1);
       ln.returned = true;
       ln.note = `échangée → ${newP.name} · ${newSize}`;
       state.exchange = null;
@@ -1652,6 +1679,10 @@
         };
         SALES.unshift(sale);
         saleSeq++;
+        // Draw the sold pieces down from the SHARED inventory — a real sale must move
+        // stock through to the base (the in-memory ticket holds alone evaporate on the
+        // next catalogue sync). Real/paired store only; the local demo stays in-memory.
+        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;

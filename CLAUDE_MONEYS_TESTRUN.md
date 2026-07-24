@@ -99,3 +99,63 @@ but it means a network blip = an ungated till for that boot. Acceptable default;
 for awareness. Also: the gate currently accepts ANY configured role (owner/manager/staff),
 which matches "owner or cashier" here; if the till should exclude some role, that's a small
 `submitPin` role-filter — not currently requested.
+
+---
+
+## Caisse walkthrough (till open, boutique POS)
+
+### 🟢 Inventaire — product + variant creation works end-to-end
+« Nouvel article » → name / category / type (Vêtement S–XL) / price / cost / icon picker,
+then « Ajouter une variante » → colour swatch × size × initial stock, with an auto-generated
+**real EAN-13** (2000000000015) plus print/copy/delete controls. Created *Chemise en lin*,
+450 MAD sale / 200 MAD cost, variant Bleu nuit · M · stock 10. KPIs updated correctly
+(Valeur de stock 4 500 MAD, 10 pièces). Catalog persists to
+`kiwiBoutiqueCatalog:v1:claude-s-moneys` — the base shared with the dashboard.
+
+### 🟢 Vente → encaissement works end-to-end
+Product appears in the sale grid under its category, tap → add-to-ticket sheet (size with
+live per-size stock, colour, quantity stepper, manager-gated discounts −5/10/15/20 %),
+« Encaisser » → payment sheet (Espèces / Carte / Avoir). Cash tender computes change
+correctly (550 reçu → 100 MAD rendu). « C'est encaissé » confirmation with 80 mm + WhatsApp
+receipt options. Header ticked over to "1 vente · 450 MAD aujourd'hui".
+
+### 🔴 #6 — Selling a boutique item does NOT decrement inventory stock (FIXED)
+**Symptom:** rang a real sale of *Chemise en lin · M* (qty 1); the variant's stock stayed
+**10** in the Inventaire view *and* in storage (`var_2.stock: 10`) — a boutique whose stock
+never moves. Low-stock / rupture alerts would never fire, stock valuation stays wrong, and
+the owner can oversell indefinitely.
+
+**Root cause:** `assets/pos-boutique.js` decrements stock only in the in-memory `P`
+projection via `stockAdd()` (add-to-ticket, ticket +/−, reset). `checkout().onPaid` records
+the sale, mirrors it to Live Link, and awards points, but **never persists the decrement to
+the shared catalogue** (`window.KiwiBoutiqueCatalog.adjustStock`). `rebuildCatalog()`
+re-derives `P` from the persistent base on every catalogue sync, so even the in-memory
+decrement evaporates. The code comment at line ~213 admits it: *"La baisse de stock à la
+vente reste en mémoire (démo)."* Fine for the pitch demo, wrong for a real store. The mirror
+paths (retour `restoreLines`, échange `apply`) had the same gap — they only did in-memory
+`stockAdd(+)`.
+
+**Fix:** added a `persistStock(pid, size, color, delta)` helper that resolves the exact
+variant (produit × couleur × taille) and calls `adjustStock`, gated on `pvReal()` so the
+local Maison Mansour demo keeps its reset-each-load behaviour (byte-identical). Wired into
+the three **committed** movements: vente (−qty per line), retour (+qty), échange (+ rendue /
+− remplacement). Idempotent-safe: `adjustStock`'s commit fires the subscribe→`rebuildCatalog`,
+which re-sets `P` from the base, so the persisted change never double-counts the in-memory
+hold. Provisional ticket holds (add / +/− / reset) stay in-memory only, as before.
+_Shipped cache v57 — pending live re-verify after deploy._
+
+### 🟡 #7 — Three colliding venue identities for one store (to investigate)
+On the paired caisse: `kiwiVenue = "vmrza3s4g"` (dashboard's generated custom venue),
+catalog keyed `claude-s-moneys` (merchant slug, what pos-boutique uses), and the live-sales
+mirror under `kiwiSales:own` (legacy synthetic "own" venue). The catalog/dashboard share the
+merchant-slug key so inventory syncs, but the sales mirror lives under a *different* key.
+Needs a pass to confirm the caisse sale actually surfaces on the dashboard "En direct" feed
+under the right venue. _To verify on the dashboard side._
+
+### 🟠 #8 — Stale phantom sale in `kiwiSales:own` (cross-account leftover, to investigate)
+`kiwiSales:own` held `[{ts, amount:189, method:"cash", cursor:5}]` — a single sale
+timestamped ~3 h **before** this account created its first product, i.e. not one of Claude's
+Moneys' sales. `kiwiSales:own` is keyed by the generic "own" venue (not account-scoped by
+email), so a prior account's live-mirrored sale can bleed into a fresh store's KPI sum.
+Needs confirming against F1 isolation + the live-feed→KPI bridge. _To investigate on the
+dashboard._
