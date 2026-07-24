@@ -37,3 +37,7 @@ AGENTS.md
 
 # Kiwi Printer Bridge build artifacts (published to GitHub Releases)
 bridge/dist/
+
+# Bridge build deps (pkg) — never committed; `npm install` in bridge/ recreates them
+bridge/node_modules/
+bridge/package-lock.json

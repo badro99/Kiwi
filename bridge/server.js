@@ -26,7 +26,7 @@ const http = require('http');
 const net = require('net');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -140,17 +140,75 @@ const server = http.createServer(async (req, res) => {
   sendJson(res, 404, { ok: false, error: 'not-found' }, origin);
 });
 
-server.listen(PORT, HOST, () => {
-  // eslint-disable-next-line no-console
-  console.log(`${NAME} v${VERSION} listening on http://${HOST}:${PORT}`);
-  console.log('Leave this window open. It relays Kiwi print jobs to your thermal printer.');
-});
+/* On a shop's Windows till this is launched by double-click, so a process that
+ * exits takes its console window with it — the owner sees a flash and nothing
+ * else, and the app just says "pont non détecté". Two rules follow:
+ *   1. never die on a busy port; walk up the range the app already scans;
+ *   2. never exit silently — if we truly cannot start, hold the window open so
+ *      the reason stays readable.
+ * An explicit KIWI_BRIDGE_PORT is honoured exactly, with no fallback: if the
+ * shop pinned a port, moving to another one would just hide a problem. */
+const PORT_CANDIDATES = process.env.KIWI_BRIDGE_PORT
+  ? [PORT]
+  : [9110, 9111, 9112, 9113, 9114];
 
-server.on('error', (e) => {
-  // eslint-disable-next-line no-console
-  console.error('Bridge failed to start:', (e && e.message) || e);
-  if (e && e.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use — the bridge may already be running.`);
+// Keep the console readable when started by double-click; exit at once when it
+// isn't a terminal (Startup folder, service wrapper) so nothing hangs forever.
+function holdOpen(code) {
+  if (process.stdin.isTTY) {
+    console.error('\nAppuyez sur une touche pour fermer cette fenêtre…');
+    try {
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.on('data', () => process.exit(code));
+      return;
+    } catch (_) { /* fall through to a plain exit */ }
   }
-  process.exit(1);
+  process.exit(code);
+}
+
+let attempt = 0;
+function tryListen() {
+  const port = PORT_CANDIDATES[attempt];
+
+  /* Both handlers are removed as soon as one of them wins. Without that, each
+   * failed attempt leaves its 'listening' callback attached, and when a later
+   * port finally binds EVERY stale callback fires too — so the window announced
+   * the FIRST port tried while actually serving on another. A shop owner reading
+   * "listening on 9110" while Kiwi talks to 9112 is a support call we don't want. */
+  const onError = (e) => {
+    server.removeListener('listening', onListening);
+    if (e && e.code === 'EADDRINUSE' && attempt < PORT_CANDIDATES.length - 1) {
+      console.log(`Port ${port} occupé, essai sur ${PORT_CANDIDATES[attempt + 1]}…`);
+      attempt++;
+      setImmediate(tryListen);
+      return;
+    }
+    console.error('Le pont n\'a pas pu démarrer :', (e && e.message) || e);
+    if (e && e.code === 'EADDRINUSE') {
+      console.error(`Le port ${port} est déjà utilisé — le pont tourne peut-être déjà dans une autre fenêtre.`);
+      console.error('Fermez l\'autre fenêtre, ou lancez celle-ci avec un autre port :');
+      console.error('    set KIWI_BRIDGE_PORT=9115 && kiwi-printer-bridge-win.exe');
+    }
+    holdOpen(1);
+  };
+  const onListening = () => {
+    server.removeListener('error', onError);
+    console.log(`${NAME} v${VERSION} listening on http://${HOST}:${port}`);
+    console.log('Laissez cette fenêtre ouverte. Elle relaie les impressions Kiwi vers votre imprimante.');
+    if (port !== PORT_CANDIDATES[0]) {
+      console.log(`(Port ${PORT_CANDIDATES[0]} occupé — Kiwi cherche automatiquement jusqu'à ${PORT_CANDIDATES[PORT_CANDIDATES.length - 1]}.)`);
+    }
+  };
+
+  server.once('error', onError);
+  server.once('listening', onListening);
+  server.listen(port, HOST);
+}
+tryListen();
+
+// A crash must not vanish the window either.
+process.on('uncaughtException', (e) => {
+  console.error('Erreur inattendue :', (e && e.stack) || e);
+  holdOpen(1);
 });
