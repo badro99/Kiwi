@@ -212,7 +212,7 @@ mechanism behind #8. **Fix:** a paired till still trusts its own binding
 unresolved identity now polls **nothing** and self-heals a tick later. The local demo is
 untouched.
 
-### 🟠 #12 — A till's staff PINs are still readable without an account (OPEN, needs a call)
+### 🟠 #12 — A till's staff PINs are still readable without an account (FIXED, v65)
 `GET /api/config?merchant=<slug>` returns `pins:[{pin,name,role}]` — the codes that open a
 till. Half-fixed: a **signed-in** merchant can no longer read another merchant's PINs (the
 session slug now overrides `?merchant=`; operator still honoured). Still open: a caller with
@@ -291,7 +291,7 @@ merchants; demo pool unchanged.
 Verified live: *Inventaire produits → Nouveau produit* showed the demo store's name as the
 modal eyebrow (hardcoded `tag:`). Now the store's own name via `_bqxTag()`.
 
-### 🟠 #21 — Stock is valued at **retail price, not cost** (OPEN — needs a call)
+### 🟠 #21 — Stock is valued at **retail price, not cost** (FIXED, v63)
 `boutique-catalog.js:369` — `stockValue += s * (p.priceMAD || 0)`. Every product stores a
 `cost` (the owner typed 200 MAD against a 450 MAD sale price) that is never used here, so
 "VALEUR DE STOCK" read **4 050 MAD** for 9 pieces that cost **1 800 MAD** — 2.25×
@@ -300,7 +300,7 @@ materially wrong. Not fixed unilaterally: the demo seeds `cost = 55 % of price`,
 switching the basis changes the demo's visible number, and "which basis" is a product
 decision. Recommend: value at cost, and show retail as a secondary "potentiel de vente".
 
-### 🟠 #22 — Payment-mix card is dead + has **no cash row** (OPEN — needs a call)
+### 🟠 #22 — Payment-mix card is dead + has **no cash row** (FIXED, v63)
 `renderMix` has no custom-venue branch, so a real store sees a blank ring and Visa /
 Mastercard / Kiwi Tap / QR all at **0 %** forever despite real sales. Worse, the four
 categories are **card rails only — there is no Espèces row at all**, which is the
@@ -308,42 +308,42 @@ boutique's actual dominant tender. Fixing means adding a 5th segment, which also
 the demo card, and relabelling "Visa/Mastercard" (the till only knows *card*, not the
 network). Owner's call on the shape.
 
-### 🟠 #23 — Terminaux shows "Encore rien ici" although a caisse **is** paired
+### 🟠 #23 — Terminaux shows "Encore rien ici" although a caisse **is** paired (FIXED, v63)
 The sidebar chip says "Caisse connectée" and `kiwiPairedVenue` is set, but the Terminaux
 destination is a starter placeholder. The one device the client definitely has does not
 appear on the page whose whole job is listing devices.
 
-### 🟡 #24 — Most destinations are starter placeholders for a real boutique
+### 🟡 #24 — Most destinations are starter placeholders for a real boutique (FIXED, v63)
 `pages-pro.js REAL_FOR_CUSTOM = {inventory, categories, equipe, menu, tables}` — every
 other destination (**Terminaux, Conformité, Paie & planning, Réservations & RDV,
 Promotions, Retours & échanges**) renders "Encore rien ici". `conformite.js`, `stock.js`
 and `finance.js` each already build a correct real empty-state page that is currently
 unreachable — adding those navs to the set is close to a one-line unlock.
 
-### 🟡 #25 — Restaurant copy on a boutique dashboard
+### 🟡 #25 — Restaurant copy on a boutique dashboard (FIXED, v64)
 Kiwi AI suggestion chip **"Quel plat retirer de ma carte ?"**; Promotions placeholder
 **"Ex. −10 % happy hour"**; hero card "CE SOIR · Aucune activité planifiée"; Équipe
 department list offering *Bar, Cuisine, Coiffure, Manucure, Massage, Pâtisserie, Plonge*
 to a clothing shop; `agent.js NAV_TARGETS` routing "ouvre le menu" / "plan de salle" to
 live restaurant surfaces. Kiwi is boutique-heavy at launch — this reads as the wrong product.
 
-### 🟡 #26 — Dashboard opened on **"Hier"**, showing 0,00 MAD next to a live 450 MAD sale
+### 🟡 #26 — Dashboard opened on **"Hier"**, showing 0,00 MAD next to a live 450 MAD sale (FIXED, v63)
 `kiwiDateRange` is in identity.js's `PRESERVE` list, so a range chosen in a previous
 session (or by a previous account on that browser) carries over. The first thing the
 owner saw was *ENCAISSÉ HIER 0,00 MAD* directly under an *EN DIRECT · 450 MAD* card.
 A brand-new store should land on Aujourd'hui.
 
-### 🟡 #27 — KIWI AI panel contradicts the data on the same screen
+### 🟡 #27 — KIWI AI panel contradicts the data on the same screen (FIXED, v63)
 "Votre tableau de bord est prêt · **Aucune donnée pour l'instant**, enregistrez vos ventes"
 while the same viewport showed 450 MAD / 1 commande. Same class: Promotions and Retours
 both still offer "Encaisser ma première vente" after two sales.
 
-### 🟡 #28 — Ventes rows are unidentifiable and not clickable
+### 🟡 #28 — Ventes rows are unidentifiable and not clickable (FIXED, v63)
 Rows read "Vente", not "Chemise en lin" — the label IS sent to the server and shown in the
 live card, but the local `kiwiSales:<venue>` record keeps only `{ts, amount, method}`. For
 a boutique processing a return, finding the original sale is the core task.
 
-### 🟡 #29 — Caisse day counter resets on reload
+### 🟡 #29 — Caisse day counter resets on reload (FIXED, v63)
 After reloading the till, its header read "0 vente · 0 MAD aujourd'hui" while the dashboard
 correctly showed 450 MAD. The server has the sales; the caisse's own list does not survive
 a reload, so a cashier and the owner see different numbers for the same day.
@@ -353,7 +353,54 @@ a reload, so a cashier and the owner see different numbers for the same day.
 
 ---
 
-### 🟡 #13 — Pairing codes are brute-forceable (OPEN, low)
+### 🟡 #13 — Pairing codes are brute-forceable (FIXED, v65)
 `/api/pair/redeem` is unauthenticated (site gate only), single-use, 15-min TTL, 6 digits =
 900 000 codes, **no rate limit**. A script could grind a live code and bind its own till to
 a merchant. Low urgency at pilot scale; wants a per-IP attempt cap before real volume.
+
+---
+
+## Pass 2 — 24 Jul 2026, evening (cache v63 → v65)
+
+Every item left OPEN after the first sweep is now closed. Verified against a real
+custom venue driven through the app's own public API (`KiwiVenue.createVenue`,
+`KiwiSales.add`) on the local server, with DOM assertions rather than screenshots
+— the dashboard sits behind the PIN gate, which this session cannot open.
+
+**Verified on screen:** payment mix reads Espèces 68 % / Carte 23 % / QR 9 % on
+1 100 MAD of real sales (segment dasharrays match pct − gap exactly); Ventes rows
+read "Chemise en lin", "Foulard de soie", "Sac cabas"; KIWI AI reads "4 ventes
+aujourd'hui pour 1 100 MAD, panier moyen 275 MAD… 68 % encaissé en espèces",
+agreeing with both; Terminaux lists "Caisse Kiwi · Test Boutique · Casablanca ·
+connectée"; Stock/Conformité/Finance render their own scoped empty registers;
+Équipe offers Vente / Vitrine / Caisse / Stock / Management. The DEMO payment
+mix was re-checked byte-for-byte (Visa 48 / MC 24 / Tap 18 / QR 10) — unchanged.
+
+**Verified by test** (stubbed D1, `scratchpad/*.test.mjs`): 14 assertions on the
+pairing rate limiter and 8 on the PIN disclosure. All pass.
+
+### 🔴 #31 — Every real sale printed "450,00 MADMAD" (FIXED, v63)
+Found while verifying #28. `buildCustomFeed` appended " MAD" to the amount while
+the row template already appends its own `<span class="cur">MAD</span>`. Demo rows
+pass the bare number, so only REAL merchants saw the doubled unit — on every row
+of their sales list.
+
+### 🔴 #32 — OrderPro has no tables in production (OPEN — partner's call)
+`schema.sql` defines `menus` and `orders`; the live D1 (`kiwi-sales`) has neither:
+
+```
+accounts · merchant_config · operators · pairings · sales · staff_pins · pair_attempts
+```
+
+`GET /api/menu?merchant=…` answers `{"menu":null,"orderpro":false}` — it fails
+soft, so a customer who taps an NFC tag reaches the page (fixed in 890584c) and
+finds an empty carte instead of an error. Nothing can be published and no order
+can be stored. NOT provisioned unilaterally: these tables belong to the partner's
+OrderPro rollout and they may be staging it deliberately (R2 media, etc.).
+`pair_attempts` WAS applied, since it backs a security fix shipped in the same
+commit and nothing else reads it.
+
+Apply with:
+```sql
+-- the menus + orders blocks from schema.sql, verbatim
+```
