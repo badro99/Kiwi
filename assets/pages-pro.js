@@ -11675,9 +11675,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      placeholder. This set grows as more pages become per-venue functional. */
   /* 'menu' is now a real per-venue editor (assets/menu-catalog.js →
      window.KiwiMenuStore), so it renders functionally for custom venues.
-     'payroll' & 'practitioners' stay OUT: their handlers still hardcode demo
-     staff (Fatima/Sofia… / Spa Bahia's PRACS), so a custom venue must get the
-     zeroed starter, not the demo roster, until they become genuinely per-venue. */
+     'practitioners' stays OUT: its handler still hardcodes demo staff (Spa
+     Bahia's PRACS), so a custom venue must get the zeroed starter, not the demo
+     roster, until it becomes genuinely per-venue. 'payroll' caught up — it now
+     reads the merchant's own roster, so it moved to REAL_WHEN below (allowed
+     once somebody has actually been hired). */
   /* 'conformite', 'stock' and 'finance' were building a correct per-venue page
      that nobody could reach: each module already detects a real/custom venue
      (conformite.js:877, stock.js:719, finance.js:866) and renders its own honest
@@ -11687,6 +11689,24 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      tells the merchant what will fill it. */
   const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
     'conformite', 'stock', 'finance', 'payroll']);
+
+  /* Data-conditional destinations: the module DOES build a real per-venue page,
+     but has no empty state of its own, so the starter is the better answer until
+     the data exists. Payroll is the case — venues.js' customPayStaff() builds the
+     roster from the employees added on Équipe and never falls back to the demo
+     staff, yet a merchant who had hired two people still got "Encore rien ici"
+     while their own payslips sat one gate away. With nobody hired, the module
+     renders an empty table and an empty planner, which is worse than the starter
+     and its "Ajouter un employé" — so gate on the roster, not on the venue. */
+  const REAL_WHEN = {
+    payroll() {
+      try {
+        const root = window.__kiwiTeamV2;
+        const v = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+        return !!(root && root.byVenue && (root.byVenue[v] || []).length);
+      } catch (_) { return false; }
+    },
+  };
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button
@@ -11965,7 +11985,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (orig && orig.__kiwiStarter) return;
       const wrapped = function () {
         const realOrCustom = window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.();
-        if (realOrCustom && !REAL_FOR_CUSTOM.has(nav)) return renderStarter(nav, meta);
+        const allowed = REAL_FOR_CUSTOM.has(nav) || (REAL_WHEN[nav] && REAL_WHEN[nav]());
+        if (realOrCustom && !allowed) return renderStarter(nav, meta);
         /* Direct invocations (mobile nav, palette, agent) bypass the sidebar
          * router's genpage cleanup — clear a leftover starter page so it
          * can't mask the destination's own body-class view. */

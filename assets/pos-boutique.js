@@ -361,7 +361,24 @@
   const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0);
 
   /* ───────────────────────── state ───────────────────────── */
-  let saleSeq = 1208;            /* MM-1203…1207 vendues — MM-1208 = ticket en cours */
+  /* Le numéro de ticket porte les initiales de la boutique. « MM » = Maison
+     Mansour, la boutique de démo : imprimé tel quel chez un vrai commerçant, il
+     met les initiales d'une AUTRE enseigne sur son reçu, et démarre sa toute
+     première vente au n° 1208. Une vraie boutique prend donc ses propres
+     initiales et repart de 1 (restoreDay() reprend ensuite au-delà du dernier
+     numéro encaissé du jour). La démo garde MM-1208, inchangée. */
+  function ticketPrefix() {
+    if (IS_DEMO) return 'MM';
+    const pv = pvPaired();
+    const ini = String((pv && pv.name) || '')
+      .split(/\s+/).filter(Boolean).slice(0, 2)
+      .map((w) => w[0]).join('')
+      .normalize('NFD').replace(/[^A-Za-z]/g, '')
+      .toUpperCase();
+    return ini || 'KW';
+  }
+  const TK = ticketPrefix();
+  let saleSeq = IS_DEMO ? 1208 : 1;   /* démo : MM-1203…1207 vendues, MM-1208 en cours */
 
   /* ── le journal du jour survit à un rechargement (boutiques réelles) ───────
      SALES ne vivait qu'en mémoire : recharger la caisse remettait son en-tête à
@@ -415,7 +432,7 @@
     offline: false, queued: 0,
   };
   function freshTicket() {
-    state.ticket = { num: `MM-${saleSeq}`, lines: [], client: null, remiseAuth: false };
+    state.ticket = { num: `${TK}-${saleSeq}`, lines: [], client: null, remiseAuth: false };
   }
   function ticketClient() {
     const t = state.ticket;
@@ -1584,7 +1601,11 @@
                   <i data-lucide="ticket"></i><b>${a.code}</b> · ${fmtMAD(a.balance)}, ${esc(a.holderName)}<span class="see">Voir</span>
                 </button>`).join('')}
             </div>` : ''}
-          ${hits.map((s) => saleCard(s, ret)).join('') || `<div class="bq-empty">Rien pour « ${esc(q)} », vérifiez le n° de ticket ou le téléphone.</div>`}
+          ${hits.map((s) => saleCard(s, ret)).join('') || (String(q).trim()
+            ? `<div class="bq-empty">Rien pour « ${esc(q)} », vérifiez le n° de ticket ou le téléphone.</div>`
+            /* Rien tapé encore : une boutique sans vente du jour ouvrait cette page
+               sur « Rien pour «  » », un échec de recherche que personne n'a lancée. */
+            : `<div class="bq-empty">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div>`)}
         </div></div>
       </div>`;
     $('#bq-ret-q', panel).oninput = (e) => {
@@ -1848,7 +1869,7 @@
           onPaid: (parts) => {
             apply();
             const rec = {
-              id: `MM-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
+              id: `${TK}-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
               methods: parts.map((x) => x.m).join(' + '),
               lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
               total: diff,
