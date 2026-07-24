@@ -12,6 +12,26 @@ after the mainline is verified.
 
 ---
 
+## STATUS — 2026-07-24 (all shipped to both remotes, deployed, demo-safe)
+
+| Fix | State | Verified |
+|-----|-------|----------|
+| **F0** PIN "code incorrect" | ✅ DONE (5e20da3, v48) | live — 7777 accepted |
+| **F1** account-scoped tenant reset | ✅ DONE (9f05298, v49) | live — same-acct no-op |
+| **F2** onboarding `?onboarding=1` strip | ✅ DONE (c419870, v50) | code + fail-safe (needs signup e2e) |
+| **F3** server business type on login | ✅ DONE (c419870, v50) | **live — /api/me→boutique, venueType=boutique, boutique sidebar** |
+| **F4** one caisse⇄dashboard inventory key | ✅ DONE (9c4827a, v51) | key = slugMerchant(business)="mixmax-test" both sides |
+| **F5** checkout → recordPurchase (client/points/spend) | ✅ DONE (9c4827a, v51) | code (needs a real sale e2e) |
+| **F7** live-card merchant scope + heal stale pin | ✅ DONE (c419870→bc5df9a, v52) | **live — kiwiLiveMerchant healed vix→mixmax-test** |
+| **F8** staff PIN after pairing | ✅ DONE (9c4827a, v51) | code, **fail-soft (worst case = no lockout)** — needs a real pairing e2e |
+| **F6** restaurant floor/KDS/roster per-venue | ⏸️ DEFERRED | no restaurant client launching; large refactor best done vs a real restaurant tenant |
+
+Ground truth (D1 `kiwi-sales`): accounts **adam** (doukaliadam80@gmail.com, slug `adam`,
+type boutique, PIN 8888) and **Ghali/MixMax** (badromail9@gmail.com, slug `mixmax-test`,
+type boutique, PIN 7777). Both boutiques → F6 (restaurant) is not launch-blocking.
+
+---
+
 ## The one disease
 
 Every symptom is tenant data kept in **browser-global localStorage keys** that are
