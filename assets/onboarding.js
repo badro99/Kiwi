@@ -709,7 +709,16 @@
   function shouldAutoLaunch() {
     const q = new URLSearchParams(location.search);
     if (q.has('demo')) return false;
-    if (q.has('onboarding')) { reset(); return true; }
+    if (q.has('onboarding')) {
+      // Consume the one-shot signup param. It used to be STICKY: every reload with
+      // ?onboarding=1 still in the URL re-ran reset() + relaunched the wizard,
+      // wiping a just-completed kiwiOnboarded (P3). Strip it so a refresh can't
+      // re-trigger, and never reset an account that already finished onboarding.
+      try { history.replaceState({}, '', location.pathname + location.hash); } catch (_) {}
+      if (isComplete()) return false;
+      reset();
+      return true;
+    }
     if (isComplete()) return false;
     if (LS.get('kiwiSkipOnboard') === '1') return false;
     if (hasCustomVenue()) return false;

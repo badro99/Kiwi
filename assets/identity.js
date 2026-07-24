@@ -157,6 +157,21 @@
     setTimeout(go, 700);   // re-apply after the venue engine + entry-flash render
   }
 
+  // Make the server-stored business type authoritative for a real merchant's OWN
+  // dashboard. init() synthesizes the empty "own" venue at boot — BEFORE /api/me
+  // resolves — so it can't know the trade yet and defaults to 'restaurant'. Once
+  // identity resolves, push the real type into the venue engine so a boutique is
+  // never rendered as a restaurant (P6/P7). Retried after the async venue render.
+  function applyOwnType(type) {
+    if (!type) return;
+    var go = function () {
+      try { if (window.KiwiVenue && window.KiwiVenue.applyServerType) window.KiwiVenue.applyServerType(type); } catch (_) {}
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
+    setTimeout(go, 750);
+  }
+
   // Drive the venue engine so the switcher/header show the scoped client, not the
   // operator's own local venues. Retried alongside the DOM patch for async nav.
   function applyScopedVenue(label, type) {
@@ -245,6 +260,7 @@
         name: (me.name || '').trim(),
         business: (me.business || '').trim(),
         email: (me.email || '').trim(),
+        type: (me.type || '').trim(),
       };
       // Feed the keys the rest of the app already reads (account.js reads
       // kiwiSet:*, onboarding/personalize read kiwiOwnerName/kiwiBizName).
@@ -260,6 +276,7 @@
         return;
       }
       run(id, false);
+      applyOwnType(id.type);   // boutique renders as boutique, not restaurant (F3)
     })
     .catch(function () { /* offline / missing endpoint → keep the demo locally, but a real (hosted) session still gets neutralized */ runNeutral(); });
 })();

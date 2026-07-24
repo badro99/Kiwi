@@ -27,14 +27,34 @@
       return localStorage.getItem(LS) === '1';
     } catch (_) { return urlFlag(); }
   }
-  // Which tenant this dashboard is showing. A ?merchant= in the URL is
-  // authoritative (the operator's "Ouvrir dashboard" opens the client this way)
-  // and is pinned to localStorage; otherwise the last pick, else the demo tenant.
+  // slugMerchant() twin (functions/auth/_lib.js): "MixMax Test" → "mixmax-test".
+  // Lets a real dashboard derive its OWN live-feed tenant from the signed-in
+  // identity instead of guessing.
+  function slugify(s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  // Which tenant this dashboard is showing. Priority: an explicit ?merchant= (the
+  // operator's "Ouvrir dashboard", pinned to localStorage) → a pinned slug a paired
+  // caisse/operator already set → the signed-in merchant's OWN slug (from KiwiMe).
+  // A REAL dashboard must NEVER fall back to the shared 'cafe-atlas' demo tenant —
+  // that made a brand-new store poll another merchant's feed (P1). Unknown-yet real
+  // session ⇒ '' (polls nothing until identity resolves); only the local demo keeps
+  // 'cafe-atlas'.
   function merchant() {
     try {
       var q = new URLSearchParams(location.search).get('merchant');
       if (q) { try { localStorage.setItem('kiwiLiveMerchant', q); } catch (_) {} return q; }
-      return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas';
+      var pinned = localStorage.getItem('kiwiLiveMerchant');
+      if (pinned) return pinned;
+      var me = window.KiwiMe;
+      if (me && me.business) {
+        var s = slugify(me.business);
+        if (s) { try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {} return s; }
+      }
+      var real = false;
+      try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+      return real ? '' : 'cafe-atlas';
     } catch (_) { return 'cafe-atlas'; }
   }
 

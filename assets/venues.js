@@ -1240,6 +1240,16 @@
     if (!base || currentVenue === 'fusion') return false;
     if (base === getVenueType()) return false;      // already correct
     typeOverride = base;
+    // If the ACTIVE venue is a transient synthetic one (a real merchant's empty
+    // "own" venue, or the operator 'scoped' venue), also correct its stored type
+    // and label so surfaces that read venue.type directly agree with getVenueType()
+    // — otherwise the sidebar section flips to boutique but the header chip / KPI
+    // band could still read the boot-time 'restaurant'. Transient venues only.
+    if ((currentVenue === 'own' || currentVenue === 'scoped') && VENUES[currentVenue]) {
+      const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
+      VENUES[currentVenue].type = base;
+      VENUES[currentVenue].typeLabel = TYPE_LABELS[base] || VENUES[currentVenue].typeLabel;
+    }
     try { renderVerticalSection({ skipFade: true }); } catch (_) {}
     subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
     return true;

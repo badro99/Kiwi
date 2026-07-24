@@ -91,7 +91,11 @@
     catch (_) { return false; }
   }
   function applyServerType() {
-    if (!cfg.type || !isScoped()) return;
+    // Apply on the operator's scoped view AND on a real merchant's own dashboard.
+    // The dashboard reads bare /api/config (session-derived), so the demo — which
+    // has no session — gets an empty type here and this stays a no-op. A boutique
+    // must render as a boutique on a plain login, not just under God mode (F3).
+    if (!cfg.type || !(isScoped() || onDashboard())) return;
     try { if (window.KiwiVenue && window.KiwiVenue.applyServerType) window.KiwiVenue.applyServerType(cfg.type); } catch (_) {}
   }
 

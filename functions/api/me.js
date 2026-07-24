@@ -33,8 +33,19 @@ export async function onRequestGet(context) {
         .bind(sess.aid).first();
     } catch (_) { /* table missing / db error → fall through to demo */ }
     if (acc) {
+      // The business subtype (boutique|restaurant|…) the operator/onboarding stored
+      // for THIS merchant, keyed by its own slug — same convention the config/roster
+      // use. The dashboard applies it so a boutique is never rendered as a restaurant
+      // (the empty "own" venue synthesized at boot defaults to restaurant otherwise).
+      let type = '';
+      try {
+        const slug = slugMerchant(acc.business || acc.email);
+        const c = await env.DB.prepare('SELECT type FROM merchant_config WHERE merchant = ?')
+          .bind(slug).first();
+        type = (c && c.type) || '';
+      } catch (_) { /* no config row yet → no type, dashboard keeps its default */ }
       return json({
-        authenticated: true, scoped: false,
+        authenticated: true, scoped: false, type,
         name: acc.name || '', business: acc.business || '', email: acc.email || '',
       });
     }
