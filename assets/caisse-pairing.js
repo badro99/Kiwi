@@ -349,16 +349,32 @@
     (pinList || []).forEach(function (p) {
       if (!who && String((p && (p.pin || p.code)) || '') === code) who = p;
     });
+    var scr = document.getElementById('cp-pin-screen');
+    function refuse(msg) {
+      if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
+      toast(msg);
+      pinBuf = ''; renderPinDots();
+    }
     if (who) {
+      /* A code that EXISTS is still not automatically a till code. The staff list
+       * is the whole payroll — the kitchen, the stockroom, the cleaner all carry
+       * one so they can clock in — and every one of them opened the register.
+       * assets/staff-roles.js holds the rule (a deny list: only back-of-house is
+       * refused, because refusing wrongly stops a sale). Missing file ⇒ everyone
+       * in, exactly as before. Name them in the message: the code is right, the
+       * person simply is not a cashier, and "Code incorrect" would send them
+       * hunting for a typo that isn't there. */
+      var R = window.KiwiRoles;
+      if (R && R.opensTill && !R.opensTill(who.role)) {
+        var f = firstNameOf(who.name);
+        return refuse((f ? f + ', ce' : 'Ce') + ' code n’ouvre pas la caisse.');
+      }
       setStaff(who);                                  // the till now knows whose shift this is
-      var s = document.getElementById('cp-pin-screen'); if (s) s.style.display = 'none';
+      if (scr) scr.style.display = 'none';
       bootVertical(pinVenue);
       return;
     }
-    var scr = document.getElementById('cp-pin-screen');
-    if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
-    toast('Code incorrect.');
-    pinBuf = ''; renderPinDots();
+    refuse('Code incorrect.');
   }
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).

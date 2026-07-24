@@ -151,8 +151,34 @@
     return !!SERVICE_SET[id];
   }
 
+  /* ── Who may open the register ──────────────────────────────────────────────
+   * Deliberately the mirror image of the floor rule: a DENY list, not an allow
+   * list. Getting the floor wrong shows someone a screen they do not need;
+   * getting the till wrong stops a sale with a customer standing there. So the
+   * only roles refused are the ones that unambiguously never handle money —
+   * the kitchen line, the stockroom, housekeeping, cleaning.
+   *
+   * Everyone else keeps it, including the ones a bigger business would separate:
+   * in a small Moroccan shop the boulanger does serve the 6am counter, the
+   * livreur does collect cash, the veilleur does take a late payment. Splitting
+   * those hairs from here would lock real people out of their own till. */
+  var NO_TILL = [
+    'plongeur', 'cuisinier', 'chef', 'commis', 'grillardin',   // kitchen line
+    'magasinier', 'reassort', 'merch',                          // stock & vitrine
+    'menage', 'gouvernante', 'bagagiste', 'entretien',          // étages & entretien
+  ];
+  var NO_TILL_SET = {};
+  NO_TILL.forEach(function (id) { NO_TILL_SET[id] = true; });
+
+  function opensTill(raw) {
+    var id = idOf(raw);
+    if (!id) return true;                          // unknown ⇒ keep the till
+    return !NO_TILL_SET[id];
+  }
+
   window.KiwiRoles = {
-    LABELS: LABELS, BY_TYPE: BY_TYPE, UNIVERSAL: UNIVERSAL, SERVICE: SERVICE,
-    forType: forType, label: label, isService: isService, idOf: idOf, norm: norm,
+    LABELS: LABELS, BY_TYPE: BY_TYPE, UNIVERSAL: UNIVERSAL, SERVICE: SERVICE, NO_TILL: NO_TILL,
+    forType: forType, label: label, isService: isService, opensTill: opensTill,
+    idOf: idOf, norm: norm,
   };
 })();
