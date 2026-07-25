@@ -207,7 +207,11 @@
       payrollEditRule: "Modifier",
       payrollDistribute: "Distribuer · WhatsApp à l'équipe →",
       payrollLaborCost: "Coût main d'œuvre vs ventes",
-      payrollLaborCostSub: "Ratio cible < 30 % · benchmark cafés Casa 28 %",
+      /* Le « benchmark cafés Casa 28 % » a été retiré : Kiwi ne mesure aucun
+         panel de cafés casablancais, et un repère chiffré inventé sur lequel un
+         patron ajuste ses effectifs est plus dommageable qu'un chiffre absent.
+         Le ratio cible, lui, est une règle de gestion publique et reste. */
+      payrollLaborCostSub: "Ratio cible < 30 % des ventes",
       payrollToday: "Aujourd'hui",
       payroll7days: "7 derniers jours",
       payrollTarget: "Cible",
@@ -447,7 +451,7 @@
       payrollEditRule: "Edit",
       payrollDistribute: "Distribute · WhatsApp to team →",
       payrollLaborCost: "Labor Cost vs Sales",
-      payrollLaborCostSub: "Target ratio < 30% · Casa cafés benchmark 28%",
+      payrollLaborCostSub: "Target ratio < 30% of sales",
       payrollToday: "Today",
       payroll7days: "7 days",
       payrollTarget: "Target",
@@ -687,7 +691,7 @@
       payrollEditRule: "تعديل",
       payrollDistribute: "وزع · واتساب للفريق →",
       payrollLaborCost: "تكلفة اليد العاملة مقابل المبيعات",
-      payrollLaborCostSub: "النسبة المستهدفة < 30٪ · معيار مقاهي الدار البيضاء 28٪",
+      payrollLaborCostSub: "النسبة المستهدفة < 30٪ من المبيعات",
       payrollToday: "اليوم",
       payroll7days: "7 أيام",
       payrollTarget: "الهدف",

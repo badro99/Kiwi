@@ -8175,9 +8175,14 @@
         const real = miCustomHeatmapRec(v);
         if (real) return real;
         const W = {
-          fr: { title: 'Vos heures de pointe apparaîtront ici', obs: 'Dès vos premières ventes, Kiwi AI repère vos creux et vos pics de la journée et suggère quoi lancer, et quand.', cta: '' },
-          en: { title: 'Your peak hours will show up here', obs: 'As soon as you record sales, Kiwi AI spots your daily lulls and rushes and suggests what to run, and when.', cta: '' },
-          ar: { title: 'ساعات الذروة ستظهر هنا', obs: 'بمجرد تسجيل مبيعاتك، يرصد Kiwi AI فترات الركود والذروة ويقترح ما الذي تطلقه ومتى.', cta: '' },
+          /* "Kiwi AI" on what is an hour-by-hour count of the merchant's own
+           * tickets. It is arithmetic, and calling arithmetic AI is how the
+           * label stops meaning anything by the time it sits on something that
+           * genuinely is. Kiwi Insights, and a promise limited to what the
+           * count can actually deliver. */
+          fr: { title: 'Vos heures de pointe apparaîtront ici', obs: 'Dès vos premières ventes, Kiwi compte vos tickets heure par heure et vous montre vos creux et vos pics de la journée.', cta: '' },
+          en: { title: 'Your peak hours will show up here', obs: 'As soon as you record sales, Kiwi counts your tickets hour by hour and shows you the lulls and the rushes.', cta: '' },
+          ar: { title: 'ساعات الذروة ستظهر هنا', obs: 'بمجرد تسجيل مبيعاتك، يحصي كيوي تذاكرك ساعة بساعة ويعرض لك فترات الركود والذروة.', cta: '' },
         };
         return W[fusionLang()] || W.fr;
       }

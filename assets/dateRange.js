@@ -1917,10 +1917,19 @@
 
   function renderHeatmapAi() {
     const rec = window.KiwiVenue?.getHeatmapAiRec?.();
-    if (!rec) return;
     const titleEl = document.querySelector('.hh-ai-title');
     const obsEl   = document.querySelector('.hh-ai-obs');
     const ctaEl   = document.querySelector('.hh-ai-cta');
+    /* Same rule as renderHeroAi: no hint has to LOOK like no hint. Returning
+     * early left the markup's own copy standing, and that copy used to be a
+     * finished recommendation quoting a peer benchmark Kiwi cannot measure. */
+    if (!rec) {
+      const empty = { fr: 'Vos heures creuses apparaîtront ici dès vos premières ventes.', en: 'Your quiet hours will appear here once you record sales.', ar: 'ستظهر ساعاتك الهادئة هنا بمجرد تسجيل مبيعاتك.' };
+      if (titleEl) titleEl.textContent = '';
+      if (obsEl)   obsEl.textContent = empty[getLang()] || empty.fr;
+      if (ctaEl)   ctaEl.textContent = '';
+      return;
+    }
     if (titleEl) titleEl.textContent = rec.title;
     if (obsEl)   obsEl.textContent = rec.obs;
     if (ctaEl)   ctaEl.textContent = rec.cta;
@@ -3958,7 +3967,14 @@
     const lang = getLang();
     const card = document.querySelector('[data-bench-card]');
     if (card && _benchOrig == null) _benchOrig = card['inner' + 'HTML'];
-    if (window.KiwiVenue?.isCustom?.()) {
+    /* "#12 sur 147 cafés à Casablanca · top 8 %" is a cohort Kiwi does not
+     * have. It is fine in the demo, where every number is openly a rehearsal,
+     * and it is not fine anywhere else — an invented peer benchmark is worse
+     * than an invented figure, because it reads like data somebody else
+     * collected and a merchant reasonably prices against it. The gate was
+     * isCustom() alone, which left the real-but-not-custom session showing a
+     * ranking among 147 cafés that were never counted. */
+    if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
       if (card) {
         const t = BENCH_EMPTY[lang] || BENCH_EMPTY.fr;
         card['inner' + 'HTML'] =
