@@ -480,6 +480,187 @@ function pdsFixtureHTML(e, opts) {
   </div>`;
 }
 
+/* ─── Collision ───────────────────────────────────────────────────────────
+ *   "Make it impossible to stack tables" is right, but a blanket no-overlap
+ *   rule breaks the two cases a restaurant actually needs: a tapis is MEANT
+ *   to have tables standing on it, and a banquette is MEANT to have tables
+ *   pushed flat against it. So the rule is per class, not global.
+ *
+ *     solid     tables, cuisine, comptoir, caisse, vitrine, wc, escalier,
+ *               colonne, plante — may never interpenetrate another solid.
+ *     underlay  tapis, texte — never blocks anything, nothing blocks it.
+ *     abutting  mur, banquette, claustra, garde, fenetre, passe — a solid may
+ *               touch it (zero gap) but not pass through.
+ *     portal    porte — sits IN a wall, and keeps a clear approach in front.
+ *
+ *   The collision body of a TABLE meeting another solid is the tabletop plus
+ *   its chair band: two tables 5 units apart do not overlap geometrically,
+ *   but nobody can sit between them, so a purely geometric test would bless
+ *   a plan that cannot be served. Against an `abutting` piece the band is
+ *   dropped — sharing it with a banquette is the entire point of a banquette.
+ */
+const PDS_CLS = {
+  tapis: 'underlay', texte: 'underlay',
+  mur: 'abutting', banquette: 'abutting', claustra: 'abutting',
+  garde: 'abutting', fenetre: 'abutting', passe: 'abutting',
+  porte: 'portal',
+};
+/* Clear approach a doorway keeps in front of itself, on its swing side. */
+const PDS_PORTAL_FAN = 90;
+
+function pdsCls(o) {
+  if (!o) return 'solid';
+  if (PDS_TABLE_TYPES[o.type]) return 'solid';
+  return PDS_CLS[o.type] || 'solid';
+}
+function pdsIsTable(o) { return !!(o && PDS_TABLE_TYPES[o.type]); }
+
+/* The four corners of a rotated box, in floor coordinates. */
+function pdsCorners(x, y, w, h, deg) {
+  const r = (deg || 0) * Math.PI / 180;
+  const cos = Math.cos(r), sin = Math.sin(r);
+  const cx = x + w / 2, cy = y + h / 2;
+  return [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]]
+    .map(([px, py]) => [cx + px * cos - py * sin, cy + px * sin + py * cos]);
+}
+
+/* Separating-axis test for two convex quads. Exact for rectangles at any
+   angle — an axis-aligned bounding box would refuse legal placements for a
+   table turned 45°, whose AABB is 41% larger than the table. */
+function pdsObbOverlap(A, B) {
+  for (const box of [A, B]) {
+    for (let i = 0; i < 2; i++) {
+      const p1 = box[i], p2 = box[i + 1];
+      const ax = -(p2[1] - p1[1]), ay = p2[0] - p1[0];
+      const len = Math.hypot(ax, ay) || 1;
+      const nx = ax / len, ny = ay / len;
+      let aMin = Infinity, aMax = -Infinity, bMin = Infinity, bMax = -Infinity;
+      for (const p of A) { const d = p[0] * nx + p[1] * ny; if (d < aMin) aMin = d; if (d > aMax) aMax = d; }
+      for (const p of B) { const d = p[0] * nx + p[1] * ny; if (d < bMin) bMin = d; if (d > bMax) bMax = d; }
+      /* A hair of tolerance so "pushed flat against" is legal, not a 0.0001 overlap. */
+      if (aMax - bMin <= 0.5 || bMax - aMin <= 0.5) return false;
+    }
+  }
+  return true;
+}
+
+/* How far this object's body is inflated when tested against `other`. */
+function pdsInflate(o, other) {
+  return (pdsCls(o) === 'solid' && pdsCls(other) === 'solid' && pdsIsTable(o)) ? PDS_PAD : 0;
+}
+function pdsBodyOf(o, pad, at) {
+  const g = pdsGeom(o);
+  const x = (at ? at.x : o.x) - pad;
+  const y = (at ? at.y : o.y) - pad;
+  const w = (at && at.w != null ? at.w : g.w) + pad * 2;
+  const h = (at && at.h != null ? at.h : g.h) + pad * 2;
+  return pdsCorners(x, y, w, h, at && at.rot != null ? at.rot : o.rot);
+}
+/* A door's keep-clear box: its own footprint extended by the fan on the side
+   the leaf swings to, which is local −y (the arc in PDS_FIX.porte). */
+function pdsPortalBody(o, at) {
+  const g = pdsGeom(o);
+  const w = (at && at.w != null ? at.w : g.w);
+  const h = (at && at.h != null ? at.h : g.h);
+  const x = (at ? at.x : o.x), y = (at ? at.y : o.y);
+  const rot = at && at.rot != null ? at.rot : o.rot;
+  /* Grow upward in local space: same centre shifted −fan/2 along local y. */
+  const r = (rot || 0) * Math.PI / 180;
+  const cx = x + w / 2 - Math.sin(r) * (-PDS_PORTAL_FAN / 2);
+  const cy = y + h / 2 + Math.cos(r) * (-PDS_PORTAL_FAN / 2);
+  const H = h + PDS_PORTAL_FAN;
+  return pdsCorners(cx - w / 2, cy - H / 2, w, H, rot);
+}
+
+/* Do these two objects conflict? `at` overrides a's position/size/rotation,
+   so a drag can ask "would it conflict THERE" without mutating anything. */
+function pdsConflict(a, b, at) {
+  if (!a || !b || a.id === b.id) return false;
+  const ca = pdsCls(a), cb = pdsCls(b);
+  if (ca === 'underlay' || cb === 'underlay') return false;
+  if (ca === 'portal' && cb === 'portal') return false;
+  if (ca === 'portal' || cb === 'portal') {
+    const pIsA = ca === 'portal';
+    const other = pIsA ? b : a;
+    /* A door belongs in a wall — architecture never blocks it. */
+    if (pdsCls(other) === 'abutting') return false;
+    const portalBox = pIsA ? pdsPortalBody(a, at) : pdsPortalBody(b, null);
+    const otherBox  = pIsA ? pdsBodyOf(b, 0, null) : pdsBodyOf(a, 0, at);
+    return pdsObbOverlap(portalBox, otherBox);
+  }
+  return pdsObbOverlap(pdsBodyOf(a, pdsInflate(a, b), at), pdsBodyOf(b, pdsInflate(b, a), null));
+}
+
+/* Everything on the same floor that `o` could collide with. */
+function pdsNeighbours(state, o) {
+  const z = o.zone != null ? o.zone : state.activeZone;
+  return state.tables.concat(state.elements)
+    .filter(n => n.id !== o.id && (n.zone != null ? n.zone : state.activeZone) === z);
+}
+/* The blockers at a candidate placement — empty array means legal. */
+function pdsBlockers(state, o, at) {
+  return pdsNeighbours(state, o).filter(n => pdsConflict(o, n, at));
+}
+
+/* Nearest legal spot to (x, y). Used on release so a drag that ends on top of
+   something settles beside it instead of snapping back to where it started —
+   the table still goes where you aimed it.
+ *
+ *   Two phases, because rings alone are not enough. Rings are cheap and give
+ *   a genuinely nearest answer close in, but on a crowded floor the first
+ *   legal spot can sit further out than any sane radius, and the angular
+ *   sampling thins as r grows until it steps straight over a narrow slot.
+ *   A bounded ring search that fails therefore falls through to a full sweep
+ *   of the floor, so "settles beside it" holds whenever ANY legal position
+ *   exists — the alternative is a table that silently springs back with no
+ *   explanation, which is the behaviour this whole rule exists to remove. */
+function pdsNearestFree(state, o, x, y, plane, maxR) {
+  const g = pdsGeom(o);
+  const w = g.w, h = g.h;
+  const clamp = (px, py) => ({
+    x: Math.max(0, Math.min(plane.w - w, Math.round(px))),
+    y: Math.max(0, Math.min(plane.h - h, Math.round(py))),
+  });
+  const free = (px, py) => {
+    const at = clamp(px, py);
+    return pdsBlockers(state, o, at).length === 0 ? at : null;
+  };
+  const here = free(x, y);
+  if (here) return here;
+
+  /* Phase 1 — rings, sampled by arc length so the spacing between probes
+     stays constant instead of fanning out with the radius. */
+  const step = 8, R = maxR || 200;
+  for (let r = step; r <= R; r += step) {
+    const n = Math.max(12, Math.round(2 * Math.PI * r / 10));
+    for (let i = 0; i < n; i++) {
+      const rad = (i / n) * 2 * Math.PI;
+      const hit = free(x + Math.cos(rad) * r, y + Math.sin(rad) * r);
+      if (hit) return hit;
+    }
+  }
+
+  /* Phase 2 — sweep the whole floor. Candidates are visited in order of
+     distance from the drop, so the first legal one IS the nearest and the
+     scan stops there; testing in raster order instead made a crowded drop
+     cost ~140 ms of collision maths before it could answer. Coarser grid on
+     purpose: this only runs when the neighbourhood is full, and a few units
+     of imprecision beats refusing the drop. */
+  const grid = 16;
+  const cells = [];
+  for (let py = 0; py <= plane.h - h; py += grid) {
+    for (let px = 0; px <= plane.w - w; px += grid) {
+      cells.push([(px - x) * (px - x) + (py - y) * (py - y), px, py]);
+    }
+  }
+  cells.sort((a, b) => a[0] - b[0]);
+  for (let i = 0; i < cells.length; i++) {
+    const at = { x: cells[i][1], y: cells[i][2] };
+    if (!pdsBlockers(state, o, at).length) return at;
+  }
+  return null;
+}
+
 /* ─── Exposure ────────────────────────────────────────────────────────────
  *   pages-pro.js is an IIFE in the same global scope and picks these up by
  *   name. kiwi-caisse.html is not, so it goes through this namespace. */
@@ -492,4 +673,8 @@ window.KiwiFloorCore = {
   room: pdsRoom, roomShell: pdsRoomShell,
   seatSlots: pdsSeatSlots, chair: pdsChair, chairsFor: pdsChairsFor,
   boxStyle: pdsBoxStyle, tableBody: pdsTableBody, fixtureHTML: pdsFixtureHTML,
+  CLS: PDS_CLS, cls: pdsCls, isTable: pdsIsTable,
+  corners: pdsCorners, obbOverlap: pdsObbOverlap,
+  conflict: pdsConflict, blockers: pdsBlockers,
+  neighbours: pdsNeighbours, nearestFree: pdsNearestFree,
 };

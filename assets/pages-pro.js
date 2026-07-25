@@ -3588,7 +3588,9 @@ Object.assign(PDS_STR.fr, {
   layerBack: 'Arrière', layerFront: 'Avant',
   lock: 'Verrouiller', unlock: 'Déverrouiller',
   lockedHint: 'Verrouillé — déverrouillez pour modifier',
-  rotateHint: 'Faire pivoter',
+  rotateHint: 'Faire pivoter · Maj pour 15°',
+  noRoom: 'Pas de place libre ici',
+  blockedHint: 'Chevauchement — relâchez pour poser à côté',
 });
 Object.assign(PDS_STR.en, {
   undo: 'Undo', redo: 'Redo',
@@ -3614,7 +3616,9 @@ Object.assign(PDS_STR.en, {
   layerBack: 'Send back', layerFront: 'Bring front',
   lock: 'Lock', unlock: 'Unlock',
   lockedHint: 'Locked — unlock to edit',
-  rotateHint: 'Rotate',
+  rotateHint: 'Rotate · hold Shift for 15°',
+  noRoom: 'No free space here',
+  blockedHint: 'Overlapping — release to settle beside it',
 });
 Object.assign(PDS_STR.ar, {
   undo: 'تراجع', redo: 'إعادة',
@@ -3640,7 +3644,9 @@ Object.assign(PDS_STR.ar, {
   layerBack: 'إلى الخلف', layerFront: 'إلى الأمام',
   lock: 'قفل', unlock: 'فتح',
   lockedHint: 'مقفل — افتح القفل للتعديل',
-  rotateHint: 'تدوير',
+  rotateHint: 'تدوير · اضغط Shift لـ 15°',
+  noRoom: 'لا توجد مساحة فارغة هنا',
+  blockedHint: 'تداخل — أفلت ليستقر بجانبه',
 });
 
 /* ─── Default roster — used when no team data is provided ────────────────── */
@@ -4260,8 +4266,57 @@ function pdsFreeSpot(state, w, h, plane) {
  *      compensate: with A the anchor in local coords and c the local centre,
  *      C1 = C0 + R·((A0 − A1) + (c1 − c0)). Without that term a rotated
  *      object crawls across the floor as you resize it.                    */
+/* Free movement that PULLS to a value within `tol`, instead of the hard
+   Math.round(v / grid) * grid that made every drag feel notched. */
+function pdsMagnet(v, grid, tol) {
+  const n = Math.round(v / grid) * grid;
+  return Math.abs(v - n) <= tol ? n : v;
+}
+
+/* Repaint ONE cell from state and re-arm its handlers. The old code called
+   refresh() on pointerup, which rebuilt the whole drawer body plus both
+   rails and reopened the inspector — that rebuild is the hitch you feel at
+   the end of every resize. Nothing outside this cell changed, so nothing
+   outside it needs to be rebuilt. */
+function pdsRepaintCell(root, state, T, id, refresh, selection) {
+  const f = pdsFind(state, id);
+  const old = root.querySelector(`[data-pds-table="${id}"], [data-pds-el="${id}"]`);
+  if (!f || !old) { refresh(); return; }
+  const holder = document.createElement('div');
+  holder.innerHTML = (f.table ? pdsRenderTable(f.o, state, T) : pdsRenderElement(f.o, state, T)).trim();
+  const fresh = holder.firstElementChild;
+  if (!fresh) { refresh(); return; }
+  old.replaceWith(fresh);
+  if (f.table) pdsAttachDrag(fresh, id, state, T, root, refresh, selection);
+  else pdsAttachElDrag(fresh, id, state, T, root, refresh);
+  pdsBindHandles(fresh, root, state, T, refresh, selection);
+  try { pdsSave(state); } catch (_) {}
+}
+
+/* Push geometry back into the inspector's number fields without rebuilding
+   it — never clobbering a field the merchant is currently typing in. */
+function pdsSyncInspector(root, o) {
+  const g = pdsGeom(o);
+  /* querySelectorAll, not querySelector — rotation has both a dial and a
+     number box, and they must not drift apart. */
+  const set = (f, v) => {
+    root.querySelectorAll(`[data-pds-field="${f}"]`).forEach(el => {
+      if (document.activeElement !== el) el.value = v;
+    });
+  };
+  set('w', Math.round(g.w)); set('h', Math.round(g.h));
+  set('x', Math.round(o.x));  set('y', Math.round(o.y));
+  set('rot', Math.round(o.rot || 0));
+  const out = root.querySelector('[data-pds-rotout]');
+  if (out) out.textContent = `${Math.round(o.rot || 0)}°`;
+}
+
 function pdsAttachResize(root, state, T, refresh, selection) {
-  root.querySelectorAll('[data-pds-handle]').forEach(hd => {
+  pdsBindHandles(root, root, state, T, refresh, selection);
+}
+
+function pdsBindHandles(scope, root, state, T, refresh, selection) {
+  scope.querySelectorAll('[data-pds-handle]').forEach(hd => {
     const dir = hd.getAttribute('data-pds-handle');
     const id  = hd.getAttribute('data-pds-hid');
     hd.addEventListener('pointerdown', (ev) => {
@@ -4272,20 +4327,41 @@ function pdsAttachResize(root, state, T, refresh, selection) {
       const g0 = pdsGeom(o);
       const K = (f.table ? PDS_TABLE_TYPES[o.type] : PDS_FIX[o.type]) || {};
       const minW = K.minW || 28, minH = K.minH || 28;
+      /* A column and a plant are round in plan — they resize, but keeping
+         their ratio by default stops them turning into ovals. Shift inverts. */
+      const ratioKind = (o.type === 'colonne' || o.type === 'plante');
       const plane = pdsPlaneOf(state);
       const k = pdsK(root);
-      const rot = o.rot || 0;
-      const rad = rot * Math.PI / 180;
+      const rot0 = o.rot || 0;
+      const rad = rot0 * Math.PI / 180;
       const cos = Math.cos(rad), sin = Math.sin(rad);
       const R = (vx, vy) => [vx * cos - vy * sin, vx * sin + vy * cos];
       const w0 = g0.w, h0 = g0.h;
       const C0 = [o.x + w0 / 2, o.y + h0 / 2];
       const sx = ev.clientX, sy = ev.clientY;
       const cell = root.querySelector(`[data-pds-table="${id}"], [data-pds-el="${id}"]`);
-      let live = false;
+      const badge = cell ? cell.querySelector('.pds-dim') : null;
+      const pad = f.table ? PDS_PAD : 0;
 
-      const move = (e2) => {
-        const ddx = (e2.clientX - sx) / k, ddy = (e2.clientY - sy) / k;
+      /* Last geometry that broke nothing — what a blocked frame falls back
+         to, so the growing edge visibly stops at the blocker. */
+      let last = { x: o.x, y: o.y, w: w0, h: h0, rot: rot0 };
+      let lastRot = rot0;
+      let live = false, frame = 0, ptr = null;
+
+      const paint = () => {
+        if (!cell) return;
+        cell.style.left = (o.x - pad) + 'px';
+        cell.style.top = (o.y - pad) + 'px';
+        cell.style.width = (pdsGeom(o).w + pad * 2) + 'px';
+        cell.style.height = (pdsGeom(o).h + pad * 2) + 'px';
+        cell.style.transform = `rotate(${o.rot || 0}deg)`;
+      };
+
+      const apply = () => {
+        frame = 0;
+        if (!ptr) return;
+        const ddx = (ptr.x - sx) / k, ddy = (ptr.y - sy) / k;
         if (!live) {
           if (Math.abs(ddx) < 2 && Math.abs(ddy) < 2) return;
           live = true;
@@ -4296,70 +4372,152 @@ function pdsAttachResize(root, state, T, refresh, selection) {
         if (dir === 'rot') {
           if (!cell) return;
           const r = cell.getBoundingClientRect();
-          const a = Math.atan2(e2.clientY - (r.top + r.height / 2),
-                               e2.clientX - (r.left + r.width / 2)) * 180 / Math.PI + 90;
-          let deg = (a + 360) % 360;
-          if (state.snap) deg = Math.round(deg / 15) * 15;
+          let deg = Math.atan2(ptr.y - (r.top + r.height / 2),
+                               ptr.x - (r.left + r.width / 2)) * 180 / Math.PI + 90;
+          deg = (deg + 360) % 360;
+          if (ptr.shift) {
+            deg = Math.round(deg / 15) * 15;
+          } else {
+            /* Magnetic square angles. Free rotation is the default — every
+               angle in between stays reachable — but you can still land on
+               exactly 90° without aiming for it. */
+            const near = Math.round(deg / 90) * 90;
+            if (Math.abs(deg - near) <= 3) deg = near;
+          }
           o.rot = Math.round(deg) % 360;
+          const hits = pdsBlockers(state, o, null);
+          const clean = hits.length === 0;
+          if (clean) lastRot = o.rot;
+          /* Name what is in the way, same as a drag does — "it went red" is
+             half an answer without "and this is what it hit". */
+          root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+          hits.forEach(b => {
+            const n = root.querySelector(`[data-pds-table="${b.id}"], [data-pds-el="${b.id}"]`);
+            if (n) n.classList.add('pds-blocker');
+          });
+          /* THE live preview. The old code returned before this line, so the
+             angle updated in state and the screen never moved — which is why
+             rotation felt like it snapped to a handful of positions on
+             release rather than following the cursor. */
+          cell.style.transform = `rotate(${o.rot}deg)`;
+          cell.classList.toggle('is-blocked', !clean);
+          if (badge) badge.textContent = `${o.rot}°`;
           return;
         }
 
         /* Screen delta → the object's own axes. */
         const ldx = ddx * cos + ddy * sin;
         const ldy = -ddx * sin + ddy * cos;
+        const fromCentre = ptr.alt;
+        const m = fromCentre ? 2 : 1;
 
         let w1 = w0, h1 = h0;
-        if (dir.includes('e')) w1 = w0 + ldx;
-        if (dir.includes('w')) w1 = w0 - ldx;
-        if (dir.includes('s')) h1 = h0 + ldy;
-        if (dir.includes('n')) h1 = h0 - ldy;
+        if (dir.includes('e')) w1 = w0 + ldx * m;
+        if (dir.includes('w')) w1 = w0 - ldx * m;
+        if (dir.includes('s')) h1 = h0 + ldy * m;
+        if (dir.includes('n')) h1 = h0 - ldy * m;
+
+        /* Shift locks the aspect ratio (and unlocks it for the round kinds). */
+        if (ptr.shift !== ratioKind) {
+          const ar = w0 / h0;
+          if (dir === 'n' || dir === 's') w1 = h1 * ar;
+          else if (dir === 'e' || dir === 'w') h1 = w1 / ar;
+          else if (Math.abs(w1 - w0) / ar >= Math.abs(h1 - h0)) h1 = w1 / ar;
+          else w1 = h1 * ar;
+        }
 
         if (state.snap) {
-          w1 = Math.round(w1 / PDS_GRID) * PDS_GRID;
-          h1 = Math.round(h1 / PDS_GRID) * PDS_GRID;
+          w1 = pdsMagnet(w1, PDS_GRID, 6);
+          h1 = pdsMagnet(h1, PDS_GRID, 6);
         }
         w1 = Math.max(minW, Math.min(plane.w, Math.round(w1)));
         h1 = Math.max(minH, Math.min(plane.h, Math.round(h1)));
 
-        /* Hold the opposite edge — see the note above. */
-        const A0 = [dir.includes('w') ? w0 : 0, dir.includes('n') ? h0 : 0];
-        const A1 = [dir.includes('w') ? w1 : 0, dir.includes('n') ? h1 : 0];
-        const vx = (A0[0] - A1[0]) + (w1 - w0) / 2;
-        const vy = (A0[1] - A1[1]) + (h1 - h0) / 2;
-        const [rx, ry] = R(vx, vy);
-        const C1 = [C0[0] + rx, C0[1] + ry];
-
-        o.w = w1; o.h = h1;
-        o.x = Math.round(C1[0] - w1 / 2);
-        o.y = Math.round(C1[1] - h1 / 2);
-        if (!rot) {   /* only meaningful while axis-aligned */
-          o.x = Math.max(0, Math.min(plane.w - w1, o.x));
-          o.y = Math.max(0, Math.min(plane.h - h1, o.y));
+        /* Hold the opposite edge — see the note above. Resizing from the
+           centre holds the centre instead, so neither edge is an anchor. */
+        let C1 = C0;
+        if (!fromCentre) {
+          const A0 = [dir.includes('w') ? w0 : 0, dir.includes('n') ? h0 : 0];
+          const A1 = [dir.includes('w') ? w1 : 0, dir.includes('n') ? h1 : 0];
+          const [rx, ry] = R((A0[0] - A1[0]) + (w1 - w0) / 2,
+                             (A0[1] - A1[1]) + (h1 - h0) / 2);
+          C1 = [C0[0] + rx, C0[1] + ry];
         }
 
-        /* Live preview without a full re-render — a refresh per pointermove
-           would rebuild both rails and drop the pointer capture. */
-        if (cell) {
-          const pad = f.table ? PDS_PAD : 0;
-          cell.style.left = (o.x - pad) + 'px';
-          cell.style.top = (o.y - pad) + 'px';
-          cell.style.width = (w1 + pad * 2) + 'px';
-          cell.style.height = (h1 + pad * 2) + 'px';
-          cell.style.transform = `rotate(${o.rot || 0}deg)`;
-          const dim = cell.querySelector('.pds-dim');
-          if (dim) dim.textContent = `${w1}×${h1}`;
+        const at = { x: Math.round(C1[0] - w1 / 2), y: Math.round(C1[1] - h1 / 2), w: w1, h: h1, rot: rot0 };
+        if (!rot0) {   /* clamping to the room is only meaningful axis-aligned */
+          at.x = Math.max(0, Math.min(plane.w - w1, at.x));
+          at.y = Math.max(0, Math.min(plane.h - h1, at.y));
         }
+
+        /* A fixture may not grow through a table. Accept-or-reject is not
+           enough: pointermoves are coalesced to one frame, so a fast drag
+           can jump a long way between samples and a single rejected frame
+           would freeze the whole gesture at its starting size. Bisect
+           between the last legal geometry and the requested one instead, so
+           the edge lands exactly ON the blocker whatever the frame rate. */
+        const hits = pdsBlockers(state, o, at);
+        if (!hits.length) {
+          last = at;
+        } else {
+          const lerp = (t) => ({
+            x: Math.round(last.x + (at.x - last.x) * t),
+            y: Math.round(last.y + (at.y - last.y) * t),
+            w: Math.round(last.w + (at.w - last.w) * t),
+            h: Math.round(last.h + (at.h - last.h) * t),
+            rot: rot0,
+          });
+          let lo = 0, hi = 1;
+          for (let i = 0; i < 8; i++) {
+            const mid = (lo + hi) / 2;
+            if (pdsBlockers(state, o, lerp(mid)).length) hi = mid; else lo = mid;
+          }
+          const edge = lerp(lo);
+          if (edge.w >= minW && edge.h >= minH) last = edge;
+        }
+        o.x = last.x; o.y = last.y; o.w = last.w; o.h = last.h;
+
+        /* Name what stopped it — an edge that halts for no visible reason
+           reads as a bug, not as a rule. */
+        root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+        hits.forEach(b => {
+          const n = root.querySelector(`[data-pds-table="${b.id}"], [data-pds-el="${b.id}"]`);
+          if (n) n.classList.add('pds-blocker');
+        });
+
+        paint();
+        if (badge) badge.textContent = `${last.w}×${last.h}`;
+      };
+
+      const move = (e2) => {
+        /* Snapshot rather than retain the event, and coalesce to one style
+           write per frame instead of one per pointermove. */
+        ptr = { x: e2.clientX, y: e2.clientY, shift: e2.shiftKey, alt: e2.altKey };
+        if (!frame) frame = requestAnimationFrame(apply);
       };
 
       const up = () => {
         hd.removeEventListener('pointermove', move);
         hd.removeEventListener('pointerup', up);
         hd.removeEventListener('pointercancel', up);
-        if (cell) cell.classList.remove('is-resizing');
+        if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        if (cell) cell.classList.remove('is-resizing', 'is-blocked');
+        root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
         if (!live) return;          /* a click, not a drag — leave state alone */
+        /* Rotation is free to preview through a neighbour; committing is not.
+           The angle is what the merchant was aiming at, so honour it and move
+           the table to the nearest spot where it fits — reverting the angle
+           reads as "the rotation didn't take", which is worse than a nudge.
+           Only when the floor has genuinely no room does the angle go back. */
+        if (dir === 'rot' && pdsBlockers(state, o, null).length) {
+          const spot = pdsNearestFree(state, o, o.x, o.y, plane);
+          if (spot) { o.x = spot.x; o.y = spot.y; }
+          else { o.rot = lastRot; if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom); }
+          paint();
+        }
         selection.clear(); selection.add(id);
-        refresh();
-        if (state._openInspector) setTimeout(() => state._openInspector(id), 0);
+        pdsRepaintCell(root, state, T, id, refresh, selection);
+        pdsSyncInspector(root, o);
       };
 
       try { hd.setPointerCapture(ev.pointerId); } catch (_) {}
@@ -4685,9 +4843,11 @@ function pdsRenderInspector(state, T, obj) {
       </div>
 
       <div class="pds-form-row">
-        <label>${T.inspectorRotation} <span class="pds-unit">${Math.round(obj.rot||0)}°</span></label>
+        <label>${T.inspectorRotation} <span class="pds-unit" data-pds-rotout>${Math.round(obj.rot||0)}°</span></label>
         <div class="pds-rot-row">
-          <input class="pds-range" type="range" min="0" max="345" step="15" data-pds-field="rot" value="${Math.round(obj.rot||0)}"/>
+          <input class="pds-range" type="range" min="0" max="359" step="1" data-pds-field="rot" value="${Math.round(obj.rot||0)}"/>
+          <input class="kf-input pds-input pds-rot-num" type="number" min="0" max="359" step="1"
+                 data-pds-field="rot" value="${Math.round(obj.rot||0)}" aria-label="${T.inspectorRotation}"/>
           <button class="pds-step-btn" data-pds-action="rot-90" data-pds-id="${obj.id}" title="+90°">90°</button>
         </div>
       </div>
@@ -5180,9 +5340,34 @@ function pdsAttach(root, state, T, dr) {
           else if (f === 'x')     o.x = Math.max(0, Math.min(plane.w - pdsGeom(o).w, Math.round(+v || 0)));
           else if (f === 'y')     o.y = Math.max(0, Math.min(plane.h - pdsGeom(o).h, Math.round(+v || 0)));
           else if (f === 'rot')   o.rot = ((Math.round(+v || 0)) % 360 + 360) % 360;
-          reselect();
+          /* Geometry edits repaint the one cell they touch. Rebuilding the
+             whole drawer and reopening the inspector — what reselect() does —
+             is what made typing a size feel like the panel flinched. */
+          if (f === 'w' || f === 'h' || f === 'x' || f === 'y' || f === 'rot') {
+            pdsRepaintCell(root, state, T, o.id, refresh, selection);
+            pdsSyncInspector(root, o);
+          } else {
+            reselect();
+          }
         };
         input.onchange = commit;
+
+        /* The rotation dial previews as you drag it; the commit lands on
+           change. Without this the dial only moved the table on release,
+           which is the same complaint as the rotate handle. */
+        if (f === 'rot' && input.type === 'range') {
+          input.oninput = () => {
+            const deg = ((Math.round(+input.value || 0)) % 360 + 360) % 360;
+            o.rot = deg;
+            const cell = root.querySelector(`[data-pds-table="${o.id}"], [data-pds-el="${o.id}"]`);
+            if (cell) cell.style.transform = `rotate(${deg}deg)`;
+            root.querySelectorAll('[data-pds-field="rot"]').forEach(n => {
+              if (n !== input) n.value = deg;
+            });
+            const out = root.querySelector('[data-pds-rotout]');
+            if (out) out.textContent = `${deg}°`;
+          };
+        }
       });
 
       /* Status pill row inside inspector */
@@ -5320,6 +5505,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let dragging = false;
   let startX, startY, origX, origY, transformX, transformY;
   let dragK = 1;
+  let blockFrame = 0;
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
@@ -5366,6 +5552,20 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     transformX = (ev.clientX - startX) / dragK;
     transformY = (ev.clientY - startY) / dragK;
     el.style.transform = `translate(${transformX}px, ${transformY}px) rotate(${t.rot||0}deg)`;
+    /* The table always follows the cursor 1:1 — a table that refuses to move
+       reads as a broken app, not as a rule. Illegality is shown, not enforced,
+       until release. The collision test is coalesced to one per frame. */
+    if (!blockFrame) blockFrame = requestAnimationFrame(() => {
+      blockFrame = 0;
+      const at = { x: Math.round(origX + transformX), y: Math.round(origY + transformY) };
+      const hits = pdsBlockers(state, t, at);
+      el.classList.toggle('is-blocked', hits.length > 0);
+      root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+      hits.forEach(b => {
+        const n = root.querySelector(`[data-pds-table="${b.id}"], [data-pds-el="${b.id}"]`);
+        if (n) n.classList.add('pds-blocker');
+      });
+    });
   });
 
   const finish = (ev) => {
@@ -5383,6 +5583,20 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     const g = pdsGeom(t);
     nx = Math.max(0, Math.min(plane.w - g.w, nx));
     ny = Math.max(0, Math.min(plane.h - g.h, ny));
+    if (blockFrame) { cancelAnimationFrame(blockFrame); blockFrame = 0; }
+    el.classList.remove('is-blocked');
+    root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+    /* Settle. A drop on top of something lands beside it — searched outward
+       from where you actually aimed, so the table still goes where you meant
+       it to go rather than springing back to where it started. */
+    if (selection.size <= 1 && pdsBlockers(state, t, { x: nx, y: ny }).length) {
+      const spot = pdsNearestFree(state, t, nx, ny, plane);
+      if (spot) { nx = spot.x; ny = spot.y; }
+      else {
+        nx = origX; ny = origY;
+        if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom);
+      }
+    }
     /* If shift-multi-drag, move all selected by the same delta */
     if (selection.size > 1 && selection.has(id)) {
       const dx = nx - origX;
@@ -5420,6 +5634,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   let dragging = false;
   let startX, startY, origX, origY;
   let dragK = 1;
+  let blockFrame = 0, lastX = 0, lastY = 0;
   const elObj = state.elements.find(e => e.id === id);
   if (!elObj) return;
   let lastTap = 0;
@@ -5445,11 +5660,25 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
     el.style.transform = `translate(${(ev.clientX - startX)/dragK}px, ${(ev.clientY - startY)/dragK}px) rotate(${elObj.rot||0}deg)`;
+    if (!blockFrame) blockFrame = requestAnimationFrame(() => {
+      blockFrame = 0;
+      const at = { x: Math.round(origX + (lastX - startX) / dragK), y: Math.round(origY + (lastY - startY) / dragK) };
+      const hits = pdsBlockers(state, elObj, at);
+      el.classList.toggle('is-blocked', hits.length > 0);
+      root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+      hits.forEach(b => {
+        const n = root.querySelector(`[data-pds-table="${b.id}"], [data-pds-el="${b.id}"]`);
+        if (n) n.classList.add('pds-blocker');
+      });
+    });
+    lastX = ev.clientX; lastY = ev.clientY;
   });
   const finish = (ev) => {
     if (!dragging) return;
     dragging = false;
-    el.classList.remove('is-dragging');
+    el.classList.remove('is-dragging', 'is-blocked');
+    if (blockFrame) { cancelAnimationFrame(blockFrame); blockFrame = 0; }
+    root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
     let nx = origX + (ev.clientX - startX) / dragK;
     let ny = origY + (ev.clientY - startY) / dragK;
     if (state.snap) {
@@ -5460,6 +5689,16 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     const g = pdsGeom(elObj);
     nx = Math.max(0, Math.min(plane.w - g.w, nx));
     ny = Math.max(0, Math.min(plane.h - g.h, ny));
+    /* Same settle rule as tables — a kitchen dropped over a table lands
+       against it, not through it. */
+    if (pdsBlockers(state, elObj, { x: nx, y: ny }).length) {
+      const spot = pdsNearestFree(state, elObj, nx, ny, plane);
+      if (spot) { nx = spot.x; ny = spot.y; }
+      else {
+        nx = origX; ny = origY;
+        if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom);
+      }
+    }
     elObj.x = nx; elObj.y = ny;
     refresh();
   };
@@ -6711,6 +6950,40 @@ const PDS_INLINE_CSS = `
     width:28px; height:28px; overflow:hidden;
   }
   .pds-pal-mini svg { display:block; max-width:100%; max-height:100%; }
+
+  /* ═══ v3 · collision, fluid resize, free rotation ════════════════════════ */
+
+  /* Illegal placement is SHOWN, never enforced mid-drag — the object keeps
+     following the cursor and settles legally on release. Red is the one
+     non-brand hue in the editor, and it only ever appears mid-gesture. */
+  .pds-tbl-cell.is-blocked,
+  .pds-el.is-blocked { filter:none; }
+  .pds-tbl-cell.is-blocked::after,
+  .pds-el.is-blocked::after {
+    content:''; position:absolute; inset:var(--pad, 0px);
+    border:1.5px solid #C0392B; border-radius:5px;
+    background:rgba(192,57,43,0.13);
+    pointer-events:none; z-index:3;
+  }
+  .pds-blocker::before {
+    content:''; position:absolute; inset:var(--pad, 0px);
+    border:1.5px dashed #C0392B; border-radius:5px;
+    pointer-events:none; z-index:2;
+  }
+
+  /* Handles keep their 11px look but carry a 24px hit pad, so the same
+     control works under a fingertip on a tablet. */
+  .pds-hdl::after {
+    content:''; position:absolute; left:50%; top:50%;
+    width:24px; height:24px; transform:translate(-50%, -50%);
+  }
+  .pds-hdl-rot::after { width:30px; height:30px; }
+
+  /* The dimension badge doubles as the angle readout during a rotate. */
+  .pds-tbl-cell.is-resizing .pds-dim,
+  .pds-el.is-resizing .pds-dim { background:var(--atlas); }
+
+  .pds-rot-num { width:56px; flex:none; text-align:center; padding:5px 4px; }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
