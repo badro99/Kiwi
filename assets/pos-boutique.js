@@ -338,6 +338,28 @@
     const c = window.KiwiClients && window.KiwiClients.get(id);
     return c ? fromKiwi(c) : null;
   }
+  /* Fidélité — la récompense de CE client, lue sur le programme réel du magasin
+     (KiwiClients.config). « Prête » = la carte est pleine / le seuil de points est
+     atteint. Le type se déduit du modèle : amount → une remise en % sur le ticket
+     (boutique « −10 % ») ; visit/product → un article offert (carte à tampons).
+     Renvoie null pour la démo (pas de KiwiClients) et pour la cliente de passage. */
+  function clReward(id) {
+    if (isDemoStore() || !window.KiwiClients || !id || id === 'passage') return null;
+    const raw = window.KiwiClients.get(id);
+    if (!raw) return null;
+    const cfg = (window.KiwiClients.config && window.KiwiClients.config()) || {};
+    const ready = window.KiwiClients.progress ? window.KiwiClients.progress(raw, cfg) >= 1 : false;
+    let kind = 'percent', value = 10, label = '−10 %';
+    if (cfg.model === 'amount') {
+      const txt = (cfg.amount && cfg.amount.reward) || '−10 %';
+      const m = String(txt).match(/(\d+)\s*%/);
+      kind = 'percent'; value = m ? +m[1] : 10; label = txt;
+    } else {
+      const txt = (cfg.model === 'product' ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward)) || '1 offert';
+      kind = 'free'; label = txt;
+    }
+    return { ready: ready, kind: kind, value: value, label: label };
+  }
   const IS_DEMO = isDemoStore();  // frozen for this session — gates the seeded demo sales/avoirs/ticket
 
   /* ───────────────────────── ventes du jour (seed, mi-journée) ──────────── */
@@ -465,10 +487,22 @@
   }
   const lineUnit  = (ln) => Math.round(P[ln.pid].price * (100 - ln.remise) / 100);
   const lineTotal = (ln) => lineUnit(ln) * ln.qty;
+  /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
+     Attachée au client via clientId : si on détache/change la cliente, elle cesse
+     de s'appliquer d'elle-même, sans avoir à la retirer partout à la main. */
+  function rewardDiscount(t, base) {
+    const r = t.reward;
+    if (!r || r.clientId !== t.client) return 0;
+    if (r.kind === 'percent') return Math.round(base * (r.value || 0) / 100);
+    if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
+    return 0;
+  }
   function ticketTotals(t) {
     const sub = t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0);
-    const total = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
-    return { sub, remise: sub - total, total };
+    const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
+    const reward = rewardDiscount(t, afterLines);
+    const total = Math.max(0, afterLines - reward);
+    return { sub, remise: sub - afterLines, reward, total };
   }
   const ticketCount = (t) => t.lines.reduce((s, ln) => s + ln.qty, 0);
   const caToday = () => SALES.reduce((s, x) => s + x.total, 0);
@@ -783,9 +817,30 @@
       <span class="edit">Changer</span></button>`;
   }
 
+  /* La récompense fidélité au moment d'encaisser : quand la cliente attachée a
+     assez de points / une carte pleine, une pastille « Utiliser » apparaît sous
+     sa fiche. Un geste : la remise s'applique au ticket, les points ne sont
+     débités qu'au paiement (redeem dans onPaid) — annulable tant qu'on n'a pas
+     encaissé. Rien en démo ni pour la cliente de passage. */
+  function rewardRow(t) {
+    if (!t.client || t.client === 'passage') return '';
+    if (t.reward && t.reward.clientId === t.client) {
+      return `<button class="bq-reward-row is-on" id="bq-reward-toggle"><i data-lucide="gift"></i>
+        <span class="l"><b>Récompense appliquée · ${esc(t.reward.label)}</b><span>Points débités à l'encaissement</span></span>
+        <span class="edit">Annuler</span></button>`;
+    }
+    const rw = clReward(t.client);
+    if (rw && rw.ready) {
+      return `<button class="bq-reward-row" id="bq-reward-toggle"><i data-lucide="gift"></i>
+        <span class="l"><b>Récompense prête · ${esc(rw.label)}</b><span>${rw.kind === 'percent' ? 'Remise fidélité sur ce ticket' : 'Un article offert sur ce ticket'}</span></span>
+        <span class="edit">Utiliser</span></button>`;
+    }
+    return '';
+  }
+
   function renderTicket() {
     const t = state.ticket;
-    const { remise, total } = ticketTotals(t);
+    const { remise, reward, total } = ticketTotals(t);
     const count = ticketCount(t);
     const el = $('#bq-ticket', root);
     el.innerHTML = `
@@ -793,7 +848,7 @@
         <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num} · par ${esc(STAFF.caissiere.name)}</span></div>
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
-      <div class="bq-tk-meta">${clientRow(t)}</div>
+      <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
       <div class="bq-tk-lines" id="bq-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
           <div class="bq-tk-empty">
@@ -805,6 +860,7 @@
         <div class="bq-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
           ${remise ? `<span class="rem">Remise · −${fmtMAD(remise)}</span>` : ''}
+          ${reward ? `<span class="rem rew">Récompense · −${fmtMAD(reward)}</span>` : ''}
         </div>
         <div class="bq-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="bq-validate" id="bq-validate" ${t.lines.length ? '' : 'disabled'}>
@@ -819,6 +875,19 @@
       toast('Ticket vidé, articles remis en stock');
     };
     $('#bq-tk-client', el).onclick = openClientModal;
+    const rwBtn = $('#bq-reward-toggle', el);
+    if (rwBtn) rwBtn.onclick = () => {
+      if (t.reward && t.reward.clientId === t.client) {
+        t.reward = null;
+        toast('Récompense retirée du ticket');
+      } else {
+        const rw = clReward(t.client);
+        if (!rw || !rw.ready) { toast('Pas encore de récompense pour cette cliente'); return; }
+        t.reward = { clientId: t.client, kind: rw.kind, value: rw.value, label: rw.label };
+        toast('Récompense appliquée', rw.label);
+      }
+      renderTicket(); icons();
+    };
     $('#bq-validate', el).onclick = checkout;
     $('#bq-tk-lines', el).onclick = (e) => {
       const minus = e.target.closest('[data-bq-minus]');
@@ -1977,10 +2046,14 @@
       })),
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
+        // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
+        // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
+        const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
           id: t.num, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, unit: lineUnit(ln), returned: false, note: '' })),
+          reward: rewardUsed ? t.reward.label : null,
           total,
         };
         SALES.unshift(sale);
@@ -2022,11 +2095,17 @@
           // object. Real store only; the local demo keeps its in-memory client. F5.
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
             try { window.KiwiClients.recordPurchase(c.id, { amount: total }); } catch (_) {}
+            // La récompense est portée : on brûle les points (KiwiClients.redeem
+            // retire le seuil / réinitialise la carte). Après recordPurchase, pour
+            // que l'achat compte d'abord, la récompense se déduise ensuite.
+            if (rewardUsed && window.KiwiClients.redeem) {
+              try { window.KiwiClients.redeem(c.id); } catch (_) {}
+            }
           }
           const pts = Math.round(total / 10);
           c.points += pts;
           c.achats += 1;
-          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}`;
+          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${t.reward.label}` : '');
         }
         queueIfOffline(`Vente ${sale.id}`);
         freshTicket();
@@ -2160,6 +2239,7 @@
 
     const stepCard = () => {
       const amount = due();
+      const cardParts = () => { const p = []; if (avoirPart) p.push(avoirPart); p.push({ m: 'carte', amount }); return p; };
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
@@ -2168,24 +2248,35 @@
           <div class="reader-disc is-pulsing" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="bq-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
           <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
+        </div>
+        <div class="bq-card-confirm" id="bq-card-confirm" hidden>
+          <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>
+          <button class="bq-btn ghost" id="bq-card-cancel">Paiement refusé · annuler</button>
         </div>`;
       icons(); closeBtns();
+      /* On simule l'aller au lecteur, puis — contrairement à avant — on n'encaisse
+         PAS tout seul : la caissière confirme d'un geste que le lecteur a approuvé.
+         AVANT, l'encaissement carte partait d'un minuteur de ~2,8 s ; fermer l'écran
+         carte pendant l'animation (réflexe normal, le vrai paiement se fait sur le
+         lecteur partenaire) perdait TOUTE la vente et ses points fidélité — d'où
+         « en carte la cliente ne gagne pas de points ». La confirmation explicite
+         enregistre la vente de façon fiable, exactement comme les espèces. */
       setTimeout(() => {
         const disc = $('#bq-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
         disc.classList.remove('is-pulsing');
         disc.classList.add('is-success');
         disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#bq-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
+        $('#bq-reader-status', el).textContent = 'Confirmez l\'encaissement sur le lecteur';
         $('#bq-reader-status', el).classList.add('is-success');
+        const cw = $('#bq-card-confirm', el);
+        if (cw) cw.hidden = false;
         icons();
-        setTimeout(() => {
-          const parts = [];
-          if (avoirPart) parts.push(avoirPart);
-          parts.push({ m: 'carte', amount });
-          commit(parts);
-        }, 900);
-      }, 1900);
+        const ok = $('#bq-card-ok', el);
+        if (ok) ok.onclick = () => commit(cardParts());
+        const cancel = $('#bq-card-cancel', el);
+        if (cancel) cancel.onclick = () => closeVeil('#bq-pay-veil');
+      }, 1400);
     };
 
     const commit = (parts) => {

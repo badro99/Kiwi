@@ -253,6 +253,32 @@
 .bq-tk-row .l span { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bq-tk-row .edit { font-size: 11px; color: var(--forest); font-weight: 600; flex-shrink: 0; }
 
+/* Récompense fidélité sur le ticket — pastille d'action sous la fiche cliente.
+   « Prête » = liseré mint, invitant ; « appliquée » (.is-on) = plein forest. */
+.bq-reward-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 11px; border-radius: 11px; width: 100%; text-align: left;
+  border: 1px solid var(--mint-edge); background: var(--mint-tint); color: var(--ink);
+  font-size: 12.5px; transition: border-color 140ms, background 140ms, transform 120ms;
+}
+.bq-reward-row:hover { border-color: var(--forest); }
+.bq-reward-row:active { transform: scale(0.99); }
+.bq-reward-row svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--forest); }
+.bq-reward-row .l { flex: 1; min-width: 0; }
+.bq-reward-row .l b { display: block; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bq-reward-row .l span { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bq-reward-row .edit { font-size: 11px; color: var(--forest); font-weight: 700; flex-shrink: 0; }
+.bq-reward-row.is-on { background: var(--forest); border-color: var(--forest); color: #fff; }
+.bq-reward-row.is-on svg,
+.bq-reward-row.is-on .edit { color: var(--mint, #7DF2B0); }
+.bq-reward-row.is-on .l span { color: rgba(255,255,255,0.72); }
+.bq-tk-tot .rem.rew { color: var(--forest); }
+
+/* Confirmation d'encaissement carte — bouton explicite (remplace l'auto-commit
+   par minuteur, qui perdait la vente si l'écran carte était fermé trop tôt). */
+.bq-card-confirm { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.bq-card-confirm[hidden] { display: none; }
+
 .bq-tk-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px; display: flex; flex-direction: column; gap: 6px; }
 .bq-tk-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
