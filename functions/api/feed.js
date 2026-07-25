@@ -14,7 +14,11 @@
 // in the same browser — silently ingested the PREVIOUS merchant's sales into the
 // new merchant's KPIs. Both are fixed the same way: the server decides.
 //
-//   · account session  → ALWAYS that account's own slug; ?merchant= is ignored.
+//   · account session  → the store it asked for when the registry confirms the
+//     account owns it, otherwise that account's own slug. It used to be ALWAYS
+//     the account slug, which is what leaked the boutique's sales into the
+//     restaurant's Commandes — see entitledMerchant() in auth/_lib.js, which now
+//     holds this rule for every endpoint that touches money.
 //   · operator (God mode, kiwi_op) → ?merchant= is honoured, that is the point.
 //   · neither (pitch demo on the staff passcode) → only the demo tenant.
 //
@@ -22,29 +26,32 @@
 // shared literal bucket ('default'), which two different unresolved stores would
 // both read and write — a cross-tenant channel by construction.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
+import {
+  json, readSession, readCookie, SESS_COOKIE, slugMerchant, entitledMerchant,
+} from '../auth/_lib.js';
 
-// The only tenant a gate-only (no account) caller may read: the pitch demo.
-const DEMO_MERCHANTS = { 'cafe-atlas': 1 };
-
-// The slug this request is entitled to, or '' when it is entitled to nothing.
-async function scopeMerchant(request, env, asked) {
-  // No auth configured at all (local static server / GitHub Pages) → this whole
-  // gate is inert, so keep the historical behaviour and serve what was asked.
-  if (!env.AUTH_SECRET) return asked;
-
+/* ── THE PRE-SPLIT BUCKET ─────────────────────────────────────────────────────
+ * Before stores had their own tenant, every sale an account rang up landed under
+ * slugMerchant(accounts.business) whichever shop it came from. Scoping per store
+ * is right going forward, but on its own it would open an empty history for the
+ * merchant whose ONE shop is simply named differently from the business ("Cafe
+ * Amira" the account, "Cafe Amira · Tanger" the store) — their whole till roll
+ * would vanish from the dashboard the day this deploys.
+ *
+ * So a store ALSO reads the old account bucket when the account has exactly one
+ * registered store: there is nowhere else those sales could have come from, so
+ * nothing is being guessed. An account with SEVERAL stores gets the clean split
+ * and its pre-split rows stay parked under the account slug — which shop rang
+ * them up is genuinely unknowable, and inventing an answer would just recreate
+ * the leak this fixes. Fails closed (no union) on any error. */
+async function preSplitBucket(env, aid, merchant, accSlug) {
+  if (!aid || !accSlug || merchant === accSlug) return '';
   try {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (sess && sess.aid) {
-      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-      // A signed-in merchant only ever reads itself — no matter what it asked for.
-      if (acc && acc.business) return slugMerchant(acc.business);
-      return '';
-    }
-  } catch (_) { /* fall through to the operator / demo paths */ }
-
-  if (await isOperator(request, env)) return asked;
-  return DEMO_MERCHANTS[asked] ? asked : '';
+    const row = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM merchant_config WHERE account_id = ?'
+    ).bind(aid).first();
+    return (row && Number(row.n) === 1) ? accSlug : '';
+  } catch (_) { return ''; }
 }
 
 export async function onRequestGet({ request, env }) {
@@ -54,15 +61,30 @@ export async function onRequestGet({ request, env }) {
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
-  const merchant = await scopeMerchant(request, env, asked);
-  if (!merchant) return json({ sales: [], cursor: since });
+  const merchant = await entitledMerchant(request, env, asked);
+  if (!merchant) return json({ sales: [], cursor: since, merchant: '' });
+
+  /* Which buckets this store reads: its own, plus the account's pre-split one
+   * when that is unambiguous. Binding `merchant` twice when there is no second
+   * bucket keeps ONE query shape — an IN (?, ?) with a duplicate is exactly the
+   * same result set as an equality test. */
+  let legacy = '';
+  try {
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (sess && sess.aid) {
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+      if (acc && acc.business) {
+        legacy = await preSplitBucket(env, sess.aid, merchant, slugMerchant(acc.business));
+      }
+    }
+  } catch (_) { /* no session (operator / demo) → own bucket only */ }
 
   let rows = [];
   try {
     const rs = await env.DB.prepare(
       'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
-      'FROM sales WHERE merchant = ? AND rowid > ? ORDER BY rowid ASC LIMIT 50'
-    ).bind(merchant, since).all();
+      'FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50'
+    ).bind(merchant, legacy || merchant, since).all();
     rows = (rs && rs.results) || [];
   } catch (e) {
     /* Older database, no `lines` column yet: serve the sales without the basket
@@ -73,8 +95,8 @@ export async function onRequestGet({ request, env }) {
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
-          'FROM sales WHERE merchant = ? AND rowid > ? ORDER BY rowid ASC LIMIT 50'
-        ).bind(merchant, since).all();
+          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50'
+        ).bind(merchant, legacy || merchant, since).all();
         rows = (rs && rs.results) || [];
       } catch (_) {
         return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
@@ -98,6 +120,10 @@ export async function onRequestGet({ request, env }) {
     return r;
   });
 
+  /* `merchant` is the tenant actually SERVED, which is not always the one asked
+   * for — an unclaimed store still snaps back to the account slug. Reporting it
+   * makes a mis-scoped feed visible from the outside instead of something you
+   * have to infer from whose sales showed up. */
   const cursor = rows.length ? rows[rows.length - 1].cursor : since;
-  return json({ sales: rows, cursor });
+  return json({ sales: rows, cursor, merchant });
 }

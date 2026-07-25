@@ -224,12 +224,27 @@ export async function mirrorLead(env, lead) {
  *   · paired till     → the store it was bound to (checked FIRST: on a
  *                       multi-store account the till, not the session, knows
  *                       which établissement is ringing)
- *   · account session → that account's own slug, whatever was asked for
+ *   · account session → the store it asked for WHEN THE REGISTRY SAYS IT OWNS
+ *                       IT, otherwise its own account slug
  *   · operator        → whatever was asked; that is the point of God mode
  *   · gate only       → demo tenants, nothing else
  *
  * Returns '' when the caller is entitled to nothing — callers must refuse. */
 export const DEMO_MERCHANTS = { 'cafe-atlas': 1, 'maison-mansour': 1, 'spa-bahia': 1 };
+
+/* Who owns this store? '' = a row that predates the registry (or one an operator
+ * seeded) and belongs to nobody yet; null = the column isn't there, i.e. the
+ * database has not been migrated. Callers treat both the same way — fall back to
+ * the account slug — which is what makes the widening below safe to deploy
+ * before the ALTER runs. config.js, menu.js and _private.js each carry an older
+ * copy of this with identical semantics; new endpoints should import this one. */
+export async function storeOwner(env, slug) {
+  try {
+    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return row ? (row.account_id || '') : null;
+  } catch (_) { return null; }
+}
 
 export async function entitledMerchant(request, env, asked, opts) {
   asked = String(asked || '').slice(0, 64);
@@ -245,7 +260,19 @@ export async function entitledMerchant(request, env, asked, opts) {
     const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
     if (sess && sess.aid && env.DB) {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-      return (acc && acc.business) ? slugMerchant(acc.business) : '';
+      if (!(acc && acc.business)) return '';
+      const accSlug = slugMerchant(acc.business);
+      /* One login holds SEVERAL établissements, and money is the one thing that
+       * must never cross between them. Collapsing every store onto accounts
+       * .business is exactly what put the boutique's takings in the restaurant's
+       * Commandes: both dashboards polled that single tenant, and both tills
+       * wrote into it, so the two shops shared one till roll. The registry says
+       * which stores are really this account's — config.js and _private.js
+       * already resolve their tenant this way; the sales path was the one left
+       * behind. An unowned or unclaimed slug still snaps back to the account,
+       * so nothing widens beyond the caller's own shops. */
+      if (asked && asked !== accSlug && (await storeOwner(env, asked)) === sess.aid) return asked;
+      return accSlug;
     }
   } catch (_) { /* fall through to operator / demo */ }
   try { if (await isOperator(request, env)) return asked; } catch (_) {}
