@@ -97,8 +97,28 @@
       cashBuffer: null, staffCount: null, contribRatio: null,
       dailyNet: null, netPerOrder: null,
       breakEvenRev: null, breakEvenOrdersDay: null, marginOfSafety: null,
-      mtdRevenue: tot.revenue, mtdDays: 1, daysInMonth: 30,
+      ...monthToDate(vid),
     };
+  }
+
+  /* Le mois en cours, vraiment mesuré. `mtdDays: 1` codé en dur faisait dire à
+     l'assistant « sur vos 1 premiers jours du mois (2 889 MAD encaissés), le
+     rythme est de 2 889 MAD/jour » — le chiffre d'affaires de TOUTE l'histoire
+     du commerce présenté comme une recette quotidienne (KiwiSales.totals cumule
+     sans remise à zéro). Toute projection bâtie dessus était fausse d'un facteur
+     égal au nombre de jours d'activité. On additionne donc les ventes du mois
+     courant, et on divise par les jours ÉCOULÉS de ce mois. */
+  function monthToDate(vid) {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    let revenue = 0;
+    try {
+      (window.KiwiSales && window.KiwiSales.list ? (window.KiwiSales.list(vid) || []) : []).forEach((e) => {
+        if (e && +e.ts >= first) revenue += Math.max(0, +e.amount || 0);
+      });
+    } catch (_) { revenue = 0; }
+    return { mtdRevenue: revenue, mtdDays: now.getDate(), daysInMonth };
   }
   function syncProfile() { B = buildProfile(); return B; }
 

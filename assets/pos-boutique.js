@@ -1988,7 +1988,16 @@
             const pieces = t.lines.reduce((n, ln) => n + ln.qty, 0);
             const name = (first && P[first.pid]) ? P[first.pid].name : 'Vente';
             const label = t.lines.length > 1 ? (name + ' +' + (pieces - first.qty) + ' art.') : name;
-            window.KiwiLive.postSale({ amount: total, method: method, label: label, ref: sale.id, time: sale.at });
+            /* On remonte l'argent QUI RENTRE, pas la valeur du ticket. Un avoir
+               n'est pas un encaissement : c'est la consommation d'une dette née
+               d'une vente déjà comptée. Remonter le total, c'est compter deux
+               fois — un caftan à 1 200 rendu puis réglé avec l'avoir affichait
+               2 400 MAD de recette pour 1 200 MAD réellement pris. Réglé
+               entièrement en avoir, il ne reste rien à remonter et postSale
+               (montant ≤ 0) passe son tour, ce qui est le bon comptage.
+               sale.total garde la valeur du ticket : c'est la vente, pas la caisse. */
+            const cashIn = (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
+            window.KiwiLive.postSale({ amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at });
           }
         } catch (_) {}
         let ptsLine = '';
