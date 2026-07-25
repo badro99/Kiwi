@@ -8141,9 +8141,15 @@
         const real = miCustomHeroRec(v);
         if (real) return real;
         const W = {
-          fr: { title: 'Votre tableau de bord est prêt', obs: "Aucune donnée pour l'instant, enregistrez vos ventes et Kiwi AI commencera à repérer vos heures fortes, vos marges et vos opportunités.", act: '→ Enregistrez votre première vente pour démarrer.' },
-          en: { title: 'Your dashboard is ready', obs: 'No data yet, record your sales and Kiwi AI will start spotting your peak hours, margins and opportunities.', act: '→ Record your first sale to get started.' },
-          ar: { title: 'لوحة التحكم جاهزة', obs: 'لا توجد بيانات بعد، سجّل مبيعاتك وسيبدأ Kiwi AI في رصد ساعات الذروة والهوامش والفرص.', act: '→ سجّل أول عملية بيع للبدء.' },
+          /* This used to promise margins. It cannot: a margin needs the cost of
+           * what was sold, and a till only ever knows the price. Recording
+           * sales gets the merchant their hours, their best sellers and their
+           * average basket — real, immediately, from the first ticket. Margin
+           * arrives when they enter their costs, and the copy now says which
+           * is which instead of promising the second to sell the first. */
+          fr: { title: 'Votre tableau de bord est prêt', obs: "Aucune donnée pour l'instant. Dès votre première vente, Kiwi lit vos heures fortes, vos articles qui partent et votre panier moyen. Pour vos marges, il faudra aussi renseigner vos coûts, une vente seule ne les dit pas.", act: '→ Enregistrez votre première vente pour démarrer.' },
+          en: { title: 'Your dashboard is ready', obs: 'No data yet. From your first sale, Kiwi reads your peak hours, what is selling and your average basket. Margins need your costs on top, a sale alone does not carry them.', act: '→ Record your first sale to get started.' },
+          ar: { title: 'لوحة التحكم جاهزة', obs: 'لا توجد بيانات بعد. من أول عملية بيع، يقرأ كيوي ساعات الذروة والأصناف التي تُباع ومتوسط السلة. أما الهوامش فتحتاج تكاليفك أيضاً، فالبيع وحده لا يحملها.', act: '→ سجّل أول عملية بيع للبدء.' },
         };
         return W[fusionLang()] || W.fr;
       }

@@ -221,6 +221,21 @@ section('Invented figures are removed from model answers');
 
     const small = R('Comptez 3 employés en salle le samedi.');
     t('a small operational number is left alone', small.redacted === 0, small.text);
+
+    const hypo = R('Si vous augmentez vos prix de 7 %, la marge suit presque entièrement.');
+    t('a hypothesis keeps its percentage', hypo.redacted === 0, hypo.text);
+
+    /* Counts live in separate namespaces. Café Atlas has a dish that sold
+     * exactly 312 units, and with one flat set that plate of food vouched for
+     * "vos 312 clients fidèles" — a customer count Kiwi has never measured. */
+    const staffLie = R('Vos 47 employés couvrent le service du samedi.');
+    t('an invented headcount does not survive', staffLie.redacted === 1, staffLie.text);
+
+    const orders = R(`Vous avez fait ${B.ordersPerMonth} ventes ce mois-ci.`);
+    t('a real order count survives', orders.redacted === 0, orders.text);
+
+    const fakeOrders = R('Vous avez fait 7 400 ventes ce mois-ci.');
+    t('an invented order count does not survive', fakeOrders.redacted === 1, fakeOrders.text);
   }
 }
 
@@ -280,6 +295,35 @@ section('The demo clock does not run on a real session');
     runClock(DEMO, 'v1mrz9', false).getSimState() === null);
   const demo = runClock(DEMO, 'cafeAtlas', false).getSimState();
   t('the local demo still gets its day', demo && demo.cumRevenue >= 0 && demo.venue === 'cafeAtlas');
+
+  /* Same class of bug, second home. KiwiVenue.getMenuItems() answers for a
+   * demo venue id with Café Atlas's carte, so a real session on a non-custom
+   * venue got a perfectly computed insight about somebody else's restaurant.
+   * Real arithmetic on the wrong menu is still the wrong answer. */
+  const insightsSrc = fs.readFileSync(path.join(ROOT, 'assets', 'insights.js'), 'utf8');
+  const MENU = [
+    { name: 'Tajine', price: 75, cost: 26, unitsThisMonth: 412 },
+    { name: 'Thé', price: 15, cost: 3, unitsThisMonth: 1890 },
+    { name: 'Pastilla', price: 90, cost: 34, unitsThisMonth: 168 },
+    { name: 'Salade', price: 35, cost: 9, unitsThisMonth: 96 },
+  ];
+  const runInsights = (env, isCustom) => {
+    const ctx = makeCtx({ lang: 'fr' });
+    ctx.window.KiwiEnv = env;
+    ctx.window.KiwiVenue = { getMenuItems: () => MENU, isCustom: () => !!isCustom };
+    vm.createContext(ctx);
+    vm.runInContext(insightsSrc, ctx, { filename: 'insights.js' });
+    return ctx.window.KiwiInsights;
+  };
+  t('a real session on a demo venue gets no insight at all',
+    runInsights(REAL, false).compute().length === 0);
+  t('a real session on its OWN venue still gets insights',
+    runInsights(REAL, true).compute().length > 0);
+  const demoIns = runInsights(DEMO, false).compute();
+  t('the local demo keeps its insights', demoIns.length > 0);
+  t('every insight declares measured or estimated',
+    demoIns.every((i) => i.basis === 'measured' || i.basis === 'estimated'),
+    JSON.stringify(demoIns.map((i) => i.id + ':' + i.basis)));
 }
 
 /* ── 7 · permissions ───────────────────────────────────────────────────────
@@ -291,18 +335,34 @@ section('Role permissions (staff badge cannot read the P&L)');
   const w = load({ lang: 'fr', role: 'staff' });
   const MONEY = [
     'quel est mon bénéfice net', 'quelles sont mes charges', 'combien je paie de salaires',
-    'quelle est ma trésorerie', 'quelle est ma marge nette',
+    'quelle est ma trésorerie', 'quelle est ma marge nette', 'mon loyer représente combien',
+    'combien je verse à la CNSS', 'quel est mon seuil de rentabilité',
+    'combien vaut mon affaire', "quelle est ma masse salariale",
   ];
   let through = 0;
   for (const q of MONEY) {
     const r = w.KiwiAgentAsk(q);
     const text = flatten(r);
-    // The refusal must not carry the figures it is refusing to show.
-    const nums = numbersIn(text);
-    const leaked = nums.some((v) => v >= 10000);
-    if (leaked) { through++; fail(`staff asked "${q}" and got a five-figure amount back`); }
+    // The refusal must not carry the figures it is refusing to show, and it
+    // must BE a refusal — falling through to the model is not an answer.
+    if (!r || !r.refused) { through++; fail(`staff asked "${q}" and was not refused (route answered instead)`); continue; }
+    if (numbersIn(text).some((v) => v >= 10000)) { through++; fail(`staff asked "${q}" and got a five-figure amount back`); }
   }
   if (!through) ok(`${MONEY.length} P&L questions refused for a staff badge`);
+
+  /* Over-refusing would make the assistant useless to the people on the till
+   * all day. The shop floor keeps the shop floor. */
+  const FLOOR = ['mon chiffre d’affaires', 'quel est mon produit le plus vendu', 'mon stock'];
+  let blocked = 0;
+  for (const q of FLOOR) {
+    const r = w.KiwiAgentAsk(q);
+    if (r && r.refused) { blocked++; fail(`staff was refused "${q}" — that is their own shop floor`); }
+  }
+  if (!blocked) ok(`${FLOOR.length} shop-floor questions still answered for a staff badge`);
+
+  const wm = load({ lang: 'fr', role: 'manager' });
+  const mgr = wm.KiwiAgentAsk('quelle est ma marge');
+  t('a manager is refused the margins too (the sidebar hides them)', !!(mgr && mgr.refused));
 
   const wo = load({ lang: 'fr', role: 'owner' });
   const ownerText = flatten(wo.KiwiAgentAsk('quel est mon bénéfice net'));

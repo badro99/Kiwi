@@ -104,6 +104,17 @@
   function compute(venueKey, langOverride) {
     const KV = window.KiwiVenue;
     if (!KV || !KV.getMenuItems) return [];
+    /* Whose carte is this? getMenuItems() answers for a custom venue with the
+     * merchant's own menu, and for a demo venue id with Café Atlas's. A real
+     * session sitting on a demo venue id — which happens, it is the case
+     * buildProfile() calls "real-but-not-custom" — would therefore get a
+     * beautifully computed, entirely genuine insight about somebody else's
+     * restaurant. The arithmetic being real does not make the answer true. */
+    try {
+      const real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+      const custom = !!(KV.isCustom && KV.isCustom(venueKey));
+      if (real && !custom) return [];
+    } catch (_) { return []; }
     let items;
     try { items = KV.getMenuItems(venueKey) || []; } catch (_) { return []; }
 

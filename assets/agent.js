@@ -175,9 +175,16 @@
       note: 'ليس رفضًا مني: هو نفس الصلاحية المطبَّقة في قائمتك الجانبية التي تُخفي أصلًا الهوامش والمصاريف والأجور. إذا احتجت هذا الرقم فهو متوفّر لدى صاحب الحساب.',
     },
   };
+  /* The books, as words rather than as routes. Deliberately excludes sales,
+   * baskets, orders, products and clients — a shop-floor badge is entitled to
+   * all of those, and over-refusing would make the assistant useless to the
+   * people who use the till all day. */
+  const BOOKS_TOPIC_RX = /marge|rentab|seuil|benefic|resultat\s+net|seuil\s+de|charge|depense|loyer|salaire|\bpaie\b|masse\s+salariale|tresorerie|\bcash\b|cnss|\bimpot|\btva\b|valorisa|cout\s+matiere|margin|profit|payroll|salary|salaries|rent\b|expense|cash\s+flow|break[- ]?even|valuation|هامش|ربح|خزينة|اجور|رواتب|مصاريف|كراء|عتبة/;
   function sForbidden() {
     const p = PERM[L] || PERM.fr;
-    return { text: p.text, note: p.note };
+    /* `refused` is for the telemetry hook, not the renderer — a permissions
+     * regression should be visible as a rate, not discovered by a merchant. */
+    return { text: p.text, note: p.note, refused: true };
   }
 
   /* ─────────────── LANGUAGE ─────────────── */
@@ -402,6 +409,16 @@
         loadFail: 'Échec du chargement.',
         loadFailMsg: 'Je n’ai pas pu charger l’assistant IA (connexion, mémoire ou navigateur incompatible). Mes calculs financiers restent pleinement disponibles.',
         runErr: 'Une erreur est survenue côté assistant IA. Réessayez, ou demandez-moi un calcul précis.',
+        cancel: 'Annuler',
+        stop: 'Arrêter',
+        cancelled: 'Téléchargement annulé. Mes calculs restent disponibles, et vous pourrez relancer l’installation quand vous voudrez.',
+        queued: (n) => n === 1 ? 'Je garde votre question, j’y réponds dès que l’assistant est prêt.' : `Je garde vos ${n} questions, j’y réponds dès que l’assistant est prêt.`,
+        timeout: 'Le téléchargement s’est arrêté en route, sans erreur du navigateur — le plus souvent le wifi de la boutique ou un pare-feu. Mes calculs restent disponibles.',
+        diag: (c) => `Code à donner au support : ${c}`,
+        unfitAdapter: 'Votre navigateur annonce WebGPU mais aucune carte graphique ne répond. L’assistant libre ne pourra pas s’exécuter ici, et je préfère vous le dire maintenant plutôt qu’après 1,2 Go de téléchargement.',
+        unfitSpace: 'Il n’y a pas assez d’espace de stockage libre dans ce navigateur pour garder le modèle (1,2 Go). Libérez de la place, ou continuez avec mes calculs, qui ne demandent rien.',
+        unfitMemory: 'Cet appareil a trop peu de mémoire pour faire tourner le modèle sans bloquer votre caisse. Je ne vais pas le tenter.',
+        unfitTail: 'Ce que je calcule reste entier : embauche, prix, seuil de rentabilité, prévisions, marges, charges, trésorerie, et vos ventes par article, par client et par jour.',
       },
       acct: {
         hub: 'Je suis aussi votre comptable, teneur de livres, fiscaliste et gestionnaire de paie, tout est réuni dans votre Comptabilité : livre, états financiers, TVA & impôts, et paie.',
@@ -572,6 +589,16 @@
         loadFail: 'Loading failed.',
         loadFailMsg: 'I couldn\'t load the AI assistant (connection, memory, or an incompatible browser). My financial calculations remain fully available.',
         runErr: 'Something went wrong on the AI assistant side. Try again, or ask me for a precise calculation.',
+        cancel: 'Cancel',
+        stop: 'Stop',
+        cancelled: 'Download cancelled. My calculations are still here, and you can start the install again whenever you like.',
+        queued: (n) => n === 1 ? "I'll hold your question and answer it as soon as the assistant is ready." : `I'll hold your ${n} questions and answer them as soon as the assistant is ready.`,
+        timeout: 'The download stalled part-way with no browser error — usually shop wifi or a firewall. My calculations are still available.',
+        diag: (c) => `Code for support: ${c}`,
+        unfitAdapter: 'Your browser advertises WebGPU but no graphics adapter answers. The open model cannot run here, and I would rather say so now than after a 1.2 GB download.',
+        unfitSpace: 'There is not enough free storage in this browser to keep the model (1.2 GB). Free some space, or carry on with my calculations, which need none.',
+        unfitMemory: 'This device has too little memory to run the model without freezing your till. I am not going to try.',
+        unfitTail: 'What I calculate is untouched: hiring, pricing, break-even, forecasts, margins, costs, cash, and your sales by item, by customer and by day.',
       },
       acct: {
         hub: 'I\'m also your accountant, bookkeeper, tax adviser and payroll manager, it\'s all together in your Accounting: ledger, financial statements, VAT & tax, and payroll.',
@@ -744,6 +771,16 @@
         loadFail: 'فشل التحميل.',
         loadFailMsg: 'تعذّر تحميل مساعد الذكاء الاصطناعي (الاتصال أو الذاكرة أو متصفّح غير متوافق). تبقى حساباتي المالية متاحة بالكامل.',
         runErr: 'حدث خطأ من جهة مساعد الذكاء الاصطناعي. أعد المحاولة، أو اطلب مني حساباً دقيقاً.',
+        cancel: 'إلغاء',
+        stop: 'إيقاف',
+        cancelled: 'تمّ إلغاء التنزيل. حساباتي ما زالت متاحة، ويمكنك إعادة التثبيت متى شئت.',
+        queued: (n) => n === 1 ? 'سأحتفظ بسؤالك وأجيب عنه فور جهوز المساعد.' : `سأحتفظ بأسئلتك الـ${n} وأجيب عنها فور جهوز المساعد.`,
+        timeout: 'توقّف التنزيل في منتصفه دون خطأ من المتصفّح — غالباً شبكة المحل أو جدار حماية. حساباتي ما زالت متاحة.',
+        diag: (c) => `رمز للدعم التقني: ${c}`,
+        unfitAdapter: 'متصفّحك يعلن دعم WebGPU لكن لا تستجيب أي بطاقة رسومات. لن يعمل النموذج المفتوح هنا، وأفضّل إخبارك الآن بدل أن أخبرك بعد تنزيل 1,2 غيغابايت.',
+        unfitSpace: 'لا توجد مساحة تخزين كافية في هذا المتصفّح للاحتفاظ بالنموذج (1,2 غيغابايت). أفرغ بعض المساحة، أو تابع مع حساباتي التي لا تحتاج شيئاً.',
+        unfitMemory: 'ذاكرة هذا الجهاز أقل من أن تشغّل النموذج دون تجميد صندوقك. لن أحاول.',
+        unfitTail: 'ما أحسبه يبقى كاملاً: التوظيف، الأسعار، عتبة الربحية، التوقّعات، الهوامش، المصاريف، الخزينة، ومبيعاتك حسب الصنف والزبون واليوم.',
       },
       acct: {
         hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك، كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
@@ -2857,13 +2894,24 @@
     return { kind: null, raw, q };
   }
 
+  /* Which scenario answered the last question — read by the telemetry hook in
+   * ask(). Kept out of the reply object so nothing renders it by accident. */
+  let lastRouteKind = null;
   function respond(rawIn) {
     syncProfile();  // reason off whatever venue is active right now
     const d = decideRoute(rawIn);
+    lastRouteKind = d.kind === null ? 'llm' : d.kind;
     /* Permission is checked BEFORE the scenario runs — a refusal must never be
      * computed from figures this reader is not allowed to see, or the numbers
      * end up in the object even when the sentence declines. */
     if (BOOKS_ROUTES[d.kind] && !seesBooks()) return sForbidden();
+    /* And by TOPIC, not only by route. "Quelle est ma trésorerie" does not
+     * match a scenario cleanly, so it fell through to the model — where the
+     * restricted prompt withholds the books, but the merchant gets a vague
+     * paragraph instead of a straight answer about why. One vocabulary, one
+     * reply, whichever way the question is phrased. Owners never reach this
+     * line, so routing for them is untouched. */
+    if (!seesBooks() && BOOKS_TOPIC_RX.test(norm(fixDigits(rawIn)))) return sForbidden();
     /* The staff badge has no Équipe page; it gets no roster lookups either. */
     if (d.kind === 'lookup' && d.spec && d.spec.entity === 'staff' && accessTier() === 'staff') return sForbidden();
     // Remember amount-driven scenarios so the next correction can refine them.
@@ -3194,7 +3242,55 @@
     status: 'idle',
     engine: null,
     progress: 0,
+    /* A QUEUE, not a slot. `LLM.pending = question` meant a merchant who typed
+     * a second question during the 1,2 Go download silently lost the first —
+     * and the one that survived was the one they had already given up on. */
+    pending: [],
+    cancelled: false,
+    diag: '',
+    lastProgressAt: 0,
   };
+  /* Roughly what the weights need on disk, with room for the browser's own
+   * bookkeeping. Checked BEFORE the download, not discovered at 94 %. */
+  const LLM_NEED_BYTES = 1.6 * 1024 * 1024 * 1024;
+  /* No progress callback for this long means the transfer is dead. WebLLM has
+   * no timeout of its own, so without this the merchant watches a bar that
+   * will never move again, with no way to leave. */
+  const LLM_STALL_MS = 60000;
+  /* A code the merchant can read down the phone. Short, no personal data. */
+  function diagCode() {
+    let n = 0;
+    try { n = Date.now() % 1679616; } catch (_) { n = 0; }
+    return 'KAI-' + n.toString(36).toUpperCase().padStart(4, '0');
+  }
+  /* A device that cannot run the model should stop being asked to try. */
+  function llmDisabled() {
+    try { return localStorage.getItem('kiwiAiLocal') === 'off'; } catch (_) { return false; }
+  }
+  function disableLlm() {
+    try { localStorage.setItem('kiwiAiLocal', 'off'); } catch (_) {}
+  }
+
+  /* Can this machine actually do it? `'gpu' in navigator` only says the API is
+   * declared. Asking for an adapter, for free disk and for memory takes a few
+   * milliseconds and replaces the worst outcome available here: a shop till on
+   * shop wifi spending eight minutes downloading 1,2 Go to arrive at "Failed to
+   * fetch". A straight no, now, is kinder and truer. */
+  async function llmCapability() {
+    if (!('gpu' in navigator)) return { ok: false, why: 'noGpu' };
+    let adapter = null;
+    try { adapter = await navigator.gpu.requestAdapter(); } catch (_) { adapter = null; }
+    if (!adapter) return { ok: false, why: 'unfitAdapter' };
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const est = await navigator.storage.estimate();
+        const free = (est && est.quota ? est.quota : 0) - (est && est.usage ? est.usage : 0);
+        if (est && est.quota && free < LLM_NEED_BYTES) return { ok: false, why: 'unfitSpace' };
+      }
+    } catch (_) {}
+    if (navigator.deviceMemory && navigator.deviceMemory < 4) return { ok: false, why: 'unfitMemory' };
+    return { ok: true };
+  }
 
   /* Qwen can emit <think>…</think> reasoning blocks. Qwen3.5 defaults to
    * non-thinking (see LLM above), but we strip defensively so the merchant
@@ -3360,15 +3456,40 @@
     if (!B.partial) [B.grossMargin, B.netMargin, 100 - B.grossMargin, B.contribRatio * 100, B.marginOfSafety].forEach(add);
     return s;
   }
-  /* The counts we hold: orders, staff, days, and units sold per menu item. */
-  function knownCounts() {
+  /* The counts we hold, kept in SEPARATE NAMESPACES on purpose.
+   *
+   * One flat set let a number vouch for itself across dimensions it has
+   * nothing to do with: Café Atlas has a dish that sold exactly 312 units, so
+   * "vos 312 clients fidèles reviennent chaque semaine" — a customer count we
+   * have never measured — passed the guard on the strength of a plate of food.
+   * A count is only cited if we hold that KIND of count. */
+  function knownCounts(kind) {
     const s = new Set();
     const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n)); };
-    [B.ordersPerMonth, B.ordersPerDay, B.staffCount, B.daysOpen, B.mtdDays, B.daysInMonth].forEach(add);
-    try {
-      (window.KiwiMenu && window.KiwiMenu.items ? window.KiwiMenu.items() : []).forEach((it) => add(it.units));
-    } catch (_) {}
+    [B.daysOpen, B.mtdDays, B.daysInMonth].forEach(add);   // calendar, always fair
+    if (kind === 'sale') [B.ordersPerMonth, B.ordersPerDay].forEach(add);
+    if (kind === 'staff') add(B.staffCount);
+    if (kind === 'item') {
+      try {
+        (window.KiwiMenu && window.KiwiMenu.items ? window.KiwiMenu.items() : []).forEach((it) => add(it.units));
+      } catch (_) {}
+    }
+    if (kind === 'customer') {
+      try {
+        const KC = window.KiwiClients;
+        if (KC && KC.count) add(KC.count());
+        if (KC && KC.list) add((KC.list() || []).length);
+      } catch (_) {}
+    }
     return s;
+  }
+  /* Which kind of thing is being counted, from the noun that follows it. */
+  function countKind(noun) {
+    const n = String(noun || '').toLowerCase();
+    if (/client|customer|زب/.test(n)) return 'customer';
+    if (/vente|commande|ticket|sale|order|visite|visit|مبيع|طلب/.test(n)) return 'sale';
+    if (/employ|staff|موظف/.test(n)) return 'staff';
+    return 'item';
   }
 
   /* A lever the merchant could pull, versus a claim about what happened. We
@@ -3377,7 +3498,7 @@
   const HYPO_RX = /\bsi\b|\bpourrai[ts]\b|\bpeut\b|\bpeuvent\b|\bpermettrait\b|essay|\bteste[rz]?\b|imagin|suppos|\bvise[rz]?\b|augment|baiss|réduis|reduis|\bhausse\b|\bobjectif\b|\bif\b|\bcould\b|\bwould\b|\bmight\b|\btry\b|\btarget\b|\brais(?:e|ing)\b|\bincreas|\bcut\b|\bلو\b|\bإذا\b|جرّب|حاول|هدف/i;
   /* Only a sentence that names a business metric can be making a business
    * claim. Keeps the redactor off phone numbers, addresses and dates. */
-  const METRIC_RX = /marge|rentab|chiffre|panier|benefic|bénéfic|croissance|vente|client|commande|cout|coût|charge|tresorerie|trésorerie|salaire|margin|revenue|basket|profit|growth|sales|customer|order|cost|cash|payroll|هامش|مبيعات|ربح|زبون|زبائن|تكلفة|خزينة|طلب/i;
+  const METRIC_RX = /marge|rentab|chiffre|panier|benefic|bénéfic|croissance|vente|client|commande|cout|coût|charge|tresorerie|trésorerie|salaire|employ|effectif|equipe|stock|margin|revenue|basket|profit|growth|sales|customer|order|cost|cash|payroll|staff|headcount|هامش|مبيعات|ربح|زبون|زبائن|تكلفة|خزينة|طلب/i;
   const COUNTABLE_RX = /clients?|ventes?|commandes?|articles?|couverts?|tickets?|employ[eé]s?|visites?|customers?|sales|orders|items|covers|visits|staff|زبون|زبناء|زبائن|مبيعة|طلبات?/;
 
   /* Remove every figure this answer cannot support, and report how many went.
@@ -3390,10 +3511,11 @@
     try {
       const knownM = Array.from(knownFigures());
       const knownP = Array.from(knownPercents());
-      const knownC = Array.from(knownCounts());
       const citedM = (v) => knownM.some((k) => Math.abs(k - v) <= Math.max(50, v * 0.01));
       const citedP = (v) => knownP.some((k) => Math.abs(k - v) <= 0.6);
-      const citedC = (v) => knownC.some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
+      /* Per namespace: a dish sold 312 times does not make 312 CLIENTS a
+       * figure we hold. */
+      const citedC = (v, kind) => Array.from(knownCounts(kind)).some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
       const num = (raw) => parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
 
       /* Sentence by sentence — "is this a hypothesis?" is only answerable
@@ -3421,7 +3543,7 @@
         c = c.replace(new RegExp('(\\d[\\d  . ]*)\\s+((?:[a-zà-ÿ\'’]+\\s+){0,1}(?:' + COUNTABLE_RX.source + '))', 'gi'),
           (m, d, noun) => {
             const v = num(d);
-            if (!isFinite(v) || v < 20 || citedC(v)) return m;
+            if (!isFinite(v) || v < 20 || citedC(v, countKind(noun))) return m;
             n++; return mark + ' ' + noun;
           });
         return c;
@@ -3770,6 +3892,10 @@
       background:var(--atlas); color:#fff; cursor:pointer; transition:transform 150ms var(--fa-ease), background 150ms;
       box-shadow:0 10px 24px -12px rgba(11,110,79,.6); }
     .fa-llm-btn:hover { background:var(--riad); transform:translateY(-1px); }
+    .fa-rate { background:none; border:1px solid var(--n-200); border-radius:999px; padding:3px 9px;
+               font-size:13px; cursor:pointer; line-height:1.4; opacity:0.55; transition:opacity 140ms, border-color 140ms; }
+    .fa-rate:hover { opacity:1; border-color:var(--atlas); }
+    .fa-rated { opacity:0.75; font-size:13px; }
     .fa-llm-prog { height:8px; border-radius:999px; background:var(--n-200); overflow:hidden; margin:13px 0 8px; }
     .fa-llm-bar { height:100%; width:0%; border-radius:999px;
       background:linear-gradient(90deg,var(--atlas),var(--mint)); transition:width 240ms ease; }
@@ -4005,7 +4131,18 @@
       const hero = thread.querySelector('[data-fa-hero]');
       if (hero) hero.remove();
       pushUser(t);
+      const t0 = Date.now();
       const reply = respond(t);
+      /* No question text goes in — see the header of assets/ai-telemetry.js.
+       * Route, provenance, tier, language, latency. That is enough to know
+       * what is failing without keeping a log of what a merchant asks about
+       * their own money. */
+      logAi({
+        route: lastRouteKind,
+        provenance: !reply ? 'model' : reply.refused ? 'refused' : lastRouteKind === 'lookup' ? 'lookup' : 'deterministic',
+        ms: Date.now() - t0,
+        qLength: t.length,
+      });
       if (reply) {
         const typing = pushTyping();
         setTimeout(() => { typing.remove(); pushAgent(replyHtml(reply)); }, 460 + Math.random() * 300);
@@ -4014,19 +4151,45 @@
       routeToLlm(t);
     }
 
-    function routeToLlm(question) {
+    function logAi(e) {
+      try {
+        if (!window.KiwiAiTelemetry) return;
+        window.KiwiAiTelemetry.log(Object.assign({ tier: accessTier(), lang: L }, e));
+      } catch (_) {}
+    }
+
+    /* The deterministic-only answer: what Kiwi computes, said plainly. Used
+     * when the device cannot run the model and when the merchant has turned it
+     * off — never as a shrug, always with the list of what still works. */
+    function deterministicOnly(why) {
       const m = tr().llm;
-      if (!('gpu' in navigator)) {
-        pushAgent(replyHtml({ text: m.noGpu, follow: [tr().chips.charges, tr().chips.breakeven] }));
-        return;
-      }
+      const lead = why && m[why] ? m[why] : m.noGpu;
+      pushAgent(replyHtml({
+        text: why && m[why] ? lead + ' ' + m.unfitTail : lead,
+        follow: [tr().chips.charges, tr().chips.breakeven],
+      }));
+    }
+
+    async function routeToLlm(question) {
+      const m = tr().llm;
       if (LLM.status === 'ready') { runLlm(question); return; }
+      if (llmDisabled()) { deterministicOnly('noGpu'); return; }
       if (LLM.status === 'loading') {
-        LLM.pending = question;
-        pushAgent(replyHtml({ text: m.loading(Math.round(LLM.progress * 100)) }));
+        /* Queue. The old line was `LLM.pending = question`, so asking a second
+         * thing during a 1,2 Go download threw the first one away in silence. */
+        LLM.pending.push(question);
+        pushAgent(replyHtml({ text: m.loading(Math.round(LLM.progress * 100)) + ' ' + m.queued(LLM.pending.length) }));
         return;
       }
-      LLM.pending = question;
+      /* Ask the machine before asking the merchant. A device that will fail at
+       * 94 % should be told so at 0 %. */
+      const cap = await llmCapability();
+      if (!cap.ok) {
+        if (cap.why !== 'noGpu') disableLlm();
+        deterministicOnly(cap.why);
+        return;
+      }
+      LLM.pending.push(question);
       pushAgent(
         `<div>${m.offerLead}</div>
          <div class="fa-note" style="font-style:normal;">${m.offerSize(LLM.sizeLabel)}</div>
@@ -4037,12 +4200,33 @@
       if (LLM.status === 'loading' || LLM.status === 'ready') return;
       const m = tr().llm;
       LLM.status = 'loading';
+      LLM.cancelled = false;
+      LLM.diag = diagCode();
+      LLM.lastProgressAt = Date.now();
+      /* A cancel button, because 1,2 Go on shop wifi is a decision a merchant
+       * is allowed to change their mind about — and because a progress bar
+       * with no way out is what makes people close the tab on the whole app. */
       const card = pushAgent(
         `<div>${m.installing}</div>
          <div class="fa-llm-prog"><div class="fa-llm-bar" data-fa-bar></div></div>
-         <div class="fa-llm-ptxt" data-fa-ptxt>${m.initializing}</div>`);
+         <div class="fa-llm-ptxt" data-fa-ptxt>${m.initializing}</div>
+         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cancel-llm>${m.cancel}</button></div>`);
       const bar = card.querySelector('[data-fa-bar]');
       const ptxt = card.querySelector('[data-fa-ptxt]');
+      /* WebLLM offers no timeout and no abort. A transfer that dies mid-way
+       * simply stops calling back, so the bar freezes at 61 % for ever. Watch
+       * the callback clock instead and give up out loud. */
+      const stall = setInterval(() => {
+        if (LLM.status !== 'loading') { clearInterval(stall); return; }
+        if (Date.now() - LLM.lastProgressAt < LLM_STALL_MS) return;
+        clearInterval(stall);
+        LLM.cancelled = true;
+        LLM.status = 'error';
+        LLM.pending.length = 0;
+        try { card.remove(); } catch (_) {}
+        pushAgent(replyHtml({ text: m.timeout, note: m.diag(LLM.diag) }));
+      }, 4000);
+      const done = () => { try { clearInterval(stall); } catch (_) {} };
       try {
         const webllm = await import(LLM.cdn);
         /* The model's WASM lib defaults to raw.githubusercontent.com, which many
@@ -4060,25 +4244,56 @@
         LLM.engine = await webllm.CreateMLCEngine(LLM.model, {
           appConfig,
           initProgressCallback: (p) => {
+            LLM.lastProgressAt = Date.now();   // feeds the stall watchdog
             LLM.progress = p.progress || 0;
             if (bar) bar.style.width = Math.round(LLM.progress * 100) + '%';
             if (ptxt) ptxt.textContent = p.text || `${Math.round(LLM.progress * 100)} %`;
           },
         });
+        done();
+        /* Cancelled while the weights were still arriving: the engine resolves
+         * anyway, and we must not silently light it up after the merchant said
+         * no. Drop it and leave the door open for later. */
+        if (LLM.cancelled) { LLM.status = 'idle'; LLM.engine = null; return; }
         LLM.status = 'ready';
+        logAi({ route: 'llm-activate', provenance: 'deterministic', ms: 0, qLength: 0 });
         if (bar) bar.style.width = '100%';
         if (ptxt) ptxt.textContent = m.ready;
+        const cancelBtn = card.querySelector('[data-fa-cancel-llm]');
+        if (cancelBtn) cancelBtn.remove();
         pushAgent(replyHtml({ text: m.readyMsg }));
-        if (LLM.pending) { const q = LLM.pending; LLM.pending = null; runLlm(q); }
+        /* Drain the whole queue, oldest first — every question the merchant
+         * asked while waiting gets its answer, in the order they asked. */
+        const queued = LLM.pending.slice();
+        LLM.pending.length = 0;
+        for (const q of queued) { await runLlm(q); }
       } catch (e) {
-        console.error('[Kiwi] In-browser LLM failed to load:', e);
+        done();
+        if (LLM.cancelled) { LLM.status = 'idle'; return; }
+        console.error('[Kiwi] In-browser LLM failed to load:', LLM.diag, e);
+        /* Into the same buffer the support team already reads
+         * (window.KiwiErrors.report()), tagged with the code shown on screen. */
+        try { window.dispatchEvent(new ErrorEvent('error', { message: 'LLM ' + LLM.diag + ': ' + (e && e.message), filename: 'agent.js' })); } catch (_) {}
         LLM.status = 'error';
+        logAi({ route: 'llm-activate', provenance: 'error', ms: 0, qLength: 0, diag: LLM.diag });
+        LLM.pending.length = 0;
         if (ptxt) ptxt.textContent = m.loadFail;
-        pushAgent(replyHtml({ text: m.loadFailMsg }));
+        pushAgent(replyHtml({ text: m.loadFailMsg, note: m.diag(LLM.diag) }));
       }
     }
 
+    /* The merchant changed their mind. Mark it before the engine resolves so
+     * the success path knows to throw the result away. */
+    function cancelLlm() {
+      if (LLM.status !== 'loading') return;
+      LLM.cancelled = true;
+      LLM.status = 'idle';
+      LLM.pending.length = 0;
+      pushAgent(replyHtml({ text: tr().llm.cancelled }));
+    }
+
     async function runLlm(question) {
+      const tLlm = Date.now();
       const typing = pushTyping();
       llmHistory.push({ role: 'user', content: question });
       /* No `/no_think` suffix: that was Qwen3's switch and Qwen3.5 removed it
@@ -4099,7 +4314,8 @@
           stream: true,
         });
         typing.remove();
-        const bubble = pushAgent('<span data-fa-stream></span>');
+        LLM.cancelled = false;
+        const bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
         const target = bubble.querySelector('[data-fa-stream]');
         let acc = '';
         /* Stream by SETTLED SENTENCE, not by token. The redactor works on whole
@@ -4121,6 +4337,8 @@
             scrollDown();
           }
         }
+        const stopWrap = bubble && bubble.querySelector('[data-fa-stopwrap]');
+        if (stopWrap) stopWrap.remove();
         const clean = stripThink(acc);
         /* The guardrail REMOVES what it cannot support (see the block above
          * redactUnsupported). redacted === -1 means the detector itself threw:
@@ -4132,6 +4350,16 @@
           note.className = 'fa-note';
           note.textContent = (GUARD[L] || GUARD.fr)(red.redacted);
           bubble.appendChild(note);
+        }
+        logAi({ route: 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
+        /* The merchant's own verdict — the only signal that says whether the
+         * answer was any good. Two buttons, no free text, nothing transmitted. */
+        if (bubble && red.redacted !== -1) {
+          const rate = document.createElement('div');
+          rate.className = 'fa-follow';
+          rate.innerHTML = '<button type="button" class="fa-rate" data-fa-rate="up" aria-label="Utile">👍</button>'
+            + '<button type="button" class="fa-rate" data-fa-rate="down" aria-label="Pas utile">👎</button>';
+          bubble.appendChild(rate);
         }
         scrollDown();
         /* Store the REDACTED answer. Keeping the raw one would feed the
@@ -4201,6 +4429,15 @@
         return;
       }
       if (e.target.closest('[data-fa-activate]')) { activateLlm(); return; }
+      if (e.target.closest('[data-fa-cancel-llm]')) { cancelLlm(); return; }
+      const rateBtn = e.target.closest('[data-fa-rate]');
+      if (rateBtn) {
+        try { window.KiwiAiTelemetry && window.KiwiAiTelemetry.rate(rateBtn.getAttribute('data-fa-rate')); } catch (_) {}
+        const wrap = rateBtn.parentElement;
+        if (wrap) { wrap.textContent = rateBtn.getAttribute('data-fa-rate') === 'up' ? '👍' : '👎'; wrap.classList.add('fa-rated'); }
+        return;
+      }
+      if (e.target.closest('[data-fa-stop-llm]')) { LLM.cancelled = true; return; }
       const moreBtn = e.target.closest('[data-fa-ctx-more]');
       if (moreBtn) {
         const det = root.querySelector('[data-fa-detail]');
