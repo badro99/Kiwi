@@ -552,6 +552,44 @@
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
 
+  /* Plein écran (mode kiosque) — la caisse resto l'a via le bandeau partagé du
+     shell ; la boutique dessine son PROPRE rail, ce bandeau n'y apparaît pas,
+     d'où l'absence du bouton signalée en boutique. On repose donc le même geste
+     dans le rail boutique. Deux icônes (agrandir / réduire) dont on bascule
+     `hidden` — aucun re-rendu lucide nécessaire. L'écouteur `fullscreenchange`
+     n'est attaché qu'UNE fois (le rail est reconstruit à chaque montage). */
+  function fsIsOn() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function fsToggle() {
+    try {
+      const r = fsIsOn()
+        ? (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document)
+        : (function () { const el = document.documentElement; return (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); })();
+      if (r && r.catch) r.catch(function () {});   // certains contextes (iframe sandbox) rejettent — on ignore
+    } catch (_) {}
+  }
+  function paintFs() {
+    const b = root && $('#bq-fs', root); if (!b) return;
+    const on = fsIsOn();
+    const en = b.querySelector('[data-fs="enter"]'), ex = b.querySelector('[data-fs="exit"]');
+    // `hidden` ne suffit pas ici : un reset `svg { display:block }` bat la règle
+    // UA `[hidden]{display:none}` — on force donc le display en inline (spécificité max).
+    if (en) en.style.display = on ? 'none' : '';
+    if (ex) ex.style.display = on ? '' : 'none';
+    const lb = b.querySelector('span'); if (lb) lb.textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = on ? 'Quitter le plein écran' : 'Plein écran';
+  }
+  function setupFullscreenBtn() {
+    const b = $('#bq-fs', root); if (!b) return;
+    b.addEventListener('click', fsToggle);
+    paintFs();
+    if (!setupFullscreenBtn._subbed) {
+      setupFullscreenBtn._subbed = true;
+      document.addEventListener('fullscreenchange', paintFs);
+      document.addEventListener('webkitfullscreenchange', paintFs);
+    }
+  }
+
   function mount(rootEl) {
     root = rootEl;
     syncTillStaff();
@@ -579,6 +617,7 @@
           <button class="bq-net" id="bq-net" title="Simuler une coupure réseau">
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>
+          <button class="bq-lock" id="bq-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
           <button class="bq-lock" id="bq-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
@@ -627,6 +666,7 @@
     });
     $('#bq-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
     $('#bq-net', root).addEventListener('click', toggleOffline);
+    setupFullscreenBtn();
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
