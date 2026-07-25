@@ -84,6 +84,30 @@ function pdsShade(hex, amt) {
   return '#' + p.join('');
 }
 
+/* Normalise anything colour-shaped to a 6-digit hex, so <input type="color">
+   always has something valid to show and never silently resets to black. */
+function pdsHexOf(v) {
+  const h = String(v == null ? '' : v).trim().replace('#', '');
+  if (/^[0-9a-f]{3}$/i.test(h)) return '#' + h.split('').map(c => c + c).join('');
+  if (/^[0-9a-f]{6}$/i.test(h)) return '#' + h.toLowerCase();
+  return '#fbf7ee';
+}
+
+/* A free colour picker has to stay legible: pdsInk() flips bone-vs-ink at
+   L≈0.42, and a fill sitting right on that boundary gets a label that clears
+   neither direction. Rather than reject the merchant's choice, nudge it out
+   of the dead band — they get the colour they asked for, just far enough
+   from the tipping point that the table number stays readable. */
+function pdsSafeColor(v) {
+  let c = pdsHexOf(v);
+  let L = pdsLum(c);
+  for (let i = 0; i < 14 && L > 0.34 && L < 0.52; i++) {
+    c = pdsShade(c, L >= 0.42 ? 0.05 : -0.05);
+    L = pdsLum(c);
+  }
+  return c;
+}
+
 /* ─── Fixtures ────────────────────────────────────────────────────────────
  *   Everything that used to be a hardcoded path inside PDS_SCENES lives here
  *   instead, as a KIND with default geometry. An instance owns its own
@@ -319,6 +343,9 @@ function pdsRoom(zone) {
     wall:    r.wall    || '#2C2520',
     finish:  r.finish  || 'terrazzo',
     wallW:   (r.wallW != null) ? +r.wallW : 2,
+    /* The void around the room was the one surface with no control on it.
+       Null means "inherit the drawer's own paper", which is the old look. */
+    backdrop: r.backdrop || null,
   };
 }
 function pdsRoomShell(zone) {
@@ -478,6 +505,63 @@ function pdsFixtureHTML(e, opts) {
     <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
     ${label ? `<span class="pds-el-label" style="color:${pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
   </div>`;
+}
+
+/* ─── Ambiances ───────────────────────────────────────────────────────────
+ *   Forty individual colour decisions reliably produce an ugly room; four
+ *   curated ones produce a room that looks designed. Each ambiance sets the
+ *   floor, walls, finish, backdrop and a material per furniture family in
+ *   one go, and every value is an existing PDS_MAT token — an ambiance
+ *   re-chooses inside the brand palette, it never widens it.
+ *
+ *   Per-object colour still wins: applying an ambiance only rewrites objects
+ *   that never had a colour set by hand (o.colorLock), so a merchant who
+ *   deliberately painted the bar red keeps their red. */
+const PDS_AMBIANCE = {
+  riad: {
+    room: { floor: '#CFC0A6', wall: '#8A6A45', finish: 'zellige' },
+    backdrop: '#3A3128',
+    table: '#C9A46B',
+    fix: { comptoir: '#8A6A45', cuisine: '#EFE7D6', banquette: '#C4784F',
+           tapis: '#C4784F', claustra: '#BFA86A', colonne: '#8A6A45', mur: '#8A6A45' },
+  },
+  marine: {
+    room: { floor: '#FBF7EE', wall: '#E0D7C4', finish: 'carreaux' },
+    backdrop: '#7A9E8E',
+    table: '#E0D7C4',
+    fix: { comptoir: '#7A9E8E', cuisine: '#FBF7EE', banquette: '#7A9E8E',
+           tapis: '#7A9E8E', claustra: '#E0D7C4', colonne: '#E0D7C4', mur: '#E0D7C4' },
+  },
+  bistrot: {
+    room: { floor: '#8A6A45', wall: '#2A2A28', finish: 'bois' },
+    backdrop: '#141A16',
+    table: '#3A3128',
+    fix: { comptoir: '#2A2A28', cuisine: '#E0D7C4', banquette: '#3A3128',
+           tapis: '#8A6A45', claustra: '#BFA86A', colonne: '#2A2A28', mur: '#2A2A28' },
+  },
+  jardin: {
+    room: { floor: '#E0D7C4', wall: '#7A9E8E', finish: 'terrazzo' },
+    backdrop: '#053B2C',
+    table: '#EFE7D6',
+    fix: { comptoir: '#7A9E8E', cuisine: '#FBF7EE', banquette: '#7A9E8E',
+           tapis: '#7A9E8E', claustra: '#C9A46B', colonne: '#E0D7C4', mur: '#7A9E8E' },
+  },
+};
+
+/* Apply an ambiance to one zone. Returns false for an unknown key rather
+   than half-painting the room. */
+function pdsApplyAmbiance(state, zoneId, key) {
+  const A = PDS_AMBIANCE[key];
+  if (!A) return false;
+  const zone = state.zones.find(z => z.id === zoneId);
+  if (!zone) return false;
+  zone.room = Object.assign({}, zone.room, A.room, { backdrop: A.backdrop });
+  zone.ambiance = key;
+  state.tables.filter(t => t.zone === zoneId && !t.colorLock)
+    .forEach(t => { t.color = A.table; });
+  state.elements.filter(e => e.zone === zoneId && !e.colorLock)
+    .forEach(e => { if (A.fix[e.type]) e.color = A.fix[e.type]; });
+  return true;
 }
 
 /* ─── Collision ───────────────────────────────────────────────────────────
@@ -673,6 +757,8 @@ window.KiwiFloorCore = {
   room: pdsRoom, roomShell: pdsRoomShell,
   seatSlots: pdsSeatSlots, chair: pdsChair, chairsFor: pdsChairsFor,
   boxStyle: pdsBoxStyle, tableBody: pdsTableBody, fixtureHTML: pdsFixtureHTML,
+  AMBIANCE: PDS_AMBIANCE, applyAmbiance: pdsApplyAmbiance,
+  hexOf: pdsHexOf, safeColor: pdsSafeColor,
   CLS: PDS_CLS, cls: pdsCls, isTable: pdsIsTable,
   corners: pdsCorners, obbOverlap: pdsObbOverlap,
   conflict: pdsConflict, blockers: pdsBlockers,

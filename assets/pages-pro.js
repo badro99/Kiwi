@@ -3590,6 +3590,11 @@ Object.assign(PDS_STR.fr, {
   lockedHint: 'Verrouillé — déverrouillez pour modifier',
   rotateHint: 'Faire pivoter · Maj pour 15°',
   noRoom: 'Pas de place libre ici',
+  ambianceLabel: 'Ambiance', customColor: 'Couleur libre',
+  roomBackdrop: 'Fond', backdropNone: 'Aucun fond',
+  ambriad: 'Riad', ambmarine: 'Bord de mer', ambbistrot: 'Neo-bistrot', ambjardin: 'Jardin',
+  ambianceApplied: (n) => `Ambiance ${n} appliquee`,
+  ambianceDesc: 'Sol, murs, tables et fond repeints ensemble. Les pieces peintes a la main sont conservees.',
   blockedHint: 'Chevauchement — relâchez pour poser à côté',
 });
 Object.assign(PDS_STR.en, {
@@ -3618,6 +3623,11 @@ Object.assign(PDS_STR.en, {
   lockedHint: 'Locked — unlock to edit',
   rotateHint: 'Rotate · hold Shift for 15°',
   noRoom: 'No free space here',
+  ambianceLabel: 'Ambiance', customColor: 'Custom colour',
+  roomBackdrop: 'Backdrop', backdropNone: 'No backdrop',
+  ambriad: 'Riad', ambmarine: 'Seaside', ambbistrot: 'Neo-bistro', ambjardin: 'Garden',
+  ambianceApplied: (n) => `${n} ambiance applied`,
+  ambianceDesc: 'Floor, walls, tables and backdrop repainted together. Hand-picked pieces are kept.',
   blockedHint: 'Overlapping — release to settle beside it',
 });
 Object.assign(PDS_STR.ar, {
@@ -3646,6 +3656,11 @@ Object.assign(PDS_STR.ar, {
   lockedHint: 'مقفل — افتح القفل للتعديل',
   rotateHint: 'تدوير · اضغط Shift لـ 15°',
   noRoom: 'لا توجد مساحة فارغة هنا',
+  ambianceLabel: 'الأجواء', customColor: 'لون حر',
+  roomBackdrop: 'الخلفية', backdropNone: 'بدون خلفية',
+  ambriad: 'رياض', ambmarine: 'شاطئ', ambbistrot: 'بيسترو', ambjardin: 'حديقة',
+  ambianceApplied: (n) => `تم تطبيق أجواء ${n}`,
+  ambianceDesc: 'الأرضية والجدران والطاولات والخلفية أُعيد طلاؤها معًا. القطع الملوّنة يدويًا تبقى كما هي.',
   blockedHint: 'تداخل — أفلت ليستقر بجانبه',
 });
 
@@ -4568,7 +4583,8 @@ function pdsRenderStage(state, T) {
             </label>
           </div>
         </div>
-        <div class="pds-plan-canvas">
+        <div class="pds-plan-canvas" data-pds-backdrop
+             style="${pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
           <div class="pds-plan-room" data-pds-room style="max-width:${P.w}px; aspect-ratio:${P.w} / ${P.h};">
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
@@ -4689,14 +4705,42 @@ function pdsRenderRoomCard(state, T) {
             data-pds-room-field="${field}" data-pds-val="${m.c}"
             style="background:${m.c};" title="${T['mat' + m.id] || m.id}"
             aria-label="${T['mat' + m.id] || m.id}"></button>`).join('');
+  /* A free picker alongside the 16 tokens. Any hex is allowed, but the
+     handler pulls it back into a legible luminance band so pdsInk() can
+     always find readable ink for a table number — see pdsSafeColor. */
+  const custom = (val, field) => `
+    <label class="pds-sw pds-sw-custom" title="${T.customColor}">
+      <input type="color" data-pds-room-field="${field}" value="${pdsHexOf(val)}"/>
+    </label>`;
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.roomTitle}</div>
       <div class="pds-rail-hint">${T.roomHint}</div>
+      <label class="pds-mini-label">${T.ambianceLabel}</label>
+      <div class="pds-amb-row">
+        ${Object.keys(PDS_AMBIANCE).map(k => {
+          const A = PDS_AMBIANCE[k];
+          return `<button class="pds-amb ${zone && zone.ambiance === k ? 'active' : ''}"
+                          data-pds-action="ambiance" data-pds-amb="${k}" title="${T['amb'+k]}">
+            <span class="pds-amb-chips" aria-hidden="true">
+              <i style="background:${A.room.floor}"></i><i style="background:${A.room.wall}"></i>
+              <i style="background:${A.table}"></i><i style="background:${A.backdrop}"></i>
+            </span>
+            <span class="pds-amb-name">${T['amb'+k]}</span>
+          </button>`;
+        }).join('')}
+      </div>
       <label class="pds-mini-label">${T.roomFloor}</label>
-      <div class="pds-sw-row">${sw(r.floor, 'floor')}</div>
+      <div class="pds-sw-row">${sw(r.floor, 'floor')}${custom(r.floor, 'floor')}</div>
       <label class="pds-mini-label">${T.roomWall}</label>
-      <div class="pds-sw-row">${sw(r.wall, 'wall')}</div>
+      <div class="pds-sw-row">${sw(r.wall, 'wall')}${custom(r.wall, 'wall')}</div>
+      <label class="pds-mini-label">${T.roomBackdrop}</label>
+      <div class="pds-sw-row">
+        <button class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
+                data-pds-room-field="backdrop" data-pds-val=""
+                title="${T.backdropNone}" aria-label="${T.backdropNone}"></button>
+        ${sw(r.backdrop, 'backdrop')}${custom(r.backdrop || '#F7F5F0', 'backdrop')}
+      </div>
       <label class="pds-mini-label">${T.roomFinish}</label>
       <select class="kf-input pds-input" data-pds-room-field="finish">
         ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
@@ -4795,7 +4839,12 @@ function pdsRenderInspector(state, T, obj) {
   const swatches = PDS_MAT.map(m => `
     <button class="pds-sw ${m.c.toLowerCase() === String(c).toLowerCase() ? 'active' : ''}"
             data-pds-field="color" data-pds-val="${m.c}" style="background:${m.c};"
-            title="${T['mat' + m.id] || m.id}" aria-label="${T['mat' + m.id] || m.id}"></button>`).join('');
+            title="${T['mat' + m.id] || m.id}" aria-label="${T['mat' + m.id] || m.id}"></button>`).join('')
+    /* Free picker per object. Choosing one sets colorLock, so a later
+       ambiance repaints the room around this piece and leaves it alone. */
+    + `<label class="pds-sw pds-sw-custom ${obj.colorLock ? 'active' : ''}" title="${T.customColor}">
+         <input type="color" data-pds-field="color" value="${pdsHexOf(c)}"/>
+       </label>`;
   return `
     <div class="pds-rail-card pds-inspect" data-pds-inspect-id="${obj.id}">
       <div class="pds-inspect-head">
@@ -5313,8 +5362,22 @@ function pdsAttach(root, state, T, dr) {
           input.onclick = () => {
             pdsPush(state);
             o.color = input.getAttribute('data-pds-val');
+            /* A token from the palette is not a hand-mixed colour, so it
+               stays fair game for the next ambiance. */
+            delete o.colorLock;
             reselect();
           };
+          return;
+        }
+
+        /* Free colour picker on this one object. */
+        if (f === 'color' && input.type === 'color') {
+          input.oninput = () => {
+            const cc = pdsSafeColor(input.value);
+            o.color = cc; o.colorLock = 1;
+            pdsRepaintCell(root, state, T, o.id, refresh, selection);
+          };
+          input.onchange = () => { pdsPush(state); o.color = pdsSafeColor(input.value); o.colorLock = 1; reselect(); };
           return;
         }
 
@@ -5403,12 +5466,33 @@ function pdsAttach(root, state, T, dr) {
           state.elements.filter(e => e.zone === zone.id).forEach(clamp);
         } else if (f === 'wallW') {
           zone.room.wallW = Math.max(0, Math.min(14, Math.round(+val || 0)));
+        } else if (f === 'backdrop') {
+          /* Empty string is a real choice — "no backdrop", back to paper. */
+          zone.room.backdrop = val ? pdsSafeColor(val) : null;
+        } else if (f === 'floor' || f === 'wall') {
+          zone.room[f] = pdsSafeColor(val);
         } else {
           zone.room[f] = val;
         }
         refresh();
       };
       if (ctl.tagName === 'BUTTON') ctl.onclick = () => apply(ctl.getAttribute('data-pds-val'));
+      else if (ctl.type === 'color') {
+        /* Live-preview the surface as the picker moves; commit on change so
+           one drag through the spectrum is one undo step, not forty. */
+        ctl.oninput = () => {
+          const c = pdsSafeColor(ctl.value);
+          const el = f === 'backdrop' ? root.querySelector('[data-pds-backdrop]')
+                   : f === 'floor'    ? root.querySelector('[data-pds-floor]') : null;
+          if (f === 'wall') {
+            const fl = root.querySelector('[data-pds-floor]');
+            if (fl) fl.style.boxShadow = `inset 0 0 0 ${pdsRoom(zone).wallW}px ${c}`;
+          } else if (el) {
+            el.style.backgroundColor = c;
+          }
+        };
+        ctl.onchange = () => apply(ctl.value);
+      }
       else ctl.onchange = () => apply(ctl.value);
     });
 
@@ -6164,6 +6248,15 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       f.o.rot = ((f.o.rot || 0) + step) % 360;
       refresh();
       setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'ambiance': {
+      const key = btn.getAttribute('data-pds-amb');
+      pdsPush(state);
+      if (pdsApplyAmbiance(state, state.activeZone, key)) {
+        refresh();
+        toast(T.ambianceApplied(T['amb' + key]), { type: 'success', desc: T.ambianceDesc });
+      }
       break;
     }
     case 'table-duplicate': {
@@ -6984,6 +7077,42 @@ const PDS_INLINE_CSS = `
   .pds-el.is-resizing .pds-dim { background:var(--atlas); }
 
   .pds-rot-num { width:56px; flex:none; text-align:center; padding:5px 4px; }
+
+  /* ── Ambiances ─────────────────────────────────────────────────────────
+     Four curated whole-room palettes. Each button previews its own four
+     surfaces, so the merchant picks from what they will get. */
+  .pds-amb-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px; }
+  .pds-amb {
+    display:flex; flex-direction:column; gap:5px; align-items:flex-start;
+    padding:7px 8px; cursor:pointer;
+    border:1px solid var(--n-200); border-radius:9px; background:var(--surface);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .pds-amb:hover  { border-color:var(--atlas); }
+  .pds-amb.active { border-color:var(--atlas); box-shadow:0 0 0 2px rgba(11,110,79,0.16); }
+  .pds-amb-chips { display:flex; gap:0; border-radius:4px; overflow:hidden; width:100%; height:16px; }
+  .pds-amb-chips i { flex:1; display:block; }
+  .pds-amb-name {
+    font:600 9.5px/1 var(--mono, monospace);
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--n-600);
+  }
+
+  /* Free picker sits in the swatch row and reads as one more swatch. The
+     native colour input is stretched under a conic rainbow so it keeps the
+     20px square the row is built on. */
+  .pds-sw-custom {
+    position:relative; overflow:hidden; display:inline-block;
+    background:conic-gradient(#C0392B, #C9A46B, #7DF2B0, #0B6E4F, #BFD9E8, #8A6A45, #C0392B);
+  }
+  .pds-sw-custom input[type="color"] {
+    position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px);
+    padding:0; border:0; opacity:0; cursor:pointer;
+  }
+  .pds-sw-none {
+    background:
+      linear-gradient(45deg, transparent 45%, #C0392B 45% 55%, transparent 55%),
+      var(--paper, #F7F5F0);
+  }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
