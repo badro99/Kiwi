@@ -4324,6 +4324,40 @@
     }
 
     /* ============ send order ============ */
+    /* L'ADDITION PART VRAIMENT À LA CAISSE.
+       Cette fonction se contentait d'un setTimeout : la commande du client
+       n'allait NULLE PART. Il voyait « c'est parti en cuisine », le personnel
+       ne voyait rien, et le plat n'arrivait jamais. Le relais existait pourtant
+       en entier — POST /api/order (public, pensé pour un téléphone sans compte)
+       et la file côté caisse dans /api/order/queue — il n'était simplement
+       jamais appelé.
+       La démo (pas de ?merchant dans le QR) garde le chemin local : elle n'a
+       pas de caisse à qui parler. Et si le serveur refuse (OrderPro coupé,
+       réseau absent), on retombe sur l'affichage local plutôt que de laisser
+       le client devant un bouton mort. */
+    let liveOrderId = null;
+    function postOrderToTill(totalNow, linesCopy) {
+      liveOrderId = null;
+      const T = KiwiTenant;
+      if (!T || !T.hasTenant || !T.slug) return Promise.resolve(null);
+      const lines = linesCopy.map((l) => ({
+        id: String(l.id || ''), name: nameOf(l.id), qty: l.qty, unitPrice: l.unitPrice,
+        options: Object.values(l.options || {}).filter(Boolean).join(', '),
+        note: String(l.note || ''),
+      }));
+      return fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          merchant: T.slug, mode: orderMode === 'takeout' ? 'takeout' : 'table',
+          table: tableNumber, total: totalNow, lines: lines,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => (d && d.ok ? (liveOrderId = d.id, d) : null))
+        .catch(() => null);
+    }
+
     function sendOrder() {
       const btn = $('#send-btn');
       btn.classList.add('is-loading');
@@ -4333,11 +4367,23 @@
       const totalNow = totals().total;
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
+      const sent = postOrderToTill(totalNow, linesCopy);
       setTimeout(() => {
         btn.classList.remove('is-loading');
         closeCart();
         if (orderMode === 'takeout') {
+          /* Le numéro vient de la caisse quand elle a répondu : c'est celui que
+             le personnel appellera. Le numéro inventé à partir de performance.now()
+             ne correspondait à rien — deux clients pouvaient recevoir le même, et
+             aucun ne figurait sur l'écran de la caisse. */
           orderNumber = String(40 + Math.floor((performance.now() % 60))).padStart(3, '0');
+          sent.then((d) => {
+            if (!d || !d.number) return;
+            orderNumber = String(d.number).padStart(3, '0');
+            $('#cashier-number-digits').textContent = orderNumber;
+            $('#prep-number').textContent = orderNumber;
+            $('#ready-number').textContent = orderNumber;
+          });
           $('#cashier-number-digits').textContent = orderNumber;
           $('#prep-number').textContent = orderNumber;
           $('#ready-number').textContent = orderNumber;
@@ -4419,7 +4465,39 @@
     }
 
     /* ============ takeout: preparing progress + ETA ============ */
+    /* Chez un VRAI commerçant, « c'est prêt » vient de la cuisine, pas d'un
+       chronomètre. La barre de progression tournait sur 10 s en dur et annonçait
+       au client que son plat l'attendait — au comptoir, personne n'avait encore
+       touché la commande. On interroge donc l'état réel (/api/order, la réponse
+       la plus mince possible : statut + numéro) et on ne dit « prêt » que quand
+       la caisse l'a dit. La démo garde sa barre de 10 s : elle n'a pas de
+       cuisine, et la démonstration doit rester lisible. */
+    let readyPollId = null;
+    function pollUntilReady() {
+      const T = KiwiTenant;
+      if (!liveOrderId || !T || !T.slug) return false;
+      if (readyPollId) { clearInterval(readyPollId); readyPollId = null; }
+      const url = '/api/order?merchant=' + encodeURIComponent(T.slug) + '&id=' + encodeURIComponent(liveOrderId);
+      readyPollId = setInterval(() => {
+        fetch(url, { headers: { Accept: 'application/json' } })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (!d || !d.ok) return;
+            if (d.status === 'ready') { clearInterval(readyPollId); readyPollId = null; triggerReady(); }
+            else if (d.status === 'rejected') { clearInterval(readyPollId); readyPollId = null; }
+          })
+          .catch(() => {});
+      }, 5000);
+      return true;
+    }
+
     function startPreparing() {
+      // Vraie commande partie à la caisse → on suit SON état, pas un minuteur.
+      if (pollUntilReady()) {
+        const eta0 = $('#prep-eta');
+        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '—';
+        return;
+      }
       const totalMs = 10000; // 10s demo — real life: pull from KDS estimate
       const startedAt = performance.now();
       const bar = $('#prep-bar-fill');
