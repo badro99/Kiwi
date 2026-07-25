@@ -3837,6 +3837,19 @@ function pdsLoad() {
 }
 function pdsSave(state) {
   try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
+  /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
+   * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
+   * the same identity spine the boutique/menu already share, so a design made
+   * here shows up on the till (same browser today; the server channel lights it
+   * up cross-device). Real custom stores only — a demo venue never mirrors, so
+   * its seeded plan can't leak into a paired till. */
+  try {
+    var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+    if (vd && vd.custom && vd.name) {
+      var slug = _bqxSlug(vd.name);
+      if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
+    }
+  } catch (e) {}
 }
 function pdsDefaultState() {
   /* A merchant-created store starts with an empty floor to design (one zone,
