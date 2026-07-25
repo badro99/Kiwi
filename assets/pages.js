@@ -193,7 +193,7 @@
       payrollFinished: "Terminé",
       payrollTotal: "TOTAL",
       payrollWeeklyPlan: (week) => `Planning · semaine du ${week}`,
-      payrollWeeklyPlanSub: "Glissez une cellule pour modifier · WhatsApp envoyé à l'équipe à chaque mise à jour",
+      payrollWeeklyPlanSub: "Glissez une cellule pour modifier",
       payrollEditPlan: "Modifier le planning",
       payrollDow: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
       payrollShiftDay: "JOUR",
@@ -2171,11 +2171,11 @@
   handlers['clock-out'] = (el) => {
     const row = el?.closest('.sh-clock-row');
     const name = row?.querySelector('.who .n')?.textContent || 'Employé';
-    toast(`${name} · ${tr({fr:'sortie pointée', en:'clock-out recorded', ar:'تم تسجيل الانصراف'})}`, { type: 'success', desc: tr({fr:'Heure de fin enregistrée. Récap WhatsApp envoyé.', en:'End time recorded. WhatsApp summary sent.', ar:'تم تسجيل وقت الخروج. تم إرسال ملخص عبر WhatsApp.'}) });
+    toast(`${name} · ${tr({fr:'sortie pointée', en:'clock-out recorded', ar:'تم تسجيل الانصراف'})}`, { type: 'success', desc: tr({fr:'Heure de fin enregistrée.', en:'End time recorded.', ar:'تم تسجيل وقت الخروج.'}) });
   };
   handlers['edit-shifts'] = () => toast(tr({fr:'Éditeur de planning', en:'Schedule editor', ar:'محرر الجداول الزمنية'}), { type: 'info', desc: tr({fr:'Glissez les blocs ou cliquez une cellule pour ouvrir le détail.', en:'Drag blocks or click a cell to open the detail.', ar:'اسحب المربعات أو انقر على خلية لفتح التفاصيل.'}) });
   handlers['edit-tip-rule'] = () => toast(tr({fr:'Règle de partage des pourboires', en:'Tip sharing rule', ar:'قاعدة توزيع البقشيش'}), { type: 'info', desc: tr({fr:'Modifiez les pourcentages par poste ou la base de calcul.', en:'Edit the percentages per role or the calculation base.', ar:'عدّل النسب حسب المنصب أو أساس الحساب.'}) });
-  handlers['distribute-tips'] = () => toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Notification WhatsApp envoyée aux 4 employés. Crédit visible demain matin.', en:'WhatsApp notification sent to 4 employees. Credit visible tomorrow morning.', ar:'تم إرسال إشعار WhatsApp إلى 4 موظفين. الرصيد متاح صباح الغد.'}) });
+  handlers['distribute-tips'] = () => toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Répartition enregistrée. Prévenez l’équipe : la notification automatique arrive bientôt.', en:'Split recorded. Tell the team — automatic notification coming soon.', ar:'تم تسجيل التوزيع. أخبر الفريق — الإشعار التلقائي قريبًا.'}) });
   handlers['export-payroll'] = () => toast(tr({fr:'Export de paie · avril 2026', en:'Payroll export · April 2026', ar:'تصدير الرواتب · أبريل 2026'}), { type: 'info', desc: tr({fr:'PDF + CSV générés et envoyés à votre comptable.', en:'PDF + CSV generated and sent to your accountant.', ar:'تم إنشاء PDF + CSV وإرسالهما إلى محاسبك.'}) });
 
   /* ═══════════════════ Sidebar nav router ═══════════════════

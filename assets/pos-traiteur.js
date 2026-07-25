@@ -855,7 +855,9 @@
     evSeq++; dvSeq++;
     draft = blankDraft();
     queueIfOffline(`Devis ${ev.devisRef}`);
-    toast(`Devis ${ev.devisRef} envoyé à ${ev.client || 'client'}, suivi dans Événements`);
+    /* « envoyé » était faux : à ce stade le devis est seulement enregistré côté
+       traiteur, c'est le brouillon WhatsApp ouvert juste après qui part. */
+    toast(`Devis ${ev.devisRef} enregistré pour ${ev.client || 'client'}, suivi dans Événements`);
     state.evFilter = 'tous';
     switchView('events');
     renderBadges();
@@ -1181,16 +1183,34 @@
     $$('[data-tr-close]', el).forEach((b) => { b.onclick = () => closeVeil('#tr-veil-wa'); });
     const att = $('#tr-wa-attach', el);
     if (att) att.onclick = () => { attach = !attach; att.classList.toggle('on', attach); };
+    /* Ce bouton annonçait « WhatsApp envoyé » (et « Devis … envoyé ») alors que
+       rien ne quittait la tablette : le client n'a jamais reçu son devis ni son
+       rappel, et le traiteur le croyait prévenu. Une page web ne peut pas
+       envoyer un WhatsApp toute seule, on ouvre donc le brouillon pré-rempli
+       avec le texte tel qu'il a été édité, et c'est le traiteur qui appuie sur
+       envoyer. Le lien ne transporte pas le PDF, on le dit au lieu de le
+       prétendre. */
     $('#tr-wa-send', el).onclick = () => {
+      const txt = $('#tr-wa-text', el);
+      const body = txt ? txt.value : waMessage(ev, kind);
+      const num = String(ev.phone || '').replace(/\D/g, '');
+      const who = ev.client || 'le client';
+      if (!num) { toast(`Pas de numéro pour ${who}, ajoutez-le à sa fiche`); return; }
       closeVeil('#tr-veil-wa');
+      let opened = false;
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        opened = true;
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
       if (isDevis) {
         registerDevis(ev);
-        if (attach) toast('Devis PDF joint au message');
+        if (opened) toast(`WhatsApp ouvert pour ${who}, appuyez sur envoyer`);
+        if (attach) toast('Le devis PDF n’est pas joint par le lien, ajoutez-le dans WhatsApp');
         return;
       }
       ev.lastWa = new Date();
       queueIfOffline('Message WhatsApp');
-      toast(`WhatsApp envoyé à ${ev.client}${kind === 'rappel' ? ', rappel d’échéance' : kind === 'route' ? ', équipe en route' : ''}`);
+      if (opened) toast(`WhatsApp ouvert pour ${who}, appuyez sur envoyer${kind === 'rappel' ? ', rappel d’échéance' : kind === 'route' ? ', équipe en route' : ''}`);
       refreshAll();
     };
   }

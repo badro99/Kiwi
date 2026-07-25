@@ -1308,11 +1308,24 @@
       withCover = !withCover;
       $('#lb-wa-cover', el).classList.toggle('on', withCover);
     };
+    /* Ce bouton annonçait « WhatsApp envoyé » et marquait la commande prévenue
+       alors qu'aucun message ne partait : le client n'a jamais su que son livre
+       était arrivé. Une page web ne peut pas envoyer un WhatsApp toute seule, on
+       ouvre donc le brouillon pré-rempli (texte tel qu'édité) et c'est le
+       libraire qui appuie sur envoyer. Le lien ne transporte pas la couverture,
+       on le dit au lieu de le prétendre. */
     $('#lb-wa-send', el).onclick = () => {
+      const txt = $('#lb-wa-text', el);
+      const body = txt ? txt.value : waMessage(c);
+      const num = String(cu.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Pas de numéro pour ${cu.name}, ajoutez-le à sa fiche`); return; }
       c.notified = true;
       closeVeil('#lb-wa-veil');
       queueIfOffline('Notification WhatsApp');
-      toast(`WhatsApp envoyé à ${cu.name}${withCover ? ' (avec couverture)' : ''}`);
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${cu.name}, appuyez sur envoyer${withCover ? ' · joignez la couverture dans WhatsApp' : ''}`);
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
       renderBadges();
       if (state.view === 'commandes') renderCmd();
       icons();

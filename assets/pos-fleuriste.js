@@ -1388,10 +1388,23 @@
     $$('[data-fl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#fl-wa-veil'); });
     const photoBtn = $('#fl-wa-photo', el);
     if (d.photo) photoBtn.onclick = () => { withPhoto = !withPhoto; photoBtn.classList.toggle('on', withPhoto); };
+    /* Ce bouton disait « WhatsApp envoyé » sans rien envoyer : le ou la
+       destinataire n'a jamais été prévenu·e de la livraison, et la boutique le
+       croyait fait. Une page web ne peut pas envoyer un WhatsApp toute seule, on
+       ouvre donc le brouillon pré-rempli (texte tel qu'édité) et c'est la
+       boutique qui appuie sur envoyer. Le lien ne transporte pas la photo du
+       bouquet, on le dit au lieu de le prétendre. */
     $('#fl-wa-send', el).onclick = () => {
+      const txt = $('#fl-wa-text', el);
+      const body = txt ? txt.value : waMessage(d);
+      const num = String(d.recipient.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Pas de numéro pour ${d.recipient.name}, ajoutez-le au bon`); return; }
       closeVeil('#fl-wa-veil');
       queueIfOffline('Notification WhatsApp');
-      toast(`WhatsApp envoyé à ${d.recipient.name}${withPhoto ? ' (avec photo)' : ''}`);
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${d.recipient.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
     };
   }
 

@@ -1461,10 +1461,23 @@
       $$('[data-gy-tone]', el).forEach((x) => x.classList.toggle('on', x === b));
       $('#gy-wa-text', el).value = toneMessage(m, b.dataset.gyTone);
     };
+    /* Ce bouton annonçait « WhatsApp envoyé » alors que rien ne quittait la
+       tablette : le coach croyait le membre relancé, le membre n'a jamais rien
+       reçu. Une page web ne peut pas envoyer un WhatsApp toute seule, et ce
+       serait malsain qu'elle le puisse — on ouvre donc le brouillon pré-rempli
+       avec le texte tel qu'il a été édité, et c'est le coach qui appuie sur
+       envoyer. */
     $('#gy-wa-send', el).onclick = () => {
+      const txt = $('#gy-wa-text', el);
+      const body = txt ? txt.value : waMessage(m);
+      const num = String(m.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Pas de numéro pour ${firstName(m.name)}, ajoutez-le à sa fiche`); return; }
       closeVeil('#gy-wa-veil');
       queueIfOffline('Relance WhatsApp');
-      toast(`WhatsApp envoyé à ${firstName(m.name)}`);
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${firstName(m.name)}, appuyez sur envoyer`);
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
     };
   }
 

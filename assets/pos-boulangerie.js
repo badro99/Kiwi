@@ -1200,11 +1200,24 @@
       withPhoto = !withPhoto;
       $('#bl-wa-photo', el).classList.toggle('on', withPhoto);
     };
+    /* Ce bouton disait « WhatsApp envoyé » et marquait la commande prévenue,
+       sans qu'aucun message ne parte : la cliente n'était jamais avertie que son
+       gâteau était prêt. Une page web ne peut pas envoyer un WhatsApp toute
+       seule, on ouvre donc le brouillon pré-rempli (texte tel qu'édité) et c'est
+       la boulangère qui appuie sur envoyer. La photo n'est pas jointe par le
+       lien, on le dit au lieu de le prétendre. */
     $('#bl-wa-send', el).onclick = () => {
+      const txt = $('#bl-wa-text', el);
+      const body = txt ? txt.value : waMessage(c);
+      const num = String(c.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à la commande`); return; }
       c.notified = true;
       closeVeil('#bl-wa-veil');
       queueIfOffline(`WhatsApp ${c.id}`);
-      toast(`WhatsApp envoyé à ${c.name}${withPhoto ? ' (avec photo du gâteau)' : ''}`);
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo du gâteau dans WhatsApp' : ''}`);
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
       refreshOps();
     };
   }

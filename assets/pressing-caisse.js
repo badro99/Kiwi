@@ -1591,11 +1591,24 @@
       withPhoto = !withPhoto;
       $('#px-wa-photo', el).classList.toggle('on', withPhoto);
     };
+    /* Ce bouton annonçait « WhatsApp envoyé » et marquait la commande notifiée
+       alors qu'aucun message ne partait : le client attendait chez lui un
+       message qui n'existait pas. Une page web ne peut pas envoyer un WhatsApp
+       toute seule, on ouvre donc le brouillon pré-rempli (texte tel qu'édité) et
+       c'est le pressing qui appuie sur envoyer. Le lien ne transporte pas la
+       photo, on le dit au lieu de le prétendre. */
     $('#px-wa-send', el).onclick = () => {
+      const txt = $('#px-wa-text', el);
+      const body = txt ? txt.value : waMessage(o);
+      const num = String(c.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à sa fiche`); return; }
       o.notified = true;
       closeVeil('#px-wa-veil');
       queueIfOffline('Notification WhatsApp');
-      toast(`WhatsApp envoyé à ${c.name}${withPhoto ? ' (avec photo)' : ''}`);
+      try {
+        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+      } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
       refreshOps();
     };
   }

@@ -392,7 +392,7 @@
       'export-etats': ['États financiers exportés', 'Compte de résultat + bilan en PDF, prêts pour le comptable.'],
       'prep-tva': ['Déclaration TVA préparée', 'Pré-remplie au format SIMPL · il ne reste qu’à la signer sur le portail DGI.'],
       'export-tva': ['Déclaration TVA exportée', 'Fichier conforme DGI généré pour la période.'],
-      'gen-paie': ['{n} fiches de paie générées', 'Bulletins PDF prêts · notification WhatsApp envoyée à l’équipe.'],
+      'gen-paie': ['Fiches de paie', 'Génération des bulletins PDF et envoi à l’équipe : bientôt disponible.'],
       'decl-cnss': ['Déclaration CNSS préparée', 'Bordereau du mois prêt pour le portail Damancom.'],
     },
     en: {

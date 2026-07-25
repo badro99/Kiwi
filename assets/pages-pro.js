@@ -1559,7 +1559,7 @@ const CONFORMITE_STR = {
         calendarExportToast: 'Calendrier .ics exporté',
         calendarExportToastDesc: 'Importable dans Google Calendar, Outlook, Apple Calendar.',
         auditExportToast: 'Export CSV signé',
-        auditExportToastDesc: 'Hash SHA-256 + signature horodatée Bank Al-Maghrib.',
+        auditExportToastDesc: 'Export horodaté, à conserver avec vos pièces comptables.',
         rotateSecretToast: 'Rotation manuelle initiée',
         rotateSecretToastDesc: 'Nouveau secret généré · ancien valide 24 h pour transition.',
     },
@@ -1597,7 +1597,7 @@ const CONFORMITE_STR = {
         calendarExportToast: 'Calendar .ics exported',
         calendarExportToastDesc: 'Importable into Google Calendar, Outlook, Apple Calendar.',
         auditExportToast: 'Signed CSV Export',
-        auditExportToastDesc: 'SHA-256 hash + Bank Al-Maghrib timestamped signature.',
+        auditExportToastDesc: 'Timestamped export, keep it with your accounting records.',
         rotateSecretToast: 'Manual rotation initiated',
         rotateSecretToastDesc: 'New secret generated · old one valid for 24h for transition.',
     },
@@ -1635,7 +1635,7 @@ const CONFORMITE_STR = {
         calendarExportToast: 'تم تصدير تقويم .ics',
         calendarExportToastDesc: 'يمكن استيراده إلى تقويم Google و Outlook و Apple Calendar.',
         auditExportToast: 'تصدير CSV موقع',
-        auditExportToastDesc: 'تجزئة SHA-256 + توقيع بنك المغرب المختوم بالوقت.',
+        auditExportToastDesc: 'تصدير مؤرَّخ، احتفظ به مع مستنداتك المحاسبية.',
         rotateSecretToast: 'بدء التدوير اليدوي',
         rotateSecretToastDesc: 'تم إنشاء سر جديد · القديم صالح لمدة 24 ساعة للانتقال.',
     },
@@ -2473,7 +2473,7 @@ handlers['nav-payroll'] = () => {
 
       <div class="sh-section">
         <div class="sh-section-head">
-          <div><h4>Planning hebdomadaire · 21 → 27 avril</h4><div class="sub">Glissez une cellule pour modifier · WhatsApp envoyé à l'équipe</div></div>
+          <div><h4>Planning hebdomadaire · 21 → 27 avril</h4><div class="sub">Glissez une cellule pour modifier</div></div>
           <button class="kb ghost" data-action="edit-shifts" style="padding:8px 12px; font-size:12.5px;">Modifier</button>
         </div>
         <div class="sh-week">
@@ -2911,12 +2911,12 @@ handlers['rotate-secret']   = () => {
 };
 // add-member / member-detail / edit-perms are now registered inside
 // nav-equipe's handler so they can close over the live team state.
-handlers['payslip-pdf']     = () => toast('Bulletin PDF généré · Fatima Khalki', { type: 'success', desc: 'Bulletin avril 2026 envoyé par WhatsApp.' });
-handlers['generate-payslips'] = () => toast('5 bulletins générés', { type: 'success', desc: 'PDF + CSV DGI prêts · envoi WhatsApp en file.' });
-handlers['export-dgi']      = () => toast('Export DGI · CSV', { type: 'success', desc: 'Fichier conforme au format DGI 2026 · prêt pour télédéclaration.' });
+handlers['payslip-pdf']     = () => toast('Bulletin de paie', { type: 'info', desc: 'Génération du PDF et envoi au salarié : bientôt disponible.' });
+handlers['generate-payslips'] = () => toast('Bulletins de paie', { type: 'info', desc: 'Génération en lot et envoi à l’équipe : bientôt disponible.' });
+handlers['export-dgi']      = () => toast('Export DGI', { type: 'info', desc: 'Export au format attendu par la DGI : bientôt disponible.' });
 handlers['all-leaves']      = () => toast('Toutes les demandes de congé', { type: 'info', desc: 'Filtrez par employé, statut ou période.' });
-handlers['leave-approve']   = () => toast('Demande approuvée', { type: 'success', desc: 'Notification WhatsApp envoyée · planning mis à jour.' });
-handlers['leave-deny']      = () => toast('Demande refusée', { type: 'info', desc: 'Notification WhatsApp envoyée · raison à compléter.' });
+handlers['leave-approve']   = () => toast('Demande approuvée', { type: 'success', desc: 'Pensez à prévenir le salarié : la notification automatique arrive bientôt.' });
+handlers['leave-deny']      = () => toast('Demande refusée', { type: 'info', desc: 'Pensez à prévenir le salarié : la notification automatique arrive bientôt.' });
 handlers['resv-detail']     = (el) => toast(`Réservation · ${el?.dataset?.arg || ''}`, { type: 'info', desc: 'Profil client unifié · historique · préférences · score no-show.' });
 handlers['resv-buffer']     = () => toast('Buffer 15 min appliqué', { type: 'success', desc: 'Prochaine réservation décalée à 19:30 · client notifié WhatsApp.' });
 })();
