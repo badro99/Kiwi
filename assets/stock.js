@@ -198,13 +198,13 @@
       addItemCost: 'Coût unitaire (MAD)',
       addItemBtn: "Ajouter au catalogue",
       addItemStock: 'Stock actuel',
-      addItemToast: (name) => `${name} ajouté au catalogue (démo · réinitialisé au refresh)`,
+      addItemToast: (name) => `${name} ajouté au catalogue`,
       // Edit / delete item
       editItemTitle: "Modifier l'article",
       editItemBtn: 'Enregistrer les modifications',
-      editItemToast: (name) => `${name} mis à jour (démo · réinitialisé au refresh)`,
+      editItemToast: (name) => `${name} mis à jour`,
       deleteItemTitle: 'Supprimer cet article ?',
-      deleteItemBody: (name) => `Vous êtes sur le point de supprimer « ${name} » du catalogue. Cette action s'applique à la session démo et sera réinitialisée au refresh.`,
+      deleteItemBody: (name) => `Vous êtes sur le point de supprimer « ${name} » du catalogue.`,
       deleteItemBtn: "Supprimer l'article",
       deleteItemToast: (name) => `${name} supprimé du catalogue`,
       ordNewToast: 'Nouvelle commande · démarrez par un fournisseur',
@@ -226,7 +226,7 @@
       addSupCta: 'Ajouter un fournisseur',
       addSupTitle: 'Nouveau fournisseur',
       addSupBtn: 'Ajouter le fournisseur',
-      addSupToast: (name) => `${name} ajouté à vos fournisseurs (démo · réinitialisé au refresh)`,
+      addSupToast: (name) => `${name} ajouté à vos fournisseurs`,
       editSupTitle: 'Modifier le fournisseur',
       editSupBtn: 'Enregistrer les modifications',
       editSupToast: (name) => `${name} mis à jour`,
@@ -384,12 +384,12 @@
       addItemCost: 'Unit cost (MAD)',
       addItemBtn: 'Add to catalogue',
       addItemStock: 'Current stock',
-      addItemToast: (name) => `${name} added to catalogue (demo · resets on refresh)`,
+      addItemToast: (name) => `${name} added to catalogue`,
       editItemTitle: 'Edit item',
       editItemBtn: 'Save changes',
-      editItemToast: (name) => `${name} updated (demo · resets on refresh)`,
+      editItemToast: (name) => `${name} updated`,
       deleteItemTitle: 'Delete this item?',
-      deleteItemBody: (name) => `You are about to remove "${name}" from the catalogue. This change is local to the demo session and resets on refresh.`,
+      deleteItemBody: (name) => `You are about to remove "${name}" from the catalogue.`,
       deleteItemBtn: 'Delete item',
       deleteItemToast: (name) => `${name} removed from catalogue`,
       ordNewToast: 'New order · start with a supplier',
@@ -410,7 +410,7 @@
       addSupCta: 'Add supplier',
       addSupTitle: 'New supplier',
       addSupBtn: 'Add supplier',
-      addSupToast: (name) => `${name} added to your suppliers (demo · resets on refresh)`,
+      addSupToast: (name) => `${name} added to your suppliers`,
       editSupTitle: 'Edit supplier',
       editSupBtn: 'Save changes',
       editSupToast: (name) => `${name} updated`,
@@ -557,12 +557,12 @@
       addItemCost: 'تكلفة الوحدة (درهم)',
       addItemBtn: 'إضافة للكتالوج',
       addItemStock: 'المخزون الحالي',
-      addItemToast: (name) => `${name} تمت إضافته للكتالوج (تجريبي · يُعاد عند التحديث)`,
+      addItemToast: (name) => `${name} تمت إضافته للكتالوج`,
       editItemTitle: 'تعديل المنتج',
       editItemBtn: 'حفظ التعديلات',
-      editItemToast: (name) => `${name} تم تحديثه (تجريبي · يُعاد عند التحديث)`,
+      editItemToast: (name) => `${name} تم تحديثه`,
       deleteItemTitle: 'حذف هذا المنتج؟',
-      deleteItemBody: (name) => `أنت على وشك حذف «${name}» من الكتالوج. هذا التغيير محلي للجلسة التجريبية ويُعاد عند التحديث.`,
+      deleteItemBody: (name) => `أنت على وشك حذف «${name}» من الكتالوج.`,
       deleteItemBtn: 'حذف المنتج',
       deleteItemToast: (name) => `${name} تم حذفه من الكتالوج`,
       ordNewToast: 'طلب جديد · ابدأ باختيار مورّد',
@@ -583,7 +583,7 @@
       addSupCta: 'إضافة مورد',
       addSupTitle: 'مورد جديد',
       addSupBtn: 'إضافة المورد',
-      addSupToast: (name) => `${name} تمت إضافته لمورديك (تجريبي · يُعاد عند التحديث)`,
+      addSupToast: (name) => `${name} تمت إضافته لمورديك`,
       editSupTitle: 'تعديل المورد',
       editSupBtn: 'حفظ التعديلات',
       editSupToast: (name) => `${name} تم تحديثه`,
@@ -635,6 +635,66 @@
   const stSupOverrides  = Object.create(null); // edits to existing suppliers, keyed by id
   const stDeletedSups   = new Set();          // soft-deleted supplier ids
   let stUserCategories  = [];                 // owner-added categories [{ id, label }]
+
+  /* ── Persistance de la surcouche — VRAI commerçant uniquement ──
+   * Le contrat « ça repart à zéro au rechargement » ci-dessus vaut pour la
+   * DÉMO : ce sont des retouches sur un inventaire fictif, elles doivent
+   * disparaître. Pour un vrai commerçant ce ne sont pas des retouches de démo,
+   * c'est SON stock : il saisissait ses articles, ses fournisseurs et ses
+   * catégories, voyait la page se remplir, rechargeait — et tout avait disparu,
+   * sans le moindre avertissement. Le travail d'une soirée de saisie.
+   *
+   * Rangé par établissement sous `kiwi:` (purgé au changement de compte, voir
+   * TENANT_PREFIXES dans identity.js). La démo n'écrit ni ne lit : son contrat
+   * de remise à zéro est intact. */
+  /* « (démo · réinitialisé au refresh) » était collé dans les libellés eux-mêmes,
+     donc affiché AUSSI au vrai commerçant — à qui on annonçait que sa saisie
+     serait perdue, pendant qu'elle l'était effectivement. Maintenant qu'elle est
+     conservée, la mise en garde ne vaut plus que pour la démo. */
+  const stDemoNote = () => (stShowReal() ? '' : ({
+    fr: ' (démo · réinitialisé au refresh)',
+    en: ' (demo · resets on refresh)',
+    ar: ' (تجريبي · يُعاد عند التحديث)',
+  }[lang()] || ' (démo · réinitialisé au refresh)'));
+
+  const stOverlayKey = () => 'kiwi:stockOverlay:' + currentVenueId();
+  let stOverlayLoadedFor = null;
+
+  function stSaveOverlay() {
+    if (!stShowReal()) return;
+    try {
+      localStorage.setItem(stOverlayKey(), JSON.stringify({
+        items: stUserItems, itemOv: stItemOverrides, delItems: [...stDeletedItems],
+        sups: stUserSuppliers, supOv: stSupOverrides, delSups: [...stDeletedSups],
+        cats: stUserCategories, stockOv: stStockOverrides,
+      }));
+    } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
+  }
+
+  /* Recharge la surcouche du commerce courant. Les Set/objet sont `const` :
+     on les vide et les re-remplit sur place plutôt que de les réaffecter. */
+  function stEnsureOverlay() {
+    const venue = currentVenueId();
+    if (stOverlayLoadedFor === venue) return;
+    stOverlayLoadedFor = venue;
+    stUserItems = []; stUserSuppliers = []; stUserCategories = [];
+    stDeletedItems.clear(); stDeletedSups.clear();
+    Object.keys(stItemOverrides).forEach((k) => delete stItemOverrides[k]);
+    Object.keys(stSupOverrides).forEach((k) => delete stSupOverrides[k]);
+    Object.keys(stStockOverrides).forEach((k) => delete stStockOverrides[k]);
+    if (!stShowReal()) return;                       // la démo repart de zéro, comme avant
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
+    if (!s || typeof s !== 'object') return;
+    if (Array.isArray(s.items)) stUserItems = s.items;
+    if (Array.isArray(s.sups)) stUserSuppliers = s.sups;
+    if (Array.isArray(s.cats)) stUserCategories = s.cats;
+    (s.delItems || []).forEach((id) => stDeletedItems.add(id));
+    (s.delSups || []).forEach((id) => stDeletedSups.add(id));
+    Object.assign(stItemOverrides, s.itemOv || {});
+    Object.assign(stSupOverrides, s.supOv || {});
+    Object.assign(stStockOverrides, s.stockOv || {});
+  }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Lucide icons inline
@@ -833,6 +893,7 @@
   function render() {
     const root = document.querySelector('[data-stock-root]');
     if (!root) return;
+    stEnsureOverlay();      // le stock saisi par le commerçant, relu avant d'afficher
     root.removeAttribute('hidden');
     root.innerHTML = `
       ${renderHeader()}
@@ -1918,6 +1979,7 @@
       Object.entries(matches).forEach(([id, q]) => {
         const it = inv.find(x => x.id === id);
         if (it) stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + q;
+        stSaveOverlay();
       });
       closeTopModal();
       window.Kiwi.toast(t('mScanToast'), { type: 'success', duration: 3800 });
@@ -2022,6 +2084,7 @@
         const v = parseFloat(inp.value);
         if (!isNaN(v)) stStockOverrides[inp.dataset.pcReal] = v;
       });
+      stSaveOverlay();     // un inventaire physique se compte une fois, pas à chaque rechargement
       closeTopModal();
       window.Kiwi.toast(t('mCountToast', fmtMad(totalCostVar)), { type: 'success', duration: 4200 });
       if (stPageActive) render();
@@ -2288,6 +2351,7 @@
       if (!raw) { inlineInput?.focus(); return; }
       const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
       stUserCategories.push({ id, label: raw });
+      stSaveOverlay();
       // Rebuild the select preserving "+ Nouvelle…" option last, select new id.
       sel.innerHTML = renderCatOptions(id);
       inlineWrap.style.display = 'none';
@@ -2380,6 +2444,7 @@
                 name, category, unit, supplier,
                 parLevel, reorderLevel, costPerUnit, currentStock,
               };
+              stSaveOverlay();   // article créé PAR le commerçant : sa correction compte autant
             }
           } else {
             stItemOverrides[existing.id] = {
@@ -2389,9 +2454,10 @@
             };
             // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
             stStockOverrides[existing.id] = currentStock;
+            stSaveOverlay();
           }
           closeTopModal();
-          window.Kiwi.toast(t('editItemToast', name), { type: 'success' });
+          window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
           if (stPageActive) render();
           return;
         }
@@ -2412,8 +2478,9 @@
           status,
         };
         stUserItems.push(item);
+        stSaveOverlay();
         closeTopModal();
-        window.Kiwi.toast(t('addItemToast', name), { type: 'success' });
+        window.Kiwi.toast(t('addItemToast', name) + stDemoNote(), { type: 'success' });
         if (stPageActive) render();
       });
   }
@@ -2427,7 +2494,7 @@
     const m = window.Kiwi.modal({
       title: t('deleteItemTitle'),
       width: 480,
-      body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteItemBody', it.name))}</p>`,
+      body: `<p style="margin:0; color:var(--n-700); line-height:1.55;">${esc(t('deleteItemBody', it.name) + stDemoNote())}</p>`,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" style="background:#b32a2a; border-color:#9a1f1f;" data-stock-delete-confirm>${esc(t('deleteItemBtn'))}</button>`,
     });
     const scope = m?.el || topBackdrop();
@@ -2437,6 +2504,7 @@
         stUserItems = stUserItems.filter(x => x.id !== it.id);
       } else {
         stDeletedItems.add(it.id);
+        stSaveOverlay();
       }
       closeTopModal();
       window.Kiwi.toast(t('deleteItemToast', it.name), { type: 'info' });
@@ -2528,12 +2596,13 @@
       if (isEdit) {
         if (existing.id.startsWith('usr-')) {
           const i = stUserSuppliers.findIndex(x => x.id === existing.id);
-          if (i >= 0) stUserSuppliers[i] = { ...stUserSuppliers[i], name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend };
+          if (i >= 0) { stUserSuppliers[i] = { ...stUserSuppliers[i], name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend }; stSaveOverlay(); }
         } else {
           stSupOverrides[existing.id] = { ...(stSupOverrides[existing.id] || {}), name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend };
+          stSaveOverlay();
         }
         closeTopModal();
-        window.Kiwi.toast(t('editSupToast', name), { type: 'success' });
+        window.Kiwi.toast(t('editSupToast', name) + stDemoNote(), { type: 'success' });
         if (stPageActive) render();
         return;
       }
@@ -2549,8 +2618,9 @@
         priceChangeLast30d: 0,
       };
       stUserSuppliers.push(sup);
+      stSaveOverlay();
       closeTopModal();
-      window.Kiwi.toast(t('addSupToast', name), { type: 'success' });
+      window.Kiwi.toast(t('addSupToast', name) + stDemoNote(), { type: 'success' });
       if (stPageActive) render();
     });
   }
@@ -2571,6 +2641,7 @@
         stUserSuppliers = stUserSuppliers.filter(x => x.id !== s.id);
       } else {
         stDeletedSups.add(s.id);
+        stSaveOverlay();
       }
       closeTopModal();
       window.Kiwi.toast(t('deleteSupToast', s.name), { type: 'info' });
@@ -2602,6 +2673,7 @@
       if (!raw) { input?.focus(); return; }
       const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
       stUserCategories.push({ id, label: raw });
+      stSaveOverlay();
       scope?.remove();
       window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
       if (stPageActive) render();
