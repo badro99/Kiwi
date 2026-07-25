@@ -32,11 +32,24 @@ lands on `/kiwi-admin.html`. Clients never discover it.
    exactly what they see. **"Gérer"** opens the management panel below.
 2. **PINs** (per client) — list / **add** (4-digit + name + role) / **delete**
    staff PINs. Managed remotely so an owner never has to.
-3. **Fonctionnalités** (per client) — a switch per module (stock, réservations,
-   KDS, tables, menu, paie, fidélité, dépenses). **Operator-only authority** — it
-   maps to the pricing tier. Turning a module **off hides it in that client's real
-   app** on next load (a small snack gets a clean interface, not a maze of buttons
-   it will never use).
+3. **Fonctionnalités** (per client) — **a switch per module the client can see**,
+   in three bands: *Modules communs* (ventes, clients & marketing, terminaux,
+   conformité, équipe, paie, réservations, fidélité, dépenses), the client's own
+   trade (boutique → inventaire / catégories / promos / retours; restaurant →
+   plan de salle / menu / KDS / stock / marges; spa; hôtel), and *Options
+   payantes* (Order Pro). **Operator-only authority** — it maps to the pricing
+   tier. Turning a module **off hides it in that client's real app** on next load
+   (a small snack gets a clean interface, not a maze of buttons it will never
+   use); switch off a whole trade section and its sidebar header goes with it.
+
+   The list is a mirror of the dashboard sidebar and has to stay one: a module in
+   the sidebar with no switch can't be sold or withheld, and a switch with no
+   sidebar node lies to whoever flips it. **Adding a nav entry ⇒ add the switch**
+   (`kiwi-admin.html` › `CORE_MODULES` / `VERTICAL_MODULES`) **and tag the node**
+   `data-feature="<key>"` — static entries in `dashboard.html`, per-trade ones in
+   `assets/venues.js` › `renderVerticalSection()` (tagged automatically from the
+   nav id). Only **Accueil** is deliberately unswitchable: it is the dashboard
+   itself, not a module.
 4. **Opérateurs** — add / delete operator access codes.
 
 ## Architecture
@@ -97,7 +110,12 @@ Loaded by `dashboard.html`, `kiwi-caisse.html`, `kiwi-serveur.html`. On load it
 fetches `/api/config?merchant=<slug>` and:
 
 - **Feature hiding** — for each module toggled off, hides every element tagged
-  `data-feature="<key>"` and adds `body.feat-off-<key>`.
+  `data-feature="<key>"` and adds `body.feat-off-<key>`. A sidebar section header
+  whose every link is hidden goes too (an empty "BOUTIQUE" band reads as a broken
+  page, not as a module the client doesn't have). Surfaces that paint on demand —
+  drawers, in-flow pages, the re-rendered trade section — are caught by a
+  `MutationObserver` that only runs while something is actually switched off, so
+  the common case costs nothing.
 - **PINs** — exposes `window.KiwiConfig.pins` for the caisse/serveur to consult
   **additively** (managed PINs augment the hardcoded defaults; defaults never
   break). A `kiwi-config` event fires when config arrives.

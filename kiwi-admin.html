@@ -126,8 +126,10 @@ em, i, cite, dfn, var { font-style: normal; }
   .feat{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
   .feat:last-child{border-bottom:0}
   .feat .fl{font-size:.9rem}
-  /* Paid add-on — set apart so nobody flips it thinking it's a normal module. */
-  .feat.addon{border-top:1px solid var(--line); margin-top:6px; padding-top:14px}
+  /* Band header — "Modules communs" / the trade / "Options payantes". Keeps a
+     15-row switch list readable instead of one undifferentiated column. */
+  .featgrp{margin:18px 0 4px}
+  .featgrp:first-child{margin-top:2px}
   .feat .fl .fh{display:block; font-size:.74rem; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
   .sw{position:relative; width:44px; height:26px; border-radius:999px; background:#cfd6d1; border:0; cursor:pointer; transition:background .2s; flex:none}
   .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
@@ -340,8 +342,30 @@ em, i, cite, dfn, var { font-style: normal; }
     return LEGACY_LABELS[v.toLowerCase()] || v || 'Équipe';
   }
 
-  // Modules per base vertical (the sidebar sections in venues.js) + the universal
-  // trio every business shares. A missing type ⇒ restaurant (the historic default).
+  // ── The client's app, module by module ───────────────────────────────────
+  // This list has to stay a mirror of the dashboard's sidebar: every entry a
+  // client can see is a switch here, and every switch here hides a real entry
+  // (the nav nodes carry data-feature="<key>" — the static ones in
+  // dashboard.html, the per-trade ones in venues.js › renderVerticalSection).
+  // A module in the sidebar with no switch is a module we can't sell or
+  // withhold; a switch with no sidebar node is a lie to whoever flips it.
+  //
+  // Three bands: CORE (every trade), the trade's own section, then paid add-ons.
+  // "Accueil" is deliberately absent — it is the dashboard itself, not a module,
+  // and a client with no landing page has no app.
+  var CORE_MODULES = [
+    { key:'transactions', label:'Ventes & commandes' },
+    { key:'crm',          label:'Clients & Marketing' },
+    { key:'terminaux',    label:'Terminaux' },
+    { key:'conformite',   label:'Conformité' },
+    { key:'equipe',       label:'Équipe' },
+    { key:'payroll',      label:'Paie & planning' },
+    { key:'reservations', label:'Réservations & RDV' },
+    { key:'loyalty',      label:'Fidélité' },
+    { key:'depenses',     label:'Dépenses & cartes' },
+  ];
+  // Modules per base vertical (the sidebar sections in venues.js).
+  // A missing type ⇒ restaurant (the historic default).
   var VERTICAL_MODULES = {
     restaurant: [
       { key:'tables',       label:'Plan de salle' },
@@ -349,7 +373,6 @@ em, i, cite, dfn, var { font-style: normal; }
       { key:'kds',          label:'Écran cuisine (KDS)' },
       { key:'stock',        label:'Stock & approvisionnement' },
       { key:'finance',      label:'Marges & budget' },
-      { key:'reservations', label:'Réservations' },
     ],
     boutique: [
       { key:'inventory',    label:'Inventaire produits' },
@@ -369,15 +392,16 @@ em, i, cite, dfn, var { font-style: normal; }
       { key:'sejours',      label:'Réservations & séjours' },
       { key:'menage',       label:'Ménage' },
       { key:'tarifs',       label:'Tarifs & occupation' },
+      { key:'hotes',        label:'Clients & fidélité' },
       { key:'folios',       label:'Notes clients · folios' },
       { key:'canaux',       label:'Canaux & OTA' },
+      { key:'hotelintel',   label:'Intelligence hôtel' },
     ],
   };
-  var UNIVERSAL_MODULES = [
-    { key:'payroll',  label:'Paie' },
-    { key:'loyalty',  label:'Fidélité' },
-    { key:'depenses', label:'Dépenses' },
-  ];
+  var VERTICAL_TITLES = {
+    restaurant: 'Restauration', boutique: 'Boutique',
+    spa: 'Espace bien-être',    hotel: 'Hôtel',
+  };
   // Paid add-ons — the ONLY modules that default to OFF. Everything above is part
   // of the interface a client already has, so an absent key means ON; an add-on is
   // the reverse, because switching it on has consequences outside the dashboard.
@@ -389,11 +413,17 @@ em, i, cite, dfn, var { font-style: normal; }
     { key:'orderpro', label:'Order Pro', off:true,
       hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
   ];
+  // Grouped so a 15-row list still reads: what everyone gets, what this trade
+  // gets, what costs extra.
   function modulesForType(typeId){
     var meta = typeMeta(typeId);
     var base = (meta && meta.base) || 'restaurant';
-    return (VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant)
-      .concat(UNIVERSAL_MODULES).concat(ADDON_MODULES);
+    return [
+      { title:'Modules communs', items:CORE_MODULES },
+      { title:VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant,
+        items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
+      { title:'Options payantes', items:ADDON_MODULES },
+    ];
   }
 
   // ── store: real /api/admin/* when reachable, else seeded mock + localStorage ─
@@ -842,22 +872,26 @@ em, i, cite, dfn, var { font-style: normal; }
     renderTypeRow();
     var wrap = document.getElementById('feat-list'); clear(wrap);
     var feats = await store.config(selected.merchant);
-    modulesForType(selected.type).forEach(function(mod){
-      // Standard module: absent ⇒ ON. Paid add-on (mod.off): absent ⇒ OFF.
-      var isOn = function(f){ return mod.off ? f[mod.key] === true : f[mod.key] !== false; };
-      var on = isOn(feats);
-      var sw = h('button', { class:'sw', role:'switch', 'aria-checked': on ? 'true':'false', 'aria-label':mod.label });
-      sw.addEventListener('click', async function(){
-        var cur = await store.config(selected.merchant);
-        var next = !isOn(cur);
-        cur[mod.key] = next;
-        sw.setAttribute('aria-checked', next ? 'true':'false');
-        await store.setConfig(selected.merchant, cur, selected.plan || '');
+    modulesForType(selected.type).forEach(function(grp){
+      if (!grp.items.length) return;
+      wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
+      grp.items.forEach(function(mod){
+        // Standard module: absent ⇒ ON. Paid add-on (mod.off): absent ⇒ OFF.
+        var isOn = function(f){ return mod.off ? f[mod.key] === true : f[mod.key] !== false; };
+        var on = isOn(feats);
+        var sw = h('button', { class:'sw', role:'switch', 'aria-checked': on ? 'true':'false', 'aria-label':mod.label });
+        sw.addEventListener('click', async function(){
+          var cur = await store.config(selected.merchant);
+          var next = !isOn(cur);
+          cur[mod.key] = next;
+          sw.setAttribute('aria-checked', next ? 'true':'false');
+          await store.setConfig(selected.merchant, cur, selected.plan || '');
+        });
+        var label = mod.hint
+          ? h('span', { class:'fl' }, mod.label, h('small', { class:'fh' }, mod.hint))
+          : h('span', { class:'fl' }, mod.label);
+        wrap.appendChild(h('div', { class:'feat' + (mod.off ? ' addon' : '') }, label, sw));
       });
-      var label = mod.hint
-        ? h('span', { class:'fl' }, mod.label, h('small', { class:'fh' }, mod.hint))
-        : h('span', { class:'fl' }, mod.label);
-      wrap.appendChild(h('div', { class:'feat' + (mod.off ? ' addon' : '') }, label, sw));
     });
   }
 

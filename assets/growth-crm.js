@@ -192,7 +192,7 @@
           <button class="kb atlas crm-send" data-crm-send>${T.send}</button>
         </div>
       </div>
-      <div class="crm-foot"><button class="kb ghost" data-crm-loyalty>${T.program}</button><button class="kb ghost" data-dismiss>${T.close}</button></div>
+      <div class="crm-foot"><button class="kb ghost" data-crm-loyalty data-feature="loyalty">${T.program}</button><button class="kb ghost" data-dismiss>${T.close}</button></div>
     </div>`;
 
     // In-flow like every other sidebar destination (no full-viewport takeover).

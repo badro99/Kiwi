@@ -127,6 +127,36 @@
     }).catch(function () { return false; });
   }
 
+  /* A section header with nothing under it is worse than no section at all:
+   * "BOUTIQUE" over empty space reads as a broken page, not as a module this
+   * client doesn't pay for. So after every pass a sidebar `.sect` whose every
+   * following link is one WE hid disappears with them, and comes back the moment
+   * one returns. Only our own hides count — the Croissance band is hidden by CSS
+   * (body.growth-locked) and must not be read as a switched-off section. */
+  function syncSectionHeaders() {
+    var nav = document.querySelector('.sidebar nav');
+    if (!nav) return;
+    var nodes = nav.querySelectorAll('.sect, a');
+    var head = null, total = 0, off = 0;
+    function settle() {
+      if (!head) return;
+      if (total && total === off) {
+        head.setAttribute('data-feat-empty', '');
+        head.style.display = 'none';
+      } else if (head.hasAttribute('data-feat-empty')) {
+        head.removeAttribute('data-feat-empty');
+        head.style.display = '';
+      }
+    }
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.classList.contains('sect')) { settle(); head = el; total = 0; off = 0; continue; }
+      total++;
+      if (el.hasAttribute('hidden')) off++;
+    }
+    settle();
+  }
+
   var appliedOff = [];
   function applyFeatures() {
     var features = cfg.features || {};
@@ -152,6 +182,43 @@
         }
       }
     });
+    syncSectionHeaders();
+    watchLateNodes();
+  }
+
+  /* Half this app paints on demand — a drawer, an in-flow page, a re-rendered
+   * sidebar section. Those nodes are born after the config landed, so a hide
+   * applied once at boot never reaches them and a switched-off module reappears
+   * the moment the client opens the surface that offers it.
+   *
+   * The observer only exists while something is actually switched off, which for
+   * most clients is never: the common path costs nothing. When it does run it is
+   * debounced to one pass per task and skips subtrees with no [data-feature] in
+   * them. setTimeout, not requestAnimationFrame: a dashboard opened in a
+   * background tab paints no frames, and the module would be back on screen the
+   * moment the merchant looked at it. */
+  var mo = null, moQueued = false;
+  function watchLateNodes() {
+    if (!appliedOff.length) {
+      if (mo) { mo.disconnect(); mo = null; }
+      return;
+    }
+    if (mo || typeof MutationObserver !== 'function' || !document.body) return;
+    mo = new MutationObserver(function (records) {
+      if (moQueued) return;
+      for (var i = 0; i < records.length; i++) {
+        var added = records[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          var n = added[j];
+          if (n.nodeType !== 1) continue;
+          if (!n.hasAttribute('data-feature') && !n.querySelector('[data-feature]')) continue;
+          moQueued = true;
+          setTimeout(function () { moQueued = false; applyFeatures(); }, 0);
+          return;
+        }
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
   }
 
   // Push the server-stored business type into the dashboard's venue engine so the

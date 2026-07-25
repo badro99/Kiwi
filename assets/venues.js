@@ -1718,12 +1718,19 @@
     const T = window.KiwiI18n?.T?.[lang] || {};
     const headerTxt = (sect.i18nHeader && T[sect.i18nHeader]) || sect.header;
 
+    /* data-feature="<nav>" is what makes the operator console's per-module
+     * switches reach this section. The keys are the nav ids, which is exactly
+     * what kiwi-admin.html lists per vertical — so "Inventaire produits" off in
+     * God mode hides this <a>. Without the attribute the switch existed but did
+     * nothing, because merchant-config.js can only hide what is tagged. Subtype
+     * profiles relabel these items but keep the base nav id, so a pharmacy's
+     * "Stock & péremptions" answers to the same `inventory` switch. */
     const html = `
       <div class="sect"${sect.i18nHeader ? ` data-i18n="${sect.i18nHeader}"` : ''}>${headerTxt}</div>
       ${sect.items.map(it => {
         const lbl = (it.i18n && T[it.i18n]) || it.label;
         return `
-          <a href="#" data-nav="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
+          <a href="#" data-nav="${it.nav}" data-feature="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${it.icon}</svg>
             <span${it.i18n ? ` data-i18n="${it.i18n}"` : ''}>${lbl}</span>
             ${it.tag ? `<span class="tag">${it.tag}</span>` : ''}
@@ -1732,8 +1739,15 @@
       }).join('')}
     `;
 
+    /* These <a> are brand new nodes, so the operator's hides have to be replayed
+     * over them — merchant-config.js applied them to the markup that was here a
+     * moment ago. Cheap (a querySelectorAll per disabled key) and a no-op when
+     * there is no backend or nothing is switched off. */
+    const reapplyConfig = () => { try { window.KiwiConfig?.apply?.(); } catch (_) {} };
+
     if (opts.skipFade) {
       wrap.innerHTML = html;
+      reapplyConfig();
       return;
     }
     // 150ms fade-out → swap → fade-in
@@ -1744,6 +1758,7 @@
       // eslint-disable-next-line no-unused-expressions
       wrap.offsetHeight;
       wrap.classList.remove('vert-fading');
+      reapplyConfig();
     }, 150);
   }
 

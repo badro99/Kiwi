@@ -5057,28 +5057,32 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
         <span data-i18n="dash.sidebar.home">Accueil</span>
       </a>
-      <a href="#" data-nav="transactions">
+      <!-- data-feature="<key>" = the operator's switch in kiwi-admin.html. Every
+           nav entry below Accueil carries one, so a module we don't sell to this
+           client is a module they never see. Accueil has none on purpose: it is
+           the dashboard itself, not a module. -->
+      <a href="#" data-nav="transactions" data-feature="transactions">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
         <span data-i18n="dash.sidebar.orders">Commandes</span>
         <span class="count">182</span>
       </a>
-      <a href="#" data-action="clients-directory">
+      <a href="#" data-action="clients-directory" data-feature="crm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="dash.sidebar.crm">Clients &amp; Marketing</span>
       </a>
-      <a href="#" data-nav="terminaux">
+      <a href="#" data-nav="terminaux" data-feature="terminaux">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>
         <span data-i18n="dash.sidebar.terminals">Terminaux</span>
         <span class="count">4</span>
       </a>
       <!-- Règlements removed in Kiwi 1.0 (no payment-processing license yet).
            Handler code preserved in pages-pro.js · see KIWI_2.0_ROADMAP.md to re-enable. -->
-      <a href="#" data-nav="conformite">
+      <a href="#" data-nav="conformite" data-feature="conformite">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-i18n="dash.sidebar.compliance">Conformité</span>
         <span class="tag">AAA</span>
       </a>
-      <a href="#" data-nav="equipe">
+      <a href="#" data-nav="equipe" data-feature="equipe">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg>
         <span data-i18n="dash.sidebar.team">Équipe</span>
         <span class="count">8</span>
@@ -5111,7 +5115,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3m4-3v7h-7"/></svg>
         <span data-i18n="dash.sidebar.qr">Commander à table</span>
       </a>
-      <a href="#" data-action="growth-crm">
+      <a href="#" data-action="growth-crm" data-feature="crm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l16-6v14L3 13z"/><path d="M8 17a2.5 2.5 0 0 0 4 1.5M3 11v2"/></svg>
         <span data-i18n="dash.sidebar.crm">Clients &amp; Marketing</span>
         <span class="tag" data-i18n="dash.sidebar.new">NOUV.</span>

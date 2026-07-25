@@ -106,7 +106,7 @@
       cta: { fr: 'Créer un lien', en: 'Create a link', ar: 'إنشاء رابط' },
     },
     {
-      id: 'loyalty', art: 'loyalty', action: 'loyalty',
+      id: 'loyalty', art: 'loyalty', action: 'loyalty', feat: 'loyalty',
       t: { fr: 'Vos habitués valent de l\'or', en: 'Your regulars are gold', ar: 'زبناؤك الأوفياء ذهب' },
       d: { fr: 'Un programme de fidélité directement sur la caisse, points, récompenses, et des clients qui reviennent.',
            en: 'A loyalty program built into the till, points, rewards, and customers who come back.',
@@ -215,13 +215,22 @@
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { return false; }
   }
 
+  /* A card carrying `feat` is an offer for a module the operator can withhold
+   * (kiwi-admin.html › Fonctionnalités). Switched off ⇒ the card is never dealt
+   * rather than dealt-then-hidden, so the next one fills the slot and the grid
+   * doesn't end up with a hole in it. */
+  function moduleOff(key) {
+    try { return !!key && !!window.KiwiConfig && window.KiwiConfig.features[key] === false; }
+    catch (_) { return false; }
+  }
+
   function render() {
     const band = document.querySelector('[data-oppo-band]');
     if (!band) return;
     const gone = dismissed();
     const real = isReal();
     const cards = POOL
-      .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]))
+      .filter((c) => !gone.includes(c.id) && !(real && PHASE_2[c.id]) && !moduleOff(c.feat))
       .slice(0, SLOTS);
     if (!cards.length) { setHtml(band, ''); band.style.display = 'none'; return; }
     band.style.display = '';
@@ -245,6 +254,9 @@
   });
 
   window.addEventListener('kiwi:langchange', render);
+  /* The config lands after this band is first painted (one fetch), and again on
+   * every venue switch — so re-deal whenever it arrives. */
+  document.addEventListener('kiwi-config', render);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
   else render();
 })();
