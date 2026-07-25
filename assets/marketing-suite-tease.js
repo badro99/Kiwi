@@ -107,7 +107,7 @@
     animation: kw-msu-scan 14s linear infinite;
   }
   @keyframes kw-msu-scan {
-    0%   { transform: translateY(0);     opacity: 0; }
+    0%   { transform: translateY(0);    opacity: 0; }
     8%   { opacity: 0.22; }
     92%  { opacity: 0.22; }
     100% { transform: translateY(120vh); opacity: 0; }
@@ -278,7 +278,6 @@
   }
   .kw-msu__title-word--accent {
     font-family: 'Instrument Serif', 'Inter Tight', serif;
-    font-style: italic;
     color: #7DF2B0;
     text-shadow: 0 0 28px rgba(125,242,176,0.3);
     letter-spacing: -0.02em;
@@ -400,7 +399,6 @@
     pointer-events: none;
     white-space: nowrap;
     font-family: 'Instrument Serif', 'Inter Tight', serif;
-    font-style: italic;
     letter-spacing: -0.02em;
     left: -9999px; top: -9999px;
   }
@@ -568,7 +566,7 @@
     measure.style.fontWeight = styles.fontWeight;
     measure.style.letterSpacing = styles.letterSpacing;
     measure.textContent = word;
-    /* Italic glyphs paint past advance-width — add a small safety pad. */
+    /* Serif glyphs can paint a hair past advance-width — small safety pad. */
     const w = measure.getBoundingClientRect().width;
     return Math.ceil(w) + 2;
   }

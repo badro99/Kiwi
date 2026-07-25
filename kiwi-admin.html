@@ -12,6 +12,14 @@
     --warn:#b0402f; --ok:#0B6E4F;
     --mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,monospace;
   }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
+
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
@@ -538,7 +546,7 @@
   function groupByOwner(rows){
     var order = [], byKey = {};
     rows.forEach(function(c){
-      var key = c.owner || c.email || ('#' + c.merchant);   // no owner ⇒ alone
+      var key = c.owner || c.email || ('#' + c.merchant);  // no owner ⇒ alone
       if (!byKey[key]){ byKey[key] = { key:key, stores:[] }; order.push(byKey[key]); }
       byKey[key].stores.push(c);
     });
@@ -820,9 +828,9 @@
       try {
         await store.setType(selected.merchant, v);
         selected.type = v;
-        renderClients();          // roster reflects the new type
-        renderPinRoles();          // staff roles switch to the new trade
-        await renderFeatures();    // module set switches to the new vertical
+        renderClients();         // roster reflects the new type
+        renderPinRoles();         // staff roles switch to the new trade
+        await renderFeatures();   // module set switches to the new vertical
         notify(v ? ('Type : ' + typeLabel(v) + ', modules adaptés.') : 'Type effacé.');
       } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
     });

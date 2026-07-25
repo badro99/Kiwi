@@ -35,13 +35,13 @@
     }
 
     :root {
-      --forest:        #0B6E4F;   /* brand --atlas (primary) */
-      --forest-deep:   #053B2C;   /* brand --riad (deep) */
-      --emerald:       #3FB67A;   /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
+      --forest:        #0B6E4F;  /* brand --atlas (primary) */
+      --forest-deep:   #053B2C;  /* brand --riad (deep) */
+      --emerald:       #3FB67A;  /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
       --mint-tint:     #EBF5F0;
       --mint-edge:     #C5E0D3;
 
-      --paper:         #F7F5F0;   /* brand warm paper */
+      --paper:         #F7F5F0;  /* brand warm paper */
       --paper-cream:   #F7F5F0;
       --paper-soft:    #F7F7F5;
       --paper-mute:    #F4F4F2;
@@ -50,7 +50,7 @@
       --line:          #E5E5E5;
       --line-soft:     #EEEEEE;
 
-      --ink:           #0A0F0D;   /* brand ink */
+      --ink:           #0A0F0D;  /* brand ink */
       --ink-2:         #4A4A4A;
       --ink-3:         #6B6B6B;
       --ink-4:         #9A9A9A;
@@ -76,6 +76,13 @@
       --topbar-h: 56px;
       --bottom-h: 64px;
     }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
 
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
@@ -174,7 +181,6 @@
     }
     .pin-tagline {
       font-family: var(--serif);
-      font-style: italic;
       font-size: 14px;
       color: rgba(247,245,240,0.55);
     }
@@ -303,7 +309,6 @@
     }
     .ci-tagline {
       font-family: var(--serif);
-      font-style: italic;
       font-size: 18px;
       color: rgba(247,245,240,0.55);
       text-align: center;
@@ -315,7 +320,7 @@
       text-align: center;
       letter-spacing: -0.02em;
     }
-    .ci-greeting em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--mint); }
+    .ci-greeting em { font-family: var(--serif); font-weight: 400; color: var(--mint); }
     .ci-role {
       font-size: 13px; color: rgba(247,245,240,0.55);
       letter-spacing: 0.08em; text-transform: uppercase;
@@ -427,7 +432,7 @@
     @keyframes nfc-check-pop {
       0%   { transform: scale(0.4); opacity: 0; }
       55%  { transform: scale(1.25); opacity: 1; }
-      100% { transform: scale(1);    opacity: 1; }
+      100% { transform: scale(1);   opacity: 1; }
     }
     .nfc-caption {
       font-family: var(--mono);
@@ -842,7 +847,7 @@
       display: flex; justify-content: space-between; align-items: baseline;
     }
     .td-total-row .lbl {
-      font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-2);
+      font-family: var(--serif); font-size: 15px; color: var(--ink-2);
     }
     .td-total-row .val {
       font-size: 22px; font-weight: 800; color: var(--ink);
@@ -865,7 +870,7 @@
     /* read-only note sub-line under a sent order item */
     .td-item-noteline {
       flex: 1 0 100%;
-      font-size: 11.5px; color: var(--forest); font-style: italic;
+      font-size: 11.5px; color: var(--forest);
       padding-left: 2px;
     }
 
@@ -890,7 +895,7 @@
     .td-btn:active { transform: scale(0.98); }
     .td-btn svg { width: 18px; height: 18px; }
     .td-btn.primary { background: var(--gradient); color: #fff; }
-    .td-btn.dark    { background: var(--ink);    color: #fff; }
+    .td-btn.dark    { background: var(--ink);   color: #fff; }
     .td-btn.ghost   { background: var(--paper-mute); color: var(--ink-2); }
     .td-btn.warn    { background: var(--forest); color: #fff; }
     .td-btn.danger  { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
@@ -1183,7 +1188,7 @@
     .menu-cart-bar.is-visible { display: flex; }
     @keyframes slide-up-bar {
       from { transform: translateY(120%); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
+      to   { transform: translateY(0);   opacity: 1; }
     }
     .menu-cart-bar-info { display: flex; align-items: center; gap: 10px; }
     .menu-cart-count {
@@ -1272,7 +1277,7 @@
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }
-    .shift-value.serif { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 19px; }
+    .shift-value.serif { font-family: var(--serif); font-weight: 400; font-size: 19px; }
 
     .profil-clockout {
       width: 100%;
@@ -1350,7 +1355,7 @@
       white-space: nowrap;
       letter-spacing: -0.01em;
     }
-    .kg-day.is-rest .kg-day-hours { color: var(--ink-4); font-style: italic; }
+    .kg-day.is-rest .kg-day-hours { color: var(--ink-4); }
     .kg-day.is-today .kg-day-name,
     .kg-day.is-today .kg-day-num { color: var(--forest-deep); }
     .kg-day.is-today .kg-day-hours { color: var(--forest-deep); font-weight: 600; }
@@ -1514,7 +1519,7 @@
       gap: 12px;
     }
     .kg-rank-name {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       font-size: 27px; line-height: 1.05; color: var(--ink);
       margin-top: 6px;
     }
@@ -1542,7 +1547,7 @@
       margin-top: 8px; font-size: 11.5px; color: var(--ink-3);
     }
     .kg-rank-foot em {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       font-size: 13px; color: var(--ink-2);
     }
     .kg-rank-foot .kg-mono {
@@ -1586,9 +1591,9 @@
     .kg-rec-tile.is-record .kg-rec-flag { display: block; }
     .kg-rec-tile.kg-just-broke { animation: kg-record-pop 1500ms ease; }
     @keyframes kg-record-pop {
-      0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(125,242,176,0); }
+      0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(125,242,176,0); }
       18%  { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(125,242,176,0.45); }
-      100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(125,242,176,0); }
+      100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(125,242,176,0); }
     }
 
     /* c) Défi du soir */
@@ -1641,7 +1646,7 @@
     }
     .kg-rank-chip-name { font-weight: 600; color: var(--ink-2); }
     .kg-rank-chip-role {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       font-size: 13px; color: var(--ink-3);
     }
 
@@ -1665,7 +1670,7 @@
       text-transform: uppercase; letter-spacing: 0.14em;
     }
     .kg-sc-title {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       font-size: 42px; line-height: 1; color: #fff; margin-top: 8px;
     }
     .kg-sc-meta {
@@ -1712,7 +1717,7 @@
       font-size: 15px; color: #fff; margin-top: 3px;
       line-height: 1.35; font-weight: 500;
     }
-    .kg-sc-hl-text em { font-family: var(--serif); font-style: italic; font-weight: 400; }
+    .kg-sc-hl-text em { font-family: var(--serif); font-weight: 400; }
     .kg-sc-actions {
       margin-top: auto; padding-top: 24px;
       display: flex; flex-direction: column; gap: 9px;
@@ -2225,7 +2230,6 @@
     .split-convive-cart-remove:active { background: rgba(184,82,69,0.22); }
     .split-convive-cart-empty-state {
       text-align: center; font-size: 12px; color: var(--ink-4);
-      font-style: italic;
       margin-top: 12px;
       padding: 10px;
       background: var(--paper-soft);
@@ -2496,7 +2500,7 @@
        Scoped inside .app via position:absolute so on desktop the
        phone-frame bezel stays visible around it. On mobile (<500px)
        .app already fills the viewport so this fills the viewport too.
-       Mirrors the dashboard intro: slide-up h1 → typewriter italic
+       Mirrors the dashboard intro: slide-up h1 → typewriter reveal
        → caret → fade out + dive in.
        =========================================================== */
     .kiwi-greet {
@@ -2535,7 +2539,7 @@
       white-space: nowrap;
     }
     .kiwi-greet h1 em {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       color: var(--forest);
       display: inline;
     }
@@ -2568,7 +2572,7 @@
       margin-top: 18px;
     }
     .kiwi-greet-sub em {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       text-transform: none; letter-spacing: normal;
       color: var(--forest);
     }
@@ -2580,7 +2584,7 @@
     }
     @keyframes main-enter {
       0%   { transform: scale(0.92); opacity: 0; }
-      100% { transform: scale(1);    opacity: 1; }
+      100% { transform: scale(1);   opacity: 1; }
     }
     /* Stagger inner content rise */
     .tab-tables.is-fresh > * {
@@ -2592,7 +2596,7 @@
     .tab-tables.is-fresh > *:nth-child(4) { animation-delay: 420ms; }
     @keyframes rise-in {
       from { transform: translateY(18px); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
+      to   { transform: translateY(0);   opacity: 1; }
     }
 
     /* Welcome banner — auto-dismissing celebration */
@@ -2616,8 +2620,8 @@
     }
     @keyframes welcome-show {
       0%   { opacity: 0; transform: translateY(-20px) scale(0.96); }
-      8%   { opacity: 1; transform: translateY(0)     scale(1);    }
-      85%  { opacity: 1; transform: translateY(0)     scale(1);    }
+      8%   { opacity: 1; transform: translateY(0)     scale(1);   }
+      85%  { opacity: 1; transform: translateY(0)     scale(1);   }
       100% { opacity: 0; transform: translateY(-12px) scale(0.98); }
     }
     .wb-icon {
@@ -2668,7 +2672,6 @@
     /* Section big title for "Vos tables ce soir" */
     .scope-title {
       font-family: var(--serif);
-      font-style: italic;
       font-size: 22px;
       font-weight: 400;
       color: var(--ink);
@@ -3569,7 +3572,7 @@
       'm-022': ['sauces', 'piment'],                                // Wrap végé
     };
     const itemHasOptions = id => Array.isArray(itemOptions[id]) && itemOptions[id].length > 0;
-    const isReqKind = k => k === 'radio';   // radio = obligatoire; multi / toggle = optionnel
+    const isReqKind = k => k === 'radio';  // radio = obligatoire; multi / toggle = optionnel
 
     /* Build the chosen-options array (and €) from a draft selection. */
     function optsFromSel(itemId, sel) {
@@ -3595,7 +3598,7 @@
       opts.forEach(o => {
         const def = optionGroups[o.group];
         if (def && def.kind === 'multi') (multiBy[o.group] = multiBy[o.group] || []).push(o.label);
-        else parts.push(o.label);   // radio value or toggle group-name
+        else parts.push(o.label);  // radio value or toggle group-name
       });
       Object.keys(multiBy).forEach(g => parts.push(`${optionGroups[g].name}: ${multiBy[g].join(', ')}`));
       return parts.join(' · ');
@@ -3698,11 +3701,11 @@
 
     /* ---------- State ---------- */
     let currentTab = 'tables';
-    let activeTableId = null;        // currently viewing in screen-table
-    let menuContextId = null;        // table for which menu is collecting items
+    let activeTableId = null;       // currently viewing in screen-table
+    let menuContextId = null;       // table for which menu is collecting items
     let activeFilter = 'all';
     let activeCat = 'all';
-    let currentScope = 'mine';       // 'mine' | 'all'
+    let currentScope = 'mine';      // 'mine' | 'all'
     let shiftStart = null;
     let tablesPaid = 0;
 
@@ -3954,7 +3957,7 @@
        *   0       button morphs into a check
        *   640     clockin screen leaves (zoom + blur, 380ms)
        *   1020    GREETING FLASH appears (paper bg fades in, h1 slides up)
-       *   1900    typewriter italic begins
+       *   1900    typewriter reveal begins
        *   2700    caret drops, sentence reads clean
        *   3300    greeting fades + main screen zooms in (existing animation)
        *   4000    greeting removed
@@ -4102,7 +4105,7 @@
       greetEl.classList.add('is-visible');
       greetEl.setAttribute('aria-hidden', 'false');
 
-      // t=880: typewriter italic begins
+      // t=880: typewriter reveal begins
       setTimeout(() => emClip && emClip.classList.add('is-revealed', 'is-typing'), 880);
 
       // t=1680: caret drops
@@ -4167,7 +4170,7 @@
       const cap = $('#bt-capsule'), pill = $('#bt-pill');
       if (!cap || !pill) return;
       const active = cap.querySelector('.bt-btn[aria-pressed="true"]');
-      if (!active || cap.offsetWidth === 0) return;   // hidden / not laid out yet
+      if (!active || cap.offsetWidth === 0) return;  // hidden / not laid out yet
       const capR = cap.getBoundingClientRect(), r = active.getBoundingClientRect();
       const left = Math.round(r.left - capR.left), w = Math.round(r.width);
       const set = (l, width) => { pill.style.transform = `translateX(${l}px)`; pill.style.width = width + 'px'; };
@@ -4635,7 +4638,7 @@
       activeTableId = null;
       menuContextId = null;
       showScreen('screen-main');
-      setTab('tables');   // setTab renders the tables panel + hides the cart bar
+      setTab('tables');  // setTab renders the tables panel + hides the cart bar
       lucide.createIcons();
     }
 
@@ -4890,7 +4893,7 @@
     }
 
     /* ---------- Options sheet — forced before a dish with groups joins the order ---------- */
-    let optDraft = null;   // { itemId, sel: { groupId: value | Set | bool } }
+    let optDraft = null;  // { itemId, sel: { groupId: value | Set | bool } }
 
     function openOptionsSheet(itemId) {
       const item = menuItems.find(m => m.id === itemId);
@@ -5364,7 +5367,7 @@
       if (e.target === cardModal && !splitPayCallback) closeCardModal({ paid: true, tableId });
       if (action === 'close') closeCardModal({ paid: true, tableId });
       if (action === 'print') { toast('Ticket en impression…'); closeCardModal({ paid: true, tableId }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');    closeCardModal({ paid: true, tableId }); }
+      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');   closeCardModal({ paid: true, tableId }); }
     });
 
     /* ---------- CASH modal ---------- */
@@ -5464,7 +5467,7 @@
       if (e.target === cashModal) closeCashModal({ paid: cashStepInput.hidden, tableId });
       if (action === 'close') closeCashModal({ paid: true, tableId });
       if (action === 'print') { toast('Ticket en impression…'); closeCashModal({ paid: true, tableId }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');    closeCashModal({ paid: true, tableId }); }
+      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp');   closeCashModal({ paid: true, tableId }); }
     });
 
     /* ---------- Mark paid ---------- */
@@ -5494,7 +5497,7 @@
       }, 4000);
       // Update views
       if (activeTableId === id) {
-        returnToFloor();   // land on the floor, not a stale tab panel
+        returnToFloor();  // land on the floor, not a stale tab panel
       }
       if (currentTab === 'tables')   renderTables();
       if (currentTab === 'paiement') renderPaiement();
@@ -5520,7 +5523,7 @@
     /* Persisted splits per table — survives modal close, table switch, etc.
        Allows the server to start a split, dismiss the modal, help other
        customers, and come back to keep encaisser. */
-    const tableSplits = new Map();   // tableId → { mode, parts, paidCount, total }
+    const tableSplits = new Map();  // tableId → { mode, parts, paidCount, total }
 
     function saveSplitFlow() {
       if (!splitState.tableId || !splitState.flow) return;
@@ -6044,7 +6047,7 @@
        and intercepts the clock-out button upstream (capture phase).
        ========================================================= */
     (function () {
-      /* --- ranks (serif-italic names in the UI) --- */
+      /* --- ranks (serif names in the UI) --- */
       const KG_RANKS = [
         { name: 'Apprenti',         xp: 0    },
         { name: 'Garçon',           xp: 700  },
@@ -6094,8 +6097,8 @@
 
       /* --- shift-local state (resets each shift / page reload) --- */
       let kgState        = kgLoad();
-      let kgShiftRevenue = 0;   // MAD encaissé this shift (tallied via markTablePaid)
-      let kgShiftTurnMin = 0;   // sum of occupancy minutes of paid tables
+      let kgShiftRevenue = 0;  // MAD encaissé this shift (tallied via markTablePaid)
+      let kgShiftTurnMin = 0;  // sum of occupancy minutes of paid tables
       let kgShareLine    = 'Service bouclé';
       const kgBroke      = { bestNight: false, bestSpeed: false };
 
@@ -6278,7 +6281,7 @@
         if (hlEl) {
           hlEl.style.display = 'flex';
           hlEl.style.animation = 'none';
-          void hlEl.offsetWidth;                       // restart the entrance animation
+          void hlEl.offsetWidth;                      // restart the entrance animation
           hlEl.style.animation = '';
           hlEl.style.animationDelay = (rows.length * 80 + 60) + 'ms';
         }
@@ -6364,7 +6367,7 @@
         kgBankShift();
         const veil = document.getElementById('kg-shiftcard');
         if (veil) veil.classList.remove('is-open');
-        clockOut();   // the original clock-out logic
+        clockOut();  // the original clock-out logic
       });
 
       /* --- keep the card-screen rank chip fresh whenever the modal opens --- */

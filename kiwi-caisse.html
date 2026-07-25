@@ -57,22 +57,22 @@
   <style>
     /* ---------- Tokens (inline, file is standalone) ---------- */
     :root {
-      --forest:        #0B6E4F;   /* brand --atlas (primary) */
-      --forest-deep:   #053B2C;   /* brand --riad (deep) */
-      --emerald:       #3FB67A;   /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
-      --mint-tint:     #EBF5F0;   /* ka-yaklo bg */
-      --mint-edge:     #C5E0D3;   /* ka-yaklo border */
+      --forest:        #0B6E4F;  /* brand --atlas (primary) */
+      --forest-deep:   #053B2C;  /* brand --riad (deep) */
+      --emerald:       #3FB67A;  /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
+      --mint-tint:     #EBF5F0;  /* ka-yaklo bg */
+      --mint-edge:     #C5E0D3;  /* ka-yaklo border */
 
-      --paper:         #F7F5F0;   /* brand warm paper */
-      --paper-cream:   #F7F5F0;   /* dashboard "paper" — light text on dark */
-      --paper-soft:    #F7F7F5;   /* stat card bg (light variant) */
-      --paper-mute:    #F4F4F2;   /* khawya / quick action bg */
-      --mint:          #7DF2B0;   /* dashboard mint accent */
-      --ink-bg:        #0A0F0D;   /* dashboard sidebar bg */
+      --paper:         #F7F5F0;  /* brand warm paper */
+      --paper-cream:   #F7F5F0;  /* dashboard "paper" — light text on dark */
+      --paper-soft:    #F7F7F5;  /* stat card bg (light variant) */
+      --paper-mute:    #F4F4F2;  /* khawya / quick action bg */
+      --mint:          #7DF2B0;  /* dashboard mint accent */
+      --ink-bg:        #0A0F0D;  /* dashboard sidebar bg */
       --line:          #E5E5E5;
       --line-soft:     #EEEEEE;
 
-      --ink:           #0A0F0D;   /* brand ink */
+      --ink:           #0A0F0D;  /* brand ink */
       --ink-2:         #4A4A4A;
       --ink-3:         #6B6B6B;
       --ink-4:         #9A9A9A;
@@ -342,7 +342,7 @@
     }
     .main-head[hidden] { display: none; }
     .main-title { font-size: 16px; font-weight: 600; color: var(--ink); }
-    .main-title em { font-family: var(--serif); font-style: italic; color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px; }
+    .main-title em { font-family: var(--serif); color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px; }
 
     .legend { display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--ink-3); }
     .legend-item { display: flex; align-items: center; gap: 6px; }
@@ -549,7 +549,6 @@
     }
     .plan-room-label em {
       font-family: var(--serif, 'Instrument Serif', serif);
-      font-style: italic;
       font-weight: 400;
       text-transform: none;
       color: var(--ink-4);
@@ -654,7 +653,7 @@
       display: flex; justify-content: center; gap: 5px;
       pointer-events: none;
     }
-    .tbl-chairs-top    { left: 6px; right: 6px; top: -9px;    height: 7px; }
+    .tbl-chairs-top    { left: 6px; right: 6px; top: -9px;   height: 7px; }
     .tbl-chairs-bottom { left: 6px; right: 6px; bottom: -9px; height: 7px; }
     .chair {
       flex: 0 1 16px;
@@ -750,7 +749,6 @@
     }
     .tbl-covers {
       font-family: var(--serif, 'Instrument Serif', serif);
-      font-style: italic;
       font-weight: 400;
       font-size: 12px;
       line-height: 1;
@@ -1051,7 +1049,7 @@
     }
     @keyframes slide-in {
       from { transform: translateX(100%); opacity: 0; }
-      to   { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(0);   opacity: 1; }
     }
 
     .rp-head {
@@ -1165,7 +1163,7 @@
       margin-top: 6px;
     }
     .rp-total .lbl {
-      font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-2);
+      font-family: var(--serif); font-size: 16px; color: var(--ink-2);
     }
     .rp-total .val {
       font-size: 24px; font-weight: 800; color: var(--ink);
@@ -1243,7 +1241,7 @@
     }
     @keyframes pop-in {
       from { transform: scale(0.95); opacity: 0; }
-      to   { transform: scale(1);    opacity: 1; }
+      to   { transform: scale(1);   opacity: 1; }
     }
 
     .modal-title {
@@ -1776,7 +1774,6 @@
     .split-convive-cart-remove:hover { background: rgba(184,82,69,0.22); }
     .split-convive-cart-empty-state {
       text-align: center; font-size: 12.5px; color: var(--ink-4);
-      font-style: italic;
       margin-top: 12px;
       padding: 12px;
       background: var(--paper-soft);
@@ -1885,7 +1882,7 @@
       display: inline-block;
     }
     .pin-greet {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       font-size: 22px; color: rgba(255,255,255,.78);
       margin-bottom: 6px;
       text-align: center;
@@ -1980,8 +1977,8 @@
     }
     @keyframes welcome-show {
       0%   { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.96); }
-      8%   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);    }
-      85%  { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);    }
+      8%   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);   }
+      85%  { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);   }
       100% { opacity: 0; transform: translateX(-50%) translateY(-8px)  scale(0.98); }
     }
     .welcome-banner-icon {
@@ -1995,7 +1992,7 @@
     .welcome-banner-text { flex: 1; min-width: 0; }
     .wb-line1 { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
     .wb-line2 { font-size: 11.5px; opacity: 0.92; margin-top: 3px; line-height: 1.3; }
-    .wb-line2 em { font-family: var(--serif); font-style: italic; }
+    .wb-line2 em { font-family: var(--serif); }
 
     /* Entry stagger animations (gamification) */
     @keyframes rise-fade {
@@ -2006,11 +2003,11 @@
     @keyframes shell-enter {
       0%   { transform: scale(0.92); opacity: 0; filter: blur(2px); }
       60%  { filter: blur(0); }
-      100% { transform: scale(1);    opacity: 1; filter: blur(0); }
+      100% { transform: scale(1);   opacity: 1; filter: blur(0); }
     }
     @keyframes topbar-enter {
       0%   { transform: translateY(-6px); opacity: 0; }
-      100% { transform: translateY(0);    opacity: 1; }
+      100% { transform: translateY(0);   opacity: 1; }
     }
     /* Pre-hide shell + topbar so the greeting flash fully covers the
      * area underneath while the PIN cross-fades into the greeting.
@@ -2065,7 +2062,7 @@
       animation: clockin-out 480ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
     }
     @keyframes clockin-out {
-      0%   { opacity: 1; transform: scale(1);    filter: blur(0); }
+      0%   { opacity: 1; transform: scale(1);   filter: blur(0); }
       100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
     }
     .clockin-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -2075,10 +2072,10 @@
       color: var(--paper-cream);
     }
     .clockin-brand i { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; display: inline-block; }
-    .clockin-tagline { font-family: var(--serif); font-style: italic; font-size: 15px; color: rgba(255,255,255,0.5); }
+    .clockin-tagline { font-family: var(--serif); font-size: 15px; color: rgba(255,255,255,0.5); }
     .clockin-mid { display: flex; flex-direction: column; align-items: center; text-align: center; }
     .clockin-greet { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-    .clockin-greet em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--mint); }
+    .clockin-greet em { font-family: var(--serif); font-weight: 400; color: var(--mint); }
     .clockin-role { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 6px; letter-spacing: 0.04em; }
     .clockin-clock {
       font-family: var(--mono); font-size: 88px; font-weight: 700;
@@ -2148,7 +2145,7 @@
     }
     .clo-eyebrow { font-size: 11px; font-weight: 600; color: var(--mint); text-transform: uppercase; letter-spacing: 0.14em; }
     .clo-title {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       font-size: 33px; line-height: 1; color: #fff; margin-top: 8px;
     }
     .clo-meta { font-size: 12px; color: rgba(247,245,240,0.5); margin-top: 7px; }
@@ -2198,7 +2195,7 @@
     }
     .clo-highlight-icon svg { width: 16px; height: 16px; }
     .clo-highlight-text { font-size: 13.5px; color: #fff; line-height: 1.4; }
-    .clo-highlight-text em { font-family: var(--serif); font-style: italic; }
+    .clo-highlight-text em { font-family: var(--serif); }
     .clo-actions { margin-top: 16px; display: flex; gap: 9px; }
     .clo-btn {
       flex: 1; height: 46px; border-radius: 14px;
@@ -2344,8 +2341,8 @@
       display: inline-flex; align-items: center; justify-content: center;
     }
     .cm-row-ic svg { width: 13px; height: 13px; }
-    .cm-row-ic--in  { background: rgba(63,182,122,0.14);  color: var(--forest); }
-    .cm-row-ic--out { background: rgba(184,82,69,0.12);   color: var(--danger-mute); }
+    .cm-row-ic--in  { background: rgba(63,182,122,0.14); color: var(--forest); }
+    .cm-row-ic--out { background: rgba(184,82,69,0.12);  color: var(--danger-mute); }
     .cm-row-reason {
       flex: 1; color: var(--ink-2); font-weight: 500;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2466,7 +2463,7 @@
       flex: 1;
     }
     .drawer-title em {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px;
     }
     .drawer-close {
@@ -2747,7 +2744,7 @@
     /* ===========================================================
        GREETING FLASH (full-viewport, plays after PIN unlock,
        before the shell rises in). Mirrors the dashboard's intro
-       sequence — same timing, same typewriter italic, same caret.
+       sequence — same timing, same typewriter reveal, same caret.
        =========================================================== */
     .kiwi-greet {
       position: fixed; inset: 0; z-index: var(--z-greeting, 700);
@@ -2786,7 +2783,7 @@
       white-space: nowrap;
     }
     .kiwi-greet h1 em {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       color: var(--forest);
       display: inline;
     }
@@ -2821,7 +2818,7 @@
       margin-top: 22px;
     }
     .kiwi-greet-sub em {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       text-transform: none; letter-spacing: normal;
       color: var(--forest);
     }
@@ -3250,7 +3247,7 @@
     }
     .ho-slip-sign-col { flex: 1; text-align: center; }
     .ho-slip-sign-name {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       font-size: 16px; color: var(--ink);
     }
     .ho-slip-sign-role {
@@ -3303,7 +3300,7 @@
     }
     .receipt-paper {
       width: 322px; max-width: calc(100vw - 48px);
-      background: #FBF9F2;          /* warm cream — never pure white */
+      background: #FBF9F2;         /* warm cream — never pure white */
       color: var(--ink);
       font-family: var(--mono);
       font-size: 12px; line-height: 1.55;
@@ -3785,7 +3782,7 @@
     /* read-only note sub-line under a bill item (table addition) */
     .rp-item-noteline {
       grid-column: 1 / -1;
-      font-size: 11px; color: var(--forest); font-style: italic;
+      font-size: 11px; color: var(--forest);
       margin-top: 3px; padding-left: 2px;
     }
     /* the `hidden` attribute is too weak vs. these flex rules — force it */
@@ -4033,7 +4030,7 @@
           var r = fsEl()
             ? (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document)
             : (function () { var el = document.documentElement; return (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el); })();
-          if (r && r.catch) r.catch(function () {});   // some contexts (sandboxed iframes) reject — ignore
+          if (r && r.catch) r.catch(function () {});  // some contexts (sandboxed iframes) reject — ignore
         } catch (_) {}
       });
       document.addEventListener('fullscreenchange', paint);
@@ -4239,7 +4236,7 @@
               <text x="1330" y="200" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="22" font-weight="500" letter-spacing="6" fill="#7D6E45">CUISINE</text>
               <!-- Pass-through window between cuisine and main floor -->
               <rect x="1098" y="296" width="60" height="40" fill="#FBF7EE" stroke="#A89770" stroke-width="1.5"/>
-              <text x="1128" y="358" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="13" fill="#7D6E45">pass</text>
+              <text x="1128" y="358" text-anchor="middle" font-family="Instrument Serif, serif" font-size="13" fill="#7D6E45">pass</text>
 
               <!-- Comptoir (long bar) — walnut + brass -->
               <rect x="220" y="350" width="800" height="80" rx="8" fill="url(#walnut)"/>
@@ -4441,7 +4438,7 @@
                 </g>
                 <!-- Label -->
                 <text x="0" y="170" text-anchor="middle"
-                      font-family="Instrument Serif, serif" font-style="italic"
+                      font-family="Instrument Serif, serif"
                       font-size="20" fill="#1F4A38" opacity="0.7">banquette ronde</text>
               </g>
 
@@ -4468,7 +4465,7 @@
                       stroke="url(#leather-highlight)" stroke-width="4"
                       fill="none" opacity="0.5" transform="translate(0, -18)"/>
                 <text x="0" y="35" text-anchor="middle"
-                      font-family="Instrument Serif, serif" font-style="italic"
+                      font-family="Instrument Serif, serif"
                       font-size="14" fill="#1F4A38" opacity="0.65">banquette d'angle</text>
               </g>
 
@@ -5406,7 +5403,7 @@
     }
     const ROSTER_PALETTE = ['#3FB67A', '#1F5D3C', '#D49F2E', '#2B5C68', '#7A5BC9', '#B26B0F', '#4F7560', '#B85245'];
     function rebuildRealRoster() {
-      if (!storeIsReal()) return;                       // demo keeps its seeded five
+      if (!storeIsReal()) return;                      // demo keeps its seeded five
       const roster = currentRoster();
       Object.keys(servers).forEach(k => { delete servers[k]; });
       roster.forEach((m, i) => {
@@ -5591,7 +5588,7 @@
     }
 
     function tableHTML(id, t) {
-      if (t.designed) return designedTableHTML(id, t);   // real store: grid card, not the demo canvas node
+      if (t.designed) return designedTableHTML(id, t);  // real store: grid card, not the demo canvas node
       const sizeClass = `size-${t.size}`;
       const shape = t.shape || 'rect';
       const shapeClass = shape === 'round' ? 'is-round' : (shape === 'square' ? 'is-square' : 'is-rect');
@@ -5646,7 +5643,7 @@
       } else if (anchor === 'banquette-ronde') {
         // Round table inside a 3/4 C-arc opening south → chairs on the south arc only.
         const n = Math.max(1, Math.ceil(t.covers / 2));
-        chairsHTML = chairsArc(n, 130, 230);   // ~100° arc centered on south
+        chairsHTML = chairsArc(n, 130, 230);  // ~100° arc centered on south
       } else if (shape === 'round') {
         chairsHTML = chairsRound(t.covers);
       } else if (shape === 'square') {
@@ -5715,7 +5712,7 @@
     function designedCovers(type) { return DESIGN_COVERS[type] || 4; }
 
     function caisseFloorPlan() {
-      if (!storeIsReal()) return null;                 // demo uses the built-in plan
+      if (!storeIsReal()) return null;                // demo uses the built-in plan
       let slug = '';
       try { const p = storePaired(); slug = (p && p.merchant) || ''; } catch (_) {}
       // Cross-device: a server-fed plan (future /api/floorplan) lands here first.
@@ -5777,10 +5774,10 @@
     // Read the plan, (re)build `tables` from it (status reset to empty), then paint.
     // Called on load, when pairing resolves, and when the dashboard saves a design.
     function setupRealSalle() {
-      if (!storeIsReal()) return;                       // demo untouched
+      if (!storeIsReal()) return;                      // demo untouched
       const view = document.querySelector('.view-salle');
       if (!view) return;
-      view.querySelectorAll('.plan-canvas').forEach(c => { c.style.display = 'none'; });   // hide demo architecture
+      view.querySelectorAll('.plan-canvas').forEach(c => { c.style.display = 'none'; });  // hide demo architecture
       const tog = document.querySelector('.main-head[data-mode-section="salle"] .floor-toggle');
       if (tog) tog.style.display = 'none';
       let host = view.querySelector('.plan-real');
@@ -5893,7 +5890,7 @@
         setVrapView('builder');
         renderOrderPanel(selectedId);
       } else if (newMode === 'waitlist') {
-        renderWaitlist();   // the right addition panel is hidden via body[data-mode] CSS
+        renderWaitlist();  // the right addition panel is hidden via body[data-mode] CSS
       } else {
         setVrapView('board');
         showPayButtons(false);
@@ -6172,13 +6169,13 @@
        for editing. vrapEditingNum holds its number (null = new order).
        vrapDiscount holds a manager-approved réduction on the cart. */
     let vrapEditingNum = null;
-    let vrapDiscount   = null;   // { kind, value, amount, reason } | null
+    let vrapDiscount   = null;  // { kind, value, amount, reason } | null
 
     /* ---- Waitlist (liste d'attente) — walk-in parties at the door ---- */
-    let waitlist = [];           // [{ id, name, size, pref, addedAt }]
+    let waitlist = [];          // [{ id, name, size, pref, addedAt }]
     let wlSeq = 0;
     let wlDraft = { name: '', size: 2, pref: 'peu-importe' };
-    let wlSeating = null;        // party being seated on the Plan de salle (or null)
+    let wlSeating = null;       // party being seated on the Plan de salle (or null)
 
     /* ---- Stock & approvisionnement (cashier inventory) — resets on reload ---- */
     let stockTab = 'apercu';
@@ -6462,7 +6459,7 @@
         const id = tableEl.dataset.table;
         const t = tables[id];
         if (!t) return;
-        if (wlSeating) {   // choosing a table for a waitlist party
+        if (wlSeating) {  // choosing a table for a waitlist party
           if (t.status === 'khawya') seatPartyAt(id);
           else toast('Table occupée, choisis une table libre');
           return;
@@ -6630,11 +6627,11 @@
        Split parts keep their own tip (splitState) — this is only applied
        when splitPayCallback is null. currentTotal() stays the base; the tip
        is added on top wherever the customer-facing figure is shown/recorded. */
-    let payTipMode = '0';      // '0' | '5' | '10' | '15' | 'autre'
-    let payTipCustom = 0;      // custom % when mode === 'autre'
+    let payTipMode = '0';     // '0' | '5' | '10' | '15' | 'autre'
+    let payTipCustom = 0;     // custom % when mode === 'autre'
 
     function payTipPct() {
-      if (splitPayCallback) return 0;        // split has its own tip
+      if (splitPayCallback) return 0;       // split has its own tip
       if (payTipMode === 'autre') return Math.max(0, payTipCustom || 0);
       return parseFloat(payTipMode) || 0;
     }
@@ -7132,12 +7129,12 @@
       const e = wlSeating;
       const idx = waitlist.findIndex(w => w.id === e.id);
       const t = tables[tableId];
-      if (t && t.status === 'khawya') {   // occupy the chosen table on the floor
-        t.status  = 'a-commander';     // seated — server still needs to take the order
+      if (t && t.status === 'khawya') {  // occupy the chosen table on the floor
+        t.status  = 'a-commander';    // seated — server still needs to take the order
         t.covers  = e.size;
         t.elapsed = 0;
-        delete orders[tableId];        // drop any cached/fabricated order
-        tableOrders[tableId] = [];     // fresh table, ready to take their order
+        delete orders[tableId];       // drop any cached/fabricated order
+        tableOrders[tableId] = [];    // fresh table, ready to take their order
         refreshTableNode(tableId);
       }
       if (idx >= 0) waitlist.splice(idx, 1);
@@ -7994,9 +7991,9 @@
     /* ===========================================================
        === Shift lifecycle ===  (clock-in · live stats · Clôture)
        =========================================================== */
-    let   openingFloat   = 500;     // fond d'ouverture — MAD (chosen at clock-in)
-    const cashMovements  = [];      // [{ id, time, type:'in'|'out', amount, reason }]
-    const DAILY_OBJECTIF = 18000;   // objectif d'lyoum — MAD
+    let   openingFloat   = 500;    // fond d'ouverture — MAD (chosen at clock-in)
+    const cashMovements  = [];     // [{ id, time, type:'in'|'out', amount, reason }]
+    const DAILY_OBJECTIF = 18000;  // objectif d'lyoum — MAD
 
     /* Non-journal shift counters — the journal below is the ledger of record. */
     const shift = { discounts: 95, refunds: 0, tablesPaid: 0 };
@@ -8014,15 +8011,15 @@
       { id: 'mehdi',   name: 'Mehdi A.',   role: 'Caissier'  },
     ];
     let   currentCashier    = { id: 'othmane', name: 'Othmane N.', role: 'Caissier' };
-    let   posteOpenedAt     = null;   // current cashier's poste start
-    let   posteOpeningFloat = 500;    // drawer the current cashier took over
-    const handovers         = [];     // [{ id,time,fromName,toName,posteOpenedAt,expected,counted,ecart }]
+    let   posteOpenedAt     = null;  // current cashier's poste start
+    let   posteOpeningFloat = 500;   // drawer the current cashier took over
+    const handovers         = [];    // [{ id,time,fromName,toName,posteOpenedAt,expected,counted,ecart }]
 
     /* ---- Journal des ventes — the shift's transaction ledger ---- */
-    const journal = [];          // [{ id, time, label, amount, method, ref }]
+    const journal = [];         // [{ id, time, label, amount, method, ref }]
     let journalSearch = '';
-    let journalFilter = 'all';   // all | card | cash
-    let lastSaleId    = null;    // flashes the freshest entry while the drawer is open
+    let journalFilter = 'all';  // all | card | cash
+    let lastSaleId    = null;   // flashes the freshest entry while the drawer is open
 
     function genRef() { return 'KW-' + (28000 + Math.floor(Math.random() * 1999)); }
 
@@ -8052,16 +8049,16 @@
         let label, amount;
         if (isVrap) {
           label  = 'À emporter';
-          amount = 30 + Math.floor(Math.random() * 13) * 15;   // 30–210 MAD
+          amount = 30 + Math.floor(Math.random() * 13) * 15;  // 30–210 MAD
         } else {
           label  = tIds[Math.floor(Math.random() * tIds.length)];
-          amount = 90 + Math.floor(Math.random() * 28) * 15;   // 90–495 MAD
+          amount = 90 + Math.floor(Math.random() * 28) * 15;  // 90–495 MAD
           tablesDone++;
         }
         // ~45% of tenders carry a small pourboire (rounded to 5 MAD, ~5–12%).
         let tip = 0;
         if (Math.random() < 0.45) {
-          const pct = 5 + Math.floor(Math.random() * 8);       // 5–12 %
+          const pct = 5 + Math.floor(Math.random() * 8);      // 5–12 %
           tip = Math.max(5, Math.round(amount * pct / 100 / 5) * 5);
         }
         journal.push({
@@ -8105,7 +8102,7 @@
 
     /* ============ REÇU / TICKET — receipt preview ============ */
     /* Faux but plausible Moroccan establishment identifiers — DEMO ONLY. */
-    const RECEIPT_ICE   = '002176548000071';   /* 15-digit ICE (demo) */
+    const RECEIPT_ICE   = '002176548000071';  /* 15-digit ICE (demo) */
     const RECEIPT_PHONE = '+212 522 27 84 19'; /* Casablanca landline (demo) */
 
     /* Real store identity, resolved from the 6-digit pairing (kiwiPairedVenue =
@@ -8123,7 +8120,7 @@
       if (!storeIsReal()) return;
       const nm = storeName() || 'Ma caisse', city = storeCity();
       const top = document.getElementById('topbar-store'); if (top) top.textContent = [nm, city].filter(Boolean).join(' · ');
-      const sub = document.getElementById('greet-sub');    if (sub) sub.textContent = nm + ' · service ouvert';
+      const sub = document.getElementById('greet-sub');   if (sub) sub.textContent = nm + ' · service ouvert';
       const role = document.querySelector('.clockin-role'); if (role) role.textContent = 'Caissier · ' + nm;
       const foot = document.querySelector('.clockin-foot'); if (foot) foot.textContent = city || nm;
       document.querySelectorAll('.plan-room-label').forEach((el) => {
@@ -8148,7 +8145,7 @@
       }
       const first = String(cashName).trim().split(/\s+/)[0] || 'Caissier';
       const g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Sba7 lkhir ' + first + ',';
-      const wb = document.getElementById('wb-line1');     if (wb) wb.textContent = 'Sba7 lkhir ' + first;
+      const wb = document.getElementById('wb-line1');    if (wb) wb.textContent = 'Sba7 lkhir ' + first;
       const cn = document.querySelector('.cashier-name'); if (cn) cn.textContent = cashName;
       const setGreet = (sel, tag) => document.querySelectorAll(sel).forEach((el) => {
         el.textContent = 'Sba7 lkhir' + (tag ? ' ' : ', ');
@@ -8204,10 +8201,10 @@
 
       /* amount is signed for refunds — work off the magnitude for TVA math. */
       const gross = Math.abs(entry.amount);
-      const ht    = Math.round(gross / 1.10);   /* TVA marocaine restauration = 10 % */
+      const ht    = Math.round(gross / 1.10);  /* TVA marocaine restauration = 10 % */
       const tva   = gross - ht;
       const tip   = !isRefund && entry.tip > 0 ? entry.tip : 0;
-      const sign  = isRefund ? '− ' : '';   /* minus sign */
+      const sign  = isRefund ? '− ' : '';  /* minus sign */
 
       /* line items — itemised if entry.lines present, else summary fallback. */
       let itemsHTML;
@@ -8337,7 +8334,7 @@
       // 0 transactions) that fills from real encaissements.
       const _realStore = storeIsReal();
       shiftOpenedAt = _realStore ? new Date() : new Date(Date.now() - 128 * 60 * 1000);
-      posteOpenedAt = shiftOpenedAt;         // first cashier's poste = whole shift
+      posteOpenedAt = shiftOpenedAt;        // first cashier's poste = whole shift
       posteOpeningFloat = openingFloat;
       if (!_realStore) seedJournal();
       renderShiftStats();
@@ -8533,7 +8530,7 @@
         `${tot.txns} transaction${tot.txns > 1 ? 's' : ''} · ${fmtMAD(tot.revenue)} encaissés`;
 
       const q = journalSearch.trim().toLowerCase();
-      let list = journal.slice().reverse();   // newest first
+      let list = journal.slice().reverse();  // newest first
       if (journalFilter !== 'all') list = list.filter(e => e.method === journalFilter);
       if (q) list = list.filter(e =>
         e.label.toLowerCase().includes(q) ||
@@ -8758,11 +8755,11 @@
        Exposed as window.requireManager so later features can gate
        sensitive actions through it.
        =========================================================== */
-    const authorizations = [];   // [{ id, time:Date, action }]
+    const authorizations = [];  // [{ id, time:Date, action }]
     const mgrModal   = $('#manager-modal');
     let   mgrBuffer  = '';
     let   mgrOnApprove = null;
-    let   mgrBusy    = false;     // true during the success beat
+    let   mgrBusy    = false;    // true during the success beat
 
     function renderMgrDots() {
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
@@ -9149,7 +9146,7 @@
       saveSplitFlow();
       const t = tables[splitState.tableId];
       if (t && t.status !== 'khlass') {
-        t.status = 'bgha-ykhlass';   // backgrounded split → mesa shows Addition
+        t.status = 'bgha-ykhlass';  // backgrounded split → mesa shows Addition
         refreshTableNode(splitState.tableId);
       }
       $('#split-modal').classList.remove('is-open');
@@ -9195,7 +9192,7 @@
         saveSplitFlow();
         const t = tables[splitState.tableId];
         if (t && t.status !== 'khlass') {
-          t.status = 'bgha-ykhlass';   // backgrounded split → mesa shows Addition
+          t.status = 'bgha-ykhlass';  // backgrounded split → mesa shows Addition
           refreshTableNode(splitState.tableId);
         }
         $('#split-modal').classList.remove('is-open');
@@ -9452,7 +9449,7 @@
     }
     function openRefundConfirm(orig) {
       refundState.orig   = orig;
-      refundState.amount = orig.amount;            // default — full refund
+      refundState.amount = orig.amount;           // default — full refund
       refundState.reason = 'Erreur de saisie';
       const hh = String(orig.time.getHours()).padStart(2, '0');
       const mm = String(orig.time.getMinutes()).padStart(2, '0');
@@ -9489,7 +9486,7 @@
       const o = refundState.orig;
       if (!o) return;
       let amt = Math.round(parseFloat($('#rf-amount').value) || 0);
-      amt = Math.max(1, Math.min(amt, o.amount));   // 1 … original
+      amt = Math.max(1, Math.min(amt, o.amount));  // 1 … original
       refundState.amount = amt;
     }
     function confirmRefund() {
@@ -9514,7 +9511,7 @@
         };
         journal.push(entry);
         orig.refunded = true;
-        shift.refunds += amount;        // positive — Clôture renders it as a row
+        shift.refunds += amount;       // positive — Clôture renders it as a row
         lastSaleId = entry.id;
         renderShiftStats();
         if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
@@ -9863,7 +9860,7 @@
         tableSplits.delete(selectedId);
         const t = tables[selectedId];
         if (t && t.status !== 'khlass') {
-          t.status = 'bgha-ykhlass';   // split cancelled → mesa stays Addition
+          t.status = 'bgha-ykhlass';  // split cancelled → mesa stays Addition
           refreshTableNode(selectedId);
         }
         renderRightPanel(selectedId);
@@ -10582,9 +10579,9 @@
     }
 
     /* ---- Réception — enter stock by photo (mock scan) or manual entry ---- */
-    let skReceptMode = 'photo';   // 'photo' | 'manual'
-    let skReceptState = 'idle';   // 'idle' | 'scanning' | 'done'
-    let skReceptLines = [];       // [{ name, qty }]
+    let skReceptMode = 'photo';  // 'photo' | 'manual'
+    let skReceptState = 'idle';  // 'idle' | 'scanning' | 'done'
+    let skReceptLines = [];      // [{ name, qty }]
     function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; openSkModal(renderReceptModal()); }
     function renderReceptModal(){
       return `<div class="split-badge">Réception</div><h3 class="modal-title" style="margin-bottom:4px;">Entrer du stock</h3>
@@ -10649,15 +10646,15 @@
     $('#open-stock').addEventListener('click', openStock);
     $('#stock-close-btn').addEventListener('click', closeStock);
     $('#stock-screen').addEventListener('click', (e)=>{
-      const tab = e.target.closest('[data-sk-tab]');     if (tab){ stockTab = tab.dataset.skTab; renderStock(); return; }
-      const cat = e.target.closest('[data-sk-cat]');     if (cat){ skCat = cat.dataset.skCat; renderStock(); return; }
-      const stf = e.target.closest('[data-sk-status]');  if (stf){ skStatus = stf.dataset.skStatus; renderStock(); return; }
-      const ed  = e.target.closest('[data-sk-edit]');    if (ed){ openEditItem(ed.dataset.skEdit); return; }
-      const ord = e.target.closest('[data-sk-order]');   if (ord){ const it = stockItems.find(i=>i.id===ord.dataset.skOrder); openNewOrder(it && it.supplier, it && it.id); return; }
+      const tab = e.target.closest('[data-sk-tab]');    if (tab){ stockTab = tab.dataset.skTab; renderStock(); return; }
+      const cat = e.target.closest('[data-sk-cat]');    if (cat){ skCat = cat.dataset.skCat; renderStock(); return; }
+      const stf = e.target.closest('[data-sk-status]'); if (stf){ skStatus = stf.dataset.skStatus; renderStock(); return; }
+      const ed  = e.target.closest('[data-sk-edit]');   if (ed){ openEditItem(ed.dataset.skEdit); return; }
+      const ord = e.target.closest('[data-sk-order]');  if (ord){ const it = stockItems.find(i=>i.id===ord.dataset.skOrder); openNewOrder(it && it.supplier, it && it.id); return; }
       if (e.target.closest('[data-sk-additem]'))     { openAddItem(); return; }
       if (e.target.closest('[data-sk-neworder]'))    { openNewOrder(); return; }
-      const cf = e.target.closest('[data-sk-confirm]');  if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
-      const rc = e.target.closest('[data-sk-receive]');  if (rc){ receiveOrder(rc.dataset.skReceive); return; }
+      const cf = e.target.closest('[data-sk-confirm]'); if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
+      const rc = e.target.closest('[data-sk-receive]'); if (rc){ receiveOrder(rc.dataset.skReceive); return; }
       if (e.target.closest('[data-sk-validate-inv]')){ validateInventory(); return; }
     });
     $('#stock-screen').addEventListener('input', (e)=>{ if (e.target.id === 'sk-search-input'){ skSearch = e.target.value; renderSkRows(); } });
@@ -10674,7 +10671,7 @@
     });
     $('#sk-modal').addEventListener('input', (e)=>{
       const nm = e.target.closest('[data-sk-rl-name]'); if (nm){ const i=+nm.dataset.skRlName; if (skReceptLines[i]) skReceptLines[i].name = nm.value; return; }
-      const qt = e.target.closest('[data-sk-rl-qty]');  if (qt){ const i=+qt.dataset.skRlQty;  if (skReceptLines[i]) skReceptLines[i].qty  = qt.value; return; }
+      const qt = e.target.closest('[data-sk-rl-qty]'); if (qt){ const i=+qt.dataset.skRlQty; if (skReceptLines[i]) skReceptLines[i].qty  = qt.value; return; }
     });
     $('#sk-modal').addEventListener('change', (e)=>{ if (e.target.id === 'sk-order-supplier'){ $('#sk-order-lines').innerHTML = skOrderLinesHTML(e.target.value); if (window.lucide) lucide.createIcons(); } });
     $('#sk-recept-btn').addEventListener('click', openRecept);
@@ -10716,7 +10713,7 @@
        "Nouvelle commande" reveals the menu builder. Served orders
        drop into the history.
        =========================================================== */
-    let vrapView = 'board';   // 'board' | 'builder'
+    let vrapView = 'board';  // 'board' | 'builder'
 
     function setVrapView(v) {
       vrapView = v;
@@ -10820,7 +10817,7 @@
       const o = kdsOrders.find(x => x.num === vrapEditingNum);
       if (!o || o.paid || cart.length === 0) return;
       o.items = vrapCartItems(o);
-      o.total = cart.reduce((s, c) => s + c.price * c.qty, 0);   // gross — réduction is checkout-only
+      o.total = cart.reduce((s, c) => s + c.price * c.qty, 0);  // gross — réduction is checkout-only
     }
 
     /* Card / cash cleared in À emporter mode. For an order being edited this
@@ -10830,7 +10827,7 @@
         const o = kdsOrders.find(x => x.num === vrapEditingNum);
         if (o) {
           o.paid  = true;
-          o.total = currentTotal();          // net of any réduction
+          o.total = currentTotal();         // net of any réduction
           if (cart.length) o.items = vrapCartItems(o);
           toast(`Commande #${o.num} encaissée · ${fmtMAD(o.total)}`);
         }
@@ -10917,7 +10914,7 @@
       if (vrapEditingNum != null) {
         saveVrapEdits();
         vrapEditingNum = null;
-        clearCart();          // empties cart + réduction, panel → empty
+        clearCart();         // empties cart + réduction, panel → empty
       }
       setVrapView('board');
     });
@@ -10978,12 +10975,12 @@
           id: e.id, time: new Date(e.time), label: e.label,
           amount: e.amount, method: e.method, ref: e.ref,
         };
-        if (e.kind)            entry.kind     = e.kind;       // 'refund'
+        if (e.kind)            entry.kind     = e.kind;      // 'refund'
         if (e.refundOf)        entry.refundOf = e.refundOf;
         if (e.refunded)        entry.refunded = true;
-        if (e.tip)             entry.tip      = e.tip;        // pourboire
-        if (e.lines)           entry.lines    = e.lines;      // itemised receipt
-        if (e.cashier)         entry.cashier  = e.cashier;    // ringing cashier
+        if (e.tip)             entry.tip      = e.tip;       // pourboire
+        if (e.lines)           entry.lines    = e.lines;     // itemised receipt
+        if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
         journal.push(entry);
       });
       cashMovements.length = 0;
@@ -11024,7 +11021,7 @@
       }
     }
     function enterShellDirectly() {
-      const pin = $('#pin-screen');     if (pin) pin.style.display = 'none';
+      const pin = $('#pin-screen');    if (pin) pin.style.display = 'none';
       const ci  = $('#clockin-screen'); if (ci)  ci.style.display = 'none';
       const greet = document.querySelector('[data-kiwi-greet]'); if (greet) greet.remove();
       document.body.classList.add('is-unlocked');

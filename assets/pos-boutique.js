@@ -338,7 +338,7 @@
     const c = window.KiwiClients && window.KiwiClients.get(id);
     return c ? fromKiwi(c) : null;
   }
-  const IS_DEMO = isDemoStore();   // frozen for this session — gates the seeded demo sales/avoirs/ticket
+  const IS_DEMO = isDemoStore();  // frozen for this session — gates the seeded demo sales/avoirs/ticket
 
   /* ───────────────────────── ventes du jour (seed, mi-journée) ──────────── */
   const NOW = Date.now();
@@ -389,7 +389,7 @@
     return ini || 'KW';
   }
   const TK = ticketPrefix();
-  let saleSeq = IS_DEMO ? 1208 : 1;   /* démo : MM-1203…1207 vendues, MM-1208 en cours */
+  let saleSeq = IS_DEMO ? 1208 : 1;  /* démo : MM-1203…1207 vendues, MM-1208 en cours */
 
   /* ── le journal du jour survit à un rechargement (boutiques réelles) ───────
      SALES ne vivait qu'en mémoire : recharger la caisse remettait son en-tête à
@@ -417,7 +417,7 @@
     if (!Array.isArray(saved) || !saved.length) return;
     let maxSeq = 0;
     saved.forEach((s) => {
-      if (!s || !s.at || !isToday(s.at)) return;              // le journal d'hier n'est pas le compteur d'aujourd'hui
+      if (!s || !s.at || !isToday(s.at)) return;             // le journal d'hier n'est pas le compteur d'aujourd'hui
       s.at = new Date(s.at);
       s.lines = Array.isArray(s.lines) ? s.lines : [];
       s.total = +s.total || s.lines.reduce((t, l) => t + (+l.unit || 0) * (+l.qty || 0), 0);
@@ -425,7 +425,7 @@
       if (n > maxSeq) maxSeq = n;
       SALES.push(s);
     });
-    SALES.sort((a, b) => b.at - a.at);                        // le plus récent d'abord, comme unshift
+    SALES.sort((a, b) => b.at - a.at);                       // le plus récent d'abord, comme unshift
     if (maxSeq >= saleSeq) saleSeq = maxSeq + 1;
   })();
   const state = {
@@ -630,7 +630,7 @@
 
   function onShow() {
     if (!root) return;
-    syncTillStaff();                       // a new shift may have unlocked the till
+    syncTillStaff();                      // a new shift may have unlocked the till
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
@@ -808,7 +808,7 @@
     const reset = $('#bq-tk-reset', el);
     if (reset) reset.onclick = () => {
       t.lines.forEach((ln) => stockAdd(ln.pid, ln.size, ln.qty));
-      freshTicket();                       /* ticket ET cliente remis à zéro — pas d'attache auto */
+      freshTicket();                      /* ticket ET cliente remis à zéro — pas d'attache auto */
       renderTicket(); renderGrid(); renderBadges(); icons();
       toast('Ticket vidé, articles remis en stock');
     };
@@ -1128,7 +1128,7 @@
         let cid;
         if (useKiwiCl()) {
           const rec = window.KiwiClients.upsert({ name, phone: tel, consent: true, source: 'caisse' });
-          cid = rec.id;                                    // unified — appears in the dashboard « Clients » too
+          cid = rec.id;                                   // unified — appears in the dashboard « Clients » too
         } else {
           cid = 'cx' + Date.now().toString(36);
           const c = { id: cid, name, phone: tel, points: 0, taille: '', achats: 0, spent: 0, prefs: [], history: [] };
@@ -1753,7 +1753,7 @@
       // Returned pieces go back into the real inventory too, not just the display.
       persistStock(ln.pid, ln.size, ln.color, ln.qty);
     });
-    persistDay();   // le retour change la recette du jour, pas seulement l'affichage
+    persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
 
   function issueAvoir(amount, cliente, motif, fromSaleId) {
@@ -2033,7 +2033,7 @@
 
   function openPay(opts) {
     const el = $('#bq-paym', root);
-    let avoirPart = null;                    /* { m:'avoir', amount, code } */
+    let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const due = () => opts.amount - (avoirPart ? avoirPart.amount : 0);
     const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-pay-veil'); });
 
@@ -2330,7 +2330,7 @@
       .bqi-code { font-family: var(--mono); font-size: 11px; color: #555; display: flex; flex-direction: column; }
       .bqi-code em { font-style: normal; font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase; font-weight: 700; }
       .bqi-code em.gen { color: #0B6E4F; } .bqi-code em.imp { color: #8A6210; }
-      .bqi-nocode { color: #99a; font-style: italic; font-size: 12px; }
+      .bqi-nocode { color: #99a; font-size: 12px; }
       .bqi-vact { display: flex; gap: 5px; justify-content: flex-end; }
       .bqi-modfoot { display: flex; gap: 8px; padding: 14px 24px 22px; flex-wrap: wrap; }
       .bqi-modfoot .bq-btn.danger { color: #9B2F22; }
@@ -2448,7 +2448,7 @@
   function handleWedge(code) {
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
-    commitEan(code);                                                     /* vente → ticket */
+    commitEan(code);                                                    /* vente → ticket */
   }
 
   /* ─── Douchette · diagnostic ─────────────────────────────────────────────
@@ -2488,7 +2488,7 @@
 
     const onKey = (e) => {
       const now = Date.now();
-      if (now - last > 400) ev = [];        // new burst
+      if (now - last > 400) ev = [];       // new burst
       last = now;
       if (e.key === 'Enter') {
         e.preventDefault();

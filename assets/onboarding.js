@@ -122,7 +122,7 @@
     .kob-body{overflow-y:auto;overflow-x:hidden;flex:1;margin:-4px -6px 0;padding:4px 6px 2px;}
     .kob-body::-webkit-scrollbar{width:7px;}.kob-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:6px;}
     .kob-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin:0 0 12px;}
-    .kob-h{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(30px,5vw,42px);line-height:1.04;letter-spacing:-.01em;margin:0 0 10px;color:#fff;}
+    .kob-h{font-family:var(--serif);font-weight:400;font-size:clamp(30px,5vw,42px);line-height:1.04;letter-spacing:-.01em;margin:0 0 10px;color:#fff;}
     .kob-h .k-sans{font-family:var(--sans);font-style:normal;font-weight:600;letter-spacing:-.02em;}
     .kob-sub{font-size:14.5px;line-height:1.55;color:rgba(233,239,233,.72);margin:0 0 22px;max-width:44ch;}
     .kob-anim{animation:kob-rise .44s cubic-bezier(.32,.72,0,1) both;}

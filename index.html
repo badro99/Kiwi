@@ -1023,7 +1023,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   animation: cityPulse 2.6s var(--ease-counter) infinite;
 }
 @keyframes cityPulse {
-  0%   { r: 6;  opacity: 0.55; }
+  0%   { r: 6; opacity: 0.55; }
   100% { r: 28; opacity: 0; }
 }
 .city-label {
@@ -1096,10 +1096,10 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 
 /* Tunables — change RAIL_X to move the rail; everything else follows. */
 .why-timeline {
-  --rail-x: 220px;            /* horizontal position of the rail */
-  --rail-w: 1px;              /* base rail width */
-  --rail-progress-w: 3px;     /* progress fill width */
-  --dot: 14px;                /* base dot diameter */
+  --rail-x: 220px;           /* horizontal position of the rail */
+  --rail-w: 1px;             /* base rail width */
+  --rail-progress-w: 3px;    /* progress fill width */
+  --dot: 14px;               /* base dot diameter */
 
   margin-top: var(--s-12);
   position: relative;
@@ -1305,7 +1305,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   }
 }
 /* Future event — keep the icon static, same as the regulatory events.
-   Differentiation already comes from the italic body paragraph. */
+   Differentiation already comes from the editorial-serif body paragraph. */
 @media (prefers-reduced-motion: reduce) {
   .why-event.is-active .why-event-body .marker img {
     animation: none;
@@ -1356,7 +1356,6 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 .why-event.is-active .why-event-body h4 { color: var(--atlas); }
 .why-event.is-future .why-event-body p {
   font-family: var(--font-editorial);
-  font-style: italic;
   font-size: 17.5px;
   letter-spacing: 0.005em;
   color: var(--n-600);
@@ -1479,10 +1478,9 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   letter-spacing: 0.04em; fill: var(--atlas); font-weight: 500;
 }
 
-/* Pull-quote — Instrument Serif italic, primary-source voice */
+/* Pull-quote — Instrument Serif roman, primary-source voice */
 .why-event-quote {
   font-family: var(--font-editorial);
-  font-style: italic;
   font-weight: 400;
   font-size: 14.5px;
   line-height: 1.5;
@@ -2098,9 +2096,9 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 .stage-tap-svg .nfc-wave-2 { animation-delay: 0.4s; }
 .stage-tap-svg .nfc-wave-3 { animation-delay: 0.8s; }
 @keyframes nfcWave {
-  0%   { opacity: 0;    transform: scale(0.6); }
+  0%   { opacity: 0;   transform: scale(0.6); }
   20%  { opacity: 0.95; }
-  100% { opacity: 0;    transform: scale(1.35); stroke: var(--mint); }
+  100% { opacity: 0;   transform: scale(1.35); stroke: var(--mint); }
 }
 .feat-cell:hover .stage-tap-svg .nfc-wave {
   animation-duration: 1.4s;
@@ -2550,7 +2548,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 }
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.55; transform: scale(0.92); }
-  50%      { opacity: 1;    transform: scale(1.08); }
+  50%      { opacity: 1;   transform: scale(1.08); }
 }
 @media (prefers-reduced-motion: reduce) {
   .stage-ramadan-star { animation: none; opacity: 0.85; }
@@ -2772,7 +2770,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 /* ════════════════════════════════════════════════════════════════
    TRANSPARENCY · "The Manifesto"
    No card grid. Three editorial statements stacked, separated by
-   atlas hairlines. A giant Instrument Serif italic "0" watermark
+   atlas hairlines. A giant Instrument Serif "0" watermark
    bleeds off the top-right corner — the brand's promise of zero
    hidden fees rendered as a magazine pull-quote.
    ════════════════════════════════════════════════════════════════ */
@@ -2788,7 +2786,6 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   position: absolute;
   top: -8%; right: -6%;
   font-family: var(--font-editorial);
-  font-style: italic;
   font-weight: 400;
   font-size: clamp(360px, 50vw, 720px);
   line-height: 0.82;
@@ -2830,7 +2827,7 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
   z-index: 0;
 }
 
-/* Massive number — Geist 500 with Instrument Serif italic ornament.
+/* Massive number — Geist 500 with an Instrument Serif ornament.
    Subtle mint underglow gives a Robinhood-style "live data" feel
    without breaking the editorial restraint. */
 .trans-statement-num {
@@ -2861,7 +2858,6 @@ h1, h2, h3, h4, .s-head h2, .final h2, .editorial {
 /* Atlas-green accent on the comma/period as editorial ornament */
 .trans-statement-num .acc {
   font-family: var(--font-editorial);
-  font-style: italic;
   font-weight: 400;
   color: var(--atlas);
   font-size: 0.62em;
@@ -4873,7 +4869,7 @@ footer {
          · outcome line (atlas, with the killer metric in mono)
          · sparkline OR convergence diagram (SVG)
          · body paragraph (≤45 words)
-         · primary-source pull-quote (Instrument Serif italic)
+         · primary-source pull-quote (Instrument Serif roman)
          · "Source · [authority]" citation row with external-link glyph
          Every quantified claim is sourced in research/why-now-sources.md. -->
 
@@ -5335,7 +5331,7 @@ footer {
 
     <!-- Three editorial statements stacked. Each one has a number, a thesis,
          a paragraph, and a list of antagonist lines (struck-through, what
-         you DO NOT pay). The giant Instrument Serif italic "0" watermark
+         you DO NOT pay). The giant Instrument Serif "0" watermark
          bleeds off the right edge as a magazine pull-quote. -->
     <div class="trans-manifesto reveal">
 

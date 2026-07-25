@@ -21,7 +21,7 @@
        Tokens — same brand system as kiwi-serveur / kiwi-caisse
        ========================================================= */
     :root {
-    --surface: #FFFDFA;   /* card/panel fill — lit paper, never cold #fff */
+    --surface: #FFFDFA;  /* card/panel fill — lit paper, never cold #fff */
       --forest:       #1F5D3C;
       --forest-deep:  #164A2F;
       --emerald:      #3FB67A;
@@ -55,6 +55,13 @@
       --ph-h:  844px;
       --ph-r:  55px;
     }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
 
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
@@ -128,7 +135,6 @@
     }
     .mission h1 em {
       font-family: var(--serif);
-      font-style: italic;
       font-weight: 400;
       color: var(--forest);
     }
@@ -264,9 +270,9 @@
         inset 0 -1px 0 rgba(0,0,0,0.3),
         0 1px 1px rgba(0,0,0,0.25);
     }
-    .side-btn.action      { left: -3px; top: 130px;  width: 4px; height: 28px; }
-    .side-btn.vol-up      { left: -3px; top: 175px;  width: 4px; height: 56px; }
-    .side-btn.vol-down    { left: -3px; top: 245px;  width: 4px; height: 56px; }
+    .side-btn.action      { left: -3px; top: 130px; width: 4px; height: 28px; }
+    .side-btn.vol-up      { left: -3px; top: 175px; width: 4px; height: 56px; }
+    .side-btn.vol-down    { left: -3px; top: 245px; width: 4px; height: 56px; }
     .side-btn.side-power  { right: -3px; top: 165px; width: 4px; height: 90px; }
     .side-btn.camera-ctrl { right: -3px; top: 275px; width: 4px; height: 36px;
                             background: linear-gradient(180deg, #6e6c66 0%, #c4c2bb 50%, #6e6c66 100%); }
@@ -388,7 +394,7 @@
     }
     .kiwi-greet h1 br { display: block; content: ""; }
     .kiwi-greet h1 em {
-      font-family: var(--serif); font-style: italic; font-weight: 400;
+      font-family: var(--serif); font-weight: 400;
       color: var(--forest);
       display: inline;
     }
@@ -421,7 +427,7 @@
       margin-top: 22px;
     }
     .kiwi-greet-sub em {
-      font-family: var(--serif); font-style: italic;
+      font-family: var(--serif);
       text-transform: none; letter-spacing: normal;
       color: var(--forest);
       font-size: 13px;
@@ -440,7 +446,7 @@
     }
     @keyframes main-enter {
       0%   { transform: scale(0.92); opacity: 0; }
-      100% { transform: scale(1);    opacity: 1; }
+      100% { transform: scale(1);   opacity: 1; }
     }
 
     /* =========================================================
@@ -915,7 +921,6 @@
     }
     .pay-success h2 em {
       font-family: var(--serif);
-      font-style: italic;
       font-weight: 400;
       color: var(--mint);
     }
@@ -1258,7 +1263,7 @@
       greetEl.classList.add('is-visible');
       greetEl.setAttribute('aria-hidden', 'false');
 
-      // t=900: typewriter italic begins
+      // t=900: typewriter reveal begins
       setTimeout(() => emClip && emClip.classList.add('is-revealed', 'is-typing'), 900);
 
       // t=2000: caret drops (em fully revealed)

@@ -12,7 +12,7 @@
 <style>
 /* ═══ KIWI DESIGN TOKENS (inlined) ═══ */
 :root {
-    --surface: #FFFDFA;   /* card/panel fill — lit paper, never cold #fff */
+    --surface: #FFFDFA;  /* card/panel fill — lit paper, never cold #fff */
   --atlas: #0B6E4F; --atlas-600: #0E805C; --atlas-700: #0A5E43;
   --riad: #053B2C; --riad-deep: #02261C;
   --mint: #7DF2B0; --mint-soft: #C9F6DC;
@@ -27,6 +27,14 @@
   --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
 }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 body { font-size: 16px; line-height: 1.55; letter-spacing: -0.005em; scroll-behavior: smooth; }
@@ -35,7 +43,7 @@ svg { display: block; max-width: 100%; }
 button { font-family: inherit; cursor: pointer; border: 0; background: none; }
 
 .eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-500); font-weight: 500; }
-.editorial { font-family: var(--serif); font-weight: 400; font-style: italic; }
+.editorial { font-family: var(--serif); font-weight: 400; }
 .mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
 .wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
 .wrap-sm { max-width: 960px; margin: 0 auto; padding: 0 32px; }
@@ -55,7 +63,7 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; }
 /* Hero */
 .brand-hero { padding: 110px 0 70px; }
 .brand-hero h1 { font-size: clamp(48px, 7vw, 96px); letter-spacing: -0.04em; line-height: 0.95; margin: 18px 0 20px; font-weight: 600; max-width: 900px; }
-.brand-hero h1 em { font-family: var(--serif); font-style: italic; color: var(--atlas); font-weight: 400; }
+.brand-hero h1 em { font-family: var(--serif); color: var(--atlas); font-weight: 400; }
 .brand-hero p { font-size: 20px; color: var(--n-600); line-height: 1.5; max-width: 620px; }
 
 /* Index nav */
@@ -126,7 +134,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 .voice-card h4 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
 .voice-card h4 .plus { color: var(--atlas); }
 .voice-card h4 .minus { color: var(--n-400); text-decoration: line-through; }
-.voice-card .ex { font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.4; margin: 14px 0; color: var(--ink); }
+.voice-card .ex { font-family: var(--serif); font-size: 20px; line-height: 1.4; margin: 14px 0; color: var(--ink); }
 .voice-card .ex.bad { color: var(--n-400); }
 
 /* Icons */
@@ -336,7 +344,7 @@ footer a { color: var(--mint); }
         <div class="type-sample" style="font-size: clamp(40px, 6vw, 84px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95;">La banque du commerçant</div>
       </div>
       <div class="type-row">
-        <div><div class="label">Editorial</div><div class="spec">Instrument Serif Italic · 56/56</div></div>
+        <div><div class="label">Editorial</div><div class="spec">Instrument Serif · 56/56</div></div>
         <div class="type-sample editorial" style="font-size: clamp(32px, 5vw, 72px); line-height: 1.0;">la banque que vous <i>méritez</i></div>
       </div>
       <div class="type-row">
@@ -373,7 +381,7 @@ footer a { color: var(--mint); }
         <div style="font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">RÈGLES</div>
         <ul style="list-style: none; padding: 0; margin: 14px 0 0; font-size: 14px; color: var(--n-700); line-height: 1.6;">
           <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Jamais Bold pour les titres, Medium (500) uniquement</li>
-          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Italic Instrument Serif pour 1 mot sur 3 max</li>
+          <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Instrument Serif romain pour 1 mot sur 3 max — jamais d’italique</li>
           <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Mono pour chiffres financiers uniquement</li>
           <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Arabe = +15 % de line-height vs latin</li>
           <li style="padding: 6px 0;">Ne jamais mélanger 2 poids dans un même mot</li>

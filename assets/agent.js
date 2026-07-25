@@ -127,7 +127,7 @@
     const l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang();
     return (l === 'en' || l === 'ar') ? l : 'fr';
   }
-  let L = 'fr';   // resolved at open()
+  let L = 'fr';  // resolved at open()
 
   /* Language of one specific question — the assistant's free-text answer must
    * match it even when the dashboard UI runs in another language. Arabic
@@ -1215,7 +1215,7 @@
     if (B.partial || B.cashBuffer == null || B.totalOpex == null) {
       return { text: gTxt().strainPartial, follow: [tr().chips.charges, tr().chips.breakeven] };
     }
-    const monthlyOut = B.totalOpex + B.cogs;          // everything that must be paid
+    const monthlyOut = B.totalOpex + B.cogs;         // everything that must be paid
     const losing = B.netProfit < 0;
     const months = losing ? B.cashBuffer / Math.abs(B.netProfit) : B.cashBuffer / monthlyOut;
     const opex = B.opex || {};
@@ -2432,7 +2432,7 @@
   }
 
   function respond(rawIn) {
-    syncProfile();   // reason off whatever venue is active right now
+    syncProfile();  // reason off whatever venue is active right now
     const d = decideRoute(rawIn);
     // Remember amount-driven scenarios so the next correction can refine them.
     if (d.kind === 'hire' || d.kind === 'afford' || d.kind === 'price' || d.kind === 'compound') lastScenario = d.kind;
@@ -2466,7 +2466,7 @@
     if (d.kind === 'othershop') return sOtherShop();
     if (d.kind === 'calcerr') return sCalcErr();
     if (d.kind === 'nodata') return sNoData(d.action);
-    if (d.kind === null) return null;   // unmatched → routed to the in-browser LLM
+    if (d.kind === null) return null;  // unmatched → routed to the in-browser LLM
     return d.run(d.raw, d.q);
   }
 
@@ -2662,7 +2662,7 @@
   ];
   function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
   function runEval() {
-    lastScenario = null;   // stateless harness — never inherit conversation context
+    lastScenario = null;  // stateless harness — never inherit conversation context
     const fails = [];
     EVAL_SET.forEach((row) => { const got = routeLabel(row[0]); if (got !== row[1]) fails.push({ q: row[0], expected: row[1], got }); });
     const pass = EVAL_SET.length - fails.length;
@@ -2678,15 +2678,15 @@
     check('hire', 'plutôt 5000', 'hire');
     check('hire', 'et à 4000 ?', 'hire');
     check('afford', 'non plutôt 90000', 'afford');
-    check('hire', "et si j'augmente les prix de 5%", 'price');  // new strong intent wins
-    check('hire', 'montre mes charges', 'charges');             // no number → not a refinement
+    check('hire', "et si j'augmente les prix de 5%", 'price'); // new strong intent wins
+    check('hire', 'montre mes charges', 'charges');            // no number → not a refinement
     /* The two commonest hiring follow-ups, both dead before: neither carries a
      * digit, so the old isRefinement (which required one) sent "deux" to the
      * model and "CNSS" to the accounting blurb (RX_ACCT owns that word). */
     check('hire', "et si j'en prends deux", 'hire');
     check('hire', 'et avec la CNSS ça fait combien', 'hire');
-    check('price', 'non', 'llm');                               // correction without a number can't hijack
-    check(null, 'ça va aujourd’hui ?', 'llm');                  // standalone "ça va" is not revenue
+    check('price', 'non', 'llm');                              // correction without a number can't hijack
+    check(null, 'ça va aujourd’hui ?', 'llm');                 // standalone "ça va" is not revenue
     lastScenario = null;
     const fails = cases.filter((c) => !c.ok);
     return { total: cases.length, pass: cases.length - fails.length, fails };
@@ -2996,7 +2996,7 @@
       color:var(--ink); box-shadow:0 4px 16px -10px rgba(10,15,13,.22); }
     [dir="rtl"] .fa-msg.user .fa-bubble { border-radius:18px 18px 18px 6px; }
     .fa-bubble b { font-weight:600; color:var(--riad); }
-    .fa-bubble i { color:var(--n-500); font-style:italic; }
+    .fa-bubble i { color:var(--n-500); }
 
     /* stat cards */
     .fa-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
@@ -3014,7 +3014,7 @@
     .fa-verdict.good { background:rgba(11,110,79,.08); color:var(--atlas); }
     .fa-verdict.warn { background:rgba(176,124,0,.11); color:#8a6200; }
     .fa-verdict.bad  { background:rgba(193,58,48,.10); color:#b3392f; }
-    .fa-note { margin-top:11px; font-size:11.5px; color:var(--n-500); font-style:italic; line-height:1.5; }
+    .fa-note { margin-top:11px; font-size:11.5px; color:var(--n-500); line-height:1.5; }
 
     /* suggestion chips */
     .fa-follow { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
@@ -3252,7 +3252,7 @@
     if (!window.Kiwi || !window.Kiwi.drawer) return;
     L = getLang();
     injectCss();
-    syncProfile();   // build the profile for whatever venue is active
+    syncProfile();  // build the profile for whatever venue is active
     const u = tr().ui;
 
     // Every fact the agent knows — grouped, each row click-to-insert.

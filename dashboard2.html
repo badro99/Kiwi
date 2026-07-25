@@ -757,8 +757,8 @@
   }
   .rev-live-ring.delay { animation-delay: 0.6s; }
   @keyframes rev-live-pulse {
-    0%   { r: 4;  opacity: 0.55; }
-    100% { r: 16; opacity: 0;    }
+    0%   { r: 4; opacity: 0.55; }
+    100% { r: 16; opacity: 0;   }
   }
   /* Halo behind the primary line — a wider, semi-transparent, blurred stroke
    * that creates an Apple Stocks-style soft glow under the line. */
@@ -797,7 +797,7 @@
   }
   .cmp-btn:active, .hero-view-toggle:active { transform: scale(0.97); }
   .cmp-caption {
-    font-size: 11px; font-style: italic; color: var(--n-500);
+    font-size: 11px; color: var(--n-500);
     margin-top: 4px; letter-spacing: 0.01em;
   }
 
@@ -1090,7 +1090,7 @@
 
   /* Dashboard title area */
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 16px; }
-  /* Greeting headline — floating with a soft layered shadow; italic stays solid atlas. */
+  /* Greeting headline — floating with a soft layered shadow; the accent stays solid atlas. */
   .page-head h1.greeting {
     font-size: 34px; font-weight: 600; letter-spacing: -0.032em; margin: 0; line-height: 1.12;
     text-shadow: 0 8px 28px rgba(11,110,79,0.10), 0 2px 6px rgba(10,15,13,0.06);
@@ -1098,7 +1098,6 @@
   .page-head h1.greeting .greet-text { color: var(--ink); }
   .page-head h1.greeting em {
     font-family: var(--serif);
-    font-style: italic;
     font-weight: 400;
     letter-spacing: -0.005em;
     color: var(--atlas);
@@ -1259,7 +1258,7 @@
       radial-gradient(70% 55% at 75% 85%, rgba(11,110,79,0.20), transparent 60%),
       linear-gradient(135deg, #0A1612, var(--ink));
     color: var(--paper);
-    transition: opacity 540ms cubic-bezier(0.32, 0.72, 0, 1), transform 540ms cubic-bezier(0.32, 0.72, 0, 1);  }
+    transition: opacity 540ms cubic-bezier(0.32, 0.72, 0, 1), transform 540ms cubic-bezier(0.32, 0.72, 0, 1); }
   .kiwi-lock.is-unlocking { opacity: 0; transform: scale(1.03); pointer-events: none; }
   .kiwi-lock-inner {
     display: flex; flex-direction: column; align-items: center;
@@ -1282,7 +1281,7 @@
     50%      { box-shadow: 0 0 0 8px rgba(125,242,176, 0); }
   }
   .kiwi-lock-title {
-    font-family: var(--serif); font-style: italic; font-weight: 400;
+    font-family: var(--serif); font-weight: 400;
     font-size: 30px; color: var(--paper);
     letter-spacing: -0.012em;
     margin-bottom: 6px;
@@ -1317,7 +1316,7 @@
   }
   .kiwi-pin-cell.is-success { animation: kw-pin-success 340ms cubic-bezier(0.32, 0.72, 0, 1) both; }
   @keyframes kw-pin-success {
-    0%   { transform: scale(1);   background: rgba(125,242,176,0.12); border-color: var(--mint); }
+    0%   { transform: scale(1);  background: rgba(125,242,176,0.12); border-color: var(--mint); }
     45%  { transform: scale(1.18); background: var(--mint); color: var(--riad); border-color: var(--mint); box-shadow: 0 0 0 10px rgba(125,242,176, 0.30); }
     100% { transform: scale(1.02); background: var(--mint); color: var(--riad); border-color: var(--mint); box-shadow: 0 0 0 0 rgba(125,242,176, 0); }
   }
@@ -1348,7 +1347,7 @@
     background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1);  }
+    transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1); }
   .kiwi-greet::before {
     /* Subtle ambient blobs behind the text */
     content: ""; position: absolute; inset: 0; z-index: 0;
@@ -1383,7 +1382,7 @@
    * with the surrounding sans. All the reveal mechanics happen on the
    * wrapper. */
   .kiwi-greet h1 em {
-    font-family: var(--serif); font-style: italic; font-weight: 400;
+    font-family: var(--serif); font-weight: 400;
     color: var(--atlas);
     display: inline;
   }
@@ -1401,7 +1400,7 @@
     /* NO padding — padding has a fixed length that browsers won't shrink
      * below, so even with max-width:0 the padding box would render and
      * leak the first glyph. The +24px buffer baked into naturalW (JS)
-     * gives the italic ink all the trailing room it needs without padding. */
+     * gives the accent ink all the trailing room it needs without padding. */
     transition: max-width 960ms cubic-bezier(0.32, 0.72, 0, 1);
   }
   .kiwi-greet h1 .em-clip.is-revealed {
@@ -1430,7 +1429,7 @@
   .app {
     transition: opacity 720ms cubic-bezier(0.32, 0.72, 0, 1),
                 transform 720ms cubic-bezier(0.32, 0.72, 0, 1);
-    transform-origin: top center;  }
+    transform-origin: top center; }
   .kw-bar-hidden { opacity: 0; }
   .demo-bar {
     transition: opacity 480ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -1461,17 +1460,17 @@
    * dots, sparklines); atlas + riad are reserved for filled green panels
    * (hero, settlement, gradients) that need brand identity. */
   body.fusion-mode {
-    --atlas:       #0E805C;   /* brand atlas-600 — lifted for dark surfaces */
+    --atlas:       #0E805C;  /* brand atlas-600 — lifted for dark surfaces */
     --atlas-600:   #0E805C;
     --atlas-700:   #0A5E43;
-    --riad:        #053B2C;   /* brand riad */
+    --riad:        #053B2C;  /* brand riad */
     --riad-deep:   #02261C;
-    --mint:        #7DF2B0;   /* brand mint — primary accent on black */
-    --mint-soft:   #14201A;   /* very dark mint-tinted surface */
-    --paper:       #000000;   /* pure black canvas */
-    --paper-soft:  #0F0F0F;   /* card surfaces — neutral near-black */
-    --paper-muted: #1A1A1A;   /* slightly raised surfaces */
-    --ink:         #F7F5F0;   /* primary text — brand paper */
+    --mint:        #7DF2B0;  /* brand mint — primary accent on black */
+    --mint-soft:   #14201A;  /* very dark mint-tinted surface */
+    --paper:       #000000;  /* pure black canvas */
+    --paper-soft:  #0F0F0F;  /* card surfaces — neutral near-black */
+    --paper-muted: #1A1A1A;  /* slightly raised surfaces */
+    --ink:         #F7F5F0;  /* primary text — brand paper */
     --ink-soft:    #D3D0C8;
     --n-50:        rgba(255,255,255,0.04);
     --n-100:       rgba(255,255,255,0.06);
@@ -2865,15 +2864,15 @@
      refraction plays 1600→3300ms). Heavy blur is held all the way through
      the lockup's on-screen life, then released as the overlay starts exiting. */
   @keyframes fo-frost {
-    0%   { opacity: 0;    backdrop-filter: blur(0px)  saturate(1.00); -webkit-backdrop-filter: blur(0px)  saturate(1.00); }
+    0%   { opacity: 0;   backdrop-filter: blur(0px)  saturate(1.00); -webkit-backdrop-filter: blur(0px)  saturate(1.00); }
     8%   { opacity: 0.35; backdrop-filter: blur(2px)  saturate(1.08); -webkit-backdrop-filter: blur(2px)  saturate(1.08); }
-    22%  { opacity: 0.7;  backdrop-filter: blur(6px)  saturate(1.18); -webkit-backdrop-filter: blur(6px)  saturate(1.18); }
+    22%  { opacity: 0.7; backdrop-filter: blur(6px)  saturate(1.18); -webkit-backdrop-filter: blur(6px)  saturate(1.18); }
     33%  { opacity: 0.92; backdrop-filter: blur(12px) saturate(1.26); -webkit-backdrop-filter: blur(12px) saturate(1.26); }
-    40%  { opacity: 1;    backdrop-filter: blur(18px) saturate(1.32); -webkit-backdrop-filter: blur(18px) saturate(1.32); }
-    72%  { opacity: 1;    backdrop-filter: blur(18px) saturate(1.32); -webkit-backdrop-filter: blur(18px) saturate(1.32); }
+    40%  { opacity: 1;   backdrop-filter: blur(18px) saturate(1.32); -webkit-backdrop-filter: blur(18px) saturate(1.32); }
+    72%  { opacity: 1;   backdrop-filter: blur(18px) saturate(1.32); -webkit-backdrop-filter: blur(18px) saturate(1.32); }
     88%  { opacity: 0.72; backdrop-filter: blur(10px) saturate(1.18); -webkit-backdrop-filter: blur(10px) saturate(1.18); }
-    96%  { opacity: 0.3;  backdrop-filter: blur(3px)  saturate(1.05); -webkit-backdrop-filter: blur(3px)  saturate(1.05); }
-    100% { opacity: 0;    backdrop-filter: blur(0px)  saturate(1.00); -webkit-backdrop-filter: blur(0px)  saturate(1.00); }
+    96%  { opacity: 0.3; backdrop-filter: blur(3px)  saturate(1.05); -webkit-backdrop-filter: blur(3px)  saturate(1.05); }
+    100% { opacity: 0;   backdrop-filter: blur(0px)  saturate(1.00); -webkit-backdrop-filter: blur(0px)  saturate(1.00); }
   }
 
   /* Inner edge glow that stabilises after the melt resolves — a soft frame
@@ -2937,8 +2936,8 @@
   }
   .fo-ultra-r    { color: rgba(255,120,200,0.85); mix-blend-mode: screen; animation: fo-refract-r    1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
   .fo-ultra-b    { color: rgba(141,200,255,0.85); mix-blend-mode: screen; animation: fo-refract-b    1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
-  .fo-ultra-g    { color: var(--fs-bahia);                                       animation: fo-refract-g    1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
-  .fo-ultra-core { color: #FFFFFF;                mix-blend-mode: screen; animation: fo-refract-core 1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
+  .fo-ultra-g    { color: var(--fs-bahia);                                      animation: fo-refract-g    1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
+  .fo-ultra-core { color: #FFFFFF;               mix-blend-mode: screen; animation: fo-refract-core 1700ms cubic-bezier(0.22,1,0.36,1) forwards 1600ms; }
   @keyframes fo-refract-r {
     0%   { opacity: 0; transform: translate(0,0)      scale(1); }
     14%  { opacity: 1; transform: translate(-7px,-2px) scale(1.05); }
@@ -3542,7 +3541,7 @@
   .mi-est-sync-opt:has(input:checked) { background: rgba(11,110,79,0.06); border-color: var(--atlas); }
   /* Station card chips (Stations tab) */
   .mi-station-chip { display: inline-block; margin-top: 9px; padding: 3px 9px; border-radius: 99px; font-size: 10.5px; font-weight: 600; letter-spacing: -0.005em; font-family: var(--mono); }
-  .mi-station-chip-sync { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .mi-station-chip-sync { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .mi-station-chip-fast { background: rgba(217,154,43,0.14); color: var(--warning); }
 
   /* ── Tab 2 · profitability matrix — dimensional ───────────────────────── */
@@ -3587,9 +3586,9 @@
   @media (max-width: 560px)  { .mi-quad-cards { grid-template-columns: 1fr; } }
   .mi-qcard { position: relative; background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 14px; padding: 17px 16px 15px; overflow: hidden; box-shadow: 0 1px 2px rgba(10,15,13,0.05), 0 12px 24px -16px rgba(10,15,13,0.45), inset 0 1px 0 rgba(255,255,255,0.5); transition: transform 220ms cubic-bezier(0.32,0.72,0,1), box-shadow 220ms ease, opacity 200ms ease; }
   .mi-qcard.star   { --qc: var(--success); background: linear-gradient(180deg, rgba(31,181,116,0.13), transparent 66px), var(--paper-soft); }
-  .mi-qcard.plow   { --qc: var(--info);    background: linear-gradient(180deg, rgba(58,111,184,0.14), transparent 66px), var(--paper-soft); }
+  .mi-qcard.plow   { --qc: var(--info);   background: linear-gradient(180deg, rgba(58,111,184,0.14), transparent 66px), var(--paper-soft); }
   .mi-qcard.puzzle { --qc: var(--warning); background: linear-gradient(180deg, rgba(217,154,43,0.16), transparent 66px), var(--paper-soft); }
-  .mi-qcard.dog    { --qc: var(--danger);  background: linear-gradient(180deg, rgba(201,74,58,0.13), transparent 66px), var(--paper-soft); }
+  .mi-qcard.dog    { --qc: var(--danger); background: linear-gradient(180deg, rgba(201,74,58,0.13), transparent 66px), var(--paper-soft); }
   .mi-qcard::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0) 65%), var(--qc, var(--n-300)); }
   .mi-qcard:hover { transform: translateY(-4px); box-shadow: 0 2px 5px rgba(10,15,13,0.06), 0 24px 36px -18px rgba(10,15,13,0.55), inset 0 1px 0 rgba(255,255,255,0.55); }
   .mi-qcard-h { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--ink); }
@@ -3689,10 +3688,10 @@
   .mi-recipe-status-block { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
   .mi-recipe-status-badge { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; letter-spacing: -0.005em; }
   .mi-recipe-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  .mi-recipe-status-badge-ok      { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .mi-recipe-status-badge-ok      { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .mi-recipe-status-badge-warn    { background: rgba(217,154,43,0.14); color: var(--warning); }
-  .mi-recipe-status-badge-crit    { background: rgba(201,74,58,0.12);  color: var(--danger); }
-  .mi-recipe-status-badge-neutral { background: var(--paper-soft);     color: var(--n-500); }
+  .mi-recipe-status-badge-crit    { background: rgba(201,74,58,0.12); color: var(--danger); }
+  .mi-recipe-status-badge-neutral { background: var(--paper-soft);    color: var(--n-500); }
   .mi-recipe-money       { font-size: 13px; color: var(--n-700); font-weight: 500; line-height: 1.4; }
   .mi-recipe-money-ok      { color: var(--atlas); }
   .mi-recipe-money-warn    { color: var(--warning); }
@@ -3704,9 +3703,9 @@
   /* ── Side drawer · recipe detail / edit. ── */
   .mi-rec-drawer-body { display: flex; flex-direction: column; gap: 18px; padding-bottom: 6px; }
   .mi-rec-drawer-status { padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--n-200); }
-  .mi-rec-drawer-status-ok   { border-color: rgba(11,110,79,0.25);  background: rgba(11,110,79,0.04); }
+  .mi-rec-drawer-status-ok   { border-color: rgba(11,110,79,0.25); background: rgba(11,110,79,0.04); }
   .mi-rec-drawer-status-warn { border-color: rgba(217,154,43,0.30); background: rgba(217,154,43,0.05); }
-  .mi-rec-drawer-status-crit { border-color: rgba(201,74,58,0.30);  background: rgba(201,74,58,0.04); }
+  .mi-rec-drawer-status-crit { border-color: rgba(201,74,58,0.30); background: rgba(201,74,58,0.04); }
   .mi-rec-drawer-status-l { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); font-weight: 600; }
   .mi-rec-drawer-status-v { font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 4px; letter-spacing: -0.015em; }
   .mi-rec-drawer-status-m { font-size: 13px; color: var(--n-600); margin-top: 4px; line-height: 1.5; }
@@ -3758,8 +3757,8 @@
   .mi-recipe-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 11.5px; color: var(--n-500); }
   .mi-recipe-cat { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--n-500); padding: 2px 7px; background: var(--paper-soft); border-radius: 99px; }
   .mi-recipe-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; letter-spacing: -0.005em; }
-  .mi-recipe-status.ok   { background: rgba(11,110,79,0.10);   color: var(--atlas); }
-  .mi-recipe-status.warn { background: rgba(217,154,43,0.14);  color: var(--warning); }
+  .mi-recipe-status.ok   { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .mi-recipe-status.warn { background: rgba(217,154,43,0.14); color: var(--warning); }
 
   .mi-recipe-stat-l { font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); font-weight: 600; }
   .mi-recipe-stat-v { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 3px; font-feature-settings: "tnum" 1; }
@@ -3771,9 +3770,9 @@
   .mi-recipe-fc-act { color: var(--n-700); font-weight: 600; }
 
   .mi-recipe-pip { display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; font-family: var(--mono); letter-spacing: 0; font-feature-settings: "tnum" 1; }
-  .mi-recipe-pip-ok   { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .mi-recipe-pip-ok   { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .mi-recipe-pip-warn { background: rgba(217,154,43,0.14); color: var(--warning); }
-  .mi-recipe-pip-crit { background: rgba(201,74,58,0.12);  color: var(--danger); }
+  .mi-recipe-pip-crit { background: rgba(201,74,58,0.12); color: var(--danger); }
 
   .mi-recipe-acts { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
   .mi-recipe-acts .mi-ic-btn { background: transparent; border: 1px solid var(--n-200); border-radius: 8px; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--n-600); cursor: pointer; transition: border-color 150ms, color 150ms, background 150ms; }
@@ -3785,7 +3784,7 @@
   .mi-recipe-expand-empty .btn-slim { margin-top: 10px; }
   .mi-recipe-expand-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 11.5px; color: var(--n-600); }
   .mi-recipe-expand-meta b { color: var(--ink); font-weight: 600; margin-right: 4px; }
-  .mi-recipe-updated { color: var(--n-400); font-style: italic; flex: 1; text-align: right; }
+  .mi-recipe-updated { color: var(--n-400); flex: 1; text-align: right; }
 
   .mi-recipe-table-wrap { overflow-x: auto; }
   .mi-recipe-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -3973,9 +3972,9 @@
   .fin-pnl-p { font-size: 12px; font-family: var(--mono); color: var(--n-500); text-align: right; font-feature-settings: "tnum" 1; }
   .fin-pnl-total .fin-pnl-p { color: var(--atlas); font-weight: 600; }
   .fin-pip { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 600; letter-spacing: -0.005em; }
-  .fin-pip-ok   { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .fin-pip-ok   { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .fin-pip-warn { background: rgba(217,154,43,0.14); color: var(--warning); }
-  .fin-pip-crit { background: rgba(201,74,58,0.12);  color: var(--danger); }
+  .fin-pip-crit { background: rgba(201,74,58,0.12); color: var(--danger); }
   .fin-pnl-foot { font-size: 12.5px; color: var(--n-600); margin-top: 14px; line-height: 1.5; }
   .fin-pnl-foot b { color: var(--ink); font-weight: 600; }
 
@@ -3992,9 +3991,9 @@
   .fin-budget-row b { color: var(--ink); font-weight: 600; }
   .fin-budget-verdict { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 12.5px; line-height: 1.45; border-left: 3px solid var(--n-300); background: var(--paper); }
   .fin-budget-verdict b { color: var(--ink); font-weight: 600; }
-  .fin-budget-verdict-ok   { border-left-color: var(--atlas);   color: var(--atlas); }
+  .fin-budget-verdict-ok   { border-left-color: var(--atlas);  color: var(--atlas); }
   .fin-budget-verdict-warn { border-left-color: var(--warning); color: var(--warning); }
-  .fin-budget-verdict-bad  { border-left-color: var(--danger);  color: var(--danger); }
+  .fin-budget-verdict-bad  { border-left-color: var(--danger); color: var(--danger); }
 
   /* ── Break-even card · split layout for full-width row ── */
   .fin-bev-split { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: stretch; }
@@ -4011,7 +4010,7 @@
   .fin-bev-daily-v { font-size: 26px; font-weight: 600; color: var(--atlas); margin-top: 4px; font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
   .fin-bev-daily-sub { font-size: 11.5px; color: var(--n-500); margin-top: 3px; }
   .fin-bev-verdict { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 12.5px; line-height: 1.45; border-left: 3px solid var(--atlas); background: var(--paper); }
-  .fin-bev-verdict-ok  { border-left-color: var(--atlas);  color: var(--atlas); }
+  .fin-bev-verdict-ok  { border-left-color: var(--atlas); color: var(--atlas); }
   .fin-bev-verdict-bad { border-left-color: var(--danger); color: var(--danger); }
   .fin-bev-verdict b { font-weight: 600; }
 
@@ -4052,7 +4051,7 @@
   .fin-price-foot { font-size: 11px; color: var(--n-500); margin-top: 14px; line-height: 1.5; }
 
   /* ── Page footer note ── */
-  .fin-note { font-size: 11px; color: var(--n-500); text-align: center; padding: 8px 0 0; max-width: 720px; margin: 0 auto; line-height: 1.5; font-style: italic; }
+  .fin-note { font-size: 11px; color: var(--n-500); text-align: center; padding: 8px 0 0; max-width: 720px; margin: 0 auto; line-height: 1.5; }
 
   /* ── TVA monthly reconciliation ── */
   .fin-tva-period { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -4092,7 +4091,7 @@
   .fin-tva-hrow:last-child { border-bottom: 0; }
   .fin-tva-hpayable { font-weight: 600; color: var(--ink); font-family: var(--mono); font-feature-settings: "tnum" 1; }
   .fin-tva-hstatus { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 99px; justify-self: end; }
-  .fin-tva-hstatus-ok   { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .fin-tva-hstatus-ok   { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .fin-tva-hstatus-warn { background: rgba(217,154,43,0.14); color: var(--warning); }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -4162,11 +4161,11 @@
   .cf-z-summary-l { color: var(--n-700); }
   .cf-z-summary-v { font-weight: 700; font-family: var(--mono); font-feature-settings: "tnum" 1; }
   .cf-z-summary-v small { font-size: 11px; font-weight: 500; opacity: 0.8; }
-  .cf-z-summary-ok   { background: rgba(11,110,79,0.06);  color: var(--atlas); }
+  .cf-z-summary-ok   { background: rgba(11,110,79,0.06); color: var(--atlas); }
   .cf-z-summary-ok   .cf-z-summary-v { color: var(--atlas); }
   .cf-z-summary-warn { background: rgba(217,154,43,0.10); color: var(--warning); }
   .cf-z-summary-warn .cf-z-summary-v { color: var(--warning); }
-  .cf-z-summary-bad  { background: rgba(201,74,58,0.10);  color: var(--danger); }
+  .cf-z-summary-bad  { background: rgba(201,74,58,0.10); color: var(--danger); }
   .cf-z-summary-bad  .cf-z-summary-v { color: var(--danger); }
   .cf-z-reason { margin-top: 12px; }
   .cf-z-reason-l { font-size: 11.5px; color: var(--n-600); font-weight: 600; margin-bottom: 6px; display: block; }
@@ -4218,9 +4217,9 @@
   .cf-hyg-tval-warn { color: var(--warning); }
   .cf-hyg-tval-bad  { color: var(--danger); }
   .cf-hyg-tstat { font-size: 10.5px; font-weight: 700; letter-spacing: -0.005em; padding: 2px 8px; border-radius: 99px; justify-self: end; }
-  .cf-hyg-tstat-ok   { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .cf-hyg-tstat-ok   { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .cf-hyg-tstat-warn { background: rgba(217,154,43,0.14); color: var(--warning); }
-  .cf-hyg-tstat-bad  { background: rgba(201,74,58,0.12);  color: var(--danger); }
+  .cf-hyg-tstat-bad  { background: rgba(201,74,58,0.12); color: var(--danger); }
 
   /* ── Équipements tab ── */
   .cf-eq-banner { background: rgba(201,74,58,0.08); border: 1px solid rgba(201,74,58,0.25); border-left: 4px solid var(--danger); padding: 12px 14px; border-radius: 10px; color: var(--danger); font-size: 13px; line-height: 1.5; }
@@ -4236,9 +4235,9 @@
   .cf-eq-last, .cf-eq-next { font-family: var(--mono); font-feature-settings: "tnum" 1; color: var(--n-700); }
   .cf-eq-next small { color: var(--n-500); }
   .cf-eq-stat { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; justify-self: end; }
-  .cf-eq-stat-ok    { background: rgba(11,110,79,0.10);  color: var(--atlas); }
+  .cf-eq-stat-ok    { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .cf-eq-stat-due   { background: rgba(217,154,43,0.14); color: var(--warning); }
-  .cf-eq-stat-late  { background: rgba(201,74,58,0.12);  color: var(--danger); }
+  .cf-eq-stat-late  { background: rgba(201,74,58,0.12); color: var(--danger); }
   .cf-eq-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
 
   /* Equipment detail overlay */
@@ -4399,7 +4398,7 @@
   .st-cal-day-item { font-size: 11.5px; color: var(--n-600); line-height: 1.4; padding: 5px 7px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 7px; }
   .st-cal-day-item b { color: var(--ink); display: block; font-weight: 600; }
   .st-cal-day-item .h { font-family: var(--mono); font-size: 10.5px; color: var(--n-500); }
-  .st-cal-day-empty { font-size: 11px; color: var(--n-400); font-style: italic; margin-top: auto; }
+  .st-cal-day-empty { font-size: 11px; color: var(--n-400); margin-top: auto; }
 
   /* ── TAB 2 · Search + filters + view toggle ───────────────────────────── */
   .st-toolbar { display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; }
@@ -5783,8 +5782,8 @@
   /* No persistence — the lock + greeting flow ALWAYS replays on reload
    * so the demo entry sequence is fully repeatable. The Skip control
    * lets a repeat viewer collapse it without sitting through it again. */
-  let unlocked = false;  /* the PIN-success choreography has started */
-  let done = false;      /* the intro is resolved — normal end or Skip */
+  let unlocked = false; /* the PIN-success choreography has started */
+  let done = false;     /* the intro is resolved — normal end or Skip */
 
   /* Prevent the page from scrolling while the lock is up. */
   document.documentElement.style.overflow = 'hidden';
@@ -5841,7 +5840,7 @@
        * The flag is read by the role-filter script in assets/roleGate.js
        * and reflected as body.role-manager / body.role-owner. */
       let role = 'owner';
-      if (val === '0000' || val === '0505') role = 'owner';   /* config / tease both run as owner */
+      if (val === '0000' || val === '0505') role = 'owner';  /* config / tease both run as owner */
       else if (val === '0909') role = 'manager';
       window.__kiwiRole = role;
       try { localStorage.setItem('kiwiRole', role); } catch (_) {}
@@ -5876,7 +5875,7 @@
     if (greetEm) {
       /* Measure em's natural inline width. em is plain inline in our
        * CSS so getBoundingClientRect gives the real text width. */
-      /* +44px: italic glyphs (esp. terminal "?" / "é") paint well past
+      /* +72px: serif glyphs (esp. terminal "?" / "é") can paint past
        * their advance-width — "ink overflow". Combined with the 2.5px
        * caret pinned to the right edge, we need generous trailing room
        * so overflow:hidden doesn't shave the tail off. Erring high here
@@ -5948,12 +5947,12 @@
      *          reveal — a single 960 ms CSS transition handles both the
      *          shift-left of "Bonjour Rachid," (the h1 line stays
      *          centered while the em widens) AND the typewriter-style
-     *          left-to-right reveal of the green italic. A caret rides
+     *          left-to-right reveal of the green accent. A caret rides
      *          the right edge via the .is-typing ::after pseudo. */
     setTimeout(() => {
       if (emClip) {
         /* Re-measure now that fonts are guaranteed loaded. getBoundingClientRect
-         * returns the advance-width-based layout box; italic glyphs paint
+         * returns the advance-width-based layout box; serif glyphs can paint
          * well past that ("?" terminal swash, "é" accent). We add a buffer
          * proportional to font-size (~0.5em) so it scales across breakpoints. */
         const innerEm = emClip.querySelector('em');

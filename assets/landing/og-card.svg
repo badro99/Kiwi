@@ -155,10 +155,9 @@
     </g>
   </g>
 
-  <!-- Right edge: editorial Instrument Serif italic ornament -->
+  <!-- Right edge: editorial Instrument Serif ornament (roman) -->
   <text x="1120" y="350"
         font-family="Instrument Serif, Times New Roman, serif"
-        font-style="italic"
         font-size="240"
         fill="rgba(125,242,176,0.06)"
         text-anchor="end"

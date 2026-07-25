@@ -10,6 +10,14 @@
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
     --paper:#F7F5F0; --ink:#0A0F0D; --line:#e7e3da; --muted:#5d6b63; --surface:#FFFDFA;
   }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
+
   *{box-sizing:border-box}
   html,body{margin:0}
   body{

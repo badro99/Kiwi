@@ -53,6 +53,14 @@
     --glass-blur: blur(26px) saturate(180%);
     --glass-shadow: 0 18px 40px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.25);
   }
+
+/* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+   sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+   the colour and face already set on each em rule carry the emphasis instead.
+   Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+   set font-style on their own class, which outranks this. */
+em, i, cite, dfn, var { font-style: normal; }
+
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
   body {
@@ -67,7 +75,7 @@
   a { color: inherit; text-decoration: none; }
   .num { font-feature-settings: "tnum" 1, "ss01" 1; letter-spacing: -0.02em; }
   .mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
-  .serif { font-family: var(--serif); font-style: italic; font-weight: 400; }
+  .serif { font-family: var(--serif); font-weight: 400; }
 
   /* ============ PHONE FRAME ============ */
   .app {
@@ -304,7 +312,7 @@
   .ultra-head { display: flex; justify-content: space-between; align-items: center; }
   .ultra-mark { color: var(--mint); font-size: 18px; line-height: 1; }
   .ultra-wm { display: inline-flex; align-items: baseline; gap: 4px; font-size: 14px; font-weight: 700; letter-spacing: -0.04em; }
-  .ultra-wm .ux { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; font-size: 15px; color: rgba(255,255,255,0.92); }
+  .ultra-wm .ux { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; font-size: 15px; color: rgba(255,255,255,0.92); }
   .ultra-l { font-size: 10.5px; color: rgba(255,255,255,0.55); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 12px; }
   .ultra-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-top: 6px; font-size: 12.5px; color: rgba(255,255,255,0.88); }
   .ultra-perks > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -930,7 +938,7 @@
       <div class="prof-head">
         <div class="prof-av-big">IM</div>
         <div class="prof-name">Imane Mouline</div>
-        <div class="prof-tier"><span style="color:var(--mint);">✦</span> Kiwi <span style="font-family:var(--serif);font-style:italic;font-weight:400;letter-spacing:-0.01em;">ultra</span> · membre depuis 2026</div>
+        <div class="prof-tier"><span style="color:var(--mint);">✦</span> Kiwi <span style="font-family:var(--serif);font-weight:400;letter-spacing:-0.01em;">ultra</span> · membre depuis 2026</div>
       </div>
 
       <div class="prof-iban">
@@ -946,7 +954,7 @@
       </div>
 
       <div class="menu-group">
-        <button class="menu-item" data-toast='{"title":"✦ Kiwi Ultra · palier signature","desc":"299 MAD/mois · cashback 2 % · FX 0 % · conciergerie 24/7 · Visa Infinite Metal"}'><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg></span><span class="lbl">✦ Niveau <span style="font-family:var(--serif);font-style:italic;font-weight:400;">ultra</span></span><span class="ch">›</span></button>
+        <button class="menu-item" data-toast='{"title":"✦ Kiwi Ultra · palier signature","desc":"299 MAD/mois · cashback 2 % · FX 0 % · conciergerie 24/7 · Visa Infinite Metal"}'><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg></span><span class="lbl">✦ Niveau <span style="font-family:var(--serif);font-weight:400;">ultra</span></span><span class="ch">›</span></button>
         <button class="menu-item" data-toast='{"title":"Parrainage","desc":"Invitez un·e ami·e · 200 MAD pour vous deux"}'><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span class="lbl">Parrainer un·e ami·e</span><span class="ch">›</span></button>
         <button class="menu-item" data-toast='{"title":"Support 24/7","desc":"Chat in-app · darija, français, arabe"}'><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span><span class="lbl">Aide & support</span><span class="ch">›</span></button>
       </div>
@@ -1126,7 +1134,7 @@
   <!-- ULTRA -->
   <div class="sheet" data-sheet="ultra">
     <div class="sheet-grip"></div>
-    <div class="sheet-head"><h2><span style="color:var(--mint);">✦</span> Kiwi <span style="font-family:var(--serif);font-style:italic;font-weight:400;">ultra</span></h2><button class="sheet-close" data-close>✕</button></div>
+    <div class="sheet-head"><h2><span style="color:var(--mint);">✦</span> Kiwi <span style="font-family:var(--serif);font-weight:400;">ultra</span></h2><button class="sheet-close" data-close>✕</button></div>
     <div class="sheet-body">
       <div style="background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%); border-radius: 22px; padding: 26px; position: relative; overflow: hidden; margin-bottom: 18px;">
         <div style="position:absolute; top:-50px; right:-50px; width:200px; height:200px; border-radius:50%; background: radial-gradient(circle, rgba(91,213,255,0.32), transparent 70%); pointer-events:none;"></div>
@@ -1135,7 +1143,7 @@
           <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;">
             <span style="color:var(--mint);font-size:38px;line-height:1;">✦</span>
             <span style="font-size:36px;font-weight:700;letter-spacing:-0.04em;line-height:1;">kiwi</span>
-            <span style="font-family:var(--serif);font-style:italic;font-weight:400;font-size:36px;letter-spacing:-0.015em;line-height:1;color:rgba(255,255,255,0.95);margin-left:4px;">ultra</span>
+            <span style="font-family:var(--serif);font-weight:400;font-size:36px;letter-spacing:-0.015em;line-height:1;color:rgba(255,255,255,0.95);margin-left:4px;">ultra</span>
           </div>
           <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:14px;line-height:1.5;max-width:300px;">L'expérience la plus complète de Kiwi, pensée pour ceux qui voyagent, investissent, et vivent entre plusieurs monnaies.</div>
           <div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.55);">Renouvellement <span style="color:var(--mint);">1er jan. 2027</span></div>

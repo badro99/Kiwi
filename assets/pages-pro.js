@@ -504,10 +504,10 @@ handlers['nav-transactions'] = () => {
     const RANGE_LABEL = RANGE_LABEL_STR[lang] || RANGE_LABEL_STR.fr;
     menu(el, [
       { label: RANGE_LABEL.aujourdhui,       active: activeRange === 'aujourdhui', onClick: () => { activeRange = 'aujourdhui'; activeFilter = T.all; expanded = false; render(); } },
-      { label: RANGE_LABEL.hier,               active: activeRange === 'hier',       onClick: () => { activeRange = 'hier';       activeFilter = T.all; expanded = false; render(); } },
+      { label: RANGE_LABEL.hier,               active: activeRange === 'hier',       onClick: () => { activeRange = 'hier';      activeFilter = T.all; expanded = false; render(); } },
       { sep: true },
-      { label: RANGE_LABEL.sept,   active: activeRange === 'sept',       onClick: () => { activeRange = 'sept';       activeFilter = T.all; expanded = false; render(); } },
-      { label: RANGE_LABEL.trente,  active: activeRange === 'trente',     onClick: () => { activeRange = 'trente';     activeFilter = T.all; expanded = false; render(); } },
+      { label: RANGE_LABEL.sept,   active: activeRange === 'sept',       onClick: () => { activeRange = 'sept';      activeFilter = T.all; expanded = false; render(); } },
+      { label: RANGE_LABEL.trente,  active: activeRange === 'trente',     onClick: () => { activeRange = 'trente';    activeFilter = T.all; expanded = false; render(); } },
     ]);
   };
   handlers['tx-show-all'] = () => { expanded = true; render(); };
@@ -1879,7 +1879,7 @@ handlers['nav-equipe'] = () => {
 
     let workedPct, dotPct;
     if (status === 'clocked-out')     { workedPct = 100; dotPct = 100; }
-    else if (status === 'scheduled')  { workedPct = 0;   dotPct = 0;   }
+    else if (status === 'scheduled')  { workedPct = 0;  dotPct = 0; }
     else                              { workedPct = pctOf(now); dotPct = workedPct; }
 
     const roleC = ROLE_COLOR[m.kind] || 'var(--atlas)';
@@ -2058,9 +2058,9 @@ handlers['nav-equipe'] = () => {
 
         <style>
           @keyframes kw-eq-ripple {
-            0%   { transform: scale(1);   opacity: 0.42; }
-            70%  { transform: scale(2.4); opacity: 0;    }
-            100% { transform: scale(2.4); opacity: 0;    }
+            0%   { transform: scale(1);  opacity: 0.42; }
+            70%  { transform: scale(2.4); opacity: 0;   }
+            100% { transform: scale(2.4); opacity: 0;   }
           }
           @keyframes kw-eq-pulse {
             0%, 100% { opacity: 1; }
@@ -2976,7 +2976,7 @@ function pdsKey() {
   const v = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
   return PDS_LS_KEY + ':' + v;
 }
-const PDS_GRID = 16;          /* snap-to-grid unit (px) */
+const PDS_GRID = 16;         /* snap-to-grid unit (px) */
 const PDS_CANVAS_W = 880;
 const PDS_CANVAS_H = 540;
 
@@ -3098,7 +3098,7 @@ const PDS_SCENES = {
       </g>
       <rect x="0" y="0" width="1600" height="8" fill="#000" opacity="0.06"/>
       <line x1="20" y1="780" x2="1580" y2="780" stroke="#C4B493" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="770" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="14" fill="#A89770">trottoir</text>
+      <text x="800" y="770" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">trottoir</text>
     </svg>
   `,
   bar: `
@@ -3173,7 +3173,7 @@ const PDS_SCENES = {
       <g transform="translate(800, 400)">
         <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-forest)" stroke-width="60" stroke-linecap="round" fill="none"/>
         <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-highlight)" stroke-width="6" fill="none" transform="translate(0, -22)"/>
-        <text x="0" y="160" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="18" fill="#1F4A38" opacity="0.7">banquette ronde</text>
+        <text x="0" y="160" text-anchor="middle" font-family="Instrument Serif, serif" font-size="18" fill="#1F4A38" opacity="0.7">banquette ronde</text>
       </g>
       <g transform="translate(180, 700)">
         <rect width="980" height="56" rx="10" fill="url(#pds-leather-forest)"/>
@@ -3193,7 +3193,7 @@ const PDS_SCENES = {
       </defs>
       <rect width="1600" height="800" fill="url(#pds-zellige-prive)"/>
       <rect x="40" y="40" width="1520" height="720" rx="20" fill="none" stroke="#A89770" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="780" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="14" fill="#A89770">salon privé · accès rideau</text>
+      <text x="800" y="780" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">salon privé · accès rideau</text>
     </svg>
   `,
   blank: `
@@ -4836,7 +4836,7 @@ function pdsAttach(root, state, T, dr) {
   const onEscape = (ev) => {
     if (ev.key !== 'Escape') return;
     if (selection.size === 0) return; /* let the drawer close itself */
-    if (!root.isConnected) return;    /* drawer already gone — bail */
+    if (!root.isConnected) return;   /* drawer already gone — bail */
     selection.clear();
     root.querySelectorAll('.pds-tbl-cell.is-selected').forEach(el => el.classList.remove('is-selected'));
     openBulkInspector();
@@ -5651,7 +5651,7 @@ const PDS_INLINE_CSS = `
   }
   .pds-plan-label em {
     font-family:var(--serif, "Instrument Serif", serif);
-    font-style:italic; font-weight:400;
+     font-weight:400;
     text-transform:none;
     color:#5C5447;
     letter-spacing:0;
@@ -5690,7 +5690,7 @@ const PDS_INLINE_CSS = `
      Tables are absolute on the canvas. Each .pds-tbl-cell contains:
        • .pds-tbl       — the tabletop (wood/marble vibe via shadows)
        • .pds-tbl-num   — large bold number
-       • .pds-tbl-covers— italic seat count (instrument serif)
+       • .pds-tbl-covers— seat count (instrument serif, roman)
        • .pds-tbl-chairs / .pds-chair  — chair pills around the table
        • .pds-tbl-server — corner badge with server initials + color        */
   .pds-tbl-cell {
@@ -5708,7 +5708,7 @@ const PDS_INLINE_CSS = `
     display:flex; justify-content:center; gap:5px;
     pointer-events:none;
   }
-  .pds-tbl-chairs-top    { left:6px; right:6px; top:-9px;    height:7px; }
+  .pds-tbl-chairs-top    { left:6px; right:6px; top:-9px;   height:7px; }
   .pds-tbl-chairs-bottom { left:6px; right:6px; bottom:-9px; height:7px; }
   .pds-chair {
     flex:0 1 16px; min-width:8px; max-width:22px;
@@ -5778,7 +5778,7 @@ const PDS_INLINE_CSS = `
     font-feature-settings:"tnum" 1;
   }
   .pds-tbl-num    { font-weight:700; letter-spacing:0.01em; font-size:17px; line-height:1; color:inherit; }
-  .pds-tbl-covers { font-family:var(--serif, "Instrument Serif", serif); font-style:italic; font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
+  .pds-tbl-covers { font-family:var(--serif, "Instrument Serif", serif); font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
 
   /* Status color encodings — mirrors caisse khawya / ka-yaklo etc. */
   .pds-tbl[data-status="free"] {
@@ -5896,7 +5896,7 @@ const PDS_INLINE_CSS = `
   .pds-asum-dot { width:9px; height:9px; border-radius:50%; background:var(--chip); flex-shrink:0; }
   .pds-asum-name { flex:1; color:var(--ink); }
   .pds-asum-n { font-family:var(--mono); font-size:11.5px; color:var(--n-600); font-weight:600; }
-  .pds-asum-unassigned .pds-asum-name { color:var(--n-500); font-style:italic; }
+  .pds-asum-unassigned .pds-asum-name { color:var(--n-500); }
 
   .pds-tpls { display:flex; flex-direction:column; gap:10px; }
   .pds-tpl { background:var(--paper-soft); border:1px solid var(--n-200); border-radius:12px; padding:14px; }
@@ -6728,7 +6728,7 @@ function _bqxCss() {
     .bqx-badge.gen { background: rgba(11,110,79,.12); color: #0B6E4F; }
     .bqx-badge.imp { background: rgba(217,154,43,.16); color: #8A6210; }
     .bqx-vact { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-    .bqx-nocode { color: var(--n-500, #99a); font-size: 12px; font-style: italic; }
+    .bqx-nocode { color: var(--n-500, #99a); font-size: 12px; }
     .bqx-cat-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line, #e7e3da); border-radius: 12px; margin-bottom: 8px; background: var(--paper, #fff); }
     .bqx-cat-bar { width: 5px; align-self: stretch; border-radius: 3px; min-height: 34px; }
     .bqx-cat-info { flex: 1; min-width: 0; }
@@ -6865,7 +6865,7 @@ function _bqxAdoptLegacy(slug, legacySlug) {
       var c = cands[i];
       if (!c || c === slug) continue;
       var old = localStorage.getItem(pre + c);
-      if (!_bqxHasStock(old)) continue;                    // nothing worth carrying
+      if (!_bqxHasStock(old)) continue;                   // nothing worth carrying
       localStorage.setItem(pre + slug, old);
       var seq = localStorage.getItem('kiwiBarcodeSeq:' + c);
       if (seq && !localStorage.getItem('kiwiBarcodeSeq:' + slug)) localStorage.setItem('kiwiBarcodeSeq:' + slug, seq);
@@ -10281,7 +10281,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
    *   Two-column layout (category rail + items pane) with three top-level tabs.
    * ═════════════════════════════════════════════════════════════════════════ */
   handlers['nav-menu'] = () => {
-    let activeTab = 'products';       // products | options | stations
+    let activeTab = 'products';      // products | options | stations
     let activeCat = 'tajines';
     let searchTerm = '';
     const menu86 = new Set(['taj-2']);
@@ -11180,7 +11180,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
          or signals "served first" for stations with sync OFF (drinks etc.). */
       .kit-fire { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 9.5px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.02em; vertical-align: middle; }
       .kit-fire-wait { background: rgba(217,154,43,0.18); color: var(--warning); }
-      .kit-fire-now  { background: rgba(11,110,79,0.14);  color: var(--atlas); }
+      .kit-fire-now  { background: rgba(11,110,79,0.14); color: var(--atlas); }
       .kit-fire-fast { background: rgba(54,119,166,0.16); color: #3677A6; }
       .kit-zoom .kit-fire { font-size: 11px; padding: 2px 9px; }
       .kit-zoom .kit-recipe-ico { width: 16px; height: 16px; opacity: 0.5; }

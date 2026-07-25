@@ -58,10 +58,10 @@ async function accountActive(env, aid) {
   if (!env.DB || !aid) return true;
   try {
     const row = await env.DB.prepare('SELECT status FROM accounts WHERE id = ?').bind(aid).first();
-    if (!row) return false;                 // deleted
-    return row.status !== 'suspended';      // frozen for non-payment, etc.
+    if (!row) return false;                // deleted
+    return row.status !== 'suspended';     // frozen for non-payment, etc.
   } catch (_) {
-    return true;                            // can't verify → don't lock anyone out
+    return true;                           // can't verify → don't lock anyone out
   }
 }
 
@@ -139,9 +139,9 @@ export async function onRequest(context) {
       const dest = request.headers.get('Sec-Fetch-Dest');
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
-      if (!(wantsDoc || isApi)) return next();          // asset → trust the token
+      if (!(wantsDoc || isApi)) return next();         // asset → trust the token
       if (await accountActive(env, sess.aid)) return next();
-      sessionRevoked = true;                            // deleted/suspended → lock out below
+      sessionRevoked = true;                           // deleted/suspended → lock out below
     }
   }
 
@@ -290,6 +290,14 @@ function authPage(opts) {
             "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
     --serif: "Instrument Serif", "New York", ui-serif, Georgia, Cambria, serif;
   }
+
+    /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
+       sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+       the colour and face already set on each em rule carry the emphasis instead.
+       Italics that DEPICT something (icing piped on a cake, an imitated masthead)
+       set font-style on their own class, which outranks this. */
+    em, i, cite, dfn, var { font-style: normal; }
+    
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; }
@@ -314,7 +322,7 @@ function authPage(opts) {
   .card {
     width: 100%;
     max-width: 440px;
-    margin: auto;                  /* centers when short, scrolls when tall */
+    margin: auto;                 /* centers when short, scrolls when tall */
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 24px;
@@ -359,7 +367,6 @@ function authPage(opts) {
   }
   h1 em {
     font-family: var(--serif);
-    font-style: italic;
     font-weight: 400;
     letter-spacing: -0.01em;
     color: var(--atlas);
