@@ -306,7 +306,7 @@
     scanCycleIdx: 0,
     offline: false, queued: 0,
   };
-  function freshTicket() { state.ticket = { num: `T-${ticketSeq}`, lines: [] }; }
+  function freshTicket() { state.ticket = { num: posRef(`T-${ticketSeq}`), lines: [] }; }
   freshTicket();
 
   function queueIfOffline(label) {
@@ -914,6 +914,14 @@
        la reprise après rechargement. Sans ça la recette vivait uniquement dans
        `day` et disparaissait au premier refresh. Démo : no-op. */
     postDay(total, method, t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} art.)`, t.num);
+  }
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
   }
   function postDay(total, method, label, ref) {
     try {

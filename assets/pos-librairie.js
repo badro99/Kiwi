@@ -298,7 +298,7 @@
     rentree: true,
     offline: false, queued: 0,
   };
-  function freshCart() { state.cart = { num: `V-${saleSeq}`, lines: [], client: null }; }
+  function freshCart() { state.cart = { num: posRef(`V-${saleSeq}`), lines: [], client: null }; }
 
   function queueIfOffline(label) {
     if (!state.offline) return false;
@@ -316,6 +316,14 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      La librairie encaissait dans state.cart, jeté juste après la vente : la
      recette n'existait nulle part. Démo : no-op. */
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function postDay(total, method, label, ref) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref });

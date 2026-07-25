@@ -179,8 +179,45 @@
     return max >= base ? max + 1 : base;
   }
 
+  /* ─── identifiant de terminal ───
+   * Le compteur de tickets vit dans le stockage LOCAL : deux caisses du même
+   * commerce partent donc du même numéro et impriment toutes les deux « T-642 »
+   * le même jour. Deux ventes différentes, un seul numéro : c'est un problème
+   * de tenue de livres, et la numérotation d'une caisse doit être unique.
+   * On suffixe donc chaque référence par une étiquette stable et courte, propre
+   * au terminal (2 caractères, tirés une fois puis conservés). « T-642-A7 » et
+   * « T-642-K3 » ne se confondent plus.
+   * Ce choix reste HORS-LIGNE : une caisse sans réseau doit continuer à
+   * encaisser, donc pas d'aller-retour serveur pour obtenir un numéro. Une
+   * séquence fiscale unique délivrée par le serveur est un autre débat (et une
+   * décision réglementaire) — voir le rapport. */
+  var TAG_KEY = 'kiwi:posDevice';
+  var _tag = null;
+  function deviceTag() {
+    if (_tag) return _tag;
+    try {
+      _tag = localStorage.getItem(TAG_KEY) || '';
+      if (!/^[A-Z0-9]{2}$/.test(_tag)) {
+        var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // sans I/O/0/1 : illisibles sur un ticket
+        var b = new Uint8Array(2);
+        (crypto.getRandomValues ? crypto.getRandomValues(b) : (b[0] = 7, b[1] = 13));
+        _tag = A[b[0] % A.length] + A[b[1] % A.length];
+        localStorage.setItem(TAG_KEY, _tag);
+      }
+    } catch (_) { _tag = 'XX'; }
+    return _tag;
+  }
+  /* stamp('T-642') → 'T-642-A7'. Idempotent : une référence déjà étiquetée
+     n'est pas ré-étiquetée (le solde d'une commande reprend sa référence). */
+  function stamp(ref) {
+    var s = String(ref == null ? '' : ref);
+    if (!s) return '';
+    var tag = deviceTag();
+    return new RegExp('-' + tag + '$').test(s) ? s : (s + '-' + tag);
+  }
+
   window.KiwiPosSale = {
     record: record, today: today, totals: totals, nextSeq: nextSeq,
-    isReal: isReal,
+    isReal: isReal, deviceTag: deviceTag, stamp: stamp,
   };
 })();

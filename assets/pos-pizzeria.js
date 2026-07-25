@@ -366,7 +366,7 @@
   let ticking = null;
   const state = { view: 'carte', ticket: null, offline: false, queued: 0 };
   function freshTicket() {
-    state.ticket = { num: `M-${seq}`, mode: 'surplace', table: null, customer: null, zone: null, address: '', lines: [] };
+    state.ticket = { num: posRef(`M-${seq}`), mode: 'surplace', table: null, customer: null, zone: null, address: '', lines: [] };
   }
   function queueIfOffline(label) {
     if (!state.offline) return false;
@@ -378,6 +378,14 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      La pizzeria encaissait dans o.pay, et ORDERS meurt avec l'onglet : la
      recette du service n'existait nulle part. Démo : no-op. */
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function postDay(total, method, label, ref) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref });

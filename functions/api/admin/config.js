@@ -46,13 +46,24 @@ export async function onRequestPut(context) {
   const hasType = Object.prototype.hasOwnProperty.call(body, 'type');
   const type = hasType ? (body.type || '').toString().trim().slice(0, 24) : null;
 
+  /* Rattachement explicite d'une boutique à son propriétaire.
+     Une fiche préparée par l'opérateur naît sans account_id, et /api/config
+     refuse désormais qu'un compte tiers l'adopte (error: merchant-reserved) —
+     sinon le premier à deviner le slug emportait la boutique. Quand le nom
+     commercial du client ne donne pas exactement ce slug (multi-boutiques,
+     enseigne différente de la raison sociale), c'est ici que l'opérateur relie
+     la fiche au bon compte. Envoyer accountId: null la libère à nouveau. */
+  const hasOwner = Object.prototype.hasOwnProperty.call(body, 'accountId');
+  const accountId = hasOwner ? ((body.accountId || '').toString().trim().slice(0, 64) || null) : null;
+
   await context.env.DB.prepare(
-    `INSERT INTO merchant_config (merchant, features, plan, type, updated_ts) VALUES (?,?,?,?,?)
+    `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
      ON CONFLICT(merchant) DO UPDATE SET
        features = excluded.features,
        plan = excluded.plan,
        type = COALESCE(excluded.type, merchant_config.type),
+       account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
        updated_ts = excluded.updated_ts`
-  ).bind(merchant, JSON.stringify(clean), plan, type, Date.now()).run();
-  return json({ ok: true, features: clean, plan, type: type });
+  ).bind(merchant, JSON.stringify(clean), plan, type, accountId, Date.now()).run();
+  return json({ ok: true, features: clean, plan, type: type, accountId: hasOwner ? accountId : undefined });
 }

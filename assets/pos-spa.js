@@ -262,7 +262,7 @@
     offline: false, queued: 0,
   };
   function freshTicket() {
-    state.ticket = { num: `S-${ticketSeq}`, lines: [], clientId: null, guest: false, apptId: null };
+    state.ticket = { num: posRef(`S-${ticketSeq}`), lines: [], clientId: null, guest: false, apptId: null };
   }
   function queueIfOffline(label) {
     if (!state.offline) return false;
@@ -274,6 +274,14 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le spa encaissait dans un ticket jeté juste après la vente : la recette du
      jour n'existait nulle part et la patronne voyait 0 MAD. Démo : no-op. */
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function postDay(total, method, label, ref) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref });

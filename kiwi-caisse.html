@@ -7614,15 +7614,31 @@
       ).join('');
     }
 
+    /* Le journal encaisse en dirhams entiers (recordSale arrondit). Des parts
+       laissées en flottant se perdaient donc à l'arrondi : 100 MAD en trois,
+       c'était 33 + 33 + 33 = 99 encaissés, un dirham évaporé à chaque table
+       partagée. On répartit le reste plutôt que de le jeter — les premières
+       parts prennent le dirham en plus (méthode du plus fort reste), et la
+       somme des parts fait exactement le total. */
+    function shareInteger(total, n) {
+      const cents = Math.round(total);
+      const base = Math.floor(cents / n);
+      let rest = cents - base * n;
+      const out = [];
+      for (let i = 0; i < n; i++) { out.push(base + (rest > 0 ? 1 : 0)); if (rest > 0) rest--; }
+      return out;
+    }
+
     /* ---- launch flow ---- */
     function launchSplitFlow() {
       const parts = [];
       if (splitState.splitMode === 'egal') {
         const tipPct = effectiveTipPct();
-        const perPerson = (splitState.total * (1 + tipPct / 100)) / splitState.numParts;
+        const withTipTotal = splitState.total * (1 + tipPct / 100);
+        const shares = shareInteger(withTipTotal, splitState.numParts);
         const label = tipPct > 0 ? `Part égale + pourboire ${tipPct}%` : 'Part égale';
         for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ amount: perPerson, label, paid: false, payMethod: null });
+          parts.push({ amount: shares[i], label, paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -7648,6 +7664,16 @@
             label: items || 'Part équilibrée',
             paid: false, payMethod: null,
           });
+        }
+        /* Même arrondi, même perte : chaque part par convive était arrondie
+           dans son coin. On arrondit ici et on rend l'écart à la part la plus
+           grosse, pour que la somme des parts fasse le total de la table. */
+        const target = Math.round(splitState.total * (1 + effectiveTipPct() / 100));
+        parts.forEach((p) => { p.amount = Math.round(p.amount); });
+        const drift = target - parts.reduce((s, p) => s + p.amount, 0);
+        if (drift !== 0 && parts.length) {
+          const big = parts.reduce((a, b) => (b.amount > a.amount ? b : a), parts[0]);
+          big.amount = Math.max(0, big.amount + drift);
         }
       }
 

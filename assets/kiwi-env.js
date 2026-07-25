@@ -55,3 +55,63 @@
     },
   };
 })();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * FILET D'ERREURS — window.KiwiErrors
+ * ---------------------------------------------------------------------------
+ * L'application n'avait AUCUN gestionnaire global : ni window.onerror, ni
+ * unhandledrejection. Une exception dans un rendu laissait donc un écran à
+ * moitié dessiné, sans un mot, et le commerçant appelait pour dire « ça
+ * marche plus » sans que personne puisse savoir quoi. Sur 585 blocs catch du
+ * projet, 355 sont vides : le silence était la règle, pas l'exception.
+ *
+ * Ce filet ne CORRIGE rien — il garde une trace. Les vingt dernières erreurs
+ * restent lisibles dans window.KiwiErrors.list(), avec le message, la source
+ * et l'heure, pour que le support puisse demander une capture au lieu de
+ * deviner. Rien n'est envoyé nulle part : pas de collecte à l'insu du
+ * commerçant, et ça continue de fonctionner hors-ligne.
+ *
+ * Volontairement discret : on n'affiche pas de bandeau rouge à un commerçant en
+ * plein service pour une icône qui n'a pas su se charger. La console garde le
+ * détail complet ; le tampon garde l'historique.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var MAX = 20;
+  var buf = [];
+  function push(kind, msg, src, line, err) {
+    try {
+      buf.push({
+        at: new Date().toISOString(), kind: kind,
+        msg: String(msg || '').slice(0, 300),
+        src: String(src || '').split('/').pop().slice(0, 80),
+        line: line || 0,
+        stack: (err && err.stack ? String(err.stack).slice(0, 600) : ''),
+      });
+      if (buf.length > MAX) buf.shift();
+    } catch (_) {}
+  }
+  window.addEventListener('error', function (e) {
+    // Une ressource qui ne charge pas (image, script) remonte ici sans message :
+    // on la note comme telle plutôt que d'enregistrer une ligne vide.
+    if (e && e.target && e.target !== window && e.target.tagName) {
+      push('resource', e.target.tagName + ' ' + (e.target.src || e.target.href || ''), '', 0, null);
+      return;
+    }
+    push('error', e && e.message, e && e.filename, e && e.lineno, e && e.error);
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    push('promise', (r && (r.message || r)) || 'rejet non traité', '', 0, r);
+  });
+  window.KiwiErrors = {
+    list: function () { return buf.slice(); },
+    clear: function () { buf.length = 0; },
+    // Un bloc que le commerçant peut copier-coller au support.
+    report: function () {
+      return buf.map(function (e) {
+        return e.at + '  [' + e.kind + '] ' + e.msg + (e.src ? '  (' + e.src + ':' + e.line + ')' : '');
+      }).join('\n') || 'Aucune erreur enregistrée.';
+    },
+  };
+})();

@@ -346,7 +346,7 @@
     unlocked: false,
   };
   function freshTicket() {
-    state.ticket = { num: `P-${ticketSeq}`, lines: [], customer: null, ready: suggestReady() };
+    state.ticket = { num: posRef(`P-${ticketSeq}`), lines: [], customer: null, ready: suggestReady() };
   }
   function suggestReady() {
     const d = new Date(Date.now() + 48 * H);
@@ -376,6 +376,14 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le comptoir encaissait dans o.pay, et ORDERS meurt avec l'onglet : la
      recette du jour n'existait nulle part. Démo : no-op. */
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function postDay(total, method, label, ref) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref });

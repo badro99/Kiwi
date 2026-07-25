@@ -442,8 +442,16 @@
     scanBusy: false,
     offline: false, queued: 0,
   };
+  /* Deux caisses de la même boutique partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : MM-1208-A7 vs MM-1208-K3. En
+     démo, pas d'étiquette — les captures restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function freshTicket() {
-    state.ticket = { num: `${TK}-${saleSeq}`, lines: [], client: null, remiseAuth: false };
+    state.ticket = { num: posRef(`${TK}-${saleSeq}`), lines: [], client: null, remiseAuth: false };
   }
   function ticketClient() {
     const t = state.ticket;

@@ -247,7 +247,7 @@
   };
 
   function freshBouquet() {
-    state.bouquet = { num: `B-${bouquetSeq}`, stems: {}, presets: [], wrap: 'none', occ: state.occActive, message: '', customer: null };
+    state.bouquet = { num: posRef(`B-${bouquetSeq}`), stems: {}, presets: [], wrap: 'none', occ: state.occActive, message: '', customer: null };
   }
 
   /* ── bouquet maths ── */
@@ -322,6 +322,14 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      La boutique encaissait dans des variables de closure et rien d'autre : la
      patronne voyait 0 MAD et un refresh effaçait la recette. Démo : no-op. */
+  /* Deux caisses du même commerce partaient du même compteur local et
+     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
+     terminal (KiwiPosSale.stamp) les sépare : T-642-A7 vs T-642-K3. En démo,
+     pas d'étiquette — les captures et la démonstration restent lisibles. */
+  function posRef(n) {
+    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
+    catch (_) { return n; }
+  }
   function postDay(total, method, label, ref) {
     try {
       if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref });

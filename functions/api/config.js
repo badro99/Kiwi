@@ -179,11 +179,27 @@ export async function onRequestPost(context) {
   const wantedName = String((body && body.name) || '').trim().slice(0, 120);
   if (wanted && wanted !== accSlug) {
     const owner = await storeOwner(env, wanted);
-    // null (no row) and '' (unclaimed) are both adoptable; a slug already claimed
-    // by someone else is refused outright rather than quietly redirected — a sync
-    // that lands on the wrong store is how the two-shop corruption happened.
+    // A slug already claimed by someone else is refused outright rather than
+    // quietly redirected — a sync that lands on the wrong store is how the
+    // two-shop corruption happened.
     if (owner !== null && owner !== '' && owner !== sess.aid) {
       return json({ error: 'merchant-not-yours' }, 403);
+    }
+    /* '' = une fiche existe déjà mais n'appartient à personne : c'est une
+       boutique PRÉPARÉE PAR L'OPÉRATEUR pour un client (admin/config.js insère
+       sans account_id). Elle était adoptable par le premier venu — et `wanted`
+       arrive tel quel du corps de la requête. N'importe quel commerçant connecté
+       pouvait donc envoyer {merchant:"cafe-rif"}, prendre la boutique que
+       l'opérateur venait de configurer pour un autre, écrire SES codes PIN
+       dedans et les relire ensuite. Le vrai commerçant, lui, se prenait un 403
+       sur sa propre boutique. Les slugs se devinent : ils dérivent du nom
+       commercial.
+       Une fiche réservée ne se prend donc plus que par le compte dont le nom
+       commercial donne ce slug. Un slug SANS fiche (null) reste librement
+       créable : personne n'a rien préparé dessus. L'opérateur garde la main pour
+       rattacher explicitement une fiche à un compte (admin/config.js). */
+    if (owner === '') {          // on est déjà dans la branche wanted !== accSlug
+      return json({ error: 'merchant-reserved' }, 403);
     }
     merchant = wanted;
     storeName = wantedName || wanted;
