@@ -6,14 +6,19 @@ the free tier.
 
 ## What "hosted" means here (be honest with the client)
 
-The deployed site is a **fully interactive demo/pilot**: every screen, the caisse,
-the dashboard, all verticals, trilingual FR/EN/AR. But data is **mocked
-client-side and stored per-browser** (`localStorage`). So:
+The deployed site is the **real product**: every screen, the caisse, the
+dashboard, all verticals, trilingual FR/EN/AR — backed by a live Cloudflare
+D1 backend (`functions/`, `schema.sql`). Concretely:
 
-- Data does **not** sync across devices or staff — each browser is its own island.
-- There are **no real payments, settlements, or DGI filings** behind the buttons.
-- It is a design-partner pilot, **not** a system of record yet. Real shared state
-  needs the backend (the "needs-backend" horizon in `KIWI_10X_ROADMAP.md`).
+- **Data syncs across devices.** Accounts/auth, caisse↔dashboard pairing, live
+  sales (Live Link), clients, menus, and QR/NFC orders are server-authoritative
+  in D1. A sale rung on the till appears on the owner's phone.
+- **Fail-soft:** if the backend is unreachable, each surface keeps working on
+  per-device `localStorage` and reconciles when it's back.
+- The one honest limit: **Kiwi does not process payments itself yet** — no
+  settlements or DGI filings. That layer is license-gated (Bank Al-Maghrib)
+  and scoped in `KIWI_2.0_ROADMAP.md`; the merchant's existing acquirer keeps
+  handling money movement.
 
 ## 1. Host on Cloudflare Pages (free)
 
@@ -68,7 +73,9 @@ remembered on that device for 30 days.
 
 ## Notes
 
-- The gate (`functions/_middleware.js`) is the **only** server-side piece and it is
-  isolated infra — it never touches the app. The app itself stays 100% vanilla.
+- The gate (`functions/_middleware.js`) sits in front of the whole app **and**
+  the `/api/*` backend (accounts, pairing, Live Link, orders — see `LIVE_LINK.md`
+  and `ADMIN.md`), so API calls ride behind it automatically. The frontend
+  itself stays 100% vanilla.
 - The gate runs **only on Cloudflare Pages** — it is inert on the local static
   server and on GitHub Pages, which have no serverless layer.

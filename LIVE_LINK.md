@@ -4,8 +4,11 @@ Turns the demo from "each browser is its own island" into a real link: a sale ru
 on the **caisse** (any device) appears on the owner's **dashboard** (any device),
 live. Runs entirely on the **free** Cloudflare Pages + D1 tiers.
 
-**It is OFF by default** — with no flag set, both apps behave exactly as the
-mocked per-browser demo. Nothing here can disturb the current pitch demo.
+**Real and paired stores are live automatically** (`KiwiEnv.isReal()` turns the
+spine on — no flag needed). The `kiwiLive` / `?live=1` flag described below
+remains as the manual switch for ad-hoc use. With neither, the showcase venues
+keep their seeded per-browser behaviour — nothing here can disturb them, and
+they can never leak into a real store's feed.
 
 > **✅ Provisioned (2026-07-07).** The one-time Cloudflare setup below is already
 > done on the `kiwi-maroc` Pages project: D1 database **`kiwi-sales`** created,

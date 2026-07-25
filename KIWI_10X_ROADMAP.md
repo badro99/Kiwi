@@ -21,6 +21,13 @@ today), `needs-backend` (the server the raise funds), or `license-gated`
 (Bank Al-Maghrib / DGI / AMMC) — and every item respects the house honesty rule:
 never claim a capability Kiwi does not hold.
 
+> **Update (July 2026):** the backend has since landed — Cloudflare Pages
+> Functions + D1 (accounts/auth, till pairing, live sales sync, clients, menus,
+> orders; see `AI_HANDOFF.md`). Read the tags accordingly: `needs-backend` no
+> longer means "blocked on a future server" — the spine exists and those items
+> are now buildable engineering work; only `license-gated` remains a hard
+> external gate. Kiwi itself is a live product, not a demo artifact.
+
 > **How this was built.** A 6-slice code recon → 7 independent
 > ideation lenses (52 raw ideas) → consolidation to
 > 39 candidates → an adversarial scoring pass (skeptical
@@ -280,7 +287,7 @@ Everything here ships inside the current vanilla HTML/CSS/JS artifact — no fra
 
 ## Horizon 2 — Needs the backend (the raise funds this)
 
-These eight bets all require the server and data layer Kiwi doesn't yet have — which is precisely why they belong here: each one 10x's the *product* and, more importantly, the *moat*. Horizon 1 makes Kiwi worth opening every day on the merchant's own hardware; Horizon 2 makes Kiwi impossible to leave. The through-line is that the vanilla artifact already *fakes* most of these — a hardcoded "rang 12/147" benchmark card, WhatsApp "share" toasts with no thread behind them, accounting toasts claiming a "DGI/SIMPL file" that has no Blob, a "Darija" tag that no engine understands. Horizon 2 is where those fabrications become real, backed data flows. That reframing matters for the raise: we are not inventing eight new surfaces, we are pouring a backend under UI the merchant has already been shown and believed. Ordered best-first by adversarial score, with an honest note on the two identity/WhatsApp bets that should partially merge.
+These eight bets all require the server and data layer that has since landed (Cloudflare Pages Functions + D1 — see the July 2026 update note up top); what remains is building each feature onto that spine. They belong here because: each one 10x's the *product* and, more importantly, the *moat*. Horizon 1 makes Kiwi worth opening every day on the merchant's own hardware; Horizon 2 makes Kiwi impossible to leave. The through-line is that the vanilla artifact already *fakes* most of these — a hardcoded "rang 12/147" benchmark card, WhatsApp "share" toasts with no thread behind them, accounting toasts claiming a "DGI/SIMPL file" that has no Blob, a "Darija" tag that no engine understands. Horizon 2 is where those fabrications become real, backed data flows. That reframing matters for the raise: we are not inventing eight new surfaces, we are pouring a backend under UI the merchant has already been shown and believed. Ordered best-first by adversarial score, with an honest note on the two identity/WhatsApp bets that should partially merge.
 
 #### Wa9tek — le numéro WhatsApp comme identité client universelle
 - **10x thesis:** Collapsing four independent, un-linked phone captures into one deduplicated customer record turns four toy demos into a single compounding customer graph — the first consumer-side data moat Kiwi owns.

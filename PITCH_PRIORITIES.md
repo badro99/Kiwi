@@ -1,5 +1,11 @@
 # Kiwi — Pitch Priorities (the 16 → 3 cut)
 
+> **✅ Historical (May 2026) — all three shipped, then surpassed.** Cross-surface
+> sync went beyond the in-browser `KiwiBus` described here: it is now a real
+> Cloudflare D1 backend (Live Link + till pairing — see `LIVE_LINK.md`,
+> `AI_HANDOFF.md`). i18n/RTL is complete. Kiwi is a live product, not a demo;
+> this file is kept as a record of the cut.
+
 The HANDOFF roadmap spans 16 items across four horizons. For the next raise,
 only three change an investor's mind. Everything else is deferred — not
 abandoned — with a one-line reason. Doing fewer things completely beats doing

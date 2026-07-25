@@ -3,11 +3,12 @@
 **Real market & accounting intelligence for the Kiwi assistant.**
 
 This is a forward design doc, not a commitment. It sketches what it takes to
-evolve the Kiwi AI agent from a deterministic co-pilot on demo data into an
-assistant that genuinely *knows* — the merchant's real books, Moroccan tax,
-and the Moroccan café market. It crosses the no-backend line (see `CLAUDE.md`
-§2) and is a multi-quarter effort. Companion to `KIWI_2.0_ROADMAP.md` (which
-tracks payment-license-gated removals — a separate concern).
+evolve the Kiwi AI agent from a deterministic co-pilot into an assistant that
+genuinely *knows* — the merchant's real books, Moroccan tax, and the Moroccan
+café market. The backend spine it needs is now live (Cloudflare Pages
+Functions + D1 — see `AI_HANDOFF.md`); the intelligence layer on top remains
+a multi-quarter effort. Companion to `KIWI_2.0_ROADMAP.md` (which tracks
+payment-license-gated removals — a separate concern).
 
 ---
 

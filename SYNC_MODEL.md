@@ -3,15 +3,22 @@
 > Pitch-ready narrative for the question every technical investor asks:
 > *"An order is taken on the server's phone — how does it reach the cashier and the owner's dashboard?"*
 
-## The honest starting point
+> **✅ Built (July 2026).** The architecture below is no longer a plan — it is
+> what runs in production. The "Venue Service" is Cloudflare Pages Functions +
+> D1 (`functions/`, `schema.sql`): sales rung on the caisse or settled on the
+> serveur reach the owner's dashboard on any device (Live Link — see
+> `LIVE_LINK.md`), tills bind to their store via pairing (`/api/pair/*`), and
+> QR/NFC client orders flow through `/api/order/*`. The "wire it in-browser
+> for the demo" section at the end is the historical stepping stone that
+> preceded the real backend.
 
-Kiwi today is a **fidelity prototype**. The three surfaces — `kiwi-serveur.html`
+## The starting point (as of May 2026, when this was written)
+
+Kiwi was then a **fidelity prototype**. The three surfaces — `kiwi-serveur.html`
 (server mobile app), `kiwi-caisse.html` (cashier register), `dashboard.html`
-(owner dashboard) — each run on their own client-side mock data. There is
-**no sync between them yet**: confirming an order fires a local toast, nothing
-crosses surfaces. This document is the architecture we build the moment we have
-funding, and the *minimal* version we can wire into the demo now (see last
-section).
+(owner dashboard) — each ran on their own client-side mock data with
+**no sync between them**. This document was the architecture to build next —
+which has since happened (see the note above).
 
 ## The model: one venue ledger, three thin clients
 

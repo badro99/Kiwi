@@ -1,8 +1,8 @@
 # Kiwi — Agent Handoff Document
 
-**Last updated:** 2026-05-12
+**Last updated:** 2026-05-12 · **superseded on current state by `AI_HANDOFF.md`** — read that first; this file remains the full history/context companion.
 **Location:** `/Users/badrosonair/Documents/kiwi/` (mirror at `/tmp/kiwi-preview/`) · GitHub `https://github.com/badro99/Kiwi` (auto-pushed after every edit — see `CLAUDE.md` §1)
-**Status:** High-fidelity interactive prototype. Not production code. Demo-ready for investor + client meetings.
+**Status:** Real, working product with a live backend (Cloudflare Pages Functions + D1: accounts/auth, till pairing, live sales sync, operator console) and real hardware I/O (Kiwi Printer Bridge). The "high-fidelity prototype" framing this document was written under (May 2026) is retired — see `CLAUDE.md` §2.
 **Founders:** Badr-Eddin Bakkioui (CEO) & Zakariae Attahiri (CTO · COO) · `invest@kiwi.ma` · Tanger
 
 ---
@@ -31,10 +31,10 @@ Hardware is a Kiwi CapEx line — **never a revenue line**. The distribution moa
 - **Vanilla HTML + CSS + JS.** No React, no build step, no framework, no bundler.
 - **Serves from a Python `http.server`** (sandboxed copy at `/tmp/kiwi-preview/`).
 - **Fonts:** Google Fonts — Inter Tight, Instrument Serif, IBM Plex Sans Arabic, JetBrains Mono.
-- **No backend.** All interactions are mocked client-side via toasts, modals, and drawers.
-- **localStorage** for persistence (lang, theme, mode).
+- **Real backend (landed July 2026).** Cloudflare Pages Functions + D1 (`functions/`, `schema.sql`): accounts/auth, merchant config, caisse↔dashboard pairing, live sales sync, clients, menus, orders, operator console. Surfaces fail soft to per-device state when it's unreachable.
+- **localStorage** for client-side persistence (lang, theme, mode, per-store state); D1 for server-authoritative data.
 
-The choice of vanilla was intentional: the prototype must be demonstrable by anyone, anywhere, without toolchain. Any agent inheriting this project should resist the urge to "migrate to Next.js" — the vanilla decision is deliberate and durable until the first real backend lands.
+The choice of vanilla was intentional: the product must be demonstrable by anyone, anywhere, without toolchain. Any agent inheriting this project should resist the urge to "migrate to Next.js" — the vanilla decision on the **frontend** is deliberate and durable; the backend is real and lives in `functions/`.
 
 ---
 

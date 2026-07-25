@@ -30,9 +30,13 @@ evidence-driven. **Reproduce every finding** before you report it.
 - **Stack: vanilla HTML + CSS + JS. No framework, no build step, no bundler.**
   This is a deliberate, locked decision. Do **not** propose migrating to React/
   Next/Vite. Audit the vanilla app as-is.
-- All interactions are mocked **client-side** (toasts, modals, drawers). There
-  is **no backend** yet. `localStorage` holds state: `kiwiLang`, `kiwiTheme`,
-  `kiwiMode`, `kiwiDateRange`, `kiwiRevCompare`.
+- A **real backend exists** (Cloudflare Pages Functions + D1 — accounts/auth,
+  till pairing, live sales sync, clients, menus, orders) and surfaces fail soft
+  to per-device state when it's unreachable. `localStorage` holds client state:
+  `kiwiLang`, `kiwiTheme`, `kiwiMode`, `kiwiDateRange`, `kiwiRevCompare`.
+  The showcase venue audited here (Café Atlas) runs on seeded demo data by
+  design; real paired stores must never show it — treat any leak of seed data
+  into a real/paired store as a launch blocker.
 - **Trilingual: French (default), English, Arabic.** Arabic implies **RTL**.
   i18n uses a "captured-originals" pattern (`assets/i18n.js`): FR is captured
   from the DOM; EN/AR live in a `T` dictionary. Elements carry
