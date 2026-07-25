@@ -5908,6 +5908,9 @@
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
 <script src="assets/orderpro-publish.js" defer fetchpriority="low"></script>
 <script src="assets/orderpro-panel.js" defer fetchpriority="low"></script>
+<!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
+     which reads its top-level declarations as globals. -->
+<script src="assets/floorplan-core.js" defer fetchpriority="low"></script>
 <script src="assets/pages-pro.js" defer fetchpriority="low"></script>
 <script src="assets/stock.js" defer fetchpriority="low"></script>
 <script src="assets/team.js" defer fetchpriority="low"></script>

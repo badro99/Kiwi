@@ -17,6 +17,10 @@
        https://unpkg.com/lucide@latest/dist/umd/lucide.min.js into assets/. -->
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
   <script src="assets/kiwi-env.js"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
+       deferred: the inline app script below calls KiwiFloorCore while painting
+       the salle view, so it has to be resolved by then. -->
+  <script src="assets/floorplan-core.js"></script>
 
   <script src="assets/lucide.min.js" defer></script>
 
@@ -3860,7 +3864,53 @@
     }
     .vrap-back-btn:hover { background: var(--line); }
     .vrap-back-btn svg { width: 14px; height: 14px; }
-  </style>
+  
+  /* ═══ Mirrored floor plan · the owner's actual layout ══════════════════
+     Same geometry as the dashboard designer (assets/floorplan-core.js): a
+     fixed logical plane scaled by CSS, so the room keeps its proportions at
+     any width without a resize listener. */
+  .cplan-zone { margin: 0 0 18px; }
+  .cplan-room {
+    position: relative;
+    width: 100%; max-width: 880px; margin: 8px auto 0;
+    container-type: inline-size;
+    border: 1.5px solid rgba(44,37,32,0.22); border-radius: 14px;
+    overflow: hidden; background: #FBF7EE;
+  }
+  .cplan-scale { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; }
+  .pds-el { position: absolute; transform-origin: 50% 50%; }
+  .pds-el-fill { position: absolute; inset: 0; background-repeat: repeat; overflow: hidden; }
+  .pds-el-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pds-el-label {
+    position: absolute; inset: 0; padding: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font: 600 9.5px/1.2 var(--mono, monospace);
+    letter-spacing: .16em; text-transform: uppercase;
+    pointer-events: none; text-align: center; overflow: hidden;
+  }
+  .cplan-tbl {
+    position: absolute; z-index: 3; cursor: pointer;
+    transform-origin: 50% 50%; -webkit-tap-highlight-color: transparent;
+  }
+  .cplan-tbl > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  .cplan-face {
+    position: absolute; inset: var(--pad, 0px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; text-align: center;
+  }
+  .cplan-num { font: 700 16px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing: -.01em; }
+  .cplan-cov { font: 400 10px/1 var(--mono, monospace); opacity: .6; margin-top: 3px; }
+  .cplan-tbl:active { filter: brightness(.97); }
+  .cplan-urgent {
+    position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
+    border-radius: 50%; background: #C0306E;
+    box-shadow: 0 0 0 3px rgba(192,48,110,.22);
+    animation: cplanPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes cplanPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .cplan-urgent { animation: none; } }
+</style>
   <link rel="stylesheet" href="assets/caisse-skin.css" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />
@@ -5712,8 +5762,20 @@
        (unpaired localhost) is untouched — it keeps its architectural plan.
        ═══════════════════════════════════════════════════════════════════════ */
     let __realZoneOrder = [];
-    const DESIGN_COVERS = { round2: 2, sq2: 2, high: 2, bar: 1, round4: 4, sq4: 4, rect4: 4, round6: 6, rect6: 6, round8: 8, rect8: 8 };
-    function designedCovers(type) { return DESIGN_COVERS[type] || 4; }
+    /* The owner's plan as designed — kept alongside `tables` (which holds live
+       service state) so a repaint can position tables without re-reading
+       storage or resetting anybody's status. */
+    let __realPlan = null;
+    /* Fallback only. The dashboard's plan (v2) stores the cover count on each
+       TABLE, because the owner can resize a table and change its seating; this
+       map is what a v1 plan gets, and it was already wrong — `rect10` was
+       missing, so every 10-top on the till read "4p". Read the table first,
+       fall back to the type, and only then to 4. */
+    const DESIGN_COVERS = { round2: 2, sq2: 2, high: 2, bar: 1, round4: 4, sq4: 4, rect4: 4, round6: 6, rect6: 6, round8: 8, rect8: 8, rect10: 10 };
+    function designedCovers(tb) {
+      if (tb && tb.seats != null && isFinite(+tb.seats)) return +tb.seats;
+      return DESIGN_COVERS[tb && tb.type] || 4;
+    }
 
     function caisseFloorPlan() {
       if (!storeIsReal()) return null;                // demo uses the built-in plan
@@ -5755,21 +5817,102 @@
         `</div>${sb}</div>`;
     }
 
-    // Repaint the grid from the CURRENT `tables` (preserves live status set by the
-    // order flow) — no plan re-read, no status reset.
+    /* Service statuses are not design statuses, so the ring is mapped here
+       rather than reused from the core: the owner cares about free/reserved,
+       the floor cares about who has ordered and who wants the bill. */
+    const CAISSE_RING = {
+      'khawya':       { s: '#B9B2A4', w: 1.4, dash: '' },
+      'a-commander':  { s: '#C99A2B', w: 2.6, dash: '' },
+      'ka-yaklo':     { s: '#0B6E4F', w: 2.6, dash: '' },
+      'bgha-ykhlass': { s: '#C0306E', w: 3.0, dash: '' },
+      'khlass':       { s: '#6A7A88', w: 2.4, dash: '5 4' },
+    };
+
+    /* Repaint from the CURRENT `tables` (live status from the order flow)
+       positioned by the OWNER'S plan. This used to be a flat card grid per
+       zone, which threw away every coordinate the owner had placed — the
+       waiter saw an alphabetical list, not their room. Same geometry and the
+       same drawing primitives as the dashboard designer, via KiwiFloorCore. */
     function renderRealGrid() {
       const host = document.querySelector('.view-salle .plan-real');
       if (!host) return;
-      const byZone = {};
-      Object.keys(tables).forEach(id => { const z = tables[id].zoneName || 'Salle'; (byZone[z] || (byZone[z] = [])).push(id); });
-      const order = __realZoneOrder.length ? __realZoneOrder : Object.keys(byZone);
-      if (!Object.keys(byZone).length) { host.innerHTML = emptyPlanHTML(); if (window.lucide) lucide.createIcons(); return; }
+      const C = window.KiwiFloorCore;
+      const plan = __realPlan;
+      const ids = Object.keys(tables);
+      if (!ids.length) { host.innerHTML = emptyPlanHTML(); if (window.lucide) lucide.createIcons(); return; }
+
+      /* No core or no coordinates → fall back to the card grid rather than
+         render an empty room. */
+      const spatial = !!(C && plan && (plan.tables || []).some(t => +t.x || +t.y));
+      if (!spatial) {
+        const byZone = {};
+        ids.forEach(id => { const z = tables[id].zoneName || 'Salle'; (byZone[z] || (byZone[z] = [])).push(id); });
+        const order = __realZoneOrder.length ? __realZoneOrder : Object.keys(byZone);
+        let html = '';
+        order.forEach(z => {
+          const zi = byZone[z]; if (!zi || !zi.length) return;
+          html += `<div class="plan-real-zone"><div class="plan-real-zone-h">${escTeam(z)} <em>· ${zi.length} table${zi.length > 1 ? 's' : ''}</em></div><div class="plan-real-grid">`;
+          zi.forEach(id => { html += designedTableHTML(id, tables[id]); });
+          html += '</div></div>';
+        });
+        host.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      const PAD = C.PAD;
       let html = '';
-      order.forEach(z => {
-        const ids = byZone[z]; if (!ids || !ids.length) return;
-        html += `<div class="plan-real-zone"><div class="plan-real-zone-h">${escTeam(z)} <em>· ${ids.length} table${ids.length > 1 ? 's' : ''}</em></div><div class="plan-real-grid">`;
-        ids.forEach(id => { html += designedTableHTML(id, tables[id]); });
-        html += '</div></div>';
+      (plan.zones || []).forEach(z => {
+        const zTables = (plan.tables || []).filter(t => (t.zone || 'z1') === z.id);
+        const zEls = (plan.elements || []).filter(e => (e.zone || 'z1') === z.id)
+                       .slice().sort((a, b) => (a.z || 0) - (b.z || 0));
+        if (!zTables.length && !zEls.length) return;
+        const W = Math.max(240, +((z.room || {}).w) || 880);
+        const H = Math.max(200, +((z.room || {}).h) || 540);
+        const occ = zTables.filter(t => {
+          const st = (tables[String(t.num || t.id)] || {}).status;
+          return st && st !== 'khawya';
+        }).length;
+
+        const items = zTables.map(t => {
+          const id = String(t.num || t.id);
+          const live = tables[id] || {};
+          const g = C.geom(t), c = C.color(t);
+          const ring = CAISSE_RING[live.status] || CAISSE_RING.khawya;
+          const covers = live.covers != null ? live.covers : C.geom(t).seats;
+          const urgent = live.status === 'bgha-ykhlass'
+            ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
+          const sv = live.server && servers[live.server];
+          const badge = sv
+            ? `<span class="tbl-server" style="background:${sv.color};">${serverInitials(sv)}</span>` : '';
+          return `<div class="cplan-tbl" data-table="${escTeam(id)}" role="button" tabindex="0"
+                 data-status="${live.status || 'khawya'}"
+                 aria-label="Table ${escTeam(id)}, ${covers} couverts"
+                 style="left:${t.x - PAD}px; top:${t.y - PAD}px;
+                        width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
+                        --pad:${PAD}px; transform:rotate(${t.rot || 0}deg);">
+              <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
+                ${C.chairsFor(g, g.seats, c)}${C.tableBody(g, c, ring)}
+              </svg>
+              <div class="cplan-face" style="color:${C.ink(c)};">
+                <span class="cplan-num">${escTeam(id)}</span>
+                <span class="cplan-cov">${covers}p</span>
+              </div>${urgent}${badge}
+            </div>`;
+        }).join('');
+
+        html += `<div class="cplan-zone">
+            <div class="plan-real-zone-h">${escTeam(z.name || 'Salle')}
+              <em>· ${zTables.length} table${zTables.length > 1 ? 's' : ''} · ${occ} occupée${occ > 1 ? 's' : ''}</em></div>
+            <div class="cplan-room" style="aspect-ratio:${W} / ${H};">
+              <div class="cplan-scale" style="width:${W}px; height:${H}px;
+                   transform:scale(calc(100cqw / ${W}px));">
+                ${C.roomShell(z)}
+                ${zEls.map(e => C.fixtureHTML(e, { cls: 'pds-el' })).join('')}
+                ${items}
+              </div>
+            </div>
+          </div>`;
       });
       host.innerHTML = html;
       if (window.lucide) lucide.createIcons();
@@ -5790,6 +5933,7 @@
       const plan = caisseFloorPlan();
       Object.keys(tables).forEach(k => { delete tables[k]; });
       __realZoneOrder = [];
+      __realPlan = plan;
       if (!plan || !Array.isArray(plan.tables) || !plan.tables.length) {
         host.innerHTML = emptyPlanHTML();
         if (window.lucide) lucide.createIcons();
@@ -5800,7 +5944,17 @@
         const id = String(tb.num || tb.id);
         const zone = zn[tb.zone] || 'Salle';
         if (__realZoneOrder.indexOf(zone) < 0) __realZoneOrder.push(zone);
-        tables[id] = { designed: true, floor: 0, zone: tb.zone || 'z1', zoneName: zone, shape: 'round', covers: designedCovers(tb.type), status: 'khawya', server: null, x: 0, y: 0, w: 0, h: 0, elapsed: 0 };
+        /* Carry the designed geometry through — the owner's layout is the
+           point of the mirror, so shape/position/size come from the plan
+           rather than being flattened to a round table at 0,0. */
+        tables[id] = {
+          designed: true, floor: 0, zone: tb.zone || 'z1', zoneName: zone,
+          shape: tb.shape || 'round', covers: designedCovers(tb),
+          status: 'khawya', server: null,
+          x: +tb.x || 0, y: +tb.y || 0, w: +tb.w || 0, h: +tb.h || 0,
+          rot: +tb.rot || 0, color: tb.color || null, num: tb.num || id,
+          elapsed: 0,
+        };
       });
       renderRealGrid();
     }
