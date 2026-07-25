@@ -326,6 +326,54 @@ section('The demo clock does not run on a real session');
     JSON.stringify(demoIns.map((i) => i.id + ':' + i.basis)));
 }
 
+/* ── 6c · the basket survives the trip ─────────────────────────────────────
+ * The till records {name, qty, total} per line. Until now KiwiLive.postSale()
+ * dropped it, so the server held {amount, method, label} and `label` is a
+ * ticket SUMMARY ("Pain +3 art.") — ranking it would have ranked tickets while
+ * claiming to rank products. "Quel est mon produit le plus vendu" therefore had
+ * an answer only when the caisse ran in the same browser as the dashboard,
+ * which for a till at the counter and a dashboard in the back office is never.
+ * This checks the last leg — feed row → store → ranking. */
+section('Line items reach the merchant’s own ranking');
+{
+  const now = Date.now();
+  const FEED = [
+    { cursor: 101, amount: 120, method: 'cash', label: 'Café +1 art.', ts: now, lines: [{ name: 'Café noir', qty: 4, total: 48 }, { name: 'Croissant', qty: 3, total: 36 }] },
+    { cursor: 102, amount: 210, method: 'card', label: 'Table 4', ts: now, lines: [{ name: 'Café noir', qty: 6, total: 72 }, { name: 'Msemen', qty: 2, total: 30 }] },
+    { cursor: 103, amount: 90, method: 'cash', label: 'À emporter', ts: now, lines: [{ name: 'Msemen', qty: 1, total: 15 }, { name: 'Jus d’orange', qty: 2, total: 40 }] },
+  ];
+  const w = load({
+    lang: 'fr',
+    env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Cafe test' }) },
+    sales: {
+      list: () => FEED,
+      totals: () => ({ revenue: 420, count: 3, basket: 140 }),
+    },
+  });
+  const r = w.KiwiAgentAsk('quel est mon produit le plus vendu');
+  const text = flatten(r);
+  t('the top seller is named from the line items', /Café noir/.test(text), text.slice(0, 120));
+  t('its unit count is the sum across tickets (4 + 6 = 10)',
+    numbersIn(text).some((v) => v === 10), text.slice(0, 160));
+  t('it is not the ticket summary label', !/Pain|\+1 art|Table 4/.test(text), text.slice(0, 120));
+
+  /* And when the basket genuinely is not there, say so — never rank the
+   * summary labels and never invent a winner. */
+  const wBlind = load({
+    lang: 'fr',
+    env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Cafe test' }) },
+    sales: {
+      list: () => FEED.map(({ lines, ...rest }) => rest),
+      totals: () => ({ revenue: 420, count: 3, basket: 140 }),
+    },
+  });
+  const blind = flatten(wBlind.KiwiAgentAsk('quel est mon produit le plus vendu'));
+  t('no line items ⇒ an honest dead end, not a ranked ticket label',
+    !/Café noir|Table 4/.test(blind) && blind.length > 20, blind.slice(0, 140));
+}
+
 /* ── 7 · permissions ───────────────────────────────────────────────────────
  * The sidebar hides Marges, Dépenses and Paie from a staff badge. An
  * assistant that answers "quel est mon bénéfice net" for the same badge has

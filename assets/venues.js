@@ -7279,6 +7279,16 @@
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;
+    /* Le panier, quand la caisse l'a envoyé. C'est la seule source de vérité
+       par article pour un commerçant réel : le libellé est un résumé de ticket
+       (« Pain +3 art. »), le classer reviendrait à classer des tickets en
+       prétendant classer des produits. Absent ⇒ inconnu, jamais « panier vide ». */
+    if (sale && Array.isArray(sale.lines) && sale.lines.length) {
+      entry.lines = sale.lines.slice(0, 40).map(function (l) {
+        return { name: String((l && l.name) || 'Article').slice(0, 60), qty: Math.max(0, Math.round(+(l && l.qty) || 0)), total: Math.max(0, Math.round(+(l && l.total) || 0)) };
+      }).filter(function (l) { return l.qty > 0; });
+      if (!entry.lines.length) delete entry.lines;
+    }
     list.push(entry);
     try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) {}
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });

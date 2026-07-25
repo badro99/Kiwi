@@ -10,8 +10,26 @@ CREATE TABLE IF NOT EXISTS sales (
   method   TEXT NOT NULL,      -- cash | card | tap | qr | wallet
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref
-  ts       INTEGER NOT NULL    -- epoch ms of the sale
+  ts       INTEGER NOT NULL,   -- epoch ms of the sale
+  -- What was actually in the basket: JSON [{n:name, q:qty, t:total}], capped at
+  -- 40 lines. NULL for every row written before this column existed, and for
+  -- any surface that genuinely has no line detail (a payment link, a hotel
+  -- folio) — readers must treat absent as unknown, never as zero.
+  --
+  -- Why it is here: the till recorded its lines locally and KiwiLive.postSale()
+  -- dropped them, so the server only ever held {amount, method, label}. `label`
+  -- is a ticket SUMMARY ("Pain +3 art."), so ranking it would have ranked
+  -- tickets while claiming to rank products. The consequence was that "quel est
+  -- mon produit le plus vendu" could only be answered when the caisse happened
+  -- to run in the same browser as the dashboard — which, for a merchant with a
+  -- till at the counter and a dashboard in the back office, is never.
+  lines    TEXT
 );
+-- Existing databases: add the column in place. SQLite has no
+-- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
+-- when re-run on a schema that already has it — the rest of the file still
+-- applies. See LIVE_LINK.md.
+--   ALTER TABLE sales ADD COLUMN lines TEXT;
 
 -- The dashboard polls "WHERE merchant = ? AND rowid > ? ORDER BY rowid".
 -- Index on merchant alone is enough: on a rowid table SQLite implicitly

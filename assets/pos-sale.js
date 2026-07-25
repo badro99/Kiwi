@@ -135,6 +135,14 @@
         window.KiwiLive.postSale({
           amount: total, method: entry.method, label: entry.label,
           ref: entry.ref, time: at,
+          /* Le détail du panier suit la vente. Il était construit juste
+             au-dessus et restait sur ce terminal : le serveur ne recevait que
+             {montant, moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
+             (« Pain +3 art. »). Résultat, « quel est mon produit le plus
+             vendu » n'avait de réponse que si la caisse tournait dans le même
+             navigateur que le tableau de bord — jamais le cas quand la caisse
+             est au comptoir et le tableau de bord dans l'arrière-boutique. */
+          lines: entry.lines || null,
         });
       }
     } catch (_) {}

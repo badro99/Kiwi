@@ -221,6 +221,19 @@
     var m = merchant();
     if (!m) return;
     var q = qRead();
+    /* The basket, compacted. {n,q,t} rather than {name,qty,total} because this
+     * queue lives in localStorage and is replayed after an outage — a busy
+     * lunch service can hold a few hundred queued sales, and the short keys are
+     * roughly a third of the bytes for the same information. Capped at 40 lines
+     * and 60 chars per name, the same limits the till itself applies. */
+    var lines = null;
+    try {
+      if (Array.isArray(entry.lines) && entry.lines.length) {
+        lines = entry.lines.slice(0, 40).map(function (l) {
+          return { n: String((l && l.name) || 'Article').slice(0, 60), q: +(l && l.qty) || 1, t: Math.round((l && +l.total) || 0) };
+        });
+      }
+    } catch (_) { lines = null; }
     q.push({
       id: uid(),                                              // idempotency key = row PK
       merchant: m,
@@ -229,6 +242,7 @@
       label: entry.label || 'Vente',
       ref: entry.ref || '',
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
+      lines: lines,                                           // null ⇒ unknown, never "empty basket"
     });
     qWrite(q);
     pingLocal();     // a dashboard in this browser starts polling before the POST lands
@@ -388,7 +402,11 @@
       if (!cur || have[cur]) return;                // no cursor, or already stored → skip
       var amt = Math.round(s.amount) || 0;
       if (amt <= 0) return;
-      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts, label: s.label }); have[cur] = 1; } catch (_) {}
+      /* `lines` travels the last leg. Without it the dashboard's store held
+         the money and the ticket summary only, so assets/agent-data.js fell back
+         to its honest refusal on "quel est mon produit le plus vendu" for every
+         merchant whose caisse is not in this same browser. */
+      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts, label: s.label, lines: s.lines }); have[cur] = 1; } catch (_) {}
     });
   }
 

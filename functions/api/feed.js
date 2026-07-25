@@ -60,13 +60,43 @@ export async function onRequestGet({ request, env }) {
   let rows = [];
   try {
     const rs = await env.DB.prepare(
-      'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
+      'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
       'FROM sales WHERE merchant = ? AND rowid > ? ORDER BY rowid ASC LIMIT 50'
     ).bind(merchant, since).all();
     rows = (rs && rs.results) || [];
   } catch (e) {
-    return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
+    /* Older database, no `lines` column yet: serve the sales without the basket
+     * rather than serve nothing. A dashboard that shows no revenue because a
+     * migration has not run is a far worse failure than one that cannot rank
+     * products yet. */
+    if (String((e && e.message) || e).includes('lines')) {
+      try {
+        const rs = await env.DB.prepare(
+          'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
+          'FROM sales WHERE merchant = ? AND rowid > ? ORDER BY rowid ASC LIMIT 50'
+        ).bind(merchant, since).all();
+        rows = (rs && rs.results) || [];
+      } catch (_) {
+        return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
+      }
+    } else {
+      return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
+    }
   }
+  /* Hand the basket back as an array, in the shape the till sent it and the
+   * dashboard's own journal already uses ({name, qty, total}). Parsing here
+   * means no consumer has to know the column is JSON, and a corrupt row costs
+   * that one basket instead of throwing the whole poll. */
+  rows = rows.map((r) => {
+    if (!r || r.lines == null) return r;
+    try {
+      const arr = JSON.parse(r.lines);
+      r.lines = Array.isArray(arr)
+        ? arr.map((l) => ({ name: l && l.n, qty: l && l.q, total: l && l.t }))
+        : null;
+    } catch (_) { r.lines = null; }
+    return r;
+  });
 
   const cursor = rows.length ? rows[rows.length - 1].cursor : since;
   return json({ sales: rows, cursor });

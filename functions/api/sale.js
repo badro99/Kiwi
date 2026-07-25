@@ -55,10 +55,44 @@ export async function onRequestPost({ request, env }) {
   const id = String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8));
 
   try {
+  /* The basket. Validated and re-serialised here rather than trusted: this is
+   * client-supplied JSON going into a column the dashboard and the assistant
+   * both read, so it gets the same treatment as every other field — bounded
+   * length, bounded count, coerced types. A malformed or oversized basket
+   * costs the line detail, never the sale. */
+  let lines = null;
+  try {
+    const raw = b && b.lines;
+    if (Array.isArray(raw) && raw.length) {
+      const clean = raw.slice(0, 40).map((l) => ({
+        n: String((l && (l.n ?? l.name)) || 'Article').slice(0, 60),
+        q: Math.max(0, Math.round(Number(l && (l.q ?? l.qty)) || 0)),
+        t: Math.max(0, Math.round(Number(l && (l.t ?? l.total)) || 0)),
+      })).filter((l) => l.q > 0);
+      if (clean.length) {
+        const s = JSON.stringify(clean);
+        if (s.length <= 4000) lines = s;
+      }
+    }
+  } catch (_) { lines = null; }
+
+  try {
     await env.DB.prepare(
-      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, merchant, amount, method, label, ref, ts).run();
+      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
   } catch (e) {
+    /* A database that predates the `lines` column rejects the 8-column insert.
+     * Write the sale without the basket rather than lose the sale — the money
+     * is the part that must not be dropped, and the migration in schema.sql
+     * brings the detail back for everything recorded after it runs. */
+    if (String((e && e.message) || e).includes('lines')) {
+      try {
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, merchant, amount, method, label, ref, ts).run();
+        return json({ ok: true, id, lines: 'unmigrated' });
+      } catch (_) { /* fall through to the real error */ }
+    }
     return json({ error: 'db', detail: String(e && e.message || e) }, 500);
   }
   return json({ ok: true, id });

@@ -50,6 +50,26 @@ Everything below is on the free tier. Do it once on the `kiwi-maroc` Pages proje
    use "Retry deployment" — a retry replays the old env snapshot without the new
    binding (same gotcha as `SITE_PASSWORD` in `DEPLOY.md`).
 
+### Migration · `sales.lines` (basket detail)
+
+A database created before this column exists still works — `/api/sale` writes the
+sale without the basket and `/api/feed` serves it without one, both by design, so
+**no money is ever lost to a missing migration**. What is lost is per-product
+truth: "quel est mon produit le plus vendu" has no answer, because `label` is a
+ticket summary ("Pain +3 art.") and ranking summaries would rank tickets while
+claiming to rank products.
+
+To turn it on, run once against the live DB:
+
+```sql
+ALTER TABLE sales ADD COLUMN lines TEXT;
+```
+
+SQLite has no `ADD COLUMN IF NOT EXISTS`; re-running it just reports
+`duplicate column name: lines`, which is harmless. Rows written before the
+migration keep `NULL` — readers treat that as *unknown*, never as an empty
+basket, so the ranking simply starts from the first sale rung up afterwards.
+
 That's it. `GET https://kiwi-maroc.pages.dev/api/sale` (while unlocked) should
 return `{"ok":true,"db":true}` once the binding is live.
 
