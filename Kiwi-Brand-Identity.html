@@ -12,6 +12,7 @@
 <style>
 /* ═══ KIWI DESIGN TOKENS (inlined) ═══ */
 :root {
+    --surface: #FFFDFA;   /* card/panel fill — lit paper, never cold #fff */
   --atlas: #0B6E4F; --atlas-600: #0E805C; --atlas-700: #0A5E43;
   --riad: #053B2C; --riad-deep: #02261C;
   --mint: #7DF2B0; --mint-soft: #C9F6DC;
@@ -74,7 +75,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 /* Logo showcase */
 .logo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 900px) { .logo-grid { grid-template-columns: 1fr; } }
-.logo-cell { background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 50px; aspect-ratio: 1.4; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+.logo-cell { background: var(--surface); border: 1px solid var(--n-200); border-radius: 20px; padding: 50px; aspect-ratio: 1.4; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
 .logo-cell.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .logo-cell.atlas { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
 .logo-cell.mint { background: var(--mint-soft); border-color: transparent; }
@@ -109,7 +110,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 /* Dos / donts */
 .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 900px) { .rules { grid-template-columns: 1fr; } }
-.rule { background: #fff; border-radius: 20px; padding: 34px; border: 1px solid var(--n-200); }
+.rule { background: var(--surface); border-radius: 20px; padding: 34px; border: 1px solid var(--n-200); }
 .rule h3 { font-size: 22px; margin: 0 0 20px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
 .rule.do h3 { color: var(--atlas); }
 .rule.dont h3 { color: var(--danger); }
@@ -121,7 +122,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 /* Voice */
 .voice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 900px) { .voice-grid { grid-template-columns: 1fr; } }
-.voice-card { background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 30px; }
+.voice-card { background: var(--surface); border: 1px solid var(--n-200); border-radius: 20px; padding: 30px; }
 .voice-card h4 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
 .voice-card h4 .plus { color: var(--atlas); }
 .voice-card h4 .minus { color: var(--n-400); text-decoration: line-through; }
@@ -131,7 +132,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 /* Icons */
 .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; }
 @media (max-width: 900px) { .icon-grid { grid-template-columns: repeat(4, 1fr); } }
-.icon-cell { background: #fff; border: 1px solid var(--n-200); border-radius: 14px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--atlas); transition: border-color 150ms; }
+.icon-cell { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--atlas); transition: border-color 150ms; }
 .icon-cell:hover { border-color: var(--atlas); }
 
 /* Motion */
@@ -145,7 +146,7 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 /* Spacing grid */
 .grid-block { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; padding: 30px 0; }
 @media (max-width: 900px) { .grid-block { grid-template-columns: 1fr; } }
-.grid-demo { background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 20px; background-image: linear-gradient(var(--mint-soft) 1px, transparent 1px), linear-gradient(90deg, var(--mint-soft) 1px, transparent 1px); background-size: 8px 8px; aspect-ratio: 1.4; display: flex; align-items: center; justify-content: center; }
+.grid-demo { background: var(--surface); border: 1px solid var(--n-200); border-radius: 16px; padding: 20px; background-image: linear-gradient(var(--mint-soft) 1px, transparent 1px), linear-gradient(90deg, var(--mint-soft) 1px, transparent 1px); background-size: 8px 8px; aspect-ratio: 1.4; display: flex; align-items: center; justify-content: center; }
 .grid-demo .block { background: var(--atlas); color: var(--paper); padding: 20px 26px; border-radius: 10px; font-weight: 500; font-size: 14px; }
 
 /* Toast for copy feedback */
@@ -242,7 +243,7 @@ footer a { color: var(--mint); }
     </div>
 
     <!-- Construction -->
-    <div style="margin-top: 60px; background: #fff; border: 1px solid var(--n-200); border-radius: 20px; padding: 40px 50px;">
+    <div style="margin-top: 60px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 20px; padding: 40px 50px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap; gap: 16px;">
         <div>
           <div style="font-family: var(--mono); font-size: 12px; color: var(--n-500); letter-spacing: 0.1em;">CONSTRUCTION</div>
@@ -272,7 +273,7 @@ footer a { color: var(--mint); }
 </section>
 
 <!-- 02. COULEURS -->
-<section id="couleurs" style="background: #fff;">
+<section id="couleurs" style="background: var(--surface);">
   <div class="wrap">
     <div class="sec-head">
       <div class="num">02 · PALETTE</div>
@@ -329,7 +330,7 @@ footer a { color: var(--mint); }
       <p>Inter Tight porte l'ossature moderne et technique. Instrument Serif apporte la chaleur éditoriale. IBM Plex Sans Arabic signe notre respect pour l'arabe.</p>
     </div>
 
-    <div style="background: #fff; border-radius: 20px; padding: 40px 50px; border: 1px solid var(--n-200);">
+    <div style="background: var(--surface); border-radius: 20px; padding: 40px 50px; border: 1px solid var(--n-200);">
       <div class="type-row">
         <div><div class="label">Display</div><div class="spec">Inter Tight · 96/96 · −0.04em</div></div>
         <div class="type-sample" style="font-size: clamp(40px, 6vw, 84px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95;">La banque du commerçant</div>
@@ -357,7 +358,7 @@ footer a { color: var(--mint); }
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px;">
-      <div style="background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
+      <div style="background: var(--surface); border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
         <div style="font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">ÉCHELLE</div>
         <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-family: var(--mono); font-size: 12.5px;">
           <div style="padding: 6px 0; border-bottom: 1px solid var(--n-200);">Display 1</div><div style="padding: 6px 0; border-bottom: 1px solid var(--n-200); color: var(--n-500);">96 / 96 / −0.04</div>
@@ -368,7 +369,7 @@ footer a { color: var(--mint); }
           <div style="padding: 6px 0;">Caption</div><div style="padding: 6px 0; color: var(--n-500);">12 / 18 / 0.04</div>
         </div>
       </div>
-      <div style="background: #fff; border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
+      <div style="background: var(--surface); border: 1px solid var(--n-200); border-radius: 16px; padding: 24px;">
         <div style="font-size: 12px; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">RÈGLES</div>
         <ul style="list-style: none; padding: 0; margin: 14px 0 0; font-size: 14px; color: var(--n-700); line-height: 1.6;">
           <li style="padding: 6px 0; border-bottom: 1px solid var(--n-100);">Jamais Bold pour les titres, Medium (500) uniquement</li>
@@ -383,7 +384,7 @@ footer a { color: var(--mint); }
 </section>
 
 <!-- 04. VOIX -->
-<section id="voix" style="background: #fff;">
+<section id="voix" style="background: var(--surface);">
   <div class="wrap">
     <div class="sec-head">
       <div class="num">04 · VOIX & TON</div>
@@ -431,7 +432,7 @@ footer a { color: var(--mint); }
 </section>
 
 <!-- 06. GRILLE -->
-<section id="grille" style="background: #fff;">
+<section id="grille" style="background: var(--surface);">
   <div class="wrap">
     <div class="sec-head">
       <div class="num">06 · GRILLE & SPACING</div>
@@ -484,7 +485,7 @@ footer a { color: var(--mint); }
 </section>
 
 <!-- 08. RÈGLES -->
-<section id="regles" style="background: #fff;">
+<section id="regles" style="background: var(--surface);">
   <div class="wrap">
     <div class="sec-head">
       <div class="num">08 · RÈGLES ABSOLUES</div>

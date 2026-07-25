@@ -270,11 +270,11 @@
 .ht-room-amt { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .ht-room-amt.due { color: var(--danger-mute); }
 
-.ht-room.st-occ { border-color: var(--mint-edge); background: linear-gradient(180deg, #fff 0%, var(--mint-tint) 165%); }
-.ht-room.st-depart { border-color: var(--ht-due-edge); background: linear-gradient(180deg, #fff 0%, var(--ht-due-bg) 175%); }
-.ht-room.st-menage { border-color: rgba(217,154,43,0.4); background: linear-gradient(180deg, #fff 0%, var(--ht-warn-bg) 175%); }
+.ht-room.st-occ { border-color: var(--mint-edge); background: linear-gradient(180deg, var(--surface) 0%, var(--mint-tint) 165%); }
+.ht-room.st-depart { border-color: var(--ht-due-edge); background: linear-gradient(180deg, var(--surface) 0%, var(--ht-due-bg) 175%); }
+.ht-room.st-menage { border-color: rgba(217,154,43,0.4); background: linear-gradient(180deg, var(--surface) 0%, var(--ht-warn-bg) 175%); }
 .ht-room.st-hs {
-  background: repeating-linear-gradient(135deg, #fff 0 9px, var(--paper-mute) 9px 18px);
+  background: repeating-linear-gradient(135deg, var(--surface) 0 9px, var(--paper-mute) 9px 18px);
   color: var(--ink-3);
 }
 .ht-room.st-hs .ht-room-guest { color: var(--ink-3); }

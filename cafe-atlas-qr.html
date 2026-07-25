@@ -21,6 +21,7 @@
        Tokens — same brand system as kiwi-serveur / kiwi-caisse
        ========================================================= */
     :root {
+    --surface: #FFFDFA;   /* card/panel fill — lit paper, never cold #fff */
       --forest:       #1F5D3C;
       --forest-deep:  #164A2F;
       --emerald:      #3FB67A;
@@ -249,7 +250,7 @@
       inset: 9px;
       border-radius: calc(var(--ph-r) - 12px);
       overflow: hidden;
-      background: #fff;
+      background: var(--surface);
       isolation: isolate;
     }
 
@@ -502,7 +503,7 @@
       margin: 0 22px 12px;
       padding: 9px 12px;
       border-radius: 12px;
-      background: #fff;
+      background: var(--surface);
       border: 1px solid var(--line-soft);
       display: flex;
       align-items: center;
@@ -529,7 +530,7 @@
       position: absolute;
       width: 9px; height: 9px;
       border: 2px solid var(--ink);
-      background: #fff;
+      background: var(--surface);
     }
     .qr-strip .qr-mini::before { top: 2px; left: 2px; }
     .qr-strip .qr-mini::after  { top: 2px; right: 2px; }
@@ -548,7 +549,7 @@
       flex: 0 0 auto;
       padding: 9px 14px;
       border-radius: 999px;
-      background: #fff;
+      background: var(--surface);
       border: 1px solid var(--line-soft);
       font-size: 13px;
       font-weight: 500;
@@ -578,7 +579,7 @@
       gap: 14px;
       align-items: center;
       padding: 12px;
-      background: #fff;
+      background: var(--surface);
       border: 1px solid var(--line-soft);
       border-radius: 14px;
       box-shadow: var(--shadow-card);
@@ -736,7 +737,7 @@
     .cart-sheet-panel {
       position: absolute;
       left: 0; right: 0; bottom: 0;
-      background: #fff;
+      background: var(--surface);
       border-radius: 20px 20px 0 0;
       padding: 22px 22px 28px;
       max-height: 75%;
@@ -800,7 +801,7 @@
     .cart-row .qty button {
       width: 26px; height: 26px;
       border-radius: 999px;
-      background: #fff;
+      background: var(--surface);
       border: 1px solid var(--line);
       font-size: 14px;
       font-weight: 500;

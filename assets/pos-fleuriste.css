@@ -196,7 +196,7 @@
 }
 .fl-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); border-color: var(--mint-edge); }
 .fl-card:active { transform: scale(0.96); }
-.fl-card.is-preset { background: linear-gradient(170deg, #fff 0%, var(--mint-tint) 140%); border-color: var(--mint-edge); }
+.fl-card.is-preset { background: linear-gradient(170deg, var(--surface) 0%, var(--mint-tint) 140%); border-color: var(--mint-edge); }
 .fl-card.has-count { border-color: var(--forest); box-shadow: 0 0 0 1.5px var(--forest); }
 .fl-card-art {
   width: 58px; height: 58px;
@@ -662,7 +662,7 @@
   padding: 12px 14px;
   transition: border-color 140ms;
 }
-.fl-arow.is-sale { border-color: rgba(217,154,43,0.45); background: linear-gradient(100deg, #fff 60%, var(--fl-warn-bg) 160%); }
+.fl-arow.is-sale { border-color: rgba(217,154,43,0.45); background: linear-gradient(100deg, var(--surface) 60%, var(--fl-warn-bg) 160%); }
 .fl-arow-art { width: 46px; height: 46px; border-radius: 11px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .fl-arow-art svg { width: 34px; height: 34px; }
 .fl-arow-mid { flex: 1; min-width: 0; }

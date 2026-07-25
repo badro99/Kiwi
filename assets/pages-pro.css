@@ -1591,7 +1591,7 @@ html[data-theme="dark"] .s-prac-week .day { background: var(--paper); }
   text-align: center;
   border: 1px solid;
 }
-.s-cli-tier.platine { color: #4B4944; border-color: var(--n-400); background: linear-gradient(135deg, #f0eee8, #fff); }
+.s-cli-tier.platine { color: #4B4944; border-color: var(--n-400); background: linear-gradient(135deg, #f0eee8, var(--surface)); }
 .s-cli-tier.or      { color: var(--warn-ink); border-color: rgba(217,154,43,0.4); background: var(--warn-soft); }
 .s-cli-tier.argent  { color: #4B4944; border-color: var(--n-300); background: var(--paper); }
 .s-cli-tier.bronze  { color: #6B4423; border-color: rgba(180,98,76,0.3); background: rgba(180,98,76,0.08); }

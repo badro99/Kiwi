@@ -7,7 +7,8 @@
 <title>Kiwi · Liquid Glass</title>
 <link rel="stylesheet" href="./assets/liquid-glass.css" />
 <style>
-  :root{ --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0; --paper:#F7F5F0; --ink:#0A0F0D; }
+  :root{
+    --surface: #FFFDFA;   /* card/panel fill — lit paper, never cold #fff */ --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0; --paper:#F7F5F0; --ink:#0A0F0D; }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{ font:16px/1.5 'Inter Tight', system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink);
@@ -52,7 +53,7 @@
     font:12px/1 'JetBrains Mono', ui-monospace, monospace; color:var(--ink);
     background:rgba(255,255,255,.86); border:1px solid rgba(0,0,0,.08); padding:8px 12px; border-radius:10px; }
   .hud b{ color:var(--atlas); } .hud button{ font:inherit; cursor:pointer; border:1px solid rgba(0,0,0,.12);
-    background:#fff; border-radius:7px; padding:6px 10px; } .hud input{ width:120px; }
+    background:var(--surface); border-radius:7px; padding:6px 10px; } .hud input{ width:120px; }
 </style>
 </head>
 <body>

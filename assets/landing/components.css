@@ -182,7 +182,7 @@
     from var(--rgb-spin),
     var(--atlas) 0deg,
     var(--mint) 90deg,
-    #FFFFFF 140deg,
+    var(--surface) 140deg,
     var(--mint) 200deg,
     var(--atlas) 280deg,
     var(--riad-deep) 320deg,

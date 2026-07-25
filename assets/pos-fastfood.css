@@ -445,7 +445,7 @@
   animation: ff-card-in 320ms ease-out both;
 }
 .ff-ocard:hover { transform: translateY(-1.5px); box-shadow: var(--shadow-1); border-color: var(--ink-4); }
-.ff-ocard.pret { border-color: var(--mint-edge); background: linear-gradient(180deg, #fff 0%, var(--mint-tint) 130%); }
+.ff-ocard.pret { border-color: var(--mint-edge); background: linear-gradient(180deg, var(--surface) 0%, var(--mint-tint) 130%); }
 .ff-ocard.remis { opacity: 0.72; }
 .ff-ocard-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ff-onum { font-family: var(--mono); font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }

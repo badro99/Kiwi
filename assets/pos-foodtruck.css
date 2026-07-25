@@ -313,7 +313,7 @@
   padding: 13px 16px;
   animation: ft-card-in 300ms ease-out both;
 }
-.ft-qrow.is-ready { border-color: var(--mint-edge); background: linear-gradient(0deg, var(--mint-tint), #fff 65%); }
+.ft-qrow.is-ready { border-color: var(--mint-edge); background: linear-gradient(0deg, var(--mint-tint), var(--surface) 65%); }
 .ft-qnum {
   width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
   background: #111; color: var(--mint);
@@ -461,8 +461,8 @@
 }
 button.ft-vital:hover { border-color: var(--ink-4); }
 button.ft-vital:active { transform: scale(0.985); }
-.ft-vital.warn { border-color: rgba(217,154,43,0.55); background: linear-gradient(0deg, var(--ft-warn-bg), #fff 70%); }
-.ft-vital.bad { border-color: rgba(184,82,69,0.45); background: linear-gradient(0deg, rgba(184,82,69,0.10), #fff 70%); }
+.ft-vital.warn { border-color: rgba(217,154,43,0.55); background: linear-gradient(0deg, var(--ft-warn-bg), var(--surface) 70%); }
+.ft-vital.bad { border-color: rgba(184,82,69,0.45); background: linear-gradient(0deg, rgba(184,82,69,0.10), var(--surface) 70%); }
 .ft-vital-lbl {
   font-family: var(--mono); font-size: 10px; font-weight: 600;
   letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3);
