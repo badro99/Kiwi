@@ -1787,6 +1787,16 @@
    * sales, a day that predates the first recorded sale is not a zero day, and a
    * genuine zero day is stated as "nothing was rung up" rather than dressed up
    * as a result. */
+  /* The reading lives in assets/agent-data.js — one module per concern, and
+   * the bundle every merchant downloads does not grow a store reader per
+   * feature. If that file is absent the honest refusal is still there. */
+  function sLookup(spec) {
+    const D = window.KiwiAgentData;
+    let r = null;
+    try { r = (D && D.reply) ? D.reply(spec, L) : null; } catch (_) { r = null; }
+    return r || sScoped();
+  }
+
   function sDay(spec) {
     const t = xt();
     const from = midnight(spec.offset), to = from + DAY_MS;
@@ -2287,6 +2297,57 @@
     return { offset: (new Date(midnight(0)).getDay() - hit[0].dow + 7) % 7 };
   }
 
+  /* ─── LOOKUPS ───────────────────────────────────────────────────────────
+   * Questions whose answer is a row in another module, not a simulation: the
+   * best-selling item, the best client, one client's points, who is on shift,
+   * what is out of stock. assets/agent-data.js does the reading; this only
+   * decides that the question IS a lookup, and of what. */
+  const SUP_TOP_RX = /\ble\s+plus\b|\bla\s+plus\b|\bles\s+plus\b|\bmeilleur\w*\b|\bbest\b|\btop\b|\bmost\b|\bmieux\b|se\s+vend\s+bien|اكثر|افضل|احسن/;
+  const SUP_LOW_RX = /\ble\s+moins\b|\bla\s+moins\b|\bles\s+moins\b|\bpire\b|\bworst\b|\bleast\b|\bslowest\b|se\s+vend\s+(?:le\s+)?(?:moins|mal)|اقل|اسوا/;
+  const PRODUCT_RX = /\bproduits?\b|\barticles?\b|\bplats?\b|\bitems?\b|\bproducts?\b|\bdish(?:es)?\b|\bvendu?e?s?\b|\bseller\b|\bselling\b|\bsold\b|\bvendeurs?\b|\bsells?\b|(?:top\s*\d*\s*(?:des\s+)?|meilleures?\s+)ventes?\b|best[- ]?sell\w*|\bboisson\b|\bmenu\b|\bcarte\b|منتج|صنف|طبق|مبيعا|سلعة/;
+  const CLIENT_TOP_RX = /meilleur\w*\s+(?:client|cliente)|best\s+(?:client|customer)|top\s+(?:client|customer)|biggest\s+spender|clients?\s+(?:qui\s+)?(?:depense|paie|achete)\w*\s+le\s+plus|gros\s+client|افضل\s*زبون|احسن\s*زبون/;
+  /* Loyalty points only. Latin script: plural — "le point mort" is the
+   * break-even point, "fais le point" is the overview, "point de vente" is a
+   * second shop. Arabic has no such plural tell, so the break-even phrase is
+   * excluded by name. */
+  const POINTS_RX = /\bpoints\b|\bstamps?\b|\btampons?\b|نقاط|نقطة|نقط/;
+  const NOT_POINTS_RX = /points?\s+de\s+vente|\bpoint\s+mort\b|break[- ]?even|seuil\s+de\s+rentab|نقطة\s*التعادل/;
+  const DORMANT_RX = /(?:pas|plus)\s+(?:re)?venus?\b|ne\s+revien\w+\s+plus|\bendormis?\b|\bdormant\b|\bperdus?\b|\bchurn\b|lost\s+customers?|haven[' ]?t\s+(?:come\s+)?back|not\s+come\s+back|لم\s*يعود|نائم/;
+  const STAFF_RX = /\bemployes?\b|\bsalaries?\b|\bequipe\b|\bstaff\b|\bteam\b|\bpersonnel\b|\bserveurs?\b|\bcuisiniers?\b|\beffectif\b|موظف|فريق|عمال|مستخدم/;
+  const WHICH_RX = /\bquels?\b|\bquelles?\b|\bwhich\b|\bwhat\b|\bqui\b|\bliste\b|\blist\b|\bmontre\b|\bnomme\b|اي\b|من\b|لائحة/;
+  const OUT_RX = /\bruptures?\b|\ben\s+rupture\b|out\s+of\s+stock|\bstock\s+bas\b|\blow\s+stock\b|\bepuises?\b|نفاد|نافد|مخزون\s*منخفض/;
+  const ON_SHIFT_RX = /\btravaille\b|\bde\s+service\b|\bon\s+shift\b|\bworking\b|\bplanning\b|\bpresents?\b|يعمل|الخدمة/;
+
+  function matchLookup(q, raw) {
+    /* Products: a superlative plus something that names an item. "combien j'ai
+     * vendu" has no superlative and stays a revenue question. */
+    const sup = SUP_TOP_RX.test(q) ? 'top' : SUP_LOW_RX.test(q) ? 'bottom' : null;
+    if (sup && PRODUCT_RX.test(q) && !CLIENT_TOP_RX.test(q) && !STAFF_RX.test(q)) {
+      return { entity: 'product', agg: sup, raw };
+    }
+    /* One client, by name: "combien de points a Salma Bennani". */
+    if (POINTS_RX.test(q) && !NOT_POINTS_RX.test(q) && !PRODUCT_RX.test(q)) return { entity: 'client', agg: 'points', raw };
+    if (CLIENT_TOP_RX.test(q)) return { entity: 'client', agg: 'top', raw };
+    if (DORMANT_RX.test(q) && /clients?\b|customers?\b|زب/.test(q)) return { entity: 'client', agg: 'dormant', raw };
+    /* The team: headcount, or who is on today. */
+    if (ON_SHIFT_RX.test(q) && (STAFF_RX.test(q) || /\bqui\b|\bwho\b|من\b/.test(q))) {
+      return { entity: 'staff', agg: 'today', raw };
+    }
+    /* "combien coûte un serveur" is what a hire would cost, not how many I
+     * have — the hiring simulation owns it. */
+    if (STAFF_RX.test(q) && !/\bcoute\w*|\bcout\b|\bcost\w*|\bembauch\w*|\brecrut\w*|\bhir(?:e|ing)\b|\bsalaire\b|يكلف|توظيف/.test(q)) {
+      /* "qui est mon meilleur serveur" — no per-employee sales reach this
+       * screen, so the module says so rather than let the hiring simulation
+       * answer a question about people who already work here. */
+      if (sup) return { entity: 'staff', agg: 'top', raw };
+      if (/\bcombien\b|how\s+many|\bcount\b|\beffectif\b|كم|شحال/.test(q)) return { entity: 'staff', agg: 'count', raw };
+    }
+    /* Stock only when the merchant asks WHICH — "combien de références" is a
+     * total and the stock scenario already answers it well. */
+    if (OUT_RX.test(q) && WHICH_RX.test(q)) return { entity: 'stock', agg: 'out', raw };
+    return null;
+  }
+
   const CLIENTS_RX = /clients?\b[^?]{0,20}\b(?:revien|reviennent|fidel|reguli)|combien\s+(?:de\s+)?(?:\w+\s+){0,2}clients?\b|\b(?:mes|nos|my|our)\s+(?:\w+\s+){0,2}clients?\b|clients?\s+fidel|fichier\s+client|fidelisation|taux\s+de\s+retour|repeat\s+customers?|returning\s+customers?|\bretention\b|how\s+many\s+(?:\w+\s+){0,2}(?:clients|customers)|loyal\s+customers?|\bvip\s+(?:clients?|customers?)\b|customers?\s+(?:come\s+back|return)|\bzbon\b|\bzbayn\b|\bzbnaji\b|زبنا|زبون|الزبناء/;
   /* …but "puis-je investir 80 000 dans du stock" is an investment question
    * that merely names stock. An affordability verb with a real amount wins. */
@@ -2471,7 +2532,7 @@
   const INTENTS = [
     { id: 'greet', run: () => sHelp(), sig: [
       [/bonjour|salut|coucou|hello|^hi$|^hey|مرحبا|سلام|اهلا|\bsalam\b|\bslam\b|\blabas\b|\bahlan\b|\bsbah\s*lkhir\b|لاباس|صباح الخير/, 3],
-      [/qui es|who are you|من انت|que (peux|sais)|what can you|ماذا تفعل/, 3],
+      [/qui\s+es(?:[- ]?tu|\s*[?!.]*$)|who are you|من انت|que (peux|sais)|what can you|ماذا تفعل/, 3],
       /* bare "comment ça" only — "comment ça a évolué depuis 2024" is a trend
        * question and was being greeted. */
       [/bonsoir|comment\s+ca\s+va\b|^comment\s+ca\s*[?!.]*$/, 3], [/\baide\b|\bhelp\b|مساعدة/, 2],
@@ -2629,6 +2690,10 @@
     if (act) return { kind: 'action', raw, q, action: act };
     if (META_RX.test(q)) return { kind: 'meta', raw, q };
     if (LAYOFF_RX.test(q)) return { kind: 'layoff', raw, q };
+    /* A lookup is stronger than a date: "le plat le plus vendu hier" is a
+     * ranking question that happens to mention a day. */
+    const look = matchLookup(q, raw);
+    if (look) return { kind: 'lookup', raw, q, spec: look };
     /* Ahead of TREND_RX, which owns "hier" and "yesterday" and would refuse
      * them as a comparison across periods. */
     const dNear = namedDay(q);
@@ -2747,6 +2812,7 @@
     if (d.kind === 'meta') return sMeta();
     if (d.kind === 'layoff') return sLayoff();
     if (d.kind === 'scoped') return sScoped();
+    if (d.kind === 'lookup') return sLookup(d.spec);
     if (d.kind === 'day') return sDay(d.day);
     if (d.kind === 'notrend') return sNoTrend();
     if (d.kind === 'unclear') return sUnclear();
@@ -2819,8 +2885,8 @@
     ['réduire l’effectif', 'layoff'],
     // per-item/day/person → the global figure, presented as if it were theirs
     ['ma marge sur le thé à la menthe', 'scoped'],
-    ['quel serveur vend le plus', 'scoped'],                     // → hire
-    ['quel est mon produit le plus vendu', 'scoped'],
+    ['quel serveur vend le plus', 'lookup'],                     // → hire
+    ['quel est mon produit le plus vendu', 'lookup'],
     ['combien je fais le samedi', 'scoped'],
     ['quelle est mon heure de pointe', 'scoped'],
     // period comparison → the one static 30-day window, or a fresh simulation
@@ -2828,6 +2894,9 @@
     ["j'ai augmenté les prix de 10% le mois dernier, ça a marché ?", 'notrend'],
     ['évolution de ma marge sur 6 mois', 'notrend'],
     ["combien j'ai fait hier", 'day'],           // a day is a window we hold, not a trend
+    ['quel est mon produit le plus vendu', 'lookup'], ['what is my most sold product', 'lookup'],
+    ['qui est mon meilleur client', 'lookup'], ['combien de points a Salma Bennani', 'lookup'],
+    ['qui travaille aujourd’hui', 'lookup'], ['ما هو المنتج الأكثر مبيعا', 'lookup'],
     ['donne-moi un brief pour hier', 'day'], ['give me a brief for yesterday', 'day'],
     ["combien j'ai fait aujourd'hui", 'day'], ['شحال دخلت البارح', 'day'],
     ['les ventes de samedi', 'day'],
