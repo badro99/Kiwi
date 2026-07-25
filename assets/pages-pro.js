@@ -3591,10 +3591,29 @@ Object.assign(PDS_STR.fr, {
   rotateHint: 'Faire pivoter · Maj pour 15°',
   noRoom: 'Pas de place libre ici',
   ambianceLabel: 'Ambiance', customColor: 'Couleur libre',
+  wizTitle: 'Composons votre salle', wizDesc: 'Huit questions, puis trois plans meublés à comparer.',
+  wizVenue: 'Type d’établissement', wizFloors: 'Combien d’étages ?',
+  wizExtras: 'Vous avez aussi…', wizDims: 'Dimensions de la salle',
+  wizW: 'Largeur', wizH: 'Profondeur', wizTables: 'Combien de tables ?',
+  wizKitchen: 'La cuisine est de quel côté ?', wizEntrance: 'L’entrée est de quel côté ?',
+  wizAlso: 'Aussi présent', wizGenerate: 'Composer mon plan', wizBack: 'Modifier',
+  wizAgain: 'Régénérer', wizApply: 'Personnaliser ce plan',
+  wizCardsNote: 'Chaque plan respecte des passages de service. Vous pourrez tout déplacer ensuite.',
+  wizDone: (c) => `Plan composé · ${c} couverts`,
+  wizDoneDesc: (n, a) => `${n} tables, passages de ${a} cm. Tout reste modifiable.`,
+  wizShort: (n, r) => `${n} des ${r} tables demandées ne tiennent pas avec ces passages`,
+  venuerestaurant: 'Restaurant', venuecafe: 'Café', venuesnack: 'Snack',
+  venuepatisserie: 'Pâtisserie', venuerooftop: 'Rooftop',
+  extraterrasse: 'Terrasse', extrapatio: 'Patio', extramezzanine: 'Mezzanine',
+  extrasalon: 'Salon privé', extrabar: 'Bar',
+  walln: 'Nord', walle: 'Est', walls: 'Sud', wallw: 'Ouest',
+  vardense: 'Dense', varconfort: 'Confort', varbanquettes: 'Banquettes',
+  covers: 'couverts', tables: 'tables', cover: 'couvert',
+  aisleOf: (a) => `passages ${a} cm`,
   roomBackdrop: 'Fond', backdropNone: 'Aucun fond',
-  ambriad: 'Riad', ambmarine: 'Bord de mer', ambbistrot: 'Neo-bistrot', ambjardin: 'Jardin',
-  ambianceApplied: (n) => `Ambiance ${n} appliquee`,
-  ambianceDesc: 'Sol, murs, tables et fond repeints ensemble. Les pieces peintes a la main sont conservees.',
+  ambriad: 'Riad', ambmarine: 'Bord de mer', ambbistrot: 'Néo-bistrot', ambjardin: 'Jardin',
+  ambianceApplied: (n) => `Ambiance ${n} appliquée`,
+  ambianceDesc: 'Sol, murs, tables et fond repeints ensemble. Les pièces peintes à la main sont conservées.',
   blockedHint: 'Chevauchement — relâchez pour poser à côté',
 });
 Object.assign(PDS_STR.en, {
@@ -3624,6 +3643,25 @@ Object.assign(PDS_STR.en, {
   rotateHint: 'Rotate · hold Shift for 15°',
   noRoom: 'No free space here',
   ambianceLabel: 'Ambiance', customColor: 'Custom colour',
+  wizTitle: 'Let’s lay out your room', wizDesc: 'Eight questions, then three furnished plans to compare.',
+  wizVenue: 'Type of venue', wizFloors: 'How many floors?',
+  wizExtras: 'You also have…', wizDims: 'Room dimensions',
+  wizW: 'Width', wizH: 'Depth', wizTables: 'How many tables?',
+  wizKitchen: 'Which side is the kitchen?', wizEntrance: 'Which side is the entrance?',
+  wizAlso: 'Also present', wizGenerate: 'Build my plan', wizBack: 'Edit answers',
+  wizAgain: 'Regenerate', wizApply: 'Customise this plan',
+  wizCardsNote: 'Every plan keeps real service aisles. You can move anything afterwards.',
+  wizDone: (c) => `Plan built · ${c} covers`,
+  wizDoneDesc: (n, a) => `${n} tables, ${a} cm aisles. Everything stays editable.`,
+  wizShort: (n, r) => `${n} of the ${r} tables asked for do not fit at these aisles`,
+  venuerestaurant: 'Restaurant', venuecafe: 'Café', venuesnack: 'Snack',
+  venuepatisserie: 'Pâtisserie', venuerooftop: 'Rooftop',
+  extraterrasse: 'Terrace', extrapatio: 'Patio', extramezzanine: 'Mezzanine',
+  extrasalon: 'Private room', extrabar: 'Bar',
+  walln: 'North', walle: 'East', walls: 'South', wallw: 'West',
+  vardense: 'Dense', varconfort: 'Comfort', varbanquettes: 'Banquettes',
+  covers: 'covers', tables: 'tables', cover: 'cover',
+  aisleOf: (a) => `${a} cm aisles`,
   roomBackdrop: 'Backdrop', backdropNone: 'No backdrop',
   ambriad: 'Riad', ambmarine: 'Seaside', ambbistrot: 'Neo-bistro', ambjardin: 'Garden',
   ambianceApplied: (n) => `${n} ambiance applied`,
@@ -3657,6 +3695,25 @@ Object.assign(PDS_STR.ar, {
   rotateHint: 'تدوير · اضغط Shift لـ 15°',
   noRoom: 'لا توجد مساحة فارغة هنا',
   ambianceLabel: 'الأجواء', customColor: 'لون حر',
+  wizTitle: 'لنرتّب قاعتك', wizDesc: 'ثمانية أسئلة، ثم ثلاثة مخططات مؤثّثة للمقارنة.',
+  wizVenue: 'نوع المحل', wizFloors: 'كم طابقًا؟',
+  wizExtras: 'لديك أيضًا…', wizDims: 'أبعاد القاعة',
+  wizW: 'العرض', wizH: 'العمق', wizTables: 'كم طاولة؟',
+  wizKitchen: 'في أي جهة المطبخ؟', wizEntrance: 'في أي جهة المدخل؟',
+  wizAlso: 'موجود أيضًا', wizGenerate: 'أنشئ مخططي', wizBack: 'تعديل',
+  wizAgain: 'إعادة الإنشاء', wizApply: 'خصّص هذا المخطط',
+  wizCardsNote: 'كل مخطط يحترم ممرات الخدمة. يمكنك تحريك كل شيء بعد ذلك.',
+  wizDone: (c) => `تم إنشاء المخطط · ${c} مقعدًا`,
+  wizDoneDesc: (n, a) => `${n} طاولة، ممرات ${a} سم. كل شيء قابل للتعديل.`,
+  wizShort: (n, r) => `${n} من ${r} طاولة مطلوبة لا تتّسع بهذه الممرات`,
+  venuerestaurant: 'مطعم', venuecafe: 'مقهى', venuesnack: 'سناك',
+  venuepatisserie: 'حلويات', venuerooftop: 'سطح',
+  extraterrasse: 'تراس', extrapatio: 'فناء', extramezzanine: 'ميزانين',
+  extrasalon: 'صالون خاص', extrabar: 'بار',
+  walln: 'شمال', walle: 'شرق', walls: 'جنوب', wallw: 'غرب',
+  vardense: 'مكثّف', varconfort: 'مريح', varbanquettes: 'أرائك',
+  covers: 'مقعدًا', tables: 'طاولة', cover: 'مقعد',
+  aisleOf: (a) => `ممرات ${a} سم`,
   roomBackdrop: 'الخلفية', backdropNone: 'بدون خلفية',
   ambriad: 'رياض', ambmarine: 'شاطئ', ambbistrot: 'بيسترو', ambjardin: 'حديقة',
   ambianceApplied: (n) => `تم تطبيق أجواء ${n}`,
@@ -4620,7 +4677,7 @@ function pdsRenderEmpty(state, T) {
       <h4>${T.emptyTitle}</h4>
       <p>${T.emptyDesc}</p>
       <div style="display:flex; gap:8px; justify-content:center;">
-        <button class="kb atlas" data-pds-action="open-templates">${T.emptyChoose}</button>
+        <button class="kb atlas" data-pds-action="open-wizard">${T.wizGenerate}</button>
         <button class="kb ghost" data-pds-action="add-table-default">${T.emptyBlank}</button>
       </div>
     </div>
@@ -4666,7 +4723,7 @@ function pdsRenderLayoutRail(state, T) {
     `).join('')}
     ${pdsRenderRoomCard(state, T)}
     <div class="pds-rail-card">
-      <button class="kb atlas pds-rail-cta" data-pds-action="open-templates">${T.templates}</button>
+      <button class="kb atlas pds-rail-cta" data-pds-action="open-wizard">${T.wizTitle}</button>
       <button class="kb ghost pds-rail-cta" data-pds-action="rename-zone">${T.renameZone}</button>
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
     </div>
@@ -4691,6 +4748,30 @@ function pdsFixMini(kind, K) {
   }
   return `<span style="display:block;width:${w}px;height:${h}px;
     ${pdsBoxStyle(K.draw({}, c, g) || {}, c)}"></span>`;
+}
+
+/* Thumbnail drawn from the candidate's OWN objects. The five templates
+   shipped hand-drawn previews next to a stored cover count, which is how
+   a card advertising 60 covers could load a plan holding 98 — two sources
+   of truth for one number. Here there is only the plan. */
+function pdsPlanThumb(plan) {
+  const z = plan.zones[0];
+  if (!z) return '';
+  const W = z.room.w, H = z.room.h;
+  const r = pdsRoom(z);
+  const items = plan.elements.filter(e => e.zone === z.id)
+    .map(e => ({ o: e, c: pdsShade(pdsColor(e), -0.04) }))
+    .concat(plan.tables.filter(t => t.zone === z.id).map(t => ({ o: t, c: pdsColor(t) })));
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="${r.floor}" stroke="${r.wall}" stroke-width="10"/>
+    ${items.map(({ o, c }) => {
+      const g = pdsGeom(o);
+      const round = (g.shape === 'round');
+      return round
+        ? `<ellipse cx="${o.x + g.w / 2}" cy="${o.y + g.h / 2}" rx="${g.w / 2}" ry="${g.h / 2}" fill="${c}"/>`
+        : `<rect x="${o.x}" y="${o.y}" width="${g.w}" height="${g.h}" rx="6" fill="${c}"/>`;
+    }).join('')}
+  </svg>`;
 }
 
 /* Room panel — floor, walls, finish, dimensions. Replaces the six-scene
@@ -6004,65 +6085,195 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       });
       break;
     }
-    case 'open-templates': {
-      const tplKeys = ['bistro','resto','cafe','brasserie','blank'];
-      const m = drawer({
-        title: T.templatesTitle,
-        subtitle: T.templatesDesc,
-        width: 560,
-        body: `
-          <div class="pds-tpls">
-            ${tplKeys.map(k => `
-              <div class="pds-tpl">
-                <div class="pds-tpl-h">
-                  <div>
-                    <h4>${T['tpl' + k.charAt(0).toUpperCase() + k.slice(1)]}</h4>
-                    <p>${T['tpl' + k.charAt(0).toUpperCase() + k.slice(1) + 'Desc']}</p>
-                  </div>
-                  <button class="kb atlas" data-pds-tpl="${k}">${T.tplApply}</button>
-                </div>
-              </div>
-            `).join('')}
+    /* ─── Setup wizard ───────────────────────────────────────────────────
+       Replaces the five hard-coded templates. Eight questions, then three
+       furnished candidates built from the answers — each labelled with the
+       numbers it actually produced, so the count on the card and the count
+       on the floor cannot drift apart the way the templates' could. */
+    case 'open-templates':
+    case 'open-wizard': {
+      const A = state._wizAnswers || (state._wizAnswers = {
+        venue: 'restaurant', floors: ['RDC'], extras: [],
+        dims_default: { w: 1200, h: 800 }, tables: 18,
+        kitchenWall: 'n', entranceWall: 's', wc: true,
+      });
+      let step = 1, plans = null, chosen = null, spin = 0;
+
+      const VENUES = ['restaurant', 'cafe', 'snack', 'patisserie', 'rooftop'];
+      const EXTRAS = ['terrasse', 'patio', 'mezzanine', 'salon', 'bar'];
+      const WALLS  = ['n', 'e', 's', 'w'];
+
+      const qBody = () => `
+        <div class="pds-wiz">
+          <label class="pds-wiz-q">${T.wizVenue}</label>
+          <div class="pds-wiz-opts">
+            ${VENUES.map(v => `<button class="pds-wiz-opt ${A.venue===v?'active':''}" data-wiz-venue="${v}">${T['venue'+v]}</button>`).join('')}
           </div>
-        `,
-        foot: `<button class="kb ghost" data-dismiss>${T.close}</button>`,
+
+          <label class="pds-wiz-q">${T.wizFloors}</label>
+          <div class="pds-wiz-opts">
+            ${[1,2,3,4].map(n => `<button class="pds-wiz-opt ${A.floors.length===n?'active':''}" data-wiz-floors="${n}">${n}</button>`).join('')}
+          </div>
+
+          <label class="pds-wiz-q">${T.wizExtras}</label>
+          <div class="pds-wiz-opts">
+            ${EXTRAS.map(e => `<button class="pds-wiz-opt ${A.extras.includes(e)?'active':''}" data-wiz-extra="${e}">${T['extra'+e]}</button>`).join('')}
+          </div>
+
+          <label class="pds-wiz-q">${T.wizDims}</label>
+          <div class="pds-wiz-dims">
+            <label>${T.wizW}<input class="kf-input pds-input" type="number" min="3" max="40" step="0.5" data-wiz-w value="${A.dims_default.w/100}"/><span class="pds-unit">m</span></label>
+            <label>${T.wizH}<input class="kf-input pds-input" type="number" min="3" max="40" step="0.5" data-wiz-h value="${A.dims_default.h/100}"/><span class="pds-unit">m</span></label>
+            <span class="pds-wiz-area">${((A.dims_default.w*A.dims_default.h)/10000).toFixed(0)} m²</span>
+          </div>
+
+          <label class="pds-wiz-q">${T.wizTables}</label>
+          <div class="pds-wiz-dims">
+            <input class="pds-range" type="range" min="2" max="60" step="1" data-wiz-tables value="${A.tables}"/>
+            <span class="pds-wiz-area" data-wiz-tables-out>${A.tables}</span>
+          </div>
+
+          <label class="pds-wiz-q">${T.wizKitchen}</label>
+          <div class="pds-wiz-opts">
+            ${WALLS.map(w => `<button class="pds-wiz-opt ${A.kitchenWall===w?'active':''}" data-wiz-kw="${w}">${T['wall'+w]}</button>`).join('')}
+          </div>
+
+          <label class="pds-wiz-q">${T.wizEntrance}</label>
+          <div class="pds-wiz-opts">
+            ${WALLS.map(w => `<button class="pds-wiz-opt ${A.entranceWall===w?'active':''}" data-wiz-ew="${w}">${T['wall'+w]}</button>`).join('')}
+          </div>
+
+          <label class="pds-wiz-q">${T.wizAlso}</label>
+          <div class="pds-wiz-opts">
+            <button class="pds-wiz-opt ${A.wc?'active':''}" data-wiz-wc>${T.fixwc}</button>
+          </div>
+        </div>`;
+
+      const cardBody = () => `
+        <div class="pds-wiz-cards">
+          ${plans.map((p, i) => `
+            <button class="pds-wiz-card ${chosen===i?'active':''}" data-wiz-pick="${i}">
+              <span class="pds-wiz-thumb">${pdsPlanThumb(p)}</span>
+              <span class="pds-wiz-card-name">${T['var'+p.variant]}</span>
+              <span class="pds-wiz-card-nums">
+                <b>${p.covers}</b> ${T.covers} · ${p.tableCount} ${T.tables}<br/>
+                ${p.m2PerCover} m²/${T.cover} · ${T.aisleOf(p.aisle)}
+              </span>
+              ${p.shortfall ? `<span class="pds-wiz-short">${T.wizShort(p.shortfall, p.requested)}</span>` : ''}
+            </button>`).join('')}
+        </div>
+        <p class="pds-wiz-note">${T.wizCardsNote}</p>`;
+
+      const m = drawer({
+        title: T.wizTitle, subtitle: T.wizDesc, width: 620,
+        body: qBody(),
+        foot: `<button class="kb ghost" data-dismiss>${T.close}</button>
+               <button class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`,
       });
       wireDismiss(m);
       if (!m || !m.el) break;
-      m.el.querySelectorAll('[data-pds-tpl]').forEach(b => {
-        b.addEventListener('click', () => {
-          const k = b.getAttribute('data-pds-tpl');
-          const tplName = T['tpl' + k.charAt(0).toUpperCase() + k.slice(1)];
-          /* Confirm */
-          const c = modal({
-            tag: T.tagPdS,
-            title: T.tplApplyConfirm(tplName),
-            desc: T.tplApplyConfirmDesc,
-            width: 460,
-            body: '',
-            foot: `
-              <button class="kb ghost" data-dismiss>${T.cancel}</button>
-              <button class="kb atlas" data-dismiss data-pds-tpl-confirm>${T.tplApply}</button>
-            `,
-          });
-          wireDismiss(c);
-          if (!c || !c.el) return;
-          c.el.querySelector('[data-pds-tpl-confirm]')?.addEventListener('click', () => {
-            const fresh = pdsNormalize(pdsTemplate(k));
-            pdsPush(state);
-            Object.keys(state).forEach(kk => delete state[kk]);
-            Object.assign(state, fresh);
-            selection.clear();
-            m.close();
-            /* Close the picker too. Applying a template used to leave BOTH
-               drawers shut, so the merchant never saw the floor they had just
-               chosen — the one moment the plan most needs to be on screen. */
-            try { m.close(); } catch (_) {}
-            refresh();
-            toast(T.tplLoaded(tplName), { type: 'success', desc: T.tplLoadedDesc });
-          });
+
+      const bodyEl = () => m.el.querySelector('.kiwi-drawer-body') || m.el.querySelector('.kiwi-modal-body');
+      const footEl = () => m.el.querySelector('.kiwi-drawer-foot') || m.el.querySelector('.kiwi-modal-foot');
+
+      const build = () => {
+        /* Vary the mix rotation per regeneration so "Régénérer" gives a
+           genuinely different arrangement rather than the same one twice. */
+        const mix = (PDS_VENUE_MIX[A.venue] || PDS_VENUE_MIX.restaurant).slice();
+        for (let i = 0; i < (spin % Math.max(1, mix.length)); i++) mix.push(mix.shift());
+        const ans = Object.assign({}, A, {
+          mix,
+          floors: A.floors,
+          extras: A.extras.map(e => T['extra' + e]),
         });
-      });
+        plans = ['dense', 'confort', 'banquettes'].map(v => pdsGeneratePlan(ans, v));
+        chosen = 0;
+      };
+
+      const render = () => {
+        const b = bodyEl(), f = footEl();
+        if (step === 1) {
+          if (b) b.innerHTML = qBody();
+          if (f) f.innerHTML = `<button class="kb ghost" data-dismiss>${T.close}</button>
+                                <button class="kb atlas" data-wiz-go>${T.wizGenerate}</button>`;
+        } else {
+          if (b) b.innerHTML = cardBody();
+          if (f) f.innerHTML = `<button class="kb ghost" data-wiz-back>${T.wizBack}</button>
+                                <button class="kb ghost" data-wiz-again>${T.wizAgain}</button>
+                                <button class="kb atlas" data-wiz-apply>${T.wizApply}</button>`;
+        }
+        wireDismiss(m);
+        wire();
+      };
+
+      const wire = () => {
+        const on = (sel, fn) => m.el.querySelectorAll(sel).forEach(el => el.onclick = () => fn(el));
+        on('[data-wiz-venue]', el => { A.venue = el.getAttribute('data-wiz-venue'); render(); });
+        on('[data-wiz-floors]', el => {
+          const n = +el.getAttribute('data-wiz-floors');
+          const names = ['RDC', '1er', '2e', '3e'];
+          A.floors = names.slice(0, n); render();
+        });
+        on('[data-wiz-extra]', el => {
+          const k = el.getAttribute('data-wiz-extra');
+          A.extras = A.extras.includes(k) ? A.extras.filter(x => x !== k) : A.extras.concat(k);
+          render();
+        });
+        on('[data-wiz-kw]', el => { A.kitchenWall = el.getAttribute('data-wiz-kw'); render(); });
+        on('[data-wiz-ew]', el => { A.entranceWall = el.getAttribute('data-wiz-ew'); render(); });
+        on('[data-wiz-wc]', () => { A.wc = !A.wc; render(); });
+
+        const wIn = m.el.querySelector('[data-wiz-w]'), hIn = m.el.querySelector('[data-wiz-h]');
+        if (wIn) wIn.onchange = () => { A.dims_default.w = Math.round(Math.max(3, +wIn.value || 12) * 100); render(); };
+        if (hIn) hIn.onchange = () => { A.dims_default.h = Math.round(Math.max(3, +hIn.value || 8) * 100); render(); };
+        const tIn = m.el.querySelector('[data-wiz-tables]');
+        if (tIn) {
+          tIn.oninput = () => {
+            A.tables = +tIn.value;
+            const out = m.el.querySelector('[data-wiz-tables-out]');
+            if (out) out.textContent = A.tables;
+          };
+        }
+
+        const go = m.el.querySelector('[data-wiz-go]');
+        if (go) go.onclick = () => { build(); step = 2; render(); };
+        const back = m.el.querySelector('[data-wiz-back]');
+        if (back) back.onclick = () => { step = 1; render(); };
+        const again = m.el.querySelector('[data-wiz-again]');
+        if (again) again.onclick = () => { spin++; build(); render(); };
+        on('[data-wiz-pick]', el => { chosen = +el.getAttribute('data-wiz-pick'); render(); });
+
+        const apply = m.el.querySelector('[data-wiz-apply]');
+        if (apply) apply.onclick = () => {
+          const p = plans[chosen];
+          if (!p) return;
+          pdsPush(state);
+          state.zones = p.zones;
+          state.tables = p.tables;
+          state.elements = p.elements;
+          state.activeZone = p.zones[0].id;
+          state.v = 2;
+          selection.clear();
+          try { pdsSave(state); } catch (_) {}
+          /* Closing this drawer takes the plan drawer underneath with it, so
+             the merchant would land back on the dashboard having never seen
+             the room they just built — the one moment it most needs to be on
+             screen. Re-open it explicitly instead of assuming it survived. */
+          m.close();
+          refresh();
+          setTimeout(() => {
+            if (!document.querySelector('[data-pds-canvas]')) {
+              try { handlers['nav-tables'](); } catch (_) {}
+            }
+            toast(T.wizDone(p.covers), {
+              type: 'success',
+              desc: p.shortfall ? T.wizShort(p.shortfall, p.requested) : T.wizDoneDesc(p.tableCount, p.aisle),
+            });
+          }, 60);
+        };
+      };
+
+      wire();
       break;
     }
     case 'add-table':
@@ -7113,6 +7324,59 @@ const PDS_INLINE_CSS = `
       linear-gradient(45deg, transparent 45%, #C0392B 45% 55%, transparent 55%),
       var(--paper, #F7F5F0);
   }
+
+  /* ── Setup wizard ──────────────────────────────────────────────────────*/
+  .pds-wiz { display:flex; flex-direction:column; gap:2px; }
+  .pds-wiz-q {
+    display:block; margin:14px 0 6px;
+    font:600 10px/1 var(--mono, monospace);
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500);
+  }
+  .pds-wiz-q:first-child { margin-top:0; }
+  .pds-wiz-opts { display:flex; flex-wrap:wrap; gap:6px; }
+  .pds-wiz-opt {
+    padding:7px 12px; cursor:pointer;
+    border:1px solid var(--n-200); border-radius:8px;
+    background:var(--surface); color:var(--n-700);
+    font:500 12.5px/1 var(--font-ui, system-ui);
+    transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+  }
+  .pds-wiz-opt:hover  { border-color:var(--atlas); }
+  .pds-wiz-opt.active { background:var(--atlas); border-color:var(--atlas); color:var(--paper, #F7F5F0); }
+  .pds-wiz-dims { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .pds-wiz-dims label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--n-600); }
+  .pds-wiz-dims input[type="number"] { width:82px; text-align:center; }
+  .pds-wiz-dims .pds-range { flex:1; min-width:160px; }
+  .pds-wiz-area {
+    font:600 12px/1 var(--mono, monospace); color:var(--atlas);
+    padding:5px 9px; border-radius:7px; background:var(--paper-muted, rgba(11,110,79,0.07));
+  }
+
+  /* Three candidates, each previewing its own generated objects. */
+  .pds-wiz-cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .pds-wiz-card {
+    display:flex; flex-direction:column; gap:7px; align-items:stretch; text-align:left;
+    padding:9px; cursor:pointer;
+    border:1px solid var(--n-200); border-radius:11px; background:var(--surface);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .pds-wiz-card:hover  { border-color:var(--atlas); }
+  .pds-wiz-card.active { border-color:var(--atlas); box-shadow:0 0 0 2px rgba(11,110,79,0.16); }
+  .pds-wiz-thumb { display:block; border-radius:7px; overflow:hidden; background:var(--paper, #F7F5F0); }
+  .pds-wiz-thumb svg { display:block; width:100%; height:88px; }
+  .pds-wiz-card-name {
+    font:600 10px/1 var(--mono, monospace);
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--ink);
+  }
+  .pds-wiz-card-nums { font-size:11.5px; line-height:1.5; color:var(--n-600); }
+  .pds-wiz-card-nums b { font-size:15px; color:var(--atlas); }
+  .pds-wiz-short {
+    font:500 10.5px/1.4 var(--font-ui, system-ui);
+    color:#8A4B22; background:rgba(192,57,43,0.09);
+    padding:4px 6px; border-radius:6px;
+  }
+  .pds-wiz-note { margin:10px 0 0; font-size:11.5px; color:var(--n-500); }
+  @media (max-width: 620px) { .pds-wiz-cards { grid-template-columns:1fr; } }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -745,6 +745,217 @@ function pdsNearestFree(state, o, x, y, plane, maxR) {
   return null;
 }
 
+/* ─── Plan generation ─────────────────────────────────────────────────────
+ *   Replaces the five hard-coded templates. A template is a photograph of
+ *   someone else's restaurant: it can only ever be the wrong shape, and its
+ *   advertised cover count drifts from what it actually loads because the
+ *   number is stored rather than counted. This builds a room from the
+ *   merchant's own answers and counts what it placed, so the two can never
+ *   disagree.
+ *
+ *   Units are centimetres — a 4-top is 88×88 cm, a service aisle is 90.
+ *
+ *   Three variants from the same answers, because nobody can choose between
+ *   abstract descriptions but everybody can choose between three concrete
+ *   plans with their real numbers on them. */
+const PDS_VARIANTS = {
+  dense:      { aisle: 90,  main: 120, banquette: false },
+  confort:    { aisle: 120, main: 150, banquette: false },
+  banquettes: { aisle: 100, main: 130, banquette: true  },
+};
+
+/* Default table mix per venue type — what that kind of room actually seats. */
+const PDS_VENUE_MIX = {
+  restaurant: [['rect4', 4], ['round2', 2], ['rect6', 6]],
+  cafe:       [['round2', 2], ['sq2', 2], ['round4', 4]],
+  snack:      [['sq4', 4], ['sq2', 2]],
+  patisserie: [['round2', 2], ['sq2', 2]],
+  rooftop:    [['round4', 4], ['round2', 2], ['rect6', 6]],
+};
+
+function pdsId(p) { return p + Math.random().toString(36).slice(2, 9); }
+
+/* One zone, furnished. Architecture first, then circulation, then tables on
+   whatever rectangle is left — so the aisles are a consequence of the
+   layout rather than something checked afterwards. */
+function pdsGenerateZone(o) {
+  const W = o.w, H = o.h;
+  const V = PDS_VARIANTS[o.variant] || PDS_VARIANTS.dense;
+  const zone = o.zoneId;
+  const tables = [], elements = [];
+  const add = (type, x, y, extra) => {
+    const d = PDS_FIX[type] || {};
+    elements.push(Object.assign({ id: pdsId('e'), type, zone,
+      x: Math.round(x), y: Math.round(y), w: d.w, h: d.h, rot: 0 }, extra || {}));
+  };
+
+  /* Usable rectangle, eaten into by each fixture as it is placed. */
+  let free = { x: 0, y: 0, w: W, h: H };
+  const wallBand = (wall, depth) => {
+    if (wall === 'n') { const r = { x: free.x, y: free.y, w: free.w, h: depth }; free = { x: free.x, y: free.y + depth, w: free.w, h: free.h - depth }; return r; }
+    if (wall === 's') { const r = { x: free.x, y: free.y + free.h - depth, w: free.w, h: depth }; free = { x: free.x, y: free.y, w: free.w, h: free.h - depth }; return r; }
+    if (wall === 'w') { const r = { x: free.x, y: free.y, w: depth, h: free.h }; free = { x: free.x + depth, y: free.y, w: free.w - depth, h: free.h }; return r; }
+    const r = { x: free.x + free.w - depth, y: free.y, w: depth, h: free.h };
+    free = { x: free.x, y: free.y, w: free.w - depth, h: free.h }; return r;
+  };
+
+  /* 1 · Kitchen against its wall, sized to the room rather than fixed. */
+  if (o.kitchen) {
+    const depth = Math.max(140, Math.min(240, Math.round(Math.min(W, H) * 0.32)));
+    const band = wallBand(o.kitchenWall, depth);
+    const along = (o.kitchenWall === 'n' || o.kitchenWall === 's') ? 'w' : 'h';
+    const span = Math.round(band[along] * 0.58);
+    if (along === 'w') add('cuisine', band.x + (band.w - span) / 2, band.y, { w: span, h: depth });
+    else               add('cuisine', band.x, band.y + (band.h - span) / 2, { w: depth, h: span });
+    /* A pass belongs on the dining side of the kitchen, not floating. */
+    if (o.venue === 'restaurant' || o.venue === 'rooftop') {
+      const p = PDS_FIX.passe;
+      if (along === 'w') add('passe', band.x + band.w / 2 - p.w / 2, o.kitchenWall === 'n' ? band.y + depth - p.h : band.y, { w: p.w, h: p.h });
+      else add('passe', o.kitchenWall === 'w' ? band.x + depth - p.h : band.y, band.y + band.h / 2 - p.w / 2, { w: p.h, h: p.w, rot: 0 });
+    }
+  }
+
+  /* 2 · Counter — the till side of the room, opposite the kitchen. */
+  if (o.counter) {
+    const opp = { n: 's', s: 'n', e: 'w', w: 'e' }[o.kitchenWall] || 's';
+    const c = PDS_FIX.comptoir;
+    const band = wallBand(opp, c.h + 20);
+    const span = Math.round(Math.min(band.w, W * 0.5));
+    add('comptoir', band.x + (band.w - span) / 2, band.y + 10, { w: span, h: c.h });
+  }
+
+  /* 3 · Entrance on its wall, with the approach kept clear of tables by the
+     portal rule in the collision model. */
+  const eDepth = 30;
+  const eBand = wallBand(o.entranceWall, eDepth);
+  const door = PDS_FIX.porte;
+  const eRot = { n: 0, s: 180, w: 90, e: 270 }[o.entranceWall] || 0;
+  if (o.entranceWall === 'n' || o.entranceWall === 's') {
+    add('porte', eBand.x + eBand.w * 0.22, eBand.y + (eDepth - door.h) / 2, { w: door.w, h: door.h, rot: eRot });
+  } else {
+    add('porte', eBand.x + (eDepth - door.w) / 2, eBand.y + eBand.h * 0.22, { w: door.w, h: door.h, rot: eRot });
+  }
+
+  /* 4 · WC in the corner furthest from the door. */
+  if (o.wc) {
+    const k = PDS_FIX.wc;
+    const cx = (o.entranceWall === 'w') ? W - k.w - 10 : 10;
+    const cy = (o.entranceWall === 'n') ? H - k.h - 10 : 10;
+    add('wc', cx, cy, { w: k.w, h: k.h });
+  }
+
+  /* 5 · Banquette along the longest free wall, for the variant that wants it. */
+  let bench = null;
+  if (V.banquette && free.w > 260 && free.h > 200) {
+    const b = PDS_FIX.banquette;
+    const horiz = free.w >= free.h;
+    if (horiz) { bench = { x: free.x + 20, y: free.y, w: free.w - 40, h: b.h }; free = { x: free.x, y: free.y + b.h, w: free.w, h: free.h - b.h }; }
+    else       { bench = { x: free.x, y: free.y + 20, w: b.h, h: free.h - 40 }; free = { x: free.x + b.h, y: free.y, w: free.w - b.h, h: free.h }; }
+    add('banquette', bench.x, bench.y, { w: bench.w, h: bench.h });
+  }
+
+  /* 6 · Tables on a lattice sized by the variant's aisle. The mix repeats in
+     order, so a 3-way mix over 10 tables gives 4/3/3 rather than 10 of one. */
+  const mix = (o.mix && o.mix.length) ? o.mix : (PDS_VENUE_MIX[o.venue] || PDS_VENUE_MIX.restaurant);
+  const want = Math.max(1, o.tables | 0);
+  const pad = 16;   /* keep tables off the wall line itself */
+  const inner = { x: free.x + pad, y: free.y + pad, w: free.w - pad * 2, h: free.h - pad * 2 };
+  let placed = 0, i = 0;
+  const rows = [];
+  let cursorY = inner.y;
+  while (placed < want && cursorY < inner.y + inner.h) {
+    /* Row height is driven by the tallest table this row will hold. */
+    const rowTypes = [];
+    let cursorX = inner.x, rowH = 0;
+    while (placed + rowTypes.length < want) {
+      const [type] = mix[(i + rowTypes.length) % mix.length];
+      const d = PDS_TABLE_TYPES[type];
+      if (cursorX + d.w > inner.x + inner.w) break;
+      rowTypes.push({ type, d, x: cursorX });
+      cursorX += d.w + V.aisle;
+      rowH = Math.max(rowH, d.h);
+    }
+    if (!rowTypes.length) break;
+    if (cursorY + rowH > inner.y + inner.h) break;
+    rowTypes.forEach(r => {
+      tables.push({
+        id: pdsId('t'), zone, type: r.type,
+        x: Math.round(r.x), y: Math.round(cursorY),
+        w: r.d.w, h: r.d.h, seats: r.d.seats, shape: r.d.shape,
+        rot: 0, num: String(tables.length + 1 + (o.numFrom || 0)),
+        status: 'free', server: null,
+      });
+    });
+    placed += rowTypes.length;
+    i += rowTypes.length;
+    rows.push(rowTypes.length);
+    cursorY += rowH + (rows.length === 1 ? V.main : V.aisle);
+  }
+
+  /* 7 · Decoration last, and only into space nothing else claimed. */
+  if (free.w > 120 && free.h > 120 && o.venue !== 'snack') {
+    const p = PDS_FIX.plante;
+    add('plante', inner.x + inner.w - p.w, inner.y + inner.h - p.h, { w: p.w, h: p.h });
+  }
+
+  const covers = tables.reduce((s, t) => s + (t.seats || 0), 0);
+  return { tables, elements, covers, placed, requested: want, aisle: V.aisle };
+}
+
+/* A whole venue: one zone per floor plus one per extra the merchant ticked. */
+function pdsGeneratePlan(a, variant) {
+  const zones = [], tables = [], elements = [];
+  const specs = [];
+  (a.floors || ['RDC']).forEach((name, idx) => specs.push({ name, kind: 'floor', idx }));
+  (a.extras || []).forEach(name => specs.push({ name, kind: 'extra' }));
+
+  /* Split the requested table count across zones by weight, then hand the
+     rounding remainder to the main floor so the parts add up to exactly what
+     the merchant asked for. The earlier version added a main-floor bonus on
+     top of a full share, which quietly turned a request for 24 into 30. */
+  const want = Math.max(1, a.tables || 12);
+  const weightOf = (s) => s.kind === 'extra' ? 0.35 : (s.idx === 0 ? 1 : 0.6);
+  const wSum = specs.reduce((s, sp) => s + weightOf(sp), 0);
+  const quota = specs.map(sp => Math.max(1, Math.floor(want * weightOf(sp) / wSum)));
+  let mainIdx = specs.findIndex(sp => sp.kind === 'floor' && sp.idx === 0);
+  if (mainIdx < 0) mainIdx = 0;
+  quota[mainIdx] += want - quota.reduce((s, q) => s + q, 0);
+  if (quota[mainIdx] < 1) quota[mainIdx] = 1;
+
+  let shortfall = 0;
+  specs.forEach((spec, n) => {
+    const id = 'z' + (n + 1);
+    const dim = (a.dims && a.dims[spec.name]) || a.dims_default || { w: 880, h: 540 };
+    zones.push({ id, name: spec.name, room: { w: dim.w, h: dim.h } });
+    /* Kitchen and till belong on the main floor only — an extra zone is a
+       terrace or a mezzanine, it is served FROM the main room. */
+    const isMain = (n === mainIdx);
+    const g = pdsGenerateZone({
+      zoneId: id, w: dim.w, h: dim.h, variant,
+      venue: a.venue || 'restaurant',
+      tables: quota[n],
+      mix: a.mix, kitchen: isMain, counter: isMain, wc: isMain && a.wc,
+      kitchenWall: a.kitchenWall || 'n', entranceWall: a.entranceWall || 's',
+      numFrom: tables.length,
+    });
+    shortfall += Math.max(0, g.requested - g.placed);
+    tables.push(...g.tables);
+    elements.push(...g.elements);
+  });
+
+  const covers = tables.reduce((s, t) => s + (t.seats || 0), 0);
+  const area = zones.reduce((s, z) => s + (z.room.w * z.room.h), 0) / 10000;  /* cm² → m² */
+  return {
+    zones, tables, elements, variant,
+    covers, tableCount: tables.length,
+    m2PerCover: covers ? +(area / covers).toFixed(2) : 0,
+    aisle: (PDS_VARIANTS[variant] || PDS_VARIANTS.dense).aisle,
+    /* Surfaced, never swallowed: a room that cannot hold what was asked for
+       has to say so, or the merchant reads a short plan as a broken one. */
+    requested: want, shortfall,
+  };
+}
+
 /* ─── Exposure ────────────────────────────────────────────────────────────
  *   pages-pro.js is an IIFE in the same global scope and picks these up by
  *   name. kiwi-caisse.html is not, so it goes through this namespace. */
@@ -759,6 +970,8 @@ window.KiwiFloorCore = {
   boxStyle: pdsBoxStyle, tableBody: pdsTableBody, fixtureHTML: pdsFixtureHTML,
   AMBIANCE: PDS_AMBIANCE, applyAmbiance: pdsApplyAmbiance,
   hexOf: pdsHexOf, safeColor: pdsSafeColor,
+  VARIANTS: PDS_VARIANTS, VENUE_MIX: PDS_VENUE_MIX,
+  generateZone: pdsGenerateZone, generatePlan: pdsGeneratePlan,
   CLS: PDS_CLS, cls: pdsCls, isTable: pdsIsTable,
   corners: pdsCorners, obbOverlap: pdsObbOverlap,
   conflict: pdsConflict, blockers: pdsBlockers,
