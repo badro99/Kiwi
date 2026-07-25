@@ -8,13 +8,18 @@
 // operators table and sets the kiwi_op cookie; the client then navigates to the
 // console.
 
-import { operatorToken, OP_COOKIE, verifyPassword, json } from './_lib.js';
+import { operatorToken, OP_COOKIE, verifyPassword, json, limitCheck, limitFail, limitClear } from './_lib.js';
 
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
+
+  // Ce code ouvre la console d'administration : les ventes, les PIN et les
+  // clients de TOUS les commerçants. Il n'avait aucun plafond d'essais.
+  const blocked = await limitCheck(request, env, 'op');
+  if (blocked) return blocked;
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -29,7 +34,8 @@ export async function onRequestPost(context) {
       }
     } catch (_) { /* table missing / db error → no match */ }
   }
-  if (!ok) return json({ error: 'bad-code' }, 401);
+  if (!ok) { await limitFail(request, env, 'op'); return json({ error: 'bad-code' }, 401); }
+  await limitClear(request, env, 'op');
 
   const op = await operatorToken(env.AUTH_SECRET);
   return new Response(JSON.stringify({ ok: true, redirect: '/kiwi-admin.html' }), {

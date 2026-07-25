@@ -1,11 +1,17 @@
 // POST /auth/login — verify credentials, start a session.
 // Body JSON: { email, password }.
-import { verifyPassword, makeSession, sessionCookie, json, normEmail } from './_lib.js';
+import { verifyPassword, makeSession, sessionCookie, json, normEmail, limitCheck, limitFail, limitClear } from './_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
   const secret = env.AUTH_SECRET;
   if (!env.DB || !secret) return json({ error: 'not-configured' }, 503);
+
+  // Sans plafond, le mot de passe d'un commerçant se devine au script — et sa
+  // boutique, ce sont ses ventes et ses clients. Compteur par IP, fenêtre de
+  // 15 min ; une connexion réussie l'efface, donc un oubli honnête ne coûte rien.
+  const blocked = await limitCheck(request, env, 'login');
+  if (blocked) return blocked;
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -18,7 +24,8 @@ export async function onRequestPost(context) {
   const ok = row
     ? await verifyPassword(password, row.salt, row.hash)
     : await verifyPassword(password, '00', '00');
-  if (!row || !ok) return json({ error: 'bad-creds' }, 401);
+  if (!row || !ok) { await limitFail(request, env, 'login'); return json({ error: 'bad-creds' }, 401); }
+  await limitClear(request, env, 'login');
 
   const token = await makeSession(row.id, secret);
   return new Response(JSON.stringify({ ok: true }), {

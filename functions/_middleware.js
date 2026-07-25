@@ -24,6 +24,7 @@
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
   operatorToken, OP_COOKIE, verifyPassword,
+  limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
 const GATE_COOKIE = 'kiwi_gate';
@@ -179,6 +180,10 @@ export async function onRequest(context) {
   // Operator unlock attempt — a code from the `operators` table, revealed by the
   // hidden long-press gesture on the logo. Lands on the operator console.
   if (authSecret && request.method === 'POST' && path === OPERATOR_PATH) {
+    // Même plafond que /auth/operator, et le même compteur ('op') : sans quoi
+    // il suffisait de revenir sur l'écran verrouillé pour repartir à zéro.
+    const tooMany = await limitCheck(request, env, 'op');
+    if (tooMany) return tooMany;
     const form = await request.formData();
     const tried = (form.get('code') || '').toString();
     let ok = false;
@@ -191,6 +196,7 @@ export async function onRequest(context) {
       } catch (_) { /* table missing / db error → treated as no match */ }
     }
     if (ok) {
+      await limitClear(request, env, 'op');
       const op = await operatorToken(authSecret);
       return new Response(null, {
         status: 303,
@@ -200,6 +206,7 @@ export async function onRequest(context) {
         },
       });
     }
+    await limitFail(request, env, 'op');
     return htmlResponse(authPage({ allowStaff: !!sitePassword, operatorError: true }));
   }
 

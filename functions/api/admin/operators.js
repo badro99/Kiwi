@@ -30,7 +30,11 @@ export async function onRequestPost(context) {
   try { body = await context.request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const label = (body.label || '').toString().trim().slice(0, 40);
   const code = (body.code || '').toString().trim();
-  if (code.length < 4) return json({ error: 'code-too-short' }, 400);
+  // 4 caractères, c'était ~10 000 combinaisons pour la console qui voit TOUS
+  // les commerçants — quelques minutes de script. Le plafond d'essais
+  // (limitCheck, scope 'op') rend le grinding coûteux ; ce plancher le rend
+  // inutile. Les codes déjà émis restent valides : ils sont à renouveler.
+  if (code.length < 10) return json({ error: 'code-too-short' }, 400);
   const { salt, hash } = await hashPassword(code);
   const id = 'op-' + crypto.randomUUID();
   await context.env.DB.prepare(

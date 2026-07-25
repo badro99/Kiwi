@@ -251,3 +251,82 @@ export async function entitledMerchant(request, env, asked, opts) {
   try { if (await isOperator(request, env)) return asked; } catch (_) {}
   return DEMO_MERCHANTS[asked] ? asked : '';
 }
+
+/* ─────────────────────── ATTEMPT LIMITER (brute force) ───────────────────────
+ * Le même compteur que l'appairage (functions/api/pair/redeem.js), rendu
+ * réutilisable. Il manquait là où il compte le plus : /auth/operator, le POST
+ * /__operator du middleware et /auth/login n'avaient AUCUNE limite. Un code
+ * opérateur fait au minimum 4 caractères — soit ~10 000 essais pour obtenir la
+ * console d'administration, c'est-à-dire les ventes, les PIN et les clients de
+ * TOUS les commerçants. Sans plafond, c'est quelques minutes de script.
+ *
+ * On réutilise la table pair_attempts telle quelle (aucune migration) en
+ * préfixant la clé par un domaine : « op|1.2.3.4 ». Sans ce préfixe un
+ * appairage raté bloquerait une connexion, et l'opérateur partagerait son
+ * quota avec les caisses.
+ *
+ * Toujours « fail open » : si la table manque ou que D1 tousse, on laisse
+ * passer. Un limiteur cassé ne doit jamais empêcher un commerçant d'entrer
+ * chez lui.
+ * ───────────────────────────────────────────────────────────────────────── */
+const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
+const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
+const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
+
+function limiterKey(request, scope) {
+  const ip = request.headers.get('CF-Connecting-IP')
+          || request.headers.get('X-Forwarded-For')
+          || '';
+  return ip ? `${scope}|${ip}` : '';
+}
+
+/* Déjà bloqué ? Vérifié AVANT de regarder le code, pour qu'une entrée
+   malformée ne serve pas de sonde gratuite. Renvoie une Response 429 à
+   retourner telle quelle, ou null si la voie est libre. */
+export async function limitCheck(request, env, scope) {
+  const k = limiterKey(request, scope);
+  if (!k || !env.DB) return null;
+  try {
+    const a = await env.DB.prepare(
+      'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
+    ).bind(k).first();
+    const now = Date.now();
+    if (a && a.blocked_until && a.blocked_until > now) {
+      return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
+    }
+  } catch (_) { /* pas de table → pas de limiteur */ }
+  return null;
+}
+
+/* Un essai raté de plus. Fenêtre glissante par redémarrage : passé
+   LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
+export async function limitFail(request, env, scope) {
+  const k = limiterKey(request, scope);
+  if (!k || !env.DB) return;
+  const now = Date.now();
+  try {
+    const a = await env.DB.prepare(
+      'SELECT fails, first_ts FROM pair_attempts WHERE ip = ?'
+    ).bind(k).first();
+    if (!a || (now - a.first_ts) > LIMIT_WINDOW_MS) {
+      await env.DB.prepare(
+        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
+         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
+      ).bind(k, now).run();
+      return;
+    }
+    const fails = (a.fails || 0) + 1;
+    const blocked = fails >= LIMIT_MAX_FAILS ? (now + LIMIT_BLOCK_MS) : null;
+    await env.DB.prepare(
+      'UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?'
+    ).bind(fails, blocked, k).run();
+  } catch (_) { /* limiteur indisponible → on laisse passer */ }
+}
+
+/* Entrée réussie : on efface l'ardoise, pour qu'un commerçant qui s'est
+   trompé deux fois avant de réussir ne traîne pas son compteur. */
+export async function limitClear(request, env, scope) {
+  const k = limiterKey(request, scope);
+  if (!k || !env.DB) return;
+  try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); } catch (_) {}
+}

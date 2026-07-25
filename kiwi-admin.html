@@ -887,7 +887,7 @@
     var err = document.getElementById('op-err'); err.textContent = '';
     var label = document.getElementById('op-label').value.trim();
     var code = document.getElementById('op-code').value.trim();
-    if (code.length < 4) { err.textContent = 'Code trop court (4 caractères min.).'; return; }
+    if (code.length < 10) { err.textContent = 'Code trop court (10 caractères min.). Ce code ouvre les données de TOUS les commerçants.'; return; }
     try {
       await store.addOperator(label, code);
       document.getElementById('op-label').value = ''; document.getElementById('op-code').value = '';

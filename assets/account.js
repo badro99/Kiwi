@@ -296,7 +296,15 @@
   function editBusinessModal(id) {
     const b = allBiz().find((x) => x.id === id);
     if (!b) return;
-    const isExtra = !BIZ_DEFAULTS.some((d) => d.id === id);
+    /* « Est-ce une fiche ajoutée à la main ? » se lit dans kiwiBizExtra, pas
+       dans l'absence des démos. L'établissement d'un VRAI compte a l'id
+       'primary' : absent de BIZ_DEFAULTS, il était traité comme un extra, et
+       la sauvegarde faisait un .map() sur une liste où il ne figure pas —
+       elle réécrivait la liste inchangée. Le commerçant corrigeait son
+       adresse, voyait « Établissement mis à jour », et retrouvait l'ancienne
+       au rechargement. Les surcharges par champ (kiwiSet:biz:primary:*) sont
+       relues par bizField() : c'est la bonne branche pour lui. */
+    const isExtra = extraBiz().some((x) => x.id === id);
     const m = Kiwi.modal({
       tag: pick({ fr: 'ÉTABLISSEMENT', en: 'BUSINESS', ar: 'مؤسسة' }), title: b.name, width: 560,
       body: bizForm() + BIZ_FIELDS.map((f) => fieldInput(pick(f.label), f.k, b[f.k], ['name', 'type', 'address'].includes(f.k))).join('') + '</div>',
