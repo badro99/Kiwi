@@ -113,6 +113,10 @@
   }
   function load() {
     if (db) return db;
+    // Premier accès à ce magasin dans cette page : on va aussi chercher sa copie
+    // serveur. Asynchrone — `load()` rend tout de suite ce que le navigateur a,
+    // et la page se re-rend via notify() quand la copie arrive.
+    setTimeout(cloudBind, 0);
     let raw = null;
     try { raw = localStorage.getItem(KEY); } catch (e) {}
     if (raw) {
@@ -135,6 +139,7 @@
     KEY = keyFor(VENUE);
     db = null;
     load();
+    cloudBind();   // ce magasin-ci a sa propre copie serveur
     notify();
   }
 
@@ -142,8 +147,11 @@
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
   }
 
-  // Any mutation goes through here: persist + notify same-page subscribers.
-  function commit() { persist(); notify(); }
+  // Any mutation goes through here: persist + notify same-page subscribers, and
+  // mirror the change up so the stock survives this browser (voir LE FILET plus
+  // bas). L'écriture locale reste synchrone : la caisse ne doit jamais attendre
+  // le réseau pour encaisser.
+  function commit() { persist(); notify(); schedulePush(); }
   function notify() { subs.forEach((fn) => { try { fn(); } catch (e) {} }); }
 
   // Cross-tab: another tab wrote the catalog → reload + notify our listeners.
@@ -151,6 +159,211 @@
     if (e.key !== KEY) return;
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
     notify();
+  });
+
+  /* ═════════════════ LE FILET — une copie serveur sur laquelle retomber ══════
+   * Jusqu'ici ce catalogue ne vivait QUE dans le localStorage du navigateur qui
+   * l'avait saisi. Une fenêtre privée fermée, un deuxième appareil, un cache
+   * vidé, et l'inventaire n'existait plus nulle part : rien n'en gardait copie.
+   * Un commerçant ne peut pas ressaisir son stock à chaque fois qu'il change de
+   * navigateur — ce n'est pas un réglage d'affichage, c'est son magasin.
+   *
+   * Le stock est donc miroité vers /api/catalog, qui n'est lisible qu'en
+   * prouvant son identité sur CE magasin (session du compte, caisse appairée ou
+   * opérateur — jamais public, contrairement à /api/menu). Le tableau de bord et
+   * la caisse écrivent déjà sous le même slug de boutique : ils tombent
+   * naturellement sur le même document.
+   *
+   * Trois règles, dans cet ordre de priorité :
+   *
+   *  1. NE JAMAIS PERDRE DE STOCK. Toute panne — hors ligne, 500, table pas
+   *     encore migrée, session expirée — est avalée : la copie locale reste la
+   *     vérité de travail et la remontée est retentée au prochain enregistrement.
+   *     La caisse continue de vendre dans un sous-sol sans réseau.
+   *  2. NE JAMAIS ÉCRASER L'AUTRE APPAREIL. On envoie la révision sur laquelle on
+   *     s'est basé ; si le serveur a bougé entre-temps il refuse (409) et renvoie
+   *     sa copie. On fusionne et on repropose.
+   *  3. NE JAMAIS POUSSER AVANT D'AVOIR LU. Un navigateur neuf a un catalogue
+   *     vide ; s'il poussait en premier il effacerait le vrai stock.
+   *
+   * Fusion : union par id. Ce que CET appareil affiche l'emporte sur un id connu
+   * des deux côtés, et tout ce que l'autre a ajouté vient s'ajouter. Deux
+   * appareils qui modifient LA MÊME déclinaison en même temps voient donc un des
+   * deux comptes gagner — mais rien ne disparaît jamais, ce qui est le seul
+   * arbitrage acceptable sur un inventaire. */
+  const REV_KEY = (slug) => 'kiwiCatalogRev:v1:' + slug;
+  const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0 };
+
+  // La démo (Maison Mansour) ne quitte jamais ce navigateur : elle est semée
+  // localement et n'appartient à aucun compte.
+  function cloudOn() {
+    try {
+      if (!VENUE || VENUE === DEMO_VENUE) return false;
+      return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+    } catch (e) { return false; }
+  }
+  function readRev(slug) {
+    try { return parseInt(localStorage.getItem(REV_KEY(slug)) || '0', 10) || 0; } catch (e) { return 0; }
+  }
+  function writeRev(slug, rev) {
+    try { localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {}
+  }
+
+  function mergeDocs(mine, theirs) {
+    const out = {
+      v: 1, categories: [], products: [], variants: [],
+      seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+    };
+    ['categories', 'products', 'variants'].forEach((k) => {
+      const seen = Object.create(null);
+      const list = [];
+      const take = (e) => { if (e && e.id && !seen[e.id]) { seen[e.id] = 1; list.push(e); } };
+      ((mine && mine[k]) || []).forEach(take);     // cet appareil d'abord
+      ((theirs && theirs[k]) || []).forEach(take); // puis ce que l'autre a ajouté
+      out[k] = list;
+    });
+    // Une déclinaison dont le produit a été supprimé des deux côtés n'a plus de
+    // parent : elle deviendrait un article fantôme, invendable et invisible.
+    const alive = Object.create(null);
+    out.products.forEach((p) => { alive[p.id] = 1; });
+    out.variants = out.variants.filter((v) => alive[v.productId]);
+    return out;
+  }
+
+  /* Le compteur d'EAN-13 maison vit dans UNE clé locale (assets/barcode.js). Un
+   * deuxième appareil qui reçoit le catalogue du premier démarre à zéro et
+   * rééditerait exactement les mêmes codes — deux articles différents sous le
+   * même code-barres, que la douchette ne pourrait plus départager. On remonte
+   * donc le compteur au-dessus du plus grand code maison déjà présent. */
+  function healSeq() {
+    try {
+      let max = 0;
+      (db.variants || []).forEach((v) => ((v && v.barcodes) || []).forEach((b) => {
+        const m = /^20(\d{10})\d$/.exec(String((b && b.code) || ''));
+        if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+      }));
+      if (!max) return;
+      // barcode.js lit une clé fixe ; pages-pro.js en reporte une par magasin.
+      // On remonte les deux, sinon le compteur repart selon la surface ouverte.
+      ['kiwiBarcodeSeq:maisonMansour', 'kiwiBarcodeSeq:' + VENUE].forEach((K) => {
+        const cur = parseInt(localStorage.getItem(K) || '0', 10) || 0;
+        if (max > cur) localStorage.setItem(K, String(max));
+      });
+    } catch (e) {}
+  }
+
+  /* Lit la copie serveur et la réconcilie avec la locale. `first` = tout premier
+   * contact pour ce magasin : c'est le seul cas où un catalogue local vide est
+   * remplacé en bloc (le navigateur neuf adopte le magasin). Ensuite on fusionne
+   * toujours, pour ne pas jeter ce qui vient d'être saisi ici. */
+  function pull(first) {
+    const slug = VENUE;
+    if (!cloudOn()) return Promise.resolve(false);
+    return fetch('/api/catalog?merchant=' + encodeURIComponent(slug), {
+      headers: { Accept: 'application/json' },
+    })
+      .then((r) => (r && r.ok ? r.json() : null))
+      .then((res) => {
+        cloud.read[slug] = 1;
+        cloud.last = Date.now();
+        // Le commerçant a changé de magasin pendant l'aller-retour : cette
+        // réponse concerne l'inventaire d'une autre boutique, on la jette.
+        if (!res || slug !== VENUE) return false;
+
+        const serverRev = +res.rev || 0;
+        const theirs = res.data;
+        load();
+        const mineEmpty = !(db.products && db.products.length);
+        const theirsEmpty = !(theirs && theirs.products && theirs.products.length);
+
+        if (theirsEmpty) {
+          // Rien en ligne : c'est ce navigateur qui fait référence.
+          cloud.rev = serverRev;
+          if (!mineEmpty) schedulePush(0);
+          return false;
+        }
+        cloud.rev = serverRev;
+        if (!mineEmpty && readRev(slug) === serverRev) { healSeq(); return false; } // déjà à jour
+
+        const adopt = first && mineEmpty;
+        db = adopt ? theirs : mergeDocs(db, theirs);
+        persist(); writeRev(slug, serverRev); healSeq(); notify();
+        if (!adopt) schedulePush(0);   // notre fusion doit remonter
+        return true;
+      })
+      .catch(() => false);   // hors ligne → la copie locale reste la vérité
+  }
+
+  function schedulePush(delay) {
+    if (!cloudOn()) return;
+    if (cloud.timer) clearTimeout(cloud.timer);
+    cloud.timer = setTimeout(pushNow, delay == null ? 900 : delay);
+  }
+
+  function pushNow(opts) {
+    cloud.timer = null;
+    if (!cloudOn()) return;
+    const slug = VENUE;
+    // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
+    if (!cloud.read[slug]) { pull(true); return; }
+    if (cloud.busy) { cloud.again = true; return; }
+    cloud.busy = true;
+    fetch('/api/catalog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: slug, baseRev: cloud.rev, data: db }),
+      // L'onglet peut se fermer juste après une vente : keepalive laisse la
+      // requête partir quand même.
+      keepalive: !!(opts && opts.keepalive),
+    })
+      .then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
+      .then((res) => {
+        if (slug !== VENUE) return;
+        if (res.status === 200 && res.j && res.j.ok) {
+          cloud.rev = +res.j.rev || 0;
+          writeRev(slug, cloud.rev);
+          cloud.tries = 0;
+          return;
+        }
+        // 409 : le serveur a bougé (ou a refusé un envoi vide). Il nous rend sa
+        // copie — on fusionne et on repropose, quelques fois au plus pour ne
+        // jamais tourner en rond si l'autre appareil écrit en continu.
+        if (res.status === 409 && res.j && res.j.data && cloud.tries < 3) {
+          cloud.tries++;
+          db = mergeDocs(db, res.j.data);
+          cloud.rev = +res.j.rev || 0;
+          persist(); writeRev(slug, cloud.rev); healSeq(); notify();
+          cloud.again = true;
+        }
+        // 401 / 503 / 500 → on garde tout en local et on retentera plus tard.
+      })
+      .catch(() => { /* hors ligne : la vente continue, la remontée attendra */ })
+      .then(() => {
+        cloud.busy = false;
+        if (cloud.again) { cloud.again = false; schedulePush(400); }
+      });
+  }
+
+  // Le magasin actif vient de changer (ou la page vient de s'ouvrir) : on lit sa
+  // copie serveur une fois.
+  function cloudBind() {
+    const slug = VENUE;
+    if (!cloudOn() || cloud.read[slug]) return;
+    pull(true);
+  }
+
+  /* Revenir sur l'onglet est le moment où l'on veut voir ce que l'AUTRE appareil
+   * a fait — la caisse a vendu pendant qu'on regardait ailleurs. On relit, sans
+   * marteler le serveur. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!cloudOn() || Date.now() - cloud.last < 20000) return;
+    pull(false);
+  });
+
+  // Une modification en attente ne doit pas mourir avec l'onglet.
+  window.addEventListener('pagehide', () => {
+    if (cloud.timer) { clearTimeout(cloud.timer); cloud.timer = null; pushNow({ keepalive: true }); }
   });
 
   /* ───────────────── seeding ───────────────── */

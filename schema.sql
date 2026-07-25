@@ -205,3 +205,31 @@ CREATE TABLE IF NOT EXISTS orders (
 -- The caisse polls "WHERE merchant = ? AND updated_ts > ?" — this index covers
 -- both that and the per-merchant daily number lookup.
 CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders (merchant, updated_ts);
+
+-- ── BOUTIQUE · inventaire (le stock privé du commerçant) ────────────────────
+-- Le catalogue d'une boutique — produits, déclinaisons couleur × taille, stock
+-- et codes-barres — vivait UNIQUEMENT dans le localStorage du navigateur qui
+-- l'avait saisi. Une fenêtre privée, un deuxième appareil ou un cache vidé et
+-- l'inventaire n'existait plus : rien n'en gardait copie. C'est cette table.
+--
+-- Pourquoi PAS la table `menus` : `GET /api/menu` est PUBLIC (le client qui
+-- scanne un QR n'a ni compte ni cookie de porte). `menus` ne contient donc que
+-- ce qu'une boutique CHOISIT de publier. Ici c'est l'inventaire de travail —
+-- stock réel, tous les codes-barres, articles non publiés — et sa lecture exige
+-- toujours une preuve d'identité (session du compte, caisse appairée, ou
+-- opérateur). Les deux ne doivent jamais se confondre.
+--
+-- Un seul document JSON par boutique, remplacé à chaque écriture : le catalogue
+-- est petit (quelques milliers de variantes au plus) et les deux surfaces qui
+-- l'éditent — le tableau de bord et la caisse — appartiennent au MÊME
+-- commerçant. `rev` s'incrémente côté serveur à chaque écriture ; le client
+-- renvoie la révision sur laquelle il s'est basé, et une écriture basée sur une
+-- révision périmée est refusée (409) plutôt qu'écrasée. Le client fusionne alors
+-- et réessaie, pour qu'un produit ajouté à la caisse ne disparaisse jamais parce
+-- que le tableau de bord a enregistré une seconde plus tard.
+CREATE TABLE IF NOT EXISTS catalogs (
+  merchant   TEXT PRIMARY KEY,   -- slugMerchant(nom de la boutique) — même colonne vertébrale que sales/menus
+  data       TEXT NOT NULL,      -- JSON : { v, categories[], products[], variants[], seq }
+  rev        INTEGER NOT NULL,   -- révision monotone, incrémentée par le serveur
+  updated_ts INTEGER NOT NULL
+);
