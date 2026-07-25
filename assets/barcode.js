@@ -108,15 +108,45 @@
 
   /* ─────────────────────────── generation / detection ─────────────────────────── */
 
-  const SEQ_KEY = 'kiwiBarcodeSeq:maisonMansour';
-  function readSeq() { const n = parseInt(localStorage.getItem(SEQ_KEY) || '0', 10); return isNaN(n) ? 0 : n; }
+  /* Le compteur de codes-barres est PAR MAGASIN.
+   *
+   * Il était figé sur 'kiwiBarcodeSeq:maisonMansour' — le nom de la toute
+   * première boutique, laissé en dur. Un seul compteur pour tous les
+   * établissements : les codes ne se télescopaient pas (le compteur ne fait que
+   * monter), mais deux magasins du même compte se partageaient une numérotation,
+   * et le jour où l'on nettoie cette clé, c'est le stock des deux qui perd ses
+   * références. La clé suit donc le magasin courant, comme le catalogue lui-même.
+   *
+   * L'ancienne clé reste lue, et le compteur prend toujours le PLUS HAUT des
+   * deux : une boutique déjà en service ne réémet jamais un code qu'elle a déjà
+   * imprimé, et rien n'est à migrer. boutique-catalog.js remonte en plus ce
+   * compteur au-dessus du plus grand code réellement présent après une
+   * hydratation depuis le cloud, pour qu'un appareil neuf ne reparte pas de zéro. */
+  const LEGACY_SEQ_KEY = 'kiwiBarcodeSeq:maisonMansour';
+  function seqKey() {
+    let venue = '';
+    try {
+      const C = window.KiwiBoutiqueCatalog;
+      if (C && C.currentVenue) venue = String(C.currentVenue() || '');
+    } catch (_) {}
+    return venue ? 'kiwiBarcodeSeq:' + venue : LEGACY_SEQ_KEY;
+  }
+  function readAt(key) {
+    try { const n = parseInt(localStorage.getItem(key) || '0', 10); return isNaN(n) ? 0 : n; }
+    catch (_) { return 0; }
+  }
+  function readSeq() {
+    const key = seqKey();
+    const own = readAt(key);
+    return key === LEGACY_SEQ_KEY ? own : Math.max(own, readAt(LEGACY_SEQ_KEY));
+  }
   function peekNextSeq() { return readSeq() + 1; }
 
   // Fresh in-store EAN-13. Prefix "20" (GS1 restricted-circulation range 20-29)
   // + 10-digit zero-padded counter → 12 data digits, + mod-10 check = 13.
   function nextInStoreEan() {
     const seq = readSeq() + 1;
-    localStorage.setItem(SEQ_KEY, String(seq));
+    try { localStorage.setItem(seqKey(), String(seq)); } catch (_) {}
     const body = '20' + String(seq).padStart(10, '0'); // 12 digits
     return body + String(ean13CheckDigit(body));
   }

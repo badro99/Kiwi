@@ -11,6 +11,15 @@
 //     200 { name:'', type:'', menu:null } so the client shows a clean
 //     "menu coming soon" state instead of an error.
 //
+//   GET /api/menu?mine=1            — the MERCHANT reading its own carte back, to
+//     rebuild it in a browser that has never seen it. Same row, but resolved from
+//     the session instead of taken on the client's word, and it answers the raw
+//     stored carte (an empty one included) plus the slug it resolved — the
+//     dashboard has to be able to tell "no carte published" from "not reachable".
+//     Without this the carte existed ONLY in the localStorage of the browser that
+//     typed it: a phone, an iPad or a private window showed an empty menu, and
+//     then published that emptiness back over the real one (see the POST guard).
+//
 //   POST /api/menu                  — the merchant's dashboard mirrors ITS OWN
 //     menu up. The merchant is derived from the authenticated session, NEVER from
 //     the body — a client can only ever publish its own slug (same rule as
@@ -101,6 +110,38 @@ function sanitizeShop(raw) {
 
 const isShop = (type) => String(type || '').toLowerCase() === 'boutique';
 
+// Une carte vide n'est pas une carte : ni plat, ni catégorie. Sert au garde-fou
+// du POST — refuser d'écraser une vraie carte par du vide.
+const menuEmpty = (d) => !d || (!(d.items && d.items.length) && !(d.cats && d.cats.length));
+const shopEmpty = (d) => !d || !(d.products && d.products.length);
+
+/* Quel magasin de ce compte ? — même règle que /api/config, en PLUS STRICTE.
+ *
+ * Un login peut tenir plusieurs établissements, et le QR client imprime le slug
+ * du MAGASIN (assets/order-qr.js), pas celui du compte : une boutique nommée
+ * autrement que la raison sociale publiait donc sa carte dans une ligne que le
+ * client ne lisait jamais. Le corps peut désormais nommer le magasin — mais on
+ * ne le croit que si la base dit qu'il appartient déjà à ce compte.
+ *
+ * /api/config accepte en plus un slug SANS fiche (owner null), parce qu'il est
+ * lui-même ce qui enregistre un magasin. Ici on refuse : cette ligne se lit
+ * PUBLIQUEMENT par slug, et sur une base pas encore migrée storeOwner() répond
+ * null pour tout — n'importe quel compte connecté pourrait publier une fausse
+ * carte sous le slug d'un autre restaurant. En cas de doute on retombe sur le
+ * slug du compte, c'est-à-dire exactement le comportement d'aujourd'hui. */
+async function storeOwner(env, slug) {
+  try {
+    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return row ? (row.account_id || '') : null;
+  } catch (_) { return null; }
+}
+async function resolveMerchant(env, aid, accSlug, wanted) {
+  const w = str(wanted, 80).trim();
+  if (!w || w === accSlug) return accSlug;
+  return (await storeOwner(env, w)) === aid ? w : accSlug;
+}
+
 // Is the Order Pro add-on switched on for this merchant?
 //
 // NOTE this inverts the usual merchant_config rule. Everywhere else a MISSING
@@ -121,7 +162,44 @@ async function orderProEnabled(env, merchant) {
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
-  const merchant = (url.searchParams.get('merchant') || '').trim();
+  let merchant = (url.searchParams.get('merchant') || '').trim();
+
+  /* ?mine=1 — le commerçant relit SA carte pour la reconstruire dans un
+   * navigateur neuf. Le slug demandé n'est qu'une requête : il passe par la même
+   * résolution que le POST, donc on relit toujours la ligne où l'on écrit. Sans
+   * ce drapeau, rien ne change pour la page client (kiwi-order.html), qui n'a ni
+   * session ni compte et continue de lire par slug public. */
+  const mine = url.searchParams.get('mine') === '1';
+  if (mine) {
+    if (!env.DB || !env.AUTH_SECRET) return json({ merchant: '', menu: null, shop: null, unreachable: true });
+    let sess = null;
+    try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
+    if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (!acc) return json({ error: 'unauthorized' }, 401);
+    merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+
+    let row = null;
+    try {
+      row = await env.DB.prepare('SELECT name, type, data FROM menus WHERE merchant = ?').bind(merchant).first();
+    } catch (_) { return json({ merchant, menu: null, shop: null, unreachable: true }); }
+
+    let parsed = null;
+    try { parsed = row && row.data ? JSON.parse(row.data) : null; } catch (_) {}
+    const type = (row && row.type) || '';
+    // Ici on rend la carte TELLE QUELLE, vide comprise : le tableau de bord doit
+    // distinguer « rien de publié » (il peut pousser) de « injoignable » (il ne
+    // doit surtout pas pousser, il effacerait).
+    return json({
+      merchant,
+      name: (row && row.name) || '',
+      type,
+      menu: parsed && !isShop(type) ? sanitizeMenu(parsed) : null,
+      shop: parsed && isShop(type) ? sanitizeShop(parsed) : null,
+      published: !!row,
+    });
+  }
+
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!env.DB) return json({ name: '', type: '', menu: null }); // no backend → neutral
 
@@ -169,10 +247,14 @@ export async function onRequestPost(context) {
 
   const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
   if (!acc) return json({ error: 'unauthorized' }, 401);
-  const merchant = slugMerchant(acc.business);
+  const accSlug = slugMerchant(acc.business);
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
+  // et rabattu sur le slug du compte si la base ne confirme pas la propriété.
+  const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant);
 
   // The display name defaults to the account's own business; a client may send a
   // trimmed override but never another merchant's identity (slug is session-bound).
@@ -198,6 +280,34 @@ export async function onRequestPost(context) {
   if (!shop && !looksMenu && looksShop) return json({ error: 'shape-mismatch', expected: 'menu' }, 409);
 
   const data = shop ? sanitizeShop(raw) : sanitizeMenu(raw);
+
+  /* ═══ NE JAMAIS EFFACER UNE CARTE PUBLIÉE PAR DU VIDE ═══════════════════════
+   * Le tableau de bord republie sa carte au démarrage. Tant que cette carte ne
+   * vivait que dans le localStorage, ouvrir le tableau de bord dans un
+   * navigateur neuf — un téléphone, un iPad, une fenêtre privée — envoyait ici
+   * un { cats:[], items:[] } tout neuf, et cette ligne écrasait la vraie carte.
+   * Le client qui scannait le QR de sa table tombait alors sur « bientôt
+   * disponible » : la panne était invisible côté commerçant.
+   *
+   * Le garde-fou vit ICI, pas seulement dans le client, parce que le déploiement
+   * n'est pas instantané : un onglet resté ouvert sur l'ancien build publierait
+   * encore du vide demain matin.
+   *
+   * Vider sa carte reste évidemment permis — mais il faut le dire (allowEmpty),
+   * et seul un client qui a d'abord RELU la carte du serveur l'affirme. */
+  const wasEmpty = shop ? shopEmpty(data) : menuEmpty(data);
+  if (wasEmpty && !(body && body.allowEmpty === true)) {
+    let cur = null;
+    try {
+      const row = await env.DB.prepare('SELECT type, data FROM menus WHERE merchant = ?').bind(merchant).first();
+      if (row && row.data) {
+        const parsed = JSON.parse(row.data);
+        cur = isShop(row.type) ? sanitizeShop(parsed) : sanitizeMenu(parsed);
+        if (isShop(row.type) ? shopEmpty(cur) : menuEmpty(cur)) cur = null;
+      }
+    } catch (_) { cur = null; }   // pas de table / base absente → rien à protéger
+    if (cur) return json({ error: 'refused-empty', merchant, data: cur }, 409);
+  }
 
   try {
     await env.DB.prepare(
