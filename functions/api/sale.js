@@ -54,7 +54,6 @@ export async function onRequestPost({ request, env }) {
   // that send no id keep the old behaviour: a fresh row every time.
   const id = String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8));
 
-  try {
   /* The basket. Validated and re-serialised here rather than trusted: this is
    * client-supplied JSON going into a column the dashboard and the assistant
    * both read, so it gets the same treatment as every other field — bounded

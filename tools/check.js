@@ -45,6 +45,44 @@ section('Syntax (vm.Script compile)');
   if (!bad) ok(`${JS_FILES.length} JS files parse clean`);
 }
 
+/* ── 1b · SYNTAX of the Pages Functions ──────────────────────────────────────
+ * The one directory whose syntax errors take the whole SITE down, and the one
+ * this file used to skip. A stray `try {` in functions/api/sale.js failed six
+ * consecutive Cloudflare builds — the deploy pipeline stayed on the last good
+ * commit for 44 minutes while every push appeared to succeed, because nothing
+ * local ever parsed these files.
+ *
+ * They need their own pass for two reasons: they live in subdirectories, and
+ * they are ES modules — `new vm.Script` throws on `export` no matter how valid
+ * the file is, so the check above could never have covered them. `node --check`
+ * decides module vs script from the extension, hence the .mjs temp copy. */
+section('Syntax · Pages Functions (node --check, ESM)');
+{
+  const { execFileSync } = require('child_process');
+  const os = require('os');
+  const walk = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+    const p = path.join(dir, d.name);
+    return d.isDirectory() ? walk(p) : (d.name.endsWith('.js') ? [p] : []);
+  }) : [];
+
+  const FN_FILES = walk(path.join(ROOT, 'functions'));
+  const tmp = path.join(os.tmpdir(), 'kiwi-check-' + process.pid + '.mjs');
+  let bad = 0;
+  for (const f of FN_FILES) {
+    try {
+      fs.writeFileSync(tmp, read(f));
+      execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
+    } catch (e) {
+      bad++;
+      const out = String((e && e.stderr) || (e && e.message) || '').split('\n')
+        .find((l) => /Error|error/.test(l)) || 'syntax error';
+      fail(path.relative(ROOT, f) + ' — ' + out.trim() + '  (this breaks the Cloudflare build)');
+    }
+  }
+  try { fs.unlinkSync(tmp); } catch (_) {}
+  if (!bad) ok(`${FN_FILES.length} Pages Functions parse clean`);
+}
+
 /* ── 2 · data-action coverage ───────────────────────────────────────────────
  * An action declared in markup must be *known* somewhere in JS — as a handler
  * registration, an object key, or routed delegation. Heuristic: after removing
