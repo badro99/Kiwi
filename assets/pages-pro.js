@@ -2987,244 +2987,314 @@ const PDS_GRID = 16;         /* snap-to-grid unit (px) */
 const PDS_CANVAS_W = 880;
 const PDS_CANVAS_H = 540;
 
-/* ─── SVG architectural backgrounds, per zone "scene" ─────────────────────
- *   Each scene is a full-bleed SVG matching the caisse plan-bg vibe — terrazzo
- *   floor + zellige hints + fixtures (comptoir, banquette, escalier, plantes).
- *   The renderer picks a scene from zone.scene ('salle' | 'terrasse' | 'bar'
- *   | 'etage' | 'prive' | 'blank').                                          */
-const PDS_SCENES = {
-  salle: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <linearGradient id="pds-walnut" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0"   stop-color="#2A332A"/>
-          <stop offset="0.5" stop-color="#1F2820"/>
-          <stop offset="1"   stop-color="#151D17"/>
-        </linearGradient>
-        <linearGradient id="pds-brass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#E8C88A"/>
-          <stop offset="1" stop-color="#B89052"/>
-        </linearGradient>
-        <pattern id="pds-zellige" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-          <rect width="48" height="48" fill="#F2EBD6"/>
-          <circle cx="24" cy="24" r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="0"  cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="48" cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="0"  cy="48" r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="48" cy="48" r="2.5" fill="#BFA86A" opacity="0.32"/>
-        </pattern>
-        <pattern id="pds-terrazzo" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-          <rect width="60" height="60" fill="#FBF7EE"/>
-          <circle cx="12" cy="18" r="1.2" fill="#C6BDA1" opacity="0.4"/>
-          <circle cx="42" cy="8"  r="1"   fill="#A89770" opacity="0.35"/>
-          <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
-          <circle cx="22" cy="48" r="1"   fill="#8A7B5A" opacity="0.3"/>
-          <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-terrazzo)"/>
-      <!-- North wall windows -->
-      <g vector-effect="non-scaling-stroke">
-        <line x1="40"  y1="14" x2="1560" y2="14" stroke="#C6BDA1" stroke-width="3"/>
-        <line x1="60"  y1="20" x2="380"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="420" y1="20" x2="780"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="820" y1="20" x2="1180" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="1220" y1="20" x2="1540" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-      </g>
-      <!-- Right wall: CUISINE (compact, narrow strip on the east edge) -->
-      <rect x="1480" y="170" width="115" height="500" rx="8" fill="url(#pds-zellige)" stroke="#A89770" stroke-width="1.5" stroke-dasharray="6 4"/>
-      <text transform="translate(1540, 420) rotate(-90)" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="16" font-weight="500" letter-spacing="8" fill="#7D6E45">CUISINE</text>
-      <!-- Pass-through window into cuisine -->
-      <rect x="1470" y="290" width="20" height="60" fill="#FBF7EE" stroke="#A89770" stroke-width="1.5"/>
-      <!-- South wall COMPTOIR (full width along the south wall, leaves the main floor clear) -->
-      <rect x="80" y="902" width="1240" height="56" rx="6" fill="url(#pds-walnut)"/>
-      <rect x="80" y="902" width="1240" height="5" rx="2.5" fill="url(#pds-brass)"/>
-      <rect x="84" y="907" width="1232" height="1.5" fill="#3A4439" opacity="0.5"/>
-      <rect x="680" y="882" width="80" height="20" rx="3" fill="#1A211B"/>
-      <circle cx="700" cy="892" r="3" fill="#C9A876"/>
-      <circle cx="720" cy="892" r="3" fill="#C9A876"/>
-      <circle cx="740" cy="892" r="3" fill="#C9A876"/>
-      <text x="700" y="942" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="12" font-weight="500" letter-spacing="6" fill="#E8C88A">COMPTOIR</text>
-      <!-- Escalier, bottom-right corner, compact -->
-      <g transform="translate(1340, 882)">
-        <rect width="130" height="80" rx="6" fill="#F0E8D6" stroke="#A89770" stroke-width="1.2"/>
-        <line x1="10" y1="20" x2="120" y2="20" stroke="#C4B493" stroke-width="1"/>
-        <line x1="10" y1="38" x2="120" y2="38" stroke="#C4B493" stroke-width="1"/>
-        <line x1="10" y1="56" x2="120" y2="56" stroke="#C4B493" stroke-width="1"/>
-        <path d="M 65 64 L 65 14 M 50 28 L 65 14 L 80 28" stroke="#7D6E45" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <!-- Plante, top-left corner, small -->
-      <g transform="translate(60, 70)">
-        <ellipse cx="0" cy="32" rx="24" ry="5" fill="#000" opacity="0.07"/>
-        <path d="M -20 4 L 20 4 L 16 36 L -16 36 Z" fill="#8B6B47"/>
-        <path d="M -20 4 L 20 4 L 18 10 L -18 10 Z" fill="#5C4730"/>
-        <path d="M 0 4 Q -26 -36 -32 -6"  stroke="#3D5E48" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 0 4 Q -10 -52 -6 -26"  stroke="#4F7560" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 0 4 Q 10 -52 6 -26"    stroke="#3D5E48" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 0 4 Q 26 -36 32 -6"    stroke="#4F7560" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 0 4 Q 0 -56 0 -28"     stroke="#2F4F3B" stroke-width="3" fill="none" stroke-linecap="round"/>
-      </g>
-      <!-- Entrée, left wall door arc -->
-      <g>
-        <rect x="0" y="470" width="6" height="100" fill="#FBF7EE"/>
-        <path d="M 6 570 A 80 80 0 0 1 86 490" stroke="#A89770" stroke-width="1" stroke-dasharray="4 4" fill="none"/>
-        <line x1="6" y1="570" x2="86" y2="570" stroke="#3D3530" stroke-width="2.5"/>
-        <text x="14" y="615" font-family="Inter Tight, system-ui" font-size="10" font-weight="500" letter-spacing="4" fill="#7D6E45">ENTRÉE</text>
-      </g>
-    </svg>
-  `,
-  terrasse: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <pattern id="pds-tiles" x="0" y="0" width="42" height="42" patternUnits="userSpaceOnUse">
-          <rect width="42" height="42" fill="#F7F2E8"/>
-          <line x1="0" y1="0" x2="42" y2="0" stroke="#D8CDA8" stroke-width="0.4"/>
-          <line x1="0" y1="0" x2="0"  y2="42" stroke="#D8CDA8" stroke-width="0.4"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-tiles)"/>
-      <g>
-        <rect x="60"  y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="80"  cy="32" rx="22" ry="14" fill="#4F7560"/>
-        <ellipse cx="80"  cy="26" rx="14" ry="10" fill="#5C8367"/>
-        <rect x="260" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="280" cy="32" rx="22" ry="14" fill="#3D5E48"/>
-        <ellipse cx="280" cy="26" rx="14" ry="10" fill="#4F7560"/>
-        <rect x="500" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="520" cy="32" rx="22" ry="14" fill="#5C8367"/>
-        <ellipse cx="520" cy="26" rx="14" ry="10" fill="#7DA68A"/>
-        <rect x="740" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="760" cy="32" rx="22" ry="14" fill="#4F7560"/>
-        <ellipse cx="760" cy="26" rx="14" ry="10" fill="#5C8367"/>
-        <rect x="1080" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="1100" cy="32" rx="22" ry="14" fill="#3D5E48"/>
-        <ellipse cx="1100" cy="26" rx="14" ry="10" fill="#4F7560"/>
-        <rect x="1380" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-        <ellipse cx="1400" cy="32" rx="22" ry="14" fill="#5C8367"/>
-        <ellipse cx="1400" cy="26" rx="14" ry="10" fill="#7DA68A"/>
-      </g>
-      <rect x="0" y="0" width="1600" height="8" fill="#000" opacity="0.06"/>
-      <line x1="20" y1="962" x2="1580" y2="962" stroke="#C4B493" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="952" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">trottoir</text>
-    </svg>
-  `,
-  bar: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <linearGradient id="pds-walnut-bar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0"   stop-color="#2A332A"/>
-          <stop offset="1"   stop-color="#151D17"/>
-        </linearGradient>
-        <linearGradient id="pds-brass-bar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#E8C88A"/>
-          <stop offset="1" stop-color="#B89052"/>
-        </linearGradient>
-        <pattern id="pds-terrazzo-bar" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-          <rect width="60" height="60" fill="#FBF7EE"/>
-          <circle cx="12" cy="18" r="1.2" fill="#C6BDA1" opacity="0.4"/>
-          <circle cx="42" cy="8"  r="1"   fill="#A89770" opacity="0.35"/>
-          <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-terrazzo-bar)"/>
-      <!-- North wall comptoir, long bar -->
-      <rect x="120" y="60" width="1360" height="80" rx="6" fill="url(#pds-walnut-bar)"/>
-      <rect x="120" y="60" width="1360" height="5" rx="2.5" fill="url(#pds-brass-bar)"/>
-      <!-- Espresso machine in middle -->
-      <rect x="730" y="30" width="120" height="36" rx="4" fill="#1A211B"/>
-      <circle cx="760" cy="48" r="5" fill="#C9A876"/>
-      <circle cx="790" cy="48" r="5" fill="#C9A876"/>
-      <circle cx="820" cy="48" r="5" fill="#C9A876"/>
-      <text x="780" y="115" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="14" font-weight="500" letter-spacing="8" fill="#E8C88A">COMPTOIR · BAR</text>
-      <!-- South wall windows -->
-      <g vector-effect="non-scaling-stroke">
-        <line x1="40"  y1="968" x2="1560" y2="968" stroke="#C6BDA1" stroke-width="2" stroke-dasharray="22 8"/>
-      </g>
-    </svg>
-  `,
-  etage: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <linearGradient id="pds-leather-forest" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0"   stop-color="#2F5946"/>
-          <stop offset="0.55" stop-color="#1F4A38"/>
-          <stop offset="1"   stop-color="#143828"/>
-        </linearGradient>
-        <linearGradient id="pds-leather-highlight" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#E8C88A" stop-opacity="0.5"/>
-          <stop offset="1" stop-color="#E8C88A" stop-opacity="0"/>
-        </linearGradient>
-        <radialGradient id="pds-spotlight" cx="50%" cy="50%" r="50%">
-          <stop offset="0"    stop-color="#FFE9B8" stop-opacity="0.18"/>
-          <stop offset="0.55" stop-color="#FFE9B8" stop-opacity="0.05"/>
-          <stop offset="1"    stop-color="#FFE9B8" stop-opacity="0"/>
-        </radialGradient>
-        <pattern id="pds-terrazzo-etage" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-          <rect width="60" height="60" fill="#FBF7EE"/>
-          <circle cx="12" cy="18" r="1.2" fill="#C6BDA1" opacity="0.4"/>
-          <circle cx="42" cy="8"  r="1"   fill="#A89770" opacity="0.35"/>
-          <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
-          <circle cx="22" cy="48" r="1"   fill="#8A7B5A" opacity="0.3"/>
-          <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-terrazzo-etage)"/>
-      <ellipse cx="800" cy="490" rx="340" ry="260" fill="url(#pds-spotlight)"/>
-      <g vector-effect="non-scaling-stroke">
-        <line x1="40"  y1="14" x2="1400" y2="14" stroke="#C6BDA1" stroke-width="3"/>
-        <line x1="80"  y1="20" x2="320"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="360" y1="20" x2="660"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="700" y1="20" x2="1000" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-        <line x1="1040" y1="20" x2="1380" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-      </g>
-      <g transform="translate(800, 490)">
-        <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-forest)" stroke-width="60" stroke-linecap="round" fill="none"/>
-        <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-highlight)" stroke-width="6" fill="none" transform="translate(0, -22)"/>
-        <text x="0" y="160" text-anchor="middle" font-family="Instrument Serif, serif" font-size="18" fill="#1F4A38" opacity="0.7">banquette ronde</text>
-      </g>
-      <g transform="translate(180, 882)">
-        <rect width="980" height="56" rx="10" fill="url(#pds-leather-forest)"/>
-        <rect width="980" height="4" rx="2" fill="url(#pds-leather-highlight)" opacity="0.6"/>
-      </g>
-    </svg>
-  `,
-  prive: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <pattern id="pds-zellige-prive" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-          <rect width="48" height="48" fill="#F2EBD6"/>
-          <circle cx="24" cy="24" r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="0"  cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-          <circle cx="48" cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-zellige-prive)"/>
-      <rect x="40" y="40" width="1520" height="902" rx="20" fill="none" stroke="#A89770" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="962" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">salon privé · accès rideau</text>
-    </svg>
-  `,
-  blank: `
-    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
-      <defs>
-        <pattern id="pds-blank-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-          <rect width="48" height="48" fill="#FBF7EE"/>
-          <circle cx="24" cy="24" r="0.8" fill="#C6BDA1" opacity="0.5"/>
-        </pattern>
-      </defs>
-      <rect width="1600" height="981.82" fill="url(#pds-blank-grid)"/>
-    </svg>
-  `,
+/* ─── Materials ───────────────────────────────────────────────────────────
+ *   The merchant is colouring THEIR restaurant, not Kiwi's chrome, so this
+ *   palette is materials (woods, stone, terracotta, brass) rather than the
+ *   brand ramp — same reasoning as the italic depiction exceptions in
+ *   CLAUDE.md §3. The three brand greens are in here so a plan can echo the
+ *   Kiwi identity, but the UI around the plan stays brand-locked. Free-form
+ *   hex is deliberately NOT offered: a colour wheel is how a floor plan ends
+ *   up magenta.                                                            */
+const PDS_MAT = [
+  { id: 'bone',   c: '#FBF7EE' }, { id: 'sand',   c: '#EFE7D6' },
+  { id: 'stone',  c: '#E0D7C4' }, { id: 'clay',   c: '#CFC0A6' },
+  { id: 'oak',    c: '#C9A46B' }, { id: 'brass',  c: '#BFA86A' },
+  { id: 'terra',  c: '#C4784F' }, { id: 'walnut', c: '#8A6A45' },
+  { id: 'sage',   c: '#7A9E8E' }, { id: 'ebony',  c: '#3A3128' },
+  { id: 'coal',   c: '#2A2A28' }, { id: 'ink',    c: '#141A16' },
+  { id: 'atlas',  c: '#0B6E4F' }, { id: 'riad',   c: '#053B2C' },
+  { id: 'mint',   c: '#7DF2B0' }, { id: 'glass',  c: '#BFD9E8' },
+];
+
+/* Floor finishes. Pure CSS background-image: tiles at a fixed size, so it
+   never distorts when the room is resized — the failure mode the old
+   `preserveAspectRatio="none"` scenes had. Tinted by the floor colour
+   underneath rather than baked, so one pattern serves every colour. */
+const PDS_FLOORS = {
+  plain:    '',
+  terrazzo: `radial-gradient(circle at 18% 26%, rgba(0,0,0,.07) 0 2.2px, transparent 2.3px),
+             radial-gradient(circle at 68% 62%, rgba(0,0,0,.055) 0 3px, transparent 3.1px),
+             radial-gradient(circle at 88% 18%, rgba(0,0,0,.05) 0 1.6px, transparent 1.7px)`,
+  zellige:  `linear-gradient(rgba(0,0,0,.055) 1px, transparent 1px),
+             linear-gradient(90deg, rgba(0,0,0,.055) 1px, transparent 1px)`,
+  bois:     `repeating-linear-gradient(90deg, rgba(0,0,0,.055) 0 1px, transparent 1px 92px),
+             repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 27px)`,
+  carreaux: `conic-gradient(rgba(0,0,0,.05) 0 25%, transparent 0 50%, rgba(0,0,0,.05) 0 75%, transparent 0)`,
 };
-function pdsScene(zone) {
-  const key = (zone?.scene) || (
-    /terr/i.test(zone?.name || '') ? 'terrasse' :
-    /bar|compt/i.test(zone?.name || '') ? 'bar' :
-    /étage|etage|1er|1\.ère|first/i.test(zone?.name || '') ? 'etage' :
-    /priv|salon/i.test(zone?.name || '') ? 'prive' :
-    /salle|principale|main|dining/i.test(zone?.name || '') ? 'salle' :
-    'blank'
-  );
-  return PDS_SCENES[key] || PDS_SCENES.blank;
+const PDS_FLOOR_SIZE = {
+  plain: 'auto', terrazzo: '46px 46px, 64px 64px, 38px 38px',
+  zellige: '42px 42px', bois: '92px 27px', carreaux: '58px 58px',
+};
+
+/* Pick legible text for any material — a table number on ebony needs bone
+   ink, the same number on bone needs dark ink. Relative luminance, sRGB. */
+function pdsInk(hex) {
+  const h = String(hex || '#FBF7EE').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const v = [0, 2, 4].map(i => {
+    const s = parseInt(n.slice(i, i + 2), 16) / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  return L > 0.42 ? '#141A16' : '#F7F3E8';
+}
+/* Slightly darker/lighter sibling of a material, for edges and shading. */
+function pdsShade(hex, amt) {
+  const h = String(hex || '#FBF7EE').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const p = [0, 2, 4].map(i => {
+    const c = Math.round(parseInt(n.slice(i, i + 2), 16) + amt * 255);
+    return Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0');
+  });
+  return '#' + p.join('');
+}
+
+/* ─── Fixtures ────────────────────────────────────────────────────────────
+ *   Everything that used to be a hardcoded path inside PDS_SCENES lives here
+ *   instead, as a KIND with default geometry. An instance owns its own
+ *   x/y/w/h/rot/color/label, so the comptoir can be deleted, the cuisine can
+ *   be resized and the entrance can be dragged to another wall — none of
+ *   which was expressible while they were artwork.
+ *
+ *   `draw` returns the body. Two strategies, and the choice is not cosmetic:
+ *     • 'box'  → a CSS box (background/border/overlay). CSS backgrounds tile
+ *                and borders keep their width, so a box survives any resize
+ *                undistorted. Correct for areas, counters, walls, rugs.
+ *     • 'svg'  → an inline SVG whose viewBox is generated from the
+ *                instance's OWN w/h, so one SVG unit is one logical unit and
+ *                geometry is authored in real dimensions. Distortion is
+ *                impossible by construction, which is what went wrong when
+ *                the scenes stretched a fixed viewBox to fit.
+ *   Labels are always an HTML overlay, never inside the SVG — SVG text
+ *   scales with the shape and turns into a smear on a wide fixture.        */
+const PDS_FIX = {
+  comptoir: {
+    grp: 'service', w: 460, h: 56, color: '#2A332A', blocking: 1, label: 'COMPTOIR',
+    minW: 80, minH: 28, render: 'box',
+    draw: (o, c) => ({
+      bg: `linear-gradient(180deg, ${pdsShade(c, .06)} 0%, ${c} 46%, ${pdsShade(c, -.05)} 100%)`,
+      border: `1px solid ${pdsShade(c, -.1)}`, radius: 4,
+      /* brass rail along the customer edge + a worktop highlight */
+      overlay: `linear-gradient(180deg, transparent calc(100% - 5px), #BFA86A calc(100% - 5px), #8E6C3A 100%),
+                linear-gradient(180deg, rgba(255,255,255,.16) 0 2px, transparent 2px)`,
+    }),
+  },
+  cuisine: {
+    grp: 'service', w: 200, h: 300, color: '#EFE7D6', blocking: 1, label: 'CUISINE',
+    minW: 60, minH: 60, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: `1.5px dashed ${pdsShade(c, -.32)}`, radius: 6,
+      overlay: `repeating-linear-gradient(45deg, rgba(0,0,0,.045) 0 6px, transparent 6px 14px)`,
+    }),
+  },
+  passe: {
+    grp: 'service', w: 150, h: 18, color: '#BFA86A', blocking: 0, label: '',
+    minW: 30, minH: 8, render: 'box',
+    draw: (o, c) => ({ bg: c, border: `1px solid ${pdsShade(c, -.18)}`, radius: 3 }),
+  },
+  caisse: {
+    grp: 'service', w: 74, h: 52, color: '#1F2820', blocking: 1, label: 'POS',
+    minW: 28, minH: 24, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: `1px solid ${pdsShade(c, .1)}`, radius: 5,
+      overlay: `linear-gradient(180deg, rgba(125,242,176,.5) 0 3px, transparent 3px)`,
+    }),
+  },
+  vitrine: {
+    grp: 'service', w: 130, h: 62, color: '#BFD9E8', blocking: 1, label: '',
+    minW: 40, minH: 26, render: 'box',
+    draw: (o, c) => ({
+      bg: `linear-gradient(180deg, ${pdsShade(c, .08)}, ${c})`,
+      border: `1.5px solid ${pdsShade(c, -.24)}`, radius: 4,
+      overlay: `repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 1px, transparent 1px 30px)`,
+    }),
+  },
+
+  mur: {
+    grp: 'archi', w: 240, h: 12, color: '#2C2520', blocking: 1, label: '',
+    minW: 16, minH: 4, render: 'box',
+    draw: (o, c) => ({ bg: c, border: 'none', radius: 1 }),
+  },
+  porte: {
+    grp: 'archi', w: 92, h: 14, color: '#0B6E4F', blocking: 0, label: '',
+    minW: 30, minH: 6, render: 'svg',
+    /* Swing arc drawn in the instance's own units, so a wider doorway gets a
+       wider arc instead of an ellipse. */
+    draw: (o, c, g) => `
+      <path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}"
+            fill="none" stroke="${c}" stroke-width="1.4" stroke-dasharray="4 3" opacity=".62"/>
+      <rect x="0" y="${g.h - 4}" width="${g.w}" height="4" rx="1.5" fill="${c}"/>`,
+  },
+  fenetre: {
+    grp: 'archi', w: 140, h: 10, color: '#BFD9E8', blocking: 0, label: '',
+    minW: 24, minH: 4, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: `1px solid ${pdsShade(c, -.3)}`, radius: 1,
+      overlay: `repeating-linear-gradient(90deg, ${pdsShade(c, -.3)} 0 1px, transparent 1px 34px)`,
+    }),
+  },
+  colonne: {
+    grp: 'archi', w: 30, h: 30, color: '#2C2520', blocking: 1, label: '',
+    minW: 10, minH: 10, render: 'svg',
+    draw: (o, c, g) => `
+      <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="3" fill="${c}"/>
+      <rect x="${g.w * .22}" y="${g.h * .22}" width="${g.w * .56}" height="${g.h * .56}"
+            rx="2" fill="none" stroke="${pdsShade(c, .18)}" stroke-width="1"/>`,
+  },
+  escalier: {
+    grp: 'archi', w: 130, h: 96, color: '#CFC0A6', blocking: 1, label: '',
+    minW: 40, minH: 34, render: 'svg',
+    /* Tread count derived from depth: a taller stair gets more treads rather
+       than the same treads stretched. */
+    draw: (o, c, g) => {
+      const n = Math.max(3, Math.min(12, Math.round(g.h / 15)));
+      const step = g.h / n;
+      let t = `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="3" fill="${c}"/>`;
+      for (let i = 1; i < n; i++) {
+        t += `<line x1="0" y1="${(step * i).toFixed(1)}" x2="${g.w}" y2="${(step * i).toFixed(1)}"
+              stroke="${pdsShade(c, -.24)}" stroke-width="1"/>`;
+      }
+      const ax = g.w / 2, top = g.h * .18, bot = g.h * .82;
+      t += `<path d="M${ax} ${bot} L${ax} ${top} M${ax} ${top} l${-g.w * .09} ${g.h * .1}
+            M${ax} ${top} l${g.w * .09} ${g.h * .1}" fill="none"
+            stroke="${pdsShade(c, -.42)}" stroke-width="1.6" stroke-linecap="round"/>`;
+      return t;
+    },
+  },
+  wc: {
+    grp: 'archi', w: 92, h: 92, color: '#E0D7C4', blocking: 1, label: 'WC',
+    minW: 34, minH: 34, render: 'box',
+    draw: (o, c) => ({ bg: c, border: `1.5px solid ${pdsShade(c, -.28)}`, radius: 4 }),
+  },
+
+  banquette: {
+    grp: 'salle', w: 260, h: 66, color: '#8A6A45', blocking: 1, label: '',
+    minW: 60, minH: 30, render: 'svg',
+    /* Cushion count follows length, so a long banquette reads as a bench and
+       not as one enormous pillow. */
+    draw: (o, c, g) => {
+      const n = Math.max(1, Math.round(g.w / 84));
+      const pad = 3, cw = (g.w - pad * (n + 1)) / n;
+      let t = `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="5" fill="${pdsShade(c, -.12)}"/>`;
+      for (let i = 0; i < n; i++) {
+        t += `<rect x="${(pad + i * (cw + pad)).toFixed(1)}" y="${pad}" width="${cw.toFixed(1)}"
+              height="${(g.h - pad * 2).toFixed(1)}" rx="4" fill="${c}"/>`;
+      }
+      t += `<rect x="0" y="0" width="${g.w}" height="${Math.min(7, g.h * .16).toFixed(1)}"
+            rx="3" fill="${pdsShade(c, -.2)}"/>`;
+      return t;
+    },
+  },
+  claustra: {
+    grp: 'salle', w: 200, h: 16, color: '#C9A46B', blocking: 1, label: '',
+    minW: 40, minH: 8, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: `1px solid ${pdsShade(c, -.2)}`, radius: 3,
+      overlay: `repeating-linear-gradient(90deg, ${pdsShade(c, -.26)} 0 2px, transparent 2px 11px)`,
+    }),
+  },
+  plante: {
+    grp: 'salle', w: 46, h: 46, color: '#0B6E4F', blocking: 1, label: '',
+    minW: 16, minH: 16, render: 'svg',
+    draw: (o, c, g) => {
+      const cx = g.w / 2, potH = g.h * .34, potW = g.w * .46;
+      return `
+      <ellipse cx="${cx}" cy="${g.h * .40}" rx="${g.w * .46}" ry="${g.h * .34}" fill="${c}"/>
+      <ellipse cx="${cx - g.w * .17}" cy="${g.h * .33}" rx="${g.w * .25}" ry="${g.h * .20}" fill="${pdsShade(c, .12)}"/>
+      <ellipse cx="${cx + g.w * .16}" cy="${g.h * .30}" rx="${g.w * .21}" ry="${g.h * .17}" fill="${pdsShade(c, .06)}"/>
+      <path d="M${cx - potW / 2} ${g.h - potH} L${cx + potW / 2} ${g.h - potH}
+               L${cx + potW * .38} ${g.h} L${cx - potW * .38} ${g.h} Z" fill="#B0763F"/>
+      <rect x="${cx - potW / 2}" y="${g.h - potH}" width="${potW}"
+            height="${Math.min(4, potH * .3).toFixed(1)}" fill="#C98A4E"/>`;
+    },
+  },
+  tapis: {
+    grp: 'salle', w: 260, h: 180, color: '#C4784F', blocking: 0, label: '',
+    minW: 40, minH: 40, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: `3px solid ${pdsShade(c, -.16)}`, radius: 2, opacity: .55,
+      overlay: `repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 5px, transparent 5px 12px)`,
+    }),
+  },
+  garde: {
+    grp: 'salle', w: 300, h: 10, color: '#BFA86A', blocking: 1, label: '',
+    minW: 30, minH: 4, render: 'box',
+    draw: (o, c) => ({
+      bg: c, border: 'none', radius: 5,
+      overlay: `repeating-linear-gradient(90deg, ${pdsShade(c, -.3)} 0 2px, transparent 2px 22px)`,
+    }),
+  },
+  texte: {
+    grp: 'salle', w: 140, h: 30, color: '#2C2520', blocking: 0, label: 'TEXTE',
+    minW: 40, minH: 16, render: 'none',
+    draw: () => ({}),
+  },
+};
+const PDS_FIX_GRP = { service: 'Service', archi: 'Architecture', salle: 'Salle' };
+
+/* Instance-first geometry. THE fix for "you cannot resize anything": size and
+   seat count used to be read from PDS_TABLE_TYPES[t.type] / PDS_EL_TYPES[e.type],
+   i.e. owned by the KIND, so a resize had nowhere to be stored and every table
+   of a type was locked to one size. Now the instance wins and the kind is only
+   a source of defaults for newly-created objects. */
+function pdsGeom(o) {
+  const def = PDS_TABLE_TYPES[o.type] || PDS_FIX[o.type] || {};
+  const w = Math.max(8, +o.w || def.w || 80);
+  const h = Math.max(8, +o.h || def.h || 80);
+  const seats = (o.seats != null) ? +o.seats : (def.seats || 0);
+  return { w, h, seats, shape: o.shape || def.shape || 'rect', def };
+}
+function pdsColor(o) {
+  const def = PDS_TABLE_TYPES[o.type] || PDS_FIX[o.type] || {};
+  /* Tables default to sand, not bone: the floor is bone, and a bone table on
+     a bone floor reads as a smudge. */
+  return o.color || def.color || (PDS_TABLE_TYPES[o.type] ? '#EFE7D6' : '#FBF7EE');
+}
+/* Relative luminance, shared by pdsInk and the chair tone. */
+function pdsLum(hex) {
+  const h = String(hex || '#FBF7EE').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const v = [0, 2, 4].map(i => {
+    const s = parseInt(n.slice(i, i + 2), 16) / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+/* Chairs must stay visible against BOTH the tabletop and the floor. Shading
+   the table colour by a fixed amount fails at the ends of the ramp — a bone
+   table shaded 6% is still bone. Push away from the table's luminance
+   instead, so the delta is guaranteed at either end. */
+function pdsChairTone(c) {
+  const light = pdsLum(c) > 0.34;
+  return {
+    pad:  pdsShade(c, light ? -0.26 : 0.20),
+    back: pdsShade(c, light ? -0.40 : 0.32),
+    lip:  pdsShade(c, light ? -0.14 : 0.30),
+  };
+}
+
+/* ─── Room shell ──────────────────────────────────────────────────────────
+ *   Replaces PDS_SCENES entirely. The room is now four editable properties
+ *   instead of one of six frozen drawings, which is what makes "change the
+ *   colour of the restaurant" a two-click operation.                       */
+function pdsRoom(zone) {
+  const r = (zone && zone.room) || {};
+  return {
+    floor:   r.floor   || '#FBF7EE',
+    wall:    r.wall    || '#2C2520',
+    finish:  r.finish  || 'terrazzo',
+    wallW:   (r.wallW != null) ? +r.wallW : 2,
+  };
+}
+function pdsRoomShell(zone) {
+  const r = pdsRoom(zone);
+  const pat = PDS_FLOORS[r.finish] || '';
+  const size = PDS_FLOOR_SIZE[r.finish] || 'auto';
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${r.floor};
+    ${pat ? `background-image:${pat.replace(/\s+/g, ' ')}; background-size:${size};` : ''}
+    box-shadow: inset 0 0 0 ${r.wallW}px ${r.wall};
+  "></div>`;
 }
 
 /* ─── Static i18n table — every label, status, role, template name ───────── */
@@ -3794,6 +3864,89 @@ const PDS_STR = {
   },
 };
 
+/* ─── v2 strings ──────────────────────────────────────────────────────────
+ *   Added by assignment rather than inline, so the three language blocks
+ *   above stay diff-clean and a missing key is a visible undefined instead
+ *   of a silent French fallback in an Arabic UI. */
+Object.assign(PDS_STR.fr, {
+  undo: 'Annuler', redo: 'Rétablir',
+  undoNothing: 'Rien à annuler', redoNothing: 'Rien à rétablir',
+  unitCm: 'cm', deletedSuffix: 'supprimé',
+  roomTitle: 'La salle', roomHint: 'Sol, murs et dimensions de cette zone.',
+  roomFloor: 'Sol', roomWall: 'Murs', roomFinish: 'Finition',
+  roomW: 'Larg.', roomH: 'Prof.', roomWallW: 'Mur',
+  finplain: 'Uni', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
+  finbois: 'Parquet', fincarreaux: 'Carreaux',
+  grpservice: 'Service', grparchi: 'Architecture', grpsalle: 'Salle',
+  fixcomptoir: 'Comptoir', fixcuisine: 'Cuisine', fixpasse: 'Passe-plat',
+  fixcaisse: 'Caisse', fixvitrine: 'Vitrine', fixmur: 'Mur', fixporte: 'Entrée',
+  fixfenetre: 'Fenêtre', fixcolonne: 'Colonne', fixescalier: 'Escalier',
+  fixwc: 'WC', fixbanquette: 'Banquette', fixclaustra: 'Claustra',
+  fixplante: 'Plante', fixtapis: 'Tapis', fixgarde: 'Garde-corps', fixtexte: 'Texte',
+  matbone: 'Ivoire', matsand: 'Sable', matstone: 'Pierre', matclay: 'Argile',
+  matoak: 'Chêne', matbrass: 'Laiton', matterra: 'Terracotta', matwalnut: 'Noyer',
+  matsage: 'Sauge', matebony: 'Ébène', matcoal: 'Charbon', matink: 'Encre',
+  matatlas: 'Atlas', matriad: 'Riad', matmint: 'Menthe', matglass: 'Verre',
+  inspectorSeats: 'Couverts', inspectorLabel: 'Libellé', inspectorSize: 'Taille',
+  inspectorRotation: 'Orientation', inspectorMaterial: 'Matière', inspectorDepth: 'Profondeur',
+  layerBack: 'Arrière', layerFront: 'Avant',
+  lock: 'Verrouiller', unlock: 'Déverrouiller',
+  lockedHint: 'Verrouillé — déverrouillez pour modifier',
+  rotateHint: 'Faire pivoter',
+});
+Object.assign(PDS_STR.en, {
+  undo: 'Undo', redo: 'Redo',
+  undoNothing: 'Nothing to undo', redoNothing: 'Nothing to redo',
+  unitCm: 'cm', deletedSuffix: 'deleted',
+  roomTitle: 'The room', roomHint: 'Floor, walls and dimensions of this zone.',
+  roomFloor: 'Floor', roomWall: 'Walls', roomFinish: 'Finish',
+  roomW: 'Width', roomH: 'Depth', roomWallW: 'Wall',
+  finplain: 'Plain', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
+  finbois: 'Wood', fincarreaux: 'Checker',
+  grpservice: 'Service', grparchi: 'Architecture', grpsalle: 'Room',
+  fixcomptoir: 'Counter', fixcuisine: 'Kitchen', fixpasse: 'Pass',
+  fixcaisse: 'Till', fixvitrine: 'Display', fixmur: 'Wall', fixporte: 'Entrance',
+  fixfenetre: 'Window', fixcolonne: 'Column', fixescalier: 'Stairs',
+  fixwc: 'WC', fixbanquette: 'Banquette', fixclaustra: 'Screen',
+  fixplante: 'Plant', fixtapis: 'Rug', fixgarde: 'Railing', fixtexte: 'Text',
+  matbone: 'Bone', matsand: 'Sand', matstone: 'Stone', matclay: 'Clay',
+  matoak: 'Oak', matbrass: 'Brass', matterra: 'Terracotta', matwalnut: 'Walnut',
+  matsage: 'Sage', matebony: 'Ebony', matcoal: 'Charcoal', matink: 'Ink',
+  matatlas: 'Atlas', matriad: 'Riad', matmint: 'Mint', matglass: 'Glass',
+  inspectorSeats: 'Covers', inspectorLabel: 'Label', inspectorSize: 'Size',
+  inspectorRotation: 'Orientation', inspectorMaterial: 'Material', inspectorDepth: 'Depth',
+  layerBack: 'Send back', layerFront: 'Bring front',
+  lock: 'Lock', unlock: 'Unlock',
+  lockedHint: 'Locked — unlock to edit',
+  rotateHint: 'Rotate',
+});
+Object.assign(PDS_STR.ar, {
+  undo: 'تراجع', redo: 'إعادة',
+  undoNothing: 'لا شيء للتراجع عنه', redoNothing: 'لا شيء لإعادته',
+  unitCm: 'سم', deletedSuffix: 'حُذف',
+  roomTitle: 'القاعة', roomHint: 'الأرضية والجدران وأبعاد هذه المنطقة.',
+  roomFloor: 'الأرضية', roomWall: 'الجدران', roomFinish: 'التشطيب',
+  roomW: 'العرض', roomH: 'العمق', roomWallW: 'الجدار',
+  finplain: 'سادة', finterrazzo: 'تيرازو', finzellige: 'زليج',
+  finbois: 'خشب', fincarreaux: 'مربعات',
+  grpservice: 'الخدمة', grparchi: 'العمارة', grpsalle: 'القاعة',
+  fixcomptoir: 'الكونتوار', fixcuisine: 'المطبخ', fixpasse: 'ممر الأطباق',
+  fixcaisse: 'الصندوق', fixvitrine: 'واجهة العرض', fixmur: 'جدار', fixporte: 'المدخل',
+  fixfenetre: 'نافذة', fixcolonne: 'عمود', fixescalier: 'درج',
+  fixwc: 'المرافق', fixbanquette: 'أريكة', fixclaustra: 'حاجز',
+  fixplante: 'نبتة', fixtapis: 'زربية', fixgarde: 'حاجز واقٍ', fixtexte: 'نص',
+  matbone: 'عاجي', matsand: 'رملي', matstone: 'حجري', matclay: 'طيني',
+  matoak: 'بلوط', matbrass: 'نحاس', matterra: 'فخاري', matwalnut: 'جوز',
+  matsage: 'مريمية', matebony: 'أبنوس', matcoal: 'فحمي', matink: 'حبري',
+  matatlas: 'أطلس', matriad: 'رياض', matmint: 'نعناع', matglass: 'زجاج',
+  inspectorSeats: 'المقاعد', inspectorLabel: 'التسمية', inspectorSize: 'الحجم',
+  inspectorRotation: 'الاتجاه', inspectorMaterial: 'المادة', inspectorDepth: 'العمق',
+  layerBack: 'إلى الخلف', layerFront: 'إلى الأمام',
+  lock: 'قفل', unlock: 'فتح',
+  lockedHint: 'مقفل — افتح القفل للتعديل',
+  rotateHint: 'تدوير',
+});
+
 /* ─── Default roster — used when no team data is provided ────────────────── */
 const PDS_DEFAULT_STAFF = [
   { id: 'KR', name: 'Karim Rifai',     color: '#0B6E4F' },
@@ -3832,15 +3985,122 @@ const PDS_EL_TYPES = {
 };
 
 /* ─── State manager · loaded from localStorage on demand ──────────────── */
+/* ─── v1 → v2 migration ───────────────────────────────────────────────────
+ *   v1 stored size and seats on the KIND and drew the comptoir, cuisine,
+ *   stairs, plant and entrance inside a frozen SVG scene. v2 stores geometry
+ *   on the instance and makes those fixtures real objects.
+ *
+ *   The scene → fixture step matters more than it looks: a merchant who had
+ *   the "salle" backdrop had a counter and a kitchen on their plan. Dropping
+ *   the scenes without replacing them would delete both from their floor. So
+ *   each retired scene is reconstituted as the objects it used to depict —
+ *   this time movable, resizable and deletable.                            */
+const PDS_SCENE_MIGRATION = {
+  salle: {
+    room: { floor: '#FBF7EE', wall: '#2C2520', finish: 'terrazzo' },
+    fix: [
+      { type: 'comptoir', x: 40,  y: 470, w: 420, h: 42 },
+      { type: 'cuisine',  x: 700, y: 48,  w: 150, h: 300 },
+      { type: 'porte',    x: 6,   y: 228, w: 80,  h: 14, rot: 90 },
+      { type: 'plante',   x: 792, y: 466, w: 46,  h: 46 },
+    ],
+  },
+  terrasse: {
+    room: { floor: '#E0D7C4', wall: '#8A6A45', finish: 'carreaux' },
+    fix: [
+      { type: 'garde',  x: 20,  y: 506, w: 840, h: 10 },
+      { type: 'plante', x: 28,  y: 30,  w: 46,  h: 46 },
+      { type: 'plante', x: 806, y: 30,  w: 46,  h: 46 },
+    ],
+  },
+  bar: {
+    room: { floor: '#EFE7D6', wall: '#1F2820', finish: 'bois' },
+    fix: [
+      { type: 'comptoir', x: 60,  y: 118, w: 520, h: 54 },
+      { type: 'vitrine',  x: 640, y: 110, w: 150, h: 66 },
+      { type: 'fenetre',  x: 120, y: 6,   w: 200, h: 10 },
+    ],
+  },
+  etage: {
+    room: { floor: '#FBF7EE', wall: '#2C2520', finish: 'zellige' },
+    fix: [
+      { type: 'escalier',  x: 44, y: 44,  w: 130, h: 96 },
+      { type: 'banquette', x: 40, y: 452, w: 300, h: 66 },
+    ],
+  },
+  prive: {
+    room: { floor: '#EFE7D6', wall: '#053B2C', finish: 'zellige' },
+    fix: [{ type: 'tapis', x: 260, y: 170, w: 360, h: 220 }],
+  },
+  blank: { room: { floor: '#FBF7EE', wall: '#2C2520', finish: 'plain' }, fix: [] },
+};
+const PDS_EL_RENAME = { wall: 'mur', door: 'porte', window: 'fenetre', column: 'colonne', plant: 'plante' };
+
+function pdsNormalize(state) {
+  if (!state || !Array.isArray(state.zones)) return state;
+  const fresh = state.v !== 2;
+  let nextEl = 1;
+  const elId = () => 'em' + (nextEl++) + '_' + Math.random().toString(36).slice(2, 6);
+
+  state.zones.forEach(z => {
+    const scene = z.scene;
+    const mig = PDS_SCENE_MIGRATION[scene] || PDS_SCENE_MIGRATION.blank;
+    z.room = Object.assign({}, mig.room, z.room || {});
+    if (z.room.w == null) z.room.w = PDS_CANVAS_W;
+    if (z.room.h == null) z.room.h = PDS_CANVAS_H;
+    if (z.room.wallW == null) z.room.wallW = 2;
+    if (fresh && scene) {
+      /* Reconstitute what the scene used to draw, once. */
+      state.elements = state.elements || [];
+      mig.fix.forEach((f, i) => {
+        state.elements.push(Object.assign({
+          id: elId(), zone: z.id, rot: 0, color: (PDS_FIX[f.type] || {}).color,
+          label: null, z: i, locked: false,
+        }, f));
+      });
+    }
+    delete z.scene;
+  });
+
+  (state.tables || []).forEach(t => {
+    const cfg = PDS_TABLE_TYPES[t.type] || PDS_TABLE_TYPES.round4;
+    if (t.w == null) t.w = cfg.w;
+    if (t.h == null) t.h = cfg.h;
+    if (t.seats == null) t.seats = cfg.seats;
+    if (t.shape == null) t.shape = cfg.shape;
+    if (t.color === undefined) t.color = null;
+    if (t.locked == null) t.locked = false;
+  });
+
+  state.elements = (state.elements || []).map((e, i) => {
+    const type = PDS_EL_RENAME[e.type] || e.type;
+    const cfg = PDS_FIX[type];
+    if (!cfg) return null;          /* unknown kind — drop rather than crash */
+    return Object.assign({}, e, {
+      type,
+      w: e.w != null ? e.w : cfg.w,
+      h: e.h != null ? e.h : cfg.h,
+      color: e.color || cfg.color,
+      label: e.label !== undefined ? e.label : null,
+      z: e.z != null ? e.z : i,
+      locked: !!e.locked,
+    });
+  }).filter(Boolean);
+
+  if (state.showChairs == null) state.showChairs = true;
+  state.v = 2;
+  return state;
+}
+
 function pdsLoad() {
   try {
     const raw = localStorage.getItem(pdsKey());
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.zones && parsed.tables && parsed.staff) return parsed;
+      if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
     }
   } catch (e) { /* fall through to default */ }
-  return pdsDefaultState();
+  return pdsNormalize(pdsDefaultState());
 }
 function pdsWriteLocal(state) {
   try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
@@ -4143,7 +4403,7 @@ handlers['nav-tables'] = () => {
   /* Quick counters used in the subtitle + KPI strip */
   const nTables = state.tables.length;
   const nOcc = state.tables.filter(t => t.status === 'occupied').length;
-  const nCovers = state.tables.reduce((s, t) => s + (PDS_TABLE_TYPES[t.type]?.seats || 0), 0);
+  const nCovers = state.tables.reduce((s, t) => s + pdsGeom(t).seats, 0);
 
   const dr = fullpage({
     title: T.title,
@@ -4174,7 +4434,7 @@ handlers['nav-tables'] = () => {
 /* ═══ RENDERER ══════════════════════════════════════════════════════ */
 function pdsRenderBody(state, T) {
   const nTables = state.tables.length;
-  const nCovers = state.tables.reduce((s, t) => s + (PDS_TABLE_TYPES[t.type]?.seats || 0), 0);
+  const nCovers = state.tables.reduce((s, t) => s + pdsGeom(t).seats, 0);
   const nZones = state.zones.length;
   const nServers = state.staff.length;
   return `
@@ -4212,15 +4472,240 @@ function pdsRenderBody(state, T) {
   `;
 }
 
+/* Chair band: chairs live OUTSIDE the table footprint, so every table cell is
+   inflated by PDS_PAD on all four sides and the SVG viewBox is offset to
+   match. The stored x/y therefore still means "top-left of the tabletop",
+   unchanged from v1, and rotation still spins about the tabletop centre
+   because the inflation is symmetric. */
+const PDS_PAD = 19;
+
+/* Selection lives in pdsAttach's closure; the renderer needs to read it to
+   draw handles on the selected object. This is the same Set, not a copy —
+   pdsAttach assigns it — so there is still exactly one source of truth. */
+let PDS_SEL = new Set();
+
+/* Find any object by id across both arrays. Tables and fixtures use disjoint
+   id prefixes, so one lookup serves both and the inspector, handles and
+   keyboard nudge don't need to know which array they're editing. */
+function pdsFind(state, id) {
+  const t = state.tables.find(o => o.id === id);
+  if (t) return { o: t, table: true };
+  const e = state.elements.find(o => o.id === id);
+  if (e) return { o: e, table: false };
+  return null;
+}
+function pdsPlane(zone) {
+  const r = (zone && zone.room) || {};
+  return { w: Math.max(240, +r.w || PDS_CANVAS_W), h: Math.max(200, +r.h || PDS_CANVAS_H) };
+}
+/* Plane of the zone currently on screen — the clamp bound for drag and resize.
+   PDS_CANVAS_W/H are now only the default room size, not a global. */
+function pdsPlaneOf(state) {
+  return pdsPlane(state.zones.find(z => z.id === state.activeZone) || state.zones[0]);
+}
+
+/* ─── Undo ────────────────────────────────────────────────────────────────
+ *   Snapshots of the three mutable arrays. A designer who cannot undo does
+ *   not experiment, and an editor nobody experiments in gets used once.
+ *   pdsPush is called BEFORE a mutation, by the action that performs it. */
+const PDS_UNDO = { stack: [], redo: [] };
+function pdsSnap(state) {
+  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements });
+}
+function pdsApplySnap(state, s) {
+  const d = JSON.parse(s);
+  state.zones = d.zones; state.tables = d.tables; state.elements = d.elements;
+  if (!state.zones.some(z => z.id === state.activeZone)) state.activeZone = state.zones[0]?.id;
+}
+function pdsPush(state) {
+  PDS_UNDO.stack.push(pdsSnap(state));
+  if (PDS_UNDO.stack.length > 40) PDS_UNDO.stack.shift();
+  PDS_UNDO.redo.length = 0;
+}
+function pdsUndo(state) {
+  if (!PDS_UNDO.stack.length) return false;
+  PDS_UNDO.redo.push(pdsSnap(state));
+  pdsApplySnap(state, PDS_UNDO.stack.pop());
+  return true;
+}
+function pdsRedo(state) {
+  if (!PDS_UNDO.redo.length) return false;
+  PDS_UNDO.stack.push(pdsSnap(state));
+  pdsApplySnap(state, PDS_UNDO.redo.pop());
+  return true;
+}
+
+/* First grid position where a w×h object clears everything already placed,
+   with an 8-unit breathing gap. Beats the old "centre + n×16 offset", which
+   stacked the 7th item straight back onto the 1st. */
+function pdsFreeSpot(state, w, h, plane) {
+  const zone = state.activeZone;
+  const boxes = state.tables.filter(t => t.zone === zone).map(t => ({ x: t.x, y: t.y, g: pdsGeom(t) }))
+    .concat(state.elements.filter(e => e.zone === zone).map(e => ({ x: e.x, y: e.y, g: pdsGeom(e) })));
+  /* Chairs stick PDS_PAD out of every table, so a gap smaller than two chair
+     bands puts one table's chairs inside its neighbour's. Add walking room on
+     top of that: this is a restaurant floor, not a packing problem. */
+  const gap = PDS_PAD * 2 + 24;
+  const hit = (x, y) => boxes.some(b =>
+    x < b.x + b.g.w + gap && x + w + gap > b.x && y < b.y + b.g.h + gap && y + h + gap > b.y);
+  /* How much this position actually covers other objects (no gap allowance) —
+     used only to rank fallbacks. */
+  const overlapArea = (x, y) => boxes.reduce((sum, b) => {
+    const ox = Math.min(x + w, b.x + b.g.w) - Math.max(x, b.x);
+    const oy = Math.min(y + h, b.y + b.g.h) - Math.max(y, b.y);
+    return sum + (ox > 0 && oy > 0 ? ox * oy : 0);
+  }, 0);
+  const step = PDS_GRID * 2;
+  const top = 48;   /* clear of the room's own name plate */
+  let best = null, bestArea = Infinity;
+  for (let y = top; y + h <= plane.h - PDS_GRID; y += step) {
+    for (let x = PDS_GRID * 2; x + w <= plane.w - PDS_GRID; x += step) {
+      if (!hit(x, y)) return { x, y };
+      /* Remember the least-crowded spot in case nothing is fully clear. */
+      const a = overlapArea(x, y);
+      if (a < bestArea) { bestArea = a; best = { x, y }; }
+    }
+  }
+  /* A full floor used to dump the new object dead-centre, straight on top of
+     whatever was already there. Land on the emptiest patch instead — still
+     visible, still draggable, but not hidden under a table. */
+  return best || { x: Math.max(0, Math.round((plane.w - w) / 2)), y: Math.max(0, Math.round((plane.h - h) / 2)) };
+}
+
+/* ─── Resize + rotate ─────────────────────────────────────────────────────
+ *   Eight edge/corner handles plus a rotation grip, on tables and fixtures
+ *   alike. Two things make this correct rather than approximately correct:
+ *
+ *   1. Screen deltas are divided by the stage scale k (pdsK) and then rotated
+ *      into the object's LOCAL frame, so dragging the east handle of a table
+ *      turned 30° widens it along its own axis instead of along the screen's.
+ *   2. The handle opposite the one being dragged stays put. Because rotation
+ *      is about the centre, holding an edge still means moving the centre to
+ *      compensate: with A the anchor in local coords and c the local centre,
+ *      C1 = C0 + R·((A0 − A1) + (c1 − c0)). Without that term a rotated
+ *      object crawls across the floor as you resize it.                    */
+function pdsAttachResize(root, state, T, refresh, selection) {
+  root.querySelectorAll('[data-pds-handle]').forEach(hd => {
+    const dir = hd.getAttribute('data-pds-handle');
+    const id  = hd.getAttribute('data-pds-hid');
+    hd.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      const f = pdsFind(state, id);
+      if (!f || f.o.locked) return;
+      const o = f.o;
+      const g0 = pdsGeom(o);
+      const K = (f.table ? PDS_TABLE_TYPES[o.type] : PDS_FIX[o.type]) || {};
+      const minW = K.minW || 28, minH = K.minH || 28;
+      const plane = pdsPlaneOf(state);
+      const k = pdsK(root);
+      const rot = o.rot || 0;
+      const rad = rot * Math.PI / 180;
+      const cos = Math.cos(rad), sin = Math.sin(rad);
+      const R = (vx, vy) => [vx * cos - vy * sin, vx * sin + vy * cos];
+      const w0 = g0.w, h0 = g0.h;
+      const C0 = [o.x + w0 / 2, o.y + h0 / 2];
+      const sx = ev.clientX, sy = ev.clientY;
+      const cell = root.querySelector(`[data-pds-table="${id}"], [data-pds-el="${id}"]`);
+      let live = false;
+
+      const move = (e2) => {
+        const ddx = (e2.clientX - sx) / k, ddy = (e2.clientY - sy) / k;
+        if (!live) {
+          if (Math.abs(ddx) < 2 && Math.abs(ddy) < 2) return;
+          live = true;
+          pdsPush(state);
+          if (cell) cell.classList.add('is-resizing');
+        }
+
+        if (dir === 'rot') {
+          if (!cell) return;
+          const r = cell.getBoundingClientRect();
+          const a = Math.atan2(e2.clientY - (r.top + r.height / 2),
+                               e2.clientX - (r.left + r.width / 2)) * 180 / Math.PI + 90;
+          let deg = (a + 360) % 360;
+          if (state.snap) deg = Math.round(deg / 15) * 15;
+          o.rot = Math.round(deg) % 360;
+          return;
+        }
+
+        /* Screen delta → the object's own axes. */
+        const ldx = ddx * cos + ddy * sin;
+        const ldy = -ddx * sin + ddy * cos;
+
+        let w1 = w0, h1 = h0;
+        if (dir.includes('e')) w1 = w0 + ldx;
+        if (dir.includes('w')) w1 = w0 - ldx;
+        if (dir.includes('s')) h1 = h0 + ldy;
+        if (dir.includes('n')) h1 = h0 - ldy;
+
+        if (state.snap) {
+          w1 = Math.round(w1 / PDS_GRID) * PDS_GRID;
+          h1 = Math.round(h1 / PDS_GRID) * PDS_GRID;
+        }
+        w1 = Math.max(minW, Math.min(plane.w, Math.round(w1)));
+        h1 = Math.max(minH, Math.min(plane.h, Math.round(h1)));
+
+        /* Hold the opposite edge — see the note above. */
+        const A0 = [dir.includes('w') ? w0 : 0, dir.includes('n') ? h0 : 0];
+        const A1 = [dir.includes('w') ? w1 : 0, dir.includes('n') ? h1 : 0];
+        const vx = (A0[0] - A1[0]) + (w1 - w0) / 2;
+        const vy = (A0[1] - A1[1]) + (h1 - h0) / 2;
+        const [rx, ry] = R(vx, vy);
+        const C1 = [C0[0] + rx, C0[1] + ry];
+
+        o.w = w1; o.h = h1;
+        o.x = Math.round(C1[0] - w1 / 2);
+        o.y = Math.round(C1[1] - h1 / 2);
+        if (!rot) {   /* only meaningful while axis-aligned */
+          o.x = Math.max(0, Math.min(plane.w - w1, o.x));
+          o.y = Math.max(0, Math.min(plane.h - h1, o.y));
+        }
+
+        /* Live preview without a full re-render — a refresh per pointermove
+           would rebuild both rails and drop the pointer capture. */
+        if (cell) {
+          const pad = f.table ? PDS_PAD : 0;
+          cell.style.left = (o.x - pad) + 'px';
+          cell.style.top = (o.y - pad) + 'px';
+          cell.style.width = (w1 + pad * 2) + 'px';
+          cell.style.height = (h1 + pad * 2) + 'px';
+          cell.style.transform = `rotate(${o.rot || 0}deg)`;
+          const dim = cell.querySelector('.pds-dim');
+          if (dim) dim.textContent = `${w1}×${h1}`;
+        }
+      };
+
+      const up = () => {
+        hd.removeEventListener('pointermove', move);
+        hd.removeEventListener('pointerup', up);
+        hd.removeEventListener('pointercancel', up);
+        if (cell) cell.classList.remove('is-resizing');
+        if (!live) return;          /* a click, not a drag — leave state alone */
+        selection.clear(); selection.add(id);
+        refresh();
+        if (state._openInspector) setTimeout(() => state._openInspector(id), 0);
+      };
+
+      try { hd.setPointerCapture(ev.pointerId); } catch (_) {}
+      hd.addEventListener('pointermove', move);
+      hd.addEventListener('pointerup', up);
+      hd.addEventListener('pointercancel', up);
+    });
+  });
+}
+
 function pdsRenderStage(state, T) {
   if (state.mode === 'rotate') return pdsRenderRotateStage(state, T);
   /* Layout + Assignation share the same canvas; Assignation overlays a roster. */
   const tablesInZone = state.tables.filter(t => t.zone === state.activeZone);
-  const isEmpty = tablesInZone.length === 0 && state.elements.filter(e => e.zone === state.activeZone).length === 0;
+  const elsInZone = state.elements.filter(e => e.zone === state.activeZone);
+  const isEmpty = tablesInZone.length === 0 && elsInZone.length === 0;
   const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
   const occ = tablesInZone.filter(t => t.status === 'occupied').length;
-  const scene = pdsScene(zone);
-  const isTerrasse = (zone?.scene === 'terrasse');
+  const P = pdsPlane(zone);
+  /* Fixtures paint under tables, and within fixtures a rug must sit under a
+     comptoir. z is explicit so the merchant can reorder. */
+  const ordered = elsInZone.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
   return `
     <div class="pds-stage-grid pds-stage-${state.mode}">
       <div class="pds-rail" data-pds-rail>
@@ -4235,19 +4720,29 @@ function pdsRenderStage(state, T) {
             <span class="pds-legend-item"><span class="pds-legend-swatch pds-sw-reserved"></span>${T.statusReserved}</span>
             <span class="pds-legend-item"><span class="pds-legend-swatch pds-sw-cleaning"></span>${T.statusCleaning}</span>
           </div>
-          <label class="pds-snap" title="${T.snapHint}">
-            <input type="checkbox" data-pds-snap ${state.snap?'checked':''}/>
-            <span>${state.snap ? T.snapOn : T.snapOff}</span>
-          </label>
+          <div class="pds-bar-tools">
+            ${state.mode === 'layout' ? `
+              <button class="pds-tool" data-pds-action="undo" title="${T.undo}" aria-label="${T.undo}">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.4 2.6L3 13"/></svg>
+              </button>
+              <button class="pds-tool" data-pds-action="redo" title="${T.redo}" aria-label="${T.redo}">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 13"/></svg>
+              </button>` : ''}
+            <label class="pds-snap" title="${T.snapHint}">
+              <input type="checkbox" data-pds-snap ${state.snap?'checked':''}/>
+              <span>${state.snap ? T.snapOn : T.snapOff}</span>
+            </label>
+          </div>
         </div>
         <div class="pds-plan-canvas">
-          <div class="pds-plan-room ${isTerrasse ? 'is-terrasse' : ''}" data-pds-room>
-            <div class="pds-plan-label">${zone?.name || ''} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
-            <div class="pds-plan-scale" data-pds-scale>
-              ${scene}
-              <div class="pds-canvas" data-pds-canvas style="width:${PDS_CANVAS_W}px; height:${PDS_CANVAS_H}px;">
+          <div class="pds-plan-room" data-pds-room style="max-width:${P.w}px; aspect-ratio:${P.w} / ${P.h};">
+            <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
+            <div class="pds-plan-scale" data-pds-scale
+                 style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
+              ${pdsRoomShell(zone)}
+              <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
-                ${state.elements.filter(e => e.zone === state.activeZone).map(e => pdsRenderElement(e, state, T)).join('')}
+                ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
                 ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
                 <div class="pds-bulk" data-pds-bulk hidden></div>
               </div>
@@ -4255,6 +4750,7 @@ function pdsRenderStage(state, T) {
           </div>
           <div class="pds-plan-footer">
             <span class="pds-plan-floor-count">${T.floorCount(occ, tablesInZone.length)}</span>
+            <span class="pds-plan-dims">${P.w} × ${P.h} ${T.unitCm}</span>
           </div>
         </div>
       </div>
@@ -4263,6 +4759,14 @@ function pdsRenderStage(state, T) {
       </div>
     </div>
   `;
+}
+
+/* Merchant-authored strings (zone names, fixture labels) reach innerHTML, so
+   they get escaped. `${zone.name}` used to interpolate raw. */
+function pdsEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function pdsRenderEmpty(state, T) {
@@ -4278,9 +4782,13 @@ function pdsRenderEmpty(state, T) {
   `;
 }
 
-/* Layout rail — palette + structural elements + templates link */
+/* Layout rail — table palette + every fixture kind + the room panel.
+   The fixture list is generated from PDS_FIX, so adding a kind there makes it
+   placeable here with no second edit. */
 function pdsRenderLayoutRail(state, T) {
   const types = ['round2','round4','round6','round8','sq2','sq4','rect4','rect6','rect8','rect10','bar','high'];
+  const groups = {};
+  Object.entries(PDS_FIX).forEach(([k, v]) => { (groups[v.grp] = groups[v.grp] || []).push([k, v]); });
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.paletteTitle}</div>
@@ -4297,28 +4805,78 @@ function pdsRenderLayoutRail(state, T) {
         }).join('')}
       </div>
     </div>
-    <div class="pds-rail-card">
-      <div class="pds-rail-title">${T.structTitle}</div>
-      <div class="pds-rail-hint">${T.structHint}</div>
-      <div class="pds-palette pds-palette-el">
-        ${[
-          ['wall', T.elWall],
-          ['door', T.elDoor],
-          ['window', T.elWindow],
-          ['column', T.elColumn],
-          ['plant', T.elPlant],
-        ].map(([k, label]) => `
-          <button class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}">
-            <span class="pds-pal-icon pds-pal-el-${k}"></span>
-            <span class="pds-pal-label">${label}</span>
-          </button>
-        `).join('')}
+    ${Object.entries(groups).map(([grp, items]) => `
+      <div class="pds-rail-card">
+        <div class="pds-rail-title">${T['grp' + grp.charAt(0).toUpperCase() + grp.slice(1)] || PDS_FIX_GRP[grp]}</div>
+        <div class="pds-palette pds-palette-el">
+          ${items.map(([k, v]) => `
+            <button class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}"
+                    title="${T['fix' + k] || k}">
+              <span class="pds-pal-mini">${pdsFixMini(k, v)}</span>
+              <span class="pds-pal-label">${T['fix' + k] || k}</span>
+            </button>
+          `).join('')}
+        </div>
       </div>
-    </div>
+    `).join('')}
+    ${pdsRenderRoomCard(state, T)}
     <div class="pds-rail-card">
       <button class="kb atlas pds-rail-cta" data-pds-action="open-templates">${T.templates}</button>
       <button class="kb ghost pds-rail-cta" data-pds-action="rename-zone">${T.renameZone}</button>
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
+    </div>
+  `;
+}
+
+/* Palette thumbnail — the fixture drawn by its own draw() at a small size, so
+   the button always shows what will actually be placed. No second artwork to
+   keep in sync. */
+function pdsFixMini(kind, K) {
+  const box = 26;
+  const ar = K.w / K.h;
+  const w = ar >= 1 ? box : Math.max(6, box * ar);
+  const h = ar >= 1 ? Math.max(6, box / ar) : box;
+  const g = { w, h };
+  const c = K.color;
+  if (K.render === 'svg') {
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${K.draw({}, c, g)}</svg>`;
+  }
+  if (K.render === 'none') {
+    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${c};">Aa</span>`;
+  }
+  return `<span style="display:block;width:${w}px;height:${h}px;
+    ${pdsBoxStyle(K.draw({}, c, g) || {}, c)}"></span>`;
+}
+
+/* Room panel — floor, walls, finish, dimensions. Replaces the six-scene
+   dropdown: instead of picking one of six frozen drawings, the merchant sets
+   the four properties those drawings differed by. */
+function pdsRenderRoomCard(state, T) {
+  const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
+  const r = pdsRoom(zone);
+  const P = pdsPlane(zone);
+  const sw = (val, field) => PDS_MAT.map(m => `
+    <button class="pds-sw ${m.c.toLowerCase() === String(val).toLowerCase() ? 'active' : ''}"
+            data-pds-room-field="${field}" data-pds-val="${m.c}"
+            style="background:${m.c};" title="${T['mat' + m.id] || m.id}"
+            aria-label="${T['mat' + m.id] || m.id}"></button>`).join('');
+  return `
+    <div class="pds-rail-card">
+      <div class="pds-rail-title">${T.roomTitle}</div>
+      <div class="pds-rail-hint">${T.roomHint}</div>
+      <label class="pds-mini-label">${T.roomFloor}</label>
+      <div class="pds-sw-row">${sw(r.floor, 'floor')}</div>
+      <label class="pds-mini-label">${T.roomWall}</label>
+      <div class="pds-sw-row">${sw(r.wall, 'wall')}</div>
+      <label class="pds-mini-label">${T.roomFinish}</label>
+      <select class="kf-input pds-input" data-pds-room-field="finish">
+        ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
+      </select>
+      <div class="pds-num-grid">
+        <label>${T.roomW}<input class="kf-input pds-input" type="number" min="240" max="2400" step="20" data-pds-room-field="w" value="${P.w}"/></label>
+        <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
+        <label>${T.roomWallW}<input class="kf-input pds-input" type="number" min="0" max="14" step="1" data-pds-room-field="wallW" value="${r.wallW}"/></label>
+      </div>
     </div>
   `;
 }
@@ -4332,12 +4890,12 @@ function pdsRenderAssignRail(state, T) {
       <div class="pds-roster">
         ${state.staff.map(s => {
           const tbls = state.tables.filter(t => t.server === s.id);
-          const seats = tbls.reduce((acc, t) => acc + (PDS_TABLE_TYPES[t.type]?.seats || 0), 0);
+          const seats = tbls.reduce((acc, t) => acc + pdsGeom(t).seats, 0);
           return `
             <div class="pds-chip" draggable="false" data-pds-chip="${s.id}" style="--chip:${s.color};">
               <span class="pds-chip-dot"></span>
               <span class="pds-chip-body">
-                <b>${s.name}</b>
+                <b>${pdsEsc(s.name)}</b>
                 <em>${T.rosterTables(tbls.length)} · ${T.rosterCovers(seats)}</em>
               </span>
             </div>
@@ -4360,7 +4918,6 @@ function pdsRenderInspectorEmpty(state, T) {
         <div class="pds-rail-hint">${T.modeAssignDesc}</div>
         ${pdsRenderAssignSummary(state, T)}
       </div>
-      ${pdsRenderScenePicker(state, T)}
     `;
   }
   return `
@@ -4368,45 +4925,7 @@ function pdsRenderInspectorEmpty(state, T) {
       <div class="pds-rail-title">${T.selection}</div>
       <div class="pds-rail-hint">${T.bulkHintNone}</div>
     </div>
-    ${pdsRenderScenePicker(state, T)}
   `;
-}
-
-/* ─── Scene picker — switches the architectural backdrop of the active zone.
- *   Single select dropdown with explanatory hint, instead of a 6-pill grid.
- *   (Pills made it look like the zone name "Bar" was a value, and the
- *   "Bar / Comptoir" pill inside created a confusing recursion.) */
-function pdsRenderScenePicker(state, T) {
-  const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
-  const current = zone?.scene || pdsScenePickerDefault(zone);
-  const opts = [
-    ['salle',    T.sceneSalle],
-    ['terrasse', T.sceneTerrasse],
-    ['bar',      T.sceneBar],
-    ['etage',    T.sceneEtage],
-    ['prive',    T.scenePrive],
-    ['blank',    T.sceneBlank],
-  ];
-  return `
-    <div class="pds-rail-card pds-scene-card">
-      <div class="pds-rail-title">${T.sceneLabel}</div>
-      <div class="pds-rail-hint">${T.sceneHint(zone?.name || '')}</div>
-      <select class="kf-input pds-input pds-scene-select" data-pds-scene-select aria-label="${T.sceneLabel}">
-        ${opts.map(([k, label]) => `<option value="${k}" ${k===current?'selected':''}>${label}</option>`).join('')}
-      </select>
-    </div>
-  `;
-}
-/* Best-guess scene if the zone has none stored (mirrors pdsScene fallback). */
-function pdsScenePickerDefault(zone) {
-  return (
-    /terr/i.test(zone?.name || '') ? 'terrasse' :
-    /bar|compt/i.test(zone?.name || '') ? 'bar' :
-    /étage|etage|1er|1\.ère|first/i.test(zone?.name || '') ? 'etage' :
-    /priv|salon/i.test(zone?.name || '') ? 'prive' :
-    /salle|principale|main|dining/i.test(zone?.name || '') ? 'salle' :
-    'blank'
-  );
 }
 
 function pdsRenderAssignSummary(state, T) {
@@ -4417,7 +4936,7 @@ function pdsRenderAssignSummary(state, T) {
         const tbls = state.tables.filter(t => t.server === s.id);
         return `<div class="pds-asum-row" style="--chip:${s.color};">
           <span class="pds-asum-dot"></span>
-          <span class="pds-asum-name">${s.name.split(' ')[0]}</span>
+          <span class="pds-asum-name">${pdsEsc(s.name.split(' ')[0])}</span>
           <span class="pds-asum-n">${tbls.length}</span>
         </div>`;
       }).join('')}
@@ -4432,52 +4951,117 @@ function pdsRenderAssignSummary(state, T) {
   `;
 }
 
-function pdsRenderInspector(state, T, table) {
-  const type = PDS_TABLE_TYPES[table.type];
-  const sv = state.staff.find(s => s.id === table.server);
+/* ─── Inspector ───────────────────────────────────────────────────────────
+ *   One inspector serves tables and fixtures. Geometry (X/Y/W/H/rotation) is
+ *   editable numerically as well as by handle, because "make both banquettes
+ *   exactly 240 wide" is not a drag gesture.                               */
+function pdsRenderInspector(state, T, obj) {
+  const found = pdsFind(state, obj.id) || { o: obj, table: true };
+  const isT = found.table;
+  const g = pdsGeom(obj);
+  const c = pdsColor(obj);
+  const K = isT ? (PDS_TABLE_TYPES[obj.type] || {}) : (PDS_FIX[obj.type] || {});
+  const title = isT ? T.inspectorTitle(obj.num)
+                    : (T['fix' + obj.type] || obj.type);
+  const swatches = PDS_MAT.map(m => `
+    <button class="pds-sw ${m.c.toLowerCase() === String(c).toLowerCase() ? 'active' : ''}"
+            data-pds-field="color" data-pds-val="${m.c}" style="background:${m.c};"
+            title="${T['mat' + m.id] || m.id}" aria-label="${T['mat' + m.id] || m.id}"></button>`).join('');
   return `
-    <div class="pds-rail-card pds-inspect">
+    <div class="pds-rail-card pds-inspect" data-pds-inspect-id="${obj.id}">
       <div class="pds-inspect-head">
-        <div class="pds-rail-title">${T.inspectorTitle(table.num)}</div>
+        <div class="pds-rail-title">${pdsEsc(title)}</div>
         <button class="pds-inspect-close" data-pds-action="deselect" title="${T.bulkClear}" aria-label="${T.bulkClear}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+
+      ${isT ? `
+        <div class="pds-form-row">
+          <label>${T.inspectorNum}</label>
+          <input class="kf-input pds-input" data-pds-field="num" value="${pdsEsc(obj.num)}"/>
+        </div>
+        <div class="pds-form-row">
+          <label>${T.inspectorType}</label>
+          <select class="kf-input pds-input" data-pds-field="type">
+            ${Object.entries(PDS_TABLE_TYPES).map(([k,v]) => `<option value="${k}" ${k===obj.type?'selected':''}>${v.label(T)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pds-form-row">
+          <label>${T.inspectorSeats}</label>
+          <div class="pds-step">
+            <button class="pds-step-btn" data-pds-action="seats-down" data-pds-id="${obj.id}" aria-label="−">−</button>
+            <input class="kf-input pds-input pds-step-val" type="number" min="0" max="24" data-pds-field="seats" value="${g.seats}"/>
+            <button class="pds-step-btn" data-pds-action="seats-up" data-pds-id="${obj.id}" aria-label="+">+</button>
+          </div>
+        </div>
+      ` : `
+        <div class="pds-form-row">
+          <label>${T.inspectorLabel}</label>
+          <input class="kf-input pds-input" data-pds-field="label"
+                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="—"/>
+        </div>
+      `}
+
       <div class="pds-form-row">
-        <label>${T.inspectorNum}</label>
-        <input class="kf-input pds-input" data-pds-field="num" value="${table.num}"/>
-      </div>
-      <div class="pds-form-row">
-        <label>${T.inspectorType}</label>
-        <select class="kf-input pds-input" data-pds-field="type">
-          ${Object.entries(PDS_TABLE_TYPES).map(([k,v]) => `<option value="${k}" ${k===table.type?'selected':''}>${v.label(T)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="pds-form-row">
-        <label>${T.inspectorStatus}</label>
-        <div class="pds-status-pills" data-pds-status-row>
-          ${['free','occupied','reserved','cleaning'].map(st => `
-            <button class="pds-status-pill pds-pill-${st} ${table.status===st?'active':''}" data-pds-status="${st}">
-              ${T['status' + st.charAt(0).toUpperCase() + st.slice(1)]}
-            </button>
-          `).join('')}
+        <label>${T.inspectorSize} <span class="pds-unit">${T.unitCm}</span></label>
+        <div class="pds-num-grid pds-num-4">
+          <label>L<input class="kf-input pds-input" type="number" min="${K.minW||16}" max="2400" data-pds-field="w" value="${Math.round(g.w)}"/></label>
+          <label>H<input class="kf-input pds-input" type="number" min="${K.minH||16}" max="2000" data-pds-field="h" value="${Math.round(g.h)}"/></label>
+          <label>X<input class="kf-input pds-input" type="number" min="0" max="2400" data-pds-field="x" value="${Math.round(obj.x)}"/></label>
+          <label>Y<input class="kf-input pds-input" type="number" min="0" max="2000" data-pds-field="y" value="${Math.round(obj.y)}"/></label>
         </div>
       </div>
+
       <div class="pds-form-row">
-        <label>${T.inspectorServer}</label>
-        <select class="kf-input pds-input" data-pds-field="server">
-          <option value="">${T.inspectorUnassigned}</option>
-          ${state.staff.map(s => `<option value="${s.id}" ${s.id===table.server?'selected':''}>${s.name}</option>`).join('')}
-        </select>
+        <label>${T.inspectorRotation} <span class="pds-unit">${Math.round(obj.rot||0)}°</span></label>
+        <div class="pds-rot-row">
+          <input class="pds-range" type="range" min="0" max="345" step="15" data-pds-field="rot" value="${Math.round(obj.rot||0)}"/>
+          <button class="pds-step-btn" data-pds-action="rot-90" data-pds-id="${obj.id}" title="+90°">90°</button>
+        </div>
       </div>
+
       <div class="pds-form-row">
-        <label>${T.inspectorNotes}</label>
-        <input class="kf-input pds-input" data-pds-field="notes" value="${table.notes || ''}" placeholder="—"/>
+        <label>${T.inspectorMaterial}</label>
+        <div class="pds-sw-row">${swatches}</div>
       </div>
+
+      ${isT ? `
+        <div class="pds-form-row">
+          <label>${T.inspectorStatus}</label>
+          <div class="pds-status-pills" data-pds-status-row>
+            ${['free','occupied','reserved','cleaning'].map(st => `
+              <button class="pds-status-pill pds-pill-${st} ${obj.status===st?'active':''}" data-pds-status="${st}">
+                ${T['status' + st.charAt(0).toUpperCase() + st.slice(1)]}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="pds-form-row">
+          <label>${T.inspectorServer}</label>
+          <select class="kf-input pds-input" data-pds-field="server">
+            <option value="">${T.inspectorUnassigned}</option>
+            ${state.staff.map(s => `<option value="${s.id}" ${s.id===obj.server?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pds-form-row">
+          <label>${T.inspectorNotes}</label>
+          <input class="kf-input pds-input" data-pds-field="notes" value="${pdsEsc(obj.notes || '')}" placeholder="—"/>
+        </div>
+      ` : `
+        <div class="pds-form-row">
+          <label>${T.inspectorDepth}</label>
+          <div class="pds-inspect-actions pds-actions-tight">
+            <button class="kb ghost" data-pds-action="layer-back" data-pds-id="${obj.id}">${T.layerBack}</button>
+            <button class="kb ghost" data-pds-action="layer-front" data-pds-id="${obj.id}">${T.layerFront}</button>
+          </div>
+        </div>
+      `}
+
       <div class="pds-inspect-actions">
-        <button class="kb ghost" data-pds-action="table-rotate" data-pds-id="${table.id}">${T.inspectorRotate}</button>
-        <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${table.id}">${T.inspectorDuplicate}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${table.id}">${T.inspectorDelete}</button>
+        <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
+        <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
+        <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
     </div>
   `;
@@ -4516,107 +5100,208 @@ function pdsRenderBulkInspector(state, T, selectedIds) {
   `;
 }
 
-/* ─── Chair rendering — mirrors caisse: row of chair-pills for rect tables,
- *   ring of radial chairs for round/square tables. ───────────────────────── */
-function pdsChairsRow(count, where) {
-  if (count <= 0) return '';
-  const chairs = '<span class="pds-chair"></span>'.repeat(count);
-  return `<div class="pds-tbl-chairs pds-tbl-chairs-${where}" aria-hidden="true">${chairs}</div>`;
-}
-function pdsChairsArc(count, startDeg, endDeg) {
-  const out = [];
-  const span = endDeg - startDeg;
-  const closed = (span >= 360 - 0.001);
-  const step = closed ? span / count : span / (count + 1);
-  for (let i = 0; i < count; i++) {
-    const deg = closed ? (startDeg + step * i) : (startDeg + step * (i + 1));
-    const rad = (deg - 90) * Math.PI / 180;
-    const left = (50 + 50 * Math.cos(rad)).toFixed(2);
-    const top  = (50 + 50 * Math.sin(rad)).toFixed(2);
-    out.push(`<div class="pds-chair-radial" style="left:${left}%;top:${top}%;transform:translate(-50%,-50%) rotate(${deg.toFixed(1)}deg);"></div>`);
-  }
-  return `<div class="pds-tbl-chairs-ring" aria-hidden="true">${out.join('')}</div>`;
-}
-function pdsChairsRound(count)  { return pdsChairsArc(count, 0, 360); }
-function pdsChairsSquare(count) {
-  const slots = [
-    { left: '50%',  top: '0%',   deg: 0   },
-    { left: '100%', top: '50%',  deg: 90  },
-    { left: '50%',  top: '100%', deg: 180 },
-    { left: '0%',   top: '50%',  deg: 270 },
+/* ─── Seating ─────────────────────────────────────────────────────────────
+ *   Chairs are derived from the table's CURRENT dimensions, not from a fixed
+ *   per-type recipe. Each side's capacity comes from its length, so widening
+ *   a 4-top puts the new chairs on the long sides instead of cramming them,
+ *   and a resize visibly changes the seating — which is the whole point of
+ *   being able to resize.                                                  */
+function pdsSeatSlots(w, h, n) {
+  const cap = s => Math.max(1, Math.floor(s / 46));
+  const sides = [
+    { k: 'top', len: w }, { k: 'bottom', len: w },
+    { k: 'left', len: h }, { k: 'right', len: h },
   ];
-  const used = slots.slice(0, Math.min(4, count));
-  const out = used.map(s =>
-    `<div class="pds-chair-radial" style="left:${s.left};top:${s.top};transform:translate(-50%,-50%) rotate(${s.deg}deg);"></div>`
-  );
-  return `<div class="pds-tbl-chairs-ring" aria-hidden="true">${out.join('')}</div>`;
+  const alloc = { top: 0, bottom: 0, left: 0, right: 0 };
+  for (let i = 0; i < n; i++) {
+    let best = null, bestRatio = Infinity;
+    for (const s of sides) {
+      const c = cap(s.len);
+      if (alloc[s.k] >= c) continue;
+      const ratio = alloc[s.k] / c;
+      if (ratio < bestRatio - 1e-9) { bestRatio = ratio; best = s; }
+    }
+    if (!best) break;   /* table is physically full — stop rather than overlap */
+    alloc[best.k]++;
+  }
+  return alloc;
 }
 
-/* Render a single table on the canvas — caisse architectural language. */
+/* One chair, anchored at a point ON the table edge and extending outward
+   along its local −y. Seat pad + backrest, drawn in logical units. */
+function pdsChair(x, y, deg, c) {
+  const t = pdsChairTone(c);
+  return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})">
+    <rect x="-8" y="-16.5" width="16" height="4.2" rx="2.1" fill="${t.back}"/>
+    <rect x="-7" y="-13" width="14" height="12" rx="3.5" fill="${t.pad}"/>
+    <rect x="-7" y="-13" width="14" height="2.6" rx="1.3" fill="${t.lip}" opacity=".8"/>
+  </g>`;
+}
+
+function pdsChairsFor(g, seats, c) {
+  if (!seats || seats < 1) return '';
+  const { w, h, shape } = g;
+  if (shape === 'round') {
+    /* Anchor on the ellipse, chair rotated to face the centre. */
+    const rx = w / 2, ry = h / 2, cx = rx, cy = ry;
+    let out = '';
+    for (let i = 0; i < seats; i++) {
+      const phi = (-90 + (360 * i) / seats) * Math.PI / 180;
+      out += pdsChair(cx + rx * Math.cos(phi), cy + ry * Math.sin(phi),
+                      (-90 + (360 * i) / seats) + 90, c);
+    }
+    return out;
+  }
+  const a = pdsSeatSlots(w, h, seats);
+  let out = '';
+  const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
+  along(a.top, w).forEach(px => { out += pdsChair(px, 0, 0, c); });
+  along(a.bottom, w).forEach(px => { out += pdsChair(px, h, 180, c); });
+  along(a.left, h).forEach(py => { out += pdsChair(0, py, -90, c); });
+  along(a.right, h).forEach(py => { out += pdsChair(w, py, 90, c); });
+  return out;
+}
+
+/* Compose a fixture's box into CSS.
+ *   `bg` may be a solid or a gradient and `overlay` is a second image layer
+ *   (brass rail, tile hatch, slats). They cannot both go through the
+ *   `background` shorthand: the shorthand resets background-image, so a later
+ *   `background-image: <overlay>` silently DELETED the body gradient — which
+ *   is why the comptoir rendered as an empty outline with a gold strip. Both
+ *   go into one background-image list instead, overlay first (topmost), with
+ *   a solid background-color underneath. */
+function pdsBoxStyle(d, c) {
+  const isGrad = /gradient\(/.test(String(d.bg || ''));
+  const layers = [];
+  if (d.overlay) layers.push(String(d.overlay).replace(/\s+/g, ' '));
+  if (isGrad) layers.push(String(d.bg).replace(/\s+/g, ' '));
+  return `background-color:${isGrad ? c : (d.bg || c)};
+    ${layers.length ? `background-image:${layers.join(',')};` : ''}
+    border:${d.border || 'none'};
+    border-radius:${d.radius != null ? d.radius : 0}px;
+    ${d.opacity != null ? `opacity:${d.opacity};` : ''}`;
+}
+
+/* Resize/rotate affordances, drawn only on the single selected object.
+   Inset by --pad so they hug the tabletop, not the chair band. */
+function pdsHandles(o, g, T) {
+  if (o.locked) {
+    return `<span class="pds-locked" title="${T.lockedHint}" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </span>`;
+  }
+  const dirs = ['nw','n','ne','e','se','s','sw','w'];
+  return `<div class="pds-hdl-layer">
+    ${dirs.map(d => `<span class="pds-hdl pds-hdl-${d}" data-pds-handle="${d}" data-pds-hid="${o.id}"></span>`).join('')}
+    <span class="pds-hdl pds-hdl-rot" data-pds-handle="rot" data-pds-hid="${o.id}" title="${T.rotateHint}"></span>
+    <span class="pds-dim">${Math.round(g.w)}×${Math.round(g.h)}</span>
+  </div>`;
+}
+
+/* ─── Table ───────────────────────────────────────────────────────────────
+ *   The viewBox is generated from this table's own w/h, so one SVG unit is
+ *   one logical unit and the tabletop cannot be stretched out of shape no
+ *   matter what size the merchant drags it to. Number and cover count are an
+ *   HTML overlay, never SVG text — SVG text scales with the shape and smears
+ *   on a long table.                                                       */
+const PDS_STATUS_RING = {
+  free:     { s: '#B9B2A4', w: 1.4, dash: '' },
+  occupied: { s: '#0B6E4F', w: 2.6, dash: '' },
+  reserved: { s: '#C99A2B', w: 2.6, dash: '' },
+  cleaning: { s: '#6A7A88', w: 2.4, dash: '5 4' },
+};
 function pdsRenderTable(t, state, T) {
-  const type = PDS_TABLE_TYPES[t.type];
-  if (!type) return '';
+  const g = pdsGeom(t);
+  const c = pdsColor(t);
+  const P = PDS_PAD;
+  const sel = PDS_SEL.has(t.id);
+  const only = sel && PDS_SEL.size === 1;
   const sv = state.staff.find(s => s.id === t.server);
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
+  const ring = PDS_STATUS_RING[t.status] || PDS_STATUS_RING.free;
+  const ink = pdsInk(c);
+  const edge = pdsShade(c, pdsLum(c) > 0.34 ? -0.22 : 0.16);
 
-  /* Chair layout — same logic as caisse:
-   *   rect → chair pills on top + bottom (long sides)
-   *   round → full radial ring of chairs
-   *   square → one chair per side (max 4)
-   *   bar / high → no chairs (stools live in the bg)                       */
-  let chairsHTML = '';
-  if (t.type === 'bar' || t.type === 'high') {
-    chairsHTML = ''; /* bar stool — chairs implicit in fixture */
-  } else if (type.shape === 'round') {
-    chairsHTML = pdsChairsRound(type.seats);
-  } else if (type.shape === 'square') {
-    chairsHTML = pdsChairsSquare(type.seats);
+  /* A 2-unit contact shadow under the top. Without it a sand table on a bone
+     floor has no edge to catch, and the plan reads flat. Drawn as an offset
+     copy of the shape rather than an SVG filter — filters on 30 tables cost
+     a repaint each, an offset shape costs nothing. */
+  let body;
+  if (g.shape === 'round') {
+    const rx = g.w / 2, ry = g.h / 2;
+    body = `
+      <ellipse cx="${rx}" cy="${ry + 2.5}" rx="${rx}" ry="${ry}" fill="rgba(20,15,10,0.15)"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="${edge}"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - 2)}" ry="${Math.max(1, ry - 2)}" fill="${c}"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - ring.w / 2)}" ry="${Math.max(1, ry - ring.w / 2)}"
+               fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${ring.dash?`stroke-dasharray="${ring.dash}"`:''}/>`;
   } else {
-    /* rect — chairs on top + bottom */
-    const topChairs    = Math.ceil(type.seats / 2);
-    const bottomChairs = type.seats - topChairs;
-    chairsHTML = `${pdsChairsRow(topChairs, 'top')}${pdsChairsRow(bottomChairs, 'bottom')}`;
+    const r = Math.min(9, g.w / 6, g.h / 6);
+    body = `
+      <rect x="0" y="2.5" width="${g.w}" height="${g.h}" rx="${r}" fill="rgba(20,15,10,0.15)"/>
+      <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${edge}"/>
+      <rect x="1.5" y="1.5" width="${Math.max(1, g.w-3)}" height="${Math.max(1, g.h-3)}" rx="${Math.max(0, r-1)}" fill="${c}"/>
+      <rect x="${ring.w/2}" y="${ring.w/2}" width="${Math.max(1, g.w-ring.w)}" height="${Math.max(1, g.h-ring.w)}"
+            rx="${Math.max(0, r-ring.w/2)}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"
+            ${ring.dash?`stroke-dasharray="${ring.dash}"`:''}/>`;
   }
 
-  /* Server badge — caisse-style circle pinned to a corner, color = server.
-   *   Shown in BOTH layout + assign modes when a server is set (so the
-   *   owner can see ownership at a glance even in layout mode).            */
-  const serverBadge = sv ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${sv.name}">${initials}</span>` : '';
-
-  /* Shape class for the inner .pds-tbl */
-  const shapeClass = type.shape === 'round'  ? 'pds-is-round'  :
-                     type.shape === 'square' ? 'pds-is-square' :
-                     t.type === 'bar' || t.type === 'high'     ? 'pds-is-bar' : 'pds-is-rect';
-  const sizeClass = `pds-size-${type.seats}`;
-  /* Color overlay in assign mode — picks server color for border */
-  const colorStripe = (state.mode === 'assign' && sv) ? sv.color : '';
-  const colorVar    = colorStripe ? ` --pds-server:${colorStripe};` : '';
+  const showChairs = state.showChairs !== false;
+  const chairs = showChairs ? pdsChairsFor(g, g.seats, c) : '';
+  const serverBadge = sv
+    ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
+    : '';
 
   return `
-    <div class="pds-tbl-cell ${shapeClass} ${state.mode==='assign' && sv?'pds-has-server':''}"
+    <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
          data-pds-table="${t.id}"
          role="button" tabindex="0"
-         aria-label="Table ${t.num}, ${type.seats} ${T.seats}"
-         style="left:${t.x}px; top:${t.y}px; width:${type.w}px; height:${type.h}px; transform:rotate(${t.rot||0}deg);${colorVar}">
-      <div class="pds-tbl ${sizeClass}" data-status="${t.status}">
-        <div class="pds-tbl-head">
-          <span class="pds-tbl-num">${t.num}</span>
-          <span class="pds-tbl-covers">${type.seats}p</span>
-        </div>
+         aria-label="Table ${pdsEsc(t.num)}, ${g.seats} ${T.seats}"
+         style="left:${t.x - P}px; top:${t.y - P}px; width:${g.w + P*2}px; height:${g.h + P*2}px;
+                --pad:${P}px; transform:rotate(${t.rot||0}deg);">
+      <svg class="pds-tbl-svg" viewBox="${-P} ${-P} ${g.w + P*2} ${g.h + P*2}" aria-hidden="true">
+        ${chairs}${body}
+      </svg>
+      <div class="pds-tbl-face" style="color:${ink};">
+        <span class="pds-tbl-num">${pdsEsc(t.num)}</span>
+        ${g.seats ? `<span class="pds-tbl-covers">${g.seats}p</span>` : ''}
       </div>
       ${serverBadge}
-      ${chairsHTML}
+      ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;
 }
 
+/* ─── Fixture ─────────────────────────────────────────────────────────────
+ *   Two render strategies, chosen per kind — see the note on PDS_FIX. Both
+ *   are resize-safe; the label is always an HTML overlay.                   */
 function pdsRenderElement(e, state, T) {
-  const type = PDS_EL_TYPES[e.type];
+  const K = PDS_FIX[e.type];
+  if (!K) return '';
+  const g = pdsGeom(e);
+  const c = pdsColor(e);
+  const sel = PDS_SEL.has(e.id);
+  const only = sel && PDS_SEL.size === 1;
+  const label = (e.label != null ? e.label : (K.label || ''));
+
+  let inner = '';
+  let boxStyle = '';
+  if (K.render === 'svg') {
+    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${K.draw(e, c, g)}</svg>`;
+  } else if (K.render === 'box') {
+    boxStyle = pdsBoxStyle(K.draw(e, c, g) || {}, c);
+  }
+
   return `
-    <div class="pds-el pds-el-${e.type}"
-         data-pds-el="${e.id}"
-         style="left:${e.x}px; top:${e.y}px; width:${type.w}px; height:${type.h}px; transform:rotate(${e.rot||0}deg);"
-         title="${T[`el${e.type.charAt(0).toUpperCase()+e.type.slice(1)}`] || e.type}"></div>
+    <div class="pds-el pds-el-${e.type} ${sel?'is-selected':''} ${e.locked?'is-locked':''}"
+         data-pds-el="${e.id}" role="button" tabindex="0"
+         aria-label="${pdsEsc(T['fix'+e.type] || e.type)}"
+         style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
+                --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
+      <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
+      ${label ? `<span class="pds-el-label" style="color:${pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      ${only ? pdsHandles(e, g, T) : ''}
+    </div>
   `;
 }
 
@@ -4787,8 +5472,14 @@ function pdsAttach(root, state, T, dr) {
     try { pdsSave(state); } catch (_) {} /* auto-save every change per store — a design is never lost */
   };
 
-  /* ── Selection store ──────────────────────────────────────────── */
-  let selection = new Set();
+  /* ── Selection store ──────────────────────────────────────────────
+   * The renderer needs to know what is selected in order to draw resize
+   * handles on it, so the Set is shared with module scope rather than
+   * copied — one Set, two readers. */
+  PDS_SEL.clear();
+  const selection = PDS_SEL;
+  PDS_UNDO.stack.length = 0;
+  PDS_UNDO.redo.length = 0;
 
   /* ── Event bindings ───────────────────────────────────────────── */
   const bind = () => {
@@ -4837,10 +5528,22 @@ function pdsAttach(root, state, T, dr) {
           if (ev.detail === 0) return; /* keyboard-triggered click without coords */
         };
       });
+      /* Fixtures are selectable now, not just draggable. Selecting one is what
+         opens the inspector that can resize, recolour or delete it — the
+         capability that did not exist while they were scene artwork. */
       root.querySelectorAll('[data-pds-el]').forEach(el => {
         const id = el.getAttribute('data-pds-el');
         pdsAttachElDrag(el, id, state, T, root, refresh);
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          if (state.mode !== 'layout') return;
+          selection.clear();
+          selection.add(id);
+          refresh();
+          setTimeout(() => openInspector(id), 0);
+        };
       });
+      pdsAttachResize(root, state, T, refresh, selection);
       /* Assign mode — wire chip drop */
       if (state.mode === 'assign') {
         root.querySelectorAll('[data-pds-chip]').forEach(chip => {
@@ -4849,60 +5552,100 @@ function pdsAttach(root, state, T, dr) {
       }
     }
 
-    /* Inspector inputs */
-    root.querySelectorAll('[data-pds-field]').forEach(input => {
-      const inspect = input.closest('.pds-inspect');
-      if (!inspect) return;
-      const tableEl = root.querySelector('.pds-tbl-cell.is-selected');
-      const tid = tableEl ? tableEl.getAttribute('data-pds-table') : null;
-      if (!tid) return;
-      const t = state.tables.find(tt => tt.id === tid);
-      if (!t) return;
-      input.onchange = () => {
+    /* Inspector inputs — resolved through the inspector's own id rather than
+       by hunting for a `.is-selected` table in the DOM, so the exact same
+       code edits a comptoir, a kitchen or a table. */
+    const inspectEl = root.querySelector('[data-pds-inspect-id]');
+    const selId = inspectEl ? inspectEl.getAttribute('data-pds-inspect-id') : null;
+    const found = selId ? pdsFind(state, selId) : null;
+    const reselect = () => {
+      refresh();
+      setTimeout(() => openInspector(selId), 0);
+    };
+    if (found) {
+      const o = found.o;
+      root.querySelectorAll('[data-pds-field]').forEach(input => {
+        if (!input.closest('.pds-inspect')) return;
         const f = input.getAttribute('data-pds-field');
-        if (f === 'num') t.num = input.value.trim() || t.num;
-        else if (f === 'type') t.type = input.value;
-        else if (f === 'server') t.server = input.value || null;
-        else if (f === 'notes') t.notes = input.value;
-        Kiwi.toast(T.inspectorDone, { type: 'success', duration: 1200 });
-        refresh();
-        /* Re-select the same table after refresh */
-        setTimeout(() => {
-          const newEl = root.querySelector(`[data-pds-table="${tid}"]`);
-          if (newEl) { newEl.classList.add('is-selected'); openInspector(tid); }
-        }, 0);
-      };
-    });
-    /* Status pill row inside inspector */
-    root.querySelectorAll('[data-pds-status]').forEach(btn => {
-      if (btn.getAttribute('data-pds-action')) return; /* handled elsewhere */
-      btn.onclick = () => {
-        const tableEl = root.querySelector('.pds-tbl-cell.is-selected');
-        const tid = tableEl ? tableEl.getAttribute('data-pds-table') : null;
-        if (!tid) return;
-        const t = state.tables.find(tt => tt.id === tid);
-        if (!t) return;
-        t.status = btn.getAttribute('data-pds-status');
-        refresh();
-        setTimeout(() => {
-          const newEl = root.querySelector(`[data-pds-table="${tid}"]`);
-          if (newEl) { newEl.classList.add('is-selected'); openInspector(tid); }
-        }, 0);
-      };
-    });
 
-    /* Scene picker — select dropdown changes the active zone's backdrop */
-    const sceneSel = root.querySelector('[data-pds-scene-select]');
-    if (sceneSel) {
-      sceneSel.onchange = () => {
+        /* Material swatches are buttons, not inputs. */
+        if (input.tagName === 'BUTTON') {
+          input.onclick = () => {
+            pdsPush(state);
+            o.color = input.getAttribute('data-pds-val');
+            reselect();
+          };
+          return;
+        }
+
+        const commit = () => {
+          const v = input.value;
+          pdsPush(state);
+          const plane = pdsPlaneOf(state);
+          const K = (found.table ? PDS_TABLE_TYPES[o.type] : PDS_FIX[o.type]) || {};
+          if (f === 'num')        o.num = v.trim() || o.num;
+          else if (f === 'label') o.label = v;
+          else if (f === 'notes') o.notes = v;
+          else if (f === 'server') o.server = v || null;
+          else if (f === 'type') {
+            /* Changing the type re-seeds geometry, otherwise a 2-top turned
+               into a 10-top keeps the 2-top's footprint and the seats have
+               nowhere to go. */
+            const cfg = PDS_TABLE_TYPES[v];
+            if (cfg) { o.type = v; o.w = cfg.w; o.h = cfg.h; o.seats = cfg.seats; o.shape = cfg.shape; }
+          }
+          else if (f === 'seats') o.seats = Math.max(0, Math.min(24, Math.round(+v || 0)));
+          else if (f === 'w')     o.w = Math.max(K.minW || 16, Math.min(plane.w, Math.round(+v || 0)));
+          else if (f === 'h')     o.h = Math.max(K.minH || 16, Math.min(plane.h, Math.round(+v || 0)));
+          else if (f === 'x')     o.x = Math.max(0, Math.min(plane.w - pdsGeom(o).w, Math.round(+v || 0)));
+          else if (f === 'y')     o.y = Math.max(0, Math.min(plane.h - pdsGeom(o).h, Math.round(+v || 0)));
+          else if (f === 'rot')   o.rot = ((Math.round(+v || 0)) % 360 + 360) % 360;
+          reselect();
+        };
+        input.onchange = commit;
+      });
+
+      /* Status pill row inside inspector */
+      root.querySelectorAll('[data-pds-status]').forEach(btn => {
+        if (btn.getAttribute('data-pds-action')) return; /* handled elsewhere */
+        btn.onclick = () => {
+          if (!found.table) return;
+          pdsPush(state);
+          o.status = btn.getAttribute('data-pds-status');
+          reselect();
+        };
+      });
+    }
+
+    /* Room panel — floor, walls, finish, dimensions of the active zone. */
+    root.querySelectorAll('[data-pds-room-field]').forEach(ctl => {
+      const f = ctl.getAttribute('data-pds-room-field');
+      const apply = (val) => {
         const zone = state.zones.find(z => z.id === state.activeZone);
         if (!zone) return;
-        zone.scene = sceneSel.value;
-        const label = T['scene' + sceneSel.value.charAt(0).toUpperCase() + sceneSel.value.slice(1)] || sceneSel.value;
+        pdsPush(state);
+        zone.room = zone.room || {};
+        if (f === 'w' || f === 'h') {
+          zone.room[f] = Math.max(f === 'w' ? 240 : 200, Math.round(+val || 0));
+          /* Shrinking the room must not strand furniture outside it. */
+          const plane = pdsPlane(zone);
+          const clamp = (o) => {
+            const g = pdsGeom(o);
+            o.x = Math.max(0, Math.min(plane.w - g.w, o.x));
+            o.y = Math.max(0, Math.min(plane.h - g.h, o.y));
+          };
+          state.tables.filter(t => t.zone === zone.id).forEach(clamp);
+          state.elements.filter(e => e.zone === zone.id).forEach(clamp);
+        } else if (f === 'wallW') {
+          zone.room.wallW = Math.max(0, Math.min(14, Math.round(+val || 0)));
+        } else {
+          zone.room[f] = val;
+        }
         refresh();
-        Kiwi.toast(T.sceneLabel + ' · ' + label, { type: 'success', duration: 1200 });
       };
-    }
+      if (ctl.tagName === 'BUTTON') ctl.onclick = () => apply(ctl.getAttribute('data-pds-val'));
+      else ctl.onchange = () => apply(ctl.value);
+    });
 
     /* Click on empty canvas floor — clears selection (deselects all tables) */
     const canvas = root.querySelector('[data-pds-canvas]');
@@ -4917,13 +5660,13 @@ function pdsAttach(root, state, T, dr) {
     }
   };
 
-  /* Open inspector for table id */
+  /* Open inspector for any object id — table or fixture. */
   const openInspector = (id) => {
-    const t = state.tables.find(tt => tt.id === id);
+    const f = pdsFind(state, id);
     const inspector = root.querySelector('[data-pds-inspector]');
     if (!inspector) return;
-    if (!t) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
-    inspector.innerHTML = pdsRenderInspector(state, T, t);
+    if (!f) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
+    inspector.innerHTML = pdsRenderInspector(state, T, f.o);
     bind();
   };
   /* Open bulk inspector */
@@ -5055,19 +5798,20 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
       nx = Math.round(nx / PDS_GRID) * PDS_GRID;
       ny = Math.round(ny / PDS_GRID) * PDS_GRID;
     }
-    /* Clamp to canvas */
-    const type = PDS_TABLE_TYPES[t.type];
-    nx = Math.max(0, Math.min(PDS_CANVAS_W - type.w, nx));
-    ny = Math.max(0, Math.min(PDS_CANVAS_H - type.h, ny));
+    /* Clamp to the room — its own size, which the merchant can change. */
+    const plane = pdsPlaneOf(state);
+    const g = pdsGeom(t);
+    nx = Math.max(0, Math.min(plane.w - g.w, nx));
+    ny = Math.max(0, Math.min(plane.h - g.h, ny));
     /* If shift-multi-drag, move all selected by the same delta */
     if (selection.size > 1 && selection.has(id)) {
       const dx = nx - origX;
       const dy = ny - origY;
       state.tables.forEach(tt => {
         if (selection.has(tt.id) && tt.id !== id) {
-          const ttype = PDS_TABLE_TYPES[tt.type];
-          tt.x = Math.max(0, Math.min(PDS_CANVAS_W - ttype.w, tt.x + dx));
-          tt.y = Math.max(0, Math.min(PDS_CANVAS_H - ttype.h, tt.y + dy));
+          const tg = pdsGeom(tt);
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, tt.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, tt.y + dy));
         }
       });
     }
@@ -5132,9 +5876,10 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
       nx = Math.round(nx / PDS_GRID) * PDS_GRID;
       ny = Math.round(ny / PDS_GRID) * PDS_GRID;
     }
-    const type = PDS_EL_TYPES[elObj.type];
-    nx = Math.max(0, Math.min(PDS_CANVAS_W - type.w, nx));
-    ny = Math.max(0, Math.min(PDS_CANVAS_H - type.h, ny));
+    const plane = pdsPlaneOf(state);
+    const g = pdsGeom(elObj);
+    nx = Math.max(0, Math.min(plane.w - g.w, nx));
+    ny = Math.max(0, Math.min(plane.h - g.h, ny));
     elObj.x = nx; elObj.y = ny;
     refresh();
   };
@@ -5400,10 +6145,16 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
           wireDismiss(c);
           if (!c || !c.el) return;
           c.el.querySelector('[data-pds-tpl-confirm]')?.addEventListener('click', () => {
-            const fresh = pdsTemplate(k);
+            const fresh = pdsNormalize(pdsTemplate(k));
+            pdsPush(state);
             Object.keys(state).forEach(kk => delete state[kk]);
             Object.assign(state, fresh);
+            selection.clear();
             m.close();
+            /* Close the picker too. Applying a template used to leave BOTH
+               drawers shut, so the merchant never saw the floor they had just
+               chosen — the one moment the plan most needs to be on screen. */
+            try { m.close(); } catch (_) {}
             refresh();
             toast(T.tplLoaded(tplName), { type: 'success', desc: T.tplLoadedDesc });
           });
@@ -5415,45 +6166,57 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'add-table-default': {
       const type = action === 'add-table-default' ? 'round4' : btn.getAttribute('data-pds-type');
       const cfg = PDS_TABLE_TYPES[type] || PDS_TABLE_TYPES.round4;
-      const inZone = state.tables.filter(t => t.zone === state.activeZone);
-      /* Place at center of zone, offset by # tables to avoid overlap */
-      const baseX = Math.round((PDS_CANVAS_W - cfg.w) / 2 / PDS_GRID) * PDS_GRID;
-      const baseY = Math.round((PDS_CANVAS_H - cfg.h) / 2 / PDS_GRID) * PDS_GRID;
-      const offset = (inZone.length % 6) * 16;
+      pdsPush(state);
+      const plane = pdsPlaneOf(state);
+      const spot = pdsFreeSpot(state, cfg.w, cfg.h, plane);
       const num = String(state.tables.length + 1);
       const newT = {
         id: newTableId(),
         zone: state.activeZone,
         type,
-        x: baseX + offset,
-        y: baseY + offset,
+        x: spot.x,
+        y: spot.y,
+        /* Geometry is stamped onto the instance at birth. The type is only a
+           source of defaults from here on, so resizing this table cannot
+           affect any other table of the same type. */
+        w: cfg.w, h: cfg.h, seats: cfg.seats, shape: cfg.shape,
+        color: null,
         num,
         status: 'free',
         server: null,
         notes: '',
         rot: 0,
+        locked: false,
       };
       state.tables.push(newT);
+      /* Select BEFORE rendering: handles are drawn by the renderer from the
+         selection, so selecting afterwards left the new table without any. */
+      selection.clear();
+      selection.add(newT.id);
       refresh();
       toast(T.addedTableToast(num), { type: 'success', desc: T.addedTableDesc(cfg.seats, state.zones.find(z=>z.id===state.activeZone)?.name || '') });
-      setTimeout(() => {
-        const el = root.querySelector(`[data-pds-table="${newT.id}"]`);
-        if (el) {
-          selection.clear();
-          selection.add(newT.id);
-          el.classList.add('is-selected');
-          state._openInspector(newT.id);
-        }
-      }, 0);
+      setTimeout(() => { if (state._openInspector) state._openInspector(newT.id); }, 0);
       break;
     }
     case 'add-el': {
       const type = btn.getAttribute('data-pds-eltype');
-      const cfg = PDS_EL_TYPES[type];
-      const baseX = Math.round((PDS_CANVAS_W - cfg.w) / 2 / PDS_GRID) * PDS_GRID;
-      const baseY = Math.round((PDS_CANVAS_H - cfg.h) / 2 / PDS_GRID) * PDS_GRID;
-      state.elements.push({ id: newElId(), zone: state.activeZone, type, x: baseX, y: baseY, rot: 0 });
+      const cfg = PDS_FIX[type];
+      if (!cfg) break;
+      const plane = pdsPlaneOf(state);
+      pdsPush(state);
+      /* Drop new fixtures in a free spot rather than always dead-centre, so
+         adding three in a row doesn't stack them into one illegible pile. */
+      const spot = pdsFreeSpot(state, cfg.w, cfg.h, plane);
+      const maxZ = state.elements.reduce((m, e) => Math.max(m, e.z || 0), 0);
+      const el = {
+        id: newElId(), zone: state.activeZone, type,
+        x: spot.x, y: spot.y, w: cfg.w, h: cfg.h, rot: 0,
+        color: cfg.color, label: null, z: maxZ + 1, locked: false,
+      };
+      state.elements.push(el);
+      selection.clear(); selection.add(el.id);
       refresh();
+      if (state._openInspector) setTimeout(() => state._openInspector(el.id), 0);
       toast(T.addedElementToast, { type: 'success', desc: T.addedElementDesc });
       break;
     }
@@ -5565,35 +6328,106 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       break;
     }
     /* ── Inspector actions ─────────────────────────────────────── */
-    case 'table-rotate': {
+    /* ── Object actions ────────────────────────────────────────────
+     * These used to be table-only. They now resolve through pdsFind, so the
+     * same buttons rotate, duplicate, lock and delete a comptoir or a kitchen
+     * — the operations the merchant could not previously perform on anything
+     * that came out of a scene. The action names keep their `table-` prefix
+     * because the inspector markup and the keyboard bindings both reference
+     * them; renaming would be churn for no behaviour change. */
+    case 'table-rotate':
+    case 'rot-90': {
       const id = btn.getAttribute('data-pds-id');
-      const t = state.tables.find(tt => tt.id === id);
-      if (!t) break;
-      t.rot = ((t.rot || 0) + 45) % 360;
+      const f = pdsFind(state, id);
+      if (!f || f.o.locked) break;
+      pdsPush(state);
+      const step = action === 'rot-90' ? 90 : 45;
+      f.o.rot = ((f.o.rot || 0) + step) % 360;
       refresh();
       setTimeout(() => state._openInspector(id), 0);
       break;
     }
     case 'table-duplicate': {
       const id = btn.getAttribute('data-pds-id');
-      const t = state.tables.find(tt => tt.id === id);
-      if (!t) break;
-      const newT = { ...t, id: newTableId(), x: t.x + 24, y: t.y + 24, num: t.num + '·' };
-      state.tables.push(newT);
-      refresh();
-      toast(T.addedTableToast(newT.num), { type: 'success', desc: T.addedTableDesc(PDS_TABLE_TYPES[newT.type]?.seats || 0, state.zones.find(z=>z.id===newT.zone)?.name || '') });
+      const f = pdsFind(state, id);
+      if (!f) break;
+      pdsPush(state);
+      if (f.table) {
+        const newT = { ...f.o, id: newTableId(), x: f.o.x + 24, y: f.o.y + 24, num: f.o.num + '·' };
+        state.tables.push(newT);
+        selection.clear(); selection.add(newT.id);
+        refresh();
+        toast(T.addedTableToast(newT.num), { type: 'success', desc: T.addedTableDesc(pdsGeom(newT).seats, state.zones.find(z=>z.id===newT.zone)?.name || '') });
+      } else {
+        const maxZ = state.elements.reduce((m, e) => Math.max(m, e.z || 0), 0);
+        const newE = { ...f.o, id: newElId(), x: f.o.x + 24, y: f.o.y + 24, z: maxZ + 1 };
+        state.elements.push(newE);
+        selection.clear(); selection.add(newE.id);
+        refresh();
+        toast(T.addedElementToast, { type: 'success', desc: T.addedElementDesc });
+      }
       break;
     }
     case 'table-delete': {
       const id = btn.getAttribute('data-pds-id');
-      const idx = state.tables.findIndex(tt => tt.id === id);
-      if (idx >= 0) {
-        const t = state.tables[idx];
-        state.tables.splice(idx, 1);
-        selection.delete(id);
-        refresh();
-        toast(`Table ${t.num} · supprimée`, { type: 'warn', duration: 1400 });
+      const f = pdsFind(state, id);
+      if (!f) break;
+      pdsPush(state);
+      if (f.table) {
+        state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
+        toast(`Table ${f.o.num} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
+      } else {
+        state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
+        toast(`${T['fix'+f.o.type] || f.o.type} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
       }
+      selection.delete(id);
+      refresh();
+      break;
+    }
+    case 'obj-lock': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f) break;
+      pdsPush(state);
+      f.o.locked = !f.o.locked;
+      refresh();
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'seats-up':
+    case 'seats-down': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f) break;
+      pdsPush(state);
+      const cur = pdsGeom(f.o).seats;
+      f.o.seats = Math.max(0, Math.min(24, cur + (action === 'seats-up' ? 1 : -1)));
+      refresh();
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'layer-back':
+    case 'layer-front': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f || f.table) break;
+      pdsPush(state);
+      const zs = state.elements.map(e => e.z || 0);
+      f.o.z = action === 'layer-front' ? Math.max(...zs) + 1 : Math.min(...zs) - 1;
+      refresh();
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'undo': {
+      if (!pdsUndo(state)) { toast(T.undoNothing, { type: 'info', duration: 1200 }); break; }
+      selection.clear();
+      refresh();
+      break;
+    }
+    case 'redo': {
+      if (!pdsRedo(state)) { toast(T.redoNothing, { type: 'info', duration: 1200 }); break; }
+      selection.clear();
+      refresh();
       break;
     }
     /* ── Bulk actions ──────────────────────────────────────────── */
@@ -5661,17 +6495,8 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       toast(T.bulkOkStatus(n, T['status' + st.charAt(0).toUpperCase() + st.slice(1)]), { type: 'success', duration: 1400 });
       break;
     }
-    case 'set-scene': {
-      /* Legacy pill handler — kept in case any old markup still ships set-scene. */
-      const sceneKey = btn.getAttribute('data-pds-scene');
-      const zone = state.zones.find(z => z.id === state.activeZone);
-      if (zone) {
-        zone.scene = sceneKey;
-        refresh();
-        toast(T.sceneLabel + ' · ' + (T['scene' + sceneKey.charAt(0).toUpperCase() + sceneKey.slice(1)] || sceneKey), { type: 'success', duration: 1200 });
-      }
-      break;
-    }
+    /* 'set-scene' retired with PDS_SCENES — the room is four editable
+       properties now, wired through [data-pds-room-field]. */
     case 'deselect': {
       /* Close inspector × button — clears the current selection and returns
        *   to the empty inspector / décor picker pane. */
@@ -6148,6 +6973,164 @@ const PDS_INLINE_CSS = `
   .pds-foot-actions { display:flex; gap:8px; }
 
   html[dir="rtl"] .pds-zone-tabs, html[dir="rtl"] .pds-modes { flex-direction:row-reverse; }
+
+  /* ═══ v2 · object-model floor plan ═══════════════════════════════════════
+     Everything below supersedes the v1 table/element rules above. The v1
+     rules are left in place because a few of them (cell positioning, rail
+     chrome, status pills) are still correct; the ones that are not are
+     overridden here by source order. Anything keyed to a v1 fixture type
+     (.pds-el-wall, .pds-el-door, …) is inert — those kinds were renamed. */
+
+  /* Floor + walls, driven by zone.room rather than a baked scene. */
+  .pds-floor {
+    position:absolute; inset:0;
+    border-radius:14px;
+    background-repeat:repeat;
+    pointer-events:none;
+  }
+  .pds-plan-room { border-color:rgba(44,37,32,0.22); background:transparent; }
+
+  /* ── Tables ────────────────────────────────────────────────────────────
+     The cell is inflated by --pad on every side to hold the chair band, so
+     .pds-tbl-face insets by --pad to sit on the tabletop itself. */
+  .pds-tbl-cell {
+    transform-origin:50% 50%;
+    transition: filter 150ms ease;
+  }
+  .pds-tbl-cell:hover { filter:brightness(1.03); }
+  .pds-tbl-cell.is-selected  { z-index:6; }
+  .pds-tbl-cell.is-resizing  { z-index:7; }
+  .pds-tbl-cell.is-locked    { cursor:default; }
+  .pds-tbl-svg {
+    position:absolute; inset:0; width:100%; height:100%;
+    display:block; overflow:visible; pointer-events:none;
+  }
+  .pds-tbl-face {
+    position:absolute; inset:var(--pad, 0px);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    pointer-events:none; text-align:center;
+  }
+  .pds-tbl-num    { font:600 15px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:.6; margin-top:3px; }
+
+  /* ── Fixtures ──────────────────────────────────────────────────────────
+     The v1 rule painted .pds-el itself dark; v2 paints the .pds-el-fill
+     child from the instance's own material, so the host must be cleared. */
+  .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
+  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:hidden; }
+  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .pds-el-label {
+    position:absolute; inset:0; padding:2px;
+    display:flex; align-items:center; justify-content:center;
+    font:600 9.5px/1.2 var(--mono, monospace);
+    letter-spacing:0.16em; text-transform:uppercase;
+    pointer-events:none; text-align:center; overflow:hidden;
+  }
+  .pds-el.is-selected { z-index:60; }
+  .pds-el.is-locked   { cursor:default; }
+
+  /* ── Selection · resize + rotate handles ───────────────────────────────
+     Inset by --pad so they hug the tabletop, not the chair band. */
+  .pds-hdl-layer { position:absolute; inset:var(--pad, 0px); pointer-events:none; }
+  .pds-hdl-layer::before {
+    content:''; position:absolute; inset:-2px;
+    border:1.5px solid var(--atlas); border-radius:4px;
+    box-shadow:0 0 0 3px rgba(11,110,79,0.14);
+  }
+  .pds-hdl {
+    position:absolute; width:11px; height:11px; margin:-5.5px 0 0 -5.5px;
+    background:var(--paper, #F7F5F0); border:1.5px solid var(--atlas);
+    border-radius:2px; pointer-events:auto;
+    box-shadow:0 1px 2px rgba(10,15,13,0.28);
+  }
+  .pds-hdl:hover { background:var(--mint, #7DF2B0); }
+  .pds-hdl-nw { top:0;    left:0;    cursor:nwse-resize; }
+  .pds-hdl-n  { top:0;    left:50%;  cursor:ns-resize; }
+  .pds-hdl-ne { top:0;    left:100%; cursor:nesw-resize; }
+  .pds-hdl-e  { top:50%;  left:100%; cursor:ew-resize; }
+  .pds-hdl-se { top:100%; left:100%; cursor:nwse-resize; }
+  .pds-hdl-s  { top:100%; left:50%;  cursor:ns-resize; }
+  .pds-hdl-sw { top:100%; left:0;    cursor:nesw-resize; }
+  .pds-hdl-w  { top:50%;  left:0;    cursor:ew-resize; }
+  .pds-hdl-rot {
+    top:-24px; left:50%; border-radius:50%;
+    background:var(--atlas); border-color:var(--paper, #F7F5F0); cursor:grab;
+  }
+  .pds-hdl-rot::before {
+    content:''; position:absolute; left:50%; top:100%;
+    width:1.5px; height:14px; margin-left:-0.75px;
+    background:var(--atlas); opacity:.55;
+  }
+  .pds-dim {
+    position:absolute; bottom:-21px; left:50%; transform:translateX(-50%);
+    font:600 9px/1.7 var(--mono, monospace);
+    background:var(--ink, #0A0F0D); color:var(--paper, #F7F5F0);
+    padding:1px 6px; border-radius:3px; white-space:nowrap;
+  }
+  .pds-locked {
+    position:absolute; top:2px; right:2px;
+    display:grid; place-items:center;
+    width:16px; height:16px; border-radius:4px;
+    background:rgba(10,15,13,0.72); color:var(--paper, #F7F5F0);
+  }
+
+  /* ── Inspector + room controls ─────────────────────────────────────────*/
+  .pds-sw-row { display:flex; flex-wrap:wrap; gap:4px; }
+  .pds-sw {
+    width:20px; height:20px; border-radius:5px; cursor:pointer;
+    border:1.5px solid rgba(44,37,32,0.20); padding:0;
+    transition: transform 150ms cubic-bezier(0.34, 1.45, 0.5, 1), box-shadow 150ms ease;
+  }
+  .pds-sw:hover  { transform:scale(1.12); }
+  .pds-sw.active { box-shadow:0 0 0 2px var(--paper, #F7F5F0), 0 0 0 3.5px var(--atlas); }
+  .pds-mini-label {
+    display:block; margin:9px 0 4px;
+    font:600 10px/1 var(--mono, monospace);
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500);
+  }
+  .pds-num-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:8px; }
+  .pds-num-grid.pds-num-4 { grid-template-columns:repeat(4, 1fr); margin-top:0; }
+  .pds-num-grid > label {
+    display:flex; flex-direction:column; gap:3px;
+    font:600 9.5px/1 var(--mono, monospace);
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--n-500);
+  }
+  .pds-num-grid input { width:100%; padding:5px 6px; font-size:12px; text-align:center; }
+  .pds-unit { font:400 9.5px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; text-transform:none; }
+  .pds-step { display:flex; align-items:center; gap:5px; }
+  .pds-step-val { flex:1; text-align:center; padding:5px 4px; }
+  .pds-step-btn {
+    width:26px; height:26px; flex:none;
+    display:grid; place-items:center;
+    border:1px solid var(--n-200); border-radius:7px;
+    background:var(--surface); cursor:pointer;
+    font:600 12px/1 var(--font-ui, system-ui); color:var(--ink);
+  }
+  .pds-step-btn:hover { background:var(--paper-muted); border-color:var(--atlas); }
+  .pds-rot-row { display:flex; align-items:center; gap:8px; }
+  .pds-range { flex:1; accent-color:var(--atlas); }
+  .pds-actions-tight { margin-top:0; }
+
+  /* ── Canvas toolbar ────────────────────────────────────────────────────*/
+  .pds-bar-tools { display:flex; align-items:center; gap:6px; }
+  .pds-tool {
+    width:26px; height:26px; flex:none;
+    display:grid; place-items:center;
+    border:1px solid var(--n-200); border-radius:7px;
+    background:var(--surface); color:var(--n-600); cursor:pointer;
+  }
+  .pds-tool:hover { background:var(--paper-muted); color:var(--atlas); border-color:var(--atlas); }
+  .pds-plan-dims { font:400 10px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; }
+  .pds-plan-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+  /* Palette thumbnails are the fixture's own drawing, so the button always
+     previews what will actually be placed. */
+  .pds-pal-mini {
+    display:grid; place-items:center;
+    width:28px; height:28px; overflow:hidden;
+  }
+  .pds-pal-mini svg { display:block; max-width:100%; max-height:100%; }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
