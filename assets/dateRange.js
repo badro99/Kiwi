@@ -1886,13 +1886,31 @@
     }
 
     const rec = window.KiwiVenue?.getHeroAiRec?.();
-    if (!rec) return;
     const titleEl = document.querySelector('.hai-rec-title');
     const obsEl   = document.querySelector('.hai-rec-obs');
     const actEl   = document.querySelector('.hai-rec-act');
+    const eyebrow = document.querySelector('.hai-eyebrow');
+    /* `return` on a null rec used to leave whatever was in the markup sitting
+     * there — which was a finished, hand-written recommendation. Getting no
+     * answer has to look like no answer, not like the last one. */
+    if (!rec) {
+      const empty = { fr: 'Pas encore assez de ventes pour une recommandation.', en: 'Not enough sales yet for a recommendation.', ar: 'لا توجد مبيعات كافية بعد لتقديم توصية.' };
+      if (titleEl) titleEl.textContent = '';
+      if (obsEl)   obsEl.textContent = empty[getLang()] || empty.fr;
+      if (actEl)   actEl.textContent = '';
+      if (eyebrow) eyebrow.textContent = 'KIWI INSIGHTS';
+      return;
+    }
     if (titleEl) titleEl.textContent = rec.title;
     if (obsEl)   obsEl.textContent = rec.obs;
     if (actEl)   actEl.textContent = rec.act;
+    /* Measured or estimated, said out loud on the card. A counted best-seller
+     * and a constant-volume price projection are not the same kind of claim,
+     * and the merchant is the one carrying the risk of the difference. */
+    if (eyebrow) {
+      eyebrow.textContent = rec.basisLabel ? `KIWI INSIGHTS · ${rec.basisLabel}` : 'KIWI INSIGHTS';
+      eyebrow.removeAttribute('data-i18n');
+    }
   }
 
   /* ═══════════════ RENDER: HEATMAP AI HINT (per venue) ═══════════════ */
@@ -3470,7 +3488,15 @@
     const venue = window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
     // A user-created venue's feed is built from the merchant's own recorded
     // sales — empty state until the first one is rung up.
-    const rows = window.KiwiVenue?.isCustom?.(venue) ? buildCustomFeed(venue)
+    //
+    // The `isReal` arm matters as much as the `isCustom` one. A real session on
+    // a venue id that isn't flagged custom used to fall through to the static
+    // demo feed, and those rows do not just sit on screen: renderFeed caches
+    // them in window.__kiwiFeedOrders, which the assistant reads as "les
+    // dernières commandes encaissées" and puts in the model's prompt. Demo
+    // covers, demo servers, demo tickets, quoted back as the merchant's own.
+    const realSession = !!(window.KiwiEnv?.isReal?.());
+    const rows = (window.KiwiVenue?.isCustom?.(venue) || realSession) ? buildCustomFeed(venue)
       : isLive ? buildLiveFeed(venue) : vData(FEED_BY_VENUE, currentRange);
     const wrap = document.querySelector('[data-feed]');
 

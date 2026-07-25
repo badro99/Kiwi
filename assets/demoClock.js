@@ -82,11 +82,40 @@
 
   /* ═══════════════ PUBLIC: SIM STATE SNAPSHOT ═══════════════ */
 
+  /* ═══════════════ PROVENANCE GATE ═══════════════
+   * This file is a SIMULATOR. It replays one day of Café Atlas — an hour-weight
+   * curve times a daily target — so the demo has a business that breathes.
+   *
+   * getSimState() used to answer for any venue at all: an id it had never heard
+   * of fell through to `TARGETS.cafeAtlas`, and it never once asked whether the
+   * session was real. So a signed-in merchant's dashboard asked "what has today
+   * taken?" and was handed Café Atlas's rehearsal — 31 500 MAD of revenue and
+   * 215 transactions that belong to nobody. The number did not stay put either:
+   * it reached the hero insight ("votre creux de 15h–17h ne pèse que…"), and it
+   * reached the assistant's system prompt under the heading "activité en direct,
+   * ce que la caisse a enregistré depuis l'ouverture aujourd'hui" — presented to
+   * the model, and through it to the merchant, as their own till.
+   *
+   * One gate, at the source, so every consumer inherits it. They all read
+   * through `?.` or `isActive()` and degrade to showing nothing, which is the
+   * right thing to show when there is nothing to show. */
+  function simulationAllowed() {
+    try {
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return false;
+      if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return false;
+    } catch (_) { return false; }
+    return true;
+  }
+
   function getSimState() {
+    if (!simulationAllowed()) return null;
     const f = getRealFraction();
     const venue = window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
-    const target = TARGETS[venue] || TARGETS.cafeAtlas;
-    const weights = HOUR_WEIGHTS[venue] || HOUR_WEIGHTS.cafeAtlas;
+    /* An unknown venue is NOT Café Atlas. Falling back to its curve is how a
+     * merchant ended up reading someone else's day; return nothing instead. */
+    if (!TARGETS[venue] || !HOUR_WEIGHTS[venue]) return null;
+    const target = TARGETS[venue];
+    const weights = HOUR_WEIGHTS[venue];
 
     const pos = f * N;
     const simIdx = Math.min(N - 1, Math.floor(pos));
@@ -120,6 +149,10 @@
 
   function tick() {
     const state = getSimState();
+    /* The gate can close mid-session — identity.js populates window.KiwiMe
+     * after login, and the venue switcher can move to a custom venue. Stop
+     * fanning out simulated state the moment it does. */
+    if (!state) { started = false; window.__kiwiDemoActive = false; return; }
     const isReset = state.fraction < lastFraction - 0.05;  // wrapped past :59
     lastFraction = state.fraction;
     subscribers.forEach(fn => { try { fn(state, isReset); } catch (_) {} });
@@ -133,6 +166,10 @@
   function start() {
     if (started) return;
     if (!/dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) return;
+    /* Never start on a real session. kiwi-env.js is loaded before this file,
+     * so the hostname half of the answer is already known here; the signed-in
+     * half arrives later and tick() re-checks every 3 s. */
+    if (!simulationAllowed()) return;
     started = true;
     window.__kiwiDemoActive = true;
 

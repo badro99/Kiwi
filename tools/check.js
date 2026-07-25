@@ -140,6 +140,27 @@ section('Forbidden patterns');
   if (!leaks) ok('no secret-shaped strings');
 }
 
+/* ── 5 · the assistant actually answering ───────────────────────────────────
+ * Everything above this line checks that the code PARSES and is WIRED. None of
+ * it would have noticed the assistant quoting a break-even it computed wrong,
+ * leaking a demo café's revenue to a real merchant, or answering a payroll
+ * question for a badge that cannot open the payroll page. tools/agent-test.js
+ * runs the assistant for real and grades its answers; it is a release gate, so
+ * its failures are this script's failures. ─────────────────────────────────── */
+section('Assistant behaviour (tools/agent-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'agent-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    const passed = (out.match(/✓/g) || []).length;
+    ok(`assistant gate green (${passed} checks: routing ×3 langs, arithmetic, redaction, isolation, permissions)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`agent-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }

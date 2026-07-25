@@ -122,6 +122,64 @@
   }
   function syncProfile() { B = buildProfile(); return B; }
 
+  /* ─────────────── PERMISSIONS ───────────────
+   * dashboard.html hides Marges & budget, Dépenses and Paie & planning from a
+   * manager badge, and Équipe and Conformité on top of that from a staff badge.
+   * The assistant honoured none of it: the same person who could not open the
+   * P&L could type "quel est mon bénéfice net" and read the whole thing back,
+   * salaries included. A permission that one surface enforces and another
+   * ignores is not a permission, it is a detour.
+   *
+   * Tiers resolve exactly as dashboard.html's accessTier() does — through the
+   * shared role catalogue when it is loaded, then the machine tokens the
+   * onboarding wizard writes. Anything unrecognised is STAFF, the safe end.
+   * No stored role at all is the demo, which runs as owner. */
+  function accessTier() {
+    let raw = window.__kiwiRole;
+    if (raw == null) { try { raw = localStorage.getItem('kiwiRole'); } catch (_) {} }
+    if (raw == null || raw === '') return 'owner';
+    let id = '';
+    try { if (window.KiwiRoles && window.KiwiRoles.idOf) id = window.KiwiRoles.idOf(raw) || ''; } catch (_) {}
+    if (id === 'proprietaire') return 'owner';
+    if (id === 'manager') return 'manager';
+    if (id) return 'staff';
+    let n = String(raw).trim().toLowerCase();
+    try { n = n.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    if (n === 'owner' || n === 'proprietaire' || n === 'direction' || n === 'patron') return 'owner';
+    if (n === 'manager' || n === 'admin' || n === 'gerant' || n === 'management') return 'manager';
+    return 'staff';
+  }
+  const seesBooks = () => accessTier() === 'owner';
+
+  /* The routes that ARE the books: opex, salaries, net profit, cash, margins,
+   * break-even, what the business is worth, and every simulation built on
+   * them. Deliberately no wider than the three pages the sidebar closes — a
+   * manager keeps the entire shop floor: sales, the day, stock, clients, the
+   * menu, the lookups. */
+  const BOOKS_ROUTES = {
+    margin: 1, charges: 1, profit: 1, runway: 1, breakeven: 1, valuation: 1,
+    financing: 1, expansion: 1, hire: 1, afford: 1, layoff: 1, compound: 1,
+    price: 1, goal: 1, overview: 1,
+  };
+  const PERM = {
+    fr: {
+      text: 'Les marges, les charges, les salaires et la trésorerie sont réservés au propriétaire du compte. Votre badge ouvre la caisse, les ventes, le stock et les opérations, et je réponds sur tout ça sans réserve.',
+      note: 'Ce n’est pas un refus de ma part : c’est le même accès que votre menu latéral, qui masque déjà Marges & budget, Dépenses et Paie. Si ce chiffre vous est nécessaire, le propriétaire l’a dans son tableau de bord.',
+    },
+    en: {
+      text: 'Margins, costs, salaries and cash are reserved for the account owner. Your badge opens the till, sales, stock and operations, and I answer on all of that without reservation.',
+      note: 'This is not my refusal: it is the same access your sidebar already applies, which hides Margins & budget, Expenses and Payroll. If you need that figure, the owner has it in their dashboard.',
+    },
+    ar: {
+      text: 'الهوامش والمصاريف والأجور والخزينة محجوزة لصاحب الحساب. شارتك تفتح الصندوق والمبيعات والمخزون والعمليات، وأجيب عن كل ذلك دون تحفّظ.',
+      note: 'ليس رفضًا مني: هو نفس الصلاحية المطبَّقة في قائمتك الجانبية التي تُخفي أصلًا الهوامش والمصاريف والأجور. إذا احتجت هذا الرقم فهو متوفّر لدى صاحب الحساب.',
+    },
+  };
+  function sForbidden() {
+    const p = PERM[L] || PERM.fr;
+    return { text: p.text, note: p.note };
+  }
+
   /* ─────────────── LANGUAGE ─────────────── */
   function getLang() {
     const l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang();
@@ -2802,6 +2860,12 @@
   function respond(rawIn) {
     syncProfile();  // reason off whatever venue is active right now
     const d = decideRoute(rawIn);
+    /* Permission is checked BEFORE the scenario runs — a refusal must never be
+     * computed from figures this reader is not allowed to see, or the numbers
+     * end up in the object even when the sentence declines. */
+    if (BOOKS_ROUTES[d.kind] && !seesBooks()) return sForbidden();
+    /* The staff badge has no Équipe page; it gets no roster lookups either. */
+    if (d.kind === 'lookup' && d.spec && d.spec.entity === 'staff' && accessTier() === 'staff') return sForbidden();
     // Remember amount-driven scenarios so the next correction can refine them.
     if (d.kind === 'hire' || d.kind === 'afford' || d.kind === 'price' || d.kind === 'compound') lastScenario = d.kind;
     if (d.kind === 'math') return sCalc(d.raw, evalMath(d.raw));
@@ -3098,6 +3162,15 @@
   window.KiwiAgentEvalSet = EVAL_SET;
   window.KiwiGuardTest = runGuardTest;
   window.KiwiAgentConvoTest = runConvoTest;
+  /* The release gate (tools/agent-test.js) grades ANSWERS, not just routes: it
+   * recomputes every money scenario from the profile and compares. That needs
+   * the same entry point the UI uses, plus the profile it reasoned from. Both
+   * are reads — they change nothing — and they exist so that editing a formula
+   * cannot ship unnoticed. */
+  window.KiwiAgentAsk = function (q, lang) { L = lang || getLang(); return respond(q); };
+  window.KiwiAgentProfile = function () { return syncProfile(); };
+  window.KiwiAgentRedact = function (text, lang) { return redactUnsupported(text, lang || getLang()); };
+  window.KiwiAgentTier = accessTier;
 
   /* ═══════════════ IN-BROWSER LLM · WebLLM ═══════════════
    * Anything the deterministic engine doesn't recognise is answered by an
@@ -3204,15 +3277,34 @@
   }
 
   /* ─────────────── NUMERIC GUARDRAIL ───────────────
-   * The model may phrase a MAD figure that isn't a verbatim restatement of the
-   * grounding — sometimes a fair derivation, sometimes a slip. We can't ban
-   * derivations, so rather than alter the answer we detect uncited material
-   * amounts and append a calm "verify in your dashboard" nudge. Detectors are
-   * pure and unit-tested via window.KiwiGuardTest(). */
+   * A 2B model running on a shop till will occasionally state a figure that is
+   * not in its grounding. This used to be handled by appending "vérifiez les
+   * montants dans votre tableau de bord" underneath and leaving the figure
+   * exactly where it was. That is not a guardrail. A merchant who reads
+   * "vous avez gagné 999 000 MAD" and a footnote keeps the 999 000 — the
+   * number is what gets remembered, quoted to a partner, taken to a bank.
+   *
+   * So the figure is REMOVED and its absence is marked. Three families, each
+   * only as aggressive as it can justify:
+   *
+   *   money        every MAD amount ≥ 100 is a claim about their cash and is
+   *                checkable against the grounding. Redacted when uncited.
+   *   percentages  only when asserted about a business metric. "+5 % sur la
+   *                carte ferait…" is a lever the merchant can pull and there
+   *                is nothing to check it against; "votre marge a bondi de
+   *                47 %" is a claim about their past, and we hold their past.
+   *   counts       a number ≥ 20 in front of a countable business noun
+   *                ("312 clients"). Below 20 it is operational and harmless
+   *                ("3 employés en salle") — redacting those would mangle
+   *                good advice to catch nothing.
+   *
+   * Detectors are pure and unit-tested via window.KiwiGuardTest(); the whole
+   * redactor is exercised by tools/agent-test.js. */
+  const REDACTED = { fr: '[chiffre retiré]', en: '[figure removed]', ar: '[رقم محذوف]' };
   const GUARD = {
-    fr: 'Chiffres dérivés de vos données, vérifiez les montants exacts dans votre tableau de bord.',
-    en: 'Figures derived from your data, verify the exact amounts in your dashboard.',
-    ar: 'أرقام مُشتقّة من بياناتك، تحقّق من المبالغ الدقيقة في لوحة التحكم.',
+    fr: (n) => `${n} chiffre${n > 1 ? 's' : ''} de cette réponse ne venai${n > 1 ? 'ent' : 't'} pas de vos données. Je l'ai retiré plutôt que de vous laisser le lire comme un fait. Demandez-moi le calcul, je le referai sur vos chiffres.`,
+    en: (n) => `${n} figure${n > 1 ? 's' : ''} in this answer did not come from your data. I removed ${n > 1 ? 'them' : 'it'} rather than let you read ${n > 1 ? 'them' : 'it'} as fact. Ask me for the calculation and I'll run it on your own numbers.`,
+    ar: (n) => `${n} من الأرقام في هذا الجواب لم تأتِ من بياناتك. حذفتها بدل أن أترككَ تقرأها كحقيقة. اطلب مني الحساب وسأقوم به على أرقامك.`,
   };
   /* Every MAD-denominated amount in a block of text. */
   function extractMad(text) {
@@ -3229,7 +3321,11 @@
   function knownFigures() {
     const s = new Set();
     const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n)); };
-    if (!B.partial) {
+    /* A reader without the books has no cited books figures. So if the model
+     * produces one anyway — from a stale context, from a guess that happens to
+     * land — the redactor removes it instead of waving it through as "known".
+     * Defence in depth: the prompt already withholds them. */
+    if (!B.partial && seesBooks()) {
       [B.revenue, B.cogs, B.grossProfit, B.totalOpex, B.netProfit, B.cashBuffer, B.avgBasket,
        B.dailyRev, B.dailyNet, B.netPerOrder, B.breakEvenRev, B.mtdRevenue,
        B.revenue * 12, B.netProfit * 12].forEach(add);
@@ -3257,6 +3353,87 @@
     return { uncited };
   }
 
+  /* The percentages we can stand behind: the ones the profile computes. */
+  function knownPercents() {
+    const s = new Set();
+    const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n * 10) / 10); };
+    if (!B.partial) [B.grossMargin, B.netMargin, 100 - B.grossMargin, B.contribRatio * 100, B.marginOfSafety].forEach(add);
+    return s;
+  }
+  /* The counts we hold: orders, staff, days, and units sold per menu item. */
+  function knownCounts() {
+    const s = new Set();
+    const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n)); };
+    [B.ordersPerMonth, B.ordersPerDay, B.staffCount, B.daysOpen, B.mtdDays, B.daysInMonth].forEach(add);
+    try {
+      (window.KiwiMenu && window.KiwiMenu.items ? window.KiwiMenu.items() : []).forEach((it) => add(it.units));
+    } catch (_) {}
+    return s;
+  }
+
+  /* A lever the merchant could pull, versus a claim about what happened. We
+   * can check the second against the ledger; the first hasn't happened yet, so
+   * there is nothing to check it against and nothing to redact. */
+  const HYPO_RX = /\bsi\b|\bpourrai[ts]\b|\bpeut\b|\bpeuvent\b|\bpermettrait\b|essay|\bteste[rz]?\b|imagin|suppos|\bvise[rz]?\b|augment|baiss|réduis|reduis|\bhausse\b|\bobjectif\b|\bif\b|\bcould\b|\bwould\b|\bmight\b|\btry\b|\btarget\b|\brais(?:e|ing)\b|\bincreas|\bcut\b|\bلو\b|\bإذا\b|جرّب|حاول|هدف/i;
+  /* Only a sentence that names a business metric can be making a business
+   * claim. Keeps the redactor off phone numbers, addresses and dates. */
+  const METRIC_RX = /marge|rentab|chiffre|panier|benefic|bénéfic|croissance|vente|client|commande|cout|coût|charge|tresorerie|trésorerie|salaire|margin|revenue|basket|profit|growth|sales|customer|order|cost|cash|payroll|هامش|مبيعات|ربح|زبون|زبائن|تكلفة|خزينة|طلب/i;
+  const COUNTABLE_RX = /clients?|ventes?|commandes?|articles?|couverts?|tickets?|employ[eé]s?|visites?|customers?|sales|orders|items|covers|visits|staff|زبون|زبناء|زبائن|مبيعة|طلبات?/;
+
+  /* Remove every figure this answer cannot support, and report how many went.
+   * Returns { text, redacted } — never throws, never returns undefined text:
+   * a guard that can fail open is not a guard. */
+  function redactUnsupported(text, lang) {
+    const L2 = REDACTED[lang] ? lang : 'fr';
+    const mark = REDACTED[L2];
+    let n = 0;
+    try {
+      const knownM = Array.from(knownFigures());
+      const knownP = Array.from(knownPercents());
+      const knownC = Array.from(knownCounts());
+      const citedM = (v) => knownM.some((k) => Math.abs(k - v) <= Math.max(50, v * 0.01));
+      const citedP = (v) => knownP.some((k) => Math.abs(k - v) <= 0.6);
+      const citedC = (v) => knownC.some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
+      const num = (raw) => parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
+
+      /* Sentence by sentence — "is this a hypothesis?" is only answerable
+       * inside the clause that carries the number. */
+      const out = String(text).split(/(?<=[.!?\n؟])/).map((clause) => {
+        let c = clause;
+        const claim = METRIC_RX.test(c) && !HYPO_RX.test(c);
+
+        // a · money, always checkable
+        c = c.replace(/(\d[\d  . ]*(?:,\d+)?)\s*(mad|dhs?|dirhams?|درهم|د\.?\s?م)\b/gi, (m, d, unit) => {
+          const v = num(d);
+          if (!isFinite(v) || v < 100 || citedM(v)) return m;
+          n++; return mark + ' ' + unit;
+        });
+        if (!claim) return c;
+
+        // b · percentages asserted about a metric
+        c = c.replace(/(\d+(?:[.,]\d+)?)\s*(%|٪|pour\s?cent|percent)/gi, (m, d, unit) => {
+          const v = parseFloat(String(d).replace(',', '.'));
+          if (!isFinite(v) || citedP(v)) return m;
+          n++; return mark + ' ' + unit;
+        });
+
+        // c · counts in front of a countable business noun
+        c = c.replace(new RegExp('(\\d[\\d  . ]*)\\s+((?:[a-zà-ÿ\'’]+\\s+){0,1}(?:' + COUNTABLE_RX.source + '))', 'gi'),
+          (m, d, noun) => {
+            const v = num(d);
+            if (!isFinite(v) || v < 20 || citedC(v)) return m;
+            n++; return mark + ' ' + noun;
+          });
+        return c;
+      }).join('');
+      return { text: out, redacted: n };
+    } catch (_) {
+      /* Detector blew up on some input we didn't foresee. Fail CLOSED: an
+       * answer we could not check is an answer we do not show. */
+      return { text: '', redacted: -1 };
+    }
+  }
+
   /* The deterministic engine refuses these outright (ILLICIT_RX), but anything
    * it doesn't recognise reaches the model instead — and the prompt used to
    * forbid stock tips and off-topic chat while saying nothing about helping a
@@ -3266,6 +3443,33 @@
 
   function buildSystemPrompt(lang) {
     const dir = SP_DIR[lang] || SP_DIR.fr;
+    /* The books never enter the context of a reader who may not see them.
+     * Gating the deterministic answers alone would have been theatre: every
+     * unmatched question goes to the model, and the model was handed the full
+     * P&L — salaries, cash, net margin — in its very first system message. */
+    if (!seesBooks()) {
+      const menuR = menuContextLines();
+      const liveR = liveActivityContextLines();
+      const outR = [
+        dir, '',
+        `Tu es l'assistant de "${B.name}", un établissement au Maroc. Tu parles à un membre de l'équipe, PAS au propriétaire.`,
+        `Ventes des 30 derniers jours : ${fmt(B.revenue)} MAD sur ${fmt(B.ordersPerMonth)} vente(s), panier moyen ${fmt(B.avgBasket)} MAD.`,
+      ];
+      if (liveR) outR.push('', 'Activité en direct, enregistrée par la caisse depuis l’ouverture aujourd’hui :', liveR);
+      if (menuR) outR.push('', 'La carte, avec les ventes du mois par article :', menuR);
+      outR.push(
+        '',
+        'Règles :',
+        `- Tu ne connais PAS et tu ne donnes JAMAIS : les marges, le coût matière, les charges, le loyer, les salaires, la masse salariale, le bénéfice, la trésorerie, le seuil de rentabilité, la valorisation. Si on te les demande, réponds que ces chiffres sont réservés au propriétaire du compte, en une phrase, sans t'excuser et sans en deviner un seul.`,
+        `- Tu aides sur la caisse, les ventes, la carte, le stock, le service, les clients et les opérations.`,
+        `- N'invente JAMAIS un chiffre, un plat ou une statistique.`,
+        `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
+        INTEGRITY_RULE,
+        '',
+        dir
+      );
+      return outR.join('\n');
+    }
     if (B.partial) {
       return [
         dir, '',
@@ -3898,25 +4102,43 @@
         const bubble = pushAgent('<span data-fa-stream></span>');
         const target = bubble.querySelector('[data-fa-stream]');
         let acc = '';
+        /* Stream by SETTLED SENTENCE, not by token. The redactor works on whole
+         * clauses — it has to, since "is this a hypothesis or a claim?" is only
+         * answerable once the sentence exists. Rendering raw tokens would put
+         * an invented figure on screen for the second between the token that
+         * completes it and the token that ends the sentence, and a merchant
+         * reading over the till does not get that second back. */
+        const SETTLED = /[\s\S]*[.!?\n؟]/;
+        let shown = 0;
         for await (const chunk of stream) {
+          if (LLM.cancelled) break;
           acc += chunk.choices?.[0]?.delta?.content || '';
-          if (target) target.textContent = stripThink(acc);
-          scrollDown();
+          const m = stripThink(acc).match(SETTLED);
+          const settled = m ? m[0] : '';
+          if (settled.length > shown) {
+            shown = settled.length;
+            if (target) target.textContent = redactUnsupported(settled, L).text;
+            scrollDown();
+          }
         }
         const clean = stripThink(acc);
-        /* Numeric guardrail — if the answer states material MAD figures that
-         * aren't a (rounded) restatement of the grounding, append a calm
-         * verify-nudge. Never alters the answer itself. */
-        if (bubble && auditNumbers(clean).uncited.length) {
+        /* The guardrail REMOVES what it cannot support (see the block above
+         * redactUnsupported). redacted === -1 means the detector itself threw:
+         * an answer we could not check is an answer we do not show. */
+        const red = redactUnsupported(clean, L);
+        if (target) target.textContent = red.redacted === -1 ? tr().llm.runErr : red.text;
+        if (bubble && red.redacted > 0) {
           const note = document.createElement('div');
           note.className = 'fa-note';
-          note.textContent = GUARD[L] || GUARD.fr;
+          note.textContent = (GUARD[L] || GUARD.fr)(red.redacted);
           bubble.appendChild(note);
-          scrollDown();
         }
-        /* Store the clean answer — Qwen3 guidance is to keep prior thinking
-         * content OUT of multi-turn history. */
-        llmHistory.push({ role: 'assistant', content: clean });
+        scrollDown();
+        /* Store the REDACTED answer. Keeping the raw one would feed the
+         * invented figure straight back into the next turn's context, where
+         * the model would treat its own slip as established fact — and Qwen
+         * guidance is to keep prior thinking content out of history anyway. */
+        llmHistory.push({ role: 'assistant', content: red.redacted === -1 ? '' : red.text });
       } catch (e) {
         typing.remove();
         pushAgent(replyHtml({ text: tr().llm.runErr }));
@@ -4045,11 +4267,33 @@
   }
   register();
 
-  // Keep the active profile in lockstep with the venue switcher.
+  /* Keep the active profile in lockstep with the venue switcher — AND drop
+   * everything the previous establishment said.
+   *
+   * syncProfile() alone was not enough. The profile followed the switcher, but
+   * llmHistory and lastScenario are module-level and did not: a merchant who
+   * asked about the margins at one shop, switched to another and typed "et si
+   * j'augmentais de 5 %?" got a refinement computed on the new venue's figures
+   * inside a conversation still carrying the old one's — and the model, handed
+   * eight turns of the first shop's numbers, would happily quote them back
+   * under the second shop's name. Two establishments, one memory, no wall. */
+  function resetConversation() {
+    llmHistory.length = 0;
+    lastScenario = null;
+  }
   (function subVenue() {
-    if (window.KiwiVenue && window.KiwiVenue.subscribe) { window.KiwiVenue.subscribe(syncProfile); return; }
+    if (window.KiwiVenue && window.KiwiVenue.subscribe) {
+      window.KiwiVenue.subscribe(function () { resetConversation(); syncProfile(); });
+      return;
+    }
     setTimeout(subVenue, 120);
   })();
+  /* Same wall between accounts. Signing out and back in as someone else must
+   * not inherit the previous owner's conversation. */
+  window.addEventListener('kiwi:account-changed', resetConversation);
+  window.addEventListener('storage', function (e) {
+    if (e && (e.key === 'kiwiAccountKey' || e.key === 'kiwiRole')) resetConversation();
+  });
 
   // The dashboard hero's question box opens this assistant with the typed question.
   function wireHeroInput() {

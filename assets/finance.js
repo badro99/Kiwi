@@ -944,10 +944,12 @@
     if (!window.Kiwi || !window.Kiwi.handlers) {
       return setTimeout(wire, 80);
     }
-    /* Role gate — manager cannot reach Marges & budget even if the entry
-     * is somehow triggered. Bounce to dashboard + a soft toast. */
+    /* Role gate — only the owner reaches Marges & budget, even if the entry is
+     * somehow triggered. Bounce to dashboard + a soft toast.
+     * Was `=== 'manager'`: the sidebar hides this page from manager AND staff,
+     * so checking for the manager alone let the more restricted badge in. */
     window.Kiwi.handlers['nav-finance'] = () => {
-      if ((window.__kiwiRole || 'owner') === 'manager') {
+      if ((window.__kiwiRole || 'owner') !== 'owner') {
         window.Kiwi.toast?.('Accès propriétaire uniquement', { type: 'info' });
         return;
       }

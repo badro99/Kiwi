@@ -27,6 +27,19 @@
   const pct1 = (n) => (Math.round(n * 10) / 10).toLocaleString('fr-FR'); // 22,3
   const uiLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
 
+  /* ── Provenance ────────────────────────────────────────────────────────────
+   * Two of these insights are counted and two are projected, and until now they
+   * looked identical on screen. "Thé à la menthe est votre moteur de marge" is
+   * a fact taken from the ledger; "+5 % sur la carte ≈ +42 000 MAD/mois" is an
+   * arithmetic guess that assumes not one customer walks away. A merchant is
+   * entitled to know which one they are reading before they act on it. */
+  const BASIS = {
+    fr: { measured: 'MESURÉ', estimated: 'ESTIMÉ' },
+    en: { measured: 'MEASURED', estimated: 'ESTIMATED' },
+    ar: { measured: 'مقاس', estimated: 'تقديري' },
+  };
+  const basisLabel = (b, lang) => (BASIS[lang] || BASIS[uiLang()] || BASIS.fr)[b] || '';
+
   /* Localized renderers — each takes the computed data object `d` (numbers
    * already derived from real data) and returns {kpi, title, obs, act}. */
   const T = {
@@ -110,12 +123,12 @@
 
     // A · Star — the single biggest monthly-margin contributor.
     const star = [...sell].sort((a, b) => b.monthly - a.monthly)[0];
-    if (star) { used.add(star.name); out.push(Object.assign({ id: 'star', score: star.monthly }, L.star(star))); }
+    if (star) { used.add(star.name); out.push(Object.assign({ id: 'star', score: star.monthly, basis: 'measured' }, L.star(star))); }
 
     // B · Dog — the least-sold item (a genuine low-volume signal, not a margin
     // judgement — food naturally runs a lower margin % than drinks).
     const dog = [...sell].filter((s) => !used.has(s.name)).sort((a, b) => a.units - b.units)[0];
-    if (dog) { used.add(dog.name); out.push(Object.assign({ id: 'dog', score: 2200 }, L.dog(dog))); }
+    if (dog) { used.add(dog.name); out.push(Object.assign({ id: 'dog', score: 2200, basis: 'measured' }, L.dog(dog))); }
 
     // C · Off-peak — the weakest consecutive 2-hour daytime window, from the
     // live hourly revenue weights (index 0 = 11h). % = its share of the day.
@@ -127,7 +140,8 @@
         const s = (w[i] || 0) + (w[i + 1] || 0);
         if (s < lo) { lo = s; loIdx = i; }
       }
-      out.push(Object.assign({ id: 'offpeak', score: 2600 },
+      /* The hourly curve is a distribution, not a count of tickets per hour. */
+      out.push(Object.assign({ id: 'offpeak', score: 2600, basis: 'estimated' },
         L.offpeak({ h1: 11 + loIdx, h2: 11 + loIdx + 2, pct: lo * 100 })));
     }
 
@@ -135,7 +149,8 @@
     const totalUnits = sell.reduce((s, x) => s + x.units, 0);
     const totalRev   = sell.reduce((s, x) => s + x.revenue, 0);
     if (totalRev > 0) {
-      out.push(Object.assign({ id: 'price', score: totalRev * 0.05 },
+      /* Assumes constant volume — nobody trades down, nobody leaves. */
+      out.push(Object.assign({ id: 'price', score: totalRev * 0.05, basis: 'estimated' },
         L.price({ rev: totalRev, units: totalUnits, price5: totalRev * 0.05 })));
     }
 
@@ -150,8 +165,8 @@
     let day = 1;
     try { day = new Date().getDate(); } catch (_) {}
     const pick = ins[day % ins.length];
-    return { title: pick.title, obs: pick.obs, act: pick.act };
+    return { title: pick.title, obs: pick.obs, act: pick.act, basis: pick.basis || 'estimated', basisLabel: basisLabel(pick.basis || 'estimated') };
   }
 
-  window.KiwiInsights = { compute, heroRec };
+  window.KiwiInsights = { compute, heroRec, basisLabel };
 })();

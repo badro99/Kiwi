@@ -5303,14 +5303,27 @@
           </div><!-- /.hero-left -->
           <div class="hero-right">
             <div>
-              <div class="hai-eyebrow" data-i18n="dash.hero.ai.eyebrow">KIWI AI</div>
+              <div class="hai-eyebrow" data-i18n="dash.hero.ai.eyebrow">KIWI INSIGHTS</div>
               <div class="hai-title" data-i18n="dash.hero.ai.title">Recommandations du jour</div>
             </div>
+            <!-- First paint only. assets/dateRange.js → renderHeroAi() replaces
+                 this with the recommendation assets/insights.js computes from
+                 the venue's own menu and sales, and blanks it when there isn't
+                 enough data to say anything true.
+
+                 What used to sit here was a finished recommendation, hard-coded
+                 in three languages: "entre 15h et 17h vous réalisez 8 % de votre
+                 chiffre… vos clients restent assis 47 minutes contre 31 au
+                 déjeuner". Kiwi does not measure how long anyone sits down. The
+                 dwell times were invented, and they rendered under a KIWI AI
+                 badge on a real merchant's home screen until the script caught
+                 up — or permanently, if it didn't. A placeholder may say that it
+                 is waiting. It may not make up a statistic. -->
             <div class="hai-recs">
               <div class="hai-rec">
-                <div class="hai-rec-title" data-i18n="dash.hero.ai.rec1.title">Votre heure creuse de 15h-17h représente un potentiel inexploité</div>
-                <div class="hai-rec-obs" data-i18n="dash.hero.ai.rec1.obs">Entre 15h et 17h, vous réalisez seulement 8% de votre chiffre d'affaires quotidien. Pourtant, c'est l'heure où vos clients restent le plus longtemps assis (temps moyen : 47 minutes, contre 31 minutes au déjeuner).</div>
-                <div class="hai-rec-act" data-i18n="dash.hero.ai.rec1.act">→ Proposer un menu « goûter » avec thé à la menthe et msemen à prix réduit pourrait augmenter la rotation des tables de 20-30%.</div>
+                <div class="hai-rec-title" data-i18n="dash.hero.ai.rec1.title">Lecture de vos ventes en cours</div>
+                <div class="hai-rec-obs" data-i18n="dash.hero.ai.rec1.obs">Kiwi calcule vos recommandations du jour à partir de votre carte et de vos ventes enregistrées.</div>
+                <div class="hai-rec-act" data-i18n="dash.hero.ai.rec1.act">&nbsp;</div>
               </div>
             </div>
             <div class="hai-chips">
@@ -5942,7 +5955,11 @@
     const prev = window.Kiwi.handlers[key];
     if (!prev || prev.__kiwiRoleGated) return;
     const guarded = (...args) => {
-      if ((window.__kiwiRole || 'owner') === 'manager') {
+      /* `!== 'owner'`, not `=== 'manager'`. The CSS above hides Paie from a
+       * manager AND from a staff badge, but this gate only ever checked for
+       * the manager — so the more restricted of the two tiers was the one that
+       * walked through it. A hidden link is a suggestion; this is the lock. */
+      if ((window.__kiwiRole || 'owner') !== 'owner') {
         window.Kiwi.toast?.('Accès propriétaire uniquement', { type: 'info' });
         return;
       }
@@ -5951,7 +5968,14 @@
     guarded.__kiwiRoleGated = true;
     window.Kiwi.handlers[key] = guarded;
   };
-  wrap('nav-payroll');
+  /* Everything the CSS hides from a non-owner badge. Hiding a sidebar link
+   * removes the doorway, not the room: these handlers are reachable from a
+   * data-action anywhere in the DOM, from a leftover shortcut, and from the
+   * console. Only nav-payroll was ever wrapped — Dépenses was open. */
+  ['nav-payroll', 'nav-depenses'].forEach(wrap);
+  /* Staff-only exclusions: the badge that cannot see Équipe cannot see the
+   * team's contracts or the compliance file either. */
+  if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach(wrap);
 })();
 </script>
 <!-- "Introducing Kiwi Marketing Suite" tease — fired by PIN 0505 after the

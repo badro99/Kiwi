@@ -8149,10 +8149,16 @@
       }
       // Prefer a REAL, data-derived recommendation (menu margins × popularity,
       // live hourly distribution) computed by the shared insight engine — the
-      // same one the AI agent uses. Falls back to the static rec if the engine
-      // can't produce one (e.g. not loaded yet, or too little data).
+      // same one the AI agent uses.
       const real = window.KiwiInsights && window.KiwiInsights.heroRec && window.KiwiInsights.heroRec(v);
       if (real) return real;
+      /* The static rec below is Café Atlas's, written by hand. It is the right
+       * fallback for the local demo and the wrong one for anybody else: a real
+       * session that lands here is a merchant whose own data was too thin to
+       * compute anything, and handing them a stranger's recommendation is the
+       * worst possible answer to that. Say nothing instead — renderHeroAi()
+       * blanks the card. */
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
       const L = HERO_AI_REC[fusionLang()] || HERO_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     getHeatmapAiRec: id => {
@@ -8169,6 +8175,9 @@
         };
         return W[fusionLang()] || W.fr;
       }
+      // Same rule as getHeroAiRec: the canned copy is Café Atlas's, so a real
+      // session gets nothing rather than somebody else's peak hours.
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
       const L = HEATMAP_AI_REC[fusionLang()] || HEATMAP_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     // Custom / scoped venues have no benchmark cohort — return empty so callers
