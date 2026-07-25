@@ -471,6 +471,11 @@
 
   /* ── live updates (same-tab + cross-tab, via KiwiStore) ─────────────────── */
   function subscribe(fn) { return clientsStore.subscribe(function (vid) { try { fn(vid); } catch (_) {} }); }
+  // The fidelity PROGRAM (model / targets / rewards) is its own record — the
+  // dashboard configurator writes it and the caisse Carnet must re-read it live,
+  // so a merchant who changes "10 cafés = 1 offert" on the laptop sees the till's
+  // header update without a reload. Same-tab notify here; cross-tab via `storage`.
+  function subscribeConfig(fn) { return fidelityStore.subscribe(function (vid) { try { fn(vid); } catch (_) {} }); }
 
   window.KiwiClients = {
     bookId: bookId,
@@ -485,7 +490,7 @@
     segment: segment, segmentCounts: segmentCounts, progress: progress,
     // helpers
     normPhone: normPhone, samePhone: samePhone, daysSince: daysSince,
-    subscribe: subscribe,
+    subscribe: subscribe, subscribeConfig: subscribeConfig,
     // backend sync (fail-soft — no-op until /api/clients + D1 are deployed)
     pull: pull, sync: startSync, syncable: function (b) { return syncable(b || bookId()); },
   };

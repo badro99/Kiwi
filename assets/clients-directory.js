@@ -21,21 +21,21 @@
 
   var STR = {
     fr: { title: 'Clients', sub: 'Le carnet complet — coordonnées, fidélité et consentement.',
-      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
+      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
       th: { name: 'Client', phone: 'Téléphone', email: 'Email', city: 'Ville', visits: 'Visites', spend: 'Dépensé', points: 'Points', seg: 'Segment', last: 'Dernière visite' },
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '—', empty: 'Aucun client — ajoutez-en depuis la caisse.',
       ago: function (d) { return d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
       detail: 'Fiche client', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis' },
     en: { title: 'Customers', sub: 'The full book — contacts, loyalty and consent.',
-      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
+      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '—', empty: 'No customers yet — add them from the till.',
       ago: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
       detail: 'Customer', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since' },
     ar: { title: 'العملاء', sub: 'الدفتر الكامل — جهات الاتصال والوفاء والموافقة.',
-      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
+      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '—', empty: 'لا يوجد عملاء بعد — أضِفهم من الصندوق.',
@@ -83,7 +83,7 @@
   var CSS = [
     '.cd-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}',
     '.cd-stats{display:flex;gap:22px;flex-wrap:wrap;}',
-    '.cd-stat .v{font-family:var(--serif);font-size:26px;line-height:1;}',
+    '.cd-stat .v{font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em;font-feature-settings:"tnum" 1;}',
     '.cd-stat .l{font-size:11px;color:var(--n-500);margin-top:3px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);}',
     '.cd-tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap;}',
     '.cd-search{width:min(340px,60vw);padding:11px 14px;border:1px solid var(--n-200);border-radius:11px;font-size:14px;background:var(--surface);color:var(--ink);}',
@@ -190,12 +190,22 @@
       '</div><div class="cd-tools">' +
         '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '">' +
         '<button class="cd-exp" id="cd-exp"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' + T.export + '</button>' +
+        '<button class="cd-exp" id="cd-loyalty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>' + T.program + '</button>' +
         '<button class="cd-exp cd-camp" id="cd-campaign"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>' + T.campaign + '</button>' +
       '</div></div>' +
       '<div class="cd-segs" id="cd-segs">' + segChips() + '</div>' +
       '<div id="cd-table">' + tableHtml() + '</div></div>';
 
-    var d = Kiwi.drawer({ title: T.title, subtitle: T.sub, fullpage: true, body: body });
+    // Render IN-FLOW like every other sidebar destination (Terminaux, Équipe…) —
+    // the dashboard shell + sidebar stay visible instead of a full-viewport takeover.
+    var d = (Kiwi.appPage
+      ? Kiwi.appPage('crm', { title: T.title, subtitle: T.sub, body: body })
+      : Kiwi.drawer({ title: T.title, subtitle: T.sub, fullpage: true, body: body }));
+    // appPage highlights [data-nav]; the CRM link is [data-action], so mark it here.
+    try {
+      document.querySelectorAll('.sidebar nav a').forEach(function (a) { a.classList.remove('active'); });
+      document.querySelectorAll('.sidebar nav a[data-action="clients-directory"], .sidebar nav a[data-action="growth-crm"]').forEach(function (a) { a.classList.add('active'); });
+    } catch (_) {}
     if (window.KiwiKit) KiwiKit.reveal(d.el.querySelector('.gk-reveal-root'));
     var root = d.el;
     function rerenderTable() { root.querySelector('#cd-table').innerHTML = tableHtml(); }
@@ -207,7 +217,10 @@
       var sg = e.target.closest('[data-cd-seg]');
       if (sg) { state.seg = sg.getAttribute('data-cd-seg'); rerenderSegs(); rerenderTable(); return; }
       if (e.target.closest('#cd-exp')) { csvExport(filtered(), T); Kiwi.toast && Kiwi.toast(T.export, { type: 'success', desc: fmt(filtered().length) + ' ' + T.total }); return; }
-      if (e.target.closest('#cd-campaign')) { try { d.close(); } catch (_) {} if (window.Kiwi.handlers && Kiwi.handlers['growth-crm']) Kiwi.handlers['growth-crm'](); return; }
+      if (e.target.closest('#cd-loyalty')) { if (window.Kiwi.handlers && Kiwi.handlers['loyalty']) Kiwi.handlers['loyalty'](); return; }
+      // In-flow: growth-crm's appPage replaces this page's host, so no close() needed
+      // (calling it would flash the home page in between).
+      if (e.target.closest('#cd-campaign')) { if (window.Kiwi.handlers && Kiwi.handlers['growth-crm']) Kiwi.handlers['growth-crm'](); else { try { d.close(); } catch (_) {} } return; }
       var tr = e.target.closest('[data-cd-id]');
       if (tr) { openDetail(all.filter(function (c) { return c.id === tr.getAttribute('data-cd-id'); })[0], T); }
     });

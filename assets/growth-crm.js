@@ -34,7 +34,7 @@
       tpls: ['Mot de bienvenue', 'Anniversaire', 'Nouveauté à la carte', 'Offre −15 %'],
       preview: 'Aperçu', msg: (seg) => `Bonjour {prénom}, vous nous avez manqué chez Café Atlas. Un thé à la menthe vous attend, −15 % sur votre prochaine visite cette semaine.`,
       reach: 'Audience', lift: 'CA estimé', send: 'Programmer le message',
-      toastT: 'Campagne programmée', toastD: (n) => `${n} clients · WhatsApp · départ demain 10h.`, close: 'Fermer' },
+      toastT: 'Campagne programmée', toastD: (n) => `${n} clients · WhatsApp · départ demain 10h.`, program: 'Programme de fidélité', close: 'Fermer' },
     en: { title: 'Customers & Marketing', sub: 'Your customers, segmented, and the right nudge at the right time.',
       segLabel: { reg: 'Regulars', vip: 'VIP', new: 'New this month', win: 'Win back' },
       segSub: { reg: 'Avg basket 142 MAD', vip: 'Avg basket 380 MAD', new: 'Acquired in June', win: 'Not back in 30 days' },
@@ -44,7 +44,7 @@
       tpls: ['Welcome note', 'Birthday', 'New on the menu', '−15 % offer'],
       preview: 'Preview', msg: () => `Hi {first name}, we've missed you at Café Atlas. A mint tea is waiting, −15 % on your next visit this week.`,
       reach: 'Audience', lift: 'Est. revenue', send: 'Schedule the message',
-      toastT: 'Campaign scheduled', toastD: (n) => `${n} customers · WhatsApp · sends tomorrow 10am.`, close: 'Close' },
+      toastT: 'Campaign scheduled', toastD: (n) => `${n} customers · WhatsApp · sends tomorrow 10am.`, program: 'Loyalty program', close: 'Close' },
     ar: { title: 'العملاء والتسويق', sub: 'عملاؤك، مقسّمون، والرسالة المناسبة في الوقت المناسب.',
       segLabel: { reg: 'دائمون', vip: 'كبار', new: 'جدد هذا الشهر', win: 'لاستعادتهم' },
       segSub: { reg: 'متوسط السلة 142 درهم', vip: 'متوسط السلة 380 درهم', new: 'اكتُسبوا في يونيو', win: 'لم يعودوا منذ 30 يومًا' },
@@ -54,7 +54,7 @@
       tpls: ['رسالة ترحيب', 'عيد ميلاد', 'جديد في القائمة', 'عرض −15٪'],
       preview: 'معاينة', msg: () => `مرحبًا {الاسم}، اشتقنا إليك في مقهى أطلس. شاي بالنعناع بانتظارك، −15٪ على زيارتك القادمة هذا الأسبوع.`,
       reach: 'الجمهور', lift: 'الإيراد المقدّر', send: 'جدولة الرسالة',
-      toastT: 'تمت جدولة الحملة', toastD: (n) => `${n} عميل · واتساب · الإرسال غدًا 10ص.`, close: 'إغلاق' },
+      toastT: 'تمت جدولة الحملة', toastD: (n) => `${n} عميل · واتساب · الإرسال غدًا 10ص.`, program: 'برنامج الوفاء', close: 'إغلاق' },
   };
 
   const CSS = `
@@ -63,7 +63,7 @@
   .crm-seg:hover { box-shadow:0 10px 24px -16px rgba(10,15,13,.3); transform:translateY(-2px); }
   .crm-seg.sel { border-color:var(--atlas); box-shadow:0 0 0 1px var(--atlas); }
   .crm-seg .dot { position:absolute; top:16px; inset-inline-end:16px; width:8px; height:8px; border-radius:50%; }
-  .crm-seg .n { font-family:var(--serif); font-size:34px; line-height:1; letter-spacing:-.01em; }
+  .crm-seg .n { font-size:32px; font-weight:600; line-height:1; letter-spacing:-.02em; font-feature-settings:"tnum" 1; }
   .crm-seg .l { font-size:13px; font-weight:600; margin-top:8px; } .crm-seg .s { font-size:11.5px; color:var(--n-500); margin-top:2px; }
 
   .crm-grid { display:grid; grid-template-columns:1fr 360px; gap:18px; margin-top:20px; align-items:start; }
@@ -90,10 +90,10 @@
   .crm-wa i { width:7px;height:7px;border-radius:50%; background:#25D366; }
   .crm-kpis { display:flex; gap:10px; margin:14px 0; }
   .crm-kpi { flex:1; background:var(--paper-soft); border-radius:12px; padding:11px 13px; }
-  .crm-kpi .v { font-family:var(--serif); font-size:21px; } .crm-kpi .l { font-size:10.5px; color:var(--n-500); margin-top:1px; }
+  .crm-kpi .v { font-size:22px; font-weight:600; letter-spacing:-.01em; font-feature-settings:"tnum" 1; } .crm-kpi .l { font-size:10.5px; color:var(--n-500); margin-top:1px; }
   .crm-send { width:100%; }
 
-  .crm-foot { display:flex; justify-content:flex-end; margin-top:22px; }
+  .crm-foot { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
   html[data-theme="dark"] .crm-seg, html[data-theme="dark"] .crm-tbl, html[data-theme="dark"] .crm-comp { background:#131916; border-color:#26302b; }
   html[data-theme="dark"] .crm-tag.reg { color:var(--mint); }
   html[data-theme="dark"] .crm-tbl th, html[data-theme="dark"] .crm-kpi { background:#0f1714; } html[data-theme="dark"] .crm-tbl td { border-color:#26302b; }
@@ -192,13 +192,23 @@
           <button class="kb atlas crm-send" data-crm-send>${T.send}</button>
         </div>
       </div>
-      <div class="crm-foot"><button class="kb ghost" data-dismiss>${T.close}</button></div>
+      <div class="crm-foot"><button class="kb ghost" data-crm-loyalty>${T.program}</button><button class="kb ghost" data-dismiss>${T.close}</button></div>
     </div>`;
 
-    const d = drawer({ title: T.title, subtitle: T.sub, fullpage: true, body });
+    // In-flow like every other sidebar destination (no full-viewport takeover).
+    const d = (window.Kiwi.appPage
+      ? window.Kiwi.appPage('crm', { title: T.title, subtitle: T.sub, body })
+      : drawer({ title: T.title, subtitle: T.sub, fullpage: true, body }));
+    try {
+      document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
+      document.querySelectorAll('.sidebar nav a[data-action="clients-directory"], .sidebar nav a[data-action="growth-crm"]').forEach((a) => a.classList.add('active'));
+    } catch (_) {}
     if (KIT) KIT.reveal(d.el.querySelector('.gk-reveal-root'));
     const root = d.el;
     d.el.addEventListener('click', (e) => {
+      // appPage has no backdrop dismiss listener — wire the foot buttons ourselves.
+      if (e.target.closest('[data-dismiss]')) { try { d.close(); } catch (_) {} return; }
+      if (e.target.closest('[data-crm-loyalty]')) { if (window.Kiwi.handlers && window.Kiwi.handlers['loyalty']) window.Kiwi.handlers['loyalty'](); return; }
       const sg = e.target.closest('[data-crm-seg]');
       const ch = e.target.closest('[data-crm-chan]');
       if (sg) {

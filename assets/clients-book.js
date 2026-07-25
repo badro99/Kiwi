@@ -77,7 +77,11 @@
       '#kcb-chip .kcb-badge{background:var(--mint,#7DF2B0);color:var(--riad,#053B2C);font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 7px;min-width:18px;text-align:center;}',
       '@media (max-width:600px){#kcb-chip{right:12px;bottom:12px;padding:11px 15px 11px 13px;}#kcb-chip .kcb-lbl{display:none;}}',
       /* root overlay */
-      '#kcb-root{position:fixed;inset:0;z-index:940;background:var(--paper,#F7F5F0);display:flex;flex-direction:column;',
+      /* Inset over the caisse working area (positioned in JS to sit right of the
+         nav rail, below the top bar) so the caisse chrome stays visible — like the
+         "Plan d'sala" floor-plan view. inset:0 here is the full-bleed fallback. */
+      '#kcb-root{position:fixed;inset:0;z-index:940;background:var(--paper,#F7F5F0);display:flex;flex-direction:column;overflow:hidden;',
+      'border-inline-start:1px solid rgba(10,15,13,.10);box-shadow:-22px 0 55px -30px rgba(5,20,14,.55);border-start-start-radius:16px;',
       'font-family:"Inter Tight",Inter,system-ui,sans-serif;color:var(--ink,#0A0F0D);animation:kcb-fade .2s ease;}',
       '@keyframes kcb-fade{from{opacity:0}to{opacity:1}}',
       '@keyframes kcb-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}',
@@ -160,7 +164,7 @@
       '.kcb-big{background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font:600 1rem/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
       '.kcb-big svg{width:18px;height:18px;}',
       /* dark */
-      'html[data-theme="dark"] #kcb-root{background:#0d1512;color:#eafff3;}',
+      'html[data-theme="dark"] #kcb-root{background:#0d1512;color:#eafff3;border-color:rgba(255,255,255,.07);}',
       'html[data-theme="dark"] #kcb-root .kcb-head,html[data-theme="dark"] .kcb-row,html[data-theme="dark"] .kcb-stat,html[data-theme="dark"] .kcb-kpi,html[data-theme="dark"] .kcb-record,html[data-theme="dark"] .kcb-field input,html[data-theme="dark"] #kcb-root .kcb-search{background:#141d19;border-color:#26302b;color:#eafff3;}',
       'html[data-theme="dark"] #kcb-sheet .kcb-card{background:#0d1512;}',
       'html[data-theme="dark"] .kcb-consent,html[data-theme="dark"] .kcb-btn.ghost,html[data-theme="dark"] .kcb-recrow input{background:#141d19;border-color:#26302b;color:#eafff3;}',
@@ -196,6 +200,41 @@
 
   /* ── root panel ────────────────────────────────────────────────────────── */
   var state = { q: '' };
+  /* Inset the panel to the caisse working area — right of the nav rail, below the
+   * top bar — so the caisse sidebar + top bar stay visible (the "Plan d'sala" look
+   * the owner asked for) instead of a full-viewport takeover. Café/resto exposes a
+   * 280px .sidebar; pos verticals a vertical nav rail. Unknown layouts fall back to
+   * full-bleed (inset:0) so nothing is ever hidden. */
+  function panelInset() {
+    var res = { left: 0, top: 0, right: 0, bottom: 0 };
+    try {
+      var rail = null, cands = document.querySelectorAll('.sidebar, nav[class$="-nav"]');
+      for (var i = 0; i < cands.length; i++) {
+        var el = cands[i]; if (el.offsetParent === null) continue;
+        var rr = el.getBoundingClientRect();
+        // a vertical rail hugging a screen edge (taller than wide), not a top bar
+        if (rr.height > rr.width * 1.4 && (rr.left < 60 || rr.right > window.innerWidth - 60)) { rail = rr; break; }
+      }
+      if (rail) {
+        res.top = Math.max(0, Math.round(rail.top));
+        if (rail.left <= window.innerWidth - rail.right) res.left = Math.max(0, Math.round(rail.right)); // rail on the left
+        else res.right = Math.max(0, Math.round(window.innerWidth - rail.left));                         // rail on the right (RTL)
+        return res;
+      }
+      var main = document.querySelector('.main');
+      if (main && main.offsetParent !== null) {
+        var mr = main.getBoundingClientRect();
+        if (mr.width > 120 && mr.height > 120) { res.top = Math.max(0, Math.round(mr.top)); res.left = Math.max(0, Math.round(mr.left)); }
+      }
+    } catch (_) {}
+    return res;
+  }
+  function positionRoot(root) {
+    if (!root) return;
+    var b = panelInset();
+    root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
+    root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
+  }
   function open() {
     css();
     var root = document.getElementById('kcb-root');
@@ -205,6 +244,7 @@
       document.body.appendChild(root);
     }
     root.style.display = 'flex';
+    positionRoot(root);
     root.innerHTML =
       '<div class="kcb-head"><h2>Carnet clients</h2><span class="kcb-prog">' + esc(progLabel()) + '</span>' +
         '<button class="kcb-x" id="kcb-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
@@ -248,6 +288,15 @@
     Array.prototype.forEach.call(host.querySelectorAll('.kcb-row'), function (row) {
       row.onclick = function () { openDetail(row.getAttribute('data-id')); };
     });
+  }
+
+  // The programme (model / targets / rewards) can be changed from the dashboard —
+  // refresh the header label + the stamp/points column live when it does.
+  function refreshOpen() {
+    var r = document.getElementById('kcb-root');
+    if (!r || r.style.display === 'none') return;
+    var pl = r.querySelector('.kcb-prog'); if (pl) pl.textContent = progLabel();
+    renderList();
   }
 
   /* ── sheet (add / edit / detail) ───────────────────────────────────────── */
@@ -443,11 +492,14 @@
     setTimeout(function () { wireScheduled = false; try { wireCaisseEntry(); ensureChip(); } catch (_) {} }, 120);
   }
   function boot() {
+    window.addEventListener('resize', function () { var r = document.getElementById('kcb-root'); if (r && r.style.display !== 'none') positionRoot(r); });
     window.addEventListener('storage', function (e) {
       if (!e.key) return;
-      if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant' || e.key.indexOf('kiwi:clients:') === 0) { ensureChip(); if (document.getElementById('kcb-root') && document.getElementById('kcb-root').style.display !== 'none') renderList(); }
+      if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant' || e.key.indexOf('kiwi:clients:') === 0) { ensureChip(); refreshOpen(); }
+      else if (e.key.indexOf('kiwi:fidelity:') === 0) refreshOpen(); // programme changed on the dashboard (other tab)
     });
-    if (KC.subscribe) KC.subscribe(function () { ensureChip(); var r = document.getElementById('kcb-root'); if (r && r.style.display !== 'none') renderList(); });
+    if (KC.subscribe) KC.subscribe(function () { ensureChip(); refreshOpen(); });
+    if (KC.subscribeConfig) KC.subscribeConfig(function () { refreshOpen(); }); // same-tab programme edit
     // Verticals mount lazily on unlock → watch the DOM and (re)inject the entry.
     try { new MutationObserver(scheduleWire).observe(document.body, { childList: true, subtree: true }); } catch (_) {}
     scheduleWire();

@@ -1276,7 +1276,14 @@
       close: 'Fermer',
       activate: 'Activer le programme →',
       toastTitle: 'Programme fidélité activé',
-      toastDesc: "Vos prochains clients verront le prompt d'inscription sur le reçu."
+      toastDesc: "Vos prochains clients verront le prompt d'inscription sur le reçu.",
+      cfg: {
+        reward: 'Récompense', visitTarget: 'Nombre de visites',
+        perMad: 'Points par MAD', threshold: 'Palier (points)',
+        item: 'Produit concerné', productTarget: 'Quantité',
+        save: 'Enregistrer le programme', saved: 'Programme mis à jour',
+        savedDesc: 'La caisse et le carnet clients l’appliquent aussitôt.',
+      }
     },
     en: {
       tag: 'LOYALTY · KIWI LOYALTY',
@@ -1295,7 +1302,14 @@
       close: 'Close',
       activate: 'Activate Program →',
       toastTitle: 'Loyalty program activated',
-      toastDesc: 'Your next customers will see the sign-up prompt on their receipt.'
+      toastDesc: 'Your next customers will see the sign-up prompt on their receipt.',
+      cfg: {
+        reward: 'Reward', visitTarget: 'Number of visits',
+        perMad: 'Points per MAD', threshold: 'Threshold (points)',
+        item: 'Qualifying product', productTarget: 'Quantity',
+        save: 'Save program', saved: 'Program updated',
+        savedDesc: 'The till and the client book apply it right away.',
+      }
     },
     ar: {
       tag: 'الوفاء · KIWI LOYALTY',
@@ -1314,7 +1328,14 @@
       close: 'إغلاق',
       activate: 'تفعيل البرنامج →',
       toastTitle: 'تم تفعيل برنامج الوفاء',
-      toastDesc: 'سيرى عملاؤك القادمون موجه التسجيل على إيصالهم.'
+      toastDesc: 'سيرى عملاؤك القادمون موجه التسجيل على إيصالهم.',
+      cfg: {
+        reward: 'المكافأة', visitTarget: 'عدد الزيارات',
+        perMad: 'نقاط لكل درهم', threshold: 'العتبة (نقاط)',
+        item: 'المنتج المؤهل', productTarget: 'الكمية',
+        save: 'حفظ البرنامج', saved: 'تم تحديث البرنامج',
+        savedDesc: 'يطبّقه الصندوق ودفتر العملاء فورًا.',
+      }
     }
   };
   handlers['loyalty'] = () => {
@@ -1327,6 +1348,21 @@
     if (!_biz) _biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     const _prog = _biz ? T.previewProgram.replace(/·.*$/, '· ' + _biz.toUpperCase())
       : (window.KiwiEnv?.isReal?.() ? T.previewProgram.replace(/·.*$/, '').trim() : T.previewProgram);
+    const C = T.cfg || {};
+    const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // Pre-fill from the store's live programme (clients-store.js) — a merchant who
+    // already set "10 cafés = 1 offert" reopens the editor on those exact values.
+    const cur = (() => { try { return (window.KiwiClients && KiwiClients.config && KiwiClients.config()) || {}; } catch (_) { return {}; } })();
+    const cfg = {
+      model: cur.model || (window.KiwiClients && KiwiClients.defaultModel && KiwiClients.defaultModel()) || 'visit',
+      visit:   Object.assign({ target: 10, reward: '1 offert' }, cur.visit),
+      amount:  Object.assign({ perMad: 1, threshold: 100, reward: '−10 %' }, cur.amount),
+      product: Object.assign({ item: 'Café', target: 10, reward: '1 offert' }, cur.product),
+    };
+    const optStyle = (v) => cfg.model === v ? 'border:1px solid var(--atlas); background: var(--mint-soft);' : 'border:1px solid var(--n-200); background: transparent;';
+    const lineFor = (c) => c.model === 'amount' ? `${c.amount.perMad} pt / MAD → ${c.amount.reward} à ${c.amount.threshold} pts`
+      : c.model === 'product' ? `${c.product.target} ${c.product.item} = ${c.product.reward}`
+      : `${c.visit.target} visites = ${c.visit.reward}`;
     const m = modal({
       tag: T.tag,
       title: T.title,
@@ -1335,7 +1371,7 @@
       body: `
         <div class="loy-preview">
           <div style="font-size:11px; letter-spacing:0.1em; font-family:var(--mono); color:var(--mint);">${_prog}</div>
-          <div style="font-size:22px; font-weight:600; margin-top:6px; letter-spacing:-0.02em;">${T.previewReward}</div>
+          <div data-loy-preview style="font-size:22px; font-weight:600; margin-top:6px; letter-spacing:-0.02em;">${escAttr(lineFor(cfg))}</div>
           <div class="loy-dots">
             <i class="active">✓</i><i class="active">✓</i><i class="active">✓</i><i class="active">✓</i><i class="current">5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>🎁</i>
           </div>
@@ -1343,25 +1379,70 @@
         </div>
         <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-family:var(--mono); margin-top:18px; margin-bottom:10px;">${T.modelTitle}</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <label style="display:flex; gap:12px; padding:12px 14px; border:1px solid var(--atlas); background: var(--mint-soft); border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="visit" checked /><div><b>${T.byVisit}</b><div style="font-size:12px; color:var(--n-600); margin-top:2px;">${T.byVisitDesc}</div></div></label>
-          <label style="display:flex; gap:12px; padding:12px 14px; border:1px solid var(--n-200); border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="amount" /><div><b>${T.byAmount}</b><div style="font-size:12px; color:var(--n-500); margin-top:2px;">${T.byAmountDesc}</div></div></label>
-          <label style="display:flex; gap:12px; padding:12px 14px; border:1px solid var(--n-200); border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="product" /><div><b>${T.byProduct}</b><div style="font-size:12px; color:var(--n-500); margin-top:2px;">${T.byProductDesc}</div></div></label>
+          <label data-mopt="visit" style="display:flex; gap:12px; padding:12px 14px; ${optStyle('visit')} border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="visit" ${cfg.model === 'visit' ? 'checked' : ''}/><div><b>${T.byVisit}</b><div style="font-size:12px; color:var(--n-600); margin-top:2px;">${T.byVisitDesc}</div></div></label>
+          <label data-mopt="amount" style="display:flex; gap:12px; padding:12px 14px; ${optStyle('amount')} border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="amount" ${cfg.model === 'amount' ? 'checked' : ''}/><div><b>${T.byAmount}</b><div style="font-size:12px; color:var(--n-500); margin-top:2px;">${T.byAmountDesc}</div></div></label>
+          <label data-mopt="product" style="display:flex; gap:12px; padding:12px 14px; ${optStyle('product')} border-radius: 10px; cursor:pointer;"><input type="radio" name="m" value="product" ${cfg.model === 'product' ? 'checked' : ''}/><div><b>${T.byProduct}</b><div style="font-size:12px; color:var(--n-500); margin-top:2px;">${T.byProductDesc}</div></div></label>
+        </div>
+        <div data-mgroup="visit" ${cfg.model === 'visit' ? '' : 'hidden'} style="margin-top:16px;">
+          <div class="kf-row">
+            <div class="kf-group"><label class="kf-label">${C.visitTarget}</label><input class="kf-input" data-loy="visit.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.visit.target)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="visit.reward" value="${escAttr(cfg.visit.reward)}" placeholder="1 offert"></div>
+          </div>
+        </div>
+        <div data-mgroup="amount" ${cfg.model === 'amount' ? '' : 'hidden'} style="margin-top:16px;">
+          <div class="kf-row">
+            <div class="kf-group"><label class="kf-label">${C.perMad}</label><input class="kf-input" data-loy="amount.perMad" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.perMad)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.threshold}</label><input class="kf-input" data-loy="amount.threshold" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.threshold)}"></div>
+          </div>
+          <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="amount.reward" value="${escAttr(cfg.amount.reward)}" placeholder="−10 %"></div>
+        </div>
+        <div data-mgroup="product" ${cfg.model === 'product' ? '' : 'hidden'} style="margin-top:16px;">
+          <div class="kf-row">
+            <div class="kf-group"><label class="kf-label">${C.item}</label><input class="kf-input" data-loy="product.item" value="${escAttr(cfg.product.item)}" placeholder="Café"></div>
+            <div class="kf-group"><label class="kf-label">${C.productTarget}</label><input class="kf-input" data-loy="product.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.product.target)}"></div>
+          </div>
+          <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="product.reward" value="${escAttr(cfg.product.reward)}" placeholder="1 offert"></div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">
           <button class="kb ghost" data-close>${T.close}</button>
-          <button class="kb atlas" data-activate>${T.activate}</button>
+          <button class="kb atlas" data-activate>${C.save || T.activate}</button>
         </div>
       `
     });
+    // Read the full programme back out of the form (with sane fallbacks).
+    const readCfg = () => {
+      const read = (k) => { const el = m.el.querySelector(`[data-loy="${k}"]`); return el ? el.value.trim() : ''; };
+      const num = (k, d) => { const n = parseInt(read(k), 10); return n > 0 ? n : d; };
+      const picked = m.el.querySelector('input[name="m"]:checked');
+      return {
+        model: (picked && picked.value) || cfg.model,
+        visit:   { target: num('visit.target', 10), reward: read('visit.reward') || '1 offert' },
+        amount:  { perMad: num('amount.perMad', 1), threshold: num('amount.threshold', 100), reward: read('amount.reward') || '−10 %' },
+        product: { item: read('product.item') || 'Café', target: num('product.target', 10), reward: read('product.reward') || '1 offert' },
+      };
+    };
+    const refreshPreview = () => { const el = m.el.querySelector('[data-loy-preview]'); if (el) el.textContent = lineFor(readCfg()); };
+    // Model switch → reveal that mechanic's fields, restyle the chosen card, refresh preview.
+    m.el.addEventListener('change', (e) => {
+      const r = e.target.closest('input[name="m"]'); if (!r) return;
+      const model = r.value;
+      m.el.querySelectorAll('[data-mgroup]').forEach((g) => { g.hidden = g.getAttribute('data-mgroup') !== model; });
+      m.el.querySelectorAll('[data-mopt]').forEach((l) => {
+        const on = l.getAttribute('data-mopt') === model;
+        l.style.border = on ? '1px solid var(--atlas)' : '1px solid var(--n-200)';
+        l.style.background = on ? 'var(--mint-soft)' : 'transparent';
+      });
+      refreshPreview();
+    });
+    m.el.addEventListener('input', (e) => { if (e.target.closest('[data-loy]')) refreshPreview(); });
     m.el.addEventListener('click', (e) => {
       if (e.target.closest('[data-close]')) m.close();
       if (e.target.closest('[data-activate]')) {
-        // Persist the chosen mechanic to the store's fidelity config (clients-store.js),
-        // so the caisse Carnet clients + the CRM segments use it. No-op without a real book.
-        const picked = m.el.querySelector('input[name="m"]:checked');
-        const model = (picked && picked.value) || 'visit';
-        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) KiwiClients.setConfig({ model }); } catch (_) {}
-        m.close(); toast(T.toastTitle, {type:'success', desc: T.toastDesc});
+        // Persist the FULL programme (model + targets + rewards) to the store's
+        // fidelity config (clients-store.js), so the caisse Carnet + the CRM segments
+        // use it live. No-op without a real book (unpaired demo).
+        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) KiwiClients.setConfig(readCfg()); } catch (_) {}
+        m.close(); toast(C.saved || T.toastTitle, { type: 'success', desc: C.savedDesc || T.toastDesc });
       }
     });
   };
