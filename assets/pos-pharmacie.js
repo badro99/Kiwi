@@ -275,6 +275,24 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  const tkLabel = (t) => {
+    const l = t.lines[0];
+    if (!l) return 'Vente';
+    const nm = ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Vente';
+    return t.lines.length > 1 ? `${nm} +${t.lines.length - 1} art.` : nm;
+  };
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le comptoir encaissait dans un ticket jeté juste après : la recette du jour
+     n'existait nulle part et le titulaire voyait 0 MAD. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pharmacie', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
+     un rechargement le remet à V-2480 et deux ventes portent le même numéro.
+     Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) saleSeq = window.KiwiPosSale.nextSeq('pharmacie', saleSeq); } catch (_) {}
 
   /* ═══════════════════════ ROOT ═══════════════════════ */
   let root = null;
@@ -994,6 +1012,10 @@
       if (state.night) {
         queuedSales.unshift({ t: fmtTime(new Date()), item: ITEMS[t.lines[0].itemId].label + (t.lines.length > 1 ? ` +${t.lines.length - 1}` : ''), who: t.patient ? t.patient.name : 'Passage', amt: due });
       }
+      /* Seule la part patient rentre au comptoir. La part mutuelle est facturée
+         au tiers payant plus tard : la journaliser ici gonflerait la recette du
+         jour d'un encaissement qui n'a pas eu lieu. */
+      postDay(due, method, tkLabel(t), t.num);
       saleSeq++;
       const wasNum = t.num;
       freshTicket();

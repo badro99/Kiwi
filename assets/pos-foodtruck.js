@@ -180,12 +180,40 @@
   const itemsSummary = (o) => o.lines.map((l) => `${l.qty} × ${ITEM[l.id].label}`).join(' · ');
   const findQ = (id) => QUEUE.find((o) => o.id === id);
 
-  function addRecette(spotId, method, amount) {
+  /* Point de passage unique de la recette : la vente éclair et l'encaissement
+     au retrait finissent tous les deux ici, donc le journal partagé aussi. */
+  function addRecette(spotId, method, amount, ref) {
     const r = recette[spotId] || recette.marina;
     r.orders++;
     if (method === 'carte') r.carte += amount;
     else r.especes += amount;
+    postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref);
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le camion encaissait dans `recette` et rien d'autre : la recette du service
+     disparaissait au premier refresh et le patron voyait 0 MAD. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('foodtruck', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Reprise du service en cours. Le journal ne retient pas l'emplacement, donc
+     tout est recrédité sur `marina`, l'emplacement par défaut : mieux vaut une
+     ventilation approximative qu'une recette du jour à zéro. `sold` n'est pas
+     restauré — c'est un compteur d'articles, pas d'argent. Le numéro d'appel
+     repart au-delà du dernier encaissé, sinon deux clients sont appelés au même
+     numéro. Démo : journal vide, aucun effet. */
+  (function restoreDay() {
+    try {
+      if (!window.KiwiPosSale) return;
+      const t = window.KiwiPosSale.totals('foodtruck');
+      if (!t.count) return;
+      recette.marina.especes += t.cash;
+      recette.marina.carte += t.card + t.other;
+      recette.marina.orders += t.count;
+      seq = window.KiwiPosSale.nextSeq('foodtruck', seq);
+    } catch (_) {}
+  })();
 
   function queueIfOffline(label) {
     if (!state.offline) return false;
@@ -534,7 +562,7 @@
     };
     seq++;
     QUEUE.push(o);
-    addRecette(o.spot, method, total);
+    addRecette(o.spot, method, total, o.id);
     o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
     consumeBread(o.lines);
     state.ticket = { lines: [], name: '' };
@@ -750,7 +778,7 @@
         method: null,
         onPaid: (m, rendu) => {
           o.pay = { method: m, paid: o.total };
-          addRecette(o.spot, m, o.total);
+          addRecette(o.spot, m, o.total, o.id);
           o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
           toast(`Khlass, ${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
           serveOrder(o);

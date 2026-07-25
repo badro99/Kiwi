@@ -375,6 +375,18 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     La pizzeria encaissait dans o.pay, et ORDERS meurt avec l'onglet : la
+     recette du service n'existait nulle part. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de commande repart AU-DELÀ du dernier encaissé aujourd'hui :
+     sans ça un rechargement le remet à M-208 et deux commandes du même service
+     portent le même numéro. Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) seq = window.KiwiPosSale.nextSeq('pizzeria', seq); } catch (_) {}
 
   const lineArt = (ln) => ln.kind === 'drink' ? (ART[ln.did] || '') : (ln.pidB ? halfArt(ln.pid, ln.pidB) : (ART[ln.pid] || ''));
   const jobArt  = (j) => j.pidB ? halfArt(j.pid, j.pidB) : (ART[j.pid] || '');
@@ -1153,6 +1165,10 @@
         order.pay.paid += amount;
         order.pay.method = method;
         order.pay.deferred = null;
+        /* Le solde d'un « payer à table / au retrait / à la livraison » rentre
+           ICI. remitOrder et deliverOrder passent tous les deux par openPay
+           en mode settle, donc cette ligne les couvre tous les deux. */
+        postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id);
         closeVeil('#pz-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         renderStats();
@@ -1161,6 +1177,10 @@
         return;
       }
       order.pay = { method, paid: amount, deferred: null };
+      /* Le différé (data-defer) sort par commitOrder sans passer ici : il ne
+         prend rien au comptoir, ce n'est pas une recette tant que le solde
+         n'est pas encaissé. */
+      postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id);
       closeVeil('#pz-pay-veil');
       commitOrder(order);
       toast(`Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);

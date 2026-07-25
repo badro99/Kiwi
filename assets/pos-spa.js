@@ -271,6 +271,18 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le spa encaissait dans un ticket jeté juste après la vente : la recette du
+     jour n'existait nulle part et la patronne voyait 0 MAD. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de ticket repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
+     un rechargement le remet à S-2104 et deux séances portent le même numéro.
+     Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('spa', ticketSeq); } catch (_) {}
 
   let root = null;
 
@@ -854,6 +866,13 @@
 
   /* ---------- ticket ---------- */
   const ticketTotal = (t) => t.lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const tkLabel = (t) => {
+    const l = t.lines[0];
+    if (!l) return 'Vente';
+    const ref = l.type === 'svc' ? PRESTA[l.refId] : PROD[l.refId];
+    const nm = ref ? ref.name : 'Vente';
+    return t.lines.length > 1 ? `${nm} +${t.lines.length - 1} art.` : nm;
+  };
 
   function lineRow(l, i) {
     const isSvc = l.type === 'svc';
@@ -1146,6 +1165,9 @@
         cureSeq++;
         const cu = { id: `CU-${cureSeq}`, clientId: ctx.clientId, familyId: ctx.familyId, size: ctx.size, used: 0, boughtDays: 0, expiresDays: 180 };
         CURES.unshift(cu);
+        /* Le forfait est encaissé en entier le jour de la vente : c'est une
+           recette du jour, même si les séances seront consommées plus tard. */
+        postDay(ctx.price, method, `Forfait ${ctx.name}${CL[ctx.clientId] ? ` · ${CL[ctx.clientId].name}` : ''}`, cu.id);
         queueIfOffline('Vente forfait');
         toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} séances pour ${CL[ctx.clientId].name}`);
         toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
@@ -1162,6 +1184,9 @@
       t.lines.forEach((l) => { if (l.type === 'prod') PROD[l.refId].stock = Math.max(0, PROD[l.refId].stock - l.qty); });
       if (t.clientId) { const c = CL[t.clientId]; c.visits++; c.lastDays = 0; }
       const parts = tipSplit(tip, t.lines);
+      /* Prestations ET pourboire : c'est le montant que la cliente a réellement
+         laissé au comptoir, le même que celui annoncé dans le toast. */
+      postDay(base + tip, method, tkLabel(t), t.num);
       queueIfOffline('Encaissement');
       toast(`${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (tip > 0) toast(`Pourboire ${fmtMAD(tip)} réparti, ${parts.map((p) => `${PR[p.id].short} ${p.amount}`).join(' · ')}`, 2800);

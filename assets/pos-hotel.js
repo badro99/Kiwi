@@ -236,6 +236,19 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     La maison d'hôtes encaissait dans le folio du séjour, et le folio meurt
+     avec le check-out : la recette n'existait nulle part une fois la chambre
+     passée en ménage. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('hotel', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de facture repart AU-DELÀ de la dernière émise aujourd'hui :
+     sans ça un rechargement le remet à F-1208 et deux séjours différents
+     repartent avec la même facture. Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) factureSeq = window.KiwiPosSale.nextSeq('hotel', factureSeq); } catch (_) {}
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
@@ -729,6 +742,11 @@
         charges: [], payments: a.acompte ? [['carte', a.acompte, 'Acompte à la réservation']] : [],
       });
       st.police = ci.police;
+      /* L'acompte de réservation entre dans les livres ici : le check-out ne
+         journalise que le SOLDE, donc sans cette ligne cet argent n'arrivait
+         jamais au tableau de bord. La caution, elle, n'est pas une recette :
+         elle est rendue au départ, on ne la journalise pas. */
+      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`);
       queueIfOffline(`Check-in Ch. ${a.room}`);
       toast(`Check-in Ch. ${a.room}, ${a.guest} · marhba`);
       if (ci.caution === 'especes') toast('Caution 1 000 MAD espèces, au coffre, reçu remis');
@@ -1090,6 +1108,10 @@
       if (method === 'carte') st.payments.push({ method, amount, label: 'Solde au départ · carte' });
       if (method === 'especes') st.payments.push({ method, amount, label: 'Solde au départ · espèces' });
       if (method === 'online') st.payments.push({ method, amount, label: `Réglé en ligne · ${online}` });
+      /* Le folio déjà soldé passe par done(null, 0, 0) : rien n'est pris au
+         comptoir ce jour-là, ce n'est donc pas une recette du jour — l'argent
+         a été journalisé au moment où il est réellement rentré. */
+      if (amount > 0) postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`);
       closeVeil('#ht-checkout-veil');
 
       /* clôture du séjour */

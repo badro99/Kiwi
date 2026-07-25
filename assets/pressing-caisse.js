@@ -366,6 +366,25 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  const tkLabel = (o) => {
+    const l = o.lines[0];
+    if (!l) return 'Pressing';
+    const nm = ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing';
+    const n = o.lines.reduce((s, x) => s + x.qty, 0);
+    return o.lines.length > 1 ? `${nm} +${n - l.qty} pièces` : nm;
+  };
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le comptoir encaissait dans o.pay, et ORDERS meurt avec l'onglet : la
+     recette du jour n'existait nulle part. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
+     un rechargement le remet à P-1045 et deux commandes différentes portent le
+     même numéro, sur les pièces comme sur le rack. Démo : aucun effet. */
+  try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('pressing', ticketSeq); } catch (_) {}
 
   /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
   let root = null;
@@ -1294,6 +1313,9 @@
       if (settle) {
         order.pay.paid += amount;
         order.pay.method = method;
+        /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
+           c'est ici qu'il devient une recette, pas à la prise de la commande. */
+        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id);
         closeVeil('#px-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (ctx && typeof ctx.onSettled === 'function') ctx.onSettled();
@@ -1307,6 +1329,11 @@
 
     const finishFresh = (msg) => {
       closeVeil('#px-pay-veil');
+      /* `pickup` et `compte` passent aussi par ici avec paid: 0 : ils ne
+         prennent rien au comptoir. Seul l'argent réellement encaissé (paiement
+         complet ou acompte) est une recette, le solde sera journalisé par la
+         branche `settle` au retrait. */
+      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id);
       if (fresh) {
         ORDERS.unshift(order);
         ticketSeq++;

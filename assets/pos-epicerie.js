@@ -277,8 +277,25 @@
     ],
   };
 
+  /* Reprise de la journée en cours : un rechargement (mise à jour PWA, onglet
+     tué, batterie) ne doit pas remettre la recette du comptoir à zéro alors que
+     le tiroir est plein. Relu depuis le journal partagé, filtré sur aujourd'hui.
+     Le numéro de ticket repart AU-DELÀ du dernier encaissé, sinon deux ventes
+     différentes porteraient le même T-642. Démo : journal vide, aucun effet. */
+  (function restoreDay() {
+    try {
+      if (!window.KiwiPosSale) return;
+      const t = window.KiwiPosSale.totals('epicerie');
+      if (!t.count) return;
+      day.especes += t.cash;
+      day.carte += t.card + t.other;
+      day.tickets += t.count;
+    } catch (_) {}
+  })();
+
   /* ───────────────────────── state ───────────────────────── */
   let ticketSeq = 642;
+  try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('epicerie', ticketSeq); } catch (_) {}
   const state = {
     view: 'caisse',
     cat: 'tous',
@@ -893,6 +910,15 @@
       const add = ln.weight != null ? 1 : ln.qty;
       if (row) row.qty += add;
     });
+    /* Journal partagé : le serveur (donc le tableau de bord de la patronne) et
+       la reprise après rechargement. Sans ça la recette vivait uniquement dans
+       `day` et disparaissait au premier refresh. Démo : no-op. */
+    postDay(total, method, t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} art.)`, t.num);
+  }
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('epicerie', { total, method, label, ref });
+    } catch (_) {}
   }
 
   /* ═══════════════════════ CARNET PICK (attacher le panier à une ardoise) ═══════════════════════ */
@@ -1249,6 +1275,12 @@
       $('#ep-settle-ok', el).onclick = () => {
         const rendu = Math.max(0, received - pay);
         c.hist.push({ type: 'pay', label: pay >= bal ? 'Règlement (soldé)' : 'Règlement partiel', amt: Math.round(pay), at: new Date() });
+        /* Un règlement d'ardoise, c'est de l'argent qui entre dans le tiroir.
+           Le toast l'annonçait déjà, mais ni la recette du jour ni le tableau
+           de bord n'en voyaient la couleur : la journée était sous-comptée de
+           tout ce que les voisins venaient rembourser. */
+        day.especes += pay;
+        postDay(pay, 'especes', `Ardoise · ${c.name}`, '');
         closeVeil('#ep-pay-veil');
         queueIfOffline('Règlement');
         const newBal = balanceOf(c);

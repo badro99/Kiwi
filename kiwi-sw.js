@@ -74,6 +74,7 @@ var SHELL = [
   '/assets/orderpro-publish.js',
   '/assets/orderpro-panel.js',
   '/assets/orderpro-inbox.js',
+  '/assets/pos-sale.js',
   '/assets/pos-dispatch.js',
   '/assets/caisse-pairing.js',
   '/assets/pressing-caisse.js',

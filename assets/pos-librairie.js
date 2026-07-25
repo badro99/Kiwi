@@ -307,6 +307,24 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  const cartLabel = (c) => {
+    const l = c.lines[0];
+    if (!l) return 'Vente';
+    const nm = ITEM[l.key] ? ITEM[l.key].title : 'Vente';
+    return c.lines.length > 1 ? `${nm} +${cartCount(c) - l.qty} art.` : nm;
+  };
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     La librairie encaissait dans state.cart, jeté juste après la vente : la
+     recette n'existait nulle part. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
+     un rechargement le remet à V-4821 et deux ventes portent le même numéro.
+     Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) saleSeq = window.KiwiPosSale.nextSeq('librairie', saleSeq); } catch (_) {}
 
   /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
   let root = null;
@@ -918,6 +936,7 @@
         cu.visits += 1;
         earnMsg = ` · +${total} pts fidélité`;
       }
+      postDay(total, method, cartLabel(c), c.num);
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
       freshCart();

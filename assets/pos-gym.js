@@ -281,6 +281,18 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + historique de la journée.
+     Le club encaissait dans state.dayRevenue et rien d'autre : la patronne
+     voyait 0 MAD et un refresh effaçait la recette. Démo : no-op.
+     Pas de restoreDay ici : dayRevenue ventile par ligne de produit (abos,
+     shop, coaching, pass), pas par moyen de paiement. Le journal ne retient
+     que le moyen de paiement, donc il n'y a rien à recréditer sans inventer
+     une ligne — mieux vaut ne rien restaurer que fausser la ventilation. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref });
+    } catch (_) {}
+  }
   function initials(name) {
     return name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   }
@@ -1015,6 +1027,7 @@
       setTimeout(() => openMember(id), 350);
     }
     addRevenue('abos', price);
+    postDay(price, method, `${sel.renew ? 'Renouvellement' : 'Abonnement'} ${PLAN[sel.plan].label.toLowerCase()}${sel.student ? ' · étudiant' : ''}`, sel.member ? sel.member.code : '');
     refreshOps();
   }
 
@@ -1132,6 +1145,7 @@
       onPaid: (method, rendu) => {
         state.cart = [];
         addRevenue('shop', total);
+        postDay(total, method, `Comptoir · ${summary}`, '');
         renderCart(); renderBadges(); icons();
         if (state.view === 'pilotage') renderPilotage();
         toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1827,6 +1841,7 @@
             sel.member.ptCredits += pk.n;
             if (sel.coach && sel.member.coach === 'Sans coach') sel.member.coach = COACH[sel.coach].name;
             addRevenue('coaching', pk.price);
+            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '');
             queueIfOffline('Vente séances coaching');
             toast(`${firstName(sel.member.name)}, ${pk.n} séance${pk.n > 1 ? 's' : ''} ajoutée${pk.n > 1 ? 's' : ''}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();
@@ -1954,6 +1969,7 @@
             state.passesToday += 1;
             state.inGym += (p.id === 'duo' ? 2 : 1);
             addRevenue('pass', p.price);
+            postDay(p.price, method, `Pass · ${p.label}`, '');
             queueIfOffline('Séance unique / pass');
             toast(`${p.label} vendu, accès ouvert${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();

@@ -319,6 +319,18 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     La boutique encaissait dans des variables de closure et rien d'autre : la
+     patronne voyait 0 MAD et un refresh effaçait la recette. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
+     un rechargement le remet à B-1068 et deux bouquets différents portent le
+     même numéro. Démo : journal vide, aucun effet. */
+  try { if (window.KiwiPosSale) bouquetSeq = window.KiwiPosSale.nextSeq('fleuriste', bouquetSeq); } catch (_) {}
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
@@ -1072,6 +1084,9 @@
       if (settle) {
         order.pay.paid += amount;
         order.pay.method = method;
+        /* Le solde d'une livraison est encaissé ici, pas à la prise de commande :
+           c'est le seul moment où l'argent rentre vraiment. */
+        postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id);
         closeVeil('#fl-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (typeof ctx.onSettled === 'function') ctx.onSettled();
@@ -1086,6 +1101,10 @@
     const finishFresh = (mode, method, paid, msg) => {
       closeVeil('#fl-pay-veil');
       const b = ctx.b;
+      /* `pickup` et `compte` ne prennent rien au comptoir : seul l'argent
+         réellement encaissé (paiement complet ou acompte) est une recette,
+         le solde sera journalisé au passage par la branche `settle`. */
+      if (paid > 0) postDay(paid, method, `Bouquet · ${OCC[b.occ] ? OCC[b.occ].label : 'Composition'}`, b.num);
       const cId = b.customer && b.customer.type === 'known' ? b.customer.id : null;
       if (ctx.delivSlot) {
         const created = mkDelivery({

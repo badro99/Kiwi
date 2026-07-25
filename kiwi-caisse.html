@@ -32,6 +32,10 @@
   <script src="assets/escpos.js" defer></script>
   <script src="assets/printer-bridge.js" defer></script>
   <script src="assets/caisse-hardware.js" defer></script>
+  <!-- Journal de vente partagé — DOIT précéder les modules métier (pressing +
+       tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
+       recette du jour et la renvoie au tableau de bord. -->
+  <script src="assets/pos-sale.js" defer></script>
   <link rel="stylesheet" href="assets/pressing-caisse.css" />
   <script src="assets/pressing-caisse.js" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).

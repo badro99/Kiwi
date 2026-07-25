@@ -217,6 +217,31 @@
   const tkCount  = () => state.ticket.reduce((s, l) => s + l.qty, 0);
   const tkTotal  = () => state.ticket.reduce((s, l) => s + effPrice(PROD[l.prodId]) * l.qty, 0);
   const inTicket = (prodId) => { const l = state.ticket.find((x) => x.prodId === prodId); return l ? l.qty : 0; };
+  const tkLabel  = () => {
+    const l = state.ticket[0];
+    if (!l) return 'Vente';
+    const nm = PROD[l.prodId] ? PROD[l.prodId].name : 'Vente';
+    return state.ticket.length > 1 ? `${nm} +${tkCount() - l.qty} art.` : nm;
+  };
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le comptoir vendait toute la matinée dans state.day et rien d'autre : la
+     patronne voyait 0 MAD et un refresh effaçait la recette. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('boulangerie', { total, method, label, ref });
+    } catch (_) {}
+  }
+  (function restoreDay() {
+    try {
+      if (!window.KiwiPosSale) return;
+      const t = window.KiwiPosSale.totals('boulangerie');
+      if (!t.count) return;
+      state.day.especes += t.cash;
+      state.day.carte += t.card + t.other;
+      state.day.tickets += t.count;
+      state.seq = window.KiwiPosSale.nextSeq('boulangerie', state.seq);
+    } catch (_) {}
+  })();
 
   function queueIfOffline(label) {
     if (!state.offline) return false;
@@ -516,6 +541,7 @@
     });
     state.day[method === 'carte' ? 'carte' : 'especes'] += total;
     state.day.tickets++;
+    postDay(total, method, tkLabel(), num);
     state.seq++;
     state.ticket = [];
     closeVeil('#bl-pay-veil');
@@ -857,6 +883,7 @@
         c.paid += due;
         state.day[method === 'carte' ? 'carte' : 'especes'] += due;
         state.day.gateaux += due;
+        postDay(due, method, `Solde gâteau · ${c.name}`, c.id);
         closeVeil('#bl-pay-veil');
         queueIfOffline(`Solde ${c.id}`);
         toast(`Solde encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1114,6 +1141,7 @@
       cake.paid += acompte;
       state.day[method === 'carte' ? 'carte' : 'especes'] += acompte;
       state.day.gateaux += acompte;
+      postDay(acompte, method, `Acompte gâteau · ${cake.name}`, cake.id);
       closeVeil('#bl-pay-veil');
       queueIfOffline(`Acompte ${cake.id}`);
       toast(`Acompte ${fmtMAD(acompte)} encaissé, solde ${fmtMAD(cakeDue(cake))} au retrait${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);

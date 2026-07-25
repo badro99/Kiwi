@@ -298,6 +298,14 @@
     toast(`${label}, mis en file hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le salon encaissait dans DONE_TODAY / TIP_LEDGER et rien d'autre : la
+     patronne voyait 0 MAD et un refresh effaçait la recette. Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref });
+    } catch (_) {}
+  }
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
@@ -1334,6 +1342,10 @@
         c.hist = c.hist || [];
         c.hist.unshift({ when: new Date(), svc: p.lines.map((l) => ITEMS[l.itemId].label).join(' + '), by: p.lines[0].staffId || p.staffId, amt: total });
       }
+      /* Journal partagé : prestations ET pourboire, c'est ce que la cliente a
+         réellement payé au comptoir. Sans ça la recette du salon vivait dans
+         DONE_TODAY et disparaissait au premier rechargement. */
+      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`);
       closeVeil('#cf-pay-veil');
       queueIfOffline('Encaissement');
       toast(`${passCustName(p)}, ${fmtMAD(total + tt)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${tt ? ` · pourboire ${fmtMAD(tt)}` : ''}`);

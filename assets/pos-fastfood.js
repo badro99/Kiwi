@@ -348,6 +348,38 @@
     if (o.channel === 'glovo') return 'Glovo';
     return o.name || 'Comptoir';
   }
+  const ordLabel = (o) => {
+    const l = o.lines[0];
+    if (!l) return 'Commande';
+    const n = o.lines.reduce((s, x) => s + x.qty, 0);
+    return o.lines.length > 1 ? `${ITEM[l.itemId].label} +${n - l.qty} art.` : ITEM[l.itemId].label;
+  };
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le comptoir encaissait tout le service dans `tally` et rien d'autre : la
+     patronne voyait 0 MAD et un refresh effaçait la recette du midi.
+     Démo : no-op. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('fastfood', { total, method, label, ref });
+    } catch (_) {}
+  }
+  /* Reprise du service en cours : un rechargement (mise à jour PWA, onglet tué,
+     batterie) ne doit pas remettre la recette du comptoir à zéro alors que le
+     tiroir est plein. Le prochain numéro de commande repart AU-DELÀ du dernier
+     encaissé, sinon deux commandes du même service portent le même nº.
+     Démo : journal vide, aucun effet. */
+  (function restoreDay() {
+    try {
+      if (!window.KiwiPosSale) return;
+      const t = window.KiwiPosSale.totals('fastfood');
+      if (!t.count) return;
+      tally.especes += t.cash;
+      tally.carte += t.card + t.other;
+      tally.revenue += t.total;
+      tally.orders += t.count;
+      state.seq = window.KiwiPosSale.nextSeq('fastfood', state.seq);
+    } catch (_) {}
+  })();
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
@@ -924,6 +956,9 @@
         order.pay.method = method;
         order.pay.paid += amount;
         tally[method === 'carte' ? 'carte' : 'especes'] += amount;
+        /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
+           c'est ici qu'il devient une recette, pas au moment de la commande. */
+        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`);
         closeVeil('#ff-pay-veil');
         queueIfOffline('Encaissement');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -935,6 +970,7 @@
       if (method === 'especes') tally.especes += amount;
       else if (method === 'carte') tally.carte += amount;
       else if (method === 'glovo') tally.glovo += amount;
+      postDay(amount, method, ordLabel(order), `#${order.num}`);
       postOrder(order);
       success(order, rendu, received, null);
     };

@@ -325,6 +325,17 @@
     toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
     return true;
   }
+  /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
+     Le traiteur pointait la tranche sur l'événement et rien d'autre : l'argent
+     encaissé n'apparaissait ni sur « En direct » ni dans les KPI, alors que
+     c'est ici que la trésorerie du mois se joue. Démo : no-op.
+     Pas de reprise de compteur : la référence journalisée est la référence
+     BANCAIRE de la tranche, pas un numéro de ticket à incrémenter. */
+  function postDay(total, method, label, ref) {
+    try {
+      if (window.KiwiPosSale) window.KiwiPosSale.record('traiteur', { total, method, label, ref });
+    } catch (_) {}
+  }
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   let root = null;
@@ -1406,6 +1417,9 @@
       t.paid = { method, at: new Date(), note: ref ? `réf. ${ref}` : '' };
       const wasConfirme = ev.status === 'confirme';
       if (wasConfirme) ev.status = 'acompte';
+      /* Une tranche encaissée est une recette du jour, pas le total de
+         l'événement : le reste rentrera à ses propres échéances. */
+      postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref);
       closeVeil('#tr-veil-pay');
       queueIfOffline('Encaissement tranche');
       toast(`Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
