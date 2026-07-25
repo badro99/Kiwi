@@ -17,6 +17,38 @@
 (function () {
   'use strict';
 
+  /* ══════════════════ THE IDENTITY GATE — window.KiwiIdentity ══════════════════
+   * Anything that must know WHO is signed in before it acts has to wait for the
+   * fetch below, and until now nothing could. The setup wizard is the case that
+   * mattered: assets/onboarding.js runs a few lines after this file (both are
+   * `defer`, so they execute in document order) and decided "is this merchant
+   * new?" synchronously, a full network round-trip before /api/me answered. An
+   * established merchant on a fresh browser was therefore read as a brand-new
+   * signup and asked to create their business a second time.
+   *
+   * So publish a promise, settled exactly once from every terminal branch of the
+   * fetch — including the failures — and let callers await it. No timers and no
+   * polling: this file is loaded before its callers, so the promise already
+   * exists by the time anyone asks for it.
+   *
+   * The settled value is a decision, not the raw payload:
+   *   { authenticated, operator, onboarded, stores, reloading, noBackend, unreachable }
+   * `noBackend` = a host with no API at all (static mirror) — callers may fall
+   * back to local behaviour. `unreachable` = there IS a backend and it failed to
+   * answer, which is never a licence to guess. */
+  var settleGate;
+  var gateSettled = false;
+  window.KiwiIdentity = {
+    ready: new Promise(function (res) { settleGate = res; }),
+    state: null,
+  };
+  function settle(state) {
+    if (gateSettled) return;
+    gateSettled = true;
+    try { window.KiwiIdentity.state = state; } catch (_) {}
+    try { settleGate(state); } catch (_) {}
+  }
+
   function ls(k, v) { try { if (v) localStorage.setItem(k, v); } catch (_) {} }
   function firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
   function initialsOf(name) {
@@ -262,9 +294,22 @@
   runNeutral();
 
   fetch(meUrl, { headers: { Accept: 'application/json' } })
-    .then(function (r) { return (r && r.ok) ? r.json() : null; })
+    .then(function (r) {
+      if (r && r.ok) return r.json();
+      // 404 = this host simply has no API (a static mirror). Everything else —
+      // 500 from a database blip, 503 not-configured — means there IS a backend
+      // and it failed to answer. Callers treat those very differently: the first
+      // is "no account system here", the second is "we do not know yet", and
+      // only the first may fall back to local guesses.
+      return { __httpFail: (r && r.status) || 0 };
+    })
     .then(function (me) {
-      if (!me) { runNeutral(); return; }
+      if (!me || me.__httpFail != null) {
+        settle(me && me.__httpFail === 404
+          ? { authenticated: false, noBackend: true }
+          : { authenticated: false, unreachable: true });
+        runNeutral(); return;
+      }
 
       // Operator (God mode) scoped into a client. Show that client — its real
       // identity if an account exists, else the slug as a readable label — and
@@ -281,12 +326,15 @@
           type: (me.type || '').trim(),
         };
         window.KiwiMe = opId;
+        // An operator looking at somebody else's shop is never doing their own
+        // setup — the wizard must not open in their face (test G).
+        settle({ authenticated: !!me.authenticated, operator: true, onboarded: true, stores: [] });
         run(opId, true, label, (me.type || '').trim());
         return;
       }
 
       // A real merchant on their own device.
-      if (!me.authenticated) { runNeutral(); return; }   // hosted-no-account → neutral, not demo; local demo → isReal false, untouched
+      if (!me.authenticated) { settle({ authenticated: false }); runNeutral(); return; }   // hosted-no-account → neutral, not demo; local demo → isReal false, untouched
       // Isolate accounts: if a DIFFERENT account previously used this browser,
       // purge its tenant state now so foreign stores / PINs / sales can't leak in.
       var purged = reconcileAccount(me);
@@ -306,11 +354,34 @@
         // We wiped a different account's local state → reload so the venue engine,
         // onboarding gate and caisse re-initialise clean for THIS account. The new
         // kiwiAccountKey is already written, so this reload cannot loop.
+        // `reloading` keeps the wizard shut in the meantime: this page is already
+        // leaving, and the flag it would have read has just been purged.
+        settle({ authenticated: true, reloading: true });
         try { location.reload(); } catch (_) {}
         return;
+      }
+      // Server-authoritative answer to "does this account already have a
+      // business?" — the whole point of the gate. `onboarded` is only ever
+      // trusted when the server actually said so.
+      settle({
+        authenticated: true,
+        onboarded: me.onboarded === true,
+        stores: Array.isArray(me.stores) ? me.stores : [],
+      });
+      // Put this merchant's real établissements back on a browser that has none
+      // (new device, cleared data). No-op when they already have their stores
+      // here — see KiwiVenue.adoptServerStores.
+      if (Array.isArray(me.stores) && me.stores.length) {
+        try {
+          if (window.KiwiVenue && window.KiwiVenue.adoptServerStores) window.KiwiVenue.adoptServerStores(me.stores);
+        } catch (_) {}
       }
       run(id, false);
       applyOwnType(id.type);   // boutique renders as boutique, not restaurant (F3)
     })
-    .catch(function () { /* offline / missing endpoint → keep the demo locally, but a real (hosted) session still gets neutralized */ runNeutral(); });
+    .catch(function () {
+      /* offline / missing endpoint → keep the demo locally, but a real (hosted) session still gets neutralized */
+      settle({ authenticated: false, unreachable: true });
+      runNeutral();
+    });
 })();

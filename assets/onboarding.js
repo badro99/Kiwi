@@ -724,23 +724,95 @@
       return v !== 'own';
     } catch (_) { return false; }
   }
-  function shouldAutoLaunch() {
+  /* The URL's one-shot instructions. Consumed BEFORE we await anything, because
+   * ?onboarding is a one-shot signup param and awaiting first would let a second
+   * caller see it again. Returns 'force' | 'skip' | null. */
+  function forcedByQuery() {
     const q = new URLSearchParams(location.search);
-    if (q.has('demo')) return false;
+    if (q.has('demo')) return 'skip';
     if (q.has('onboarding')) {
-      // Consume the one-shot signup param. It used to be STICKY: every reload with
-      // ?onboarding=1 still in the URL re-ran reset() + relaunched the wizard,
-      // wiping a just-completed kiwiOnboarded (P3). Strip it so a refresh can't
-      // re-trigger, and never reset an account that already finished onboarding.
+      // It used to be STICKY: every reload with ?onboarding=1 still in the URL
+      // re-ran reset() + relaunched the wizard, wiping a just-completed
+      // kiwiOnboarded (P3). Strip it so a refresh can't re-trigger, and never
+      // reset an account that already finished onboarding.
       try { history.replaceState({}, '', location.pathname + location.hash); } catch (_) {}
-      if (isComplete()) return false;
+      if (isComplete()) return 'skip';
       reset();
-      return true;
+      return 'force';
     }
+    return null;
+  }
+
+  /* Everything this BROWSER can work out on its own. It is the whole answer for a
+   * session with no account behind it — the local demo, the shared staff
+   * passcode, a static mirror with no API. For a signed-in merchant it is only a
+   * cache, and a treacherous one: `kiwiOnboarded` is per-browser, so a new
+   * device, another browser, a private window or cleared site data all read an
+   * established merchant as a brand-new signup; and identity.js purges the flag
+   * outright (it is in TENANT_KEYS) whenever a different account last used this
+   * browser, so even logging back in on your own machine could lose it. */
+  function localSaysNew() {
     if (isComplete()) return false;
     if (LS.get('kiwiSkipOnboard') === '1') return false;
     if (hasCustomVenue()) return false;
     return true;
+  }
+  function shouldAutoLaunch() {
+    const forced = forcedByQuery();
+    return forced ? forced === 'force' : localSaysNew();
+  }
+
+  /* Cache the server's verdict. `kiwiOnboarded` stops being the source of truth
+   * and becomes what it should always have been — a local echo of it, so the next
+   * load is instant and an offline one still knows an établissement exists. */
+  function markComplete() { if (!isComplete()) LS.set('kiwiOnboarded', '1'); }
+  function hostedApp() {
+    try { return !!(window.KiwiEnv && window.KiwiEnv.hosted); } catch (_) { return false; }
+  }
+
+  /* ── Should the wizard open by itself? Ask the server first. ──────────────
+   *
+   * "Create your business" is not a question you may ask an account that already
+   * has one, and only the server knows whether it does — the establishment lives
+   * in D1, the flag we used to read lives in this browser. So wait for the
+   * identity gate (assets/identity.js → window.KiwiIdentity.ready) instead of
+   * racing it, and let its answer decide. It resolves from every branch of
+   * /api/me, failures included, so this always settles. */
+  function decide() {
+    const forced = forcedByQuery();
+    let gate = null;
+    try { gate = window.KiwiIdentity && window.KiwiIdentity.ready; } catch (_) {}
+    // No identity script on this page at all → nothing to wait for.
+    if (!gate || typeof gate.then !== 'function') {
+      return Promise.resolve(forced ? forced === 'force' : localSaysNew());
+    }
+    return gate.then(function (st) {
+      st = st || {};
+      // An operator's God-mode view of a client, or a page already reloading
+      // after an account switch. Neither is somebody doing their own setup.
+      if (st.operator || st.reloading) return false;
+
+      if (st.authenticated) {
+        // THE FIX. The account owns at least one établissement, so it is not new
+        // — whatever this browser does or doesn't remember about it.
+        if (st.onboarded) { markComplete(); return false; }
+        // The server looked and found nothing anywhere: no store, no staff code,
+        // no sale. This really is a merchant who has yet to set up.
+        return forced === 'force' ? true : localSaysNew();
+      }
+
+      // There IS a backend and it could not tell us who this is (a D1 blip, a
+      // 503). Not knowing is never a reason to invent a business on a hosted
+      // app — the merchant reaches setup with the signup link or PIN 0000, and
+      // meanwhile nothing gets duplicated. The local demo is untouched.
+      if (st.unreachable && hostedApp()) return false;
+
+      // No account behind this session: the local demo, the staff passcode, a
+      // static mirror. Local state is all there is, exactly as before.
+      return forced ? forced === 'force' : localSaysNew();
+    }).catch(function () {
+      return forced ? forced === 'force' : localSaysNew();
+    });
   }
 
   function initHandler() {
@@ -759,11 +831,10 @@
   function boot() {
     if (!document.querySelector('[data-kiwi-lock]')) { initHandler(); return; }
     initHandler();
-    if (shouldAutoLaunch()) {
-      const start = () => { S.step = 0; open(); };
-      if (window.KiwiVenue) start();
-      else setTimeout(start, 60);
-    }
+    // decide() awaits the identity gate, so KiwiVenue (loaded earlier in the
+    // document) is always present by the time we open — the old 60 ms guess is
+    // gone along with the race it was papering over.
+    decide().then(function (yes) { if (yes) { S.step = 0; open(); } });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -1368,6 +1368,62 @@
     return 'own';
   }
 
+  /* Put the merchant's REAL établissements back on a browser that has none.
+   *
+   * A store's data lives in D1 under the slug of its NAME (assets/merchant-config
+   * .js → storeSlug), but the LIST of stores lived only in this browser's
+   * kiwiCustomVenues. So a merchant who opened Kiwi on a second device saw one
+   * synthetic "Mon établissement" instead of their shops. /api/me now returns the
+   * stores the account owns (functions/api/me.js → establishments); identity.js
+   * hands them here.
+   *
+   * Two rules keep this from ever inventing or resurrecting anything:
+   *   · It only fills an EMPTY browser. A merchant who already has stores here
+   *     keeps precisely what they have — adopting into a populated list is how
+   *     you would bring back a store somebody removed on this device.
+   *   · Ids derive from the slug, never from the clock, so a reload or a second
+   *     tab re-running this cannot grow a duplicate établissement.
+   * Restored stores carry no figures, which is the honest truth: sales and
+   * catalogues are fetched per store, they are not part of the registry. */
+  function adoptServerStores(list) {
+    if (!Array.isArray(list) || !list.length) return 0;
+    // Anything real already cached → leave this browser alone.
+    for (const id of customIds) if (TRANSIENT_IDS.indexOf(id) < 0) return 0;
+
+    const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
+    const seen = new Set();
+    let first = null;
+    list.forEach((s) => {
+      const slug = String((s && s.merchant) || '').trim();
+      if (!slug || seen.has(slug)) return;
+      seen.add(slug);
+      const id = 'v-' + slug;
+      if (VENUES[id]) return;
+      const name = String((s && s.name) || '').trim()
+        || slug.split('-').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const base = SUBTYPE_BASE[s && s.type] ||
+        (TYPE_BASES.indexOf(s && s.type) >= 0 ? s.type : 'restaurant');
+      VENUES[id] = {
+        id, name, location: '',
+        fullDisplay: name,
+        type: base, typeLabel: TYPE_LABELS[base] || 'Restaurant',
+        subtype: (s && s.type) || '', profileInfo: null,
+        siblings: '', status: 'En service', ice: '—',
+        txCount: 0, staffCount: 0, custom: true,
+        hours: '', methods: '', goal: 0,
+      };
+      customIds.add(id);
+      if (!first) first = id;
+    });
+    if (!first) return 0;
+    persistCustomVenues();
+    // They were looking at the synthetic placeholder; move them into a real
+    // store of theirs. setVenue persists the choice and re-renders.
+    if (currentVenue === 'own') setVenue(first);
+    else { try { renderAll({ skipFade: true }); } catch (_) {} }
+    return seen.size;
+  }
+
   function setVenue(id) {
     if (!VALID.includes(id) && !customIds.has(id)) return;
     if (id === currentVenue) return;
@@ -8037,6 +8093,7 @@
     getVenueType,
     applyServerType,
     applyScopedVenue,
+    adoptServerStores,
     getKpiSpec: type => {
       /* Subtype profile first: a custom venue's KPI band speaks its trade's
        * language (labels resolve per-language; dateRange re-renders the band
