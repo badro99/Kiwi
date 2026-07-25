@@ -5813,6 +5813,46 @@
     // Pairing redeemed after paint (?pair=1 hand-off) → build the real plan.
     document.addEventListener('kiwi-paired', () => { try { setupRealSalle(); } catch (_) {} });
 
+    /* ── Le plan dessiné sur UN AUTRE appareil ──────────────────────────────
+       Les deux relances ci-dessus supposent le même navigateur : l'événement
+       `storage` ne traverse pas les appareils, et l'appairage ne transporte pas
+       le plan. Une caisse installée après coup — le cas normal, le patron
+       dessine chez lui et l'iPad arrive au comptoir ensuite — affichait donc
+       « Plan de salle pas encore conçu » sur une salle entièrement dessinée.
+       On lit la copie serveur, qui atterrit sur le `window.KiwiFloorPlan` que
+       caisseFloorPlan() consulte déjà en premier. La caisse ne dessine pas de
+       plan, mais elle en porte un quand l'appairage s'est fait dans ce
+       navigateur : si le serveur est encore vide, c'est donc elle qui l'y pose
+       — le premier des deux à se connecter sème, peu importe lequel. */
+    (function () {
+      if (!window.KiwiCloudDoc) return;
+      const slugMirror = (slug) => 'kiwiPlanDeSalle:slug:' + slug;
+      const doc = window.KiwiCloudDoc.attach({
+        feature: 'floorplan',
+        slug: () => window.KiwiCloudDoc.currentSlug(),
+        read: () => {
+          try {
+            const s = window.KiwiCloudDoc.currentSlug();
+            const raw = s ? localStorage.getItem(slugMirror(s)) : null;
+            const d = raw ? JSON.parse(raw) : null;
+            if (d && Array.isArray(d.tables)) return d;
+          } catch (_) {}
+          return { zones: [], tables: [], staff: [] };
+        },
+        write: (d) => {
+          try {
+            const s = window.KiwiCloudDoc.currentSlug();
+            if (s) localStorage.setItem(slugMirror(s), JSON.stringify(d));
+          } catch (_) {}
+          window.KiwiFloorPlan = d;
+          try { setupRealSalle(); } catch (_) {}
+        },
+        isEmpty: (d) => !d || !(d.tables && d.tables.length),
+      });
+      try { doc.bind(); } catch (_) {}
+      document.addEventListener('kiwi-paired', () => { try { doc.bind(); } catch (_) {} });
+    })();
+
     /* ---------- Floor switching (RDC ↔ 1er étage) ---------- */
     function setFloor(floor) {
       const f = String(floor);

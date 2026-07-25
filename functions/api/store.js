@@ -74,6 +74,15 @@ const FEATURES = {
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },
   suppliers:    { keys: ['list'],                                  max: 200000 },
   expenses:     { keys: ['list'],                                  max: 400000 },
+  /* Les trois destinations « starter » qui n'avaient pas encore de case ici.
+   * Le starter (pages-pro.js) range une simple LISTE de lignes saisies à la
+   * main, d'où la forme `{ list: [...] }` — la même que `suppliers` ou
+   * `expenses`. `terminals` n'est pas `terminaux` : les noms de features sont
+   * la clé primaire de store_docs, ils restent en anglais comme tous les
+   * autres. */
+  terminals:    { keys: ['list'],                                  max: 200000 },
+  appointments: { keys: ['list'],                                  max: 400000 },
+  practitioners:{ keys: ['list'],                                  max: 200000 },
 };
 
 const featureOf = (v) => {

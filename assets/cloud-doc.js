@@ -175,17 +175,30 @@
    *
    * On balaie donc les clés `kiwi:<feature>:v1:*` du navigateur à la recherche
    * d'un autre identifiant qui désigne LE MÊME magasin, et on recopie. Copie,
-   * jamais déplacement : si l'hypothèse est fausse, rien n'a été détruit. */
-  function carryForward(feature, venueId, slug, hasData) {
+   * jamais déplacement : si l'hypothèse est fausse, rien n'a été détruit.
+   *
+   * `shape` sert aux fonctionnalités antérieures à venue-store.js, qui portent
+   * leur propre convention de clé : `kiwi:stockOverlay:<venueId>` et
+   * `kiwiPlanDeSalle:<venueId>` (un simple préfixe), `kiwiStarter:<venueId>:<nav>`
+   * (l'identifiant au MILIEU, d'où le suffixe). Elles souffrent exactement du
+   * même changement d'identifiant ; sans ce paramètre le balayage cherchait un
+   * préfixe `:v1:` qu'elles n'ont jamais eu et ne trouvait donc jamais rien —
+   * un sauvetage silencieusement inopérant, pire que pas de sauvetage.
+   * Une chaîne vaut pour `{ prefix }`. */
+  function carryForward(feature, venueId, slug, hasData, shape) {
     if (!slug || !venueId) return null;
-    var mine = STORE_PREFIX + feature + ':v1:' + venueId;
+    if (typeof shape === 'string') shape = { prefix: shape };
+    shape = shape || {};
+    var pre = shape.prefix || (STORE_PREFIX + feature + ':v1:');
+    var suf = shape.suffix || '';
+    var mine = pre + venueId + suf;
     try {
       if (hasData(ls(mine))) return null;                 // déjà quelque chose ici
-      var pre = STORE_PREFIX + feature + ':v1:';
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
         if (!k || k.indexOf(pre) !== 0 || k === mine) continue;
-        var otherId = k.slice(pre.length);
+        if (suf && k.slice(-suf.length) !== suf) continue;   // une autre destination
+        var otherId = suf ? k.slice(pre.length, k.length - suf.length) : k.slice(pre.length);
         if (slugFor(otherId) !== slug) continue;          // un autre magasin
         var raw = ls(k);
         if (!hasData(raw)) continue;                      // rien à récupérer

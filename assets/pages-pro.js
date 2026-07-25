@@ -3842,14 +3842,13 @@ function pdsLoad() {
   } catch (e) { /* fall through to default */ }
   return pdsDefaultState();
 }
-function pdsSave(state) {
+function pdsWriteLocal(state) {
   try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
   /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
    * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
    * the same identity spine the boutique/menu already share, so a design made
-   * here shows up on the till (same browser today; the server channel lights it
-   * up cross-device). Real custom stores only — a demo venue never mirrors, so
-   * its seeded plan can't leak into a paired till. */
+   * here shows up on the till. Real custom stores only — a demo venue never
+   * mirrors, so its seeded plan can't leak into a paired till. */
   try {
     var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
     if (vd && vd.custom && vd.name) {
@@ -3857,6 +3856,92 @@ function pdsSave(state) {
       if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
     }
   } catch (e) {}
+}
+function pdsSave(state) {
+  pdsWriteLocal(state);
+  var c = pdsCloud();
+  if (c) c.push();
+}
+
+/* ── LA COPIE SERVEUR DU PLAN DE SALLE ──────────────────────────────────────
+ * « le serveur lightera ça cross-device » disait le commentaire ci-dessus. Il
+ * n'existait pas. Une heure passée à placer trente tables, leurs zones et leurs
+ * serveurs ne quittait pas ce navigateur : le patron dessinait la salle sur son
+ * portable, le maître d'hôtel ouvrait l'iPad du comptoir et retrouvait une
+ * salle vide. C'est assets/cloud-doc.js qui porte les trois règles ; on ne
+ * câble ici que le read / write / merge propres au plan.
+ *
+ * `pdsRawState` lit le document TEL QU'IL EST RANGÉ, jamais `pdsDefaultState()`
+ * : le gabarit par défaut d'un magasin neuf porte déjà une zone, donc le
+ * proposer au serveur créerait une ligne que le commerçant n'a jamais dessinée,
+ * et le deuxième appareil la recevrait comme un vrai plan.
+ *
+ * « Vide » = aucune table. Une salle SANS table n'est pas une salle dessinée —
+ * c'est la zone unique que le gabarit pose tout seul à la première ouverture de
+ * la page. Poser sa première table suffit à tout faire partir. */
+var pdsLive = null;    // l'état actuellement ouvert à l'écran, s'il y en a un
+var pdsDoc = null;
+
+function pdsRawState() {
+  try {
+    var raw = localStorage.getItem(pdsKey());
+    var p = raw ? JSON.parse(raw) : null;
+    if (p && p.zones && p.tables) return p;
+  } catch (e) {}
+  return { zones: [], tables: [], staff: [] };
+}
+
+/* Union par identifiant, cet appareil prioritaire (le défaut de cloud-doc.js),
+ * SAUF que le plan porte aussi des réglages scalaires (mode, snap, zone
+ * courante) : ceux-là restent les nôtres, changer la zone affichée sur l'iPad
+ * n'a pas à déplacer la vue du portable. */
+function pdsMerge(mine, theirs) {
+  var M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
+  if (!M || !theirs) return mine;
+  var out = M(mine, theirs);
+  ['mode', 'snap', 'zone', 'zoneId'].forEach(function (k) {
+    if (mine && Object.prototype.hasOwnProperty.call(mine, k)) out[k] = mine[k];
+  });
+  return out;
+}
+
+/* Le plan a la même faiblesse d'identifiant que le reste : celui qui a créé le
+ * restaurant l'a rangé sous `v`+horloge, une ré-adoption le range sous
+ * `v-<slug>`, et le dessin d'origine reste en place sans lecteur. Le miroir par
+ * slug (`kiwiPlanDeSalle:slug:<slug>`) partage ce préfixe mais n'est pas un
+ * identifiant de venue : slugFor() ne le reconnaît pas et l'écarte. */
+function pdsCarryForward() {
+  if (!window.KiwiCloudDoc) return;
+  var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+  var slug = window.KiwiCloudDoc.currentSlug();
+  if (!vid || !slug) return;
+  window.KiwiCloudDoc.carryForward('floorplan', vid, slug, function (raw) {
+    try { var d = JSON.parse(raw || 'null'); return !!(d && d.tables && d.tables.length); }
+    catch (e) { return false; }
+  }, PDS_LS_KEY + ':');
+}
+
+function pdsCloud() {
+  if (pdsDoc || !window.KiwiCloudDoc) return pdsDoc;
+  pdsDoc = window.KiwiCloudDoc.attach({
+    feature: 'floorplan',
+    slug: function () { return window.KiwiCloudDoc.currentSlug(); },
+    read: pdsRawState,
+    write: function (d) {
+      pdsWriteLocal(d);
+      /* La page est ouverte : on remplace le contenu de l'état VIVANT (les
+       * gestionnaires de glisser-déposer tiennent cette référence) plutôt que
+       * l'objet lui-même, puis on repeint par son propre `_refresh`. */
+      if (!pdsLive) return;
+      try {
+        Object.keys(d).forEach(function (k) { if (k.charAt(0) !== '_') pdsLive[k] = d[k]; });
+        if (pdsLive._refresh) pdsLive._refresh();
+      } catch (e) {}
+    },
+    merge: pdsMerge,
+    isEmpty: function (d) { return !d || !(d.tables && d.tables.length); },
+  });
+  return pdsDoc;
 }
 function pdsDefaultState() {
   /* A merchant-created store starts with an empty floor to design (one zone,
@@ -4047,7 +4132,13 @@ handlers['nav-tables'] = () => {
   pdsEnsureCss();
   const T = PDS_STR[trLang()] || PDS_STR.fr;
   const v = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Café Atlas', type: 'restaurant' };
+  /* Avant de lire : récupérer un dessin laissé sous un ancien identifiant. */
+  try { pdsCarryForward(); } catch (_) {}
   const state = pdsLoad();
+  /* L'état vivant, pour que la copie serveur qui arrive pendant qu'on dessine
+   * repeigne la salle au lieu de se contenter du localStorage. */
+  pdsLive = state;
+  { const c = pdsCloud(); if (c) c.bind(); }
 
   /* Quick counters used in the subtitle + KPI strip */
   const nTables = state.tables.length;
@@ -4070,6 +4161,7 @@ handlers['nav-tables'] = () => {
   const prevClose = dr.close;
   dr.close = () => {
     try { pdsSave(state); } catch (_) {} /* auto-save the floor so a design is never lost on close */
+    if (pdsLive === state) pdsLive = null;   /* plus rien à repeindre à l'écran */
     window.Kiwi?.setActivePage?.('accueil');
     prevClose();
   };
@@ -11929,7 +12021,72 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const venueId = () => { const KV = window.KiwiVenue; return (KV && KV.getCurrentVenueData && KV.getCurrentVenueData() || {}).id || (KV && KV.getVenue && KV.getVenue()) || 'v'; };
   const skey = (nav) => 'kiwiStarter:' + venueId() + ':' + nav;
   function getItems(nav) { try { return JSON.parse(localStorage.getItem(skey(nav)) || '[]'); } catch (_) { return []; } }
-  function setItems(nav, arr) { try { localStorage.setItem(skey(nav), JSON.stringify(arr)); } catch (_) {} }
+  function setItems(nav, arr) {
+    try { localStorage.setItem(skey(nav), JSON.stringify(arr)); } catch (_) {}
+    const c = starterCloud(nav);
+    if (c) c.push();
+  }
+
+  /* ── LA COPIE SERVEUR DES DESTINATIONS « STARTER » ─────────────────────────
+   * Ces pages-là ne sont pas des maquettes : le commerçant y tape ses offres,
+   * ses réservations, ses terminaux, et la liste lui est réaffichée. C'était de
+   * la vraie saisie, rangée sous `kiwiStarter:<venueId>:<nav>` — donc perdue au
+   * changement d'appareil comme le reste.
+   *
+   * Ne SONT PAS câblées ici :
+   *   · les destinations de REAL_FOR_CUSTOM (équipe, carte, plan de salle,
+   *     stock, inventaire, catégories, paie) — un vrai magasin ne voit jamais
+   *     leur version starter, c'est leur module qui répond, et lui a déjà sa
+   *     propre copie serveur. Deux miroirs sur une même donnée divergent ;
+   *   · `clients`, qui appartient à assets/clients-store.js et à /api/clients.
+   *     Le carnet est synchronisé À LA LIGNE, pas au document ; le doubler ici
+   *     ferait deux carnets pour un seul commerçant. */
+  const STARTER_CLOUD = {
+    promos: 'promotions', reservations: 'reservations', services: 'services',
+    terminaux: 'terminals', appointments: 'appointments', practitioners: 'practitioners',
+  };
+  const starterDocs = Object.create(null);
+  const starterCarried = Object.create(null);
+  let starterOpen = null;          // la destination starter actuellement à l'écran
+
+  function starterCloud(nav) {
+    const feature = STARTER_CLOUD[nav];
+    if (!feature || !window.KiwiCloudDoc) return null;
+    if (starterDocs[nav]) return starterDocs[nav];
+    starterDocs[nav] = window.KiwiCloudDoc.attach({
+      feature,
+      slug: () => window.KiwiCloudDoc.slugFor(venueId()),
+      /* Le starter range un TABLEAU nu ; store_docs veut un document. `list` est
+       * la forme que /api/store attend déjà pour suppliers et expenses. */
+      read: () => ({ list: getItems(nav) }),
+      write: (d) => {
+        const list = Array.isArray(d && d.list) ? d.list : [];
+        // Écriture directe : passer par setItems() reprogrammerait une remontée
+        // de ce qu'on vient tout juste de recevoir.
+        try { localStorage.setItem(skey(nav), JSON.stringify(list)); } catch (_) {}
+        if (starterOpen === nav && STARTERS[nav]) {
+          try { renderStarter(nav, STARTERS[nav]); } catch (_) {}
+        }
+      },
+      isEmpty: (d) => !d || !(d.list && d.list.length),
+    });
+    return starterDocs[nav];
+  }
+
+  function starterBind(nav) {
+    const c = starterCloud(nav);
+    if (!c || !window.KiwiCloudDoc) return;
+    const vid = venueId();
+    const slug = window.KiwiCloudDoc.slugFor(vid);
+    if (slug && !starterCarried[nav]) {
+      starterCarried[nav] = 1;
+      window.KiwiCloudDoc.carryForward(nav, vid, slug, (raw) => {
+        try { const a = JSON.parse(raw || 'null'); return Array.isArray(a) && a.length > 0; }
+        catch (_) { return false; }
+      }, { prefix: 'kiwiStarter:', suffix: ':' + nav });
+    }
+    c.bind();
+  }
 
   /* Guided "add" modal — the client types their items; DOM-built list (no
    * innerHTML), persisted on Done, reflected back on the page. */
@@ -12075,6 +12232,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     if (nav === 'transactions' && window.KiwiSales?.list && window.KiwiSales.list().length) {
       return renderRealTransactions(nav, meta);
     }
+    /* Cette destination est celle affichée : une copie serveur qui arrive
+     * ensuite a le droit de la repeindre — et elle seule. */
+    starterOpen = nav;
+    try { starterBind(nav); } catch (_) {}
     const KV = window.KiwiVenue;
     const vd = KV?.getCurrentVenueData?.() || {};
     const cfg = ADD[nav];
@@ -12149,6 +12310,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         const realOrCustom = window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.();
         const allowed = REAL_FOR_CUSTOM.has(nav) || (REAL_WHEN[nav] && REAL_WHEN[nav]());
         if (realOrCustom && !allowed) return renderStarter(nav, meta);
+        /* On quitte le starter pour une vraie page : sans ça, une copie serveur
+         * arrivant en retard repeindrait la page starter PAR-DESSUS celle que le
+         * commerçant vient d'ouvrir. */
+        starterOpen = null;
         /* Direct invocations (mobile nav, palette, agent) bypass the sidebar
          * router's genpage cleanup — clear a leftover starter page so it
          * can't mask the destination's own body-class view. */

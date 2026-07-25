@@ -669,6 +669,75 @@
         cats: stUserCategories, stockOv: stStockOverrides,
       }));
     } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
+    const c = stCloud();
+    if (c) c.push();
+  }
+
+  /* ── LA COPIE SERVEUR DU STOCK ────────────────────────────────────────────
+   * La surcouche ci-dessus a sauvé la saisie d'un rechargement, pas d'un
+   * changement d'appareil : elle était rangée sous `kiwi:stockOverlay:<venueId>`
+   * — un identifiant que venues.js tire de l'horloge, donc propre à CE
+   * navigateur. Le gérant saisissait ses articles et ses fournisseurs sur le
+   * portable de l'arrière-boutique, ouvrait Kiwi sur la tablette du comptoir, et
+   * retrouvait l'inventaire de départ.
+   *
+   * `read` relit le localStorage plutôt que les variables vivantes : la page
+   * peut n'avoir jamais été ouverte pour ce magasin, auquel cas les
+   * variables sont vides alors que le disque, lui, est plein. Proposer ce vide
+   * comme état courant ferait adopter la copie serveur PAR-DESSUS une saisie
+   * locale bien réelle. */
+  let stDoc = null;
+
+  function stOverlayRaw() {
+    try {
+      const s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null');
+      if (s && typeof s === 'object') return s;
+    } catch (_) {}
+    return { items: [], sups: [], cats: [], itemOv: {}, supOv: {}, stockOv: {}, delItems: [], delSups: [] };
+  }
+
+  /* Union par identifiant (le défaut de cloud-doc.js) — SAUF les suppressions.
+   * `delItems`/`delSups` sont des listes d'identifiants NUS, et la fusion par
+   * défaut, faute d'identité à comparer, garde simplement la nôtre : l'article
+   * supprimé sur la tablette réapparaissait donc au premier envoi du portable,
+   * en boucle. Deux suppressions s'additionnent, elles ne s'arbitrent pas. */
+  function stMergeOverlay(mine, theirs) {
+    const M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
+    if (!M || !theirs) return mine;
+    const out = M(mine, theirs);
+    ['delItems', 'delSups'].forEach((k) => {
+      const a = Array.isArray(mine && mine[k]) ? mine[k] : [];
+      const b = Array.isArray(theirs && theirs[k]) ? theirs[k] : [];
+      out[k] = [...new Set([...a, ...b])];
+    });
+    return out;
+  }
+
+  function stCloud() {
+    if (stDoc || !window.KiwiCloudDoc) return stDoc;
+    stDoc = window.KiwiCloudDoc.attach({
+      feature: 'stock',
+      slug: () => window.KiwiCloudDoc.slugFor(currentVenueId()),
+      read: stOverlayRaw,
+      write: (d) => {
+        try { localStorage.setItem(stOverlayKey(), JSON.stringify(d)); } catch (_) {}
+        // Forcer la relecture : les variables vivantes portent encore l'ancienne
+        // surcouche, et c'est elles que dessine render().
+        stOverlayLoadedFor = null;
+        try { stEnsureOverlay(); } catch (_) {}
+        if (stPageActive) { try { render(); } catch (_) {} }
+      },
+      merge: stMergeOverlay,
+      /* Un commerçant qui n'a rien saisi porte quand même les huit champs
+       * vides : sans ce test, ouvrir la page suffisait à créer une ligne. */
+      isEmpty: (d) => !d || !(
+        (d.items && d.items.length) || (d.sups && d.sups.length) || (d.cats && d.cats.length)
+        || (d.itemOv && Object.keys(d.itemOv).length) || (d.supOv && Object.keys(d.supOv).length)
+        || (d.stockOv && Object.keys(d.stockOv).length)
+        || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length)
+      ),
+    });
+    return stDoc;
   }
 
   /* Recharge la surcouche du commerce courant. Les Set/objet sont `const` :
@@ -694,6 +763,27 @@
     Object.assign(stItemOverrides, s.itemOv || {});
     Object.assign(stSupOverrides, s.supOv || {});
     Object.assign(stStockOverrides, s.stockOv || {});
+  }
+
+  /* Premier contact avec ce magasin dans cette page : on récupère d'abord ce
+   * qu'un ANCIEN identifiant de venue aurait laissé orphelin sur ce navigateur,
+   * puis on lit la copie serveur. Appelé depuis showPage() — le stock n'a aucun
+   * consommateur en arrière-plan, contrairement à l'équipe dont les codes
+   * alimentent la caisse, donc il n'y a rien à hydrater tant que personne ne
+   * regarde. */
+  function stCloudBind() {
+    if (!window.KiwiCloudDoc || !stShowReal()) return;
+    const vid = currentVenueId();
+    const slug = window.KiwiCloudDoc.slugFor(vid);
+    if (!slug) return;                                  // démo / pas un vrai magasin
+    window.KiwiCloudDoc.carryForward('stockOverlay', vid, slug, (raw) => {
+      try {
+        const d = JSON.parse(raw || 'null');
+        return !!(d && ((d.items && d.items.length) || (d.sups && d.sups.length)));
+      } catch (_) { return false; }
+    }, 'kiwi:stockOverlay:');
+    const c = stCloud();
+    if (c) c.bind();
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -872,6 +962,9 @@
     document.querySelector('.sidebar nav a[data-nav="stock"]')?.classList.add('active');
     window.scrollTo({ top: 0 });
     render();
+    // La copie serveur arrive après coup et repeint par elle-même : on n'attend
+    // jamais le réseau pour afficher ce que ce navigateur sait déjà.
+    try { stCloudBind(); } catch (_) {}
     // Subscribe to demo clock for live food-cost tick (subtle)
     if (!stDemoClockUnsub && window.KiwiDemoClock?.subscribe) {
       stDemoClockUnsub = window.KiwiDemoClock.subscribe(() => tickFoodCost());
