@@ -2039,23 +2039,42 @@
   function printReceiptNow(opts, parts) {
     const KP = window.KiwiPrinter;
     if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
-    if (!KP.isConnected || !KP.isConnected()) {
-      toast('Aucune imprimante connectée');
-      try { KP.openSetup({}); } catch (_) {}
-      return;
-    }
     const pv = pvPaired();
     const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces' };
     const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
-    toast('Impression du reçu…');
-    KP.printReceipt({
+    const doc = {
       shop: (pv && pv.name) || 'Kiwi',
       ref: opts.ref || '',
       date: fmtDT(new Date()),
       lines: lines.length ? lines : [{ name: opts.title || 'Vente', price: fmtMAD(opts.amount) }],
       total: fmtMAD(opts.amount),
       method: (parts || []).map((x) => label[x.m] || x.m).join(' + '),
-    }).then(
+    };
+
+    /* Aucune imprimante ESC/POS joignable. Ça ne veut PAS dire que la boutique
+     * n'a pas d'imprimante : sur une caisse Windows où elle est déjà installée,
+     * Windows possède le périphérique, WebUSB se voit refuser le claim, et les
+     * trois transports de Kiwi échouent alors que l'imprimante marche.
+     * On propose donc l'impression système au lieu de renvoyer le commerçant
+     * vers un écran de connexion qui ne peut rien pour lui — et on retient son
+     * choix, sinon la caissière repasse par le modal à chaque ticket. */
+    if (!KP.isConnected || !KP.isConnected()) {
+      const cfg = (KP.getConfig && KP.getConfig()) || {};
+      if (cfg.browserFallback && KP.browserReceipt) { KP.browserReceipt(doc); return; }
+      toast('Aucune imprimante connectée');
+      try {
+        KP.openSetup(KP.browserReceipt ? {
+          kind: 'receipt',
+          onBrowserPrint: () => {
+            try { KP.setConfig({ browserFallback: true }); } catch (_) {}
+            KP.browserReceipt(doc);
+          },
+        } : {});
+      } catch (_) {}
+      return;
+    }
+    toast('Impression du reçu…');
+    KP.printReceipt(doc).then(
       (r) => toast(r && r.ok
         ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : 'réseau'))
         : ('Impression échouée : ' + ((r && r.reason) || 'inconnu'))),

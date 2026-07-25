@@ -435,6 +435,90 @@
   }
   function withPaper(o) { o = o || {}; if (!o.paper) o.paper = getConfig().paper; return o; }
 
+  /* ── transport D : le pilote du système, via la boîte d'impression ──────────
+   * Les trois transports au-dessus (Bluetooth, USB, pont) poussent de l'ESC/POS
+   * et exigent que Kiwi PARLE à l'imprimante. Sur une caisse Windows où
+   * l'imprimante est déjà installée, c'est justement impossible : Windows
+   * possède le périphérique, WebUSB se voit refuser le claim (« Imprimante déjà
+   * utilisée par le système ») et il n'y a ni Bluetooth ni pont. L'imprimante
+   * marche pourtant très bien — pour tout le reste de Windows.
+   *
+   * D'où cette quatrième voie : on peint le reçu en HTML et on laisse le pilote
+   * du système l'imprimer. Ce n'est pas silencieux (il y a une boîte de
+   * dialogue), donc ça reste le repli et non le chemin nominal, mais c'est la
+   * seule chose qui imprime sur une caisse déjà équipée.
+   *
+   * La mise en page suit celle de KiwiEscPos.receipt() volontairement : le même
+   * ticket ne doit pas changer de forme selon la voie qui l'imprime. */
+  function receiptHTML(o) {
+    o = withPaper(o || {});
+    var rows = (o.lines || []).map(function (l) {
+      var name = (l.qty ? l.qty + '× ' : '') + (l.name || '');
+      return '<div class="kpr-r"><span>' + esc(name) + '</span><span>' + esc(l.price != null ? l.price : '') + '</span></div>';
+    }).join('');
+    return '<div class="kpr-ticket">' +
+      '<div class="kpr-shop">' + esc(o.shop || 'Kiwi') + '</div>' +
+      (o.address ? '<div class="kpr-c">' + esc(o.address) + '</div>' : '') +
+      (o.phone ? '<div class="kpr-c">' + esc(o.phone) + '</div>' : '') +
+      ((o.ref || o.date) ? '<div class="kpr-c">' + esc([o.ref, o.date].filter(Boolean).join('  ')) + '</div>' : '') +
+      '<div class="kpr-rule"></div>' + rows + '<div class="kpr-rule"></div>' +
+      '<div class="kpr-r kpr-tot"><span>TOTAL</span><span>' + esc(o.total != null ? o.total : '') + '</span></div>' +
+      (o.method ? '<div class="kpr-r"><span>Paiement</span><span>' + esc(o.method) + '</span></div>' : '') +
+      (o.footer ? '<div class="kpr-c kpr-foot">' + esc(o.footer) + '</div>' : '') +
+      '<div class="kpr-c kpr-foot">Merci · Kiwi</div>' +
+    '</div>';
+  }
+
+  /* La largeur de page suit le rouleau réglé dans les paramètres : imprimer un
+   * 80 mm sur une page A4 donne un ticket minuscule perdu en haut d'une feuille,
+   * ce qui est le grand classique de l'impression navigateur ratée. */
+  function ensureReceiptPrintCss(paper) {
+    var w = String(paper || '80') === '58' ? 58 : 80;
+    var prev = document.getElementById('kpr-print-css');
+    if (prev) { if (prev.getAttribute('data-w') === String(w)) return; prev.remove(); }
+    var st = document.createElement('style');
+    st.id = 'kpr-print-css';
+    st.setAttribute('data-w', String(w));
+    st.textContent =
+      '#kpr-print-root{display:none;}' +
+      '@media print{' +
+        '@page{size:' + w + 'mm auto;margin:0;}' +
+        'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
+        /* Tout le reste de la caisse disparaît : sans ça la boîte d'impression
+         * sort la page entière (grille produits, panneaux) au lieu du reçu. */
+        'body>*:not(#kpr-print-root){display:none!important;}' +
+        '#kpr-print-root{display:block!important;position:static!important;}' +
+        '.kpr-ticket{width:' + (w - 6) + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
+          'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
+        '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;}' +
+        '.kpr-c{text-align:center;}' +
+        '.kpr-rule{border-top:1px dashed #000;margin:2mm 0;}' +
+        '.kpr-r{display:flex;justify-content:space-between;gap:3mm;}' +
+        '.kpr-r>span:last-child{white-space:nowrap;}' +
+        '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
+        '.kpr-foot{margin-top:3mm;}' +
+      '}';
+    document.head.appendChild(st);
+  }
+
+  /* Repeint et ouvre la boîte d'impression. Le root est retiré après coup pour
+   * ne pas laisser un reçu fantôme dans le DOM de la caisse. */
+  function browserReceipt(o) {
+    o = withPaper(o || {});
+    var root = document.getElementById('kpr-print-root');
+    if (root) root.remove();
+    root = document.createElement('div');
+    root.id = 'kpr-print-root';
+    root.innerHTML = receiptHTML(o);
+    document.body.appendChild(root);
+    ensureReceiptPrintCss(o.paper);
+    setTimeout(function () {
+      try { window.print(); } catch (_) {}
+      setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
+    }, 60);
+    return { ok: true, via: 'browser' };
+  }
+
   // ── the pairing modal ───────────────────────────────────────────────────────
   function injectCss() {
     if (document.getElementById('kpr-style')) return;
@@ -500,13 +584,24 @@
     var btLive = btConnected();
     var usbLive = usbConnected();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
+    /* Le modal servait les étiquettes uniquement, donc le titre les nommait en
+     * dur. Le reçu emprunte le même chemin depuis que l'impression système est
+     * un repli : `kind` évite de proposer « Imprimer l'étiquette » à une
+     * caissière qui encaisse une vente. */
+    var isLabel = (context.kind || 'label') === 'label';
     ov.innerHTML =
       '<div id="kpr-card">' +
         '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer">×</button>' +
-        '<h2>' + (fromPrint ? 'Imprimer l’étiquette' : 'Connecter une imprimante') + '</h2>' +
+        '<h2>' + (fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
         '<p class="kpr-sub">' + (fromPrint
-          ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
-          : 'Le plus simple : une imprimante déjà installée s’imprime directement via « Imprimer ». Pour imprimer sans boîte de dialogue, connectez une imprimante Bluetooth.') + '</p>' +
+          ? (isLabel
+            ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
+            : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système — ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
+          /* Cette phrase renvoyait vers un bouton « Imprimer » qui n'existe que
+           * lorsqu'on ouvre le modal DEPUIS une impression (fromPrint). Ouvert
+           * par « connecter une imprimante », elle envoyait le commerçant
+           * chercher un bouton absent de l'écran. */
+          : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
           (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
           (context.onSavePdf ? '<button class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">Enregistrer en PDF</button>' : '') +
@@ -719,6 +814,8 @@
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
+    // Le repli « pilote du système » — même objet reçu que printReceipt.
+    browserReceipt: browserReceipt,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
   };
