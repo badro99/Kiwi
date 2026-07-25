@@ -580,6 +580,113 @@
     return !!raw && BOUTIQUE_TRADES.some((t) => raw.indexOf(t) !== -1);
   }
 
+  /* ═══════════════ LA CARTE APPARTIENT AU COMPTE, PAS AU NAVIGATEUR ══════════
+   * Ce module ne faisait que POUSSER. La carte de travail vivait dans le seul
+   * localStorage du navigateur qui l'avait saisie — donc un commerçant qui
+   * ouvrait son tableau de bord sur son téléphone, sur un iPad, ou dans une
+   * fenêtre privée trouvait une carte vide. Et pire : il republiait ce vide
+   * par-dessus la vraie carte, et le client qui scannait le QR de sa table
+   * tombait sur « bientôt disponible ». Une carte n'est pas un réglage
+   * d'affichage, c'est le fonds de commerce.
+   *
+   * Trois règles, dans cet ordre :
+   *
+   *  1. LIRE AVANT D'ÉCRIRE. Aucune publication tant que le serveur n'a pas
+   *     répondu. Un navigateur neuf n'a rien à dire tant qu'il n'a rien lu.
+   *  2. NE RIEN PERDRE. Panne, hors ligne, 503, session expirée : on avale, la
+   *     copie locale reste la vérité de travail, on retente à la modification
+   *     suivante. Le tableau de bord ne bloque jamais sur le réseau.
+   *  3. FUSIONNER, PAS ÉCRASER. Union par id : ce que CET appareil affiche
+   *     l'emporte sur un id connu des deux côtés, et tout ce que l'autre a
+   *     ajouté vient s'ajouter. Rien ne disparaît.
+   *
+   * Rien ici ne connaît un magasin en particulier : l'identité est
+   * slugMerchant(nom de l'établissement) côté serveur, résolue depuis la
+   * session. Tout établissement créé aujourd'hui ou dans deux ans passe par le
+   * même chemin, sans une ligne de code de plus. */
+  const cloud = { read: false, merchant: '', tried: 0, pulling: false };
+
+  function storeSlug() {
+    try {
+      const C = window.KiwiConfig;
+      if (C && C.storeSlug) { const s = C.storeSlug(); if (s) return s; }
+    } catch (_) {}
+    const KV = window.KiwiVenue;
+    let name = '';
+    try {
+      const vd = KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData && KV.getCurrentVenueData();
+      if (vd && vd.name) name = String(vd.name).trim();
+    } catch (_) {}
+    return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // Le compteur d'ids (`seq`) ne voyage pas : le serveur ne stocke que la carte.
+  // Sans ce rattrapage, un navigateur neuf repartirait de it_1 et écraserait des
+  // produits existants dès le premier ajout.
+  function healSeq(d) {
+    let max = +d.seq || 0;
+    const scan = (id) => { const m = /_(\d+)$/.exec(String(id || '')); if (m) max = Math.max(max, +m[1]); };
+    (d.cats || []).forEach((c) => { scan(c.id); (c.sub || []).forEach((s) => scan(s.id)); });
+    (d.items || []).forEach((i) => scan(i.id));
+    d.seq = max;
+    return d;
+  }
+
+  // Union par id, cet appareil d'abord. Les sous-catégories fusionnent de même,
+  // sinon renommer une catégorie sur un poste effacerait les sous-catégories
+  // créées sur l'autre.
+  function mergeMenus(mine, theirs) {
+    const out = { seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0), cats: [], items: [] };
+    const byId = Object.create(null);
+    ((mine && mine.cats) || []).forEach((c) => {
+      if (!c || !c.id || byId[c.id]) return;
+      byId[c.id] = { id: c.id, name: c.name, sub: (c.sub || []).slice() };
+      out.cats.push(byId[c.id]);
+    });
+    ((theirs && theirs.cats) || []).forEach((c) => {
+      if (!c || !c.id) return;
+      if (!byId[c.id]) { byId[c.id] = { id: c.id, name: c.name, sub: (c.sub || []).slice() }; out.cats.push(byId[c.id]); return; }
+      const have = Object.create(null);
+      byId[c.id].sub.forEach((s) => { if (s && s.id) have[s.id] = 1; });
+      (c.sub || []).forEach((s) => { if (s && s.id && !have[s.id]) byId[c.id].sub.push(s); });
+    });
+    const seen = Object.create(null);
+    [((mine && mine.items) || []), ((theirs && theirs.items) || [])].forEach((list) => {
+      list.forEach((it) => { if (it && it.id && !seen[it.id]) { seen[it.id] = 1; out.items.push(it); } });
+    });
+    return healSeq(out);
+  }
+
+  /* Relire la carte du compte. Adoption pure si ce navigateur est vierge (le cas
+   * qui compte : téléphone, iPad, fenêtre privée), fusion sinon. */
+  function pull() {
+    if (!isRealSession() || cloud.pulling) return Promise.resolve(false);
+    const KV = window.KiwiVenue;
+    const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    if (isBoutiqueVenue(vd)) { cloud.read = true; return Promise.resolve(false); }
+    cloud.pulling = true;
+    const slug = storeSlug();
+    return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
+                 { headers: { Accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        cloud.pulling = false;
+        if (!j || j.error || j.unreachable) return false;   // injoignable → surtout ne pas publier
+        cloud.merchant = j.merchant || '';
+        cloud.read = true;                                   // à partir d'ici, publier est sûr
+        const theirs = j.menu;
+        if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
+        const mine = store.get();
+        const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
+        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [] })
+                        : mergeMenus(mine, theirs));
+        try { if (isCustom()) render(); } catch (_) {}
+        return true;
+      })
+      .catch(() => { cloud.pulling = false; return false; });   // hors ligne → local reste la vérité
+  }
+
   let syncTimer = null;
   function publish(vid) {
     if (!isRealSession()) return;                 // local demo → never touch the network
@@ -587,12 +694,23 @@
     const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
                (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     if (isBoutiqueVenue(vd)) return;              // stock is published by orderpro-publish.js
+    // RÈGLE 1 — rien ne part tant qu'on n'a pas lu. Sans ce verrou, un navigateur
+    // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes
+    // après l'ouverture du tableau de bord.
+    if (!cloud.read) { if (cloud.tried++ < 3) pull().then(() => { if (cloud.read) publish(vid); }); return; }
     const data = store.get(vid);
+    const slug = cloud.merchant || storeSlug();
     try {
       fetch('/api/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ name: vd.name || '', type: vd.type || '', data: data }),
+        body: JSON.stringify({
+          name: vd.name || '', type: vd.type || '', data: data,
+          merchant: slug || undefined,
+          // On a relu le serveur : une carte vide ici est une carte vidée exprès,
+          // pas un navigateur qui n'a rien trouvé. Le serveur refuse l'inverse.
+          allowEmpty: true,
+        }),
       }).catch(function () {});                    // fire-and-forget, fail-soft
     } catch (_) {}
   }
@@ -617,8 +735,24 @@
       }
       schedulePublish(vid);
     });
-    // Publish once on boot so a merchant who never edits still has its carte live.
-    if (isRealSession()) setTimeout(function () { try { publish(); } catch (_) {} }, 1500);
+    // RELIRE, PUIS publier. Dans cet ordre, et jamais l'inverse : c'est la
+    // lecture qui reconstruit la carte dans un navigateur neuf, et c'est elle
+    // qui autorise la publication (voir la règle 1 dans publish()).
+    if (isRealSession()) {
+      setTimeout(function () {
+        pull().then(function () { try { publish(); } catch (_) {} });
+      }, 1200);
+      // Revenir sur l'onglet après avoir modifié la carte sur un autre appareil
+      // doit suffire à la voir arriver — sans marteler le réseau.
+      let lastPull = 0;
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        const now = Date.now();
+        if (now - lastPull < 20000) return;
+        lastPull = now;
+        try { pull(); } catch (_) {}
+      });
+    }
   }
   if (document.readyState === 'complete') boot();
   else window.addEventListener('load', boot);
