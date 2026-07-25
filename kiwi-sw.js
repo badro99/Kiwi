@@ -37,6 +37,7 @@ var SHELL = [
   '/assets/liquid-glass.css',
   '/assets/liquid-glass.js',
   '/assets/dashboard-native.css',
+  '/assets/cloud-doc.js',
   '/assets/i18n.js',
   '/assets/interactive.js',
   '/assets/features.js',

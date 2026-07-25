@@ -3876,6 +3876,10 @@
   <script src="assets/staff-roles.js" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js" defer></script>
+  <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
+       caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
+       venue-store.js, qui s'y branche. -->
+  <script src="assets/cloud-doc.js" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js" defer></script>

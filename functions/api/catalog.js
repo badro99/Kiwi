@@ -31,65 +31,15 @@
 // écriture. Le client garde alors sa copie locale et retentera : il ne doit
 // jamais perdre de stock parce que le serveur tousse.
 
-import {
-  json, readSession, readCookie, SESS_COOKIE,
-  slugMerchant, isTillFor, isOperator,
-} from '../auth/_lib.js';
+import { json } from '../auth/_lib.js';
+// La règle de tenancy vivait ici. Elle vaut maintenant aussi pour /api/store et
+// /api/clients, qui exposent les mêmes données privées ; elle a donc déménagé
+// dans _private.js pour qu'il n'en existe qu'UNE. Trois copies dérivent : on en
+// corrige une, les deux autres restent ouvertes.
+import { tenantFor } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
-
-/* À qui appartient ce magasin ? NULL = ligne d'avant le registre (ou magasin
- * semé par un opérateur) ; `null` renvoyé = colonne absente, base pas encore
- * migrée. Les deux se comportent pareil ici : on retombe sur le slug du compte. */
-async function storeOwner(env, slug) {
-  try {
-    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
-      .bind(slug).first();
-    return row ? (row.account_id || '') : null;
-  } catch (_) { return null; }
-}
-
-/* Quel magasin ce demandeur a-t-il le droit de lire/écrire ?
- *
- *   · caisse appairée → le magasin auquel CE terminal a été lié. Testé en
- *     premier : sur un compte multi-boutiques, c'est la caisse — pas la
- *     session — qui sait derrière quel comptoir on se tient.
- *   · session du compte → son propre slug, plus tout magasin qu'il POSSÈDE
- *     (vérifié en base, jamais sur parole du client).
- *   · opérateur → ce qui est demandé ; c'est tout l'objet de la console.
- *
- * Renvoie '' quand le demandeur n'a droit à rien : l'appelant doit refuser. */
-async function tenantFor(request, env, asked) {
-  asked = str(asked, 64).trim();
-
-  if (asked) {
-    try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
-  }
-
-  let sessionMerchant = '';
-  let sessionAid = '';
-  if (env.AUTH_SECRET) {
-    try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-      if (sess && sess.aid) {
-        const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?')
-          .bind(sess.aid).first();
-        if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
-      }
-    } catch (_) { /* pas de session → opérateur, sinon rien */ }
-  }
-
-  try { if (await isOperator(request, env)) return asked || sessionMerchant; } catch (_) {}
-
-  if (!sessionMerchant) return '';
-  if (!asked || asked === sessionMerchant) return sessionMerchant;
-  // Une deuxième boutique du même compte : autorisée si la base confirme qu'elle
-  // lui appartient. Un slug inconnu retombe sur le magasin du compte plutôt que
-  // d'ouvrir celui d'un inconnu.
-  if ((await storeOwner(env, asked)) === sessionAid) return asked;
-  return sessionMerchant;
-}
 
 /* Bornage du document. On fait confiance au commerçant (c'est son propre stock)
  * mais un client qui déraille ne doit pas pouvoir gonfler la ligne. Toute forme
