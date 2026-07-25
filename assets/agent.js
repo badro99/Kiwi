@@ -162,7 +162,10 @@
    * tatweel go too, so patterns below are written in the folded form. */
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[\u064b-\u0655\u0670]/g, '').replace(/\u0649/g, '\u064a').replace(/\u0640/g, '')
-    .replace(/[’‘`´]/g, "'");
+    .replace(/[’‘`´]/g, "'")
+    /* Two taps on the space bar turned "mon point mort" into a question no
+     * pattern could see: every guard here spells its gaps as a single space. */
+    .replace(/\s+/g, ' ').trim();
   const escAttr = (s) => String(s).replace(/"/g, '&quot;');
   // Full HTML-text escaper — use for any user-derived value (venue name/location)
   // interpolated into an innerHTML string. escAttr only neutralises quotes; this
@@ -2023,7 +2026,7 @@
    * entertain, and both used to fall through to the model. */
   const SECRET_RX = /\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)|\bprompt\b|\b(?:tes|ton|ta)\s+(?:instructions|consignes|code|configuration|regles)\b|\byour\s+(?:instructions|rules|prompt|config)\b|code\s+source|\bsource\s+code\b|cle\s+api|\bapi\s+key\b|تعليماتك|كلمة\s*السر/;
 
-  const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|pense)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\bje\s+refuse\b|\bno\s+(?:hiring|more)\b|\bn[e']?\s*(?:augmente|baisse|ferme|embauche|prends|prend|licencie)\w*\s+(?:pas|plus)\b|\b(?:don'?t|do\s+not|won'?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*اريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
+  const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|pense)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\bje\s+refuse\b|\bno\s+(?:hiring|more)\b|\bn[e']?\s*(?:augmente|baisse|ferme|embauche|prends|prend|licencie)\w*\s+(?:pas|plus)\b|\b(?:don'?\s?t|do\s+not|won'?\s?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*اريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
 
   /* 2. Meta / challenge. "t'es sûr de ce chiffre ?" scored +3 on `chiffre`
    *    and returned an unrelated revenue dump. Challenging a number is the
@@ -2153,8 +2156,11 @@
    * rival shop. Refusing "les ventes de Ramadan" as somebody else's data would
    * be a worse failure than the one this guard exists to prevent. */
   const PERIOD_WORD = /^(?:janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|january|february|march|april|june|july|august|september|october|november|december|ramadan|aid|achoura|noel|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|monday|tuesday|wednesday|thursday|friday|saturday|sunday|hier|aujourd|demain|kiwi|caisse|midi|soir)\b/;
+  const NAMED_DATA_CAPS_RX = new RegExp(NAMED_DATA_RX.source, 'i');
   function namedBusiness(raw) {
-    const m = String(raw).match(NAMED_DATA_RX);
+    const txt = String(raw);
+    const shouting = txt === txt.toUpperCase() && /[A-ZÀ-Þ]{3}/.test(txt);
+    const m = txt.match(shouting ? NAMED_DATA_CAPS_RX : NAMED_DATA_RX);
     if (!m) return null;
     const who = norm(m[1]).trim();
     if (who.length < 3 || PERIOD_WORD.test(who)) return null;
@@ -2184,18 +2190,39 @@
     jai: 'j ai', jvais: 'je vais', jveux: 'je veux', jpeux: 'je peux',
     dpense: 'depense', trso: 'tresorerie', empl: 'employe', ct: 'cout',
   };
+  /* Words the corrector may fix a typo INTO. Kept by hand on purpose: deriving
+   * it from the routing patterns pulls in their stems (`ecritur`, `amortiss`),
+   * and completing a real word into a stem invents an intent — "qui a écrit Le
+   * Petit Prince" became a question about bookkeeping entries. */
   const FUZZ_LEX = ['combien', 'chiffre', 'affaires', 'benefice', 'benefices', 'marge', 'marges',
     'charges', 'depenses', 'embaucher', 'embauche', 'employe', 'employes', 'serveur', 'rentabilite',
     'seuil', 'tresorerie', 'prevision', 'augmenter', 'augmente', 'baisser', 'investir', 'acheter',
     'stock', 'stocks', 'clients', 'salaire', 'loyer', 'prix', 'vente', 'ventes', 'gagne', 'gagner',
     'frais', 'depense', 'inventaire', 'references', 'articles',
-    'revenus', 'resultat', 'commande', 'commandes', 'panier', 'fermer', 'ouvrir'];
+    'revenus', 'resultat', 'commande', 'commandes', 'panier', 'fermer', 'ouvrir',
+    /* fr — the nouns and verbs that actually carry a route */
+    'montre', 'montrer', 'affiche', 'afficher', 'ouvre', 'cuisine', 'terminaux', 'terminal',
+    'reglements', 'conformite', 'equipe', 'tables', 'reservations', 'touristes', 'demain',
+    'semaine', 'recommandations', 'recommandation', 'conseil', 'conseils', 'comptabilite',
+    'declaration', 'salaires', 'fidele', 'fideles', 'point', 'associe', 'banque', 'credit',
+    'emprunter', 'financer', 'boutique', 'magasin', 'commerce', 'marchandise', 'categorie',
+    'produit', 'produits', 'article', 'serveurs', 'cuisinier', 'barista', 'caissiere',
+    'licencier', 'licencie', 'reduire', 'effectif', 'tarifs', 'tarif', 'objectif', 'encaisse',
+    'encaisser', 'paiement', 'reservation', 'ramadan', 'vacances', 'saison', 'concurrent',
+    'concurrents', 'moyens', 'calculer', 'calcule',
+    /* en */
+    'revenue', 'sales', 'margin', 'profit', 'expenses', 'forecast', 'breakeven', 'inventory',
+    'customers', 'customer', 'business', 'kitchen', 'screen', 'payslips', 'terminals',
+    'settlements', 'compliance', 'bookings', 'orders', 'waiter', 'hiring', 'prices',
+    'turnover', 'takings', 'payroll', 'valuation', 'partner', 'season', 'closing', 'overhead',
+    'calculate',
+    'bonjour', 'bonsoir', 'salut', 'hello', 'merci', 'choukran'];
   /* Ordinary words that happen to be the first four letters of a lexicon
    * entry. Without this, "il y a du vent" completed to "vente" and the agent
    * answered a weather remark with the month's takings. */
   /* "je me marie le mois prochain" was spell-corrected into "marge" and
    * answered with the month's margin. Ordinary words are never completed. */
-  const FUZZ_STOP = { vent: 1, char: 1, reve: 1, tres: 1, rent: 1, comb: 1, sale: 1, part: 1, cent: 1, temp: 1, aug: 1, dep: 1, comm: 1, marie: 1, mari: 1, prix: 1, paie: 1 };
+  const FUZZ_STOP = { vent: 1, char: 1, reve: 1, tres: 1, rent: 1, comb: 1, sale: 1, part: 1, cent: 1, temp: 1, aug: 1, dep: 1, comm: 1, marie: 1, mari: 1, prix: 1, paie: 1, comme: 1, commen: 1, produi: 1, banc: 1, poin: 1, sais: 1, prince: 1, france: 1, service: 1, presque: 1, term: 1, cred: 1, ferme: 1, ouvre: 1, tarif: 1, pris: 1, price: 1, saison: 1 };
   /* Edit distance ≤ 1, without building a matrix — one mismatch is allowed and
    * consumed on whichever side is longer, then the walk must finish clean. */
   function within1(a, b) {
@@ -2208,6 +2235,17 @@
       if (la > lb) i++; else if (lb > la) j++; else { i++; j++; }
     }
     return diff + (la - i) + (lb - j) <= 1;
+  }
+  /* Damerau's extra move: one swap of adjacent letters. within1() counts that
+   * as two edits and rejects it, which is why "monrte" stayed unrecognised. */
+  function transposed(a, b) {
+    if (a.length !== b.length || a.length < 4) return false;
+    let i = 0;
+    while (i < a.length && a[i] === b[i]) i++;
+    if (i >= a.length - 1) return false;
+    if (a[i] !== b[i + 1] || a[i + 1] !== b[i]) return false;
+    for (let j = i + 2; j < a.length; j++) if (a[j] !== b[j]) return false;
+    return true;
   }
   function fuzz(q) {
     return q.split(/(\s+)/).map((tok) => {
@@ -2225,7 +2263,7 @@
         }
       }
       if (pref) return tok.replace(w, pref);
-      if (w.length >= 5) for (const k of FUZZ_LEX) if (within1(w, k)) return tok.replace(w, k);
+      if (w.length >= 5 && !FUZZ_STOP[w]) for (const k of FUZZ_LEX) if (within1(w, k) || transposed(w, k)) return tok.replace(w, k);
       return tok;
     }).join('');
   }
@@ -2356,9 +2394,31 @@
 
   /* Pure routing decision — shared by respond() (to dispatch) and the eval
    * harness (to check), so the two can never drift. */
+  /* A salutation on the front of a real question. Stripped before anything is
+   * scored, because the greet intent scores 3 on "bonjour" and was swallowing
+   * every question standing behind it. A bare greeting keeps its greeting. */
+  const GREET_LEAD = /^(?:(?:bonjour|bonsoir|bjr|salut|coucou|hello|hi|hey|salam|slam|sbah\s*lkhir|ahlan|labas|aslema|مرحبا|سلام|اهلا|صباح\s*الخير|السلام\s*عليكم)\b[\s,;:!.…-]*)+/;
   function decideRoute(rawIn, retry) {
     const raw = fixDigits(rawIn);
     const q = retry || norm(raw);
+    if (!retry) {
+      const bare = q.replace(GREET_LEAD, '');
+      if (bare !== q && /[a-z0-9؀-ۿ]{2}/.test(bare)) {
+        const sentence = bare.split(/\s+/).filter(Boolean).length >= 3 || bare.length >= 12;
+        let handoff = null;
+        for (const cand of [bare, fuzz(bare)]) {
+          if (!cand) continue;
+          const alt = decideRoute(rawIn, cand);
+          if (alt.kind !== null && alt.kind !== 'unclear' && alt.kind !== 'greet') { alt.raw = raw; return alt; }
+          if (alt.kind === null && sentence) handoff = alt;
+        }
+        /* Nothing here answers it, but a whole sentence followed the salutation
+         * — hand it on rather than greeting over it. Decided AFTER the
+         * spell-corrected attempt, or "bonjour, kombien je gagn" would be
+         * handed off before the typo was ever corrected. */
+        if (handoff) { handoff.raw = raw; return handoff; }
+      }
+    }
     /* Nothing to answer. Offering to download a 1,2 Go model because the
      * merchant hit Enter on an empty box is absurd; greet them instead. */
     if (!/[a-z0-9؀-ۿ]/.test(q)) return { kind: 'greet', raw, q, run: () => sHelp() };
@@ -2774,6 +2834,10 @@
   /* Exposed for QA — not part of the merchant-facing surface. */
   window.KiwiAgentEval = runEval;
   window.KiwiAgentRoute = routeLabel;
+  /* Seeds for tools/agent-mutate.js, which re-types every one of them the way a
+   * merchant would (no accents, caps, a greeting in front, one fat-fingered
+   * letter) and asserts the route does not move. */
+  window.KiwiAgentEvalSet = EVAL_SET;
   window.KiwiGuardTest = runGuardTest;
   window.KiwiAgentConvoTest = runConvoTest;
 
