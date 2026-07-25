@@ -12,15 +12,41 @@ Why it exists: a browser cannot open a raw network socket to a printer at
 
 ## What it is
 
-- **Zero dependencies** — Node's built-in `http` + `net` only.
+- **Zero dependencies** — Node's built-in `http` + `net` only (plus `child_process`
+  for the OS spooler route; still nothing from npm, so it packages into one binary).
 - Listens on `http://127.0.0.1:9110` (loopback only — nothing on the LAN can reach it).
 - Endpoints:
   - `GET /kiwi/ping` → `{ ok, name, version }` — how the app detects it.
-  - `POST /kiwi/print` `{ printerIp, port?, dataB64 }` → relays raw ESC/POS bytes
-    to `printerIp:port` (port defaults to `9100`). → `{ ok, bytes }` or `502`.
+  - `GET /kiwi/printers` → `{ ok, platform, printers[], default }` — the printers
+    this computer already has installed.
+  - `POST /kiwi/print` → `{ ok, bytes, via }` or `502`. Two ways to name the target:
+    - `{ printerIp, port?, dataB64 }` — relays to `printerIp:port` over TCP
+      (port defaults to `9100`). `via: "tcp"`.
+    - `{ printerName, dataB64 }` — hands the job to a printer the OS already has
+      installed. `via: "os"`.
 
 The Kiwi app builds the ESC/POS bytes (`assets/escpos.js`), base64-encodes them,
-and POSTs them here. The bridge is dumb on purpose: it just opens the socket.
+and POSTs them here.
+
+### Why the second route exists
+
+The app's own transports (Bluetooth, WebUSB, and this bridge over TCP) all need
+Kiwi to reach the printer itself. On the commonest setup in a Moroccan shop — a
+USB thermal printer on a Windows till, installed the normal way — every one of
+them fails: `usbprint.sys` owns the device so Chrome is refused the WebUSB claim,
+there is no Bluetooth, and a USB printer has no IP. The printer works perfectly
+for the rest of Windows and not at all for Kiwi.
+
+`printerName` hands the bytes to the OS instead, through each platform's RAW
+passthrough — `winspool.drv` (via PowerShell, Microsoft's own RawPrinterHelper
+recipe) on Windows, `lp -o raw` on macOS/Linux. RAW matters: the driver passes
+the bytes through untouched, so the cutter still cuts and the cash drawer still
+kicks, which a browser print dialog cannot do.
+
+The printer name arrives from the browser, so it never reaches a shell: there is
+no shell (`execFile`/`spawn` with an argv array), PowerShell receives it as an
+environment variable rather than as script text, and it is checked against the
+real installed list first.
 
 ---
 

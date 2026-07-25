@@ -151,12 +151,17 @@
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
+  /* `osPrinter` is the name of a printer the till ALREADY has installed, printed
+   * to through the bridge's spooler route. It is the answer for the commonest
+   * shop setup — a USB thermal printer on a Windows caisse — where Bluetooth,
+   * WebUSB and the network path all fail at once (Windows owns the USB device,
+   * and a USB printer has no IP). */
   function getConfig() {
-    var d = { ip: '', port: 9100, model: 'escpos', paper: '80', label: { w: 50, h: 30 } };
+    var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 30 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
   function setConfig(cfg) { set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {}))); }
-  function isConfigured() { return !!getConfig().ip; }
+  function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter); }
 
   // ── bridge transport ───────────────────────────────────────────────────────
   function withTimeout(promise, ms) {
@@ -376,10 +381,13 @@
     return step();
   }
 
-  // ── transport C: the network bridge (loopback helper → TCP printer) ──────────
+  /* ── transport C: the bridge — to a TCP printer, or to one the OS already has ──
+   * Same helper, two targets. `osPrinter` wins when both are set: it is the
+   * deliberate choice made in the panel, while an `ip` can survive in saved
+   * config from an earlier setup and would otherwise silently outrank it. */
   function bridgePrintBytes(bytes) {
     var cfg = getConfig();
-    if (!cfg.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (!cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
     // ports since — a restart on a busy 9110 lands somewhere else).
     if (!bridgePort) {
@@ -394,7 +402,9 @@
     var to = withTimeout(null, 9000);
     return fetch(bridgeBase() + '/kiwi/print', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-      body: JSON.stringify({ printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
+      body: JSON.stringify(cfg.osPrinter
+        ? { printerName: cfg.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
+        : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
     }).then(function (r) {
       to.done();
       return r.json().then(function (j) { return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes } : { ok: false, reason: (j && j.error) || 'print-failed' }; },
@@ -620,6 +630,19 @@
           '<button class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
+        /* Printers the till already has. Hidden until the bridge answers with a
+         * non-empty list — on a tablet, or with no bridge, an empty box that
+         * never fills is worse than no box. Populated in the ping handler. */
+        '<div class="kpr-bt" id="kpr-os" style="display:none;">' +
+          '<h3>Imprimante déjà installée</h3>' +
+          '<p>Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.</p>' +
+          '<div class="kpr-status ' + (cfg.osPrinter ? 'on' : 'off') + '" id="kpr-os-status"><span class="kpr-d"></span><span id="kpr-os-status-t">' + (cfg.osPrinter ? esc('Choisie · ' + cfg.osPrinter) : 'Aucune imprimante choisie.') + '</span></div>' +
+          '<div class="kpr-field"><label for="kpr-os-sel">Imprimante</label><select id="kpr-os-sel"></select></div>' +
+          '<div class="kpr-actions">' +
+            '<button class="kpr-btn kpr-test" type="button" id="kpr-os-test">Imprimer un ticket test</button>' +
+            '<button class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
+          '</div>' +
+        '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
@@ -660,6 +683,28 @@
     function close() { ov.remove(); }
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
 
+    /* Fill the "already installed" picker from the bridge. Older bridges (< 1.2)
+     * have no /kiwi/printers and 404 — the section simply stays hidden, so an
+     * un-updated till degrades to exactly today's behaviour instead of showing a
+     * control that can never work. */
+    function loadOsPrinters() {
+      var box = $('#kpr-os'), sel = $('#kpr-os-sel');
+      if (!box || !sel) return Promise.resolve();
+      var to = withTimeout(null, 6000);
+      return fetch(bridgeBase() + '/kiwi/printers', { signal: to.signal })
+        .then(function (r) { to.done(); return r.ok ? r.json() : null; })
+        .catch(function () { to.done(); return null; })
+        .then(function (j) {
+          var list = (j && j.ok && Array.isArray(j.printers)) ? j.printers : [];
+          if (!list.length) { box.style.display = 'none'; return; }
+          var cur = getConfig().osPrinter || j.default || '';
+          sel.innerHTML = list.map(function (n) {
+            return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
+          }).join('');
+          box.style.display = '';
+        });
+    }
+
     var bridgeUp = false;
     function refreshStatus() {
       var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test');
@@ -670,7 +715,9 @@
           st.className = 'kpr-status on';
           t.textContent = 'Pont connecté · v' + (j.version || '?');
           test.disabled = false;
+          loadOsPrinters();
         } else {
+          var box = $('#kpr-os'); if (box) box.style.display = 'none';
           st.className = 'kpr-status off';
           // Rebuild with download + re-check affordances.
           t.innerHTML = 'Kiwi Printer Bridge non détecté. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
@@ -683,6 +730,42 @@
     $('#kpr-close').addEventListener('click', close);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('#kpr-save').addEventListener('click', function () { setConfig(readForm()); toast('Imprimante enregistrée'); close(); });
+
+    /* Choosing an installed printer clears any saved IP. Leaving both set would
+     * be ambiguous to read back later, even though the bridge prefers the name. */
+    $('#kpr-os-save').addEventListener('click', function () {
+      var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
+      setConfig({ osPrinter: sel.value, ip: '' });
+      var t = $('#kpr-os-status-t'), st = $('#kpr-os-status');
+      if (t) t.textContent = 'Choisie · ' + sel.value;
+      if (st) st.className = 'kpr-status on';
+      toast('Imprimante enregistrée');
+      close();
+    });
+
+    /* Test prints to the printer highlighted right now, not to the saved one —
+     * the owner is trying candidates, and a test that ignores the picker would
+     * report success for a printer they didn't select. */
+    $('#kpr-os-test').addEventListener('click', function () {
+      var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
+      var btn = this, orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Impression…';
+      var cfg2 = getConfig();
+      var to = withTimeout(null, 12000);
+      fetch(bridgeBase() + '/kiwi/print', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
+        body: JSON.stringify({ printerName: sel.value,
+          dataB64: window.KiwiEscPos.toB64(window.KiwiEscPos.testSlip({ paper: cfg2.paper })) }),
+      }).then(function (r) { to.done(); return r.json().catch(function () { return null; }); })
+        .then(function (j) {
+          btn.textContent = orig; btn.disabled = false;
+          toast(j && j.ok ? 'Ticket test envoyé' : ('Échec : ' + ((j && j.error) || 'inconnu')));
+        })
+        .catch(function () {
+          to.done(); btn.textContent = orig; btn.disabled = false;
+          toast('Échec : pont injoignable');
+        });
+    });
     if (context.onBrowserPrint) {
       var bp = $('#kpr-browser');
       if (bp) bp.addEventListener('click', function () { close(); try { context.onBrowserPrint(); } catch (_) {} });
