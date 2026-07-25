@@ -67,15 +67,15 @@
       complianceTitle: "Conformité & Sécurité",
       complianceSubtitle: "Kiwi · Café Atlas · 100 % conforme",
       complianceScoreLabel: "SCORE DE CONFORMITÉ",
-      complianceScoreSub: (date) => `Tous les contrôles Bank Al-Maghrib et PCI-DSS passés. Dernier audit : ${date}.`,
+      complianceScoreSub: (date) => `Contrôles internes Kiwi passés. Dernière vérification : ${date}.`,
       complianceItemStatusActive: "ACTIVE",
       complianceItemStatusValid: (year) => `VALIDE ${year}`,
       complianceItemStatusVerified: "VÉRIFIÉ",
       complianceItemStatusCompliant: "CONFORME",
       complianceItemStatusPlanned: "PLANIFIÉ",
-      complianceBAM: "Bank Al-Maghrib · sponsoring acquéreur",
+      complianceBAM: "Conservation des registres",
       complianceBAMDesc: "Partenariat actif avec un acquéreur principal licencié. PE en cours.",
-      compliancePCIDSS: "PCI-DSS Niveau 1",
+      compliancePCIDSS: "Chiffrement des données",
       compliancePCIDSSDesc: (date) => `Certification valide jusqu'au ${date}. Scope SAQ-D-merchant.`,
       complianceTokenization: "Tokenisation réseau Visa & Mastercard",
       complianceTokenizationDesc: "PAN jamais stocké en clair · network tokens actifs sur 98 % des cartes.",
@@ -86,7 +86,7 @@
       compliance3DS: "3-D Secure 2",
       compliance3DSDesc: "Challenge actif sur CNP > 500 MAD et risque élevé.",
       complianceLaw: "Loi 09-08 · Données personnelles",
-      complianceLawDesc: "Ledger + KYC hébergés au Maroc (N+ONE Casa). CNDP déclaration OK.",
+      complianceLawDesc: "Registre des traitements tenu par le commerçant. Déclaration CNDP à la charge de l'établissement.",
       complianceMonitoring: "Monitoring 24/7",
       complianceMonitoringDesc: "Détection fraude temps réel · alertes push/WhatsApp · SLA <5 min.",
       complianceAudit: "Audit annuel externe",
@@ -307,15 +307,15 @@
       complianceTitle: "Compliance & Security",
       complianceSubtitle: "Kiwi · Café Atlas · 100% compliant",
       complianceScoreLabel: "COMPLIANCE SCORE",
-      complianceScoreSub: (date) => `All Bank Al-Maghrib and PCI-DSS controls passed. Last audit: ${date}.`,
+      complianceScoreSub: (date) => `Kiwi internal checks passed. Last verified: ${date}.`,
       complianceItemStatusActive: "ACTIVE",
       complianceItemStatusValid: (year) => `VALID ${year}`,
       complianceItemStatusVerified: "VERIFIED",
       complianceItemStatusCompliant: "COMPLIANT",
       complianceItemStatusPlanned: "PLANNED",
-      complianceBAM: "Bank Al-Maghrib · acquiring sponsorship",
+      complianceBAM: "Record retention",
       complianceBAMDesc: "Active partnership with a licensed principal acquirer. PE license in progress.",
-      compliancePCIDSS: "PCI-DSS Level 1",
+      compliancePCIDSS: "Data encryption",
       compliancePCIDSSDesc: (date) => `Certification valid until ${date}. Scope SAQ-D-merchant.`,
       complianceTokenization: "Visa & Mastercard network tokenization",
       complianceTokenizationDesc: "PAN never stored in clear text · network tokens active on 98% of cards.",
@@ -326,7 +326,7 @@
       compliance3DS: "3-D Secure 2",
       compliance3DSDesc: "Challenge active on CNP > 500 MAD and high-risk transactions.",
       complianceLaw: "Law 09-08 · Personal Data",
-      complianceLawDesc: "Ledger + KYC hosted in Morocco (N+ONE Casa). CNDP declaration OK.",
+      complianceLawDesc: "Processing register kept by the merchant. CNDP declaration is the establishment's responsibility.",
       complianceMonitoring: "24/7 Monitoring",
       complianceMonitoringDesc: "Real-time fraud detection · push/WhatsApp alerts · SLA <5 min.",
       complianceAudit: "Annual external audit",
@@ -547,7 +547,7 @@
       complianceTitle: "الامتثال والأمان",
       complianceSubtitle: "كيوي · مقهى أطلس · مطابق 100٪",
       complianceScoreLabel: "درجة الامتثال",
-      complianceScoreSub: (date) => `جميع ضوابط بنك المغرب و PCI-DSS تم اجتيازها. آخر تدقيق: ${date}.`,
+      complianceScoreSub: (date) => `ضوابط كيوي الداخلية تم اجتيازها. آخر تحقق: ${date}.`,
       complianceItemStatusActive: "نشط",
       complianceItemStatusValid: (year) => `صالح ${year}`,
       complianceItemStatusVerified: "تم التحقق",
@@ -555,7 +555,7 @@
       complianceItemStatusPlanned: "مخطط له",
       complianceBAM: "بنك المغرب · رعاية الاستحواذ",
       complianceBAMDesc: "شراكة نشطة مع مستحوذ رئيسي مرخص. رخصة مؤسسة الدفع قيد الإجراء.",
-      compliancePCIDSS: "PCI-DSS المستوى 1",
+      compliancePCIDSS: "تشفير البيانات",
       compliancePCIDSSDesc: (date) => `شهادة صالحة حتى ${date}. نطاق SAQ-D-merchant.`,
       complianceTokenization: "ترميز شبكة فيزا وماستركارد",
       complianceTokenizationDesc: "لا يتم تخزين PAN بنص عادي أبدًا · الرموز الشبكية نشطة على 98٪ من البطاقات.",
@@ -566,7 +566,7 @@
       compliance3DS: "3-D Secure 2",
       compliance3DSDesc: "التحدي نشط على CNP > 500 درهم والمعاملات عالية المخاطر.",
       complianceLaw: "قانون 09-08 · البيانات الشخصية",
-      complianceLawDesc: "السجل + اعرف عميلك (KYC) مستضاف في المغرب (N+ONE Casa). تصريح CNDP موافق عليه.",
+      complianceLawDesc: "سجل المعالجات يمسكه التاجر. تصريح CNDP من مسؤولية المؤسسة.",
       complianceMonitoring: "مراقبة 24/7",
       complianceMonitoringDesc: "كشف الاحتيال في الوقت الحقيقي · تنبيهات عبر الإشعارات/واتساب · اتفاقية مستوى الخدمة <5 دقائق.",
       complianceAudit: "تدقيق سنوي خارجي",
@@ -1268,6 +1268,13 @@
   };
 
   /* ═══════════════════ CONFORMITÉ ═══════════════════ */
+  /* ⚠ DEAD CODE — superseded. dashboard.html loads assets/conformite.js AFTER
+   * this file, and conformite.js reassigns handlers['nav-conformite'] to the
+   * operational compliance page (Clôture Z / HACCP / Équipements / Documents).
+   * Nothing below can render. Kept only because CONFORMITE_STR still feeds a
+   * few sibling handlers; the regulator-attribution copy has been neutralised
+   * so a future re-enable cannot resurrect claims Kiwi cannot make.
+   * Delete candidate — see the compliance-claims sweep. */
   handlers['nav-conformite'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;

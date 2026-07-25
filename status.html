@@ -167,19 +167,19 @@
 
 <nav class="nav" aria-label="Navigation principale">
   <div class="nav-inner">
-    <a href="landing-zaka.html" class="nav-logo">
+    <a href="index.html" class="nav-logo">
       <span class="logo-mark">k</span>
       <span>kiwi</span>
     </a>
     <div class="nav-actions">
-      <a class="btn btn-ghost btn-sm" href="landing-zaka.html">Retour au site</a>
+      <a class="btn btn-ghost btn-sm" href="index.html">Retour au site</a>
     </div>
   </div>
 </nav>
 
 <section class="slab-paper status-page">
   <div class="wrap-narrow">
-    <a href="landing-zaka.html" class="legal-back">← Retour à kiwi.ma</a>
+    <a href="index.html" class="legal-back">← Retour à kiwi.ma</a>
     <span class="pill pill-paper pill-dot">status.kiwi.ma</span>
 
     <h1 style="margin-top: var(--s-4);">Statut opérationnel.</h1>
@@ -188,7 +188,7 @@
     <div class="status-hero">
       <span class="status-hero-dot" aria-hidden="true"></span>
       <span class="status-hero-text">Tous les services opérationnels.</span>
-      <span class="status-hero-meta">Dernière vérification : il y a 12 secondes</span>
+      <span class="status-hero-meta">Page mise à jour manuellement par l&rsquo;équipe Kiwi</span>
     </div>
 
     <!-- Service-by-service breakdown -->
@@ -196,99 +196,67 @@
       <div class="status-row">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
-          Encaissement carte
-          <span class="desc">Acquisition CMI · Visa · Mastercard · Wafacash</span>
-        </div>
-        <span class="status-uptime">99,98 % · 30 j</span>
-        <span class="status-tag">Opérationnel</span>
-      </div>
-      <div class="status-row">
-        <span class="status-dot" aria-hidden="true"></span>
-        <div class="status-name">
-          Versement T+1
-          <span class="desc">Settlement quotidien sur IBAN marocain · 9 h</span>
-        </div>
-        <span class="status-uptime">100,0 % · 30 j</span>
-        <span class="status-tag">Opérationnel</span>
-      </div>
-      <div class="status-row">
-        <span class="status-dot" aria-hidden="true"></span>
-        <div class="status-name">
           Tableau de bord
-          <span class="desc">app.kiwi.ma · web et mobile</span>
+          <span class="desc">Pilotage, ventes, stock, équipe · web et mobile</span>
         </div>
-        <span class="status-uptime">99,96 % · 30 j</span>
         <span class="status-tag">Opérationnel</span>
       </div>
       <div class="status-row">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
-          API publique
-          <span class="desc">api.kiwi.ma · v1 · webhooks</span>
+          Caisse
+          <span class="desc">Encaissement et tickets · fonctionne hors-ligne</span>
         </div>
-        <span class="status-uptime">99,99 % · 30 j</span>
         <span class="status-tag">Opérationnel</span>
       </div>
       <div class="status-row">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
-          Tap-to-Pay (iOS)
-          <span class="desc">EMV NFC · iPhone XS et plus récent</span>
+          Prise de commande serveur
+          <span class="desc">Commande en salle depuis le téléphone du serveur</span>
         </div>
-        <span class="status-uptime">99,97 % · 30 j</span>
         <span class="status-tag">Opérationnel</span>
       </div>
       <div class="status-row">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
-          Tap-to-Pay (Android)
-          <span class="desc">EMV NFC · Android 11+ · 28 modèles certifiés</span>
+          Synchronisation Live Link
+          <span class="desc">Remontée des ventes caisse et serveur vers le tableau de bord</span>
         </div>
-        <span class="status-uptime">99,95 % · 30 j</span>
         <span class="status-tag">Opérationnel</span>
       </div>
       <div class="status-row">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="status-name">
-          Support multilingue
-          <span class="desc">FR · AR · darija · EN · 8 h–22 h, lun.–sam.</span>
+          Pont d&rsquo;impression
+          <span class="desc">Relais vers les imprimantes thermiques du réseau local</span>
         </div>
-        <span class="status-uptime">100,0 % · 30 j</span>
+        <span class="status-tag">Opérationnel</span>
+      </div>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="status-name">
+          Support
+          <span class="desc">WhatsApp · FR, darija, arabe, anglais</span>
+        </div>
         <span class="status-tag">Opérationnel</span>
       </div>
     </div>
 
     <!-- Recent incidents -->
     <div class="status-incidents">
-      <h2>Incidents récents (90 derniers jours)</h2>
-
+      <h2>Incidents</h2>
       <div class="incident">
-        <div class="incident-head">
-          <span class="incident-tag">Résolu</span>
-          <span class="incident-title">Latence accrue · API webhooks</span>
-          <span class="incident-meta">12 avr. 2026 · 14 h 22 → 14 h 47 (25 min)</span>
-        </div>
         <div class="incident-body">
-          Les webhooks sortants ont connu une latence moyenne de 8 secondes pendant
-          25 minutes en raison d'un pic de charge sur le routeur DNS primaire.
-          Mitigé par bascule sur le secondaire. Aucune transaction perdue.
-          <b>Post-mortem publié</b> le 13 avril.
-        </div>
-      </div>
-
-      <div class="incident">
-        <div class="incident-head">
-          <span class="incident-tag">Résolu</span>
-          <span class="incident-title">Maintenance planifiée · base versement</span>
-          <span class="incident-meta">28 mars 2026 · 02 h 00 → 03 h 30 (90 min)</span>
-        </div>
-        <div class="incident-body">
-          Migration trimestrielle du moteur de settlement vers la nouvelle
-          partition. Communiqué 7 jours à l'avance par email à tous les
-          commerçants actifs. Aucun versement T+1 affecté.
+          Aucun incident à signaler. Cette page est tenue à jour manuellement&nbsp;:
+          Kiwi ne publie pas encore de mesure de disponibilité automatisée, et nous
+          préférons ne rien afficher plutôt qu&rsquo;un chiffre que nous ne mesurons pas.
+          Si un service vous semble indisponible, écrivez-nous sur WhatsApp&nbsp;— nous
+          répondons pendant les heures de support.
         </div>
       </div>
     </div>
+
   </div>
 </section>
 

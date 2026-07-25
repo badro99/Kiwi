@@ -1527,13 +1527,13 @@ handlers['nav-reglements'] = () => {
 const CONFORMITE_STR = {
     fr: {
         title: 'Conformité & sécurité',
-        subtitle: (name) => `${name} · 100 % conforme · audit BAM passé`,
+        subtitle: (name) => `${name} · registres et pièces administratives`,
         scoreTitle: 'SCORE DE CONFORMITÉ',
         score: '100 / 100 · AAA',
-        scoreDesc: 'Bank Al-Maghrib · PCI-DSS L1 · CNDP loi 09-08 · GAFI. Dernier audit 12 mars 2026.',
+        scoreDesc: 'Pièces administratives, déclarations et échéances suivies dans Kiwi.',
         reportPdf: 'Rapport PDF',
         kycDocs: 'Coffre KYC documentaire',
-        kycDocsSub: '6 documents · synchronisés DGI / CNSS · re-upload en 1 clic',
+        kycDocsSub: '6 documents · suivi des échéances · re-upload en 1 clic',
         upload: 'Téléverser',
         doc: 'DOCUMENT',
         ref: 'RÉFÉRENCE',
@@ -1565,13 +1565,13 @@ const CONFORMITE_STR = {
     },
     en: {
         title: 'Compliance & Security',
-        subtitle: (name) => `${name} · 100% compliant · BAM audit passed`,
+        subtitle: (name) => `${name} · records and administrative documents`,
         scoreTitle: 'COMPLIANCE SCORE',
         score: '100 / 100 · AAA',
-        scoreDesc: 'Bank Al-Maghrib · PCI-DSS L1 · CNDP law 09-08 · FATF. Last audit March 12, 2026.',
+        scoreDesc: 'Administrative documents, filings and deadlines tracked in Kiwi.',
         reportPdf: 'PDF Report',
         kycDocs: 'KYC Document Vault',
-        kycDocsSub: '6 documents · DGI / CNSS synchronized · 1-click re-upload',
+        kycDocsSub: '6 documents · deadline tracking · 1-click re-upload',
         upload: 'Upload',
         doc: 'DOCUMENT',
         ref: 'REFERENCE',
@@ -1606,10 +1606,10 @@ const CONFORMITE_STR = {
         subtitle: (name) => `${name} · امتثال 100٪ · تم اجتياز تدقيق بنك المغرب`,
         scoreTitle: 'درجة الامتثال',
         score: '100 / 100 · AAA',
-        scoreDesc: 'بنك المغرب · PCI-DSS L1 · قانون CNDP 09-08 · GAFI. آخر تدقيق 12 مارس 2026.',
+        scoreDesc: 'الوثائق الإدارية والتصاريح والآجال متتبَّعة في كيوي.',
         reportPdf: 'تقرير PDF',
         kycDocs: 'خزنة مستندات اعرف عميلك',
-        kycDocsSub: '6 مستندات · متزامنة مع DGI / CNSS · إعادة تحميل بنقرة واحدة',
+        kycDocsSub: '6 مستندات · تتبّع الآجال · إعادة تحميل بنقرة واحدة',
         upload: 'تحميل',
         doc: 'المستند',
         ref: 'المرجع',
@@ -1640,6 +1640,13 @@ const CONFORMITE_STR = {
         rotateSecretToastDesc: 'تم إنشاء سر جديد · القديم صالح لمدة 24 ساعة للانتقال.',
     },
 };
+/* ⚠ DEAD CODE — superseded. dashboard.html loads assets/conformite.js AFTER
+ * this file, and conformite.js reassigns handlers['nav-conformite'] to the
+ * operational compliance page (Clôture Z / HACCP / Équipements / Documents).
+ * Nothing below can render. Kept only because CONFORMITE_STR still feeds a
+ * few sibling handlers; the regulator-attribution copy has been neutralised
+ * so a future re-enable cannot resurrect claims Kiwi cannot make.
+ * Delete candidate — see the compliance-claims sweep. */
 handlers['nav-conformite'] = () => {
   const v = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Café Atlas', type: 'restaurant' };
   const T = CONFORMITE_STR[trLang()] || CONFORMITE_STR.fr;
@@ -2987,7 +2994,7 @@ const PDS_CANVAS_H = 540;
  *   | 'etage' | 'prive' | 'blank').                                          */
 const PDS_SCENES = {
   salle: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <linearGradient id="pds-walnut" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0"   stop-color="#2A332A"/>
@@ -3015,7 +3022,7 @@ const PDS_SCENES = {
           <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-terrazzo)"/>
+      <rect width="1600" height="981.82" fill="url(#pds-terrazzo)"/>
       <!-- North wall windows -->
       <g vector-effect="non-scaling-stroke">
         <line x1="40"  y1="14" x2="1560" y2="14" stroke="#C6BDA1" stroke-width="3"/>
@@ -3025,21 +3032,21 @@ const PDS_SCENES = {
         <line x1="1220" y1="20" x2="1540" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
       </g>
       <!-- Right wall: CUISINE (compact, narrow strip on the east edge) -->
-      <rect x="1480" y="80" width="115" height="500" rx="8" fill="url(#pds-zellige)" stroke="#A89770" stroke-width="1.5" stroke-dasharray="6 4"/>
-      <text transform="translate(1540, 330) rotate(-90)" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="16" font-weight="500" letter-spacing="8" fill="#7D6E45">CUISINE</text>
+      <rect x="1480" y="170" width="115" height="500" rx="8" fill="url(#pds-zellige)" stroke="#A89770" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text transform="translate(1540, 420) rotate(-90)" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="16" font-weight="500" letter-spacing="8" fill="#7D6E45">CUISINE</text>
       <!-- Pass-through window into cuisine -->
-      <rect x="1470" y="200" width="20" height="60" fill="#FBF7EE" stroke="#A89770" stroke-width="1.5"/>
+      <rect x="1470" y="290" width="20" height="60" fill="#FBF7EE" stroke="#A89770" stroke-width="1.5"/>
       <!-- South wall COMPTOIR (full width along the south wall, leaves the main floor clear) -->
-      <rect x="80" y="720" width="1240" height="56" rx="6" fill="url(#pds-walnut)"/>
-      <rect x="80" y="720" width="1240" height="5" rx="2.5" fill="url(#pds-brass)"/>
-      <rect x="84" y="725" width="1232" height="1.5" fill="#3A4439" opacity="0.5"/>
-      <rect x="680" y="700" width="80" height="20" rx="3" fill="#1A211B"/>
-      <circle cx="700" cy="710" r="3" fill="#C9A876"/>
-      <circle cx="720" cy="710" r="3" fill="#C9A876"/>
-      <circle cx="740" cy="710" r="3" fill="#C9A876"/>
-      <text x="700" y="760" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="12" font-weight="500" letter-spacing="6" fill="#E8C88A">COMPTOIR</text>
+      <rect x="80" y="902" width="1240" height="56" rx="6" fill="url(#pds-walnut)"/>
+      <rect x="80" y="902" width="1240" height="5" rx="2.5" fill="url(#pds-brass)"/>
+      <rect x="84" y="907" width="1232" height="1.5" fill="#3A4439" opacity="0.5"/>
+      <rect x="680" y="882" width="80" height="20" rx="3" fill="#1A211B"/>
+      <circle cx="700" cy="892" r="3" fill="#C9A876"/>
+      <circle cx="720" cy="892" r="3" fill="#C9A876"/>
+      <circle cx="740" cy="892" r="3" fill="#C9A876"/>
+      <text x="700" y="942" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="12" font-weight="500" letter-spacing="6" fill="#E8C88A">COMPTOIR</text>
       <!-- Escalier, bottom-right corner, compact -->
-      <g transform="translate(1340, 700)">
+      <g transform="translate(1340, 882)">
         <rect width="130" height="80" rx="6" fill="#F0E8D6" stroke="#A89770" stroke-width="1.2"/>
         <line x1="10" y1="20" x2="120" y2="20" stroke="#C4B493" stroke-width="1"/>
         <line x1="10" y1="38" x2="120" y2="38" stroke="#C4B493" stroke-width="1"/>
@@ -3059,15 +3066,15 @@ const PDS_SCENES = {
       </g>
       <!-- Entrée, left wall door arc -->
       <g>
-        <rect x="0" y="380" width="6" height="100" fill="#FBF7EE"/>
-        <path d="M 6 480 A 80 80 0 0 1 86 400" stroke="#A89770" stroke-width="1" stroke-dasharray="4 4" fill="none"/>
-        <line x1="6" y1="480" x2="86" y2="480" stroke="#3D3530" stroke-width="2.5"/>
-        <text x="14" y="525" font-family="Inter Tight, system-ui" font-size="10" font-weight="500" letter-spacing="4" fill="#7D6E45">ENTRÉE</text>
+        <rect x="0" y="470" width="6" height="100" fill="#FBF7EE"/>
+        <path d="M 6 570 A 80 80 0 0 1 86 490" stroke="#A89770" stroke-width="1" stroke-dasharray="4 4" fill="none"/>
+        <line x1="6" y1="570" x2="86" y2="570" stroke="#3D3530" stroke-width="2.5"/>
+        <text x="14" y="615" font-family="Inter Tight, system-ui" font-size="10" font-weight="500" letter-spacing="4" fill="#7D6E45">ENTRÉE</text>
       </g>
     </svg>
   `,
   terrasse: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <pattern id="pds-tiles" x="0" y="0" width="42" height="42" patternUnits="userSpaceOnUse">
           <rect width="42" height="42" fill="#F7F2E8"/>
@@ -3075,7 +3082,7 @@ const PDS_SCENES = {
           <line x1="0" y1="0" x2="0"  y2="42" stroke="#D8CDA8" stroke-width="0.4"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-tiles)"/>
+      <rect width="1600" height="981.82" fill="url(#pds-tiles)"/>
       <g>
         <rect x="60"  y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
         <ellipse cx="80"  cy="32" rx="22" ry="14" fill="#4F7560"/>
@@ -3097,12 +3104,12 @@ const PDS_SCENES = {
         <ellipse cx="1400" cy="26" rx="14" ry="10" fill="#7DA68A"/>
       </g>
       <rect x="0" y="0" width="1600" height="8" fill="#000" opacity="0.06"/>
-      <line x1="20" y1="780" x2="1580" y2="780" stroke="#C4B493" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="770" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">trottoir</text>
+      <line x1="20" y1="962" x2="1580" y2="962" stroke="#C4B493" stroke-width="2" stroke-dasharray="14 8"/>
+      <text x="800" y="952" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">trottoir</text>
     </svg>
   `,
   bar: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <linearGradient id="pds-walnut-bar" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0"   stop-color="#2A332A"/>
@@ -3119,7 +3126,7 @@ const PDS_SCENES = {
           <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-terrazzo-bar)"/>
+      <rect width="1600" height="981.82" fill="url(#pds-terrazzo-bar)"/>
       <!-- North wall comptoir, long bar -->
       <rect x="120" y="60" width="1360" height="80" rx="6" fill="url(#pds-walnut-bar)"/>
       <rect x="120" y="60" width="1360" height="5" rx="2.5" fill="url(#pds-brass-bar)"/>
@@ -3131,12 +3138,12 @@ const PDS_SCENES = {
       <text x="780" y="115" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="14" font-weight="500" letter-spacing="8" fill="#E8C88A">COMPTOIR · BAR</text>
       <!-- South wall windows -->
       <g vector-effect="non-scaling-stroke">
-        <line x1="40"  y1="786" x2="1560" y2="786" stroke="#C6BDA1" stroke-width="2" stroke-dasharray="22 8"/>
+        <line x1="40"  y1="968" x2="1560" y2="968" stroke="#C6BDA1" stroke-width="2" stroke-dasharray="22 8"/>
       </g>
     </svg>
   `,
   etage: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <linearGradient id="pds-leather-forest" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0"   stop-color="#2F5946"/>
@@ -3161,8 +3168,8 @@ const PDS_SCENES = {
           <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-terrazzo-etage)"/>
-      <ellipse cx="800" cy="400" rx="340" ry="260" fill="url(#pds-spotlight)"/>
+      <rect width="1600" height="981.82" fill="url(#pds-terrazzo-etage)"/>
+      <ellipse cx="800" cy="490" rx="340" ry="260" fill="url(#pds-spotlight)"/>
       <g vector-effect="non-scaling-stroke">
         <line x1="40"  y1="14" x2="1400" y2="14" stroke="#C6BDA1" stroke-width="3"/>
         <line x1="80"  y1="20" x2="320"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
@@ -3170,19 +3177,19 @@ const PDS_SCENES = {
         <line x1="700" y1="20" x2="1000" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
         <line x1="1040" y1="20" x2="1380" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
       </g>
-      <g transform="translate(800, 400)">
+      <g transform="translate(800, 490)">
         <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-forest)" stroke-width="60" stroke-linecap="round" fill="none"/>
         <path d="M -160 90 A 220 220 0 1 1 160 90" stroke="url(#pds-leather-highlight)" stroke-width="6" fill="none" transform="translate(0, -22)"/>
         <text x="0" y="160" text-anchor="middle" font-family="Instrument Serif, serif" font-size="18" fill="#1F4A38" opacity="0.7">banquette ronde</text>
       </g>
-      <g transform="translate(180, 700)">
+      <g transform="translate(180, 882)">
         <rect width="980" height="56" rx="10" fill="url(#pds-leather-forest)"/>
         <rect width="980" height="4" rx="2" fill="url(#pds-leather-highlight)" opacity="0.6"/>
       </g>
     </svg>
   `,
   prive: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <pattern id="pds-zellige-prive" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
           <rect width="48" height="48" fill="#F2EBD6"/>
@@ -3191,20 +3198,20 @@ const PDS_SCENES = {
           <circle cx="48" cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-zellige-prive)"/>
-      <rect x="40" y="40" width="1520" height="720" rx="20" fill="none" stroke="#A89770" stroke-width="2" stroke-dasharray="14 8"/>
-      <text x="800" y="780" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">salon privé · accès rideau</text>
+      <rect width="1600" height="981.82" fill="url(#pds-zellige-prive)"/>
+      <rect x="40" y="40" width="1520" height="902" rx="20" fill="none" stroke="#A89770" stroke-width="2" stroke-dasharray="14 8"/>
+      <text x="800" y="962" text-anchor="middle" font-family="Instrument Serif, serif" font-size="14" fill="#A89770">salon privé · accès rideau</text>
     </svg>
   `,
   blank: `
-    <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
+    <svg class="plan-bg" viewBox="0 0 1600 981.82" aria-hidden="true">
       <defs>
         <pattern id="pds-blank-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
           <rect width="48" height="48" fill="#FBF7EE"/>
           <circle cx="24" cy="24" r="0.8" fill="#C6BDA1" opacity="0.5"/>
         </pattern>
       </defs>
-      <rect width="1600" height="800" fill="url(#pds-blank-grid)"/>
+      <rect width="1600" height="981.82" fill="url(#pds-blank-grid)"/>
     </svg>
   `,
 };
@@ -4018,8 +4025,26 @@ function pdsTemplate(key) {
   return blank;
 }
 
+/* ─── Stylesheet, injected once at the document level ──────────────────
+ * NOT inside the drawer body. The `.pds-*` sheet used to ship as
+ * `<style>${PDS_INLINE_CSS}</style>` at the top of pdsRenderBody()'s HTML
+ * string, so its lifetime was tied to that body — and `open-templates`
+ * opens a SECOND drawer over the first, replacing the body and taking the
+ * only copy of the stylesheet with it. The template picker then rendered
+ * with no CSS at all: no card fill, no border, no padding, just stacked
+ * text bleeding through the glass. Anything that reuses `.pds-*` markup
+ * outside the main drawer depends on this being document-level. */
+function pdsEnsureCss() {
+  if (document.getElementById('pds-css')) return;
+  const s = document.createElement('style');
+  s.id = 'pds-css';
+  s.textContent = PDS_INLINE_CSS;
+  document.head.appendChild(s);
+}
+
 /* ─── nav-tables handler — main entry point ────────────────────────── */
 handlers['nav-tables'] = () => {
+  pdsEnsureCss();
   const T = PDS_STR[trLang()] || PDS_STR.fr;
   const v = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Café Atlas', type: 'restaurant' };
   const state = pdsLoad();
@@ -4061,7 +4086,6 @@ function pdsRenderBody(state, T) {
   const nZones = state.zones.length;
   const nServers = state.staff.length;
   return `
-    <style>${PDS_INLINE_CSS}</style>
     <div class="p-kpis pds-kpis">
       <div class="p-kpi"><div class="l">${T.kpiTables}</div><div class="v">${nTables}</div><div class="d">${state.tables.filter(t=>t.status==='occupied').length} occ. · ${state.tables.filter(t=>t.status==='reserved').length} rés.</div></div>
       <div class="p-kpi"><div class="l">${T.kpiCovers}</div><div class="v">${nCovers}</div><div class="d">capacité totale</div></div>
@@ -4127,12 +4151,14 @@ function pdsRenderStage(state, T) {
         <div class="pds-plan-canvas">
           <div class="pds-plan-room ${isTerrasse ? 'is-terrasse' : ''}" data-pds-room>
             <div class="pds-plan-label">${zone?.name || ''} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
-            ${scene}
-            <div class="pds-canvas" data-pds-canvas style="width:${PDS_CANVAS_W}px; height:${PDS_CANVAS_H}px;">
-              ${isEmpty ? pdsRenderEmpty(state, T) : ''}
-              ${state.elements.filter(e => e.zone === state.activeZone).map(e => pdsRenderElement(e, state, T)).join('')}
-              ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
-              <div class="pds-bulk" data-pds-bulk hidden></div>
+            <div class="pds-plan-scale" data-pds-scale>
+              ${scene}
+              <div class="pds-canvas" data-pds-canvas style="width:${PDS_CANVAS_W}px; height:${PDS_CANVAS_H}px;">
+                ${isEmpty ? pdsRenderEmpty(state, T) : ''}
+                ${state.elements.filter(e => e.zone === state.activeZone).map(e => pdsRenderElement(e, state, T)).join('')}
+                ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
+                <div class="pds-bulk" data-pds-bulk hidden></div>
+              </div>
             </div>
           </div>
           <div class="pds-plan-footer">
@@ -4856,10 +4882,29 @@ function pdsAttach(root, state, T, dr) {
   bind();
 }
 
+/* ═══ STAGE SCALE ═══════════════════════════════════════════════════
+ * The stage is authored once in logical units (${PDS_CANVAS_W}×${PDS_CANVAS_H},
+ * 1 unit = 1 cm) and CSS scales it to fit the room (see .pds-plan-scale, which
+ * derives the ratio from 100cqw). Everything downstream — drag deltas,
+ * snapping, clamping — works in logical units and divides screen pixels by k,
+ * so the maths never has to know how wide the window is.
+ *
+ * k is always MEASURED from the live box, never cached and never written by JS.
+ * An earlier version set a --pds-k custom property from a ResizeObserver; at
+ * 1024px the room was 712px while the property still read 0.968, and five
+ * tables rendered outside the room. One source of truth only. */
+function pdsK(root) {
+  const scale = root && root.querySelector('[data-pds-scale]');
+  if (!scale) return 1;
+  const k = scale.getBoundingClientRect().width / PDS_CANVAS_W;
+  return (isFinite(k) && k > 0.05) ? k : 1;
+}
+
 /* ═══ DRAG SYSTEM (pointer events, CSS transforms) ══════════════════ */
 function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let dragging = false;
   let startX, startY, origX, origY, transformX, transformY;
+  let dragK = 1;
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
@@ -4891,6 +4936,11 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     startX = ev.clientX; startY = ev.clientY;
     origX = t.x; origY = t.y;
     transformX = 0; transformY = 0;
+    /* Snapshot the stage scale for the duration of this drag. The table is a
+     * child of the scaled plane, so a translate() on it is itself scaled —
+     * meaning a screen delta of D px must be written as D/k logical units to
+     * track the cursor 1:1. */
+    dragK = pdsK(root);
     el.setPointerCapture(ev.pointerId);
     el.classList.add('is-dragging');
     ev.preventDefault();
@@ -4898,8 +4948,8 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
 
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
-    transformX = ev.clientX - startX;
-    transformY = ev.clientY - startY;
+    transformX = (ev.clientX - startX) / dragK;
+    transformY = (ev.clientY - startY) / dragK;
     el.style.transform = `translate(${transformX}px, ${transformY}px) rotate(${t.rot||0}deg)`;
   });
 
@@ -4953,6 +5003,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
 function pdsAttachElDrag(el, id, state, T, root, refresh) {
   let dragging = false;
   let startX, startY, origX, origY;
+  let dragK = 1;
   const elObj = state.elements.find(e => e.id === id);
   if (!elObj) return;
   let lastTap = 0;
@@ -4970,20 +5021,21 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
     origX = elObj.x; origY = elObj.y;
+    dragK = pdsK(root);   /* screen px → logical units, see pdsK() */
     el.setPointerCapture(ev.pointerId);
     el.classList.add('is-dragging');
     ev.preventDefault();
   });
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
-    el.style.transform = `translate(${ev.clientX - startX}px, ${ev.clientY - startY}px) rotate(${elObj.rot||0}deg)`;
+    el.style.transform = `translate(${(ev.clientX - startX)/dragK}px, ${(ev.clientY - startY)/dragK}px) rotate(${elObj.rot||0}deg)`;
   });
   const finish = (ev) => {
     if (!dragging) return;
     dragging = false;
     el.classList.remove('is-dragging');
-    let nx = origX + (ev.clientX - startX);
-    let ny = origY + (ev.clientY - startY);
+    let nx = origX + (ev.clientX - startX) / dragK;
+    let ny = origY + (ev.clientY - startY) / dragK;
     if (state.snap) {
       nx = Math.round(nx / PDS_GRID) * PDS_GRID;
       ny = Math.round(ny / PDS_GRID) * PDS_GRID;
@@ -5613,12 +5665,26 @@ const PDS_INLINE_CSS = `
      escalier, plantes, fenêtres). The inner .pds-canvas absorbs all the
      pointer events for table dragging — it is positioned over the SVG. */
   .pds-plan-canvas { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
+  /* The room is a RESPONSIVE box; the stage inside it is a FIXED logical
+     ${PDS_CANVAS_W}×${PDS_CANVAS_H} space scaled to fit (see .pds-plan-scale).
+     It used to be a hard ${PDS_CANVAS_W}px wide with max-width:100%, so below
+     ~1490px of viewport the room narrowed while the absolutely-positioned
+     tables kept their px coordinates — and overflow:hidden silently cropped
+     everything past the new edge. Scaling instead of cropping means one
+     coordinate space at every width, which is also what lets the backdrop
+     and the tables finally agree. 1 logical unit = 1 cm. */
   .pds-plan-room {
     position:relative;
-    width: ${PDS_CANVAS_W}px;
-    height: ${PDS_CANVAS_H}px;
-    max-width: 100%;
+    width: 100%;
+    max-width: ${PDS_CANVAS_W}px;
+    aspect-ratio: ${PDS_CANVAS_W} / ${PDS_CANVAS_H};
     margin: 0 auto;
+    /* Scale reference for .pds-plan-scale. Doing this in CSS rather than from a
+       JS-set custom property matters: a JS var is a second source of truth that
+       goes stale the moment a resize callback is throttled (a hidden tab runs
+       neither rAF nor ResizeObserver), and a stale scale silently crops the
+       floor. cqw is always current because the browser resolves it. */
+    container-type: inline-size;
     border:1.5px solid #2C2520;
     border-radius:16px;
     overflow:hidden;
@@ -5632,6 +5698,18 @@ const PDS_INLINE_CSS = `
     border-style:dashed;
     border-color:#A89770;
     background:#F7F2E8;
+  }
+  /* Fixed logical stage — the backdrop and the tables live on ONE plane that is
+     scaled as a whole, so they can never drift apart. 100cqw is the room's own
+     width, so dividing it by the logical width yields the exact fit ratio with
+     no JS involved. transform-origin is top-left so logical (0,0) stays pinned
+     to the room's corner. */
+  .pds-plan-scale {
+    position:absolute; top:0; left:0;
+    width:${PDS_CANVAS_W}px;
+    height:${PDS_CANVAS_H}px;
+    transform-origin: 0 0;
+    transform: scale(calc(100cqw / ${PDS_CANVAS_W}px));
   }
   .pds-plan-room .plan-bg {
     position:absolute; inset:0;

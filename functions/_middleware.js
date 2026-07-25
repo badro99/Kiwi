@@ -660,11 +660,11 @@ function authPage(opts) {
     ${staffBlock}
     ${operatorBlock}
     <div class="foot">
-      <span>Hébergé au Maroc</span>
-      <span class="dot-sep" aria-hidden="true"></span>
       <span>Données chiffrées</span>
       <span class="dot-sep" aria-hidden="true"></span>
-      <span>Conforme CNDP</span>
+      <span>Jamais revendues</span>
+      <span class="dot-sep" aria-hidden="true"></span>
+      <span>Sans engagement</span>
     </div>
   </main>
 <script>

@@ -130,7 +130,7 @@
     var pid = activePosId(); if (pid) return DEMO_VENUE_BY_POS[pid] || ('demo-' + pid);
     return null;
   }
-  // caisse vertical → the dashboard demo venue id (venues.js REAL_VENUES / venues2.js).
+  // caisse vertical → the dashboard demo venue id (venues.js REAL_VENUES).
   var DEMO_VENUE_BY_POS = { boutique: 'maisonMansour', spa: 'spaBahia', restaurant: 'cafeAtlas', hotel: 'riadYasmina' };
   // books we pre-seed so a demo looks alive. cafeAtlas is left empty on purpose so
   // the flagship pitch demo keeps its rich hard-coded CRM until real clients arrive.

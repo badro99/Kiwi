@@ -179,7 +179,7 @@
       phone_placeholder: '+212 6 xx xx xx xx',
       city_label: 'Ville',
       city_placeholder: 'Casablanca',
-      kyc_notice: 'Vos données restent hébergées au Maroc. KYC automatique via votre CIN à l\'étape suivante.',
+      kyc_notice: 'Vos données sont chiffrées en transit et au repos, et ne sont jamais revendues.',
       ready_title: 'Votre compte Kiwi est prêt.',
       ready_desc: 'Vous recevez votre terminal PAX A920 gratuitement sous 48h. En attendant, commencez à encaisser dès maintenant sur votre téléphone.',
       subscription_label: 'ABONNEMENT',
@@ -218,7 +218,7 @@
       phone_placeholder: '+212 6 xx xx xx xx',
       city_label: 'City',
       city_placeholder: 'Casablanca',
-      kyc_notice: 'Your data remains hosted in Morocco. Automatic KYC via your CIN in the next step.',
+      kyc_notice: 'Your data is encrypted in transit and at rest, and is never resold.',
       ready_title: 'Your Kiwi account is ready.',
       ready_desc: 'You will receive your free PAX A920 terminal within 48 hours. In the meantime, start taking payments now on your phone.',
       subscription_label: 'SUBSCRIPTION',
@@ -257,7 +257,7 @@
       phone_placeholder: 'xx xx xx 6 212+',
       city_label: 'المدينة',
       city_placeholder: 'الدار البيضاء',
-      kyc_notice: 'بياناتك تبقى مستضافة في المغرب. التحقق من الهوية تلقائي عبر بطاقتكم الوطنية في الخطوة التالية.',
+      kyc_notice: 'بياناتك مشفّرة أثناء النقل وفي التخزين، ولا تُباع أبدًا.',
       ready_title: 'حسابك في كيوي جاهز.',
       ready_desc: 'ستستلم جهاز PAX A920 مجانًا في غضون 48 ساعة. في هذه الأثناء، ابدأ في تحصيل المدفوعات الآن على هاتفك.',
       subscription_label: 'الاشتراك',
@@ -1501,12 +1501,11 @@ ar: {
           </div>
         </div>
         <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'CONFORMITÉ & SÉCURITÉ', en: 'COMPLIANCE & SECURITY', ar: 'الامتثال والأمان' }))}
+          ${sec(tr({ fr: 'SÉCURITÉ & DONNÉES', en: 'SECURITY & DATA', ar: 'الأمان والبيانات' }))}
           <div class="kset-card">
-            ${settingsRow('🛡️', tr({ fr: 'Authentification 2FA', en: 'Two-factor auth', ar: 'المصادقة الثنائية' }), tr({ fr: 'SMS activé', en: 'SMS on', ar: 'الرسائل مفعلة' }), { toggle: true, on: setOn('2fa'), action: 'settings-toggle', arg: '2fa' })}
-            ${settingsRow('🔐', 'PCI-DSS', tr({ fr: 'Certification valide 2026', en: 'Certification valid 2026', ar: 'شهادة سارية 2026' }), { toggle: true, on: setOn('pcidss'), action: 'settings-toggle', arg: 'pcidss' })}
-            ${settingsRow('📋', 'KYC', tr({ fr: 'Vérifié le 12 mars 2026', en: 'Verified 12 March 2026', ar: 'تم التحقق 12 مارس 2026' }), { toggle: true, on: setOn('kyc'), action: 'settings-toggle', arg: 'kyc' })}
-            ${settingsRow('🏛️', 'Bank Al-Maghrib', tr({ fr: 'Sponsoring actif', en: 'Active sponsorship', ar: 'رعاية نشطة' }), { toggle: true, on: setOn('bankam'), action: 'settings-toggle', arg: 'bankam' })}
+            ${settingsRow('🔑', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès à la caisse', en: 'Manage till access', ar: 'إدارة الوصول إلى الصندوق' }), { action: 'nav-equipe' })}
+            ${settingsRow('🛡️', tr({ fr: 'Chiffrement', en: 'Encryption', ar: 'التشفير' }), tr({ fr: 'En transit et au repos', en: 'In transit and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Actif', en: 'On', ar: 'مفعّل' }) })}
+            ${settingsRow('📤', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · CSV', en: 'Sales, products, team · CSV', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
           </div>
         </div>
         <div>

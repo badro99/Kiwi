@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · Hotel vertical — loaded by BOTH dashboards.
+ * Kiwi · Hotel vertical.
  *
- * Pages (sidebar · VERTICAL_SECTIONS.hotel in venues.js / venues2.js):
+ * Pages (sidebar · VERTICAL_SECTIONS.hotel in venues.js):
  *   Réception · Plan des chambres · Réservations & séjours (tape chart) ·
  *   Ménage · Tarifs & occupation · Clients & fidélité · Folios ·
  *   Canaux & OTA · Intelligence hôtel
@@ -10,14 +10,16 @@
  * charges post straight onto the room bill, taxe de séjour included — one
  * property, one system, one source of truth.
  *
- * Two operating modes, switched per-venue at runtime:
+ * Two operating modes were switched per-venue at runtime:
  *  · DEMO — the Riad Yasmina property (24 chambres, Médina de Marrakech).
- *    Only reachable on dashboard2.html, whose venues2.js registers the
- *    venue; on dashboard.html that data is simply never activated.
- *  · CUSTOM — any 0000-onboarded hotel (both dashboards): starter pages on
- *    the live rack/folio engine, sized by the step-2 « rooms » answer.
+ *    UNREACHABLE since dashboard2.html and its venues2.js fork were
+ *    deleted: no surviving venue registry declares that venue, so the
+ *    branch can never activate. Dead weight — safe to strip.
+ *  · CUSTOM — any 0000-onboarded hotel: starter pages on the live
+ *    rack/folio engine, sized by the step-2 « rooms » answer. This is the
+ *    only live path today.
  * This file also owns the onboarding-wizard fork (obOnboard) that adds the
- * « Hôtel / Riad » trade to the 0000 flow on whichever dashboard loads it.
+ * « Hôtel / Riad » trade to the 0000 flow.
  * ─────────────────────────────────────────────────────────────────────────── */
 (() => {
   'use strict';
@@ -1162,9 +1164,9 @@
   }
 
   /* ═══════════════ ONBOARDING WIZARD · fork with the hotel trade ═══════════════
-   * dashboard2-only override of interactive.js's 'onboard' handler — same
-   * wizard, plus « Hôtel / Riad » as a 4th primary type. Kept in this file
-   * (with venues2.js SUBTYPE_PROFILES.hotel) so dashboard.html stays intact. */
+   * Override of interactive.js's 'onboard' handler — same wizard, plus
+   * « Hôtel / Riad » as a 4th primary type. Kept in this file so the
+   * hotel trade travels with the vertical rather than the core wizard. */
   function obOnboard() {
     const Kw = window.Kiwi;
     const trL = (o) => { const l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; return o == null ? '' : (o[l] ?? o.fr ?? o); };
@@ -1310,7 +1312,7 @@
     if (!window.Kiwi || !window.Kiwi.handlers || !window.Kiwi.appPage) { setTimeout(register, 80); return; }
     const { handlers, toast } = window.Kiwi;
 
-    /* The 0000 wizard now offers « Hôtel / Riad » — dashboard2-only fork of
+    /* The 0000 wizard now offers « Hôtel / Riad » — fork of
      * interactive.js's onboard handler (see obOnboard above). Re-asserted
      * after load like pages-pro's starter wraps, in case of re-registration. */
     handlers['onboard'] = obOnboard;

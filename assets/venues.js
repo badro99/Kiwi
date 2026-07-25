@@ -281,8 +281,8 @@
     services: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 000-5C13 3 12 8 12 8"/>',
     practitioners: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M16 11l2 2 4-4"/>',
     clients: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14h6M9 18h6M9 10h2"/>',
-    // hotel — onboarding vertical (no demo venue on this dashboard; the
-    // Riad Yasmina demo lives in dashboard2's venues2.js fork)
+    // hotel — onboarding vertical, reached only through the 0000 wizard
+    // (no demo hotel venue ships)
     reception: '<path d="M4 19h16"/><path d="M5 19v-4a7 7 0 0114 0v4"/><path d="M12 8V6"/><path d="M10 6h4"/>',
     chambres: '<path d="M3 18v-7"/><path d="M3 16h18v-3a2 2 0 00-2-2h-9v5"/><circle cx="6.5" cy="11.5" r="1.5"/><path d="M21 18v-2"/>',
     sejours: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M7 13h4M13 16h4"/>',
@@ -1793,11 +1793,12 @@
     const v = VENUES[currentVenue];
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const T = window.KiwiI18n?.T?.[lang] || {};
-    const sponsor = T['dash.footer.sponsor'] || 'opéré sous sponsoring Bank Al-Maghrib';
     const help = T['dash.footer.help'] || 'aide WhatsApp';
     // The merchant name already sits in the demo bar — keep the footer to
     // legal / system info so the two bars don't echo each other.
-    const legal = isCustom(currentVenue) ? '' : `ICE ${v.ice} · ${sponsor} · `;
+    // No acquiring-sponsorship line: Kiwi holds no Bank Al-Maghrib licence,
+    // and a demo footer is still a public claim. See mentions-legales.html.
+    const legal = isCustom(currentVenue) ? '' : `ICE ${v.ice} · `;
     el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">${help}</a>`;
   }
 
