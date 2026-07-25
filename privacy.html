@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Confidentialité · Kiwi</title>
-<meta name="description" content="Politique de confidentialité Kiwi Payments SA. Conformité loi 09-08 (CNDP), hébergement intégral au Maroc." />
+<meta name="description" content="Politique de confidentialité Kiwi. Logiciel de caisse et de gestion — Kiwi n'encaisse pas les paiements par carte." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://kiwi.ma/privacy.html" />
@@ -60,6 +60,12 @@
   .legal ul { margin-top: var(--s-3); padding-left: 22px; }
   .legal li { margin-top: 6px; }
   .legal b { color: var(--ink); font-weight: var(--w-medium); }
+  /* Précision de second plan : ce que Kiwi ne fait PAS. Utile au lecteur, mais
+     ne doit pas peser autant que l'engagement qu'elle nuance. */
+  .legal p.note {
+    color: var(--n-600); font-size: 0.94em;
+    border-left: 2px solid var(--n-200); padding-left: 12px;
+  }
   .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
   .legal a:hover { color: var(--atlas-700); }
   .legal-back {
@@ -94,10 +100,11 @@
 
     <h1 style="margin-top: var(--s-4);">Politique de confidentialité</h1>
     <p class="lede">
-      Kiwi Payments SA traite vos données personnelles dans le respect de la loi 09-08
+      Kiwi traite vos données personnelles dans le respect de la loi 09-08
       relative à la protection des personnes physiques à l'égard du traitement
-      des données à caractère personnel, et des standards internationaux applicables
-      au secteur des services de paiement.
+      des données à caractère personnel. Kiwi est un logiciel de caisse et de
+      gestion : il n'encaisse pas les paiements par carte et n'est pas un
+      établissement de paiement.
     </p>
     <div class="meta">
       <span><b>Dernière mise à jour</b> : 26 avril 2026</span>
@@ -107,61 +114,85 @@
 
     <h2>1. Responsable de traitement</h2>
     <p>
-      <b>Kiwi Payments SA</b>, société anonyme de droit marocain, RC Tanger n° 142 857,
-      ICE 003 184 729 000 075, dont le siège social est situé 12, rue Ibn Battouta,
-      Tanger 90000, Maroc, agissant en qualité de responsable de traitement au sens
-      de la loi 09-08.
+      L'éditeur de Kiwi (identité complète et coordonnées : voir les
+      <a href="mentions-legales.html">mentions légales</a>) agit en qualité de
+      responsable de traitement au sens de la loi 09-08.
     </p>
     <p>
       Délégué à la protection des données : <a href="mailto:dpo@kiwi.ma">dpo@kiwi.ma</a>.
     </p>
 
     <h2>2. Données collectées</h2>
-    <p>Kiwi collecte exclusivement les données nécessaires à l'exécution du service de paiement :</p>
-    <h3>2.1 Données du commerçant</h3>
-    <ul>
-      <li>Identité du gérant (CIN, nom, prénom, date de naissance) pour le KYC réglementaire.</li>
-      <li>Coordonnées de l'établissement (raison sociale, RC, IF, TP, ICE, adresse, IBAN).</li>
-      <li>Données biométriques de l'onboarding (capture de visage et de pièce d'identité), conservées 90 jours après vérification puis purgées.</li>
-    </ul>
-    <h3>2.2 Données transactionnelles</h3>
-    <ul>
-      <li>Montant, devise, horodatage, BIN de la carte (six premiers chiffres).</li>
-      <li>Identifiant terminal (IMEI ou numéro de série), géolocalisation au moment de l'encaissement.</li>
-      <li>Aucun PAN complet n'est jamais stocké : Kiwi opère en mode <em>token</em> conforme PCI-DSS niveau 1.</li>
-    </ul>
-    <h3>2.3 Données du payeur final (client du commerçant)</h3>
     <p>
-      Kiwi traite les données du payeur uniquement pour la durée strictement nécessaire
-      à l'exécution de la transaction : aucune donnée nominative, aucun PAN complet,
-      aucune adresse client n'est conservée au-delà des obligations comptables (10 ans).
+      Kiwi est un logiciel de caisse et de gestion. <b>Kiwi n'encaisse pas les
+      paiements par carte</b> : le paiement carte se fait sur le terminal de la
+      banque ou du prestataire du commerçant. Kiwi ne voit donc, ne reçoit ni ne
+      conserve aucun numéro de carte, aucun BIN, aucune donnée de porteur.
+    </p>
+    <h3>2.1 Données du compte commerçant</h3>
+    <ul>
+      <li>Adresse e-mail (identifiant de connexion) et nom du contact.</li>
+      <li>Nom de l'établissement et type d'activité déclarés à l'inscription.</li>
+      <li>Mot de passe, jamais conservé en clair : seule une empreinte PBKDF2 salée est stockée.</li>
+    </ul>
+    <p class="note">
+      Kiwi ne demande ni CIN, ni pièce d'identité, ni photographie, ni IBAN, et ne
+      pratique aucune vérification biométrique.
+    </p>
+    <h3>2.2 Données d'exploitation</h3>
+    <ul>
+      <li>Ventes enregistrées à la caisse : montant en dirhams, mode de règlement, libellé, référence de ticket, horodatage.</li>
+      <li>Réglages de l'établissement : modules activés, formule, codes d'accès du personnel.</li>
+      <li>Commandes passées par les clients via le QR de table, le temps de leur préparation.</li>
+    </ul>
+    <p class="note">
+      Aucune géolocalisation, aucun identifiant matériel (IMEI, numéro de série)
+      n'est collecté. Une partie des données (catalogue, équipe, stock) reste
+      stockée dans le navigateur du commerçant et ne quitte pas son appareil.
+    </p>
+    <h3>2.3 Client final du commerçant</h3>
+    <p>
+      Une commande passée par QR contient les articles, la table et le montant.
+      Elle n'est associée à aucune identité : Kiwi ne demande au client final ni
+      nom, ni téléphone, ni e-mail, ni moyen de paiement.
     </p>
 
     <h2>3. Finalités du traitement</h2>
     <ul>
-      <li><b>Exécution du contrat de service de paiement</b> (loi 103-12).</li>
-      <li><b>Conformité réglementaire</b> : KYC, lutte contre le blanchiment (LCB-FT), reporting Bank Al-Maghrib.</li>
-      <li><b>Sécurité et lutte contre la fraude</b> : détection d'opérations atypiques, blocage temporaire en cas de suspicion.</li>
-      <li><b>Amélioration produit</b> : analyses agrégées et anonymisées, jamais à des fins publicitaires tierces.</li>
+      <li><b>Fourniture du service</b> : faire fonctionner la caisse, le tableau de bord et la prise de commande.</li>
+      <li><b>Sécurité des comptes</b> : authentification, limitation des tentatives de connexion, cloisonnement entre commerçants.</li>
+      <li><b>Support</b> : diagnostic d'un incident signalé par le commerçant.</li>
     </ul>
+    <p class="note">
+      Kiwi ne revend aucune donnée, ne fait aucune publicité ciblée et ne partage
+      les données d'un commerçant avec aucun autre commerçant.
+    </p>
 
     <h2>4. Hébergement et localisation</h2>
     <p>
-      <b>Toutes les données sont hébergées au Maroc</b>, dans des centres de données
-      conformes Tier III situés à Casablanca (primaire) et Rabat (secondaire).
-      Aucune donnée n'est transférée hors du territoire marocain à des fins commerciales
-      ou opérationnelles. Les flux de routage Visa / Mastercard transitent par les
-      infrastructures certifiées des réseaux concernés, conformément aux règles
-      d'interopérabilité internationales.
+      Kiwi s'appuie sur l'infrastructure de <b>Cloudflare</b> (pages, fonctions et
+      base de données D1). Les données sont donc hébergées sur le réseau mondial de
+      ce prestataire et <b>peuvent être traitées hors du Maroc</b>, notamment au sein
+      de l'Union européenne et aux États-Unis, dans le cadre des engagements
+      contractuels de Cloudflare en matière de protection des données.
+    </p>
+    <p class="note">
+      Nous préférons l'écrire clairement plutôt que de laisser croire à un
+      hébergement local que nous n'assurons pas. Un hébergement au Maroc est une
+      évolution envisagée ; cette page sera mise à jour le jour où elle sera vraie,
+      et pas avant.
     </p>
 
     <h2>5. Durée de conservation</h2>
     <ul>
-      <li>Données KYC : 5 ans après clôture de la relation, conformément à la circulaire BAM 41/G/2007.</li>
-      <li>Données transactionnelles : 10 ans (obligation comptable, code de commerce).</li>
-      <li>Données biométriques d'onboarding : 90 jours après vérification.</li>
-      <li>Logs techniques : 12 mois glissants.</li>
+      <li>Compte commerçant : conservé tant que le compte est ouvert, supprimé sur demande.</li>
+      <li>Ventes et commandes : conservées pour l'historique du commerçant, qui en reste propriétaire.</li>
+      <li>Compteur de tentatives de connexion : effacé après 15 minutes ou dès la première connexion réussie.</li>
     </ul>
+    <p class="note">
+      Le commerçant reste responsable de ses propres obligations de conservation
+      comptable et fiscale ; Kiwi lui fournit l'export de ses données à la demande.
+    </p>
 
     <h2>6. Vos droits</h2>
     <p>Vous disposez à tout moment des droits suivants, exerçables auprès de notre DPO :</p>
@@ -192,7 +223,7 @@
     <h2>9. Contact</h2>
     <p>
       Pour toute question : <a href="mailto:dpo@kiwi.ma">dpo@kiwi.ma</a>
-      ou par courrier postal à Kiwi Payments SA, 12, rue Ibn Battouta, Tanger 90000.
+      ou par courrier postal à l'adresse indiquée dans les <a href="mentions-legales.html">mentions légales</a>.
     </p>
   </div>
 </section>

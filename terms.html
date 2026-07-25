@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Conditions générales · Kiwi</title>
-<meta name="description" content="Conditions générales d'utilisation et de service de Kiwi Payments SA." />
+<meta name="description" content="Conditions générales de l'abonnement au logiciel de caisse et de gestion Kiwi." />
 <meta name="theme-color" content="#0B6E4F" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://kiwi.ma/terms.html" />
@@ -55,6 +55,11 @@
   .legal ul, .legal ol { margin-top: var(--s-3); padding-left: 22px; }
   .legal li { margin-top: 6px; }
   .legal b { color: var(--ink); font-weight: var(--w-medium); }
+  /* Précision de second plan : ce que Kiwi ne fait PAS. */
+  .legal p.note {
+    color: var(--n-600); font-size: 0.94em;
+    border-left: 2px solid var(--n-200); padding-left: 12px;
+  }
   .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
   .legal a:hover { color: var(--atlas-700); }
   .legal-back {
@@ -84,13 +89,13 @@
 <section class="slab-paper legal">
   <div class="wrap-narrow">
     <a href="landing-zaka.html" class="legal-back">← Retour à kiwi.ma</a>
-    <span class="pill pill-paper pill-dot">Légal · loi 103-12</span>
+    <span class="pill pill-paper pill-dot">Légal · abonnement logiciel</span>
 
     <h1 style="margin-top: var(--s-4);">Conditions générales</h1>
     <p class="lede">
-      Les présentes conditions régissent la relation entre Kiwi Payments SA et tout
-      commerçant souscrivant au service Kiwi. Elles constituent l'accord cadre du
-      service de paiement, complété par un contrat de prestation signé séparément.
+      Les présentes conditions régissent la relation entre l'éditeur de Kiwi (voir
+      les <a href="mentions-legales.html">mentions légales</a>) et tout commerçant
+      souscrivant à un abonnement Kiwi.
     </p>
     <div class="meta">
       <span><b>Version</b> : 3.0</span>
@@ -100,54 +105,60 @@
 
     <h2>1. Objet</h2>
     <p>
-      Kiwi Payments SA fournit un service de paiement et de gestion d'établissement
-      comprenant : (i) l'acceptation et l'acquisition de paiements par carte
-      (CMI, Visa, Mastercard, Wafacash) ; (ii) un terminal logiciel sur smartphone
-      (Tap-to-Pay) ; (iii) un tableau de bord de gestion des ventes, du stock,
-      de l'équipe et de la comptabilité.
+      Kiwi édite un <b>logiciel de caisse et de gestion</b> vendu par abonnement :
+      caisse tactile, tableau de bord des ventes, stock, équipe, commande par QR
+      de table, et impression de tickets sur imprimante thermique.
+    </p>
+    <p class="note">
+      Kiwi <b>n'encaisse pas les paiements par carte</b> et n'est pas un
+      établissement de paiement. Le règlement carte se fait sur le terminal de la
+      banque ou du prestataire du commerçant ; Kiwi ne reçoit aucune donnée de
+      porteur, ne détient aucun fonds et n'effectue aucun versement.
     </p>
 
-    <h2>2. Tarification</h2>
-    <p>
-      Le service est facturé à <b>1,79 % all-in</b> sur le volume carte encaissé,
-      sans frais d'installation, sans frais de location terminal, sans frais de
-      transaction unitaire. Aucun engagement de durée. Aucun frais de résiliation.
-    </p>
-    <p>
-      Cas particuliers réseau (cartes hors zone SEPA + MENA, chargebacks frauduleux
-      avérés) : frais réseau facturés au coût exact, affichés à l'avance dans
-      l'application.
-    </p>
-
-    <h2>3. Versement T+1</h2>
-    <p>
-      Tout encaissement validé avant 23 h 59 (heure de Casablanca) un jour ouvré
-      est versé sur l'IBAN marocain du commerçant à 9 h le jour ouvré suivant.
-      <b>Samedi est considéré comme jour ouvré pour Kiwi.</b> Pendant un jour
-      férié national, le versement est exécuté le jour ouvré suivant à 9 h.
-    </p>
-
-    <h2>4. Obligations du commerçant</h2>
+    <h2>2. Formules et tarification</h2>
     <ul>
-      <li>Fournir des informations KYC exactes et à jour (CIN, RC, IF, TP, IBAN).</li>
+      <li><b>Kiwi Basic — 199 MAD / mois</b> : le logiciel sur le matériel du commerçant, appareils illimités, un établissement, formation sur place et guides inclus.</li>
+      <li><b>Kiwi Pro — 399 MAD / mois</b> : tout Basic, plus une caisse Kiwi offerte et la maintenance du matériel.</li>
+      <li><b>Kiwi Ultra — 1 499 MAD / mois</b> : établissements illimités, multi-pays, API entreprise, gestionnaire de compte dédié 24/7.</li>
+      <li><b>Kiwi Ultimate — sur devis</b> : périmètre, nombre d'appareils et de caisses convenus avec le client.</li>
+    </ul>
+    <p>
+      Tarifs hors taxes, facturés mensuellement. Aucun engagement de durée, aucun
+      frais de résiliation. Toute évolution tarifaire est notifiée avec un préavis
+      de 30 jours.
+    </p>
+
+    <h2>3. Obligations du commerçant</h2>
+    <ul>
+      <li>Fournir des informations d'inscription exactes (raison sociale, contact).</li>
+      <li>Garder confidentiels ses identifiants de connexion et les codes d'accès de son personnel.</li>
       <li>Ne pas utiliser le service à des fins illicites au sens du droit marocain.</li>
-      <li>Ne pas accepter de transactions fictives ou contraires aux règles des réseaux carte.</li>
-      <li>Conserver les justificatifs des transactions disputées pendant 13 mois minimum.</li>
+      <li>Assurer ses propres obligations comptables et fiscales : Kiwi est un outil, pas un mandataire.</li>
     </ul>
 
-    <h2>5. Obligations de Kiwi</h2>
+    <h2>4. Obligations de Kiwi</h2>
     <ul>
-      <li>Garantir la disponibilité du service avec un SLA de 99,9 % (hors maintenance planifiée).</li>
-      <li>Effectuer le versement T+1 conformément à l'article 3.</li>
-      <li>Mettre à disposition un support en français, darija et arabe classique, du lundi au samedi de 8 h à 22 h.</li>
-      <li>Informer le commerçant de toute évolution tarifaire ou contractuelle avec un préavis de 30 jours.</li>
+      <li>Maintenir le service en conditions opérationnelles et corriger les anomalies signalées.</li>
+      <li>Cloisonner les données de chaque commerçant et ne jamais les partager avec un autre client.</li>
+      <li>Mettre à disposition un support en français, darija et arabe classique.</li>
+      <li>Permettre au commerçant d'exporter ses données à tout moment, sur demande.</li>
     </ul>
 
-    <h2>6. Sécurité</h2>
+    <h2>5. Données et propriété</h2>
     <p>
-      Kiwi opère sous certification PCI-DSS niveau 1, audité annuellement par un QSA
-      agréé. Les données sensibles (PAN, données biométriques) sont chiffrées au
-      repos et en transit. Aucun PAN complet n'est jamais stocké en base.
+      Les données saisies par le commerçant (catalogue, ventes, équipe, clients)
+      lui appartiennent. Kiwi les héberge pour lui rendre le service et ne les
+      exploite à aucune autre fin. Voir la
+      <a href="privacy.html">politique de confidentialité</a>.
+    </p>
+
+    <h2>6. Disponibilité</h2>
+    <p>
+      La caisse est conçue pour continuer à fonctionner <b>hors connexion</b> : une
+      vente prise sans réseau est conservée sur l'appareil et remonte au tableau de
+      bord dès le retour du réseau. Le service en ligne peut néanmoins connaître des
+      interruptions, notamment lors des maintenances ou d'une panne de l'hébergeur.
     </p>
 
     <h2>7. Suspension et résiliation</h2>
@@ -155,12 +166,12 @@
       Kiwi peut suspendre le service en cas de violation grave des présentes
       conditions, de soupçon de fraude documenté, ou d'injonction réglementaire.
       Le commerçant peut résilier à tout moment depuis l'application, sans frais
-      ni préavis. Le versement final intervient à T+1 du jour de résiliation.
+      ni préavis. 
     </p>
 
     <h2>8. Responsabilité</h2>
     <p>
-      La responsabilité de Kiwi est plafonnée au montant des commissions perçues
+      La responsabilité de Kiwi est plafonnée au montant des abonnements perçus
       au titre des 12 derniers mois auprès du commerçant concerné. Sont expressément
       exclus de toute indemnisation les pertes indirectes, manque à gagner ou
       atteinte à la réputation.
