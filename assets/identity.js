@@ -102,6 +102,24 @@
     return true;
   }
 
+  /* The venue engine OWNS the store-switcher label ([data-loc-name]) and the
+   * vertical-section type whenever a REAL store the merchant created is active
+   * (a custom 'vXXX' venue). Account-level /api/me identity may drive those two
+   * surfaces ONLY for the synthetic placeholders: the empty 'own' venue
+   * synthesized at boot before /api/me resolves, and the operator's 'scoped'
+   * God-mode view. On a MULTI-store account /api/me carries only the PRIMARY
+   * store's business + type, so writing it over a selected custom store is what
+   * flipped a merchant's restaurant view to the boutique — the switcher label
+   * and sidebar section snapped to the boutique ~0.7s after load while the store
+   * itself (and its team) stayed the restaurant. Returns true when the engine
+   * owns the store → identity.js must NOT touch the label or the type. */
+  function venueEngineOwnsStore() {
+    try {
+      var v = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+      return !!v && v !== 'own' && v !== 'scoped';
+    } catch (_) { return false; }
+  }
+
   function apply(id) {
     var first = firstName(id.name);
 
@@ -112,12 +130,18 @@
       try { if (window.__kiwiLock && window.__kiwiLock.setGreetName) window.__kiwiLock.setGreetName(first); } catch (_) {}
     }
 
-    // Business — greeting subtext + any location label.
+    // Business — greeting subtext always follows the account; the store-switcher
+    // label ([data-loc-name]) only when a synthetic placeholder is active. Once a
+    // real store is selected the venue engine owns that label — overwriting it
+    // with the account's primary business is what desynced a multi-store switcher
+    // (see venueEngineOwnsStore).
     if (id.business) {
       var sub = document.querySelector('[data-kiwi-greet-sub]');
       if (sub) sub.textContent = id.business + ' · service ouvert';
-      var locs = document.querySelectorAll('[data-loc-name]');
-      for (var j = 0; j < locs.length; j++) locs[j].textContent = id.business;
+      if (!venueEngineOwnsStore()) {
+        var locs = document.querySelectorAll('[data-loc-name]');
+        for (var j = 0; j < locs.length; j++) locs[j].textContent = id.business;
+      }
     }
 
     // Sidebar profile chip — the name the owner sees they're "connected as", + avatar.
@@ -169,6 +193,12 @@
   function applyOwnType(type) {
     if (!type) return;
     var go = function () {
+      // Only the synthetic 'own' boot placeholder (or a 'scoped' operator view)
+      // may take its type from the ACCOUNT. A real selected store owns its type:
+      // a multi-store account's me.type is only the PRIMARY store, and pushing it
+      // here flipped the active store's sidebar section ~0.7s after load (a
+      // selected restaurant rendered the boutique section). See venueEngineOwnsStore.
+      if (venueEngineOwnsStore()) return;
       try { if (window.KiwiVenue && window.KiwiVenue.applyServerType) window.KiwiVenue.applyServerType(type); } catch (_) {}
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
