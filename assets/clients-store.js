@@ -182,8 +182,17 @@
     return MODEL_BY_TRADE[sub] || MODEL_BY_TRADE[typ] || MODEL_BY_TRADE[pid] || 'amount';
   }
 
+  /* `auto: true` = personne n'a choisi ce programme, il est DÉDUIT du métier du
+   * magasin. La distinction compte depuis que le programme se synchronise : le
+   * défaut est matérialisé dès la première lecture — donc avant que la copie
+   * serveur n'ait eu le temps d'arriver — et sans ce drapeau il gagnait la
+   * fusion contre le vrai réglage. Le commerçant réglait « 10 visites = 1 café
+   * offert » sur le portable, et la caisse continuait d'annoncer « −10 % » en
+   * ayant écrasé son choix. Un défaut déduit ne quitte donc jamais l'appareil ;
+   * setConfig() retire le drapeau, parce que là quelqu'un a décidé. */
   var DEFAULT_CFG = function () {
     return {
+      auto: true,
       model: defaultModel(),
       visit:   { target: 10, reward: '1 offert' },
       amount:  { perMad: 1, threshold: 100, reward: '−10 %' },
@@ -193,7 +202,22 @@
 
   /* ── the two KiwiStore records ─────────────────────────────────────────── */
   var clientsStore = KiwiStore.define('clients', { blank: function () { return { list: [], seq: 0 }; } });
-  var fidelityStore = KiwiStore.define('fidelity', { blank: function () { return null; } });
+  /* The loyalty PROGRAMME (model, targets, rewards) rides the document mirror —
+   * it is one small object per store, edited from the dashboard configurator and
+   * read on every till. The client BOOK does not: it goes record by record
+   * through /api/clients below, because a book grows without a natural ceiling
+   * and two tills serving two different customers must never collide over one
+   * document. Same server, two shapes, for two different write patterns.
+   *
+   * Without this, a merchant who set "10 cafés = 1 offert" on the laptop saw the
+   * tablet's till keep the default programme, and the two counted different
+   * rewards for the same customer. */
+  var fidelityStore = KiwiStore.define('fidelity', {
+    blank: function () { return null; },
+    cloud: true,
+    // Un programme déduit ne compte pas comme un réglage : voir DEFAULT_CFG.
+    isEmpty: function (d) { return !d || !d.model || !!d.auto; },
+  });
 
   /* Demo books only (kiwi-caisse PIN verticals): seed a small, segment-diverse
    * roster on first open so the Carnet looks alive for a demo. A REAL/paired
@@ -235,6 +259,9 @@
     book = book || bookId();
     var c = config(book);
     var next = Object.assign({}, c, patch || {});
+    // Quelqu'un a décidé : ce n'est plus un défaut déduit, et ça a désormais le
+    // droit de voyager jusqu'aux autres appareils.
+    delete next.auto;
     fidelityStore.set(next, book);
     return next;
   }
@@ -394,7 +421,7 @@
    * Same contract as live-link's /api/sale: gated on kiwiLive (or a real/hosted env),
    * NEVER demo/seed books, and endpoint absence (404/503/offline) is a silent no-op.
    * localStorage stays the source of truth same-browser; the server carries the book
-   * across devices (caisse tablet ⇄ dashboard laptop) the moment the endpoint deploys.
+   * across devices (caisse tablet ⇄ dashboard laptop).
    * Merge is last-write-wins on each record's `updated` clock. ─────────────────── */
   function realEnv() { try { return !!(window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()); } catch (_) { return false; } }
   function syncable(book) {
@@ -404,21 +431,86 @@
   function getCursor(book) { var n = Number(ls(curKey(book))); return n > 0 ? n : 0; }
   function setCursor(book, c) { try { localStorage.setItem(curKey(book), String(c || 0)); } catch (_) {} }
 
+  /* ── LA FILE D'ATTENTE ────────────────────────────────────────────────────
+   * Ces deux appels étaient « fire-and-forget » : un POST qui échoue — hors
+   * ligne, table pas encore migrée, session expirée — n'était jamais rejoué. La
+   * fiche restait bien dans le navigateur, mais elle n'atteignait le serveur
+   * qu'au prochain passage du client en caisse, c'est-à-dire peut-être jamais.
+   * Un tunnel de réseau au comptoir suffisait à ce qu'une cliente inscrite le
+   * matin n'existe pas sur le portable du patron le soir.
+   *
+   * On garde donc les identifiants en souffrance. Ils sont rejoués au tour de
+   * synchronisation suivant, en relisant la fiche COURANTE depuis le carnet
+   * local — jamais un instantané figé, sinon on renverrait un solde de points
+   * périmé par-dessus un plus récent. Une suppression est mise en file sous
+   * '-<id>' : elle doit être rejouée elle aussi, ou le client supprimé revient
+   * depuis l'autre appareil. */
+  function outKey(book) { return 'kiwi:clients-out:v1:' + book; }
+  function outRead(book) {
+    try { var a = JSON.parse(ls(outKey(book)) || '[]'); return Array.isArray(a) ? a : []; }
+    catch (_) { return []; }
+  }
+  function outWrite(book, a) {
+    // Plafonné : une caisse hors ligne pendant des jours ne doit pas remplir le
+    // localStorage. Les plus anciens sortent — ils restent dans le carnet local
+    // de toute façon, et le prochain passage du client les remettra en file.
+    try { localStorage.setItem(outKey(book), JSON.stringify(a.slice(-500))); } catch (_) {}
+  }
+  function outAdd(book, token) {
+    if (!syncable(book) || !token) return;
+    var a = outRead(book);
+    if (a.indexOf(token) === -1) { a.push(token); outWrite(book, a); }
+  }
+  function outDrop(book, token) {
+    var a = outRead(book);
+    var i = a.indexOf(token);
+    if (i >= 0) { a.splice(i, 1); outWrite(book, a); }
+  }
+
   function pushClient(rec, book) {
-    if (!syncable(book) || !rec) return;
+    if (!syncable(book) || !rec || !rec.id) return;
+    var id = rec.id;
     try {
       fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify(Object.assign({ merchant: book }, rec)),
-      }).catch(function () {});
-    } catch (_) {}
+      }).then(function (r) {
+        if (r && r.ok) { outDrop(book, id); return; }
+        outAdd(book, id);                    // 401 / 503 / 500 → on retentera
+      }).catch(function () { outAdd(book, id); });
+    } catch (_) { outAdd(book, id); }
   }
   function deleteRemote(id, book) {
     if (!syncable(book) || !id) return;
+    // Une suppression en attente annule un envoi en attente de la même fiche :
+    // rejouer le POST ressusciterait ce qu'on vient d'effacer.
+    outDrop(book, id);
     try {
       fetch('/api/clients?merchant=' + encodeURIComponent(book) + '&id=' + encodeURIComponent(id),
-        { method: 'DELETE', keepalive: true }).catch(function () {});
-    } catch (_) {}
+        { method: 'DELETE', keepalive: true })
+        .then(function (r) {
+          if (r && r.ok) { outDrop(book, '-' + id); return; }
+          outAdd(book, '-' + id);
+        }).catch(function () { outAdd(book, '-' + id); });
+    } catch (_) { outAdd(book, '-' + id); }
+  }
+
+  /* Rejoue ce qui n'est jamais parti. Silencieux : un échec remet simplement le
+   * jeton en file, et le carnet local n'a jamais cessé d'être utilisable. */
+  function flushOutbox(book) {
+    if (!syncable(book)) return;
+    var pending = outRead(book);
+    if (!pending.length) return;
+    var byId = {};
+    readBook(book).list.forEach(function (c) { byId[c.id] = c; });
+    pending.slice(0, 25).forEach(function (token) {
+      if (token.charAt(0) === '-') { deleteRemote(token.slice(1), book); return; }
+      var rec = byId[token];
+      // La fiche a quitté le carnet local sans passer par remove() : il n'y a
+      // plus rien à envoyer, on sort le jeton plutôt que de retenter sans fin.
+      if (!rec) { outDrop(book, token); return; }
+      pushClient(rec, book);
+    });
   }
 
   // map a D1 row (snake_case, 0/1) back onto a client record.
@@ -435,7 +527,18 @@
   function mergeServer(book, rows) {
     var d = readBook(book), changed = false, byId = {};
     d.list.forEach(function (c) { byId[c.id] = c; });
+    var gone = {};
     rows.forEach(function (r) {
+      /* Une pierre tombale : ce client a été supprimé sur un autre appareil.
+       * Sans ce cas, la ligne serait fusionnée comme une fiche ordinaire — vidée
+       * de son nom et de son téléphone par le serveur — et le carnet afficherait
+       * un client anonyme et immortel à la place d'une suppression. */
+      if (r && r.deleted) {
+        if (byId[r.id]) { gone[r.id] = 1; changed = true; }
+        // La suppression est acquise : plus rien à rejouer pour cette fiche.
+        outDrop(book, r.id); outDrop(book, '-' + r.id);
+        return;
+      }
       var sc = fromServer(r), local = byId[sc.id];
       if (!local) {
         d.list.push(sc); byId[sc.id] = sc; changed = true;
@@ -444,10 +547,18 @@
         Object.assign(local, sc); changed = true;
       }
     });
-    if (changed) clientsStore.set(d, book); // notifies subscribers; does NOT re-push
+    if (changed) {
+      d.list = d.list.filter(function (c) { return !gone[c.id]; });
+      clientsStore.set(d, book); // notifies subscribers; does NOT re-push
+    }
     return changed;
   }
-  function pull(book, cb) {
+  /* Une page au plus par appel côté serveur (500 fiches). Un navigateur neuf qui
+   * adopte un carnet de 2 000 clients doit continuer à demander tant qu'il
+   * reste des pages, sinon il s'arrête à la première et croit avoir tout lu.
+   * Le garde-fou de profondeur évite qu'une réponse incohérente ne fasse
+   * tourner la boucle sans fin. */
+  function pull(book, cb, depth) {
     book = book || bookId();
     if (!syncable(book)) { if (cb) cb(false); return; }
     var since = getCursor(book);
@@ -457,16 +568,27 @@
         .then(function (data) {
           if (!data || !Array.isArray(data.clients)) { if (cb) cb(false); return; }
           var changed = data.clients.length ? mergeServer(book, data.clients) : false;
-          if (data.cursor) setCursor(book, data.cursor);
+          // Le curseur n'avance que s'il avance vraiment : sur une réponse
+          // incohérente, mieux vaut relire deux fois que sauter des fiches.
+          if (data.cursor > since) setCursor(book, data.cursor);
+          if (data.more && data.cursor > since && (depth || 0) < 20) {
+            pull(book, function (more) { if (cb) cb(changed || more); }, (depth || 0) + 1);
+            return;
+          }
           if (cb) cb(changed);
         }).catch(function () { if (cb) cb(false); });
     } catch (_) { if (cb) cb(false); }
   }
   var pollTimer = null;
-  function startSync() {
+  function tick() {
     var b = bookId();
-    if (syncable(b)) pull(b);
-    if (!pollTimer) pollTimer = setInterval(function () { var bk = bookId(); if (syncable(bk)) pull(bk); }, 15000);
+    if (!syncable(b)) return;
+    flushOutbox(b);   // d'abord ce qui n'est jamais parti d'ici…
+    pull(b);          // …puis ce que les autres appareils ont fait
+  }
+  function startSync() {
+    tick();
+    if (!pollTimer) pollTimer = setInterval(tick, 15000);
   }
 
   /* ── live updates (same-tab + cross-tab, via KiwiStore) ─────────────────── */

@@ -5889,6 +5889,10 @@
 <script src="assets/escpos.js" defer fetchpriority="low"></script>
 <script src="assets/printer-bridge.js" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js" defer fetchpriority="low"></script>
+<!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
+     fidélité…) : un deuxième appareil ne doit pas trouver un établissement
+     vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
+<script src="assets/cloud-doc.js" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js" defer fetchpriority="low"></script>

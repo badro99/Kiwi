@@ -814,7 +814,10 @@
       });
     } catch (_) {}
   }
-  function saveCustomTeams() {
+  /* L'écriture locale, et rien d'autre. Séparée de saveCustomTeams() parce que
+   * la copie serveur, en redescendant, doit pouvoir se poser sans redéclencher
+   * une remontée : sinon deux appareils se renvoient la balle indéfiniment. */
+  function persistTeams() {
     try {
       const root = window.__kiwiTeamV2;
       const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {} };
@@ -827,6 +830,8 @@
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
     } catch (_) {}
+  }
+  function afterTeamChange() {
     // Every roster change reaches the till from here — one place, so a future
     // mutation path can't forget to publish and quietly leave a cashier locked out.
     publishPins();
@@ -836,8 +841,119 @@
      * prochain rechargement. */
     try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
+  function saveCustomTeams() {
+    persistTeams();
+    afterTeamChange();
+    teamCloudPush();
+  }
   loadCustomTeams();
   window.addEventListener('pagehide', saveCustomTeams);
+
+  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════
+   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs
+   * taux horaires, et quatre semaines de planning ne vivaient que dans le
+   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi
+   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale
+   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il
+   * faut le ressaisir à chaque appareil.
+   *
+   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte
+   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais
+   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.
+   *
+   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue
+   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge
+   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant
+   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.
+   *
+   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde
+   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster
+   * là où il a toujours été. */
+  function teamVenueKey() {
+    try {
+      const v = window.KiwiVenue?.getCurrentVenueData?.();
+      // Un magasin de démonstration garde son équipe semée en mémoire : elle
+      // n'appartient à aucun compte et ne doit jamais quitter ce navigateur.
+      if (!v || !v.custom) return '';
+      const k = teamKey(v);
+      return persistableTeamKey(k) ? k : '';
+    } catch (_) { return ''; }
+  }
+
+  /* Fusion. Union des membres, cet appareil prioritaire sur un id connu des deux
+   * côtés. Un salarié supprimé ici et présent là-bas REVIENT — c'est assumé :
+   * entre ressusciter une ligne qu'il faut resupprimer et perdre un salarié avec
+   * son contrat et ses heures, seul le second est irréparable.
+   *
+   * Heures et plannings sont fusionnés case par case (salarié × jour), pas en
+   * bloc : deux responsables qui remplissent deux semaines différentes du même
+   * planning doivent obtenir les deux semaines, pas la dernière enregistrée. */
+  function mergeByDay(mine, theirs, alive) {
+    const out = {};
+    const put = (src) => Object.keys(src || {}).forEach((mid) => {
+      if (alive && !alive[mid]) return;               // salarié disparu des deux côtés
+      const days = src[mid] || {};
+      const dst = out[mid] || (out[mid] = {});
+      Object.keys(days).forEach((d) => { if (!(d in dst)) dst[d] = days[d]; });
+    });
+    put(mine); put(theirs);                            // le nôtre pose sa case en premier
+    return out;
+  }
+  function mergeTeamDoc(mine, theirs) {
+    const seen = Object.create(null);
+    const members = [];
+    const take = (m) => { const id = m && m.id; if (!id || seen[id]) return; seen[id] = 1; members.push(m); };
+    ((mine && mine.members) || []).forEach(take);
+    ((theirs && theirs.members) || []).forEach(take);
+    return {
+      members,
+      hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
+      shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
+    };
+  }
+
+  let teamCloud = null;
+  function teamCloudInit() {
+    if (teamCloud || !window.KiwiCloudDoc) return teamCloud;
+    teamCloud = window.KiwiCloudDoc.attach({
+      feature: 'team',
+      slug: () => window.KiwiCloudDoc.slugFor(teamVenueKey()),
+      read: () => {
+        const k = teamVenueKey();
+        const root = window.__kiwiTeamV2;
+        if (!k) return { members: [], hours: {}, shifts: {} };
+        return {
+          members: root.byVenue[k] || [],
+          hours: root.hoursByVenue[k] || {},
+          shifts: root.shiftsByVenue[k] || {},
+        };
+      },
+      write: (doc) => {
+        const k = teamVenueKey();
+        if (!k || !doc) return;
+        const root = window.__kiwiTeamV2;
+        root.byVenue[k] = Array.isArray(doc.members) ? doc.members : [];
+        root.hoursByVenue[k] = doc.hours || {};
+        root.shiftsByVenue[k] = doc.shifts || {};
+        persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
+        afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
+      },
+      merge: mergeTeamDoc,
+      isEmpty: (d) => !d || !(d.members && d.members.length),
+      // Le roster vient d'arriver du serveur : la page ouverte doit le montrer,
+      // sinon le commerçant regarde une équipe vide qui n'existe plus.
+      onPulled: () => { if (pageActive) { try { render(); } catch (_) {} } },
+    });
+    return teamCloud;
+  }
+  function teamCloudBind() {
+    const c = teamCloudInit();
+    if (c) c.bind();
+  }
+  function teamCloudPush() {
+    const c = teamCloudInit();
+    if (c) c.push();
+  }
 
   function ensureVenueData(venue) {
     const root = window.__kiwiTeamV2;
@@ -2759,4 +2875,25 @@
   }
   window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster });
   try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
+
+  /* ═══════════════ HYDRATATION AU DÉMARRAGE ═══════════════════════════════
+   * On lit la copie serveur sans attendre que quelqu'un ouvre la page Équipe.
+   * Deux surfaces dépendent du roster sans jamais l'afficher : publishPins()
+   * envoie les codes du personnel à la caisse, et la carte « Équipe » de
+   * l'accueil annonce qui est en service. Sur un deuxième appareil, attendre
+   * l'ouverture de la page voudrait dire une caisse sans aucun code d'accès —
+   * personne ne peut ouvrir le tiroir — et un accueil qui affirme zéro salarié.
+   *
+   * venues.js n'a pas forcément fini de rétablir les établissements du compte
+   * quand ce fichier s'exécute (adoptServerStores attend /api/me) : on lie donc
+   * au 'load', puis à chaque changement de magasin. bind() est idempotent par
+   * magasin, un rappel de trop ne coûte rien. */
+  function bootTeamCloud() {
+    teamCloudBind();
+    try {
+      if (window.KiwiVenue?.subscribe) window.KiwiVenue.subscribe(() => teamCloudBind());
+    } catch (_) {}
+  }
+  if (document.readyState === 'complete') setTimeout(bootTeamCloud, 0);
+  else window.addEventListener('load', () => setTimeout(bootTeamCloud, 0));
 })();

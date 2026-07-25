@@ -233,3 +233,92 @@ CREATE TABLE IF NOT EXISTS catalogs (
   rev        INTEGER NOT NULL,   -- révision monotone, incrémentée par le serveur
   updated_ts INTEGER NOT NULL
 );
+
+-- ── LES AUTRES DONNÉES D'UN ÉTABLISSEMENT (carte, équipe, fidélité, plan…) ───
+-- L'inventaire d'une boutique a eu sa copie serveur (table `catalogs`). Tout le
+-- reste de ce qu'un commerçant configure vivait encore UNIQUEMENT dans le
+-- localStorage du navigateur qui l'avait saisi : sa carte, son équipe et ses
+-- plannings de paie, son programme de fidélité, son plan de salle. Un deuxième
+-- appareil, une fenêtre privée ou un cache vidé, et l'établissement était vide.
+-- Ressaisir vingt salariés et quatre semaines de planning parce qu'on a ouvert
+-- Kiwi sur l'iPad du comptoir n'est pas acceptable.
+--
+-- Une seule table pour toutes ces fonctionnalités, plutôt qu'une table et un
+-- endpoint chacune : six copies de la même logique de révision, ce sont six
+-- occasions de se tromper sur la tenancy. C'est déjà la forme qu'impose
+-- assets/venue-store.js côté navigateur — `kiwi:<feature>:v1:<venue>` contient
+-- un objet, et un seul. Le serveur ne fait que lui donner où survivre.
+--
+-- `merchant` est le slug du NOM du magasin (slugMerchant), jamais l'identifiant
+-- de venue du navigateur : celui-ci est tiré de l'horloge à la création
+-- (venues.js `'v' + Date.now()`) ou du slug à l'adoption (`'v-' + slug`), donc
+-- deux navigateurs du même commerçant ne tombent JAMAIS sur le même. Le slug,
+-- lui, est ce que la caisse et le tableau de bord calculent tous les deux à
+-- l'identique — la même colonne vertébrale que sales / menus / catalogs.
+--
+-- La liste des `feature` autorisées est fermée côté serveur (functions/api/
+-- store.js → FEATURES) : sans elle, un client authentifié pourrait semer autant
+-- de lignes qu'il veut sous des noms inventés.
+--
+-- Note sur l'équipe : ce document contient des salaires, des CIN et les codes
+-- d'accès du personnel. C'est un choix assumé — les codes atteignent déjà D1 par
+-- staff_pins, et un roster amputé de ses codes obligerait le commerçant à tout
+-- reconfigurer sur chaque appareil. La lecture exige toujours une preuve
+-- d'identité sur CE magasin ; rien ici n'est jamais public.
+CREATE TABLE IF NOT EXISTS store_docs (
+  merchant   TEXT NOT NULL,      -- slugMerchant(nom du magasin)
+  feature    TEXT NOT NULL,      -- 'menu' | 'team' | 'fidelity' | 'floorplan' | …
+  data       TEXT NOT NULL,      -- JSON : le document de la fonctionnalité, tel quel
+  rev        INTEGER NOT NULL,   -- révision monotone, incrémentée par le serveur
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, feature)
+);
+
+-- ── CARNET CLIENTS · fidélité ───────────────────────────────────────────────
+-- assets/clients-store.js appelle /api/clients depuis la livraison de la
+-- fidélité. L'endpoint n'existait pas : les trois appels tombaient sur un 404
+-- avalé en silence, donc une caisse sur tablette et un tableau de bord sur
+-- portable tenaient deux carnets séparés et comptaient deux fois les points.
+--
+-- Des LIGNES, pas un document JSON comme store_docs : un carnet grossit sans
+-- plafond naturel, et deux caisses qui servent deux clients différents ne
+-- doivent pas se croiser. Dernier écrivain gagne PAR FICHE, sur `updated_ts`
+-- (l'horloge de la fiche) ; une écriture plus ancienne que la base est ignorée,
+-- donc une caisse qui rejoue sa file après une coupure ne rétrograde rien.
+--
+-- `srv_ts` est autre chose que `updated_ts` : une horloge SERVEUR strictement
+-- croissante par magasin, qui ne sert qu'au curseur de synchronisation. Sur
+-- l'horloge des fiches, une tablette mal réglée de trois jours écrirait dans le
+-- passé du curseur et sa cliente n'apparaîtrait jamais sur les autres appareils.
+--
+-- `deleted` est une pierre tombale : sans elle, l'appareil qui n'a pas vu la
+-- suppression repousse la fiche au prochain encaissement et le client supprimé
+-- ressuscite en boucle. Les champs personnels sont vidés à la suppression — il
+-- ne reste que l'identifiant, le temps que les autres appareils apprennent.
+CREATE TABLE IF NOT EXISTS clients (
+  merchant      TEXT NOT NULL,   -- slugMerchant(nom du magasin)
+  id            TEXT NOT NULL,   -- l'id de la fiche, généré par le client
+  name          TEXT NOT NULL DEFAULT '',
+  phone         TEXT NOT NULL DEFAULT '',
+  email         TEXT NOT NULL DEFAULT '',
+  birthday      TEXT NOT NULL DEFAULT '',
+  gender        TEXT NOT NULL DEFAULT '',
+  city          TEXT NOT NULL DEFAULT '',
+  address       TEXT NOT NULL DEFAULT '',
+  notes         TEXT NOT NULL DEFAULT '',
+  points        INTEGER NOT NULL DEFAULT 0,
+  stamps        INTEGER NOT NULL DEFAULT 0,
+  visits        INTEGER NOT NULL DEFAULT 0,
+  spend         INTEGER NOT NULL DEFAULT 0,
+  consent       INTEGER NOT NULL DEFAULT 0,
+  consent_email INTEGER NOT NULL DEFAULT 0,
+  source        TEXT NOT NULL DEFAULT 'caisse',
+  first_seen    INTEGER NOT NULL DEFAULT 0,
+  last_seen     INTEGER NOT NULL DEFAULT 0,
+  updated_ts    INTEGER NOT NULL DEFAULT 0,  -- horloge de la FICHE → arbitrage
+  srv_ts        INTEGER NOT NULL DEFAULT 0,  -- horloge SERVEUR → curseur
+  deleted       INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, id)
+);
+-- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».
+CREATE INDEX IF NOT EXISTS idx_clients_sync ON clients (merchant, srv_ts);
