@@ -124,10 +124,22 @@
       plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
       plApply: 'Reporter sur les heures', plClear: 'Vider le planning',
       plFooter: 'Total planifié',
-      plHint: 'Affectez un service à chaque personne, puis reportez-le sur les heures une fois la semaine faite.',
+      plHint: 'Cliquez une case pour saisir les heures exactes du service, ou marquer un jour de repos.',
       plApplied: (n) => `${n} journée${n > 1 ? 's' : ''} reportée${n > 1 ? 's' : ''} sur les heures.`,
       plNothing: 'Rien à reporter : aucun service planifié sur cette période.',
       plCleared: 'Planning vidé pour cette période.',
+      plRest: 'Repos',
+      plStart: 'Début', plEnd: 'Fin', plDur: 'Durée',
+      plSave: 'Enregistrer', plClearCell: 'Vider la case',
+      plWholeWeek: 'Appliquer à toute la semaine',
+      plNextDay: (day, time) => `Se termine le ${day} à ${time}`,
+      plNextDayLegend: 'Un service marqué +1 se termine le lendemain. Les heures comptent sur le jour de début.',
+      plNeedBoth: 'Indiquez une heure de début et une heure de fin.',
+      plSameTime: "L'heure de fin doit être différente de l'heure de début.",
+      plWeekOf: (a, b) => `Semaine du ${a} au ${b}`,
+      plPrevWeek: 'Semaine précédente', plNextWeek: 'Semaine suivante',
+      plPlannedPeriod: 'Planifié · période',
+      plWeekApplied: (n) => `Service appliqué sur ${n} jour${n > 1 ? 's' : ''}.`,
       submitAdd:  'Ajouter le membre',
       submitEdit: 'Enregistrer les modifications',
       cancel: 'Annuler',
@@ -262,10 +274,22 @@
       plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
       plApply: 'Copy onto hours', plClear: 'Clear schedule',
       plFooter: 'Total scheduled',
-      plHint: 'Assign a shift to each person, then copy it onto hours once the week is done.',
+      plHint: 'Click a cell to set the exact shift hours, or mark the day as time off.',
       plApplied: (n) => `${n} day${n > 1 ? 's' : ''} copied onto hours.`,
       plNothing: 'Nothing to copy: no shift scheduled this period.',
       plCleared: 'Schedule cleared for this period.',
+      plRest: 'Day off',
+      plStart: 'Starts', plEnd: 'Ends', plDur: 'Length',
+      plSave: 'Save', plClearCell: 'Clear cell',
+      plWholeWeek: 'Apply to the whole week',
+      plNextDay: (day, time) => `Ends ${day} at ${time}`,
+      plNextDayLegend: 'A shift marked +1 ends the next day. Its hours count on the day it starts.',
+      plNeedBoth: 'Enter both a start and an end time.',
+      plSameTime: 'The end time must differ from the start time.',
+      plWeekOf: (a, b) => `Week of ${a} to ${b}`,
+      plPrevWeek: 'Previous week', plNextWeek: 'Next week',
+      plPlannedPeriod: 'Scheduled · period',
+      plWeekApplied: (n) => `Shift applied to ${n} day${n > 1 ? 's' : ''}.`,
       submitAdd:  'Add member',
       submitEdit: 'Save changes',
       cancel: 'Cancel',
@@ -399,10 +423,22 @@
       plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
       plApply: 'نقل إلى الساعات', plClear: 'مسح الجدول',
       plFooter: 'إجمالي المجدول',
-      plHint: 'عيّن وردية لكل شخص، ثم انقلها إلى الساعات بعد انتهاء الأسبوع.',
+      plHint: 'انقر على خانة لإدخال ساعات الوردية بالضبط، أو لتحديد يوم راحة.',
       plApplied: (n) => `تم نقل ${n} يوم إلى الساعات.`,
       plNothing: 'لا شيء للنقل: لا توجد ورديات مجدولة في هذه الفترة.',
       plCleared: 'تم مسح الجدول لهذه الفترة.',
+      plRest: 'راحة',
+      plStart: 'البداية', plEnd: 'النهاية', plDur: 'المدة',
+      plSave: 'حفظ', plClearCell: 'إفراغ الخانة',
+      plWholeWeek: 'تطبيق على كامل الأسبوع',
+      plNextDay: (day, time) => `تنتهي ${day} على ${time}`,
+      plNextDayLegend: 'الوردية المعلّمة بـ +1 تنتهي في اليوم التالي. تُحتسب ساعاتها على يوم البداية.',
+      plNeedBoth: 'أدخل ساعة البداية وساعة النهاية.',
+      plSameTime: 'يجب أن تختلف ساعة النهاية عن ساعة البداية.',
+      plWeekOf: (a, b) => `أسبوع من ${a} إلى ${b}`,
+      plPrevWeek: 'الأسبوع السابق', plNextWeek: 'الأسبوع التالي',
+      plPlannedPeriod: 'مُجدول · الفترة',
+      plWeekApplied: (n) => `تم تطبيق الوردية على ${n} يوم.`,
       submitAdd:  'إضافة العضو',
       submitEdit: 'حفظ التعديلات',
       cancel: 'إلغاء',
@@ -681,17 +717,64 @@
    * La page s'appelle « Paie & planning » et ne savait que constater : une
    * grille d'heures DÉJÀ faites. Impossible d'affecter qui que ce soit à un
    * service — le commerçant ne pouvait pas planifier, seulement compter après
-   * coup. Un poste = un créneau nommé, avec sa durée, pour que le planning
-   * puisse être chiffré avant la semaine et reporté sur les heures après. */
-  const SHIFTS = [
-    { id: 'matin',   h: 4, fr: 'Matin · 9h-13h',    en: 'Morning · 9-1',    ar: 'صباح · 9-13' },
-    { id: 'aprem',   h: 5, fr: 'Après-midi · 13h-18h', en: 'Afternoon · 1-6', ar: 'بعد الظهر · 13-18' },
-    { id: 'journee', h: 8, fr: 'Journée · 9h-18h',  en: 'Full day · 9-6',   ar: 'يوم كامل · 9-18' },
-    { id: 'soir',    h: 6, fr: 'Soir · 18h-00h',    en: 'Evening · 6-12',   ar: 'مساء · 18-00' },
-    { id: 'repos',   h: 0, fr: 'Repos',             en: 'Day off',          ar: 'راحة' },
-  ];
-  const SHIFT_BY_ID = Object.fromEntries(SHIFTS.map((s) => [s.id, s]));
-  const shiftHours = (id) => (SHIFT_BY_ID[id] ? SHIFT_BY_ID[id].h : 0);
+   * coup.
+   *
+   * Un service n'est PAS un créneau à prendre dans une liste. Les quatre
+   * presets (Matin 9h-13h, Après-midi 13h-18h, Journée, Soir) décrivaient une
+   * seule façon de tenir boutique : celui qui ouvre à 8h30, ferme à 23h ou
+   * fait 11h-15h n'avait rien à cliquer et devait mentir sur son planning.
+   * On stocke donc deux heures exactes — { start:'HH:MM', end:'HH:MM' } — et
+   * { off:true } pour un jour de repos, qui est une décision (« tu ne viens
+   * pas ») et pas la même chose qu'une case vide (« pas encore décidé »).
+   *
+   * Un service qui finit après minuit finit le LENDEMAIN : 21:00 → 03:00,
+   * c'est 3 h du matin mardi, pas lundi. La durée passe donc par minuit au
+   * lieu de soustraire bêtement — sinon la nuit du samedi comptait −18 h et
+   * emportait le total de la semaine avec elle. Les heures restent comptées
+   * sur le jour de DÉBUT (convention de paie), et l'écran le dit. */
+  const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  /* Ancien format : quatre ids de presets. Un planning déjà saisi ne doit pas
+   * s'évaporer parce qu'on a changé de modèle — on le relit en heures. */
+  const LEGACY_SHIFTS = {
+    matin:   { start: '09:00', end: '13:00' },
+    aprem:   { start: '13:00', end: '18:00' },
+    journee: { start: '09:00', end: '18:00' },
+    soir:    { start: '18:00', end: '00:00' },
+    repos:   { off: true },
+  };
+  function normShift(v) {
+    if (typeof v === 'string') return LEGACY_SHIFTS[v] || null;
+    if (!v || typeof v !== 'object') return null;
+    if (v.off) return { off: true };
+    if (!HHMM_RE.test(v.start || '') || !HHMM_RE.test(v.end || '')) return null;
+    return { start: v.start, end: v.end };
+  }
+  const hhmmToMin = (s) => (+s.slice(0, 2)) * 60 + (+s.slice(3, 5));
+  function shiftMinutes(v) {
+    const s = normShift(v);
+    if (!s || s.off) return 0;
+    const a = hhmmToMin(s.start), b = hhmmToMin(s.end);
+    if (b === a) return 0;                       // refusé à la saisie ; 0 plutôt qu'un 24 h muet
+    return b > a ? b - a : (1440 - a) + b;       // 21:00 → 03:00 = 6 h, pas −18 h
+  }
+  const shiftHours = (v) => shiftMinutes(v) / 60;
+  /* Fin ≤ début ⇒ on a franchi minuit. 18:00 → 00:00 en fait partie : minuit,
+   * c'est déjà demain. */
+  function shiftIsNextDay(v) {
+    const s = normShift(v);
+    return !!(s && !s.off && hhmmToMin(s.end) <= hhmmToMin(s.start));
+  }
+  function fmtDur(mins) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return m ? `${h} h ${pad(m)}` : `${h} h`;
+  }
+  /* new Date('2026-07-20') = minuit UTC : au Maroc ça retombe la veille selon
+   * la saison. Une date de planning se lit en local, chiffre par chiffre. */
+  function fromISO(d) {
+    const p = String(d || '').split('-').map(Number);
+    return new Date(p[0], (p[1] || 1) - 1, p[2] || 1);
+  }
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   function getShifts(venueType) { return window.__kiwiTeamV2.shiftsByVenue[venueType] || {}; }
   /* Les deux grilles — planifié et réalisé — partagent le même sélecteur de
    * période : elles doivent toujours parler de la même semaine. */
@@ -811,6 +894,8 @@
   /* Paie & planning ouvre sur le PLANNING : c'est la moitié de la page qui
    * n'existait pas, et les heures réelles restent à un clic. */
   let payTab = 'planning';
+  /* Quelle semaine de la période le planning montre — voir weekChunks(). */
+  let planWeekIdx = 0;
   let activeFilters = { search: '', dept: '', contract: '', lang: '' };
   let pageActive = false;
   // Which of this module's two pages is on screen: 'equipe' | 'payroll' | null.
@@ -911,6 +996,8 @@
 
   /* ═══════════════ RENDER ═══════════════ */
   function render() {
+    // L'éditeur de service est ancré sur une case : la case disparaît, lui aussi.
+    closeShiftPop();
     if (pageMode === 'payroll') { showPayroll(); return; }
     const root = document.querySelector('[data-equipe-root]');
     if (!root) return;
@@ -1241,7 +1328,9 @@
       period.days.forEach((d) => {
         if (!row[d]) return;
         if (!hours[m.id]) hours[m.id] = {};
-        hours[m.id][d] = shiftHours(row[d]);
+        // Deux décimales : une saisie libre tombe sur 7,25 ou 7,75, pas sur un
+        // 7,333333 qui s'afficherait tel quel dans la grille des heures.
+        hours[m.id][d] = Math.round(shiftHours(row[d]) * 100) / 100;
         n++;
       });
     });
@@ -1263,32 +1352,191 @@
     Kiwi.toast(t().plCleared, { type: 'info' });
   };
 
-  /* Un service choisi est une décision d'organisation : on la persiste tout de
-   * suite, comme une heure saisie. */
-  document.addEventListener('change', (e) => {
-    const el = e.target;
-    if (!el.matches || !el.matches('[data-kt-shift]')) return;
-    if (!pageActive) return;
-    if (window.__kiwiTeamV2.periodLocked) return;
-    const mid = el.getAttribute('data-mid');
-    const day = el.getAttribute('data-day');
-    const vt = teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+  handlers['kt-plan-week'] = (_el, dir) => {
+    closeShiftPop();
+    const chunks = weekChunks(buildPeriod(window.__kiwiTeamV2.periodKind || 'week').days);
+    const next = planWeekIdx + (dir === 'next' ? 1 : -1);
+    if (next < 0 || next >= chunks.length) return;
+    planWeekIdx = next;
+    render();
+  };
+
+  /* ── ÉDITEUR DE SERVICE ──────────────────────────────────────────────────
+   * Deux heures exactes ne tiennent pas dans une colonne de 90 px, et la
+   * grille ne doit plus déborder de la carte : la saisie se fait donc dans un
+   * petit éditeur ancré sur la case. Il dit à voix haute ce qu'une case ne
+   * peut que suggérer — la durée, et surtout le JOUR où le service se termine
+   * quand il passe minuit. « Appliquer à toute la semaine » évite d'ouvrir
+   * sept fois le même éditeur pour quelqu'un qui fait les mêmes horaires du
+   * lundi au dimanche. */
+  let shiftPop = null;
+
+  const currentVenueKey = () => teamKey(window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' });
+  const planHost = () => document.querySelector('.dash-genpage .dash-equipe');
+  function findCell(mid, day) {
+    const host = planHost();
+    if (!host) return null;
+    const want = `${mid}|${day}`;
+    return Array.prototype.find.call(host.querySelectorAll('[data-kt-cell]'), (td) => td.getAttribute('data-kt-cell') === want) || null;
+  }
+  function visibleDays() {
+    const chunks = weekChunks(buildPeriod(window.__kiwiTeamV2.periodKind || 'week').days);
+    return chunks[Math.min(Math.max(planWeekIdx, 0), chunks.length - 1)] || [];
+  }
+  function writeShift(mid, day, val) {
+    const vt = currentVenueKey();
     const shifts = window.__kiwiTeamV2.shiftsByVenue[vt] || (window.__kiwiTeamV2.shiftsByVenue[vt] = {});
     if (!shifts[mid]) shifts[mid] = {};
-    if (el.value) shifts[mid][day] = el.value; else delete shifts[mid][day];
-    /* Surtout PAS render() : reconstruire toute la page à chaque cellule mettait
-     * plusieurs secondes par choix, et remplir la semaine de trois personnes
-     * devenait une minute d'attente — sans compter que le <select> qu'on venait
-     * d'utiliser était détruit sous le curseur. Même approche que la grille des
-     * heures : on repeint les totaux sur place. */
-    const td = el.closest('td');
-    if (td) {
-      td.classList.toggle('on', !!el.value && el.value !== 'repos');
-      td.classList.toggle('off', el.value === 'repos');
+    if (val) shifts[mid][day] = val; else delete shifts[mid][day];
+  }
+  /* Surtout PAS render() : reconstruire toute la page à chaque case mettait
+   * plusieurs secondes par choix, et remplir la semaine de trois personnes
+   * devenait une minute d'attente. On repeint la case et les totaux sur place,
+   * comme la grille des heures. */
+  function paintShiftCell(mid, day) {
+    const td = findCell(mid, day);
+    if (!td) return;
+    const T = t();
+    const cur = (getShifts(currentVenueKey())[mid] || {})[day];
+    const s = normShift(cur);
+    td.classList.toggle('on', !!(s && !s.off));
+    td.classList.toggle('off', !!(s && s.off));
+    const btn = td.querySelector('.kt-sh');
+    if (!btn) return;
+    btn.innerHTML = shiftCellInner(T, cur, false);
+    const title = shiftCellTitle(T, cur, day);
+    if (title) btn.setAttribute('title', title); else btn.removeAttribute('title');
+  }
+  /* La légende du +1 n'a de sens que s'il y a un service de nuit à l'écran. */
+  function refreshNextDayLegend() {
+    const host = planHost();
+    if (!host) return;
+    const legend = host.querySelector('.kt-plan-legend');
+    if (legend) legend.classList.toggle('is-off', !host.querySelector('tbody .kt-sh-next'));
+  }
+
+  function closeShiftPop() {
+    if (!shiftPop) return;
+    document.removeEventListener('mousedown', onPopDown, true);
+    document.removeEventListener('keydown', onPopKey, true);
+    window.removeEventListener('resize', placeShiftPop);
+    window.removeEventListener('scroll', placeShiftPop, true);
+    shiftPop.el.remove();
+    shiftPop = null;
+  }
+  function onPopDown(e) {
+    if (!shiftPop) return;
+    if (shiftPop.el.contains(e.target)) return;
+    if (shiftPop.anchor && shiftPop.anchor.contains(e.target)) return;   // le toggle s'en charge
+    closeShiftPop();
+  }
+  function onPopKey(e) { if (e.key === 'Escape' && shiftPop) { e.stopPropagation(); closeShiftPop(); } }
+  function placeShiftPop() {
+    if (!shiftPop) return;
+    const a = shiftPop.anchor.getBoundingClientRect();
+    const el = shiftPop.el;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let left = a.left + (a.width / 2) - (w / 2);
+    left = Math.max(10, Math.min(left, window.innerWidth - w - 10));
+    let top = a.bottom + 8;
+    if (top + h > window.innerHeight - 10) top = Math.max(10, a.top - h - 8);
+    el.style.left = `${Math.round(left)}px`;
+    el.style.top = `${Math.round(top)}px`;
+  }
+
+  function openShiftPop(anchor, mid, day) {
+    closeShiftPop();
+    const T = t();
+    const vt = currentVenueKey();
+    const m = getMembers(vt).find((x) => x.id === mid);
+    const cur = normShift((getShifts(vt)[mid] || {})[day]);
+    const longDay = (iso) => fromISO(iso).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
+
+    const el = document.createElement('div');
+    el.className = 'kt-shpop';
+    el.setAttribute('role', 'dialog');
+    el.innerHTML = `
+      <div class="kt-shpop-head">
+        <b>${esc(m ? memberFullName(m) : '')}</b>
+        <span>${esc(longDay(day))}</span>
+      </div>
+      <div class="kt-shpop-times">
+        <label><span>${esc(T.plStart)}</span><input type="time" data-sh-start value="${cur && !cur.off ? esc(cur.start) : ''}"></label>
+        <label><span>${esc(T.plEnd)}</span><input type="time" data-sh-end value="${cur && !cur.off ? esc(cur.end) : ''}"></label>
+      </div>
+      <div class="kt-shpop-sum" data-sh-sum></div>
+      <label class="kt-shpop-week"><input type="checkbox" data-sh-week><span>${esc(T.plWholeWeek)}</span></label>
+      <div class="kt-shpop-foot">
+        <button class="kt-shpop-b" type="button" data-sh-rest>${esc(T.plRest)}</button>
+        <button class="kt-shpop-b" type="button" data-sh-clear>${esc(T.plClearCell)}</button>
+        <button class="kt-shpop-b primary" type="button" data-sh-save>${esc(T.plSave)}</button>
+      </div>`;
+    document.body.appendChild(el);
+    shiftPop = { el, anchor, mid, day };
+
+    const $start = el.querySelector('[data-sh-start]');
+    const $end = el.querySelector('[data-sh-end]');
+    const $sum = el.querySelector('[data-sh-sum]');
+    const $week = el.querySelector('[data-sh-week]');
+
+    /* Le résumé se met à jour à chaque frappe : on ne découvre pas après coup
+     * qu'un 21:00 → 03:00 finit mardi. */
+    function refresh() {
+      const v = normShift({ start: $start.value, end: $end.value });
+      if (!v) { $sum.className = 'kt-shpop-sum'; $sum.textContent = ''; return; }
+      const mins = shiftMinutes(v);
+      if (!mins) { $sum.className = 'kt-shpop-sum warn'; $sum.textContent = T.plSameTime; return; }
+      if (shiftIsNextDay(v)) {
+        $sum.className = 'kt-shpop-sum next';
+        $sum.innerHTML = `<b>${esc(fmtDur(mins))}</b><br><i class="kt-sh-next">+1</i> ${esc(T.plNextDay(longDay(toISO(addDays(fromISO(day), 1))), v.end))}`;
+      } else {
+        $sum.className = 'kt-shpop-sum';
+        $sum.innerHTML = `<b>${esc(fmtDur(mins))}</b>`;
+      }
     }
-    updateShiftTotals();
-    saveCustomTeams();
-  });
+    refresh();
+
+    function commit(val) {
+      const days = ($week.checked ? visibleDays() : [day]);
+      days.forEach((d) => { writeShift(mid, d, val); paintShiftCell(mid, d); });
+      updateShiftTotals();
+      refreshNextDayLegend();
+      saveCustomTeams();
+      closeShiftPop();
+      if ($week.checked && days.length > 1) toast(T.plWeekApplied(days.length), { type: 'success' });
+    }
+    function save() {
+      const start = $start.value, end = $end.value;
+      if (!HHMM_RE.test(start) || !HHMM_RE.test(end)) { toast(T.plNeedBoth, { type: 'pend' }); return; }
+      if (start === end) { toast(T.plSameTime, { type: 'pend' }); return; }
+      commit({ start, end });
+    }
+
+    [$start, $end].forEach((inp) => {
+      inp.addEventListener('input', refresh);
+      inp.addEventListener('change', refresh);
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+    });
+    el.querySelector('[data-sh-save]').addEventListener('click', save);
+    el.querySelector('[data-sh-rest]').addEventListener('click', () => commit({ off: true }));
+    el.querySelector('[data-sh-clear]').addEventListener('click', () => commit(null));
+
+    placeShiftPop();
+    document.addEventListener('mousedown', onPopDown, true);
+    document.addEventListener('keydown', onPopKey, true);
+    window.addEventListener('resize', placeShiftPop);
+    window.addEventListener('scroll', placeShiftPop, true);
+    try { $start.focus(); } catch (_) {}
+  }
+
+  handlers['kt-shift-edit'] = (el) => {
+    if (!pageActive || window.__kiwiTeamV2.periodLocked) return;
+    const mid = el.getAttribute('data-mid');
+    const day = el.getAttribute('data-day');
+    if (!mid || !day) return;
+    if (shiftPop && shiftPop.mid === mid && shiftPop.day === day) { closeShiftPop(); return; }
+    openShiftPop(el, mid, day);
+  };
 
   /* Totaux du planning recalculés en place — jumeau de updateHourTotals(). */
   function updateShiftTotals() {
@@ -1825,6 +2073,7 @@
     const root = window.__kiwiTeamV2;
     root.periodKind = kind;
     root.periodLocked = false;
+    planWeekIdx = weekIdxForToday(buildPeriod(kind).days);   // nouvelle période ⇒ on retombe sur la semaine en cours
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const vt = teamKey(venue);
     const period = buildPeriod(kind);
@@ -1955,33 +2204,87 @@
    * dans la grille des heures réelles, seule à alimenter la paie : le planning
    * ne paie personne tout seul, sinon une semaine prévue mais pas travaillée
    * partirait en salaire. */
+  /* Une case = l'état du jour, lisible sans l'ouvrir : deux heures empilées,
+   * « Repos », ou rien du tout. Le badge +1 dit que le service déborde sur le
+   * lendemain, et le title l'écrit en toutes lettres. */
+  function shiftCellInner(T, cur, locked) {
+    const s = normShift(cur);
+    if (!s) return `<span class="kt-sh-empty">${esc(T.plNone)}</span>`;
+    if (s.off) return `<span class="kt-sh-rest">${esc(T.plRest)}</span>`;
+    const next = shiftIsNextDay(s);
+    return `<span class="kt-sh-t">${esc(s.start)}</span>` +
+      `<span class="kt-sh-t end">${esc(s.end)}${next ? '<i class="kt-sh-next">+1</i>' : ''}</span>`;
+  }
+  function shiftCellTitle(T, cur, dayISO) {
+    const s = normShift(cur);
+    if (!s || s.off) return '';
+    const mins = shiftMinutes(s);
+    if (!shiftIsNextDay(s)) return fmtDur(mins);
+    const nx = addDays(fromISO(dayISO), 1);
+    const lbl = nx.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
+    return `${T.plNextDay(lbl, s.end)} · ${fmtDur(mins)}`;
+  }
+  const dateLocale = () => (trLang() === 'en' ? 'en-US' : trLang() === 'ar' ? 'ar-MA' : 'fr-FR');
+
+  function planCellHtml(T, m, d, cur, locked) {
+    const s = normShift(cur);
+    const isToday = (d === toISO(new Date()));
+    const title = shiftCellTitle(T, cur, d);
+    return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}"
+      data-kt-cell="${esc(m.id)}|${esc(d)}">
+      <button class="kt-sh" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}"
+        ${locked ? 'disabled' : ''}${title ? ` title="${esc(title)}"` : ''}>${shiftCellInner(T, cur, locked)}</button>
+    </td>`;
+  }
+
+  /* Le planning ne glisse plus sous la souris : la grille tient dans la carte.
+   * Colonnes en largeur fixe (table-layout: fixed) et UNE semaine à l'écran —
+   * sur une quinzaine ou un mois, 14 ou 31 colonnes ne rentrent nulle part, on
+   * passe de semaine en semaine au lieu de faire défiler le tableau. Les
+   * totaux, eux, restent ceux de la période entière : c'est exactement ce que
+   * « Reporter sur les heures » ira écrire. */
+  function weekChunks(days) {
+    const out = [];
+    for (let i = 0; i < days.length; i += 7) out.push(days.slice(i, i + 7));
+    return out.length ? out : [[]];
+  }
+  /* Sur « Ce mois », s'ouvrir au 1er juillet quand on est le 25 obligeait à
+   * cliquer quatre fois pour retrouver sa semaine. On ouvre sur aujourd'hui. */
+  function weekIdxForToday(days) {
+    const today = toISO(new Date());
+    const i = days.indexOf(today);
+    return i < 0 ? 0 : Math.floor(i / 7);
+  }
+
   function renderPlanningPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
     const period = buildPeriod(root.periodKind || 'week');
     const shifts = root.shiftsByVenue[venueType] || (root.shiftsByVenue[venueType] = {});
     const locked = root.periodLocked;
-    const lang = trLang();
     let grandH = 0, grandCost = 0;
 
-    const headDays = period.days.map((d) => {
-      const dt = new Date(d);
-      const dayLbl = dt.toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short' });
+    const chunks = weekChunks(period.days);
+    if (planWeekIdx >= chunks.length) planWeekIdx = chunks.length - 1;
+    if (planWeekIdx < 0) planWeekIdx = 0;
+    const view = chunks[planWeekIdx];
+    const multiWeek = chunks.length > 1;
+
+    const headDays = view.map((d) => {
+      const dt = fromISO(d);
+      const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
       return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
     }).join('');
 
+    let anyNextDay = false;
     const rows = members.map((m) => {
       const row = shifts[m.id] || {};
+      /* Le total de la ligne couvre la PÉRIODE, pas la semaine affichée : c'est
+       * le chiffre que les tuiles du haut annoncent et que la paie recevra. */
       let h = 0;
-      const cells = period.days.map((d) => {
-        const cur = row[d] || '';
-        h += shiftHours(cur);
-        const isToday = (d === toISO(new Date()));
-        const opts = [`<option value=""${cur ? '' : ' selected'}>${esc(T.plNone)}</option>`]
-          .concat(SHIFTS.map((s) => `<option value="${s.id}"${cur === s.id ? ' selected' : ''}>${esc(s[lang] || s.fr)}</option>`))
-          .join('');
-        return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${cur && cur !== 'repos' ? ' on' : ''}${cur === 'repos' ? ' off' : ''}">
-          <select data-kt-shift data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''}>${opts}</select>
-        </td>`;
+      period.days.forEach((d) => { h += shiftHours(row[d]); });
+      const cells = view.map((d) => {
+        if (shiftIsNextDay(row[d])) anyNextDay = true;
+        return planCellHtml(T, m, d, row[d], locked);
       }).join('');
       const cost = h * (+m.hourlyRate || 0);
       grandH += h; grandCost += cost;
@@ -2001,6 +2304,16 @@
         </tr>`;
     }).join('');
 
+    const cols = `<colgroup><col class="kt-plan-col-mem">${view.map(() => '<col>').join('')}<col class="kt-plan-col-tot"><col class="kt-plan-col-tot"></colgroup>`;
+    const stepper = multiWeek ? `
+      <div class="kt-plan-step">
+        <button class="kt-plan-arrow" type="button" data-action="kt-plan-week" data-arg="prev"
+          aria-label="${esc(T.plPrevWeek)}" ${planWeekIdx === 0 ? 'disabled' : ''}>‹</button>
+        <span class="kt-plan-steplbl mono">${esc(T.plWeekOf(fmtFr(fromISO(view[0])), fmtFr(fromISO(view[view.length - 1]))))}</span>
+        <button class="kt-plan-arrow" type="button" data-action="kt-plan-week" data-arg="next"
+          aria-label="${esc(T.plNextWeek)}" ${planWeekIdx >= chunks.length - 1 ? 'disabled' : ''}>›</button>
+      </div>` : '';
+
     return `
       <div class="eq-section">
         <div class="eq-section-head">
@@ -2014,14 +2327,16 @@
             <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-plan-apply" ${locked ? 'disabled' : ''}>${svgIcon(IC.check, 13)}<span>${esc(T.plApply)}</span></button>
           </div>
         </div>
-        <p style="margin:0 0 12px; font-size:12.5px; color:var(--n-500);">${esc(T.plHint)}</p>
-        <div class="kt-h-tablewrap">
-          <table class="kt-h-table">
+        <p class="kt-plan-hint">${esc(T.plHint)}</p>
+        ${stepper}
+        <div class="kt-plan-wrap">
+          <table class="kt-h-table kt-plan-table">
+            ${cols}
             <thead>
               <tr>
                 <th class="kt-h-memberhead">${esc(T.plMember)}</th>
                 ${headDays}
-                <th class="kt-h-totalhead">${esc(T.plPlanned)}</th>
+                <th class="kt-h-totalhead">${esc(multiWeek ? T.plPlannedPeriod : T.plPlanned)}</th>
                 <th class="kt-h-totalhead">${esc(T.plCost)}</th>
               </tr>
             </thead>
@@ -2029,13 +2344,14 @@
             <tfoot>
               <tr>
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
-                <td colspan="${period.days.length}"></td>
+                <td colspan="${view.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${grandH.toFixed(2).replace('.', ',')}</b><span>h</span></td>
                 <td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
               </tr>
             </tfoot>
           </table>
         </div>
+        <p class="kt-plan-legend${anyNextDay ? '' : ' is-off'}"><i class="kt-sh-next">+1</i> ${esc(T.plNextDayLegend)}</p>
       </div>`;
   }
 
@@ -2133,19 +2449,116 @@
   /* ═══════════════ SCOPED CSS — only patches what .eq-* doesn't cover ═══════════════ */
   const PAGE_CSS = `
     /* Planning · une cellule = un service. Le fond teinté fait lire la semaine
-       d'un coup d'œil : qui est posté, qui est en repos, quels jours sont vides. */
-    .kt-plan-cell select {
-      width: 100%; min-width: 92px; padding: 6px 4px; border: 1px solid var(--n-200);
-      border-radius: 8px; background: var(--surface); color: var(--ink);
-      font-family: var(--sans); font-size: 11.5px; outline: none; cursor: pointer;
-      transition: border-color 140ms, box-shadow 140ms;
+       d'un coup d'œil : qui est posté, qui est en repos, quels jours sont vides.
+
+       La grille ne défile PAS horizontalement : table-layout fixe + une semaine
+       par écran (voir weekChunks). Un tableau qui glisse sous la souris n'a
+       jamais l'air fini, et une colonne de paie à moitié coupée encore moins. */
+    .dash-equipe .kt-plan-hint { margin: 0 0 12px; font-size: 12.5px; color: var(--n-500); }
+    .dash-equipe .kt-plan-wrap { border: 1px solid var(--n-200); border-radius: 12px; overflow: hidden; background: var(--surface); }
+    .dash-equipe .kt-plan-table { table-layout: fixed; width: 100%; }
+    .dash-equipe .kt-plan-table .kt-plan-col-mem { width: 21%; }
+    .dash-equipe .kt-plan-table .kt-plan-col-tot { width: 10%; }
+    .dash-equipe .kt-plan-table th, .dash-equipe .kt-plan-table td { overflow: hidden; }
+    /* En largeur fixe, le min-width du profil ferait déborder la ligne. */
+    .dash-equipe .kt-plan-table .kt-h-member { min-width: 0; gap: 8px; padding-left: 12px; }
+    .dash-equipe .kt-plan-table .kt-h-member > div { min-width: 0; }
+    .dash-equipe .kt-plan-table .kt-h-member .n,
+    .dash-equipe .kt-plan-table .kt-h-member .r { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dash-equipe .kt-plan-table .kt-h-total, .dash-equipe .kt-plan-table .kt-h-pay { min-width: 0; padding-right: 10px; }
+    .dash-equipe .kt-plan-table .kt-day-cell { padding: 5px 3px; }
+
+    /* Le pas à pas des semaines — visible seulement sur quinzaine / mois. */
+    .dash-equipe .kt-plan-step { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .dash-equipe .kt-plan-arrow {
+      width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--n-200);
+      background: var(--surface); color: var(--ink); font-size: 15px; line-height: 1;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: border-color 140ms, background 140ms;
     }
-    .kt-plan-cell select:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
-    .kt-plan-cell select:disabled { opacity: 0.55; cursor: default; }
+    .dash-equipe .kt-plan-arrow:hover:not(:disabled) { border-color: var(--atlas); background: var(--mint-soft, rgba(11,110,79,0.06)); }
+    .dash-equipe .kt-plan-arrow:disabled { opacity: 0.4; cursor: default; }
+    .dash-equipe .kt-plan-steplbl { font-size: 11px; color: var(--n-600); letter-spacing: 0.02em; }
+
+    /* La case : deux heures empilées, ou « Repos », ou rien. */
+    .dash-equipe .kt-sh {
+      width: 100%; min-height: 42px; padding: 5px 2px; border: 1px solid var(--n-200);
+      border-radius: 8px; background: var(--surface); color: var(--ink);
+      font-family: var(--mono); font-size: 11px; line-height: 1.35; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: border-color 140ms, box-shadow 140ms, background 140ms;
+    }
+    .dash-equipe .kt-sh:hover:not(:disabled) { border-color: var(--atlas); }
+    .dash-equipe .kt-sh:focus-visible { outline: none; border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
+    .dash-equipe .kt-sh:disabled { opacity: 0.55; cursor: default; }
+    .dash-equipe .kt-sh-empty { color: var(--n-400); font-size: 13px; }
+    .dash-equipe .kt-sh-rest { font-family: var(--sans); font-size: 11px; color: var(--n-500); }
+    .dash-equipe .kt-sh-t { display: block; white-space: nowrap; }
+    .dash-equipe .kt-sh-t.end { color: var(--n-600); }
+    /* Pas scopé à .dash-equipe : le même badge sert dans l'éditeur, qui vit
+       sur <body> pour ne jamais être rogné par le tableau. */
+    .kt-sh-next {
+      display: inline-block; margin: 0 2px 0 3px; padding: 0 3px; border-radius: 4px;
+      background: var(--mint-soft, rgba(125,242,176,0.35)); color: var(--atlas);
+      font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 600;
+      vertical-align: 1px; letter-spacing: 0;
+    }
     .kt-plan-cell.on  { background: rgba(11,110,79,0.055); }
     .kt-plan-cell.off { background: var(--paper-soft, rgba(0,0,0,0.025)); }
-    .kt-plan-cell.on select  { border-color: rgba(11,110,79,0.35); font-weight: 500; }
-    .kt-plan-cell.off select { color: var(--n-500); }
+    .dash-equipe .kt-plan-cell.on .kt-sh { border-color: rgba(11,110,79,0.35); font-weight: 500; }
+    .dash-equipe .kt-plan-legend { margin: 10px 0 0; font-size: 11.5px; color: var(--n-500); line-height: 1.5; }
+    .dash-equipe .kt-plan-legend.is-off { display: none; }
+
+    /* Écran étroit : la grille tient toujours (largeurs fixes), mais les heures
+       finissaient rognées à mi-chiffre. On rend au jour ce que la colonne
+       « membre » et le métier peuvent lui céder, et le +1 passe à la ligne. */
+    @media (max-width: 900px) {
+      .dash-equipe .kt-plan-table .kt-plan-col-mem { width: 17%; }
+      .dash-equipe .kt-plan-table .kt-plan-col-tot { width: 9%; }
+      .dash-equipe .kt-plan-table .kt-h-member { gap: 6px; padding-left: 8px; }
+      .dash-equipe .kt-plan-table .kt-h-member .r { display: none; }
+      .dash-equipe .kt-plan-table .kt-day-cell { padding: 4px 1px; }
+      .dash-equipe .kt-sh { font-size: 9.5px; padding: 4px 1px; min-height: 38px; }
+      .dash-equipe .kt-sh-rest { font-size: 9.5px; }
+      .dash-equipe .kt-sh .kt-sh-next { display: block; margin: 1px 0 0; }
+    }
+
+    /* Éditeur de service — ancré sur la case, jamais dans le flux du tableau. */
+    .kt-shpop {
+      position: fixed; z-index: 900; width: 268px; padding: 14px;
+      background: var(--surface, #fff); border: 1px solid var(--n-200);
+      border-radius: 14px; box-shadow: 0 18px 44px rgba(10,15,13,0.18);
+      font-family: var(--sans); color: var(--ink);
+    }
+    .kt-shpop-head { margin-bottom: 11px; }
+    .kt-shpop-head b { display: block; font-size: 13px; }
+    /* « lundi 20 juillet » : en français seule la 1re lettre prend la majuscule
+       — capitalize aurait écrit « Lundi 20 Juillet ». */
+    .kt-shpop-head span { display: block; font-size: 11px; color: var(--n-500); margin-top: 2px; }
+    .kt-shpop-head span::first-letter { text-transform: uppercase; }
+    .kt-shpop-times { display: flex; gap: 8px; }
+    .kt-shpop-times label { flex: 1; min-width: 0; }
+    .kt-shpop-times span { display: block; font-size: 10px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); margin-bottom: 4px; }
+    .kt-shpop-times input {
+      width: 100%; box-sizing: border-box; padding: 8px 9px; border: 1px solid var(--n-200);
+      border-radius: 9px; background: var(--surface); color: var(--ink);
+      font-family: var(--mono); font-size: 13px; outline: none;
+    }
+    .kt-shpop-times input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
+    .kt-shpop-sum { min-height: 17px; margin: 9px 0 2px; font-size: 11.5px; color: var(--n-600); line-height: 1.5; }
+    .kt-shpop-sum b { color: var(--ink); font-size: 12.5px; }
+    .kt-shpop-sum.warn { color: #946100; }
+    .kt-shpop-week { display: flex; align-items: center; gap: 7px; margin: 9px 0 12px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
+    .kt-shpop-week input { width: 14px; height: 14px; accent-color: var(--atlas); cursor: pointer; }
+    .kt-shpop-foot { display: flex; gap: 6px; }
+    .kt-shpop-b {
+      flex: 1; padding: 8px 4px; border-radius: 9px; border: 1px solid var(--n-200);
+      background: var(--surface); color: var(--ink); font-family: var(--sans);
+      font-size: 11.5px; cursor: pointer; transition: border-color 140ms, background 140ms;
+    }
+    .kt-shpop-b:hover { border-color: var(--atlas); }
+    .kt-shpop-b.primary { background: var(--atlas); border-color: var(--atlas); color: var(--paper); font-weight: 500; }
+    .kt-shpop-b.primary:hover { background: var(--riad); border-color: var(--riad); }
 
     /* Search bar */
     .dash-equipe .kt-searchbar { position: relative; }
@@ -2192,7 +2605,16 @@
     /* Fusion-mode overrides for the bits we added */
     body.fusion-mode .dash-equipe .kt-searchbar input,
     body.fusion-mode .dash-equipe .kt-h-tablewrap,
+    body.fusion-mode .dash-equipe .kt-plan-wrap,
+    body.fusion-mode .dash-equipe .kt-sh,
+    body.fusion-mode .dash-equipe .kt-plan-arrow,
+    body.fusion-mode .kt-shpop,
+    body.fusion-mode .kt-shpop-times input,
+    body.fusion-mode .kt-shpop-b,
     body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell input { background: #0F0F0F !important; color: var(--paper); border-color: rgba(125,242,176,0.18) !important; }
+    body.fusion-mode .kt-shpop-b.primary { background: var(--atlas) !important; border-color: var(--atlas) !important; }
+    body.fusion-mode .dash-equipe .kt-sh-t.end,
+    body.fusion-mode .dash-equipe .kt-sh-rest { color: var(--n-400); }
     body.fusion-mode .dash-equipe .kt-h-table thead th,
     body.fusion-mode .dash-equipe .kt-h-table tfoot td { background: rgba(255,255,255,0.04) !important; color: var(--paper); }
     body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-400); }
