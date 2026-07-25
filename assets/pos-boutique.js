@@ -399,6 +399,41 @@
   let avSeq = 2032;
   const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0);
 
+  /* Les avoirs (bons d'achat) d'une VRAIE boutique doivent survivre à un
+     rechargement de la caisse — sinon un bon émis sur un retour disparaît au
+     prochain refresh et la cliente ne peut plus le consommer (perte sèche de
+     crédit magasin). On les range comme le journal du jour (préfixe `kiwi:`,
+     purgé au changement de compte via TENANT_PREFIXES), mais SANS filtre
+     « aujourd'hui » : un bon vit jusqu'à sa consommation ou son expiration.
+     avSeq repart au-delà du dernier code restauré pour ne pas réémettre un code
+     déjà en circulation. La démo reste en mémoire, inchangée. */
+  const AVOIR_KEY = 'kiwi:bqAvoirs';
+  function persistAvoirs() {
+    if (IS_DEMO) return;
+    try {
+      const keep = AVOIRS.filter((a) => a && (a.balance > 0 || (a.until && new Date(a.until) > new Date())));
+      localStorage.setItem(AVOIR_KEY, JSON.stringify(keep));
+    } catch (_) {}
+  }
+  (function restoreAvoirs() {
+    if (IS_DEMO) return;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(AVOIR_KEY) || '[]'); } catch (_) { return; }
+    if (!Array.isArray(saved) || !saved.length) return;
+    let maxSeq = avSeq - 1;
+    saved.forEach((a) => {
+      if (!a || !a.code) return;
+      a.at = a.at ? new Date(a.at) : new Date();
+      a.until = a.until ? new Date(a.until) : null;
+      a.amount = +a.amount || 0;
+      a.balance = +a.balance || 0;
+      AVOIRS.push(a);
+      const n = parseInt(String(a.code).replace(/^\D+/, ''), 10);
+      if (Number.isFinite(n) && n > maxSeq) maxSeq = n;
+    });
+    if (maxSeq >= avSeq) avSeq = maxSeq + 1;   // le prochain bon ne réutilise pas un code déjà restauré
+  })();
+
   /* ───────────────────────── state ───────────────────────── */
   /* Le numéro de ticket porte les initiales de la boutique. « MM » = Maison
      Mansour, la boutique de démo : imprimé tel quel chez un vrai commerçant, il
@@ -1842,6 +1877,7 @@
       from: fromSaleId || null,
     };
     AVOIRS.unshift(av);
+    persistAvoirs();                          // un bon émis doit survivre au rechargement de la caisse
     queueIfOffline(`Avoir ${av.code}`);
     toast(`${av.code} émis, ${fmtMAD(amount)}, pièces remises en stock`);
     renderBadges();
@@ -2283,8 +2319,11 @@
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
-        av.balance -= avp.amount;
-        toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
+        if (av) {                              // garde-fou : un code introuvable (bon d'une autre caisse) ne fait plus planter l'encaissement
+          av.balance -= avp.amount;
+          persistAvoirs();                     // le solde entamé survit au rechargement
+          toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
+        }
       }
       const res = opts.onPaid(parts) || {};
       stepSuccess(parts, res);
