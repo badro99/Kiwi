@@ -74,37 +74,76 @@
    * which is what KiwiEscPos emits — the field is a label for the owner, not a
    * driver, so an unlisted make that speaks ESC/POS works on "Générique".
    * `note` carries a real caveat shown under the picker when that make is
-   * chosen. Deliberately NOT listed: Zebra / TSC / Godex, which are label
-   * printers speaking ZPL / TSPL / EZPL — offering them would promise something
-   * these bytes cannot drive. */
+   * chosen.
+   *
+   * The model families in the labels are the ones actually on sale in Morocco,
+   * taken from the catalogues of Moroccan POS vendors (fournipro.ma, iris.ma,
+   * lepc.ma, posmaroc.ma) rather than from a manufacturer's world range — a
+   * merchant recognises the box on their counter, not the global SKU list.
+   *
+   * `driver` is the make's own driver/support page, and it is a FALLBACK, not
+   * the happy path: over Bluetooth, USB or the bridge, Kiwi pushes ESC/POS
+   * bytes itself and no driver is involved at all. It matters in exactly two
+   * places — printing labels through the browser/Windows driver route (see
+   * LABEL_SIZES above), and Windows refusing a WebUSB claim until the printer
+   * has a WinUSB-flavoured driver (see the usb transport below). Every URL here
+   * was fetched and confirmed live; a make with no reachable official download
+   * page deliberately carries no link rather than a plausible dead one. */
   var MODELS = [
     { id: 'escpos', label: 'Générique (ESC/POS)' },
-    { id: 'epson', label: 'Epson' },
-    { id: 'xprinter', label: 'Xprinter' },
-    { id: 'sunmi', label: 'Sunmi' },
-    { id: 'rongta', label: 'Rongta' },
-    { id: 'bixolon', label: 'Bixolon' },
-    { id: 'hprt', label: 'HPRT' },
-    { id: 'citizen', label: 'Citizen' },
-    { id: 'goojprt', label: 'Goojprt' },
-    { id: 'munbyn', label: 'Munbyn' },
-    { id: 'gainscha', label: 'Gainscha' },
-    { id: 'zjiang', label: 'Zjiang (ZJ)' },
-    { id: 'snbc', label: 'SNBC' },
-    { id: 'sprt', label: 'SPRT' },
-    { id: 'posiflex', label: 'Posiflex' },
+    { id: 'epson', label: 'Epson (TM-T20 / TM-T88 / TM-U220)',
+      driver: 'https://download-center.epson.com/' },
+    { id: 'xprinter', label: 'Xprinter (XP-58 / XP-80)',
+      driver: 'https://www.xprinter.net/' },
+    { id: 'sunmi', label: 'Sunmi',
+      note: 'Les Sunmi sont des terminaux Android à imprimante intégrée : l\'impression passe par le terminal, il n\'y a pas de pilote Windows à installer.',
+      driver: 'https://www.sunmi.com/' },
+    { id: 'rongta', label: 'Rongta', driver: 'https://www.rongtatech.com/download/' },
+    { id: 'bixolon', label: 'Bixolon (SRP)', driver: 'https://bixolonusa.com/support/downloads/' },
+    { id: 'hprt', label: 'HPRT', driver: 'https://download.hprt.com/Downloads/' },
+    { id: 'citizen', label: 'Citizen (CT-E351 / CT-S851)',
+      driver: 'https://www.citizen-systems.com/en/support/drivers-and-tools/' },
+    /* Vendu au Maroc surtout en portable Bluetooth (MTP-3F, PT-210). Pas de
+     * page de téléchargement officielle joignable — d'où l'absence de lien. */
+    { id: 'goojprt', label: 'Goojprt (MTP-3F / PT-210)',
+      note: 'Goojprt ne publie pas de page de téléchargement officielle joignable. Ces modèles sont de l\'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n\'est nécessaire.' },
+    { id: 'munbyn', label: 'Munbyn',
+      driver: 'https://support.munbyn.com/hc/en-us/articles/6092502480787-Printer-Drivers-SDK-Download' },
+    { id: 'gainscha', label: 'Gainscha (GA-E200i)', driver: 'https://www.gainscha.com.tw/download' },
+    { id: 'zjiang', label: 'Zjiang (ZJ)',
+      note: 'Zjiang ne publie pas de page de téléchargement officielle joignable. Ces imprimantes sont de l\'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n\'est nécessaire.' },
+    { id: 'snbc', label: 'SNBC (BTP)',
+      note: 'SNBC ne publie pas de page de téléchargement officielle joignable depuis le Maroc. En Bluetooth ou en USB, aucun pilote n\'est nécessaire.' },
+    { id: 'sprt', label: 'SPRT', driver: 'https://www.sprt-printer.com/download/' },
+    { id: 'posiflex', label: 'Posiflex (Aura)', driver: 'https://download.posiflex.com/' },
     { id: 'nexa', label: 'Nexa' },
     { id: 'milestone', label: 'Milestone' },
-    /* First Kiwi client's hardware. WD8260 (reçus, 80 mm, USB + LAN) déclare
-     * "Command Support: ESC/POS" sur sa plaque, donc il marche tel quel, tiroir
-     * 24 V compris. WD8210 (étiquettes, 110 mm, USB + Bluetooth) ne déclare PAS
-     * son langage : beaucoup d'imprimantes d'étiquettes parlent TSPL et non
-     * ESC/POS. À vérifier par un ticket test avant de compter dessus. */
-    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué — beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.' },
-    { id: 'star', label: 'Star', note: 'Les Star impriment en mode Star Line, pas en ESC/POS. Activez l\'émulation ESC/POS sur l\'imprimante, sinon le ticket sortira illisible.' },
+    /* First Kiwi client's hardware — et pas un cas isolé : posmaroc.ma vend
+     * toute la gamme (WD8260, WD8210, WD9800, WD980, tiroir WD0408), donc
+     * c'est le distributeur à indiquer plutôt qu'un site constructeur.
+     * WD8260 (reçus, 80 mm, USB + LAN) déclare "Command Support: ESC/POS" sur
+     * sa plaque, donc il marche tel quel, tiroir 24 V compris. WD8210
+     * (étiquettes, 110 mm, USB + Bluetooth) ne déclare PAS son langage :
+     * beaucoup d'imprimantes d'étiquettes parlent TSPL et non ESC/POS.
+     * À vérifier par un ticket test avant de compter dessus. */
+    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué — beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.',
+      driver: 'https://posmaroc.ma/' },
+    { id: 'star', label: 'Star', note: 'Les Star impriment en mode Star Line, pas en ESC/POS. Activez l\'émulation ESC/POS sur l\'imprimante, sinon le ticket sortira illisible.',
+      driver: 'https://starmicronics.com/support/downloads/' },
+    /* Listé pour DIRE qu'on ne le pilote pas. Zebra est la marque d'étiquettes
+     * la plus vendue au Maroc (ZQ220 / ZQ310 / ZQ320 chez lepc.ma, posmaroc.ma,
+     * fournipro.ma, iris.ma) et elle parle ZPL, pas ESC/POS. Sans cette entrée
+     * le commerçant choisit « Générique » et sort une étiquette illisible sans
+     * comprendre pourquoi : l'avertissement vaut mieux que le silence. */
+    { id: 'zebra', label: 'Zebra (ZQ / ZD) — étiquettes', note: 'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).',
+      driver: 'https://www.zebra.com/us/en/support-downloads/printers.html' },
   ];
   function modelNote(id) {
     for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i].note || '';
+    return '';
+  }
+  function modelDriver(id) {
+    for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i].driver || '';
     return '';
   }
 
@@ -440,7 +479,11 @@
       '.kpr-adv>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--riad,#053B2C);opacity:.82;}' +
       '.kpr-adv[open]>summary{margin-bottom:14px;}' +
       '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
-      '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}';
+      '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
+      /* Sans ça les liens d'une note (« Télécharger le pont », la page de pilote)
+       * sortent du même gris que le texte autour et ne se lisent pas comme des
+       * liens — le commerçant ne clique pas ce qu'il ne voit pas. */
+      '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}';
     document.head.appendChild(s);
   }
 
@@ -492,7 +535,15 @@
             '<div class="kpr-field"><label for="kpr-label">Format d\'étiquette</label><select id="kpr-label">' + labelOptions(cfg.label) + '</select></div>' +
           '</div>' +
           '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
-            '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p></div>' +
+            '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p>' +
+            /* Le pilote ne sert PAS aux trois transports de Kiwi (Bluetooth, USB,
+             * pont) : il sert à imprimer les étiquettes via le pilote Windows, et
+             * à débloquer un refus de claim WebUSB. Le libellé le dit, pour ne pas
+             * envoyer le commerçant installer un pilote dont il n'a pas besoin. */
+            '<p class="kpr-note" id="kpr-model-driver" style="margin-top:6px;' + (modelDriver(cfg.model) ? '' : 'display:none;') + '">' +
+              'Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) : ' +
+              '<a id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
+            '</p></div>' +
           '<div class="kpr-actions">' +
             '<button class="kpr-btn kpr-test" type="button" id="kpr-test" disabled>Imprimer un ticket test</button>' +
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
@@ -606,12 +657,23 @@
       });
     }
 
-    // Model caveats (Star emulation, WD8210 language) surface as they're picked.
+    // Model caveats (Star emulation, WD8210 language, Zebra = ZPL) and the make's
+    // driver page surface as they're picked.
     $('#kpr-model').addEventListener('change', function () {
-      var el = $('#kpr-model-note'); if (!el) return;
-      var n = modelNote(this.value);
-      el.textContent = n;
-      el.style.display = n ? '' : 'none';
+      var el = $('#kpr-model-note');
+      if (el) {
+        var n = modelNote(this.value);
+        el.textContent = n;
+        el.style.display = n ? '' : 'none';
+      }
+      var dp = $('#kpr-model-driver'), da = $('#kpr-model-driver-a');
+      if (dp && da) {
+        var d = modelDriver(this.value);
+        // href, jamais innerHTML : l'URL vient de MODELS, mais on garde le même
+        // réflexe que partout ailleurs dans ce fichier.
+        if (d) da.setAttribute('href', d);
+        dp.style.display = d ? '' : 'none';
+      }
     });
 
     // ── Network bridge (advanced): test targets the bridge explicitly ──
