@@ -1382,6 +1382,20 @@
       inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas — c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
       otherShop: 'Je ne vois que votre établissement, et c’est délibéré : les données d’un autre commerçant ne transitent pas par cet écran. Pour vos propres chiffres, demandez-les moi directement.',
       calcErr: 'Ce calcul n’a pas de résultat : une division par zéro, ou une expression que je ne sais pas lire. Réécrivez-la et je la refais.',
+      /* ─ une journée ─ */
+      dayText: (d) => `Votre journée du <b>${d}</b>, telle qu’elle est passée en caisse :`,
+      dayRev: 'Encaissé', dayRevH: (n) => `${n} vente${n > 1 ? 's' : ''} enregistrée${n > 1 ? 's' : ''}`,
+      dayBasket: 'Panier moyen', dayBasketH: 'sur cette journée',
+      dayPrev: 'La veille', dayNone: 'aucune vente',
+      dayAvg: 'Moyenne /jour', dayAvgH: (n) => `sur vos ${n} jours enregistrés`,
+      dayVUp: (p) => `Journée ${p} % au-dessus de votre moyenne. Une bonne journée isolée ne fait pas un mois : c’est sa répétition qui compte.`,
+      dayVDown: (p) => `Journée ${p} % sous votre moyenne. Un jour creux est normal ; s’il retombe chaque semaine sur le même jour, c’est une question d’horaires, pas une mauvaise passe.`,
+      dayNote: 'Je ne compte que ce qui est passé en caisse Kiwi : une vente non enregistrée n’apparaît pas ici.',
+      dayNoteToday: 'La journée n’est pas finie — ce chiffre bougera encore d’ici la fermeture.',
+      dayZero: (d) => `Aucune vente enregistrée le ${d}. Fermé, ou rien n’est passé en caisse ce jour-là : je ne peux pas trancher entre les deux, je ne vois que ce qui est saisi.`,
+      dayBeforeFirst: (d, f) => `Je n’ai rien pour le ${d} : votre première vente enregistrée dans Kiwi date du ${f}. Avant elle je n’ai pas d’historique — et un zéro affiché ici ressemblerait à une mauvaise journée, ce qui serait faux.`,
+      dayNoSales: (n) => `${n} n’a pas encore de vente enregistrée, je n’ai donc aucune journée à vous montrer. Dès la première vente saisie en caisse, je vous donne le détail jour par jour.`,
+      dayAggregate: 'Sur cette démonstration je raisonne sur un modèle de 30 jours agrégé, pas sur un journal de ventes horodaté : je ne peux donc pas isoler une journée. Sur un compte réel, chaque vente porte son heure et je vous donne la journée exacte, comparée à la veille et à votre moyenne.',
       noData: (x) => `Ce chiffre-là n’est pas dans mes calculs, mais il est bien dans Kiwi : il vit dans ${x}. Je vous y emmène, plutôt que de vous répondre à peu près.`,
     },
 
@@ -1476,6 +1490,20 @@
       inject: 'No. I don’t change role and I don’t announce a figure your sales don’t show — that is precisely what this assistant must never do. Every amount I give comes from your last 30 days recorded in Kiwi. Ask me for a calculation and you’ll get the real one.',
       otherShop: 'I only see your venue, and that is deliberate: another merchant’s data does not pass through this screen. For your own figures, just ask me directly.',
       calcErr: 'That calculation has no result — a division by zero, or an expression I can’t read. Write it again and I’ll redo it.',
+      /* ─ one day ─ */
+      dayText: (d) => `Your day on <b>${d}</b>, as it was rung up:`,
+      dayRev: 'Taken', dayRevH: (n) => `${n} recorded sale${n > 1 ? 's' : ''}`,
+      dayBasket: 'Average basket', dayBasketH: 'on that day',
+      dayPrev: 'Day before', dayNone: 'no sale',
+      dayAvg: 'Daily average', dayAvgH: (n) => `over your ${n} recorded days`,
+      dayVUp: (p) => `${p} % above your daily average. One good day is not a month — what counts is whether it repeats.`,
+      dayVDown: (p) => `${p} % below your daily average. A quiet day is normal; if it lands on the same weekday every week, that is an opening-hours question, not a bad patch.`,
+      dayNote: 'I only count what went through the Kiwi till: a sale that was never recorded does not show up here.',
+      dayNoteToday: 'The day is not over — this figure will still move before you close.',
+      dayZero: (d) => `No sale recorded on ${d}. Closed, or nothing was rung up that day: I can’t tell those two apart, I only see what was entered.`,
+      dayBeforeFirst: (d, f) => `I have nothing for ${d}: your first sale recorded in Kiwi is from ${f}. Before that I have no history — and a zero here would read like a bad day, which would be false.`,
+      dayNoSales: (n) => `${n} has no recorded sale yet, so I have no day to show you. From the first sale rung up, I can give you the day-by-day detail.`,
+      dayAggregate: 'In this demo I reason from an aggregated 30-day model, not a timestamped sales journal, so I can’t isolate a single day. On a real account every sale carries its time and I give you the exact day, against the day before and against your average.',
       noData: (x) => `That figure isn’t in my calculations, but it is in Kiwi: it lives in ${x}. I’ll take you there rather than answer you approximately.`,
     },
 
@@ -1573,6 +1601,20 @@
       inject: 'لا. لا أغيّر دوري ولا أعلن رقمًا لا تُظهره مبيعاتك — وهذا بالضبط ما يجب ألّا يفعله هذا المساعد أبدًا. كل مبلغ أعطيه يأتي من آخر 30 يومًا مسجّلة في Kiwi. اطلب مني حسابًا وستحصل على الحقيقي.',
       otherShop: 'لا أرى إلا محلّك، وهذا مقصود: بيانات تاجر آخر لا تمرّ عبر هذه الشاشة. أما أرقامك أنت، فاطلبها مني مباشرة.',
       calcErr: 'هذا الحساب بلا نتيجة: قسمة على صفر، أو تعبير لا أستطيع قراءته. أعد كتابته وأعيد حسابه.',
+      /* ─ يوم واحد ─ */
+      dayText: (d) => `يومك <b>${d}</b>، كما مرّ في الصندوق:`,
+      dayRev: 'المقبوض', dayRevH: (n) => `${n} ${n === 1 ? 'عملية بيع مسجّلة' : n <= 10 ? 'عمليات بيع مسجّلة' : 'عملية بيع مسجّلة'}`,
+      dayBasket: 'متوسط السلة', dayBasketH: 'في هذا اليوم',
+      dayPrev: 'اليوم السابق', dayNone: 'لا بيع',
+      dayAvg: 'المعدّل اليومي', dayAvgH: (n) => `على ${n} ${n <= 10 ? 'أيام مسجّلة' : 'يوماً مسجّلاً'}`,
+      dayVUp: (p) => `يوم أعلى بـ ${p} % من معدّلك. يوم جيّد واحد لا يصنع شهراً — المهم أن يتكرّر.`,
+      dayVDown: (p) => `يوم أقل بـ ${p} % من معدّلك. اليوم الضعيف عادي؛ لكن إن تكرّر في نفس يوم الأسبوع فالمسألة مسألة توقيت عمل، لا فترة سيّئة.`,
+      dayNote: 'لا أحتسب إلا ما مرّ في صندوق Kiwi: البيع غير المسجّل لا يظهر هنا.',
+      dayNoteToday: 'اليوم لم ينتهِ بعد — هذا الرقم سيتحرّك إلى حين الإغلاق.',
+      dayZero: (d) => `لا عملية بيع مسجّلة يوم ${d}. إمّا كنت مغلقاً، وإمّا لم يمرّ شيء في الصندوق ذلك اليوم: لا أستطيع الحسم بينهما، لا أرى إلا ما سُجّل.`,
+      dayBeforeFirst: (d, f) => `ليس لديّ شيء عن ${d}: أول عملية بيع مسجّلة في Kiwi تعود إلى ${f}. قبلها لا تاريخ لديّ — وصفر معروض هنا سيبدو كيوم سيّئ، وذلك غير صحيح.`,
+      dayNoSales: (n) => `${n} ليس لديه بعد أي عملية بيع مسجّلة، فلا يوم لأعرضه عليك. من أول عملية بيع في الصندوق، أعطيك التفصيل يوماً بيوم.`,
+      dayAggregate: 'في هذا العرض التوضيحي أعتمد نموذجاً مجمّعاً على 30 يوماً، لا سجلّ مبيعات موقّتاً، فلا أستطيع عزل يوم بعينه. في حساب حقيقي تحمل كل عملية بيع ساعتها، فأعطيك اليوم بالضبط، مقارناً باليوم السابق وبمعدّلك.',
       noData: (x) => `هذا الرقم ليس ضمن حساباتي، لكنه موجود في Kiwi: يوجد في ${x}. سآخذك إليه بدل أن أجيبك تقريبًا.`,
     },
   };
@@ -1696,6 +1738,91 @@
       note: t.goalNote,
       follow: [tr().chips.price5, tr().chips.breakeven],
     };
+  }
+
+  /* ─── ONE NAMED DAY ─────────────────────────────────────────────────────
+   * Every sale the merchant records carries a timestamp — the dashboard's own
+   * range pills read them day by day — so "hier" is a window we hold, not a
+   * comparison across periods we don't. It sat inside TREND_RX all the same,
+   * so « un brief pour hier » came back « je ne peux pas comparer deux
+   * périodes ». The unguarded half was the dangerous one: "combien j'ai fait
+   * aujourd'hui" fell through to the revenue intent and answered with the
+   * WHOLE ledger — 2 700 MAD for a day that had taken 200. */
+  const DAY_MS = 864e5;
+  function ledger() {
+    try {
+      const KV = window.KiwiVenue;
+      const vid = (KV && KV.getVenue) ? KV.getVenue() : null;
+      const rows = (window.KiwiSales && window.KiwiSales.list) ? window.KiwiSales.list(vid) : null;
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+  function windowStats(from, to) {
+    let revenue = 0, count = 0;
+    ledger().forEach((e) => {
+      const ts = +((e && e.ts) || 0);
+      if (!ts || ts < from || ts >= to) return;
+      revenue += Math.max(0, +e.amount || 0); count++;
+    });
+    return { revenue, count, basket: count ? revenue / count : 0 };
+  }
+  function firstSaleTs() {
+    let min = Infinity;
+    ledger().forEach((e) => { const ts = +((e && e.ts) || 0); if (ts && ts < min) min = ts; });
+    return isFinite(min) ? min : null;
+  }
+  function midnight(offset) {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    return d.getTime() - (offset || 0) * DAY_MS;
+  }
+  const DATE_LOC = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+  function dateLabel(ts) {
+    try {
+      return new Date(ts).toLocaleDateString(DATE_LOC[L] || 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch (_) { return new Date(ts).toLocaleDateString('fr-FR'); }
+  }
+
+  /* One day, read from the ledger. Four honest dead ends come before any
+   * number: the demo model carries no timestamps at all, a new merchant has no
+   * sales, a day that predates the first recorded sale is not a zero day, and a
+   * genuine zero day is stated as "nothing was rung up" rather than dressed up
+   * as a result. */
+  function sDay(spec) {
+    const t = xt();
+    const from = midnight(spec.offset), to = from + DAY_MS;
+    const label = dateLabel(from);
+    if (!B.partial) return { text: t.dayAggregate, follow: [tr().chips.forecast, tr().chips.breakeven] };
+    const first = firstSaleTs();
+    if (first == null) return { text: t.dayNoSales(escHtml(B.name)) };
+    if (to <= first) return { text: t.dayBeforeFirst(label, dateLabel(first)) };
+    const firstDay = midnight(0) - Math.round((midnight(0) - new Date(first).setHours(0, 0, 0, 0)) / DAY_MS) * DAY_MS;
+    const spanDays = Math.max(1, Math.round((midnight(0) - firstDay) / DAY_MS) + 1);
+    const avg = windowStats(firstDay, Infinity).revenue / spanDays;
+    const cur = windowStats(from, to);
+    const prev = windowStats(from - DAY_MS, from);
+    const prevStat = { l: t.dayPrev, v: prev.count ? fmtMad(prev.revenue) : t.dayNone, h: dateLabel(from - DAY_MS) };
+    const avgStat = { l: t.dayAvg, v: fmtMad(avg), h: t.dayAvgH(spanDays) };
+    if (!cur.count) {
+      return { text: t.dayZero(label), stats: [prevStat, avgStat], note: t.dayNote, follow: [tr().chips.forecast, tr().chips.breakeven] };
+    }
+    const r = {
+      text: t.dayText(label),
+      stats: [
+        { l: t.dayRev, v: fmtMad(cur.revenue), h: t.dayRevH(cur.count) },
+        { l: t.dayBasket, v: fmtMad(cur.basket), h: t.dayBasketH },
+        prevStat,
+        avgStat,
+      ],
+      note: spec.offset === 0 ? t.dayNoteToday : t.dayNote,
+      follow: [tr().chips.forecast, tr().chips.breakeven],
+    };
+    if (avg > 0) {
+      const delta = (cur.revenue - avg) / avg * 100;
+      r.verdict = delta >= 0
+        ? { tone: 'good', text: t.dayVUp(fmt1(delta)) }
+        : { tone: 'warn', text: t.dayVDown(fmt1(-delta)) };
+    }
+    return r;
   }
 
   /* Stock and clients are the two questions the agent used to punt on while
@@ -2112,6 +2239,54 @@
    * 1,2 Go download. Anything that asks ABOUT the stock belongs here: worst
    * case the scenario says the catalogue is empty and opens the page. */
   const STOCK_RX = /\bstocks?\b|\bstok\b|\binventair(?:e|es)?\b|\binventory\b|\bmarchandise\b|\bruptures?\b|\bepuise?e?s?\b|\breferences?\b|\bout\s+of\s+stock\b|\bon\s+hand\b|\bgoods\b|how\s+many\s+items|\blow\s+stock\b|combien\s+d[' ]?articles?\b|\barticles?\s+(?:restant|dispo|en\s+stock)\b|المخزون|مخزون|ستوك|بضاعة|جرد|نفد|المنتجات\s*الناقصة/;
+  /* A day word alone is not a question about the till — "il pleut aujourd'hui"
+   * and "qui travaille aujourd'hui" are not — so the message must also carry a
+   * takings or report word. "fait" is deliberately not free-standing: "il fait
+   * beau aujourd'hui" is the weather. A question about the client book keeps
+   * its own route. */
+  const DAY_ASK_RX = /\bbrief\w*|\bdebrief\b|\brecap\w*|\bresume\b|\bbilan\b|\bjournee\b|\bsummary\b|\breport\b|\bventes?\b|\bsales\b|\bchiffre\b|\brecette\b|\bcaisse\b|encaiss\w*|gagn\w*|\b(?:ai|a|avons|ont)\s+fait\b|\bfait\s+combien\b|\bmade\b|\btook\b|\btakings\b|\brevenue\b|\bturnover\b|\bcommandes?\b|\borders?\b|\bpanier\b|\btickets?\b|comment\s+(?:c[' ]?)?(?:etait|ca\s+s[' ]?est\s+passe|s[' ]?est\s+passee?)|\bca\s+a\s+(?:donne|marche)\b|how\s+(?:did|was|much)\b|مبيعات|دخل|ربح|شحال|(?:^|\s)كم(?=\s)|حصيلة|ملخص|كيف\s*كان|بعت/;
+  const DAY_TODAY_RX = /\baujourd[' ]?hui\b|\btoday\b|\bdu\s+jour\b|\b(?:de\s+la|ma|cette)\s+journee\b|\bce\s+jour\b|daily\s+(?:brief|recap|summary|report)|اليوم/;
+  const DAY_YEST_RX = /\bhier\b|\byesterday\b|البارحة|البارح|لبارح|(?:^|\s)امس(?=$|\s|\?)|\blbare7\b|\blbareh\b/;
+  const DAY_PREV2_RX = /\bavant[- ]?hier\b|day\s+before\s+yesterday|اول\s*امس/;
+  const WEEKDAY_RX = [
+    { rx: /\bdimanche\b|\bsunday\b|الاحد/, dow: 0 },
+    { rx: /\blundi\b|\bmonday\b|الاثنين/, dow: 1 },
+    { rx: /\bmardi\b|\btuesday\b|الثلاثاء/, dow: 2 },
+    { rx: /\bmercredi\b|\bwednesday\b|الاربعاء/, dow: 3 },
+    { rx: /\bjeudi\b|\bthursday\b|الخميس/, dow: 4 },
+    { rx: /\bvendredi\b|\bfriday\b|الجمعة/, dow: 5 },
+    { rx: /\bsamedi\b|\bsaturday\b|السبت/, dow: 6 },
+  ];
+  /* A day typed on its own IS the question. Politeness and wrappers are not
+   * content: "hier svp", "peux-tu me dire hier" and "hier 🙏" all ask the same
+   * thing as "hier". */
+  const DAY_ONLY_RX = /aujourd[' ]?hui|today|avant[- ]?hier|hier|yesterday|البارحة|البارح|امس|اليوم/g;
+  const DAY_FILLER_RX = /\b(?:et|alors|donc|ok|le|la|les|l|de|du|des|svp|stp|s[' ]?il\s+vous\s+plait|please|merci|thanks?|peux[- ]?tu\s+me\s+dire|dis[- ]?moi|tell\s+me|give\s+me|show\s+me|montre[- ]?moi|pour|for)\b/g;
+  function bareDay(q) {
+    if (!/aujourd[' ]?hui|today|hier|yesterday|البارح|امس|اليوم/.test(q)) return false;
+    return q.replace(DAY_ONLY_RX, ' ').replace(DAY_FILLER_RX, ' ').replace(/[^a-z0-9؀-ۿ]+/g, '') === '';
+  }
+  function namedDay(q) {
+    if (CLIENTS_RX.test(q)) return null;
+    const offset = DAY_PREV2_RX.test(q) ? 2 : DAY_YEST_RX.test(q) ? 1 : DAY_TODAY_RX.test(q) ? 0 : null;
+    if (offset == null) return null;
+    if (DAY_ASK_RX.test(q) || bareDay(q)) return { offset };
+    /* "venets d'hier" — the day word survived the typo, the takings word did
+     * not. Correct once here, or the trend guard refuses a question we can
+     * read: it owns "hier" and runs long before the corrector does. */
+    const f = fuzz(q);
+    return (f !== q && DAY_ASK_RX.test(f)) ? { offset } : null;
+  }
+  /* "les ventes de samedi" — the most recent Saturday, today included. The
+   * reply names the date, so there is nothing to guess about WHICH Saturday.
+   * Two weekdays in one message is a comparison, not a day: left alone. */
+  function namedWeekday(q) {
+    if (!DAY_ASK_RX.test(q) || CLIENTS_RX.test(q)) return null;
+    const hit = WEEKDAY_RX.filter((w) => w.rx.test(q));
+    if (hit.length !== 1) return null;
+    return { offset: (new Date(midnight(0)).getDay() - hit[0].dow + 7) % 7 };
+  }
+
   const CLIENTS_RX = /clients?\b[^?]{0,20}\b(?:revien|reviennent|fidel|reguli)|combien\s+(?:de\s+)?(?:\w+\s+){0,2}clients?\b|\b(?:mes|nos|my|our)\s+(?:\w+\s+){0,2}clients?\b|clients?\s+fidel|fichier\s+client|fidelisation|taux\s+de\s+retour|repeat\s+customers?|returning\s+customers?|\bretention\b|how\s+many\s+(?:\w+\s+){0,2}(?:clients|customers)|loyal\s+customers?|\bvip\s+(?:clients?|customers?)\b|customers?\s+(?:come\s+back|return)|\bzbon\b|\bzbayn\b|\bzbnaji\b|زبنا|زبون|الزبناء/;
   /* …but "puis-je investir 80 000 dans du stock" is an investment question
    * that merely names stock. An affordability verb with a real amount wins. */
@@ -2454,8 +2629,16 @@
     if (act) return { kind: 'action', raw, q, action: act };
     if (META_RX.test(q)) return { kind: 'meta', raw, q };
     if (LAYOFF_RX.test(q)) return { kind: 'layoff', raw, q };
+    /* Ahead of TREND_RX, which owns "hier" and "yesterday" and would refuse
+     * them as a comparison across periods. */
+    const dNear = namedDay(q);
+    if (dNear) return { kind: 'day', raw, q, day: dNear };
     if (TREND_RX.test(q)) return { kind: 'notrend', raw, q };
     if (EXTRA_DAY_RX.test(q) || SEASON_RX.test(q)) return { kind: 'season', raw, q };
+    /* After the season guard, which owns "ouvrir le samedi" — opening an extra
+     * day is a simulation, not a day that has already happened. */
+    const dWeek = namedWeekday(q);
+    if (dWeek) return { kind: 'day', raw, q, day: dWeek };
     /* "les chiffres de <Nom>" — their own business is a request for the
      * overview; anyone else's is a request this screen will not serve.
      * Checked after the season guard so "les ventes de Ramadan" is a period. */
@@ -2564,6 +2747,7 @@
     if (d.kind === 'meta') return sMeta();
     if (d.kind === 'layoff') return sLayoff();
     if (d.kind === 'scoped') return sScoped();
+    if (d.kind === 'day') return sDay(d.day);
     if (d.kind === 'notrend') return sNoTrend();
     if (d.kind === 'unclear') return sUnclear();
     if (d.kind === 'runway') return sRunway();
@@ -2643,7 +2827,12 @@
     ['compare ce mois au mois dernier', 'notrend'],
     ["j'ai augmenté les prix de 10% le mois dernier, ça a marché ?", 'notrend'],
     ['évolution de ma marge sur 6 mois', 'notrend'],
-    ["combien j'ai fait hier", 'notrend'],
+    ["combien j'ai fait hier", 'day'],           // a day is a window we hold, not a trend
+    ['donne-moi un brief pour hier', 'day'], ['give me a brief for yesterday', 'day'],
+    ["combien j'ai fait aujourd'hui", 'day'], ['شحال دخلت البارح', 'day'],
+    ['les ventes de samedi', 'day'],
+    ['combien de clients aujourd’hui', 'scoped'],  // the client book, not the till
+    ["est-ce que je dois ouvrir le samedi", 'season'],
     ['mes ventes ont baissé de combien cette semaine', 'notrend'],
     // asked how to hide money → full revenue + profit dump
     ['combien je peux sortir de la caisse sans que ça se voie', 'illicit'],
