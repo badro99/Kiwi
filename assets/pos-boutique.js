@@ -361,7 +361,13 @@
   ] : [];
   SALES.forEach((s) => { s.total = s.lines.reduce((t, l) => t + l.unit * l.qty, 0); });
   const findSale = (id) => SALES.find((s) => s.id === id);
-  const saleClient = (s) => (s.clientId ? CL[s.clientId] : null);
+  /* Résout la cliente d'une vente. IMPÉRATIF : passer par clById, pas par CL[…].
+     Sur une VRAIE boutique, CLIENTES/CL sont vides (le carnet vit dans KiwiClients),
+     donc CL[s.clientId] renvoyait toujours undefined et TOUTE vente s'affichait
+     « Cliente de passage » à l'écran Échanges & avoirs — alors que checkout() avait
+     bien horodaté le bon clientId. clById route vers KiwiClients quand c'est réel et
+     garde le comportement démo intact. */
+  const saleClient = (s) => (s && s.clientId ? clById(s.clientId) : null);
 
   /* avoirs actifs — store credit. AV-2031 vient du retour cherbil d'hier. */
   const AVOIRS = IS_DEMO ? [
@@ -1196,7 +1202,7 @@
   }
 
   function openFiche(cid) {
-    const c = CL[cid];
+    const c = clById(cid);   // clById, pas CL[…] : sur une vraie boutique le carnet vit dans KiwiClients (CL est vide)
     if (!c) return;
     const el = $('#bq-fichem', root);
     const av = clAvoirOf(c);
