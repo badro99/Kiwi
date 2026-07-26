@@ -256,6 +256,17 @@ export async function entitledMerchant(request, env, asked, opts) {
   if (opts && opts.allowTill && asked) {
     try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
   }
+  /* God mode, BEFORE the account session — the console is opened from a browser
+   * that is normally ALSO signed in as a merchant (the site gate admits real
+   * accounts), and with the session first that account won every time: "Ouvrir
+   * dashboard" on any client polled the OPERATOR's own store, so every client's
+   * En Direct feed and KPIs showed the operator's takings. The doc above always
+   * promised "operator → whatever was asked"; only the ordering said otherwise.
+   * Not a widening: isOperator() is a signed cookie, so a plain merchant still
+   * falls through to the session branch and can still only reach its own shops. */
+  if (asked) {
+    try { if (await isOperator(request, env)) return asked; } catch (_) {}
+  }
   try {
     const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
     if (sess && sess.aid && env.DB) {

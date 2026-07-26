@@ -2,18 +2,21 @@
 //
 // Two callers, both server-authoritative (never trust a query param on its own):
 //
-//   1. A real merchant, signed in with their own session cookie. The account is
+//   1. The operator (God mode) scoped into a client via ?merchant=slug. This
+//      cross-account read is unlocked ONLY by a valid operator cookie (kiwi_op /
+//      staff gate); a caller without one gets nothing back for the param and
+//      falls through to case 2. Returns the scoped client's identity + business
+//      type so the dashboard can show THAT client (not the demo "Rachid" /
+//      "Café Atlas"), with operator:true so the client-side knows it's a God-mode
+//      view. authenticated reflects whether an account exists for the slug yet.
+//
+//   2. A real merchant, signed in with their own session cookie. The account is
 //      derived from the signed cookie only, so a caller can only ever read
 //      themselves → { authenticated:true, scoped:false, name, business, email }.
 //
-//   2. The operator (God mode) scoped into a client via ?merchant=slug. This
-//      cross-account read is unlocked ONLY by a valid operator cookie (kiwi_op /
-//      staff gate); a plain merchant never reaches here (it returned in step 1)
-//      and a client without an operator cookie gets nothing back for the param.
-//      Returns the scoped client's identity + business type so the dashboard can
-//      show THAT client (not the demo "Rachid" / "Café Atlas"), with operator:true
-//      so the client-side knows it's a God-mode view. authenticated reflects
-//      whether an account actually exists for the slug yet.
+// Case 1 is checked FIRST: the operator console is opened from a browser that is
+// usually also signed in as a merchant, and with the session first that account
+// answered every scoped request — see the note at the branch.
 //
 // Anything else → { authenticated:false } and the caller leaves the demo identity
 // in place. No DB / not configured (static host) ⇒ also false. Never cached.
@@ -111,7 +114,44 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ authenticated: false });
 
-  // 1) Real merchant session — can only ever read itself.
+  // 1) Operator (God mode) scoped into a client via ?merchant=slug.
+  //
+  // Checked BEFORE the account session on purpose. The console is opened from a
+  // browser that is normally ALSO signed in as a merchant — the site gate admits
+  // real accounts, and that is how the operator reaches the app at all — so with
+  // the session first that account answered every scoped request: "Ouvrir
+  // dashboard" on ANY client rendered the operator's own store, name, trade and
+  // venue, whichever client had been picked.
+  //
+  // Ordering only, not a widening: isOperator() is a signed cookie (kiwi_op /
+  // staff gate), so a plain merchant sending ?merchant=<someone-else> still fails
+  // here, falls through to step 2, and can still only ever read itself.
+  const url = new URL(request.url);
+  const scopedSlug = (url.searchParams.get('merchant') || '').trim();
+  if (scopedSlug && await isOperator(request, env)) {
+    let acc = null;
+    try {
+      // Accounts are keyed by id/email; the roster maps them to merchants by
+      // slugifying the business name (same convention as clients.js), so match
+      // the requested slug the same way.
+      const rs = await env.DB.prepare('SELECT name, business, email FROM accounts').all();
+      for (const a of (rs.results || [])) {
+        if (slugMerchant(a.business || a.email) === scopedSlug) { acc = a; break; }
+      }
+    } catch (_) { /* ignore — treated as no account yet */ }
+    let type = '';
+    try {
+      const c = await env.DB.prepare('SELECT type FROM merchant_config WHERE merchant = ?')
+        .bind(scopedSlug).first();
+      type = (c && c.type) || '';
+    } catch (_) { /* ignore */ }
+    return json({
+      authenticated: !!acc, operator: true, scoped: true, slug: scopedSlug, type,
+      name: (acc && acc.name) || '', business: (acc && acc.business) || '', email: (acc && acc.email) || '',
+    });
+  }
+
+  // 2) Real merchant session — can only ever read itself.
   const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
   if (sess && sess.aid) {
     let acc = null;
@@ -136,32 +176,6 @@ export async function onRequestGet(context) {
         onboarded: est.onboarded, stores: est.stores,
       });
     }
-  }
-
-  // 2) Operator (God mode) scoped into a client via ?merchant=slug.
-  const url = new URL(request.url);
-  const slug = (url.searchParams.get('merchant') || '').trim();
-  if (slug && await isOperator(request, env)) {
-    let acc = null;
-    try {
-      // Accounts are keyed by id/email; the roster maps them to merchants by
-      // slugifying the business name (same convention as clients.js), so match
-      // the requested slug the same way.
-      const rs = await env.DB.prepare('SELECT name, business, email FROM accounts').all();
-      for (const a of (rs.results || [])) {
-        if (slugMerchant(a.business || a.email) === slug) { acc = a; break; }
-      }
-    } catch (_) { /* ignore — treated as no account yet */ }
-    let type = '';
-    try {
-      const c = await env.DB.prepare('SELECT type FROM merchant_config WHERE merchant = ?')
-        .bind(slug).first();
-      type = (c && c.type) || '';
-    } catch (_) { /* ignore */ }
-    return json({
-      authenticated: !!acc, operator: true, scoped: true, slug, type,
-      name: (acc && acc.name) || '', business: (acc && acc.business) || '', email: (acc && acc.email) || '',
-    });
   }
 
   return json({ authenticated: false });
