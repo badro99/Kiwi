@@ -124,7 +124,12 @@
       document.querySelectorAll('.kiwi-backdrop').forEach((b) => {
         const btn = b.querySelector('.kiwi-modal-close');
         if (btn) btn.click();   // runs close() → unlockPageScroll()
-        else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        /* Sur `document.body` et non sur `document` : la cible de l'événement
+         * devient un ÉLÉMENT, et les écouteurs qui filtrent la saisie avec
+         * `e.target.matches(...)` ne trébuchent plus. `bubbles` est
+         * indispensable — un KeyboardEvent ne remonte pas par défaut, et les
+         * écouteurs concernés sont posés sur `document`. */
+        else document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       });
     }
 

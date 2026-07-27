@@ -184,6 +184,20 @@
         justify-content: center; opacity: 0.6; transition: opacity 160ms ease, background 160ms ease, color 160ms ease; }
       .oppo-card:hover .oppo-x, .oppo-x:focus-visible { opacity: 1; }
       .oppo-x:hover { background: var(--paper-soft); color: var(--ink); }
+      /* Au doigt, il n'y a pas de survol. Deux conséquences que la règle
+         ci-dessus laissait passer sur téléphone :
+           — la croix restait à 60 % d'opacité pour toujours, puisque la règle
+             de survol sur .oppo-card ne se produit jamais ;
+           — et elle mesurait 26 px, sous le seuil de confort tactile. Le pouce
+             manque la croix, touche la carte, et ouvre la fonction qu'on
+             voulait justement écarter.
+         La zone sensible passe de 25 à 45 px par un pseudo-élément débordant
+         (25 + 2 × 10) : le dessin ne bouge pas d'un pixel, seule la cible
+         grandit, et elle passe au-dessus des 44 px recommandés au doigt. */
+      @media (pointer: coarse) {
+        .oppo-x { opacity: 1; }
+        .oppo-x::after { content: ''; position: absolute; inset: -10px; }
+      }
       @media (prefers-reduced-motion: reduce) {
         .oppo-card, body.cards-enter .oppo-card { animation: none; transition: none; }
         .oppo-card:hover .oppo-art { transform: none; }

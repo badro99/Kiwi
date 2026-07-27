@@ -3916,7 +3916,11 @@ ar: {
     const k = e.key.toLowerCase();
     if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); commandPalette(); }
     if ((e.metaKey || e.ctrlKey) && k === 'j') { e.preventDefault(); commandPalette(); }
-    if (e.key === '/' && !e.target.matches('input, textarea')) { e.preventDefault(); commandPalette(); }
+    /* `e.target` peut être `document` et non un élément — le menu mobile ferme
+     * les surfaces ouvertes par un Escape envoyé sur `document`. Sans le test
+     * de type, .matches() n'existe pas et la touche jette. */
+    if (e.key === '/' && !(e.target && typeof e.target.matches === 'function'
+      && e.target.matches('input, textarea'))) { e.preventDefault(); commandPalette(); }
     if (k === 'arrowright' && document.querySelector('.deck')) {
       const slides = document.querySelectorAll('.slide');
       const cur = [...slides].findIndex(s => s.getBoundingClientRect().top >= -50);

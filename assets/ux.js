@@ -214,13 +214,25 @@
       document.addEventListener('keydown', esc);
       back.addEventListener('click', (e) => { if (e.target === back) close(); });
     }
+    /* La cible d'un événement clavier n'est pas toujours un élément. Le menu
+     * mobile ferme les surfaces ouvertes en envoyant un Escape sur `document`
+     * (mobile-nav.js), et `document` n'a pas de méthode .matches() : la ligne
+     * plus bas s'exécute à CHAQUE touche sur le tableau de bord, donc chaque
+     * fermeture depuis le téléphone jetait un TypeError non rattrapé. Même
+     * garde que onboarding.js:679 et team.js:1961, qui la portent déjà. */
+    const typing = (e) => {
+      const t = e.target;
+      return !!(t && typeof t.matches === 'function'
+        && t.matches('input, textarea, [contenteditable]'));
+    };
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === '?' && !e.target.matches('input, textarea, [contenteditable]')) {
+      if (e.key === '?' && !typing(e)) {
         e.preventDefault();
         open();
       }
       // Single key shortcuts on dashboard
-      if (!e.target.matches('input, textarea, [contenteditable]') && /dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) {
+      if (!typing(e) && /dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) {
         if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
           e.preventDefault();
           window.Kiwi?.handlers?.['new-sale']?.();
