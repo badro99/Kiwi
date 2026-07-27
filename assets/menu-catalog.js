@@ -32,6 +32,7 @@
     addSub:     { fr: 'Sous-catégorie', en: 'Sub-category', ar: 'فئة فرعية' },
     addItem:    { fr: 'Ajouter un produit', en: 'Add a product', ar: 'إضافة منتج' },
     loadEx:     { fr: 'Charger un exemple', en: 'Load an example', ar: 'تحميل مثال' },
+    importCsv:  { fr: 'Importer un CSV', en: 'Import a CSV', ar: 'استيراد CSV' },
     example:    { fr: 'Exemple chargé, à vous de l\'adapter.', en: 'Example loaded, make it yours.', ar: 'تم تحميل المثال، عدّله كما تريد.' },
     catName:    { fr: 'Nom de la catégorie', en: 'Category name', ar: 'اسم الفئة' },
     subName:    { fr: 'Nom de la sous-catégorie', en: 'Sub-category name', ar: 'اسم الفئة الفرعية' },
@@ -248,6 +249,7 @@
   /* ───────────────── small SVGs ───────────────── */
   const PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   const EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>';
+  const DOWNLOAD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
   const TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
   const SPARK = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
 
@@ -340,6 +342,7 @@
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
                 <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
               </div>
             </div>
@@ -368,6 +371,7 @@
             <p>${esc(tr(T.emptyP))}</p>
             <div class="row">
               <button class="mx-pane-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
+              <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
               <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-load-example">${SPARK ? '' : ''}<span>${esc(tr(T.loadEx))}</span></button>
             </div>
           </div>
@@ -520,6 +524,16 @@
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };
     H['mx-item-del'] = (_el, id) => confirmThen(tr(T.delItemQ), () => { deleteItem(id); render(); });
     H['mx-item-avail'] = (_el, id) => { const it = itemById(store.get(), id); if (it) { updateItem(id, { avail: it.avail === false }); render(); } };
+    /* Bring the carte over from whatever the kitchen used before — a spreadsheet
+     * or an export from the old till. assets/catalog-import.js does the reading
+     * and shows what it found; we only re-render once it has written. */
+    H['mx-import'] = () => {
+      if (!window.KiwiCatalogImport) {
+        if (window.Kiwi.toast) window.Kiwi.toast('Import indisponible', { type: 'warn', desc: 'Rechargez la page.', force: true });
+        return;
+      }
+      window.KiwiCatalogImport.openMenu({ onDone: () => { activeCat = null; activeSub = null; render(); } });
+    };
     H['mx-load-example'] = () => { store.loadExample(); activeCat = null; activeSub = null; render(); if (window.Kiwi.toast) window.Kiwi.toast(tr(T.example), { type: 'success', force: true }); try { window.Kiwi.confetti && window.Kiwi.confetti(); } catch (_) {} };
   }
 

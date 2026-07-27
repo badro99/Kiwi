@@ -8100,6 +8100,8 @@ const _ICN = {
   search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>',
   scan:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M21 7V5a2 2 0 00-2-2h-2M3 17v2a2 2 0 002 2h2M21 17v2a2 2 0 01-2 2h-2M7 8v8M11 8v8M15 8v8M19 8v8"/></svg>',
   upload: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+  // Same tray as `upload`, arrow reversed — the file comes IN (import).
+  download: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   plus:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
   edit:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
   copy:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
@@ -8475,6 +8477,7 @@ function _renderInventory() {
       <div class="p-toolbar" style="margin-top: 4px;">
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
           <input data-bqx-search placeholder="Rechercher produit, catégorie, code-barres…" value="${_esc(_bqxQuery)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
+        <button class="kb ghost" data-action="bqx-import">${_ICN.download}Importer CSV</button>
         <button class="kb ghost" data-action="bqx-export">${_ICN.upload}Exporter CSV</button>
         ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
@@ -8517,6 +8520,16 @@ handlers['bqx-filter'] = (_el, arg) => { _bqxFilter = arg || 'all'; _renderInven
 handlers['bqx-cfilter'] = (_el, arg) => {
   _bqxColorFilter = (_bqxColorFilter === arg) ? '' : (arg || '');
   _renderInventory();
+};
+/* The way IN — a shop arriving from another till brings its article file rather
+ * than retyping it. assets/catalog-import.js owns the parsing, the preview and
+ * the writes; the page only re-renders once the merchant has confirmed. */
+handlers['bqx-import'] = () => {
+  if (!window.KiwiCatalogImport) {
+    toast('Import indisponible', { desc: 'Le module d\'import n\'est pas chargé, rechargez la page.', type: 'warn' });
+    return;
+  }
+  window.KiwiCatalogImport.openBoutique({ onDone: () => _renderInventory() });
 };
 handlers['bqx-export'] = () => {
   try {

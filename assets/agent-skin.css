@@ -1,0 +1,453 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * KIWI · ASSISTANT — « LE RELEVÉ »
+ *
+ * Une refonte visuelle complète de l'assistant, posée EN COUCHE au-dessus de
+ * assets/agent.js. Aucune ligne de logique n'est touchée : tout est piloté par
+ * <html data-kiwi-ai="releve">, que assets/agent-skin.js pose et retire.
+ * KiwiAiSkin.disable() rend l'ancien écran au pixel près.
+ *
+ * ── LA THÈSE ───────────────────────────────────────────────────────────────
+ * L'ancien écran était une messagerie : un avatar, une bulle, des cartes
+ * blanches, une barre de saisie. Tous les copilotes du marché ont exactement
+ * cet écran, et il dit la mauvaise chose — que Kiwi *bavarde*.
+ *
+ * Kiwi ne bavarde pas. Il lit les livres du commerçant, il montre d'où sort
+ * chaque chiffre, et il retire ce qu'il ne peut pas soutenir. C'est un
+ * INSTRUMENT, et un instrument financier a une forme : le relevé.
+ *
+ *   · la question devient une mention en marge, pas une bulle ;
+ *   · la réponse devient un feuillet numéroté, avec son filet de reliure ;
+ *   · le chiffre de tête sort en display — on le lit debout, à trois mètres ;
+ *   · les autres chiffres deviennent un tableau réglé, pas des cartes ;
+ *   · la provenance signe le feuillet, comme le pied d'un relevé bancaire.
+ *
+ * ── LA SIGNATURE : L'ANCRAGE VISIBLE ───────────────────────────────────────
+ * Toute la campagne d'audit de ce mois portait sur une seule idée — un chiffre
+ * doit dire d'où il vient. Ici cette idée devient une INTERFACE : quand une
+ * réponse se pose, chaque ligne du volet de droite dont la valeur apparaît
+ * littéralement dans la réponse s'allume, et survoler l'une éclaire l'autre.
+ * Ce n'est pas une supposition sur les entrées du calcul : c'est une
+ * correspondance de texte, exacte, donc jamais menteuse.
+ *
+ * ── CE QUI RESTE INTOUCHÉ ──────────────────────────────────────────────────
+ * Les couleurs, les fontes et la lentille liquide sont celles de la marque.
+ * Aucun accent nouveau, aucune graisse display, aucune italique, aucun emoji.
+ * Le mode sombre suit les jetons, donc rien à ouvrir de plus (il reste Ultra).
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-kiwi-ai="releve"] .fa-drawer {
+  --rlv-rule: color-mix(in srgb, var(--ink) 11%, transparent);
+  --rlv-rule-soft: color-mix(in srgb, var(--ink) 6%, transparent);
+  --rlv-sheet: color-mix(in srgb, var(--surface) 76%, var(--paper));
+  --rlv-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rlv-serif: 'Instrument Serif', Georgia, serif;
+  --rlv-ease: cubic-bezier(0.34, 1.45, 0.5, 1);
+}
+
+/* ═══════════ 1 · LE BANDEAU — un ours de journal, pas un titre de modale ═══ */
+html[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
+  background: var(--paper);
+  border-bottom: 1px solid var(--rlv-rule);
+  padding-bottom: 18px;
+}
+html[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head h3 {
+  font-family: var(--rlv-serif);
+  font-size: clamp(26px, 2.4vw, 34px);
+  letter-spacing: -0.012em;
+  line-height: 1.02;
+}
+html[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head p {
+  font-family: var(--rlv-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--n-500);
+  margin-top: 7px;
+}
+
+/* L'état de service, posé dans le bandeau par agent-skin.js. Un point, une
+   heure, une langue — la ligne d'en-tête d'un relevé, rien de plus. */
+html[data-kiwi-ai="releve"] .rlv-status {
+  /* Dégagé du bouton de fermeture, qui occupe le coin avec sa zone de clic. */
+  position: absolute; inset-inline-end: 122px; top: 50%;
+  transform: translateY(-50%);
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--rlv-mono); font-size: 10px; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--n-500); pointer-events: none;
+}
+html[data-kiwi-ai="releve"] .rlv-status i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--atlas);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--atlas) 55%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-kiwi-ai="releve"] .rlv-status i { animation: rlvPulse 3.4s ease-out infinite; }
+}
+@keyframes rlvPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--atlas) 50%, transparent); }
+  70%  { box-shadow: 0 0 0 7px color-mix(in srgb, var(--atlas) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--atlas) 0%, transparent); }
+}
+@media (max-width: 900px) { html[data-kiwi-ai="releve"] .rlv-status { display: none; } }
+
+/* ═══════════ 2 · LE CHAMP — du papier, et une aube très lente ═════════════
+ * Le seul geste décoratif de tout l'écran, et il est tenu à 3 % : une lueur
+ * atlas au bord haut, comme la lumière d'une fenêtre sur une feuille. Elle ne
+ * bouge pas assez pour qu'on la voie bouger ; on la voit avoir bougé. */
+html[data-kiwi-ai="releve"] .fa-thread {
+  position: relative;
+  background: var(--paper);
+  padding: 0 clamp(20px, 7%, 96px) 40px;
+}
+html[data-kiwi-ai="releve"] .fa-thread::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 340px;
+  pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(120% 100% at 16% -18%, color-mix(in srgb, var(--atlas) 13%, transparent), transparent 60%),
+    radial-gradient(95% 85% at 86% -26%, color-mix(in srgb, var(--mint) 20%, transparent), transparent 56%);
+  opacity: .62;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-kiwi-ai="releve"] .fa-thread::before { animation: rlvDawn 34s ease-in-out infinite alternate; }
+}
+@keyframes rlvDawn {
+  from { transform: translate3d(-3%, -2%, 0) scale(1.04); opacity: .38; }
+  to   { transform: translate3d( 3%,  2%, 0) scale(1.12); opacity: .62; }
+}
+html[data-kiwi-ai="releve"] .fa-thread-in {
+  position: relative; z-index: 1;
+  max-width: 780px; gap: 0;
+  padding-top: 30px;
+}
+
+/* ═══════════ 3 · LA QUESTION — une mention en marge ═══════════════════════
+ * Elle n'est pas la moitié d'une conversation, elle est l'intitulé du feuillet
+ * qui suit. Donc pas de bulle : un filet, des petites capitales, et de l'air. */
+html[data-kiwi-ai="releve"] .fa-msg.user {
+  display: block; margin: 42px 0 0;
+}
+html[data-kiwi-ai="releve"] .fa-msg.user:first-child { margin-top: 0; }
+html[data-kiwi-ai="releve"] .fa-msg.user .fa-bubble {
+  max-width: none; background: none; border: none; border-radius: 0;
+  padding: 0 0 0 20px; box-shadow: none;
+  border-inline-start: 2px solid var(--atlas);
+  font-family: var(--rlv-mono); font-size: 11.5px; line-height: 1.6;
+  letter-spacing: 0.055em; text-transform: uppercase;
+  color: var(--n-600); font-weight: 500;
+}
+
+/* ═══════════ 4 · LA RÉPONSE — un feuillet numéroté ════════════════════════ */
+html[data-kiwi-ai="releve"] .fa-msg.agent {
+  display: block; position: relative;
+  margin: 20px 0 0; padding: 26px 0 30px 20px;
+  border-inline-start: 1px solid var(--rlv-rule);
+}
+/* Le numéro de feuillet, sur le filet de reliure. */
+html[data-kiwi-ai="releve"] .fa-msg.agent[data-rlv-turn]::before {
+  content: attr(data-rlv-turn);
+  position: absolute; inset-inline-start: 0; top: 26px;
+  transform: translateX(-50%);
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.08em;
+  color: var(--n-400); background: var(--paper);
+  padding: 3px 0; line-height: 1; min-width: 22px; text-align: center;
+}
+[dir="rtl"] html[data-kiwi-ai="releve"] .fa-msg.agent[data-rlv-turn]::before,
+html[data-kiwi-ai="releve"] [dir="rtl"] .fa-msg.agent[data-rlv-turn]::before {
+  transform: translateX(50%);
+}
+/* L'avatar rond disparaît : le filet et le numéro disent déjà qui parle. */
+html[data-kiwi-ai="releve"] .fa-msg.agent .fa-avatar { display: none; }
+html[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble {
+  max-width: none; padding: 0; background: none; border: none; box-shadow: none;
+}
+/* La phrase d'ouverture : la lecture, pas le chiffre. */
+html[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child {
+  font-size: 15.5px; line-height: 1.66; color: var(--ink-soft);
+  max-width: 62ch;
+}
+html[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child b {
+  font-weight: 500; color: var(--riad);
+  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--mint) 34%, transparent);
+}
+
+/* ═══════════ 5 · LES CHIFFRES — un relevé réglé, pas quatre cartes ════════
+ * Les cartes blanches donnaient le même poids à tout. Un relevé hiérarchise :
+ * le chiffre de tête sort en display, les autres tiennent dans un tableau à
+ * filets, alignés sur la même colonne, en chiffres tabulaires. */
+html[data-kiwi-ai="releve"] .fa-stats {
+  display: block; margin-top: 26px;
+  border-top: 1px solid var(--rlv-rule);
+}
+html[data-kiwi-ai="releve"] .fa-stat {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+  gap: 4px 22px; padding: 13px 2px;
+  background: none; border: none; border-radius: 0;
+  border-bottom: 1px solid var(--rlv-rule-soft);
+}
+html[data-kiwi-ai="releve"] .fa-stat .l {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--n-500); grid-column: 1;
+}
+html[data-kiwi-ai="releve"] .fa-stat .v {
+  grid-column: 2; grid-row: 1;
+  font-size: 17px; font-weight: 550; color: var(--ink);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.005em;
+  text-align: end; white-space: nowrap;
+}
+html[data-kiwi-ai="releve"] .fa-stat .h {
+  grid-column: 1 / -1; font-size: 11.5px; color: var(--n-500); line-height: 1.5;
+}
+/* Le chiffre de tête. On le lit debout, à trois mètres de l'écran. */
+html[data-kiwi-ai="releve"] .fa-stat.rlv-lead {
+  display: block; padding: 22px 2px 20px; border-bottom: 1px solid var(--rlv-rule);
+}
+html[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v {
+  display: block; text-align: start;
+  font-family: var(--rlv-serif); font-weight: 400;
+  font-size: clamp(38px, 5.6vw, 58px); line-height: 0.98;
+  letter-spacing: -0.022em; color: var(--riad); margin-top: 9px;
+}
+html[data-kiwi-ai="releve"] .fa-stat.rlv-lead .h { margin-top: 11px; font-size: 12px; }
+
+/* ═══════════ 6 · LE JUGEMENT — une citation, pas un bandeau coloré ════════ */
+html[data-kiwi-ai="releve"] .fa-verdict {
+  background: none; border-radius: 0; padding: 0 0 0 17px;
+  margin-top: 22px; font-size: 14px; line-height: 1.6;
+  border-inline-start: 2px solid currentColor;
+}
+html[data-kiwi-ai="releve"] .fa-verdict.good { color: var(--atlas); }
+html[data-kiwi-ai="releve"] .fa-verdict.warn { color: #8a6200; }
+html[data-kiwi-ai="releve"] .fa-verdict.bad  { color: #b3392f; }
+
+/* ═══════════ 7 · LA RÉSERVE ET LA SIGNATURE ══════════════════════════════
+ * La provenance — établissement · période · module · volume · fraîcheur — est
+ * le pied du relevé. Filet au-dessus, monospace, et un point vivant : c'est la
+ * ligne qui tient dans une capture d'écran le jour où deux surfaces de Kiwi
+ * annoncent deux chiffres différents. */
+html[data-kiwi-ai="releve"] .fa-note {
+  margin-top: 18px; font-size: 12px; line-height: 1.62; color: var(--n-500);
+  max-width: 64ch;
+}
+html[data-kiwi-ai="releve"] .fa-meta {
+  margin-top: 20px; padding-top: 11px;
+  border-top: 1px solid var(--rlv-rule-soft);
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--n-400); opacity: 1;
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+}
+html[data-kiwi-ai="releve"] .fa-meta::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%; flex: none;
+  background: var(--atlas); opacity: .6; transform: translateY(-1px);
+}
+
+/* ═══════════ 8 · LES RELANCES — pastilles à filet, prêtes pour la lentille ═ */
+html[data-kiwi-ai="releve"] .fa-follow { gap: 7px; margin-top: 22px; }
+html[data-kiwi-ai="releve"] .fa-follow button {
+  background: none; border: 1px solid var(--rlv-rule);
+  color: var(--n-600); font-size: 12px; font-weight: 450;
+  padding: 9px 15px; border-radius: 999px;
+  transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+html[data-kiwi-ai="releve"] .fa-follow button:hover {
+  transform: none; box-shadow: none;
+  border-color: var(--atlas); color: var(--atlas);
+  background: color-mix(in srgb, var(--mint) 12%, transparent);
+}
+html[data-kiwi-ai="releve"] .fa-follow .fa-llm-btn {
+  background: var(--riad); border-color: var(--riad); color: var(--paper);
+}
+html[data-kiwi-ai="releve"] .fa-follow .fa-llm-btn:hover {
+  background: var(--atlas); border-color: var(--atlas); color: var(--paper);
+}
+
+/* ═══════════ 9 · L'ANCRAGE VISIBLE — la signature de l'écran ══════════════
+ * Un chiffre de la réponse qui figure aussi au volet de droite est souligné en
+ * atlas ; le survol de l'un éclaire l'autre. Correspondance exacte de texte —
+ * on n'affirme pas « ceci est l'entrée du calcul », on montre « ce chiffre-là
+ * est celui-ci, sur vos livres ». */
+html[data-kiwi-ai="releve"] .rlv-cite {
+  background: none; color: inherit; cursor: help;
+  border-bottom: 1px solid color-mix(in srgb, var(--atlas) 40%, transparent);
+  transition: background .22s ease, color .22s ease;
+}
+html[data-kiwi-ai="releve"] .rlv-cite.is-lit,
+html[data-kiwi-ai="releve"] .rlv-cite:hover {
+  background: color-mix(in srgb, var(--mint) 42%, transparent);
+  border-bottom-color: var(--atlas); color: var(--riad);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-kpi.is-cited,
+html[data-kiwi-ai="releve"] .fa-ctx-item.is-cited { position: relative; }
+html[data-kiwi-ai="releve"] .fa-ctx-kpi.is-cited::after,
+html[data-kiwi-ai="releve"] .fa-ctx-item.is-cited::after {
+  content: ""; position: absolute; inset-inline-start: -13px; top: 50%;
+  width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%;
+  background: var(--atlas);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-kpi.is-lit,
+html[data-kiwi-ai="releve"] .fa-ctx-item.is-lit {
+  background: color-mix(in srgb, var(--mint) 26%, transparent);
+}
+
+/* ═══════════ 10 · LE VOLET — un tableau de bord d'instrument ══════════════ */
+html[data-kiwi-ai="releve"] .fa-context {
+  background: var(--rlv-sheet);
+  border-inline-start: 1px solid var(--rlv-rule);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-eyebrow {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.18em; color: var(--n-400);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-biz {
+  font-family: var(--rlv-serif); font-weight: 400; font-size: 25px;
+  letter-spacing: -0.012em; line-height: 1.06; margin-top: 9px; color: var(--ink);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-sub {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--n-400); margin-top: 8px;
+}
+html[data-kiwi-ai="releve"] .fa-ctx-kpis { margin-top: 22px; border-top: 1px solid var(--rlv-rule); }
+html[data-kiwi-ai="releve"] .fa-ctx-kpi {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 16px;
+  padding: 13px 4px; border-bottom: 1px solid var(--rlv-rule-soft);
+  border-radius: 0; background: none;
+}
+html[data-kiwi-ai="releve"] .fa-ctx-kpi .k { font-size: 12.5px; color: var(--n-600); }
+html[data-kiwi-ai="releve"] .fa-ctx-kpi .v {
+  font-size: 14.5px; font-weight: 550; font-variant-numeric: tabular-nums;
+  color: var(--ink); white-space: nowrap;
+}
+html[data-kiwi-ai="releve"] .fa-ctx-kpi.hl .v { color: var(--atlas); }
+html[data-kiwi-ai="releve"] .fa-ctx-kpi:hover { background: color-mix(in srgb, var(--mint) 16%, transparent); }
+html[data-kiwi-ai="releve"] .fa-ctx-viz-h,
+html[data-kiwi-ai="releve"] .fa-ctx-gh {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--n-500);
+}
+html[data-kiwi-ai="releve"] .fa-ctx-bar { border-radius: 2px; overflow: hidden; height: 5px; }
+html[data-kiwi-ai="releve"] .fa-ctx-more {
+  border: 1px solid var(--rlv-rule); background: none; border-radius: 999px;
+  font-family: var(--rlv-mono); font-size: 10px; letter-spacing: 0.11em; text-transform: uppercase;
+}
+html[data-kiwi-ai="releve"] .fa-ctx-more:hover { border-color: var(--atlas); color: var(--atlas); }
+html[data-kiwi-ai="releve"] .fa-ctx-trust {
+  border-top: 1px solid var(--rlv-rule-soft); padding-top: 14px; margin-top: 20px;
+  font-size: 11px; line-height: 1.5;
+}
+
+/* ═══════════ 11 · LA SAISIE — une barre de verre qui flotte ═══════════════
+ * Le socle encadré devient un objet posé au-dessus du relevé : verre liquide
+ * maison (assets/liquid-glass.css), pas une boîte de messagerie. */
+html[data-kiwi-ai="releve"] .fa-dock {
+  background: linear-gradient(to top, var(--paper) 42%, color-mix(in srgb, var(--paper) 0%, transparent));
+  border-top: none; padding-bottom: 22px;
+}
+html[data-kiwi-ai="releve"] .fa-dock-in { max-width: 780px; }
+html[data-kiwi-ai="releve"] .fa-inputwrap {
+  --lg-radius: 26px; --lg-blur: 16px; --lg-tint: color-mix(in srgb, var(--surface) 82%, transparent);
+  --lg-rim: color-mix(in srgb, #fff 70%, transparent);
+  border: 1px solid var(--rlv-rule);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+          backdrop-filter: blur(16px) saturate(1.5);
+  border-radius: 26px; padding: 6px 6px 6px 20px;
+  box-shadow: 0 22px 48px -30px color-mix(in srgb, var(--riad) 62%, transparent);
+  transition: border-color .24s ease, box-shadow .24s ease, transform .24s var(--rlv-ease);
+}
+html[data-kiwi-ai="releve"] .fa-inputwrap:focus-within {
+  border-color: color-mix(in srgb, var(--atlas) 55%, transparent);
+  box-shadow: 0 26px 56px -28px color-mix(in srgb, var(--riad) 72%, transparent);
+  transform: translateY(-1px);
+}
+html[data-kiwi-ai="releve"] .fa-input { font-size: 15px; }
+html[data-kiwi-ai="releve"] .fa-input::placeholder {
+  color: var(--n-400); font-size: 14.5px;
+}
+html[data-kiwi-ai="releve"] .fa-toolbar { margin-top: 11px; }
+html[data-kiwi-ai="releve"] .fa-tool,
+html[data-kiwi-ai="releve"] .fa-hint {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+html[data-kiwi-ai="releve"] .fa-tool { border-radius: 999px; border: 1px solid var(--rlv-rule); }
+html[data-kiwi-ai="releve"] .fa-tool:hover { border-color: var(--atlas); color: var(--atlas); }
+html[data-kiwi-ai="releve"] .fa-keypad-card {
+  border-radius: 24px; border: 1px solid var(--rlv-rule);
+  box-shadow: 0 26px 56px -32px color-mix(in srgb, var(--riad) 62%, transparent);
+}
+
+/* ═══════════ 12 · L'ÉCRAN VIDE — une ouverture, pas un accueil ════════════ */
+html[data-kiwi-ai="releve"] .fa-hero { padding-top: 8px; }
+html[data-kiwi-ai="releve"] .fa-hero-mark {
+  width: 0; height: 0; overflow: hidden; margin: 0; box-shadow: none; background: none;
+}
+html[data-kiwi-ai="releve"] .fa-hero-h {
+  font-size: clamp(38px, 5.2vw, 62px); line-height: 0.98; letter-spacing: -0.024em;
+  margin-top: 0; color: var(--ink); max-width: 15ch;
+}
+html[data-kiwi-ai="releve"] .fa-hero-p {
+  font-size: 15px; line-height: 1.68; margin-top: 18px; max-width: 56ch; color: var(--n-600);
+}
+html[data-kiwi-ai="releve"] .fa-hero-cards {
+  margin-top: 34px; gap: 0; grid-template-columns: 1fr;
+  border-top: 1px solid var(--rlv-rule);
+}
+html[data-kiwi-ai="releve"] .fa-hero-card {
+  flex-direction: row; align-items: baseline; gap: 18px;
+  background: none; border: none; border-bottom: 1px solid var(--rlv-rule-soft);
+  border-radius: 0; padding: 17px 4px;
+  transition: padding-inline-start .28s var(--rlv-ease), background .22s ease;
+}
+html[data-kiwi-ai="releve"] .fa-hero-card:hover {
+  transform: none; box-shadow: none;
+  background: color-mix(in srgb, var(--mint) 13%, transparent);
+  padding-inline-start: 14px;
+}
+html[data-kiwi-ai="releve"] .fa-hero-card .ic {
+  width: 26px; height: 26px; border-radius: 8px; flex: none; background: none;
+  color: var(--atlas); display: flex; align-items: center; justify-content: center; margin: 0;
+}
+html[data-kiwi-ai="releve"] .fa-hero-card .t {
+  font-family: var(--rlv-serif); font-size: 21px; font-weight: 400;
+  letter-spacing: -0.01em; flex: 1; margin: 0;
+}
+html[data-kiwi-ai="releve"] .fa-hero-card .s {
+  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--n-400); margin: 0; text-align: end;
+}
+html[data-kiwi-ai="releve"] .fa-hero-insight {
+  margin-top: 30px; background: none; border-radius: 0; padding: 0 0 0 17px;
+  border-inline-start: 2px solid var(--atlas);
+  font-size: 13.5px; line-height: 1.62; color: var(--n-600);
+}
+html[data-kiwi-ai="releve"] .fa-hero-insight svg { color: var(--atlas); }
+html[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--riad); font-weight: 550; }
+
+/* ═══════════ 13 · MODE SOMBRE — il suit les jetons, rien à ouvrir ═════════
+ * Le thème sombre reste un levier Kiwi Ultra : ce fichier ne l'expose pas, il
+ * se contente de ne pas casser quand il est déjà actif. */
+html[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
+  --rlv-rule: color-mix(in srgb, #fff 13%, transparent);
+  --rlv-rule-soft: color-mix(in srgb, #fff 7%, transparent);
+}
+html[data-theme="dark"][data-kiwi-ai="releve"] .fa-stat.rlv-lead .v,
+html[data-theme="dark"][data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child b {
+  color: var(--mint);
+}
+html[data-theme="dark"][data-kiwi-ai="releve"] .rlv-cite.is-lit,
+html[data-theme="dark"][data-kiwi-ai="releve"] .rlv-cite:hover {
+  background: color-mix(in srgb, var(--atlas) 46%, transparent); color: var(--mint);
+}
+
+/* ═══════════ 14 · TÉLÉPHONE — le relevé se replie, il ne rétrécit pas ═════ */
+@media (max-width: 860px) {
+  html[data-kiwi-ai="releve"] .fa-thread { padding-inline: 18px; }
+  /* La question d'amorce passe sur deux lignes à cette largeur : le champ doit
+     les montrer. Un textarea rows="1" les coupait, et le commerçant lisait
+     « posez une question, embauche, prix, » sans la fin de sa propre invite. */
+  html[data-kiwi-ai="releve"] .fa-inputwrap {
+    align-items: center; padding: 11px 6px 11px 17px; border-radius: 24px;
+  }
+  html[data-kiwi-ai="releve"] .fa-input { min-height: 56px; font-size: 14.5px; line-height: 1.35; }
+  html[data-kiwi-ai="releve"] .fa-input::placeholder { font-size: 13px; }
+  html[data-kiwi-ai="releve"] .fa-msg.agent { padding-inline-start: 15px; }
+  html[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v { font-size: clamp(32px, 11vw, 44px); }
+  html[data-kiwi-ai="releve"] .fa-stat { grid-template-columns: 1fr; }
+  html[data-kiwi-ai="releve"] .fa-stat .v { grid-column: 1; grid-row: auto; text-align: start; }
+}

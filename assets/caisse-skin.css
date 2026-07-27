@@ -56,34 +56,106 @@
 
 /* Portrait handheld — ticket becomes a bottom sheet, sidebar goes off-canvas */
 @media (max-width: 767px) {
+  /* ── Sideways-scroll guard ─────────────────────────────────────────────
+   * The register header is a nowrap flex row built for a 1280px desk screen;
+   * its min-content width (~562px) used to force the whole page wider than
+   * the phone, which the browser then shrank-to-fit — every glyph rendered
+   * at ~0.67×. Clip is deliberate: `hidden` would turn html/body into scroll
+   * containers and break the fixed sheet + sticky chrome on iOS. */
+  html, body { overflow-x: clip; max-width: 100%; }
+  .shell { height: 100dvh; min-width: 0; }
+  .main { min-width: 0; max-width: 100%; }
+
   .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40;
+             width: 280px; max-width: 86vw;
              transform: translateX(-100%); transition: transform .28s var(--spring); }
+  [dir="rtl"] .sidebar { inset: 0 0 0 auto; transform: translateX(100%); }
   body.nav-open .sidebar { transform: translateX(0); }
-  .main { padding-bottom: 88px; }
+  /* Clear the docked ticket peek + the home indicator */
+  .main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   .menu-grid { grid-template-columns: repeat(2, 1fr); }
   .menu-item { min-height: 96px; }
 
+  /* ── Register header: one column, title clears the hamburger ──────────
+   * Covers all three modes (salle · vrap · waitlist) — each renders its own
+   * .main-head and only one is ever unhidden. */
+  .main-head {
+    flex-direction: column; align-items: stretch;
+    gap: 10px; min-width: 0;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  }
+  .main-head .main-title {
+    padding-inline-start: 56px;          /* the 44px hamburger + its 12px inset */
+    min-height: 44px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px;
+    font-size: 17px;
+  }
+  .main-head .main-title em { margin-left: 0; font-size: 13px; }
+
+  .plan-head-left { flex-direction: column; align-items: stretch; gap: 10px; min-width: 0; }
+  .floor-toggle { align-self: flex-start; max-width: 100%; }
+  .floor-pill { padding: 9px 14px; min-height: 40px; }
+
+  /* Legend wraps to two compact rows rather than hiding states off-screen —
+   * a table-colour key the cashier can't see is a key that doesn't work. */
+  .legend { flex-wrap: wrap; gap: 8px 14px; min-width: 0; }
+  .legend-item { flex: 0 0 auto; }
+
+  .vrap-meta { flex-wrap: wrap; min-width: 0; }
+
+  /* ── Floor plan: pan, don't shrink ────────────────────────────────────
+   * Tables are positioned in % of the room, so squeezing the room to 327px
+   * scales the whole scene to ~0.38× of the desk layout while the T-numbers
+   * stay at their fixed 17px — the labels end up wider than the tables they
+   * sit on. Holding the plan at a workable width and letting the cashier pan
+   * keeps the geometry readable and every table comfortably tappable. */
+  .view-salle { overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* 640px keeps a 7% round table at ~45px — close enough to the desk layout's
+   * 60px that the centred number and the top-pinned server chip still clear
+   * each other. Squeezing to the 327px the phone actually offers put the chip
+   * straight on top of the "T", and no chip offset fixes that: at 36px the
+   * circle is smaller than its own contents. */
+  .view-salle .plan-canvas { min-width: 640px; }
+  .tbl-covers { font-size: 11px; }
+  .tbl-server { width: 18px; height: 18px; font-size: 8.5px; }
+  .tbl-cell.is-round .tbl-server { top: -10px; }
+
   .kw-hamburger {
     display: grid; place-items: center;
-    position: fixed; top: 12px; left: 12px; z-index: 46;
+    position: fixed; z-index: 46;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    inset-inline-start: 12px;
     width: 44px; height: 44px; border: 0; border-radius: 12px;
     background: var(--ink-bg); color: #EAFFF4; cursor: pointer;
     box-shadow: var(--elev-2);
   }
+  /* The trigger sits above the drawer, so while the drawer is out it lands on
+   * the kiwi wordmark. Fade it with the drawer — the scrim is the way back,
+   * same as every other off-canvas menu on the platform. */
+  .kw-hamburger { transition: opacity .2s ease; }
+  body.nav-open .kw-hamburger { opacity: 0; pointer-events: none; }
+
   .kw-scrim { display: block; position: fixed; inset: 0; z-index: 39;
     background: rgba(10,15,13,.4); opacity: 0; pointer-events: none;
     transition: opacity .28s ease; }
   body.nav-open .kw-scrim { opacity: 1; pointer-events: auto; }
 
   .rightpanel {
+    /* Peek height is shared by the sheet's resting offset and the peek bar,
+     * so the notch inset can't drift between them. */
+    --rp-peek-h: calc(72px + env(safe-area-inset-bottom, 0px));
     position: fixed; left: 0; right: 0; bottom: 0; top: auto;
-    width: 100%; max-height: 82vh;
-    transform: translateY(calc(100% - 72px));
+    width: 100%; max-height: 82dvh;
+    transform: translateY(calc(100% - var(--rp-peek-h)));
     transition: transform .32s var(--spring);
     border-radius: 18px 18px 0 0;
     box-shadow: var(--elev-2);
     z-index: 45;
   }
   body.ticket-open .rightpanel { transform: translateY(0); }
-  .rp-peek { display: flex; }
+  .rp-peek {
+    display: flex;
+    min-height: var(--rp-peek-h);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
 }
