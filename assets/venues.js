@@ -1227,6 +1227,15 @@
     };
     customIds.add(id);
     persistCustomVenues();
+    /* Déclarer l'établissement NEUF au serveur, tout de suite.
+     * C'est le seul instant où l'on sait qu'il s'agit d'une création et pas d'un
+     * simple bonjour : une minute plus tard, la boutique de ce matin et celle de
+     * l'an dernier envoient exactement le même POST. Cette déclaration décide de
+     * la configuration de départ (Terminaux, Conformité, Réservations, Dépenses
+     * et Order Pro coupés — functions/api/config.js), que l'opérateur rallume à
+     * la demande. Elle n'allume jamais rien et ne touche jamais une fiche déjà
+     * réglée. Sans backend l'appel échoue et rien ne change. */
+    try { window.KiwiConfig?.newStore?.({ name, type: cfg.subtype || type }); } catch (_) {}
     return id;
   }
 

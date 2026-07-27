@@ -84,6 +84,10 @@
   function pull() {
     var m = merchant();
     if (!m) return;
+    // Module coupé ⇒ personne ne peut commander (functions/api/menu.js et
+    // /api/order refusent déjà), donc la file est vide par construction :
+    // inutile d'interroger le serveur toutes les quelques secondes pour rien.
+    if (!orderProOn()) { chip(); return; }
     fetch('/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + state.since, {
       headers: { Accept: 'application/json' }, cache: 'no-store',
     }).then(function (r) { return r.ok ? r.json() : null; })
@@ -203,8 +207,23 @@
       (ready.length ? '<div class="kop-sec">Prêtes</div>' + ready.map(cardHtml).join('') : '');
   }
 
+  /* Order Pro est une option payante : la pastille « Commandes » ne doit exister
+   * que chez un commerçant à qui l'opérateur l'a ouverte. Sinon la caisse porte
+   * en permanence un bouton qui n'ouvre qu'un écran vide promettant « les
+   * commandes passées depuis le téléphone d'un client arrivent ici » — une
+   * fonction qu'il n'a pas, présentée comme une fonction qu'il attend.
+   *
+   * Même règle que orderpro-panel.js côté tableau de bord : la clé doit valoir
+   * `true` explicitement. Config pas encore arrivée ⇒ pas de pastille, et le
+   * prochain passage (poll, ou l'événement kiwi-config) la fait apparaître. Sans
+   * backend il n'y a de toute façon aucune file à relever. */
+  function orderProOn() {
+    try { return !!(window.KiwiConfig && window.KiwiConfig.features
+      && window.KiwiConfig.features.orderpro === true); } catch (_) { return false; }
+  }
+
   function chip() {
-    if (!merchant()) { var ex = document.getElementById('kop-chip'); if (ex) ex.remove(); return; }
+    if (!merchant() || !orderProOn()) { var ex = document.getElementById('kop-chip'); if (ex) ex.remove(); return; }
     css();
     var b = document.getElementById('kop-chip');
     if (!b) {
@@ -262,6 +281,10 @@
   window.addEventListener('storage', function (e) {
     if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant') { state.since = 0; chip(); pull(); }
   });
+  // La config arrive après le premier passage : c'est elle qui décide si cette
+  // caisse a Order Pro, donc on repeint dès qu'elle est là (allumage immédiat,
+  // sans attendre le prochain tour de poll).
+  document.addEventListener('kiwi-config', function () { chip(); pull(); });
 
   window.KiwiOrderInbox = { open: open, close: close, refresh: pull, orders: function () { return state.orders; } };
 })();

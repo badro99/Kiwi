@@ -40,8 +40,15 @@
    * whose code was filed under their first shop could no longer open the
    * dashboard from their second, while that second shop's cashier could. */
   var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
-    apply: applyFeatures, syncPins: syncPins, syncType: syncType };
+    apply: applyFeatures, syncPins: syncPins, syncType: syncType,
+    newStore: registerNewStore, off: featureOff };
   window.KiwiConfig = cfg;
+
+  /* Un module coupé par l'opérateur. `=== false` et rien d'autre : une clé
+   * absente veut dire ALLUMÉ (c'est ce qui laisse les clients d'avant
+   * intacts), et une config jamais reçue — pas de backend, hors ligne — ne
+   * doit fermer aucune porte. */
+  function featureOff(key) { return cfg.features[key] === false; }
 
   var pinSeen = Object.create(null);
   function rememberPins(list) {
@@ -91,15 +98,67 @@
   }
   function storeSlug() { return slugMerchant(storeName()); }
 
-  function post(payload) {
-    var name = storeName();
-    var slug = slugMerchant(name);
-    if (slug) { payload.merchant = slug; payload.name = name; }
+  function postRaw(payload) {
     return fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
     });
+  }
+  function post(payload) {
+    var name = storeName();
+    var slug = slugMerchant(name);
+    if (slug) {
+      payload.merchant = slug; payload.name = name;
+      // Une boutique créée hors ligne n'a jamais pu se déclarer neuve. Le drapeau
+      // attend dans `kiwiFreshStores` et repart avec le premier envoi qui passe.
+      if (isFresh(slug)) payload.fresh = true;
+    }
+    return postRaw(payload).then(function (r) {
+      if (r && r.ok && payload.fresh && slug) freshDrop(slug);
+      return r;
+    });
+  }
+
+  /* ── « Cet établissement vient d'être créé » ────────────────────────────────
+   * Le serveur ne peut pas deviner la différence entre une boutique ouverte à
+   * l'instant et une boutique de six mois qui dit simplement bonjour : les deux
+   * envoient le même POST. Ce drapeau-là est la différence, et c'est lui qui
+   * décide si la fiche naît avec les cinq modules coupés (voir
+   * functions/api/config.js › NEW_STORE_FEATURES) ou tout allumé comme avant.
+   *
+   * Il ne peut RIEN allumer : côté serveur il n'écrit des valeurs par défaut que
+   * dans une fiche qui n'a aucune configuration. Un client existant qui ouvre son
+   * tableau de bord ne passe jamais par ici.
+   *
+   * La liste d'attente survit à un échec réseau — une boutique créée dans le
+   * métro se déclarera au prochain envoi réussi. Bornée à 8 pour ne pas laisser
+   * traîner un slug abandonné pour toujours. */
+  var FRESH_KEY = 'kiwiFreshStores';
+  function freshList() { try { return JSON.parse(localStorage.getItem(FRESH_KEY)) || []; } catch (_) { return []; } }
+  function freshSave(a) { try { localStorage.setItem(FRESH_KEY, JSON.stringify(a.slice(-8))); } catch (_) {} }
+  function freshAdd(slug) { var a = freshList(); if (a.indexOf(slug) < 0) { a.push(slug); freshSave(a); } }
+  function freshDrop(slug) { var a = freshList(); var i = a.indexOf(slug); if (i >= 0) { a.splice(i, 1); freshSave(a); } }
+  function isFresh(slug) { return !!slug && freshList().indexOf(slug) >= 0; }
+
+  /* Appelé au moment exact de la création : par l'onboarding (première boutique
+   * d'un compte) et par le sélecteur d'établissement (venues.js › createVenue).
+   * Le nom est passé en clair parce que le moteur de venues n'a pas encore
+   * basculé dessus — on ne peut pas lire « le magasin à l'écran », il n'existe
+   * pas encore. Sans nom, le serveur retombe sur le slug du compte, ce qui est
+   * précisément la première boutique. */
+  function registerNewStore(opts) {
+    opts = opts || {};
+    var name = String(opts.name || '').trim();
+    var slug = slugMerchant(name);
+    var payload = { fresh: true };
+    if (slug) { payload.merchant = slug; payload.name = name; freshAdd(slug); }
+    if (opts.type) payload.type = String(opts.type);
+    return postRaw(payload).then(function (r) {
+      var ok = !!(r && r.ok);
+      if (ok && slug) freshDrop(slug);
+      return ok;
+    }).catch(function () { return false; });
   }
 
   /* Push this store's business type (onboarding kiwiBizType) up to the server so
@@ -183,7 +242,51 @@
       }
     });
     syncSectionHeaders();
+    gateHandlers();
     watchLateNodes();
+  }
+
+  /* ── La deuxième moitié : les portes, pas seulement les panneaux ────────────
+   * Cacher le lien de la barre latérale ne suffit pas. La même destination
+   * s'atteint depuis la recherche (⌘K), une carte de l'accueil, une action
+   * rapide, la barre du mobile, un raccourci de la caisse, et Kiwi AI qui répond
+   * « j'ouvre les terminaux » avec un bouton. Tout cela finit au même endroit :
+   * `Kiwi.handlers[nom]`. On garde donc la porte plutôt que de courir après
+   * chaque panneau — un module coupé ne s'ouvre plus, d'où qu'on frappe.
+   *
+   * Le test est fait À L'APPEL, pas au moment où on enveloppe : rallumer un
+   * module le rouvre aussitôt, sans rien à restaurer, et une config qui n'est
+   * jamais arrivée (hors ligne, hôte statique) ne ferme rien du tout.
+   *
+   * Les identifiants de nav SONT les clés de modules (venues.js), donc
+   * `nav-<clé>` se déduit. Les alias sont les entrées qui portent un autre nom.
+   */
+  var HANDLER_ALIASES = {
+    terminaux: ['nav-terminals'],
+    depenses: ['open-depenses'],
+    orderpro: ['orderpro-tags'],
+    crm: ['clients-directory', 'growth-crm'],
+    loyalty: ['loyalty'],
+    reservations: ['new-reservation'],
+  };
+  function gateOne(H, name, key) {
+    var fn = H[name];
+    if (typeof fn !== 'function' || fn.__kiwiGate) return;
+    var wrapped = function () {
+      if (featureOff(key)) return;          // ce module ne fait pas partie de leur Kiwi
+      return fn.apply(this, arguments);
+    };
+    wrapped.__kiwiGate = key;
+    H[name] = wrapped;
+  }
+  function gateHandlers() {
+    var H = null;
+    try { H = window.Kiwi && window.Kiwi.handlers; } catch (_) {}
+    if (!H) return;
+    Object.keys(cfg.features).forEach(function (key) {
+      gateOne(H, 'nav-' + key, key);
+      (HANDLER_ALIASES[key] || []).forEach(function (n) { gateOne(H, n, key); });
+    });
   }
 
   /* Half this app paints on demand — a drawer, an in-flow page, a re-rendered

@@ -7,7 +7,43 @@
 // full interface), so an absent row = everything on. Turning a module OFF here
 // hides it in that merchant's real app on next load (via /api/config).
 
-import { isOperator, json } from '../../auth/_lib.js';
+import { isOperator, json, readOperatorId } from '../../auth/_lib.js';
+
+/* Qui vient de couper ce module ?
+ * Le cookie d'identité est signé (auth/_lib.js › readOperatorId) : sans lui on
+ * n'invente pas de nom. 'equipe' = entré par le laissez-passer partagé, ou
+ * session ouverte avant que ce cookie existe. Mieux vaut une identité honnête et
+ * vague qu'une fausse précision dans un journal. */
+async function actorOf(context) {
+  const id = await readOperatorId(context.request, context.env);
+  if (!id) return { id: '', label: 'equipe' };
+  try {
+    const row = await context.env.DB.prepare('SELECT label FROM operators WHERE id = ?').bind(id).first();
+    return { id, label: (row && row.label) || 'opérateur' };
+  } catch (_) { return { id, label: 'opérateur' }; }
+}
+
+/* Une ligne par module RÉELLEMENT changé. Un enregistrement qui ne touche que le
+ * plan, ou qui renvoie les mêmes valeurs, n'écrit rien — un journal qui grossit
+ * à chaque ouverture de panneau ne se lit plus.
+ *
+ * `prev` absent et `next` présent compte comme un changement : c'est le passage
+ * d'un défaut implicite à une décision explicite, et c'est précisément le geste
+ * qu'on veut pouvoir retrouver. Jamais bloquant : si la table n'existe pas
+ * encore sur cette base, la configuration est quand même enregistrée. */
+async function logChanges(context, merchant, prev, next) {
+  const actor = await actorOf(context);
+  const ts = Date.now();
+  const stmts = [];
+  for (const k of Object.keys(next)) {
+    if (prev[k] === next[k]) continue;
+    stmts.push(context.env.DB.prepare(
+      'INSERT INTO config_audit (merchant, feature, enabled, actor, actor_id, ts) VALUES (?,?,?,?,?,?)'
+    ).bind(merchant, k, next[k] ? 1 : 0, actor.label, actor.id, ts));
+  }
+  if (!stmts.length) return;
+  try { await context.env.DB.batch(stmts); } catch (_) { /* table absente → on n'échoue pas l'enregistrement */ }
+}
 
 async function guard(context) {
   const ok = await isOperator(context.request, context.env);
@@ -56,6 +92,18 @@ export async function onRequestPut(context) {
   const hasOwner = Object.prototype.hasOwnProperty.call(body, 'accountId');
   const accountId = hasOwner ? ((body.accountId || '').toString().trim().slice(0, 64) || null) : null;
 
+  // L'état d'AVANT, lu avant d'écrire : c'est la seule façon de savoir ce qui a
+  // changé, et donc quoi inscrire au journal. Couper un module n'efface aucune
+  // donnée — le catalogue, les réservations, les notes restent dans leurs tables
+  // et reviennent intactes à la réactivation ; ce journal garde la trace du
+  // geste, que `merchant_config` ne conserve pas (il ne montre que le dernier état).
+  let prev = {};
+  try {
+    const before = await context.env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?')
+      .bind(merchant).first();
+    if (before && before.features) { try { prev = JSON.parse(before.features) || {}; } catch (_) { prev = {}; } }
+  } catch (_) { /* pas de fiche → tout est nouveau */ }
+
   await context.env.DB.prepare(
     `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
      ON CONFLICT(merchant) DO UPDATE SET
@@ -65,5 +113,6 @@ export async function onRequestPut(context) {
        account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
        updated_ts = excluded.updated_ts`
   ).bind(merchant, JSON.stringify(clean), plan, type, accountId, Date.now()).run();
+  await logChanges(context, merchant, prev, clean);
   return json({ ok: true, features: clean, plan, type: type, accountId: hasOwner ? accountId : undefined });
 }
