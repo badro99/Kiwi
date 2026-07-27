@@ -170,6 +170,7 @@
     }
     if (!db || !db.products) {
       db = blank();
+      dropIndex();
       if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
     } else if (migrate()) {
@@ -186,6 +187,7 @@
     VENUE = v;
     KEY = keyFor(VENUE);
     db = null;
+    dropIndex();
     load();
     cloudBind();   // ce magasin-ci a sa propre copie serveur
     notify();
@@ -232,6 +234,7 @@
   window.addEventListener('storage', (e) => {
     if (e.key !== KEY) return;
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
+    dropIndex();
     migrate();   // the other tab may be an older build, or a cloud copy just landed
     notify();
   });
@@ -362,6 +365,7 @@
 
         const adopt = first && mineEmpty;
         db = adopt ? theirs : mergeDocs(db, theirs);
+        dropIndex();
         migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();
         if (!adopt) schedulePush(0);   // notre fusion doit remonter
@@ -407,6 +411,7 @@
         if (res.status === 409 && res.j && res.j.data && cloud.tries < 3) {
           cloud.tries++;
           db = mergeDocs(db, res.j.data);
+          dropIndex();
           migrate();
           cloud.rev = +res.j.rev || 0;
           persist(); writeRev(slug, cloud.rev); healSeq(); notify();
@@ -549,30 +554,82 @@
 
   /* ───────────────── lookups / derived ───────────────── */
   const catById  = (id) => db.categories.find((c) => c.id === id) || null;
-  const prodById = (id) => db.products.find((p) => p.id === id) || null;
-  const varById  = (id) => db.variants.find((v) => v.id === id) || null;
-  const variantsOf = (pid) => db.variants.filter((v) => v.productId === pid);
 
-  /* Déclinaisons regroupées par produit, en UN passage.
+  /* ═══════════════ L'INDEX — chercher sans balayer tout le magasin ═══════════
+   * Ces recherches se faisaient en refiltrant la table entière, à chaque appel.
+   * Sans conséquence sur une vitrine de vingt articles ; ruineux dès qu'un
+   * commerçant reprend son stock, parce que les appelants sont dans des BOUCLES :
+   *   · compat() et stats() demandent les déclinaisons UNE FOIS PAR PRODUIT,
+   *   · la liste d'inventaire du tableau de bord appelle getProduct() PAR LIGNE,
+   *   · le filtre par couleur, lui, appelait getProduct() par produit filtré.
+   * Le coût devenait produits × déclinaisons, et ces fonctions sont rejouées à
+   * chaque écriture du catalogue. Mesuré : à 1 200 articles une reconstruction
+   * coûtait 36 ms, et un article enregistré en déclenche plusieurs.
    *
-   * variantsOf() refiltre la table entière à chaque appel. C'est sans
-   * conséquence sur une vitrine de vingt articles, mais compat() et stats()
-   * l'appellent UNE FOIS PAR PRODUIT : le coût devient produits × déclinaisons.
-   * Or ces deux fonctions sont rejouées à chaque écriture du catalogue (le
-   * subscribe reconstruit la projection de vente). Mesuré sur une reprise de
-   * stock réelle : à 1 200 articles, compat() coûtait 22 ms et stats() 14 ms,
-   * et comme un article enregistré déclenche plusieurs commits, chaque scan
-   * payait près de 100 ms de reconstruction — l'import de plusieurs milliers
-   * de références, c'est-à-dire précisément l'usage visé, s'enlisait.
-   * Un seul regroupement rend l'ensemble linéaire. */
-  function groupVariants() {
-    const by = Object.create(null);
+   * L'index se reconstruit à la demande, en un passage, et sert ensuite en temps
+   * constant. Il tient des RÉFÉRENCES : modifier un stock ou une taille ne
+   * l'invalide donc pas — l'objet indexé est le même que l'objet modifié. Seuls
+   * l'ajout, la suppression et le remplacement du document le périment, plus les
+   * codes-barres, qui changent sans changer le nombre de déclinaisons : d'où
+   * dropIndex() dans attachBarcode / removeBarcode / generateBarcode.
+   * Le garde-fou `n` rattrape tout chemin d'ajout ou de retrait qu'on aurait
+   * oublié d'annoncer. */
+  let IX = null;
+  function index() {
+    if (IX && IX.n === db.variants.length) return IX;
+    const byProduct = Object.create(null), byId = Object.create(null);
+    const byCode = Object.create(null), byGtin = Object.create(null);
+    const KB = window.KiwiBarcode;
+    const gtin = KB && KB.gtinKey ? KB.gtinKey : null;
     for (const v of db.variants) {
       if (!v) continue;
-      (by[v.productId] || (by[v.productId] = [])).push(v);
+      (byProduct[v.productId] || (byProduct[v.productId] = [])).push(v);
+      byId[v.id] = v;
+      const codes = v.barcodes || [];
+      for (const b of codes) {
+        if (!b || !b.code) continue;
+        // Premier arrivé, premier servi : un doublon hérité d'une fusion ne doit
+        // pas faire changer d'article un code déjà attribué.
+        if (byCode[b.code] === undefined) byCode[b.code] = v;
+        if (gtin) { const k = gtin(b.code); if (k && byGtin[k] === undefined) byGtin[k] = v; }
+      }
     }
-    return by;
+    const prod = Object.create(null);
+    for (const p of db.products) { if (p && p.id) prod[p.id] = p; }
+    IX = { n: db.variants.length, byProduct, byId, byCode, byGtin, prod };
+    return IX;
   }
+  function dropIndex() { IX = null; }
+
+  /* Entretien À CHAUD. Tout jeter à chaque écriture aurait suffi à la
+   * correction, mais aurait ramené le défaut par la porte de derrière : pendant
+   * une reprise de stock, chaque article écrit puis relit, donc chaque article
+   * aurait payé une reconstruction complète — à nouveau du produits × déclinaisons
+   * sur la durée de l'import. Les trois ajouts du chemin chaud (produit,
+   * déclinaison, code-barres) mettent donc l'index à jour en place, et l'index
+   * reste valide d'un bout à l'autre de la session. Les suppressions, rares,
+   * se contentent de le périmer. */
+  function ixAddProduct(p) { if (IX && p && p.id) IX.prod[p.id] = p; }
+  function ixAddVariant(v) {
+    if (!IX || !v) return;
+    (IX.byProduct[v.productId] || (IX.byProduct[v.productId] = [])).push(v);
+    IX.byId[v.id] = v;
+    IX.n = db.variants.length;          // rester en phase avec le garde-fou
+  }
+  function ixAddCode(v, code) {
+    if (!IX || !v || !code) return;
+    if (IX.byCode[code] === undefined) IX.byCode[code] = v;
+    const KB = window.KiwiBarcode;
+    if (KB && KB.gtinKey) { const k = KB.gtinKey(code); if (k && IX.byGtin[k] === undefined) IX.byGtin[k] = v; }
+  }
+
+  const prodById = (id) => index().prod[id] || null;
+  const varById  = (id) => index().byId[id] || null;
+  // Rend le tableau VIVANT de l'index : les appelants internes ne font que le
+  // lire. Les sorties publiques (listVariants, getProduct) en donnent une copie,
+  // pour qu'un appelant qui pousserait dedans ne corrompe pas l'index.
+  const variantsOf = (pid) => index().byProduct[pid] || [];
+  function groupVariants() { return index().byProduct; }
 
   function productStock(pid) { return variantsOf(pid).reduce((s, v) => s + (v.stock || 0), 0); }
 
@@ -593,17 +650,14 @@
   function barcodeOwner(code) {
     const c = normCode(code);
     if (!c) return null;
-    for (const v of db.variants) {
-      if (v.barcodes && v.barcodes.some((b) => b.code === c)) return v;
-    }
+    const ix = index();
+    const exact = ix.byCode[c];
+    if (exact) return exact;
     const KB = window.KiwiBarcode;
     if (!KB || !KB.gtinKey) return null;
     const key = KB.gtinKey(c);
     if (!key) return null;
-    for (const v of db.variants) {
-      if (v.barcodes && v.barcodes.some((b) => KB.gtinKey(b.code) === key)) return v;
-    }
-    return null;
+    return ix.byGtin[key] || null;
   }
 
   function findByBarcode(code) {
@@ -663,7 +717,7 @@
       video: String(data.video || ''),
       createdAt: Date.now(), archived: false,
     };
-    db.products.push(p); commit(); return p;
+    db.products.push(p); ixAddProduct(p); commit(); return p;
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
@@ -676,6 +730,7 @@
   function deleteProduct(id) {
     db.variants = db.variants.filter((v) => v.productId !== id);
     db.products = db.products.filter((p) => p.id !== id);
+    dropIndex();
     commit();
   }
 
@@ -696,8 +751,12 @@
       if (!sizes.includes(v.size)) sizes.push(v.size);
     });
     return {
-      product: p, category: catById(p.categoryId), variants, colors, sizes,
-      families: colors.map((c) => c.id), stock: productStock(id),
+      // copie : `variants` vient de l'index, et cet objet sort du module.
+      product: p, category: catById(p.categoryId), variants: variants.slice(), colors, sizes,
+      families: colors.map((c) => c.id),
+      // le stock se somme sur le tableau qu'on vient de parcourir, pas en
+      // redemandant les déclinaisons (getProduct est appelé PAR LIGNE de liste).
+      stock: variants.reduce((s, v) => s + (v.stock || 0), 0),
     };
   }
 
@@ -715,7 +774,7 @@
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
     if (data.note) v.note = String(data.note).slice(0, 60);
-    db.variants.push(v); commit(); return v;
+    db.variants.push(v); ixAddVariant(v); commit(); return v;
   }
   function updateVariant(id, patch) {
     const v = varById(id); if (!v) return null;
@@ -744,7 +803,7 @@
   }
   function setStock(id, n) { const v = varById(id); if (v) { v.stock = Math.max(0, n | 0); commit(); } return v; }
   function adjustStock(id, d) { const v = varById(id); if (v) { v.stock = Math.max(0, (v.stock || 0) + (d | 0)); commit(); } return v; }
-  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); commit(); }
+  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); dropIndex(); commit(); }
 
   /* ─────────── les trois gestes d'inventaire, jamais confondus ───────────
    * Une reprise de stock existant se fait à la douchette, vite, et trois gestes
@@ -777,7 +836,7 @@
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
     if (data.note) v.note = String(data.note).slice(0, 60);
-    db.variants.push(v); commit();
+    db.variants.push(v); ixAddVariant(v); commit();
     return { variant: v, created: true };
   }
 
@@ -812,6 +871,7 @@
     let code; let guard = 0;
     do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
     v.barcodes.push({ code, type: 'ean13', primary: true });
+    ixAddCode(v, code);
     commit(); return code;
   }
 
@@ -844,6 +904,7 @@
     const sym = opts.sym || (KB && KB.detect ? KB.detect(code) : '');
     const isPrimary = !v.barcodes.some((b) => b.primary);
     v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary });
+    ixAddCode(v, code);
     commit(); return { ok: true, code, sym };
   }
   function removeBarcode(variantId, code) {
@@ -851,6 +912,7 @@
     const c = normCode(code); const wasPrimary = v.barcodes.some((b) => b.code === c && b.primary);
     v.barcodes = v.barcodes.filter((b) => b.code !== c);
     if (wasPrimary && v.barcodes.length) v.barcodes[0].primary = true;
+    dropIndex();
     commit();
   }
   function barcodeExists(code) { return !!barcodeOwner(code); }
@@ -986,7 +1048,10 @@
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
     // variants
-    listVariants: (pid) => (load(), variantsOf(pid)), addVariant: (d) => (load(), addVariant(d)),
+    // .slice() : variantsOf() rend le tableau vivant de l'index (voir index()).
+    // À l'intérieur du module on ne fait que le lire ; dehors, une copie, pour
+    // qu'un appelant qui pousserait dedans ne fasse pas mentir l'index.
+    listVariants: (pid) => (load(), variantsOf(pid).slice()), addVariant: (d) => (load(), addVariant(d)),
     updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
     adjustStock: (id, d) => (load(), adjustStock(id, d)), deleteVariant: (id) => (load(), deleteVariant(id)),
     // intake — les trois gestes distincts (voir le bloc au-dessus de findVariant)
