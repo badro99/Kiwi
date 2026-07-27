@@ -489,9 +489,58 @@
     const x = new Date(d), n = new Date();
     return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
   }
+
+  /* ── « Retour sous 7 jours » — encore faut-il retrouver la vente ────────────
+   * L'échange affiche « retour sous 7 jours », mais le journal ne gardait que la
+   * journée en cours : une cliente qui revenait le jeudi avec un article acheté
+   * le mardi était introuvable, et l'employé n'avait aucun moyen de vérifier le
+   * prix payé. La promesse faite au comptoir ne tenait qu'un jour.
+   *
+   * Le journal garde donc RETAIN_DAYS jours. Deux limites, pour que cet
+   * élargissement ne déborde nulle part :
+   *
+   *  · L'ARGENT RESTE À LA JOURNÉE. caToday() et l'en-tête filtrent
+   *    explicitement sur aujourd'hui (voir salesToday) : ils sommaient tout
+   *    SALES en se fiant au fait qu'il ne contenait qu'un jour, et garder une
+   *    semaine y aurait affiché une recette multipliée par sept sous le mot
+   *    « aujourd'hui ». C'est le vrai piège de ce changement.
+   *  · LE NUMÉRO DE TICKET NE RECULE JAMAIS. saleSeq repart au-dessus du plus
+   *    grand numéro RESTAURÉ, toutes journées confondues — sinon un ticket
+   *    d'aujourd'hui réutiliserait le numéro d'hier, et deux ventes
+   *    différentes se présenteraient sous la même référence dans les retours.
+   *
+   * Le rapport journalier n'est pas concerné : build() reçoit « toutes les ventes
+   * connues (elles seront filtrées sur la journée) » — voir assets/day-report.js.
+   * Le plafond de purge borne aussi la taille du journal ; une boutique très
+   * active tient largement dans le quota localStorage sur sept jours. */
+  const RETAIN_DAYS = 7;
+  function withinRetention(d) {
+    const x = new Date(d);
+    if (isNaN(x)) return false;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (RETAIN_DAYS - 1));       // aujourd'hui inclus
+    return x >= start;
+  }
+  /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. */
+  const salesToday = () => SALES.filter((s) => s && isToday(s.at));
+
+  /* Quand une vente a-t-elle eu lieu ? Le journal couvrant maintenant la semaine,
+     un libellé « auj. » écrit en dur mentirait sur une vente de mardi. Sur sept
+     jours le nom du jour suffit à lever toute ambiguïté. */
+  function whenLabel(d) {
+    const x = new Date(d);
+    if (isToday(x)) return `auj. ${fmtHM(x)}`;
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    if (x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate()) {
+      return `hier ${fmtHM(x)}`;
+    }
+    return `${DAYS[x.getDay()]} ${fmtHM(x)}`;
+  }
+
   function persistDay() {
     if (IS_DEMO) return;
-    try { localStorage.setItem(DAY_KEY, JSON.stringify(SALES.filter((s) => s && isToday(s.at)))); } catch (_) {}
+    try { localStorage.setItem(DAY_KEY, JSON.stringify(SALES.filter((s) => s && withinRetention(s.at)))); } catch (_) {}
   }
   (function restoreDay() {
     if (IS_DEMO) return;
@@ -500,10 +549,12 @@
     if (!Array.isArray(saved) || !saved.length) return;
     let maxSeq = 0;
     saved.forEach((s) => {
-      if (!s || !s.at || !isToday(s.at)) return;             // le journal d'hier n'est pas le compteur d'aujourd'hui
+      if (!s || !s.at || !withinRetention(s.at)) return;      // au-delà de la semaine, on oublie
       s.at = new Date(s.at);
       s.lines = Array.isArray(s.lines) ? s.lines : [];
       s.total = +s.total || s.lines.reduce((t, l) => t + (+l.unit || 0) * (+l.qty || 0), 0);
+      // Le plus grand numéro TOUTES JOURNÉES CONFONDUES : un numéro déjà encaissé
+      // ne doit jamais resservir, même s'il vient d'hier.
       const n = parseInt(String(s.id || '').replace(/^\D+/, ''), 10);
       if (n > maxSeq) maxSeq = n;
       SALES.push(s);
@@ -560,7 +611,10 @@
     return { sub, remise: sub - afterLines, reward, total };
   }
   const ticketCount = (t) => t.lines.reduce((s, ln) => s + ln.qty, 0);
-  const caToday = () => SALES.reduce((s, x) => s + x.total, 0);
+  /* Sur salesToday(), jamais sur SALES : le journal garde une semaine pour les
+     retours (voir RETAIN_DAYS), et sommer tout afficherait la recette de sept
+     jours sous le mot « aujourd'hui ». */
+  const caToday = () => salesToday().reduce((s, x) => s + x.total, 0);
   function queueIfOffline(label) {
     if (!state.offline) return false;
     state.queued++;
@@ -822,7 +876,10 @@
     if (invBadge) { const st = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.stats() : null; const n = st ? st.ruptures + st.low : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }
   }
   function headSubVente() {
-    return `${fmtDT(new Date())} · ${SALES.length} vente${SALES.length > 1 ? 's' : ''} · ${fmtMAD(caToday())} aujourd'hui`;
+    // Le compte de ventes suit la même règle que la recette : la journée, pas la
+    // semaine conservée pour les retours.
+    const n = salesToday().length;
+    return `${fmtDT(new Date())} · ${n} vente${n > 1 ? 's' : ''} · ${fmtMAD(caToday())} aujourd'hui`;
   }
   function renderAll() {
     $('#bq-today', root).textContent = headSubVente();
@@ -891,7 +948,7 @@
     slot.innerHTML = `
       <div class="bq-exch-note">
         <i data-lucide="arrow-left-right"></i>
-        <span class="l">Échange <b>${sale.id}</b>, retour <b>${esc(P[ln.pid].name)} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
+        <span class="l">Échange <b>${sale.id}</b>, retour <b>${esc((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article')} · ${esc(ln.size)}</b> (${fmtMAD(ln.unit)}).
         Touchez l'article de remplacement dans la grille.</span>
         <button class="bq-exch-cancel" id="bq-exch-cancel">Annuler l'échange</button>
       </div>`;
@@ -1383,8 +1440,9 @@
     const el = $('#bq-fichem', root);
     const av = clAvoirOf(c);
     const todays = SALES.filter((s) => s.clientId === cid).map((s) => ({
-      when: `auj. ${fmtHM(s.at)}`,
-      what: s.lines.map((l) => `${P[l.pid].name} · ${l.size}`).join(' + '),
+      when: whenLabel(s.at),
+      // idem : une vente de la semaine peut porter un article supprimé depuis.
+      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
       amt: s.total,
     }));
     const hist = todays.concat(c.history || []);
@@ -1843,14 +1901,23 @@
     return `<div class="bq-sale">
       <div class="bq-sale-top">
         <span class="bq-sale-num">${s.id}</span>
-        <span class="bq-sale-when">${fmtHM(s.at)} · par ${esc(s.by)}</span>
+        <!-- whenLabel et non fmtHM : la liste couvre la semaine, et « 14:32 »
+             tout court ne dit pas si la vente est de ce matin ou de mardi. -->
+        <span class="bq-sale-when">${whenLabel(s.at)} · par ${esc(s.by)}</span>
         <span class="bq-pill ${s.kind === 'echange' ? 'warn' : 'ok'}">${s.kind === 'echange' ? 'échange' : esc(s.methods)}</span>
         ${hasRet ? '<span class="bq-pill warn">retour</span>' : ''}
         <span class="bq-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : 'Cliente de passage'} · ${fmtMAD(s.total)}</span>
       </div>
       <div class="bq-sale-lines">
         ${s.lines.map((l, i) => {
-          const p = P[l.pid];
+          /* Le journal couvre la semaine : un article vendu mardi peut avoir été
+             supprimé du catalogue depuis. Sans ce repli, P[l.pid] valait
+             undefined et TOUTE la page des échanges se vidait — donc plus aucun
+             retour possible, y compris sur les ventes intactes. Le nom du
+             produit est retrouvé dans la ligne de vente quand il y est, sinon on
+             le dit franchement ; le montant payé, lui, vient de la ligne et
+             reste toujours juste. */
+          const p = P[l.pid] || { name: l.name || 'Article retiré du catalogue', art: '' };
           if (l.returned) {
             return `<button class="bq-sline is-locked" data-bq-locked="1">
               <span class="tick"></span>
@@ -2012,8 +2079,13 @@
     if (!ex) return;
     const sale = findSale(ex.saleId);
     const ln = sale.lines[ex.idx];
-    const oldP = P[ln.pid];
+    /* L'article RENDU peut ne plus être au catalogue (le journal couvre la
+       semaine) ; celui qui le remplace vient forcément de la grille, donc il y
+       est. Le prix du retour se lit sur la ligne de vente — le montant payé —
+       et pas sur la fiche produit, qui a pu changer de prix depuis. */
+    const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
+    if (!newP) { toast('Article de remplacement introuvable'); return; }
     const diff = newP.price - ln.unit;
     const c = saleClient(sale);
     const el = $('#bq-exchm', root);
