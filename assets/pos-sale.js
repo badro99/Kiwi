@@ -62,6 +62,45 @@
 
   function key(vertical) { return PREFIX + String(vertical || 'pos'); }
 
+  /* ─── QUI a encaissé cette ligne ───
+   * Le journal est indexé par MÉTIER (kiwi:posDay:epicerie), pas par
+   * établissement. Deux commerces servis depuis le même navigateur — le cas
+   * courant quand un propriétaire ouvre sa boutique et son restaurant, ou
+   * quand un terminal de démonstration change de mains — écrivaient donc dans
+   * la même clé, et l'assistant les additionnait pour classer les produits.
+   * Le classement d'un commerce contenait les ventes de l'autre.
+   *
+   * Chaque ligne porte maintenant son locataire. Le lecteur (assets/agent-data.js)
+   * ne retient que les siennes ; il n'y a plus rien à déduire de la clé. */
+  var TENANTS_KEY = 'kiwi:posTenants';
+  function tenant() {
+    try {
+      if (window.KiwiLive && window.KiwiLive.merchant) {
+        var m = window.KiwiLive.merchant();
+        if (m) return String(m).slice(0, 64);
+      }
+    } catch (_) {}
+    try {
+      var pv = paired();
+      if (pv && pv.merchant) return String(pv.merchant).slice(0, 64);
+    } catch (_) {}
+    return '';
+  }
+  /* La liste des locataires que CE navigateur a vus encaisser. Elle sert à une
+     seule décision, chez le lecteur : une ligne écrite avant ce changement ne
+     porte pas de locataire, et on ne peut l'attribuer honnêtement que s'il n'y
+     en a jamais eu qu'un — le même raisonnement que preSplitBucket() côté
+     serveur. Deux locataires ⇒ la ligne anonyme est écartée plutôt que
+     devinée. */
+  function noteTenant(t) {
+    if (!t) return;
+    try {
+      var a = JSON.parse(localStorage.getItem(TENANTS_KEY) || '[]');
+      if (!Array.isArray(a)) a = [];
+      if (a.indexOf(t) === -1) { a.push(t); localStorage.setItem(TENANTS_KEY, JSON.stringify(a.slice(-8))); }
+    } catch (_) {}
+  }
+
   function read(vertical) {
     /* La démo ne LIT pas le journal, pas seulement elle n'y écrit pas. Un
        terminal qui a servi à un vrai commerce puis revient en démo (démo de
@@ -110,9 +149,12 @@
     if (!isReal()) return null;                 /* la démo reste en mémoire */
 
     var at = sale.at instanceof Date ? sale.at : new Date();
+    var who = tenant();
+    noteTenant(who);
     var entry = {
       ts: at.getTime(),
       total: total,
+      m: who,                                    /* le locataire, voir tenant() */
       method: normMethod(sale.method),
       raw: sale.method == null ? '' : String(sale.method),   /* le mot du métier, pour le journal local */
       label: String(sale.label || 'Vente').slice(0, 80),

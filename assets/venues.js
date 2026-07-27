@@ -1827,7 +1827,8 @@
       // (initial paint before the simulator's first tick), fall back to the
       // venue's end-of-day target so the badge isn't empty.
       // User-created venue → count its recorded sales; demo venue → demo clock.
-      const live = isCustom(currentVenue)
+      const ownV = isCustom(currentVenue) || !!(window.KiwiEnv?.isReal?.());
+      const live = ownV
         ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue).count) || 0)
         : window.KiwiDemoClock?.getSimState?.()?.cumTx;
       txCountEl.textContent = String(live != null ? live : (VENUES[currentVenue].txCount || 0));
@@ -7266,6 +7267,15 @@
       try { adoptTransientSales(currentVenue); } catch (_) {}
     });
   }
+  /* …et de nouveau à CHAQUE changement de venue. L'identité réelle se résout
+   * après un aller-retour serveur : une vente encaissée dans cet intervalle —
+   * le pont Live Link, le pavé « Nouvelle vente » — atterrit sous l'id
+   * transitoire, et l'adoption au chargement était déjà passée. L'argent
+   * restait donc dans kiwiSales:own jusqu'au rechargement suivant : présent
+   * sur le serveur, absent du tableau de bord ET de l'assistant, c'est-à-dire
+   * exactement la contradiction que ce lot corrige ailleurs. Idempotent
+   * (dédup par cursor, puis la clé transitoire est effacée). */
+  subscribers.add((id) => { try { adoptTransientSales(id); } catch (_) {} });
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);

@@ -56,17 +56,49 @@
     } catch (_) { return []; }
   }
   /* Le journal de la caisse, quand caisse et tableau de bord tournent dans le
-   * même navigateur — le cas du commerçant à une seule machine. C'est le SEUL
-   * endroit où les lignes de ticket existent aujourd'hui : le pont Live Link
-   * n'envoie que le total et un libellé résumé ("Pain +3 art."). */
+   * même navigateur — le cas du commerçant à une seule machine.
+   *
+   * Ce journal est indexé par MÉTIER, pas par établissement, et la boucle
+   * ci-dessous concaténait autrefois toutes les clés `kiwi:posDay:*` sans
+   * regarder à qui elles appartenaient. Deux commerces servis depuis le même
+   * navigateur se contaminaient : le classement des produits d'une boutique
+   * comptait les ventes du restaurant d'à côté. Un chiffre faux qui a l'air
+   * juste est pire qu'un refus — c'est sur celui-là qu'on rachète du stock.
+   *
+   * Chaque ligne porte donc son locataire (`m`, écrit par assets/pos-sale.js),
+   * et ce navigateur tient la liste de ceux qu'il a vus encaisser. Un seul
+   * locataire connu ⇒ rien ne peut être contaminé, tout est lu (y compris les
+   * lignes antérieures à ce changement, qui ne portent pas de `m`). Deux ou
+   * plus ⇒ on exige la correspondance exacte, et une ligne anonyme est écartée
+   * plutôt que devinée. C'est le raisonnement de preSplitBucket() côté serveur :
+   * on n'attribue que ce qui n'a qu'une origine possible. */
+  function liveTenant() {
+    try {
+      if (window.KiwiLive && window.KiwiLive.merchant) return String(window.KiwiLive.merchant() || '');
+    } catch (_) {}
+    return '';
+  }
+  function knownTenants() {
+    try {
+      var a = JSON.parse(localStorage.getItem('kiwi:posTenants') || '[]');
+      return Array.isArray(a) ? a : [];
+    } catch (_) { return []; }
+  }
   function tillRows() {
     var out = [];
+    var me = liveTenant();
+    var ambiguous = knownTenants().length > 1;
     try {
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
         if (!k || k.indexOf('kiwi:posDay:') !== 0) continue;
         var rows = JSON.parse(localStorage.getItem(k) || '[]');
-        if (Array.isArray(rows)) out = out.concat(rows);
+        if (!Array.isArray(rows)) continue;
+        rows.forEach(function (r) {
+          if (!r) return;
+          if (!ambiguous) { out.push(r); return; }  /* une seule origine possible */
+          if (me && String(r.m || '') === me) out.push(r);
+        });
       }
     } catch (_) { return []; }
     return out;
@@ -114,6 +146,12 @@
       /* produits */
       prodTop: function (n, u) { return 'Votre meilleure vente, c’est <b>' + n + '</b> — ' + u + '.'; },
       prodBottom: function (n, u) { return 'Votre article le moins vendu, c’est <b>' + n + '</b> — ' + u + '.'; },
+      /* La période nommée dans la phrase — seulement quand la source a su la lire. */
+      prodTopP: function (n, u, p) { return 'Votre meilleure vente ' + p + ', c’est <b>' + n + '</b> — ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'Votre article le moins vendu ' + p + ', c’est <b>' + n + '</b> — ' + u + '.'; },
+      prodNonePeriod: function (p) { return 'Aucune vente n’est enregistrée ' + p + ', je n’ai donc rien à classer sur cette période. Je ne vais pas vous donner le classement d’une autre journée en faisant comme si c’était celui-là.'; },
+      prodPerTill: function (p) { return 'Vous me demandez ' + p + ', et je ne peux pas répondre honnêtement. Le détail par article ne me vient aujourd’hui que du journal de ma caisse, qui ne garde que la journée en cours — il est remis à zéro à minuit. Je sais classer vos articles d’aujourd’hui ; pour une journée passée, il me faudrait le détail des tickets côté serveur.'; },
+      prodPerMenu: function (p) { return 'Une réserve : ce classement porte sur les unités du mois telles que votre carte les enregistre, pas sur ' + p + ' — la carte ne date pas ses ventes.'; },
       prodUnits: function (u) { return fmt(u) + ' unité' + (u > 1 ? 's' : ''); },
       prodLines: function (u) { return fmt(u) + ' ligne' + (u > 1 ? 's' : '') + ' de ticket'; },
       colUnits: 'Vendu', colRev: 'Chiffre', colPrice: 'Prix', colMargin: 'Marge unitaire',
@@ -129,6 +167,7 @@
       cliSpend: 'Dépensé', cliVisits: 'Visites', cliPoints: 'Points', cliLast: 'Dernière venue',
       cliDaysAgo: function (d) { return d === 0 ? 'aujourd’hui' : d === 1 ? 'hier' : 'il y a ' + d + ' jours'; },
       cliRunners: 'Vos suivants',
+      cliPerLifetime: function (p) { return 'Une précision : votre carnet retient le cumul de chaque client depuis toujours, pas le détail daté. Ce classement est donc celui de la dépense totale, et non celui de ' + p + '.'; },
       cliPointsOf: function (n, p) { return '<b>' + n + '</b> a <b>' + fmt(p) + ' point' + (p > 1 ? 's' : '') + '</b>.'; },
       cliReward: function (r) { return 'Récompense atteinte : il reste ' + r + ' à offrir.'; },
       cliToGo: function (n) { return 'Encore ' + fmt(n) + ' points avant la prochaine récompense.'; },
@@ -157,6 +196,11 @@
       pMenu: 'the menu', pClients: 'the client book', pTeam: 'the team', pStock: 'stock',
       prodTop: function (n, u) { return 'Your best seller is <b>' + n + '</b> — ' + u + '.'; },
       prodBottom: function (n, u) { return 'Your slowest item is <b>' + n + '</b> — ' + u + '.'; },
+      prodTopP: function (n, u, p) { return 'Your best seller ' + p + ' is <b>' + n + '</b> — ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'Your slowest item ' + p + ' is <b>' + n + '</b> — ' + u + '.'; },
+      prodNonePeriod: function (p) { return 'No sale is recorded for ' + p + ', so there is nothing to rank over that period. I am not going to hand you another day’s ranking and let it pass for this one.'; },
+      prodPerTill: function (p) { return 'You are asking about ' + p + ', and I cannot answer that honestly. Item-level detail reaches me only through my till journal, which keeps the current day and is cleared at midnight. I can rank today’s items; for a past day I would need the ticket lines from the server.'; },
+      prodPerMenu: function (p) { return 'One caveat: this ranking is the month’s units as your menu records them, not ' + p + ' — the menu does not date its sales.'; },
       prodUnits: function (u) { return fmt(u) + ' unit' + (u > 1 ? 's' : ''); },
       prodLines: function (u) { return fmt(u) + ' ticket line' + (u > 1 ? 's' : ''); },
       colUnits: 'Sold', colRev: 'Revenue', colPrice: 'Price', colMargin: 'Unit margin',
@@ -171,6 +215,7 @@
       cliSpend: 'Spent', cliVisits: 'Visits', cliPoints: 'Points', cliLast: 'Last seen',
       cliDaysAgo: function (d) { return d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; },
       cliRunners: 'Next up',
+      cliPerLifetime: function (p) { return 'One precision: your book keeps each client’s lifetime total, not a dated history. So this ranking is total spend, not ' + p + '.'; },
       cliPointsOf: function (n, p) { return '<b>' + n + '</b> has <b>' + fmt(p) + ' point' + (p > 1 ? 's' : '') + '</b>.'; },
       cliReward: function (r) { return 'Reward reached: ' + r + ' is owed.'; },
       cliToGo: function (n) { return fmt(n) + ' more points before the next reward.'; },
@@ -197,6 +242,11 @@
       pMenu: 'القائمة', pClients: 'سجلّ الزبناء', pTeam: 'الفريق', pStock: 'المخزون',
       prodTop: function (n, u) { return 'أكثر ما تبيعه هو <b>' + n + '</b> — ' + u + '.'; },
       prodBottom: function (n, u) { return 'أقل ما تبيعه هو <b>' + n + '</b> — ' + u + '.'; },
+      prodTopP: function (n, u, p) { return 'أكثر ما تبيعه ' + p + ' هو <b>' + n + '</b> — ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'أقل ما تبيعه ' + p + ' هو <b>' + n + '</b> — ' + u + '.'; },
+      prodNonePeriod: function (p) { return 'لا توجد أي مبيعة مسجّلة ' + p + '، فلا شيء أرتّبه في هذه الفترة. ولن أعطيك ترتيب يوم آخر وكأنه ترتيب هذا اليوم.'; },
+      prodPerTill: function (p) { return 'تسألني عن ' + p + '، ولا أستطيع الجواب بأمانة. تفصيل الأصناف لا يصلني اليوم إلا من سجلّ الصندوق، وهو لا يحتفظ إلا باليوم الجاري ويُمسح عند منتصف الليل. أستطيع ترتيب أصناف اليوم؛ أما يوم مضى فأحتاج تفاصيل التذاكر من الخادم.'; },
+      prodPerMenu: function (p) { return 'تحفّظ واحد: هذا الترتيب يخصّ وحدات الشهر كما تسجّلها لائحتك، لا ' + p + ' — اللائحة لا تؤرّخ مبيعاتها.'; },
       prodUnits: function (u) { return fmt(u) + ' وحدة'; },
       prodLines: function (u) { return fmt(u) + ' سطر بيع'; },
       colUnits: 'المُباع', colRev: 'المداخيل', colPrice: 'الثمن', colMargin: 'هامش الوحدة',
@@ -211,6 +261,7 @@
       cliSpend: 'أنفق', cliVisits: 'الزيارات', cliPoints: 'النقاط', cliLast: 'آخر زيارة',
       cliDaysAgo: function (d) { return d === 0 ? 'اليوم' : d === 1 ? 'أمس' : 'قبل ' + d + ' يوماً'; },
       cliRunners: 'ثم يليه',
+      cliPerLifetime: function (p) { return 'توضيح: دفترك يحتفظ بمجموع كل زبون منذ البداية، لا بسجلّ مؤرَّخ. فهذا الترتيب هو ترتيب الإنفاق الإجمالي، لا ترتيب ' + p + '.'; },
       cliPointsOf: function (n, p) { return 'لدى <b>' + n + '</b> <b>' + fmt(p) + ' نقطة</b>.'; },
       cliReward: function (r) { return 'بلغ المكافأة: ' + r + ' مستحقّة.'; },
       cliToGo: function (n) { return 'بقيت ' + fmt(n) + ' نقطة قبل المكافأة التالية.'; },
@@ -243,8 +294,20 @@
    * 1. les lignes portées par les ventes enregistrées (si le pont les transmet un jour)
    * 2. le journal de la caisse, dans ce navigateur
    * 3. la carte de démonstration et ses unités
-   * Aucune des trois ⇒ on dit ce qui manque, on n'invente pas un classement. */
-  function productRanking() {
+   * Aucune des trois ⇒ on dit ce qui manque, on n'invente pas un classement.
+   *
+   * LA PÉRIODE. « Mon meilleur produit hier » arrive ici avec sa fenêtre, et
+   * les trois sources ne savent pas la lire de la même façon :
+   *   · les ventes enregistrées sont datées ⇒ la fenêtre s'applique vraiment ;
+   *   · le journal de caisse ne garde QUE la journée en cours (pos-sale.js le
+   *     purge à minuit) ⇒ il sait dire « aujourd'hui » et rien d'autre ;
+   *   · la carte de démonstration ne date pas ses unités ⇒ mois figé.
+   * Une source qui ne sait pas honorer la fenêtre le déclare (`honoured:false`)
+   * plutôt que de servir la journée d'aujourd'hui sous l'étiquette d'hier. */
+  function startOfDay() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function inWin(ts, p) { return !p || (ts >= p.from && ts < p.to); }
+
+  function productRanking(period) {
     var by = {}, n = 0;
     var add = function (name, qty, total) {
       var k = norm(name);
@@ -252,17 +315,40 @@
       if (!by[k]) { by[k] = { name: String(name), units: 0, revenue: 0 }; }
       by[k].units += qty; by[k].revenue += total; n++;
     };
-    salesRows().forEach(function (e) {
-      if (!e || !Array.isArray(e.lines)) return;
+    var eat = function (e) {
       e.lines.forEach(function (l) { add(l && l.name, +(l && l.qty) || 1, +(l && l.total) || 0); });
-    });
-    if (n) return { src: 'lines', rows: rank(by) };
+    };
 
-    (isRealVenue() ? tillRows() : []).forEach(function (e) {
-      if (!e || !Array.isArray(e.lines)) return;
-      e.lines.forEach(function (l) { add(l && l.name, +(l && l.qty) || 1, +(l && l.total) || 0); });
+    var sales = salesRows();
+    var anyLines = false, winTotal = 0, winLined = 0;
+    sales.forEach(function (e) {
+      if (!e) return;
+      var lined = Array.isArray(e.lines) && e.lines.length > 0;
+      if (lined) anyLines = true;
+      if (!inWin(+e.ts || 0, period)) return;
+      winTotal++;
+      if (!lined) return;
+      winLined++; eat(e);
     });
-    if (n) return { src: 'till', rows: rank(by) };
+    if (n) return { src: 'lines', rows: rank(by), prov: { mod: 'sales', count: winLined, total: winTotal, honoured: true } };
+    /* Des ventes détaillées existent, mais aucune dans la fenêtre demandée.
+       C'est une réponse — « rien vendu hier » — et non une absence de source :
+       retomber sur le journal de la caisse répondrait « hier » avec la journée
+       d'aujourd'hui, ce qui est exactement le chiffre faux qu'on évite. */
+    if (anyLines && period) return { src: 'lines', rows: [], prov: { mod: 'sales', count: 0, total: winTotal, honoured: true } };
+
+    var till = (isRealVenue() ? tillRows() : []).filter(function (r) {
+      return r && inWin(+r.ts || 0, { from: startOfDay(), to: startOfDay() + DAY });
+    });
+    if (till.length) {
+      if (!period || period.id === 'today') {
+        var lined = 0;
+        till.forEach(function (e) { if (Array.isArray(e.lines) && e.lines.length) { lined++; eat(e); } });
+        if (n) return { src: 'till', rows: rank(by), prov: { mod: 'till', count: lined, total: till.length, honoured: true } };
+      } else {
+        return { src: 'till', rows: [], prov: { mod: 'till', count: till.length, total: till.length, honoured: false, limit: 'till' } };
+      }
+    }
 
     if (!isRealVenue()) {
       var menu = demoMenu().filter(function (i) { return i && +i.units > 0; });
@@ -272,6 +358,7 @@
           rows: menu.map(function (i) {
             return { name: i.name, units: +i.units, revenue: +i.units * (+i.price || 0), price: +i.price || 0, cost: +i.cost || 0 };
           }).sort(function (a, b) { return b.units - a.units; }),
+          prov: { mod: 'menu', count: menu.length, unit: 'entries', honoured: !period, limit: period ? 'menu' : null },
         };
       }
     }
@@ -284,7 +371,9 @@
 
   function sProduct(spec, L) {
     var t = tr(L);
-    var r = productRanking();
+    var per = spec && spec.period;
+    var perName = (spec && spec.periodLabel) || '';
+    var r = productRanking(per);
     if (!r) {
       var carte = carteItems().length || catalogProducts().length;
       if (!carte) return { text: t.prodNoCarte, open: open1(L, 'pMenu', 'nav-menu') };
@@ -293,7 +382,20 @@
       return { text: t.prodCarteOnly(carte), note: t.prodNoLines, open: open1(L, 'pMenu', 'nav-menu') };
     }
     var rows = r.rows;
-    if (!rows.length) return { text: t.prodNoCarte, open: open1(L, 'pMenu', 'nav-menu') };
+    if (!rows.length) {
+      /* La source sait lire la fenêtre demandée : elle est simplement vide.
+         Le dire avec la période nommée — « rien vendu hier » est une réponse. */
+      if (per && r.prov && r.prov.honoured) {
+        return { text: t.prodNonePeriod(perName), prov: r.prov, open: open1(L, 'pMenu', 'nav-menu') };
+      }
+      /* La source ne sait pas remonter jusque-là. On ne substitue pas une
+         autre fenêtre en silence : c'est le classement d'aujourd'hui présenté
+         comme celui d'hier que l'audit a trouvé, et il vaut un refus net. */
+      if (per && r.prov && r.prov.limit === 'till') {
+        return { text: t.prodPerTill(perName), prov: r.prov, open: open1(L, 'pMenu', 'nav-menu') };
+      }
+      return { text: t.prodNoCarte, open: open1(L, 'pMenu', 'nav-menu') };
+    }
     var bottom = spec.agg === 'bottom';
     var pick = bottom ? rows[rows.length - 1] : rows[0];
     var unitTxt = t.prodUnits(pick.units);
@@ -311,11 +413,20 @@
         h: others.map(function (o) { return fmt(o.units); }).join(' · '),
       });
     }
-    return {
-      text: (bottom ? t.prodBottom : t.prodTop)(esc(pick.name), unitTxt),
+    var honoured = !per || !r.prov || r.prov.honoured !== false;
+    var out = {
+      /* La période n'entre dans la PHRASE que si la source a su la lire.
+         Sinon on répond sans l'annoncer, et la réserve dit sur quoi porte
+         réellement le classement. */
+      text: honoured && per
+        ? (bottom ? t.prodBottomP : t.prodTopP)(esc(pick.name), unitTxt, perName)
+        : (bottom ? t.prodBottom : t.prodTop)(esc(pick.name), unitTxt),
       stats: stats,
+      prov: r.prov,
       open: open1(L, 'pMenu', 'nav-menu'),
     };
+    if (!honoured && r.prov && r.prov.limit === 'menu') out.note = t.prodPerMenu(perName);
+    return out;
   }
 
   /* ═══════════ clients ═══════════ */
@@ -337,7 +448,7 @@
     return { book: book, hit: best };
   }
 
-  function sClientTop(L) {
+  function sClientTop(spec, L) {
     var t = tr(L);
     var book = clientBook();
     if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'nav-clients') };
@@ -359,7 +470,17 @@
         h: others.map(function (o) { return fmtMad(+o.spend || 0); }).join(' · '),
       });
     }
-    return { text: t.cliTop(esc(c.name)), stats: stats, open: open1(L, 'pClients', 'nav-clients') };
+    var r = {
+      text: t.cliTop(esc(c.name)), stats: stats,
+      prov: { mod: 'clients', count: book.length, unit: 'entries' },
+      open: open1(L, 'pClients', 'nav-clients'),
+    };
+    /* Le carnet ne retient qu'un cumul par client, jamais l'historique daté.
+       « Mon meilleur client ce mois-ci » n'a donc pas de réponse propre : on
+       donne le cumul et on dit que c'en est un, plutôt que de l'étiqueter
+       « ce mois-ci ». */
+    if (spec && spec.period) r.note = t.cliPerLifetime((spec && spec.periodLabel) || '');
+    return r;
   }
 
   function sClientPoints(spec, L) {
@@ -381,6 +502,7 @@
         { l: t.cliSpend, v: fmtMad(+c.spend || 0), h: '' },
         { l: t.cliLast, v: d == null ? '—' : t.cliDaysAgo(d), h: '' },
       ],
+      prov: { mod: 'clients', count: f.book.length, unit: 'entries' },
       open: open1(L, 'pClients', 'nav-clients'),
     };
     if (!cfg || !cfg.on) r.note = t.cliNoLoyalty;
@@ -406,6 +528,7 @@
         return { l: esc(c.name), v: fmtMad(+c.spend || 0), h: t.cliDaysAgo(daysSince(c.lastSeen)) };
       }).concat(sleep.length > top.length ? [{ l: t.andMore(sleep.length - top.length), v: '—', h: '' }] : []),
       note: t.cliDormantNote,
+      prov: { mod: 'clients', count: book.length, unit: 'entries' },
       open: open1(L, 'pClients', 'nav-clients'),
     };
   }
@@ -426,6 +549,7 @@
           { l: t.colRole, v: roleTxt || '—', h: '' },
           { l: t.colToday, v: fmt(onToday.length), h: '' },
         ],
+        prov: { mod: 'team', count: team.length, unit: 'entries' },
         open: open1(L, 'pTeam', 'nav-equipe'),
       };
     }
@@ -433,6 +557,7 @@
       return {
         text: t.staffToday(onToday.length),
         stats: onToday.slice(0, 5).map(function (m) { return { l: esc(m.name), v: esc(m.role || '—'), h: '' }; }),
+        prov: { mod: 'team', count: team.length, unit: 'entries' },
         open: open1(L, 'pTeam', 'nav-equipe'),
       };
     }
@@ -442,6 +567,7 @@
         { l: t.colRole, v: roleTxt || '—', h: '' },
         { l: t.colToday, v: fmt(onToday.length), h: '' },
       ],
+      prov: { mod: 'team', count: team.length, unit: 'entries' },
       open: open1(L, 'pTeam', 'nav-equipe'),
     };
   }
@@ -464,7 +590,11 @@
     var stats = out.slice(0, 4).map(function (p) { return { l: esc(p.name), v: t.stkOutCol, h: '' }; });
     if (out.length > 4) stats.push({ l: t.andMore(out.length - 4), v: '—', h: '' });
     if (low.length) stats.push({ l: t.stkLow, v: fmt(low.length), h: low.slice(0, 3).map(function (p) { return esc(p.name); }).join(' · ') });
-    return { text: out.length ? t.stkOut(out.length) : t.stkNone, stats: stats, open: open1(L, 'pStock', 'nav-stock') };
+    return {
+      text: out.length ? t.stkOut(out.length) : t.stkNone, stats: stats,
+      prov: { mod: 'stock', count: prods.length, unit: 'entries' },
+      open: open1(L, 'pStock', 'nav-stock'),
+    };
   }
 
   /* ═══════════ point d'entrée ═══════════
@@ -477,7 +607,7 @@
       if (spec.entity === 'client') {
         if (spec.agg === 'points') return sClientPoints(spec, L);
         if (spec.agg === 'dormant') return sClientDormant(L);
-        return sClientTop(L);
+        return sClientTop(spec, L);
       }
       if (spec.entity === 'staff') return sStaff(spec, L);
       if (spec.entity === 'stock') return sStockOut(L);

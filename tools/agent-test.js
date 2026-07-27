@@ -417,6 +417,152 @@ section('Role permissions (staff badge cannot read the P&L)');
   t('the owner still gets the answer', numbersIn(ownerText).some((v) => v > 10000), ownerText.slice(0, 80));
 }
 
+/* ── 8 · the re-audit's production acceptance tests ────────────────────────
+ * July 2026 re-audit, "Production acceptance tests". Six properties a build
+ * has to hold before it goes near a paying merchant. Three of them already
+ * had a home above (cross-device item detail → §6c, grounding → §5, role
+ * enforcement on the P&L → §7); the rest live here, plus the client-book half
+ * of role enforcement, which §7 did not cover. */
+section('Production acceptance (re-audit, July 2026)');
+{
+  const now = Date.now();
+
+  /* 1 · IMMEDIATE SALE AWARENESS. The audit found the deployed dashboard at
+   * 1 910 MAD, three orders and a live payment mix while the assistant on the
+   * same screen said there were no sales yet and asked for a first one. The
+   * merchant was hosted but sitting on a venue id that had never been flagged
+   * custom: the dashboard cards asked isCustom() and fell through to the demo
+   * model, the assistant asked isReal() || isCustom() and answered honestly.
+   * Two Kiwi surfaces disagreeing about whether the merchant's own money
+   * exists. Both halves are checked — the answer here, the gate in the file. */
+  {
+    const w = load({
+      lang: 'fr',
+      env: { isReal: () => true },
+      venue: { isCustom: () => false, getVenue: () => 'v-amira', getCurrentVenueData: () => ({ name: 'Boutique' }) },
+      sales: {
+        list: () => [
+          { ts: now - 3 * 3600e3, amount: 640, method: 'cash' },
+          { ts: now - 2 * 3600e3, amount: 700, method: 'card' },
+          { ts: now - 3600e3, amount: 570, method: 'cash' },
+        ],
+        totals: () => ({ revenue: 1910, count: 3, basket: 636.67 }),
+      },
+      globals: { KiwiMe: { business: 'Amira Boutique' } },
+    });
+    const day = w.KiwiAgentAsk('combien j’ai fait aujourd’hui');
+    const text = flatten(day);
+    t('a hosted merchant on a non-custom venue is told their own takings',
+      numbersIn(text).some((v) => v === 1910), text.slice(0, 160));
+    /* The sentence itself, not the stats — "Hier : aucune vente" is a true row
+     * about a different day and must not read as a failure here. */
+    const lead = strip((day && day.text) || '');
+    t('…and is not told there is no sale yet',
+      !/aucune vente|premiere vente|première vente|pas encore/i.test(lead), lead.slice(0, 160));
+
+    /* The dashboard half. Every card in dateRange.js used to ask isCustom()
+     * on its own; they now go through ownData(), which is isCustom() OR a real
+     * session. One bare call site coming back is the whole bug coming back. */
+    const dr = fs.readFileSync(path.join(ROOT, 'assets', 'dateRange.js'), 'utf8');
+    const bare = (dr.match(/KiwiVenue\s*\?\.\s*isCustom\s*\?\./g) || []).length;
+    t('no dashboard card decides "is this my data" on isCustom() alone',
+      bare === 0, `${bare} bare call site(s) left in dateRange.js`);
+  }
+
+  /* 2 · VENUE ISOLATION. The till journal is keyed by trade, not by
+   * establishment: two shops served from one browser wrote into the same
+   * localStorage key and the product ranking of one counted the other's
+   * sales. Each row now carries its tenant. */
+  {
+    const w = load({
+      lang: 'fr',
+      env: { isReal: () => true },
+      venue: { isCustom: () => true, getVenue: () => 'v-a', getCurrentVenueData: () => ({ name: 'Boutique A' }) },
+      sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+      globals: { KiwiLive: { merchant: () => 'boutique-a' } },
+      store: {
+        'kiwi:posTenants': JSON.stringify(['boutique-a', 'resto-b']),
+        'kiwi:posDay:boutique': JSON.stringify([
+          { ts: now, total: 100, m: 'boutique-a', lines: [{ name: 'Jean noir', qty: 5, total: 100 }] },
+        ]),
+        'kiwi:posDay:restaurant': JSON.stringify([
+          { ts: now, total: 200, m: 'resto-b', lines: [{ name: 'Tajine', qty: 9, total: 200 }] },
+        ]),
+      },
+    });
+    const text = flatten(w.KiwiAgentAsk('quel est mon produit le plus vendu'));
+    t('the shop ranks its own item', /Jean noir/.test(text), text.slice(0, 140));
+    t('the restaurant next door does not appear in it', !/Tajine/.test(text), text.slice(0, 140));
+  }
+
+  /* 4 · PERIOD CORRECTNESS. "Best product yesterday" routes to the product
+   * lookup before the day handler — the right order — but the spec used to
+   * travel without a window, so an all-time ranking came back dressed as
+   * yesterday's. That is the class of wrong number a merchant restocks on. */
+  {
+    const LINES = [{ name: 'Café noir', qty: 7, total: 84 }];
+    const w = load({
+      lang: 'fr',
+      env: { isReal: () => true },
+      venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Cafe test' }) },
+      sales: {
+        list: () => [{ ts: now, amount: 84, lines: LINES }],
+        totals: () => ({ revenue: 84, count: 1, basket: 84 }),
+      },
+    });
+    const yest = w.KiwiAgentAsk('quel est mon produit le plus vendu hier');
+    const yTxt = flatten(yest);
+    t('yesterday, with sales only today, does not crown today’s item',
+      !/Café noir/.test(yTxt), yTxt.slice(0, 160));
+    t('…and the refusal names the period it could not fill',
+      /hier/i.test(yTxt), yTxt.slice(0, 160));
+    const today = flatten(w.KiwiAgentAsk('quel est mon produit le plus vendu aujourd’hui'));
+    t('today still gets its ranking, and says so',
+      /Café noir/.test(today) && /aujourd/i.test(today), today.slice(0, 160));
+
+    /* 6 · GROUNDING, provenance half — establishment, period, module, volume. */
+    const prov = w.KiwiAgentAsk('quel est mon produit le plus vendu');
+    t('every metric answer carries its provenance line',
+      !!(prov && prov.meta && /Cafe test/.test(prov.meta) && /ticket/.test(prov.meta)),
+      (prov && prov.meta) || '(no meta)');
+  }
+
+  /* 5 · ROLE ENFORCEMENT, client book. §7 covers the P&L; this covers the
+   * other disclosure — a name, what they spend, their visits, their points,
+   * their last visit and the runners-up's spending, one question at a time. */
+  {
+    const BOOK = [
+      { name: 'Salma Bennani', spend: 4200, visits: 31, points: 88, lastSeen: now - 2 * 864e5 },
+      { name: 'Youssef Idrissi', spend: 2600, visits: 18, points: 51, lastSeen: now - 9 * 864e5 },
+    ];
+    const clients = { hasBook: () => true, list: () => BOOK, config: () => ({ on: true, threshold: 100, reward: 'un café' }) };
+    const mk = (role) => load({
+      lang: 'fr', role,
+      env: { isReal: () => true },
+      venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Cafe test' }) },
+      sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+      globals: { KiwiClients: clients },
+    });
+    const ws = mk('staff');
+    const PII = ['qui est mon meilleur client', 'combien de points a Salma Bennani',
+      'quels clients ne sont plus revenus', 'c’est quoi le numéro de téléphone de la cliente'];
+    let leaked = 0;
+    for (const q of PII) {
+      const r = ws.KiwiAgentAsk(q);
+      if (!r || !r.refused) { leaked++; fail(`staff asked "${q}" and was not refused`); continue; }
+      if (/Salma|Youssef/.test(flatten(r))) { leaked++; fail(`the refusal to "${q}" carried a client name`); }
+    }
+    if (!leaked) ok(`${PII.length} client-book questions refused for a staff badge`);
+
+    const wm = mk('manager');
+    t('a manager still runs the client book (their sidebar keeps it)',
+      /Salma/.test(flatten(wm.KiwiAgentAsk('qui est mon meilleur client'))));
+    const wo = mk('owner');
+    t('the owner still runs the client book',
+      /Salma/.test(flatten(wo.KiwiAgentAsk('qui est mon meilleur client'))));
+  }
+}
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ assistant gate: ${failures} failure(s)`); process.exit(1); }

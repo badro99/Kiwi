@@ -180,8 +180,34 @@
    * all of those, and over-refusing would make the assistant useless to the
    * people who use the till all day. */
   const BOOKS_TOPIC_RX = /marge|rentab|seuil|benefic|resultat\s+net|seuil\s+de|charge|depense|loyer|salaire|\bpaie\b|masse\s+salariale|tresorerie|\bcash\b|cnss|\bimpot|\btva\b|valorisa|cout\s+matiere|margin|profit|payroll|salary|salaries|rent\b|expense|cash\s+flow|break[- ]?even|valuation|هامش|ربح|خزينة|اجور|رواتب|مصاريف|كراء|عتبة/;
-  function sForbidden() {
-    const p = PERM[L] || PERM.fr;
+  /* Les livres ne sont pas la seule chose qu'un badge de comptoir ne doit pas
+   * lire. « Qui est mon meilleur client » sort un nom, ce qu'il a dépensé, ses
+   * visites, ses points, sa dernière venue ET la dépense des suivants — un
+   * export du carnet, une question à la fois. Le carnet client et les fiches
+   * de l'équipe sont donc réservés au propriétaire et à la direction, comme
+   * la page Équipe que la barre latérale ferme déjà. Le comptoir garde le
+   * comptoir : ventes, journée, stock, produits, panier moyen. */
+  const PERM_DATA = {
+    fr: {
+      text: 'Le carnet clients et les fiches de l’équipe sont des données personnelles : elles restent au propriétaire et à la direction. Votre badge ouvre la caisse, les ventes, la journée, le stock et les produits, et je réponds sur tout ça sans réserve.',
+      note: 'Ce n’est pas un refus de ma part : votre menu latéral ferme déjà Équipe, et un nom de client avec ce qu’il dépense n’est pas une donnée de comptoir. Si ce détail vous est nécessaire, le propriétaire l’a dans son tableau de bord.',
+    },
+    en: {
+      text: 'The client book and the team records are personal data: they stay with the owner and management. Your badge opens the till, sales, the day, stock and products, and I answer on all of that without reservation.',
+      note: 'This is not my refusal: your sidebar already closes Équipe, and a customer’s name together with what they spend is not shop-floor data. If you need that detail, the owner has it in their dashboard.',
+    },
+    ar: {
+      text: 'دفتر الزبناء وبطاقات الفريق بيانات شخصية: تبقى لدى صاحب الحساب والإدارة. شارتك تفتح الصندوق والمبيعات واليوم والمخزون والمنتجات، وأجيب عن كل ذلك دون تحفّظ.',
+      note: 'ليس رفضًا مني: قائمتك الجانبية تُغلق أصلًا صفحة الفريق، واسم زبون مع ما ينفقه ليس بيانات مِنضدة. إذا احتجت هذا التفصيل فهو متوفّر لدى صاحب الحساب.',
+    },
+  };
+  /* Les coordonnées d'un client, sans passer par une route de recherche :
+   * « c'est quoi le numéro de la cliente qui vient le vendredi ». */
+  const CONTACT_RX = /\btelephone\b|\bnumero\b|\bcoordonnees\b|\bemail\b|\be-?mails?\b|\badresse\b|phone\s+number|contact\s+details|هاتف|رقم\s*الزبون|عنوان\s*الزبون/;
+  const CLIENT_WORD_RX = /clients?\b|clientes?\b|customers?\b|زبون|زبناء/;
+  function sForbidden(kind) {
+    const src = kind === 'data' ? PERM_DATA : PERM;
+    const p = src[L] || src.fr;
     /* `refused` is for the telemetry hook, not the renderer — a permissions
      * regression should be visible as a rate, not discovered by a merchant. */
     return { text: p.text, note: p.note, refused: true };
@@ -1885,11 +1911,85 @@
   /* The reading lives in assets/agent-data.js — one module per concern, and
    * the bundle every merchant downloads does not grow a store reader per
    * feature. If that file is absent the honest refusal is still there. */
+  /* ─── D'OÙ SORT CE CHIFFRE ? ────────────────────────────────────────────
+   * L'audit de juillet a trouvé le tableau de bord à 1 910 MAD et l'assistant
+   * à « aucune vente » sur le même écran, et il a fallu une enquête pour
+   * savoir laquelle des deux surfaces mentait. Une ligne suffisait : quel
+   * établissement, quelle fenêtre, quel module, combien de tickets, quelle
+   * fraîcheur. Elle est petite et discrète parce qu'elle ne s'adresse pas au
+   * commerçant tous les jours — mais le jour où deux surfaces se contredisent,
+   * elle tient dans une capture d'écran. */
+  const PROV_T = {
+    fr: {
+      sales: 'ventes enregistrées', till: 'journal de caisse', menu: 'carte (démonstration)',
+      clients: 'carnet clients', team: 'fiche équipe', stock: 'catalogue stock',
+      tickets: (n) => fmt(n) + ' ticket' + (n > 1 ? 's' : ''),
+      entries: (n) => fmt(n) + ' fiche' + (n > 1 ? 's' : ''),
+      part: (a, b) => 'panier détaillé sur ' + fmt(a) + ' des ' + fmt(b),
+      syncNever: 'jamais synchronisé', syncNow: 'synchro à l’instant',
+      syncAgo: (s) => 'synchro il y a ' + s,
+    },
+    en: {
+      sales: 'recorded sales', till: 'till journal', menu: 'menu (demo)',
+      clients: 'client book', team: 'team sheet', stock: 'stock catalogue',
+      tickets: (n) => fmt(n) + ' ticket' + (n > 1 ? 's' : ''),
+      entries: (n) => fmt(n) + ' record' + (n > 1 ? 's' : ''),
+      part: (a, b) => 'itemised basket on ' + fmt(a) + ' of ' + fmt(b),
+      syncNever: 'never synced', syncNow: 'synced just now',
+      syncAgo: (s) => 'synced ' + s + ' ago',
+    },
+    ar: {
+      sales: 'المبيعات المسجّلة', till: 'سجلّ الصندوق', menu: 'اللائحة (عرض)',
+      clients: 'دفتر الزبناء', team: 'ورقة الفريق', stock: 'كتالوج المخزون',
+      tickets: (n) => fmt(n) + ' تذكرة',
+      entries: (n) => fmt(n) + ' بطاقة',
+      part: (a, b) => 'تفصيل السلة في ' + fmt(a) + ' من ' + fmt(b),
+      syncNever: 'دون مزامنة', syncNow: 'مزامنة الآن',
+      syncAgo: (s) => 'مزامنة منذ ' + s,
+    },
+  };
+  function agoLabel(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 5) return null;
+    if (s < 90) return s + ' s';
+    const m = Math.round(s / 60);
+    return m < 90 ? m + ' min' : Math.round(m / 60) + ' h';
+  }
+  /* Muet quand le Live Link est éteint : une caisse et un tableau de bord dans
+     le même navigateur n'ont rien à synchroniser, et annoncer « jamais
+     synchronisé » y serait faux. */
+  function syncBit(p) {
+    let st = null;
+    try { st = (window.KiwiLive && window.KiwiLive.status) ? window.KiwiLive.status() : null; } catch (_) { st = null; }
+    if (!st || !st.on) return null;
+    if (!st.lastSync) return p.syncNever;
+    const a = agoLabel(Date.now() - st.lastSync);
+    return a ? p.syncAgo(a) : p.syncNow;
+  }
+  function metaLine(prov, spec) {
+    if (!prov || !prov.mod) return '';
+    /* La démo locale n'a qu'une source de vérité par construction : deux
+       surfaces ne peuvent pas s'y contredire, il n'y a donc rien à tracer, et
+       la démo reste identique au bit près. La ligne est pour les vrais
+       commerçants, chez qui plusieurs magasins coexistent. */
+    if (!B.partial) return '';
+    const p = PROV_T[L] || PROV_T.fr;
+    const bits = [escHtml(B.name || ''), (spec && spec.periodLabel) || periodLabel(null), p[prov.mod] || prov.mod];
+    if (prov.count != null) bits.push(prov.unit === 'entries' ? p.entries(prov.count) : p.tickets(prov.count));
+    if (prov.total != null && prov.count != null && prov.total > prov.count) bits.push(p.part(prov.count, prov.total));
+    const s = syncBit(p);
+    if (s) bits.push(s);
+    return bits.filter(Boolean).join(' · ');
+  }
+
   function sLookup(spec) {
     const D = window.KiwiAgentData;
+    if (spec) spec.periodLabel = periodLabel(spec.period);
     let r = null;
     try { r = (D && D.reply) ? D.reply(spec, L) : null; } catch (_) { r = null; }
-    return r || sScoped();
+    if (!r) return sScoped();
+    if (r.prov) { r.meta = metaLine(r.prov, spec); delete r.prov; }
+    return r;
   }
 
   function sDay(spec) {
@@ -1907,8 +2007,13 @@
     const prev = windowStats(from - DAY_MS, from);
     const prevStat = { l: t.dayPrev, v: prev.count ? fmtMad(prev.revenue) : t.dayNone, h: dateLabel(from - DAY_MS) };
     const avgStat = { l: t.dayAvg, v: fmtMad(avg), h: t.dayAvgH(spanDays) };
+    const dayProv = { mod: 'sales', count: cur.count };
     if (!cur.count) {
-      return { text: t.dayZero(label), stats: [prevStat, avgStat], note: t.dayNote, follow: [tr().chips.forecast, tr().chips.breakeven] };
+      return {
+        text: t.dayZero(label), stats: [prevStat, avgStat], note: t.dayNote,
+        meta: metaLine(dayProv, { periodLabel: label }),
+        follow: [tr().chips.forecast, tr().chips.breakeven],
+      };
     }
     const r = {
       text: t.dayText(label),
@@ -1919,6 +2024,7 @@
         avgStat,
       ],
       note: spec.offset === 0 ? t.dayNoteToday : t.dayNote,
+      meta: metaLine(dayProv, { periodLabel: label }),
       follow: [tr().chips.forecast, tr().chips.breakeven],
     };
     if (avg > 0) {
@@ -2413,7 +2519,76 @@
   const OUT_RX = /\bruptures?\b|\ben\s+rupture\b|out\s+of\s+stock|\bstock\s+bas\b|\blow\s+stock\b|\bepuises?\b|نفاد|نافد|مخزون\s*منخفض/;
   const ON_SHIFT_RX = /\btravaille\b|\bde\s+service\b|\bon\s+shift\b|\bworking\b|\bplanning\b|\bpresents?\b|يعمل|الخدمة/;
 
+  /* ─── QUELLE PÉRIODE ? ──────────────────────────────────────────────────
+   * « mon meilleur produit hier » est une question de classement qui porte une
+   * date, et le routeur la confie au module produits AVANT le module journée —
+   * c'est le bon ordre, mais le spec partait sans fenêtre. Le classement de
+   * TOUTE l'histoire du commerce revenait alors présenté comme celui d'hier :
+   * un chiffre faux qui a l'air juste, et c'est sur celui-là qu'on rachète du
+   * stock. Le spec porte donc sa période ; chaque source dit si elle sait
+   * l'honorer (le journal de caisse ne garde que la journée en cours, la carte
+   * ne date pas ses ventes, le carnet client ne retient qu'un cumul) et la
+   * réponse nomme la fenêtre qu'elle a réellement lue. */
+  const WEEK_RX = /\bsemaine\b|\bthis\s+week\b|\bweek\b|\bhebdo\w*/;
+  const MONTH_RX = /\bmois\b|\bthis\s+month\b|\bmonth\b|\bmensuel\w*|الشهر|شهر/;
+  const YEAR_RX = /\bannee\b|\bthis\s+year\b|\byear\b|\bannuel\w*|السنة|عام/;
+  const LAST_RX = /\bdernier\w*|\bderniere\b|\bpassee?\b|\blast\b|\bprevious\b|الماضي|المنصرم|السابق/;
+  const WEEK_AR_RX = /الاسبوع|اسبوع/;
+  function periodWindow(q) {
+    const now = new Date();
+    const t0 = midnight(0), day = DAY_MS;
+    if (DAY_PREV2_RX.test(q)) return { id: 'prev2', from: t0 - 2 * day, to: t0 - day };
+    if (DAY_YEST_RX.test(q)) return { id: 'yesterday', from: t0 - day, to: t0 };
+    if (DAY_TODAY_RX.test(q)) return { id: 'today', from: t0, to: t0 + day };
+    /* Deux jours nommés, c'est une comparaison, pas une fenêtre : on n'en
+       choisit pas un au hasard. */
+    const wd = WEEKDAY_RX.filter((w) => w.rx.test(q));
+    if (wd.length === 1) {
+      const back = (new Date(t0).getDay() - wd[0].dow + 7) % 7;
+      return { id: 'weekday', from: t0 - back * day, to: t0 - back * day + day };
+    }
+    const prev = LAST_RX.test(q);
+    if (WEEK_RX.test(q) || WEEK_AR_RX.test(q)) {
+      const mon = t0 - ((new Date(t0).getDay() + 6) % 7) * day;   /* lundi = début */
+      return prev ? { id: 'lastweek', from: mon - 7 * day, to: mon } : { id: 'week', from: mon, to: t0 + day };
+    }
+    if (MONTH_RX.test(q)) {
+      const y = now.getFullYear(), m = now.getMonth(), first = new Date(y, m, 1).getTime();
+      return prev ? { id: 'lastmonth', from: new Date(y, m - 1, 1).getTime(), to: first }
+                  : { id: 'month', from: first, to: t0 + day };
+    }
+    if (YEAR_RX.test(q)) {
+      const y = now.getFullYear(), first = new Date(y, 0, 1).getTime();
+      return prev ? { id: 'lastyear', from: new Date(y - 1, 0, 1).getTime(), to: first }
+                  : { id: 'year', from: first, to: t0 + day };
+    }
+    return null;
+  }
+  const PER_T = {
+    fr: { today: 'aujourd’hui', yesterday: 'hier', prev2: 'avant-hier', week: 'cette semaine',
+          lastweek: 'la semaine dernière', month: 'ce mois-ci', lastmonth: 'le mois dernier',
+          year: 'cette année', lastyear: 'l’an dernier', all: 'depuis le début' },
+    en: { today: 'today', yesterday: 'yesterday', prev2: 'the day before yesterday', week: 'this week',
+          lastweek: 'last week', month: 'this month', lastmonth: 'last month',
+          year: 'this year', lastyear: 'last year', all: 'all time' },
+    ar: { today: 'اليوم', yesterday: 'البارحة', prev2: 'أول أمس', week: 'هذا الأسبوع',
+          lastweek: 'الأسبوع الماضي', month: 'هذا الشهر', lastmonth: 'الشهر الماضي',
+          year: 'هذه السنة', lastyear: 'السنة الماضية', all: 'منذ البداية' },
+  };
+  function periodLabel(p) {
+    const d = PER_T[L] || PER_T.fr;
+    if (!p) return d.all;
+    if (p.id === 'weekday') return dateLabel(p.from);
+    return d[p.id] || d.all;
+  }
+
   function matchLookup(q, raw) {
+    const spec = matchLookupKind(q, raw);
+    if (spec) spec.period = periodWindow(q);
+    return spec;
+  }
+
+  function matchLookupKind(q, raw) {
     /* Products: a superlative plus something that names an item. "combien j'ai
      * vendu" has no superlative and stays a revenue question. */
     const sup = SUP_TOP_RX.test(q) ? 'top' : SUP_LOW_RX.test(q) ? 'bottom' : null;
@@ -2912,8 +3087,15 @@
      * reply, whichever way the question is phrased. Owners never reach this
      * line, so routing for them is untouched. */
     if (!seesBooks() && BOOKS_TOPIC_RX.test(norm(fixDigits(rawIn)))) return sForbidden();
-    /* The staff badge has no Équipe page; it gets no roster lookups either. */
-    if (d.kind === 'lookup' && d.spec && d.spec.entity === 'staff' && accessTier() === 'staff') return sForbidden();
+    /* The staff badge has no Équipe page; it gets no roster lookups either —
+     * and no client book. Both by route and by topic: a name, a spend and a
+     * phone number are the same disclosure whichever sentence carries them. */
+    if (d.kind === 'lookup' && d.spec && accessTier() === 'staff'
+        && (d.spec.entity === 'staff' || d.spec.entity === 'client')) return sForbidden('data');
+    if (accessTier() === 'staff') {
+      const nq = norm(fixDigits(rawIn));
+      if (CONTACT_RX.test(nq) && CLIENT_WORD_RX.test(nq)) return sForbidden('data');
+    }
     // Remember amount-driven scenarios so the next correction can refine them.
     if (d.kind === 'hire' || d.kind === 'afford' || d.kind === 'price' || d.kind === 'compound') lastScenario = d.kind;
     if (d.kind === 'math') return sCalc(d.raw, evalMath(d.raw));
@@ -3729,6 +3911,11 @@
     .fa-verdict.warn { background:rgba(176,124,0,.11); color:#8a6200; }
     .fa-verdict.bad  { background:rgba(193,58,48,.10); color:#b3392f; }
     .fa-note { margin-top:11px; font-size:11.5px; color:var(--n-500); line-height:1.5; }
+    /* La provenance : établissement · période · module · volume · fraîcheur.
+       Discrète par construction — elle ne s'adresse pas au commerçant tous les
+       jours, elle sert le jour où deux surfaces annoncent deux chiffres. */
+    .fa-meta { margin-top:9px; font-size:10.5px; color:var(--n-500); opacity:.8;
+      letter-spacing:.015em; line-height:1.45; }
 
     /* suggestion chips */
     .fa-follow { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
@@ -3955,6 +4142,7 @@
     }
     if (r.verdict) h += `<div class="fa-verdict ${r.verdict.tone}">${r.verdict.text}</div>`;
     if (r.note) h += `<div class="fa-note">${r.note}</div>`;
+    if (r.meta) h += `<div class="fa-meta">${r.meta}</div>`;
     if (r.follow && r.follow.length) {
       h += '<div class="fa-follow">' + r.follow.map((f) =>
         `<button data-fa-follow="${escAttr(f)}">${f}</button>`).join('') + '</div>';

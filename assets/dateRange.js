@@ -84,6 +84,29 @@
   const getShowComparison = () => showComparison;
   const getCurrentVenue = () => (window.KiwiVenue?.getVenue?.() || 'cafeAtlas');
 
+  /* ─── WHOSE DATA IS THIS? ────────────────────────────────────────────────
+   * Every card below picks between the merchant's OWN store and the demo
+   * model, and every one of them used to ask isCustom() — "did the user
+   * create this venue?". That misses the state a real merchant is actually
+   * in for their first minutes, and after any venue-resolution hiccup: a
+   * hosted, signed-in session sitting on a venue id that is not flagged
+   * custom. In that state the hero, the payment mix, the KPI band and the
+   * revenue chart all fell through to the demo model and painted somebody
+   * else's day, while the assistant — which asks isReal() || isCustom() —
+   * correctly answered that there were no sales yet.
+   *
+   * That disagreement is the single worst thing this product can do: the
+   * merchant reads two Kiwi surfaces, they contradict each other about
+   * whether their own money exists, and neither is obviously the liar. So
+   * the question is asked ONCE, here, and it is the assistant's question.
+   * A real session shows its own data or an empty state — never a demo's.
+   * Local demo: isReal() is false, so nothing about it changes. */
+  const ownData = (id) => {
+    const KV = window.KiwiVenue;
+    if (KV && KV.isCustom && KV.isCustom(id)) return true;
+    return !!(window.KiwiEnv?.isReal?.());
+  };
+
   /* ─── Fusion-mode aggregator ───────────────────────────────────────────
    * When the merchant has activated "Fusionner les 3 emplacements", every
    * venue-keyed table is summed across cafeAtlas + maisonMansour + spaBahia.
@@ -161,7 +184,7 @@
     // borrowing live numbers via the fallback below. The shape must match the
     // vertical (a boutique-based venue needs tauxRetour, a spa needs tips…),
     // otherwise vertical-specific KPI tiles silently drop.
-    if (window.KiwiVenue?.isCustom?.(v)) {
+    if (ownData(v)) {
       const baseIds = { restaurant: 'cafeAtlas', boutique: 'maisonMansour', spa: 'spaBahia' };
       const baseId = baseIds[window.KiwiVenue?.getVenueType?.() || 'restaurant'] || 'cafeAtlas';
       const shape = table?.[baseId]?.[eff] ?? table?.[baseId]?.trenteJours
@@ -185,7 +208,7 @@
     const eff = effRange();
     // A user-created venue has no synthetic demo clock — it stays at zero
     // until the merchant records real sales.
-    if (window.KiwiVenue?.isCustom?.(getCurrentVenue())) return false;
+    if (ownData(getCurrentVenue())) return false;
     return eff === 'aujourdhui' && !!window.KiwiDemoClock?.isActive?.();
   }
   function getSim() { return window.KiwiDemoClock?.getSimState?.() || null; }
@@ -1769,7 +1792,7 @@
     }
     // User-created venue — hero figures come from the merchant's real sales,
     // windowed to the active range so the number tracks the selected period.
-    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+    if (ownData() && window.KiwiSales) {
       const t = realSalesTotals();
       /* Les trois comparaisons du hero sortent des ventes réelles. Une période
        * de référence vide renvoie null, et le bloc entier disparaît au lieu
@@ -1951,7 +1974,7 @@
     }
     // User-created venue — goal comes from the merchant's setting, progress
     // from their recorded sales.
-    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+    if (ownData() && window.KiwiSales) {
       const vd = window.KiwiVenue.getCurrentVenueData?.() || {};
       data = { ...data, goal: +vd.goal || 0, current: realSalesTotals().revenue };
     }
@@ -2004,7 +2027,7 @@
      * first sale this still draws flat — the honest answer — but it no longer
      * STAYS flat once the till has rung, which is the one thing a merchant
      * opens this card to find out. Never borrows Café Atlas's shape. */
-    if (window.KiwiVenue?.isCustom?.(v)) {
+    if (ownData(v)) {
       const [from, to] = closedBounds(rng);
       const rev = new Array(HH_HOURS.length).fill(0);
       const cov = new Array(HH_HOURS.length).fill(0);
@@ -2253,7 +2276,7 @@
     }
     // User-created venue — tx / panier (and the revenue derived from them)
     // come from the merchant's recorded sales.
-    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+    if (ownData() && window.KiwiSales) {
       const t = realSalesTotals();
       const rng = effRange();
       const [wFrom, wTo] = closedBounds(rng);
@@ -2360,7 +2383,7 @@
       if (!tileData) return ''; // tile hidden for this vertical/range
       // A user-created venue has no trend history yet — show a flat baseline
       // instead of a borrowed demo sparkline.
-      const sparkPath = window.KiwiVenue?.isCustom?.()
+      const sparkPath = ownData()
         ? 'M0 18 L120 18'
         : (KPI_SPARKS[s.key] || KPI_SPARKS.tx);
       const iconPath = KPI_ICONS[s.key] || KPI_ICONS.tx;
@@ -2543,7 +2566,7 @@
     // User-created venue — plot the merchant's REAL sales for the active range
     // (bucketed from KiwiSales), replacing the zeroed demo clone that draws a
     // flat line AND leaks the demo legend total. Matches the hero / KPI window.
-    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+    if (ownData() && window.KiwiSales) {
       data = { ...data, ...realRevSeries(effRange()) };
     }
 
@@ -3129,7 +3152,7 @@
     /* Une venue réelle recompose ses tranches depuis ses ventes ; la démo garde
      * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
      * `rows`, donc les deux chemins partagent le même rendu. */
-    const custom = !!(window.KiwiVenue?.isCustom?.() && window.KiwiSales);
+    const custom = !!(ownData() && window.KiwiSales);
     const real = custom ? realMixRows(lang, effective) : null;
     const rows = custom ? real.rows : [
       { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
@@ -3504,8 +3527,7 @@
     // them in window.__kiwiFeedOrders, which the assistant reads as "les
     // dernières commandes encaissées" and puts in the model's prompt. Demo
     // covers, demo servers, demo tickets, quoted back as the merchant's own.
-    const realSession = !!(window.KiwiEnv?.isReal?.());
-    const rows = (window.KiwiVenue?.isCustom?.(venue) || realSession) ? buildCustomFeed(venue)
+    const rows = ownData(venue) ? buildCustomFeed(venue)
       : isLive ? buildLiveFeed(venue) : vData(FEED_BY_VENUE, currentRange);
     const wrap = document.querySelector('[data-feed]');
 
@@ -3590,7 +3612,7 @@
          * clock keeps simulating in the background, so reading its cumTx here
          * printed "98 commandes aujourd'hui" on a store that had rung 2. */
         let cumTx;
-        if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+        if (ownData() && window.KiwiSales) {
           const start = new Date(); start.setHours(0, 0, 0, 0);
           const t0 = start.getTime();
           let sales = [];
@@ -3815,7 +3837,7 @@
     const card = document.querySelector('[data-integ-card]');
     if (!card) return;
     if (_integOrig == null) _integOrig = card['inner' + 'HTML'];
-    if (window.KiwiVenue?.isCustom?.()) {
+    if (ownData()) {
       const lang = getLang();
       const notConn = INTEG_NOTCONN[lang] || INTEG_NOTCONN.fr;
       const addLbl = (window.KiwiI18n?.t?.('dash.integ.add')) || '+ Ajouter une intégration';
@@ -3840,14 +3862,14 @@
   function renderNotifBadge() {
     const b = document.querySelector('[data-notif-badge]');
     if (!b) return;
-    b.style.display = window.KiwiVenue?.isCustom?.() ? 'none' : '';
+    b.style.display = ownData() ? 'none' : '';
   }
 
   function renderEvening() {
     const el = document.querySelector('[data-evening-card]');
     if (!el) return;
     if (_eveningOrig == null) _eveningOrig = el['inner' + 'HTML'];
-    if (window.KiwiVenue?.isCustom?.()) {
+    if (ownData()) {
       const t = tradeStr('eveningEmpty', EVENING_EMPTY[getLang()] || EVENING_EMPTY.fr);
       el['inner' + 'HTML'] =
         `<div class="lbl">${t.lbl}</div>` +
@@ -3864,7 +3886,7 @@
     const el = document.querySelector('[data-stock-card]');
     if (!el) return;
     if (_stockOrig == null) _stockOrig = el['inner' + 'HTML'];
-    if (window.KiwiVenue?.isCustom?.()) {
+    if (ownData()) {
       const lang = getLang();
       const t = tradeStr('stockEmpty', STOCK_EMPTY[lang] || STOCK_EMPTY.fr);
       /* L'accueil porte DEUX cartes « Stock à recommander » : celle-ci, dans la
@@ -3918,7 +3940,7 @@
      * vrais. Ce n'était pas un état vide, c'était le chiffre d'affaires de
      * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
      * propres ventes ; le tilde disparaît, ce total-là est exact. */
-    if (window.KiwiVenue?.isCustom?.() && window.KiwiSales) {
+    if (ownData() && window.KiwiSales) {
       totalEl.textContent = `${frInt(realSalesTotals(effective).revenue)} MAD`;
       return;
     }
@@ -3932,7 +3954,7 @@
     const lang = getLang();
     const card = document.querySelector('[data-health-card]');
     if (card && _healthOrig == null) _healthOrig = card['inner' + 'HTML'];
-    if (window.KiwiVenue?.isCustom?.()) {
+    if (ownData()) {
       if (card) {
         const t = HEALTH_EMPTY[lang] || HEALTH_EMPTY.fr;
         card['inner' + 'HTML'] =
@@ -3974,7 +3996,7 @@
      * collected and a merchant reasonably prices against it. The gate was
      * isCustom() alone, which left the real-but-not-custom session showing a
      * ranking among 147 cafés that were never counted. */
-    if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
+    if (ownData() || window.KiwiEnv?.isReal?.()) {
       if (card) {
         const t = BENCH_EMPTY[lang] || BENCH_EMPTY.fr;
         card['inner' + 'HTML'] =
@@ -4028,7 +4050,7 @@
   function renderProducts() {
     const lang = getLang();
     const effective = effRange();
-    const isCustom = !!window.KiwiVenue?.isCustom?.();
+    const isCustom = ownData();
     const data = isCustom ? [] : vData(productsByVenue, currentRange);
     const pe = tradeStr('productsEmpty', PRODUCTS_EMPTY[lang] || PRODUCTS_EMPTY.fr);
     const lowEarly = isCustom ? realLowStock() : null;
@@ -4092,7 +4114,7 @@
   function renderStaff() {
     const lang = getLang();
     const effective = effRange();
-    const isCustom = !!window.KiwiVenue?.isCustom?.();
+    const isCustom = ownData();
     const data = isCustom ? [] : vData(staffByVenue, currentRange);
     const se = tradeStr('staffEmpty', STAFF_EMPTY[lang] || STAFF_EMPTY.fr);
     const titleEl = document.querySelector('[data-staff-title]');

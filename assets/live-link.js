@@ -288,6 +288,7 @@
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (data) {
           if (!data) return;                   // network/gate failure → still the first batch
+          lastSync = Date.now();
           if (Array.isArray(data.sales) && data.sales.length) {
             since = data.cursor || since;
             try { onSales(data.sales, backfill, tenant); } catch (_) {}
@@ -375,6 +376,7 @@
    * switch — replaying it blind poured the boutique's whole day into the
    * restaurant's store the moment the restaurant was opened. Each entry now
    * carries the merchant it was polled from, and only matching entries bridge. */
+  var lastSync = 0;     // when the server last answered a poll (0 = never)
   var feedSales = [];   // every sale the feed has returned this session
   var feedSeen = {};    // merchant + '#' + cursor -> 1 (dedup across polls)
   function accumulateFeed(sales, tenant) {
@@ -389,7 +391,15 @@
   }
   function bridgeToStore() {
     var KV = window.KiwiVenue;
-    if (!KV || !KV.isCustom || !KV.isCustom() || !window.KiwiSales || !window.KiwiSales.add) return;
+    if (!window.KiwiSales || !window.KiwiSales.add) return;
+    /* Real session OR user-created venue. isCustom() alone dropped every sale
+       of a hosted merchant sitting on a venue id that had not been flagged
+       custom yet — the exact state a store is in for its first minutes, and
+       after any venue-resolution hiccup. The sale reached the server, the
+       toast fired, and the dashboard stayed at zero. */
+    var own = false;
+    try { own = !!(KV && KV.isCustom && KV.isCustom()) || !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) { own = false; }
+    if (!own) return;
     var vid = (KV.getVenue && KV.getVenue()) || null;
     var tenant = merchant();
     if (!tenant) return;                            // identity unresolved → bridge nothing
@@ -501,5 +511,15 @@
   window.KiwiLive = {
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return qRead().length; },
+    /* What the assistant prints under an answer: which tenant it is reading,
+       when the server last answered, how many rows it has bridged, and how
+       many sales this device still owes the server. A number a merchant can
+       trace is a number a merchant can argue with. */
+    status: function () {
+      return {
+        on: on(), merchant: merchant(), lastSync: lastSync,
+        bridged: feedSales.length, queued: qRead().length,
+      };
+    },
   };
 })();

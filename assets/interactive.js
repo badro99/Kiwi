@@ -1929,7 +1929,8 @@ ar: {
           // On a user-created venue, a sale is REAL — persist it and let the
           // dashboard (hero · KPIs · feed) recompute from the sales store.
           const KV = window.KiwiVenue;
-          if (KV && KV.isCustom && KV.isCustom() && window.KiwiSales) {
+          const ownVenue = !!(KV && KV.isCustom && KV.isCustom()) || !!(window.KiwiEnv?.isReal?.());
+          if (ownVenue && window.KiwiSales) {
             const num = parseFloat(String(amount).replace(',', '.')) || 0;
             if (num <= 0) { toast(tr({fr:'Montant invalide', en:'Invalid amount', ar:'المبلغ غير صالح'}), { type: 'warn', force: true }); return; }
             const vid = KV.getVenue();
