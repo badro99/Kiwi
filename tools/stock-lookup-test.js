@@ -26,6 +26,7 @@
 import {
   makeSession, sessionCookie, tillToken, TILL_COOKIE,
   operatorToken, OP_COOKIE, SESS_COOKIE,
+  operatorIdToken, OPID_COOKIE,
 } from '../functions/auth/_lib.js';
 import { onRequestGet } from '../functions/api/stock/lookup.js';
 
@@ -54,6 +55,9 @@ const DB_ROWS = {
     { merchant: 'atlas-tanger', name: 'Atlas Tanger', type: 'boutique', account_id: ACC_A },
   ],
   accounts: { [ACC_A]: { business: 'Atlas Casa' }, [ACC_B]: { business: 'Chez Rival' } },
+  // God mode exige désormais une identité NOMMÉE et VIVANTE (auth/_lib.js →
+  // namedOperatorId) : le cookie partagé ne suffit plus, la ligne doit exister.
+  operators: ['op-badr'],
   catalogs: {
     'atlas-casa': catalogue(
       [{ id: 'p1', name: 'Chemise lin', priceMAD: 249, cost: 90, archived: false, art: 'CHM-1' }],
@@ -92,6 +96,9 @@ function makeEnv() {
             if (q.startsWith('SELECT business FROM accounts')) {
               return DB_ROWS.accounts[args[0]] || null;
             }
+            if (q.startsWith('SELECT id FROM operators')) {
+              return DB_ROWS.operators.includes(args[0]) ? { id: args[0] } : null;
+            }
             if (q.startsWith('SELECT data FROM catalogs')) {
               const d = DB_ROWS.catalogs[args[0]];
               return d ? { data: d } : null;
@@ -128,7 +135,11 @@ const byName = (r, n) => (r.body.stores || []).find((s) => s.name === n || s.mer
   const sessA = sessionCookie(await makeSession(ACC_A, SECRET)).split(';')[0];
   const sessB = sessionCookie(await makeSession(ACC_B, SECRET)).split(';')[0];
   const tillCasa = TILL_COOKIE + '=' + await tillToken(SECRET, 'atlas-casa');
-  const opCookie = OP_COOKIE + '=' + await operatorToken(SECRET);
+  // Les DEUX cookies : le jeton opérateur partagé et l'identité signée.
+  const opShared = OP_COOKIE + '=' + await operatorToken(SECRET);
+  const opCookie = opShared + '; ' + OPID_COOKIE + '=' + await operatorIdToken(SECRET, 'op-badr');
+  // Même jeton partagé, identité valide — mais la ligne a été supprimée.
+  const opRevoked = opShared + '; ' + OPID_COOKIE + '=' + await operatorIdToken(SECRET, 'op-parti');
 
   /* ── 1 · IDENTITÉ ─────────────────────────────────────────────────────── */
 
@@ -163,6 +174,14 @@ const byName = (r, n) => (r.body.stores || []).find((s) => s.name === n || s.mer
   r = await call('code=036000291452', opCookie);
   ok('opérateur sans magasin désigné refusé', r.status === 403,
     'un opérateur qui ne dit pas quel client il consulte ne doit rien recevoir');
+
+  r = await call('from=atlas-casa&code=036000291452', opShared);
+  ok('jeton opérateur partagé SEUL refusé', r.status === 403,
+    'le cookie kiwi_op est le même pour tout le monde : il ne prouve personne');
+
+  r = await call('from=atlas-casa&code=036000291452', opRevoked);
+  ok('opérateur révoqué refusé', r.status === 403,
+    'identité signée mais ligne supprimée — la révocation doit mordre ici aussi');
 
   /* ── 2 · FRONTIÈRE ────────────────────────────────────────────────────── */
 
