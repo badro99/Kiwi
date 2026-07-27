@@ -460,15 +460,27 @@
     if (cross.solo && !opts.force) return Promise.resolve(null);
 
     const slug = VENUE;
-    const key = slug + '|' + (code ? 'c:' + code : 'q:' + q.toLowerCase());
+    /* La référence entre dans la clé du cache : le propriétaire vient peut-être
+       de la poser depuis le tableau de bord sur un article scanné il y a dix
+       secondes, et servir la réponse d'avant lui montrerait « rien ailleurs »
+       juste après avoir fait le geste censé y remédier. */
+    const key = slug + '|' + (code ? 'c:' + code : 'q:' + q.toLowerCase())
+      + '|s:' + String(opts.sku || '').trim().toLowerCase();
     // Deux scans du même code à quelques secondes d'intervalle (l'employé
     // rescanne pour montrer l'écran à la cliente) ne font qu'un appel.
     const hit = cross.cache[key];
     if (hit && Date.now() - hit.at < 30000) return Promise.resolve(hit.res);
     if (cross.inflight[key]) return cross.inflight[key];
 
+    /* La référence commune part AVEC le code. Le code seul ne suffit pas : une
+     * étiquette imprimée ici ne veut rien dire dans l'autre magasin, et c'est
+     * précisément le cas du commerçant qui étiquette lui-même sa marchandise.
+     * Le serveur essaie le code d'abord (le plus sûr quand c'est un vrai
+     * code fabricant) et retombe sur la référence. */
+    const sku = String(opts.sku || '').trim();
     const url = '/api/stock/lookup?from=' + encodeURIComponent(slug)
-      + (code ? '&code=' + encodeURIComponent(code) : '&q=' + encodeURIComponent(q));
+      + (code ? '&code=' + encodeURIComponent(code) : '&q=' + encodeURIComponent(q))
+      + (sku ? '&sku=' + encodeURIComponent(sku) : '');
 
     const p = fetch(url, { headers: { Accept: 'application/json' } })
       .then((r) => (r && r.ok ? r.json() : null))
@@ -710,6 +722,20 @@
 
   function normCode(s) { return String(s == null ? '' : s).trim(); }
 
+  /* La référence commune, mise à plat avant d'être comparée. Elle est SAISIE À
+   * LA MAIN dans deux magasins différents, souvent par deux personnes : « JEAN
+   * 501 », « jean-501 » et « Jean501 » sont la même intention et doivent se
+   * rapprocher. On replie donc la casse, les accents et tout ce qui n'est ni
+   * lettre ni chiffre — ce qui reste est la clé.
+   * La forme SAISIE est conservée telle quelle sur la fiche (c'est celle que le
+   * propriétaire relit) ; seule la comparaison passe par ici. */
+  function skuNorm(s) { return String(s == null ? '' : s).trim().slice(0, 48); }
+  function skuKey(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
   /* Qui porte ce code ? En deux temps, et l'ordre compte.
    *
    *  1. Correspondance EXACTE, toujours en premier. Ce que l'employé a scanné est
@@ -785,6 +811,15 @@
       id: nextId('prod'), name: String(data.name || 'Nouvel article').trim() || 'Nouvel article',
       categoryId: data.categoryId || null, priceMAD: +data.priceMAD || 0, cost: +data.cost || 0,
       art: data.art || '', kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
+      /* La RÉFÉRENCE COMMUNE — ce qui dit que le jean de Casa et le jean de
+       * Rabat sont le même article. Deux magasins d'un même compte tiennent
+       * deux catalogues séparés : rien ne les relie sauf le code-barres, et un
+       * code-barres imprimé par Kiwi (préfixe 20) ne vaut que dans le magasin
+       * qui l'a imprimé. Le propriétaire pose cette référence UNE fois depuis le
+       * tableau de bord et les deux fiches se reconnaissent.
+       * Vide par défaut : elle ne sert qu'aux comptes multi-magasins, et
+       * l'inventer à la place du commerçant ferait de faux rapprochements. */
+      sku: skuNorm(data.sku),
       // `photo` / `video` are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia),
       // never bytes — the catalogue lives in localStorage and base64 would eat it.
       // One medium per product: a video supersedes a photo and vice-versa.
@@ -796,8 +831,11 @@
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
-    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video'].forEach((k) => {
-      if (patch[k] !== undefined) p[k] = (k === 'priceMAD' || k === 'cost') ? (+patch[k] || 0) : patch[k];
+    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku'].forEach((k) => {
+      if (patch[k] !== undefined) {
+        p[k] = (k === 'priceMAD' || k === 'cost') ? (+patch[k] || 0)
+          : (k === 'sku' ? skuNorm(patch[k]) : patch[k]);
+      }
     });
     commit(); return p;
   }
@@ -972,7 +1010,7 @@
     const p = prodById(productId); if (!p) return null;
     return {
       productId: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD,
-      cost: p.cost, kind: p.kind, art: p.art, flag: p.flag,
+      cost: p.cost, kind: p.kind, art: p.art, flag: p.flag, sku: p.sku || '',
     };
   }
 
@@ -1080,7 +1118,7 @@
       });
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
-        id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag,
+        id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag, sku: p.sku || '',
         ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
       };

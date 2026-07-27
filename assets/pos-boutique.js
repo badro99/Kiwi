@@ -1614,11 +1614,19 @@
   /* Lance la recherche inter-magasins pour le code qui vient d'être scanné et
      redessine quand elle revient. Volontairement APRÈS l'affichage local : le
      scan doit rester instantané, ceci n'est qu'un complément. */
-  function askCross(code) {
+  function askCross(code, pid) {
     const cat = window.KiwiBoutiqueCatalog;
     if (!cat || !cat.crossStock || !code) { state.cross = null; return; }
+    /* La référence commune de CE produit part avec le code. C'est elle qui fait
+       le rapprochement quand le commerçant a étiqueté lui-même sa marchandise :
+       l'étiquette de Casa ne veut rien dire à Rabat, la référence si. */
+    let sku = '';
+    try {
+      const p = pid ? (P[pid] || null) : null;
+      sku = (p && p.sku) || '';
+    } catch (_) { sku = ''; }
     state.cross = { code, loading: true, stores: null };
-    cat.crossStock({ code }).then((res) => {
+    cat.crossStock({ code, sku }).then((res) => {
       // Un autre code a été scanné entre-temps : cette réponse ne le concerne
       // plus, l'afficher sous le nouveau serait un mensonge.
       if (!state.cross || state.cross.code !== code) return;
@@ -1899,7 +1907,7 @@
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
     toast(tot > 0 ? `${p.name} · ${tot} en stock` : `${p.name}, épuisé`);
-    askCross(code);
+    askCross(code, pid);
     if (state.view === 'scan') renderScan();
     renderBadges();
   }

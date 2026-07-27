@@ -59,6 +59,13 @@ function gtinKey(raw) {
 }
 
 const normCode = (v) => String(v == null ? '' : v).trim().toUpperCase().slice(0, 48);
+/* La référence commune, repliée pour comparaison — MÊME calcul que
+ * assets/boutique-catalog.js · skuKey. Les deux doivent bouger ensemble : une
+ * divergence ici ne casse rien visiblement, elle fait juste cesser de
+ * rapprocher deux magasins, et personne ne remarque une absence. */
+const skuKey = (v) => String(v == null ? '' : v)
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 48);
 const fold = (v) => String(v == null ? '' : v)
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
@@ -102,6 +109,61 @@ function groupByProduct(db) {
     (by[v.productId] || (by[v.productId] = [])).push(v);
   }
   return by;
+}
+
+/* ── Un code peut-il servir à RAPPROCHER DEUX MAGASINS ? ─────────────────────
+ * Non, s'il a été imprimé par le magasin lui-même.
+ *
+ * GS1 réserve les préfixes 02 et 20-29 à la « circulation restreinte dans
+ * l'entreprise » : ces numéros ne sont attribués par personne, chaque commerce
+ * les fabrique dans son coin. Kiwi imprime en 20 + un compteur qui vit dans le
+ * localStorage DU TERMINAL et repart de zéro par magasin — la première étiquette
+ * de Casa et la première étiquette de Rabat sont donc la même chaîne,
+ * 2000000000015, pour deux articles qui n'ont rien à voir.
+ *
+ * Sans ce garde-fou, scanner un jean à Casa affichait le stock de la chemise que
+ * Rabat avait étiquetée en premier. Un vrai code fabricant, lui, désigne le même
+ * article partout : c'est celui-là qu'on croise. Pour le reste il y a la
+ * référence commune, que le propriétaire pose lui-même.
+ *
+ * Le magasin d'où part la question garde le droit de chercher par code chez lui :
+ * là, l'étiquette est la sienne et veut dire exactement ce qu'elle dit. */
+function crossable(code) {
+  const s = String(code == null ? '' : code).trim();
+  if (!/^\d+$/.test(s)) return true;            // référence texte : pas un GTIN
+  const g = s.length === 12 ? '0' + s : s;      // UPC-A se lit comme l'EAN-13 équivalent
+  if (g.length !== 13) return true;             // EAN-8 : hors de la plage interne
+  const p2 = g.slice(0, 2);
+  return !(p2 === '02' || (p2 >= '20' && p2 <= '29'));
+}
+
+/* Recherche par RÉFÉRENCE COMMUNE. C'est le seul lien que le propriétaire a
+ * posé lui-même entre deux fiches de deux catalogues séparés, donc le seul qui
+ * survit à des étiquettes différentes de part et d'autre.
+ * Comparaison repliée (casse, accents, tirets, espaces) : la référence est
+ * saisie à la main dans chaque magasin, « JEAN 501 » et « jean-501 » sont la
+ * même intention. */
+function findBySku(db, sku) {
+  if (!sku) return [];
+  const byProd = groupByProduct(db);
+  const out = [];
+  for (const p of db.products) {
+    if (!p || p.archived) continue;
+    if (skuKey(p.sku) !== sku) continue;
+    const all = byProd[p.id] || [];
+    out.push({
+      product: String(p.name || ''),
+      color: '', size: '',
+      stock: all.reduce((n, x) => n + Math.max(0, (x && x.stock) | 0), 0),
+      price: +p.priceMAD || 0,
+      total: all.reduce((n, x) => n + Math.max(0, (x && x.stock) | 0), 0),
+      sizes: all.filter((x) => x && (x.stock | 0) > 0)
+                .slice(0, 12)
+                .map((x) => ({ size: String(x.size || ''), color: String(x.colorLabel || ''), stock: x.stock | 0 })),
+    });
+    if (out.length >= MAX_HITS) break;
+  }
+  return out;
 }
 
 /* Recherche par code-barres : exact d'abord (ce que l'employé a scanné, au
@@ -156,8 +218,9 @@ export async function onRequestGet(context) {
   const from = (url.searchParams.get('from') || '').trim().toLowerCase().slice(0, 64);
   const code = normCode(url.searchParams.get('code'));
   const q = fold(url.searchParams.get('q')).slice(0, 48);
+  const sku = skuKey(url.searchParams.get('sku'));
 
-  if (!code && q.length < 2) return json({ error: 'code-or-query-required' }, 400);
+  if (!code && !sku && q.length < 2) return json({ error: 'code-or-query-required' }, 400);
   if (!env.DB) return json({ ok: true, code, stores: [], unconfigured: true });
 
   const owned = await ownedStores(request, env, from);
@@ -170,7 +233,19 @@ export async function onRequestGet(context) {
 
   for (const s of owned.stores.slice(0, MAX_STORES)) {
     const db = await readCatalog(env, s.merchant);
-    const hits = !db ? [] : (code ? findByCode(db, code, key) : findByText(db, q));
+    /* L'ordre est un ordre de CONFIANCE, pas de commodité.
+     *  1. le code, quand il veut dire quelque chose au-delà de ce magasin ;
+     *  2. la référence commune, posée à la main par le propriétaire ;
+     *  3. le texte, qui n'est qu'un dernier recours et peut se tromper.
+     * Un code interne (préfixe 20-29) ne cherche PAS par code : voir
+     * crossable(). On tombe directement sur la référence. */
+    const self = s.merchant === from;
+    let hits = [];
+    if (db) {
+      if (code && (self || crossable(code))) hits = findByCode(db, code, key);
+      if (!hits.length && sku) hits = findBySku(db, sku);
+      if (!hits.length && !code && q.length >= 2) hits = findByText(db, q);
+    }
     stores.push({
       merchant: s.merchant,
       name: s.name || s.merchant,

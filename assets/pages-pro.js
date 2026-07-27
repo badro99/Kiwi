@@ -8846,6 +8846,30 @@ function _bqxMediaActions() {
       ${has ? `<button class="kb ghost" type="button" data-bqx-media-del style="padding:8px 12px;font-size:12.5px;">Retirer</button>` : ''}
     </div>`;
 }
+/* ── La référence commune ────────────────────────────────────────────────────
+ * Ce que le propriétaire pose UNE fois pour dire « le jean de Casa et le jean
+ * de Rabat sont le même article ». Les deux magasins tiennent deux catalogues
+ * séparés ; sans elle, le seul lien est le code-barres, et une étiquette
+ * imprimée par Kiwi ne vaut rien en dehors du magasin qui l'a imprimée.
+ *
+ * Caché sur un compte à magasin unique : un champ dont l'utilité tient à
+ * l'existence d'un second magasin n'a rien à faire sur l'écran de celui qui
+ * n'en a qu'un — il ne saurait pas quoi y mettre, et le remplirait au hasard.
+ * La valeur DÉJÀ posée reste en base et ressort le jour où il ouvre le second
+ * (voir le `undefined` à l'enregistrement). */
+function _bqxSkuField(sku) {
+  if (_bqxSoleStore()) return '';
+  return `
+    <div class="kf-group">
+      <label class="kf-label">Référence commune (option)</label>
+      <input class="kf-input" value="${_esc(sku || '')}" data-bqx-esku
+             placeholder="ex. JEAN-501" maxlength="48" />
+      <div class="bqx-photo-msg">La même référence dans vos deux établissements, et la caisse saura
+        dire « il en reste 3 à l'autre boutique » même si les étiquettes diffèrent.
+        Majuscules, tirets et espaces sont ignorés.</div>
+    </div>`;
+}
+
 function _bqxPhotoField(photo, video) {
   _bqxPhoto = photo || '';
   _bqxVideo = video || '';
@@ -8959,6 +8983,7 @@ handlers['bqx-prod-edit'] = (_el, arg) => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" value="${p.priceMAD}" data-bqx-eprice /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" value="${p.cost || 0}" data-bqx-ecost /></div>
       </div>
+      ${_bqxSkuField(p.sku)}
       ${_bqxPhotoField(p.photo, p.video)}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${arg}">Enregistrer</button>`,
   });
@@ -8975,6 +9000,11 @@ handlers['bqx-prod-edit-save'] = (_el, arg) => {
     cost: parseInt(b.querySelector('[data-bqx-ecost]').value, 10) || 0,
     photo: _bqxPhoto,
     video: _bqxVideo,
+    /* Le champ n'est affiché qu'aux comptes multi-magasins. `undefined` quand il
+       est absent, jamais '' : updateProduct ne touche que les clés fournies, et
+       envoyer '' effacerait la référence d'un compte qui vient de repasser à un
+       seul magasin — puis la perdrait pour de bon à la réouverture du second. */
+    sku: (() => { const el = b.querySelector('[data-bqx-esku]'); return el ? el.value : undefined; })(),
   });
   if (_bqxModal) _bqxModal.close();
   toast('Produit mis à jour', { type: 'success', duration: 2000 });

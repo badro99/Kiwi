@@ -60,16 +60,29 @@ const DB_ROWS = {
   operators: ['op-badr'],
   catalogs: {
     'atlas-casa': catalogue(
-      [{ id: 'p1', name: 'Chemise lin', priceMAD: 249, cost: 90, archived: false, art: 'CHM-1' }],
-      [{ id: 'v1', productId: 'p1', size: '38', colorLabel: 'Bleu', stock: 2, barcodes: [{ code: '036000291452', primary: true }] }]
+      [{ id: 'p1', name: 'Chemise lin', priceMAD: 249, cost: 90, archived: false, art: 'CHM-1' },
+       /* Un article étiqueté PAR LE MAGASIN : code interne (préfixe 20) et une
+          référence commune posée depuis le tableau de bord. */
+       { id: 'p2', name: 'Jean droit', priceMAD: 390, cost: 150, archived: false, art: '', sku: 'JEAN-501' }],
+      [{ id: 'v1', productId: 'p1', size: '38', colorLabel: 'Bleu', stock: 2, barcodes: [{ code: '036000291452', primary: true }] },
+       { id: 'v2', productId: 'p2', size: '38', colorLabel: 'Brut', stock: 1, barcodes: [{ code: '2000000000015', primary: true }] }]
     ),
     'atlas-marrakech': catalogue(
       [{ id: 'p9', name: 'Chemise lin', priceMAD: 249, cost: 90, archived: false, art: 'CHM-1' },
-       { id: 'p8', name: 'Écharpe brodée', priceMAD: 120, cost: 40, archived: false, art: '' }],
+       { id: 'p8', name: 'Écharpe brodée', priceMAD: 120, cost: 40, archived: false, art: '' },
+       /* LE MÊME jean, saisi à la main par quelqu'un d'autre : casse et
+          séparateur différents. Étiqueté ici avec un AUTRE code interne. */
+       { id: 'p7', name: 'Jean droit', priceMAD: 390, cost: 150, archived: false, art: '', sku: 'jean 501' },
+       /* LA COLLISION : le premier article étiqueté à Marrakech porte la même
+          chaîne que le premier étiqueté à Casa — les compteurs partent de zéro
+          des deux côtés. Rien à voir avec un jean. */
+       { id: 'p6', name: 'Ceinture cuir', priceMAD: 180, cost: 60, archived: false, art: '', sku: '' }],
       [// même article, même code — mais écrit sans le zéro de tête par l'autre douchette
        { id: 'v9', productId: 'p9', size: '40', colorLabel: 'Bleu', stock: 3, barcodes: [{ code: '0036000291452', primary: true }] },
        { id: 'v10', productId: 'p9', size: '42', colorLabel: 'Bleu', stock: 1, barcodes: [] },
-       { id: 'v8', productId: 'p8', size: 'U', colorLabel: 'Or', stock: 7, barcodes: [] }]
+       { id: 'v8', productId: 'p8', size: 'U', colorLabel: 'Or', stock: 7, barcodes: [] },
+       { id: 'v7', productId: 'p7', size: '40', colorLabel: 'Brut', stock: 3, barcodes: [{ code: '2000000000473', primary: true }] },
+       { id: 'v6', productId: 'p6', size: 'U', colorLabel: 'Noir', stock: 5, barcodes: [{ code: '2000000000015', primary: true }] }]
     ),
     'chez-rival': catalogue(
       [{ id: 'r1', name: 'Chemise lin', priceMAD: 199, cost: 70, archived: false, art: '' }],
@@ -257,6 +270,56 @@ const byName = (r, n) => (r.body.stores || []).find((s) => s.name === n || s.mer
 
   const known = byName(r, 'Atlas Marrakech');
   ok('un magasin avec inventaire se déclare connu', known && known.known === true);
+
+  /* ── 5 · RÉFÉRENCE COMMUNE & ÉTIQUETTES INTERNES ────────────────────────
+   * Deux magasins, deux catalogues séparés. Le seul lien qu'un code-barres
+   * fournit est celui d'un VRAI code fabricant ; une étiquette imprimée par le
+   * magasin ne vaut que chez lui, et les compteurs repartant de zéro des deux
+   * côtés, la même chaîne y désigne deux articles différents. */
+
+  // Le scan nu d'un code interne : Marrakech ne doit RIEN rapporter, surtout
+  // pas sa ceinture qui porte par hasard la même chaîne.
+  r = await call('from=atlas-casa&code=2000000000015', sessA);
+  let mk = byName(r, 'Atlas Marrakech');
+  ok('un code interne ne traverse pas vers l\'autre magasin',
+    mk && mk.hits.length === 0,
+    'la ceinture de Marrakech porte la même chaîne que le jean de Casa');
+  const home = byName(r, 'Atlas Casa');
+  ok('…mais reste valable CHEZ SOI', home && home.hits.length === 1 && home.hits[0].product === 'Jean droit',
+    'l\'étiquette est la sienne, elle veut dire ce qu\'elle dit');
+
+  // Le même scan, la référence commune en plus : c'est elle qui fait le pont.
+  r = await call('from=atlas-casa&code=2000000000015&sku=JEAN-501', sessA);
+  mk = byName(r, 'Atlas Marrakech');
+  ok('la référence commune retrouve l\'article dans l\'autre magasin',
+    mk && mk.hits.length === 1 && mk.hits[0].product === 'Jean droit');
+  ok('…avec le stock du bon article', !!(mk && mk.hits[0] && mk.hits[0].total === 3));
+  ok('…et jamais la ceinture qui partageait la chaîne',
+    mk && !mk.hits.some((h) => h.product === 'Ceinture cuir'));
+
+  // Saisie à la main dans deux magasins : « JEAN-501 » vs « jean 501 ».
+  r = await call('from=atlas-casa&code=2000000000015&sku=jean%20501', sessA);
+  mk = byName(r, 'Atlas Marrakech');
+  ok('casse et séparateurs sont ignorés dans la référence',
+    mk && mk.hits.length === 1 && mk.hits[0].product === 'Jean droit');
+
+  // Un vrai code fabricant continue de traverser tout seul, sans référence.
+  r = await call('from=atlas-casa&code=036000291452', sessA);
+  mk = byName(r, 'Atlas Marrakech');
+  ok('un code fabricant traverse toujours sans référence',
+    mk && mk.hits.length >= 1 && mk.hits[0].product === 'Chemise lin');
+
+  // La frontière tient aussi sur ce chemin : le rival a un article, pas de
+  // référence partagée, et surtout pas le même compte.
+  r = await call('from=atlas-casa&code=2000000000015&sku=JEAN-501', sessA);
+  ok('la référence ne franchit pas la frontière entre comptes',
+    !byName(r, 'Chez Rival'));
+
+  // Une référence vide ne doit rapprocher personne : sinon tous les articles
+  // sans référence d'un magasin remonteraient sur tous les scans de l'autre.
+  r = await call('from=atlas-casa&code=2000000000015&sku=', sessA);
+  mk = byName(r, 'Atlas Marrakech');
+  ok('une référence vide ne rapproche rien', mk && mk.hits.length === 0);
 
   /* ── verdict ──────────────────────────────────────────────────────────── */
   console.log('');
