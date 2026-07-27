@@ -188,6 +188,7 @@
     KEY = keyFor(VENUE);
     db = null;
     dropIndex();
+    crossReset();  // « l'autre boutique » ne désigne plus les mêmes
     load();
     cloudBind();   // ce magasin-ci a sa propre copie serveur
     notify();
@@ -424,6 +425,80 @@
         cloud.busy = false;
         if (cloud.again) { cloud.again = false; schedulePush(400); }
       });
+  }
+
+  /* ─── « et dans l'autre boutique ? » ──────────────────────────────────────
+   *
+   * Un commerçant à deux magasins scanne un article à Casa pour une cliente qui
+   * veut du 40 : il ne reste que du 38 ici. La réponse — « il y en a trois à
+   * Marrakech » — existait déjà dans D1, sous le même compte, mais rien ne la
+   * demandait. Le vendeur téléphonait, ou renonçait.
+   *
+   * Le serveur (functions/api/stock/lookup.js) répond pour TOUS les magasins du
+   * compte d'un coup, et c'est lui qui décide lesquels : la liste des
+   * établissements vit dans le localStorage de ce navigateur, la lui faire
+   * confiance laisserait n'importe qui nommer le magasin qu'il veut lire.
+   *
+   * Trois précautions, parce que ceci se déclenche sur un SCAN — le geste qui
+   * doit rester instantané :
+   *   · jamais bloquant. Le scan affiche le stock local immédiatement ; ce qui
+   *     revient d'ici ne fait que compléter le panneau, plus tard.
+   *   · `cloudOn()`, comme le reste de la synchro : une session de démonstration
+   *     n'appelle rien, et un magasin de démo ne peut pas en interroger un vrai.
+   *   · un compte MONO-magasin arrête de demander. La première réponse dit
+   *     combien de magasins existent ; s'il n'y a que celui-ci, `solo` se pose et
+   *     les scans suivants n'atteignent plus le réseau du tout. */
+  const cross = { solo: false, cache: Object.create(null), inflight: Object.create(null) };
+
+  function crossStock(opts) {
+    opts = opts || {};
+    const code = String(opts.code || '').trim();
+    const q = String(opts.q || '').trim();
+    if (!code && q.length < 2) return Promise.resolve(null);
+    if (!cloudOn()) return Promise.resolve(null);
+    // Un seul établissement sur ce compte : la question n'a pas de sens.
+    if (cross.solo && !opts.force) return Promise.resolve(null);
+
+    const slug = VENUE;
+    const key = slug + '|' + (code ? 'c:' + code : 'q:' + q.toLowerCase());
+    // Deux scans du même code à quelques secondes d'intervalle (l'employé
+    // rescanne pour montrer l'écran à la cliente) ne font qu'un appel.
+    const hit = cross.cache[key];
+    if (hit && Date.now() - hit.at < 30000) return Promise.resolve(hit.res);
+    if (cross.inflight[key]) return cross.inflight[key];
+
+    const url = '/api/stock/lookup?from=' + encodeURIComponent(slug)
+      + (code ? '&code=' + encodeURIComponent(code) : '&q=' + encodeURIComponent(q));
+
+    const p = fetch(url, { headers: { Accept: 'application/json' } })
+      .then((r) => (r && r.ok ? r.json() : null))
+      .then((res) => {
+        // Le magasin actif a changé pendant l'aller-retour : cette réponse parle
+        // d'ailleurs, on la jette plutôt que de l'afficher sous le mauvais nom.
+        if (slug !== VENUE) return null;
+        if (!res || !res.ok || !Array.isArray(res.stores)) return null;
+        if (res.stores.length <= 1) { cross.solo = true; return null; }
+        const out = {
+          code: res.code || '',
+          // Seulement les AUTRES : le magasin où l'on se tient est déjà à l'écran.
+          stores: res.stores.filter((s) => s && !s.self),
+        };
+        cross.cache[key] = { at: Date.now(), res: out };
+        return out;
+      })
+      .catch(() => null)      // hors ligne → le scan local a déjà répondu
+      .then((v) => { delete cross.inflight[key]; return v; });
+
+    cross.inflight[key] = p;
+    return p;
+  }
+
+  // Changer de magasin invalide tout : « l'autre boutique » ne désigne plus les
+  // mêmes, et un compte solo ici peut être multi-magasins là.
+  function crossReset() {
+    cross.solo = false;
+    cross.cache = Object.create(null);
+    cross.inflight = Object.create(null);
   }
 
   // Le magasin actif vient de changer (ou la page vient de s'ouvrir) : on lit sa
@@ -1108,6 +1183,8 @@
     generateBarcode: (id) => (load(), generateBarcode(id)), attachBarcode: (id, raw, o) => (load(), attachBarcode(id, raw, o)),
     removeBarcode: (id, c) => (load(), removeBarcode(id, c)), findByBarcode: (c) => (load(), findByBarcode(c)),
     resolveScan: (c) => (load(), resolveScan(c)), barcodeExists: (c) => (load(), barcodeExists(c)), primaryBarcode,
+    // Le stock du MÊME article dans les autres établissements du compte.
+    crossStock,
     // util
     stats: () => (load(), stats()), compat: () => (load(), compat()), exportCsv: () => (load(), exportCsv()),
     get _key() { return KEY; }, get _venue() { return VENUE; },

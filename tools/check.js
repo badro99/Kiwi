@@ -250,6 +250,25 @@ section('Assistant behaviour (tools/agent-test.js)');
   }
 }
 
+/* ── 6 · qui a le droit de lire le stock d'une AUTRE boutique ───────────────
+ * /api/stock/lookup est le seul endpoint qui franchit volontairement la
+ * frontière entre deux magasins. Une erreur de tenancy n'y produit aucun
+ * symptôme visible — elle produit un concurrent qui lit l'inventaire du voisin.
+ * tools/stock-lookup-test.js signe de vrais cookies et vérifie la frontière ;
+ * c'est une porte de sortie, ses échecs sont ceux de ce script. ────────────── */
+section('Stock inter-établissements (tools/stock-lookup-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'stock-lookup-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`stock-lookup-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }

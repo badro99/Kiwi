@@ -1544,6 +1544,91 @@
       </div>`;
   }
 
+  /* ── « et dans l'autre boutique ? » ────────────────────────────────────────
+     Le panneau qui répond sans décrocher le téléphone. Il ne s'affiche que pour
+     un compte à plusieurs établissements — le serveur ne renvoie rien d'autre
+     quand il n'y en a qu'un, et le module de catalogue arrête alors de demander.
+
+     Trois états, et le troisième compte autant que les deux autres :
+       · en cours   — le scan local a déjà répondu, ceci arrive derrière
+       · trouvé     — combien, dans quelle taille, dans quel magasin
+       · INCONNU    — ce magasin n'a pas encore d'inventaire en ligne. On l'écrit
+                      ainsi, jamais « 0 en stock » : ne pas savoir n'est pas la
+                      même chose que ne pas en avoir, et un vendeur qui renvoie
+                      une cliente à Marrakech sur un faux zéro ne recommence pas. */
+  function crossCardHtml() {
+    const cx = state.cross;
+    if (!cx) return '';
+    // L'attente porte le MÊME cadre et le même titre que le résultat : quand la
+    // réponse arrive, seules les lignes changent. Un encadré séparé qui
+    // disparaît ferait sauter la fiche article que le vendeur est en train de
+    // lire — et, isolé, se lisait comme un champ de recherche vide.
+    if (cx.loading) {
+      return `<div class="bq-cross">
+        <div class="bq-cross-h"><i data-lucide="store"></i>Vos autres établissements</div>
+        <div class="bq-cross-wait"><i data-lucide="loader"></i>Recherche en cours…</div>
+      </div>`;
+    }
+    if (!cx.stores || !cx.stores.length) return '';
+
+    const rows = cx.stores.map((s) => {
+      const name = esc(s.name || s.merchant);
+      if (!s.known) {
+        return `<div class="bq-cross-row is-unknown">
+            <span class="bq-cross-store">${name}</span>
+            <span class="bq-cross-note">inventaire pas encore synchronisé</span>
+          </div>`;
+      }
+      if (!s.hits || !s.hits.length) {
+        return `<div class="bq-cross-row is-none">
+            <span class="bq-cross-store">${name}</span>
+            <span class="bq-cross-note">aucun exemplaire</span>
+          </div>`;
+      }
+      const detail = s.hits.map((h) => {
+        const dim = [h.color, h.size].filter(Boolean).map(esc).join(' · ');
+        // Une recherche par nom rapporte le produit et le détail par taille ;
+        // un scan rapporte la variante exacte. Les deux se lisent pareil ici.
+        const sizes = Array.isArray(h.sizes) && h.sizes.length
+          ? h.sizes.map((z) => `<span class="bq-cross-sz"><b>${esc(z.size)}</b><i>${z.stock | 0}</i></span>`).join('')
+          : '';
+        const n = h.stock | 0;
+        return `<div class="bq-cross-hit">
+            <span class="bq-cross-prod">${esc(h.product)}${dim ? ' <em>' + dim + '</em>' : ''}</span>
+            <span class="bq-cross-qty ${n === 0 ? 'out' : n <= 2 ? 'low' : ''}">${n}</span>
+          </div>${sizes ? `<div class="bq-cross-sizes">${sizes}</div>` : ''}`;
+      }).join('');
+      return `<div class="bq-cross-row">
+          <span class="bq-cross-store">${name}</span>
+          <div class="bq-cross-hits">${detail}</div>
+        </div>`;
+    }).join('');
+
+    return `<div class="bq-cross">
+        <div class="bq-cross-h"><i data-lucide="store"></i>Vos autres établissements</div>
+        ${rows}
+        <div class="bq-cross-foot">Stock lu à l'instant sur le serveur. Appelez avant de faire déplacer une cliente.</div>
+      </div>`;
+  }
+
+  /* Lance la recherche inter-magasins pour le code qui vient d'être scanné et
+     redessine quand elle revient. Volontairement APRÈS l'affichage local : le
+     scan doit rester instantané, ceci n'est qu'un complément. */
+  function askCross(code) {
+    const cat = window.KiwiBoutiqueCatalog;
+    if (!cat || !cat.crossStock || !code) { state.cross = null; return; }
+    state.cross = { code, loading: true, stores: null };
+    cat.crossStock({ code }).then((res) => {
+      // Un autre code a été scanné entre-temps : cette réponse ne le concerne
+      // plus, l'afficher sous le nouveau serait un mensonge.
+      if (!state.cross || state.cross.code !== code) return;
+      state.cross = res && res.stores && res.stores.length
+        ? { code, loading: false, stores: res.stores }
+        : null;
+      if (state.view === 'scan') renderScan();
+    });
+  }
+
   /* ── Caméra : lecture RÉELLE d'un code-barres ──────────────────────────────
      La douchette USB n'a jamais eu besoin de code : c'est un clavier, elle tape
      dans le champ et valide par Entrée. Ce qui manquait, c'est de pouvoir
@@ -1709,6 +1794,7 @@
           <button class="bq-scan-diag" id="bq-scan-diag"><i data-lucide="activity"></i>Tester la douchette</button>
           <div class="bq-scan-stage" id="bq-scan-stage"><span id="bq-scan-stage-ean"></span><div class="bq-scan-laser"></div></div>
           ${lookupCardHtml()}
+          ${crossCardHtml()}
           ${state.scanLog.length ? `
           <div class="bq-scan-log-h">Derniers articles vérifiés</div>
           <div class="bq-scan-log">
@@ -1795,6 +1881,10 @@
       state.lookup = null;
       state.scanLog.unshift({ at: new Date(), ok: false, label: 'Code inconnu, non référencé', ean: code, pid: null, size: '' });
       toast(`Code ${code} inconnu, aucun article ne le porte`);
+      /* Le cas où la question vaut le plus cher : l'article n'est pas d'ICI.
+         Il est peut-être de l'autre boutique — et c'est la réponse que le
+         vendeur cherchait avant même de savoir qu'il pouvait la demander. */
+      askCross(code);
       if (state.view === 'scan') renderScan();
       renderBadges();
       offerRegister(code);
@@ -1809,6 +1899,7 @@
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
     toast(tot > 0 ? `${p.name} · ${tot} en stock` : `${p.name}, épuisé`);
+    askCross(code);
     if (state.view === 'scan') renderScan();
     renderBadges();
   }
