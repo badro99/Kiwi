@@ -586,10 +586,18 @@
 
   handlers['integration-configure'] = (_el, arg) => {
     const str = INTEG_STR[trLang()] || INTEG_STR.fr;
+    if (window.KiwiEnv?.isReal?.()) {
+      toast('Intégration non configurée', { type: 'warning', desc: 'Aucun service externe n’a été contacté et aucun changement n’a été effectué.' });
+      return;
+    }
     toast(`${str.toastConfigT} · ${arg || 'intégration'}`, { type: 'info', desc: str.toastConfigD });
   }
   handlers['integration-connect'] = (_el, arg) => {
     const str = INTEG_STR[trLang()] || INTEG_STR.fr;
+    if (window.KiwiEnv?.isReal?.()) {
+      toast('Intégration indisponible', { type: 'warning', desc: 'Cette connexion n’est pas encore active. Rien n’a été envoyé au service externe.' });
+      return;
+    }
     toast(str.toastConnectT(arg || 'Intégration'), { type: 'success', desc: str.toastConnectD });
     Kiwi.confetti?.();
   };
