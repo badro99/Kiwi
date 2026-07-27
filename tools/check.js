@@ -213,7 +213,22 @@ section('Hardware honesty (tools/hardware-test.js)');
   }
 }
 
-/* ── 4d · production action honesty ────────────────────────────────────────
+/* ── 4d · live sale resilience ──────────────────────────────────────────────
+ * A Wi-Fi outage may delay a sale but must never erase or duplicate it. */
+section('Live sale resilience (tools/live-link-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'live-link-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`live-link gate green (${(out.match(/✓/g) || []).length - 1} queue/idempotency checks)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`live-link-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── 4e · production action honesty ────────────────────────────────────────
  * Presentation workflows must fail honestly for a real merchant, even if a
  * later navigation change accidentally exposes one of their buttons. */
 section('Production action honesty (tools/action-honesty-test.js)');
