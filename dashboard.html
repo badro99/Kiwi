@@ -4962,6 +4962,10 @@
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
+<!-- Assistant · « Le relevé ». Refonte visuelle complète de l'assistant, posée en
+     COUCHE au-dessus de assets/agent.js — aucune logique touchée. Pilotée par
+     <html data-kiwi-ai="releve"> ; KiwiAiSkin.disable() rend l'écran d'origine. -->
+<link rel="stylesheet" href="assets/agent-skin.css" />
 </head>
 <body class="growth-locked">
 <a class="skip-link" href="#kw-main" data-i18n="a11y.skip">Aller au contenu</a>
@@ -5918,6 +5922,7 @@
 <script src="assets/ai-telemetry.js" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js" defer fetchpriority="low"></script>
 <script src="assets/agent.js" defer fetchpriority="low"></script>
+<script src="assets/agent-skin.js" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
 <script src="assets/pages.js" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
