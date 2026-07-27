@@ -19,12 +19,20 @@
 // slug match on accounts.business kept for the primary store so nothing that
 // worked before the registry stops working now.
 
-import { isOperator, slugMerchant, json } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, slugMerchant, json } from '../../auth/_lib.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   if (!(await isOperator(request, env))) return json({ error: 'forbidden' }, 403);
   if (!env.DB) return json({ error: 'no-db' }, 503);
+
+  /* La console apprend ici son propre niveau de droits. Les gestes sensibles —
+     sortir une vente des livres, corriger une adresse de connexion, envoyer une
+     réinitialisation — exigent un CODE OPÉRATEUR nommé, pas le laissez-passer
+     d'équipe partagé (auth/_lib.js › isSeniorOperator). Le savoir dès le
+     chargement permet d'expliquer pourquoi un bouton est fermé, au lieu de le
+     griser sans raison ou de laisser découvrir un 403 après avoir tout saisi. */
+  const senior = await isSeniorOperator(request, env);
 
   // Start of "today" in the server's clock (UTC on Workers). Good enough for a
   // pilot; the console shows the day's running tally, not an accounting close.
@@ -119,7 +127,7 @@ export async function onRequestGet(context) {
   }
 
   const clients = [...map.values()].sort((a, b) => (b.last_ts || 0) - (a.last_ts || 0));
-  return json({ clients, dayStart, now });
+  return json({ clients, dayStart, now, senior, mail: !!env.MAIL_WEBHOOK });
 }
 
 // PATCH /api/admin/clients — freeze or reactivate an account.
@@ -133,6 +141,9 @@ export async function onRequestPatch(context) {
   const { request, env } = context;
   if (!(await isOperator(request, env))) return json({ error: 'forbidden' }, 403);
   if (!env.DB) return json({ error: 'no-db' }, 503);
+  if (!(await isSeniorOperator(request, env))) {
+    return json({ error: 'operator-code-required' }, 403);
+  }
 
   let email = '';
   let status = '';
@@ -153,74 +164,25 @@ export async function onRequestPatch(context) {
   return json({ ok: true, email, status });
 }
 
-// DELETE /api/admin/clients?merchant=slug[&email=…] — nuke an entire account so
-// the operator can start it fresh. Removes, in one shot:
-//   · the login row              (accounts, matched by email — the unique key)
-//   · all sales                  (sales     WHERE merchant = slug)
-//   · all staff PINs             (staff_pins WHERE merchant = slug)
-//   · the feature/plan config    (merchant_config WHERE merchant = slug)
-//   · every OTHER store the account owns — same three wipes per store, so a
-//     client with a boutique and a restaurant is cleared whole rather than
-//     leaving the second shop trading with nobody attached to it
-// merchant (the slug the roster already computed) drives the merchant-keyed
-// wipes; email removes the account itself and finds its other stores. Either
-// alone is accepted — a demo with no account is cleared by merchant only; an
-// orphan account with a renamed business is cleared by email only. Irreversible;
-// operator-gated. The console's type-the-name confirmation is the guard against
-// an accidental call.
+// DELETE is intentionally unavailable. The former implementation deleted only
+// accounts, sales, PINs and merchant_config while leaving other client-owned
+// records behind. Suspension is the production-safe reversible control until a
+// complete, transactional deletion inventory and verification report exist.
 export async function onRequestDelete(context) {
   const { request, env } = context;
   if (!(await isOperator(request, env))) return json({ error: 'forbidden' }, 403);
   if (!env.DB) return json({ error: 'no-db' }, 503);
-
-  const url = new URL(request.url);
-  let merchant = (url.searchParams.get('merchant') || '').trim();
-  let email = (url.searchParams.get('email') || '').trim().toLowerCase();
-  if (!merchant && !email) {
-    try {
-      const b = await request.json();
-      merchant = (b.merchant || '').toString().trim();
-      email = (b.email || '').toString().trim().toLowerCase();
-    } catch (_) { /* no body */ }
-  }
-  if (!merchant && !email) return json({ error: 'merchant-or-email-required' }, 400);
-
-  const deleted = { sales: 0, pins: 0, config: 0, account: 0, stores: 0 };
-  async function wipeStore(slug) {
-    const s = await env.DB.prepare(`DELETE FROM sales WHERE merchant = ?`).bind(slug).run();
-    const p = await env.DB.prepare(`DELETE FROM staff_pins WHERE merchant = ?`).bind(slug).run();
-    const c = await env.DB.prepare(`DELETE FROM merchant_config WHERE merchant = ?`).bind(slug).run();
-    deleted.sales += (s.meta && s.meta.changes) || 0;
-    deleted.pins += (p.meta && p.meta.changes) || 0;
-    deleted.config += (c.meta && c.meta.changes) || 0;
-    deleted.stores += 1;
+  if (!(await isSeniorOperator(request, env))) {
+    return json({ error: 'operator-code-required' }, 403);
   }
 
-  try {
-    if (merchant) await wipeStore(merchant);
-    if (email) {
-      // A client can hold several établissements. Wiping only the slug the console
-      // had selected would leave the second shop behind — still in the roster,
-      // still trading, now with no owner to attach it to. Take every store the
-      // registry says this account owns. Pre-migration this finds nothing and the
-      // single-store wipe above stands on its own.
-      try {
-        const acc = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
-        if (acc && acc.id) {
-          const owned = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE account_id = ?')
-            .bind(acc.id).all();
-          for (const s of (owned.results || [])) {
-            if (s.merchant && s.merchant !== merchant) await wipeStore(s.merchant);
-          }
-        }
-      } catch (_) { /* no registry column → nothing extra to clean */ }
-    }
-    if (email) {
-      const a = await env.DB.prepare(`DELETE FROM accounts WHERE email = ?`).bind(email).run();
-      deleted.account = (a.meta && a.meta.changes) || 0;
-    }
-  } catch (e) {
-    return json({ error: 'delete-failed', detail: String(e) }, 500);
-  }
-  return json({ ok: true, merchant, email, deleted });
+  /* Disabled until the deletion workflow covers every merchant-owned table and
+   * can complete transactionally. The previous route removed the account,
+   * sales, PINs and config but left store_docs, clients, catalogs, orders and
+   * device data behind. Claiming "permanent deletion" while those records can
+   * be resurrected is worse than offering no destructive button at all. */
+  return json({
+    error: 'account-deletion-disabled',
+    detail: 'Use suspension while complete deletion and verification are being implemented.',
+  }, 423);
 }

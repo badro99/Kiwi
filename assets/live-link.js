@@ -296,6 +296,13 @@
         .then(function (data) {
           if (!data) return;                   // network/gate failure → still the first batch
           lastSync = Date.now();
+          /* Les ventes RETIRÉES des livres, avant celles qui arrivent. Le flux
+             ne repasse jamais sur un curseur déjà servi, donc c'est le seul
+             chemin par lequel une annulation atteint un navigateur qui avait
+             déjà recopié la vente. Appliqué à chaque sondage, quel que soit le
+             curseur : idempotent, et un appareil neuf se retrouve d'aplomb au
+             premier passage. */
+          if (Array.isArray(data.voided)) applyVoids(data.voided, tenant);
           if (Array.isArray(data.sales) && data.sales.length) {
             since = data.cursor || since;
             try { onSales(data.sales, backfill, tenant); } catch (_) {}
@@ -386,6 +393,55 @@
   var lastSync = 0;     // when the server last answered a poll (0 = never)
   var feedSales = [];   // every sale the feed has returned this session
   var feedSeen = {};    // merchant + '#' + cursor -> 1 (dedup across polls)
+
+  /* ─── une vente sortie des livres s'en va d'ici aussi ───
+   * Trois endroits gardent une copie d'une vente sur cet appareil, et les trois
+   * doivent la lâcher, sinon elle revient :
+   *
+   *  1. window.KiwiSales — le magasin que TOUTES les surfaces du tableau de bord
+   *     relisent (hero, bande KPI, graphique, journal des ventes, rapport
+   *     journalier d'une journée ouverte, Kiwi AI). C'est celui qui change les
+   *     chiffres à l'écran.
+   *  2. `feedSales`, l'accumulateur du pont. Il rejoue TOUT le lot à chaque
+   *     changement de venue ; le nettoyer est ce qui empêche la vente retirée de
+   *     se réinstaller à la première résolution d'identité. Sans lui, le point 1
+   *     serait défait deux secondes plus tard, et le bogue serait insaisissable.
+   *  3. `kiwi:posDay:<métier>`, le journal local de la CAISSE. La caisse ne lit
+   *     pas le flux mais elle exécute ce module, et son compteur du jour est ce
+   *     que le commerçant a sous les yeux au comptoir. Une vente d'essai faite
+   *     pendant l'installation resterait sinon dans « encaissé aujourd'hui »
+   *     jusqu'à minuit, sur l'écran même où l'opérateur vient de promettre
+   *     qu'elle était retirée. Elle s'y retrouve par sa RÉFÉRENCE de ticket : la
+   *     caisse ne connaît pas les curseurs du flux.
+   *
+   * Le serveur renvoie les deux clés pour cette raison — { c: curseur, r: réf }. */
+  function applyVoids(list, tenant) {
+    if (!list || !list.length) return;
+    var cursors = [], refs = [];
+    list.forEach(function (v) {
+      if (!v) return;
+      var c = Number(v.c) || 0;
+      if (c) { cursors.push(c); if (tenant) delete feedSeen[tenant + '#' + c]; }
+      if (v.r) refs.push(String(v.r));
+    });
+    if (cursors.length) {
+      var kill = {};
+      cursors.forEach(function (c) { kill[c] = 1; });
+      feedSales = feedSales.filter(function (row) {
+        return !(row && row.tenant === tenant && kill[Number(row.s && row.s.cursor) || 0]);
+      });
+      try {
+        if (window.KiwiSales && window.KiwiSales.remove) {
+          var vid = null;
+          try { vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || null; } catch (_) {}
+          window.KiwiSales.remove(vid, cursors);
+        }
+      } catch (_) {}
+    }
+    if (refs.length) {
+      try { if (window.KiwiPosSale && window.KiwiPosSale.dropRefs) window.KiwiPosSale.dropRefs(refs); } catch (_) {}
+    }
+  }
   function accumulateFeed(sales, tenant) {
     (sales || []).forEach(function (s) {
       var cur = Number(s && s.cursor) || 0;
@@ -496,6 +552,40 @@
     })();
   }
 
+  /* ─── le sondage des retraits, côté CAISSE ───
+   * La caisse n'a pas de magasin de ventes à remplir, donc initPump() ne tourne
+   * pas ici et rien ne lui apprendrait qu'une vente a été sortie des livres. Or
+   * c'est l'écran du comptoir : une vente d'essai passée pendant l'installation
+   * reste dans « encaissé aujourd'hui » sous les yeux du commerçant, alors que
+   * l'opérateur vient de lui dire au téléphone qu'elle était retirée.
+   *
+   * Lent à dessein — 90 s, plus un passage immédiat au réveil de l'onglet. Ce
+   * n'est pas de l'encaissement, c'est une correction d'après-coup : la faire
+   * arriver dans la minute suffit, et une caisse en plein service a mieux à
+   * faire que de sonder. Ne demande QUE la liste des retraits (voids=1), donc
+   * une requête minuscule qui ne rejoue jamais la journée. */
+  var VOID_MS = 90000;
+  function watchVoids() {
+    if (!on()) return;
+    var timer = null;
+    function tick() {
+      var m = merchant();
+      if (!m) { timer = setTimeout(tick, VOID_MS); return; }
+      fetch('/api/feed?voids=1&merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' } })
+        .then(function (r) { return (r && r.ok) ? r.json() : null; })
+        .then(function (d) { if (d && Array.isArray(d.voided)) applyVoids(d.voided, m); })
+        .catch(function () {})
+        .then(function () { timer = setTimeout(tick, VOID_MS); });
+    }
+    function poke() { if (timer) clearTimeout(timer); timer = setTimeout(tick, 0); }
+    try {
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) poke(); });
+      window.addEventListener('focus', poke);
+      window.addEventListener('online', poke);
+    } catch (_) {}
+    tick();
+  }
+
   function boot() {
     // The feed pump belongs to the DASHBOARD — it is the only page with a sales
     // store to fill (KiwiSales lives in venues.js, which the tills don't load).
@@ -505,6 +595,9 @@
     // those pages happen to have a <main> — a card the cashier had no use for
     // and a poll for data the page never read.
     if (window.KiwiSales) initPump();
+    // Pas de magasin de ventes ⇒ nous sommes sur une caisse : elle n'a pas
+    // besoin du flux, mais elle doit apprendre les retraits (voir watchVoids).
+    else watchVoids();
     // Retry the queue whenever the network comes back, on every page (a till is
     // where the sales are, and it is the device most likely to be offline).
     try { window.addEventListener('online', flushQueue); } catch (_) {}

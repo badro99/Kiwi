@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v136';
+var CACHE = 'kiwi-app-v138';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -165,6 +165,13 @@ self.addEventListener('fetch', function (e) {
   // Live Link API is dynamic — never cache it, or the dashboard poll would read
   // stale sales. Let /api/* fall straight through to the network.
   if (url.pathname.indexOf('/api/') === 0) return;
+  // …et RIEN sous /auth/ non plus. Ce sont des décisions d'authentification, pas
+  // des ressources : la validité d'un lien de réinitialisation change entre deux
+  // requêtes identiques. Servie depuis le cache, la vérification de
+  // /auth/reset?token=… répondait « ce lien est bon » à un lien déjà consommé —
+  // le client voyait le formulaire, saisissait son mot de passe, et se faisait
+  // refuser à l'envoi. Observé pendant la recette de la console opérateur.
+  if (url.pathname.indexOf('/auth/') === 0) return;
 
   // NAVIGATIONS: NETWORK-FIRST. Always fetch the live document; fall back to the
   // cached shell only when the network fails. A cached HTML document must never be

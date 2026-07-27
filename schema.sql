@@ -23,13 +23,44 @@ CREATE TABLE IF NOT EXISTS sales (
   -- mon produit le plus vendu" could only be answered when the caisse happened
   -- to run in the same browser as the dashboard — which, for a merchant with a
   -- till at the counter and a dashboard in the back office, is never.
-  lines    TEXT
+  lines    TEXT,
+
+  -- ── VENTE DE TEST : annulée, jamais effacée ────────────────────────────────
+  -- Une installation, une formation, un essai d'imprimante laissent de vraies
+  -- lignes dans les livres d'un vrai commerçant. L'opérateur doit pouvoir les
+  -- sortir des chiffres — mais SUPPRIMER la ligne serait détruire une écriture
+  -- financière, et une console d'assistance qui efface des ventes est une
+  -- console qui, un jour, effacera la mauvaise.
+  --
+  -- `void_ts` non NULL = la vente est neutralisée : /api/feed cesse de la servir,
+  -- donc elle disparaît du chiffre d'affaires, du nombre de ventes, du panier
+  -- moyen, du classement produits, de la répartition des encaissements, du
+  -- rapport journalier, des exports et des calculs de Kiwi AI — tout cela
+  -- recalcule depuis le flux. La LIGNE, elle, reste, avec son montant, son
+  -- panier et son horodatage d'origine. Remettre void_ts à NULL rend la vente
+  -- aux livres à l'identique : c'est ce qui rend le geste réversible.
+  --
+  -- Le motif est obligatoire côté serveur (functions/api/admin/sales.js) et
+  -- l'auteur est celui du code opérateur, pas une IP — voir sale_audit.
+  void_ts     INTEGER,          -- epoch ms de l'annulation ; NULL = vente vivante
+  void_reason TEXT,             -- onboarding|imprimante|formation|doublon|installation|autre
+  void_note   TEXT,             -- l'explication écrite, obligatoire quand reason='autre'
+  void_actor  TEXT,             -- libellé du code opérateur, ou 'equipe'
+  void_actor_id TEXT            -- operators.id quand il est connu
 );
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
 -- applies. See LIVE_LINK.md.
 --   ALTER TABLE sales ADD COLUMN lines TEXT;
+--   ALTER TABLE sales ADD COLUMN void_ts INTEGER;
+--   ALTER TABLE sales ADD COLUMN void_reason TEXT;
+--   ALTER TABLE sales ADD COLUMN void_note TEXT;
+--   ALTER TABLE sales ADD COLUMN void_actor TEXT;
+--   ALTER TABLE sales ADD COLUMN void_actor_id TEXT;
+-- Tant que ces colonnes manquent, tout continue de fonctionner : /api/feed
+-- retombe sur sa requête d'origine et la console refuse l'annulation en le
+-- disant, plutôt que d'échouer en silence.
 
 -- The dashboard polls "WHERE merchant = ? AND rowid > ? ORDER BY rowid".
 -- Index on merchant alone is enough: on a rowid table SQLite implicitly
@@ -50,10 +81,26 @@ CREATE TABLE IF NOT EXISTS accounts (
   salt       TEXT NOT NULL,          -- PBKDF2 salt (hex)
   hash       TEXT NOT NULL,          -- PBKDF2 derived key (hex)
   created_ts INTEGER NOT NULL,       -- epoch ms of signup
-  status     TEXT NOT NULL DEFAULT 'active'  -- 'active' | 'suspended' (frozen for non-payment)
+  status     TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'suspended' (frozen for non-payment)
+
+  -- ── LES TROIS ADRESSES D'UN CLIENT ────────────────────────────────────────
+  -- `email` ci-dessus est l'adresse de CONNEXION : la clé unique, celle que le
+  -- client tape pour entrer. Ce n'était pas seulement ça jusqu'ici, c'était
+  -- aussi la seule — donc corriger une adresse de connexion mal saisie changeait
+  -- du même geste l'adresse à laquelle Kiwi écrit, et inversement.
+  --
+  -- Les deux suivantes séparent enfin les rôles. Elles sont FACULTATIVES et
+  -- vides par défaut : vide ⇒ « la même que la connexion », ce qui est le vrai
+  -- état de tous les comptes existants. On ne recopie pas `email` dedans à la
+  -- migration — une copie ne saurait plus dire si le client a choisi cette
+  -- adresse pour sa facturation ou si personne n'a jamais posé la question.
+  contact_email TEXT,                -- l'adresse à laquelle Kiwi écrit au commerce
+  billing_email TEXT                 -- facturation / comptabilité, quand elle diffère
 );
 -- Existing databases (table already created): add the column once —
 --   ALTER TABLE accounts ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+--   ALTER TABLE accounts ADD COLUMN contact_email TEXT;
+--   ALTER TABLE accounts ADD COLUMN billing_email TEXT;
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.
 
@@ -364,3 +411,101 @@ CREATE TABLE IF NOT EXISTS config_audit (
   ts         INTEGER NOT NULL           -- epoch ms
 );
 CREATE INDEX IF NOT EXISTS idx_audit_merchant ON config_audit (merchant, ts);
+
+-- ── Journal des ventes de test (qui a sorti quelle vente des livres) ────────
+-- Une ligne par geste — annulation ET remise —, écrite par functions/api/admin/
+-- sales.js. Jamais supprimée, y compris quand la vente est remise dans les
+-- livres : « cette vente a été sortie le 12, remise le 14 » est précisément ce
+-- qu'un litige demande, et un journal qui s'efface quand on annule l'annulation
+-- ne répond à rien.
+--
+-- Les colonnes montant / méthode / référence / sale_ts sont RECOPIÉES depuis la
+-- vente au moment du geste. C'est volontairement redondant avec `sales` : le
+-- journal doit rester lisible même si le compte est supprimé plus tard (la
+-- « zone dangereuse » de la console efface les ventes), et une écriture datée
+-- qui renvoie à une ligne disparue n'est pas une trace.
+--
+-- `impact` est l'instantané JSON de ce que la console a MONTRÉ à l'opérateur
+-- avant qu'il confirme — chiffres retirés, lignes de stock concernées, jour
+-- commercial touché, avertissements affichés. Sans lui, on saurait qu'une vente
+-- a été sortie, pas ce qu'on avait dit qu'elle emporterait avec elle.
+CREATE TABLE IF NOT EXISTS sale_audit (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  merchant   TEXT NOT NULL,             -- l'établissement, jamais un autre (voir sales.js)
+  sale_id    TEXT NOT NULL,             -- sales.id
+  action     TEXT NOT NULL,             -- 'void' | 'restore'
+  reason     TEXT NOT NULL DEFAULT '',  -- le motif imposé
+  note       TEXT NOT NULL DEFAULT '',  -- l'explication écrite
+  actor      TEXT NOT NULL DEFAULT '',  -- libellé du code opérateur, ou 'equipe'
+  actor_id   TEXT NOT NULL DEFAULT '',  -- operators.id quand il est connu
+  amount     INTEGER NOT NULL DEFAULT 0,
+  method     TEXT NOT NULL DEFAULT '',
+  ref        TEXT NOT NULL DEFAULT '',
+  sale_ts    INTEGER NOT NULL DEFAULT 0,
+  impact     TEXT NOT NULL DEFAULT '',  -- JSON : ce qui était annoncé comme touché
+  ts         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sale_audit_merchant ON sale_audit (merchant, ts);
+CREATE INDEX IF NOT EXISTS idx_sale_audit_sale ON sale_audit (sale_id);
+
+-- ── Journal des comptes (adresses e-mail, envois de réinitialisation) ───────
+-- Changer l'adresse de connexion d'un client, c'est changer la clé de sa porte.
+-- Le geste doit donc laisser exactement la même trace qu'une coupure de module :
+-- quoi, pour qui, par qui, quand, et pourquoi.
+--
+-- `prev` / `next` portent les adresses AVANT et APRÈS. C'est ce qui rend la
+-- reprise possible : si le client conteste, la console relit la dernière ligne
+-- et remet l'ancienne adresse (une nouvelle ligne 'email-revert', jamais une
+-- suppression).
+--
+-- Pour une réinitialisation de mot de passe, `next` porte l'adresse de
+-- destination MASQUÉE (b••••@domaine.ma) et RIEN D'AUTRE. Le lien lui-même
+-- n'entre jamais ici : un journal consultable par tout opérateur qui
+-- contiendrait des liens de réinitialisation valides serait un trousseau de
+-- clés des comptes clients.
+CREATE TABLE IF NOT EXISTS account_audit (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id TEXT NOT NULL DEFAULT '',
+  merchant   TEXT NOT NULL DEFAULT '',  -- l'établissement ouvert dans la console, pour retrouver la ligne par magasin
+  action     TEXT NOT NULL,             -- 'email' | 'email-revert' | 'contact' | 'billing' | 'reset'
+  prev       TEXT NOT NULL DEFAULT '',
+  next       TEXT NOT NULL DEFAULT '',
+  reason     TEXT NOT NULL DEFAULT '',
+  actor      TEXT NOT NULL DEFAULT '',
+  actor_id   TEXT NOT NULL DEFAULT '',
+  detail     TEXT NOT NULL DEFAULT '',  -- JSON : état d'envoi, vérification
+  ts         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_account_audit ON account_audit (account_id, ts);
+CREATE INDEX IF NOT EXISTS idx_account_audit_merchant ON account_audit (merchant, ts);
+
+-- ── Liens de réinitialisation de mot de passe ───────────────────────────────
+-- Le lien vaut « je suis ce commerçant » : il est donc traité comme un mot de
+-- passe, et stocké comme un mot de passe — c'est-à-dire pas stocké du tout.
+--
+-- Le jeton envoyé au client s'écrit "<selector>.<verifier>". Seul `selector`
+-- sert à retrouver la ligne ; de `verifier` on ne garde que le HMAC. Une fuite
+-- de cette table ne donne donc AUCUN lien utilisable, et c'est la raison d'être
+-- de la découpe en deux moitiés : chercher directement par le secret obligerait
+-- à l'indexer en clair.
+--
+-- Usage unique : la consommation fait « UPDATE … SET used_ts = ? WHERE selector
+-- = ? AND used_ts IS NULL » en UN énoncé, donc deux ouvertures simultanées du
+-- même lien ne peuvent pas réussir toutes les deux. Une réinitialisation
+-- réussie périme en plus tous les autres liens vivants du compte : le client
+-- qui a demandé trois fois ne laisse pas deux clés dans la nature.
+--
+-- Les lignes périmées ne sont pas balayées par une tâche de fond : elles sont
+-- inoffensives (expires_ts est vérifié à la lecture) et la demande suivante
+-- pour le même compte les efface.
+CREATE TABLE IF NOT EXISTS reset_tokens (
+  selector   TEXT PRIMARY KEY,          -- moitié publique du jeton, l'index
+  account_id TEXT NOT NULL,
+  verifier   TEXT NOT NULL,             -- HMAC de la moitié secrète, jamais la moitié elle-même
+  created_ts INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  used_ts    INTEGER,                   -- non NULL = déjà consommé, plus jamais valable
+  actor      TEXT NOT NULL DEFAULT '',  -- l'opérateur qui a déclenché l'envoi ('client' si demandé depuis l'écran de connexion)
+  actor_id   TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_reset_account ON reset_tokens (account_id, created_ts);

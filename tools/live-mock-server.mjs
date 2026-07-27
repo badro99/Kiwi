@@ -53,25 +53,43 @@ function makeDB() {
       bind(...a) { args = a.map((v) => (v === undefined ? null : v)); return st; },
       first() { const r = db.prepare(query).get(...args); return r === undefined ? null : r; },
       all() { return { results: db.prepare(query).all(...args) }; },
-      run() { db.prepare(query).run(...args); return { success: true }; },
-      _exec() { db.prepare(query).run(...args); },
+      /* `meta.changes` n'est pas décoratif : c'est ce que D1 renvoie toujours, et
+         plusieurs endpoints s'en servent pour distinguer « la ligne a été mise à
+         jour » de « aucune ligne ne correspondait » (404). Sans lui, ce banc
+         faisait répondre 404 à des UPDATE qui avaient parfaitement abouti — la
+         base changeait, l'appelant recevait un échec, et les traitements
+         suivants (notifications, journal) étaient sautés. */
+      run() { const r = db.prepare(query).run(...args); return { success: true, meta: { changes: r.changes } }; },
+      _exec() { return st.run(); },
     };
     return st;
   };
-  return { prepare, batch(s) { s.forEach((x) => x._exec()); return s.map(() => ({ success: true })); }, _db: db };
+  return { prepare, batch(s) { return s.map((x) => x._exec()); }, _db: db };
 }
 
 const db = makeDB();
 const env = { DB: db, AUTH_SECRET };
 
+/* La boîte d'envoi : MAIL_WEBHOOK pointe sur /__mail, ce serveur, et /__outbox
+   rend ce qui en est sorti. C'est ce qui permet d'ouvrir POUR DE VRAI le lien de
+   réinitialisation reçu « par le client », au lieu de s'arrêter au moment où le
+   serveur affirme l'avoir envoyé. */
+const outbox = [];
+env.MAIL_WEBHOOK = `http://localhost:${PORT}/__mail`;
+
 const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 const ROUTES = {
   '/api/config': await import(path.join(ROOT, 'functions/api/config.js')),
+  '/api/feed': await import(path.join(ROOT, 'functions/api/feed.js')),
   '/api/admin/config': await import(path.join(ROOT, 'functions/api/admin/config.js')),
   '/api/admin/audit': await import(path.join(ROOT, 'functions/api/admin/audit.js')),
   '/api/admin/pins': await import(path.join(ROOT, 'functions/api/admin/pins.js')),
   '/api/admin/clients': await import(path.join(ROOT, 'functions/api/admin/clients.js')),
   '/api/admin/operators': await import(path.join(ROOT, 'functions/api/admin/operators.js')),
+  '/api/admin/sales': await import(path.join(ROOT, 'functions/api/admin/sales.js')),
+  '/api/admin/account': await import(path.join(ROOT, 'functions/api/admin/account.js')),
+  '/api/admin/reset': await import(path.join(ROOT, 'functions/api/admin/reset.js')),
+  '/auth/reset': await import(path.join(ROOT, 'functions/auth/reset.js')),
 };
 
 /* ── amorce : un client d'avant, un client d'après ────────────────────────── */
@@ -100,6 +118,44 @@ db.prepare('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES
 db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
   .bind('op-dev', 'Opérateur local', 'ff', 'ff', Date.now()).run();
 
+/* ── de quoi exercer les VENTES DE TEST ────────────────────────────────────
+   Un deuxième établissement sur le même compte (pour vérifier que rien ne
+   traverse), des ventes qui couvrent les cas difficiles, une journée déjà
+   clôturée, un carnet clients et un registre d'équipe. Les cas faciles se
+   testent tout seuls ; ceux-ci sont semés exprès. */
+const NOW = Date.now();
+db.prepare('INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,updated_ts) VALUES (?,?,?,?,?,?,?)')
+  .bind('amira-cafe', '{}', 'pro', 'cafe', 'acc-old', 'Amira Café', NOW).run();
+
+const seedSale = (id, m, amount, method, label, ref, ts, lines) =>
+  db.prepare('INSERT INTO sales (id,merchant,amount,method,label,ref,ts,lines) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(id, m, amount, method, label, ref, ts, lines ? JSON.stringify(lines) : null).run();
+
+seedSale('s-onboard', 'amira-boutique', 1, 'cash', 'Test', 'T-001-A7', NOW - 2 * 3600000,
+         [{ n: 'Test imprimante', q: 1, t: 1 }]);
+seedSale('s-basket', 'amira-boutique', 640, 'card', 'Caftan +2 art.', 'T-014-A7', NOW - 3 * 3600000,
+         [{ n: 'Caftan coton', q: 1, t: 520, c: 'Prêt-à-porter' }, { n: 'Ceinture brodée', q: 2, t: 120, c: 'Accessoires' }]);
+seedSale('s-return', 'amira-boutique', 230, 'card', 'Retour · avoir AV-2031', 'T-031-A7', NOW - 4 * 3600000, null);
+seedSale('s-plain', 'amira-boutique', 410, 'tap', 'Table 4', 'T-044-A7', NOW - 5 * 3600000, null);
+seedSale('s-closed', 'amira-boutique', 300, 'cash', 'Vente', 'T-009-A7', NOW - DAY, null);
+seedSale('s-cafe', 'amira-cafe', 88, 'cash', 'Café allongé', 'C-003-B2', NOW - 3600000, null);
+
+const yUTC = new Date(NOW - DAY).toISOString().slice(0, 10);
+db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+  .bind('amira-boutique', 'dayreports', JSON.stringify({
+    days: { [yUTC]: { day: yUTC, cutoff: 0, gross: 300, txns: 1, closedAt: NOW - DAY + 3600000,
+                      closedBy: 'Sara', closedCount: 1, refunds: { count: 1, amount: 230 } } },
+  }), 1, NOW).run();
+
+db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+  .bind('amira-boutique', 'team', JSON.stringify({ members: [
+    { name: 'Sara Idrissi', role: 'Vendeuse', email: 'sara@amira.test' },
+    { name: 'Nadia Alami', role: 'Manager', email: 'nadia@amira.test' },
+  ] }), 1, NOW).run();
+
+db.prepare('INSERT INTO clients (merchant,id,name,points,spend,deleted,updated_ts,srv_ts) VALUES (?,?,?,?,?,?,?,?)')
+  .bind('amira-boutique', 'c1', 'Lalla Khadija', 1240, 1240, 0, NOW, NOW).run();
+
 const SESSIONS = {
   'amira-boutique': await lib.makeSession('acc-old', AUTH_SECRET),
   'snack-rif': await lib.makeSession('acc-new', AUTH_SECRET),
@@ -127,6 +183,21 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 http.createServer(async (rq, rs) => {
   const url = new URL(rq.url, 'http://localhost:' + PORT);
   const p = decodeURIComponent(url.pathname);
+
+  /* La sortie e-mail simulée. On garde le message entier — c'est là qu'on va
+     relire le lien de réinitialisation pour l'ouvrir comme le ferait le client. */
+  if (p === '/__mail') {
+    const chunks = [];
+    for await (const c of rq) chunks.push(c);
+    try { outbox.push(JSON.parse(Buffer.concat(chunks).toString())); } catch (_) {}
+    rs.writeHead(200, { 'Content-Type': 'application/json' });
+    return rs.end('{}');
+  }
+  if (p === '/__outbox') {
+    rs.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return rs.end(JSON.stringify({ mail: outbox }));
+  }
+
   const mod = ROUTES[p];
 
   if (mod) {
@@ -166,6 +237,7 @@ http.createServer(async (rq, rs) => {
   console.log('  /kiwi-admin.html                    console opérateur (Live · D1)');
   console.log('  /dashboard.html                     Amira Boutique — client d’AVANT, tout allumé');
   console.log('  /dashboard.html?merchant=snack-rif  Snack Rif — client d’APRÈS, cinq modules coupés');
+  console.log('  /__outbox                           les e-mails « envoyés » (liens de réinitialisation)');
   console.log('\nLe service worker sert des fichiers en cache : première ouverture,');
   console.log('videz-le (DevTools › Application › Service Workers › Unregister).');
 });

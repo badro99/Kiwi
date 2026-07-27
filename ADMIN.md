@@ -69,7 +69,154 @@ lands on `/kiwi-admin.html`. Clients never discover it.
    sets a signed `kiwi_op_id` when a code is verified. Without it — the shared
    staff bypass, or a session opened before this shipped — the entry reads
    `equipe`, which is honest rather than falsely precise.
-5. **Opérateurs** — add / delete operator access codes.
+5. **Ventes de test** (per établissement) — see below.
+6. **Compte & adresses e-mail** (per client) — see below.
+7. **Historique administratif** (per établissement) — modules, test sales and
+   account changes in one list, newest first. Three tables server-side
+   (`config_audit`, `sale_audit`, `account_audit`), merged by
+   `functions/api/admin/audit.js`, because they tell one story — what Kiwi did to
+   this client's account — and "what happened at their place in July" should not
+   take three screens. Nothing is ever removed, not even when a gesture is
+   undone: *taken out on the 12th, put back on the 14th* is exactly what a
+   dispute asks for.
+8. **Opérateurs** — add / delete operator access codes.
+
+## Two levels of operator
+
+Reading the console and **acting on a client's books or access** are not the same
+authority, and since this release they are not the same permission.
+
+| | opens the console | sees everything | can act |
+|---|---|---|---|
+| **Operator code** (`operators` table → `kiwi_op`) | ✅ | ✅ | ✅ |
+| **Accès équipe** (shared `SITE_PASSWORD` → `kiwi_gate`) | ✅ | ✅ | ❌ |
+| client / cashier / établissement manager (`kiwi_sess`) | ❌ | ❌ | ❌ |
+
+`SITE_PASSWORD` is a **shared** secret — it also opens the demo site, and several
+people know it. It can prove "somebody who knows the team passcode", which is a
+list of suspects, not a responsibility. Taking a sale out of a merchant's books,
+changing a login address or firing a password reset must carry a name, so those
+three demand a personal operator code (`isSeniorOperator()` in
+`functions/auth/_lib.js`). The panels stay fully **visible** on the staff bypass
+and say why the buttons are closed — create yourself a code under *Opérateurs*
+and reopen the console with it. A merchant session is not admitted at all: every
+`/api/admin/*` route refuses it with 403.
+
+## Ventes de test
+
+An installation, a training session, a printer check leave **real rows in a real
+merchant's books**. The operator has to be able to take them out of the figures —
+but `DELETE` on a financial record has no way back, and a support console that
+erases sales will one day erase the wrong one.
+
+So nothing is erased. `sales.void_ts` is stamped and `/api/feed` stops serving the
+row; the amount, the basket, the time and the receipt reference stay in the
+database. Clearing `void_ts` puts the sale back **identical** — the gesture is
+reversible both ways, and both ways are journalled.
+
+**Search** by receipt number, label, transaction id, date range, amount range,
+payment method, and by state (*dans les livres* / *sorties* / *toutes*). Click a
+row to open the **full transaction** — every basket line with quantity, category
+and amount — before doing anything. Tick one or several, then *Marquer comme
+ventes de test…*.
+
+**Before it happens, God mode shows what it costs.** Revenue removed, sale count,
+average basket, per-method breakdown, and two lists it is careful to separate:
+
+- **corrects itself** — revenue, number of sales, average basket, product
+  ranking, payment split, the daily report of an *open* day, accounting exports
+  and Kiwi AI's answers. All of them recompute from the feed, which is why the
+  exclusion sits in `functions/api/feed.js` and nowhere else. One filter fixes
+  every surface; ten filters would have missed one.
+- **you must do by hand** — **stock** and **loyalty**. A sale line carries the
+  product *name*, not the variant id (colour × size) that was decremented, and no
+  column links a sale to a customer record. Kiwi lists exactly what to put back,
+  with the figures, and records it in the journal — guessing a variant from a name
+  corrupts a real inventory about one time in ten, and inventing the reversal
+  would have looked better on screen and been wrong in the database.
+
+**Blockers** stop a careless removal: a **closed business day** (the Z is a
+snapshot — the dashboard serves it as-is, so taking a sale out fixes the running
+figures but *not* that day's report until it is reopened and closed again), a day
+that contains refunds, a label that looks like a return or a credit note (taking a
+refund out of the books pushes revenue *up*). The first click is refused with the
+consequences attached; only a second, explicit click gets through, and the journal
+records the gesture as **forced**.
+
+A **reason is required by the server**, not just by the screen: *onboarding ·
+imprimante · formation · doublon · installation · autre* (with a written
+explanation). The list is closed — free text fills up with "test", "ok", "rien"
+and answers nothing six months later.
+
+**One établissement can never touch another.** Every statement is bound by
+`WHERE merchant = ?`, and requested ids that don't come back from that read fail
+the **whole batch** rather than being silently skipped — an operator with two
+shops open in two tabs cannot take the boutique's sale out from the café's panel.
+
+The retraction reaches every device: `/api/feed` returns a `voided` list on every
+poll carrying both the **cursor** (the dashboard keys its sales by it) and the
+**receipt ref** (all a till knows), so an already-synced browser drops the row
+instead of keeping it in its totals forever. The caisse polls the same list at a
+slow cadence (`voids=1`) and drops it from its own day counter.
+
+## Compte & adresses e-mail
+
+Four kinds of address, named, because they don't get corrected in the same spirit:
+
+- **Connexion** (`accounts.email`) — the key. Unique across Kiwi.
+- **Contact** (`accounts.contact_email`) — where Kiwi writes to the business.
+- **Facturation** (`accounts.billing_email`) — accounting, when it differs.
+- **Équipe** (`store_docs` feature `team`) — staff addresses, **read-only** here.
+  They belong to the roster the merchant keeps himself, authenticate nothing, and
+  overwriting them from the console would fork the same employee's record.
+
+The last two were one column until now, so fixing a mistyped login also changed
+where Kiwi writes. Empty means *same as the login address* — which is the true
+state of every existing account, and why the migration copies nothing into them.
+
+Before a login change the panel names the account and the user, states plainly
+that **the new address becomes the login immediately** (Kiwi has no address
+verification step — a blocking one would lock out precisely the client who lost
+access to their old mailbox), and requires a written reason. A collision is
+refused with the name of the other business. A notice goes to the old address, a
+confirmation to the new one; neither carries a password or a token.
+
+**Nothing breaks, and that is a property of the schema rather than a promise:**
+the session is signed on `accounts.id`, store ownership is
+`merchant_config.account_id`, sales are keyed by store slug. No second account, no
+re-onboarding, no lost permissions — the client stays logged in.
+
+**Controlled recovery:** if the client disputes it, *Rétablir l'adresse
+précédente* reads the previous value back from the journal rather than making the
+operator retype it from memory — that retyping is the mistake being repaired. The
+revert is journalled in turn (`email-revert`); it is never a deletion.
+
+## Mot de passe — envoyer un lien
+
+The operator can send the official reset message. They cannot read the existing
+password (it exists only as PBKDF2), cannot choose a new one, **and never see the
+link**: the response says *sent / not sent* and the journal stores the masked
+destination (`a•••a@kiwi.test`) and nothing else. A link shown in the console
+would be account takeover in one click for anyone who opens God mode, and reading
+it out over the phone is the same thing as choosing the password.
+
+The link is unique to the user, expires after **one hour**, works **once**
+(consumed by a single conditional `UPDATE`, so two simultaneous opens cannot both
+win), and a successful reset kills every other live link on the account. Expired,
+already used, forged and never-existed all answer with the **same** message — a
+distinction would turn the page into an oracle — and the page displays no address,
+so it cannot be used to test whether someone is a Kiwi client. The client lands
+signed in, on the normal dashboard.
+
+`reset_tokens` stores `selector` plus an **HMAC** of the secret half; reading the
+whole table yields no usable link. A **5-minute cooldown** applies per account —
+each send invalidates the previous link, so an operator clicking three times while
+the client reads their email would lock them out — and the console shows the last
+send, whether a link is still live, and when the next one is allowed.
+
+**Email delivery needs `MAIL_WEBHOOK`** (see *Cloudflare setup*). Without it the
+endpoint refuses honestly and creates **no** token: a dead link that replaced a
+live one would be taking the client's key away to throw it in the bin.
 
 ## What a NEW établissement starts with
 
@@ -113,7 +260,18 @@ Functions (all under the site gate; the `/admin/*` ones additionally require an
 - `functions/api/admin/pins.js` — `GET`/`POST`/`DELETE` staff PINs.
 - `functions/api/admin/config.js` — `GET`/`PUT` a merchant's feature flags; the
   `PUT` also journals every module it actually changed.
-- `functions/api/admin/audit.js` — `GET ?merchant=` the module change history.
+- `functions/api/admin/audit.js` — `GET ?merchant=` the administrative history,
+  merging `config_audit` + `sale_audit` + `account_audit` into one sorted list.
+- `functions/api/admin/sales.js` — `GET` search / impact preview, `POST`
+  void + restore. Read is operator-level; **write requires an operator code**.
+- `functions/api/admin/account.js` — `GET` the four kinds of address, `PUT`
+  correct one (or revert). **Operator code.**
+- `functions/api/admin/reset.js` — `GET` send state + cooldown, `POST` send the
+  reset mail. **Operator code.** Never returns the link.
+- `functions/auth/reset.js` — the client half: `GET ?token=` validates without
+  consuming, `POST {token,password}` consumes once and signs the client in.
+  Public (no session — someone who lost their password has none), served by
+  `reset.html`, which is allow-listed in `functions/_middleware.js`.
 - `functions/api/admin/operators.js` — `GET`/`POST`/`DELETE` operator codes.
 - `functions/api/config.js` — `GET ?merchant=…` the client apps' own read of
   `{features, pins}` (any authenticated session; a merchant reads its own slug).
@@ -193,28 +351,57 @@ enable the console in production:
 
 1. Apply the new tables: re-run [`schema.sql`](schema.sql) (all `CREATE TABLE IF
    NOT EXISTS` — safe to re-apply) in the D1 console, or
-   `npx wrangler d1 execute kiwi-sales --file=schema.sql --remote`. This is what
-   creates `config_audit` (the module journal). Until it exists the console still
-   works and still saves — the panel simply shows "aucun changement enregistré",
-   because the journal write is deliberately non-blocking.
-2. **Multi-store registry — run once on an existing database.** `CREATE TABLE IF
-   NOT EXISTS` will not add columns to a table that already exists, so these two
-   `ALTER`s have to be run by hand (each is safe to run once; re-running errors
+   `npx wrangler d1 execute kiwi-sales --file=schema.sql --remote`. This creates
+   `config_audit` (module journal), `sale_audit`, `account_audit` and
+   `reset_tokens`. Until they exist the console still works and still saves — the
+   journal writes are deliberately non-blocking, and the panels say so.
+2. **Columns on existing tables — run once by hand.** `CREATE TABLE IF NOT
+   EXISTS` will not add a column to a table that already exists, so these
+   `ALTER`s have to be run separately (each safe once; re-running errors
    harmlessly with "duplicate column name"):
 
    ```sql
    ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
    ALTER TABLE merchant_config ADD COLUMN name TEXT;
+   ALTER TABLE sales ADD COLUMN void_ts INTEGER;
+   ALTER TABLE sales ADD COLUMN void_reason TEXT;
+   ALTER TABLE sales ADD COLUMN void_note TEXT;
+   ALTER TABLE sales ADD COLUMN void_actor TEXT;
+   ALTER TABLE sales ADD COLUMN void_actor_id TEXT;
+   ALTER TABLE accounts ADD COLUMN contact_email TEXT;
+   ALTER TABLE accounts ADD COLUMN billing_email TEXT;
    ```
 
-   Until they are run, everything keeps working exactly as before — a client's
-   second établissement simply stays folded into their first, which is the old
-   behaviour, not a new failure. Nothing 500s, and no data is written anywhere the
-   apps can't read it back.
-3. Deploy (push, or Create deployment — not "Retry").
-4. First entry: staff bypass → `/kiwi-admin.html` → Opérateurs → add your codes.
+   Until they are run, everything keeps working exactly as before. A client's
+   second établissement stays folded into their first (the old behaviour, not a
+   new failure); `/api/feed` falls back to its original query so **no dashboard
+   ever goes blank**; and the test-sale panel searches read-only and states that
+   the migration is missing instead of failing silently. Nothing 500s, and no
+   data is written anywhere the apps can't read it back.
+3. **`MAIL_WEBHOOK`** (Settings → Variables & Secrets) — required for the
+   password-reset mail and the address-change notices, and for nothing else. Kiwi
+   has no mail provider; this reuses the mechanism `LEADS_WEBHOOK` already uses, a
+   Google Apps Script `/exec` URL. The script receives
+   `{kind:'mail', to, subject, text}` and sends it:
 
-No new secret is needed — the operator cookie reuses `AUTH_SECRET`.
+   ```js
+   function doPost(e) {
+     var m = JSON.parse(e.postData.contents);
+     if (m.kind === 'mail') MailApp.sendEmail(m.to, m.subject, m.text);
+     return ContentService.createTextOutput('{}');
+   }
+   ```
+
+   Deploy it as a web app ("execute as me", "anyone with the link"), and paste the
+   `/exec` URL. Unset, the console refuses the send **honestly** and creates no
+   token — a "sent ✓" over a mail that never left is worse than no button at all.
+4. Deploy (push, or Create deployment — not "Retry").
+5. First entry: staff bypass → `/kiwi-admin.html` → Opérateurs → add your codes.
+   **Then reopen the console with a code**: the staff bypass is read-only for
+   test sales, addresses and resets (see *Two levels of operator*).
+
+Besides `MAIL_WEBHOOK` no new secret is needed — the operator cookie and the
+reset tokens both key off `AUTH_SECRET`.
 
 ## Local proof
 
@@ -231,15 +418,39 @@ node tools/live-mock-server.mjs
 
 It seeds the contrast that matters: **Amira Boutique** (account opened long
 before the cutover, no configuration saved → everything on, exactly as before)
-and **Snack Rif** (opened after → the five modules off).
+and **Snack Rif** (opened after → the five modules off). Amira also holds a
+**second établissement** (*Amira Café*), a **closed business day**, a sale that
+looks like a **return**, a multi-line basket, a client book and a staff roster —
+the hard cases, seeded on purpose, so the frightening paths can be walked without
+touching a real merchant's books.
 
 - `/kiwi-admin.html` — the console in **Live · D1** mode, against those two.
 - `/dashboard.html` — Amira's app.
 - `/dashboard.html?merchant=snack-rif` — the new client's app.
 - `/kiwi-caisse.html` — the till (Order Pro chip, staff PINs).
+- `/__outbox` — the mail that "went out". `MAIL_WEBHOOK` points back at this
+  server, so you can copy a real reset link out of it and open it as the client
+  would — the only way to check the whole path rather than stopping at the moment
+  the server claims to have sent it.
 
 Clear the service worker on first open (DevTools › Application › Service Workers
 › Unregister), or it will serve you cached assets instead of your edits.
+
+### The rules, checked
+
+```bash
+node tools/check-godmode.mjs
+```
+
+119 checks over the same real Functions: who is allowed in (anonymous, merchant
+session, staff bypass, operator code), search by every criterion, the impact
+preview, the closed-day blocker and its forced override, cross-establishment
+isolation, the mandatory reason, void → feed → restore round trip, the journal's
+contents, address correction with collision and controlled revert, reset send /
+resend cooldown / single use / expiry / forged token, the till's offline-queue
+replay not resurrecting a removed sale, and an unmigrated database still serving
+a dashboard. Run it before touching any of it — these are behavioural claims, and
+the only honest way to check a server rule is to execute it.
 
 On the plain static server (`tools/static-server.js`) there is no backend, so the
 console runs in **Démo** mode (seeded clients) and the client apps keep their

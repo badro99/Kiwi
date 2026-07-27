@@ -76,11 +76,11 @@ async function hmacHex(secret, message) {
 
 // ── Gate tokens (staff bypass + operator console) ───────────────────────────
 // Both are unforgeable HMACs. The staff token is keyed by the shared SITE_PASSWORD
-// (so it matches the "Accès équipe" cookie in _middleware.js). The operator token
-// is keyed by AUTH_SECRET and is constant — it only proves "operator-authenticated"
-// (a specific code was accepted at /__operator), not which code, so deleting a code
-// leaves live sessions intact. Both cookie names live here so the middleware and the
-// /api/admin/* handlers verify identically.
+// (so it matches the "Accès équipe" cookie in _middleware.js). The legacy operator
+// token is intentionally NOT sufficient by itself: every named operator session
+// must also carry kiwi_op_id, and that signed id is checked against the live
+// `operators` table on every privileged request. Deleting an operator therefore
+// revokes every browser that was using that code immediately.
 export const GATE_COOKIE = 'kiwi_gate';
 export const OP_COOKIE = 'kiwi_op';
 
@@ -144,21 +144,131 @@ export async function readOperatorId(request, env) {
   return timingSafeEqualHex(raw.slice(dot + 1), want) ? id : null;
 }
 
+/* A live, named operator session.
+ *
+ * The old kiwi_op cookie is the same HMAC for every operator and survives after
+ * the corresponding database row is deleted. Requiring the signed identity
+ * cookie AND the current row turns revocation into a real server-side decision.
+ * Fail closed on DB errors: God Mode can be unavailable during an incident; it
+ * must never become unauditable. */
+export async function namedOperatorId(request, env) {
+  const authSecret = env && env.AUTH_SECRET;
+  if (!authSecret || !env || !env.DB) return null;
+  const want = await operatorToken(authSecret);
+  if (!timingSafeEqualHex(readCookie(request, OP_COOKIE) || '', want)) return null;
+  const id = await readOperatorId(request, env);
+  if (!id) return null;
+  try {
+    const row = await env.DB.prepare('SELECT id FROM operators WHERE id = ?').bind(id).first();
+    return row && row.id === id ? id : null;
+  } catch (_) { return null; }
+}
+
 // True if the request carries a valid operator cookie, or a valid staff-bypass
 // cookie (owner/partner = operator-equivalent). A plain merchant session is NOT
 // enough — the admin surface is cross-merchant and privileged.
 export async function isOperator(request, env) {
-  const authSecret = env && env.AUTH_SECRET;
   const sitePassword = env && env.SITE_PASSWORD;
-  if (authSecret) {
-    const want = await operatorToken(authSecret);
-    if (timingSafeEqualHex(readCookie(request, OP_COOKIE) || '', want)) return true;
-  }
+  if (await namedOperatorId(request, env)) return true;
   if (sitePassword) {
     const want = await staffToken(sitePassword);
     if (timingSafeEqualHex(readCookie(request, GATE_COOKIE) || '', want)) return true;
   }
   return false;
+}
+
+/* ── LE DEUXIÈME NIVEAU : un code opérateur NOMMÉ ─────────────────────────────
+ * isOperator() admet deux choses très différentes sous un seul nom : un code de
+ * la table `operators`, qui appartient à quelqu'un, et SITE_PASSWORD — le
+ * laissez-passer d'équipe, un mot de passe partagé qui ouvre aussi le site de
+ * démonstration et que tout le monde connaît. Pour lire la console, les deux se
+ * valent. Pour sortir une vente des livres d'un commerçant, changer l'adresse de
+ * connexion d'un compte ou lancer une réinitialisation de mot de passe, non :
+ * ces gestes doivent porter un nom au journal, et un secret partagé n'en porte
+ * aucun. « Tapé par quelqu'un qui connaissait le code d'équipe » n'est pas une
+ * responsabilité, c'est une liste de suspects.
+ *
+ * D'où ce second niveau, qui n'accepte QUE le cookie kiwi_op (HMAC d'AUTH_SECRET,
+ * posé quand un code de la table a été vérifié). Un client, un caissier, un
+ * gérant d'établissement n'en ont évidemment aucun : leur session est un
+ * kiwi_sess, qui n'est examiné nulle part ici.
+ *
+ * Conséquence assumée : le propriétaire qui entre par l'accès équipe VOIT les
+ * trois panneaux mais ne peut pas agir, et la console le lui dit au lieu de
+ * griser un bouton sans raison. Il lui suffit de se créer un code dans
+ * « Opérateurs » — c'est déjà le chemin documenté pour amorcer le premier code. */
+export async function isSeniorOperator(request, env) {
+  return !!(await namedOperatorId(request, env));
+}
+
+/* Qui agit ? Le cookie kiwi_op est le même pour tous les opérateurs — il ne
+ * prouve que « un code a été accepté ». kiwi_op_id, signé, porte lequel.
+ * Sans lui on écrit 'equipe' : une identité honnête et vague vaut mieux qu'une
+ * fausse précision dans un journal. Écrit une fois ici parce que trois panneaux
+ * (modules, ventes, comptes) posent maintenant la même question. */
+export async function operatorActor(request, env) {
+  const id = await readOperatorId(request, env);
+  if (!id) return { id: '', label: 'equipe' };
+  try {
+    const row = await env.DB.prepare('SELECT label FROM operators WHERE id = ?').bind(id).first();
+    return { id, label: (row && row.label) || 'opérateur' };
+  } catch (_) { return { id, label: 'opérateur' }; }
+}
+
+/* ── ADRESSE MASQUÉE ──────────────────────────────────────────────────────────
+ * « à quelle adresse le lien est-il parti ? » doit rester vérifiable dans le
+ * journal sans que celui-ci devienne un annuaire des adresses de tous les
+ * clients, lisible par n'importe quel opérateur. On garde donc de quoi
+ * RECONNAÎTRE une adresse qu'on connaît déjà, pas de quoi en apprendre une.
+ * Le domaine reste entier : c'est lui qui permet de repérer qu'on a écrit chez
+ * l'ancien fournisseur du client, et il ne désigne personne à lui seul. */
+export function maskEmail(e) {
+  const s = normEmail(e);
+  const at = s.lastIndexOf('@');
+  if (at <= 0) return s ? '•••' : '';
+  const user = s.slice(0, at);
+  const dom = s.slice(at);
+  if (user.length <= 2) return user.slice(0, 1) + '•' + dom;
+  return user.slice(0, 1) + '•'.repeat(Math.min(6, user.length - 2)) + user.slice(-1) + dom;
+}
+
+/* ── ENVOI D'E-MAIL ───────────────────────────────────────────────────────────
+ * Kiwi n'a pas de fournisseur d'e-mail, et n'en avait aucun besoin jusqu'ici :
+ * rien dans le produit n'écrivait au client. Deux fonctions de cette livraison
+ * le demandent (prévenir l'ancienne adresse d'un changement, envoyer un lien de
+ * réinitialisation), donc voici la sortie — sur le MÊME mécanisme que
+ * mirrorLead() : un webhook Google Apps Script, où `MailApp.sendEmail` fait le
+ * travail. Pas de dépendance, pas de clé d'API tierce, et le partenaire a déjà
+ * ce chemin en place pour les leads.
+ *
+ * Sans MAIL_WEBHOOK configuré, on ne fait PAS semblant : la fonction renvoie
+ * { ok:false, reason:'unconfigured' } et la console l'affiche à l'opérateur. Un
+ * bouton « envoyé ✓ » au-dessus d'un e-mail qui n'est jamais parti est pire que
+ * pas de bouton du tout — l'opérateur raccroche en croyant le client servi.
+ *
+ * `ok:false` ne doit jamais faire échouer l'action appelante : le changement
+ * d'adresse a bien eu lieu même si la notification n'est pas partie. L'état
+ * d'envoi est inscrit au journal, et c'est là qu'on va le chercher. */
+export async function sendMail(env, msg) {
+  const url = env && env.MAIL_WEBHOOK;
+  if (!url) return { ok: false, reason: 'unconfigured' };
+  const to = normEmail(msg && msg.to);
+  if (!to) return { ok: false, reason: 'no-recipient' };
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'mail',
+        to,
+        subject: String((msg && msg.subject) || 'Kiwi'),
+        text: String((msg && msg.text) || ''),
+      }),
+    });
+    return r && r.ok ? { ok: true } : { ok: false, reason: 'http-' + ((r && r.status) || 0) };
+  } catch (e) {
+    return { ok: false, reason: 'network' };
+  }
 }
 
 // Session token = base64url(JSON{aid,exp}) + "." + HMAC(secret, payload).
@@ -234,6 +344,45 @@ export async function mirrorLead(env, lead) {
       body: JSON.stringify(lead),
     });
   } catch (_) { /* best-effort */ }
+}
+
+/* ── JETON DE RÉINITIALISATION ────────────────────────────────────────────────
+ * Deux moitiés, et c'est le cœur du dispositif.
+ *
+ *   selector  — public, sert UNIQUEMENT à retrouver la ligne (clé primaire).
+ *   verifier  — le secret ; la base n'en garde que le HMAC.
+ *
+ * Pourquoi pas un seul secret, cherché directement en base ? Parce qu'il
+ * faudrait alors l'indexer en clair, et une lecture de la table `reset_tokens`
+ * rendrait tous les liens vivants utilisables. Ici, cette même lecture ne donne
+ * que des empreintes : elle ne permet de reprendre aucun compte.
+ *
+ * 32 octets de hasard répartis sur les deux moitiés — hors de portée d'un
+ * script, et le limiteur d'essais couvre le reste.
+ *
+ * Le jeton complet n'existe qu'une fois, en mémoire, le temps d'écrire l'e-mail.
+ * Il n'est jamais renvoyé à la console, jamais journalisé, jamais stocké. */
+export function makeResetToken() {
+  const rnd = (n) => bytesToB64url(crypto.getRandomValues(new Uint8Array(n)));
+  const selector = rnd(9);
+  const verifier = rnd(24);
+  return { selector, verifier, token: selector + '.' + verifier };
+}
+export async function resetVerifierHash(authSecret, verifier) {
+  return hmacHex(authSecret, 'kiwi-reset-v1:' + String(verifier || ''));
+}
+/* Un jeton malformé n'est pas une erreur à signaler, c'est un jeton invalide :
+   on renvoie null et l'appelant répond « lien expiré ou déjà utilisé », le même
+   message que pour un lien réellement périmé. Distinguer les deux apprendrait à
+   un attaquant à reconnaître un selector qui existe. */
+export function splitResetToken(token) {
+  const s = String(token || '');
+  const dot = s.indexOf('.');
+  if (dot <= 0 || dot === s.length - 1) return null;
+  const selector = s.slice(0, dot);
+  const verifier = s.slice(dot + 1);
+  if (!/^[A-Za-z0-9_-]{4,64}$/.test(selector) || !/^[A-Za-z0-9_-]{8,128}$/.test(verifier)) return null;
+  return { selector, verifier };
 }
 
 /* ── TENANT ENTITLEMENT ──────────────────────────────────────────────────────

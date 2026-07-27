@@ -7325,6 +7325,39 @@
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return entry;
   }
+  /* ═══ RETIRER UNE VENTE DU MAGASIN LOCAL ═══
+   * Une vente de test sortie des livres par la console opérateur cesse d'être
+   * servie par /api/feed — mais celles que ce navigateur a DÉJÀ recopiées sont
+   * ici, dans localStorage, et le flux est un curseur : il ne repasse jamais sur
+   * ce qu'il a déjà donné. Sans cette porte de sortie, la vente resterait dans
+   * le chiffre d'affaires de cet appareil pour toujours, alors que le serveur ne
+   * la compte plus — deux vérités pour un même commerce, exactement ce qu'on
+   * cherchait à éviter.
+   *
+   * On enlève par CURSEUR (le rowid du flux), la seule clé que le serveur et le
+   * navigateur partagent : `ts + montant` confondrait deux ventes identiques
+   * encaissées dans la même seconde, ce qu'une caisse fait tous les jours à
+   * l'heure de pointe.
+   *
+   * Ne notifie que si quelque chose a bougé : le sondage passe toutes les 2,5 s
+   * avec la même liste, et redessiner le tableau de bord à chaque fois pour ne
+   * rien changer ferait clignoter les cartes en continu. Les ventes saisies à la
+   * main (pavé « Nouvelle vente », donc sans curseur) ne sont jamais touchées :
+   * elles n'ont pas d'existence côté serveur, il n'y a rien à retirer. */
+  function salesRemove(id, cursors) {
+    id = id || currentVenue;
+    if (!cursors || !cursors.length) return 0;
+    const kill = new Set();
+    cursors.forEach((c) => { const n = Number(c); if (n) kill.add(n); });
+    if (!kill.size) return 0;
+    const list = salesList(id);
+    const kept = list.filter((s) => !(s && s.cursor && kill.has(Number(s.cursor))));
+    const gone = list.length - kept.length;
+    if (!gone) return 0;
+    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(kept)); } catch (_) {}
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return gone;
+  }
   function salesTotals(id) {
     const list = salesList(id);
     const revenue = list.reduce((s, x) => s + (x.amount || 0), 0);
@@ -7433,6 +7466,7 @@
   window.KiwiSales = {
     add: salesAdd,
     list: salesList,
+    remove: salesRemove,
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
   };

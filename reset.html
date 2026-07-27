@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Kiwi · Nouveau mot de passe</title>
+<!-- La page où atterrit le lien envoyé depuis la console opérateur
+     (functions/api/admin/reset.js). Elle n'affiche AUCUNE adresse e-mail, et un
+     lien périmé, déjà utilisé ou inventé donne le même message : la page ne peut
+     donc pas servir à savoir si une adresse est cliente de Kiwi.
+
+     Autonome, sans dépendance : elle doit fonctionner pour quelqu'un qui n'a pas
+     de session, donc avant tout ce que le reste de l'app charge. -->
+<style>
+  :root{
+    --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
+    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e4e0d7; --muted:#5d6b63; --surface:#FFFDFA;
+    --warn:#b0402f;
+  }
+  em,i,cite,dfn,var{font-style:normal}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Inter Tight",Inter,"Segoe UI",sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{width:100%; max-width:420px; background:var(--surface); border:1px solid var(--line);
+        border-radius:18px; padding:30px 28px; box-shadow:0 18px 50px -30px rgba(5,59,44,.5)}
+  .mark{font-weight:660; letter-spacing:-.02em; color:var(--riad); font-size:1.32rem; margin:0 0 4px}
+  h1{font-size:1.04rem; font-weight:620; margin:0 0 6px; letter-spacing:-.01em}
+  p{margin:0 0 18px; color:var(--muted); font-size:.9rem}
+  label{display:block; font-size:.78rem; font-weight:640; text-transform:uppercase;
+        letter-spacing:.05em; color:var(--muted); margin:0 0 6px}
+  input{width:100%; font:inherit; font-size:.95rem; padding:11px 13px; border:1.5px solid var(--line);
+        border-radius:11px; background:var(--paper); color:var(--ink); margin:0 0 14px}
+  input:focus{outline:none; border-color:var(--atlas)}
+  button{width:100%; font:inherit; font-size:.94rem; font-weight:640; border:0; border-radius:11px;
+         padding:12px 16px; cursor:pointer; background:linear-gradient(135deg,var(--atlas),var(--riad));
+         color:#eafff4}
+  button:disabled{opacity:.5; cursor:default}
+  .msg{font-size:.85rem; margin:12px 0 0; min-height:1.2em}
+  .msg.bad{color:var(--warn)}
+  .msg.ok{color:var(--atlas)}
+  .back{display:inline-block; margin-top:16px; color:var(--atlas); font-size:.86rem; text-decoration:none; font-weight:600}
+  .hint{font-size:.78rem; color:var(--muted); margin:10px 0 0}
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
+    .mark{color:#cfeeda}
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <p class="mark">kiwi</p>
+    <div id="view"></div>
+  </main>
+<script>
+(function(){
+  'use strict';
+  var view = document.getElementById('view');
+  function h(tag, props){
+    var n = document.createElement(tag);
+    if (props) for (var k in props){
+      if (k === 'text') n.textContent = props[k];
+      else if (k === 'class') n.className = props[k];
+      else if (k.slice(0,2) === 'on') n.addEventListener(k.slice(2).toLowerCase(), props[k]);
+      else if (props[k] != null && props[k] !== false) n.setAttribute(k, props[k]);
+    }
+    for (var i = 2; i < arguments.length; i++){
+      var c = arguments[i];
+      if (c == null || c === false) continue;
+      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return n;
+  }
+  function clear(){ while (view.firstChild) view.removeChild(view.firstChild); }
+
+  var token = '';
+  try { token = new URLSearchParams(location.search).get('token') || ''; } catch(_){}
+
+  /* Un seul écran d'échec pour tous les cas — expiré, déjà utilisé, inventé.
+     Le serveur ne les distingue pas non plus (functions/auth/reset.js) : la
+     précision serait un oracle, pas un service. */
+  function dead(){
+    clear();
+    view.appendChild(h('h1', { text:'Ce lien n’est plus valable' }));
+    view.appendChild(h('p', { text:'Un lien de réinitialisation expire au bout d’une heure et ne fonctionne qu’une seule fois. Demandez-en un nouveau à votre interlocuteur Kiwi.' }));
+    view.appendChild(h('a', { class:'back', href:'/' }, 'Retour à la connexion ›'));
+  }
+
+  function done(){
+    clear();
+    view.appendChild(h('h1', { text:'Mot de passe enregistré' }));
+    view.appendChild(h('p', { text:'Vous êtes connecté. Bonne journée.' }));
+    view.appendChild(h('button', { onClick:function(){ location.href = '/dashboard.html'; } }, 'Ouvrir mon tableau de bord'));
+  }
+
+  function form(){
+    clear();
+    view.appendChild(h('h1', { text:'Choisissez un nouveau mot de passe' }));
+    view.appendChild(h('p', { text:'Huit caractères minimum. Il remplacera l’ancien immédiatement.' }));
+
+    var p1 = h('input', { type:'password', id:'p1', autocomplete:'new-password', placeholder:'••••••••' });
+    var p2 = h('input', { type:'password', id:'p2', autocomplete:'new-password', placeholder:'••••••••' });
+    var msg = h('p', { class:'msg' });
+    var btn = h('button', { type:'submit' }, 'Enregistrer');
+
+    var f = h('form', { onSubmit:function(e){
+      e.preventDefault();
+      msg.className = 'msg'; msg.textContent = '';
+      var a = p1.value, b = p2.value;
+      if (a.length < 8){ msg.className = 'msg bad'; msg.textContent = 'Huit caractères minimum.'; return; }
+      if (a !== b){ msg.className = 'msg bad'; msg.textContent = 'Les deux saisies diffèrent.'; return; }
+      btn.disabled = true; btn.textContent = 'Enregistrement…';
+      fetch('/auth/reset', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ token: token, password: a }),
+      }).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+        .then(function(res){
+          if (res.ok && res.j && res.j.ok) { done(); return; }
+          var err = (res.j && res.j.error) || '';
+          if (err === 'invalid'){ dead(); return; }
+          btn.disabled = false; btn.textContent = 'Enregistrer';
+          msg.className = 'msg bad';
+          msg.textContent = err === 'weak' ? 'Huit caractères minimum.'
+                          : 'Enregistrement impossible pour le moment. Réessayez dans un instant.';
+        })
+        .catch(function(){
+          btn.disabled = false; btn.textContent = 'Enregistrer';
+          msg.className = 'msg bad'; msg.textContent = 'Réseau indisponible. Réessayez.';
+        });
+    } },
+      h('label', { for:'p1' }, 'Nouveau mot de passe'), p1,
+      h('label', { for:'p2' }, 'Confirmez'), p2,
+      btn, msg);
+    view.appendChild(f);
+    setTimeout(function(){ try { p1.focus(); } catch(_){} }, 60);
+  }
+
+  /* On valide AVANT d'afficher le formulaire : faire saisir deux fois un mot de
+     passe pour apprendre ensuite que le lien était mort est une petite cruauté
+     évitable. La validation ne consomme pas le jeton (GET). */
+  view.appendChild(h('p', { text:'Vérification du lien…' }));
+  if (!token) { dead(); }
+  else {
+    /* no-store explicite : la validité d'un lien change entre deux requêtes
+       identiques, donc rien ne doit la mettre en cache — ni le service worker
+       (qui laisse désormais passer tout /auth/, voir kiwi-sw.js), ni le
+       navigateur, ni un proxy en chemin. Un « ce lien est bon » servi de mémoire
+       ferait saisir un mot de passe pour rien. */
+    fetch('/auth/reset?token=' + encodeURIComponent(token), { cache:'no-store', headers:{ Accept:'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.valid) form(); else dead(); })
+      .catch(function(){ dead(); });
+  }
+})();
+</script>
+</body>
+</html>

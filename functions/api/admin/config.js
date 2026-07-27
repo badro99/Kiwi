@@ -7,21 +7,14 @@
 // full interface), so an absent row = everything on. Turning a module OFF here
 // hides it in that merchant's real app on next load (via /api/config).
 
-import { isOperator, json, readOperatorId } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_lib.js';
 
-/* Qui vient de couper ce module ?
- * Le cookie d'identité est signé (auth/_lib.js › readOperatorId) : sans lui on
- * n'invente pas de nom. 'equipe' = entré par le laissez-passer partagé, ou
- * session ouverte avant que ce cookie existe. Mieux vaut une identité honnête et
- * vague qu'une fausse précision dans un journal. */
-async function actorOf(context) {
-  const id = await readOperatorId(context.request, context.env);
-  if (!id) return { id: '', label: 'equipe' };
-  try {
-    const row = await context.env.DB.prepare('SELECT label FROM operators WHERE id = ?').bind(id).first();
-    return { id, label: (row && row.label) || 'opérateur' };
-  } catch (_) { return { id, label: 'opérateur' }; }
-}
+/* Qui vient de couper ce module ? operatorActor() (auth/_lib.js) répond, et il
+ * répond la même chose aux trois journaux — modules, ventes, comptes. La version
+ * locale qui vivait ici a été remontée telle quelle quand les ventes de test ont
+ * eu besoin d'inscrire le même nom : deux copies de « qui agit » sont deux
+ * occasions de diverger sur la seule colonne dont l'exactitude compte. */
+const actorOf = (context) => operatorActor(context.request, context.env);
 
 /* Une ligne par module RÉELLEMENT changé. Un enregistrement qui ne touche que le
  * plan, ou qui renvoie les mêmes valeurs, n'écrit rien — un journal qui grossit
@@ -45,15 +38,18 @@ async function logChanges(context, merchant, prev, next) {
   try { await context.env.DB.batch(stmts); } catch (_) { /* table absente → on n'échoue pas l'enregistrement */ }
 }
 
-async function guard(context) {
+async function guard(context, senior) {
   const ok = await isOperator(context.request, context.env);
   if (!ok) return json({ error: 'forbidden' }, 403);
   if (!context.env.DB) return json({ error: 'no-db' }, 503);
+  if (senior && !(await isSeniorOperator(context.request, context.env))) {
+    return json({ error: 'operator-code-required' }, 403);
+  }
   return null;
 }
 
 export async function onRequestGet(context) {
-  const bad = await guard(context); if (bad) return bad;
+  const bad = await guard(context, false); if (bad) return bad;
   const url = new URL(context.request.url);
   const merchant = (url.searchParams.get('merchant') || '').trim();
   if (!merchant) return json({ error: 'merchant-required' }, 400);
@@ -66,7 +62,7 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPut(context) {
-  const bad = await guard(context); if (bad) return bad;
+  const bad = await guard(context, true); if (bad) return bad;
   let body;
   try { body = await context.request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = (body.merchant || '').toString().trim();

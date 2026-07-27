@@ -7,13 +7,25 @@
 //
 // Codes are what the hidden long-press prompt on the login screen accepts.
 
-import { isOperator, hashPassword, json } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, hashPassword, json } from '../../auth/_lib.js';
 
 async function guard(context) {
   const ok = await isOperator(context.request, context.env);
   if (!ok) return json({ error: 'forbidden' }, 403);
   if (!context.env.DB) return json({ error: 'no-db' }, 503);
   return null;
+}
+
+async function mutationGuard(context, allowBootstrap) {
+  const bad = await guard(context); if (bad) return bad;
+  if (await isSeniorOperator(context.request, context.env)) return null;
+  if (allowBootstrap) {
+    try {
+      const row = await context.env.DB.prepare('SELECT COUNT(*) AS n FROM operators').first();
+      if (row && Number(row.n) === 0) return null;
+    } catch (_) { /* fail closed below */ }
+  }
+  return json({ error: 'operator-code-required' }, 403);
 }
 
 export async function onRequestGet(context) {
@@ -25,7 +37,9 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const bad = await guard(context); if (bad) return bad;
+  // The shared team passcode may create only the very first named operator.
+  // Once one exists, every further change must be signed by a live named code.
+  const bad = await mutationGuard(context, true); if (bad) return bad;
   let body;
   try { body = await context.request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const label = (body.label || '').toString().trim().slice(0, 40);
@@ -44,7 +58,7 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestDelete(context) {
-  const bad = await guard(context); if (bad) return bad;
+  const bad = await mutationGuard(context, false); if (bad) return bad;
   const url = new URL(context.request.url);
   let id = (url.searchParams.get('id') || '').trim();
   if (!id) { try { id = ((await context.request.json()).id || '').toString().trim(); } catch (_) {} }

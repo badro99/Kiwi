@@ -15,7 +15,7 @@
 // Owner + partner: yes, this also logs YOU out of the staff bypass and the
 // operator console. That's the honest semantic of an explicit "logout" click;
 // re-entering SITE_PASSWORD (or the operator code) restores access in one tap.
-import { clearSessionCookie, GATE_COOKIE, OP_COOKIE } from './_lib.js';
+import { clearSessionCookie, GATE_COOKIE, OP_COOKIE, OPID_COOKIE } from './_lib.js';
 
 const CLEAR = 'Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 
@@ -24,5 +24,6 @@ export async function onRequest() {
   headers.append('Set-Cookie', clearSessionCookie());
   headers.append('Set-Cookie', `${GATE_COOKIE}=; ${CLEAR}`);
   headers.append('Set-Cookie', `${OP_COOKIE}=; ${CLEAR}`);
+  headers.append('Set-Cookie', `${OPID_COOKIE}=; ${CLEAR}`);
   return new Response(null, { status: 303, headers });
 }

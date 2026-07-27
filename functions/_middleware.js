@@ -23,7 +23,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
-  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, verifyPassword,
+  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
@@ -104,6 +104,16 @@ export async function onRequest(context) {
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
+  // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
+  // de passe n'a par définition AUCUNE session : la porte du site la lui
+  // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
+  // connexion — c'est-à-dire exactement l'écran qu'il ne peut pas passer.
+  // Les deux orthographes, comme les pages ci-dessous : Pages sert /foo.html en
+  // redirigeant vers /foo, et l'URL propre n'aurait jamais croisé cette liste.
+  // N'ouvre aucune donnée : la page est un formulaire, tout se joue dans
+  // /auth/reset (déjà accessible, comme tout /auth/*) qui exige un jeton signé
+  // et ne renvoie jamais d'adresse e-mail.
+  if (isRead && (path === '/reset.html' || path === '/reset')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path.startsWith('/api/media/'))) return next();
   if (method === 'POST' && path === '/api/order') return next();
@@ -151,11 +161,10 @@ export async function onRequest(context) {
     if (readCookie(request, GATE_COOKIE) === staff) return next();
   }
 
-  // 3. Valid operator cookie? (Kiwi's own back-office — reaches kiwi-admin.html.)
-  if (authSecret) {
-    const op = await operatorToken(authSecret);
-    if (readCookie(request, OP_COOKIE) === op) return next();
-  }
+  // 3. Valid NAMED operator session? The common kiwi_op HMAC alone is not
+  // enough: kiwi_op_id must be signed and still exist in the operators table.
+  // Removing an operator therefore cuts off their open browsers immediately.
+  if (authSecret && await namedOperatorId(request, env)) return next();
 
   // Not authorized. The /auth/* endpoints must still run so the screen works.
   if (path.startsWith('/auth/')) return next();
