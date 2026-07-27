@@ -852,6 +852,43 @@
     return { ok: true, added: n, before, stock: v.stock };
   }
 
+  /* ─────────── les déclinaisons qui attendent encore leur code-barres ───────────
+   * Le pont entre les deux moitiés d'une reprise de stock. Le fichier du
+   * fournisseur s'importe là où il se trouve — sur l'ordinateur, au tableau de
+   * bord — et fait entrer les noms, les prix et les coûts, mais aucun code : un
+   * tarif Excel n'en porte pas. La douchette, elle, est à la caisse.
+   *
+   * Ces déclinaisons-là sont donc exactement le travail qui reste : l'employé
+   * parcourt le magasin, scanne un article, et Kiwi le rattache à sa fiche déjà
+   * remplie au lieu de la lui faire retaper. `q` filtre par nom de produit pour
+   * que la liste reste utilisable sur un catalogue de plusieurs milliers de
+   * références. */
+  function listCodeless(opts) {
+    opts = opts || {};
+    const q = String(opts.q || '').trim().toLowerCase();
+    const byProd = index().byProduct;
+    const out = [];
+    for (const p of db.products) {
+      if (!p || p.archived) continue;
+      if (q && !p.name.toLowerCase().includes(q)) continue;
+      const vs = byProd[p.id] || [];
+      const bare = vs.filter((v) => !(v.barcodes && v.barcodes.length));
+      if (!bare.length) continue;
+      out.push({ product: p, variants: bare, total: vs.length });
+      if (opts.limit && out.length >= opts.limit) break;
+    }
+    return out;
+  }
+  function countCodeless() {
+    const byProd = index().byProduct;
+    let n = 0;
+    for (const p of db.products) {
+      if (!p || p.archived) continue;
+      for (const v of (byProd[p.id] || [])) if (!(v.barcodes && v.barcodes.length)) n++;
+    }
+    return n;
+  }
+
   /* Les informations COMMUNES d'un produit, pour enchaîner ses déclinaisons.
    * Un fournisseur qui code chaque taille séparément (Jean noir · S = code A,
    * M = code B, bleu M = code C) ne doit pas faire ressaisir le nom, la
@@ -1064,6 +1101,9 @@
     ensureVariant: (d) => (load(), ensureVariant(d)),
     receiveStock: (id, q) => (load(), receiveStock(id, q)),
     productTemplate: (pid) => (load(), productTemplate(pid)),
+    // le reste à faire après un import : ce qui n'a pas encore de code-barres
+    listCodeless: (o) => (load(), listCodeless(o)),
+    countCodeless: () => (load(), countCodeless()),
     // barcodes
     generateBarcode: (id) => (load(), generateBarcode(id)), attachBarcode: (id, raw, o) => (load(), attachBarcode(id, raw, o)),
     removeBarcode: (id, c) => (load(), removeBarcode(id, c)), findByBarcode: (c) => (load(), findByBarcode(c)),
