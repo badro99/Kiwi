@@ -518,7 +518,10 @@
       const catalog = [
         { name: 'Comptabilité',   color: '#1D3F6B', tag: 'A', desc: str['integ.compta.desc'] },
         { name: 'Bank of Africa', color: '#00613E', tag: 'B', desc: safeBank },
-        ...INTEGRATIONS_OFF.map((i) => ({ name: i.name, color: i.color, tag: i.tag, desc: str[i.i18nDesc] })),
+        /* `channel` doit survivre à cette copie. Sans lui, la carte perd son
+           canal et le vrai connecteur (clé + adresse) devient inatteignable
+           pour un client réel — précisément celui à qui il est destiné. */
+        ...INTEGRATIONS_OFF.map((i) => ({ name: i.name, color: i.color, tag: i.tag, desc: str[i.i18nDesc], channel: i.channel })),
       ];
       drawer({
         title: str.title,
@@ -532,7 +535,7 @@
           </div>
           <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:4px 0 8px;">${str.available}</div>
           ${catalog.map((i) => `
-            <div class="p-card" style="margin-bottom:8px;">
+            <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
               <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
                 <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; opacity:0.85;">${i.tag}</div>
                 <div>
@@ -561,7 +564,7 @@
 
         <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:4px 0 8px;">${str.connected}</div>
         ${INTEGRATIONS_ON.map((i) => `
-          <div class="p-card" style="margin-bottom:8px;">
+          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-configure" data-arg="${i.name}">
             <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
               <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">${i.tag}</div>
               <div>
@@ -578,7 +581,7 @@
 
         <div style="font-size:11px; letter-spacing:0.1em; color:var(--n-500); font-family:var(--mono); text-transform:uppercase; margin:18px 0 8px;">${str.available}</div>
         ${INTEGRATIONS_OFF.map((i) => `
-          <div class="p-card" style="margin-bottom:8px;">
+          <div class="p-card" style="margin-bottom:8px; cursor:pointer;" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">
             <div style="display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center;">
               <div style="width:38px; height:38px; border-radius:9px; background:${i.color}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; opacity:0.85;">${i.tag}</div>
               <div>
