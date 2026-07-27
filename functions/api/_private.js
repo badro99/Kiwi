@@ -37,6 +37,93 @@ export async function storeOwner(env, slug) {
   } catch (_) { return null; }
 }
 
+/* TOUS les magasins du même propriétaire — la question que `tenantFor` ne pose
+ * pas.
+ *
+ * `tenantFor` répond « de QUEL magasin suis-je le commerçant », au singulier :
+ * c'est ce qu'il faut pour lire ou écrire un inventaire. Un commerçant qui a
+ * deux boutiques et qui scanne un article à Casa pour savoir s'il en reste à
+ * Marrakech pose une autre question — « quels magasins sont les MIENS » — et
+ * aucune fonction n'y répondait. Sans elle, la réponse ne pouvait venir que du
+ * navigateur (la liste des établissements vit dans kiwiCustomVenues), donc un
+ * client qui l'inventait lisait le stock d'un inconnu.
+ *
+ * `from` est le magasin d'où l'on parle. Il est OBLIGATOIRE pour une caisse : le
+ * cookie d'appairage est un vérificateur (HMAC du slug), pas un porteur — on ne
+ * peut que confirmer « cette caisse est bien celle de X », jamais lui demander
+ * qui elle est. Le terminal nomme donc son magasin et le prouve.
+ *
+ * Ordre de résolution, calqué sur tenantFor pour qu'il n'y ait pas deux idées
+ * différentes de qui est qui :
+ *   · caisse appairée sur `from` → le compte qui POSSÈDE `from`
+ *   · session du compte         → ce compte
+ *   · opérateur                 → le compte qui possède `from` (console God mode)
+ *
+ * Renvoie toujours une liste sûre : `{ aid, stores }`, vide quand le demandeur
+ * ne prouve rien. Un magasin dont la base ne connaît pas le propriétaire
+ * (ligne d'avant le registre, ou base pas encore migrée) ne se voit attribuer
+ * AUCUN frère : on préfère un panneau vide à celui du voisin. */
+export async function ownedStores(request, env, from) {
+  const out = { aid: '', stores: [] };
+  if (!env || !env.DB) return out;
+  from = String(from == null ? '' : from).slice(0, 64).trim().toLowerCase();
+
+  let aid = '';
+
+  // 1) La caisse. Elle nomme son magasin, on vérifie, puis on remonte au compte.
+  if (from) {
+    try {
+      if (await isTillFor(request, env, from)) aid = (await storeOwner(env, from)) || '';
+    } catch (_) { /* pas une caisse → on continue */ }
+  }
+
+  // 2) La session du compte — elle EST le propriétaire, rien à remonter.
+  if (!aid && env.AUTH_SECRET) {
+    try {
+      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      if (sess && sess.aid) aid = sess.aid;
+    } catch (_) { /* ni caisse ni session → opérateur, sinon rien */ }
+  }
+
+  // 3) L'opérateur, cadré sur le magasin qu'il consulte. Sans `from` il n'a pas
+  //    désigné de client : on ne devine pas lequel.
+  if (!aid && from) {
+    try {
+      if (await isOperator(request, env)) aid = (await storeOwner(env, from)) || '';
+    } catch (_) {}
+  }
+
+  if (!aid) return out;
+  out.aid = aid;
+
+  const seen = new Set();
+  const push = (r) => {
+    const m = r && String(r.merchant || '').trim();
+    if (!m || seen.has(m)) return;
+    seen.add(m);
+    out.stores.push({ merchant: m, name: String(r.name || ''), type: String(r.type || '') });
+  };
+
+  // Le registre. C'est la source qui fait autorité : `account_id` n'est écrit que
+  // par le commerçant lui-même (api/config.js → claimStore) ou par un opérateur.
+  try {
+    const rs = await env.DB.prepare(
+      'SELECT merchant, name, type FROM merchant_config WHERE account_id = ? LIMIT 50'
+    ).bind(aid).all();
+    for (const r of (rs.results || [])) push(r);
+  } catch (_) { /* colonne absente → on retombe sur le slug du compte ci-dessous */ }
+
+  // Le magasin d'un compte mono-boutique est keyé sur le slug de son nom et peut
+  // n'avoir jamais été enregistré (lignes d'avant le registre). Sans ce repli, un
+  // tel commerçant se verrait répondre « aucun établissement », y compris le sien.
+  try {
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
+    if (acc && acc.business) push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+  } catch (_) {}
+
+  return out;
+}
+
 /* Quel magasin ce demandeur a-t-il le droit de lire/écrire ?
  *
  *   · caisse appairée → le magasin auquel CE terminal a été lié. Testé en
