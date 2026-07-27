@@ -158,12 +158,30 @@
    * /api/sale does INSERT OR IGNORE, so retrying after a lost response can never
    * write the same sale twice. */
   var Q_KEY = 'kiwiSaleQueue';
-  var Q_MAX = 200;
   function qRead() {
     try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
   }
-  function qWrite(a) { try { localStorage.setItem(Q_KEY, JSON.stringify(a.slice(-Q_MAX))); } catch (_) {} }
+  function queueSignal() {
+    try { window.dispatchEvent(new CustomEvent('kiwi:sale-queue', { detail: queueStatus() })); } catch (_) {}
+  }
+  /* Never trim this array. The previous `slice(-200)` silently erased the
+   * OLDEST takings during a long outage — exactly the sales least likely to
+   * exist anywhere else. If storage itself is full, report failure and leave
+   * the previous queue intact; the cashier UI turns that into a blocking red
+   * support state instead of pretending synchronization is healthy. */
+  function qWrite(a) {
+    try { localStorage.setItem(Q_KEY, JSON.stringify(a)); queueSignal(); return true; }
+    catch (_) { queueSignal(); return false; }
+  }
+  function queueStatus() {
+    var q = qRead();
+    return {
+      pending: q.length,
+      blocked: q.filter(function (x) { return x && x._blocked; }).length,
+      storageError: !!queueStorageError,
+    };
+  }
   function uid() {
     try {
       var c = window.crypto || window.msCrypto;
@@ -171,21 +189,43 @@
     } catch (_) {}
     return 'sale-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
   }
+  function stableId(merchantId, entry) {
+    var source = String((entry && (entry.id || entry.ref)) || '');
+    if (!source) return uid();
+    /* FNV-1a: deterministic across reloads, short enough for the 64-char DB
+       key, and includes the tenant so two shops may both own ticket #42. */
+    var s = String(merchantId || '') + '|' + source, h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return 'sale-ref-' + (h >>> 0).toString(16) + '-' + source.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
+  }
 
-  var flushing = false;
+  var flushing = false, queueStorageError = false;
   function flushQueue() {
     if (flushing) return;
     var q = qRead();
     if (!q.length) return;
+    /* A rejected record stays available for support but cannot hold every valid
+       sale behind it hostage. Send the first record that is still retryable. */
+    var body = q.find(function (x) { return x && !x._blocked; });
+    if (!body) { queueSignal(); return; }
     flushing = true;
-    var body = q[0];
-    function done(settled) {
+    function done(settled, blocked, status) {
       flushing = false;
-      if (!settled) return;                    // still offline → keep it, retry later
-      var rest = qRead().filter(function (x) { return x && x.id !== body.id; });
-      qWrite(rest);
-      pingLocal();                             // the row exists now — tell the dashboards
-      if (rest.length) flushQueue();
+      var current = qRead();
+      if (settled) {
+        var rest = current.filter(function (x) { return x && x.id !== body.id; });
+        qWrite(rest);
+        pingLocal();                           // the row exists now — tell the dashboards
+        if (rest.some(function (x) { return x && !x._blocked; })) flushQueue();
+        return;
+      }
+      if (blocked) {
+        current.forEach(function (x) {
+          if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
+        });
+        qWrite(current);                       // retained, visible, skipped on the next send
+        if (current.some(function (x) { return x && !x._blocked; })) flushQueue();
+      } else queueSignal();                    // offline/transient → unchanged and retryable
     }
     try {
       fetch('/api/sale', {
@@ -194,21 +234,13 @@
         body: JSON.stringify(body),
         keepalive: true,
       }).then(function (r) {
-        // 2xx = stored. Otherwise: only drop when the server has genuinely
-        // REJECTED this sale and always will — a bad body, a merchant it won't
-        // accept, or a duplicate. Everything else is kept and retried.
-        //
-        // "Any 4xx" used to count as rejected, which quietly threw away real
-        // money: a 404 means the endpoint isn't reachable (a bad deploy, a wrong
-        // route, a stale service worker answering for it), not that the sale is
-        // invalid — and 408/429 are explicitly retryable. The cashier rang it up
-        // and the drawer opened; a sale we cannot deliver yet must wait, not
-        // vanish. The queue is capped, and retries ride the existing poll, so a
-        // lasting outage costs nothing and heals the moment the route is back.
-        var DROP = { 400: 1, 401: 1, 403: 1, 409: 1, 422: 1 };
-        done(!!r && (r.ok || !!DROP[r.status]));
-      }).catch(function () { done(false); });
-    } catch (_) { done(false); }
+        /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
+           quarantined for support, never deleted. Auth failures remain retryable:
+           pairing/session repair can make the exact same sale valid later. */
+        var BLOCK = { 400: 1, 409: 1, 422: 1 };
+        done(!!(r && r.ok), !!(r && BLOCK[r.status]), r && r.status);
+      }).catch(function () { done(false, false, 0); });
+    } catch (_) { done(false, false, 0); }
   }
 
   function postSale(entry) {
@@ -241,8 +273,8 @@
         });
       }
     } catch (_) { lines = null; }
-    q.push({
-      id: uid(),                                              // idempotency key = row PK
+    var body = {
+      id: stableId(m, entry),                                 // stable receipt key = row PK
       merchant: m,
       amount: amt,                                            // MAD, integer
       method: entry.method || 'cash',                         // cash|card|tap|qr|wallet
@@ -250,10 +282,17 @@
       ref: entry.ref || '',
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
-    });
-    qWrite(q);
+    };
+    /* The same completed receipt can be observed by two local persistence
+       paths. Stable IDs plus this local check prevent it entering the queue
+       twice; INSERT OR IGNORE remains the server-side second lock. */
+    if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
+    q.push(body);
+    queueStorageError = !qWrite(q);
+    if (queueStorageError) return { ok: false, reason: 'queue-storage-full', id: body.id };
     pingLocal();     // a dashboard in this browser starts polling before the POST lands
     flushQueue();
+    return { ok: true, queued: true, id: body.id };
   }
 
   /* ─── dashboard ← server (poll) ───
@@ -611,6 +650,7 @@
   window.KiwiLive = {
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return qRead().length; },
+    queueStatus: queueStatus,
     /* What the assistant prints under an answer: which tenant it is reading,
        when the server last answered, how many rows it has bridged, and how
        many sales this device still owes the server. A number a merchant can
@@ -619,6 +659,7 @@
       return {
         on: on(), merchant: merchant(), lastSync: lastSync,
         bridged: feedSales.length, queued: qRead().length,
+        queue: queueStatus(),
       };
     },
   };
