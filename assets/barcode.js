@@ -70,6 +70,47 @@
     return { modules: bits, text: s, format: 'ean13' };
   }
 
+  /* ─────────────────────────── EAN-8 / UPC-A ───────────────────────────
+   * Kiwi only ever GENERATES EAN-13, but it must READ and re-render whatever is
+   * already printed on a merchant's existing stock. On the shelves of a Moroccan
+   * boutique that means EAN-8 (small packaging) and UPC-A (anything imported from
+   * North America) alongside EAN-13.
+   *
+   * UPC-A is not a separate symbology here: a 12-digit UPC-A prefixed with a "0"
+   * IS the equivalent EAN-13, check digit included. Rendering it that way keeps
+   * one encoder for both — and fixes a real misread: encode() used to see 12
+   * digits, treat them as 12 DATA digits and append a 13th check digit, which
+   * produces a barcode carrying a different number than the box in the hand. */
+  function ean8CheckDigit(d7) {
+    const s = String(d7).replace(/\D/g, '').slice(0, 7).padStart(7, '0');
+    let sum = 0;
+    // 7 data digits, weights 3,1,3,1,3,1,3 from the left.
+    for (let i = 0; i < 7; i++) sum += (+s[i]) * (i % 2 === 0 ? 3 : 1);
+    return (10 - (sum % 10)) % 10;
+  }
+  function isValidEan8(str) {
+    const s = String(str || '').replace(/\D/g, '');
+    if (s.length !== 8) return false;
+    return ean8CheckDigit(s.slice(0, 7)) === +s[7];
+  }
+  // A UPC-A is valid exactly when its EAN-13 form ("0" + the 12 digits) is.
+  function isValidUpcA(str) {
+    const s = String(str || '').replace(/\D/g, '');
+    if (s.length !== 12) return false;
+    return isValidEan13('0' + s);
+  }
+  function ean8(digits) {
+    let s = String(digits || '').replace(/\D/g, '');
+    if (s.length === 7) s += String(ean8CheckDigit(s));
+    if (s.length !== 8) throw new Error('EAN-8 needs 7 or 8 digits, got ' + s.length);
+    let bits = '101';                                   // start guard
+    for (let i = 0; i < 4; i++) bits += L[+s[i]];        // left half: all odd parity
+    bits += '01010';                                    // centre guard
+    for (let i = 4; i < 8; i++) bits += R[+s[i]];        // right half
+    bits += '101';                                      // end guard
+    return { modules: bits, text: s, format: 'ean8' };
+  }
+
   /* ─────────────────────────── Code 128 (Set B) ─────────────────────────── */
 
   // 107 symbol patterns (values 0-106). Each is a 6-run width string; runs
@@ -163,11 +204,95 @@
     return s.length ? 'code128' : 'unknown';
   }
 
+  /* Human-readable symbology name, for the till's feedback line. */
+  const SYM_LABEL = { ean13: 'EAN-13', ean8: 'EAN-8', upca: 'UPC-A', numeric: 'code numérique', code128: 'Code 128', unknown: 'inconnu' };
+  function symLabel(sym) { return SYM_LABEL[sym] || String(sym || ''); }
+
+  /* ── validate() — the ONE judge of "can this code be used as an identifier?" ──
+   * Used by the inventory intake before a supplier code is attached to a variant.
+   * Three outcomes, deliberately distinct:
+   *   ok:false           → not a usable code at all (empty, garbled, partial burst)
+   *   ok:true check:'bad'→ usable, but its own check digit disagrees. That is NOT
+   *                        a refusal: plenty of shops carry in-house codes that
+   *                        merely LOOK like an EAN. The till warns and lets the
+   *                        employee confirm, because refusing outright would make
+   *                        their real stock unregisterable.
+   *   ok:true check:'ok' → a standards-valid retail barcode.
+   * The code is returned VERBATIM (trimmed only). Never parsed as a number, so a
+   * leading zero — which carries meaning in a GTIN — always survives. */
+  function validate(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (!s) return { ok: false, reason: 'vide', code: '' };
+    // A control character means a truncated / mangled HID burst, not a code.
+    if (/[\x00-\x1F\x7F]/.test(s)) return { ok: false, reason: 'illisible', code: s };
+    // A 1-3 character read is a partial scan; no retail symbology is that short.
+    if (s.length < 4) return { ok: false, reason: 'trop-court', code: s };
+    if (s.length > 48) return { ok: false, reason: 'trop-long', code: s };
+    const sym = detect(s);
+    let check = 'na';                                   // no check digit to verify
+    if (sym === 'ean13') check = isValidEan13(s) ? 'ok' : 'bad';
+    else if (sym === 'ean8') check = isValidEan8(s) ? 'ok' : 'bad';
+    else if (sym === 'upca') check = isValidUpcA(s) ? 'ok' : 'bad';
+    return { ok: true, code: s, sym, check, label: symLabel(sym) };
+  }
+
+  /* ── GTIN equivalence, for LOOKUP only ───────────────────────────────────────
+   * The same physical barcode can be reported by two different scanners as two
+   * different strings: a UPC-A is "036000291452" to one and "0036000291452" to
+   * the next, and an EAN-8 may arrive zero-padded to 13. GS1 weights the check
+   * digit from the RIGHT, so zero-padding never changes it — these really are the
+   * same identifier. Without this, a shop registers a code with the till's own
+   * scanner, then a second device (or the same scanner after a firmware setting
+   * changes) reads "the same" box and finds nothing.
+   *
+   * Storage stays VERBATIM — nothing here rewrites what the employee scanned.
+   * This only widens the *search*, and only between codes whose check digit is
+   * valid: a code that fails its own check digit is treated as opaque and must
+   * match exactly, so an in-house reference like "0012" can never be silently
+   * conflated with "12". */
+  function gtinKey(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (!/^\d+$/.test(s)) return null;
+    const valid = (s.length === 13 && isValidEan13(s))
+      || (s.length === 12 && isValidUpcA(s))
+      || (s.length === 8 && isValidEan8(s));
+    if (!valid) return null;
+    // Canonical form: significant digits only. Zero-padding is not information.
+    return s.replace(/^0+/, '') || '0';
+  }
+
+  /* Which symbology should a REPRINT of this code use, so the reprinted label
+   * carries the same number the original did. */
+  function bestFormat(code) {
+    const sym = detect(code);
+    if (sym === 'ean13' && isValidEan13(code)) return 'ean13';
+    if (sym === 'upca' && isValidUpcA(code)) return 'ean13';   // rendered as 0 + 12
+    if (sym === 'ean8' && isValidEan8(code)) return 'ean8';
+    return 'code128';
+  }
+
   /* ─────────────────────────── SVG render ─────────────────────────── */
 
+  /* Pick the encoder. An EXISTING supplier code must render as the symbology it
+   * already is, or the label would carry a different number than the product:
+   *   · a valid UPC-A renders as EAN-13 of "0" + its 12 digits (same number),
+   *   · a valid EAN-8 renders as EAN-8 (it used to fall through to Code 128),
+   *   · 12 loose digits that are NOT a valid UPC-A keep the old behaviour of
+   *     "12 data digits + computed check", which is how Kiwi's own generator
+   *     hands them over. */
   function encode(value, format) {
     const s = String(value == null ? '' : value);
-    const fmt = format || (isValidEan13(s) ? 'ean13' : (/^\d{12}$/.test(s.replace(/\D/g, '')) ? 'ean13' : 'code128'));
+    const digits = s.replace(/\D/g, '');
+    let fmt = format;
+    if (!fmt) {
+      if (isValidEan13(s)) fmt = 'ean13';
+      else if (isValidUpcA(s)) fmt = 'upca';
+      else if (isValidEan8(s)) fmt = 'ean8';
+      else if (/^\d{12}$/.test(digits)) fmt = 'ean13';
+      else fmt = 'code128';
+    }
+    if (fmt === 'upca') return ean13('0' + digits);
+    if (fmt === 'ean8') return ean8(s);
     if (fmt === 'ean13') return ean13(s);
     return code128(s);
   }
@@ -463,8 +588,16 @@
     ean13CheckDigit,
     isValidEan13,
     ean13,
+    ean8CheckDigit,
+    isValidEan8,
+    isValidUpcA,
+    ean8,
     code128,
     detect,
+    symLabel,
+    validate,
+    bestFormat,
+    gtinKey,
     nextInStoreEan,
     peekNextSeq,
     encode,

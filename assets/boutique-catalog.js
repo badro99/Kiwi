@@ -199,7 +199,33 @@
   // mirror the change up so the stock survives this browser (voir LE FILET plus
   // bas). L'écriture locale reste synchrone : la caisse ne doit jamais attendre
   // le réseau pour encaisser.
-  function commit() { persist(); notify(); schedulePush(); }
+  function commit() {
+    if (batchDepth > 0) { batchDirty = true; return; }
+    persist(); notify(); schedulePush();
+  }
+
+  /* ── batch() : un geste métier = une écriture ────────────────────────────────
+   * Chaque mutation persiste TOUT le document (JSON.stringify + localStorage).
+   * C'est le bon compromis pour un geste isolé, mais enregistrer un article de
+   * reprise en enchaîne trois ou quatre — créer le produit, sa déclinaison,
+   * rattacher le code, saisir la quantité — donc trois ou quatre sérialisations
+   * complètes du catalogue pour UN scan. Sur un import de plusieurs milliers de
+   * références, où le document dépasse les 400 Ko, c'est ce qui faisait décrocher
+   * la saisie.
+   *
+   * batch() suspend l'écriture le temps du geste et n'écrit qu'une fois, à la
+   * fin. Réentrant, et `finally` garantit que l'écriture a lieu même si le geste
+   * échoue en cours de route — on ne perd jamais une modification déjà appliquée
+   * en mémoire. */
+  let batchDepth = 0, batchDirty = false;
+  function batch(fn) {
+    batchDepth++;
+    try { return fn(); }
+    finally {
+      batchDepth--;
+      if (batchDepth === 0 && batchDirty) { batchDirty = false; persist(); notify(); schedulePush(); }
+    }
+  }
   function notify() { subs.forEach((fn) => { try { fn(); } catch (e) {} }); }
 
   // Cross-tab: another tab wrote the catalog → reload + notify our listeners.
@@ -527,15 +553,55 @@
   const varById  = (id) => db.variants.find((v) => v.id === id) || null;
   const variantsOf = (pid) => db.variants.filter((v) => v.productId === pid);
 
+  /* Déclinaisons regroupées par produit, en UN passage.
+   *
+   * variantsOf() refiltre la table entière à chaque appel. C'est sans
+   * conséquence sur une vitrine de vingt articles, mais compat() et stats()
+   * l'appellent UNE FOIS PAR PRODUIT : le coût devient produits × déclinaisons.
+   * Or ces deux fonctions sont rejouées à chaque écriture du catalogue (le
+   * subscribe reconstruit la projection de vente). Mesuré sur une reprise de
+   * stock réelle : à 1 200 articles, compat() coûtait 22 ms et stats() 14 ms,
+   * et comme un article enregistré déclenche plusieurs commits, chaque scan
+   * payait près de 100 ms de reconstruction — l'import de plusieurs milliers
+   * de références, c'est-à-dire précisément l'usage visé, s'enlisait.
+   * Un seul regroupement rend l'ensemble linéaire. */
+  function groupVariants() {
+    const by = Object.create(null);
+    for (const v of db.variants) {
+      if (!v) continue;
+      (by[v.productId] || (by[v.productId] = [])).push(v);
+    }
+    return by;
+  }
+
   function productStock(pid) { return variantsOf(pid).reduce((s, v) => s + (v.stock || 0), 0); }
 
   function normCode(s) { return String(s == null ? '' : s).trim(); }
 
+  /* Qui porte ce code ? En deux temps, et l'ordre compte.
+   *
+   *  1. Correspondance EXACTE, toujours en premier. Ce que l'employé a scanné est
+   *     ce qu'on cherche, caractère pour caractère — zéros de tête compris.
+   *  2. À défaut, équivalence GTIN (assets/barcode.js · gtinKey). Une même
+   *     étiquette UPC-A est rendue « 036000291452 » par une douchette et
+   *     « 0036000291452 » par la suivante ; un EAN-8 arrive parfois complété à 13.
+   *     GS1 pondère la clé de contrôle depuis la DROITE : ces chaînes désignent
+   *     réellement le même article. Sans ce repli, une boutique enregistre un code
+   *     avec sa douchette puis ne retrouve plus rien depuis un second appareil.
+   *     Réservé aux codes dont la clé de contrôle est valide — une référence
+   *     interne « 0012 » reste opaque et n'est jamais confondue avec « 12 ». */
   function barcodeOwner(code) {
     const c = normCode(code);
     if (!c) return null;
     for (const v of db.variants) {
       if (v.barcodes && v.barcodes.some((b) => b.code === c)) return v;
+    }
+    const KB = window.KiwiBarcode;
+    if (!KB || !KB.gtinKey) return null;
+    const key = KB.gtinKey(c);
+    if (!key) return null;
+    for (const v of db.variants) {
+      if (v.barcodes && v.barcodes.some((b) => KB.gtinKey(b.code) === key)) return v;
     }
     return null;
   }
@@ -576,9 +642,10 @@
     if (opts.categoryId && opts.categoryId !== 'all') list = list.filter((p) => p.categoryId === opts.categoryId);
     if (opts.q) {
       const q = opts.q.toLowerCase();
+      const byProd = groupVariants();   // une fois, pas une fois par produit
       list = list.filter((p) => p.name.toLowerCase().includes(q)
         || (catById(p.categoryId) && catById(p.categoryId).name.toLowerCase().includes(q))
-        || variantsOf(p.id).some((v) => (v.barcodes || []).some((b) => b.code.toLowerCase().includes(q)) || (v.sku || '').toLowerCase().includes(q)));
+        || (byProd[p.id] || []).some((v) => (v.barcodes || []).some((b) => String(b.code).toLowerCase().includes(q)) || (v.sku || '').toLowerCase().includes(q)));
     }
     return list;
   }
@@ -679,6 +746,59 @@
   function adjustStock(id, d) { const v = varById(id); if (v) { v.stock = Math.max(0, (v.stock || 0) + (d | 0)); commit(); } return v; }
   function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); commit(); }
 
+  /* ─────────── les trois gestes d'inventaire, jamais confondus ───────────
+   * Une reprise de stock existant se fait à la douchette, vite, et trois gestes
+   * très différents s'y ressemblent à l'écran. Les mélanger, c'est écraser un
+   * comptage juste :
+   *   · CRÉER un produit au catalogue      → addProduct()
+   *   · AJOUTER une déclinaison manquante  → ensureVariant()  (n'écrase aucun stock)
+   *   · RECEVOIR de la marchandise         → receiveStock()   (ajoute, n'écrase pas)
+   * addVariant() reste tel quel — le dashboard l'appelle — mais il POSE le stock
+   * quand la déclinaison existe déjà, ce qui, sur un scan répété, transformerait
+   * « j'en reçois 3 » en « il y en a 3 ». D'où ces deux entrées explicites. */
+  function findVariant(productId, colorId, size) {
+    return db.variants.find((v) => v.productId === productId && v.colorId === colorId && v.size === String(size)) || null;
+  }
+
+  // Rend la déclinaison, en la créant si besoin. `created` dit lequel des deux
+  // s'est produit, pour que la caisse annonce « déclinaison ajoutée » ou
+  // « déclinaison déjà présente » au lieu de mentir dans les deux sens.
+  function ensureVariant(data) {
+    data = data || {};
+    if (!prodById(data.productId)) return { variant: null, created: false, reason: 'produit-introuvable' };
+    const found = findVariant(data.productId, data.colorId, data.size);
+    if (found) return { variant: found, created: false };
+    const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0);
+    if (data.colorLabel) v.colorLabel = data.colorLabel;
+    if (data.colorHex) v.colorHex = data.colorHex;
+    db.variants.push(v); commit();
+    return { variant: v, created: true };
+  }
+
+  // Réception de marchandise : n × la même référence, sans scanner chaque pièce.
+  function receiveStock(variantId, qty) {
+    const v = varById(variantId);
+    if (!v) return { ok: false, reason: 'variant-introuvable' };
+    const n = Math.floor(Number(qty));
+    if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: 'quantite' };
+    const before = v.stock || 0;
+    v.stock = before + n;
+    commit();
+    return { ok: true, added: n, before, stock: v.stock };
+  }
+
+  /* Les informations COMMUNES d'un produit, pour enchaîner ses déclinaisons.
+   * Un fournisseur qui code chaque taille séparément (Jean noir · S = code A,
+   * M = code B, bleu M = code C) ne doit pas faire ressaisir le nom, la
+   * catégorie, le prix et le coût à chaque scan. */
+  function productTemplate(productId) {
+    const p = prodById(productId); if (!p) return null;
+    return {
+      productId: p.id, name: p.name, categoryId: p.categoryId, priceMAD: p.priceMAD,
+      cost: p.cost, kind: p.kind, art: p.art, flag: p.flag,
+    };
+  }
+
   /* ───────────────── barcodes ───────────────── */
   function generateBarcode(variantId) {
     const v = varById(variantId); if (!v) return null;
@@ -689,19 +809,36 @@
     commit(); return code;
   }
 
-  // Register an EXISTING barcode (old POS) verbatim onto a variant — no reprint.
+  /* Register an EXISTING barcode (supplier / manufacturer / old POS) VERBATIM onto
+   * a variant — never reprinted, never renumbered. This is the spine of onboarding
+   * a shop whose stock is already labelled.
+   *
+   * `type` stays 'imported' (the two surfaces render that badge), and the detected
+   * symbology is recorded separately as `sym` — it used to be computed and then
+   * thrown away by a ternary whose branches were identical, so an EAN-8 and a
+   * Code 128 reference were indistinguishable once stored.
+   *
+   * Refuses a code already carried by ANOTHER variant, returning its owner so the
+   * till can show what it is: one barcode must never point at two unrelated
+   * articles in the same établissement. */
   function attachBarcode(variantId, raw, opts) {
     opts = opts || {};
     const v = varById(variantId); if (!v) return { ok: false, reason: 'variant-introuvable' };
+    const KB = window.KiwiBarcode;
     const code = normCode(raw);
     if (!code) return { ok: false, reason: 'vide' };
+    // Garde-fou de lisibilité : une rafale tronquée ne devient pas une référence.
+    if (KB && KB.validate) {
+      const val = KB.validate(code);
+      if (!val.ok) return { ok: false, reason: val.reason };
+    }
     const owner = barcodeOwner(code);
     if (owner && owner.id === v.id) return { ok: true, code, already: true };
     if (owner) return { ok: false, reason: 'doublon', owner: { variant: owner, product: prodById(owner.productId) } };
-    const type = opts.type || (window.KiwiBarcode ? window.KiwiBarcode.detect(code) : 'imported');
+    const sym = opts.sym || (KB && KB.detect ? KB.detect(code) : '');
     const isPrimary = !v.barcodes.some((b) => b.primary);
-    v.barcodes.push({ code, type: type === 'ean13' && window.KiwiBarcode && window.KiwiBarcode.isValidEan13(code) ? 'imported' : 'imported', primary: isPrimary });
-    commit(); return { ok: true, code };
+    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary });
+    commit(); return { ok: true, code, sym };
   }
   function removeBarcode(variantId, code) {
     const v = varById(variantId); if (!v) return;
@@ -724,8 +861,9 @@
        vente quand aucun coût n'est saisi — mieux vaut trop haut que zéro, et
        `costed` dit au rendu s'il peut se fier à la base coût. */
     let totalStock = 0, stockValue = 0, stockCost = 0, ruptures = 0, low = 0, costed = 0;
+    const byProd = groupVariants();
     products.forEach((p) => {
-      const s = productStock(p.id);
+      const s = (byProd[p.id] || []).reduce((acc, v) => acc + (v.stock || 0), 0);
       const price = p.priceMAD || 0;
       const cost = +p.cost || 0;
       totalStock += s;
@@ -746,8 +884,9 @@
     const rayonById = Object.fromEntries(RAYONS.map((r) => [r.id, r]));
     // an "uncategorised" bucket for products with no category
     let uncat = null;
+    const byProd = groupVariants();
     db.products.filter((p) => !p.archived).forEach((p) => {
-      const vs = variantsOf(p.id);
+      const vs = byProd[p.id] || [];
       const sizes = {}; const colorSet = [];
       // The till offers FAMILIES, one swatch per colour a person would name —
       // never one per stored shade. Two variants that both read Bleu present a
@@ -814,6 +953,7 @@
   window.KiwiBoutiqueCatalog = {
     // lifecycle
     load, reset, use, currentVenue: () => VENUE, demoVenue: DEMO_VENUE,
+    batch: (fn) => (load(), batch(fn)),   // un geste métier = une seule écriture
     subscribe(fn) { load(); subs.add(fn); return () => subs.delete(fn); },
     // reference data — one palette, the general families, shared with the caisse
     // and the public page. `colorsInUse` is what a filter row should offer: only
@@ -843,6 +983,11 @@
     listVariants: (pid) => (load(), variantsOf(pid)), addVariant: (d) => (load(), addVariant(d)),
     updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
     adjustStock: (id, d) => (load(), adjustStock(id, d)), deleteVariant: (id) => (load(), deleteVariant(id)),
+    // intake — les trois gestes distincts (voir le bloc au-dessus de findVariant)
+    findVariant: (pid, c, s) => (load(), findVariant(pid, c, s)),
+    ensureVariant: (d) => (load(), ensureVariant(d)),
+    receiveStock: (id, q) => (load(), receiveStock(id, q)),
+    productTemplate: (pid) => (load(), productTemplate(pid)),
     // barcodes
     generateBarcode: (id) => (load(), generateBarcode(id)), attachBarcode: (id, raw, o) => (load(), attachBarcode(id, raw, o)),
     removeBarcode: (id, c) => (load(), removeBarcode(id, c)), findByBarcode: (c) => (load(), findByBarcode(c)),
