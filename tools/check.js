@@ -213,6 +213,22 @@ section('Hardware honesty (tools/hardware-test.js)');
   }
 }
 
+/* ── 4d · production action honesty ────────────────────────────────────────
+ * Presentation workflows must fail honestly for a real merchant, even if a
+ * later navigation change accidentally exposes one of their buttons. */
+section('Production action honesty (tools/action-honesty-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'action-honesty-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`production action gate green (${(out.match(/✓/g) || []).length - 1} real/demo checks)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`action-honesty-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 5 · the assistant actually answering ───────────────────────────────────
  * Everything above this line checks that the code PARSES and is WIRED. None of
  * it would have noticed the assistant quoting a break-even it computed wrong,
