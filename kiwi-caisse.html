@@ -51,6 +51,7 @@
        (assets/pos-<id>.{js,css}). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
   <script src="assets/pos-dispatch.js" defer></script>
+  <script src="assets/pos-mobile.js" defer></script>
 
   <!-- Shared material tokens (elevation, paper, spring). Linked BEFORE the
        inline <style> so the caisse's own palette still wins; only the tokens
@@ -2755,15 +2756,13 @@
     .narrow-guard h2 { margin: 0; font-size: 18px; color: var(--ink); }
     .narrow-guard p { margin: 0; font-size: 13px; color: var(--ink-3); max-width: 280px; line-height: 1.55; }
 
-    /* Narrow-viewport guard — retired for the responsive café register (it now
-       reflows to a phone bottom-sheet + off-canvas nav in caisse-skin.css), but
-       KEPT for the pressing (body.is-pressing) and pos-* (body.is-pos) verticals,
-       which are landscape-optimised and not reflowed this round. On a phone the
-       café shows the real register; those verticals show the rotate hint. */
-    @media (max-width: 768px) {
-      body.is-pressing .narrow-guard,
-      body.is-pos .narrow-guard { display: flex; }
-    }
+    /* Narrow-viewport guard — fully retired. The café register reflows in
+       caisse-skin.css, and the pressing + pos-* verticals now reflow through
+       the shared role layer in pos-mobile.css / pos-mobile.js. Nothing asks
+       the merchant to rotate their phone any more; the rule that used to show
+       this card below 768px is gone, and .narrow-guard stays display:none.
+       The markup is kept as a seam in case a future vertical genuinely needs
+       a landscape-only screen. */
 
     /* ===========================================================
        GREETING FLASH (full-viewport, plays after PIN unlock,
@@ -3932,6 +3931,7 @@
   @media (prefers-reduced-motion: reduce) { .cplan-urgent { animation: none; } }
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css" />
+  <link rel="stylesheet" href="assets/pos-mobile.css" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />
   <meta name="apple-mobile-web-app-capable" content="yes" />

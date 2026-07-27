@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Kiwi · phone layer for the métier registers (pos-* + pressing)
+ *
+ * The fifteen verticals and the pressing all share one shell — a 212px rail, a
+ * fluid main column, and a ~360px docked ticket — which needs ~1180px to stand
+ * up. Below that the registers used to refuse to run at all and show a "pivoter
+ * l'écran" card, so a bakery or a pharmacy simply had no phone.
+ *
+ * pos-mobile.js tags the parts with role classes (vx-rail / vx-main / vx-view /
+ * vx-ticket) because each vertical prefixes its own (.bq-rail, .ph-rail …).
+ * This file reflows those roles once for every vertical:
+ *
+ *   · rail   → off-canvas drawer behind a trigger + scrim
+ *   · view   → single column, so the grid gets the full width
+ *   · ticket → bottom sheet resting at a peek bar that carries the total
+ *
+ * Everything is gated behind the phone breakpoint; the desk register keeps the
+ * three-column layout untouched.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* Injected controls never show on the desk layout. */
+.vx-burger, .vx-scrim, .vx-peek { display: none; }
+
+@media (max-width: 860px) {
+
+  /* ── Shell ─────────────────────────────────────────────────────────────── */
+  .vx-root { overflow: hidden; }
+  .vx-root .vx-main { min-width: 0; max-width: 100%; flex: 1 1 auto; }
+  /* The view is a flex ROW on the desk (grid | ticket). On a phone the ticket
+   * leaves the flow entirely, so the row just needs to stop reserving for it. */
+  .vx-root .vx-view { min-width: 0; }
+  .vx-root .vx-view > * { min-width: 0; }
+
+  /* ── Rail → off-canvas drawer ──────────────────────────────────────────── */
+  .vx-root .vx-rail {
+    position: fixed; top: 0; bottom: 0; inset-inline-start: 0;
+    z-index: 60;
+    width: 212px; max-width: 84vw;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto; overscroll-behavior: contain;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  [dir="rtl"] .vx-root .vx-rail { transform: translateX(100%); }
+  .vx-root.vx-nav-open .vx-rail {
+    transform: none;
+    box-shadow: 0 0 80px -10px rgba(0, 0, 0, 0.55);
+  }
+
+  .vx-root .vx-burger {
+    display: grid; place-items: center;
+    position: absolute; z-index: 62;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    inset-inline-start: 12px;
+    width: 44px; height: 44px;
+    border: 0; border-radius: 12px;
+    background: var(--riad, #053B2C); color: #EAFFF4;
+    cursor: pointer;
+    box-shadow: 0 8px 24px -10px rgba(10, 15, 13, .5);
+    transition: opacity .2s ease;
+  }
+  /* The trigger sits above the drawer, so it would land on the rail's own
+   * wordmark while the drawer is out. The scrim is the way back. */
+  .vx-root.vx-nav-open .vx-burger { opacity: 0; pointer-events: none; }
+
+  .vx-root .vx-scrim {
+    display: block; position: absolute; inset: 0; z-index: 59;
+    background: rgba(10, 15, 13, .45);
+    opacity: 0; pointer-events: none;
+    transition: opacity .28s ease;
+  }
+  .vx-root.vx-nav-open .vx-scrim { opacity: 1; pointer-events: auto; }
+
+  /* Every vertical's header starts at the top-left, where the trigger now is. */
+  .vx-view > * > [class*="-head"]:first-child,
+  .vx-main > [class*="-head"]:first-child { padding-inline-start: 56px; min-height: 44px; }
+  /* Header rows carry a title plus meta/actions side by side. Too short to be
+   * caught by the panel stacker, too wide for 375px — let them wrap instead of
+   * squeezing the hint text into a four-word-tall column. */
+  .vx-root .vx-view [class*="-head"] { flex-wrap: wrap; }
+
+  /* ── Ticket → bottom sheet ─────────────────────────────────────────────── */
+  .vx-root .vx-ticket {
+    --vx-peek-h: calc(60px + env(safe-area-inset-bottom, 0px));
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100%; max-width: 100%; flex: none;
+    max-height: 82dvh;
+    z-index: 58;
+    transform: translateY(calc(100% - var(--vx-peek-h)));
+    transition: transform .32s cubic-bezier(0.32, 0.72, 0, 1);
+    border-radius: 18px 18px 0 0;
+    border-inline-start: 0;
+    box-shadow: 0 -18px 48px -22px rgba(10, 15, 13, .45);
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .vx-root.vx-ticket-open .vx-ticket { transform: translateY(0); }
+
+  .vx-root .vx-peek {
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 2;
+    width: 100%;
+    min-height: var(--vx-peek-h);
+    padding: 0 18px env(safe-area-inset-bottom, 0px);
+    border: 0; border-bottom: 1px solid rgba(10, 15, 13, .08);
+    background: inherit;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    color: var(--ink, #0A0F0D);
+    cursor: pointer;
+  }
+  .vx-peek-r { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Clear the resting sheet so the last product row is never trapped under it. */
+  .vx-view [class*="-grid-scroll"],
+  .vx-view [class*="-list-scroll"] {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ── Nested two-panel rows ─────────────────────────────────────────────
+   * Several verticals split the working area a second time, below the view:
+   * check-in + stats in the gym, queue + agenda in the salon. Left as a row
+   * on a phone those become two ~130px columns wrapping one word per line.
+   *
+   * pos-mobile.js marks them. Naming is no guide — the split is
+   * .gy-ci-left/.gy-ci-side in the gym but .cf-file-queue/.cf-rdv in the
+   * salon — so the marker is measured (a flex row of tall panels), not
+   * matched on class. */
+  .vx-root .vx-stack {
+    flex-direction: column;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  /* Both halves were flex-sized for a row, so stacked they keep a height that
+   * was only ever a column width's worth — the working column then bleeds its
+   * content under the opaque panel below it. Let each take what it needs. */
+  .vx-root .vx-stack > * {
+    flex: 0 0 auto; min-height: 0;
+    width: auto; max-width: 100%; min-width: 0;
+  }
+
+  /* ── Product grids: two comfortable columns instead of six cramped ones ── */
+  .vx-view [class*="-grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* Modals ship as centred desk cards; give them the viewport on a phone. */
+  .vx-root .modal { max-width: calc(100vw - 24px); max-height: 88dvh; overflow-y: auto; }
+}
