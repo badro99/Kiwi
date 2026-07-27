@@ -6858,6 +6858,14 @@
       }
       if (selectedId) openSplitModal(selectedId);
     });
+    function printHardwareTicket(ticket) {
+      if (!window.KiwiHardware) { toast('Imprimante indisponible'); return; }
+      Promise.resolve(window.KiwiHardware.print(ticket)).then(function (res) {
+        if (res && res.printed) toast('Reçu imprimé');
+        else if (res && res.mock) toast('Aperçu de démonstration, aucun ticket physique imprimé');
+        else toast('Impression impossible, vérifiez l’imprimante dans Réglages');
+      }, function () { toast('Impression impossible, vérifiez l’imprimante dans Réglages'); });
+    }
     $$('.meta-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const a = btn.dataset.action;
@@ -6874,10 +6882,11 @@
             total: (document.getElementById('rp-total') ? document.getElementById('rp-total').textContent.trim() : '')
           };
           window.__lastTicket = _ticket;
-          if (window.KiwiHardware) window.KiwiHardware.print(_ticket);
+          printHardwareTicket(_ticket);
         }
         else if (a === 'reprint-bill') {
-          if (window.__lastTicket && window.KiwiHardware) window.KiwiHardware.print(window.__lastTicket);
+          if (window.__lastTicket) printHardwareTicket(window.__lastTicket);
+          else toast('Aucun ticket à réimprimer');
         }
         else if (a === 'cancel-table') {
           if (mode === 'order') {

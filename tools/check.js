@@ -196,6 +196,23 @@ section('Catalogue import (tools/import-test.js)');
   }
 }
 
+/* ── 4c · hardware honesty ──────────────────────────────────────────────────
+ * The POS must not convert missing devices into successful business events.
+ * This gate executes the shipped hardware wrapper as a hosted real till and
+ * rejects fake card approvals, barcodes, prints and drawer openings. */
+section('Hardware honesty (tools/hardware-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hardware-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`hardware gate green (${(out.match(/✓/g) || []).length - 1} real/demo checks)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`hardware-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 5 · the assistant actually answering ───────────────────────────────────
  * Everything above this line checks that the code PARSES and is WIRED. None of
  * it would have noticed the assistant quoting a break-even it computed wrong,

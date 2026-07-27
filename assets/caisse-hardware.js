@@ -1,14 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi Caisse — hardware bridge. Registers never talk to a device directly;
- * they call KiwiHardware.*. Each method resolves against a MOCK today, with a
- * feature-detected path to Web Serial (ESC/POS) / WebUSB / Web Bluetooth
- * stubbed behind the same interface for later.
+ * they call KiwiHardware.*. Local demos may preview hardware. A hosted or paired
+ * real till must receive an honest unavailable/failure result unless a real
+ * device transport confirms the operation.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
   var hasSerial = 'serial' in navigator;
   var hasUSB = 'usb' in navigator;
   var hasBT = 'bluetooth' in navigator;
+
+  function realTill() {
+    try {
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return false; }
+  }
+
+  function failed(reason) { return Promise.resolve({ ok: false, reason: reason }); }
 
   function el(tag, css, text) {
     var n = document.createElement(tag);
@@ -48,8 +57,8 @@
     capabilities: { serial: hasSerial, usb: hasUSB, bluetooth: hasBT },
     // Print a receipt. REAL path: when a thermal printer is paired (KiwiPrinter +
     // the Kiwi Printer Bridge), the receipt is encoded to ESC/POS and printed for
-    // real. Fail-soft: if no printer is configured, or the bridge is down / errors,
-    // fall back to the on-screen preview so the caisse never blocks on hardware.
+    // real. A real till never converts a failed physical print into a successful
+    // preview. The preview remains available only in the localhost demo.
     print: function (ticket) {
       if (window.KiwiPrinter && (KiwiPrinter.isConnected ? KiwiPrinter.isConnected() : KiwiPrinter.isConfigured())) {
         var o = {
@@ -57,23 +66,38 @@
           total: ticket && ticket.total, method: ticket && ticket.method,
         };
         return KiwiPrinter.printReceipt(o).then(function (res) {
-          return (res && res.ok) ? { ok: true, printed: true } : mockPrint(ticket);
+          if (res && res.ok) return { ok: true, printed: true, via: res.via || '' };
+          return realTill() ? { ok: false, reason: (res && res.reason) || 'print-failed' } : mockPrint(ticket);
+        }, function () {
+          return realTill() ? { ok: false, reason: 'print-failed' } : mockPrint(ticket);
         });
       }
-      return mockPrint(ticket);
+      return realTill() ? failed('printer-not-configured') : mockPrint(ticket);
     },
     // Open the cash drawer (ESC/POS kick). Real via the bridge when configured; the
     // mock resolves immediately otherwise.
     openDrawer: function () {
       if (window.KiwiPrinter && (KiwiPrinter.isConnected ? KiwiPrinter.isConnected() : KiwiPrinter.isConfigured()) && window.KiwiEscPos) {
         return KiwiPrinter.printBytes(window.KiwiEscPos.builder().init().drawer().bytes())
-          .then(function (res) { return (res && res.ok) ? { ok: true } : { ok: true, mock: true }; });
+          .then(function (res) {
+            if (res && res.ok) return { ok: true, opened: true, via: res.via || '' };
+            return realTill() ? { ok: false, reason: (res && res.reason) || 'drawer-failed' } : { ok: true, mock: true };
+          }, function () { return realTill() ? { ok: false, reason: 'drawer-failed' } : { ok: true, mock: true }; });
       }
+      return realTill() ? failed('drawer-not-configured') : Promise.resolve({ ok: true, mock: true });
+    },
+    // No dummy product may enter a real inventory. Physical keyboard-wedge and
+    // camera scanners use their dedicated inputs; this generic API is demo-only.
+    scan: function (cb) {
+      if (realTill()) return failed('scanner-not-configured');
+      setTimeout(function () { cb && cb({ code: '000000000000', mock: true }); }, 250);
       return Promise.resolve({ ok: true, mock: true });
     },
-    // Barcode scan. Mock resolves a simulated code after a tick.
-    scan: function (cb) { setTimeout(function () { cb && cb({ code: '000000000000', mock: true }); }, 250); return Promise.resolve(); },
-    // Card read. Mock resolves approved; NO certified EMV in round one.
-    readCard: function (amount) { return Promise.resolve({ approved: true, amount: amount, mock: true }); }
+    // NO certified EMV provider is connected here. A real till gets an explicit
+    // rejection instead of a fabricated approval that could mark an unpaid sale paid.
+    readCard: function (amount) {
+      if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
+      return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
+    }
   };
 })();
