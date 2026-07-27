@@ -427,7 +427,7 @@
       if (st.timer) { clearTimeout(st.timer); st.timer = null; pushNow({ keepalive: true }); }
     });
 
-    return {
+    var handle = {
       feature: feature,
       slug: slugOf,
       enabled: on,
@@ -436,10 +436,25 @@
       push: push,
       flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; pushNow({ keepalive: true }); },
     };
+    live.push(handle);
+    return handle;
+  }
+
+  /* Tous les documents attachés dans cette page — plan de salle, classeur du
+   * jour, etc. Le bouton « Rafraîchir » de la caisse les relit d'un coup : il
+   * n'a pas à savoir lesquels existent sur ce métier-là. */
+  var live = [];
+  function pullAll() {
+    var on = live.filter(function (h) { return h.enabled(); });
+    if (!on.length) return Promise.resolve(false);
+    return Promise.all(on.map(function (h) {
+      return h.pull(false).catch(function () { return false; });
+    })).then(function (rs) { return rs.some(Boolean); });
   }
 
   window.KiwiCloudDoc = {
     attach: attach,
+    pullAll: pullAll,
     slugFor: slugFor,
     currentSlug: currentSlug,
     slugStore: slugStore,

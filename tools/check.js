@@ -287,6 +287,23 @@ section('Canaux extérieurs (tools/channel-order-test.js)');
   }
 }
 
+/* ── 8 · le bouton « Rafraîchir » de la caisse ───────────────────────────────
+ * Il n'a qu'une façon de nuire : dire « à jour » sans avoir joint le serveur.
+ * Le commerçant en conclut que l'écran dit vrai, et vend ce qu'il n'a plus.
+ * (tools/caisse-refresh-test.js) ─────────────────────────────────────────── */
+section('Rafraîchir la caisse (tools/caisse-refresh-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-refresh-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`caisse-refresh-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }

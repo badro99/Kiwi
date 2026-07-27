@@ -3983,6 +3983,11 @@
   <script src="assets/orderpro-inbox.js" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
+  <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
+       pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
+       l'inventaire, les documents du magasin, les commandes en ligne et les
+       modules, sans jamais recharger la page. -->
+  <script src="assets/caisse-refresh.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -4131,6 +4136,18 @@
       // que ce script : on diffère l'init jusqu'à ce que le DOM soit prêt.
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFs);
       else initFs();
+
+      /* « Rafraîchir » de la caisse restaurant. Les métiers reçoivent le leur du
+         dispatcher et le pressing se sert lui-même ; ce shell-ci est statique,
+         alors on le pose sur son rail dès que le DOM est là. Scopé à la sidebar :
+         mount() cherche d'abord un #xx-lock, et un métier déjà ouvert dans la
+         page en a un — le lui donner mettrait le bouton dans l'écran d'à côté. */
+      function initRefresh() {
+        var rail = document.querySelector('.sidebar');
+        if (rail && window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(rail);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRefresh);
+      else initRefresh();
     })();
   </script>
 

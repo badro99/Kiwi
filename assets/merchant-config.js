@@ -41,7 +41,11 @@
    * dashboard from their second, while that second shop's cashier could. */
   var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
-    newStore: registerNewStore, off: featureOff };
+    newStore: registerNewStore, off: featureOff,
+    /* Relire la config MAINTENANT. L'opérateur vient d'allumer un module pour ce
+     * commerçant : sans ceci, la caisse ne l'apprend qu'au prochain chargement de
+     * page — et une caisse de comptoir reste ouverte des jours entiers. */
+    reload: function () { return fetchConfig(); } };
   window.KiwiConfig = cfg;
 
   /* Un module coupé par l'opérateur. `=== false` et rien d'autre : une clé
@@ -368,10 +372,10 @@
   var lastSlug = null;
   function fetchConfig() {
     lastSlug = storeSlug();
-    fetch(configUrl(), { headers: { Accept: 'application/json' } })
+    return fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
-        if (!data) return;                     // no backend → keep defaults
+        if (!data) return false;               // no backend → keep defaults
         cfg.features = data.features || {};
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
@@ -387,8 +391,9 @@
         // Re-apply shortly after, in case the app built its nav asynchronously.
         setTimeout(applyFeatures, 400);
         try { document.dispatchEvent(new CustomEvent('kiwi-config', { detail: cfg })); } catch (_) {}
+        return true;
       })
-      .catch(function () { /* offline / missing endpoint → app keeps its defaults */ });
+      .catch(function () { return false; });  /* offline / missing endpoint → app keeps its defaults */
   }
 
   /* Follow the venue switcher. Two reasons this can't be a one-shot fetch:

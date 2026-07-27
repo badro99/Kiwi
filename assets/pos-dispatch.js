@@ -239,6 +239,11 @@
     } else if (typeof spec.onShow === 'function') {
       try { spec.onShow(); } catch (e) {}
     }
+    /* « Rafraîchir » se pose ici, une fois, pour tous les métiers : chaque
+     * module a son pied de rail avec son propre préfixe, mais tous ont un
+     * #xx-lock, et c'est tout ce dont le bouton a besoin pour se ranger au bon
+     * endroit et au bon format (assets/caisse-refresh.js). */
+    try { if (window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(root); } catch (e) {}
     current = id;
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');
@@ -297,11 +302,23 @@
     for (const pin in REGISTRY) { if (REGISTRY[pin].id === id) return unlock(pin); }
   }
 
+  // Redessiner le métier ouvert avec des données fraîchement arrivées. onShow()
+  // est déjà le geste « on revient sur cet écran » ; personne d'autre n'a besoin
+  // de savoir quel module est ouvert.
+  function repaint() {
+    if (!current) return false;
+    const spec = apps[current];
+    if (!spec || typeof spec.onShow !== 'function') return false;
+    try { spec.onShow(); return true; } catch (e) { return false; }
+  }
+
   window.KiwiPosDispatch = {
     has: (pin) => !!REGISTRY[pin],
     unlock,
     unlockById,
     lock,
+    repaint,
+    current: () => current,
     register(spec) {
       if (!spec || !spec.id || typeof spec.mount !== 'function') {
         throw new Error('KiwiPosDispatch.register: spec {id, mount()} requis');

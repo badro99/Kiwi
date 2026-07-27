@@ -458,6 +458,9 @@
       if (b) switchView(b.dataset.pxView);
     });
     $('#px-lock', root).addEventListener('click', lock);
+    // Le pressing n'passe pas par le dispatcher : il pose son « Rafraîchir »
+    // lui-même, dans le même pied de rail (assets/caisse-refresh.js).
+    try { if (window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(root); } catch (_) {}
     $('#px-net', root).addEventListener('click', toggleOffline);
     /* fermer un modal en cliquant le voile */
     $$('.modal-veil', root).forEach((v) => {
