@@ -411,7 +411,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div id="aud-list"></div>
         </div>
 
-        <div class="danger-zone" id="danger-zone">
+        <div class="danger-zone" id="danger-zone" hidden>
           <p class="sub" style="color:var(--warn); margin-top:0">Zone dangereuse</p>
           <p class="dz-desc">Supprime définitivement <b id="dz-name"></b> et toutes ses données,
             compte de connexion, ventes, PINs du personnel et configuration. Le client repart de zéro.
@@ -621,8 +621,13 @@ em, i, cite, dfn, var { font-style: normal; }
     ];
   }
 
-  // ── store: real /api/admin/* when reachable, else seeded mock + localStorage ─
+  // ── store: real /api/admin/* in production; mock only on an explicit local dev
+  // environment. A production API failure must never replace real clients with
+  // plausible seeded records: support must see the outage and be unable to act.
   var LIVE = null; // null=unknown, true/false once probed
+  var BACKEND_DOWN = false;
+  var MOCK_ALLOWED = location.protocol === 'file:' ||
+    location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   // Versioned: the seed is cached in localStorage, so an operator who has opened
   // the console before keeps the OLD roster for good and never sees a change to
   // the demo data. Bump the suffix whenever seedMock() changes.
@@ -914,8 +919,21 @@ em, i, cite, dfn, var { font-style: normal; }
 
   function renderMode(){
     var b = document.getElementById('mode-badge');
-    b.textContent = LIVE ? 'Live · D1' : 'Démo';
+    b.textContent = BACKEND_DOWN ? 'Indisponible' : (LIVE ? 'Live · D1' : 'Démo locale');
     b.className = 'badge' + (LIVE ? '' : ' mock');
+  }
+
+  function renderUnavailable(){
+    selected = null;
+    document.getElementById('manage').hidden = true;
+    document.getElementById('cli-count').textContent = 'service indisponible';
+    var body = document.getElementById('cli-body'); clear(body);
+    body.appendChild(h('tr', null,
+      h('td', { colspan:'7', style:'padding:30px 18px;color:var(--warn);font-weight:600;line-height:1.55' },
+        'Impossible de charger les données réelles. Aucune donnée de démonstration n’est affichée et aucune action client n’est autorisée. Vérifiez le service puis utilisez Rafraîchir.')));
+    var ops = document.getElementById('op-list'); clear(ops);
+    ops.appendChild(h('p', { class:'empty' }, 'Opérateurs indisponibles tant que le service réel ne répond pas.'));
+    document.getElementById('op-count').textContent = '';
   }
 
   function openDashboard(merchant){
@@ -995,10 +1013,13 @@ em, i, cite, dfn, var { font-style: normal; }
     ];
     if (c.email){
       actions.push(h('button', { class:'mini' + (suspended ? ' warn' : ''),
+        disabled: SENIOR === false,
         onClick:function(e){ e.stopPropagation(); toggleSuspend(c); } },
         suspended ? 'Réactiver' : 'Suspendre'));
     }
-    actions.push(h('button', { class:'mini danger', onClick:function(e){ e.stopPropagation(); select(c).then(revealDanger); } }, 'Supprimer'));
+    // Permanent deletion is deliberately absent until every merchant-owned data
+    // store is covered by one verified deletion workflow. Suspension remains the
+    // safe, reversible production control.
 
     var cls = (selected && selected.merchant === c.merchant) ? 'sel' : '';
     if (suspended) cls += (cls ? ' ' : '') + 'suspended';
@@ -1141,6 +1162,10 @@ em, i, cite, dfn, var { font-style: normal; }
   }
 
   function renderDanger(){
+    // Server deletion is also locked. Keep this legacy panel hidden so an old
+    // cached console cannot advertise a destructive promise Kiwi cannot fulfil.
+    var zone = document.getElementById('danger-zone');
+    if (zone) zone.hidden = true;
     if (!selected) return;
     var name = selected.business || selected.merchant;
     var input = document.getElementById('del-confirm');
@@ -1196,6 +1221,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
   async function renderPins(){
     renderPinRoles();
+    document.getElementById('pin-add').disabled = SENIOR === false;
     var wrap = document.getElementById('pin-list'); clear(wrap);
     var pins = await store.pins(selected.merchant);
     if (!pins.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun PIN, l’app utilise ses codes par défaut.')); return; }
@@ -1205,7 +1231,8 @@ em, i, cite, dfn, var { font-style: normal; }
         h('span', { class:'role' }, roleLabel(p.role)),
         p.name ? h('span', { class:'nm' }, p.name) : null,
         h('span', { class:'spacer' }),
-        h('button', { class:'mini danger', onClick:async function(){ await store.delPin(selected.merchant, p.id); renderPins(); } }, 'Supprimer')
+        h('button', { class:'mini danger', disabled:SENIOR === false,
+          onClick:async function(){ await store.delPin(selected.merchant, p.id); renderPins(); } }, 'Supprimer')
       ));
     });
   }
@@ -1219,6 +1246,7 @@ em, i, cite, dfn, var { font-style: normal; }
     sel.appendChild(h('option', { value:'' }, 'Type non défini,'));
     TYPES.forEach(function(t){ sel.appendChild(h('option', { value:t.id }, t.label)); });
     sel.value = selected.type || '';
+    sel.disabled = SENIOR === false;
     sel.addEventListener('change', async function(){
       var v = sel.value;
       try {
@@ -1264,7 +1292,8 @@ em, i, cite, dfn, var { font-style: normal; }
       grp.items.forEach(function(mod){
         var st = featState(feats, mod);
         var pill = h('span', { class:'fst' + (st.on ? ' on' : '') }, st.on ? 'Activé' : 'Désactivé');
-        var sw = h('button', { class:'sw', role:'switch', 'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });
+        var sw = h('button', { class:'sw', role:'switch', disabled:SENIOR === false,
+          'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });
         sw.addEventListener('click', async function(){
           var cur = await store.config(selected.merchant);
           var next = !featState(cur, mod).on;
@@ -1865,13 +1894,18 @@ em, i, cite, dfn, var { font-style: normal; }
     var wrap = document.getElementById('op-list'); clear(wrap);
     var ops = await store.operators();
     document.getElementById('op-count').textContent = ops.length + ' code' + (ops.length>1?'s':'');
+    var add = document.getElementById('op-add');
+    // The team passcode may bootstrap exactly one named operator. Once a named
+    // operator exists, only another live named operator can change this list.
+    add.disabled = SENIOR === false && ops.length > 0;
     if (!ops.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun opérateur. Ajoutez le premier code ci-dessous.')); return; }
     ops.forEach(function(o){
       wrap.appendChild(h('div', { class:'op-item' },
         h('b', null, '••••'),
         o.label ? h('span', { class:'nm' }, o.label) : null,
         h('span', { class:'spacer' }),
-        h('button', { class:'mini danger', onClick:async function(){ await store.delOperator(o.id); renderOperators(); } }, 'Supprimer')
+        h('button', { class:'mini danger', disabled:SENIOR === false,
+          onClick:async function(){ await store.delOperator(o.id); renderOperators(); } }, 'Supprimer')
       ));
     });
   }
@@ -1879,6 +1913,7 @@ em, i, cite, dfn, var { font-style: normal; }
   // ── wire controls ───────────────────────────────────────────────────────────
   document.getElementById('pin-add').addEventListener('click', async function(){
     if (!selected) return;
+    if (SENIOR === false) { document.getElementById('pin-err').textContent = 'Code opérateur personnel requis.'; return; }
     var err = document.getElementById('pin-err'); err.textContent = '';
     var pin = document.getElementById('pin-new').value.trim();
     var name = document.getElementById('pin-name').value.trim();
@@ -1893,6 +1928,12 @@ em, i, cite, dfn, var { font-style: normal; }
 
   document.getElementById('op-add').addEventListener('click', async function(){
     var err = document.getElementById('op-err'); err.textContent = '';
+    if (SENIOR === false && !document.getElementById('op-add').disabled) {
+      // Only the empty-table bootstrap reaches this branch. The server remains
+      // authoritative and will refuse it if another operator appeared meanwhile.
+    } else if (SENIOR === false) {
+      err.textContent = 'Code opérateur personnel requis.'; return;
+    }
     var label = document.getElementById('op-label').value.trim();
     var code = document.getElementById('op-code').value.trim();
     if (code.length < 10) { err.textContent = 'Code trop court (10 caractères min.). Ce code ouvre les données de TOUS les commerçants.'; return; }
@@ -1919,8 +1960,17 @@ em, i, cite, dfn, var { font-style: normal; }
   // ── boot: probe live vs mock, then render ────────────────────────────────────
   async function boot(isRefresh){
     if (LIVE === null || isRefresh){
-      try { await api('/clients'); LIVE = true; }
-      catch(e){ LIVE = false; }
+      try {
+        await api('/clients');
+        if (BACKEND_DOWN) { location.reload(); return; }
+        LIVE = true; BACKEND_DOWN = false;
+      } catch(e){
+        if (!MOCK_ALLOWED) {
+          LIVE = false; BACKEND_DOWN = true;
+          renderMode(); renderUnavailable(); return;
+        }
+        LIVE = false; BACKEND_DOWN = false;
+      }
     }
     renderMode();
     await renderClients();

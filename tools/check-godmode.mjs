@@ -75,6 +75,10 @@ const R = {
   authReset: await import(path.join(ROOT, 'functions/auth/reset.js')),
   feed:    await import(path.join(ROOT, 'functions/api/feed.js')),
   login:   await import(path.join(ROOT, 'functions/auth/login.js')),
+  clients: await import(path.join(ROOT, 'functions/api/admin/clients.js')),
+  config:  await import(path.join(ROOT, 'functions/api/admin/config.js')),
+  pins:    await import(path.join(ROOT, 'functions/api/admin/pins.js')),
+  operators: await import(path.join(ROOT, 'functions/api/admin/operators.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -135,6 +139,7 @@ db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,
 /* ── identités ────────────────────────────────────────────────────────────── */
 const OP = await lib.operatorToken(AUTH_SECRET);
 const OPID = await lib.operatorIdToken(AUTH_SECRET, 'op-1');
+const GHOST_OPID = await lib.operatorIdToken(AUTH_SECRET, 'op-deleted');
 const STAFF = await lib.staffToken(SITE_PASSWORD);
 const SESS_A = await lib.makeSession('acc-a', AUTH_SECRET);
 
@@ -146,6 +151,8 @@ const AS = {
   operator2: `kiwi_op=${OP}; kiwi_op_id=${OPID}`,
   /* L'accès équipe partagé : il ouvre la console, il ne signe rien. */
   staff: `kiwi_gate=${STAFF}`,
+  legacyOperator: `kiwi_op=${OP}`,
+  deletedOperator: `kiwi_op=${OP}; kiwi_op_id=${GHOST_OPID}`,
   /* Un commerçant connecté — un client, un caissier, un gérant. */
   merchant: `kiwi_sess=${SESS_A}`,
   none: '',
@@ -204,6 +211,35 @@ G('1 · Droits — un client, un caissier, un gérant n’entrent jamais');
   const staffMail = await call(R.account, 'PUT', '/api/admin/account',
     { as: 'staff', body: { accountId: 'acc-a', email: 'x@y.ma', reason: 'test' } });
   ok(staffMail.status === 403, 'accès équipe : REFUSÉ au changement d’adresse', 'reçu ' + staffMail.status);
+
+  const staffConfigRead = await call(R.config, 'GET', '/api/admin/config?merchant=amira-boutique', { as: 'staff' });
+  ok(staffConfigRead.status === 200, 'accès équipe : peut lire la configuration');
+  const staffConfigWrite = await call(R.config, 'PUT', '/api/admin/config',
+    { as: 'staff', body: { merchant:'amira-boutique', features:{ conformite:false }, plan:'pro' } });
+  ok(staffConfigWrite.status === 403 && staffConfigWrite.json.error === 'operator-code-required',
+    'accès équipe : REFUSÉ à la modification des modules');
+
+  const staffPinWrite = await call(R.pins, 'POST', '/api/admin/pins',
+    { as:'staff', body:{ merchant:'amira-boutique', pin:'7788', name:'Test', role:'caisse' } });
+  ok(staffPinWrite.status === 403 && staffPinWrite.json.error === 'operator-code-required',
+    'accès équipe : REFUSÉ à la création d’un PIN');
+
+  const staffSuspend = await call(R.clients, 'PATCH', '/api/admin/clients',
+    { as:'staff', body:{ email:'amira@kiwi.test', status:'suspended' } });
+  ok(staffSuspend.status === 403 && staffSuspend.json.error === 'operator-code-required',
+    'accès équipe : REFUSÉ à la suspension d’un client');
+  ok(db.prepare('SELECT status FROM accounts WHERE id = ?').bind('acc-a').first().status === 'active',
+    '…et le compte est resté actif');
+
+  const staffPromote = await call(R.operators, 'POST', '/api/admin/operators',
+    { as:'staff', body:{ label:'Intrus', code:'1234567890' } });
+  ok(staffPromote.status === 403 && staffPromote.json.error === 'operator-code-required',
+    'accès équipe : ne peut pas se promouvoir en opérateur nommé');
+
+  const legacy = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as:'legacyOperator' });
+  ok(legacy.status === 403, 'ancien cookie opérateur sans identité : révoqué');
+  const deleted = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as:'deletedOperator' });
+  ok(deleted.status === 403, 'cookie d’un opérateur absent de la base : révoqué');
 }
 
 /* ═══ 2 · RECHERCHE ════════════════════════════════════════════════════════ */
@@ -599,6 +635,8 @@ G('12 · Base pas migrée — le produit reste debout');
      les colonnes d'annulation non. C'est l'état exact de la base de production
      tant que le partenaire n'a pas relancé schema.sql. */
   const old = makeDB();
+  old.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-1', 'Badr', 'ff', 'ff', now).run();
   old._db.exec('DROP TABLE sales');
   old._db.exec('CREATE TABLE sales (id TEXT PRIMARY KEY, merchant TEXT NOT NULL, amount INTEGER NOT NULL, method TEXT NOT NULL, label TEXT, ref TEXT, ts INTEGER NOT NULL, lines TEXT)');
   old.prepare('INSERT INTO sales (id,merchant,amount,method,label,ref,ts,lines) VALUES (?,?,?,?,?,?,?,?)')
@@ -608,6 +646,8 @@ G('12 · Base pas migrée — le produit reste debout');
   /* …et la forme préhistorique, sans `lines` non plus : la console doit encore
      tenir debout, sans le détail des paniers. */
   const ancient = makeDB();
+  ancient.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-1', 'Badr', 'ff', 'ff', now).run();
   ancient._db.exec('DROP TABLE sales');
   ancient._db.exec('CREATE TABLE sales (id TEXT PRIMARY KEY, merchant TEXT NOT NULL, amount INTEGER NOT NULL, method TEXT NOT NULL, label TEXT, ref TEXT, ts INTEGER NOT NULL)');
   ancient.prepare('INSERT INTO sales (id,merchant,amount,method,label,ref,ts) VALUES (?,?,?,?,?,?,?)')
@@ -637,6 +677,27 @@ G('12 · Base pas migrée — le produit reste debout');
   const aj = JSON.parse(await a.text());
   ok(aj.sales && aj.sales.length === 1 && aj.migration === 'needed',
     'même sans la colonne `lines`, la recherche répond (sans le détail des paniers)');
+}
+
+/* ═══ 13 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
+G('13 · Révocation — supprimer un droit coupe vraiment la session');
+{
+  const del = await call(R.clients, 'DELETE',
+    '/api/admin/clients?merchant=amira-boutique&email=amira%40kiwi.test');
+  ok(del.status === 423 && del.json.error === 'account-deletion-disabled',
+    'suppression de compte bloquée tant que l’effacement complet n’existe pas');
+  ok(!!db.prepare('SELECT id FROM accounts WHERE id = ?').bind('acc-a').first(),
+    '…et le compte ainsi que ses données sont restés en place');
+
+  const before = await lib.isSeniorOperator(new Request('https://kiwi.test/',
+    { headers:{ Cookie:AS.operator } }), env);
+  ok(before === true, 'la session de l’opérateur vivant est reconnue');
+
+  const removed = await call(R.operators, 'DELETE', '/api/admin/operators?id=op-1');
+  ok(removed.status === 200, 'l’opérateur peut révoquer son code');
+  const after = await lib.isSeniorOperator(new Request('https://kiwi.test/',
+    { headers:{ Cookie:AS.operator } }), env);
+  ok(after === false, 'la session déjà ouverte est révoquée immédiatement');
 }
 
 /* ── verdict ──────────────────────────────────────────────────────────────── */

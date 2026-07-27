@@ -76,11 +76,11 @@ async function hmacHex(secret, message) {
 
 // ── Gate tokens (staff bypass + operator console) ───────────────────────────
 // Both are unforgeable HMACs. The staff token is keyed by the shared SITE_PASSWORD
-// (so it matches the "Accès équipe" cookie in _middleware.js). The operator token
-// is keyed by AUTH_SECRET and is constant — it only proves "operator-authenticated"
-// (a specific code was accepted at /__operator), not which code, so deleting a code
-// leaves live sessions intact. Both cookie names live here so the middleware and the
-// /api/admin/* handlers verify identically.
+// (so it matches the "Accès équipe" cookie in _middleware.js). The legacy operator
+// token is intentionally NOT sufficient by itself: every named operator session
+// must also carry kiwi_op_id, and that signed id is checked against the live
+// `operators` table on every privileged request. Deleting an operator therefore
+// revokes every browser that was using that code immediately.
 export const GATE_COOKIE = 'kiwi_gate';
 export const OP_COOKIE = 'kiwi_op';
 
@@ -144,16 +144,32 @@ export async function readOperatorId(request, env) {
   return timingSafeEqualHex(raw.slice(dot + 1), want) ? id : null;
 }
 
+/* A live, named operator session.
+ *
+ * The old kiwi_op cookie is the same HMAC for every operator and survives after
+ * the corresponding database row is deleted. Requiring the signed identity
+ * cookie AND the current row turns revocation into a real server-side decision.
+ * Fail closed on DB errors: God Mode can be unavailable during an incident; it
+ * must never become unauditable. */
+export async function namedOperatorId(request, env) {
+  const authSecret = env && env.AUTH_SECRET;
+  if (!authSecret || !env || !env.DB) return null;
+  const want = await operatorToken(authSecret);
+  if (!timingSafeEqualHex(readCookie(request, OP_COOKIE) || '', want)) return null;
+  const id = await readOperatorId(request, env);
+  if (!id) return null;
+  try {
+    const row = await env.DB.prepare('SELECT id FROM operators WHERE id = ?').bind(id).first();
+    return row && row.id === id ? id : null;
+  } catch (_) { return null; }
+}
+
 // True if the request carries a valid operator cookie, or a valid staff-bypass
 // cookie (owner/partner = operator-equivalent). A plain merchant session is NOT
 // enough — the admin surface is cross-merchant and privileged.
 export async function isOperator(request, env) {
-  const authSecret = env && env.AUTH_SECRET;
   const sitePassword = env && env.SITE_PASSWORD;
-  if (authSecret) {
-    const want = await operatorToken(authSecret);
-    if (timingSafeEqualHex(readCookie(request, OP_COOKIE) || '', want)) return true;
-  }
+  if (await namedOperatorId(request, env)) return true;
   if (sitePassword) {
     const want = await staffToken(sitePassword);
     if (timingSafeEqualHex(readCookie(request, GATE_COOKIE) || '', want)) return true;
@@ -182,10 +198,7 @@ export async function isOperator(request, env) {
  * griser un bouton sans raison. Il lui suffit de se créer un code dans
  * « Opérateurs » — c'est déjà le chemin documenté pour amorcer le premier code. */
 export async function isSeniorOperator(request, env) {
-  const authSecret = env && env.AUTH_SECRET;
-  if (!authSecret) return false;
-  const want = await operatorToken(authSecret);
-  return timingSafeEqualHex(readCookie(request, OP_COOKIE) || '', want);
+  return !!(await namedOperatorId(request, env));
 }
 
 /* Qui agit ? Le cookie kiwi_op est le même pour tous les opérateurs — il ne

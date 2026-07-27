@@ -23,7 +23,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
-  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, verifyPassword,
+  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
@@ -161,11 +161,10 @@ export async function onRequest(context) {
     if (readCookie(request, GATE_COOKIE) === staff) return next();
   }
 
-  // 3. Valid operator cookie? (Kiwi's own back-office — reaches kiwi-admin.html.)
-  if (authSecret) {
-    const op = await operatorToken(authSecret);
-    if (readCookie(request, OP_COOKIE) === op) return next();
-  }
+  // 3. Valid NAMED operator session? The common kiwi_op HMAC alone is not
+  // enough: kiwi_op_id must be signed and still exist in the operators table.
+  // Removing an operator therefore cuts off their open browsers immediately.
+  if (authSecret && await namedOperatorId(request, env)) return next();
 
   // Not authorized. The /auth/* endpoints must still run so the screen works.
   if (path.startsWith('/auth/')) return next();

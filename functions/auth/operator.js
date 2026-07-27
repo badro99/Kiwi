@@ -8,7 +8,10 @@
 // operators table and sets the kiwi_op cookie; the client then navigates to the
 // console.
 
-import { operatorToken, OP_COOKIE, verifyPassword, json, limitCheck, limitFail, limitClear } from './_lib.js';
+import {
+  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE,
+  verifyPassword, json, limitCheck, limitFail, limitClear,
+} from './_lib.js';
 
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
@@ -26,24 +29,29 @@ export async function onRequestPost(context) {
   const code = (body.code || '').toString().trim();
 
   let ok = false;
+  let opId = '';
   if (env.DB && code) {
     try {
-      const rows = await env.DB.prepare('SELECT salt, hash FROM operators').all();
+      const rows = await env.DB.prepare('SELECT id, salt, hash FROM operators').all();
       for (const r of (rows.results || [])) {
-        if (await verifyPassword(code, r.salt, r.hash)) { ok = true; break; }
+        if (await verifyPassword(code, r.salt, r.hash)) { ok = true; opId = r.id || ''; break; }
       }
     } catch (_) { /* table missing / db error → no match */ }
   }
   if (!ok) { await limitFail(request, env, 'op'); return json({ error: 'bad-code' }, 401); }
   await limitClear(request, env, 'op');
 
+  if (!opId) return json({ error: 'operator-identity-missing' }, 503);
   const op = await operatorToken(env.AUTH_SECRET);
+  const opIdentity = await operatorIdToken(env.AUTH_SECRET, opId);
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+  });
+  headers.append('Set-Cookie', `${OP_COOKIE}=${op}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
+  headers.append('Set-Cookie', `${OPID_COOKIE}=${opIdentity}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
   return new Response(JSON.stringify({ ok: true, redirect: '/kiwi-admin.html' }), {
     status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-      'Set-Cookie': `${OP_COOKIE}=${op}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`,
-    },
+    headers,
   });
 }
