@@ -735,7 +735,7 @@
         let nid = null;
         try {
           nid = KV.createVenue({
-            type: T.base(trade), subtype: trade, typeLabel: T.label(trade),
+            type: T.base(trade), subtype: trade,
             name: v.name, location: v.city || '',
           });
         } catch (_) {}

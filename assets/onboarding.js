@@ -529,7 +529,7 @@
     let vid = null;
     try {
       vid = window.KiwiVenue && KiwiVenue.createVenue && KiwiVenue.createVenue({
-        type: t.base, subtype: t.id, typeLabel: tr(t.label),
+        type: t.base, subtype: t.id,
         name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
         location: S.city.trim(),
         goal: +String(S.dailyGoal).replace(/[^\d]/g, '') || 0,

@@ -1883,7 +1883,7 @@ ar: {
           ${sec(tr({ fr: 'BOUTIQUE', en: 'STORE', ar: 'المتجر' }))}
           <div class="kset-card">
             ${cv ? `
-            ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape(vd.typeLabel || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
+            ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
             ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
             ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
             ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
@@ -2286,7 +2286,7 @@ ar: {
         let id = null;
         try {
           id = window.KiwiVenue?.createVenue?.({
-            type: def.base, subtype: def.id, typeLabel: def.label,
+            type: def.base, subtype: def.id,
             name, location: city, goal, profile: answers,
           });
         } catch (_) {}

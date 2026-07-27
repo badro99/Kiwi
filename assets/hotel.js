@@ -1244,7 +1244,7 @@
       let id = null;
       try {
         id = window.KiwiVenue?.createVenue?.({
-          type: def.base, subtype: def.id, typeLabel: def.label,
+          type: def.base, subtype: def.id,
           name, location: city, goal, profile: answers,
         });
       } catch (_) {}

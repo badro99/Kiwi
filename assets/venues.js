@@ -40,7 +40,6 @@
       location: 'Maarif',
       fullDisplay: 'Café Atlas · Maarif',
       type: 'restaurant',
-      typeLabel: 'Restaurant',
       siblings: '2 autres emplacements · Casa / Marrakech',
       status: 'En service',
       ice: '0025938400014',
@@ -53,7 +52,6 @@
       location: 'Gueliz',
       fullDisplay: 'Maison Mansour · Gueliz',
       type: 'boutique',
-      typeLabel: 'Boutique',
       siblings: '2 autres emplacements · Casa / Marrakech',
       status: 'En service',
       ice: '0028471900033',
@@ -66,7 +64,6 @@
       location: 'Hivernage',
       fullDisplay: 'Spa Bahia · Hivernage',
       type: 'spa',
-      typeLabel: 'Spa',
       siblings: '2 autres emplacements · Casa / Marrakech',
       status: 'En service',
       ice: '0029502800027',
@@ -84,7 +81,6 @@
       location: '3 emplacements',
       fullDisplay: 'Go Ultra · 3 emplacements',
       type: 'fusion',
-      typeLabel: 'Multi-sites · Casa / Marrakech',
       siblings: 'Café Atlas · Maison Mansour · Spa Bahia',
       status: 'En service',
       ice: 'multi-ICE',
@@ -984,6 +980,37 @@
     },
   };
 
+  /* The venue's activity label — the second line of every switcher row.
+   * It used to be BAKED into the venue record (`typeLabel`) at creation time,
+   * in whatever language the merchant happened to be using, and five copies of
+   * a French literal map wrote it. So an Arabic dashboard read "Restaurant" for
+   * good. The stored keys are the truth — `type` (the family) and `subtype`
+   * (the precise trade, when the merchant picked one at onboarding) — and the
+   * words are resolved here, at render time, like SIBLINGS above.
+   * assets/trades.js owns the trade vocabulary and already translates it live;
+   * this literal is the net for when venues.js runs without it. */
+  const TYPE_LABELS = {
+    fr: { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel', fusion: 'Multi-sites · Casa / Marrakech' },
+    en: { restaurant: 'Restaurant', boutique: 'Shop', spa: 'Spa', hotel: 'Hotel', fusion: 'Multi-site · Casa / Marrakech' },
+    ar: { restaurant: 'مطعم', boutique: 'متجر', spa: 'سبا', hotel: 'فندق', fusion: 'مواقع متعدّدة · الدار البيضاء / مراكش' },
+  };
+  function typeLabelOf(v) {
+    if (!v) return '';
+    const lang = window.KiwiI18n?.getLang?.() || 'fr';
+    const lit = TYPE_LABELS[lang] || TYPE_LABELS.fr;
+    if (v.type === 'fusion') return lit.fusion || TYPE_LABELS.fr.fusion;
+    /* A precise trade beats its family: a bakery is not just "Restaurant". */
+    if (v.subtype) {
+      try { const l = window.KiwiTrades?.label?.(v.subtype); if (l) return l; } catch (_) {}
+    }
+    try { const l = window.KiwiTrades?.baseLabel?.(v.type); if (l) return l; } catch (_) {}
+    /* Last resort: a label an older build stored on the record (French, and
+     * only ever a string — never render the {fr,en,ar} object two wizards
+     * used to hand createVenue). */
+    return lit[v.type] || TYPE_LABELS.fr[v.type]
+      || (typeof v.typeLabel === 'string' ? v.typeLabel : '');
+  }
+
   const HEADER_SUB = {
     fr: { cafeAtlas: 'Service midi en cours', maisonMansour: 'Boutique ouverte · 10h–20h', spaBahia: 'Espace ouvert · réservations en cours', fusion: '3 emplacements actifs · vue consolidée' },
     en: { cafeAtlas: 'Lunch service in progress', maisonMansour: 'Boutique open · 10am–8pm', spaBahia: 'Spa open · bookings in progress', fusion: '3 active locations · consolidated view' },
@@ -1214,16 +1241,16 @@
   function createVenue(cfg) {
     cfg = cfg || {};
     const id = 'v' + Date.now().toString(36);
-    const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';
     const name = (cfg.name || 'Mon activité').trim();
     const location = (cfg.location || '').trim();
     VENUES[id] = {
       id, name, location,
       fullDisplay: location ? `${name} · ${location}` : name,
-      type, typeLabel: (cfg.typeLabel || TYPE_LABELS[type]),
+      type,
       /* The trade picked at onboarding — drives the subtype profile
-       * (own sidebar labels + own KPI band, not the base family's). */
+       * (own sidebar labels + own KPI band, not the base family's) AND the
+       * displayed activity label, resolved per-language by typeLabelOf(). */
       subtype: cfg.subtype || '',
       profileInfo: cfg.profile || null,
       siblings: '', status: 'En service', ice: '—',
@@ -1269,10 +1296,6 @@
       if (nb) {
         v.subtype = want;
         v.type = nb;
-        const TL = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
-        let lbl = '';
-        try { lbl = (window.KiwiTrades && window.KiwiTrades.label(want)) || ''; } catch (_) {}
-        v.typeLabel = lbl || TL[nb] || v.typeLabel;
         /* Un type poussé par le serveur ne doit pas écraser le choix que le
          * propriétaire vient de faire de sa main sur SON établissement. */
         if (id === currentVenue) typeOverride = null;
@@ -1350,13 +1373,12 @@
     typeOverride = base;
     // If the ACTIVE venue is a transient synthetic one (a real merchant's empty
     // "own" venue, or the operator 'scoped' venue), also correct its stored type
-    // and label so surfaces that read venue.type directly agree with getVenueType()
-    // — otherwise the sidebar section flips to boutique but the header chip / KPI
-    // band could still read the boot-time 'restaurant'. Transient venues only.
+    // so surfaces that read venue.type directly agree with getVenueType() — the
+    // displayed label follows from it (typeLabelOf). Otherwise the sidebar section
+    // flips to boutique while the header chip / KPI band still read the boot-time
+    // 'restaurant'. Transient venues only.
     if ((currentVenue === 'own' || currentVenue === 'scoped') && VENUES[currentVenue]) {
-      const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
       VENUES[currentVenue].type = base;
-      VENUES[currentVenue].typeLabel = TYPE_LABELS[base] || VENUES[currentVenue].typeLabel;
     }
     try { renderVerticalSection({ skipFade: true }); } catch (_) {}
     subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
@@ -1375,11 +1397,10 @@
     const location = String(info.location || '').trim();
     const base = SUBTYPE_BASE[info.type] ||
       (TYPE_BASES.indexOf(info.type) >= 0 ? info.type : 'restaurant');
-    const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
     VENUES.scoped = {
       id: 'scoped', name, location,
       fullDisplay: location ? `${name} · ${location}` : name,
-      type: base, typeLabel: TYPE_LABELS[base] || 'Restaurant',
+      type: base,
       subtype: '', profileInfo: null,
       siblings: '', status: 'En service', ice: '—',
       txCount: 0, staffCount: 0, custom: true,
@@ -1410,11 +1431,10 @@
     const name = String(me.business || me.name || '').trim() || 'Mon établissement';
     const base = SUBTYPE_BASE[me.type] ||
       (TYPE_BASES.indexOf(me.type) >= 0 ? me.type : 'restaurant');
-    const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
     VENUES.own = {
       id: 'own', name, location: '',
       fullDisplay: name,
-      type: base, typeLabel: TYPE_LABELS[base] || 'Restaurant',
+      type: base,
       subtype: '', profileInfo: null,
       siblings: '', status: 'En service', ice: '—',
       txCount: 0, staffCount: 0, custom: true,
@@ -1446,7 +1466,6 @@
     // Anything real already cached → leave this browser alone.
     for (const id of customIds) if (TRANSIENT_IDS.indexOf(id) < 0) return 0;
 
-    const TYPE_LABELS = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
     const seen = new Set();
     let first = null;
     list.forEach((s) => {
@@ -1462,7 +1481,7 @@
       VENUES[id] = {
         id, name, location: '',
         fullDisplay: name,
-        type: base, typeLabel: TYPE_LABELS[base] || 'Restaurant',
+        type: base,
         subtype: (s && s.type) || '', profileInfo: null,
         siblings: '', status: 'En service', ice: '—',
         txCount: 0, staffCount: 0, custom: true,
@@ -1605,7 +1624,7 @@
           <div class="venue-row-icon">${TYPE_ICONS[v.type] || TYPE_ICONS.restaurant}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(v.name)} · ${escD(v.location)}</div>
-            <div class="venue-row-type">${escD(v.typeLabel)}</div>
+            <div class="venue-row-type">${escD(typeLabelOf(v))}</div>
           </div>
           <div class="venue-row-status" aria-label="${escD(v.status || 'en service')}"><i></i></div>
         </button>
@@ -2193,7 +2212,9 @@
     const orig = api.setLang;
     api.setLang = function () {
       const r = orig.apply(this, arguments);
-      // Re-render the bits we own that have lang-dependent text
+      // Re-render the bits we own that have lang-dependent text. The
+      // loc-switch is handled by the kiwi:langchange listener in init(),
+      // which orig.apply() above has already fired.
       renderHeaderSub();
       renderFooter();
       renderDemoBar();
@@ -3005,10 +3026,13 @@
 
   function init() {
     if (!/dashboard(?:\.html)?(?:$|\/)/.test(location.pathname)) return;
-    /* Sidebar upsell + dropdown CTA + subtype-profiled vertical section
-     * render their own copy — re-translate live. */
+    /* Sidebar upsell + dropdown CTA + subtype-profiled vertical section +
+     * loc-switch render their own copy — re-translate live. The loc-switch
+     * sub-line (SIBLINGS) was missing from this list: switching to Arabic
+     * after load left "2 autres emplacements · Casa / Marrakech" at the top of
+     * the sidebar until some other destination happened to re-render it. */
     window.addEventListener('kiwi:langchange', () => {
-      renderUpsell(); renderDropdown();
+      renderUpsell(); renderDropdown(); renderLocSwitch();
       renderVerticalSection({ skipFade: true });
     });
 
@@ -8224,6 +8248,10 @@
     getVenueData,
     getCurrentVenueData,
     getVenueType,
+    /* The activity label to DISPLAY, in the language showing right now.
+     * Never read venue.typeLabel — older records carry a stale French string
+     * (and two wizards used to store the raw {fr,en,ar} object). */
+    getTypeLabel: id => typeLabelOf(VENUES[id || currentVenue]),
     applyServerType,
     applyScopedVenue,
     adoptServerStores,
