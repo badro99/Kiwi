@@ -493,15 +493,33 @@ ar: {
   .kp-head input { flex: 1; border: 0; outline: 0; background: none; font-size: 16px; color: var(--ink); font-family: var(--sans); letter-spacing: -0.005em; }
   .kp-head input::placeholder { color: var(--n-400); }
   .kp-list { padding: 8px 0; max-height: 420px; overflow-y: auto; }
-  .kp-sect { padding: 10px 20px 6px; font-size: 10.5px; font-weight: 500; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono); }
+  .kp-head .kp-esc { font-family: var(--mono); font-size: 10.5px; background: var(--n-100); padding: 3px 8px; border-radius: 5px; color: var(--n-500); border: 1px solid var(--n-200); flex-shrink: 0; }
+  .kp-sect { padding: 12px 20px 6px; font-size: 10.5px; font-weight: 500; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono);
+             display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .kp-sect .n { text-transform: none; letter-spacing: 0; color: var(--n-400); }
   .kp-item { margin: 1px 8px; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; gap: 14px; cursor: pointer; font-size: 13.5px; color: var(--ink); transition: background 160ms cubic-bezier(0.32,0.72,0,1); }
   .kp-item:hover, .kp-item.active { background: var(--mint-soft); }
   .kp-item:active { transform: scale(0.99); }
-  .kp-item .kpi-ic { width: 28px; height: 28px; border-radius: 8px; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--atlas); border: 1px solid var(--n-200); flex-shrink: 0; }
-  .kp-item .kpi-t { flex: 1; font-weight: 500; letter-spacing: -0.005em; }
-  .kp-item .kpi-s { color: var(--n-500); font-size: 12.5px; font-weight: 400; }
+  .kp-item .kpi-ic { width: 28px; height: 28px; border-radius: 8px; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--atlas); border: 1px solid var(--n-200); flex-shrink: 0; font-size: 13px; }
+  /* L'icône vient de la barre latérale : elle y est peinte en 18px, ici en 15px. */
+  .kp-item .kpi-ic svg { width: 15px; height: 15px; }
+  .kp-item .kpi-ic.is-initial { font-weight: 600; font-size: 12px; letter-spacing: 0.01em; }
+  .kp-item .kpi-mid { flex: 1; min-width: 0; }
+  .kp-item .kpi-t { font-weight: 500; letter-spacing: -0.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kp-item .kpi-s { color: var(--n-500); font-size: 12.5px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Le morceau qui vient d'être tapé. Pas de surligneur jaune : la couleur de
+     marque suffit, et elle survit au thème sombre. */
+  .kp-item mark { background: none; color: var(--atlas); font-weight: 600; }
+  .kp-item .kpi-amt { font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-variant-numeric: tabular-nums; flex-shrink: 0; }
   .kp-item .kpi-k { font-family: var(--mono); font-size: 10.5px; color: var(--n-500); background: var(--n-100); padding: 2px 6px; border-radius: 5px; border: 1px solid var(--n-200); }
+  .kp-empty { padding: 34px 20px 32px; text-align: center; }
+  .kp-empty-t { font-size: 14px; font-weight: 500; color: var(--ink); }
+  .kp-empty-s { margin-top: 6px; font-size: 12.5px; color: var(--n-500); max-width: 340px; margin-inline: auto; line-height: 1.5; }
   .kp-foot { padding: 10px 20px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; align-items: center; background: var(--surface); font-size: 11px; color: var(--n-500); }
+  .kp-foot .kp-count { color: var(--n-400); font-variant-numeric: tabular-nums; }
+  /* « ⌘ » n'existe pas dans JetBrains Mono : sans repli système le navigateur
+     dessine un tofu, et le raccourci se lit comme une croix. */
+  .kp-foot .kp-sc { font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif; color: var(--n-400); }
   .kp-foot span { display: inline-flex; align-items: center; gap: 6px; }
   .kp-foot kbd { font-family: var(--mono); background: var(--n-100); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--n-200); font-size: 10px; }
 
@@ -962,23 +980,23 @@ ar: {
   /* ═══════════════════════ COMMAND PALETTE ═══════════════════════ */
   const CP_STR = {
     fr: {
-      sNav: 'NAVIGATION', sActions: 'ACTIONS RAPIDES', sResto: 'RESTAURATION', sHelp: 'AIDE', sAi: 'Kiwi AI', executed: 'exécuté',
-      dash: 'Tableau de bord', dashSub: 'Vue principale',
-      orders: 'Commandes', ordersSub: "Aujourd\'hui · live",
-      team: 'Équipe', teamSub: '8 membres', teamToast: 'Page équipe',
-      assistant: 'Assistant financier', assistantSub: 'Calculateur · prévisions · scénarios',
+      sNav: 'NAVIGATION', sActions: 'ACTIONS RAPIDES', sSales: 'VENTES', sProducts: 'CATALOGUE', sClients: 'CLIENTS', sTeam: 'ÉQUIPE',
+      sAi: 'Kiwi AI', executed: 'exécuté', title: 'Recherche Kiwi',
       newSale: 'Nouvelle vente', newSaleSub: 'Encaisser un montant',
-      refund: 'Rembourser une transaction', refundToast: 'Sélectionnez une transaction',
-      waSummary: 'Envoyer résumé par WhatsApp', waSummaryToast: 'Résumé envoyé · +212 6 xx xx xx xx',
+      payLink: 'Créer un lien de paiement', payLinkSub: 'À envoyer par WhatsApp ou SMS',
+      exportTx: 'Exporter les transactions', exportTxSub: 'CSV de la période affichée',
       instant: 'Régler instantanément', instantSub: '1,50 MAD · ~10s',
-      exportTx: 'Exporter les transactions',
-      floor: 'Ouvrir plan de salle', floorToast: 'Tables · 6 occupées · 2 libres',
-      editMenu: 'Modifier le menu', editMenuToast: 'Éditeur de menu',
-      closing: 'Fermeture de service', closingToast: 'Clôture initiée…',
-      support: 'Contacter le support WhatsApp', supportToast: 'Redirection WhatsApp…',
-      docs: 'Documentation', docsToast: 'docs.kiwi.ma',
-      placeholder: 'Rechercher transactions, produits, équipe, actions…',
-      navigate: 'naviguer', select: 'sélectionner', noResult: 'Aucun résultat',
+      ai: 'Ouvrir Kiwi AI', aiSub: 'Poser une question sur vos chiffres',
+      hours: "Horaires d'ouverture", hoursSub: 'Jours et plages de service',
+      settings: 'Réglages', settingsSub: 'Langue, thème, sécurité',
+      today: "aujourd'hui", yesterday: 'hier',
+      mCash: 'Espèces', mCard: 'Carte', mWallet: 'Kiwi Wallet', mSplit: 'Partagée',
+      saleFallback: 'Vente',
+      openOrders: 'Commandes', openCatalog: 'Catalogue', openClients: 'Clients', openTeam: 'Équipe',
+      placeholder: "Vente, article, client, membre de l'équipe, action…",
+      navigate: 'naviguer', select: 'ouvrir',
+      results: '{n} résultats', ofTotal: '{n} sur {t}',
+      noResult: 'Aucun résultat', noResultSub: "Essayez un nom d'article, un prénom, un numéro de téléphone ou un montant.",
       kpiDefaultDesc: 'Indicateur de votre tableau de bord personnalisé.',
       kpiDefaultLong: 'Cet indicateur fait partie de votre bande personnalisée. Il se recalcule automatiquement pour chaque période sélectionnée.',
       kpiSubtitle: 'Indicateur personnalisé · période en cours',
@@ -988,23 +1006,23 @@ ar: {
       analyzeWithKiwiAI: 'Analyser avec Kiwi AI',
     },
     en: {
-      sNav: 'NAVIGATION', sActions: 'QUICK ACTIONS', sResto: 'RESTAURANT', sHelp: 'HELP', sAi: 'Kiwi AI', executed: 'executed',
-      dash: 'Dashboard', dashSub: 'Main view',
-      orders: 'Orders', ordersSub: 'Today · live',
-      team: 'Team', teamSub: '8 members', teamToast: 'Team page',
-      assistant: 'Financial assistant', assistantSub: 'Calculator · forecasts · scenarios',
+      sNav: 'NAVIGATION', sActions: 'QUICK ACTIONS', sSales: 'SALES', sProducts: 'CATALOGUE', sClients: 'CUSTOMERS', sTeam: 'TEAM',
+      sAi: 'Kiwi AI', executed: 'executed', title: 'Kiwi search',
       newSale: 'New sale', newSaleSub: 'Take a payment',
-      refund: 'Refund a transaction', refundToast: 'Select a transaction',
-      waSummary: 'Send summary by WhatsApp', waSummaryToast: 'Summary sent · +212 6 xx xx xx xx',
+      payLink: 'Create a payment link', payLinkSub: 'To send by WhatsApp or SMS',
+      exportTx: 'Export transactions', exportTxSub: 'CSV for the shown period',
       instant: 'Settle instantly', instantSub: '1.50 MAD · ~10s',
-      exportTx: 'Export transactions',
-      floor: 'Open floor plan', floorToast: 'Tables · 6 occupied · 2 free',
-      editMenu: 'Edit the menu', editMenuToast: 'Menu editor',
-      closing: 'Service closing', closingToast: 'Closing started…',
-      support: 'Contact WhatsApp support', supportToast: 'Redirecting to WhatsApp…',
-      docs: 'Documentation', docsToast: 'docs.kiwi.ma',
-      placeholder: 'Search transactions, products, team, actions…',
-      navigate: 'navigate', select: 'select', noResult: 'No results',
+      ai: 'Open Kiwi AI', aiSub: 'Ask a question about your numbers',
+      hours: 'Opening hours', hoursSub: 'Days and service windows',
+      settings: 'Settings', settingsSub: 'Language, theme, security',
+      today: 'today', yesterday: 'yesterday',
+      mCash: 'Cash', mCard: 'Card', mWallet: 'Kiwi Wallet', mSplit: 'Split',
+      saleFallback: 'Sale',
+      openOrders: 'Orders', openCatalog: 'Catalogue', openClients: 'Customers', openTeam: 'Team',
+      placeholder: 'Sale, item, customer, team member, action…',
+      navigate: 'navigate', select: 'open',
+      results: '{n} results', ofTotal: '{n} of {t}',
+      noResult: 'No results', noResultSub: 'Try an item name, a first name, a phone number or an amount.',
       kpiDefaultDesc: 'Indicator from your personalized dashboard.',
       kpiDefaultLong: 'This indicator is part of your custom band. It recalculates automatically for each selected period.',
       kpiSubtitle: 'Custom indicator · current period',
@@ -1014,23 +1032,23 @@ ar: {
       analyzeWithKiwiAI: 'Analyze with Kiwi AI',
     },
     ar: {
-      sNav: 'التنقّل', sActions: 'إجراءات سريعة', sResto: 'المطعم', sHelp: 'المساعدة', sAi: 'Kiwi AI', executed: 'تم التنفيذ',
-      dash: 'لوحة التحكم', dashSub: 'العرض الرئيسي',
-      orders: 'الطلبات', ordersSub: 'اليوم · مباشر',
-      team: 'الفريق', teamSub: '8 أعضاء', teamToast: 'صفحة الفريق',
-      assistant: 'المساعد المالي', assistantSub: 'حاسبة · توقّعات · سيناريوهات',
+      sNav: 'التنقّل', sActions: 'إجراءات سريعة', sSales: 'المبيعات', sProducts: 'الكتالوغ', sClients: 'الزبناء', sTeam: 'الفريق',
+      sAi: 'Kiwi AI', executed: 'تم التنفيذ', title: 'بحث Kiwi',
       newSale: 'عملية بيع جديدة', newSaleSub: 'تحصيل مبلغ',
-      refund: 'استرجاع معاملة', refundToast: 'اختر معاملة',
-      waSummary: 'إرسال الملخّص عبر واتساب', waSummaryToast: 'تم إرسال الملخّص · +212 6 xx xx xx xx',
+      payLink: 'إنشاء رابط للأداء', payLinkSub: 'يُرسَل عبر واتساب أو رسالة',
+      exportTx: 'تصدير المعاملات', exportTxSub: 'ملف CSV للفترة المعروضة',
       instant: 'تسوية فورية', instantSub: '1,50 درهم · ~10 ثوانٍ',
-      exportTx: 'تصدير المعاملات',
-      floor: 'فتح مخطط القاعة', floorToast: 'الطاولات · 6 مشغولة · 2 شاغرة',
-      editMenu: 'تعديل القائمة', editMenuToast: 'محرّر القائمة',
-      closing: 'إقفال الخدمة', closingToast: 'بدأ الإقفال…',
-      support: 'التواصل مع دعم واتساب', supportToast: 'إعادة التوجيه إلى واتساب…',
-      docs: 'التوثيق', docsToast: 'docs.kiwi.ma',
-      placeholder: 'ابحث عن معاملات، منتجات، فريق، إجراءات…',
-      navigate: 'تنقّل', select: 'اختيار', noResult: 'لا نتائج',
+      ai: 'فتح Kiwi AI', aiSub: 'اطرح سؤالاً حول أرقامك',
+      hours: 'أوقات العمل', hoursSub: 'الأيام وفترات الخدمة',
+      settings: 'الإعدادات', settingsSub: 'اللغة، المظهر، الأمان',
+      today: 'اليوم', yesterday: 'أمس',
+      mCash: 'نقداً', mCard: 'بطاقة', mWallet: 'Kiwi Wallet', mSplit: 'مقسّمة',
+      saleFallback: 'بيع',
+      openOrders: 'الطلبات', openCatalog: 'الكتالوغ', openClients: 'الزبناء', openTeam: 'الفريق',
+      placeholder: 'بيع، منتج، زبون، عضو في الفريق، إجراء…',
+      navigate: 'تنقّل', select: 'فتح',
+      results: '{n} نتيجة', ofTotal: '{n} من {t}',
+      noResult: 'لا نتائج', noResultSub: 'جرّب اسم منتج، اسماً شخصياً، رقم هاتف أو مبلغاً.',
       kpiDefaultDesc: 'مؤشر من لوحة التحكم المخصصة لك.',
       kpiDefaultLong: 'هذا المؤشر جزء من الشريط المخصص لك. يتم إعادة حسابه تلقائيًا لكل فترة محددة.',
       kpiSubtitle: 'مؤشر مخصص · الفترة الحالية',
@@ -1040,172 +1058,491 @@ ar: {
       analyzeWithKiwiAI: 'تحليل بواسطة Kiwi AI',
     },
   };
+  /* ═══════════════════════ RECHERCHE UNIVERSELLE ═══════════════════════
+   *
+   * La barre promettait « commande, produit, client, équipe » et ne cherchait
+   * que seize commandes écrites en dur — dont la moitié n'ouvrait qu'un toast
+   * portant des chiffres de démo (« 6 tables occupées ») servis à un vrai
+   * commerçant. Un patron qui tape le nom d'une cliente ou d'un article ne
+   * trouvait rien, et concluait — à raison — que la recherche ne marche pas.
+   *
+   * L'index est maintenant construit à CHAQUE ouverture, à partir de ce que ce
+   * commerçant possède vraiment :
+   *
+   *   · Navigation — moissonnée dans la barre latérale vivante. Elle est déjà
+   *     filtrée par merchant-config (module vendu ou non), par le rôle du PIN et
+   *     par le métier, et ses libellés sont déjà dans la langue en cours. Donc
+   *     un résultat ne peut pas mener à une porte fermée, et il n'y a aucune
+   *     liste parallèle à maintenir quand une destination apparaît ou part.
+   *   · Actions — uniquement celles dont le handler existe réellement.
+   *   · Ventes · produits · clients · équipe — les vrais magasins de données.
+   *     Une source vide ne produit aucune section : pas de résultat vaut mieux
+   *     qu'un faux résultat.
+   *
+   * Tout est construit en DOM, jamais en innerHTML : ces lignes portent des noms
+   * de clients et d'articles, c'est-à-dire du texte que le commerçant a saisi.
+   */
+
+  /* « Crème brûlée » doit se trouver en tapant « creme brulee », et « SALMA » en
+   * tapant « salma ». Sans ça la recherche ne sert à rien en français comme en
+   * arabe translittéré, où personne ne tape les accents. */
+  function kpNorm(s) {
+    try { return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+    catch (_) { return String(s == null ? '' : s).toLowerCase().trim(); }
+  }
+
+  /* Score d'une entrée pour des mots-clés. TOUS les mots doivent être présents
+   * (« pain com » ne doit pas remonter toute la carte), et on privilégie le
+   * début du titre, puis le début d'un mot, puis le reste. 0 ⇒ pas un résultat. */
+  function kpScore(entry, tokens) {
+    if (!tokens.length) return 1;
+    const title = entry._t || '';
+    const hay = entry._h || '';
+    let total = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      const tk = tokens[i];
+      let s = 0;
+      if (title.startsWith(tk)) s = 100;
+      else if (title.indexOf(' ' + tk) >= 0) s = 70;
+      else if (title.indexOf(tk) >= 0) s = 40;
+      else if (hay.indexOf(tk) >= 0) s = 15;
+      else return 0;                      // un mot absent ⇒ l'entrée ne matche pas
+      total += s;
+    }
+    return total / tokens.length;
+  }
+
+  function kpMoney(n) {
+    const v = Math.round(+n || 0);
+    try { return v.toLocaleString('fr-FR') + ' MAD'; } catch (_) { return v + ' MAD'; }
+  }
+
+  /* « aujourd'hui 14:05 », « hier 09:12 », sinon « 14/07 · 18:40 ». Une vente se
+   * reconnaît à son heure bien plus qu'à sa date complète. */
+  function kpWhen(ts, cp) {
+    const d = new Date(+ts || 0);
+    if (!(+d)) return '';
+    const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const day = new Date(); day.setHours(0, 0, 0, 0);
+    const diff = Math.floor((day - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+    if (diff === 0) return cp.today + ' ' + hh;
+    if (diff === 1) return cp.yesterday + ' ' + hh;
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' · ' + hh;
+  }
+
+  function kpSafe(fn, fallback) {
+    try { const v = fn(); return v == null ? fallback : v; } catch (_) { return fallback; }
+  }
+
+  /* Les destinations réellement offertes à CE commerçant, lues dans la barre
+   * latérale telle qu'elle est peinte à l'écran. `offsetParent === null` écarte
+   * d'un coup tout ce que merchant-config, le rôle du PIN et le verrou Croissance
+   * ont masqué — sans que la recherche ait besoin de connaître aucune de ces
+   * règles. L'icône est le SVG de la barre, clonée : même vocabulaire visuel. */
+  function kpNavEntries() {
+    const out = [];
+    const links = document.querySelectorAll('.sidebar nav a');
+    for (let i = 0; i < links.length; i++) {
+      const a = links[i];
+      if (a.offsetParent === null) continue;
+      let label = '';
+      const spans = a.querySelectorAll('span');
+      for (let j = 0; j < spans.length; j++) {
+        if (spans[j].classList.contains('count')) continue;
+        label = (spans[j].textContent || '').trim();
+        if (label) break;
+      }
+      if (!label) continue;
+      // Le titre de rubrique qui surplombe le lien (« KIWI PAY », « RESTAURATION »)
+      let sect = '';
+      let prev = a.previousElementSibling;
+      while (prev && !sect) {
+        if (prev.classList && prev.classList.contains('sect')) sect = (prev.textContent || '').trim();
+        prev = prev.previousElementSibling;
+      }
+      const svg = a.querySelector('svg');
+      out.push({
+        group: 'nav', title: label, sub: sect,
+        icon: svg ? svg.cloneNode(true) : null,
+        run: function () { a.click(); },
+      });
+    }
+    return out;
+  }
+
+  /* Une action n'est proposée que si son handler existe. C'est la seule barrière
+   * qui empêche la recherche de reproduire son défaut d'origine : promettre une
+   * commande qui n'ouvre rien. */
+  function kpActionEntries(cp) {
+    const want = [
+      { k: 'new-sale', title: cp.newSale, sub: cp.newSaleSub },
+      { k: 'payment-link', title: cp.payLink, sub: cp.payLinkSub },
+      { k: 'export', title: cp.exportTx, sub: cp.exportTxSub },
+      { k: 'instant-settle', title: cp.instant, sub: cp.instantSub },
+      { k: 'open-assistant', title: cp.ai, sub: cp.aiSub },
+      { k: 'settings-hours', title: cp.hours, sub: cp.hoursSub },
+      { k: 'settings', title: cp.settings, sub: cp.settingsSub },
+    ];
+    const out = [];
+    want.forEach(function (w) {
+      if (typeof handlers[w.k] !== 'function') return;
+      out.push({
+        group: 'action', title: w.title, sub: w.sub, glyph: '›',
+        run: function () { handlers[w.k](); },
+      });
+    });
+    return out;
+  }
+
+  /* Les ventes de la venue active. `label` est le résumé de ticket que la caisse
+   * a envoyé (« Pain +3 art. ») ; on cherche aussi dans les lignes du panier,
+   * parce qu'un patron cherche « chemise », pas le libellé du ticket. */
+  function kpSaleEntries(cp) {
+    const vid = kpSafe(function () { return window.KiwiVenue.getCurrentVenue(); }, null);
+    const rows = kpSafe(function () { return window.KiwiSales.list(vid) || []; }, []);
+    if (!rows.length) return [];
+    const recent = rows.slice(-400).reverse();
+    const METHOD = { cash: cp.mCash, card: cp.mCard, tap: 'Kiwi Tap', qr: 'QR', wallet: cp.mWallet, split: cp.mSplit };
+    return recent.map(function (s) {
+      const lines = Array.isArray(s.lines) ? s.lines : [];
+      const names = lines.map(function (l) { return l && l.name; }).filter(Boolean).join(' ');
+      const method = METHOD[s.method] || s.method || '';
+      return {
+        group: 'sale',
+        title: String(s.label || cp.saleFallback).slice(0, 80),
+        sub: kpWhen(s.ts, cp) + (method ? ' · ' + method : ''),
+        amount: kpMoney(s.amount),
+        extra: names,
+        glyph: '↔',
+        run: function () {
+          if (typeof handlers['nav-transactions'] === 'function') handlers['nav-transactions']();
+          else toast(cp.openOrders, { type: 'info' });
+        },
+      };
+    });
+  }
+
+  /* Le catalogue, quel que soit le métier : la carte pour un restaurant, les
+   * articles pour une boutique. Les deux magasins peuvent être présents. */
+  function kpProductEntries(cp) {
+    const out = [];
+    kpSafe(function () { return window.KiwiMenu.items() || []; }, []).forEach(function (it) {
+      if (!it || !it.name) return;
+      out.push({
+        group: 'product', title: String(it.name), sub: String(it.category || ''),
+        amount: it.price != null ? kpMoney(it.price) : '', glyph: '◦',
+        run: function () {
+          if (typeof handlers['menu-edit'] === 'function') handlers['menu-edit']();
+          else if (typeof handlers['nav-menu'] === 'function') handlers['nav-menu']();
+          else toast(cp.openCatalog, { type: 'info' });
+        },
+      });
+    });
+    const cats = {};
+    kpSafe(function () { return window.KiwiBoutiqueCatalog.listCategories() || []; }, [])
+      .forEach(function (c) { if (c && c.id) cats[c.id] = c.name || ''; });
+    kpSafe(function () { return window.KiwiBoutiqueCatalog.listProducts() || []; }, []).forEach(function (p) {
+      if (!p || !p.name) return;
+      out.push({
+        group: 'product', title: String(p.name),
+        sub: [cats[p.categoryId] || '', p.art || ''].filter(Boolean).join(' · '),
+        amount: p.priceMAD ? kpMoney(p.priceMAD) : '', glyph: '◦',
+        run: function () {
+          if (typeof handlers['nav-catalogue'] === 'function') handlers['nav-catalogue']();
+          else if (typeof handlers['bqx-open'] === 'function') handlers['bqx-open']();
+          else toast(cp.openCatalog, { type: 'info' });
+        },
+      });
+    });
+    return out;
+  }
+
+  /* Le carnet de clients. Le numéro compte autant que le nom : au comptoir on
+   * cherche « 0661 » bien plus souvent qu'un patronyme. */
+  function kpClientEntries(cp) {
+    const list = kpSafe(function () { return window.KiwiClients.list() || []; }, []);
+    return list.map(function (c) {
+      const name = String(c.name || '').trim() || (c.phone || '');
+      return {
+        group: 'client', title: name,
+        sub: [c.phone || '', c.city || ''].filter(Boolean).join(' · '),
+        extra: c.email || '', glyph: '·',
+        initial: (name.charAt(0) || '?').toUpperCase(),
+        run: function () {
+          if (typeof handlers['clients-directory'] === 'function') handlers['clients-directory']();
+          else toast(cp.openClients, { type: 'info' });
+        },
+      };
+    }).filter(function (e) { return !!e.title; });
+  }
+
+  function kpTeamEntries(cp) {
+    const list = kpSafe(function () { return window.KiwiTeam.roster() || []; }, []);
+    return list.map(function (m) {
+      return {
+        group: 'team', title: String(m.name || '').trim(), sub: String(m.role || ''),
+        initial: m.avatar || '?', glyph: '·',
+        run: function () {
+          if (typeof handlers['nav-equipe'] === 'function') handlers['nav-equipe']();
+          else toast(cp.openTeam, { type: 'info' });
+        },
+      };
+    }).filter(function (e) { return !!e.title; });
+  }
+
   function commandPalette() {
     if (document.querySelector('.kp')) return;
+    const cp = CP_STR[kiwiLang()] || CP_STR.fr;
+    const isMac = kpSafe(function () { return /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent); }, false);
+
+    /* Ordre des sections : ce qu'on fait le plus souvent d'abord. Les sections de
+     * DONNÉES n'apparaissent qu'une fois une requête tapée — sinon la palette
+     * s'ouvrirait sur des centaines de lignes de ventes au lieu d'un menu. */
+    const GROUPS = [
+      { id: 'nav', label: cp.sNav, always: true },
+      { id: 'action', label: cp.sActions, always: true },
+      { id: 'sale', label: cp.sSales, cap: 6 },
+      { id: 'product', label: cp.sProducts, cap: 6 },
+      { id: 'client', label: cp.sClients, cap: 6 },
+      { id: 'team', label: cp.sTeam, cap: 6 },
+    ];
+
+    const index = [].concat(
+      kpNavEntries(), kpActionEntries(cp), kpSaleEntries(cp),
+      kpProductEntries(cp), kpClientEntries(cp), kpTeamEntries(cp)
+    );
+    // Champs de recherche pré-normalisés une fois : le filtre tourne à chaque
+    // frappe sur potentiellement quelques milliers de lignes.
+    index.forEach(function (e) {
+      e._t = kpNorm(e.title);
+      e._h = kpNorm([e.title, e.sub, e.extra, e.amount].filter(Boolean).join(' '));
+    });
+
     const back = document.createElement('div');
     back.className = 'kiwi-backdrop';
     back.style.background = 'rgba(10,15,13,0.45)';
     const kp = document.createElement('div');
     kp.className = 'kp';
-    const cp = CP_STR[kiwiLang()] || CP_STR.fr;
     kp.setAttribute('role', 'dialog');
     kp.setAttribute('aria-modal', 'true');
-    kp.setAttribute('aria-label', cp.placeholder || 'Recherche');
-    const items = [
-      { sect: cp.sNav },
-      { icon: '📊', label: cp.dash, sub: cp.dashSub, href: 'dashboard.html', kbd: 'G A' },
-      { icon: '🧾', label: cp.orders, sub: cp.ordersSub, feat: 'transactions', action: () => handlers['nav-transactions']?.(), kbd: 'G C' },
-      // Règlements removed in Kiwi 1.0 — see KIWI_2.0_ROADMAP.md
-      { icon: '👥', label: cp.team, sub: cp.teamSub, action: () => toast(cp.teamToast, {type: 'info'}), kbd: 'G E' },
-      { icon: '🧮', label: cp.assistant, sub: cp.assistantSub, action: () => handlers['nav-assistant']?.() },
-      { sect: cp.sActions },
-      { icon: '➕', label: cp.newSale, sub: cp.newSaleSub, action: () => handlers['new-sale']() },
-      { icon: '↩', label: cp.refund, action: () => toast(cp.refundToast, {type: 'info'}) },
-      { icon: '📧', label: cp.waSummary, action: () => toast(cp.waSummaryToast, {type: 'success'}) },
-      { icon: '⚡', label: cp.instant, sub: cp.instantSub, action: () => handlers['instant-settle']() },
-      { icon: '📤', label: cp.exportTx, action: () => handlers.export() },
-      { sect: cp.sResto },
-      { icon: '🍽️', label: cp.floor, action: () => toast(cp.floorToast, {type: 'info'}) },
-      { icon: '📋', label: cp.editMenu, action: () => toast(cp.editMenuToast, {type: 'info'}) },
-      { icon: '🧾', label: cp.closing, action: () => toast(cp.closingToast, {type: 'info'}) },
-      { sect: cp.sHelp },
-      { icon: '💬', label: cp.support, action: () => toast(cp.supportToast, {type: 'info', desc: '+212 5 22 xx xx xx'}) },
-      { icon: '📚', label: cp.docs, action: () => toast(cp.docsToast, {type: 'info'}) },
-    ];
-    renderKp();
+    kp.setAttribute('aria-label', cp.title);
 
-    function renderKp(q = '') {
-      /* Un résultat de recherche qui ouvre un module que ce client n'a pas est
-       * un cul-de-sac : la porte est déjà fermée (merchant-config.js gate les
-       * handlers), donc le résultat ne mènerait nulle part. On ne le propose
-       * pas. Une entrée sans `feat` n'appartient à aucun module et reste. */
-      const off = (k) => { try { return !!k && !!window.KiwiConfig?.off?.(k); } catch (_) { return false; } };
-      const filtered = items.filter(it => !off(it.feat))
-        .filter(it => it.sect || !q || it.label.toLowerCase().includes(q.toLowerCase()));
-      kp.innerHTML = `
-        <div class="kp-head">
-          <span style="color:var(--n-500);">${I.search}</span>
-          <input type="text" placeholder="${cp.placeholder}" autofocus />
-          <span style="font-family:var(--mono); font-size:10.5px; background:var(--n-100); padding:3px 8px; border-radius:5px; color:var(--n-500);">ESC</span>
-        </div>
-        <div class="kp-list">
-          ${filtered.map(it => it.sect ? `<div class="kp-sect">${it.sect}</div>` : `
-            <div class="kp-item" data-idx="${items.indexOf(it)}">
-              <div class="kpi-ic" style="font-size:14px;">${it.icon}</div>
-              <div style="flex:1;">
-                <div class="kpi-t">${it.label}</div>
-                ${it.sub ? `<div class="kpi-s">${it.sub}</div>` : ''}
-              </div>
-              ${it.kbd ? `<div class="kpi-k">${it.kbd}</div>` : ''}
-            </div>
-          `).join('')}
-        </div>
-        <div class="kp-foot">
-          <span><kbd>↑↓</kbd> ${cp.navigate}</span>
-          <span><kbd>↵</kbd> ${cp.select}</span>
-          <span>Kiwi ⌘K</span>
-        </div>
-      `;
-      const kpInput = kp.querySelector('input');
-      kp.querySelectorAll('.kp-item').forEach(el => {
-        el.onclick = () => {
-          const it = items[+el.dataset.idx];
-          close();
-          if (it.href) location.href = it.href;
-          else it.action?.();
-        };
-      });
-      /* Filter as the user types — re-render ONLY the result list, never
-         the <input>, so the typed text and focus are preserved. */
-      kpInput.addEventListener('input', () => filterKpList(kpInput.value));
-      /* ↑ ↓ move the highlight, ↵ runs the highlighted command. */
-      kpInput.addEventListener('keydown', (e) => {
-        const rows = [].slice.call(kp.querySelectorAll('.kp-item'));
-        if (!rows.length) return;
-        const cur = rows.findIndex(r => r.classList.contains('active'));
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-          e.preventDefault();
-          const next = (cur + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
-          rows.forEach((r, i) => r.classList.toggle('active', i === next));
-          rows[next].scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          (rows[cur] || rows[0]).click();
-        }
-      });
-    }
+    const head = document.createElement('div');
+    head.className = 'kp-head';
+    const ic = document.createElement('span');
+    ic.style.color = 'var(--n-500)';
+    ic.style.display = 'inline-flex';
+    ic.innerHTML = I.search;              // icône interne, pas de donnée utilisateur
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.setAttribute('placeholder', cp.placeholder);
+    input.setAttribute('aria-label', cp.placeholder);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-expanded', 'true');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.autocomplete = 'off'; input.spellcheck = false;
+    const escTag = document.createElement('span');
+    escTag.className = 'kp-esc';
+    escTag.textContent = 'ESC';
+    head.append(ic, input, escTag);
 
-    /* Re-render only the result list (built from DOM nodes — no innerHTML)
-       so the search field above it is never rebuilt. */
-    function filterKpList(q) {
-      const query = (q || '').trim().toLowerCase();
-      const out = [];
-      items.forEach((it) => {
-        if (it.sect) { out.push(it); return; }
-        if (!query || (it.label + ' ' + (it.sub || '')).toLowerCase().includes(query)) out.push(it);
-      });
-      /* drop section headers left with no commands beneath them */
-      const rows = out.filter((it, i) => !it.sect || (out[i + 1] && !out[i + 1].sect));
-      const list = kp.querySelector('.kp-list');
+    const list = document.createElement('div');
+    list.className = 'kp-list';
+    list.setAttribute('role', 'listbox');
+
+    const foot = document.createElement('div');
+    foot.className = 'kp-foot';
+    const fNav = document.createElement('span');
+    fNav.append(kpKbd('↑'), kpKbd('↓'), document.createTextNode(' ' + cp.navigate));
+    const fSel = document.createElement('span');
+    fSel.append(kpKbd('↵'), document.createTextNode(' ' + cp.select));
+    const fCount = document.createElement('span');
+    fCount.className = 'kp-count';
+    foot.append(fNav, fSel, fCount);
+
+    kp.append(head, list, foot);
+
+    function kpKbd(t) { const k = document.createElement('kbd'); k.textContent = t; return k; }
+
+    /* Souligne dans le résultat le morceau que la personne vient de taper — sans
+     * accents dans la requête et avec accents dans la donnée, donc on compare sur
+     * la forme normalisée et on découpe la chaîne D'ORIGINE aux mêmes indices. */
+    function kpMark(text, tokens) {
       const frag = document.createDocumentFragment();
-      if (!rows.some((it) => !it.sect)) {
-        const empty = document.createElement('div');
-        empty.style.cssText = 'padding:28px 20px; text-align:center; color:var(--n-500); font-size:13px;';
-        empty.textContent = cp.noResult;
-        frag.appendChild(empty);
-      } else {
-        rows.forEach((it) => {
-          if (it.sect) {
-            const s = document.createElement('div');
-            s.className = 'kp-sect';
-            s.textContent = it.sect;
-            frag.appendChild(s);
-            return;
-          }
-          const row = document.createElement('div');
-          row.className = 'kp-item';
-          row.dataset.idx = items.indexOf(it);
-          const ic = document.createElement('div');
-          ic.className = 'kpi-ic';
-          ic.style.fontSize = '14px';
-          ic.textContent = it.icon;
-          const mid = document.createElement('div');
-          mid.style.flex = '1';
-          const t = document.createElement('div');
-          t.className = 'kpi-t';
-          t.textContent = it.label;
-          mid.appendChild(t);
-          if (it.sub) {
-            const sub = document.createElement('div');
-            sub.className = 'kpi-s';
-            sub.textContent = it.sub;
-            mid.appendChild(sub);
-          }
-          row.append(ic, mid);
-          if (it.kbd) {
-            const k = document.createElement('div');
-            k.className = 'kpi-k';
-            k.textContent = it.kbd;
-            row.appendChild(k);
-          }
-          row.addEventListener('click', () => {
-            close();
-            if (it.href) location.href = it.href;
-            else it.action?.();
-          });
-          frag.appendChild(row);
-        });
-      }
-      list.replaceChildren(frag);
+      const raw = String(text == null ? '' : text);
+      if (!tokens.length) { frag.appendChild(document.createTextNode(raw)); return frag; }
+      const norm = kpNorm(raw);
+      const hits = [];
+      tokens.forEach(function (tk) {
+        let from = 0, at;
+        while (tk && (at = norm.indexOf(tk, from)) >= 0) { hits.push([at, at + tk.length]); from = at + tk.length; }
+      });
+      if (!hits.length) { frag.appendChild(document.createTextNode(raw)); return frag; }
+      hits.sort(function (a, b) { return a[0] - b[0]; });
+      const merged = [];
+      hits.forEach(function (h) {
+        const last = merged[merged.length - 1];
+        if (last && h[0] <= last[1]) last[1] = Math.max(last[1], h[1]);
+        else merged.push([h[0], h[1]]);
+      });
+      let cur = 0;
+      merged.forEach(function (m) {
+        // La normalisation NFD peut décaler les indices ; on ne surligne que si
+        // les longueurs concordent, sinon on rend le texte brut (jamais faux).
+        if (norm.length !== raw.length) return;
+        if (m[0] > cur) frag.appendChild(document.createTextNode(raw.slice(cur, m[0])));
+        const mk = document.createElement('mark');
+        mk.textContent = raw.slice(m[0], m[1]);
+        frag.appendChild(mk);
+        cur = m[1];
+      });
+      if (cur < raw.length) frag.appendChild(document.createTextNode(raw.slice(cur)));
+      return frag;
     }
+
+    function kpRow(entry, tokens) {
+      const row = document.createElement('div');
+      row.className = 'kp-item';
+      row.setAttribute('role', 'option');
+      row.tabIndex = -1;
+
+      const box = document.createElement('div');
+      box.className = 'kpi-ic';
+      if (entry.icon) box.appendChild(entry.icon.cloneNode(true));
+      else if (entry.initial) { box.textContent = entry.initial; box.classList.add('is-initial'); }
+      else if (entry.glyph) box.textContent = entry.glyph;
+
+      const mid = document.createElement('div');
+      mid.className = 'kpi-mid';
+      const t = document.createElement('div');
+      t.className = 'kpi-t';
+      t.appendChild(kpMark(entry.title, tokens));
+      mid.appendChild(t);
+      if (entry.sub) {
+        const s = document.createElement('div');
+        s.className = 'kpi-s';
+        s.appendChild(kpMark(entry.sub, tokens));
+        mid.appendChild(s);
+      }
+      row.append(box, mid);
+
+      if (entry.amount) {
+        const a = document.createElement('div');
+        a.className = 'kpi-amt';
+        a.textContent = entry.amount;
+        row.appendChild(a);
+      }
+      row.addEventListener('click', function () { close(); kpSafe(entry.run, null); });
+      row.addEventListener('mousemove', function () { setActive(rows.indexOf(row), false); });
+      return row;
+    }
+
+    let rows = [];
+    let active = -1;
+
+    function setActive(i, scroll) {
+      if (!rows.length) { active = -1; return; }
+      active = ((i % rows.length) + rows.length) % rows.length;
+      rows.forEach(function (r, n) {
+        const on = n === active;
+        r.classList.toggle('active', on);
+        r.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if (scroll !== false) rows[active].scrollIntoView({ block: 'nearest' });
+    }
+
+    function render(q) {
+      const tokens = kpNorm(q).split(/\s+/).filter(Boolean);
+      const typing = tokens.length > 0;
+      const frag = document.createDocumentFragment();
+      rows = [];
+      let shown = 0;
+
+      GROUPS.forEach(function (g) {
+        if (!g.always && !typing) return;          // pas de mur de données à l'ouverture
+        const hits = [];
+        index.forEach(function (e) {
+          if (e.group !== g.id) return;
+          const s = kpScore(e, tokens);
+          if (s > 0) hits.push({ e: e, s: s });
+        });
+        if (!hits.length) return;
+        hits.sort(function (a, b) { return b.s - a.s; });
+        const cap = typing && g.cap ? g.cap : hits.length;
+        const head = document.createElement('div');
+        head.className = 'kp-sect';
+        const nm = document.createElement('span');
+        nm.textContent = g.label;
+        head.appendChild(nm);
+        if (hits.length > cap) {
+          const more = document.createElement('span');
+          more.className = 'n';
+          more.textContent = cp.ofTotal.replace('{n}', String(cap)).replace('{t}', String(hits.length));
+          head.appendChild(more);
+        }
+        frag.appendChild(head);
+        hits.slice(0, cap).forEach(function (h) {
+          const r = kpRow(h.e, tokens);
+          rows.push(r);
+          frag.appendChild(r);
+          shown++;
+        });
+      });
+
+      if (!shown) {
+        const empty = document.createElement('div');
+        empty.className = 'kp-empty';
+        const t = document.createElement('div');
+        t.className = 'kp-empty-t';
+        t.textContent = cp.noResult;
+        const s = document.createElement('div');
+        s.className = 'kp-empty-s';
+        s.textContent = cp.noResultSub;
+        empty.append(t, s);
+        frag.appendChild(empty);
+      }
+
+      list.replaceChildren(frag);
+      fCount.textContent = shown ? cp.results.replace('{n}', String(shown)) : '';
+      setActive(0, false);
+    }
+
+    render('');
+
+    input.addEventListener('input', function () { render(input.value); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === 'Home' && rows.length) { e.preventDefault(); setActive(0); }
+      else if (e.key === 'End' && rows.length) { e.preventDefault(); setActive(rows.length - 1); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (rows[active]) rows[active].click(); }
+    });
 
     back.appendChild(kp);
     document.body.appendChild(back);
-    requestAnimationFrame(() => { back.classList.add('in'); kp.classList.add('in'); kp.querySelector('input')?.focus(); });
-    const close = () => { back.classList.remove('in'); kp.classList.remove('in'); setTimeout(() => back.remove(), 220); document.removeEventListener('keydown', esc); };
-    const esc = (e) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', esc);
-    back.addEventListener('click', (e) => { if (e.target === back) close(); });
+    /* L'ouverture était gardée par le SEUL requestAnimationFrame. Un onglet en
+     * arrière-plan n'en exécute aucun : la palette restait alors à opacity 0,
+     * présente et invisible, et ⌘K semblait ne rien faire au retour sur l'onglet.
+     * Le timer est le filet ; `add` est idempotent, donc les deux peuvent courir. */
+    const reveal = function () { back.classList.add('in'); kp.classList.add('in'); input.focus(); };
+    requestAnimationFrame(reveal);
+    setTimeout(reveal, 60);
+
+    function close() {
+      back.classList.remove('in'); kp.classList.remove('in');
+      setTimeout(function () { back.remove(); }, 220);
+      document.removeEventListener('keydown', onEsc);
+    }
+    function onEsc(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onEsc);
+    back.addEventListener('click', function (e) { if (e.target === back) close(); });
+
+    // Le raccourci affiché doit être celui du clavier qu'on a sous les doigts :
+    // la caisse Kiwi tourne sous Windows, où « ⌘K » ne veut rien dire.
+    const shortcut = document.createElement('span');
+    shortcut.textContent = (isMac ? '⌘' : 'Ctrl ') + 'K';
+    shortcut.className = 'kp-sc';
+    foot.appendChild(shortcut);
   }
 
   /* ═══════════════════════ HANDLERS ═══════════════════════ */
@@ -3493,6 +3830,24 @@ ar: {
      * fallback toast on EVERY click. Removed: an interaction now either runs a
      * real handler from the steps above, or stays silent. */
   });
+
+  /* Le raccourci imprimé sur la barre du haut. Il était écrit « ⌘K » en dur, dans
+   * JetBrains Mono qui ne possède pas ce glyphe : sur toutes les machines le
+   * navigateur dessinait un caractère de remplacement, et sous Windows — le
+   * système de la caisse Kiwi — la touche annoncée n'existait de toute façon pas. */
+  (function () {
+    const go = function () {
+      const isMac = (function () {
+        try { return /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent); }
+        catch (_) { return false; }
+      })();
+      document.querySelectorAll('[data-search-kbd]').forEach(function (el) {
+        el.textContent = isMac ? '⌘K' : 'Ctrl K';
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
+  })();
 
   /* ─── Keyboard shortcuts ─── */
   document.addEventListener('keydown', (e) => {

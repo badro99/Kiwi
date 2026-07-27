@@ -354,22 +354,34 @@
   body.growth-locked .sidebar .sect[data-i18n="dash.sidebar.growth"],
   body.growth-locked .sidebar a[data-action^="growth-"] { display: none !important; }
   .search-big {
-    flex: 1; max-width: 460px;
+    flex: 1; max-width: 460px; min-width: 0;
     background: rgba(255,255,255,0.5);
     border: 1px solid rgba(255,255,255,0.65);
     border-radius: 999px;
-    padding: 9px 18px;
-    font-size: 13.5px; color: var(--n-500);
+    /* Hauteur alignée sur les boutons ronds voisins (38px). L'ancienne version
+       laissait le libellé passer à la ligne, ce qui poussait la pilule à 62px et
+       déséquilibrait toute la barre. */
+    height: 38px; padding: 0 8px 0 18px;
+    font-family: var(--sans); font-size: 13.5px; color: var(--n-600);
     display: flex; align-items: center; gap: 10px;
-    margin: 0 auto;
+    margin: 0 auto; cursor: pointer; text-align: start;
     transition: background 150ms, border-color 150ms, box-shadow 150ms;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
   }
+  .search-big svg { flex-shrink: 0; opacity: 0.75; }
+  /* Une ligne, toujours : à l'étroit le libellé se coupe proprement au lieu de
+     replier la barre sur deux lignes. */
+  .search-big .ph { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .search-big:hover { background: rgba(255,255,255,0.72); border-color: rgba(255,255,255,0.9); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 4px rgba(10,15,13,0.06); }
-  .search-big .k { margin-left: auto; display: flex; gap: 3px; }
-  .search-big .k span { font-family: var(--mono); font-size: 10.5px; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px; color: var(--n-600); border: 1px solid rgba(255,255,255,0.6); }
+  .search-big:focus-visible { outline: none; background: rgba(255,255,255,0.86); border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.18); }
+  .search-big:active { transform: scale(0.995); }
+  .search-big .k { margin-inline-start: auto; flex-shrink: 0;
+    font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif;
+    font-size: 10.5px; background: rgba(255,255,255,0.7); padding: 3px 7px; border-radius: 5px;
+    color: var(--n-600); border: 1px solid rgba(255,255,255,0.6); line-height: 1.4; }
+  .search-big .k:empty { display: none; }
   .icon-btn {
     width: 38px; height: 38px;
     border-radius: 50%;
@@ -1669,7 +1681,7 @@
     border-color: rgba(125,242,176,0.10) !important;
     color: var(--ink) !important;
   }
-  body.fusion-mode .search-big .k span {
+  body.fusion-mode .search-big .k {
     background: rgba(255,255,255,0.06) !important;
     color: #7E938A !important;
     border-color: rgba(125,242,176,0.10) !important;
@@ -5186,11 +5198,18 @@
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span data-i18n="dash.role.manager">Vue gérant</span>
       </div>
-      <div class="search-big">
+      <!-- Un vrai bouton, pas un <div> décoratif : c'était le seul contrôle de la
+           barre du haut qu'on ne pouvait ni tabuler ni annoncer à un lecteur
+           d'écran. Le raccourci affiché est posé par assets/interactive.js selon
+           la plateforme — la caisse Kiwi tourne sous Windows, où « ⌘ » ne veut
+           rien dire (et n'existe même pas dans JetBrains Mono). -->
+      <button type="button" class="search-big" data-action="search"
+              aria-keyshortcuts="Control+K Meta+K"
+              aria-label="Rechercher" data-i18n-attr="aria-label:dash.search.aria">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-        <span data-i18n="dash.search.placeholder">Rechercher commande, produit, client, équipe…</span>
-        <div class="k"><span>⌘</span><span>K</span></div>
-      </div>
+        <span class="ph" data-i18n="dash.search.placeholder">Rechercher commande, produit, client, équipe…</span>
+        <span class="k" data-search-kbd aria-hidden="true"></span>
+      </button>
       <button class="icon-btn" aria-label="Notifications">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21a2 2 0 004 0"/></svg>
         <span class="badge" data-notif-badge>3</span>

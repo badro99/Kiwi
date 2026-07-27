@@ -122,7 +122,7 @@ html[data-theme="dark"] .resv-engine h4 { color: #F2F0EA; }
 
 /* Search bar in topbar */
 html[data-theme="dark"] .search-big { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
-html[data-theme="dark"] .search-big .k span { background: var(--n-100); color: var(--n-600); }
+html[data-theme="dark"] .search-big .k { background: var(--n-100); color: var(--n-600); border-color: var(--n-200); }
 
 /* Sidebar — already dark, keep brand color consistent */
 html[data-theme="dark"] .sidebar { background: #05090B; }
@@ -226,6 +226,10 @@ html[data-theme="dark"] .kp { background: var(--paper-muted); }
 html[data-theme="dark"] .kp-head { border-bottom-color: var(--n-200); }
 html[data-theme="dark"] .kp-head input { color: var(--ink); }
 html[data-theme="dark"] .kp-item:hover, html[data-theme="dark"] .kp-item.active { background: rgba(125,242,176,0.08); }
+/* --atlas est presque noir sur un panneau sombre : le morceau tapé s'y effaçait
+   au lieu de ressortir. Le mint est la couleur d'accent du thème sombre. */
+html[data-theme="dark"] .kp-item mark { color: var(--mint); }
+html[data-theme="dark"] .kp-head .kp-esc { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
 html[data-theme="dark"] .kp-item .kpi-ic { background: var(--paper-soft); border-color: var(--n-200); }
 html[data-theme="dark"] .kp-item .kpi-k { background: var(--paper-soft); border-color: var(--n-200); color: var(--n-500); }
 html[data-theme="dark"] .kp-foot { background: var(--paper-soft); border-top-color: var(--n-200); }

@@ -40,7 +40,10 @@
   // information. The white one is white on purpose, and darkening it turns "Blanc"
   // into a black dot — the one thing a colour picker must never do. It carries its
   // own theme-aware rim, so it needs nothing from this pass.
-  const SKIP = '.gk-qr, .btn-slim, .kc-sw';
+  /* `mark` porte le morceau que la personne vient de taper dans la recherche.
+   * Sa couleur EST son intérêt : repeint en couleur de texte ordinaire, le
+   * surlignage disparaît et la ligne redevient un pavé illisible. */
+  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark';
 
   function fix(root) {
     if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;
