@@ -41,3 +41,6 @@ bridge/dist/
 # Bridge build deps (pkg) — never committed; `npm install` in bridge/ recreates them
 bridge/node_modules/
 bridge/package-lock.json
+
+# Rendered video masters — regenerate with video/render.mjs, never commit
+video/out/

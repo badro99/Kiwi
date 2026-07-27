@@ -38,4 +38,36 @@ check(handlers['appt-filter']() === 'filtered' && calls === 1, 'non-effect filte
 real = false;
 check(handlers['ret-refund-original']() === 'refunded' && calls === 2, 'local demo action remains available');
 
-if (!process.exitCode) console.log('\n✓ 6 production action honesty checks passed.');
+/* Une clé mal orthographiée protège le vide en silence : le garde s'installe
+ * sans erreur, le bouton continue de mentir. Chaque clé gardée doit donc être
+ * enregistrée quelque part dans assets/. */
+const guarded = [...window.KiwiProductionActions.guarded];
+const assetsDir = path.join(__dirname, '..', 'assets');
+const bundle = fs.readdirSync(assetsDir)
+  /* sans le garde lui-même : sa propre liste ferait correspondre n'importe
+   * quelle faute de frappe à elle-même, et le contrôle ne dirait plus rien. */
+  .filter((f) => f.endsWith('.js') && f !== 'production-action-guard.js')
+  .map((f) => fs.readFileSync(path.join(assetsDir, f), 'utf8'))
+  .join('\n');
+const orphans = guarded.filter((k) => !bundle.includes(`'${k}'`) && !bundle.includes(`"${k}"`));
+check(orphans.length === 0, `aucune clé gardée orpheline${orphans.length ? ' — ' + orphans.join(', ') : ''}`);
+
+/* Les promesses vers l'extérieur relevées en production le 2026-07-27 : envoi
+ * WhatsApp, bulletin « envoyé au gérant », registres exportés. Elles doivent
+ * rester gardées. Les exports qui fabriquent un vrai Blob n'y sont pas. */
+const OUTWARD = [
+  'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
+  'export-payroll', 'stock-send-suggested', 'stock-wa-supplier',
+  'stock-program-shortfall', 'audit-export', 'cal-export', 'cf-hyg-export',
+  'hx-taxe-export', 'mi-export', 'fin-tva-send', 'resv-sms'
+];
+const ungarded = OUTWARD.filter((k) => !guarded.includes(k));
+check(ungarded.length === 0, `promesses extérieures gardées${ungarded.length ? ' — manque ' + ungarded.join(', ') : ''}`);
+
+/* Ceux-là produisent vraiment un fichier : les garder serait casser une
+ * fonction qui marche. */
+const REAL_DOWNLOADS = ['export', 'bqx-export', 'margin-export'];
+const overGuarded = REAL_DOWNLOADS.filter((k) => guarded.includes(k));
+check(overGuarded.length === 0, `les vrais téléchargements restent libres${overGuarded.length ? ' — ' + overGuarded.join(', ') : ''}`);
+
+if (!process.exitCode) console.log(`\n✓ 9 production action honesty checks passed (${guarded.length} actions gardées).`);

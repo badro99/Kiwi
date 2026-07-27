@@ -13,7 +13,19 @@
     'spa-cli-add-confirm', 'spa-cli-wa-send', 'spa-cli-bday-send',
     'spa-cli-bday-batch-send', 'spa-cli-gift-confirm', 'spa-cli-block-confirm',
     'menu-mass', 'menu-schedule', 'menu-promote', 'menu-publish',
-    'kds-bump', 'kds-recall', 'kds-86', 'kds-print-summary'
+    'kds-bump', 'kds-recall', 'kds-86', 'kds-print-summary',
+    /* Équipe, paie et planning : ces boutons annonçaient un envoi WhatsApp et
+     * un PDF « envoyé au gérant » alors que rien ne part. */
+    'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
+    'export-payroll',
+    /* Stock : la commande fournisseur affichait même un montant et un
+     * « WhatsApp confirmé » codés en dur. */
+    'stock-send-suggested', 'stock-wa-supplier', 'stock-program-shortfall',
+    /* Exports réglementaires et registres : aucun fichier n'est produit.
+     * (« export », « bqx-export » et « margin-export » fabriquent un vrai
+     * Blob téléchargeable : eux ne sont pas ici, ils tiennent leur promesse.) */
+    'audit-export', 'cal-export', 'cf-hyg-export', 'hx-taxe-export',
+    'mi-export', 'fin-tva-send', 'resv-sms'
   ]);
 
   function realMerchant() {
