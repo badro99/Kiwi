@@ -198,23 +198,26 @@
     }));
   }
 
-  /* ───────────────────────── couleurs ───────────────────────── */
-  const COLORS = [
-    { id: 'ivoire',     label: 'Ivoire',      hex: '#EFE7D6' },
-    { id: 'blanc',      label: 'Blanc',       hex: '#FFFFFF' },
-    { id: 'noir',       label: 'Noir',        hex: '#1F2421' },
-    { id: 'dore',       label: 'Doré',        hex: '#C9A227' },
-    { id: 'argent',     label: 'Argenté',     hex: '#C8CCD0' },
-    { id: 'bordeaux',   label: 'Bordeaux',    hex: '#6E1F2E' },
-    { id: 'nuit',       label: 'Bleu nuit',   hex: '#1F3A5C' },
-    { id: 'emeraude',   label: 'Émeraude',    hex: '#2E6B4F' },
-    { id: 'safran',     label: 'Safran',      hex: '#D99A2B' },
-    { id: 'terracotta', label: 'Terracotta',  hex: '#B0613F' },
-    { id: 'rose',       label: 'Rose poudré', hex: '#D8A8A0' },
-    { id: 'camel',      label: 'Camel',       hex: '#B68B5C' },
-    { id: 'gris',       label: 'Gris perle',  hex: '#9AA09D' },
-  ];
-  const COLOR = Object.fromEntries(COLORS.map((c) => [c.id, c]));
+  /* ───────────────────────── couleurs ─────────────────────────
+     Aucune palette n'est définie ici. Ce module lisait autrefois sa propre liste
+     de treize nuances, copiée à l'identique dans boutique-catalog.js : deux
+     copies d'une même vérité finissent toujours par diverger. Le vocabulaire
+     vit dans assets/color-palette.js (window.KiwiColors) — des FAMILLES
+     générales, choisies à la pastille, jamais à la nuance. `colorOf()` accepte
+     n'importe quelle valeur historique ou importée et rend toujours une famille
+     affichable : une variante ne peut pas devenir grise faute de correspondance. */
+  const KC = () => window.KiwiColors || null;
+  const KC_MISS = { id: 'gris', label: 'Gris', hex: '#9AA0A6' };
+  function colorOf(id) { const k = KC(); return (k && k.normalize(id)) || KC_MISS; }
+  function colorLabel(id) { return colorOf(id).label; }
+  function colorHex(id) { return colorOf(id).hex; }
+  // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
+  // que dans le tableau de bord, nom porté par title/aria plutôt qu'écrit.
+  function colorDot(id, size) {
+    const k = KC();
+    if (k) return k.swatch(id, { size: size || 'sm' });
+    return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
+  }
 
   /* ───────────────────────── catalogue (base partagée) ─────────────────────────
      Le catalogue est désormais la BASE PARTAGÉE (window.KiwiBoutiqueCatalog) —
@@ -245,14 +248,31 @@
      Resolves the exact variant (produit × couleur × taille); guarded so a miss can never
      break the sale. adjustStock() commit fires the subscribe → rebuildCatalog, which
      re-sets P from the base, so this never double-counts the in-memory hold. */
+  /* La vente choisit une FAMILLE ("Bleu"), l'inventaire garde des variantes
+     distinctes ("navy" et "blue" restent deux articles, deux stocks, deux codes
+     — on ne fusionne jamais dans le dos du commerçant). Il faut donc décider
+     laquelle bouge, dans cet ordre : l'identifiant exact s'il correspond, sinon
+     la même famille EN AYANT du stock (une sortie ne doit pas creuser une
+     variante déjà vide pendant qu'une autre est pleine), sinon la même famille,
+     sinon la taille seule. Un retour (delta > 0) revient de préférence sur une
+     variante existante de la même famille. */
   function persistStock(pid, size, color, delta) {
     if (!delta || !pvReal()) return;
     try {
       const cat = window.KiwiBoutiqueCatalog;
       if (!cat || !cat.listVariants || !cat.adjustStock) return;
-      const vs = cat.listVariants(pid) || [];
-      const v = vs.find((x) => x.colorId === color && String(x.size) === String(size))
-             || vs.find((x) => String(x.size) === String(size));
+      const sameSize = (cat.listVariants(pid) || []).filter((x) => String(x.size) === String(size));
+      const fam = (x) => (cat.colorFamily ? cat.colorFamily(x) : x.colorId);
+      const covers = (x) => (x.stock || 0) >= -delta;
+      // Sur une SORTIE, « en avoir » passe avant « porter le même identifiant » :
+      // sinon une vente de bleu se déduirait d'une variante bleue déjà vide
+      // pendant que la variante marine, elle, est pleine — le magasin perdrait la
+      // sortie de son stock. Sur un RETOUR, l'identifiant exact suffit.
+      const v = (delta < 0 && sameSize.find((x) => x.colorId === color && covers(x)))
+             || (delta < 0 && sameSize.find((x) => fam(x) === color && covers(x)))
+             || sameSize.find((x) => x.colorId === color)
+             || sameSize.find((x) => fam(x) === color)
+             || sameSize[0];
       if (v) cat.adjustStock(v.id, delta);
     } catch (_) {}
   }
@@ -707,6 +727,14 @@
     if (window.KiwiBoutiqueCatalog && !mount._subbed) {
       mount._subbed = true;
       window.KiwiBoutiqueCatalog.subscribe(() => {
+        /* Pendant une reprise de stock, la projection de vente (RAYONS / P /
+         * BY_EAN) n'est lue par personne : la grille est cachée, et les écrans de
+         * saisie interrogent la base directement. La reconstruire à chaque
+         * enregistrement — plusieurs fois par article scanné — ne servait qu'à
+         * ralentir l'import. On la rebâtit une seule fois, à la fermeture
+         * (voir intakeClose), donc la caisse retrouve un catalogue à jour avant
+         * la première vente. */
+        if (intake.open) return;
         rebuildCatalog();
         if (root) { pruneTicket(); refreshAfterCatalog(); }
       });
@@ -740,6 +768,13 @@
   function pruneTicket() { if (state.ticket) state.ticket.lines = state.ticket.lines.filter((ln) => P[ln.pid]); }
   function refreshAfterCatalog() {
     if (!root) return;
+    /* Pendant une reprise de stock, la liste d'inventaire est CACHÉE derrière le
+     * formulaire : la redessiner à chaque enregistrement ne montre rien à
+     * personne et coûte cher. invRow() et stats() relisent tous les variants pour
+     * chaque produit — du O(produits × variants) — donc sur un import de plusieurs
+     * milliers d'articles la caisse ralentissait scan après scan, exactement là où
+     * elle doit rester vive. On redessine une fois, à la fermeture. */
+    if (intake.open) return;
     try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (e) {}
   }
 
@@ -995,8 +1030,8 @@
       <span class="bq-line-mid">
         <span class="bq-line-name">${esc(p.name)}</span>
         <span class="bq-line-sub">
-          <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
-          <span class="sz">${esc(ln.size)}</span> ${esc(COLOR[ln.color] ? COLOR[ln.color].label : ln.color)}
+          ${colorDot(ln.color)}
+          <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
           ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}
         </span>
       </span>
@@ -1079,8 +1114,8 @@
 
       <div class="bq-f">
         <div class="bq-f-lbl">Couleur</div>
-        <div class="bq-colors" id="bq-colors">
-          ${p.colors.map((cid) => { const cc = COLOR[cid] || { hex: '#ccc', label: cid }; return `<button class="bq-color ${cid === sheet.color ? 'on' : ''}" data-bq-color="${cid}" data-c="${cid}" style="background:${cc.hex}" title="${esc(cc.label)}" aria-label="${esc(cc.label)}"></button>`; }).join('')}
+        <div id="bq-colors">
+          ${KC() ? KC().picker('bq-color', sheet.color, { ids: p.colors, size: 'lg', label: 'Couleur', hint: 'Touchez une pastille pour lire son nom' }) : ''}
         </div>
       </div>
 
@@ -1128,12 +1163,9 @@
       $$('[data-bq-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
-    $('#bq-colors', el).onclick = (e) => {
-      const b = e.target.closest('[data-bq-color]');
-      if (!b) return;
-      sheet.color = b.dataset.bqColor;
-      $$('[data-bq-color]', el).forEach((x) => x.classList.toggle('on', x === b));
-    };
+    // Le picker gère lui-même sélection, clavier et libellé au survol : on écoute
+    // seulement le choix retenu.
+    $('#bq-colors', el).addEventListener('kc:change', (e) => { sheet.color = e.detail.value; });
     const qMinus = $('#bq-qty-minus', el);
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
     const qPlus = $('#bq-qty-plus', el);
@@ -1426,9 +1458,8 @@
       return `<span class="bq-look-size ${cls}${on}"><b>${esc(s)}</b><i>${q}</i></span>`;
     }).join('');
     const colors = (p.colors || []).map((cid) => {
-      const c = COLOR[cid] || { label: cid, hex: '#ccc' };
       const on = cid === lk.color ? ' is-on' : '';
-      return `<span class="bq-look-color${on}"><i style="background:${c.hex}"></i>${esc(c.label)}</span>`;
+      return `<span class="bq-look-color${on}">${colorDot(cid)}${esc(colorLabel(cid))}</span>`;
     }).join('');
     const ray = rayonOf(lk.pid);
     return `
@@ -1688,7 +1719,7 @@
       toast(`${p.name}, épuisé dans toutes les tailles`);
       return;
     }
-    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId : p.colors[0];
+    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
     if (state.view === 'vente') renderTicket();
@@ -1715,7 +1746,7 @@
     /* on affiche la variante scannée même si elle est à zéro — c'est justement le
        stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
     const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFree(p) || sizesOf(p)[0] || '');
-    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId : p.colors[0];
+    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
     state.lookup = { pid, size, color, ean: code, at: new Date() };
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
@@ -1834,7 +1865,7 @@
             <span class="bq-line-art">${artOf(p.art)}</span>
             <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
               <span class="bq-line-sub">
-                <i class="dot" style="background:${COLOR[l.color] ? COLOR[l.color].hex : '#ccc'}"></i>
+                ${colorDot(l.color)}
                 <span class="sz">${esc(l.size)}</span> ${l.qty > 1 ? `× ${l.qty}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
             <span class="amt">${fmtMAD(l.unit * l.qty)}</span>
@@ -1992,12 +2023,12 @@
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="bq-exch-row is-ret">
         <span class="bq-line-art">${artOf(oldP.art)}</span>
-        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${esc(COLOR[ln.color] ? COLOR[ln.color].label : ln.color)}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
+        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
         <span class="amt">−${fmtMAD(ln.unit)}</span>
       </div>
       <div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(newP.art)}</span>
-        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${esc(COLOR[newColor] ? COLOR[newColor].label : newColor)}</span></span>
+        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
         <span class="amt">+${fmtMAD(newP.price)}</span>
       </div>
       <div class="bq-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
@@ -2571,15 +2602,131 @@
       .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
       .bqi-fg input, .bqi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .bqi-frow { display: flex; gap: 12px; } .bqi-frow .bqi-fg { flex: 1; }
-      .bqi-swrow { display: flex; gap: 7px; flex-wrap: wrap; }
-      .bqi-sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
-      .bqi-sw.on { border-color: var(--ink); }
+      /* Le sélecteur de couleur vient de color-palette.js (.kc-*) — rien à
+         redéfinir ici, c'est tout l'intérêt. Restent la pastille cliquable de la
+         ligne variante et le rappel discret de la nuance d'origine. */
+      .bqi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
+      .bqi-cbtn:hover { background: rgba(125,242,176,.14); }
+      .bqi-csrc { font-style: normal; font-size: 11px; opacity: .6; margin-left: 5px; }
       .bqi-iconpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 168px; overflow-y: auto; padding: 8px; border: 1px solid rgba(10,15,13,.14); border-radius: 12px; background: var(--paper); }
       .bqi-icon { aspect-ratio: 1; border: 1.5px solid rgba(10,15,13,.10); border-radius: 10px; background: var(--paper); cursor: pointer; padding: 5px; color: var(--riad); display: flex; align-items: center; justify-content: center; }
       .bqi-icon:hover { border-color: rgba(11,110,79,.5); }
       .bqi-icon.on { border-color: var(--atlas); border-width: 2px; background: #EAF5EF; }
       .bqi-icon .bq-art { width: 100%; height: 100%; }
       .bqi-help { font-size: 12px; color: #77807b; margin-top: -6px; margin-bottom: 12px; }
+      .bqi-help.is-good { color: var(--atlas); }
+      .bqi-help.is-bad  { color: #9B2F22; }
+      /* .bqi-help remonte de 6px pour se coller sous un <input> nu ; sous une
+         boîte de scan (qui a sa propre bordure) ce retrait la fait chevaucher
+         le cadre. */
+      .bqx-scanbox + .bqi-help { margin-top: 7px; }
+      .bqi-first { padding: 40px 26px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .bqi-first svg { width: 34px; height: 34px; color: var(--atlas); margin-bottom: 4px; }
+      .bqi-first b { font-size: 16px; color: var(--ink); }
+      .bqi-first span { font-size: 13.5px; color: #6d766f; max-width: 46ch; line-height: 1.55; }
+      .bqi-first em { font-style: normal; font-size: 12.5px; color: #8d968f; margin-top: 6px; }
+
+      /* ─── Reprise de stock (saisie à la douchette) ─── */
+      .bqx-head { display: flex; align-items: center; gap: 16px; padding: 20px 24px 14px; border-bottom: 1px solid rgba(10,15,13,.08); }
+      .bqx-head-t { flex: 1; min-width: 0; }
+      .bqx-head-t h3 { margin: 0 0 2px; font-size: 18px; }
+      .bqx-head-t span { font-size: 12.5px; color: #77807b; line-height: 1.45; display: block; }
+      .bqx-tally { display: flex; align-items: baseline; gap: 6px; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 12px; padding: 8px 14px; flex: 0 0 auto; }
+      .bqx-tally b { font-family: var(--mono); font-size: 19px; font-weight: 600; color: var(--atlas); }
+      .bqx-tally span { font-size: 11px; color: #77807b; }
+      .bqx-tally i { width: 1px; height: 18px; background: rgba(10,15,13,.12); margin: 0 4px; }
+      .bqx-body { padding: 18px 24px 6px; }
+      .bqx-scanbox { display: flex; align-items: center; gap: 12px; background: var(--paper); border: 2px solid var(--atlas); border-radius: 14px; padding: 15px 17px; }
+      .bqx-scanbox.slim { padding: 11px 14px; border-width: 1.5px; }
+      .bqx-scanbox > svg { width: 22px; height: 22px; color: var(--atlas); flex: 0 0 auto; }
+      .bqx-scanbox.slim > svg { width: 18px; height: 18px; }
+      .bqx-scanbox input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font: inherit; font-size: 17px; font-family: var(--mono); letter-spacing: .02em; color: var(--ink); }
+      .bqx-scanbox.slim input { font-size: 15px; }
+      .bqx-mini { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 9px; border: 0; background: var(--atlas); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+      .bqx-mini svg { width: 17px; height: 17px; }
+      .bqx-hint { font-size: 12.5px; color: #77807b; margin: 9px 2px 0; line-height: 1.45; }
+      .bqx-hint.is-good { color: var(--atlas); }
+      .bqx-hint.is-bad  { color: #9B2F22; font-weight: 500; }
+      .bqx-hint.is-warn { color: #8A6210; }
+      .bqx-alt { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+      .bqx-log { display: flex; flex-direction: column; gap: 5px; margin: 14px 0 4px; }
+      .bqx-log-row { display: flex; align-items: center; gap: 9px; background: var(--paper); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+      .bqx-log-row svg { width: 15px; height: 15px; flex: 0 0 15px; color: var(--atlas); }
+      .bqx-log-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .bqx-log-row em { font-style: normal; font-family: var(--mono); font-size: 11px; color: #8d968f; }
+      .bqx-log-row.is-erreur svg { color: #9B2F22; }
+      .bqx-log-row.is-recu svg { color: #8A6210; }
+      .bqx-log-empty { margin: 16px 0 4px; padding: 16px; text-align: center; font-size: 12.5px; color: #8d968f; background: var(--paper); border-radius: 12px; line-height: 1.5; }
+      .bqx-found { display: flex; align-items: center; gap: 13px; padding: 15px 24px; }
+      .bqx-found svg { width: 22px; height: 22px; flex: 0 0 22px; }
+      .bqx-found b { display: block; font-size: 14.5px; }
+      .bqx-found.is-new { background: rgba(11,110,79,.06); } .bqx-found.is-new svg { color: var(--atlas); }
+      .bqx-found.is-known { background: rgba(184,124,32,.09); } .bqx-found.is-known svg { color: #8A6210; }
+      .bqx-found.is-fix { background: rgba(155,47,34,.06); } .bqx-found.is-fix svg { color: #9B2F22; }
+      .bqx-codeline { font-family: var(--mono); font-size: 12.5px; color: #5d6b63; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .bqx-sym { font-family: 'Inter Tight', sans-serif; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; font-weight: 700; color: var(--atlas); background: rgba(11,110,79,.10); border-radius: 5px; padding: 2px 6px; }
+      .bqx-sym.warn { color: #8A6210; background: rgba(184,124,32,.14); }
+      .bqx-form { padding-top: 16px; }
+      .bqx-foot { border-top: 1px solid rgba(10,15,13,.08); margin-top: 4px; }
+      .bqx-chain { display: flex; align-items: center; gap: 14px; margin: 14px 24px 0; padding: 13px 16px; background: var(--paper); border: 1px dashed rgba(11,110,79,.4); border-radius: 13px; }
+      .bqx-chain > div { flex: 1; min-width: 0; }
+      .bqx-chain b { display: block; font-size: 13.5px; }
+      .bqx-chain span { font-size: 12px; color: #77807b; line-height: 1.45; }
+      .bqx-common { display: flex; align-items: baseline; gap: 10px; margin: 12px 24px 0; padding: 10px 14px; background: var(--paper); border-radius: 11px; }
+      .bqx-common span { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; }
+      .bqx-common b { font-size: 13.5px; }
+      .bqx-known-card { display: flex; align-items: center; gap: 15px; padding: 16px 24px 8px; }
+      .bqx-known-card > div { flex: 1; min-width: 0; }
+      .bqx-known-card b { font-size: 16px; display: block; }
+      .bqx-known-card span { display: block; font-size: 12.5px; color: #77807b; margin-top: 2px; }
+      .bqx-thisvar { display: flex !important; align-items: center; gap: 7px; margin-top: 5px !important; }
+      .bqx-thisvar i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: 0 0 12px; }
+      .bqx-existing { padding: 8px 24px 4px; }
+      .bqx-existing > span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 7px; }
+      .bqx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+      .bqx-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--paper); border: 1px solid rgba(10,15,13,.10); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; }
+      .bqx-chip.on { border-color: var(--atlas); background: rgba(11,110,79,.08); }
+      .bqx-chip i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); }
+      .bqx-chip b { font-family: var(--mono); font-size: 12px; }
+      .bqx-chip em { font-style: normal; color: #8d968f; }
+      .bqx-acts { display: flex; flex-direction: column; gap: 9px; padding: 14px 24px 6px; }
+      .bqx-act { background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 13px; padding: 13px 16px; }
+      .bqx-act-h { display: flex; align-items: center; gap: 8px; }
+      .bqx-act-h svg { width: 16px; height: 16px; color: var(--atlas); }
+      .bqx-act-h b { font-size: 13.5px; }
+      .bqx-act p { margin: 4px 0 10px; font-size: 12px; color: #77807b; line-height: 1.45; }
+      .bqx-qtyrow { display: flex; align-items: center; gap: 7px; }
+      .bqx-qtyrow input { width: 62px; text-align: center; font-family: var(--mono); font-size: 16px; padding: 8px; border: 1px solid rgba(10,15,13,.16); border-radius: 9px; background: var(--surface, #fff); color: var(--ink); }
+      .bqx-qtyrow .bq-btn { margin-left: 4px; }
+      .bqx-pricediff { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 20px 24px; }
+      .bqx-pricediff > div { text-align: center; }
+      .bqx-pricediff span { display: block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; }
+      .bqx-pricediff b { font-family: var(--mono); font-size: 19px; }
+      .bqx-pricediff .next b { color: var(--atlas); }
+      .bqx-pricediff > svg { width: 18px; height: 18px; color: #99a; }
+      /* Le choix du code-barres à la création — trois options, la lentille liquide
+         s'y attache via data-lens-demo / data-lens-item (assets/liquid-lens.js). */
+      .bqx-choice { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+      .bqx-opt { position: relative; z-index: 1; text-align: left; background: var(--paper); border: 1.5px solid rgba(10,15,13,.10); border-radius: 12px; padding: 11px 13px; cursor: pointer; font: inherit; color: var(--ink); display: flex; flex-direction: column; gap: 2px; transition: border-color .15s; }
+      .bqx-opt:hover { border-color: rgba(11,110,79,.45); }
+      .bqx-opt.on { border-color: var(--atlas); background: rgba(11,110,79,.07); }
+      .bqx-opt svg { width: 17px; height: 17px; color: var(--atlas); margin-bottom: 3px; }
+      .bqx-opt b { font-size: 13px; }
+      .bqx-opt span { font-size: 11.5px; color: #77807b; line-height: 1.38; }
+      /* Quand la lentille liquide est attachée (assets/liquid-lens.js ajoute
+         data-kw-lens), c'est ELLE qui porte le fond — dégradé atlas → riad. La
+         pastille passe donc en transparent et son texte en clair, sinon on lit
+         de l'encre sombre sur du vert sombre. Le style .on ci-dessus reste le
+         repli lisible si la lentille n'est pas chargée. */
+      .bqx-choice[data-kw-lens] .bqx-opt.on { background: transparent; border-color: transparent; }
+      .bqx-choice[data-kw-lens] .bqx-opt.on b { color: #fff; }
+      .bqx-choice[data-kw-lens] .bqx-opt.on span { color: rgba(255,255,255,.82); }
+      .bqx-choice[data-kw-lens] .bqx-opt.on svg { color: var(--mint); }
+      .bqx-choice .kw-lens { border-radius: 12px; }
+      @media (max-width: 620px) {
+        .bqx-choice { grid-template-columns: 1fr; }
+        .bqx-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+      }
     `;
     document.head.appendChild(st);
   }
@@ -2627,6 +2774,16 @@
   function installWedgeScanner() {
     if (installWedgeScanner._done) return;
     installWedgeScanner._done = true;
+    /* `started` datait la rafale EN COURS, mais n'était remis à zéro qu'après
+     * 120 ms de silence — jamais après un Entrée. Deux scans séparés de moins de
+     * 120 ms (un lecteur en mode présentation, ou une reprise de stock menée au
+     * rythme) partageaient donc le même `started` : la durée mesurée du second
+     * incluait le premier, `span/n` franchissait le seuil des 55 ms/caractère, et
+     * la douchette cessait silencieusement d'être reconnue — sans erreur, sans
+     * message, les scans suivants disparaissaient. Vu en test : sur une salve
+     * continue, tout passait jusqu'au 97e article puis plus rien.
+     * `started` est désormais posé au PREMIER caractère de chaque rafale (buf
+     * vide), donc chaque scan est chronométré pour lui seul. */
     let buf = '', last = 0, started = 0;
     document.addEventListener('keydown', (e) => {
       if (!document.body.classList.contains('is-pos-boutique')) return;
@@ -2638,7 +2795,7 @@
       const tag = (e.target && e.target.tagName) || '';
       const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
       const now = Date.now();
-      if (now - last > 120) { buf = ''; started = now; }
+      if (now - last > 120) buf = '';        // rafale abandonnée en cours de route
       last = now;
       if (e.key === 'Enter') {
         const code = buf, span = now - started, n = code.length;
@@ -2647,14 +2804,51 @@
            is ~220 WPM, which no one types. Without this a human pressing Enter
            after any 4 quick keys fired a phantom scan. */
         const fast = n >= 4 && (span / n) < 55;
+        /* Pendant une saisie d'inventaire le scan appartient au formulaire, même
+           si le curseur traîne dans un autre champ : sinon les chiffres tombent
+           dans « Nom du produit » et l'employé les découvre à l'enregistrement. */
+        if (fast && scanCapture) { e.preventDefault(); unleak(e.target, code); handleWedge(code); return; }
         if (fast && !typing) { e.preventDefault(); handleWedge(code); }
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!buf) started = now;               // premier caractère de CETTE rafale
       buf += wedgeChar(e);
     }, true);
   }
+  /* ─── à qui appartient le prochain scan ? ────────────────────────────────────
+   * Non-null quand une SAISIE D'INVENTAIRE attend un code (reprise de stock déjà
+   * étiqueté, rattachement, réception). Tant que c'est armé, la douchette n'écrit
+   * QUE dans ce formulaire.
+   *
+   * Sans cela le routage ne regardait que `state.view`, et un scan pendant la
+   * saisie partait quand même sur le ticket : l'employé qui reprend son stock
+   * vendait ses articles un par un sans le voir. La règle du cahier des charges
+   * est explicite — scanner pendant la mise en stock ne doit JAMAIS mettre au
+   * panier, ni vendre, ni bouger le stock avant confirmation, ni imprimer. */
+  let scanCapture = null;
+  function armScanCapture(fn) { scanCapture = fn; }
+  function disarmScanCapture(fn) { if (!fn || scanCapture === fn) scanCapture = null; }
+
+  /* Les caractères d'une rafale sont tapés au fil de l'eau : seul « Entrée » est
+   * interceptable après coup. Si le curseur était dans un autre champ, le code
+   * vient de s'y écrire — on retire ce suffixe, et rien d'autre. La comparaison
+   * porte sur le brut ET sur la version AZERTY mutilée (&é"' au lieu de 1234),
+   * puisque c'est exactement ce que le champ a reçu. */
+  function unleak(target, code) {
+    if (!target || target.value == null || typeof target.value !== 'string') return;
+    const val = target.value;
+    const az = Object.entries(AZ_ROW).reduce((s, [ch, d]) => s.split(d).join(ch), code);
+    for (const tail of [code, az]) {
+      if (tail && val.length >= tail.length && val.slice(-tail.length) === tail) {
+        target.value = val.slice(0, -tail.length);
+        return;
+      }
+    }
+  }
+
   function handleWedge(code) {
+    if (scanCapture) { try { scanCapture(code); } catch (_) {} return; }  /* saisie inventaire */
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
     commitEan(code);                                                    /* vente → ticket */
@@ -2789,8 +2983,22 @@
     const code = normScan(raw);
     const cat = catDB(); if (!cat) return;
     const hit = cat.findByBarcode(code);
-    if (hit) { toast(`${hit.product.name} · ${hit.variant.colorLabel} ${hit.variant.size}`); openInvProduct(hit.product.id); }
-    else { toast(`Code ${code} inconnu, à enregistrer`); offerRegister(code); }
+    if (hit) { toast(`${hit.product.name} · ${hit.variant.colorLabel} ${hit.variant.size}`); openInvProduct(hit.product.id); return; }
+    /* Code inconnu depuis l'inventaire : c'est presque toujours un article que la
+       boutique possède mais que Kiwi ne connaît pas encore. On ouvre la reprise
+       de stock avec ce code, où il peut devenir un nouvel article OU une
+       déclinaison du précédent — l'ancien sélecteur, lui, exigeait de choisir un
+       produit déjà existant et ne savait pas en créer. */
+    toast(`Code ${code} inconnu, à enregistrer`);
+    intakeStartWith(code);
+  }
+
+  /* Entrer dans la reprise avec un code déjà lu (scan depuis l'inventaire). */
+  function intakeStartWith(raw) {
+    if (!catDB()) { toast('Base d\'inventaire indisponible'); return; }
+    if (state.view !== 'inventaire') switchView('inventaire');
+    if (!intake.open) { intake.open = true; intakeReset(); }
+    intakeTake(raw);
   }
 
   /* ─── the inventory panel ─── */
@@ -2809,7 +3017,8 @@
         </header>
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
-          <button class="bq-btn" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>
+          <button class="bq-btn" id="bqi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
+          <button class="bq-btn secondary" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>
         </div>
         <div class="bqi-pills" id="bqi-pills">
           <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
@@ -2823,12 +3032,18 @@
           <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
         </div>
         <div class="bqi-list">
-          ${products.length ? products.map((p) => invRow(p)).join('') : '<div class="bq-empty" style="padding:26px;text-align:center;color:#99a;">Aucun produit. Touchez « Nouvel article » ou scannez un code.</div>'}
+          ${products.length ? products.map((p) => invRow(p)).join('') : `<div class="bq-empty bqi-first">
+              <i data-lucide="scan-barcode"></i>
+              <b>Votre stock porte déjà des codes-barres ?</b>
+              <span>Touchez « Reprendre le stock » et scannez vos articles un par un : Kiwi garde le code du fournisseur tel quel. Aucune étiquette à réimprimer.</span>
+              <em>Pas de code sur l'article ? « Nouvel article » vous en génère un, imprimable.</em>
+            </div>`}
         </div>
       </div>`;
     const scan = $('#bqi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
+    const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -2854,11 +3069,21 @@
   function invSetModal(html, wire) {
     const el = $('#bq-invmm', root);
     if (!el) return;
+    /* Chaque écran repart d'une douchette NON captée : c'est celui qui s'affiche
+     * qui la réclame, dans son wire(). Sans ce reset, l'écran quitté garderait la
+     * main et la douchette écrirait dans un formulaire qui n'existe plus — plus
+     * aucun scan n'atteindrait jamais le ticket. */
+    disarmScanCapture();
     el.innerHTML = html;
     if (!$('#bq-inv-veil', root).classList.contains('is-open')) openVeil('#bq-inv-veil');
-    el.querySelectorAll('[data-inv-x]').forEach((b) => b.addEventListener('click', () => closeVeil('#bq-inv-veil')));
+    el.querySelectorAll('[data-inv-x]').forEach((b) => b.addEventListener('click', () => {
+      closeVeil('#bq-inv-veil');
+      disarmScanCapture();
+      intake.open = false;
+    }));
     if (wire) wire(el);
     icons();
+    lens();
   }
 
   function openInvProduct(pid) {
@@ -2895,6 +3120,7 @@
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
       el.querySelectorAll('[data-vdel]').forEach((b) => b.addEventListener('click', () => { cat2.deleteVariant(b.dataset.vdel); openInvProduct(pid); }));
+      el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
     });
   }
 
@@ -2907,7 +3133,7 @@
       ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     return `<tr>
-      <td><span class="bqi-dot" style="background:${v.colorHex}"></span>${esc(v.colorLabel)} · <b>${esc(v.size)}</b></td>
+      <td><button class="bqi-cbtn" data-vcolor="${v.id}" title="Changer la couleur">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</button>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk"><button data-vdec="${v.id}" aria-label="−1">−</button><input data-vstock="${v.id}" type="number" min="0" value="${v.stock}"/><button data-vinc="${v.id}" aria-label="+1">+</button></span></td>
       <td>${bc}</td>
       <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="bqi-mini danger" data-vdel="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button></td>
@@ -2938,23 +3164,128 @@
           <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqi-n-price" type="number" min="0" placeholder="1890" /></div>
           <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqi-n-cost" type="number" min="0" placeholder="optionnel" /></div>
         </div>
+
+        <!-- Le choix qui évite d'imprimer des milliers d'étiquettes pour rien :
+             l'article porte peut-être déjà un code du fournisseur. -->
+        <div class="bqi-fg"><label>Code-barres de cet article</label>
+          <div class="bqx-choice" id="bqi-n-bcpick" role="radiogroup" aria-label="Code-barres de cet article" data-lens-demo>
+            <button type="button" class="bqx-opt on" data-bc="existing" data-lens-item role="radio" aria-checked="true">
+              <i data-lucide="scan-line"></i><b>Il en a déjà un</b><span>Code fournisseur ou fabricant — conservé tel quel</span>
+            </button>
+            <button type="button" class="bqx-opt" data-bc="gen" data-lens-item role="radio" aria-checked="false">
+              <i data-lucide="sparkles"></i><b>Générer un code Kiwi</b><span>EAN-13 imprimable, pour un article non étiqueté</span>
+            </button>
+            <button type="button" class="bqx-opt" data-bc="later" data-lens-item role="radio" aria-checked="false">
+              <i data-lucide="clock"></i><b>Plus tard</b><span>Créer l'article maintenant, le code après</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="bqi-n-bcwrap">
+          <div class="bqi-fg"><label>Scannez ou tapez le code existant</label>
+            <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="bqi-n-code" placeholder="Scannez l'étiquette de l'article…" autocomplete="off" spellcheck="false" /></div>
+            <div class="bqi-help" id="bqi-n-codehint">La douchette écrit ici directement. Rien n'est mis au ticket, rien n'est vendu.</div>
+          </div>
+        </div>
+
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Couleur</label><div id="bqi-n-sw">${colorPicker('noir')}</div></div>
+        </div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Taille</label><input id="bqi-n-size" list="bqi-n-sizes" placeholder="M" autocomplete="off" /><datalist id="bqi-n-sizes"></datalist></div>
+          <div class="bqi-fg"><label>Stock initial</label><input id="bqi-n-stock" type="number" min="0" step="1" inputmode="numeric" value="0" /></div>
+        </div>
         <div class="bqi-fg"><label>Icône du produit</label>${iconPickerHtml('tshirt')}</div>
       </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>Annuler</button><button class="bq-btn" id="bqi-n-save">Créer et ajouter des variantes</button></div>`;
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-x>Annuler</button><button class="bq-btn" id="bqi-n-save">Créer l'article</button></div>`;
     invSetModal(html, (el) => {
+      const cat = catDB();
       let icon = 'tshirt';
+      let mode = 'existing';
       wireIconPicker(el, (k) => { icon = k; });
-      $('#bqi-n-save', el).addEventListener('click', () => {
-        const cat = catDB();
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqi-n-sw', el))) || 'noir'; };
+      const kindSel = $('#bqi-n-kind', el), sizeList = $('#bqi-n-sizes', el);
+      const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
+      kindSel.onchange = fillSizes; fillSizes();
+
+      const wrap = $('#bqi-n-bcwrap', el), codeIn = $('#bqi-n-code', el), codeHint = $('#bqi-n-codehint', el);
+      const setMode = (m) => {
+        mode = m;
+        el.querySelectorAll('#bqi-n-bcpick .bqx-opt').forEach((b) => {
+          const on = b.dataset.bc === m;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        wrap.style.display = m === 'existing' ? '' : 'none';
+        if (m === 'existing') setTimeout(() => codeIn.focus(), 20);
+        lens();
+      };
+      el.querySelectorAll('#bqi-n-bcpick .bqx-opt').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.bc)));
+
+      /* Le code scanné remplit le champ, et RIEN d'autre ne se produit. */
+      const judgeInto = (raw) => {
+        const j = intakeJudge(raw);
+        if (j.kind === 'invalide') { codeHint.textContent = INVALID_MSG[j.reason] || 'Code illisible.'; codeHint.className = 'bqi-help is-bad'; return j; }
+        if (j.kind === 'connu') {
+          codeHint.innerHTML = `Ce code est déjà porté par <b>${esc(j.hit.product.name)} · ${esc(j.hit.variant.colorLabel)} ${esc(j.hit.variant.size)}</b>. Un code ne peut désigner qu'un seul article.`;
+          codeHint.className = 'bqi-help is-bad'; return j;
+        }
+        const KB = window.KiwiBarcode;
+        codeHint.textContent = `Code lu · ${KB && KB.symLabel ? KB.symLabel(j.sym) : ''}${j.check === 'bad' ? ' — clé de contrôle inhabituelle, accepté tel quel' : ''}. Conservé sans réimpression.`;
+        codeHint.className = 'bqi-help is-good';
+        return j;
+      };
+      armScanCapture((c) => { codeIn.value = normScan(c); judgeInto(c); });
+      /* Même verdict à la douchette et au clavier — « input » et pas seulement
+         « change », sinon la saisie manuelle reste muette jusqu'à la validation. */
+      const liveJudge = () => { if (codeIn.value.trim()) judgeInto(codeIn.value); };
+      codeIn.addEventListener('input', liveJudge);
+      codeIn.addEventListener('change', liveJudge);
+
+      const save = () => {
         const name = $('#bqi-n-name', el).value.trim();
-        if (!name) { toast('Nom requis'); return; }
+        if (!name) { toast('Nom requis'); $('#bqi-n-name', el).focus(); return; }
+        const raw = codeIn.value.trim();
+        if (mode === 'existing') {
+          if (!raw) { toast('Scannez le code existant, ou choisissez « Générer » / « Plus tard »'); codeIn.focus(); return; }
+          const j = judgeInto(raw);
+          if (j.kind !== 'nouveau') {
+            toast(j.kind === 'connu' ? `Code déjà utilisé par ${j.hit.product.name}` : (INVALID_MSG[j.reason] || 'Code illisible'));
+            return;
+          }
+        }
         let catId = $('#bqi-n-cat', el).value || null;
         const newCat = $('#bqi-n-newcat', el).value.trim();
         if (newCat) catId = cat.addCategory(newCat).id;
-        const p = cat.addProduct({ name, categoryId: catId, kind: $('#bqi-n-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
-        toast(`${name} créé, ajoutez ses variantes`);
+        const size = $('#bqi-n-size', el).value.trim() || 'TU';
+        const stock = Math.max(0, parseInt($('#bqi-n-stock', el).value, 10) || 0);
+        let p = null, ev = null, res = null, genCode = null;
+        cat.batch(() => {
+          p = cat.addProduct({ name, categoryId: catId, kind: kindSel.value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
+          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock });
+          if (mode === 'existing' && ev.variant) {
+            res = cat.attachBarcode(ev.variant.id, raw);
+            if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
+          } else if (mode === 'gen' && ev.variant) {
+            genCode = cat.generateBarcode(ev.variant.id);
+          }
+        });
+        if (mode === 'existing') {
+          if (!res || !res.ok) {
+            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé');
+            return;
+          }
+          toast(`${name} créé · code ${raw} conservé, aucune étiquette imprimée`);
+        } else if (mode === 'gen') {
+          toast(genCode ? `${name} créé · EAN-13 ${genCode} généré` : `${name} créé`);
+        } else {
+          toast(`${name} créé · code à ajouter plus tard`);
+        }
+        disarmScanCapture();
         openInvProduct(p.id);
-      });
+      };
+      $('#bqi-n-save', el).addEventListener('click', save);
+      setMode('existing');
       setTimeout(() => { const i = $('#bqi-n-name', el); if (i) i.focus(); }, 40);
     });
   }
@@ -3001,9 +3332,44 @@
     });
   }
 
-  /* ─── add variant (colour × size × stock + optional EAN-13) ─── */
-  function colorSwatches(id) {
-    return catDB().colors().map((c, i) => `<button type="button" class="bqi-sw ${i === 0 ? 'on' : ''}" style="background:${c.hex}" title="${esc(c.label)}" data-cid="${c.id}"></button>`).join('');
+  /* ─── add variant (colour × size × stock + optional EAN-13) ───
+     Le sélecteur est celui du tableau de bord, en taille tactile : mêmes
+     pastilles, même état sélectionné, même comportement clavier. */
+  function colorPicker(sel) {
+    const k = KC();
+    if (!k) return '';
+    return k.picker('variant-color', sel || 'noir', {
+      size: 'lg', optional: true, label: 'Couleur',
+      hint: 'Touchez une pastille pour lire son nom',
+    });
+  }
+
+  /* Changer la couleur d'une variante existante. La variante garde son stock,
+     ses codes-barres et son identité : seule la famille affichée change. */
+  function openVariantColor(vid, pid) {
+    const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
+    const v = d.variants.find((x) => x.id === vid); if (!v) return;
+    const html = `
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="bqi-modh"><div><h3>Couleur de la variante</h3><span>${esc(d.product.name)} · taille ${esc(v.size)}${v.colorSource ? ` · saisie à l'origine « ${esc(v.colorSource)} »` : ''}</span></div></div>
+      <div class="bqi-form">
+        <div class="bqi-fg"><label>Couleur</label>${colorPicker(v.colorFamily || v.colorId)}</div>
+        <div class="bqi-fg"><label>Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif — pour distinguer deux variantes de même couleur" /></div>
+      </div>
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-vc-save">Enregistrer</button></div>`;
+    invSetModal(html, (el) => {
+      $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
+      $('#bqi-vc-save', el).addEventListener('click', () => {
+        const k = KC();
+        const colorId = k ? k.value(el) : '';
+        cat.updateVariant(vid, {
+          colorId: colorId || undefined,
+          note: $('#bqi-vc-note', el).value.trim(),
+        });
+        toast('Couleur mise à jour');
+        openInvProduct(pid);
+      });
+    });
   }
   function openAddVariant(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
@@ -3012,7 +3378,7 @@
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Ajouter une variante</h3><span>${esc(d.product.name)}, couleur × taille</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqi-av-sw">${colorSwatches()}</div></div>
+        <div class="bqi-fg"><label>Couleur</label><div id="bqi-av-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqi-av-size" list="bqi-av-sizes" value="${esc(presets[0] || 'TU')}" /><datalist id="bqi-av-sizes">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
           <div class="bqi-fg"><label>Stock initial</label><input id="bqi-av-stock" type="number" min="0" value="0" /></div>
@@ -3021,10 +3387,10 @@
       </div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-av-save">Ajouter la variante</button></div>`;
     invSetModal(html, (el) => {
-      let colorId = cat.colors()[0].id;
-      el.querySelectorAll('#bqi-av-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => { el.querySelectorAll('#bqi-av-sw .bqi-sw').forEach((x) => x.classList.remove('on')); b.classList.add('on'); colorId = b.dataset.cid; }));
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-av-save', el).addEventListener('click', () => {
+        const k = KC();
+        const colorId = (k && k.value($('#bqi-av-sw', el))) || 'noir';
         const size = $('#bqi-av-size', el).value.trim() || 'TU';
         const stock = parseInt($('#bqi-av-stock', el).value, 10) || 0;
         const v = cat.addVariant({ productId: pid, colorId, size, stock });
@@ -3066,7 +3432,13 @@
     const cat = catDB(); if (!cat) return;
     if (state.view !== 'inventaire') switchView('inventaire');
     const products = cat.listProducts({});
-    const varOptions = (pid) => cat.listVariants(pid).map((v) => `<option value="${v.id}">${esc(v.colorLabel)} · ${esc(v.size)}</option>`).join('');
+    // Une liste déroulante ne peut pas montrer de pastille : c'est le seul
+    // endroit où la couleur reste écrite. Quand deux variantes portent la même
+    // famille, la nuance d'origine ou la précision les départage.
+    const varOptions = (pid) => cat.listVariants(pid).map((v) => {
+      const extra = v.note || v.colorSource || '';
+      return `<option value="${v.id}">${esc(v.colorLabel)}${extra ? ` (${esc(extra)})` : ''} · ${esc(v.size)}</option>`;
+    }).join('');
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Code existant à enregistrer</h3><span>Code scanné : <b>${esc(code)}</b>, rattachez-le à un article (sans réimprimer).</span></div></div>
@@ -3090,12 +3462,632 @@
     });
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+   * REPRISE DE STOCK — onboarder une boutique déjà étiquetée
+   * ---------------------------------------------------------------------------
+   * Le cas que ceci résout : un commerçant a des milliers d'articles qui portent
+   * DÉJÀ un code-barres fournisseur ou fabricant. Lui faire générer et imprimer
+   * une étiquette Kiwi par pièce, c'est des jours de travail et des milliers
+   * d'étiquettes pour rien. Le code du carton est un identifiant parfaitement
+   * valable : on le lit, on le garde tel quel, on ne réimprime rien.
+   *
+   * Trois gestes vivent ici, et l'écran ne les confond JAMAIS (c'est la règle
+   * la plus importante de cet écran, parce qu'à la douchette ils se ressemblent) :
+   *   · CRÉER un article au catalogue           — le code est inconnu
+   *   · AJOUTER une déclinaison à un article    — même modèle, autre taille/couleur
+   *   · RECEVOIR du stock                       — l'article existe déjà, il en arrive
+   *
+   * Ce que scanner ici ne fait jamais : mettre au panier, encaisser, bouger le
+   * stock avant confirmation, imprimer une étiquette, écraser un article existant.
+   * Garanti par armScanCapture() (voir handleWedge) plus le mode `pending` : rien
+   * n'est écrit avant que l'employé n'ait touché « Enregistrer ».
+   * ─────────────────────────────────────────────────────────────────────────── */
+
+  /* Session de reprise : vit le temps de l'écran, sert le compteur et le journal.
+   * `log` est borné — une session d'import peut faire des milliers d'articles et
+   * la caisse doit rester aussi vive au 2000e scan qu'au premier. */
+  const intake = { open: false, count: 0, pieces: 0, log: [], mode: 'scan', draft: null, lastProduct: null, hint: null };
+  const INTAKE_LOG_MAX = 8;
+
+  function intakeReset() {
+    intake.count = 0; intake.pieces = 0; intake.log = []; intake.mode = 'scan';
+    intake.draft = null; intake.lastProduct = null; intake.hint = null;
+  }
+  function intakeNote(kind, text) {
+    intake.log.unshift({ kind, text, at: new Date() });
+    if (intake.log.length > INTAKE_LOG_MAX) intake.log.length = INTAKE_LOG_MAX;
+  }
+
+  /* ─── le juge : que faire de ce code ? ───────────────────────────────────────
+   * Un seul endroit décide, pour que le scan répété, la saisie manuelle et la
+   * caméra donnent exactement le même verdict. */
+  function intakeJudge(raw) {
+    const code = normScan(raw);
+    const KB = window.KiwiBarcode;
+    const val = KB && KB.validate ? KB.validate(code) : { ok: !!code, code, sym: '', check: 'na' };
+    if (!val.ok) return { kind: 'invalide', code, reason: val.reason };
+    const cat = catDB();
+    const hit = cat ? cat.findByBarcode(val.code) : null;
+    if (hit) return { kind: 'connu', code: val.code, sym: val.sym, check: val.check, hit };
+    return { kind: 'nouveau', code: val.code, sym: val.sym, check: val.check };
+  }
+
+  const INVALID_MSG = {
+    vide: 'Rien n\'a été lu. Rapprochez la douchette de l\'étiquette, ou tapez le code.',
+    illisible: 'Lecture incomplète — la douchette a envoyé des caractères parasites. Rescannez, ou tapez le code à la main.',
+    'trop-court': 'Lecture partielle : trop peu de caractères pour être un code-barres. Rescannez plus lentement, ou tapez-le.',
+    'trop-long': 'Ce code est anormalement long. Vérifiez qu\'un seul article est passé devant la douchette.',
+  };
+
+  function symBadge(j) {
+    if (!j || !j.sym) return '';
+    const KB = window.KiwiBarcode;
+    const label = KB && KB.symLabel ? KB.symLabel(j.sym) : j.sym;
+    if (j.check === 'bad') return `<span class="bqx-sym warn" title="La clé de contrôle ne correspond pas. C'est fréquent sur un code interne — Kiwi l'accepte tel quel.">${esc(label)} · clé inhabituelle</span>`;
+    return `<span class="bqx-sym">${esc(label)}${j.check === 'ok' ? ' ✓' : ''}</span>`;
+  }
+
+  /* ─── l'écran ─── */
+  function openIntake() {
+    if (!catDB()) { toast('Base d\'inventaire indisponible'); return; }
+    if (state.view !== 'inventaire') switchView('inventaire');
+    intake.open = true;
+    intakeReset();
+    paintIntake();
+  }
+
+  function intakeClose() {
+    intake.open = false;
+    disarmScanCapture();
+    closeVeil('#bq-inv-veil');
+    /* La projection de vente a été mise en pause pendant la saisie : on la
+       reconstruit maintenant, avant que quiconque scanne pour vendre. */
+    rebuildCatalog();
+    pruneTicket();
+    renderInventaire();
+    if (intake.count) toast(`Reprise terminée · ${intake.count} article${intake.count > 1 ? 's' : ''}, ${intake.pieces} pièce${intake.pieces > 1 ? 's' : ''}`);
+  }
+
+  function intakeHeader() {
+    return `
+      <div class="bqx-head">
+        <div class="bqx-head-t">
+          <h3>Reprise de stock</h3>
+          <span>Scannez le code déjà présent sur l'article. Kiwi le garde tel quel — aucune étiquette à réimprimer.</span>
+        </div>
+        <div class="bqx-tally" aria-live="polite">
+          <b>${intake.count}</b><span>article${intake.count > 1 ? 's' : ''}</span>
+          <i></i>
+          <b>${intake.pieces}</b><span>pièce${intake.pieces > 1 ? 's' : ''}</span>
+        </div>
+      </div>`;
+  }
+
+  function intakeLogHtml() {
+    if (!intake.log.length) {
+      return `<div class="bqx-log-empty">Rien encore. La douchette écrit directement dans le champ ci-dessus — pas besoin de cliquer.</div>`;
+    }
+    return `<div class="bqx-log">${intake.log.map((l) => `
+      <div class="bqx-log-row is-${l.kind}">
+        <i data-lucide="${l.kind === 'cree' ? 'plus-circle' : l.kind === 'variante' ? 'git-branch' : l.kind === 'recu' ? 'package-plus' : 'alert-circle'}"></i>
+        <span>${esc(l.text)}</span>
+        <em>${fmtHM(l.at)}</em>
+      </div>`).join('')}</div>`;
+  }
+
+  /* ═══ état 1 · en attente d'un scan ═══ */
+  function paintIntake() {
+    if (!intake.open) return;
+    intake.mode = 'scan';
+    const canCam = camSupported();
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-body">
+        <div class="bqx-scanbox" id="bqx-box">
+          <i data-lucide="scan-line"></i>
+          <input id="bqx-code" placeholder="Scannez un article…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button class="bqx-mini" id="bqx-go" title="Valider le code saisi"><i data-lucide="arrow-right"></i></button>
+        </div>
+        <div class="bqx-hint${intake.hint ? ' is-' + intake.hint.tone : ''}" id="bqx-hint">${esc(intake.hint ? intake.hint.msg : 'Douchette prête. Pas de douchette ? Tapez le code puis Entrée.')}</div>
+        <div class="bqx-alt">
+          ${canCam ? `<button class="bq-btn secondary" id="bqx-cam"><i data-lucide="camera"></i>Scanner avec la caméra</button>` : ''}
+          <button class="bq-btn secondary" id="bqx-diag"><i data-lucide="activity"></i>La douchette ne répond pas ?</button>
+        </div>
+        ${intakeLogHtml()}
+      </div>
+      <div class="bqi-modfoot">
+        <button class="bq-btn secondary" id="bqx-done">Terminer la reprise</button>
+      </div>`, (el) => {
+      const inp = $('#bqx-code', el);
+      const submit = () => {
+        const v = inp.value; inp.value = '';
+        if (!String(v).trim()) { intakeHint('Tapez ou scannez un code.', 'warn', el); return; }
+        intakeTake(v, { manual: true });
+      };
+      inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+      $('#bqx-go', el).onclick = submit;
+      $('#bqx-done', el).onclick = intakeClose;
+      const cam = $('#bqx-cam', el);
+      if (cam) cam.onclick = () => openCamScan((c) => intakeTake(c));
+      $('#bqx-diag', el).onclick = () => { disarmScanCapture(); openScannerTest(); };
+      /* Le scan appartient à cet écran, et à rien d'autre. */
+      armScanCapture((code) => intakeTake(code));
+      intakeFocus(el);
+    });
+  }
+
+  /* La douchette tape dans le champ : il doit avoir le curseur, tout le temps, y
+     compris après un enregistrement — c'est ce qui permet d'enchaîner sans souris. */
+  function intakeFocus(el) {
+    setTimeout(() => { const i = $('#bqx-code', el || root); if (i) { i.focus(); i.select(); } }, 30);
+  }
+  /* Le message est MÉMORISÉ avant d'être écrit : paintIntake() reconstruit tout
+     l'écran, et un texte posé juste avant le repaint disparaissait aussitôt —
+     l'employé voyait « Douchette prête » alors que son scan venait d'être refusé. */
+  function intakeHint(msg, tone, el) {
+    intake.hint = msg ? { msg, tone: tone || '' } : null;
+    const h = $('#bqx-hint', el || root);
+    if (!h) return;
+    h.textContent = msg;
+    h.className = 'bqx-hint' + (tone ? ' is-' + tone : '');
+  }
+
+  /* ═══ le geste central : un code arrive ═══ */
+  function intakeTake(raw, opts) {
+    opts = opts || {};
+    const j = intakeJudge(raw);
+    if (j.kind === 'invalide') {
+      intakeNote('erreur', `Lecture refusée · ${INVALID_MSG[j.reason] ? j.reason : 'illisible'}`);
+      intakeHint(INVALID_MSG[j.reason] || 'Code illisible, rescannez.', 'bad');
+      toast('Scan incomplet, rien n\'a été enregistré');
+      paintIntake();
+      return;
+    }
+    intake.hint = null;   // un code lisible efface l'avertissement du scan précédent
+    if (j.kind === 'connu') { intakeKnown(j); return; }
+    intakeNew(j, opts);
+  }
+
+  /* ═══ état 2 · code INCONNU → créer l'article (ou l'ajouter au précédent) ═══ */
+  function intakeNew(j, opts) {
+    intake.mode = 'nouveau';
+    const cat = catDB();
+    const cats = cat.listCategories();
+    const prev = intake.lastProduct ? cat.getProduct(intake.lastProduct) : null;
+    const manual = !!(opts && opts.manual);
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-new">
+        <i data-lucide="badge-check"></i>
+        <div>
+          <b>Code lu${manual ? ' (saisi à la main)' : ''} · nouveau</b>
+          <span class="bqx-codeline">${esc(j.code)} ${symBadge(j)}</span>
+        </div>
+      </div>
+      ${prev ? `
+      <div class="bqx-chain">
+        <div>
+          <b>Même modèle que « ${esc(prev.product.name)} » ?</b>
+          <span>Une autre taille ou couleur du même article : le nom, la catégorie et les prix sont repris, vous ne changez que la déclinaison.</span>
+        </div>
+        <button class="bq-btn" id="bqx-chain">Ajouter une déclinaison</button>
+      </div>` : ''}
+      <div class="bqi-form bqx-form">
+        <div class="bqi-fg"><label>Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Catégorie</label><select id="bqx-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : (prev ? prev.product.categoryId : ''))}</select></div>
+          <div class="bqi-fg"><label>Type de taille</label><select id="bqx-kind">${kindSelectOptions(prev ? prev.product.kind : 'taille')}</select></div>
+        </div>
+        <div class="bqi-fg"><label>Ou nouvelle catégorie</label><input id="bqx-newcat" placeholder="Laisser vide pour garder celle ci-dessus" autocomplete="off" /></div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqx-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="349" /></div>
+          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optionnel" /></div>
+        </div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
+        </div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes" placeholder="M" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
+          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+        </div>
+        <div class="bqi-fg"><label>Autre précision (optionnel)</label><input id="bqx-flag" placeholder="Ex. coupe droite, lot été" autocomplete="off" /></div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-skip">Ignorer ce code</button>
+        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
+      </div>`, (el) => {
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
+      const kindSel = $('#bqx-kind', el), sizeList = $('#bqx-sizes', el);
+      const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
+      kindSel.onchange = fillSizes; fillSizes();
+
+      if (prev) $('#bqx-chain', el).onclick = () => intakeVariant(j, intake.lastProduct);
+      $('#bqx-skip', el).onclick = () => { intakeNote('erreur', `Code ${j.code} ignoré`); paintIntake(); };
+
+      const save = () => {
+        const name = $('#bqx-name', el).value.trim();
+        if (!name) { toast('Le nom du produit est requis'); $('#bqx-name', el).focus(); return; }
+        const size = $('#bqx-size', el).value.trim() || 'TU';
+        const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
+        let catId = $('#bqx-cat', el).value || null;
+        const newCat = $('#bqx-newcat', el).value.trim();
+        if (newCat) catId = cat.addCategory(newCat).id;
+        /* Créer le produit, sa déclinaison et rattacher le code, c'est UN geste :
+           une seule écriture du catalogue au lieu de trois (voir batch()). */
+        let p = null, ev = null, res = null;
+        cat.batch(() => {
+          p = cat.addProduct({
+            name, categoryId: catId, kind: kindSel.value,
+            priceMAD: bqMoney($('#bqx-price', el).value), cost: bqMoney($('#bqx-cost', el).value),
+            art: prev ? prev.product.art : 'tshirt', flag: $('#bqx-flag', el).value.trim(),
+          });
+          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock: qty });
+          res = cat.attachBarcode(ev.variant.id, j.code);
+          if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
+        });
+        if (!res.ok) {
+          /* Course rarissime : le code a été pris entre le scan et l'enregistrement
+             (l'autre caisse, ou l'autre appareil). L'article vient d'être défait
+             dans le batch ci-dessus, rien d'orphelin ne reste. */
+          toast(res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé');
+          paintIntake();
+          return;
+        }
+        intake.count++; intake.pieces += qty;
+        intake.lastProduct = p.id;
+        intakeNote('cree', `${name} · ${size} — ${qty} pièce${qty > 1 ? 's' : ''}, code conservé`);
+        toast(`${name} enregistré · code ${j.code} conservé`);
+        intakeHint(`${name} · ${size} enregistré. Scannez l'article suivant.`, 'good');
+        paintIntake();
+      };
+      $('#bqx-save', el).onclick = save;
+      /* Entrée depuis n'importe quel champ enregistre : la reprise se fait au
+         clavier, la souris ne devrait jamais être nécessaire. */
+      el.querySelectorAll('.bqx-form input').forEach((i) => {
+        i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+      });
+      setTimeout(() => { const n = $('#bqx-name', el); if (n) n.focus(); }, 40);
+    });
+  }
+
+  /* ═══ état 3 · enchaîner une déclinaison du MÊME produit ═══
+     Le cas « Jean Noir » du cahier des charges : noir/S = code A, noir/M = code B,
+     bleu/M = code C. On ne recrée pas le produit, on ne retape pas le prix. */
+  function intakeVariant(j, pid) {
+    intake.mode = 'variante';
+    const cat = catDB();
+    const d = cat.getProduct(pid);
+    if (!d) { intakeNew(j, {}); return; }
+    const presets = cat.sizePresets(d.product.kind);
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-new">
+        <i data-lucide="git-branch"></i>
+        <div>
+          <b>Nouvelle déclinaison · ${esc(d.product.name)}</b>
+          <span class="bqx-codeline">${esc(j.code)} ${symBadge(j)}</span>
+        </div>
+      </div>
+      <div class="bqx-common">
+        <span>Repris du produit</span>
+        <b>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
+      </div>
+      <div class="bqi-form bqx-form">
+        <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes2" value="" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes2">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
+          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+        </div>
+      </div>
+      <div class="bqx-existing">
+        <span>Déjà au catalogue</span>
+        <div class="bqx-chips">${d.variants.map((v) => `<span class="bqx-chip"><i style="background:${v.colorHex}"></i>${esc(v.colorLabel)} · ${esc(v.size)} <b>${v.stock}</b></span>`).join('') || '<em>aucune déclinaison</em>'}</div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-back">Créer un autre produit</button>
+        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
+      </div>`, (el) => {
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
+      $('#bqx-back', el).onclick = () => intakeNew(j, {});
+      const save = () => {
+        const size = $('#bqx-size', el).value.trim() || presets[0] || 'TU';
+        const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
+        let ev = null, res = null;
+        cat.batch(() => {
+          ev = cat.ensureVariant({ productId: pid, colorId: pickedColor(), size, stock: 0 });
+          if (!ev.variant) return;
+          res = cat.attachBarcode(ev.variant.id, j.code);
+          if (!res.ok) { if (ev.created) cat.deleteVariant(ev.variant.id); return; }
+          /* Une déclinaison qui existait déjà REÇOIT du stock — elle n'est pas
+             remise à la quantité du carton. */
+          if (qty > 0) cat.receiveStock(ev.variant.id, qty);
+        });
+        if (!ev || !ev.variant) { toast('Déclinaison impossible'); return; }
+        const existed = !ev.created;
+        if (!res || !res.ok) {
+          if (res && res.reason === 'doublon') toast(`Ce code est déjà sur ${res.owner.product.name} · ${res.owner.variant.colorLabel} ${res.owner.variant.size}`);
+          else toast('Code refusé');
+          return;
+        }
+        intake.count++; intake.pieces += qty;
+        intake.lastProduct = pid;
+        intakeNote('variante', `${d.product.name} · ${size} — ${existed ? 'code ajouté' : 'déclinaison créée'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
+        toast(`${d.product.name} · ${size} enregistré`);
+        intakeHint(`${d.product.name} · ${size} enregistré. Scannez l'article suivant.`, 'good');
+        paintIntake();
+      };
+      $('#bqx-save', el).onclick = save;
+      el.querySelectorAll('.bqx-form input').forEach((i) => {
+        i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+      });
+      setTimeout(() => { const s = $('#bqx-size', el); if (s) s.focus(); }, 40);
+    });
+  }
+
+  /* ═══ état 4 · code DÉJÀ CONNU ═══
+     Jamais de doublon silencieux. On montre ce que la boutique a déjà, et on
+     propose les seules suites qui aient un sens : recevoir, compléter, corriger. */
+  function intakeKnown(j) {
+    intake.mode = 'connu';
+    const cat = catDB();
+    const pid = j.hit.product.id;
+    const d = cat.getProduct(pid);
+    const v = j.hit.variant;
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-known">
+        <i data-lucide="package-check"></i>
+        <div>
+          <b>Article déjà au catalogue</b>
+          <span class="bqx-codeline">${esc(j.code)} ${symBadge(j)}</span>
+        </div>
+      </div>
+      <div class="bqx-known-card">
+        <span class="bqi-art">${artOf(d.product.art)}</span>
+        <div>
+          <b>${esc(d.product.name)}</b>
+          <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock au total</span>
+          <span class="bqx-thisvar"><i style="background:${v.colorHex}"></i>Ce code désigne <b>${esc(v.colorLabel)} · ${esc(v.size)}</b> — ${v.stock} en stock</span>
+        </div>
+      </div>
+      <div class="bqx-existing">
+        <span>Toutes ses déclinaisons</span>
+        <div class="bqx-chips">${d.variants.map((x) => `<span class="bqx-chip${x.id === v.id ? ' on' : ''}"><i style="background:${x.colorHex}"></i>${esc(x.colorLabel)} · ${esc(x.size)} <b>${x.stock}</b></span>`).join('')}</div>
+      </div>
+      <div class="bqx-acts">
+        <div class="bqx-act">
+          <div class="bqx-act-h"><i data-lucide="package-plus"></i><b>Recevoir du stock</b></div>
+          <p>Plusieurs pièces du même article : indiquez la quantité, sans scanner chaque pièce.</p>
+          <div class="bqx-qtyrow">
+            <button class="bqi-mini" id="bqx-qminus" aria-label="Moins">−</button>
+            <input id="bqx-rqty" type="number" min="1" step="1" inputmode="numeric" value="1" />
+            <button class="bqi-mini" id="bqx-qplus" aria-label="Plus">+</button>
+            <button class="bq-btn" id="bqx-receive">Ajouter au stock</button>
+          </div>
+        </div>
+        <div class="bqx-act">
+          <div class="bqx-act-h"><i data-lucide="git-branch"></i><b>Une taille ou couleur manque</b></div>
+          <p>Le fournisseur donne un code par déclinaison : ajoutez-la sans recréer le produit.</p>
+          <button class="bq-btn secondary" id="bqx-addvar">Ajouter une déclinaison</button>
+        </div>
+        <div class="bqx-act">
+          <div class="bqx-act-h"><i data-lucide="pencil"></i><b>La fiche est fausse</b></div>
+          <p>Nom, prix ou catégorie saisis de travers : corrigez l'article existant.</p>
+          <button class="bq-btn secondary" id="bqx-fix">Corriger la fiche</button>
+        </div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-next">Passer au suivant</button>
+      </div>`, (el) => {
+      const qty = $('#bqx-rqty', el);
+      const nudge = (dz) => { qty.value = Math.max(1, (parseInt(qty.value, 10) || 1) + dz); };
+      $('#bqx-qminus', el).onclick = () => nudge(-1);
+      $('#bqx-qplus', el).onclick = () => nudge(1);
+      const receive = () => {
+        const n = parseInt(qty.value, 10) || 0;
+        const res = cat.receiveStock(v.id, n);
+        if (!res.ok) { toast(res.reason === 'quantite' ? 'Indiquez une quantité d\'au moins 1' : 'Réception impossible'); return; }
+        intake.pieces += res.added;
+        intakeNote('recu', `${d.product.name} · ${v.size} — ${res.added} reçue${res.added > 1 ? 's' : ''} (${res.before} → ${res.stock})`);
+        toast(`${d.product.name} · ${v.size} : ${res.before} → ${res.stock}`);
+        intakeHint(`${res.added} pièce${res.added > 1 ? 's' : ''} ajoutée${res.added > 1 ? 's' : ''} · ${d.product.name} ${v.size} passe à ${res.stock}. Scannez le suivant.`, 'good');
+        paintIntake();
+      };
+      $('#bqx-receive', el).onclick = receive;
+      qty.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); receive(); } };
+      $('#bqx-addvar', el).onclick = () => intakeAddVariantHere(pid);
+      $('#bqx-fix', el).onclick = () => intakeFix(pid);
+      $('#bqx-next', el).onclick = () => { intake.lastProduct = pid; paintIntake(); };
+      setTimeout(() => { if (qty) { qty.focus(); qty.select(); } }, 40);
+    });
+  }
+
+  /* Ajouter une déclinaison MANQUANTE à un article connu, avec son propre code
+     fournisseur — on redemande le code puisque celui qu'on vient de scanner
+     appartient déjà à une autre déclinaison. */
+  function intakeAddVariantHere(pid) {
+    const cat = catDB();
+    const d = cat.getProduct(pid); if (!d) return;
+    const presets = cat.sizePresets(d.product.kind);
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-new"><i data-lucide="git-branch"></i>
+        <div><b>Déclinaison manquante · ${esc(d.product.name)}</b><span>Scannez le code de CETTE taille/couleur, ou laissez vide pour l'ajouter sans code.</span></div>
+      </div>
+      <div class="bqi-form bqx-form">
+        <div class="bqi-fg"><label>Code-barres de la déclinaison</label>
+          <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="bqx-vcode" placeholder="Scannez ou tapez…" autocomplete="off" spellcheck="false" /></div>
+          <div class="bqi-help" id="bqx-vhint">Chaque déclinaison peut porter son propre code fournisseur.</div>
+        </div>
+        <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes3" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes3">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
+          <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
+        </div>
+      </div>
+      <div class="bqx-existing">
+        <span>Déjà au catalogue</span>
+        <div class="bqx-chips">${d.variants.map((x) => `<span class="bqx-chip"><i style="background:${x.colorHex}"></i>${esc(x.colorLabel)} · ${esc(x.size)} <b>${x.stock}</b></span>`).join('')}</div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-back">Retour</button>
+        <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Ajouter la déclinaison</button>
+      </div>`, (el) => {
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
+      const codeIn = $('#bqx-vcode', el);
+      /* Le verdict s'affiche sous le champ, et il est le MÊME que le code arrive
+         de la douchette ou des doigts : sans le second câblage, un employé qui
+         tape un code déjà pris ne l'apprenait qu'au moment d'enregistrer. */
+      const judgeV = (raw) => {
+        const jj = intakeJudge(raw);
+        const hint = $('#bqx-vhint', el);
+        if (!hint) return jj;
+        if (jj.kind === 'invalide') { hint.textContent = INVALID_MSG[jj.reason] || 'Code illisible.'; hint.className = 'bqi-help is-bad'; }
+        else if (jj.kind === 'connu') { hint.textContent = `Déjà utilisé par ${jj.hit.product.name} · ${jj.hit.variant.colorLabel} ${jj.hit.variant.size}. Un code ne peut désigner qu'un seul article.`; hint.className = 'bqi-help is-bad'; }
+        else { hint.textContent = `Code lu · ${(window.KiwiBarcode && window.KiwiBarcode.symLabel) ? window.KiwiBarcode.symLabel(jj.sym) : ''}${jj.check === 'bad' ? ' (clé de contrôle inhabituelle, accepté tel quel)' : ''}`; hint.className = 'bqi-help is-good'; }
+        return jj;
+      };
+      armScanCapture((c) => { codeIn.value = normScan(c); judgeV(c); });   /* le scan vient ici, pas sur le ticket */
+      const liveJudge = () => { const v = codeIn.value.trim(); if (v) judgeV(v); };
+      codeIn.addEventListener('input', liveJudge);
+      codeIn.addEventListener('change', liveJudge);
+      $('#bqx-back', el).onclick = () => paintIntake();
+      const save = () => {
+        const size = $('#bqx-size', el).value.trim() || presets[0] || 'TU';
+        const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
+        const raw = codeIn.value.trim();
+        if (raw) {
+          const jj = judgeV(raw);   // refuse ET explique, sous le champ concerné
+          if (jj.kind === 'invalide') { toast(INVALID_MSG[jj.reason] || 'Code illisible'); return; }
+          if (jj.kind === 'connu') { toast(`Code déjà porté par ${jj.hit.product.name} · ${jj.hit.variant.size}`); return; }
+        }
+        let ev = null, res = null;
+        cat.batch(() => {
+          ev = cat.ensureVariant({ productId: pid, colorId: pickedColor(), size, stock: 0 });
+          if (!ev.variant) return;
+          if (raw) {
+            res = cat.attachBarcode(ev.variant.id, raw);
+            if (!res.ok) { if (ev.created) cat.deleteVariant(ev.variant.id); return; }
+          }
+          if (qty > 0) cat.receiveStock(ev.variant.id, qty);
+        });
+        if (!ev || !ev.variant) { toast('Déclinaison impossible'); return; }
+        if (res && !res.ok) {
+          toast(res.reason === 'doublon' ? `Code déjà utilisé par ${res.owner.product.name}` : 'Code refusé');
+          return;
+        }
+        intake.count++; intake.pieces += qty;
+        intake.lastProduct = pid;
+        intakeNote('variante', `${d.product.name} · ${size} — ${ev.created ? 'déclinaison créée' : 'déjà présente'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
+        toast(`${d.product.name} · ${size} ajouté`);
+        intakeHint(`${d.product.name} · ${size} ajouté. Scannez l'article suivant.`, 'good');
+        paintIntake();
+      };
+      $('#bqx-save', el).onclick = save;
+      el.querySelectorAll('.bqx-form input').forEach((i) => {
+        i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+      });
+      setTimeout(() => codeIn.focus(), 40);
+    });
+  }
+
+  /* Corriger une fiche saisie de travers. Geste sensible (le prix part en caisse
+     et le coût en compta) : passe par l'autorisation responsable, comme une remise. */
+  function intakeFix(pid) {
+    const cat = catDB();
+    const d = cat.getProduct(pid); if (!d) return;
+    const p = d.product;
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-fix"><i data-lucide="pencil"></i>
+        <div><b>Corriger « ${esc(p.name)} »</b><span>Le code-barres et le stock ne changent pas — seule la fiche est corrigée.</span></div>
+      </div>
+      <div class="bqi-form bqx-form">
+        <div class="bqi-fg"><label>Nom</label><input id="bqx-fname" value="${esc(p.name)}" /></div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Catégorie</label><select id="bqx-fcat">${catSelectOptions(p.categoryId)}</select></div>
+          <div class="bqi-fg"><label>Type de taille</label><select id="bqx-fkind">${kindSelectOptions(p.kind)}</select></div>
+        </div>
+        <div class="bqi-frow">
+          <div class="bqi-fg"><label>Prix de vente (MAD)</label><input id="bqx-fprice" type="number" min="0" step="0.01" value="${p.priceMAD}" /></div>
+          <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqx-fcost" type="number" min="0" step="0.01" value="${p.cost || 0}" /></div>
+        </div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-back">Retour</button>
+        <button class="bq-btn" id="bqx-fsave"><i data-lucide="check"></i>Enregistrer la correction</button>
+      </div>`, (el) => {
+      $('#bqx-back', el).onclick = () => paintIntake();
+      $('#bqx-fsave', el).onclick = () => {
+        const name = $('#bqx-fname', el).value.trim();
+        if (!name) { toast('Le nom est requis'); return; }
+        const patch = {
+          name, categoryId: $('#bqx-fcat', el).value || null, kind: $('#bqx-fkind', el).value,
+          priceMAD: bqMoney($('#bqx-fprice', el).value), cost: bqMoney($('#bqx-fcost', el).value),
+        };
+        const apply = () => {
+          cat.updateProduct(pid, patch);
+          intakeNote('recu', `${name} — fiche corrigée`);
+          toast('Fiche corrigée');
+          paintIntake();
+        };
+        /* Changer le prix change ce que la caisse encaissera, et l'ancien prix
+           est peut-être le bon : on fait confirmer l'écart explicitement plutôt
+           que de l'appliquer au passage. (openApprove() ne convient pas ici —
+           il parle d'une remise et lit state.ticket, qui n'existe pas pendant
+           une reprise de stock.) */
+        if (patch.priceMAD !== p.priceMAD) intakeConfirmPrice(p, patch.priceMAD, apply);
+        else apply();
+      };
+      setTimeout(() => { const n = $('#bqx-fname', el); if (n) { n.focus(); n.select(); } }, 40);
+    });
+  }
+
+  /* Un prix corrigé se répercute sur tous les encaissements suivants : l'écart est
+     montré en clair, avec le nom de qui est à la caisse, avant d'être appliqué. */
+  function intakeConfirmPrice(p, next, onOk) {
+    const who = (STAFF.caissiere && STAFF.caissiere.name) || '';
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="bqx-found is-fix"><i data-lucide="alert-triangle"></i>
+        <div><b>Confirmer le changement de prix</b><span>${esc(p.name)} sera encaissé à ce nouveau prix dès la prochaine vente.</span></div>
+      </div>
+      <div class="bqx-pricediff">
+        <div><span>Prix actuel</span><b>${fmtMAD(p.priceMAD)}</b></div>
+        <i data-lucide="arrow-right"></i>
+        <div class="next"><span>Nouveau prix</span><b>${fmtMAD(next)}</b></div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-pno">Garder ${fmtMAD(p.priceMAD)}</button>
+        <button class="bq-btn" id="bqx-pyes"><i data-lucide="check"></i>Appliquer${who ? ' — ' + esc(who) : ''}</button>
+      </div>`, (el) => {
+      $('#bqx-pno', el).onclick = () => intakeFix(p.id);
+      $('#bqx-pyes', el).onclick = () => onOk();
+    });
+  }
+
   /* ─── label printing (printer wired to the caisse) ─── */
   function labelForVariant(pid, v) {
     const cat = catDB(); const p = cat.getProduct(pid).product;
     const code = cat.primaryBarcode(v);
     if (!code) return null;
-    return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: fmtNum(p.priceMAD), code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128' };
+    const extra = v.note || v.colorSource || '';
+    return { title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`, price: fmtNum(p.priceMAD), code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128' };
   }
   function printVariantLabel(vid) {
     const cat = catDB();

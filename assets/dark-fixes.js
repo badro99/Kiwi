@@ -36,7 +36,11 @@
   // Surfaces the CSS dark system already themes intentionally — never re-touch them.
   // .btn-slim(.primary) is the big one: theme.css gives it a deliberately light fill in
   // dark mode (an inverted button); our near-white test would wrongly clobber it.
-  const SKIP = '.gk-qr, .btn-slim';
+  // .kc-sw is the product-colour swatch (assets/color-palette.js): its fill IS the
+  // information. The white one is white on purpose, and darkening it turns "Blanc"
+  // into a black dot — the one thing a colour picker must never do. It carries its
+  // own theme-aware rim, so it needs nothing from this pass.
+  const SKIP = '.gk-qr, .btn-slim, .kc-sw';
 
   function fix(root) {
     if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;

@@ -159,7 +159,11 @@
   const BOUTIQUE_COLS = {
     produit:     ['produit', 'article', 'articles', 'nom', 'name', 'designation', 'libelle', 'product', 'description_article'],
     categorie:   ['categorie', 'category', 'rayon', 'famille', 'collection', 'type_produit'],
-    couleur:     ['couleur', 'color', 'coloris'],
+    couleur:     ['couleur', 'color', 'coloris', 'couleur_famille'],
+    // La nuance telle qu'elle a été SAISIE ou importée à l'origine ("Bleu nuit"),
+    // que exportCsv écrit à côté de la famille affichée ("Bleu"). Elle sert à
+    // retrouver la variante d'origine à la relecture — voir plus bas.
+    couleur_saisie: ['couleur_saisie', 'couleur_origine', 'nuance', 'shade', 'color_source'],
     taille:      ['taille', 'size', 'pointure', 'tailles'],
     prix_mad:    ['prix_mad', 'prix', 'price', 'pv', 'prix_vente', 'prix_ttc', 'prix_unitaire', 'tarif'],
     stock:       ['stock', 'quantite', 'qte', 'qty', 'quantity', 'stock_actuel', 'dispo'],
@@ -248,8 +252,35 @@
          works — the variant collapses to a single "TU" line. */
       const colorLabel = cell(row, idx.couleur) || 'Sans couleur';
       const hit = colorByLabel.get(keyName(colorLabel));
-      const colorId = hit ? hit.id : (normKey(colorLabel) || 'sans_couleur');
       const size = cell(row, idx.taille) || 'TU';
+
+      /* IDENTITY, not appearance. The colour column now carries the general
+         FAMILY a merchant reads ("Bleu"), while the variant it came from may be
+         stored under a finer id ("nuit", "navy"). Matching on the family alone
+         would make a re-imported export create a second Bleu variant beside the
+         one it was exported from — the catalogue would double on every
+         export → corriger dans Excel → réimporter loop.
+         So identity is resolved from the most precise thing the row carries:
+           1. its code-barres, which names exactly one variant and cannot be
+              confused with another;
+           2. failing that, the nuance originally saisie, matched against the
+              variants of this product at this size;
+         and only then the colour family. Each rule demands an exact prior
+         match, so two genuinely different variants are never merged. */
+      const rowCode = cell(row, idx.code_barres);
+      const rowShade = cell(row, idx.couleur_saisie);
+      let colorId = hit ? hit.id : (normKey(colorLabel) || 'sans_couleur');
+      const priorVariants = g.existing ? CAT.listVariants(g.existing.id) : [];
+      const sameSize = priorVariants.filter((x) => keyName(x.size) === keyName(size));
+      let owned = null;
+      if (rowCode) {
+        const byCode = CAT.findByBarcode(rowCode);
+        if (byCode && byCode.product && keyName(byCode.product.name) === gk) owned = byCode.variant;
+      }
+      if (!owned && rowShade) {
+        owned = sameSize.find((x) => keyName(x.colorSource || '') === keyName(rowShade)) || null;
+      }
+      if (owned) colorId = owned.colorId;
       const rawStock = cell(row, idx.stock);
       const stockGiven = rawStock !== '';
       const stock = stockGiven ? intOr(rawStock, 0) : null;
@@ -269,7 +300,7 @@
       /* Code-barres. Conflicts are reported and skipped, never reassigned: a
          code already printed on another article's labels must not silently
          start resolving to this one. */
-      const code = cell(row, idx.code_barres);
+      const code = rowCode;
       if (code) {
         /* The key must name the PRODUCT as well as the variant: two different
            articles both in "Noir · TU" share a variant key, and comparing on
