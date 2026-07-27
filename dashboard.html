@@ -5899,6 +5899,11 @@
 <!-- Env gate (demos local-only) — must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js" defer></script>
 <script src="assets/i18n.js" defer></script>
+<!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
+     deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
+     « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" — le français et
+     l'anglais ne changent pas d'un pixel. -->
+<script src="assets/rtl-numbers.js" defer></script>
 <!-- Les métiers (assets/trades.js). AVANT tout le reste : venues.js construit
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
