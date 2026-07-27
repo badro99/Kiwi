@@ -80,6 +80,14 @@ const FEATURES = {
    * `expenses`. `terminals` n'est pas `terminaux` : les noms de features sont
    * la clé primaire de store_docs, ils restent en anglais comme tous les
    * autres. */
+  /* Les horaires d'ouverture — une fiche par établissement, la source unique
+   * de « sommes-nous ouverts ? » pour la caisse, les réservations, Order Pro,
+   * la page client, le rapport journalier et l'assistant. Minuscule (sept jours
+   * + quelques exceptions) et pourtant l'un des plus importants à faire suivre
+   * d'un appareil à l'autre : un commerçant qui règle sa semaine sur l'iPad du
+   * comptoir doit la retrouver sur son téléphone, sinon les deux écrans
+   * répondent différemment à la même question. */
+  hours:        { keys: ['week', 'exceptions', 'overrides'],       max: 40000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },

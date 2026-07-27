@@ -2596,7 +2596,79 @@
     return spec;
   }
 
+  /* ── Horaires d'ouverture ──
+   * Placé en TÊTE de matchLookupKind : « à quelle heure on ferme ? » contient
+   * « combien »/« quelle heure » et se faisait attraper par les règles chiffrées
+   * plus bas, qui répondaient sur le chiffre d'affaires. La question la plus
+   * spécifique gagne. */
+  /* Volontairement étroit. Un simple « ouvert » ou « ferme » quelque part dans
+   * la phrase ne suffit pas : « combien de jours d'ouverture par mois » est une
+   * question de rentabilité, « fermeture de caisse » une question de clôture.
+   * On exige une tournure qui porte VRAIMENT sur l'amplitude horaire. */
+  const HOURS_RX = new RegExp([
+    '\\bhoraires?\\b', 'heures?\\s+d[\'’ ]?ouvertur', 'opening\\s+hours', 'business\\s+hours',
+    'ساعات\\s*العمل',
+    /* état : « est-ce qu'on est ouvert », « on est ouvert ? », « are we open » */
+    '\\b(?:est.?ce\\s+qu[\'’ ]?on|on|nous|vous|je)\\s+(?:est|sommes|etes|suis)?\\s*ouvert',
+    '\\bsommes?.?nous\\s+ouvert', '\\bc[\'’ ]?est\\s+ouvert',
+    '\\bare\\s+we\\s+open\\b', '\\bis\\s+(?:the|my|it)\\s+\\w*\\s*open\\b', '\\bwe\\s+open\\b',
+    '\\bواش\\s*محلول\\b', '\\bمفتوح\\b', '\\bمغلق\\b',
+    /* heure de fermeture / d'ouverture */
+    '\\b(?:a|à)\\s+quelle\\s+heure\\b', '\\bquelle\\s+heure\\b[^?]{0,20}\\b(?:ferm|ouvr)',
+    '\\bwhat\\s+time\\b[^?]{0,20}\\b(?:clos|open)', '\\bwhen\\s+do\\s+(?:we|you)\\s+(?:clos|open)',
+    'heure\\s+de\\s+(?:fermeture|ouverture)', 'closing\\s+time', 'opening\\s+time',
+    'وقت\\s*(?:الإغلاق|الفتح)', 'أي\\s*ساعة',
+  ].join('|'));
+  /* Ce qui n'est PAS une question d'horaires même si le mot y figure. */
+  const NOT_HOURS_RX = /chiffre\s+d[' ]?affaire|\bca\s+(?:du|de|par)\b|\bbenefice\w*|\bmarges?\b|\bcouts?\b|\bcharges?\b|\bsalaires?\b|\bcloture\s+de\s+caisse\b|\bfermeture\s+de\s+caisse\b|\brevenue\b|\bprofit\b|\bpayroll\b/;
+  const HOURS_CLOSE_RX = /\bquelle?\s+heure\b[^?]{0,20}\bferm|\bon\s+ferme\b|\bferme(?:r|ons|z)?\s*(?:a|à)\b|heure\s+de\s+fermeture|what\s+time\b[^?]{0,20}\bclos|when\s+do\s+we\s+clos|closing\s+time|\bأي\s*ساعة\b[^?]{0,20}\bنغلق|وقت\s*الإغلاق/;
+  const HOURS_UNTIL_RX = /combien\s+de\s+temps[^?]{0,25}\bfermetur|\bavant\s+(?:la\s+)?fermetur|\bil\s+reste\b[^?]{0,20}\bferm|how\s+long[^?]{0,25}\bclos|time\s+(?:left|until)[^?]{0,15}\bclos|كم\s*(?:من\s*)?(?:الوقت|بقي)[^?]{0,20}الإغلاق/;
+  const HOURS_EXC_RX = /\bramadan\b|\bramdan\b|\baid\b|\baïd\b|\beid\b|jours?\s+feries?|\bferie\w*\b|public\s+holiday|\bconges?\b|\bvacances?\b|\bholiday\b|\bsaison\w*\b|\bseasonal\b|exceptionnel\w*|\bexception\w*\b|رمضان|العيد|عطلة|موسم/;
+  /* Une date + une heure dans la question : « demain à 21h », « samedi 21:00 ».
+   * Sans heure explicite on ne fabrique pas un créneau — on répond sur l'état. */
+  const HOURS_AT_RX = /\b(\d{1,2})\s*(?::|h)\s*(\d{2})?\b/;
+
+  function hoursSpec(q, raw) {
+    if (NOT_HOURS_RX.test(q)) return null;
+    if (!HOURS_RX.test(q) && !(HOURS_EXC_RX.test(q) && /heure|horaire|hour|ساع/.test(q))) return null;
+    if (HOURS_UNTIL_RX.test(q)) return { entity: 'hours', agg: 'until', raw };
+    if (HOURS_EXC_RX.test(q)) {
+      const m = /ramadan|ramdan|رمضان/.test(q) ? 'ramadan'
+        : /\ba[iï]d\b|\beid\b|العيد/.test(q) ? 'aid'
+        : /ferie|holiday|عطلة/.test(q) ? 'ferie' : '';
+      return { entity: 'hours', agg: 'exception', term: m, raw };
+    }
+    /* « peut-on réserver demain à 21h » : une heure explicite ET un jour. */
+    const hm = HOURS_AT_RX.exec(q);
+    if (hm && /\bdemain\b|\btomorrow\b|\baujourd|\btoday\b|\blundi\b|\bmardi\b|\bmercredi\b|\bjeudi\b|\bvendredi\b|\bsamedi\b|\bdimanche\b|\bmonday\b|\btuesday\b|\bwednesday\b|\bthursday\b|\bfriday\b|\bsaturday\b|\bsunday\b|غدا|اليوم/.test(q)) {
+      const base = new Date();
+      const DOWQ = [['dimanche', 'sunday', 'الأحد'], ['lundi', 'monday', 'الإثنين'], ['mardi', 'tuesday', 'الثلاثاء'],
+                    ['mercredi', 'wednesday', 'الأربعاء'], ['jeudi', 'thursday', 'الخميس'],
+                    ['vendredi', 'friday', 'الجمعة'], ['samedi', 'saturday', 'السبت']];
+      let target = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+      if (/\bdemain\b|\btomorrow\b|غدا/.test(q)) target.setDate(target.getDate() + 1);
+      else {
+        for (let i = 0; i < 7; i++) {
+          if (DOWQ[i].some((w) => q.indexOf(w) >= 0)) {
+            const delta = (i - target.getDay() + 7) % 7 || 7;
+            target.setDate(target.getDate() + delta);
+            break;
+          }
+        }
+      }
+      target.setHours(+hm[1], +(hm[2] || 0), 0, 0);
+      return { entity: 'hours', agg: 'at', when: target.getTime(), raw };
+    }
+    if (HOURS_CLOSE_RX.test(q)) return { entity: 'hours', agg: 'close', raw };
+    return { entity: 'hours', agg: 'open', raw };
+  }
+
   function matchLookupKind(q, raw) {
+    /* Les horaires d'abord : ils portent des mots (« quelle heure »,
+     * « combien de temps ») que les règles chiffrées attrapent sinon. */
+    const hrs = hoursSpec(q, raw);
+    if (hrs) return hrs;
+
     /* Products: a superlative plus something that names an item. "combien j'ai
      * vendu" has no superlative and stays a revenue question. */
     const sup = SUP_TOP_RX.test(q) ? 'top' : SUP_LOW_RX.test(q) ? 'bottom' : null;

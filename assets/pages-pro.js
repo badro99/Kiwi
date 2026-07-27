@@ -2729,10 +2729,47 @@ handlers['nav-reservations'] = () => {
     [['12:00','15:00',22,'lunch']],
     [],
   ];
+  /* Les créneaux de service de la semaine. Pour un vrai établissement dont les
+   * horaires sont renseignés, ils viennent des HORAIRES et de rien d'autre :
+   * c'était l'incohérence la plus visible du produit — un restaurant qui ferme
+   * à 02:00 voyait quand même son planning s'arrêter à 22:30, parce que ces
+   * blocs étaient écrits en dur ici. Réservations n'a pas — et ne doit pas
+   * avoir — son propre réglage d'horaires.
+   *
+   * Un service qui franchit minuit est tronqué à 24:00 POUR L'AFFICHAGE
+   * seulement : la piste horizontale représente une journée, on ne peut pas y
+   * dessiner 02:00 du lendemain. La disponibilité réelle, elle, est calculée
+   * par KiwiHours.slotsFor() qui, lui, ne tronque rien. */
+  const KH = window.KiwiHours;
+  const realHours = !!(KH && KH.isConfigured());
+  const scheduleBlocks = (d) => {
+    const r = KH.periodsOn(d);
+    return (r.periods || []).map((p) => {
+      const a = KH.toMin(p.from);
+      const end = Math.min(1440, a + KH.span(p));
+      return [p.from, KH.fromMin(end), 0, a < 15 * 60 ? 'lunch' : 'dinner'];
+    });
+  };
   const days = COVERS.map((covers, i) => {
     const d = new Date(now); d.setDate(now.getDate() + i);
-    return { n: dShort.format(d), covers, blocks: BLOCKS[i], today: i === 0 };
+    return {
+      n: dShort.format(d),
+      covers: realHours ? 0 : covers,
+      blocks: realHours ? scheduleBlocks(d) : BLOCKS[i],
+      today: i === 0,
+    };
   });
+  /* L'amplitude de la piste. Calculée sur ce qui est réellement affiché, avec
+     une demi-heure de marge de chaque côté, pour qu'aucun bloc ne déborde. */
+  const tMin = (s) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+  const TRACK = (() => {
+    let a = 24 * 60, b = 0;
+    days.forEach((d) => (d.blocks || []).forEach(([from, to]) => {
+      a = Math.min(a, tMin(from)); b = Math.max(b, tMin(to));
+    }));
+    if (a >= b) { a = 11 * 60; b = 23 * 60; }       /* semaine vide : la fenêtre héritée */
+    return { a: Math.max(0, a - 30), b: Math.min(1440, b + 30) };
+  })();
   const blockColor = (cap, type) => {
     if (cap >= 30) return 'var(--danger)';
     if (cap >= 18) return 'var(--warning)';
@@ -2780,10 +2817,14 @@ handlers['nav-reservations'] = () => {
               <div class="rcal-name" style="${d.today ? 'color:var(--atlas); font-weight:600;' : ''}">${d.n}${d.today ? ' · ' + T.today : ''}<div style="font-size:10.5px; color:var(--n-500); font-family:var(--mono); margin-top:2px;">${d.covers} ${T.cov}</div></div>
               <div class="rcal-track">
                 ${d.blocks.map(([from, to, cap, type]) => {
-                  const fH = parseInt(from); const tH = parseInt(to);
-                  const left = ((fH - 11) / 12) * 100;
-                  const width = ((tH - fH) / 12) * 100;
-                  return `<div class="rcal-block" style="left:${left}%; width:${width}%; background:${blockColor(cap, type)};">${from}–${to} · ${cap}</div>`;
+                  /* La piste couvre TRACK.a → TRACK.b, calculé sur la semaine
+                     réelle (voir plus haut) et non plus figé sur 11 h–23 h : un
+                     commerce ouvrant à 08:00 sortait de la piste par la gauche,
+                     avec un bloc à left négatif que le navigateur rognait. */
+                  const fM = tMin(from); const tM = Math.max(tMin(to), fM + 30);
+                  const left = ((fM - TRACK.a) / (TRACK.b - TRACK.a)) * 100;
+                  const width = ((tM - fM) / (TRACK.b - TRACK.a)) * 100;
+                  return `<div class="rcal-block" style="left:${Math.max(0, left).toFixed(2)}%; width:${Math.min(100 - Math.max(0, left), width).toFixed(2)}%; background:${blockColor(cap, type)};">${from}–${to}${cap ? ' · ' + cap : ''}</div>`;
                 }).join('')}
               </div>
             </div>

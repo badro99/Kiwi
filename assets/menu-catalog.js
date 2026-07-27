@@ -714,12 +714,25 @@
     if (!cloud.read) { if (cloud.tried++ < 3) pull().then(() => { if (cloud.read) publish(vid); }); return; }
     const data = store.get(vid);
     const slug = cloud.merchant || storeSlug();
+    /* Les horaires partent AVEC la carte. Le téléphone du client ne peut pas
+     * lire les réglages du commerçant : sans ce passager, la page de commande
+     * ne saurait pas que le restaurant est fermé et prendrait la commande
+     * quand même. Le serveur ne garde que la semaine et les exceptions
+     * (functions/api/menu.js) — les dérogations internes ne sortent pas. */
+    const withHours = (() => {
+      try {
+        const KH = window.KiwiHours;
+        if (!KH || !KH.isConfigured(vid)) return data;
+        const h = KH.get(vid);
+        return Object.assign({}, data, { hours: { v: 1, week: h.week, exceptions: h.exceptions } });
+      } catch (_) { return data; }
+    })();
     try {
       fetch('/api/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
-          name: vd.name || '', type: vd.type || '', data: data,
+          name: vd.name || '', type: vd.type || '', data: withHours,
           merchant: slug || undefined,
           // On a relu le serveur : une carte vide ici est une carte vidée exprès,
           // pas un navigateur qui n'a rien trouvé. Le serveur refuse l'inverse.
@@ -749,6 +762,15 @@
       }
       schedulePublish(vid);
     });
+    /* Un changement d'horaires doit repartir vers la page client tout de suite :
+     * un commerçant qui déclare sa fermeture de l'Aïd le matin ne doit pas voir
+     * des commandes arriver l'après-midi parce que la publication attendait la
+     * prochaine modification de la carte. */
+    try {
+      if (window.KiwiHours && window.KiwiHours.subscribe) {
+        window.KiwiHours.subscribe(function () { schedulePublish(); });
+      }
+    } catch (_) {}
     // RELIRE, PUIS publier. Dans cet ordre, et jamais l'inverse : c'est la
     // lecture qui reconstruit la carte dans un navigateur neuf, et c'est elle
     // qui autorise la publication (voir la règle 1 dans publish()).

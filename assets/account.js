@@ -132,7 +132,12 @@
     { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' } },
     { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' } },
     { k: 'phone', label: { fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' } },
-    { k: 'hours', label: { fr: 'Horaires', en: 'Opening hours', ar: 'ساعات العمل' } },
+    /* Pas de champ `hours` ici. Les horaires d'ouverture ne sont plus une ligne
+     * de texte parmi les mentions légales : ils ont un écran structuré unique
+     * (Réglages → Heures d'ouverture, assets/hours-ui.js) et une fiche par
+     * établissement que tout le produit interroge. Ce formulaire en tenait une
+     * SECONDE copie, libre, que rien ne lisait — deux réglages pour une même
+     * réalité, dont un faux dès que l'autre changeait. */
     { k: 'ice', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' } },
     { k: 'fiscal', label: { fr: 'Identifiant Fiscal (IF)', en: 'Tax ID (IF)', ar: 'الرقم الضريبي' } },
     { k: 'rc', label: { fr: 'Registre de Commerce (RC)', en: 'Trade Register (RC)', ar: 'السجل التجاري' } },
@@ -162,6 +167,48 @@
   const allBiz = () => (isReal() ? [primaryRealBiz(), ...extraBiz()] : [...BIZ_DEFAULTS, ...extraBiz()])
     .map((b) => { const o = { ...b }; BIZ_FIELDS.forEach((f) => { o[f.k] = bizField(b, f.k); }); return o; });
   const initialsOf = (s) => (String(s).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
+
+  /* ── Horaires d'ouverture, sur la fiche établissement ──
+   * En lecture seule ici : la saisie a un seul écran (assets/hours-ui.js), et
+   * c'est lui qu'on ouvre. La fiche montre l'état du jour parce que c'est ce
+   * qu'un propriétaire vient vérifier — « suis-je censé être ouvert là ? » —
+   * pas la grille des sept jours.
+   *
+   * Quel établissement ? Les horaires sont classés par identifiant
+   * d'ÉTABLISSEMENT (venue), celui que le sélecteur du tableau de bord change
+   * et que la caisse résout pareil. Les fiches de cet écran ne sont pas toutes
+   * des établissements : la principale est l'établissement actif, les fiches de
+   * démonstration portent déjà un identifiant de venue, et une fiche ajoutée à
+   * la main ici n'en a aucun. Dans ce dernier cas on ne fabrique pas un
+   * classement bidon — on renvoie vers le sélecteur. */
+  function bizVenueId(b) {
+    try {
+      const KV = window.KiwiVenue;
+      if (!KV) return null;
+      if (KV.VENUES && KV.VENUES[b.id]) return b.id;
+      if (b.primary) return (KV.getVenue && KV.getVenue()) || null;
+    } catch (_) {}
+    return null;
+  }
+  function hoursRow(b) {
+    const KH = window.KiwiHours;
+    if (!KH) return '';
+    const vid = bizVenueId(b);
+    const label = pick({ fr: 'Horaires d’ouverture', en: 'Opening hours', ar: 'ساعات العمل' });
+    const s = vid ? KH.summary(Date.now(), vid) : { text: pick({ fr: 'Sélectionnez cet établissement pour le régler', en: 'Select this business to set it', ar: 'اختر هذه المؤسسة لضبطها' }), tone: 'unset' };
+    const week = vid && KH.isConfigured(vid) ? KH.weekText(vid) : '';
+    const dot = { open: 'var(--success,#16a34a)', closed: 'var(--n-400)', soon: 'var(--warning,#d97706)', unset: 'var(--danger,#dc2626)' }[s.tone] || 'var(--n-400)';
+    return `
+      <div class="acc-row" style="align-items:flex-start; ${vid ? 'cursor:pointer;' : ''}"${vid ? ` data-action="account-hours" data-arg="${esc(vid)}"` : ''}>
+        <span>${esc(label)}</span>
+        <div style="text-align:right; max-width:62%;">
+          <b style="display:inline-flex; align-items:center; gap:7px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>${esc(s.text)}
+          </b>
+          ${week ? `<div style="font-size:11.5px;color:var(--n-500);margin-top:3px;line-height:1.45;">${esc(week)}</div>` : ''}
+        </div>
+      </div>`;
+  }
 
   /* ════════════════════════════ MON PROFIL ════════════════════════════ */
   function openProfile() {
@@ -226,6 +273,7 @@
             ${lg('ICE', b.ice)}${lg('IF', b.fiscal)}${lg('RC', b.rc)}
             ${lg('Patente', b.patente)}${lg('CNSS', b.cnss)}${lg(T.phone, b.phone)}
           </div>
+          ${hoursRow(b)}
         </div>`;
     };
     const biz = allBiz();
@@ -276,6 +324,12 @@
     });
     handlers['account-change-pw'] = () => Kiwi.toast(T.pwToast, { type: 'success', force: true });
     handlers['account-edit-business'] = (el, arg) => editBusinessModal(arg || (el && el.dataset.arg));
+    handlers['account-hours'] = (el, arg) => {
+      const vid = arg || (el && el.dataset.arg) || null;
+      if (!window.KiwiHoursUI || !vid) return;
+      const b = allBiz().find((x) => bizVenueId(x) === vid);
+      window.KiwiHoursUI.open({ venueId: vid, title: (b && b.name) || '', onSave: () => setTimeout(openProfile, 80) });
+    };
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
     handlers['account-plan-cancel'] = () => planCancelModal();

@@ -158,7 +158,28 @@
     var raw = ls(k);
     if (raw == null) raw = ls(CUTOFF_KEY);            /* réglage hérité, tous magasins */
     var h = parseInt(raw, 10);
-    return (isFinite(h) && h >= 0 && h <= 12) ? h : DEFAULT_CUTOFF;
+    if (isFinite(h) && h >= 0 && h <= 12) return h;   /* réglage explicite : il gagne */
+    /* Rien d'explicite ? L'établissement sait à quelle heure il ferme — on le
+     * lui demande plutôt que de garder un 5 h arbitraire. Un restaurant qui
+     * ferme à 03:00 avait ses fins de nuit rangées dans le lendemain ; ses
+     * horaires le disent maintenant sans que personne ait à régler quoi que ce
+     * soit.
+     *
+     * derivedCutoff() ne renvoie JAMAIS moins que le plancher qu'on lui passe.
+     * C'est délibéré : raccourcir la bascule d'un magasin déjà en service
+     * couperait une soirée en cours en deux journées commerciales, et le
+     * rapport du soir se retrouverait à cheval. On ne fait que rallonger. */
+    try {
+      var d = window.KiwiHours && window.KiwiHours.derivedCutoff
+        && window.KiwiHours.derivedCutoff(slug || undefined, DEFAULT_CUTOFF);
+      /* `typeof d === 'number'` et pas seulement isFinite(d) : derivedCutoff
+       * rend null quand l'établissement n'a aucun service de nuit, et
+       * isFinite(null) vaut TRUE en JavaScript (Number(null) === 0). Sans ce
+       * test, un commerce fermant à 18 h se retrouvait avec une bascule à
+       * `null`, et toutes les dates du rapport partaient en NaN. */
+      if (typeof d === 'number' && isFinite(d) && d >= 0 && d <= 12) return d;
+    } catch (_) {}
+    return DEFAULT_CUTOFF;
   }
   function setCutoff(h, slug) {
     var v = parseInt(h, 10);
