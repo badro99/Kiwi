@@ -3988,6 +3988,11 @@
        l'inventaire, les documents du magasin, les commandes en ligne et les
        modules, sans jamais recharger la page. -->
   <script src="assets/caisse-refresh.js" defer></script>
+  <!-- « Réimprimer » — même pied de rail, même raison : le rouleau bourre sur
+       les seize métiers, pas seulement au restaurant. Ressort un ticket de la
+       journée avec son numéro d'origine et la mention de duplicata, sans jamais
+       réencaisser. Après receipt.js, dont il compose les documents. -->
+  <script src="assets/pos-reprint.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -6902,7 +6907,25 @@
           printHardwareTicket(_ticket);
         }
         else if (a === 'reprint-bill') {
-          if (window.__lastTicket) printHardwareTicket(window.__lastTicket);
+          /* Ce bouton rejouait window.__lastTicket — une variable de page. Elle
+             ne survit ni au rechargement, ni à la mise à jour du service worker,
+             ni à l'onglet que iOS tue en arrière-plan. Après midi, le moment
+             exact où l'on réimprime, il répondait « Aucun ticket » sur une
+             caisse qui avait encaissé toute la matinée.
+             Le journal, lui, est écrit. On y prend la dernière vente et on
+             ressort SON ticket : même numéro, même heure, mention de duplicata.
+             Repli sur l'ancien chemin si le journal est vide mais qu'un ticket
+             vient d'être tiré dans cette page — un service qui vient d'ouvrir. */
+          const last = journal.slice().reverse().find((e) => e && e.kind !== 'refund' && e.amount > 0);
+          const doc = last ? receiptDocFor(last, { copy: true }) : null;
+          if (doc) {
+            toast('Impression du reçu…');
+            Promise.resolve(window.KiwiReceipt.print(doc)).then(
+              (r) => toast(r && r.ok ? 'Duplicata imprimé' : 'Impression échouée'),
+              () => toast('Impression échouée')
+            );
+          }
+          else if (window.__lastTicket) printHardwareTicket(window.__lastTicket);
           else toast('Aucun ticket à réimprimer');
         }
         else if (a === 'cancel-table') {
@@ -8749,7 +8772,7 @@
        dire est une pièce qu'on ne peut plus rapprocher. Le NUMÉRO, lui, ne
        change pas : c'est le même achat. */
     $('#receipt-print').addEventListener('click', () => {
-      const doc = receiptDocFor(receiptEntry, { copy: 'DUPLICATA' });
+      const doc = receiptDocFor(receiptEntry, { copy: true });
       if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
       toast('Impression du reçu…');
       Promise.resolve(window.KiwiReceipt.print(doc)).then(

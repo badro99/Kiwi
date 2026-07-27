@@ -2295,8 +2295,14 @@
         change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
       });
       /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
-         avec son numéro, même si l'enseigne change de pied de page demain. */
-      try { if (opts.sale) opts.sale.rc = K.snapshot(doc); } catch (_) {}
+         avec son numéro, même si l'enseigne change de pied de page demain.
+         persistDay() À NOUVEAU, et c'est tout l'intérêt : la vente a été écrite
+         au moment du paiement, ce bouton-ci n'est touché qu'APRÈS, et le ticket
+         figé ne partait donc jamais sur le disque. Il vivait dans l'onglet et
+         mourait avec — c'est-à-dire précisément le jour où on en a besoin. */
+      try {
+        if (opts.sale) { opts.sale.rc = K.snapshot(doc); persistDay(); }
+      } catch (_) {}
       toast('Impression du reçu…');
       Promise.resolve(K.print(doc)).then(
         (r) => toast(r && r.ok
@@ -4423,6 +4429,41 @@
       if (res && res.ok && res.via) toast(`${what} envoyée à l'imprimante`);
     });
   }
+
+  /* La boutique n'encaisse pas dans le journal partagé (KiwiPosSale) : elle
+     tient SALES, qui couvre la semaine et porte le ticket figé de chaque vente.
+     Elle s'annonce donc au bouton « Réimprimer », qui sinon lirait un journal
+     vide et conclurait qu'aucune vente n'a été prise de la journée.
+     Traduit vers la forme commune du journal, et `rc` suit : c'est lui qui fait
+     ressortir le VRAI ticket remis plutôt qu'une recomposition. */
+  try {
+    if (window.KiwiPosReprint) {
+      /* Le prix vient de la LIGNE (ln.unit, figé à l'encaissement), jamais du
+         catalogue actuel : lineUnit() lit P[ln.pid].price et lève sur un article
+         supprimé depuis — le cas qui avait déjà vidé la page des échanges — et
+         relirait de toute façon un prix qui a pu changer depuis la vente. */
+      const lineName = (ln) => ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : '');
+      window.KiwiPosReprint.provide('boutique', () => salesToday().map((s) => {
+        const lines = (s.lines || []).map((ln) => ({
+          name: lineName(ln),
+          qty: ln.qty,
+          total: Math.round((+ln.unit || 0) * ln.qty),
+        }));
+        const pieces = lines.reduce((n, l) => n + l.qty, 0);
+        const head = lines[0];
+        return {
+          ts: (s.at instanceof Date ? s.at : new Date(s.at)).getTime(),
+          total: s.total,
+          ref: s.id,
+          label: !head ? 'Vente'
+            : (lines.length > 1 ? head.name + ' +' + (pieces - head.qty) + ' art.' : head.name),
+          raw: s.methods,
+          rc: s.rc || null,
+          lines: lines,
+        };
+      }));
+    }
+  } catch (_) {}
 
   window.KiwiPosDispatch.register({
     id: 'boutique',
