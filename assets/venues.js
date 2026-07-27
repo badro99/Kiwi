@@ -439,7 +439,7 @@
       ],
       questions: [
         { k: 'kiosks',   type: 'number', ph: 'Ex. 2',                label: { fr: 'Bornes de commande', en: 'Order kiosks', ar: 'أكشاك الطلب' } },
-        { k: 'delivery', type: 'text',   ph: 'Ex. Glovo + Jumia',    label: { fr: 'Plateformes de livraison', en: 'Delivery platforms', ar: 'منصات التوصيل' } },
+        { k: 'delivery', type: 'text',   ph: 'Ex. Glovo + Yassir',    label: { fr: 'Plateformes de livraison', en: 'Delivery platforms', ar: 'منصات التوصيل' } },
         { k: 'peak',     type: 'text',   ph: 'Ex. 12h–14h, 19h–21h', label: { fr: 'Heures de pointe', en: 'Peak hours', ar: 'ساعات الذروة' } },
       ],
       vocab: {

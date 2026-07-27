@@ -405,14 +405,22 @@
    *   Manage connected tools + connect new ones. Wires the previously-dead
    *   "+ Ajouter une intégration" link (data-action="add-integration").
    * ═══════════════════════════════════════════════════════════════════════ */
+  /* Glovo et Jumia Food figuraient ici comme CONNECTÉS, « synchronisé il y a
+     4 min ». Aucun code n'a jamais parlé à l'un ni à l'autre : c'était une
+     horloge décorative. Et Jumia Food a fermé au Maroc fin 2023 — un
+     restaurateur qui lit cette liste date le produit au premier coup d'œil.
+     Les canaux réellement raccordables passent donc dans la colonne « à
+     connecter », où « Connecter » ouvre le vrai connecteur
+     (assets/channel-link.js) au lieu d'une pastille verte. */
   const INTEGRATIONS_ON = [
-    { name: 'Glovo',         color: '#F29137', tag: 'G', i18nDesc: 'integ.glovo.desc', sync: 'il y a 4 min' },
-    { name: 'Jumia Food',    color: '#E7611A', tag: 'J', i18nDesc: 'integ.jumia.desc', sync: 'il y a 9 min' },
     { name: 'Comptabilité',  color: '#1D3F6B', tag: 'A', i18nDesc: 'integ.compta.desc', sync: 'hier 23:00' },
     { name: 'Bank of Africa', color: '#00613E', tag: 'B', i18nDesc: 'integ.bmce.desc', sync: 'il y a 1 h' },
   ];
   const INTEGRATIONS_OFF = [
-    { name: 'Kaalix',          color: '#7A3FF2', tag: 'K', i18nDesc: 'integ.kaalix.desc' },
+    { name: 'Glovo',           color: '#F29137', tag: 'G', i18nDesc: 'integ.glovo.desc', channel: 'glovo' },
+    { name: 'Yassir Express',  color: '#2B5AA8', tag: 'Y', i18nDesc: 'integ.yassir.desc', channel: 'yassir' },
+    { name: 'Shopify',         color: '#5E8E3E', tag: 'S', i18nDesc: 'integ.shopify.desc', channel: 'shopify' },
+    { name: 'Kaalix',          color: '#7A3FF2', tag: 'K', i18nDesc: 'integ.kaalix.desc', channel: 'generic' },
     { name: 'WhatsApp Business', color: '#1FB574', tag: 'W', i18nDesc: 'integ.whatsapp.desc' },
     { name: 'Export CSV / Excel', color: '#3A6FB8', tag: 'X', i18nDesc: 'integ.export.desc' },
   ];
@@ -434,8 +442,9 @@
         toastConfigD: 'Champs de synchronisation et fréquence',
         toastConnectT: (name) => `${name} connectée`,
         toastConnectD: 'Synchronisation initiale en cours',
-        'integ.glovo.desc': 'Commandes & payouts livraison',
-        'integ.jumia.desc': 'Commandes livraison',
+        'integ.glovo.desc': 'Commandes de livraison vers la caisse',
+        'integ.yassir.desc': 'Commandes de livraison vers la caisse',
+        'integ.shopify.desc': 'Commandes de la boutique en ligne',
         'integ.compta.desc': 'Export quotidien · format comptable',
         'integ.bmce.desc': 'Rapprochement IBAN ···3291',
         'integ.kaalix.desc': 'Livraison · régions Casa & Rabat',
@@ -458,8 +467,9 @@
         toastConfigD: 'Sync fields and frequency',
         toastConnectT: (name) => `${name} connected`,
         toastConnectD: 'Initial synchronization in progress',
-        'integ.glovo.desc': 'Delivery orders & payouts',
-        'integ.jumia.desc': 'Delivery orders',
+        'integ.glovo.desc': 'Delivery orders into the till',
+        'integ.yassir.desc': 'Delivery orders into the till',
+        'integ.shopify.desc': 'Online store orders',
         'integ.compta.desc': 'Daily export · accounting-ready',
         'integ.bmce.desc': 'IBAN reconciliation ···3291',
         'integ.kaalix.desc': 'Delivery · Casa & Rabat regions',
@@ -482,8 +492,9 @@
         toastConfigD: 'حقول المزامنة والتردد',
         toastConnectT: (name) => `${name} متصلة`,
         toastConnectD: 'المزامنة الأولية جارية',
-        'integ.glovo.desc': 'طلبات وت payouts التوصيل',
-        'integ.jumia.desc': 'طلبات التوصيل',
+        'integ.glovo.desc': 'طلبات التوصيل إلى الصندوق',
+        'integ.yassir.desc': 'طلبات التوصيل إلى الصندوق',
+        'integ.shopify.desc': 'طلبات المتجر الإلكتروني',
         'integ.compta.desc': 'تصدير يومي · جاهز للمحاسبة',
         'integ.bmce.desc': 'تسوية IBAN ···3291',
         'integ.kaalix.desc': 'التوصيل · مناطق الدار البيضاء والرباط',
@@ -505,8 +516,6 @@
       const heroT = ({ fr: 'Connecteurs', en: 'Connectors', ar: 'الموصلات' })[lang] || 'Connecteurs';
       const safeBank = ({ fr: 'Rapprochement bancaire automatique', en: 'Automatic bank reconciliation', ar: 'تسوية بنكية تلقائية' })[lang];
       const catalog = [
-        { name: 'Glovo',          color: '#F29137', tag: 'G', desc: str['integ.glovo.desc'] },
-        { name: 'Jumia Food',     color: '#E7611A', tag: 'J', desc: str['integ.jumia.desc'] },
         { name: 'Comptabilité',   color: '#1D3F6B', tag: 'A', desc: str['integ.compta.desc'] },
         { name: 'Bank of Africa', color: '#00613E', tag: 'B', desc: safeBank },
         ...INTEGRATIONS_OFF.map((i) => ({ name: i.name, color: i.color, tag: i.tag, desc: str[i.i18nDesc] })),
@@ -530,7 +539,7 @@
                   <div style="font-weight:600; font-size:14px;">${i.name}</div>
                   <div style="font-size:11.5px; color:var(--n-500); margin-top:2px;">${i.desc}</div>
                 </div>
-                <button class="kb atlas xs" data-action="integration-connect" data-arg="${i.name}">${str.connect}</button>
+                <button class="kb atlas xs" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">${str.connect}</button>
               </div>
             </div>
           `).join('')}
@@ -576,7 +585,7 @@
                 <div style="font-weight:600; font-size:14px;">${i.name}</div>
                 <div style="font-size:11.5px; color:var(--n-500); margin-top:2px;">${str[i.i18nDesc]}</div>
               </div>
-              <button class="kb atlas xs" data-action="integration-connect" data-arg="${i.name}">${str.connect}</button>
+              <button class="kb atlas xs" data-action="integration-connect" data-arg="${i.name}" data-channel="${i.channel || ''}">${str.connect}</button>
             </div>
           </div>
         `).join('')}
@@ -594,6 +603,13 @@
   }
   handlers['integration-connect'] = (_el, arg) => {
     const str = INTEG_STR[trLang()] || INTEG_STR.fr;
+    /* Les canaux qui portent un `channel` ont un vrai connecteur derrière eux
+       (functions/api/channel/order.js) : on remet au commerçant l'adresse et la
+       clé, ce qui est une connexion réelle et vérifiable. Les autres gardent le
+       refus honnête écrit lors de l'audit — mieux vaut « pas encore » qu'un
+       confetti pour un service que personne n'a appelé. */
+    const ch = _el && _el.getAttribute ? (_el.getAttribute('data-channel') || '') : '';
+    if (ch && window.KiwiChannels) { window.KiwiChannels.connect(ch, arg || ''); return; }
     if (window.KiwiEnv?.isReal?.()) {
       toast('Intégration indisponible', { type: 'warning', desc: 'Cette connexion n’est pas encore active. Rien n’a été envoyé au service externe.' });
       return;

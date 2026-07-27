@@ -1910,7 +1910,7 @@ ar: {
           <div class="kset-card">
             ${cv ? settingsRow('🔌', tr({ fr: 'Aucun canal connecté', en: 'No channel connected', ar: 'لا قناة متصلة' }), tr({ fr: 'Connectez Glovo, votre banque et votre compta', en: 'Connect Glovo, your bank and accounting', ar: 'اربط Glovo وبنكك ومحاسبتك' }), { action: 'add-integration' }) : `
             ${settingsRow('🟠', 'Glovo', tr({ fr: 'Connecté · 1 420 MAD aujourd\'hui', en: 'Connected · 1,420 MAD today', ar: 'متصل · 1 420 درهم اليوم' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
-            ${settingsRow('🔴', 'Jumia Food', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('jumia'), action: 'settings-toggle', arg: 'jumia' })}
+            ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
             ${settingsRow('📊', tr({ fr: 'Comptabilité', en: 'Accounting', ar: 'المحاسبة' }), tr({ fr: 'Export quotidien OCP', en: 'Daily OCP export', ar: 'تصدير يومي OCP' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
             ${settingsRow('🏦', 'Bank of Africa', tr({ fr: 'IBAN vérifié ••3291', en: 'IBAN verified ••3291', ar: 'IBAN موثق ••3291' }), { toggle: true, on: setOn('bmce'), action: 'settings-toggle', arg: 'bmce' })}
             `}
