@@ -1489,6 +1489,26 @@ ar: {
         }
         return KH.summary(Date.now()).text;
       };
+      /* Ce que la ligne « Reçu de caisse » affiche. Comme les horaires, elle
+       * LIT la fiche unique (KiwiReceipt) et ouvre l'unique écran de réglage —
+       * la caisse n'a pas le sien. Ce qu'un propriétaire vient vérifier, c'est
+       * si son ticket est en règle : on annonce donc les mentions légales
+       * manquantes, pas un « configuré / non configuré » qui ne dit rien. */
+      const receiptRowValue = () => {
+        const K = window.KiwiReceipt;
+        if (!K) return tr({ fr: 'Ticket standard', en: 'Standard ticket', ar: 'وصل قياسي' });
+        const miss = K.missing();
+        if (miss.length) {
+          return tr({
+            fr: `${miss.length} mention${miss.length > 1 ? 's' : ''} légale${miss.length > 1 ? 's' : ''} à compléter`,
+            en: `${miss.length} legal detail${miss.length > 1 ? 's' : ''} to complete`,
+            ar: `${miss.length} بيان قانوني ينقص`,
+          });
+        }
+        return K.isConfigured()
+          ? tr({ fr: 'Personnalisé · prêt à imprimer', en: 'Customised · ready to print', ar: 'مخصّص · جاهز للطبع' })
+          : tr({ fr: 'Modèle par défaut', en: 'Default template', ar: 'نموذج افتراضي' });
+      };
       const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
       return drawer({
       title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
@@ -1528,11 +1548,13 @@ ar: {
             ${cv ? `
             ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape(vd.typeLabel || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
             ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
+            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
             ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
             ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || tr({ fr: 'Toutes acceptées', en: 'All accepted', ar: 'الكل مقبول' })), { action: 'settings-edit-venue' })}
             ` : `
             ${settingsRow('🏪', escape(getSet('venueName', ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')))), escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
             ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
+            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
             ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(getSet('methods', 'Visa · MC · Kiwi Tap · QR')), { action: 'settings-methods' })}
             ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
             `}
@@ -1765,6 +1787,25 @@ ar: {
            * puisse plus afficher deux horaires différents du même commerce. */
           try { localStorage.removeItem('kiwiSet:hours'); } catch (_) {}
           try { if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' }); } catch (_) {}
+          document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
+          setTimeout(() => { try { handlers.settings(); } catch (_) {} }, 110);
+        },
+      });
+    },
+
+    /* Le reçu de caisse. Un seul écran, ouvert d'ici comme depuis la fiche
+     * établissement — c'est le MÊME éditeur et la MÊME fiche, pas deux réglages
+     * qui se ressemblent. Le raccourci « Modifier la fiche » renvoie vers Mon
+     * profil, où les mentions légales se saisissent une fois pour toutes. */
+    'settings-receipt': () => {
+      if (!window.KiwiReceiptUI || !window.KiwiReceipt) return;
+      const KV = window.KiwiVenue;
+      const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+      window.KiwiReceiptUI.open({
+        venueId: (KV && KV.getVenue && KV.getVenue()) || null,
+        title: vd.fullDisplay || vd.name || '',
+        onEditBusiness: () => { try { handlers['account-profile'](); } catch (_) {} },
+        onSave: () => {
           document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
           setTimeout(() => { try { handlers.settings(); } catch (_) {} }, 110);
         },

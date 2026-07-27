@@ -3968,6 +3968,14 @@
        fermeture réelle au lieu d'un seuil fixe. Après venue-store.js, dont il
        tient sa fiche par établissement. -->
   <script src="assets/hours.js" defer></script>
+  <!-- Le reçu. La caisse ne fabrique plus le sien : elle demande celui que le
+       propriétaire a réglé sur le tableau de bord — mentions légales comprises,
+       qu'elle n'avait aucun moyen de connaître avant (elle imprimait un ICE de
+       démonstration, masqué chez un vrai client, donc rien du tout). L'ÉDITEUR
+       (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
+       deux vérités. Après venue-store.js, dont il tient sa fiche par
+       établissement. -->
+  <script src="assets/receipt.js" defer></script>
   <script src="assets/clients-store.js" defer></script>
   <script src="assets/clients-book.js" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -8331,7 +8339,15 @@
     let journalFilter = 'all';  // all | card | cash
     let lastSaleId    = null;   // flashes the freshest entry while the drawer is open
 
-    function genRef() { return 'KW-' + (28000 + Math.floor(Math.random() * 1999)); }
+    /* Le numéro de ticket. C'était `'KW-' + random(28000..29999)` : deux ventes
+       du même service pouvaient sortir avec le même numéro, et rien ne montait.
+       Un numéro de reçu est une référence comptable — il se compte, par
+       établissement et par jour, avec l'étiquette du terminal pour que deux
+       caisses hors ligne ne se percutent pas (assets/receipt.js · nextRef). */
+    function genRef() {
+      try { if (window.KiwiReceipt && window.KiwiReceipt.nextRef) return window.KiwiReceipt.nextRef(); } catch (_) {}
+      return 'KW-' + (28000 + Math.floor(Math.random() * 1999));
+    }
 
     /* Roll up the ledger — single source of truth for revenue / tenders */
     function journalTotals() {
@@ -8401,6 +8417,11 @@
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: l.total, cat: l.cat || '' }));
       }
+      /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
+         de raison sociale, de logo ou de pied de page en septembre, les tickets
+         de juillet ne se réécrivent pas : une réimpression ressort celui qui a
+         été remis au client, avec son numéro. */
+      attachReceipt(entry);
       journal.push(entry);
       lastSaleId = entry.id;
       // Live Link (opt-in, off by default): mirror this sale to the owner's
@@ -8423,6 +8444,68 @@
     function storeIsReal() { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!storePaired(); } catch (_) { return !!storePaired(); } }
     function storeName()   { const p = storePaired(); return (p && p.name) || (storeIsReal() ? '' : 'Café Atlas'); }
     function storeCity()   { const p = storePaired(); return (p && p.location) || (storeIsReal() ? '' : 'Maarif · Casablanca'); }
+
+    /* ══════════ LE REÇU — celui du propriétaire, pas celui de la caisse ══════
+     * La caisse ne compose plus de ticket. Elle demande à window.KiwiReceipt le
+     * reçu que le propriétaire a réglé sur son tableau de bord : son enseigne,
+     * son adresse, SON ICE (que ce fichier n'avait aucun moyen de connaître —
+     * il imprimait un ICE de démonstration, masqué chez un vrai client, donc
+     * aucune mention légale du tout), ses messages, sa largeur de rouleau.
+     *
+     * La DÉMO garde son identité de démonstration, fournie explicitement : sans
+     * établissement réel il n'y a aucune fiche à lire, et un ticket de démo
+     * anonyme ne montre plus rien de ce qu'il est censé montrer. */
+    function demoIdentity() {
+      return {
+        business: { name: 'Café Atlas', legal: { address: 'Maarif · Casablanca', ice: RECEIPT_ICE, phone: RECEIPT_PHONE } },
+        /* La TVA restauration à 10 %, telle que la démo l'a toujours affichée.
+           Un VRAI commerce ne l'a pas d'office : il la règle, ou son ticket
+           n'affiche pas de ventilation (voir assets/receipt.js · vat.mode). */
+        config: Object.assign(window.KiwiReceipt.blankConfig(), { vat: { mode: 'rate', rate: 10, included: true } }),
+      };
+    }
+    /* Traduit une écriture du journal en vente lisible par KiwiReceipt. */
+    function receiptSaleFrom(entry) {
+      const isRefund = entry.kind === 'refund';
+      return {
+        ref: entry.ref,
+        ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
+        label: entry.label,
+        cashier: entry.cashier || (currentCashier && currentCashier.name) || '',
+        lines: Array.isArray(entry.lines) ? entry.lines : [],
+        total: Math.abs(entry.amount),
+        tip: isRefund ? 0 : (entry.tip || 0),
+        method: entry.method,
+        kind: isRefund ? 'refund' : 'sale',
+        of: entry.refundOf || '',
+      };
+    }
+    function receiptOpts(extra) {
+      const o = Object.assign({}, extra || {});
+      if (!storeIsReal()) Object.assign(o, demoIdentity());
+      return o;
+    }
+    /* Figer le ticket avec la vente. Ne jette jamais : un encaissement réussi ne
+       peut pas échouer parce que le reçu n'a pas pu se composer. */
+    function attachReceipt(entry) {
+      try {
+        const K = window.KiwiReceipt;
+        if (!K) return;
+        entry.rc = K.snapshot(K.build(receiptSaleFrom(entry), receiptOpts()));
+      } catch (_) {}
+    }
+    /* Rouvrir le ticket d'une écriture : le figé s'il existe (c'est LE ticket du
+       client, mentions de l'époque comprises), sinon un rendu à partir de ce que
+       le journal porte — le cas des ventes d'avant cette version. */
+    function receiptDocFor(entry, opts) {
+      const K = window.KiwiReceipt;
+      if (!K) return null;
+      opts = receiptOpts(opts);
+      try {
+        if (entry && entry.rc) return K.fromSnapshot(entry.rc, opts);
+        return K.build(receiptSaleFrom(entry), opts);
+      } catch (_) { return null; }
+    }
     /* Patch the static header labels (top bar, clock-in card, floor-plan) so a real
      * paired store shows ITS name/city — never "Café Atlas · Maarif" or "DÉMO LIVE".
      * No-op for the local demo. Runs on load; re-run after clock-in if needed. */
@@ -8497,7 +8580,13 @@
     // this file has painted its demo servers — rebuild the floor team when it lands.
     document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); } catch (_) {} });
 
-    /* Render a journal entry as a printed thermal ticket. */
+    /* Render a journal entry as a printed thermal ticket.
+     * Le reçu à l'écran est LE reçu : même moteur, même mise en page, mêmes
+     * mentions que celui qui sort de l'imprimante. Avant, cet écran avait sa
+     * propre composition — d'où une « TVA 10 % » posée sur toutes les ventes, y
+     * compris dans une boutique où elle est de 20 %, et un pied de page que le
+     * papier ne portait pas. Le chemin d'avant reste en secours pour un
+     * navigateur où assets/receipt.js n'a pas chargé. */
     function renderReceipt(entry) {
       const paper = $('#receipt-paper');
       const body  = $('#receipt-body');
@@ -8505,6 +8594,15 @@
 
       const isRefund = entry.kind === 'refund';
       paper.classList.toggle('is-refund', isRefund);
+
+      const doc = receiptDocFor(entry);
+      if (doc) {
+        try { window.KiwiReceipt.ensureCSS(); } catch (_) {}
+        body.innerHTML = window.KiwiReceipt.html(doc);
+        const tk = body.querySelector('.kr-ticket');
+        if (tk && (doc.paper === '58' || doc.paper === '57')) tk.classList.add('kr-w58');
+        return;
+      }
 
       const d   = entry.time instanceof Date ? entry.time : new Date(entry.time);
       const dd  = String(d.getDate()).padStart(2, '0');
@@ -8603,8 +8701,12 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    /* L'écriture actuellement à l'écran — c'est ELLE qu'on réimprime, pas une
+       nouvelle vente. Une réimpression garde le numéro et le contenu d'origine. */
+    let receiptEntry = null;
     function openReceipt(entry) {
       if (!entry) { toast('Ticket introuvable'); return; }
+      receiptEntry = entry;
       renderReceipt(entry);
       $('#receipt-modal').classList.add('is-open');
       $('#receipt-body').scrollTop = 0;
@@ -8612,8 +8714,22 @@
     function closeReceipt() { $('#receipt-modal').classList.remove('is-open'); }
 
     $('#receipt-close').addEventListener('click', closeReceipt);
+    /* Ce bouton annonçait « Ticket envoyé à l'imprimante » et fermait la fenêtre.
+       Il n'imprimait rien. Sur une vraie caisse, la caissière le pressait, le
+       client attendait, et il ne sortait jamais de papier — le pire mensonge
+       qu'une caisse puisse faire. Il imprime maintenant, et il dit quand il n'a
+       pas pu.
+       DUPLICATA parce qu'un second exemplaire du même ticket qui circule sans le
+       dire est une pièce qu'on ne peut plus rapprocher. Le NUMÉRO, lui, ne
+       change pas : c'est le même achat. */
     $('#receipt-print').addEventListener('click', () => {
-      toast('Ticket envoyé à l\'imprimante');
+      const doc = receiptDocFor(receiptEntry, { copy: 'DUPLICATA' });
+      if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
+      toast('Impression du reçu…');
+      Promise.resolve(window.KiwiReceipt.print(doc)).then(
+        (r) => toast(r && r.ok ? 'Reçu imprimé' : 'Impression échouée'),
+        () => toast('Impression échouée')
+      );
       closeReceipt();
     });
     $('#receipt-modal').addEventListener('click', (e) => {
@@ -10073,7 +10189,16 @@
           ref: genRef(),
           kind: 'refund',
           refundOf: orig.ref,
+          cashier: (currentCashier && currentCashier.name) || '',
+          /* Le panier remboursé, quand le ticket d'origine le portait — un
+             remboursement partiel n'en reprend pas les lignes (le montant seul
+             est vrai), un remboursement total les reprend toutes. */
+          lines: (amount === orig.amount && Array.isArray(orig.lines)) ? orig.lines : null,
         };
+        /* Un remboursement est un reçu comme un autre : le client repart avec.
+           Il porte son propre numéro, la référence du ticket d'origine, et il
+           se fige au même titre. */
+        attachReceipt(entry);
         journal.push(entry);
         orig.refunded = true;
         shift.refunds += amount;       // positive — Clôture renders it as a row
@@ -11553,6 +11678,13 @@
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
+        /* Le reçu figé au moment de la vente. Cette boucle recopie champ par
+           champ (elle ne fait pas Object.assign), donc tout ce qui n'est pas
+           nommé ici est PERDU au rechargement — et une caisse recharge tous les
+           jours. Sans cette ligne, réimprimer le ticket d'hier ne ressortait
+           plus l'enseigne et les mentions de l'époque : exactement ce que le
+           figeage est censé garantir. */
+        if (e.rc)              entry.rc       = e.rc;
         journal.push(entry);
       });
       cashMovements.length = 0;

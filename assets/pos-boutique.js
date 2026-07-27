@@ -2095,6 +2095,42 @@
   function printReceiptNow(opts, parts) {
     const KP = window.KiwiPrinter;
     if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+
+    /* Le ticket que la boutique imprime est celui que la propriétaire a réglé
+       dans Réglages → Reçu : son enseigne, son adresse, son ICE, sa politique
+       d'échange, sa largeur de rouleau. Cette fonction composait le sien —
+       `shop: pv.name || 'Kiwi'` et rien d'autre — ce qui donnait le ticket d'une
+       boutique marocaine sans une seule mention légale. */
+    const K = window.KiwiReceipt;
+    if (K) {
+      const doc = K.build({
+        ref: opts.ref || '',
+        ts: Date.now(),
+        cashier: (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
+        lines: (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, total: l.amount, ref: l.ref, barcode: l.barcode })),
+        subtotal: opts.subtotal,
+        discount: opts.discount,
+        total: opts.amount,
+        customer: opts.customer || null,
+        pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
+        received: (parts || []).some((x) => x.m === 'espèces' && x.rendu > 0) ? opts.amount + (parts.find((x) => x.m === 'espèces').rendu || 0) : null,
+        change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
+      });
+      /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
+         avec son numéro, même si l'enseigne change de pied de page demain. */
+      try { if (opts.sale) opts.sale.rc = K.snapshot(doc); } catch (_) {}
+      toast('Impression du reçu…');
+      Promise.resolve(K.print(doc)).then(
+        (r) => toast(r && r.ok
+          ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : r.via === 'browser' ? 'imprimante système' : 'réseau'))
+          : 'Impression échouée'),
+        () => toast('Impression échouée')
+      );
+      return;
+    }
+
+    /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
+       chemin, inchangé. */
     const pv = pvPaired();
     const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces' };
     const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
@@ -2141,7 +2177,8 @@
   function checkout() {
     const t = state.ticket;
     if (!t.lines.length) return;
-    const { total } = ticketTotals(t);
+    const tot = ticketTotals(t);
+    const total = tot.total;
     const c = ticketClient();
     openPay({
       amount: total,
@@ -2154,7 +2191,16 @@
         qty: ln.qty,
         name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
         amount: lineUnit(ln) * ln.qty,
+        ref: ln.pid,
+        barcode: (P[ln.pid] && P[ln.pid].barcode) || '',
       })),
+      /* Ce qui rend le ticket lisible pour la cliente : ce qu'elle aurait payé,
+         ce qu'on lui a retiré, et à quel nom la fidélité est comptée. Sans ça le
+         reçu affiche un total qui ne correspond pas à l'addition des lignes et
+         personne ne peut vérifier sa remise. */
+      subtotal: t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0),
+      discount: tot.remise + tot.reward,
+      customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette

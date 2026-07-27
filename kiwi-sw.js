@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v133';
+var CACHE = 'kiwi-app-v135';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -77,6 +77,11 @@ var SHELL = [
      qu'il puisse se faire. */
   '/assets/hours.js',
   '/assets/hours-ui.js',
+  /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
+     rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
+     et un client qui repart sans reçu ne revient pas le chercher. */
+  '/assets/receipt.js',
+  '/assets/receipt-ui.js',
   '/assets/merchant-config.js',
   '/assets/staff-roles.js',
   '/assets/identity.js',
