@@ -198,23 +198,26 @@
     }));
   }
 
-  /* ───────────────────────── couleurs ───────────────────────── */
-  const COLORS = [
-    { id: 'ivoire',     label: 'Ivoire',      hex: '#EFE7D6' },
-    { id: 'blanc',      label: 'Blanc',       hex: '#FFFFFF' },
-    { id: 'noir',       label: 'Noir',        hex: '#1F2421' },
-    { id: 'dore',       label: 'Doré',        hex: '#C9A227' },
-    { id: 'argent',     label: 'Argenté',     hex: '#C8CCD0' },
-    { id: 'bordeaux',   label: 'Bordeaux',    hex: '#6E1F2E' },
-    { id: 'nuit',       label: 'Bleu nuit',   hex: '#1F3A5C' },
-    { id: 'emeraude',   label: 'Émeraude',    hex: '#2E6B4F' },
-    { id: 'safran',     label: 'Safran',      hex: '#D99A2B' },
-    { id: 'terracotta', label: 'Terracotta',  hex: '#B0613F' },
-    { id: 'rose',       label: 'Rose poudré', hex: '#D8A8A0' },
-    { id: 'camel',      label: 'Camel',       hex: '#B68B5C' },
-    { id: 'gris',       label: 'Gris perle',  hex: '#9AA09D' },
-  ];
-  const COLOR = Object.fromEntries(COLORS.map((c) => [c.id, c]));
+  /* ───────────────────────── couleurs ─────────────────────────
+     Aucune palette n'est définie ici. Ce module lisait autrefois sa propre liste
+     de treize nuances, copiée à l'identique dans boutique-catalog.js : deux
+     copies d'une même vérité finissent toujours par diverger. Le vocabulaire
+     vit dans assets/color-palette.js (window.KiwiColors) — des FAMILLES
+     générales, choisies à la pastille, jamais à la nuance. `colorOf()` accepte
+     n'importe quelle valeur historique ou importée et rend toujours une famille
+     affichable : une variante ne peut pas devenir grise faute de correspondance. */
+  const KC = () => window.KiwiColors || null;
+  const KC_MISS = { id: 'gris', label: 'Gris', hex: '#9AA0A6' };
+  function colorOf(id) { const k = KC(); return (k && k.normalize(id)) || KC_MISS; }
+  function colorLabel(id) { return colorOf(id).label; }
+  function colorHex(id) { return colorOf(id).hex; }
+  // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
+  // que dans le tableau de bord, nom porté par title/aria plutôt qu'écrit.
+  function colorDot(id, size) {
+    const k = KC();
+    if (k) return k.swatch(id, { size: size || 'sm' });
+    return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
+  }
 
   /* ───────────────────────── catalogue (base partagée) ─────────────────────────
      Le catalogue est désormais la BASE PARTAGÉE (window.KiwiBoutiqueCatalog) —
@@ -245,14 +248,31 @@
      Resolves the exact variant (produit × couleur × taille); guarded so a miss can never
      break the sale. adjustStock() commit fires the subscribe → rebuildCatalog, which
      re-sets P from the base, so this never double-counts the in-memory hold. */
+  /* La vente choisit une FAMILLE ("Bleu"), l'inventaire garde des variantes
+     distinctes ("navy" et "blue" restent deux articles, deux stocks, deux codes
+     — on ne fusionne jamais dans le dos du commerçant). Il faut donc décider
+     laquelle bouge, dans cet ordre : l'identifiant exact s'il correspond, sinon
+     la même famille EN AYANT du stock (une sortie ne doit pas creuser une
+     variante déjà vide pendant qu'une autre est pleine), sinon la même famille,
+     sinon la taille seule. Un retour (delta > 0) revient de préférence sur une
+     variante existante de la même famille. */
   function persistStock(pid, size, color, delta) {
     if (!delta || !pvReal()) return;
     try {
       const cat = window.KiwiBoutiqueCatalog;
       if (!cat || !cat.listVariants || !cat.adjustStock) return;
-      const vs = cat.listVariants(pid) || [];
-      const v = vs.find((x) => x.colorId === color && String(x.size) === String(size))
-             || vs.find((x) => String(x.size) === String(size));
+      const sameSize = (cat.listVariants(pid) || []).filter((x) => String(x.size) === String(size));
+      const fam = (x) => (cat.colorFamily ? cat.colorFamily(x) : x.colorId);
+      const covers = (x) => (x.stock || 0) >= -delta;
+      // Sur une SORTIE, « en avoir » passe avant « porter le même identifiant » :
+      // sinon une vente de bleu se déduirait d'une variante bleue déjà vide
+      // pendant que la variante marine, elle, est pleine — le magasin perdrait la
+      // sortie de son stock. Sur un RETOUR, l'identifiant exact suffit.
+      const v = (delta < 0 && sameSize.find((x) => x.colorId === color && covers(x)))
+             || (delta < 0 && sameSize.find((x) => fam(x) === color && covers(x)))
+             || sameSize.find((x) => x.colorId === color)
+             || sameSize.find((x) => fam(x) === color)
+             || sameSize[0];
       if (v) cat.adjustStock(v.id, delta);
     } catch (_) {}
   }
@@ -995,8 +1015,8 @@
       <span class="bq-line-mid">
         <span class="bq-line-name">${esc(p.name)}</span>
         <span class="bq-line-sub">
-          <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
-          <span class="sz">${esc(ln.size)}</span> ${esc(COLOR[ln.color] ? COLOR[ln.color].label : ln.color)}
+          ${colorDot(ln.color)}
+          <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
           ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}
         </span>
       </span>
@@ -1079,8 +1099,8 @@
 
       <div class="bq-f">
         <div class="bq-f-lbl">Couleur</div>
-        <div class="bq-colors" id="bq-colors">
-          ${p.colors.map((cid) => { const cc = COLOR[cid] || { hex: '#ccc', label: cid }; return `<button class="bq-color ${cid === sheet.color ? 'on' : ''}" data-bq-color="${cid}" data-c="${cid}" style="background:${cc.hex}" title="${esc(cc.label)}" aria-label="${esc(cc.label)}"></button>`; }).join('')}
+        <div id="bq-colors">
+          ${KC() ? KC().picker('bq-color', sheet.color, { ids: p.colors, size: 'lg', label: 'Couleur', hint: 'Touchez une pastille pour lire son nom' }) : ''}
         </div>
       </div>
 
@@ -1128,12 +1148,9 @@
       $$('[data-bq-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
-    $('#bq-colors', el).onclick = (e) => {
-      const b = e.target.closest('[data-bq-color]');
-      if (!b) return;
-      sheet.color = b.dataset.bqColor;
-      $$('[data-bq-color]', el).forEach((x) => x.classList.toggle('on', x === b));
-    };
+    // Le picker gère lui-même sélection, clavier et libellé au survol : on écoute
+    // seulement le choix retenu.
+    $('#bq-colors', el).addEventListener('kc:change', (e) => { sheet.color = e.detail.value; });
     const qMinus = $('#bq-qty-minus', el);
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
     const qPlus = $('#bq-qty-plus', el);
@@ -1426,9 +1443,8 @@
       return `<span class="bq-look-size ${cls}${on}"><b>${esc(s)}</b><i>${q}</i></span>`;
     }).join('');
     const colors = (p.colors || []).map((cid) => {
-      const c = COLOR[cid] || { label: cid, hex: '#ccc' };
       const on = cid === lk.color ? ' is-on' : '';
-      return `<span class="bq-look-color${on}"><i style="background:${c.hex}"></i>${esc(c.label)}</span>`;
+      return `<span class="bq-look-color${on}">${colorDot(cid)}${esc(colorLabel(cid))}</span>`;
     }).join('');
     const ray = rayonOf(lk.pid);
     return `
@@ -1688,7 +1704,7 @@
       toast(`${p.name}, épuisé dans toutes les tailles`);
       return;
     }
-    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId : p.colors[0];
+    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
     if (state.view === 'vente') renderTicket();
@@ -1715,7 +1731,7 @@
     /* on affiche la variante scannée même si elle est à zéro — c'est justement le
        stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
     const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFree(p) || sizesOf(p)[0] || '');
-    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId : p.colors[0];
+    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
     state.lookup = { pid, size, color, ean: code, at: new Date() };
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
@@ -1834,7 +1850,7 @@
             <span class="bq-line-art">${artOf(p.art)}</span>
             <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
               <span class="bq-line-sub">
-                <i class="dot" style="background:${COLOR[l.color] ? COLOR[l.color].hex : '#ccc'}"></i>
+                ${colorDot(l.color)}
                 <span class="sz">${esc(l.size)}</span> ${l.qty > 1 ? `× ${l.qty}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
             <span class="amt">${fmtMAD(l.unit * l.qty)}</span>
@@ -1992,12 +2008,12 @@
       <p class="modal-subtle">${c ? esc(c.name) : 'Cliente de passage'} · la pièce rendue repart en stock</p>
       <div class="bq-exch-row is-ret">
         <span class="bq-line-art">${artOf(oldP.art)}</span>
-        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${esc(COLOR[ln.color] ? COLOR[ln.color].label : ln.color)}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
+        <span class="mid"><b>${esc(oldP.name)}</b><span>retour · ${esc(ln.size)} · ${colorDot(ln.color)} ${esc(colorLabel(ln.color))}${ln.remise ? ` · payé avec −${ln.remise} %` : ''}</span></span>
         <span class="amt">−${fmtMAD(ln.unit)}</span>
       </div>
       <div class="bq-exch-row is-new">
         <span class="bq-line-art">${artOf(newP.art)}</span>
-        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${esc(COLOR[newColor] ? COLOR[newColor].label : newColor)}</span></span>
+        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
         <span class="amt">+${fmtMAD(newP.price)}</span>
       </div>
       <div class="bq-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
@@ -2571,9 +2587,12 @@
       .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
       .bqi-fg input, .bqi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .bqi-frow { display: flex; gap: 12px; } .bqi-frow .bqi-fg { flex: 1; }
-      .bqi-swrow { display: flex; gap: 7px; flex-wrap: wrap; }
-      .bqi-sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
-      .bqi-sw.on { border-color: var(--ink); }
+      /* Le sélecteur de couleur vient de color-palette.js (.kc-*) — rien à
+         redéfinir ici, c'est tout l'intérêt. Restent la pastille cliquable de la
+         ligne variante et le rappel discret de la nuance d'origine. */
+      .bqi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
+      .bqi-cbtn:hover { background: rgba(125,242,176,.14); }
+      .bqi-csrc { font-style: normal; font-size: 11px; opacity: .6; margin-left: 5px; }
       .bqi-iconpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 168px; overflow-y: auto; padding: 8px; border: 1px solid rgba(10,15,13,.14); border-radius: 12px; background: var(--paper); }
       .bqi-icon { aspect-ratio: 1; border: 1.5px solid rgba(10,15,13,.10); border-radius: 10px; background: var(--paper); cursor: pointer; padding: 5px; color: var(--riad); display: flex; align-items: center; justify-content: center; }
       .bqi-icon:hover { border-color: rgba(11,110,79,.5); }
@@ -2895,6 +2914,7 @@
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
       el.querySelectorAll('[data-vdel]').forEach((b) => b.addEventListener('click', () => { cat2.deleteVariant(b.dataset.vdel); openInvProduct(pid); }));
+      el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
     });
   }
 
@@ -2907,7 +2927,7 @@
       ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     return `<tr>
-      <td><span class="bqi-dot" style="background:${v.colorHex}"></span>${esc(v.colorLabel)} · <b>${esc(v.size)}</b></td>
+      <td><button class="bqi-cbtn" data-vcolor="${v.id}" title="Changer la couleur">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</button>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk"><button data-vdec="${v.id}" aria-label="−1">−</button><input data-vstock="${v.id}" type="number" min="0" value="${v.stock}"/><button data-vinc="${v.id}" aria-label="+1">+</button></span></td>
       <td>${bc}</td>
       <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="bqi-mini danger" data-vdel="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button></td>
@@ -3001,9 +3021,44 @@
     });
   }
 
-  /* ─── add variant (colour × size × stock + optional EAN-13) ─── */
-  function colorSwatches(id) {
-    return catDB().colors().map((c, i) => `<button type="button" class="bqi-sw ${i === 0 ? 'on' : ''}" style="background:${c.hex}" title="${esc(c.label)}" data-cid="${c.id}"></button>`).join('');
+  /* ─── add variant (colour × size × stock + optional EAN-13) ───
+     Le sélecteur est celui du tableau de bord, en taille tactile : mêmes
+     pastilles, même état sélectionné, même comportement clavier. */
+  function colorPicker(sel) {
+    const k = KC();
+    if (!k) return '';
+    return k.picker('variant-color', sel || 'noir', {
+      size: 'lg', optional: true, label: 'Couleur',
+      hint: 'Touchez une pastille pour lire son nom',
+    });
+  }
+
+  /* Changer la couleur d'une variante existante. La variante garde son stock,
+     ses codes-barres et son identité : seule la famille affichée change. */
+  function openVariantColor(vid, pid) {
+    const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
+    const v = d.variants.find((x) => x.id === vid); if (!v) return;
+    const html = `
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="bqi-modh"><div><h3>Couleur de la variante</h3><span>${esc(d.product.name)} · taille ${esc(v.size)}${v.colorSource ? ` · saisie à l'origine « ${esc(v.colorSource)} »` : ''}</span></div></div>
+      <div class="bqi-form">
+        <div class="bqi-fg"><label>Couleur</label>${colorPicker(v.colorFamily || v.colorId)}</div>
+        <div class="bqi-fg"><label>Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif — pour distinguer deux variantes de même couleur" /></div>
+      </div>
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-vc-save">Enregistrer</button></div>`;
+    invSetModal(html, (el) => {
+      $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
+      $('#bqi-vc-save', el).addEventListener('click', () => {
+        const k = KC();
+        const colorId = k ? k.value(el) : '';
+        cat.updateVariant(vid, {
+          colorId: colorId || undefined,
+          note: $('#bqi-vc-note', el).value.trim(),
+        });
+        toast('Couleur mise à jour');
+        openInvProduct(pid);
+      });
+    });
   }
   function openAddVariant(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
@@ -3012,7 +3067,7 @@
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Ajouter une variante</h3><span>${esc(d.product.name)}, couleur × taille</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqi-av-sw">${colorSwatches()}</div></div>
+        <div class="bqi-fg"><label>Couleur</label><div id="bqi-av-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqi-av-size" list="bqi-av-sizes" value="${esc(presets[0] || 'TU')}" /><datalist id="bqi-av-sizes">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
           <div class="bqi-fg"><label>Stock initial</label><input id="bqi-av-stock" type="number" min="0" value="0" /></div>
@@ -3021,10 +3076,10 @@
       </div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-av-save">Ajouter la variante</button></div>`;
     invSetModal(html, (el) => {
-      let colorId = cat.colors()[0].id;
-      el.querySelectorAll('#bqi-av-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => { el.querySelectorAll('#bqi-av-sw .bqi-sw').forEach((x) => x.classList.remove('on')); b.classList.add('on'); colorId = b.dataset.cid; }));
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-av-save', el).addEventListener('click', () => {
+        const k = KC();
+        const colorId = (k && k.value($('#bqi-av-sw', el))) || 'noir';
         const size = $('#bqi-av-size', el).value.trim() || 'TU';
         const stock = parseInt($('#bqi-av-stock', el).value, 10) || 0;
         const v = cat.addVariant({ productId: pid, colorId, size, stock });
@@ -3066,7 +3121,13 @@
     const cat = catDB(); if (!cat) return;
     if (state.view !== 'inventaire') switchView('inventaire');
     const products = cat.listProducts({});
-    const varOptions = (pid) => cat.listVariants(pid).map((v) => `<option value="${v.id}">${esc(v.colorLabel)} · ${esc(v.size)}</option>`).join('');
+    // Une liste déroulante ne peut pas montrer de pastille : c'est le seul
+    // endroit où la couleur reste écrite. Quand deux variantes portent la même
+    // famille, la nuance d'origine ou la précision les départage.
+    const varOptions = (pid) => cat.listVariants(pid).map((v) => {
+      const extra = v.note || v.colorSource || '';
+      return `<option value="${v.id}">${esc(v.colorLabel)}${extra ? ` (${esc(extra)})` : ''} · ${esc(v.size)}</option>`;
+    }).join('');
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Code existant à enregistrer</h3><span>Code scanné : <b>${esc(code)}</b>, rattachez-le à un article (sans réimprimer).</span></div></div>
@@ -3095,7 +3156,8 @@
     const cat = catDB(); const p = cat.getProduct(pid).product;
     const code = cat.primaryBarcode(v);
     if (!code) return null;
-    return { title: p.name, sub: `${v.colorLabel} · ${v.size}`, price: fmtNum(p.priceMAD), code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128' };
+    const extra = v.note || v.colorSource || '';
+    return { title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`, price: fmtNum(p.priceMAD), code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128' };
   }
   function printVariantLabel(vid) {
     const cat = catDB();

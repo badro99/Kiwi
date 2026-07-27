@@ -28,23 +28,69 @@
   let KEY = keyFor(VENUE);
 
   /* ───────────────── shared colour palette (first-class attribute) ───────────────
-     Lifted from the caisse COLORS so both surfaces speak the same colours. */
-  const COLORS = [
-    { id: 'ivoire',     label: 'Ivoire',      hex: '#EFE7D6' },
-    { id: 'blanc',      label: 'Blanc',       hex: '#FFFFFF' },
-    { id: 'noir',       label: 'Noir',        hex: '#1F2421' },
-    { id: 'dore',       label: 'Doré',        hex: '#C9A227' },
-    { id: 'argent',     label: 'Argenté',     hex: '#C8CCD0' },
-    { id: 'bordeaux',   label: 'Bordeaux',    hex: '#6E1F2E' },
-    { id: 'nuit',       label: 'Bleu nuit',   hex: '#1F3A5C' },
-    { id: 'emeraude',   label: 'Émeraude',    hex: '#2E6B4F' },
-    { id: 'safran',     label: 'Safran',      hex: '#D99A2B' },
-    { id: 'terracotta', label: 'Terracotta',  hex: '#B0613F' },
-    { id: 'rose',       label: 'Rose poudré', hex: '#D8A8A0' },
-    { id: 'camel',      label: 'Camel',       hex: '#B68B5C' },
-    { id: 'gris',       label: 'Gris perle',  hex: '#9AA09D' },
+     The palette is NOT defined here — it lives once, in assets/color-palette.js
+     (window.KiwiColors), so the caisse, the dashboard, the public Order Pro page
+     and this base cannot drift apart. What a vendor picks is a general FAMILY
+     (Noir · Blanc · Gris · Marron · Beige · Rouge · Orange · Jaune · Vert · Bleu
+     · Violet · Rose · Multicolore, plus Transparent where a store uses it), not
+     a shade. "Bleu nuit", "royal", "turquoise" all read as Bleu.
+
+     LEGACY_SHADES is the retired 13-shade palette this file used to define. It
+     stays because live variants still carry those ids and the demo seed is
+     written in them: it lets a stored `nuit` variant recover the exact words the
+     merchant originally typed ("Bleu nuit") while DISPLAYING the Bleu family.
+     Nothing is rewritten and nothing is merged — see normColor() / migrate(). */
+  const LEGACY_SHADES = {
+    ivoire:     { label: 'Ivoire',      hex: '#EFE7D6' },
+    blanc:      { label: 'Blanc',       hex: '#FFFFFF' },
+    noir:       { label: 'Noir',        hex: '#1F2421' },
+    dore:       { label: 'Doré',        hex: '#C9A227' },
+    argent:     { label: 'Argenté',     hex: '#C8CCD0' },
+    bordeaux:   { label: 'Bordeaux',    hex: '#6E1F2E' },
+    nuit:       { label: 'Bleu nuit',   hex: '#1F3A5C' },
+    emeraude:   { label: 'Émeraude',    hex: '#2E6B4F' },
+    safran:     { label: 'Safran',      hex: '#D99A2B' },
+    terracotta: { label: 'Terracotta',  hex: '#B0613F' },
+    rose:       { label: 'Rose poudré', hex: '#D8A8A0' },
+    camel:      { label: 'Camel',       hex: '#B68B5C' },
+    gris:       { label: 'Gris perle',  hex: '#9AA09D' },
+  };
+
+  // Degraded stand-in for the rare load where color-palette.js is missing: the
+  // catalogue must still open, so we answer with the family set it would have.
+  const KC_FALLBACK = [
+    { id: 'noir', label: 'Noir', hex: '#1A1A1A' }, { id: 'blanc', label: 'Blanc', hex: '#FFFFFF' },
+    { id: 'gris', label: 'Gris', hex: '#9AA0A6' }, { id: 'marron', label: 'Marron', hex: '#6B4A2F' },
+    { id: 'beige', label: 'Beige', hex: '#E0CFB2' }, { id: 'rouge', label: 'Rouge', hex: '#C62828' },
+    { id: 'orange', label: 'Orange', hex: '#E8720C' }, { id: 'jaune', label: 'Jaune', hex: '#F2C230' },
+    { id: 'vert', label: 'Vert', hex: '#2E7D46' }, { id: 'bleu', label: 'Bleu', hex: '#1F5FA8' },
+    { id: 'violet', label: 'Violet', hex: '#7B4BA8' }, { id: 'rose', label: 'Rose', hex: '#E489AE' },
+    { id: 'multi', label: 'Multicolore', hex: '#8A8F8C' },
   ];
-  const COLOR_BY_ID = Object.fromEntries(COLORS.map((c) => [c.id, c]));
+  const KC = () => window.KiwiColors || null;
+  function COLORS() { const k = KC(); return k ? k.families() : KC_FALLBACK.slice(); }
+  function COLOR_BY_ID(id) {
+    const k = KC();
+    if (k) return k.get(id) || null;
+    return KC_FALLBACK.find((c) => c.id === id) || null;
+  }
+
+  /* Resolve any colour a variant could carry into the pair we store:
+       family  — what every surface DISPLAYS (swatch + name in tooltip/aria)
+       source  — the exact words behind it, kept only when they differ, so an
+                 import, an old record or a later edit never loses the original.
+     `colorId` itself is NEVER touched by this: it is the variant's identity, and
+     rewriting it would silently merge "Navy M" into "Blue M". */
+  function normColor(id, label, hex) {
+    const legacy = LEGACY_SHADES[id];
+    const srcLabel = label || (legacy && legacy.label) || '';
+    const srcHex = hex || (legacy && legacy.hex) || '';
+    const k = KC();
+    const fam = k ? k.normalize(id, srcLabel, srcHex)
+      : (KC_FALLBACK.find((c) => c.id === id) || KC_FALLBACK[2]);
+    const source = srcLabel && String(srcLabel).toLowerCase() !== String(fam.label).toLowerCase() ? srcLabel : '';
+    return { family: fam, source };
+  }
 
   /* Size presets per garment kind. `taille` = clothing, `pointure` = shoes,
      `tu` = one-size accessory. Products may add custom sizes freely. */
@@ -126,6 +172,8 @@
       db = blank();
       if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
+    } else if (migrate()) {
+      persist();   // teach older records their colour family, once, in place
     }
     return db;
   }
@@ -158,6 +206,7 @@
   window.addEventListener('storage', (e) => {
     if (e.key !== KEY) return;
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
+    migrate();   // the other tab may be an older build, or a cloud copy just landed
     notify();
   });
 
@@ -287,6 +336,7 @@
 
         const adopt = first && mineEmpty;
         db = adopt ? theirs : mergeDocs(db, theirs);
+        migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();
         if (!adopt) schedulePush(0);   // notre fusion doit remonter
         return true;
@@ -331,6 +381,7 @@
         if (res.status === 409 && res.j && res.j.data && cloud.tries < 3) {
           cloud.tries++;
           db = mergeDocs(db, res.j.data);
+          migrate();
           cloud.rev = +res.j.rev || 0;
           persist(); writeRev(slug, cloud.rev); healSeq(); notify();
           cloud.again = true;
@@ -410,12 +461,64 @@
     });
   }
 
-  function mkVariant(productId, colorId, size, stock) {
-    const c = COLOR_BY_ID[colorId] || { id: colorId, label: colorId, hex: '#999' };
-    return {
-      id: nextId('var'), productId, colorId: c.id, colorLabel: c.label, colorHex: c.hex,
+  /* A variant's colour is stored as three things that must never be confused:
+       colorId      — IDENTITY. Raw, exactly as created or imported. Two variants
+                      that came in as "navy" and "blue" keep two different ids and
+                      therefore stay two separate variants, with their own stock
+                      and their own barcodes, until someone merges them on purpose.
+       colorFamily  — DISPLAY. The general family both of those resolve to (bleu).
+       colorSource  — MEMORY. The words originally used, kept when they differ.
+     colorLabel / colorHex carry the FAMILY, because every surface already reads
+     that pair to draw a swatch and name it. */
+  function mkVariant(productId, colorId, size, stock, meta) {
+    meta = meta || {};
+    const n = normColor(colorId, meta.colorLabel, meta.colorHex);
+    const v = {
+      id: nextId('var'), productId,
+      colorId: String(colorId || n.family.id),
+      colorFamily: n.family.id,
+      colorLabel: n.family.label, colorHex: n.family.hex,
       size: String(size), stock: Math.max(0, stock | 0), sku: '', barcodes: [],
     };
+    if (n.source) {
+      v.colorSource = n.source;
+      const legacy = LEGACY_SHADES[v.colorId];
+      const srcHex = meta.colorHex || (legacy && legacy.hex) || '';
+      if (srcHex) v.colorSourceHex = srcHex;
+    }
+    return v;
+  }
+
+  /* One-way, additive, idempotent. Existing catalogues were written before the
+     palette was normalized: their variants carry a shade id and a shade label
+     ("nuit" / "Bleu nuit") and no family. This teaches each one its family and
+     remembers the original wording — it does NOT touch colorId, stock, sku or
+     barcodes, so nothing merges, disappears or loses its scan. */
+  function migrate() {
+    if (!db || !Array.isArray(db.variants)) return false;
+    let touched = 0;
+    db.variants.forEach((v) => {
+      if (v && v.colorFamily && COLOR_BY_ID(v.colorFamily)) return;
+      const n = normColor(v.colorId, v.colorLabel, v.colorHex);
+      if (n.source) {
+        if (!v.colorSource) v.colorSource = n.source;
+        if (!v.colorSourceHex && v.colorHex) v.colorSourceHex = v.colorHex;
+      }
+      v.colorFamily = n.family.id;
+      v.colorLabel = n.family.label;
+      v.colorHex = n.family.hex;
+      touched++;
+    });
+    if (touched) db.v = 2;
+    return touched > 0;
+  }
+
+  /* The family a variant displays as, tolerant of a record written before the
+     migration ran (a cloud copy that landed from an older build, say). */
+  function famOf(v) {
+    if (!v) return 'gris';
+    if (v.colorFamily && COLOR_BY_ID(v.colorFamily)) return v.colorFamily;
+    return normColor(v.colorId, v.colorSource || v.colorLabel, v.colorSourceHex || v.colorHex).family.id;
   }
 
   /* ───────────────── lookups / derived ───────────────── */
@@ -509,28 +612,42 @@
     commit();
   }
 
-  /* full product view for editors: product + variants + matrix helpers */
+  /* full product view for editors: product + variants + matrix helpers.
+     `colors` is one entry per DISTINCT FAMILY — what a person sees on the card
+     ("3 couleurs"). Two variants that both read Bleu count once here while
+     staying two separate rows in the matrix, which is exactly the point. */
   function getProduct(id) {
     const p = prodById(id); if (!p) return null;
     const variants = variantsOf(id);
     const colors = []; const sizes = [];
     variants.forEach((v) => {
-      if (!colors.some((c) => c.id === v.colorId)) colors.push({ id: v.colorId, label: v.colorLabel, hex: v.colorHex });
+      const f = famOf(v);
+      if (!colors.some((c) => c.id === f)) {
+        const fam = COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex };
+        colors.push({ id: fam.id, label: fam.label, hex: fam.hex });
+      }
       if (!sizes.includes(v.size)) sizes.push(v.size);
     });
-    return { product: p, category: catById(p.categoryId), variants, colors, sizes, stock: productStock(id) };
+    return {
+      product: p, category: catById(p.categoryId), variants, colors, sizes,
+      families: colors.map((c) => c.id), stock: productStock(id),
+    };
   }
 
   /* ───────────────── variants ───────────────── */
   function addVariant(data) {
     data = data || {};
     if (!prodById(data.productId)) return null;
-    // de-dupe by color+size within a product
+    // De-dupe on the RAW colour id, never on the family: a store that already has
+    // a "navy" variant must still be able to keep a distinct "blue" one, with its
+    // own stock and its own barcode. Merging them is a deliberate act, not a
+    // side effect of picking the same swatch.
     const dup = db.variants.find((v) => v.productId === data.productId && v.colorId === data.colorId && v.size === String(data.size));
     if (dup) { if (data.stock != null) { dup.stock = Math.max(0, data.stock | 0); commit(); } return dup; }
-    const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0);
-    if (data.colorLabel) v.colorLabel = data.colorLabel;
-    if (data.colorHex) v.colorHex = data.colorHex;
+    const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0, {
+      colorLabel: data.colorLabel, colorHex: data.colorHex,
+    });
+    if (data.note) v.note = String(data.note).slice(0, 60);
     db.variants.push(v); commit(); return v;
   }
   function updateVariant(id, patch) {
@@ -538,7 +655,24 @@
     if (patch.stock != null) v.stock = Math.max(0, patch.stock | 0);
     if (patch.size != null) v.size = String(patch.size);
     if (patch.sku != null) v.sku = String(patch.sku);
-    if (patch.colorId) { const c = COLOR_BY_ID[patch.colorId] || { id: patch.colorId, label: patch.colorLabel || patch.colorId, hex: patch.colorHex || '#999' }; v.colorId = c.id; v.colorLabel = c.label; v.colorHex = c.hex; }
+    if (patch.note != null) v.note = String(patch.note).slice(0, 60);
+    if (patch.colorId) {
+      // Re-colouring is an authorized, deliberate edit: the new choice becomes
+      // the whole truth on screen. The value it came in as is filed once under
+      // `colorWas` (imports, historical records) instead of trailing the variant
+      // around as a subtitle that no longer describes it.
+      const n = normColor(patch.colorId, patch.colorLabel, patch.colorHex);
+      const had = v.colorSource || '';
+      if (had && !v.colorWas) v.colorWas = had;
+      v.colorId = String(patch.colorId);
+      v.colorFamily = n.family.id;
+      v.colorLabel = n.family.label;
+      v.colorHex = n.family.hex;
+      v.colorSource = n.source;
+      if (n.source && (patch.colorHex || v.colorSourceHex)) v.colorSourceHex = patch.colorHex || v.colorSourceHex;
+      else delete v.colorSourceHex;
+      if (!n.source) delete v.colorSource;
+    }
     commit(); return v;
   }
   function setStock(id, n) { const v = varById(id); if (v) { v.stock = Math.max(0, n | 0); commit(); } return v; }
@@ -615,15 +749,20 @@
     db.products.filter((p) => !p.archived).forEach((p) => {
       const vs = variantsOf(p.id);
       const sizes = {}; const colorSet = [];
+      // The till offers FAMILIES, one swatch per colour a person would name —
+      // never one per stored shade. Two variants that both read Bleu present a
+      // single Bleu swatch here; which of them the sale draws down is decided in
+      // pos-boutique.js persistStock(), preferring an exact id then stock on hand.
       vs.forEach((v) => {
         sizes[v.size] = (sizes[v.size] || 0) + (v.stock || 0);
-        if (!colorSet.includes(v.colorId)) colorSet.push(v.colorId);
+        const f = famOf(v);
+        if (!colorSet.includes(f)) colorSet.push(f);
         (v.barcodes || []).forEach((b) => { BY_EAN[b.code] = p.id; });
       });
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
         id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag,
-        ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['ivoire'],
+        ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
       };
       P[p.id] = item;
@@ -637,21 +776,32 @@
     return { RAYONS: RAYONS.filter((r) => r.items.length), P, BY_EAN };
   }
 
-  /* Given a scanned barcode, resolve the exact variant → { pid, size, colorId }. */
+  /* Given a scanned barcode, resolve the exact variant.
+     `colorId` is the variant's raw identity (what actually left the shelf);
+     `colorFamily` is what the till highlights, since the sheet offers families. */
   function resolveScan(code) {
     const hit = findByBarcode(code);
     if (!hit) return null;
-    return { pid: hit.product.id, size: hit.variant.size, colorId: hit.variant.colorId, variant: hit.variant, product: hit.product };
+    return {
+      pid: hit.product.id, size: hit.variant.size,
+      colorId: hit.variant.colorId, colorFamily: famOf(hit.variant),
+      variant: hit.variant, product: hit.product,
+    };
   }
 
-  /* ───────────────── CSV export (simple) ───────────────── */
+  /* ───────────────── CSV export (simple) ─────────────────
+     `couleur` is the general family, the same word the merchant sees on screen,
+     so a report reads like the shop does. `couleur_saisie` carries the original
+     shade when there was one — a re-import or an accountant looking at last
+     season's records still finds "Bleu nuit" next to its Bleu. */
   function exportCsv() {
-    const rows = [['produit', 'categorie', 'couleur', 'taille', 'prix_mad', 'stock', 'code_barres', 'type']];
+    const rows = [['produit', 'categorie', 'couleur', 'couleur_saisie', 'taille', 'prix_mad', 'stock', 'code_barres', 'type']];
     db.products.filter((p) => !p.archived).forEach((p) => {
       const cat = catById(p.categoryId);
       variantsOf(p.id).forEach((v) => {
+        const fam = COLOR_BY_ID(famOf(v));
         (v.barcodes.length ? v.barcodes : [{ code: '', type: '' }]).forEach((b) => {
-          rows.push([p.name, cat ? cat.name : '', v.colorLabel, v.size, p.priceMAD, v.stock, b.code, b.type]);
+          rows.push([p.name, cat ? cat.name : '', fam ? fam.label : v.colorLabel, v.colorSource || '', v.size, p.priceMAD, v.stock, b.code, b.type]);
         });
       });
     });
@@ -665,8 +815,21 @@
     // lifecycle
     load, reset, use, currentVenue: () => VENUE, demoVenue: DEMO_VENUE,
     subscribe(fn) { load(); subs.add(fn); return () => subs.delete(fn); },
-    // reference data
-    colors: () => COLORS.slice(), colorById: (id) => COLOR_BY_ID[id] || null, sizePresets,
+    // reference data — one palette, the general families, shared with the caisse
+    // and the public page. `colorsInUse` is what a filter row should offer: only
+    // the families this store actually stocks, which is also how "transparent"
+    // stays out of the way until a store has a reason for it.
+    colors: (opts) => (window.KiwiColors ? window.KiwiColors.families(opts) : COLORS()),
+    colorById: (id) => COLOR_BY_ID(id),
+    colorFamily: (v) => (load(), famOf(v)),
+    colorsInUse: () => {
+      load();
+      const seen = [];
+      db.variants.forEach((v) => { const f = famOf(v); if (!seen.includes(f)) seen.push(f); });
+      return COLORS().concat(window.KiwiColors ? window.KiwiColors.all() : [])
+        .filter((c, i, a) => seen.includes(c.id) && a.findIndex((x) => x.id === c.id) === i);
+    },
+    sizePresets,
     // categories
     listCategories: () => (load(), listCategories()), addCategory: (...a) => (load(), addCategory(...a)),
     renameCategory: (...a) => (load(), renameCategory(...a)), setCategoryColor: (...a) => (load(), setCategoryColor(...a)),

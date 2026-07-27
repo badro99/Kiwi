@@ -90,12 +90,27 @@ function sanitize(raw) {
     .map((v) => ({
       id: str(v && v.id, 40),
       productId: str(v && v.productId, 40),
+      // La couleur tient en trois champs qu'il ne faut pas confondre :
+      //  · colorId     — l'IDENTITÉ, brute, telle que créée ou importée. Deux
+      //                  variantes arrivées en « navy » et « blue » gardent deux
+      //                  identifiants, donc deux stocks et deux codes-barres.
+      //  · colorFamily — ce que les écrans AFFICHENT (la famille générale).
+      //  · colorSource — les mots d'origine, gardés quand ils diffèrent.
+      // Oublier l'un d'eux ici ne lève aucune erreur : il disparaît au premier
+      // aller-retour serveur, et un appareil retrouverait « Bleu nuit » quand
+      // l'autre affiche « Bleu ».
       colorId: str(v && v.colorId, 40),
+      colorFamily: str(v && v.colorFamily, 24),
+      colorSource: str(v && v.colorSource, 40),
+      colorSourceHex: str(v && v.colorSourceHex, 9),
+      colorWas: str(v && v.colorWas, 40),
       colorLabel: str(v && v.colorLabel, 40),
       colorHex: str(v && v.colorHex, 9),
       size: str(v && v.size, 12),
       stock: num(v && v.stock, 1e6) | 0,
       sku: str(v && v.sku, 40),
+      // Précision facultative : ce qui distingue deux variantes de même couleur.
+      note: str(v && v.note, 60),
       // Un EAN-13 maison généré ici (`primary`, celui de l'étiquette) et les
       // codes de l'ancien système relevés à la douchette, gardés tels quels —
       // c'est ce qui fait qu'un ancien scan résout encore.

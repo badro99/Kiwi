@@ -2718,6 +2718,18 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid rgba(0,0,0,.14);
       display: inline-block;
     }
+    /* Deux familles ne se disent pas avec un aplat : le multicolore et le sans
+       couleur. Même dessin que dans l'app (assets/color-palette.js). */
+    .bq-swatch[data-pat="multi"] {
+      background-image: conic-gradient(from 210deg, #C62828, #E8720C, #F2C230, #2E7D46, #1F5FA8, #7B4BA8, #E489AE, #C62828) !important;
+    }
+    .bq-swatch[data-pat="clear"] {
+      background-color: #fff !important;
+      background-image:
+        linear-gradient(45deg, #c6c9c7 25%, transparent 25%, transparent 75%, #c6c9c7 75%),
+        linear-gradient(45deg, #c6c9c7 25%, transparent 25%, transparent 75%, #c6c9c7 75%) !important;
+      background-size: 8px 8px; background-position: 0 0, 4px 4px;
+    }
     .bq-scan-box {
       margin-top: 4px;
       position: relative;
@@ -5226,7 +5238,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const colorChips = [...byColor.entries()].map(([cid, n]) => {
         const c = BQ.colors.get(cid) || { label: cid, hex: '#ccc' };
         const cls = n <= 0 ? 'is-out' : '';
-        return `<span class="bq-chip ${cls}"><i class="bq-swatch" style="background:${escapeHtml(c.hex)}"></i>${escapeHtml(c.label)} <b>${n}</b></span>`;
+        const pat = cid === 'multi' ? 'multi' : cid === 'transparent' ? 'clear' : '';
+        return `<span class="bq-chip ${cls}"><i class="bq-swatch" ${pat ? `data-pat="${pat}"` : ''} style="background:${escapeHtml(c.hex)}"></i>${escapeHtml(c.label)} <b>${n}</b></span>`;
       }).join('');
 
       const total = stockOf(p);
