@@ -74,6 +74,35 @@ export async function onRequestPost(context) {
    * `merchant` est dans le WHERE, et il est dérivé du serveur : connaître
    * l'identifiant d'une clé ne suffit pas à la mettre en pause chez autrui. */
   const id = str(b && b.id, 64);
+
+  /* ── Enregistrer la clé de signature Shopify ──────────────────────────────
+   * Shopify fabrique ce secret lui-même et ne le montre qu'une fois, dans
+   * l'écran qui crée le webhook. Il voyage donc dans l'autre sens que le nôtre :
+   * c'est le commerçant qui nous le confie, pour qu'on puisse vérifier le HMAC
+   * de chaque commande (functions/api/channel/shopify/[link].js).
+   *
+   * Il ne ressort JAMAIS. `shape()` ne le lit pas, aucune route ne le renvoie —
+   * un écran capable de le réafficher serait un écran où le voler suffit à
+   * signer de fausses commandes. « Je l'ai perdu » se répare dans Shopify, en
+   * regénérant le webhook. */
+  if (id && b && b.config && typeof b.config === 'object') {
+    const secret = str(b.config.shopifySecret, 200);
+    if (!secret) return json({ error: 'bad-config' }, 400);
+    const cfg = JSON.stringify({
+      shopifySecret: secret,
+      shop: str(b.config.shop, 120).toLowerCase(),
+    });
+    try {
+      const row = await env.DB.prepare(
+        "UPDATE channel_links SET config = ? WHERE id = ? AND merchant = ? AND channel = 'shopify' RETURNING id"
+      ).bind(cfg, id, merchant).first();
+      if (!row) return json({ error: 'not-found' }, 404);
+      return json({ ok: true, id, configured: true });
+    } catch (e) {
+      return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+    }
+  }
+
   if (id) {
     const revoke = !!(b && b.revoke);
     const status = b && b.status === 'paused' ? 'paused' : 'active';
@@ -123,5 +152,12 @@ export async function onRequestPost(context) {
     // suite et prévenir qu'il ne reviendra pas.
     token: 'kwc.' + keyId + '.' + secret,
     endpoint: new URL('/api/channel/order', request.url).toString(),
+    /* Shopify ne peut pas envoyer d'en-tête : son adresse porte donc l'identité
+     * dans le chemin, et c'est la signature qui authentifie. L'identifiant de
+     * lien n'est pas un secret — il ne vaut rien sans la clé de signature que
+     * le commerçant nous confiera ensuite. */
+    webhook: channel === 'shopify'
+      ? new URL('/api/channel/shopify/' + keyId, request.url).toString()
+      : '',
   });
 }

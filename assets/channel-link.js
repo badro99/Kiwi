@@ -43,18 +43,15 @@
       en: 'Yassir Express publishes no open POS interface. Go through your account manager, or link their dashboard to this address via a relay (Make, Zapier).',
       ar: 'لا تنشر Yassir Express واجهة صندوق مفتوحة. مرّ عبر مدير حسابك أو اربط لوحتهم بهذا العنوان عبر وسيط.',
     },
-    /* Attention à ce qu'on promet ici. Un webhook Shopify ne permet de
-     * configurer QU'UNE URL : il n'envoie pas d'en-tête Authorization, et son
-     * corps a sa propre forme (line_items, total_price en chaîne, …). Coller
-     * cette adresse dans Shopify ne marcherait donc pas, et l'écrire serait
-     * refaire exactement le « Connecté » qui ne connectait rien.
-     * Ce qui marche aujourd'hui, c'est un relais qui traduit — d'où ce texte.
-     * La réception native (signature HMAC de Shopify + traduction du format)
-     * reste à construire. */
+    /* Shopify ne permet de configurer QU'UNE URL, sans en-tête. C'est pour ça
+     * que l'adresse ci-dessous porte l'identité dans son chemin et que
+     * l'authentification passe par la signature HMAC que Shopify calcule.
+     * Le relais (Make, Zapier) n'est donc plus nécessaire — il reste possible
+     * via une clé « générique » pour qui en a déjà un qui tourne. */
     shopify: {
-      fr: 'Shopify ne sait envoyer ses commandes qu\'à une URL nue, sans en-tête d\'authentification, et dans son propre format. Passez donc par un relais (Make, Zapier, un petit script) qui reçoit le webhook « Création de commande » et le repose ici avec la clé ci-dessous. La réception directe depuis Shopify n\'est pas encore en place.',
-      en: 'Shopify can only post to a bare URL, with no authentication header, and in its own format. So use a relay (Make, Zapier, a small script) that takes the "Order creation" webhook and re-posts it here with the key below. Direct Shopify intake is not in place yet.',
-      ar: 'لا يمكن لـ Shopify الإرسال إلا إلى رابط مجرّد، دون ترويسة مصادقة، وبصيغته الخاصة. استخدم وسيطًا يعيد الإرسال هنا بالمفتاح أدناه. الاستقبال المباشر غير متوفر بعد.',
+      fr: 'Shopify signe chaque commande qu\'il envoie. Kiwi vérifie cette signature : il faut donc lui confier la clé que Shopify affiche au moment où vous créez le webhook. Sans elle, l\'adresse ci-dessus refuse tout — y compris les vraies commandes.',
+      en: 'Shopify signs every order it sends. Kiwi verifies that signature, so it needs the key Shopify shows you when you create the webhook. Without it the address above refuses everything — including genuine orders.',
+      ar: 'يوقّع Shopify كل طلب يرسله. تتحقق Kiwi من هذا التوقيع، لذا تحتاج إلى المفتاح الذي يعرضه Shopify عند إنشاء الـ webhook. بدونه يرفض العنوان أعلاه كل شيء.',
     },
     generic: {
       fr: 'N\'importe quel système capable d\'un POST HTTP peut déposer une commande ici : un relais Make ou Zapier, un script, votre site. Le format attendu est décrit sous l\'adresse.',
@@ -71,6 +68,15 @@
       done: 'Clé créée', pending: 'En attente du prestataire',
       err: 'Impossible de créer la clé', errSub: 'Réessayez dans un instant.',
       hdr: 'Chaque commande reçue devient un ticket en attente à la caisse. Personne ne la met en cuisine à votre place : votre équipe l\'accepte, comme une commande au comptoir.',
+      hook: 'Adresse du webhook', sig: 'Clé de signature Shopify',
+      sigPh: 'Collez ici la clé affichée par Shopify',
+      save: 'Enregistrer', saving: '…', savedT: 'Signature enregistrée',
+      savedD: 'Les commandes de cette boutique seront acceptées.',
+      saveErr: 'Enregistrement impossible', saveErrD: 'Vérifiez la clé et réessayez.',
+      steps: 'Dans Shopify, en trois gestes',
+      st1: 'Réglages → Notifications → Webhooks → « Créer un webhook ».',
+      st2: 'Événement « Création de commande », format JSON, et collez l\'adresse ci-dessus.',
+      st3: 'Shopify affiche alors une clé de signature : recopiez-la ici et enregistrez.',
     },
     en: {
       title: 'Connect a channel', once: 'This key will never be shown again. Copy it now.',
@@ -79,6 +85,15 @@
       done: 'Key created', pending: 'Waiting on the provider',
       err: 'Could not create the key', errSub: 'Try again in a moment.',
       hdr: 'Every order received becomes a pending ticket at the till. Nobody sends it to the kitchen for you: your team accepts it, like a counter order.',
+      hook: 'Webhook address', sig: 'Shopify signing key',
+      sigPh: 'Paste the key Shopify shows you',
+      save: 'Save', saving: '…', savedT: 'Signature saved',
+      savedD: 'Orders from this shop will now be accepted.',
+      saveErr: 'Could not save', saveErrD: 'Check the key and try again.',
+      steps: 'In Shopify, in three steps',
+      st1: 'Settings → Notifications → Webhooks → "Create webhook".',
+      st2: 'Event "Order creation", JSON format, and paste the address above.',
+      st3: 'Shopify then shows a signing key: copy it here and save.',
     },
     ar: {
       title: 'ربط قناة', once: 'لن يُعرض هذا المفتاح مرة أخرى. انسخه الآن.',
@@ -87,6 +102,15 @@
       done: 'تم إنشاء المفتاح', pending: 'في انتظار المزوّد',
       err: 'تعذّر إنشاء المفتاح', errSub: 'أعد المحاولة بعد لحظات.',
       hdr: 'كل طلب يصل يصبح تذكرة في انتظار الصندوق. فريقك هو من يقبلها.',
+      hook: 'عنوان الـ webhook', sig: 'مفتاح توقيع Shopify',
+      sigPh: 'الصق هنا المفتاح الذي يعرضه Shopify',
+      save: 'حفظ', saving: '…', savedT: 'تم حفظ التوقيع',
+      savedD: 'ستُقبل طلبات هذا المتجر من الآن.',
+      saveErr: 'تعذّر الحفظ', saveErrD: 'تحقّق من المفتاح وأعد المحاولة.',
+      steps: 'في Shopify، بثلاث خطوات',
+      st1: 'الإعدادات ← الإشعارات ← Webhooks ← «إنشاء webhook».',
+      st2: 'الحدث «إنشاء طلب»، صيغة JSON، والصق العنوان أعلاه.',
+      st3: 'يعرض Shopify عندئذٍ مفتاح توقيع: انسخه هنا واحفظه.',
     },
   };
   var str = function () { return T[LANG()] || T.fr; };
@@ -120,6 +144,61 @@
     return wrap;
   }
 
+  /* Le champ où le commerçant recopie la clé que Shopify vient de lui montrer.
+   * Il part vers le serveur et n'en revient jamais : rien dans l'API ne peut
+   * le relire. Tant qu'il n'est pas enregistré, la porte refuse tout — et le
+   * dire ici évite au commerçant de croire que coller l'adresse suffisait. */
+  function sigField(linkId) {
+    var s = str();
+    var wrap = document.createElement('div');
+    wrap.className = 'chl-f';
+    var lb = document.createElement('div');
+    lb.className = 'chl-f-l'; lb.textContent = s.sig;
+    var row = document.createElement('div');
+    row.className = 'chl-f-r';
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'chl-f-v chl-in'; inp.placeholder = s.sigPh;
+    inp.setAttribute('autocomplete', 'off'); inp.setAttribute('spellcheck', 'false');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'chl-copy'; btn.textContent = s.save;
+
+    btn.addEventListener('click', function () {
+      var v = String(inp.value || '').trim();
+      if (!v) { inp.focus(); return; }
+      btn.disabled = true; btn.textContent = s.saving;
+      fetch('/api/channel/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: linkId, config: { shopifySecret: v } }),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
+        .then(function (out) {
+          if (out.status !== 200 || !out.j || !out.j.ok) throw new Error('save');
+          btn.textContent = s.savedT;
+          inp.value = ''; inp.disabled = true;
+          inp.placeholder = s.savedT;
+          toast(s.savedT, { type: 'success', desc: s.savedD });
+        })
+        .catch(function () {
+          btn.disabled = false; btn.textContent = s.save;
+          toast(s.saveErr, { type: 'warn', desc: s.saveErrD });
+        });
+    });
+
+    row.appendChild(inp); row.appendChild(btn);
+    wrap.appendChild(lb); wrap.appendChild(row);
+    return wrap;
+  }
+
+  function steps(s) {
+    var ol = document.createElement('ol');
+    ol.className = 'chl-steps';
+    [s.st1, s.st2, s.st3].forEach(function (t) {
+      var li = document.createElement('li'); li.textContent = t; ol.appendChild(li);
+    });
+    return ol;
+  }
+
   function panel(channel, res) {
     var s = str();
     var box = document.createElement('div');
@@ -128,6 +207,26 @@
     var hdr = document.createElement('p');
     hdr.className = 'chl-hdr'; hdr.textContent = s.hdr;
     box.appendChild(hdr);
+
+    /* ── Shopify : réception native ──────────────────────────────────────────
+     * Pas de jeton porteur à recopier ici — Shopify ne saurait pas l'envoyer.
+     * L'identité est dans l'adresse, la preuve est dans la signature. Le seul
+     * secret qui circule va donc dans l'autre sens : de Shopify vers Kiwi. */
+    if (channel === 'shopify' && res.webhook) {
+      box.appendChild(field(s.hook, res.webhook, false));
+
+      var hs = document.createElement('div');
+      hs.className = 'chl-h'; hs.textContent = s.steps;
+      box.appendChild(hs);
+      box.appendChild(steps(s));
+
+      box.appendChild(sigField(res.key && res.key.id));
+
+      var ps = document.createElement('p');
+      ps.className = 'chl-note'; ps.textContent = note(channel);
+      box.appendChild(ps);
+      return box;
+    }
 
     var warn = document.createElement('div');
     warn.className = 'chl-once'; warn.textContent = s.once;
@@ -216,6 +315,12 @@
   .chl-note { margin:0; font-size:13px; line-height:1.6; color:var(--n-600); }\
   .chl-pre { margin:0; padding:12px; border-radius:10px; background:var(--paper-soft); border:1px solid var(--n-200);\
              font-family:var(--mono,ui-monospace,monospace); font-size:11.5px; line-height:1.6; color:var(--n-600); overflow-x:auto; }\
+  .chl-in { white-space:normal; outline:none; }\
+  .chl-in:focus { border-color:var(--atlas); }\
+  .chl-in:disabled { color:var(--n-500); }\
+  .chl-copy:disabled { opacity:.6; cursor:default; }\
+  .chl-steps { margin:0; padding-inline-start:18px; display:flex; flex-direction:column; gap:6px;\
+               font-size:13px; line-height:1.55; color:var(--n-600); }\
   html[data-theme="dark"] .chl-f-v.is-key { color:var(--mint); }';
 
   try {

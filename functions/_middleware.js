@@ -144,6 +144,17 @@ export async function onRequest(context) {
    * Order Pro n'est pas activé. Chemin EXACT : rien sous /api/channel/ d'autre
    * n'est ouvert, et la gestion des clés reste derrière la porte normale. */
   if (method === 'POST' && path === '/api/channel/order') return next();
+  /* La réception native de Shopify. Même raisonnement, une exception près : son
+   * chemin PORTE l'identifiant du lien, donc il ne peut pas être exact. Le
+   * préfixe est aussi étroit que possible — POST seulement, un seul segment
+   * après, et rien d'autre sous /api/channel/ n'y correspond : la gestion des
+   * clés (/api/channel/keys) reste derrière la porte normale.
+   *
+   * Ouvrir ce chemin ne prouve rien non plus. Shopify ne sait envoyer aucun
+   * en-tête d'authentification ; ce qui tient la porte fermée, c'est la
+   * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
+   * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
+  if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return next();
 
   // /order is the short link written onto NFC tags — every byte counts on an
   // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite

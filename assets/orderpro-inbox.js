@@ -76,6 +76,15 @@
       '#kop-root .kop-btn.ghost{background:var(--surface);border:1px solid rgba(10,15,13,.14);color:rgba(10,15,13,.65);}',
       '#kop-root .kop-btn.ghost:hover{color:var(--danger,#b0402f);border-color:var(--danger,#b0402f);}',
       '#kop-root .kop-empty{text-align:center;color:rgba(10,15,13,.5);font-size:.92rem;padding:60px 20px;line-height:1.6;}',
+      /* La provenance et l'adresse. Une commande de livraison sans elles renvoie
+         le comptoir vers la tablette du prestataire — ce qui annule tout le
+         bénéfice de l'imprimer ici. */
+      '#kop-root .kop-src{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;' +
+        'color:var(--atlas,#0B6E4F);background:rgba(11,110,79,.09);padding:3px 8px;border-radius:6px;}',
+      '#kop-root .kop-cust{margin-top:9px;padding-top:9px;border-top:1px dashed rgba(10,15,13,.14);' +
+        'font-size:.85rem;line-height:1.5;color:rgba(10,15,13,.72);}',
+      '#kop-root .kop-cust b{font-weight:600;color:var(--ink,#0A0F0D);}',
+      '#kop-root .kop-cust .tel{font-family:"JetBrains Mono",ui-monospace,monospace;}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -174,8 +183,29 @@
       .sort(function (a, b) { return a.created_ts - b.created_ts; });
   }
 
+  /* D'où vient cette commande. 'kiwi' est le téléphone d'un client : c'est le
+   * cas normal, il ne mérite pas de pastille. Les autres viennent d'un canal
+   * extérieur, et la brigade doit pouvoir le lire d'un coup d'œil. */
+  var SRC = { shopify: 'Shopify', glovo: 'Glovo', yassir: 'Yassir', generic: 'Canal extérieur' };
+
+  function custHtml(o) {
+    var c = o.customer;
+    if (!c) return '';
+    var bits = [];
+    if (c.name) bits.push('<b>' + esc(c.name) + '</b>');
+    if (c.phone) bits.push('<span class="tel">' + esc(c.phone) + '</span>');
+    var head = bits.join(' · ');
+    var addr = c.address ? '<div>' + esc(c.address) + '</div>' : '';
+    var note = c.note ? '<div>' + esc(c.note) + '</div>' : '';
+    if (!head && !addr && !note) return '';
+    return '<div class="kop-cust">' + (head ? '<div>' + head + '</div>' : '') + addr + note + '</div>';
+  }
+
   function cardHtml(o) {
-    var where = o.mode === 'table' ? 'Table ' + esc(o.table || '?') : 'À emporter';
+    var where = o.mode === 'table' ? 'Table ' + esc(o.table || '?')
+      : (o.mode === 'delivery' ? 'Livraison' : 'À emporter');
+    var src = o.channel && o.channel !== 'kiwi'
+      ? '<span class="kop-src">' + esc(SRC[o.channel] || o.channel) + '</span>' : '';
     var lines = (o.lines || []).map(function (l) {
       return '<div class="kop-line"><span class="q">' + (l.qty || 1) + '×</span><span>' + esc(l.name || '') +
         (l.options ? ' <span class="o">' + esc(l.options) + '</span>' : '') +
@@ -191,9 +221,9 @@
           : '');
     return '<div class="kop-card ' + esc(o.status) + '">' +
       '<div class="kop-top"><span class="kop-num">#' + String(o.number || 0).padStart(3, '0') + '</span>' +
-      '<span class="kop-where">' + where + '</span>' +
+      '<span class="kop-where">' + where + '</span>' + src +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
-      lines + acts + '</div>';
+      lines + custHtml(o) + acts + '</div>';
   }
 
   function paint() {
