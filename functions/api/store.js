@@ -83,6 +83,23 @@ const FEATURES = {
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },
+  /* Les rapports de clôture (le « Z » de fin de journée), un document par
+   * magasin contenant `days['2026-07-26'] = {…}`. C'est le SEUL de cette liste
+   * qui soit une pièce comptable : un commerçant le rouvre pour justifier un
+   * écart de caisse trois mois plus tard, et il doit le retrouver depuis
+   * n'importe quel appareil — c'est précisément ce que la caisse ne savait pas
+   * faire (le rapport mourait avec l'onglet à la fermeture de la caisse).
+   *
+   * Généreux sur la taille : un an de journées, chacune avec son détail par
+   * catégorie et par produit. Ce n'est PAS `max` qui borne ce document en
+   * pratique — c'est MAX_NODES (120 000) et MAX_KEYS (400) du bornage
+   * générique plus bas. Le client le sait et s'élague lui-même AVANT d'envoyer
+   * (assets/day-report.js : 370 journées, budget de 90 000 nœuds), parce qu'un
+   * refus ici serait invisible pour le commerçant : sa copie locale survit, il
+   * ne voit rien, et le jour où il ouvre Kiwi sur un autre appareil ses
+   * rapports n'y sont pas. Toucher à l'un des deux plafonds sans l'autre
+   * rouvre exactement ce trou. */
+  dayreports:   { keys: ['days'],                                  max: 1500000 },
 };
 
 const featureOf = (v) => {

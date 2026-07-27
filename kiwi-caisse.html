@@ -2221,6 +2221,21 @@
     .clo-foot button { font-size: 12px; color: rgba(247,245,240,0.45); transition: color 150ms; }
     .clo-foot button:hover { color: var(--paper-cream); }
 
+    /* ---- L'écran d'après-clôture. Plus étroit que la clôture elle-même : il
+       ne porte qu'un chiffre et un choix, pas un tableau. ---- */
+    .zs-card { width: 430px; text-align: center; }
+    .zs-card .clo-actions { justify-content: center; }
+    .zs-card .clo-btn { flex: 1; justify-content: center; }
+    .zs-total {
+      font-size: 42px; line-height: 1; color: #fff;
+      margin-top: 14px; letter-spacing: -0.02em;
+    }
+    .zs-note {
+      margin-top: 14px; padding-top: 13px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-size: 11.5px; line-height: 1.5; color: rgba(247,245,240,0.4);
+    }
+
     /* ===========================================================
        === Journal des ventes ===  (transaction ledger drawer)
        =========================================================== */
@@ -3935,6 +3950,11 @@
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
   <script src="assets/cloud-doc.js" defer></script>
+  <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
+       avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
+       serveur — c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
+       s'ouvre le lendemain sur le téléphone du patron. -->
+  <script src="assets/day-report.js" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js" defer></script>
@@ -5065,6 +5085,31 @@
       <div class="clo-foot">
         <button id="clo-continue">Continuer le service</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ RAPPORT JOURNALIER — l'écran d'après-clôture ============
+       La caisse est fermée, le rapport est écrit. Il ne reste qu'une décision :
+       la trace papier. On la pose AVANT de recharger la page — recharger
+       d'abord, c'était fermer la porte avant d'avoir posé la question. -->
+  <div class="cloture-veil" id="zsheet-modal" role="dialog" aria-modal="true" aria-labelledby="zs-title">
+    <div class="cloture-card zs-card">
+      <div class="clo-eyebrow">Journée clôturée</div>
+      <div class="clo-title" id="zs-title">Rapport journalier</div>
+      <div class="zs-total mono" id="zs-total">—</div>
+      <div class="clo-meta" id="zs-sub"></div>
+      <div class="clo-actions">
+        <button class="clo-btn primary" id="zs-print">
+          <i data-lucide="printer"></i><span>Imprimer le rapport</span>
+        </button>
+        <button class="clo-btn secondary" id="zs-reprint" hidden>
+          <i data-lucide="copy"></i><span>Réimprimer</span>
+        </button>
+      </div>
+      <div class="clo-foot">
+        <button id="zs-skip">Continuer sans imprimer</button>
+      </div>
+      <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier — même après un rechargement ou depuis un autre appareil.</div>
     </div>
   </div>
 
@@ -6855,13 +6900,23 @@
     }
     /* Itemised lines for the receipt of the sale being tendered (non-split).
        Table → generateOrder; vente rapida → the cart. */
+    /* La famille d'un plat, en clair ("Tajines", "Boissons"). Elle voyage avec
+       la ligne jusqu'au rapport de fin de journée, qui regroupe les ventes par
+       famille puis par plat. Résolue au moment de l'encaissement, par identifiant
+       d'abord (fiable) puis par nom (les parts d'addition partagée ne portent que
+       le libellé). Vide si on ne sait pas : le rapport la repêchera dans la carte,
+       et il vaut mieux un plat non classé qu'un plat mal classé. */
+    function lineCat(id, name) {
+      const m = menuItems.find(x => (id && x.id === id) || (name && x.name === name));
+      return (m && catLabels[m.cat]) || '';
+    }
     function currentSaleLines() {
       if (mode === 'vrap') {
-        return cart.map(c => ({ name: c.name, qty: c.qty, total: c.price * c.qty }));
+        return cart.map(c => ({ name: c.name, qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
       }
       if (selectedId && tables[selectedId]) {
         return generateOrder(selectedId, tables[selectedId])
-          .map(l => ({ name: l.name, qty: l.qty, total: l.total }));
+          .map(l => ({ name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name) }));
       }
       return [];
     }
@@ -8210,9 +8265,15 @@
     const cashMovements  = [];     // [{ id, time, type:'in'|'out', amount, reason }]
     const DAILY_OBJECTIF = 18000;  // objectif d'lyoum — MAD
 
-    /* Non-journal shift counters — the journal below is the ledger of record. */
-    const shift = { discounts: 95, refunds: 0, tablesPaid: 0 };
+    /* Non-journal shift counters — the journal below is the ledger of record.
+       `discounts` opens at 95 for the pitch demo (a service already under way).
+       A real store opens at zero — applyStoreIdentity() clears it, the same way
+       it clears the seeded transaction counters. `discountsCount` and `cancels`
+       feed the daily report, which counts them as well as sums them: "3 remises
+       pour 95 MAD" tells a patron something "95 MAD" alone does not. */
+    const shift = { discounts: 95, discountsCount: 2, cancels: 0, refunds: 0, tablesPaid: 0 };
     let shiftOpenedAt = null;
+    let shiftOpenedBy = '';        // qui a ouvert la caisse — figé à l'ouverture
 
     /* ---- Cashier handover ("passation de caisse") ----
        A business day is split into "postes" — one per cashier. The journal
@@ -8304,7 +8365,7 @@
         cashier: currentCashier.name,
       };
       if (Array.isArray(lines) && lines.length) {
-        entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: l.total }));
+        entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: l.total, cat: l.cat || '' }));
       }
       journal.push(entry);
       lastSaleId = entry.id;
@@ -8376,6 +8437,10 @@
       const wb2 = document.getElementById('wb-line2'); if (wb2) wb2.textContent = 'Ouverture de service';
       const tx = document.getElementById('stat-txns'); if (tx) tx.textContent = '0';
       const txd = document.getElementById('stat-txns-delta'); if (txd) txd.textContent = 'Carte 0% · Cash 0%';
+      /* Les remises d'amorçage (95 MAD, 2 remises) sont du décor de démo. Sur un
+         vrai commerce elles se retrouvaient dans le Z et dans le rapport du
+         patron comme si quelqu'un les avait vraiment accordées. */
+      shift.discounts = 0; shift.discountsCount = 0; shift.cancels = 0;
       try { if (typeof renderShiftStats === 'function') renderShiftStats(); } catch (_) {}
       // Static demo defaults inside modals (server-row, message-target, and the
       // clôture card "Café Atlas · Othmane N.") — shown before their render fns
@@ -8549,10 +8614,15 @@
       // 0 transactions) that fills from real encaissements.
       const _realStore = storeIsReal();
       shiftOpenedAt = _realStore ? new Date() : new Date(Date.now() - 128 * 60 * 1000);
+      /* Qui a ouvert. Figé maintenant et jamais réécrit : après une passation,
+         `currentCashier` est la personne qui FERME, et le rapport doit nommer
+         les deux. C'était la question sans réponse du Z précédent. */
+      shiftOpenedBy = (currentCashier && currentCashier.name) || '';
       posteOpenedAt = shiftOpenedAt;        // first cashier's poste = whole shift
       posteOpeningFloat = openingFloat;
       if (!_realStore) seedJournal();
       renderShiftStats();
+      try { saveProvisional(true); } catch (_) {}
 
       setTimeout(() => runEntrySequence(clockinEl), 540);
     }
@@ -8720,19 +8790,219 @@
         el.style.animationDelay = delay + 'ms';
       });
     }
+    /* ═══════════════════════════════════════════════════════════════════════
+       === RAPPORT JOURNALIER ===  (le « Z », écrit pour survivre à la caisse)
+       ═══════════════════════════════════════════════════════════════════════
+       Ce que la caisse sait et que le serveur ne saura jamais : le fond
+       d'ouverture, les mouvements d'espèces, les remises accordées, qui a ouvert
+       et qui a fermé, et le comptage du tiroir. Les VENTES, elles, sont déjà
+       parties par /api/sale et n'ont aucun besoin d'être recopiées ici.
+
+       Pourquoi on enregistre AUSSI en cours de service et pas seulement à la
+       clôture : un remboursement est une écriture NÉGATIVE, et /api/sale refuse
+       les montants ≤ 0 (à raison — c'est le garde-fou qui empêche d'injecter des
+       écritures dans les livres d'autrui). Le serveur ne voit donc jamais les
+       remboursements ni les remises. Si le rapport n'existait qu'à la fermeture,
+       le tableau de bord afficherait toute la journée un total plus haut que la
+       caisse, et l'écart ne se résorberait qu'au soir. On dépose donc un
+       instantané PROVISOIRE (closed:false) pendant le service, remplacé par
+       l'instantané DÉFINITIF à la clôture. Recalculé à chaque fois depuis le
+       journal, jamais accumulé : c'est ce qui rend la double clôture inoffensive.
+    */
+    function dayReportSession(counted) {
+      return {
+        openedAt: shiftOpenedAt ? shiftOpenedAt.getTime() : 0,
+        openedBy: shiftOpenedBy || (currentCashier && currentCashier.name) || '',
+        closedBy: (currentCashier && currentCashier.name) || '',
+        openingFloat: openingFloat,
+        cashMovements: cashMovements,
+        handovers: handovers,
+        discounts: shift.discounts,
+        discountsCount: shift.discountsCount,
+        cancels: shift.cancels,
+        countedCash: counted,
+      };
+    }
+    /* La journée commerciale d'un service : celle de son OUVERTURE. Un service
+       ouvert à 22h et fermé à 2h du matin est une seule journée, celle de la
+       veille — c'est ce que le patron appelle « hier soir ». */
+    function currentBusinessDay() {
+      const DR = window.KiwiDayReport;
+      if (!DR) return '';
+      return DR.businessDay(shiftOpenedAt ? shiftOpenedAt.getTime() : Date.now());
+    }
+    function buildDayReport(counted, closedAt) {
+      const DR = window.KiwiDayReport;
+      if (!DR) return null;
+      const sess = dayReportSession(counted);
+      if (closedAt) sess.closedAt = closedAt;
+      const pv = storePaired() || {};
+      return DR.build({
+        day: currentBusinessDay(),
+        sales: journal,
+        session: sess,
+        store: { slug: DR.storeSlug(), name: storeName(), location: storeCity(), type: pv.type || '' },
+        source: 'caisse',
+      });
+    }
+    /* L'instantané provisoire. `reopen:false` : tenir le tableau de bord à jour
+       pendant le service n'est pas une clôture et ne doit ni incrémenter le
+       compteur de fermetures ni salir l'historique des révisions. */
+    let lastProvisional = 0;
+    function saveProvisional(force) {
+      if (!window.KiwiDayReport || !shiftOpenedAt || registerClosing) return;
+      if (!force && Date.now() - lastProvisional < 90000) return;
+      lastProvisional = Date.now();
+      try {
+        const r = buildDayReport(null, 0);
+        if (!r) return;
+        r.closed = false;
+        window.KiwiDayReport.save(r, { reopen: false, note: 'en cours', by: shiftOpenedBy });
+      } catch (_) {}
+    }
+
+    /* Les libellés du ticket. Ils vivent ici et pas dans l'encodeur : l'encodeur
+       ne doit connaître ni la langue ni le métier, seulement la mise en page. */
+    function dayReportPrintOpts(report, copyLabel) {
+      const DR = window.KiwiDayReport;
+      const V = DR ? DR.vocab() : { items: 'articles' };
+      const hm = (ms) => { if (!ms) return ''; const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+      const p = String(report.day || '').split('-');
+      return {
+        report: report,
+        shop: storeName() || 'Kiwi',
+        address: storeCity(),
+        title: 'RAPPORT JOURNALIER',
+        dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
+        copy: copyLabel || '',
+        openedLabel: hm(report.openedAt),
+        closedLabel: hm(report.closedAt || Date.now()),
+        detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'catégorie').toUpperCase(),
+        drawerTitle: 'TIROIR-CAISSE',
+        netLabel: 'NET DU JOUR',
+        unitWord: V.items || 'articles',
+        notCounted: 'non compté',
+        handoverWord: 'Passation',
+        reopenWord: 'Clôture n°',
+        methodLabels: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' },
+        fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
+      };
+    }
+    /* Imprime, et dit la vérité sur ce qui s'est passé. « Envoyé à l'imprimante »
+       alors que rien n'est branché est exactement le message qui faisait croire
+       que le Z sortait alors qu'il n'existait pas. */
+    function doPrintDayReport(report, copyLabel) {
+      if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
+        toast('Imprimante indisponible'); return Promise.resolve({ ok: false });
+      }
+      return window.KiwiPrinter.printDayReport(dayReportPrintOpts(report, copyLabel))
+        .then((res) => {
+          if (res && res.ok) toast(res.via === 'browser' ? 'Rapport envoyé au pilote système' : 'Rapport imprimé');
+          else toast("Impression impossible · le rapport reste dans le tableau de bord");
+          return res || { ok: false };
+        }, () => { toast("Impression impossible · le rapport reste dans le tableau de bord"); return { ok: false }; });
+    }
+
+    /* ---- L'écran d'après-clôture ----
+       Le patron vient de fermer sa caisse. Il lui reste UNE décision : garder ou
+       non une trace papier. Les trois choix sont ceux d'une caisse et pas d'un
+       logiciel — imprimer, réimprimer si le rouleau a bourré, ou continuer sans.
+       La caisse ne se recharge qu'ensuite : recharger d'abord, c'était fermer la
+       porte avant d'avoir posé la question. */
+    let closedReport = null;
+    function showPostClose(report) {
+      closedReport = report;
+      const veil = $('#zsheet-modal');
+      if (!veil) { finishClose(); return; }
+      const V = window.KiwiDayReport ? window.KiwiDayReport.vocab() : { items: 'articles' };
+      const nCat = (report.categories || []).length;
+      const nItems = (report.categories || []).reduce((s, c) => s + (c.qty || 0), 0);
+      $('#zs-total').textContent = fmtMAD(report.net);
+      const bits = [`${report.txns} transaction${report.txns > 1 ? 's' : ''}`];
+      if (nCat) bits.push(`${nItems} ${V.items} · ${nCat} ${nCat > 1 ? V.cats : V.cat}`);
+      if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
+        bits.push(`écart ${fmtEcart(report.cash.ecart)}`);
+      }
+      $('#zs-sub').textContent = bits.join(' · ');
+      $('#zs-reprint').hidden = true;
+      veil.classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+    }
+    function finishClose() {
+      const veil = $('#zsheet-modal'); if (veil) veil.classList.remove('is-open');
+      toast(`Caisse fermée · à bientôt ${String(currentCashier.name || '').trim().split(/\s+/)[0] || ''}`.trim());
+      setTimeout(() => location.reload(), 640);
+    }
+
     function closeRegister() {
       $('#cloture-modal').classList.remove('is-open');
       registerClosing = true;
+
+      /* L'ORDRE COMPTE. On écrit le rapport AVANT d'effacer le poste : la
+         version d'avant effaçait le poste puis rechargeait la page, et le
+         rapport de la journée n'avait jamais existé nulle part. Les ventes,
+         elles, ne sont pas touchées — ni ici ni ailleurs : une clôture produit
+         un document, elle ne modifie pas le registre. */
+      const countedRaw = $('#clo-count') ? $('#clo-count').value : '';
+      const counted = (countedRaw === '' || countedRaw == null) ? null : parseFloat(countedRaw);
+      let report = null;
+      try {
+        report = buildDayReport(counted, Date.now());
+        if (report && window.KiwiDayReport) {
+          report.closed = true;
+          window.KiwiDayReport.save(report, { by: (currentCashier && currentCashier.name) || '' });
+          /* La remontée serveur est débattue et la page se recharge dans une
+             seconde : sans flush() le rapport partirait après la mort de
+             l'onglet, c'est-à-dire jamais. */
+          window.KiwiDayReport.flush();
+        }
+      } catch (_) {}
+
       clearPersistedShift();
-      toast(`Caisse fermée · à bientôt ${String(currentCashier.name || '').trim().split(/\s+/)[0] || ''}`.trim());
-      setTimeout(() => location.reload(), 720);
+      if (report) showPostClose(report); else finishClose();
     }
 
     const clockinBtn = document.getElementById('clockin-btn');
     if (clockinBtn) clockinBtn.addEventListener('click', openService);
-    $('#clo-print').addEventListener('click', () => toast("Rapport Z envoyé à l'imprimante"));
+    /* Imprimer AVANT de fermer — le patron qui veut relire son Z sur papier
+       avant de valider le comptage. Le rapport est construit avec le comptage
+       saisi à l'instant, pas avec un zéro : un aperçu qui n'a pas le même écart
+       que l'écran ne sert à rien. Aucune écriture ici, c'est un tirage. */
+    $('#clo-print').addEventListener('click', () => {
+      const raw = $('#clo-count') ? $('#clo-count').value : '';
+      const r = buildDayReport((raw === '' || raw == null) ? null : parseFloat(raw), 0);
+      if (!r) { toast('Rapport indisponible'); return; }
+      doPrintDayReport(r, 'AVANT CLÔTURE');
+    });
     $('#clo-close').addEventListener('click', () => requireManager('Fermeture de caisse', closeRegister));
     $('#clo-continue').addEventListener('click', () => $('#cloture-modal').classList.remove('is-open'));
+
+    /* ---- L'écran d'après-clôture : imprimer · réimprimer · continuer ---- */
+    (function wirePostClose() {
+      const veil = $('#zsheet-modal'); if (!veil) return;
+      const print = $('#zs-print'), reprint = $('#zs-reprint'), skip = $('#zs-skip');
+      if (print) print.addEventListener('click', () => {
+        if (!closedReport) return finishClose();
+        print.disabled = true;
+        doPrintDayReport(closedReport, '').then(() => {
+          print.disabled = false;
+          /* « Réimprimer » n'apparaît qu'APRÈS un premier tirage : proposer de
+             réimprimer ce qui n'a jamais été imprimé n'a pas de sens. */
+          if (reprint) reprint.hidden = false;
+          const lbl = print.querySelector('span'); if (lbl) lbl.textContent = 'Imprimer à nouveau';
+        });
+      });
+      if (reprint) reprint.addEventListener('click', () => {
+        if (!closedReport) return;
+        /* Un double du Z porte la mention DUPLICATA. Deux exemplaires
+           indiscernables de la même journée qui circulent, c'est une pièce
+           comptable qu'on ne peut plus rapprocher. */
+        doPrintDayReport(closedReport, 'DUPLICATA');
+      });
+      if (skip) skip.addEventListener('click', finishClose);
+      /* Pas de fermeture au clic sur le voile : la caisse va se recharger, un
+         clic à côté ne doit pas décider ça à la place du commerçant. */
+    })();
     $('#cloture-modal').addEventListener('click', (e) => {
       if (e.target === $('#cloture-modal')) $('#cloture-modal').classList.remove('is-open');
     });
@@ -9514,7 +9784,7 @@
             amount: amount,
             reason: remiseState.reason,
           };
-          shift.discounts += amount;
+          shift.discounts += amount; shift.discountsCount++;
           closeRemiseModal();
           renderCart();
           toast(`Remise appliquée · −${fmtMAD(amount)}`);
@@ -9542,7 +9812,7 @@
           amount: amount,
           reason: remiseState.reason,
         };
-        shift.discounts += amount;
+        shift.discounts += amount; shift.discountsCount++;
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
         toast(`Remise appliquée · −${fmtMAD(amount)}`);
@@ -9729,6 +9999,11 @@
         shift.refunds += amount;       // positive — Clôture renders it as a row
         lastSaleId = entry.id;
         renderShiftStats();
+        /* Un remboursement change le TOTAL, et c'est la seule écriture que le
+           serveur ne verra jamais (/api/sale refuse les montants ≤ 0). Sans
+           remontée immédiate, le tableau de bord afficherait une recette trop
+           haute jusqu'au prochain battement — l'écart le plus visible qui soit. */
+        try { saveProvisional(true); } catch (_) {}
         if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
         closeRefund();
         toast('Remboursement · −' + fmtMAD(amount));
@@ -11154,6 +11429,7 @@
           v: 1,
           savedAt: Date.now(),
           openedAt: shiftOpenedAt.toISOString(),
+          openedBy: shiftOpenedBy,
           openingFloat: openingFloat,
           journal: journal,
           cashMovements: cashMovements,
@@ -11183,6 +11459,7 @@
     }
     function restoreShift(d) {
       shiftOpenedAt = new Date(d.openedAt);
+      shiftOpenedBy = d.openedBy || '';
       openingFloat  = d.openingFloat || 500;
       journal.length = 0;
       (d.journal || []).forEach(e => {
@@ -11206,6 +11483,13 @@
         shift.discounts  = d.shift.discounts;
         shift.refunds    = d.shift.refunds;
         shift.tablesPaid = d.shift.tablesPaid;
+        /* Postes enregistrés avant que le rapport ne compte les remises : on ne
+           sait pas combien il y en avait, mais un montant non nul en implique au
+           moins une. Mieux vaut « 1 remise · 95 MAD » que « 0 remise · 95 MAD »,
+           qui se lit comme un bug. */
+        shift.discountsCount = (d.shift.discountsCount != null)
+          ? d.shift.discountsCount : (d.shift.discounts > 0 ? 1 : 0);
+        shift.cancels = d.shift.cancels || 0;
       }
       if (d.currentCashier && d.currentCashier.name) {
         currentCashier = {
@@ -11277,9 +11561,12 @@
       setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);
     })();
 
-    /* Autosave — covers refresh, tab close and crashes */
+    /* Autosave — covers refresh, tab close and crashes.
+       Le rapport provisoire suit le même battement mais à son propre rythme
+       (90 s, cf. saveProvisional) : il traverse le réseau, lui, et le pousser
+       toutes les cinq secondes n'apprendrait rien de plus au tableau de bord. */
     window.addEventListener('beforeunload', persistShift);
-    setInterval(persistShift, 5000);
+    setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} }, 5000);
 
     /* ---------- Lucide first paint ---------- */
     document.addEventListener('DOMContentLoaded', () => {

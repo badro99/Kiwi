@@ -113,8 +113,12 @@ export async function onRequestGet({ request, env }) {
     if (!r || r.lines == null) return r;
     try {
       const arr = JSON.parse(r.lines);
+      /* `cat` n'est présent que sur les ventes écrites depuis que /api/sale
+       * accepte la catégorie. Absent = inconnu, et le rapport journalier
+       * repêche alors dans le catalogue actuel — jamais 'Divers' par défaut
+       * ici, ce qui reviendrait à affirmer une classification qu'on n'a pas. */
       r.lines = Array.isArray(arr)
-        ? arr.map((l) => ({ name: l && l.n, qty: l && l.q, total: l && l.t }))
+        ? arr.map((l) => ({ name: l && l.n, qty: l && l.q, total: l && l.t, cat: (l && l.c) || '' }))
         : null;
     } catch (_) { r.lines = null; }
     return r;

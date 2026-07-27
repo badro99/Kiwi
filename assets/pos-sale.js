@@ -120,7 +120,14 @@
     };
     if (Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(function (l) {
-        return { name: String((l && l.name) || 'Article').slice(0, 60), qty: +(l && l.qty) || 1, total: Math.round(((l && +l.total) || 0) * 100) / 100 };
+        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: +(l && l.qty) || 1, total: Math.round(((l && +l.total) || 0) * 100) / 100 };
+        /* La catégorie suit la ligne jusqu'au rapport de fin de journée. Les
+           quinze métiers la connaissent au moment de l'encaissement (c'est leur
+           propre onglet de catalogue) ; sans elle, le rapport la redevine dans
+           le catalogue ACTUEL et se trompe dès qu'un rayon est renommé. */
+        var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
+        if (c) o.cat = c;
+        return o;
       });
     }
 

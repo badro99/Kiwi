@@ -7294,7 +7294,14 @@
        prétendant classer des produits. Absent ⇒ inconnu, jamais « panier vide ». */
     if (sale && Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(function (l) {
-        return { name: String((l && l.name) || 'Article').slice(0, 60), qty: Math.max(0, Math.round(+(l && l.qty) || 0)), total: Math.max(0, Math.round(+(l && l.total) || 0)) };
+        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: Math.max(0, Math.round(+(l && l.qty) || 0)), total: Math.max(0, Math.round(+(l && l.total) || 0)) };
+        /* La catégorie, telle que la caisse la connaissait AU MOMENT de la vente.
+           Sans elle, le rapport journalier d'une journée pas encore clôturée
+           reclasse les ventes d'après le catalogue actuel — et se trompe dès
+           qu'un rayon a été renommé depuis. Absente ⇒ inconnue, jamais inventée. */
+        var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
+        if (c) o.cat = c;
+        return o;
       }).filter(function (l) { return l.qty > 0; });
       if (!entry.lines.length) delete entry.lines;
     }

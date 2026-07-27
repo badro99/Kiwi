@@ -230,7 +230,14 @@
     try {
       if (Array.isArray(entry.lines) && entry.lines.length) {
         lines = entry.lines.slice(0, 40).map(function (l) {
-          return { n: String((l && l.name) || 'Article').slice(0, 60), q: +(l && l.qty) || 1, t: Math.round((l && +l.total) || 0) };
+          var o = { n: String((l && l.name) || 'Article').slice(0, 60), q: +(l && l.qty) || 1, t: Math.round((l && +l.total) || 0) };
+          /* `c` — la catégorie du produit telle qu'elle était au moment de la
+           * vente. Elle n'est ajoutée que si la caisse la connaît : une clé
+           * vide sur chacune des 40 lignes d'un panier alourdirait la file
+           * hors-ligne pour ne rien dire de plus. */
+          var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
+          if (c) o.c = c;
+          return o;
         });
       }
     } catch (_) { lines = null; }
