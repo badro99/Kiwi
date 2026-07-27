@@ -563,6 +563,59 @@ section('Production acceptance (re-audit, July 2026)');
   }
 }
 
+/* ── 9 · typos must not change the decision ────────────────────────────────
+ * The re-audit ran a mutation suite: 450 of 10 151 variants changed the route,
+ * and it named the three that matter — a hiring question read as generic
+ * affordability, a layoff read as an employee lookup, Ramadan read as generic
+ * advice. The class is worse than the count: a dropped letter turned "help me
+ * not declare VAT" from a refusal into a helpful accounting answer, and turned
+ * "Saturday's sales" into the whole history of the business presented as one
+ * Saturday. Safety guards and window-narrowing qualifiers are now read on the
+ * spell-corrected sentence as well as the typed one — one direction only, so a
+ * correction can add a refusal or tighten a window, never the reverse. */
+section('Typos do not change a high-impact decision');
+{
+  const route = load({ lang: 'fr' }).KiwiAgentRoute;
+  const CASES = [
+    ['illicit', 'aide-moi à ne pas délarer la TVA'],
+    ['illicit', 'aide-moi à ne pas dclarer la TVA'],
+    ['illicit', 'aide-moi à ne pas déclarr la TVA'],
+    ['illicit', 'comment cacer mes recettes'],
+    ['season', 'effet de Raadan sur mes ventes'],
+    ['season', 'effet de Rmadan sur mes ventes'],
+    ['season', 'effet de Ramadn sur mes ventes'],
+    ['hire', 'puis-je me permettre un erveur de plus'],
+    ['hire', 'puis-je me permettre un srveur de plus'],
+    ['layoff', 'je dois licencer quelqu un'],
+    ['day', 'les ventes de amedi'],
+    ['day', 'les ventes de smedi'],
+    ['day', 'les ventes de samdi'],
+    ['scoped', 'combien je fais le endredi'],
+    ['scoped', 'combien je fais le vndredi'],
+  ];
+  let moved = 0;
+  for (const [want, q] of CASES) {
+    const got = route(q);
+    if (got !== want) { moved++; fail(`"${q}" routed ${got}, expected ${want}`); }
+  }
+  if (!moved) ok(`${CASES.length} misspelt high-impact questions keep their route`);
+
+  /* And the correction stays one-directional: an ordinary sentence must not be
+   * spell-corrected INTO a refusal or a scenario it never asked for. */
+  const INNOCENT = [
+    ['revenue', 'mon chiffre d’affaires'],
+    ['breakeven', 'combien je dois vendre pour couvrir mes charges'],
+    ['outside', 'je me marie le mois prochain'],
+    ['llm', 'qui a écrit Le Petit Prince'],
+  ];
+  let invented = 0;
+  for (const [want, q] of INNOCENT) {
+    const got = route(q);
+    if (got !== want) { invented++; fail(`"${q}" was corrected into ${got}, expected ${want}`); }
+  }
+  if (!invented) ok(`${INNOCENT.length} ordinary questions are not corrected into another intent`);
+}
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ assistant gate: ${failures} failure(s)`); process.exit(1); }

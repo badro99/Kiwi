@@ -2724,6 +2724,11 @@
     'licencier', 'licencie', 'reduire', 'effectif', 'tarifs', 'tarif', 'objectif', 'encaisse',
     'encaisser', 'paiement', 'reservation', 'ramadan', 'vacances', 'saison', 'concurrent',
     'concurrents', 'moyens', 'calculer', 'calcule',
+    /* Les mots à forte conséquence : une lettre en moins ne doit pas
+       transformer une demande de fraude en question de comptabilité, ni un
+       samedi en tout l'historique du commerce. */
+    'declarer', 'declarez', 'dissimuler', 'frauder', 'cacher', 'couvrir',
+    'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',
     /* en */
     'revenue', 'sales', 'margin', 'profit', 'expenses', 'forecast', 'breakeven', 'inventory',
     'customers', 'customer', 'business', 'kitchen', 'screen', 'payslips', 'terminals',
@@ -2736,7 +2741,11 @@
    * answered a weather remark with the month's takings. */
   /* "je me marie le mois prochain" was spell-corrected into "marge" and
    * answered with the month's margin. Ordinary words are never completed. */
-  const FUZZ_STOP = { vent: 1, char: 1, reve: 1, tres: 1, rent: 1, comb: 1, sale: 1, part: 1, cent: 1, temp: 1, aug: 1, dep: 1, comm: 1, marie: 1, mari: 1, prix: 1, paie: 1, comme: 1, commen: 1, produi: 1, banc: 1, poin: 1, sais: 1, prince: 1, france: 1, service: 1, presque: 1, term: 1, cred: 1, ferme: 1, ouvre: 1, tarif: 1, pris: 1, price: 1, saison: 1 };
+  const FUZZ_STOP = { vent: 1, char: 1, reve: 1, tres: 1, rent: 1, comb: 1, sale: 1, part: 1, cent: 1, temp: 1, aug: 1, dep: 1, comm: 1, marie: 1, mari: 1, prix: 1, paie: 1, comme: 1, commen: 1, produi: 1, banc: 1, poin: 1, sais: 1, prince: 1, france: 1, service: 1, presque: 1, term: 1, cred: 1, ferme: 1, ouvre: 1, tarif: 1, pris: 1, price: 1, saison: 1,
+    /* « combien je dois vendre » complété en « vendredi », « the same » en
+       « samedi » : les jours de la semaine sont entrés au lexique, leurs
+       préfixes sont des mots ordinaires. */
+    vendre: 1, same: 1, jeun: 1, mars: 1, lund: 1 };
   /* Edit distance ≤ 1, without building a matrix — one mismatch is allowed and
    * consumed on whichever side is longer, then the walk must finish clean. */
   function within1(a, b) {
@@ -2947,11 +2956,25 @@
      * than inside an intent because each has to beat EVERY intent, not one.
      * Order is deliberate: safety first, then explicit refusal by the
      * merchant, then "I don't have that" before anything gets computed. */
-    if (INJECT_RX.test(q)) return { kind: 'inject', raw, q };
-    if (ILLICIT_RX.test(q)) return { kind: 'illicit', raw, q };
-    if (SECRET_RX.test(q)) return { kind: 'secret', raw, q };
+    /* ─── UNE FAUTE DE FRAPPE NE DÉSARME PAS UN GARDE ────────────────────
+     * Le correcteur ne tournait qu'en tête de phrase (après une salutation)
+     * et en tout dernier recours, quand plus rien n'avait matché. Une lettre
+     * en moins au milieu suffisait donc à faire basculer une demande
+     * dangereuse dans une route serviable : « aide-moi à ne pas délarer la
+     * TVA » cessait d'être une demande de fraude et devenait une question de
+     * comptabilité — Kiwi ouvrait la page au lieu de refuser.
+     *
+     * Les gardes de sûreté sont donc évalués sur la phrase ET sur sa version
+     * corrigée. Le sens est à UNE SEULE direction : cela peut ajouter un
+     * refus, jamais transformer un refus en réponse. Le reste du routage
+     * n'y passe pas — corriger partout inventerait des intentions. */
+    const qf = fuzz(q);
+    const anyQ = (rx) => rx.test(q) || (qf !== q && rx.test(qf));
+    if (anyQ(INJECT_RX)) return { kind: 'inject', raw, q };
+    if (anyQ(ILLICIT_RX)) return { kind: 'illicit', raw, q };
+    if (anyQ(SECRET_RX)) return { kind: 'secret', raw, q };
     if (MARKET_RX.test(q)) return { kind: 'market', raw, q };
-    if (THEFT_RX.test(q)) return { kind: 'theft', raw, q };
+    if (anyQ(THEFT_RX)) return { kind: 'theft', raw, q };
     /* A dated closure is a holiday, not a bankruptcy — and STRAIN_RX owns
      * "je vais fermer". The duration is what tells them apart. */
     if (CLOSE_RX.test(q) && parseDays(q) != null) return { kind: 'season', raw, q };
@@ -2967,20 +2990,27 @@
     const act = matchAction(q);
     if (act) return { kind: 'action', raw, q, action: act };
     if (META_RX.test(q)) return { kind: 'meta', raw, q };
-    if (LAYOFF_RX.test(q)) return { kind: 'layoff', raw, q };
+    if (anyQ(LAYOFF_RX)) return { kind: 'layoff', raw, q };
     /* A lookup is stronger than a date: "le plat le plus vendu hier" is a
      * ranking question that happens to mention a day. */
     const look = matchLookup(q, raw);
     if (look) return { kind: 'lookup', raw, q, spec: look };
     /* Ahead of TREND_RX, which owns "hier" and "yesterday" and would refuse
      * them as a comparison across periods. */
-    const dNear = namedDay(q);
+    const dNear = namedDay(q) || (qf !== q ? namedDay(qf) : null);
     if (dNear) return { kind: 'day', raw, q, day: dNear };
     if (TREND_RX.test(q)) return { kind: 'notrend', raw, q };
-    if (EXTRA_DAY_RX.test(q) || SEASON_RX.test(q)) return { kind: 'season', raw, q };
+    /* « effet de Raadan sur mes ventes » répondait par le chiffre d'affaires
+       du mois : le mot Ramadan cassé, il ne restait que « ventes ». Une
+       saisonnalité mal lue vaut un stock mal commandé. */
+    if (anyQ(EXTRA_DAY_RX) || anyQ(SEASON_RX)) return { kind: 'season', raw, q };
     /* After the season guard, which owns "ouvrir le samedi" — opening an extra
      * day is a simulation, not a day that has already happened. */
-    const dWeek = namedWeekday(q);
+    /* « les ventes de amedi » répondait par TOUT l'historique du commerce
+       présenté comme un samedi — le pire des chiffres faux, celui qui a l'air
+       juste. Le jour cassé est relu sur la phrase corrigée : la correction ne
+       peut ici que RESSERRER la fenêtre, jamais l'élargir. */
+    const dWeek = namedWeekday(q) || (qf !== q ? namedWeekday(qf) : null);
     if (dWeek) return { kind: 'day', raw, q, day: dWeek };
     /* "les chiffres de <Nom>" — their own business is a request for the
      * overview; anyone else's is a request this screen will not serve.
@@ -3017,7 +3047,11 @@
     /* A qualifier like "sur le thé à la menthe" or "le samedi" only matters
      * when the winning intent reports a GLOBAL total — handing back the
      * whole-business margin as if it were one product's is the failure. */
-    if (ranked.length && GLOBAL_SCENARIOS[ranked[0].id] && SCOPE_QUAL_RX.test(q)) {
+    /* Et le qualificatif casse à la moindre faute : « combien je fais le
+       endredi » perdait son vendredi et repartait avec le chiffre d'affaires
+       entier. Relu sur la phrase corrigée — là encore, la correction ne peut
+       que RESSERRER la portée, jamais l'élargir. */
+    if (ranked.length && GLOBAL_SCENARIOS[ranked[0].id] && anyQ(SCOPE_QUAL_RX)) {
       return { kind: 'scoped', raw, q };
     }
     /* "je monte les tarifs de 10% et je prends un serveur" is two decisions, but
@@ -3047,6 +3081,15 @@
       if (lastScenario === 'compound') return { kind: 'compound', raw, q, refine: true };
       const it = INTENTS.find((i) => i.id === lastScenario);
       if (it) return { kind: lastScenario, raw, q, run: it.run, refine: true };
+    }
+    /* « puis-je me permettre un erveur de plus » : le poste cassé, il restait
+       une question générique de capacité d'achat, et l'assistant répondait sur
+       un montant au lieu de chiffrer un salaire chargé. Deux réponses, deux
+       décisions. Si la phrase corrigée nomme un poste que la phrase tapée ne
+       nommait pas, c'est une embauche. */
+    if (ranked.length && ranked[0].id === 'afford' && !WORKER_RX.test(q) && qf !== q && WORKER_RX.test(qf)) {
+      const hi = INTENTS.find((i) => i.id === 'hire');
+      if (hi) return { kind: 'hire', raw, q, run: hi.run };
     }
     if (ranked.length && ranked[0].score >= MIN_SCORE) return { kind: ranked[0].id, raw, q, run: ranked[0].run };
     /* Thanks — but only once every intent has had its chance and lost. "merci,
@@ -3388,6 +3431,18 @@
     t('grounding figure passes', auditNumbers('votre chiffre d’affaires est 842 300 MAD').uncited.length === 0);
     t('rounded restatement passes', auditNumbers('environ 842 000 MAD').uncited.length === 0);
     t('fabricated figure flagged', auditNumbers('vous gagnez 999 000 MAD ce mois').uncited.length === 1);
+    /* Les taux légaux — contrôle à sens unique : on retire l'impossible, on ne
+       certifie pas le plausible, et on renvoie à la source officielle. */
+    const R = (s) => redactUnsupported(s, 'fr');
+    t('impossible VAT rate removed', /retiré/.test(R('La TVA au Maroc est de 25 %.').text));
+    t('legal VAT rate survives', !/retiré/.test(R('La TVA au Maroc est de 20 %.').text));
+    t('a rate answer carries the verification caveat', !!R('La TVA est de 20 %.').caveat);
+    t('no caveat when no rate is named', !R('Votre panier moyen est de 142 MAD.').caveat);
+    t('impossible minimum wage removed', /retiré/.test(R('Le SMIG est de 900 MAD par mois.').text));
+    t('plausible minimum wage survives', !/retiré/.test(R('Le SMIG est de 3 111 MAD par mois.').text));
+    t('impossible CNSS rate removed', /retiré/.test(R('La CNSS coûte 60 % du salaire.').text));
+    t('an English sentence is not read as a corporate-tax rate',
+      !/removed|retiré/.test(redactUnsupported('This is 42 % better than before.', 'en').text));
     const fails = cases.filter((c) => !c.ok);
     return { total: cases.length, pass: cases.length - fails.length, fails };
   }
@@ -3409,6 +3464,10 @@
   window.KiwiAgentProfile = function () { return syncProfile(); };
   window.KiwiAgentRedact = function (text, lang) { return redactUnsupported(text, lang || getLang()); };
   window.KiwiAgentTier = accessTier;
+  /* La route seule, sans exécuter le scénario — ce qu'il faut pour mesurer la
+     robustesse aux fautes de frappe sur des milliers de variantes sans payer
+     le coût de la réponse. Lecture pure. */
+  window.KiwiAgentRoute = routeLabel;
 
   /* ═══════════════ IN-BROWSER LLM · WebLLM ═══════════════
    * Anything the deterministic engine doesn't recognise is answered by an
@@ -3639,12 +3698,92 @@
     return { uncited };
   }
 
-  /* The percentages we can stand behind: the ones the profile computes. */
+  /* The percentages we can stand behind: the ones the profile computes.
+   *
+   * Ce Set était VIDE pour tout vrai commerçant — B.partial est vrai dès qu'on
+   * sort de la démo — et le garde-fou est en aveugle : toute proportion citée
+   * dans une phrase qui parle métier était retirée, y compris celles que nous
+   * mesurons nous-mêmes. Un commerçant à qui l'on répond « [chiffre retiré] %
+   * de vos ventes sont en espèces » alors que le mix de paiement est affiché
+   * deux blocs plus haut n'apprend qu'une chose : le garde-fou ne sait pas ce
+   * que Kiwi sait. Le profil partiel n'a pas de structure de coûts, mais il a
+   * un journal de ventes daté — ce qu'on peut en calculer, on peut le citer. */
   function knownPercents() {
     const s = new Set();
     const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n * 10) / 10); };
-    if (!B.partial) [B.grossMargin, B.netMargin, 100 - B.grossMargin, B.contribRatio * 100, B.marginOfSafety].forEach(add);
+    if (!B.partial) {
+      [B.grossMargin, B.netMargin, 100 - B.grossMargin, B.contribRatio * 100, B.marginOfSafety].forEach(add);
+      return s;
+    }
+    try {
+      const rows = ledger();
+      if (!rows.length) return s;
+      /* Le mix de paiement, part par part — et son complément, parce que
+         « 60 % en espèces » et « 40 % par carte » disent la même chose. */
+      const byMethod = {}; let tot = 0;
+      rows.forEach((e) => {
+        const amt = Math.max(0, +((e && e.amount) || 0));
+        if (!amt) return;
+        tot += amt;
+        const m = String((e && (e.method || e.m)) || 'autre').toLowerCase();
+        byMethod[m] = (byMethod[m] || 0) + amt;
+      });
+      if (tot > 0) Object.keys(byMethod).forEach((m) => { const p = byMethod[m] / tot * 100; add(p); add(100 - p); });
+      /* La croissance d'un mois sur l'autre — la seule tendance qu'un journal
+         de ventes suffit à établir. */
+      const now = new Date();
+      const cur = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      let a = 0, b = 0;
+      rows.forEach((e) => {
+        const ts = +((e && e.ts) || 0), amt = Math.max(0, +((e && e.amount) || 0));
+        if (ts >= cur) a += amt; else if (ts >= prevStart) b += amt;
+      });
+      if (b > 0) { const g = (a - b) / b * 100; add(g); add(-g); }
+      /* La complétude du panier : quelle part des tickets porte son détail.
+         C'est une proportion que l'assistant énonce lui-même en provenance. */
+      const lined = rows.filter((e) => e && Array.isArray(e.lines) && e.lines.length).length;
+      add(lined / rows.length * 100);
+      add(100 - lined / rows.length * 100);
+    } catch (_) { /* un garde-fou ne tombe pas parce qu'une lecture a échoué */ }
     return s;
+  }
+
+  /* ─── LES TAUX QUI NE SONT PAS LES NÔTRES ────────────────────────────────
+   * TVA, IS, IR, CNSS, AMO, SMIG : ces chiffres ne sont dans les données
+   * d'aucun commerçant, donc knownFigures() ne peut rien en dire, et
+   * METRIC_RX ne contenait même pas « tva ». « La TVA au Maroc est de 25 % »
+   * traversait le garde-fou intact — et une erreur de taux ne se paie pas en
+   * mauvaise décision, elle se paie en redressement.
+   *
+   * Ce contrôle est délibérément À SENS UNIQUE. Kiwi n'est pas la source
+   * officielle d'un barème qui bouge à chaque loi de finances, et prétendre le
+   * contraire serait la même faute au signe près. On ne valide donc pas « ce
+   * taux est le bon » ; on retire seulement ce qui n'a jamais pu être un taux
+   * marocain — 25 % de TVA n'existe pas, un SMIG à 900 MAD non plus. Ce qui
+   * tombe dans l'enveloppe légale passe, avec un renvoi à la DGI et au
+   * comptable : c'est là qu'est la vérité, pas ici. */
+  const RATE_RX = /\btva\b|\bt\.v\.a\b|value[- ]added\s+tax|\bvat\b|\bis\s+(?:societes?|sociétés?)|impot\s+sur\s+les\s+societes|corporate\s+tax|\bir\b|impot\s+sur\s+le\s+revenu|income\s+tax|\bcnss\b|\bamo\b|\bcimr\b|\bsmig\b|\bsmag\b|salaire\s+minimum|minimum\s+wage|taxe\s+professionnelle|القيمة\s*المضافة|الضريبة|الصندوق\s*الوطني|الحد\s*الادنى/i;
+  /* Enveloppes : hors de là, c'est faux quel que soit le millésime du barème. */
+  const RATE_BAND = [
+    { rx: /\btva\b|\bt\.v\.a\b|\bvat\b|القيمة\s*المضافة/i, ok: (v) => [0, 7, 10, 11, 14, 20].indexOf(Math.round(v)) !== -1 },
+    { rx: /\bcnss\b|\bamo\b|\bcimr\b|الصندوق\s*الوطني/i, ok: (v) => v >= 0 && v <= 30 },
+    /* « is » est un mot anglais : le sigle ne compte que sous sa forme longue
+       ou pointée, sinon toute phrase anglaise deviendrait un taux d'IS. */
+    { rx: /impots?\s+sur\s+les\s+societes|impôts?\s+sur\s+les\s+sociétés|corporate\s+tax|\bi\.s\.\b/i, ok: (v) => v >= 10 && v <= 40 },
+    { rx: /impots?\s+sur\s+le\s+revenu|impôts?\s+sur\s+le\s+revenu|income\s+tax|\bi\.r\.\b/i, ok: (v) => v >= 0 && v <= 38 },
+  ];
+  const RATE_NOTE = {
+    fr: 'Les taux et barèmes (TVA, IS, IR, CNSS, SMIG) changent à chaque loi de finances et dépendent de votre activité : vérifiez-les auprès de la DGI ou de votre comptable avant d’engager quoi que ce soit. Je ne suis pas la source officielle sur ce point.',
+    en: 'Rates and scales (VAT, corporate tax, income tax, CNSS, minimum wage) change with every finance act and depend on your activity: check them with the DGI or your accountant before acting. I am not the official source on this.',
+    ar: 'النسب والجداول (الضريبة على القيمة المضافة، الشركات، الدخل، الصندوق الوطني، الحد الأدنى للأجر) تتغيّر مع كل قانون مالية وتتوقّف على نشاطك: تحقّق منها لدى المديرية العامة للضرائب أو محاسبك قبل أي إجراء. لست المرجع الرسمي هنا.',
+  };
+  const SMIG_RX = /\bsmig\b|\bsmag\b|salaire\s+minimum|minimum\s+wage|الحد\s*الادنى|الحد\s*الأدنى/i;
+  /* Le SMIG en dirhams : mensuel et horaire, deux ordres de grandeur, une
+     seule enveloppe de bon sens chacun. */
+  function smigImpossible(v, clause) {
+    if (/\bheure\b|horaire|\bhour\b|\/h\b|الساعة/i.test(clause)) return !(v >= 8 && v <= 40);
+    return !(v >= 1500 && v <= 6000);
   }
   /* The counts we hold, kept in SEPARATE NAMESPACES on purpose.
    *
@@ -3697,7 +3836,7 @@
   function redactUnsupported(text, lang) {
     const L2 = REDACTED[lang] ? lang : 'fr';
     const mark = REDACTED[L2];
-    let n = 0;
+    let n = 0, rateSeen = false;
     try {
       const knownM = Array.from(knownFigures());
       const knownP = Array.from(knownPercents());
@@ -3713,13 +3852,39 @@
       const out = String(text).split(/(?<=[.!?\n؟])/).map((clause) => {
         let c = clause;
         const claim = METRIC_RX.test(c) && !HYPO_RX.test(c);
+        const rate = RATE_RX.test(c);
+        const wage = rate && SMIG_RX.test(c);
+        if (rate) rateSeen = true;
 
-        // a · money, always checkable
-        c = c.replace(/(\d[\d  . ]*(?:,\d+)?)\s*(mad|dhs?|dirhams?|درهم|د\.?\s?م)\b/gi, (m, d, unit) => {
-          const v = num(d);
-          if (!isFinite(v) || v < 100 || citedM(v)) return m;
-          n++; return mark + ' ' + unit;
-        });
+        // a · money, always checkable — sauf le SMIG, qui n'est pas un montant
+        //     de CE commerce et relève du contrôle d'enveloppe ci-dessous.
+        if (!wage) {
+          c = c.replace(/(\d[\d  . ]*(?:,\d+)?)\s*(mad|dhs?|dirhams?|درهم|د\.?\s?م)\b/gi, (m, d, unit) => {
+            const v = num(d);
+            if (!isFinite(v) || v < 100 || citedM(v)) return m;
+            n++; return mark + ' ' + unit;
+          });
+        } else {
+          c = c.replace(/(\d[\d  . ]*(?:,\d+)?)\s*(mad|dhs?|dirhams?|درهم|د\.?\s?م)\b/gi, (m, d, unit) => {
+            const v = num(d);
+            if (!isFinite(v) || !smigImpossible(v, c)) return m;
+            n++; return mark + ' ' + unit;
+          });
+        }
+
+        // a-bis · les taux légaux, contrôle à sens unique (voir RATE_BAND).
+        //   Hors METRIC_RX à dessein : « la TVA au Maroc est de 25 % » ne
+        //   nomme aucune métrique du commerce et passait donc intact.
+        if (rate) {
+          const band = RATE_BAND.filter((b) => b.rx.test(c));
+          if (band.length) {
+            c = c.replace(/(\d+(?:[.,]\d+)?)\s*(%|٪)/g, (m, d, unit) => {
+              const v = parseFloat(String(d).replace(',', '.'));
+              if (!isFinite(v) || band.some((b) => b.ok(v))) return m;
+              n++; return mark + ' ' + unit;
+            });
+          }
+        }
         if (!claim) return c;
 
         // b · percentages asserted about a metric
@@ -3738,11 +3903,11 @@
           });
         return c;
       }).join('');
-      return { text: out, redacted: n };
+      return { text: out, redacted: n, caveat: rateSeen ? (RATE_NOTE[L2] || RATE_NOTE.fr) : '' };
     } catch (_) {
       /* Detector blew up on some input we didn't foresee. Fail CLOSED: an
        * answer we could not check is an answer we do not show. */
-      return { text: '', redacted: -1 };
+      return { text: '', redacted: -1, caveat: '' };
     }
   }
 
@@ -4546,6 +4711,14 @@
           note.className = 'fa-note';
           note.textContent = (GUARD[L] || GUARD.fr)(red.redacted);
           bubble.appendChild(note);
+        }
+        /* Un taux légal a été cité. Kiwi n'est pas la source officielle d'un
+         * barème qui bouge à chaque loi de finances : on le dit, une fois. */
+        if (bubble && red.redacted !== -1 && red.caveat) {
+          const cav = document.createElement('div');
+          cav.className = 'fa-note';
+          cav.textContent = red.caveat;
+          bubble.appendChild(cav);
         }
         logAi({ route: 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
         /* The merchant's own verdict — the only signal that says whether the
