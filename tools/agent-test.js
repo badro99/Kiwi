@@ -425,7 +425,13 @@ section('Role permissions (staff badge cannot read the P&L)');
  * of role enforcement, which §7 did not cover. */
 section('Production acceptance (re-audit, July 2026)');
 {
-  const now = Date.now();
+  /* Anchored to TODAY AT NOON, not to Date.now(). The sales below are written
+   * "three hours ago", and the assistant answers about the calendar day — so
+   * from midnight until 03:00 those three sales belong to yesterday and the
+   * assistant is right to say the day is empty. That turned a real release
+   * gate red on the clock rather than on the code. Noon leaves room on both
+   * sides of the day for every offset used here. */
+  const now = (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d.getTime(); })();
 
   /* 1 · IMMEDIATE SALE AWARENESS. The audit found the deployed dashboard at
    * 1 910 MAD, three orders and a live payment mix while the assistant on the

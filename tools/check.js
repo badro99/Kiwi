@@ -20,7 +20,17 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const list = (dir, ext) => fs.readdirSync(dir).filter((f) => f.endsWith(ext)).map((f) => path.join(dir, f));
+
+/* Les doubles de synchronisation. iCloud/Dropbox recopient un fichier modifié
+ * des deux côtés sous « dashboard 2.html », « CLAUDE 2.md » — jamais suivis par
+ * git, donc jamais déployés, mais posés à côté des vrais dans le même dossier.
+ * La garde les lisait comme du produit : elle a signalé une clé i18n manquante
+ * qui n'existe plus que dans une copie d'il y a trois semaines, et elle aurait
+ * tout aussi bien pu masquer l'inverse. On n'audite que ce qui part en ligne. */
+const STALE_COPY = / \d+\.[a-z]+$/i;
+const list = (dir, ext) => fs.readdirSync(dir)
+  .filter((f) => f.endsWith(ext) && !STALE_COPY.test(f))
+  .map((f) => path.join(dir, f));
 const read = (f) => fs.readFileSync(f, 'utf8');
 
 const JS_FILES = list(path.join(ROOT, 'assets'), '.js');
@@ -299,6 +309,25 @@ section('Canaux extérieurs (tools/channel-order-test.js)');
   } else {
     out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`channel-order-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── 7bis · la réception native Shopify ──────────────────────────────────────
+ * /api/channel/shopify/<id> n'a ni session ni clé porteuse : son adresse est
+ * publique par construction, puisque Shopify ne sait envoyer aucun en-tête
+ * d'authentification. Ce qui la tient fermée, c'est la seule signature HMAC —
+ * donc tout ce qui l'entoure (corps brut, secret enregistré, devise) est une
+ * porte, pas un détail. ────────────────────────────────────────────────────── */
+section('Réception Shopify (tools/shopify-webhook-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'shopify-webhook-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`shopify-webhook-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
 

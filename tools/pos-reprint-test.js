@@ -87,7 +87,12 @@ function load(extra) {
   return { RP: ctx.window.KiwiPosReprint, state };
 }
 
-const T = Date.now();
+/* Le repère du temps, ancré à MIDI d'aujourd'hui — pas à `Date.now()`.
+ * `rows()` ne garde que le jour en cours, alors une vente écrite « il y a
+ * 90 minutes » tombe la veille dès que la suite tourne avant 1 h 30 du matin,
+ * et la garde vire au rouge sans qu'une ligne de produit ait bougé. Une garde
+ * qui échoue selon l'heure est une garde qu'on apprend à ignorer. */
+const T = (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d.getTime(); })();
 const at = (minsAgo) => T - minsAgo * 60000;
 
 const SALE = {
