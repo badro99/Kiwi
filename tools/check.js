@@ -178,6 +178,24 @@ section('Forbidden patterns');
   if (!leaks) ok('no secret-shaped strings');
 }
 
+/* ── 4b · the catalogue import ───────────────────────────────────────────────
+ * The one feature that can destroy data a merchant already typed. Its gate
+ * asserts idempotence (re-importing a file changes nothing the second time) and
+ * that no import silently zeroes a counted stock or steals a code-barres from
+ * another article — properties invisible to a reader and cheap to check. */
+section('Catalogue import (tools/import-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'import-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`import gate green (${(out.match(/✓/g) || []).length} checks: CSV, encodages, idempotence, conflits)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`import-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 5 · the assistant actually answering ───────────────────────────────────
  * Everything above this line checks that the code PARSES and is WIRED. None of
  * it would have noticed the assistant quoting a break-even it computed wrong,

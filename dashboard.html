@@ -5938,6 +5938,10 @@
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->
 <script src="assets/clients-directory.js" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js" defer fetchpriority="low"></script>
+<!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
+     lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
+     APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
+<script src="assets/catalog-import.js" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
 <script src="assets/orderpro-publish.js" defer fetchpriority="low"></script>
