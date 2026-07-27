@@ -103,6 +103,25 @@ export async function onRequest(context) {
   // clean URL adds no surface: it is the same document, GET/HEAD only.
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
+  /* Les fichiers statiques que ces pages CHARGENT. Allow-lister la page sans ses
+   * scripts, c'est servir un document qui demande ensuite `assets/lucide.min.js`
+   * et reçoit l'écran de connexion à la place : le navigateur tente de lire du
+   * HTML comme du JavaScript, `window.lucide` reste undefined, et le client qui
+   * scanne le QR voit vingt-deux carrés vides à la place des icônes. C'est ce
+   * qui se passait en production — la page répondait 200, donc rien ne le
+   * signalait.
+   *
+   * Ça n'ouvre aucune donnée. /assets ne contient que du JS, du CSS et des
+   * polices, servis tels quels à tous les navigateurs, et les deux dépôts Kiwi
+   * sont PUBLICS sur GitHub : ces fichiers sont déjà lisibles par n'importe qui,
+   * et GitHub Pages les sert en clair. Les fermer ici ne protégeait rien — ça ne
+   * cassait que la seule page qu'un client voit. Ce qui est privé vit derrière
+   * /api, qui reste entièrement gardé.
+   *
+   * GET/HEAD uniquement, et en préfixe car les pages publiques évoluent : un
+   * quinzième script ajouté à kiwi-order.html ne doit pas re-casser la commande
+   * client en silence (tools/public-assets-test.js tient cette promesse). */
+  if (isRead && path.startsWith('/assets/')) return next();
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui

@@ -427,17 +427,26 @@ em, i, cite, dfn, var { font-style: normal; }
           <div id="aud-list"></div>
         </div>
 
+        <!-- La suppression de compte est refusée par le serveur (423, voir
+             functions/api/admin/clients.js › onRequestDelete) : l'ancienne
+             version effaçait le compte, les ventes, les PINs et la config, mais
+             laissait derrière elle store_docs, clients, catalogs, orders et les
+             appareils appairés. Tant que l'inventaire n'est pas complet et
+             transactionnel, il n'y a pas de suppression à offrir.
+             Le bouton, lui, était resté : l'opérateur tapait le nom de
+             l'établissement, cliquait, et lisait « Échec de la suppression. » —
+             sans savoir que ça ne marcherait jamais. Dire l'état réel vaut mieux
+             qu'un bouton qui ne peut que rater, et la suspension EST le geste
+             disponible : immédiate, et réversible. -->
         <div class="danger-zone" id="danger-zone" hidden>
-          <p class="sub" style="color:var(--warn); margin-top:0">Zone dangereuse</p>
-          <p class="dz-desc">Supprime définitivement <b id="dz-name"></b> et toutes ses données,
-            compte de connexion, ventes, PINs du personnel et configuration. Le client repart de zéro.
-            <b>Action irréversible.</b></p>
+          <p class="sub" style="color:var(--warn); margin-top:0">Suppression du compte</p>
+          <p class="dz-desc">La suppression de <b id="dz-name"></b> n'est pas disponible.
+            Effacer un compte doit emporter TOUT ce qui lui appartient, documents, carnet clients,
+            catalogue, commandes et appareils appairés compris. Tant que ce n'est pas garanti,
+            proposer le bouton reviendrait à promettre un effacement qui laisse des traces.</p>
+          <p class="dz-desc">Pour couper l'accès d'un client tout de suite, utilisez
+            <b>Suspendre</b> dans la liste : effet immédiat, et réversible.</p>
           <p class="dz-desc" id="dz-multi" hidden></p>
-          <div class="addrow">
-            <input id="del-confirm" class="dz-input" placeholder="Tapez le nom pour confirmer" aria-label="Confirmer le nom de l’établissement" autocomplete="off" spellcheck="false" />
-            <button class="mini danger" id="del-account" disabled>Supprimer le compte</button>
-          </div>
-          <p class="err" id="del-err"></p>
         </div>
       </div>
     </section>
@@ -1213,58 +1222,33 @@ em, i, cite, dfn, var { font-style: normal; }
   // the établissement name (or its merchant key), so a stray click can't wipe a
   // client. Handlers are assigned (not addEventListener) so re-selecting a
   // different client rewires the same nodes without stacking listeners.
-  // Jump to the delete confirm from the roster's "Supprimer" button: scroll the
-  // danger zone into view and focus the type-the-name input so it's obvious.
-  function revealDanger(){
-    var dz = document.getElementById('danger-zone');
-    var input = document.getElementById('del-confirm');
-    if (dz) dz.scrollIntoView({ behavior:'smooth', block:'center' });
-    if (input) setTimeout(function(){ input.focus(); }, 260);
-  }
-
+  /* Le panneau ne propose plus rien : il EXPLIQUE. Le serveur refuse la
+     suppression (423) tant qu'elle ne peut pas emporter toutes les tables d'un
+     client, et le formulaire « tapez le nom pour confirmer » qui vivait ici a
+     été retiré avec son gestionnaire — il ne pouvait plus aboutir, et sa seule
+     issue possible était « Échec de la suppression. », ce qui ne dit ni pourquoi
+     ni quoi faire à la place.
+     Il était déjà forcé à `hidden` : personne ne le voyait, mais son texte
+     promettait encore « Supprime définitivement… Action irréversible » à qui
+     l'aurait rouvert. Maintenant il se montre, et ce qu'il montre est vrai. */
   function renderDanger(){
-    // Server deletion is also locked. Keep this legacy panel hidden so an old
-    // cached console cannot advertise a destructive promise Kiwi cannot fulfil.
     var zone = document.getElementById('danger-zone');
-    if (zone) zone.hidden = true;
-    if (!selected) return;
+    if (!selected) { if (zone) zone.hidden = true; return; }
+    if (zone) zone.hidden = false;
+
     var name = selected.business || selected.merchant;
-    var input = document.getElementById('del-confirm');
-    var btn = document.getElementById('del-account');
-    var err = document.getElementById('del-err');
-    document.getElementById('dz-name').textContent = name;
-    // Deleting is per-CLIENT, not per-shop: the account row goes, and with it
-    // every établissement it owns. Typing the boutique's name would also take the
-    // restaurant down, so say so rather than let the operator find out after.
+    var nameEl = document.getElementById('dz-name');
+    if (nameEl) nameEl.textContent = name;
+
+    // Un compte porte parfois plusieurs établissements : le dire ici évite de
+    // laisser croire que « suspendre » ne toucherait que la boutique ouverte.
     var multi = document.getElementById('dz-multi');
     if (multi){
       var n = selected.siblings || 1;
       multi.hidden = n < 2;
       multi.textContent = n < 2 ? '' :
-        'Ce client tient ' + n + ' établissements. Les ' + n + ' seront supprimés, pas seulement ' + name + '.';
+        'Ce client tient ' + n + ' établissements sur le même compte. Une suspension les coupe tous les ' + n + ', pas seulement ' + name + '.';
     }
-    input.value = ''; err.textContent = '';
-    btn.disabled = true; btn.textContent = 'Supprimer le compte';
-
-    function norm(s){ return String(s || '').trim().toLowerCase(); }
-    input.oninput = function(){
-      var v = norm(input.value);
-      btn.disabled = !(v && (v === norm(name) || v === norm(selected.merchant)));
-    };
-    btn.onclick = async function(){
-      if (btn.disabled) return;
-      err.textContent = '';
-      btn.disabled = true; btn.textContent = 'Suppression…';
-      try {
-        await store.deleteClient(selected.merchant, selected.email);
-        selected = null;
-        document.getElementById('manage').hidden = true;
-        await renderClients();
-      } catch(e){
-        err.textContent = 'Échec de la suppression.';
-        btn.textContent = 'Supprimer le compte'; btn.disabled = false;
-      }
-    };
   }
 
   // The role list follows the selected client's type of activity. Re-rendered on
