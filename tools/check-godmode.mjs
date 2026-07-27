@@ -79,6 +79,7 @@ const R = {
   config:  await import(path.join(ROOT, 'functions/api/admin/config.js')),
   pins:    await import(path.join(ROOT, 'functions/api/admin/pins.js')),
   operators: await import(path.join(ROOT, 'functions/api/admin/operators.js')),
+  health: await import(path.join(ROOT, 'functions/api/admin/health.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -679,8 +680,33 @@ G('12 · Base pas migrée — le produit reste debout');
     'même sans la colonne `lines`, la recherche répond (sans le détail des paniers)');
 }
 
-/* ═══ 13 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
-G('13 · Révocation — supprimer un droit coupe vraiment la session');
+/* ═══ 13 · DIAGNOSTIC SUPPORT ═════════════════════════════════════════════ */
+G('13 · Diagnostic — factuel, cloisonné, explicite si la base manque');
+{
+  const h = await call(R.health, 'GET', '/api/admin/health?merchant=amira-boutique');
+  ok(h.status === 200 && h.json.merchant === 'amira-boutique', 'le dossier du magasin demandé est lisible');
+  ok(h.json.sales && h.json.sales.total === 5 && h.json.sales.last_24h === 4,
+    'le battement ventes vient des lignes réelles, sans celles de l’autre établissement');
+  ok(h.json.documents && h.json.documents.total === 2 && h.json.customers.total === 1,
+    'documents cloud et carnet clients sont comptés sans exposer leur contenu');
+
+  const noAuth = await R.health.onRequestGet({ env, request: new Request(
+    'https://kiwi.test/api/admin/health?merchant=amira-boutique') });
+  ok(noAuth.status === 403, 'un commerçant sans droit opérateur ne lit pas le diagnostic support');
+
+  const old = makeDB();
+  old.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-1', 'Badr', 'ff', 'ff', now).run();
+  old._db.exec('DROP TABLE channel_links');
+  const degraded = await R.health.onRequestGet({ env:{ DB:old, AUTH_SECRET }, request:new Request(
+    'https://kiwi.test/api/admin/health?merchant=amira-boutique', { headers:{ Cookie:AS.operator } }) });
+  const degradedJson = JSON.parse(await degraded.text());
+  ok(degraded.status === 200 && degradedJson.missing.some((x) => x.area === 'channels'),
+    'une migration absente est nommée, jamais présentée comme zéro canal');
+}
+
+/* ═══ 14 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
+G('14 · Révocation — supprimer un droit coupe vraiment la session');
 {
   const del = await call(R.clients, 'DELETE',
     '/api/admin/clients?merchant=amira-boutique&email=amira%40kiwi.test');

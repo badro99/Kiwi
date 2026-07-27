@@ -1232,6 +1232,12 @@
     };
     customIds.add(id);
     persistCustomVenues();
+    /* Le sélecteur d'établissement doit connaître le nouveau magasin TOUT DE
+     * SUITE. L'assistant d'inscription masquait le problème en basculant
+     * dessus juste après (setVenue re-rend tout) ; « Ajouter un établissement »
+     * depuis Mon profil ne bascule pas — le propriétaire créait sa deuxième
+     * boutique et ne la trouvait dans le sélecteur qu'après un rechargement. */
+    try { renderLocSwitch(); renderDropdown(); } catch (_) {}
     /* Déclarer l'établissement NEUF au serveur, tout de suite.
      * C'est le seul instant où l'on sait qu'il s'agit d'une création et pas d'un
      * simple bonjour : une minute plus tard, la boutique de ce matin et celle de
@@ -1244,12 +1250,34 @@
     return id;
   }
 
-  /* Patch an existing custom venue (name / location / hours / methods / goal)
+  /* Patch an existing custom venue (name / location / trade / methods / goal)
    * from the Settings editor — persists and re-renders if it's active. */
   function updateVenue(id, patch) {
     id = id || currentVenue;
     const v = VENUES[id];
     if (!v || !customIds.has(id) || !patch) return false;
+    /* LE MÉTIER. Il ne se modifiait nulle part : choisi une fois à
+     * l'inscription, il était ensuite gravé. Un café qui devient restaurant,
+     * une boutique qui ouvre un salon — le propriétaire n'avait aucun moyen de
+     * le dire, et la fiche établissement lui offrait à la place un champ libre
+     * qui ne changeait rien. On n'accepte qu'un métier connu (assets/trades.js
+     * via SUBTYPE_BASE) : un métier inventé ne correspond à aucun écran.
+     * Changer le métier change la famille, donc les modules — c'est le but. */
+    if (patch.subtype != null) {
+      const want = String(patch.subtype).trim();
+      const nb = SUBTYPE_BASE[want] || (TYPE_BASES.indexOf(want) >= 0 ? want : null);
+      if (nb) {
+        v.subtype = want;
+        v.type = nb;
+        const TL = { restaurant: 'Restaurant', boutique: 'Boutique', spa: 'Spa', hotel: 'Hôtel' };
+        let lbl = '';
+        try { lbl = (window.KiwiTrades && window.KiwiTrades.label(want)) || ''; } catch (_) {}
+        v.typeLabel = lbl || TL[nb] || v.typeLabel;
+        /* Un type poussé par le serveur ne doit pas écraser le choix que le
+         * propriétaire vient de faire de sa main sur SON établissement. */
+        if (id === currentVenue) typeOverride = null;
+      }
+    }
     if (patch.name != null)     v.name = String(patch.name).trim() || v.name;
     if (patch.location != null) v.location = String(patch.location).trim();
     if (patch.hours != null)    v.hours = String(patch.hours).trim();
@@ -1289,14 +1317,28 @@
 
   // Map an onboarding subtype (or a base) to its base vertical.
   const TYPE_BASES = ['restaurant', 'boutique', 'spa', 'hotel'];
-  const SUBTYPE_BASE = {
-    restaurant: 'restaurant', cafe: 'restaurant', fastfood: 'restaurant',
-    bakery: 'restaurant', pizzeria: 'restaurant', foodtruck: 'restaurant',
-    boutique: 'boutique', epicerie: 'boutique', pharmacie: 'boutique',
-    fleuriste: 'boutique', autre: 'boutique',
-    spa: 'spa', coiffure: 'spa', sport: 'spa',
-    hotel: 'hotel',
-  };
+  /* Cette table doit connaître TOUS les métiers que les assistants proposent.
+   * Écrite à la main, elle a raté « traiteur » et « librairie » — proposés au
+   * PIN 0000 mais absents ici, donc un traiteur retombait sur la famille par
+   * défaut et le type renvoyé par le serveur ne s'appliquait jamais chez lui.
+   * On la construit maintenant depuis la liste unique (assets/trades.js) ; le
+   * littéral reste le filet quand venues.js tourne seul. */
+  const SUBTYPE_BASE = (() => {
+    const m = {
+      restaurant: 'restaurant', cafe: 'restaurant', fastfood: 'restaurant',
+      bakery: 'restaurant', pizzeria: 'restaurant', foodtruck: 'restaurant',
+      traiteur: 'restaurant',
+      boutique: 'boutique', epicerie: 'boutique', pharmacie: 'boutique',
+      fleuriste: 'boutique', librairie: 'boutique', autre: 'boutique',
+      spa: 'spa', coiffure: 'spa', sport: 'spa',
+      hotel: 'hotel',
+    };
+    try {
+      const T = window.KiwiTrades;
+      if (T && T.LIST) T.LIST.forEach((t) => { if (TYPE_BASES.indexOf(t.base) >= 0) m[t.id] = t.base; });
+    } catch (_) {}
+    return m;
+  })();
   // Make the server-stored type authoritative for the current venue's sidebar
   // section + KPI band. Only ever changes anything when a real type is supplied
   // and it differs from what's shown, so a plain demo session is a no-op.

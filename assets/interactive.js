@@ -2156,6 +2156,13 @@ ar: {
       const vd = KV.getCurrentVenueData() || {};
       const fld = 'width:100%;padding:11px 13px;border:1px solid var(--n-200);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--surface);outline:none;box-sizing:border-box;';
       const lbl = 'display:block;font-size:12px;font-weight:500;color:var(--n-600);margin:16px 0 6px;';
+      /* Le MÉTIER se modifie ici aussi. Il était gravé à l'inscription : un
+       * café qui devient restaurant, une boutique qui ouvre un salon, une
+       * erreur au premier jour — il n'existait aucun écran pour le dire, et la
+       * fiche établissement offrait à la place un champ libre qui ne changeait
+       * rien. Liste unique (assets/trades.js), la même qu'à l'inscription. */
+      const KT = window.KiwiTrades;
+      const curTrade = KT ? KT.resolve(vd.subtype || vd.type) : '';
       const m = modal({
         tag: 'MA BOUTIQUE',
         title: 'Modifier votre activité',
@@ -2164,6 +2171,13 @@ ar: {
           <style>.ev-field:focus{border-color:var(--atlas)!important;}</style>
           <label style="${lbl}margin-top:2px;">Nom de l'activité</label>
           <input class="ev-field" data-ev-name style="${fld}" maxlength="40"/>
+          ${KT ? `
+          <label style="${lbl}">${tr({ fr: "Type d'activité", en: 'Type of business', ar: 'نوع النشاط' })}</label>
+          <select class="ev-field" data-ev-trade style="${fld}">${KT.options(curTrade)}</select>
+          <p style="font-size:11.5px;color:var(--n-500);margin:6px 0 0;line-height:1.45;">${tr({
+            fr: 'Détermine les écrans de ce commerce — carte et tables, catalogue et codes-barres, prestations, chambres.',
+            en: 'Decides this business’s screens — menu and tables, catalogue and barcodes, treatments, rooms.',
+            ar: 'يحدّد شاشات هذا النشاط.' })}</p>` : ''}
           <label style="${lbl}">Ville</label>
           <input class="ev-field" data-ev-city style="${fld}" maxlength="30"/>
           <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· MAD</span></label>
@@ -2179,10 +2193,13 @@ ar: {
         if (!e.target.closest('[data-ev-save]')) return;
         const name = (m.el.querySelector('[data-ev-name]').value || '').trim();
         if (!name) { toast(tr({fr:'Le nom de l\'activité est requis', en:'Activity name is required', ar:'اسم النشاط مطلوب'}), { type: 'warn', force: true }); return; }
+        const tsel = m.el.querySelector('[data-ev-trade]');
+        const trade = tsel && KT ? KT.resolve(tsel.value) : '';
         /* Plus de `hours` ici : les horaires ne sont plus une ligne de texte de
          * cette fiche, ils ont leur propre écran structuré (settings-hours). */
         KV.updateVenue(KV.getVenue(), {
           name,
+          subtype:  trade || null,
           location: m.el.querySelector('[data-ev-city]').value,
           goal:     m.el.querySelector('[data-ev-goal]').value,
         });
@@ -2198,9 +2215,13 @@ ar: {
     'onboard': () => {
       let picked = 'restaurant';
       const ic = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-      // Each visible type maps to one of the 3 data verticals (`base`); the
-      // specific label is what the merchant sees. `primary` types show first.
-      const TYPES = [
+      // Each visible type maps to a data vertical (`base`); the specific label
+      // is what the merchant sees. `primary` types show first. THE list is
+      // assets/trades.js — this literal is the parachute, and it is also why
+      // the lists drifted: it offered « traiteur » and « librairie », which
+      // assets/venues.js could not map to any vertical.
+      const KT = window.KiwiTrades;
+      const TYPES = (KT && KT.all().map((t) => ({ id: t.id, base: t.base, primary: t.primary, label: KT.label(t.id), icon: t.icon }))) || [
         { id: 'restaurant', base: 'restaurant', primary: true, label: 'Restaurant',          icon: ic('<path d="M3 3v6a2 2 0 002 2h1v10M6 11V3M11 3c-1 0-2 1.6-2 4s1 4 2 4 2-1.6 2-4-1-4-2-4zM11 11v10"/>') },
         { id: 'boutique',   base: 'boutique',   primary: true, label: 'Boutique',            icon: ic('<path d="M6 2 3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>') },
         { id: 'spa',        base: 'spa',        primary: true, label: tr({fr:'Spa / Bien-être', en:'Spa / Wellness', ar:'سبا / عافية'}),     icon: ic('<path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>') },

@@ -43,6 +43,10 @@ var SHELL = [
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/i18n.js',
+  /* Les métiers. Dans la coquille parce que venues.js et les assistants
+     d'inscription la lisent à l'évaluation : sans elle hors ligne, un
+     établissement retombe sur la famille par défaut. */
+  '/assets/trades.js',
   '/assets/interactive.js',
   '/assets/features.js',
   '/assets/venues.js',
