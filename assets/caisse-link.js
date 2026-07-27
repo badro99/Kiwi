@@ -195,7 +195,19 @@
       '#kcl-chip:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(5,59,44,.22);}' +
       '#kcl-chip .kcl-dot{width:9px;height:9px;border-radius:50%;background:#D99A2B;box-shadow:0 0 0 4px rgba(217,154,43,.16);flex:none;}' +
       '#kcl-chip[data-state="on"] .kcl-dot{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.18);}' +
-      '@media (max-width:640px){#kcl-chip{left:14px;bottom:78px;}}';
+      '@media (max-width:640px){#kcl-chip{left:14px;bottom:78px;}}' +
+      /* Docked variant: the chip lives in the sidebar brand row, in the empty
+       * strip beside the wordmark. Floating bottom-left, it sat on top of the
+       * Ultra upsell card. The sidebar is --ink, so the paper pill and the
+       * atlas "on" dot both go invisible-dark here — hence the mint dot and the
+       * translucent-white skin. font/letter-spacing are reset because #kcl-chip
+       * declares `font:inherit` and .brand is 24px/700/-0.05em. */
+      '#kcl-chip[data-docked]{position:static;z-index:auto;align-self:center;margin-inline-start:auto;' +
+      'font-size:11px;font-weight:600;letter-spacing:0;white-space:nowrap;gap:7px;padding:5px 10px 5px 8px;' +
+      'background:rgba(255,255,255,.06);color:var(--paper,#F7F5F0);border-color:rgba(255,255,255,.12);box-shadow:none;}' +
+      '#kcl-chip[data-docked]:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.10);}' +
+      '#kcl-chip[data-docked] .kcl-dot{width:7px;height:7px;box-shadow:0 0 0 3px rgba(217,154,43,.16);}' +
+      '#kcl-chip[data-docked][data-state="on"] .kcl-dot{background:var(--mint,#7DF2B0);box-shadow:0 0 0 3px rgba(125,242,176,.18);}';
     document.head.appendChild(s);
   }
 
@@ -304,7 +316,30 @@
     panel = { close: d.close, setCode: setCode, setRemote: setRemote, el: el, onStorage: refresh };
   }
 
-  /* ── Corner launcher (so the caisse is never "lost" after a dismiss) ─────── */
+  /* ── Launcher (so the caisse is never "lost" after a dismiss) ───────────── */
+  /* Home is the sidebar's brand row, whose right half is empty.
+   *
+   * Only above 860px, though: below that the sidebar becomes an off-canvas
+   * drawer (assets/mobile.css), and a chip parked inside it would be
+   * unreachable until the merchant opens the menu. `position:fixed` can't
+   * rescue it either — the drawer's own transform becomes the containing block,
+   * so the chip would stay off-screen with it. On phones, and on any page with
+   * no sidebar, the launcher therefore stays a floating corner button. */
+  var DOCK_MQ = '(min-width: 861px)';
+  function chipHost() {
+    if (!window.matchMedia(DOCK_MQ).matches) return null;
+    return document.querySelector('.sidebar .brand');
+  }
+  function placeChip(b) {
+    var host = chipHost();
+    if (host) {
+      if (b.parentNode !== host) host.appendChild(b);
+      b.setAttribute('data-docked', '');
+    } else {
+      if (b.parentNode !== document.body) document.body.appendChild(b);
+      b.removeAttribute('data-docked');
+    }
+  }
   function ensureChip() {
     if (!realMerchant()) return;
     css();
@@ -314,8 +349,8 @@
       b.id = 'kcl-chip'; b.type = 'button';
       b.innerHTML = '<span class="kcl-dot"></span><span class="kcl-t">Connecter la caisse</span>';
       b.addEventListener('click', openPanel);
-      document.body.appendChild(b);
     }
+    placeChip(b);
     updateChip();
   }
   function updateChip() {
@@ -358,6 +393,12 @@
   function boot() {
     // The caisse tab flips a code to status:'connected' → reflect it here live.
     window.addEventListener('storage', function (e) { if (e.key === K.pairings) { updateChip(); if (panel && panel.onStorage) panel.onStorage(); } });
+    // Rotating a tablet across 860px swaps the sidebar for the drawer — follow it.
+    try {
+      window.matchMedia(DOCK_MQ).addEventListener('change', function () {
+        var b = document.getElementById('kcl-chip'); if (b) placeChip(b);
+      });
+    } catch (_) {}
     setTimeout(function () { try { maybePrompt(); } catch (_) {} }, 1400);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
