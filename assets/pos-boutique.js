@@ -3189,7 +3189,7 @@
         </div>
 
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqi-n-sw">${colorSwatches()}</div></div>
+          <div class="bqi-fg"><label>Couleur</label><div id="bqi-n-sw">${colorPicker('noir')}</div></div>
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqi-n-size" list="bqi-n-sizes" placeholder="M" autocomplete="off" /><datalist id="bqi-n-sizes"></datalist></div>
@@ -3202,12 +3202,8 @@
       const cat = catDB();
       let icon = 'tshirt';
       let mode = 'existing';
-      let colorId = cat.colors()[0].id;
       wireIconPicker(el, (k) => { icon = k; });
-      el.querySelectorAll('#bqi-n-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => {
-        el.querySelectorAll('#bqi-n-sw .bqi-sw').forEach((x) => x.classList.remove('on'));
-        b.classList.add('on'); colorId = b.dataset.cid;
-      }));
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqi-n-sw', el))) || 'noir'; };
       const kindSel = $('#bqi-n-kind', el), sizeList = $('#bqi-n-sizes', el);
       const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
       kindSel.onchange = fillSizes; fillSizes();
@@ -3266,7 +3262,7 @@
         let p = null, ev = null, res = null, genCode = null;
         cat.batch(() => {
           p = cat.addProduct({ name, categoryId: catId, kind: kindSel.value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
-          ev = cat.ensureVariant({ productId: p.id, colorId, size, stock });
+          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock });
           if (mode === 'existing' && ev.variant) {
             res = cat.attachBarcode(ev.variant.id, raw);
             if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
@@ -3690,7 +3686,7 @@
           <div class="bqi-fg"><label>Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optionnel" /></div>
         </div>
         <div class="bqi-frow">
-          <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqx-sw">${colorSwatches()}</div></div>
+          <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes" placeholder="M" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
@@ -3702,11 +3698,10 @@
         <button class="bq-btn secondary" id="bqx-skip">Ignorer ce code</button>
         <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
       </div>`, (el) => {
-      let colorId = cat.colors()[0].id;
-      el.querySelectorAll('#bqx-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => {
-        el.querySelectorAll('#bqx-sw .bqi-sw').forEach((x) => x.classList.remove('on'));
-        b.classList.add('on'); colorId = b.dataset.cid;
-      }));
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
       const kindSel = $('#bqx-kind', el), sizeList = $('#bqx-sizes', el);
       const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
       kindSel.onchange = fillSizes; fillSizes();
@@ -3731,7 +3726,7 @@
             priceMAD: bqMoney($('#bqx-price', el).value), cost: bqMoney($('#bqx-cost', el).value),
             art: prev ? prev.product.art : 'tshirt', flag: $('#bqx-flag', el).value.trim(),
           });
-          ev = cat.ensureVariant({ productId: p.id, colorId, size, stock: qty });
+          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock: qty });
           res = cat.attachBarcode(ev.variant.id, j.code);
           if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
         });
@@ -3784,7 +3779,7 @@
         <b>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)}${d.product.cost ? ' · coût ' + fmtMAD(d.product.cost) : ''}</b>
       </div>
       <div class="bqi-form bqx-form">
-        <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqx-sw">${colorSwatches()}</div></div>
+        <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes2" value="" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes2">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
           <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
@@ -3798,18 +3793,17 @@
         <button class="bq-btn secondary" id="bqx-back">Créer un autre produit</button>
         <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Enregistrer et scanner le suivant</button>
       </div>`, (el) => {
-      let colorId = cat.colors()[0].id;
-      el.querySelectorAll('#bqx-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => {
-        el.querySelectorAll('#bqx-sw .bqi-sw').forEach((x) => x.classList.remove('on'));
-        b.classList.add('on'); colorId = b.dataset.cid;
-      }));
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
       $('#bqx-back', el).onclick = () => intakeNew(j, {});
       const save = () => {
         const size = $('#bqx-size', el).value.trim() || presets[0] || 'TU';
         const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
         let ev = null, res = null;
         cat.batch(() => {
-          ev = cat.ensureVariant({ productId: pid, colorId, size, stock: 0 });
+          ev = cat.ensureVariant({ productId: pid, colorId: pickedColor(), size, stock: 0 });
           if (!ev.variant) return;
           res = cat.attachBarcode(ev.variant.id, j.code);
           if (!res.ok) { if (ev.created) cat.deleteVariant(ev.variant.id); return; }
@@ -3936,7 +3930,7 @@
           <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="bqx-vcode" placeholder="Scannez ou tapez…" autocomplete="off" spellcheck="false" /></div>
           <div class="bqi-help" id="bqx-vhint">Chaque déclinaison peut porter son propre code fournisseur.</div>
         </div>
-        <div class="bqi-fg"><label>Couleur</label><div class="bqi-swrow" id="bqx-sw">${colorSwatches()}</div></div>
+        <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes3" placeholder="${esc(presets[0] || 'TU')}" autocomplete="off" /><datalist id="bqx-sizes3">${presets.map((s) => `<option value="${esc(s)}">`).join('')}</datalist></div>
           <div class="bqi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
@@ -3950,11 +3944,10 @@
         <button class="bq-btn secondary" id="bqx-back">Retour</button>
         <button class="bq-btn" id="bqx-save"><i data-lucide="check"></i>Ajouter la déclinaison</button>
       </div>`, (el) => {
-      let colorId = cat.colors()[0].id;
-      el.querySelectorAll('#bqx-sw .bqi-sw').forEach((b) => b.addEventListener('click', () => {
-        el.querySelectorAll('#bqx-sw .bqi-sw').forEach((x) => x.classList.remove('on'));
-        b.classList.add('on'); colorId = b.dataset.cid;
-      }));
+      /* Le sélecteur de couleurs partagé (assets/color-palette.js) porte son propre
+         état et sa navigation clavier : on lui DEMANDE sa valeur au moment
+         d'enregistrer, plutôt que de suivre les clics à la main. */
+      const pickedColor = () => { const k = KC(); return (k && k.value($('#bqx-sw', el))) || 'noir'; };
       const codeIn = $('#bqx-vcode', el);
       /* Le verdict s'affiche sous le champ, et il est le MÊME que le code arrive
          de la douchette ou des doigts : sans le second câblage, un employé qui
@@ -3984,7 +3977,7 @@
         }
         let ev = null, res = null;
         cat.batch(() => {
-          ev = cat.ensureVariant({ productId: pid, colorId, size, stock: 0 });
+          ev = cat.ensureVariant({ productId: pid, colorId: pickedColor(), size, stock: 0 });
           if (!ev.variant) return;
           if (raw) {
             res = cat.attachBarcode(ev.variant.id, raw);

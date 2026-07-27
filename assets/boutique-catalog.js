@@ -766,11 +766,17 @@
   function ensureVariant(data) {
     data = data || {};
     if (!prodById(data.productId)) return { variant: null, created: false, reason: 'produit-introuvable' };
+    // Même dédoublonnage que addVariant : sur l'id de couleur BRUT, jamais sur la
+    // famille — deux nuances distinctes gardent chacune son stock et son code.
     const found = findVariant(data.productId, data.colorId, data.size);
     if (found) return { variant: found, created: false };
-    const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0);
-    if (data.colorLabel) v.colorLabel = data.colorLabel;
-    if (data.colorHex) v.colorHex = data.colorHex;
+    // La couleur passe par `meta`, comme dans addVariant : c'est mkVariant qui
+    // range famille / nuance d'origine (normColor). Écrire colorLabel et colorHex
+    // après coup écraserait la famille normalisée par la nuance brute.
+    const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0, {
+      colorLabel: data.colorLabel, colorHex: data.colorHex,
+    });
+    if (data.note) v.note = String(data.note).slice(0, 60);
     db.variants.push(v); commit();
     return { variant: v, created: true };
   }
