@@ -117,6 +117,33 @@ export async function operatorToken(authSecret) {
   return hmacHex(authSecret, 'kiwi-operator-v1');
 }
 
+/* QUI est l'opérateur, et pas seulement « c'en est un ».
+ *
+ * kiwi_op est le même cookie pour tout le monde — HMAC du secret, sans identité
+ * dedans — parce qu'il ne sert qu'à dire « ce code était bon ». Le journal des
+ * modules (config_audit) doit pouvoir écrire un nom en face d'un geste, alors le
+ * middleware pose EN PLUS ce cookie-ci au moment où un code est vérifié.
+ *
+ * Signé, sinon il suffirait de le réécrire pour attribuer une coupure à un
+ * collègue : la valeur est "<operators.id>.<HMAC(secret, id)>" et lire l'id sans
+ * revérifier la signature reviendrait à croire le navigateur sur parole.
+ * Absent ⇒ null, et l'appelant écrit une identité générique plutôt qu'un faux
+ * nom (laissez-passer équipe, ou session ouverte avant cette version). */
+export const OPID_COOKIE = 'kiwi_op_id';
+export async function operatorIdToken(authSecret, opId) {
+  return String(opId) + '.' + (await hmacHex(authSecret, 'kiwi-operator-id-v1:' + String(opId)));
+}
+export async function readOperatorId(request, env) {
+  const secret = env && env.AUTH_SECRET;
+  const raw = readCookie(request, OPID_COOKIE);
+  if (!secret || !raw) return null;
+  const dot = raw.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const id = raw.slice(0, dot);
+  const want = await hmacHex(secret, 'kiwi-operator-id-v1:' + id);
+  return timingSafeEqualHex(raw.slice(dot + 1), want) ? id : null;
+}
+
 // True if the request carries a valid operator cookie, or a valid staff-bypass
 // cookie (owner/partner = operator-equivalent). A plain merchant session is NOT
 // enough — the admin surface is cross-merchant and privileged.

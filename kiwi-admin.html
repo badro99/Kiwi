@@ -123,9 +123,19 @@ em, i, cite, dfn, var { font-style: normal; }
   .addrow input.nm{width:130px}
   .add{font:inherit; font-size:.84rem; font-weight:640; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; background:linear-gradient(135deg,var(--atlas),var(--riad)); color:#eafff4}
   .add:disabled{opacity:.5;cursor:default}
-  .feat{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
+  .feat{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
   .feat:last-child{border-bottom:0}
   .feat .fl{font-size:.9rem}
+  /* L'état écrit en toutes lettres à côté de l'interrupteur. Un curseur seul se
+     lit mal quand la liste fait quinze lignes : on cherche « est-ce que la
+     Conformité est coupée chez ce client » et on compte des pastilles. */
+  .fst{font-family:var(--mono); font-size:.66rem; letter-spacing:.07em; text-transform:uppercase;
+       white-space:nowrap; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+  .fst.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent);
+          background:color-mix(in srgb, var(--atlas) 8%, transparent)}
+  /* D'où vient la valeur : une décision prise pour CE client ne se lit pas comme
+     un défaut hérité de la création de l'établissement. */
+  .fsrc{display:block; font-size:.72rem; color:var(--muted); margin-top:3px; font-weight:400}
   /* Band header — "Modules communs" / the trade / "Options payantes". Keeps a
      15-row switch list readable instead of one undifferentiated column. */
   .featgrp{margin:18px 0 4px}
@@ -135,6 +145,16 @@ em, i, cite, dfn, var { font-style: normal; }
   .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
   .sw[aria-checked="true"]{background:var(--atlas)}
   .sw[aria-checked="true"]::after{transform:translateX(18px)}
+  /* Journal des modules — qui a coupé quoi, où, quand. Compact : c'est une
+     référence qu'on consulte quand un client rappelle, pas un tableau de bord. */
+  .audit{margin-top:16px; border-top:1px solid var(--line); padding-top:12px}
+  .aud-row{display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:10px; padding:6px 0; font-size:.8rem}
+  .aud-row .ab{font-family:var(--mono); font-size:.66rem; letter-spacing:.06em; text-transform:uppercase;
+                padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+  .aud-row .ab.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent)}
+  .aud-row .aw{color:var(--muted)}
+  .aud-row .aw b{color:var(--ink); font-weight:600}
+  .aud-row .at{font-family:var(--mono); font-size:.7rem; color:var(--muted); white-space:nowrap}
   .empty{color:var(--muted); font-size:.85rem; padding:6px 0}
   .err{color:var(--warn); font-size:.8rem; min-height:1em; margin:4px 0 0}
   .hint{color:var(--muted); font-size:.78rem; margin:10px 0 0}
@@ -212,7 +232,11 @@ em, i, cite, dfn, var { font-style: normal; }
             <p class="sub">Fonctionnalités (autorité opérateur)</p>
             <div id="type-row"></div>
             <div id="feat-list"></div>
-            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque dans l’app du client à son prochain chargement. Réservé à l’opérateur, lié à l’offre.</p>
+            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
+            <div class="audit">
+              <p class="sub" style="margin-top:0">Journal des modules</p>
+              <div id="aud-list"></div>
+            </div>
           </div>
         </div>
 
@@ -495,7 +519,28 @@ em, i, cite, dfn, var { font-style: normal; }
     },
     async setConfig(merchant, features, plan){
       if (LIVE) { return api('/config', { method:'PUT', body:JSON.stringify({ merchant:merchant, features:features, plan:plan }) }); }
-      var m = mock(); m.features[merchant] = features; saveMock(m);
+      // En mode démo le journal est tenu ici, pour que le panneau se comporte
+      // exactement comme en production (l'écriture réelle est faite par
+      // functions/api/admin/config.js, qui compare l'avant et l'après).
+      var m = mock(); var prev = m.features[merchant] || {};
+      m.audit = m.audit || {};
+      Object.keys(features).forEach(function(k){
+        if (prev[k] === features[k]) return;
+        (m.audit[merchant] = m.audit[merchant] || []).unshift(
+          { feature:k, enabled:features[k] ? 1 : 0, actor:'démo', ts:Date.now() });
+      });
+      m.features[merchant] = features; saveMock(m);
+    },
+    /* Le journal des changements de modules. `merchant_config` ne garde que le
+       dernier état : « les réservations sont coupées » ne dit ni depuis quand,
+       ni par qui — et c'est la seule question qui compte quand un client
+       rappelle trois mois plus tard. */
+    async audit(merchant){
+      if (LIVE) {
+        try { return (await api('/audit?merchant=' + encodeURIComponent(merchant))).entries || []; }
+        catch(_) { return []; }   // endpoint pas encore déployé → panneau vide, pas d'erreur
+      }
+      return ((mock().audit || {})[merchant] || []);
     },
     // Set the business type. In LIVE we resend the current features + plan so the
     // PUT (which overwrites them) doesn't clear existing toggles — only the type
@@ -755,7 +800,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
-    await Promise.all([renderPins(), renderFeatures()]);
+    await Promise.all([renderPins(), renderFeatures(), renderAudit()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
@@ -868,6 +913,26 @@ em, i, cite, dfn, var { font-style: normal; }
       h('span', { class:'type-lbl' }, 'Type d’activité'), sel));
   }
 
+  /* Un module a un état, et cet état a une origine. Les deux se lisent :
+   *   ACTIVÉ / DÉSACTIVÉ — ce que le client voit, aujourd'hui, dans son app ;
+   *   « réglé pour ce client » / « valeur par défaut » — d'où vient la valeur.
+   * La distinction n'est pas cosmétique. Un établissement créé après juillet 2026
+   * naît avec Terminaux, Conformité, Réservations, Dépenses et Order Pro coupés
+   * (functions/api/config.js › NEW_STORE_FEATURES) ; un client d'avant garde tout
+   * ce qu'il avait. Sans cette ligne, un opérateur ne peut pas distinguer « on a
+   * décidé de le couper pour lui » de « il ne l'a jamais eu ».
+   *
+   * Il n'y a PAS d'héritage de compte ni de restriction par offre dans le
+   * produit : un module appartient à un établissement, et le plan enregistré ne
+   * ferme aucune porte. Aucun état n'est donc inventé pour eux — mieux vaut un
+   * panneau qui dit vrai qu'un panneau complet et faux. */
+  function featState(feats, mod){
+    var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
+    // Module standard : clé absente ⇒ ALLUMÉ. Option payante (mod.off) : l'inverse.
+    var on = mod.off ? feats[mod.key] === true : feats[mod.key] !== false;
+    return { on:on, explicit:explicit };
+  }
+
   async function renderFeatures(){
     renderTypeRow();
     var wrap = document.getElementById('feat-list'); clear(wrap);
@@ -876,22 +941,53 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
       grp.items.forEach(function(mod){
-        // Standard module: absent ⇒ ON. Paid add-on (mod.off): absent ⇒ OFF.
-        var isOn = function(f){ return mod.off ? f[mod.key] === true : f[mod.key] !== false; };
-        var on = isOn(feats);
-        var sw = h('button', { class:'sw', role:'switch', 'aria-checked': on ? 'true':'false', 'aria-label':mod.label });
+        var st = featState(feats, mod);
+        var pill = h('span', { class:'fst' + (st.on ? ' on' : '') }, st.on ? 'Activé' : 'Désactivé');
+        var sw = h('button', { class:'sw', role:'switch', 'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });
         sw.addEventListener('click', async function(){
           var cur = await store.config(selected.merchant);
-          var next = !isOn(cur);
+          var next = !featState(cur, mod).on;
           cur[mod.key] = next;
           sw.setAttribute('aria-checked', next ? 'true':'false');
+          pill.className = 'fst' + (next ? ' on' : '');
+          pill.textContent = next ? 'Activé' : 'Désactivé';
+          src.textContent = 'réglé pour ce client';
           await store.setConfig(selected.merchant, cur, selected.plan || '');
+          renderAudit();                    // le geste apparaît dans le journal
         });
-        var label = mod.hint
-          ? h('span', { class:'fl' }, mod.label, h('small', { class:'fh' }, mod.hint))
-          : h('span', { class:'fl' }, mod.label);
-        wrap.appendChild(h('div', { class:'feat' + (mod.off ? ' addon' : '') }, label, sw));
+        var src = h('small', { class:'fsrc' }, st.explicit ? 'réglé pour ce client' : 'valeur par défaut');
+        var label = h('span', { class:'fl' }, mod.label,
+          mod.hint ? h('small', { class:'fh' }, mod.hint) : null, src);
+        wrap.appendChild(h('div', { class:'feat' + (mod.off ? ' addon' : '') }, label, pill, sw));
       });
+    });
+  }
+
+  // Libellé lisible d'une clé de module, quel que soit le métier du client — le
+  // journal peut contenir une clé d'un vertical que ce client n'a plus.
+  function moduleLabel(key){
+    var all = [CORE_MODULES, ADDON_MODULES];
+    Object.keys(VERTICAL_MODULES).forEach(function(k){ all.push(VERTICAL_MODULES[k]); });
+    for (var i=0;i<all.length;i++) for (var j=0;j<all[i].length;j++)
+      if (all[i][j].key === key) return all[i][j].label;
+    return key;
+  }
+
+  async function renderAudit(){
+    var wrap = document.getElementById('aud-list'); if (!wrap) return; clear(wrap);
+    var rows = await store.audit(selected.merchant);
+    if (!rows.length) {
+      wrap.appendChild(h('p', { class:'empty' },
+        'Aucun changement enregistré pour ' + (selected.business || selected.merchant) + '.'));
+      return;
+    }
+    rows.forEach(function(r){
+      var on = !!r.enabled;
+      wrap.appendChild(h('div', { class:'aud-row' },
+        h('span', { class:'ab' + (on ? ' on' : '') }, on ? 'Activé' : 'Coupé'),
+        h('span', { class:'aw' }, h('b', null, moduleLabel(r.feature)), ' · ', r.actor || 'equipe'),
+        h('span', { class:'at' }, ago(r.ts))
+      ));
     });
   }
 
@@ -949,7 +1045,7 @@ em, i, cite, dfn, var { font-style: normal; }
     renderMode();
     await renderClients();
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures()]); }
+    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderAudit()]); }
   }
   boot(false);
 })();

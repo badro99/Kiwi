@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v126';
+var CACHE = 'kiwi-app-v129';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -61,6 +61,12 @@ var SHELL = [
   '/assets/caisse-motion.js',
   '/assets/caisse-pwa.js',
   '/assets/live-link.js',
+  /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
+     peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
+     dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
+     s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
+  '/assets/day-report.js',
+  '/assets/day-report-dash.js',
   '/assets/merchant-config.js',
   '/assets/staff-roles.js',
   '/assets/identity.js',

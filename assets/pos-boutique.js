@@ -2179,7 +2179,21 @@
                (montant ≤ 0) passe son tour, ce qui est le bon comptage.
                sale.total garde la valeur du ticket : c'est la vente, pas la caisse. */
             const cashIn = (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
-            window.KiwiLive.postSale({ amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at });
+            /* LE PANIER, qui ne partait pas. On ne remontait que {montant,
+               moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
+               (« Caftan +3 art. ») : le tableau de bord ne pouvait donc pas dire
+               à la patronne combien de jeans noirs elle avait vendus, alors que
+               la caisse le savait ligne par ligne. Le rayon voyage avec chaque
+               ligne — c'est lui qui fait tenir le « Catégorie : Jeans » du
+               rapport de fin de journée même si le rayon est renommé plus tard.
+               Bornes identiques à celles de /api/sale : 40 lignes, 60 signes. */
+            const basket = t.lines.slice(0, 40).map((ln) => ({
+              name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
+              qty: ln.qty,
+              total: Math.round(lineUnit(ln) * ln.qty),
+              cat: rayonOf(ln.pid) || '',
+            }));
+            window.KiwiLive.postSale({ amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at, lines: basket });
           }
         } catch (_) {}
         let ptsLine = '';

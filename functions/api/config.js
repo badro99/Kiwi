@@ -12,6 +12,48 @@ import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, i
 
 const VALID_PIN = /^\d{4}$/;
 
+/* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
+ * Cinq modules qui ne servent qu'à une partie des clients : un snack de quartier
+ * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni carnet de
+ * réservations, ni cartes de dépenses, et Order Pro ouvre la carte au téléphone
+ * des passants. Les laisser allumés d'office, c'est livrer un labyrinthe et
+ * quatre pages vides ; l'opérateur les rallume module par module quand le client
+ * en a réellement besoin (kiwi-admin.html › Fonctionnalités).
+ *
+ * L'inverse de tout le reste : ailleurs une clé absente veut dire ALLUMÉ. Ici on
+ * écrit `false` EXPLICITEMENT dans la fiche, et seulement à sa création. C'est ce
+ * qui permet de ne toucher à aucun client existant — leur fiche est déjà là, elle
+ * n'est jamais réécrite (le ON CONFLICT ne touche pas `features`), et un client
+ * qui utilise déjà ses réservations les garde.
+ */
+const NEW_STORE_FEATURES = {
+  terminaux: false,
+  conformite: false,
+  reservations: false,
+  depenses: false,
+  orderpro: false,
+};
+
+/* La date à partir de laquelle un COMPTE est « nouveau ».
+ * Un client qui s'inscrit après cette date n'a jamais connu l'ancienne
+ * configuration, donc sa première boutique part avec les cinq modules coupés,
+ * même si le navigateur ne nous dit rien (vieux cache, deuxième appareil).
+ * Pour un compte plus ancien on ne devine pas : seul un signal explicite du
+ * client (`fresh`, envoyé à la création d'un établissement) déclenche les
+ * valeurs par défaut. Un compte d'avant qui recharge simplement son tableau de
+ * bord ne doit rien voir changer. */
+const NEW_ACCOUNT_FROM = 1785110400000;   // 2026-07-27T00:00:00Z
+
+/* Une fiche « vide » = créée mais jamais configurée. Deux appels concurrents
+ * arrivent à la création d'un établissement (l'enregistrement du magasin et la
+ * synchro du type), et c'est une course : si l'anodin gagne, la fiche naît avec
+ * '{}' et le signal `fresh` arrive une milliseconde trop tard. On rattrape donc
+ * une fiche encore vierge — jamais une fiche que quelqu'un a déjà réglée. */
+function isBlankFeatures(v) {
+  const s = String(v == null ? '' : v).trim();
+  return s === '' || s === '{}';
+}
+
 /* Who owns a store slug?
  *   '<acc-id>' → claimed by that account
  *   ''         → a row exists but is unclaimed (a pre-registry row, or a store an
@@ -36,18 +78,31 @@ async function storeOwner(env, slug) {
  * `sales`; the loser's sync is refused with 403 rather than silently merged.)
  * Fail-soft: pre-migration this throws and is swallowed — the config write that
  * follows still works, we just cannot group the store under its owner yet. */
-async function claimStore(env, merchant, accountId, name) {
+async function claimStore(env, merchant, accountId, name, seed) {
   try {
     await env.DB.prepare(
       `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
-       VALUES (?, '{}', NULL, NULL, ?, ?, ?)
+       VALUES (?, ?, NULL, NULL, ?, ?, ?)
        ON CONFLICT(merchant) DO UPDATE SET
          account_id = COALESCE(merchant_config.account_id, excluded.account_id),
          name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
          updated_ts = excluded.updated_ts`
-    ).bind(merchant, accountId, String(name || ''), Date.now()).run();
+    ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
+           accountId, String(name || ''), Date.now()).run();
     return true;
   } catch (_) { return false; }
+}
+
+/* Rattrapage de la course décrite plus haut : la fiche existait déjà, mais
+ * personne ne l'avait encore réglée. N'écrase JAMAIS une configuration —
+ * la condition SQL exige que `features` soit encore vide. */
+async function seedBlankFeatures(env, merchant) {
+  try {
+    await env.DB.prepare(
+      `UPDATE merchant_config SET features = ?, updated_ts = ?
+        WHERE merchant = ? AND (features IS NULL OR TRIM(features) = '' OR TRIM(features) = '{}')`
+    ).bind(JSON.stringify(NEW_STORE_FEATURES), Date.now(), merchant).run();
+  } catch (_) { /* pré-migration → on reste sur le comportement d'avant */ }
 }
 
 export async function onRequestGet(context) {
@@ -142,6 +197,13 @@ export async function onRequestGet(context) {
 //   { name: "Café Nord" }                  — that store's display name
 //   { pins: [{ code|pin, name, role }] }   — full replace of this store's PINs
 //   { type: "boutique" }                   — the onboarding business subtype
+//   { fresh: true }                        — this store is being CREATED right now
+//
+// `fresh` is the only thing that distinguishes "a shop that has just been opened"
+// from "a shop that has existed for months and is merely saying hello". It decides
+// whether the row is born with NEW_STORE_FEATURES (five modules off) or with the
+// historic everything-on. Never trust it to turn anything ON: it only ever writes
+// defaults into a row that has no configuration at all.
 //
 // `merchant` is a request, not a fact: the server accepts it only when the slug
 // is free or already belongs to this account (see storeOwner/claimStore), and
@@ -165,7 +227,7 @@ export async function onRequestPost(context) {
   const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
   if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
 
-  const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+  const acc = await env.DB.prepare('SELECT business, created_ts FROM accounts WHERE id = ?').bind(sess.aid).first();
   if (!acc) return json({ error: 'unauthorized' }, 401);
   const accSlug = slugMerchant(acc.business);
 
@@ -216,8 +278,21 @@ export async function onRequestPost(context) {
   // store slug while reads still came from the account slug, and a merchant would
   // watch their own PINs and modules vanish. Better to keep the old single-store
   // behaviour intact until the column exists.
-  const claimed = await claimStore(env, merchant, sess.aid, storeName);
+  /* Cet établissement naît-il maintenant ?
+   *   · `fresh` — le client vient de créer la boutique (onboarding, ou le
+   *     sélecteur d'établissement du tableau de bord). C'est le signal qui couvre
+   *     la deuxième boutique d'un client déjà installé.
+   *   · compte récent — une inscription postérieure à NEW_ACCOUNT_FROM. Filet de
+   *     sécurité pour un navigateur qui tourne encore sur un ancien cache : un
+   *     nouveau client repart toujours de la bonne configuration.
+   * Ni l'un ni l'autre ⇒ on ne présume rien, et la fiche naît « tout allumé »,
+   * exactement comme avant. */
+  const wantSeed = (body && body.fresh === true)
+    || Number(acc.created_ts || 0) >= NEW_ACCOUNT_FROM;
+
+  const claimed = await claimStore(env, merchant, sess.aid, storeName, wantSeed);
   if (!claimed && merchant !== accSlug) merchant = accSlug;
+  if (wantSeed && claimed) await seedBlankFeatures(env, merchant);
 
   const result = { ok: true, merchant };
 
@@ -257,9 +332,11 @@ export async function onRequestPost(context) {
     try {
       await env.DB.prepare(
         `INSERT INTO merchant_config (merchant, features, plan, type, updated_ts)
-         VALUES (?, '{}', NULL, ?, ?)
+         VALUES (?, ?, NULL, ?, ?)
          ON CONFLICT(merchant) DO UPDATE SET type = excluded.type, updated_ts = excluded.updated_ts`
-      ).bind(merchant, type, Date.now()).run();
+        // Sur une base pré-migration claimStore() a échoué : c'est CETTE requête
+        // qui crée la fiche, et elle doit donc semer les mêmes valeurs par défaut.
+      ).bind(merchant, wantSeed ? JSON.stringify(NEW_STORE_FEATURES) : '{}', type, Date.now()).run();
       result.type = type;
     } catch (_) { return json({ error: 'write-failed' }, 500); }
   }

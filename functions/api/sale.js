@@ -63,14 +63,34 @@ export async function onRequestPost({ request, env }) {
   try {
     const raw = b && b.lines;
     if (Array.isArray(raw) && raw.length) {
-      const clean = raw.slice(0, 40).map((l) => ({
-        n: String((l && (l.n ?? l.name)) || 'Article').slice(0, 60),
-        q: Math.max(0, Math.round(Number(l && (l.q ?? l.qty)) || 0)),
-        t: Math.max(0, Math.round(Number(l && (l.t ?? l.total)) || 0)),
-      })).filter((l) => l.q > 0);
+      /* `c` = la catégorie du produit AU MOMENT DE LA VENTE, telle que la
+       * caisse la connaissait. Elle est facultative et le rapport journalier
+       * sait s'en passer (il repêche la catégorie dans le catalogue actuel, par
+       * nom) — mais le repêchage se trompe dès que le commerçant renomme un
+       * rayon, déplace un produit ou le supprime. Deux mois plus tard, le
+       * rapport d'une journée passée reclasserait ses ventes selon un catalogue
+       * qui n'existait pas ce jour-là. Stockée avec la ligne, la catégorie est
+       * datée comme le reste du ticket et ne bouge plus.
+       *
+       * Vide si absente, jamais inventée : le rapport distingue « pas de
+       * catégorie connue » de « catégorie Divers », et ne prétend pas classer
+       * l'historique écrit avant cette ligne. */
+      const clean = raw.slice(0, 40).map((l) => {
+        const o = {
+          n: String((l && (l.n ?? l.name)) || 'Article').slice(0, 60),
+          q: Math.max(0, Math.round(Number(l && (l.q ?? l.qty)) || 0)),
+          t: Math.max(0, Math.round(Number(l && (l.t ?? l.total)) || 0)),
+        };
+        const c = String((l && (l.c ?? l.cat ?? l.category)) || '').slice(0, 40);
+        if (c) o.c = c;
+        return o;
+      }).filter((l) => l.q > 0);
       if (clean.length) {
         const s = JSON.stringify(clean);
-        if (s.length <= 4000) lines = s;
+        /* Le plafond monte avec la catégorie : 40 lignes × ~40 caractères de
+         * plus, sinon un gros panier catégorisé perdrait TOUT son détail au
+         * profit d'un `lines = null`. La colonne est un TEXT, elle s'en moque. */
+        if (s.length <= 6000) lines = s;
       }
     }
   } catch (_) { lines = null; }

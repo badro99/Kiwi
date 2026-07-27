@@ -169,6 +169,130 @@
     return b.bytes();
   }
 
+  /* ── RAPPORT JOURNALIER (le « Z ») ────────────────────────────────────────
+   * Le ticket qu'on agrafe dans le classeur le soir. Il doit tenir dans une
+   * main et pourtant suffire tout seul : un contrôleur, un comptable ou le
+   * patron six mois plus tard doivent pouvoir le lire sans rouvrir Kiwi.
+   *
+   * D'où l'ordre : d'abord QUI et QUAND (établissement, journée commerciale,
+   * heures d'ouverture et de fermeture, qui a ouvert et qui a fermé), puis
+   * l'argent (total, moyens de paiement), puis le détail par catégorie et par
+   * produit, puis le tiroir (attendu, compté, écart) qui est la seule partie
+   * qu'on signe. Le net de la journée ferme le ticket.
+   *
+   * Ce qui est VOLONTAIREMENT compact : pas de ligne vide décorative, pas de
+   * logo, les catégories en gras et les produits en police normale indentés de
+   * deux espaces. Sur 80 mm une journée à huit catégories et quarante
+   * références tient sur une trentaine de centimètres de papier ; sur 58 mm la
+   * mise en page se resserre toute seule (row() borne à la largeur du papier).
+   *
+   * `o` est le rapport rendu par KiwiDayReport.build() plus l'habillage :
+   *   { report, shop, address, title, fmt(n) → '1 400', paper }
+   * fmt est injecté pour que le ticket et l'écran formatent les montants de la
+   * même façon — un rapport imprimé qui n'a pas les mêmes séparateurs que le
+   * tableau de bord fait douter de tout le reste. */
+  function dayReport(o) {
+    o = o || {}; var paper = o.paper || '80';
+    var r = o.report || {};
+    var f = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    var money = function (n) { return f(n) + ' MAD'; };
+    var b = new Builder().init();
+
+    /* En-tête — l'identité du commerce et la journée décrite. */
+    b.align('center').bold(true).size(2, 2).line(o.shop || (r.store && r.store.name) || 'Kiwi').size(1, 1);
+    b.line(o.title || 'RAPPORT JOURNALIER').bold(false);
+    if (o.address || (r.store && r.store.location)) b.line(o.address || r.store.location);
+    if (o.dateLabel) b.line(o.dateLabel);
+    /* Une réimpression doit se voir : deux exemplaires du même Z qui circulent
+       sans le dire, c'est une pièce comptable qu'on ne peut plus rapprocher. */
+    if (o.copy) b.bold(true).line('— ' + o.copy + ' —').bold(false);
+    b.align('left').line(rule(paper));
+
+    if (o.openedLabel) b.line(row('Ouverture', o.openedLabel, paper));
+    if (o.closedLabel) b.line(row('Fermeture', o.closedLabel, paper));
+    if (r.openedBy) b.line(row('Ouvert par', r.openedBy, paper));
+    if (r.closedBy) b.line(row('Fermé par', r.closedBy, paper));
+    b.line(rule(paper));
+
+    /* L'argent. */
+    b.line(row('Transactions', String(r.txns || 0), paper));
+    b.bold(true).line(row('TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
+    var M = o.methodLabels || {};
+    Object.keys(r.methods || {}).forEach(function (k) {
+      if (!r.methods[k]) return;
+      b.line(row('  ' + (M[k] || k), money(r.methods[k]), paper));
+    });
+    if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
+    if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
+    if (r.discounts && r.discounts.amount) {
+      b.line(row('Remises accordées', '- ' + money(r.discounts.amount), paper));
+    }
+    if (r.refunds && r.refunds.count) {
+      b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
+    }
+    if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
+
+    /* Le détail. Sauté entièrement s'il n'y a rien à détailler — un titre
+       « DÉTAIL » suivi du vide laisse croire à une panne. */
+    if ((r.categories || []).length) {
+      b.line(rule(paper));
+      b.align('center').bold(true).line(o.detailTitle || 'DÉTAIL PAR CATÉGORIE').bold(false).align('left');
+      r.categories.forEach(function (c) {
+        b.bold(true).line(row(c.name, money(c.total), paper)).bold(false);
+        (c.products || []).forEach(function (p) {
+          b.line(row('  ' + p.qty + '× ' + p.name, money(p.total), paper));
+        });
+        b.line(row('  = ' + c.qty + ' ' + (o.unitWord || 'articles'), money(c.total), paper));
+      });
+      /* L'honnêteté du classement : si un tiers du chiffre n'a pas de panier
+         détaillé, le détail ci-dessus n'est pas la journée entière et doit le
+         dire au lieu d'avoir l'air complet. */
+      if (r.coverage != null && r.coverage < 100) {
+        b.line('* détail portant sur ' + r.coverage + '% du chiffre');
+      }
+    }
+
+    /* Le tiroir — la partie qu'on compte et qu'on signe. */
+    var cash = r.cash || {};
+    b.line(rule(paper));
+    b.align('center').bold(true).line(o.drawerTitle || 'TIROIR-CAISSE').bold(false).align('left');
+    b.line(row("Fond d'ouverture", money(cash.opening), paper));
+    b.line(row('Espèces encaissées', '+ ' + money(cash.sales), paper));
+    if (cash.tips) b.line(row('Pourboires espèces', '+ ' + money(cash.tips), paper));
+    (cash.movements || []).forEach(function (m) {
+      b.line(row('  ' + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')),
+        (m.type === 'in' ? '+ ' : '- ') + money(m.amount), paper));
+    });
+    b.bold(true).line(row('ATTENDU EN CAISSE', money(cash.expected), paper)).bold(false);
+    if (cash.counted != null) {
+      b.line(row('Compté', money(cash.counted), paper));
+      var e = cash.ecart || 0;
+      b.bold(true).line(row('ÉCART', (e > 0 ? '+ ' : e < 0 ? '- ' : '') + money(Math.abs(e)), paper)).bold(false);
+    } else {
+      b.line(row('Compté', o.notCounted || 'non compté', paper));
+    }
+
+    /* Le net ferme le ticket : c'est le chiffre qu'on reporte. */
+    b.line(rule(paper));
+    b.bold(true).size(1, 2).line(row(o.netLabel || 'NET DU JOUR', money(r.net), paper)).size(1, 1).bold(false);
+
+    /* Les passations et les réouvertures — la trace, en petit, tout en bas. */
+    if ((r.handovers || []).length) {
+      b.line(rule(paper));
+      (r.handovers || []).forEach(function (h) {
+        b.line(row((o.handoverWord || 'Passation') + ' ' + h.from + ' > ' + h.to, f(h.ecart), paper));
+      });
+    }
+    if ((r.closedCount || 0) > 1) {
+      b.line(rule(paper));
+      b.line((o.reopenWord || 'Clôture n°') + ' ' + r.closedCount);
+    }
+
+    b.align('center').feed(1).line('Kiwi · ' + (r.day || ''));
+    b.cut();
+    return b.bytes();
+  }
+
   function testSlip(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
@@ -193,6 +317,7 @@
     receipt: receipt,
     kitchenTicket: kitchenTicket,
     label: label,
+    dayReport: dayReport,
     testSlip: testSlip,
     /* Single source of truth for the settings dropdown, so the widths the owner
      * can pick and the widths the encoder knows how to lay out can never drift. */

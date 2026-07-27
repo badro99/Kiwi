@@ -1054,7 +1054,7 @@ ar: {
     const items = [
       { sect: cp.sNav },
       { icon: '📊', label: cp.dash, sub: cp.dashSub, href: 'dashboard.html', kbd: 'G A' },
-      { icon: '🧾', label: cp.orders, sub: cp.ordersSub, action: () => handlers['nav-transactions']?.(), kbd: 'G C' },
+      { icon: '🧾', label: cp.orders, sub: cp.ordersSub, feat: 'transactions', action: () => handlers['nav-transactions']?.(), kbd: 'G C' },
       // Règlements removed in Kiwi 1.0 — see KIWI_2.0_ROADMAP.md
       { icon: '👥', label: cp.team, sub: cp.teamSub, action: () => toast(cp.teamToast, {type: 'info'}), kbd: 'G E' },
       { icon: '🧮', label: cp.assistant, sub: cp.assistantSub, action: () => handlers['nav-assistant']?.() },
@@ -1075,7 +1075,13 @@ ar: {
     renderKp();
 
     function renderKp(q = '') {
-      const filtered = items.filter(it => it.sect || !q || it.label.toLowerCase().includes(q.toLowerCase()));
+      /* Un résultat de recherche qui ouvre un module que ce client n'a pas est
+       * un cul-de-sac : la porte est déjà fermée (merchant-config.js gate les
+       * handlers), donc le résultat ne mènerait nulle part. On ne le propose
+       * pas. Une entrée sans `feat` n'appartient à aucun module et reste. */
+      const off = (k) => { try { return !!k && !!window.KiwiConfig?.off?.(k); } catch (_) { return false; } };
+      const filtered = items.filter(it => !off(it.feat))
+        .filter(it => it.sect || !q || it.label.toLowerCase().includes(q.toLowerCase()));
       kp.innerHTML = `
         <div class="kp-head">
           <span style="color:var(--n-500);">${I.search}</span>
@@ -1375,13 +1381,30 @@ ar: {
 
     'notifications': () => {
       const s = (NOTIFICATIONS_STR[kiwiLang()] || NOTIFICATIONS_STR.fr);
+      /* L'écran vide annonce ce qui viendra s'y ranger. Nommer « les alertes de
+       * terminaux » à un client dont l'opérateur n'a pas ouvert le module
+       * Terminaux, c'est lui promettre une page qu'il ne verra jamais — alors on
+       * ne cite que les modules qu'il a. Il en reste toujours au moins un
+       * (Kiwi AI), donc la phrase ne se vide pas. */
+      const featOff = (k) => { try { return !!window.KiwiConfig?.off?.(k); } catch (_) { return false; } };
       const NOTIF_EMPTY = {
-        fr: { head: 'Aucune notification', msg: 'Les alertes de règlement, de terminaux et les suggestions Kiwi AI apparaîtront ici.' },
-        en: { head: 'No notifications', msg: 'Settlement, terminal alerts and Kiwi AI suggestions will appear here.' },
-        ar: { head: 'لا إشعارات', msg: 'ستظهر هنا تنبيهات التسوية والأجهزة واقتراحات Kiwi AI.' },
+        fr: { head: 'Aucune notification', tail: 'apparaîtront ici.', and: ' et ',
+              src: [[null, 'Les alertes de règlement'], ['terminaux', 'de terminaux'], [null, 'les suggestions Kiwi AI']] },
+        en: { head: 'No notifications', tail: 'will appear here.', and: ' and ',
+              src: [[null, 'Settlement alerts'], ['terminaux', 'terminal alerts'], [null, 'Kiwi AI suggestions']] },
+        ar: { head: 'لا إشعارات', tail: 'ستظهر هنا.', and: ' و',
+              src: [[null, 'تنبيهات التسوية'], ['terminaux', 'تنبيهات الأجهزة'], [null, 'اقتراحات Kiwi AI']] },
       };
       if (window.KiwiVenue?.isCustom?.()) {
-        const e = NOTIF_EMPTY[kiwiLang()] || NOTIF_EMPTY.fr;
+        const b = NOTIF_EMPTY[kiwiLang()] || NOTIF_EMPTY.fr;
+        const parts = b.src.filter(([k]) => !k || !featOff(k)).map(([, t]) => t);
+        // Retirer un élément d'une énumération laisse une virgule là où il faut
+        // une conjonction : « Les alertes de règlement, les suggestions Kiwi AI »
+        // se lit comme une phrase tronquée.
+        const list = parts.length > 1
+          ? parts.slice(0, -1).join(', ') + b.and + parts[parts.length - 1]
+          : parts.join('');
+        const e = { head: b.head, msg: list + ' ' + b.tail };
         return drawer({
           title: s.title,
           subtitle: '',

@@ -2275,6 +2275,14 @@
     { rx: /lien de paiement|payment link|رابط دفع/, h: 'payment-link', key: 'paymentLink' },
     { rx: /nouvelle vente|new sale|بيع جديد/, h: 'new-sale', key: 'newSale' },
   ];
+  /* Un module que l'opérateur n'a pas vendu à ce client n'est pas une
+   * destination. Sans ce filtre l'assistant répondait « j'ouvre les terminaux »
+   * avec un bouton qui ne fait rien — la pire des trois réponses possibles,
+   * derrière « je ne sais pas » et derrière la vraie page. On ne reconnaît donc
+   * pas la cible du tout, et la question repart vers le reste du classifieur.
+   * `key` est déjà la clé de module (terminaux, conformite, reservations…) ;
+   * paymentLink et newSale n'en sont pas et passent toujours. */
+  const navOff = (t) => { try { return !!window.KiwiConfig?.off?.(t.key); } catch (_) { return false; } };
   function matchAction(q) {
     if (!ACTION_VERB.test(q)) {
       /* "un lien de paiement" and "nouvelle vente" name a thing to create; the
@@ -2282,7 +2290,7 @@
       for (const t of NAV_TARGETS) if ((t.key === 'paymentLink' || t.key === 'newSale') && t.rx.test(q)) return t;
       return null;
     }
-    for (const t of NAV_TARGETS) if (t.rx.test(q)) return t;
+    for (const t of NAV_TARGETS) if (t.rx.test(q) && !navOff(t)) return t;
     return null;
   }
   /* A question ABOUT one of those destinations, with no action verb — "combien
@@ -2295,7 +2303,7 @@
   const OWN_ASK_RX = /\b(?:combien|quel|quelle|quels|quelles|what|which|how\s+much|how\s+many|c[' ]?est\s+quoi|ou\s+(?:est|sont|en\s+est)|where|montre|affiche|liste|show|list|\bqui\b|\bwho\b|\bchkon\b|\bchhal\b|\bch7al\b|\bstatus\b|\bstatut\b|\brecent\b)\b|mes\s+derniers?|etat\s+(?:de|des|du)|كم|اين|شحال|من\s|حالة|كيف/;
   function matchOwnData(q) {
     if (!OWN_ASK_RX.test(q)) return null;
-    for (const t of NAV_TARGETS) if (t.rx.test(q)) return t;
+    for (const t of NAV_TARGETS) if (t.rx.test(q) && !navOff(t)) return t;
     return null;
   }
   const ACT = {

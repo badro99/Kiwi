@@ -479,6 +479,102 @@
     '</div>';
   }
 
+  /* ── LE RAPPORT JOURNALIER, MÊME MISE EN PAGE PAR LES DEUX VOIES ───────────
+   * Le « Z » de fin de journée est une pièce comptable : le patron l'agrafe, le
+   * comptable le relit. Il doit donc sortir IDENTIQUE que Kiwi parle à
+   * l'imprimante en ESC/POS (KiwiEscPos.dayReport) ou que ce soit le pilote
+   * Windows qui l'imprime — sinon deux exemplaires du même jour n'ont pas la
+   * même tête et plus personne ne sait lequel fait foi. L'ordre des blocs,
+   * les libellés et les totaux suivent donc ligne pour ligne l'encodeur. */
+  function dayReportHTML(o) {
+    o = withPaper(o || {});
+    var r = o.report || {};
+    var f = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    var money = function (n) { return f(n) + ' MAD'; };
+    var out = [];
+    var R = function (l, v, cls) {
+      out.push('<div class="kpr-r' + (cls ? ' ' + cls : '') + '"><span>' + esc(l) + '</span><span>' + esc(v) + '</span></div>');
+    };
+    var rule = function () { out.push('<div class="kpr-rule"></div>'); };
+
+    out.push('<div class="kpr-shop">' + esc(o.shop || (r.store && r.store.name) || 'Kiwi') + '</div>');
+    out.push('<div class="kpr-c kpr-ttl">' + esc(o.title || 'RAPPORT JOURNALIER') + '</div>');
+    var addr = o.address || (r.store && r.store.location) || '';
+    if (addr) out.push('<div class="kpr-c">' + esc(addr) + '</div>');
+    if (o.dateLabel) out.push('<div class="kpr-c">' + esc(o.dateLabel) + '</div>');
+    if (o.copy) out.push('<div class="kpr-c kpr-copy">— ' + esc(o.copy) + ' —</div>');
+    rule();
+
+    if (o.openedLabel) R('Ouverture', o.openedLabel);
+    if (o.closedLabel) R('Fermeture', o.closedLabel);
+    if (r.openedBy) R('Ouvert par', r.openedBy);
+    if (r.closedBy) R('Fermé par', r.closedBy);
+    rule();
+
+    R('Transactions', String(r.txns || 0));
+    R('TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
+    var M = o.methodLabels || {};
+    Object.keys(r.methods || {}).forEach(function (k) {
+      if (!r.methods[k]) return;
+      R('  ' + (M[k] || k), money(r.methods[k]));
+    });
+    if (r.basket) R('Ticket moyen', money(r.basket));
+    if (r.tips) R('Pourboires', money(r.tips));
+    if (r.discounts && r.discounts.amount) R('Remises accordées', '- ' + money(r.discounts.amount));
+    if (r.refunds && r.refunds.count) R('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount));
+    if (r.cancels) R('Annulations', String(r.cancels));
+
+    if ((r.categories || []).length) {
+      rule();
+      out.push('<div class="kpr-c kpr-b">' + esc(o.detailTitle || 'DÉTAIL PAR CATÉGORIE') + '</div>');
+      r.categories.forEach(function (c) {
+        R(c.name, money(c.total), 'kpr-b');
+        (c.products || []).forEach(function (p) {
+          R('  ' + p.qty + '× ' + p.name, money(p.total));
+        });
+        R('  = ' + c.qty + ' ' + (o.unitWord || 'articles'), money(c.total), 'kpr-sub');
+      });
+      if (r.coverage != null && r.coverage < 100) {
+        out.push('<div class="kpr-note">* détail portant sur ' + r.coverage + '% du chiffre</div>');
+      }
+    }
+
+    var cash = r.cash || {};
+    rule();
+    out.push('<div class="kpr-c kpr-b">' + esc(o.drawerTitle || 'TIROIR-CAISSE') + '</div>');
+    R("Fond d'ouverture", money(cash.opening));
+    R('Espèces encaissées', '+ ' + money(cash.sales));
+    if (cash.tips) R('Pourboires espèces', '+ ' + money(cash.tips));
+    (cash.movements || []).forEach(function (m) {
+      R('  ' + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')),
+        (m.type === 'in' ? '+ ' : '- ') + money(m.amount));
+    });
+    R('ATTENDU EN CAISSE', money(cash.expected), 'kpr-b');
+    if (cash.counted != null) {
+      R('Compté', money(cash.counted));
+      var e = cash.ecart || 0;
+      R('ÉCART', (e > 0 ? '+ ' : e < 0 ? '- ' : '') + money(Math.abs(e)), 'kpr-b');
+    } else {
+      R('Compté', o.notCounted || 'non compté');
+    }
+
+    rule();
+    R(o.netLabel || 'NET DU JOUR', money(r.net), 'kpr-tot');
+
+    if ((r.handovers || []).length) {
+      rule();
+      (r.handovers || []).forEach(function (h) {
+        R((o.handoverWord || 'Passation') + ' ' + h.from + ' > ' + h.to, f(h.ecart));
+      });
+    }
+    if ((r.closedCount || 0) > 1) {
+      rule();
+      out.push('<div class="kpr-note">' + esc(o.reopenWord || 'Clôture n°') + ' ' + (r.closedCount || 1) + '</div>');
+    }
+    out.push('<div class="kpr-c kpr-foot">Kiwi · ' + esc(r.day || '') + '</div>');
+    return '<div class="kpr-ticket">' + out.join('') + '</div>';
+  }
+
   /* La largeur de page suit le rouleau réglé dans les paramètres : imprimer un
    * 80 mm sur une page A4 donne un ticket minuscule perdu en haut d'une feuille,
    * ce qui est le grand classique de l'impression navigateur ratée. */
@@ -507,26 +603,70 @@
         '.kpr-r>span:last-child{white-space:nowrap;}' +
         '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
         '.kpr-foot{margin-top:3mm;}' +
+        /* Rapport journalier — le titre sous l'enseigne, la mention de copie,
+         * les lignes en gras (catégories, totaux) et la note de couverture.
+         * `white-space:pre` sur le libellé garde l'indentation de deux espaces
+         * qui distingue un produit de sa catégorie ; sans elle le HTML les
+         * replie et le détail perd sa hiérarchie. */
+        '.kpr-ttl{letter-spacing:.08em;font-size:8pt;margin-bottom:1mm;}' +
+        '.kpr-copy{font-weight:700;margin:1mm 0;}' +
+        '.kpr-r>span:first-child{white-space:pre;}' +
+        '.kpr-b{font-weight:700;}' +
+        '.kpr-sub{opacity:.75;}' +
+        '.kpr-note{font-size:7.5pt;opacity:.75;margin-top:1mm;}' +
+        /* Une catégorie et ses produits ne doivent pas être coupés par un saut
+         * de page au milieu — sur une imprimante à feuilles, un rayon dont le
+         * total atterrit seul sur la page suivante est illisible. */
+        '.kpr-r{break-inside:avoid;}' +
       '}';
     document.head.appendChild(st);
   }
 
   /* Repeint et ouvre la boîte d'impression. Le root est retiré après coup pour
    * ne pas laisser un reçu fantôme dans le DOM de la caisse. */
-  function browserReceipt(o) {
-    o = withPaper(o || {});
+  function browserPrintHTML(html, paper) {
     var root = document.getElementById('kpr-print-root');
     if (root) root.remove();
     root = document.createElement('div');
     root.id = 'kpr-print-root';
-    root.innerHTML = receiptHTML(o);
+    root.innerHTML = html;
     document.body.appendChild(root);
-    ensureReceiptPrintCss(o.paper);
+    ensureReceiptPrintCss(paper);
     setTimeout(function () {
       try { window.print(); } catch (_) {}
       setTimeout(function () { var r = document.getElementById('kpr-print-root'); if (r) r.remove(); }, 600);
     }, 60);
     return { ok: true, via: 'browser' };
+  }
+  function browserReceipt(o) {
+    o = withPaper(o || {});
+    return browserPrintHTML(receiptHTML(o), o.paper);
+  }
+  function browserDayReport(o) {
+    o = withPaper(o || {});
+    return browserPrintHTML(dayReportHTML(o), o.paper);
+  }
+
+  /* printDayReport — la voie nominale, avec le repli qui compte.
+   *
+   * Les trois transports ESC/POS ne répondent que si une imprimante est
+   * réellement appairée. Une clôture ne doit PAS échouer parce que le
+   * commerçant n'a pas encore branché de thermique : on retombe alors sur le
+   * pilote du système, qui sort le même rapport sur ce que Windows sait
+   * imprimer (y compris « Enregistrer en PDF », ce qui est un archivage tout à
+   * fait valable). Le résultat dit par quelle voie c'est parti, pour que
+   * l'écran de clôture puisse le nommer honnêtement au lieu d'un « envoyé à
+   * l'imprimante » qui n'engage rien. */
+  function printDayReport(o) {
+    o = withPaper(o || {});
+    if (!window.KiwiEscPos || !window.KiwiEscPos.dayReport) {
+      return Promise.resolve(browserDayReport(o));
+    }
+    if (!isConnected()) return Promise.resolve(browserDayReport(o));
+    return printBytes(window.KiwiEscPos.dayReport(o)).then(function (res) {
+      if (res && res.ok) return res;
+      return browserDayReport(o);
+    }, function () { return browserDayReport(o); });
   }
 
   // ── the pairing modal ───────────────────────────────────────────────────────
@@ -897,8 +1037,11 @@
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
+    // Le rapport de clôture. Contrairement aux trois au-dessus, celui-ci porte
+    // son propre repli : une journée doit pouvoir se clôturer sans thermique.
+    printDayReport: printDayReport, dayReportHTML: dayReportHTML,
     // Le repli « pilote du système » — même objet reçu que printReceipt.
-    browserReceipt: browserReceipt,
+    browserReceipt: browserReceipt, browserDayReport: browserDayReport,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
   };

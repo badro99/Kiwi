@@ -32,7 +32,7 @@ lands on `/kiwi-admin.html`. Clients never discover it.
    exactly what they see. **"Gérer"** opens the management panel below.
 2. **PINs** (per client) — list / **add** (4-digit + name + role) / **delete**
    staff PINs. Managed remotely so an owner never has to.
-3. **Fonctionnalités** (per client) — **a switch per module the client can see**,
+3. **Fonctionnalités** (per établissement) — **a switch per module the client can see**,
    in three bands: *Modules communs* (ventes, clients & marketing, terminaux,
    conformité, équipe, paie, réservations, fidélité, dépenses), the client's own
    trade (boutique → inventaire / catégories / promos / retours; restaurant →
@@ -50,7 +50,54 @@ lands on `/kiwi-admin.html`. Clients never discover it.
    `assets/venues.js` › `renderVerticalSection()` (tagged automatically from the
    nav id). Only **Accueil** is deliberately unswitchable: it is the dashboard
    itself, not a module.
-4. **Opérateurs** — add / delete operator access codes.
+
+   Each row states its **state** (Activé / Désactivé) and where that state comes
+   from — *réglé pour ce client* (somebody decided it) or *valeur par défaut*
+   (nobody has, so the module's own polarity applies). There is no account-level
+   inheritance and no plan gate in the product: a module belongs to one
+   établissement, and the stored `plan` closes no door. So no state is invented
+   for either — the panel says only what is true.
+4. **Journal des modules** (per établissement) — every change: which module,
+   enabled or disabled, by whom, when. Written by `functions/api/admin/config.js`
+   on each real change (a save that alters nothing writes nothing), read back
+   from `/api/admin/audit`. Disabling **never deletes data** — the catalogue, the
+   bookings, the notes stay in their own tables and come back untouched when the
+   module is switched on again.
+
+   *Who* is the operator **code** that was used, not an IP: `kiwi_op` is the same
+   cookie for everyone (an HMAC of the secret), so `functions/_middleware.js` also
+   sets a signed `kiwi_op_id` when a code is verified. Without it — the shared
+   staff bypass, or a session opened before this shipped — the entry reads
+   `equipe`, which is honest rather than falsely precise.
+5. **Opérateurs** — add / delete operator access codes.
+
+## What a NEW établissement starts with
+
+Five modules are **off by default on any établissement created from 2026-07-27**:
+**Terminaux · Conformité · Réservations · Dépenses & cartes · Order Pro**. They
+serve only some trades — a neighbourhood snack has no card terminals to list, no
+compliance file, no booking book and no expense cards — and shipping them on by
+default hands a new client a maze with four empty rooms in it. Nothing is removed
+from the product: the operator turns each one on, individually, when the client
+actually needs it.
+
+The list and the rule live in `functions/api/config.js` ›
+`NEW_STORE_FEATURES`. Two things decide that a store is new:
+
+- **`fresh: true`** in `POST /api/config` — sent by `assets/venues.js` ›
+  `createVenue()` at the exact moment an établissement is created (onboarding, or
+  the dashboard's venue switcher). This is what covers a **second shop opened by
+  an existing client**.
+- **a recent account** — `accounts.created_ts >= NEW_ACCOUNT_FROM`. The safety
+  net for a browser still running an old cached bundle: a brand-new client always
+  starts from the right configuration.
+
+**Existing clients are never touched.** The defaults are only ever written into a
+row that has *no* configuration at all (`ON CONFLICT` leaves `features` alone, and
+the catch-up `UPDATE` requires `features` to still be `{}`), so a client already
+using their réservations keeps them. A merchant cannot switch a module on for
+themselves either: `POST /api/config` ignores `features` entirely, and
+`/api/admin/config` refuses a plain merchant session with 403.
 
 ## Architecture
 
@@ -64,7 +111,9 @@ Functions (all under the site gate; the `/admin/*` ones additionally require an
 
 - `functions/api/admin/clients.js` — `GET` roster (accounts ⨝ today's sales ⨝ plan).
 - `functions/api/admin/pins.js` — `GET`/`POST`/`DELETE` staff PINs.
-- `functions/api/admin/config.js` — `GET`/`PUT` a merchant's feature flags.
+- `functions/api/admin/config.js` — `GET`/`PUT` a merchant's feature flags; the
+  `PUT` also journals every module it actually changed.
+- `functions/api/admin/audit.js` — `GET ?merchant=` the module change history.
 - `functions/api/admin/operators.js` — `GET`/`POST`/`DELETE` operator codes.
 - `functions/api/config.js` — `GET ?merchant=…` the client apps' own read of
   `{features, pins}` (any authenticated session; a merchant reads its own slug).
@@ -116,6 +165,20 @@ fetches `/api/config?merchant=<slug>` and:
   drawers, in-flow pages, the re-rendered trade section — are caught by a
   `MutationObserver` that only runs while something is actually switched off, so
   the common case costs nothing.
+- **Doors, not just signs** — the same destination is reachable from search
+  (⌘K), a home card, a quick action, the phone tab bar, a caisse control and
+  Kiwi AI's "j'ouvre les terminaux" button. They all end at
+  `Kiwi.handlers[name]`, so that is where the gate sits: `gateHandlers()` wraps
+  `nav-<key>` (nav ids **are** module keys) plus the aliases in
+  `HANDLER_ALIASES`, and the wrapper tests the flag **at call time** — switching
+  a module back on reopens it with nothing to restore, and a config that never
+  arrived (offline, static host) closes nothing. `window.KiwiConfig.off(key)` is
+  the same test for callers that need to filter *before* rendering: the command
+  palette drops matching results, `assets/agent.js` drops the nav target so the
+  assistant answers something else instead of offering a dead button,
+  `assets/oppo-cards.js` never deals the card, and
+  `assets/orderpro-inbox.js` keeps the caisse's "Commandes" chip off a till whose
+  merchant has no Order Pro.
 - **PINs** — exposes `window.KiwiConfig.pins` for the caisse/serveur to consult
   **additively** (managed PINs augment the hardcoded defaults; defaults never
   break). A `kiwi-config` event fires when config arrives.
@@ -130,7 +193,10 @@ enable the console in production:
 
 1. Apply the new tables: re-run [`schema.sql`](schema.sql) (all `CREATE TABLE IF
    NOT EXISTS` — safe to re-apply) in the D1 console, or
-   `npx wrangler d1 execute kiwi-sales --file=schema.sql --remote`.
+   `npx wrangler d1 execute kiwi-sales --file=schema.sql --remote`. This is what
+   creates `config_audit` (the module journal). Until it exists the console still
+   works and still saves — the panel simply shows "aucun changement enregistré",
+   because the journal write is deliberately non-blocking.
 2. **Multi-store registry — run once on an existing database.** `CREATE TABLE IF
    NOT EXISTS` will not add columns to a table that already exists, so these two
    `ALTER`s have to be run by hand (each is safe to run once; re-running errors
@@ -152,14 +218,28 @@ No new secret is needed — the operator cookie reuses `AUTH_SECRET`.
 
 ## Local proof
 
-`tools/live-mock-server.js` mirrors `/api/config` and `/api/admin/*` in memory and
-serves the site, so the whole loop works locally:
+`tools/live-mock-server.mjs` serves the site **and runs the real Pages Functions**
+against an in-memory SQLite database built from `schema.sql` (`node:sqlite`,
+Node 22+, nothing to install). Not a stand-in that imitates the responses — the
+code that ships, executed locally, which is the only way to check a rule like
+"a new établissement starts with five modules off, an existing client is never
+touched" without deploying.
 
+```bash
+node tools/live-mock-server.mjs
 ```
-node tools/live-mock-server.js         # http://localhost:4181
-# /kiwi-admin.html  → console in Live mode against the mock
-# /dashboard.html?live=1 with a merchant whose modules are toggled off → hidden
-```
+
+It seeds the contrast that matters: **Amira Boutique** (account opened long
+before the cutover, no configuration saved → everything on, exactly as before)
+and **Snack Rif** (opened after → the five modules off).
+
+- `/kiwi-admin.html` — the console in **Live · D1** mode, against those two.
+- `/dashboard.html` — Amira's app.
+- `/dashboard.html?merchant=snack-rif` — the new client's app.
+- `/kiwi-caisse.html` — the till (Order Pro chip, staff PINs).
+
+Clear the service worker on first open (DevTools › Application › Service Workers
+› Unregister), or it will serve you cached assets instead of your edits.
 
 On the plain static server (`tools/static-server.js`) there is no backend, so the
 console runs in **Démo** mode (seeded clients) and the client apps keep their

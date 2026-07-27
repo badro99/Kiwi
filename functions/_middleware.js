@@ -23,7 +23,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
-  operatorToken, OP_COOKIE, verifyPassword,
+  operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, verifyPassword,
   limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
@@ -187,24 +187,27 @@ export async function onRequest(context) {
     const form = await request.formData();
     const tried = (form.get('code') || '').toString();
     let ok = false;
+    // On retient QUEL code a répondu, pas seulement qu'un code a répondu : c'est
+    // le nom qui s'inscrira en face d'une coupure de module dans config_audit.
+    let opId = '';
     if (env.DB && tried) {
       try {
-        const rows = await env.DB.prepare('SELECT salt, hash FROM operators').all();
+        const rows = await env.DB.prepare('SELECT id, salt, hash FROM operators').all();
         for (const r of (rows.results || [])) {
-          if (await verifyPassword(tried, r.salt, r.hash)) { ok = true; break; }
+          if (await verifyPassword(tried, r.salt, r.hash)) { ok = true; opId = r.id || ''; break; }
         }
       } catch (_) { /* table missing / db error → treated as no match */ }
     }
     if (ok) {
       await limitClear(request, env, 'op');
       const op = await operatorToken(authSecret);
-      return new Response(null, {
-        status: 303,
-        headers: {
-          Location: '/kiwi-admin.html',
-          'Set-Cookie': `${OP_COOKIE}=${op}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`,
-        },
-      });
+      const headers = new Headers({ Location: '/kiwi-admin.html' });
+      headers.append('Set-Cookie', `${OP_COOKIE}=${op}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
+      if (opId) {
+        const idTok = await operatorIdToken(authSecret, opId);
+        headers.append('Set-Cookie', `${OPID_COOKIE}=${idTok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`);
+      }
+      return new Response(null, { status: 303, headers });
     }
     await limitFail(request, env, 'op');
     return htmlResponse(authPage({ allowStaff: !!sitePassword, operatorError: true }));

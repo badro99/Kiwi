@@ -340,3 +340,27 @@ CREATE TABLE IF NOT EXISTS clients (
 );
 -- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».
 CREATE INDEX IF NOT EXISTS idx_clients_sync ON clients (merchant, srv_ts);
+
+-- ── Journal des modules (qui a activé/désactivé quoi, où, quand) ────────────
+-- Une ligne PAR MODULE CHANGÉ, écrite par functions/api/admin/config.js à chaque
+-- PUT de l'opérateur. Couper un module n'efface jamais ses données — la table
+-- `store_docs`, le catalogue, les réservations restent en place et reviennent
+-- telles quelles à la réactivation. Ce journal est donc le seul endroit qui
+-- garde la trace du geste lui-même, ce que l'état courant de merchant_config ne
+-- dit pas : il ne montre que la dernière valeur.
+--
+-- `actor` est l'identité du CODE OPÉRATEUR utilisé, pas une adresse IP : le
+-- cookie kiwi_op est le même pour tout le monde (HMAC du secret), donc
+-- functions/_middleware.js pose en plus un cookie kiwi_op_id signé au moment où
+-- un code est vérifié. Sans lui (accès par le laissez-passer équipe, ou session
+-- ouverte avant cette version) on inscrit 'equipe' — honnête plutôt que faux.
+CREATE TABLE IF NOT EXISTS config_audit (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  merchant   TEXT NOT NULL,          -- l'établissement touché (slug)
+  feature    TEXT NOT NULL,          -- la clé de module ('terminaux', 'orderpro', …)
+  enabled    INTEGER NOT NULL,       -- 1 = activé, 0 = désactivé
+  actor      TEXT NOT NULL DEFAULT '',  -- libellé du code opérateur, ou 'equipe'
+  actor_id   TEXT NOT NULL DEFAULT '',  -- operators.id quand il est connu
+  ts         INTEGER NOT NULL           -- epoch ms
+);
+CREATE INDEX IF NOT EXISTS idx_audit_merchant ON config_audit (merchant, ts);
