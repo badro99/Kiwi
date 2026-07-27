@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v141';
+var CACHE = 'kiwi-app-v142';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -43,6 +43,10 @@ var SHELL = [
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/i18n.js',
+  /* Les métiers. Dans la coquille parce que venues.js et les assistants
+     d'inscription la lisent à l'évaluation : sans elle hors ligne, un
+     établissement retombe sur la famille par défaut. */
+  '/assets/trades.js',
   '/assets/interactive.js',
   '/assets/features.js',
   '/assets/venues.js',

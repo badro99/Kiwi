@@ -40,10 +40,15 @@
     del(k) { try { localStorage.removeItem(k); } catch (_) {} },
   };
 
-  /* ── Trades — the visible label maps to one of 3 data verticals (`base`).
-   *    Mirrors the set used elsewhere so a created venue behaves correctly. ── */
+  /* ── Trades — the visible label maps to a data vertical (`base`).
+   *    THE list now lives in assets/trades.js and every screen that offers a
+   *    trade reads it there: this wizard, the PIN-0000 wizard, the hotel
+   *    wizard, the establishment card in Settings. Four copies had drifted —
+   *    two of them offered trades that the venue engine could not even map to
+   *    a vertical. The literal below is only the parachute for a page that
+   *    somehow loads this file without trades.js. ── */
   const ic = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-  const TYPES = [
+  const TYPES = (window.KiwiTrades && window.KiwiTrades.all()) || [
     { id: 'restaurant', base: 'restaurant', primary: true, label: { fr: 'Restaurant', en: 'Restaurant', ar: 'مطعم' }, icon: ic('<path d="M3 3v6a2 2 0 002 2h1v10M6 11V3M11 3c-1 0-2 1.6-2 4s1 4 2 4 2-1.6 2-4-1-4-2-4zM11 11v10"/>') },
     { id: 'cafe', base: 'restaurant', primary: true, label: { fr: 'Café / Salon de thé', en: 'Café / Tea room', ar: 'مقهى' }, icon: ic('<path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4z"/><path d="M6 2v2.5M10 2v2.5M14 2v2.5"/>') },
     { id: 'boutique', base: 'boutique', primary: true, label: { fr: 'Boutique', en: 'Shop', ar: 'متجر' }, icon: ic('<path d="M6 2 3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>') },

@@ -94,6 +94,37 @@
       .acc-legal .v { font-size:13px; font-weight:500; margin-top:2px; font-variant-numeric:tabular-nums; }
       .acc-add-biz { width:100%; border:1.5px dashed var(--n-300); border-radius:14px; padding:14px; background:transparent; color:var(--atlas); font-weight:600; font-size:13.5px; font-family:var(--sans); cursor:pointer; transition:border-color 140ms, background 140ms; }
       .acc-add-biz:hover { border-color:var(--atlas); background:var(--mint-soft); }
+      /* Les RÉGLAGES d'un établissement — horaires, reçu. Ce sont des écrans à
+         ouvrir, pas des mentions à lire : ils ne peuvent pas ressembler aux
+         lignes légales juste au-dessus. Un bouton, une icône, un chevron. */
+      .acc-acts { display:grid; gap:9px; margin-top:15px; padding-top:15px; border-top:1px solid var(--n-100); }
+      @media (min-width:760px){ .acc-acts { grid-template-columns:1fr 1fr; } }
+      .acc-act { display:flex; align-items:center; gap:12px; width:100%; text-align:start; border:1px solid var(--n-200); border-radius:13px; background:var(--paper-soft); padding:12px 14px; cursor:pointer; font-family:var(--sans); color:var(--ink); transition:border-color 140ms, background 140ms, box-shadow 140ms; }
+      .acc-act:hover { border-color:var(--atlas); background:var(--surface); box-shadow:0 8px 22px -18px rgba(11,110,79,0.45); }
+      .acc-act:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
+      .acc-act[disabled] { cursor:default; opacity:0.7; }
+      .acc-act[disabled]:hover { border-color:var(--n-200); background:var(--paper-soft); box-shadow:none; }
+      .acc-act-ico { width:34px; height:34px; border-radius:11px; flex-shrink:0; display:grid; place-items:center; background:var(--mint-soft); font-size:15px; }
+      .acc-act-txt { flex:1; min-width:0; }
+      .acc-act-t { font-size:13.5px; font-weight:600; letter-spacing:-0.01em; }
+      .acc-act-v { font-size:12px; color:var(--n-600); margin-top:3px; display:flex; align-items:center; gap:6px; }
+      .acc-act-v .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+      .acc-act-sub { font-size:11px; color:var(--n-500); margin-top:3px; line-height:1.45; }
+      .acc-act-go { flex-shrink:0; color:var(--n-400); display:grid; place-items:center; }
+      .acc-act:hover .acc-act-go { color:var(--atlas); }
+      [dir="rtl"] .acc-act-go { transform:scaleX(-1); }
+      /* Le formulaire établissement. Un seul ascenseur : la fenêtre elle-même
+         défile déjà (.kiwi-modal), un second à l'intérieur coupait le dernier
+         champ et donnait deux barres de défilement imbriquées. */
+      .acc-form { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+      @media (max-width:560px){ .acc-form { grid-template-columns:1fr; } }
+      .acc-form-sec { grid-column:1/-1; font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); margin:20px 0 2px; padding-top:14px; border-top:1px solid var(--n-100); }
+      .acc-form-sec:first-child { margin-top:4px; padding-top:0; border-top:0; }
+      .acc-form-sec .why { display:block; font-family:var(--sans); font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--n-500); margin-top:5px; line-height:1.5; }
+      .acc-f, .acc-sel { width:100%; padding:11px 13px; border:1px solid var(--n-200); border-radius:10px; font-family:var(--sans); font-size:14px; color:var(--ink); background:var(--surface); outline:none; box-sizing:border-box; }
+      .acc-f:focus, .acc-sel:focus { border-color:var(--atlas); }
+      .acc-lbl { display:block; font-size:11.5px; font-weight:500; color:var(--n-600); margin:13px 0 6px; }
+      .acc-hint { font-size:11px; color:var(--n-500); margin:5px 0 0; line-height:1.45; }
       .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
       .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }`;
@@ -127,28 +158,45 @@
   /* ── Businesses (multi-établissement). Defaults + per-field localStorage
    *    overrides (kiwiSet:biz:<id>:<field>) + user-added extras (kiwiBizExtra). ── */
   const BIZ_FIELDS = [
-    { k: 'name', label: { fr: "Nom commercial", en: 'Trading name', ar: 'الاسم التجاري' } },
+    { k: 'name', label: { fr: "Nom commercial", en: 'Trading name', ar: 'الاسم التجاري' }, sec: 'id', span: true, max: 40 },
     /* La raison sociale. Distincte du nom commercial exprès : « Amira Boutique »
      * est ce que lit le client, « SARL AMIRA DISTRIBUTION » est ce que réclame
      * une pièce comptable. Le reçu imprime la seconde SOUS la première, et
      * seulement si elle en diffère — l'imprimer deux fois fait douter du ticket. */
-    { k: 'legalName', label: { fr: 'Raison sociale', en: 'Legal name', ar: 'الاسم القانوني' } },
-    { k: 'type', label: { fr: "Type d'activité", en: 'Activity type', ar: 'نوع النشاط' } },
-    { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' } },
-    { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' } },
-    { k: 'phone', label: { fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' } },
+    { k: 'legalName', label: { fr: 'Raison sociale', en: 'Legal name', ar: 'الاسم القانوني' }, span: true, max: 60,
+      hint: { fr: "Le nom déposé, s'il diffère de l'enseigne. Il s'imprime sous le nom commercial.", en: 'The registered name, if it differs from the shopfront. Printed under the trading name.', ar: 'الاسم المسجّل إن اختلف عن اسم المحل.' } },
+    /* Le MÉTIER, choisi et non écrit. Ce champ était libre : on pouvait taper
+     * « boutique de fleurs », « resto », n'importe quoi — et rien ne se
+     * passait, parce que le produit ne comprend que les métiers de la liste
+     * (assets/trades.js), les mêmes qu'à l'inscription. Un réglage qui accepte
+     * tout et n'applique rien fait croire au commerçant qu'il a configuré son
+     * établissement. Il décide vraiment de quelque chose : les écrans. */
+    { k: 'type', kind: 'trade', label: { fr: "Type d'activité", en: 'Activity type', ar: 'نوع النشاط' }, span: true,
+      hint: { fr: 'Détermine les écrans de ce commerce — carte et tables, catalogue et codes-barres, prestations, chambres.', en: 'Decides this business’s screens — menu and tables, catalogue and barcodes, treatments, rooms.', ar: 'يحدّد شاشات هذا النشاط.' } },
+    { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' }, span: true, max: 90 },
+    { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' }, max: 30 },
+    { k: 'phone', label: { fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }, max: 22, attr: 'type="tel" inputmode="tel" autocomplete="tel"' },
     /* Pas de champ `hours` ici. Les horaires d'ouverture ne sont plus une ligne
      * de texte parmi les mentions légales : ils ont un écran structuré unique
      * (Réglages → Heures d'ouverture, assets/hours-ui.js) et une fiche par
      * établissement que tout le produit interroge. Ce formulaire en tenait une
      * SECONDE copie, libre, que rien ne lisait — deux réglages pour une même
      * réalité, dont un faux dès que l'autre changeait. */
-    { k: 'ice', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' } },
-    { k: 'fiscal', label: { fr: 'Identifiant Fiscal (IF)', en: 'Tax ID (IF)', ar: 'الرقم الضريبي' } },
-    { k: 'rc', label: { fr: 'Registre de Commerce (RC)', en: 'Trade Register (RC)', ar: 'السجل التجاري' } },
-    { k: 'patente', label: { fr: 'Patente', en: 'Patente', ar: 'الباتنتا' } },
-    { k: 'cnss', label: { fr: 'CNSS', en: 'CNSS', ar: 'CNSS' } },
+    { k: 'ice', sec: 'legal', label: { fr: 'ICE', en: 'ICE', ar: 'ICE' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"',
+      hint: { fr: '15 chiffres', en: '15 digits', ar: '15 رقماً' } },
+    { k: 'fiscal', label: { fr: 'Identifiant Fiscal (IF)', en: 'Tax ID (IF)', ar: 'الرقم الضريبي' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"' },
+    { k: 'rc', label: { fr: 'Registre de Commerce (RC)', en: 'Trade Register (RC)', ar: 'السجل التجاري' }, max: 30, attr: 'autocomplete="off"' },
+    { k: 'patente', label: { fr: 'Patente', en: 'Patente', ar: 'الباتنتا' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"' },
+    { k: 'cnss', label: { fr: 'CNSS', en: 'CNSS', ar: 'CNSS' }, max: 15, attr: 'inputmode="numeric" autocomplete="off"' },
   ];
+  /* Les deux intertitres du formulaire. Onze champs à la file, sans hiérarchie
+   * ni explication, se lisaient comme une formalité administrative ; ils se
+   * lisent maintenant comme deux questions distinctes. */
+  const BIZ_SECTIONS = {
+    id: { label: { fr: 'Identité', en: 'Identity', ar: 'الهوية' } },
+    legal: { label: { fr: 'Mentions légales', en: 'Legal details', ar: 'البيانات القانونية' },
+      why: { fr: "S'impriment sur chaque reçu et chaque facture. Une mention laissée vide n'est pas imprimée du tout — un tiret à la place d'un ICE ressemble à un ICE illisible.", en: 'Printed on every receipt and invoice. A detail left blank is not printed at all — a dash in place of an ICE reads as an unreadable ICE.', ar: 'تُطبع على كل وصل وفاتورة. البيان الفارغ لا يُطبع إطلاقاً.' } },
+  };
   const BIZ_DEFAULTS = [
     { id: 'cafeAtlas', name: 'Café Atlas · Maarif', type: 'Café · Restaurant', city: 'Casablanca', address: '12 Rue Allal Ben Abdellah, Maarif', primary: true, ice: '002593840000047', fiscal: '40512893', rc: 'Casablanca 458921', patente: '31204567', cnss: '8842157', phone: '+212 5 22 39 11 84', hours: '07:00 – 23:00', revenue: 825000, orders: 3240, team: 15 },
     { id: 'maisonMansour', name: 'Maison Mansour', type: 'Restaurant · Traiteur', city: 'Casablanca', address: "45 Boulevard d'Anfa", primary: false, ice: '002593840000128', fiscal: '40698215', rc: 'Casablanca 472310', patente: '31288901', cnss: '8847720', phone: '+212 5 22 48 60 03', hours: '12:00 – 00:00', revenue: 358000, orders: 1180, team: 9 },
@@ -185,14 +233,49 @@
     return null;
   };
   const KR = () => window.KiwiReceipt;
+  const KT = () => window.KiwiTrades;
+  /* ── LE MÉTIER D'UNE FICHE ──────────────────────────────────────────────
+   * En identifiant (assets/trades.js), jamais en texte. Pour une fiche
+   * adossée à un établissement, la vérité est l'établissement : c'est son
+   * `subtype` qui décide des écrans que le propriétaire a réellement sous les
+   * yeux. L'ancien texte libre (kiwiSet:biz:<carte>:type) n'a jamais rien
+   * piloté ; on le reconnaît encore pour les fiches sans établissement, on ne
+   * lui laisse plus contredire le magasin. */
+  const bizTrade = (b) => {
+    const T = KT();
+    if (!T) return '';
+    const written = T.resolve(getSet('biz:' + b.id + ':type', '') || b.trade || b.type || '');
+    const vid = bizVenueId(b);
+    if (vid) {
+      try {
+        const v = (window.KiwiVenue.VENUES || {})[vid] || {};
+        const real = T.resolve(v.subtype || v.type);
+        if (real) {
+          /* Le texte porté par la fiche ne l'emporte que s'il DIT LA MÊME CHOSE
+           * que l'établissement : « Café · Restaurant » sur une venue
+           * restaurant est plus précis, on le garde. « Restaurant · Traiteur »
+           * sur une venue boutique était un mensonge de la fiche de démo —
+           * l'établissement gagne, parce que c'est lui qui décide des écrans. */
+          if (written && T.base(written) === T.base(real)) return written;
+          return real;
+        }
+      } catch (_) {}
+    }
+    return written;
+  };
   const bizField = (b, f) => {
+    if (f === 'type') {
+      const T = KT();
+      const id = bizTrade(b);
+      if (T && id) return T.label(id);
+      return getSet('biz:' + b.id + ':type', b.type != null ? b.type : '');
+    }
     const vid = bizVenueId(b);
     if (vid && KR()) {
       try {
         KR().migrateBusiness(vid, b.id);
         const doc = KR().business(vid);
         if (f === 'name') return doc.name || b.name || '';
-        if (f === 'type') return getSet('biz:' + b.id + ':type', b.type != null ? b.type : '');
         const v = doc.legal[f];
         if (v) return v;
         /* Rien dans la fiche : on retombe sur ce que porte la venue (une démo
@@ -208,21 +291,48 @@
       const legal = {};
       BIZ_FIELDS.forEach((f) => { if (f.k !== 'name' && f.k !== 'type') legal[f.k] = v[f.k] || ''; });
       KR().saveBusiness({ name: v.name, legal }, vid);
-      /* `type` n'est pas une mention légale : il reste où il était. */
-      try { localStorage.setItem('kiwiSet:biz:' + b.id + ':type', v.type || ''); } catch (_) {}
       return true;
     }
     return false;
   };
-  // Map an onboarding business type (base or subtype) to a human label.
-  const TYPE_LABEL = { restaurant: 'Restaurant', cafe: 'Café · Restaurant', fastfood: 'Restauration rapide', bakery: 'Boulangerie', pizzeria: 'Pizzeria', boutique: 'Boutique', epicerie: 'Épicerie', pharmacie: 'Pharmacie', fleuriste: 'Fleuriste', spa: 'Spa', coiffure: 'Salon de coiffure', sport: 'Sport & bien-être', hotel: 'Hôtel' };
-  const bizTypeLabel = (t) => TYPE_LABEL[t] || (t ? String(t) : pick({ fr: 'Établissement', en: 'Business', ar: 'مؤسسة' }));
+  /* Le métier ne se range pas avec les mentions légales : il ne s'imprime pas,
+   * il CHANGE le produit. Pour un vrai établissement il va dans l'établissement
+   * (venue.subtype), d'où le tableau de bord et la caisse le relisent ; une
+   * fiche ajoutée à la main, qui ne correspond à aucun magasin, garde l'ancien
+   * rangement. Un métier inconnu n'écrase rien : mieux vaut l'ancien métier
+   * juste qu'un nouveau que personne ne sait interpréter. */
+  const saveTrade = (b, val) => {
+    const T = KT();
+    const trade = T ? T.resolve(val) : '';
+    if (!trade) return false;
+    if (trade === bizTrade(b)) return false;
+    const vid = bizVenueId(b);
+    if (vid && window.KiwiVenue && window.KiwiVenue.updateVenue) {
+      try {
+        if (window.KiwiVenue.updateVenue(vid, { subtype: trade })) {
+          /* L'ancien texte libre est périmé à la seconde où l'établissement
+           * porte le métier. Le laisser derrière, c'est laisser un « Épicerie »
+           * d'autrefois annuler le « Boutique » que le propriétaire vient de
+           * choisir, au prochain affichage de la carte. */
+          try { localStorage.removeItem('kiwiSet:biz:' + b.id + ':type'); } catch (_) {}
+          return true;
+        }
+      } catch (_) {}
+    }
+    try { localStorage.setItem('kiwiSet:biz:' + b.id + ':type', trade); } catch (_) {}
+    return true;
+  };
+  const bizTypeLabel = (t) => {
+    const T = KT();
+    const l = T ? T.label(t) : (t ? String(t) : '');
+    return l || pick({ fr: 'Établissement', en: 'Business', ar: 'مؤسسة' });
+  };
   // A real account's single establishment: its own name + business type, and
   // BLANK legal fields (the client hasn't entered ICE/RC/etc). Never the demo's.
   const primaryRealBiz = () => ({
     id: 'primary', primary: true,
     name: (meVal('business') || getSet('bizName', '') || '').trim() || pick({ fr: 'Mon établissement', en: 'My business', ar: 'مؤسستي' }),
-    type: bizTypeLabel(meVal('type')), city: '', address: '',
+    trade: meVal('type') || '', type: bizTypeLabel(meVal('type')), city: '', address: '',
     ice: '', fiscal: '', rc: '', patente: '', cnss: '', phone: '', hours: '',
     /* no revenue/orders/team → the stat row is omitted (no fabricated numbers). */
   });
@@ -243,7 +353,7 @@
           const v = KV.VENUES[id] || {};
           return {
             id, venueId: id, primary: id === active,
-            name: v.name || '', type: bizTypeLabel(v.subtype || v.type),
+            name: v.name || '', trade: v.subtype || v.type || '', type: bizTypeLabel(v.subtype || v.type),
             city: v.location || '', address: '',
             legalName: '', ice: '', fiscal: '', rc: '', patente: '', cnss: '', phone: '',
           };
@@ -305,36 +415,46 @@
       .map((f) => ({ key: f.k, label: pick(f.label) }));
   };
 
+  /* Un réglage à ouvrir. Il ressemblait à une mention légale — même ligne,
+   * même graisse, sur le même fond — alors qu'il fallait cliquer dessus.
+   * Il est maintenant ce qu'il est : un bouton, avec son icône, son état et
+   * son chevron. Sans établissement (une fiche ajoutée à la main), il reste
+   * affiché mais inactif : mentir sur l'existence d'un écran est pire que de
+   * dire pourquoi il n'y en a pas. */
+  const DOT = { ok: 'var(--success,#16a34a)', warn: 'var(--warning,#d97706)', bad: 'var(--danger,#dc2626)', off: 'var(--n-400)' };
+  const CHEV = '<svg class="acc-act-go" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+  function actionBtn(o) {
+    const dead = !o.action;
+    return `
+      <button type="button" class="acc-act"${dead ? ' disabled' : ` data-action="${esc(o.action)}" data-arg="${esc(o.arg || '')}"`}>
+        <span class="acc-act-ico" aria-hidden="true">${o.icon}</span>
+        <span class="acc-act-txt">
+          <span class="acc-act-t">${esc(o.label)}</span>
+          <span class="acc-act-v">${o.tone ? `<span class="dot" style="background:${DOT[o.tone] || DOT.off};"></span>` : ''}${esc(o.value)}</span>
+          ${o.sub ? `<span class="acc-act-sub">${esc(o.sub)}</span>` : ''}
+        </span>
+        ${dead ? '' : CHEV}
+      </button>`;
+  }
+  const noVenueText = () => pick({ fr: 'Rattachez cette fiche à un établissement pour la régler', en: 'Link this card to a business to set it', ar: 'اربط هذه البطاقة بمؤسسة لضبطها' });
+
   function receiptRow(b) {
     const K = window.KiwiReceipt;
     if (!K || !window.KiwiReceiptUI) return '';
     const vid = bizVenueId(b);
     const label = pick({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' });
-    if (!vid) {
-      return `
-        <div class="acc-row" style="align-items:flex-start;">
-          <span>${esc(label)}</span>
-          <div style="text-align:right; max-width:62%;"><b>${esc(pick({ fr: 'Sélectionnez cet établissement pour le régler', en: 'Select this business to set it', ar: 'اختر هذه المؤسسة لضبطها' }))}</b></div>
-        </div>`;
-    }
+    if (!vid) return actionBtn({ icon: '🧾', label, value: noVenueText(), tone: 'off' });
     const miss = bizMissing(b);
     const set = K.isConfigured(vid);
     const text = miss.length
       ? pick({ fr: `${miss.length} mention${miss.length > 1 ? 's' : ''} légale${miss.length > 1 ? 's' : ''} manquante${miss.length > 1 ? 's' : ''}`, en: `${miss.length} legal detail${miss.length > 1 ? 's' : ''} missing`, ar: `${miss.length} بيان قانوني ناقص` })
       : (set ? pick({ fr: 'Personnalisé · prêt à imprimer', en: 'Customised · ready to print', ar: 'مخصّص · جاهز للطبع' })
              : pick({ fr: 'Modèle par défaut · prêt à imprimer', en: 'Default template · ready to print', ar: 'نموذج افتراضي · جاهز للطبع' }));
-    const dot = miss.length ? 'var(--danger,#dc2626)' : 'var(--success,#16a34a)';
-    const detail = miss.length ? miss.map((x) => x.label).join(', ') : '';
-    return `
-      <div class="acc-row" style="align-items:flex-start; cursor:pointer;" data-action="account-receipt" data-arg="${esc(vid)}">
-        <span>${esc(label)}</span>
-        <div style="text-align:right; max-width:62%;">
-          <b style="display:inline-flex; align-items:center; gap:7px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>${esc(text)}
-          </b>
-          ${detail ? `<div style="font-size:11.5px;color:var(--n-500);margin-top:3px;line-height:1.45;">${esc(detail)}</div>` : ''}
-        </div>
-      </div>`;
+    return actionBtn({
+      icon: '🧾', label, value: text, tone: miss.length ? 'bad' : 'ok',
+      sub: miss.length ? miss.map((x) => x.label).join(', ') : '',
+      action: 'account-receipt', arg: vid,
+    });
   }
 
   function hoursRow(b) {
@@ -342,19 +462,14 @@
     if (!KH) return '';
     const vid = bizVenueId(b);
     const label = pick({ fr: 'Horaires d’ouverture', en: 'Opening hours', ar: 'ساعات العمل' });
-    const s = vid ? KH.summary(Date.now(), vid) : { text: pick({ fr: 'Sélectionnez cet établissement pour le régler', en: 'Select this business to set it', ar: 'اختر هذه المؤسسة لضبطها' }), tone: 'unset' };
-    const week = vid && KH.isConfigured(vid) ? KH.weekText(vid) : '';
-    const dot = { open: 'var(--success,#16a34a)', closed: 'var(--n-400)', soon: 'var(--warning,#d97706)', unset: 'var(--danger,#dc2626)' }[s.tone] || 'var(--n-400)';
-    return `
-      <div class="acc-row" style="align-items:flex-start; ${vid ? 'cursor:pointer;' : ''}"${vid ? ` data-action="account-hours" data-arg="${esc(vid)}"` : ''}>
-        <span>${esc(label)}</span>
-        <div style="text-align:right; max-width:62%;">
-          <b style="display:inline-flex; align-items:center; gap:7px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>${esc(s.text)}
-          </b>
-          ${week ? `<div style="font-size:11.5px;color:var(--n-500);margin-top:3px;line-height:1.45;">${esc(week)}</div>` : ''}
-        </div>
-      </div>`;
+    if (!vid) return actionBtn({ icon: '⏰', label, value: noVenueText(), tone: 'off' });
+    const s = KH.summary(Date.now(), vid);
+    const tone = { open: 'ok', closed: 'off', soon: 'warn', unset: 'bad' }[s.tone] || 'off';
+    return actionBtn({
+      icon: '⏰', label, value: s.text, tone,
+      sub: KH.isConfigured(vid) ? KH.weekText(vid) : '',
+      action: 'account-hours', arg: vid,
+    });
   }
 
   /* ════════════════════════════ MON PROFIL ════════════════════════════ */
@@ -426,8 +541,10 @@
             ${lg('ICE', b.ice, true)}${lg('IF', b.fiscal, true)}${lg('RC', b.rc, true)}
             ${lg('Patente', b.patente, true)}${lg('CNSS', b.cnss)}${lg(T.phone, b.phone, true)}
           </div>
-          ${hoursRow(b)}
-          ${receiptRow(b)}
+          <div class="acc-acts">
+            ${hoursRow(b)}
+            ${receiptRow(b)}
+          </div>
         </div>`;
     };
     const biz = allBiz();
@@ -508,15 +625,43 @@
   }
 
   /* ── Business editor (rich form, persists per-field / extras) ── */
-  function fieldInput(label, key, val, span) {
-    const f = 'width:100%;padding:11px 13px;border:1px solid var(--n-200);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--surface);outline:none;box-sizing:border-box;';
-    const l = 'display:block;font-size:11.5px;font-weight:500;color:var(--n-600);margin:13px 0 6px;';
-    return `<div style="${span ? 'grid-column:1/-1;' : ''}"><label style="${l}">${esc(label)}</label><input class="acc-f" data-f="${esc(key)}" maxlength="90" style="${f}" value="${esc(val == null ? '' : val)}"/></div>`;
+  function fieldInput(f, val, b) {
+    const label = pick(f.label);
+    const hint = f.hint ? `<p class="acc-hint">${esc(pick(f.hint))}</p>` : '';
+    const wrap = (inner) => `<div${f.span ? ' style="grid-column:1/-1;"' : ''}><label class="acc-lbl" for="accf-${esc(f.k)}">${esc(label)}</label>${inner}${hint}</div>`;
+    if (f.kind === 'trade') {
+      const T = KT();
+      /* Pas de liste de métiers chargée : on n'invente pas un menu vide, on
+       * garde le champ tel qu'il était. */
+      if (!T) return wrap(`<input class="acc-f" id="accf-${esc(f.k)}" data-f="${esc(f.k)}" maxlength="60" value="${esc(val == null ? '' : val)}"/>`);
+      /* Ce qu'il FAUT présélectionner, c'est le métier que le produit applique
+       * réellement — pas le texte qu'on avait laissé écrire. Pour un vrai
+       * établissement c'est son `subtype` ; à défaut sa famille. Un client dont
+       * l'ancien texte ne veut rien dire retrouve donc son métier effectif,
+       * pas une case vide qui l'accuserait de n'avoir rien réglé. */
+      const cur = (b && bizTrade(b)) || T.resolve(val) || '';
+      return wrap(`<select class="acc-sel" id="accf-${esc(f.k)}" data-f="${esc(f.k)}">${T.options(cur, {
+        placeholder: cur ? '' : pick({ fr: 'Choisir un type d’activité…', en: 'Choose an activity type…', ar: 'اختر نوع النشاط…' }),
+      })}</select>`);
+    }
+    return wrap(`<input class="acc-f" id="accf-${esc(f.k)}" data-f="${esc(f.k)}" maxlength="${f.max || 90}"${f.attr ? ' ' + f.attr : ''} value="${esc(val == null ? '' : val)}"/>`);
   }
-  function bizForm() {
-    return '<style>.acc-f:focus{border-color:var(--atlas)!important;}</style><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;max-height:58vh;overflow:auto;padding-right:4px;">';
+  function bizForm(b) {
+    let out = '<div class="acc-form">';
+    BIZ_FIELDS.forEach((f) => {
+      const s = f.sec && BIZ_SECTIONS[f.sec];
+      if (s) {
+        out += `<div class="acc-form-sec">${esc(pick(s.label))}${s.why ? `<span class="why">${esc(pick(s.why))}</span>` : ''}</div>`;
+      }
+      out += fieldInput(f, b ? b[f.k] : '', b);
+    });
+    return out + '</div>';
   }
-  function readForm(scope) { const v = {}; scope.querySelectorAll('.acc-f').forEach((i) => { v[i.dataset.f] = (i.value || '').trim(); }); return v; }
+  function readForm(scope) {
+    const v = {};
+    scope.querySelectorAll('.acc-f, .acc-sel').forEach((i) => { v[i.dataset.f] = (i.value || '').trim(); });
+    return v;
+  }
   function editBusinessModal(id) {
     const b = allBiz().find((x) => x.id === id);
     if (!b) return;
@@ -531,18 +676,21 @@
     const isExtra = extraBiz().some((x) => x.id === id);
     const m = Kiwi.modal({
       tag: pick({ fr: 'ÉTABLISSEMENT', en: 'BUSINESS', ar: 'مؤسسة' }), title: b.name, width: 560,
-      body: bizForm() + BIZ_FIELDS.map((f) => fieldInput(pick(f.label), f.k, b[f.k], ['name', 'type', 'address'].includes(f.k))).join('') + '</div>',
+      body: bizForm(b),
       foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
     });
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
+      /* Le métier d'abord : il ne se range pas avec le reste, et il repeint le
+       * tableau de bord. */
+      saveTrade(b, v.type);
       /* Adossée à un établissement ⇒ la fiche partagée (per-venue, mirrorée
        * serveur), et c'est elle que le reçu, la caisse et le détail d'une
        * transaction liront. Sinon l'ancien chemin, inchangé. */
       if (!saveBizFields(b, v)) {
         if (isExtra) { setExtraBiz(extraBiz().map((x) => (x.id === id ? { ...x, ...v } : x))); }
-        else { BIZ_FIELDS.forEach((f) => { try { localStorage.setItem('kiwiSet:biz:' + id + ':' + f.k, v[f.k]); } catch (_) {} }); }
+        else { BIZ_FIELDS.forEach((f) => { if (f.k !== 'type') { try { localStorage.setItem('kiwiSet:biz:' + id + ':' + f.k, v[f.k]); } catch (_) {} } }); }
       } else if (v.name && window.KiwiVenue && window.KiwiVenue.updateVenue) {
         /* Renommer l'établissement ici doit renommer l'établissement, pas
          * seulement l'étiquette de cette carte. */
@@ -552,10 +700,25 @@
       Kiwi.toast(pick({ fr: 'Établissement mis à jour', en: 'Business updated', ar: 'تم تحديث المؤسسة' }), { type: 'success', force: true });
     });
   }
+  /* ── AJOUTER UN ÉTABLISSEMENT ───────────────────────────────────────────
+   * Ce bouton fabriquait une CARTE, pas un établissement : une entrée dans
+   * `kiwiBizExtra`, connue de ce seul écran. Elle n'apparaissait pas dans le
+   * sélecteur, n'avait ni horaires, ni reçu, ni caisse à appairer, et ses
+   * mentions légales dormaient dans un localStorage que rien d'autre ne lit.
+   * Le propriétaire croyait avoir ouvert sa deuxième boutique.
+   * Il crée maintenant un vrai établissement (KiwiVenue), déclaré au serveur
+   * comme celui du premier jour, puis y écrit les mentions saisies. */
   function addBusinessModal() {
+    const T = KT();
+    const KV = window.KiwiVenue;
+    const canCreate = isReal() && !!(T && KV && KV.createVenue);
     const m = Kiwi.modal({
       tag: pick({ fr: 'NOUVEL ÉTABLISSEMENT', en: 'NEW BUSINESS', ar: 'مؤسسة جديدة' }), title: pick({ fr: 'Ajouter un établissement', en: 'Add a business', ar: 'إضافة مؤسسة' }), width: 560,
-      body: bizForm() + BIZ_FIELDS.map((f) => fieldInput(pick(f.label), f.k, '', ['name', 'type', 'address'].includes(f.k))).join('') + '</div>',
+      desc: canCreate ? pick({
+        fr: 'Il aura ses propres horaires, son propre reçu, son propre catalogue et sa propre caisse.',
+        en: 'It gets its own opening hours, its own receipt, its own catalogue and its own till.',
+        ar: 'ستكون له ساعاته ووصله وكتالوجه وصندوقه.' }) : '',
+      body: bizForm(null),
       foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: "Créer l'établissement", en: 'Create business', ar: 'إنشاء المؤسسة' }))}</button>`,
     });
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);
@@ -563,6 +726,32 @@
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
       if (!v.name) { Kiwi.toast(pick({ fr: 'Le nom est requis.', en: 'Name is required.', ar: 'الاسم مطلوب.' }), { type: 'info', force: true }); return; }
+      if (canCreate) {
+        const trade = T.resolve(v.type);
+        if (!trade) {
+          Kiwi.toast(pick({ fr: "Choisissez le type d'activité.", en: 'Choose the activity type.', ar: 'اختر نوع النشاط.' }), { type: 'info', force: true });
+          return;
+        }
+        let nid = null;
+        try {
+          nid = KV.createVenue({
+            type: T.base(trade), subtype: trade, typeLabel: T.label(trade),
+            name: v.name, location: v.city || '',
+          });
+        } catch (_) {}
+        if (!nid) { Kiwi.toast(pick({ fr: 'Création impossible', en: 'Creation failed', ar: 'تعذّر الإنشاء' }), { type: 'warn', force: true }); return; }
+        /* Les mentions saisies vont dans la fiche du NOUVEL établissement —
+         * per-établissement et mirrorée serveur, comme partout ailleurs. */
+        if (KR()) {
+          const legal = {};
+          BIZ_FIELDS.forEach((f) => { if (f.k !== 'name' && f.k !== 'type') legal[f.k] = v[f.k] || ''; });
+          try { KR().saveBusiness({ name: v.name, legal }, nid); } catch (_) {}
+        }
+        m.close(); setTimeout(openProfile, 80);
+        Kiwi.toast(pick({ fr: 'Établissement créé', en: 'Business created', ar: 'تم إنشاء المؤسسة' }), { type: 'success', force: true,
+          desc: pick({ fr: 'Réglez ses horaires et son reçu sur sa fiche.', en: 'Set its opening hours and receipt on its card.', ar: 'اضبط ساعاته ووصله من بطاقته.' }) });
+        return;
+      }
       const extras = extraBiz(); extras.push({ id: 'biz-' + Date.now(), primary: false, ...v }); setExtraBiz(extras);
       m.close(); setTimeout(openProfile, 80);
       Kiwi.toast(pick({ fr: 'Établissement ajouté', en: 'Business added', ar: 'تمت إضافة المؤسسة' }), { type: 'success', force: true });
