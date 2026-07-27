@@ -168,6 +168,12 @@ em, i, cite, dfn, var { font-style: normal; }
   .blk-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px}
   .blk-head .sub{margin:0}
   .blk-head .spacer{margin-left:auto}
+  .health-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:9px}
+  .health-card{border:1px solid var(--line); border-radius:10px; padding:10px 11px; background:#faf8f3}
+  .health-card b{display:block; font:650 .84rem/1.25 var(--sans); margin-bottom:4px}
+  .health-card span{display:block; color:var(--muted); font-size:.76rem; line-height:1.4}
+  .health-card.warn{border-color:#e1bd76; background:#fff8e9}
+  .health-card.bad{border-color:#d9a09a; background:#fff2f0}
 
   /* Le bandeau « vous pouvez regarder, pas agir ». Affiché quand la console est
      ouverte par le laissez-passer d'équipe : le geste demande un code opérateur
@@ -397,6 +403,16 @@ em, i, cite, dfn, var { font-style: normal; }
           <div id="acct-lock"></div>
           <div id="acct-body"></div>
           <p class="err" id="acct-err"></p>
+        </div>
+
+        <div class="blk">
+          <div class="blk-head">
+            <p class="sub">Diagnostic établissement</p>
+            <span class="count" id="health-checked"></span>
+            <button class="mini" id="health-refresh" type="button">Actualiser</button>
+          </div>
+          <div class="health-grid" id="health-grid"><p class="empty">Chargement…</p></div>
+          <p class="err" id="health-err"></p>
         </div>
 
         <!-- ══ HISTORIQUE ══════════════════════════════════════════════════
@@ -788,6 +804,15 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       return ((mock().audit || {})[merchant] || []);
     },
+    async health(merchant){
+      if (LIVE) return api('/health?merchant=' + encodeURIComponent(merchant));
+      var now = Date.now();
+      return { merchant:merchant, checked_ts:now, missing:[], account:{status:'active'},
+        configuration:{last_ts:now-60000}, sales:{total:42,last_24h:12,amount_24h:4860,last_ts:now-120000},
+        documents:{total:6,last_ts:now-300000}, staff:{total:4}, pairing:{total:1,active:0,last_ts:now-86400000},
+        orders:{total:9,pending:1,oldest_pending:now-180000,last_ts:now-30000},
+        channels:{total:1,active:1,last_ts:now-360000,last_error:''}, catalog:{rev:8,last_ts:now-400000}, customers:{total:38,last_ts:now-200000} };
+    },
     // Set the business type. In LIVE we resend the current features + plan so the
     // PUT (which overwrites them) doesn't clear existing toggles — only the type
     // changes. In mock we stamp the type onto the roster row.
@@ -1142,9 +1167,45 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
-    await Promise.all([renderPins(), renderFeatures(), renderAudit(), renderTestSales(), renderAccount()]);
+    await Promise.all([renderPins(), renderFeatures(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function healthAge(ts){
+    if (!ts) return 'jamais reçu';
+    var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (sec < 60) return 'il y a ' + sec + ' s';
+    if (sec < 3600) return 'il y a ' + Math.round(sec / 60) + ' min';
+    if (sec < 86400) return 'il y a ' + Math.round(sec / 3600) + ' h';
+    return 'il y a ' + Math.round(sec / 86400) + ' j';
+  }
+  function healthCard(title, main, detail, level){
+    return h('div', { class:'health-card' + (level ? ' ' + level : '') },
+      h('b', null, title + ' · ' + main), h('span', null, detail));
+  }
+  async function renderHealth(){
+    var grid = document.getElementById('health-grid'), err = document.getElementById('health-err');
+    if (!grid || !selected) return;
+    clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic en cours…')); err.textContent = '';
+    try {
+      var d = await store.health(selected.merchant); clear(grid);
+      document.getElementById('health-checked').textContent = 'vérifié ' + healthAge(d.checked_ts);
+      var ac = d.account || {}, sa = d.sales || {}, od = d.orders || {}, ch = d.channels || {};
+      grid.appendChild(healthCard('Compte', ac.status || 'introuvable', ac.name || selected.merchant, ac.status === 'suspended' ? 'bad' : (!d.account ? 'warn' : '')));
+      grid.appendChild(healthCard('Ventes', (sa.last_24h || 0) + ' / 24 h', (sa.amount_24h || 0).toLocaleString('fr-FR') + ' MAD · dernière ' + healthAge(sa.last_ts), !d.sales ? 'bad' : (!sa.last_ts ? 'warn' : '')));
+      grid.appendChild(healthCard('Données cloud', (d.documents && d.documents.total || 0) + ' documents', 'dernière synchro ' + healthAge(d.documents && d.documents.last_ts), !d.documents ? 'bad' : ''));
+      grid.appendChild(healthCard('Caisse', (d.pairing && d.pairing.total || 0) + ' appairage(s)', 'dernier ' + healthAge(d.pairing && d.pairing.last_ts), !d.pairing ? 'bad' : (!(d.pairing.total) ? 'warn' : '')));
+      grid.appendChild(healthCard('Commandes', (od.pending || 0) + ' en attente', od.pending ? 'plus ancienne ' + healthAge(od.oldest_pending) : 'aucune file bloquée', od.pending && Date.now() - od.oldest_pending > 900000 ? 'bad' : (od.pending ? 'warn' : '')));
+      grid.appendChild(healthCard('Canaux', (ch.active || 0) + ' actif(s)', ch.last_error ? 'dernier refus : ' + ch.last_error : 'dernière commande ' + healthAge(ch.last_ts), ch.last_error ? 'bad' : ''));
+      grid.appendChild(healthCard('Équipe & clients', (d.staff && d.staff.total || 0) + ' accès', (d.customers && d.customers.total || 0) + ' clients · catalogue rév. ' + (d.catalog && d.catalog.rev || 0), (!d.staff || !d.customers) ? 'warn' : ''));
+      if (d.missing && d.missing.length) {
+        grid.appendChild(healthCard('Migrations', d.missing.length + ' manque(s)', d.missing.map(function(x){ return x.area; }).join(', '), 'bad'));
+      }
+    } catch(e) {
+      clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic indisponible.'));
+      err.textContent = 'Le serveur n’a pas pu établir l’état de cet établissement.';
+    }
   }
 
   // Danger zone — permanently delete the selected account. Guarded by a
@@ -1955,6 +2016,7 @@ em, i, cite, dfn, var { font-style: normal; }
   });
 
   document.getElementById('refresh').addEventListener('click', function(){ boot(true); });
+  document.getElementById('health-refresh').addEventListener('click', function(){ if (selected) renderHealth(); });
   document.getElementById('quit').addEventListener('click', function(){ location.href = '/'; });
 
   // ── boot: probe live vs mock, then render ────────────────────────────────────
@@ -1975,7 +2037,7 @@ em, i, cite, dfn, var { font-style: normal; }
     renderMode();
     await renderClients();
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderAudit(), renderTestSales(), renderAccount()]); }
+    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
   }
   boot(false);
 })();
