@@ -1001,14 +1001,19 @@
      so a report reads like the shop does. `couleur_saisie` carries the original
      shade when there was one — a re-import or an accountant looking at last
      season's records still finds "Bleu nuit" next to its Bleu. */
+  /* Le `cout` fait partie de l'export, sinon la boucle « exporter → corriger
+     dans Excel → réimporter » perdrait silencieusement le prix d'achat de tout
+     le stock — et avec lui la valorisation et la marge. L'import lit cette
+     colonne (BOUTIQUE_COLS.cout dans assets/catalog-import.js) : les deux bouts
+     doivent bouger ensemble. */
   function exportCsv() {
-    const rows = [['produit', 'categorie', 'couleur', 'couleur_saisie', 'taille', 'prix_mad', 'stock', 'code_barres', 'type']];
+    const rows = [['produit', 'categorie', 'couleur', 'couleur_saisie', 'taille', 'prix_mad', 'cout', 'stock', 'code_barres', 'type']];
     db.products.filter((p) => !p.archived).forEach((p) => {
       const cat = catById(p.categoryId);
       variantsOf(p.id).forEach((v) => {
         const fam = COLOR_BY_ID(famOf(v));
         (v.barcodes.length ? v.barcodes : [{ code: '', type: '' }]).forEach((b) => {
-          rows.push([p.name, cat ? cat.name : '', fam ? fam.label : v.colorLabel, v.colorSource || '', v.size, p.priceMAD, v.stock, b.code, b.type]);
+          rows.push([p.name, cat ? cat.name : '', fam ? fam.label : v.colorLabel, v.colorSource || '', v.size, p.priceMAD, p.cost || '', v.stock, b.code, b.type]);
         });
       });
     });
