@@ -1042,6 +1042,11 @@
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,
     // Le repli « pilote du système » — même objet reçu que printReceipt.
     browserReceipt: browserReceipt, browserDayReport: browserDayReport,
+    /* Le repli brut, pour un module qui peint SON propre ticket : le reçu de
+     * caisse (assets/receipt.js) a sa mise en page et n'a besoin d'ici que la
+     * mécanique — isoler le ticket dans la page, poser la largeur du rouleau,
+     * ouvrir la boîte d'impression, nettoyer derrière. */
+    browserPrintHTML: browserPrintHTML,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
   };

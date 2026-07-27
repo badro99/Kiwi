@@ -127,7 +127,12 @@
   /* ── Businesses (multi-établissement). Defaults + per-field localStorage
    *    overrides (kiwiSet:biz:<id>:<field>) + user-added extras (kiwiBizExtra). ── */
   const BIZ_FIELDS = [
-    { k: 'name', label: { fr: "Nom de l'établissement", en: 'Business name', ar: 'اسم المؤسسة' } },
+    { k: 'name', label: { fr: "Nom commercial", en: 'Trading name', ar: 'الاسم التجاري' } },
+    /* La raison sociale. Distincte du nom commercial exprès : « Amira Boutique »
+     * est ce que lit le client, « SARL AMIRA DISTRIBUTION » est ce que réclame
+     * une pièce comptable. Le reçu imprime la seconde SOUS la première, et
+     * seulement si elle en diffère — l'imprimer deux fois fait douter du ticket. */
+    { k: 'legalName', label: { fr: 'Raison sociale', en: 'Legal name', ar: 'الاسم القانوني' } },
     { k: 'type', label: { fr: "Type d'activité", en: 'Activity type', ar: 'نوع النشاط' } },
     { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' } },
     { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' } },
@@ -151,7 +156,64 @@
   ];
   const extraBiz = () => { try { return JSON.parse(localStorage.getItem('kiwiBizExtra') || '[]'); } catch (_) { return []; } };
   const setExtraBiz = (a) => { try { localStorage.setItem('kiwiBizExtra', JSON.stringify(a)); } catch (_) {} };
-  const bizField = (b, f) => getSet('biz:' + b.id + ':' + f, b[f] != null ? b[f] : '');
+
+  /* ── OÙ VIVENT LES MENTIONS LÉGALES ────────────────────────────────────────
+   * Elles vivaient dans `kiwiSet:biz:<carte>:<champ>` — un localStorage, donc
+   * UN navigateur, rangé sous l'identifiant d'une carte d'écran et pas d'un
+   * établissement. Le commerçant saisissait son ICE au bureau et son ticket
+   * sortait sans mention légale au comptoir ; il changeait d'appareil et tout
+   * était à ressaisir.
+   *
+   * Une carte adossée à un ÉTABLISSEMENT (une venue) lit et écrit maintenant
+   * `KiwiReceipt.business(venueId)` : per-établissement, mirroré serveur, et
+   * c'est la source que le reçu, la caisse et le détail d'une transaction
+   * interrogent. L'ancien stockage est repris une fois (migrateBusiness), puis
+   * plus jamais relu.
+   *
+   * Une carte SANS établissement — une fiche ajoutée à la main dans cet écran,
+   * qui ne correspond à aucun magasin du sélecteur — garde exactement l'ancien
+   * comportement. Lui inventer une venue rangerait ses mentions sous une clé
+   * que rien d'autre ne résout. */
+  const bizVenueId = (b) => {
+    if (b && b.venueId) return b.venueId;
+    try {
+      const KV = window.KiwiVenue;
+      if (!KV) return null;
+      if (KV.VENUES && b && KV.VENUES[b.id]) return b.id;
+      if (b && b.primary) return (KV.getVenue && KV.getVenue()) || null;
+    } catch (_) {}
+    return null;
+  };
+  const KR = () => window.KiwiReceipt;
+  const bizField = (b, f) => {
+    const vid = bizVenueId(b);
+    if (vid && KR()) {
+      try {
+        KR().migrateBusiness(vid, b.id);
+        const doc = KR().business(vid);
+        if (f === 'name') return doc.name || b.name || '';
+        if (f === 'type') return getSet('biz:' + b.id + ':type', b.type != null ? b.type : '');
+        const v = doc.legal[f];
+        if (v) return v;
+        /* Rien dans la fiche : on retombe sur ce que porte la venue (une démo
+         * pré-remplie), jamais sur une valeur inventée. */
+        return b[f] != null ? b[f] : '';
+      } catch (_) { /* fiche indisponible → ancien chemin */ }
+    }
+    return getSet('biz:' + b.id + ':' + f, b[f] != null ? b[f] : '');
+  };
+  const saveBizFields = (b, v) => {
+    const vid = bizVenueId(b);
+    if (vid && KR()) {
+      const legal = {};
+      BIZ_FIELDS.forEach((f) => { if (f.k !== 'name' && f.k !== 'type') legal[f.k] = v[f.k] || ''; });
+      KR().saveBusiness({ name: v.name, legal }, vid);
+      /* `type` n'est pas une mention légale : il reste où il était. */
+      try { localStorage.setItem('kiwiSet:biz:' + b.id + ':type', v.type || ''); } catch (_) {}
+      return true;
+    }
+    return false;
+  };
   // Map an onboarding business type (base or subtype) to a human label.
   const TYPE_LABEL = { restaurant: 'Restaurant', cafe: 'Café · Restaurant', fastfood: 'Restauration rapide', bakery: 'Boulangerie', pizzeria: 'Pizzeria', boutique: 'Boutique', epicerie: 'Épicerie', pharmacie: 'Pharmacie', fleuriste: 'Fleuriste', spa: 'Spa', coiffure: 'Salon de coiffure', sport: 'Sport & bien-être', hotel: 'Hôtel' };
   const bizTypeLabel = (t) => TYPE_LABEL[t] || (t ? String(t) : pick({ fr: 'Établissement', en: 'Business', ar: 'مؤسسة' }));
@@ -164,8 +226,42 @@
     ice: '', fiscal: '', rc: '', patente: '', cnss: '', phone: '', hours: '',
     /* no revenue/orders/team → the stat row is omitted (no fabricated numbers). */
   });
-  const allBiz = () => (isReal() ? [primaryRealBiz(), ...extraBiz()] : [...BIZ_DEFAULTS, ...extraBiz()])
-    .map((b) => { const o = { ...b }; BIZ_FIELDS.forEach((f) => { o[f.k] = bizField(b, f.k); }); return o; });
+  /* Les VRAIS établissements du compte, un par magasin du sélecteur.
+   * Cet écran n'en montrait qu'un : `primaryRealBiz()`, bâti sur
+   * `KiwiMe.business` — c'est UN nom par LOGIN. Un propriétaire qui tient une
+   * boutique ET un restaurant voyait donc une seule fiche, et n'avait aucun
+   * moyen de donner à chacun son ICE, son adresse et son reçu. Le sélectionneur
+   * d'établissement, lui, les connaissait tous les deux depuis le début. */
+  const realVenueBiz = () => {
+    try {
+      const KV = window.KiwiVenue;
+      if (!KV || !KV.VENUES || !KV.isCustom) return [];
+      const active = (KV.getVenue && KV.getVenue()) || '';
+      return Object.keys(KV.VENUES)
+        .filter((id) => id !== 'own' && id !== 'scoped' && KV.isCustom(id))
+        .map((id) => {
+          const v = KV.VENUES[id] || {};
+          return {
+            id, venueId: id, primary: id === active,
+            name: v.name || '', type: bizTypeLabel(v.subtype || v.type),
+            city: v.location || '', address: '',
+            legalName: '', ice: '', fiscal: '', rc: '', patente: '', cnss: '', phone: '',
+          };
+        });
+    } catch (_) { return []; }
+  };
+  const allBiz = () => {
+    let base;
+    if (isReal()) {
+      const real = realVenueBiz();
+      /* Aucun établissement encore créé (compte tout neuf, ou moteur de venues
+       * pas encore chargé) : la fiche unique d'avant, inchangée. */
+      base = (real.length ? real : [primaryRealBiz()]).concat(extraBiz());
+    } else {
+      base = [...BIZ_DEFAULTS, ...extraBiz()];
+    }
+    return base.map((b) => { const o = { ...b }; BIZ_FIELDS.forEach((f) => { o[f.k] = bizField(b, f.k); }); return o; });
+  };
   const initialsOf = (s) => (String(s).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
 
   /* ── Horaires d'ouverture, sur la fiche établissement ──
@@ -181,15 +277,66 @@
    * démonstration portent déjà un identifiant de venue, et une fiche ajoutée à
    * la main ici n'en a aucun. Dans ce dernier cas on ne fabrique pas un
    * classement bidon — on renvoie vers le sélecteur. */
-  function bizVenueId(b) {
-    try {
-      const KV = window.KiwiVenue;
-      if (!KV) return null;
-      if (KV.VENUES && KV.VENUES[b.id]) return b.id;
-      if (b.primary) return (KV.getVenue && KV.getVenue()) || null;
-    } catch (_) {}
-    return null;
+  /* ── Le reçu de caisse, sur la fiche établissement ──
+   * Même logique que les horaires : la ligne AFFICHE l'état et ouvre l'unique
+   * écran de réglage. Chaque établissement a son reçu — régler celui d'Amira
+   * Boutique ne touche pas celui du restaurant d'à côté, parce que la fiche est
+   * rangée par venue et pas par compte.
+   *
+   * Ce que la ligne dit, c'est ce qu'un propriétaire vient vérifier : mon
+   * ticket est-il en règle ? D'où le décompte des mentions manquantes plutôt
+   * qu'un « configuré / non configuré » qui ne lui apprend rien. */
+  /* L'identité EFFECTIVE de la carte affichée. `bizField()` a déjà résolu chaque
+   * champ (fiche partagée d'abord, valeur portée par la fiche ensuite), donc
+   * `b.*` EST ce que le propriétaire a sous les yeux. C'est cette liste-là qu'il
+   * faut mesurer : calculer les manques ailleurs donnait une carte qui affiche
+   * un ICE et, deux lignes plus bas, annonce que l'ICE manque. */
+  const bizIdentity = (b) => {
+    const legal = {};
+    (window.KiwiReceipt ? window.KiwiReceipt.LEGAL_FIELDS : []).forEach((f) => {
+      if (b[f.k]) legal[f.k] = b[f.k];
+    });
+    return { name: b.name || '', legal };
+  };
+  const bizMissing = (b) => {
+    const id = bizIdentity(b);
+    return (window.KiwiReceipt ? window.KiwiReceipt.LEGAL_FIELDS : [])
+      .filter((f) => f.important && !id.legal[f.k])
+      .map((f) => ({ key: f.k, label: pick(f.label) }));
+  };
+
+  function receiptRow(b) {
+    const K = window.KiwiReceipt;
+    if (!K || !window.KiwiReceiptUI) return '';
+    const vid = bizVenueId(b);
+    const label = pick({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' });
+    if (!vid) {
+      return `
+        <div class="acc-row" style="align-items:flex-start;">
+          <span>${esc(label)}</span>
+          <div style="text-align:right; max-width:62%;"><b>${esc(pick({ fr: 'Sélectionnez cet établissement pour le régler', en: 'Select this business to set it', ar: 'اختر هذه المؤسسة لضبطها' }))}</b></div>
+        </div>`;
+    }
+    const miss = bizMissing(b);
+    const set = K.isConfigured(vid);
+    const text = miss.length
+      ? pick({ fr: `${miss.length} mention${miss.length > 1 ? 's' : ''} légale${miss.length > 1 ? 's' : ''} manquante${miss.length > 1 ? 's' : ''}`, en: `${miss.length} legal detail${miss.length > 1 ? 's' : ''} missing`, ar: `${miss.length} بيان قانوني ناقص` })
+      : (set ? pick({ fr: 'Personnalisé · prêt à imprimer', en: 'Customised · ready to print', ar: 'مخصّص · جاهز للطبع' })
+             : pick({ fr: 'Modèle par défaut · prêt à imprimer', en: 'Default template · ready to print', ar: 'نموذج افتراضي · جاهز للطبع' }));
+    const dot = miss.length ? 'var(--danger,#dc2626)' : 'var(--success,#16a34a)';
+    const detail = miss.length ? miss.map((x) => x.label).join(', ') : '';
+    return `
+      <div class="acc-row" style="align-items:flex-start; cursor:pointer;" data-action="account-receipt" data-arg="${esc(vid)}">
+        <span>${esc(label)}</span>
+        <div style="text-align:right; max-width:62%;">
+          <b style="display:inline-flex; align-items:center; gap:7px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>${esc(text)}
+          </b>
+          ${detail ? `<div style="font-size:11.5px;color:var(--n-500);margin-top:3px;line-height:1.45;">${esc(detail)}</div>` : ''}
+        </div>
+      </div>`;
   }
+
   function hoursRow(b) {
     const KH = window.KiwiHours;
     if (!KH) return '';
@@ -250,7 +397,13 @@
     const isBasic = curPlan() === 'basic';
     const row = (k, v, raw) => `<div class="acc-row"><span>${esc(k)}</span>${raw || `<b>${v}</b>`}</div>`;
     const bizCard = (b) => {
-      const lg = (k, v) => `<div><div class="k">${esc(k)}</div><div class="v">${esc(v || '—')}</div></div>`;
+      /* Un champ légal vide se dit « à compléter », pas « — ». Le tiret se lit
+       * comme « sans objet » et c'est faux : ces mentions sont obligatoires sur
+       * un reçu, elles manquent. (Sur le TICKET, à l'inverse, une mention vide
+       * ne s'imprime pas du tout — un tiret imprimé à la place d'un ICE
+       * ressemble à un ICE illisible.) */
+      const todo = pick({ fr: 'à compléter', en: 'to complete', ar: 'ينقص' });
+      const lg = (k, v, required) => `<div><div class="k">${esc(k)}</div><div class="v"${v || !required ? '' : ' style="color:var(--danger);"'}>${esc(v || (required ? todo : '—'))}</div></div>`;
       return `
         <div class="acc-biz">
           <div class="acc-biz-head">
@@ -270,10 +423,11 @@
             <div class="acc-stat"><div class="v">${esc(String(b.team))}</div><div class="l">${esc(T.teamL)}</div></div>
           </div>` : ''}
           <div class="acc-legal">
-            ${lg('ICE', b.ice)}${lg('IF', b.fiscal)}${lg('RC', b.rc)}
-            ${lg('Patente', b.patente)}${lg('CNSS', b.cnss)}${lg(T.phone, b.phone)}
+            ${lg('ICE', b.ice, true)}${lg('IF', b.fiscal, true)}${lg('RC', b.rc, true)}
+            ${lg('Patente', b.patente, true)}${lg('CNSS', b.cnss)}${lg(T.phone, b.phone, true)}
           </div>
           ${hoursRow(b)}
+          ${receiptRow(b)}
         </div>`;
     };
     const biz = allBiz();
@@ -330,6 +484,22 @@
       const b = allBiz().find((x) => bizVenueId(x) === vid);
       window.KiwiHoursUI.open({ venueId: vid, title: (b && b.name) || '', onSave: () => setTimeout(openProfile, 80) });
     };
+    handlers['account-receipt'] = (el, arg) => {
+      const vid = arg || (el && el.dataset.arg) || null;
+      if (!window.KiwiReceiptUI || !vid) return;
+      const b = allBiz().find((x) => bizVenueId(x) === vid);
+      window.KiwiReceiptUI.open({
+        venueId: vid, title: (b && b.name) || '',
+        /* Ce que la carte affiche, pour que l'éditeur et l'aperçu montrent la
+         * même identité qu'elle. Purement affiché : jamais enregistré, sinon
+         * on créerait la seconde copie que tout ce chantier évite. */
+        fallbackBusiness: b ? bizIdentity(b) : null,
+        /* Le raccourci vers la SOURCE. L'éditeur de reçu affiche les mentions
+         * légales ; il ne les édite pas, sinon il en existerait deux copies. */
+        onEditBusiness: () => { if (b) editBusinessModal(b.id); },
+        onSave: () => setTimeout(openProfile, 80),
+      });
+    };
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
     handlers['account-plan-cancel'] = () => planCancelModal();
@@ -367,8 +537,17 @@
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
-      if (isExtra) { setExtraBiz(extraBiz().map((x) => (x.id === id ? { ...x, ...v } : x))); }
-      else { BIZ_FIELDS.forEach((f) => { try { localStorage.setItem('kiwiSet:biz:' + id + ':' + f.k, v[f.k]); } catch (_) {} }); }
+      /* Adossée à un établissement ⇒ la fiche partagée (per-venue, mirrorée
+       * serveur), et c'est elle que le reçu, la caisse et le détail d'une
+       * transaction liront. Sinon l'ancien chemin, inchangé. */
+      if (!saveBizFields(b, v)) {
+        if (isExtra) { setExtraBiz(extraBiz().map((x) => (x.id === id ? { ...x, ...v } : x))); }
+        else { BIZ_FIELDS.forEach((f) => { try { localStorage.setItem('kiwiSet:biz:' + id + ':' + f.k, v[f.k]); } catch (_) {} }); }
+      } else if (v.name && window.KiwiVenue && window.KiwiVenue.updateVenue) {
+        /* Renommer l'établissement ici doit renommer l'établissement, pas
+         * seulement l'étiquette de cette carte. */
+        try { window.KiwiVenue.updateVenue(bizVenueId(b), { name: v.name }); } catch (_) {}
+      }
       m.close(); setTimeout(openProfile, 80);
       Kiwi.toast(pick({ fr: 'Établissement mis à jour', en: 'Business updated', ar: 'تم تحديث المؤسسة' }), { type: 'success', force: true });
     });

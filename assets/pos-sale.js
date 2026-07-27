@@ -131,7 +131,14 @@
     cheque: 'wallet', qr: 'qr', tap: 'tap',
   };
   function normMethod(m) {
-    var k = String(m == null ? '' : m).toLowerCase().replace(/[^a-z]/g, '');
+    /* NFD d'abord. Sans ça « chèque » se réduisait à « chque », introuvable
+       dans la table, et retombait sur le défaut 'cash' : un règlement par
+       chèque était compté en espèces dans la répartition des encaissements et
+       dans le tiroir du rapport de clôture. « espèces » → « espces » tombait
+       sur le même défaut et donnait la bonne réponse par accident, ce qui est
+       exactement pourquoi ça n'a jamais été vu. */
+    var k = String(m == null ? '' : m).normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/[^a-z]/g, '');
     return METHOD_MAP[k] || 'cash';
   }
 

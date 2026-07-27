@@ -2110,6 +2110,42 @@
   function printReceiptNow(opts, parts) {
     const KP = window.KiwiPrinter;
     if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+
+    /* Le ticket que la boutique imprime est celui que la propriétaire a réglé
+       dans Réglages → Reçu : son enseigne, son adresse, son ICE, sa politique
+       d'échange, sa largeur de rouleau. Cette fonction composait le sien —
+       `shop: pv.name || 'Kiwi'` et rien d'autre — ce qui donnait le ticket d'une
+       boutique marocaine sans une seule mention légale. */
+    const K = window.KiwiReceipt;
+    if (K) {
+      const doc = K.build({
+        ref: opts.ref || '',
+        ts: Date.now(),
+        cashier: (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
+        lines: (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, total: l.amount, ref: l.ref, barcode: l.barcode })),
+        subtotal: opts.subtotal,
+        discount: opts.discount,
+        total: opts.amount,
+        customer: opts.customer || null,
+        pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
+        received: (parts || []).some((x) => x.m === 'espèces' && x.rendu > 0) ? opts.amount + (parts.find((x) => x.m === 'espèces').rendu || 0) : null,
+        change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
+      });
+      /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
+         avec son numéro, même si l'enseigne change de pied de page demain. */
+      try { if (opts.sale) opts.sale.rc = K.snapshot(doc); } catch (_) {}
+      toast('Impression du reçu…');
+      Promise.resolve(K.print(doc)).then(
+        (r) => toast(r && r.ok
+          ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : r.via === 'browser' ? 'imprimante système' : 'réseau'))
+          : 'Impression échouée'),
+        () => toast('Impression échouée')
+      );
+      return;
+    }
+
+    /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
+       chemin, inchangé. */
     const pv = pvPaired();
     const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces' };
     const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
@@ -2156,7 +2192,8 @@
   function checkout() {
     const t = state.ticket;
     if (!t.lines.length) return;
-    const { total } = ticketTotals(t);
+    const tot = ticketTotals(t);
+    const total = tot.total;
     const c = ticketClient();
     openPay({
       amount: total,
@@ -2169,7 +2206,16 @@
         qty: ln.qty,
         name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
         amount: lineUnit(ln) * ln.qty,
+        ref: ln.pid,
+        barcode: (P[ln.pid] && P[ln.pid].barcode) || '',
       })),
+      /* Ce qui rend le ticket lisible pour la cliente : ce qu'elle aurait payé,
+         ce qu'on lui a retiré, et à quel nom la fidélité est comptée. Sans ça le
+         reçu affiche un total qui ne correspond pas à l'addition des lignes et
+         personne ne peut vérifier sa remise. */
+      subtotal: t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0),
+      discount: tot.remise + tot.reward,
+      customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
@@ -2669,7 +2715,17 @@
       .bqx-form { padding-top: 16px; }
       .bqx-foot { border-top: 1px solid rgba(10,15,13,.08); margin-top: 4px; }
       .bqx-chain { display: flex; align-items: center; gap: 14px; margin: 14px 24px 0; padding: 13px 16px; background: var(--paper); border: 1px dashed rgba(11,110,79,.4); border-radius: 13px; }
+      .bqx-chain.is-link { border-style: solid; border-color: rgba(184,124,32,.45); background: rgba(184,124,32,.05); }
       .bqx-chain > div { flex: 1; min-width: 0; }
+      .bqx-linklist { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+      .bqx-linkprod { background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 13px; padding: 11px 13px; }
+      .bqx-linkhead { display: flex; align-items: center; gap: 11px; margin-bottom: 8px; }
+      .bqx-linkhead .bqi-art, .bqx-linkhead .bqi-art svg { width: 28px; height: 28px; flex: 0 0 28px; }
+      .bqx-linkhead > div { flex: 1; min-width: 0; }
+      .bqx-linkhead b { display: block; font-size: 14px; }
+      .bqx-linkhead span { font-size: 11.5px; color: #77807b; }
+      .bqx-chip.is-pick { cursor: pointer; font: inherit; font-size: 12.5px; color: var(--ink); }
+      .bqx-chip.is-pick:hover { border-color: var(--atlas); background: rgba(11,110,79,.08); }
       .bqx-chain b { display: block; font-size: 13.5px; }
       .bqx-chain span { font-size: 12px; color: #77807b; line-height: 1.45; }
       .bqx-common { display: flex; align-items: baseline; gap: 10px; margin: 12px 24px 0; padding: 10px 14px; background: var(--paper); border-radius: 11px; }
@@ -3656,6 +3712,9 @@
     const cats = cat.listCategories();
     const prev = intake.lastProduct ? cat.getProduct(intake.lastProduct) : null;
     const manual = !!(opts && opts.manual);
+    // Combien de fiches attendent leur code-barres (typiquement : ce que le
+    // fichier fournisseur a fait entrer au tableau de bord).
+    const bare = cat.countCodeless ? cat.countCodeless() : 0;
     invSetModal(`
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       ${intakeHeader()}
@@ -3673,6 +3732,14 @@
           <span>Une autre taille ou couleur du même article : le nom, la catégorie et les prix sont repris, vous ne changez que la déclinaison.</span>
         </div>
         <button class="bq-btn" id="bqx-chain">Ajouter une déclinaison</button>
+      </div>` : ''}
+      ${bare ? `
+      <div class="bqx-chain is-link">
+        <div>
+          <b>Cet article est déjà au catalogue, sans code-barres ?</b>
+          <span>${bare} déclinaison${bare > 1 ? 's' : ''} attend${bare > 1 ? 'ent' : ''} son code — celles qui viennent du fichier fournisseur. Rattachez ce code au lieu de tout ressaisir.</span>
+        </div>
+        <button class="bq-btn" id="bqx-link">Chercher l'article</button>
       </div>` : ''}
       <div class="bqi-form bqx-form">
         <div class="bqi-fg"><label>Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
@@ -3707,6 +3774,8 @@
       kindSel.onchange = fillSizes; fillSizes();
 
       if (prev) $('#bqx-chain', el).onclick = () => intakeVariant(j, intake.lastProduct);
+      const linkBtn = $('#bqx-link', el);
+      if (linkBtn) linkBtn.onclick = () => intakeLink(j);
       $('#bqx-skip', el).onclick = () => { intakeNote('erreur', `Code ${j.code} ignoré`); paintIntake(); };
 
       const save = () => {
@@ -3830,6 +3899,83 @@
         i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
       });
       setTimeout(() => { const s = $('#bqx-size', el); if (s) s.focus(); }, 40);
+    });
+  }
+
+  /* ═══ état 3 bis · RATTACHER le code à une fiche déjà importée ═══
+     La seconde moitié d'une reprise : le fichier du fournisseur est entré au
+     tableau de bord avec les noms, les prix et les coûts, mais sans code — un
+     tarif Excel n'en porte pas. L'employé parcourt le magasin, scanne, et
+     retrouve ici la fiche qui attend son code. Rien à ressaisir. */
+  function intakeLink(j) {
+    intake.mode = 'rattacher';
+    const cat = catDB();
+    const draw = (q) => {
+      const hits = cat.listCodeless({ q, limit: 40 });
+      if (!hits.length) {
+        return `<div class="bqx-log-empty">${q ? 'Aucune fiche sans code-barres ne porte ce nom.' : 'Toutes les fiches ont déjà un code-barres.'}</div>`;
+      }
+      return `<div class="bqx-linklist">${hits.map((h) => `
+        <div class="bqx-linkprod">
+          <div class="bqx-linkhead">
+            <span class="bqi-art">${artOf(h.product.art)}</span>
+            <div><b>${esc(h.product.name)}</b><span>${fmtMAD(h.product.priceMAD)}${h.product.cost ? ' · coût ' + fmtMAD(h.product.cost) : ''} · ${h.variants.length}/${h.total} sans code</span></div>
+          </div>
+          <div class="bqx-chips">${h.variants.map((v) => `
+            <button type="button" class="bqx-chip is-pick" data-link-v="${v.id}" data-link-p="${h.product.id}">
+              <i style="background:${v.colorHex}"></i>${esc(v.colorLabel)} · ${esc(v.size)} <b>${v.stock}</b>
+            </button>`).join('')}</div>
+        </div>`).join('')}</div>`;
+    };
+    invSetModal(`
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      ${intakeHeader()}
+      <div class="bqx-found is-new">
+        <i data-lucide="link"></i>
+        <div>
+          <b>Rattacher ce code à une fiche existante</b>
+          <span class="bqx-codeline">${esc(j.code)} ${symBadge(j)}</span>
+        </div>
+      </div>
+      <div class="bqx-body">
+        <div class="bqx-scanbox slim"><i data-lucide="search"></i>
+          <input id="bqx-lq" placeholder="Nom de l'article…" autocomplete="off" />
+        </div>
+        <div class="bqi-help">Touchez la déclinaison correspondante : le code y sera rattaché tel quel, sans réimpression.</div>
+        <div id="bqx-lres">${draw('')}</div>
+      </div>
+      <div class="bqi-modfoot bqx-foot">
+        <button class="bq-btn secondary" id="bqx-lback">Retour</button>
+      </div>`, (el) => {
+      const res = $('#bqx-lres', el), q = $('#bqx-lq', el);
+      const wire = () => {
+        res.querySelectorAll('[data-link-v]').forEach((b) => b.addEventListener('click', () => {
+          const vid = b.getAttribute('data-link-v'), pid = b.getAttribute('data-link-p');
+          const r = cat.attachBarcode(vid, j.code);
+          if (!r.ok) {
+            toast(r.reason === 'doublon' ? `Ce code vient d'être attribué à ${r.owner.product.name}` : 'Rattachement impossible');
+            return;
+          }
+          const d = cat.getProduct(pid);
+          intake.count++;
+          intake.lastProduct = pid;
+          intakeNote('variante', `${d.product.name} — code rattaché à une fiche importée`);
+          toast(`Code ${j.code} rattaché à ${d.product.name}`);
+          intakeHint(`${d.product.name} a maintenant son code. Scannez l'article suivant.`, 'good');
+          paintIntake();
+        }));
+      };
+      /* Le champ de recherche se tape à la main ; la douchette, elle, doit
+         pouvoir scanner l'article SUIVANT sans quitter cet écran. */
+      armScanCapture((c) => intakeTake(c));
+      let t = null;
+      q.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => { res.innerHTML = draw(q.value); wire(); icons(); }, 120);
+      });
+      $('#bqx-lback', el).onclick = () => intakeNew(j, {});
+      wire();
+      setTimeout(() => q.focus(), 40);
     });
   }
 

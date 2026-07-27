@@ -5975,6 +5975,12 @@
      Après venue-store.js, dont il tient sa fiche par établissement. -->
 <script src="assets/hours.js" defer fetchpriority="low"></script>
 <script src="assets/hours-ui.js" defer fetchpriority="low"></script>
+<!-- Le reçu de caisse. receipt.js n'a pas de DOM : il porte la fiche légale de
+     l'établissement, la fiche d'apparence et le moteur de rendu (thermique,
+     écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement —
+     la caisse LIT le reçu, elle ne le règle pas. -->
+<script src="assets/receipt.js" defer fetchpriority="low"></script>
+<script src="assets/receipt-ui.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->

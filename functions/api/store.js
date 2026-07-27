@@ -88,6 +88,16 @@ const FEATURES = {
    * comptoir doit la retrouver sur son téléphone, sinon les deux écrans
    * répondent différemment à la même question. */
   hours:        { keys: ['week', 'exceptions', 'overrides'],       max: 40000 },
+  /* La fiche de l'établissement — raison sociale, adresse, téléphone, ICE, IF,
+   * RC, patente, CNSS. La SOURCE des mentions qui s'impriment sur le reçu et
+   * qui figureront sur toute facture. Elle vivait dans `kiwiSet:biz:*`, donc
+   * dans UN navigateur : le commerçant saisissait son ICE au bureau et son
+   * ticket sortait sans mention légale au comptoir. */
+  business:     { keys: ['name', 'tradeName', 'legal'],            max: 20000 },
+  /* L'apparence du reçu — logo, en-tête, messages, ce qu'on affiche, largeur
+   * du rouleau. `max` généreux à cause du logo, qui est une image en data: URI
+   * (bornée à 200 ko côté client, voir assets/receipt.js). */
+  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 400000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },

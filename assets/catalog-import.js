@@ -165,7 +165,25 @@
     // retrouver la variante d'origine à la relecture — voir plus bas.
     couleur_saisie: ['couleur_saisie', 'couleur_origine', 'nuance', 'shade', 'color_source'],
     taille:      ['taille', 'size', 'pointure', 'tailles'],
-    prix_mad:    ['prix_mad', 'prix', 'price', 'pv', 'prix_vente', 'prix_ttc', 'prix_unitaire', 'tarif'],
+    /* La correspondance est EXACTE (voir mapColumns), donc chaque orthographe
+       doit figurer. « Prix de vente » — sans doute l'en-tête le plus courant
+       d'un tableur français — manquait : la colonne n'était pas reconnue et
+       tous les articles entraient à 0 MAD.
+       « Prix HT » reste volontairement absent : si un fichier ne porte que le
+       hors-taxe, mieux vaut un prix vide et visible qu'un prix silencieusement
+       20 % trop bas, que personne ne remarque avant la comptabilité. */
+    prix_mad:    ['prix_mad', 'prix', 'price', 'pv', 'p_v', 'prix_vente', 'prix_de_vente',
+                  'prix_vente_ttc', 'prix_de_vente_ttc', 'prix_ttc', 'prix_unitaire',
+                  'prix_unitaire_ttc', 'prix_public', 'prix_detail', 'prix_de_detail',
+                  'tarif', 'selling_price', 'sale_price', 'retail_price'],
+    /* Le prix d'ACHAT — la colonne d'un tarif fournisseur ou d'un bon de
+       livraison. C'est ce qui manquait pour qu'un tel fichier serve vraiment :
+       sans coût, stats() valorise le stock au prix de vente et la marge reste
+       inconnue. Beaucoup d'orthographes, parce qu'aucun fournisseur n'écrit la
+       même — normKey() a déjà ôté les accents avant la comparaison. */
+    cout:        ['cout', 'couts', 'prix_achat', 'prix_d_achat', 'cout_achat', 'cout_unitaire',
+                  'cost', 'cost_price', 'pa', 'p_a', 'prix_fournisseur', 'tarif_achat', 'achat',
+                  'prix_revient', 'prix_de_revient', 'revient', 'buy_price', 'purchase_price'],
     stock:       ['stock', 'quantite', 'qte', 'qty', 'quantity', 'stock_actuel', 'dispo'],
     code_barres: ['code_barres', 'codebarres', 'code_barre', 'barcode', 'ean', 'ean13', 'gencod', 'gencode', 'code', 'upc', 'sku'],
     type:        ['type', 'type_code', 'type_code_barres'],
@@ -225,7 +243,7 @@
       if (!g) {
         g = {
           name, existing: prodByName.get(gk) || null,
-          categoryName: '', priceMAD: NaN, variants: [], lines: [],
+          categoryName: '', priceMAD: NaN, cost: NaN, variants: [], lines: [],
         };
         groups.set(gk, g);
       }
@@ -246,6 +264,12 @@
         const p = num(rawPrice);
         if (isFinite(p)) g.priceMAD = p;
         else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») — ignoré' });
+      }
+      const rawCost = cell(row, idx.cout);
+      if (rawCost && !isFinite(g.cost)) {
+        const c = num(rawCost);
+        if (isFinite(c)) g.cost = c;
+        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») — ignoré' });
       }
 
       /* Variant: couleur × taille. A shop with no colours or no sizes still
@@ -381,6 +405,10 @@
         if (prod) {
           const patch = {};
           if (isFinite(g.priceMAD) && +prod.priceMAD !== g.priceMAD) patch.priceMAD = g.priceMAD;
+          /* Même discipline que le stock : on n'écrit le coût que si le fichier
+             en porte un, sinon un tarif sans colonne de coût remettrait à zéro
+             celui que la boutique a déjà saisi. */
+          if (isFinite(g.cost) && +prod.cost !== g.cost) patch.cost = g.cost;
           if (wantCat && prod.categoryId !== wantCat) patch.categoryId = wantCat;
           if (Object.keys(patch).length) CAT.updateProduct(prod.id, patch);
         } else {
@@ -388,6 +416,7 @@
             name: g.name,
             categoryId: wantCat || null,
             priceMAD: isFinite(g.priceMAD) ? g.priceMAD : 0,
+            cost: isFinite(g.cost) ? g.cost : 0,
             kind: g.kind || 'taille',
           });
           res.products++;
