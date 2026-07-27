@@ -851,7 +851,7 @@
   .kds-ticket { background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; padding: 12px; border-left: 4px solid var(--atlas); cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; }
   html[data-theme="dark"] .kds-ticket { background: var(--paper-soft); }
   .kds-ticket.glovo { border-left-color: #F29137; }
-  .kds-ticket.jumia { border-left-color: #E7611A; }
+  .kds-ticket.yassir { border-left-color: #2B5AA8; }
   .kds-ticket:hover { transform: translateX(2px); }
   .kds-ticket .thead { display: flex; justify-content: space-between; font-size: 11px; color: var(--n-500); font-family: var(--mono); margin-bottom: 6px; letter-spacing: 0.05em; }
   .kds-ticket .thead .timer { color: var(--atlas); font-weight: 600; }
@@ -1565,8 +1565,8 @@
                 <div class="thead"><span>T1 · Fatima</span><span class="timer">04:22</span></div>
                 <ul class="items"><li>Tajine kefta œuf × 2</li><li>Pastilla poulet</li></ul>
               </div>
-              <div class="kds-ticket jumia">
-                <div class="thead"><span>JUMIA #8821</span><span class="timer warn">11:44</span></div>
+              <div class="kds-ticket yassir">
+                <div class="thead"><span>YASSIR #8821</span><span class="timer warn">11:44</span></div>
                 <ul class="items"><li>Couscous royal × 1</li><li>Poulet méchoui</li></ul>
               </div>
               <div class="kds-ticket">

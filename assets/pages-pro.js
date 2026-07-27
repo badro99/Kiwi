@@ -7611,7 +7611,7 @@ handlers['nav-menu'] = () => {
           const idx = list.findIndex(x => x[0] === id);
           if (a === '86') {
             if (menu86.has(id)) menu86.delete(id); else menu86.add(id);
-            window.Kiwi.toast(menu86.has(id) ? `${list[idx][1]} marqué 86 (rupture)` : `${list[idx][1]} de retour à la carte`, { type: menu86.has(id) ? 'warn' : 'success', desc: menu86.has(id) ? 'Retiré du POS et de Glovo · Jumia notifié.' : 'Item disponible sur tous les canaux.' });
+            window.Kiwi.toast(menu86.has(id) ? `${list[idx][1]} marqué 86 (rupture)` : `${list[idx][1]} de retour à la carte`, { type: menu86.has(id) ? 'warn' : 'success', desc: menu86.has(id) ? 'Retiré de la caisse et du QR menu.' : 'Item disponible sur tous les canaux.' });
             pane.innerHTML = renderItems(activeCat);
             wireRows();
           }
@@ -7695,7 +7695,7 @@ function openItemEdit(it) {
     foot: `
       <button class="kb ghost" data-dismiss>Annuler</button>
       <button class="kb danger" data-dismiss onclick="window.Kiwi.toast('${name} supprimé de la carte',{type:'warn',desc:'Item retiré · les commandes ouvertes restent valides.'})">Supprimer</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('${name} mis à jour',{type:'success',desc:'Synchronisé sur POS · Glovo · Jumia · QR menu.'})">Enregistrer</button>
+      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('${name} mis à jour',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'})">Enregistrer</button>
     `
   });
   if (typeof wireDismiss === 'function') wireDismiss(editM);
@@ -7725,7 +7725,7 @@ handlers['menu-add'] = () => {
         </div>
       </div>
       <label style="display:flex; gap:10px; align-items:center; padding:10px 12px; background:var(--paper-soft); border-radius:10px; font-size:13px; cursor:pointer; margin-bottom:6px;">
-        <input type="checkbox" checked /> Publier immédiatement sur tous les canaux (POS · QR · Glovo · Jumia)
+        <input type="checkbox" checked /> Publier immédiatement sur la caisse et le QR menu
       </label>
       <label style="display:flex; gap:10px; align-items:center; padding:10px 12px; background:var(--paper-soft); border-radius:10px; font-size:13px; cursor:pointer;">
         <input type="checkbox" /> Marquer "nouveau" pendant 14 jours
@@ -7733,7 +7733,7 @@ handlers['menu-add'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Annuler</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Synchronisé sur POS · QR · Glovo · Jumia en 4 sec.'}); window.Kiwi.confetti();">Créer & publier</button>
+      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
     `
   }));
 };
@@ -7780,7 +7780,7 @@ handlers['menu-schedule'] = () => {
     body: `
       <div class="p-card" style="margin:0 0 10px;">
         <div class="head"><h4 style="font-size:14px;">Couscous royal</h4><span class="chip ok">vendredi 11h–15h</span></div>
-        <div style="font-size:12.5px; color:var(--n-500);">Affiché automatiquement le vendredi · masqué les autres jours. Glovo & Jumia synchronisés.</div>
+        <div style="font-size:12.5px; color:var(--n-500);">Affiché automatiquement le vendredi · masqué les autres jours.</div>
       </div>
       <div class="p-card" style="margin:0 0 10px;">
         <div class="head"><h4 style="font-size:14px;">Méchoui</h4><span class="chip pend">soir 19h–23h</span></div>
@@ -7806,7 +7806,7 @@ handlers['menu-promote'] = () => {
   wireDismiss(modal({
     tag: 'PROMOUVOIR',
     title: 'Mettre en avant le tajine kefta œuf',
-    desc: 'L\'item apparaîtra en bannière sur le QR menu, le POS et les pages Glovo / Jumia pendant 7 jours.',
+    desc: 'L\'item apparaîtra en bannière sur le QR menu et la caisse pendant 7 jours.',
     width: 540,
     body: `
       <div class="p-card" style="margin:0 0 10px;">
@@ -7823,7 +7823,7 @@ handlers['menu-promote'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Plus tard</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Tajine kefta œuf en avant',{type:'success',desc:'Bannière live sur QR · POS · Glovo · Jumia.'}); window.Kiwi.confetti();">Lancer la promo</button>
+      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Tajine kefta œuf en avant',{type:'success',desc:'Bannière live sur le QR menu et la caisse.'}); window.Kiwi.confetti();">Lancer la promo</button>
     `
   }));
 };
@@ -7848,7 +7848,7 @@ handlers['menu-publish'] = () => {
     `,
     foot: `
       <button class="kb ghost" data-dismiss>Garder en brouillon</button>
-      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée sur 4 canaux',{type:'success',desc:'POS · QR menu · Glovo · Jumia synchronisés en 6 sec.'}); window.Kiwi.confetti();">Publier maintenant</button>
+      <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>
     `
   }));
 };
@@ -7889,7 +7889,7 @@ handlers['menu-publish'] = () => {
       { id: 'T-7824', table: 'TR2',src: 'terrasse', cook: 'AY', elapsed: 88,  items: [{ q: 2, n: 'Tajine kefta', st: 'cuisson' }, { q: 1, n: 'Salade marocaine', st: 'salade' }, { q: 2, n: 'Orange pressée', st: 'boissons' }] },
       { id: 'G-3412', table: 'GLOVO', src: 'livraison', cook: 'MM', elapsed: 548, items: [{ q: 2, n: 'Tajine kefta œuf', st: 'cuisson' }, { q: 1, n: 'Salade marocaine', st: 'salade' }] },
       { id: 'T-7825', table: 'T9', src: 'salle',  cook: 'AY', elapsed: 944, items: [{ q: 1, n: 'Pastilla poulet', st: 'cuisson' }, { q: 1, n: 'Salade marocaine', st: 'salade' }, { q: 1, n: 'Pâtisseries assorties', st: 'desserts' }] },
-      { id: 'J-8821', table: 'JUMIA', src: 'livraison', cook: 'MM', elapsed: 318, items: [{ q: 3, n: 'Tajine kefta', st: 'cuisson' }] },
+      { id: 'Y-8821', table: 'YASSIR', src: 'livraison', cook: 'MM', elapsed: 318, items: [{ q: 3, n: 'Tajine kefta', st: 'cuisson' }] },
       { id: 'T-7826', table: 'TR1', src: 'terrasse', cook: 'AY', elapsed: 42,  items: [{ q: 2, n: 'Briouates viande', st: 'cuisson' }, { q: 1, n: 'Caviar d\'aubergine', st: 'salade' }, { q: 4, n: 'Café double', st: 'boissons' }] },
     ];
     const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -8057,14 +8057,14 @@ handlers['menu-publish'] = () => {
     modal({
       tag: 'STOCK',
       title: `Mettre « ${item} » en 86 ?`,
-      desc: 'Le plat devient indisponible sur tous les canaux : POS, Glovo, Jumia, QR table.',
+      desc: 'Le plat devient indisponible sur la caisse et le QR table.',
       width: 480,
       body: `<div style="font-size:13px; color:var(--n-600); line-height:1.5;">Le client en train de commander voit le plat barré. Vous pouvez le réactiver dès que le stock revient.</div>`,
       foot: `<button class="kb ghost" data-dismiss-modal>Annuler</button><button class="kb danger" data-confirm-86>Confirmer le 86</button>`,
     });
     document.querySelector('[data-confirm-86]')?.addEventListener('click', () => {
       document.querySelector('.kiwi-backdrop')?.remove();
-      toast(`${item} en 86`, { type: 'success', desc: 'Désactivé sur POS, Glovo, Jumia, QR table en 3 secondes.' });
+      toast(`${item} en 86`, { type: 'success', desc: 'Désactivé sur la caisse et le QR table.' });
     });
     document.querySelector('[data-dismiss-modal]')?.addEventListener('click', () => document.querySelector('.kiwi-backdrop')?.remove());
   };
@@ -12157,7 +12157,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               else menu86.add(id);
               toast(menu86.has(id) ? `${it.n} marqué en rupture` : `${it.n} de retour à la carte`, {
                 type: menu86.has(id) ? 'warn' : 'success',
-                desc: menu86.has(id) ? 'Retiré du POS et de Glovo · Jumia notifié.' : 'Produit disponible sur tous les canaux.',
+                desc: menu86.has(id) ? 'Retiré de la caisse et du QR menu.' : 'Produit disponible sur tous les canaux.',
               });
               refreshItems();
               refreshRail();
@@ -12576,7 +12576,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       `,
       foot: `
         <button class="kb ghost" data-dismiss>Annuler</button>
-        <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Synchronisé sur POS · QR · Glovo · Jumia en 4 sec.'}); window.Kiwi.confetti();">Créer & publier</button>
+        <button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Item publié sur la carte',{type:'success',desc:'Visible sur votre caisse et votre QR menu.'}); window.Kiwi.confetti();">Créer & publier</button>
       `,
     });
     wireDismiss(m);
@@ -12622,7 +12622,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           </ul>
         </div>
       `,
-      foot: `<button class="kb ghost" data-dismiss>Garder en brouillon</button><button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée sur 4 canaux',{type:'success',desc:'POS · QR menu · Glovo · Jumia synchronisés en 6 sec.'}); window.Kiwi.confetti();">Publier maintenant</button>`,
+      foot: `<button class="kb ghost" data-dismiss>Garder en brouillon</button><button class="kb atlas" data-dismiss onclick="window.Kiwi.toast('Carte publiée',{type:'success',desc:'Caisse et QR menu à jour.'}); window.Kiwi.confetti();">Publier maintenant</button>`,
     });
     wireDismiss(m);
   };
@@ -12687,7 +12687,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-type { display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 8px; letter-spacing: -0.005em; }
       .kit-type.dineIn { background: rgba(11,110,79,0.10); color: var(--atlas); }
       .kit-type.glovo { background: rgba(242,145,55,0.20); color: #99540F; }
-      .kit-type.jumia { background: rgba(231,97,26,0.16); color: #A53E0E; }
+      .kit-type.yassir { background: rgba(43,90,168,0.16); color: #2B5AA8; }
       .kit-type.takeaway { background: var(--paper-soft); color: var(--n-600); }
       .kit-status { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--n-500); }
       .kit-order.is-new .kit-status { color: var(--atlas); font-weight: 600; }
@@ -12821,7 +12821,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { num: 44, type: 'dineIn', table: '7', status: 'cooking', elapsed: 620, items: [
         { q: 1, n: 'Couscous royal',         stations: ['cuisson'] },
         { q: 1, n: 'Pastilla poulet',        stations: ['cuisson', 'pastry'] } ] },
-      { num: 45, type: 'jumia', code: '8821', status: 'cooking', elapsed: 388, items: [
+      { num: 45, type: 'yassir', code: '8821', status: 'cooking', elapsed: 388, items: [
         { q: 3, n: 'Tajine kefta œuf',       stations: ['cuisson'] },
         { q: 2, n: 'Cocktail mocktail',      stations: ['bar'] } ] },
       { num: 46, type: 'dineIn', table: '2', status: 'cooking', elapsed: 256, items: [
@@ -12869,7 +12869,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
     const typeChip = (o) => {
       if (o.type === 'glovo')    return `<span class="kit-type glovo">Glovo · ${esc(o.code)}</span>`;
-      if (o.type === 'jumia')    return `<span class="kit-type jumia">Jumia · ${esc(o.code)}</span>`;
+      if (o.type === 'yassir')   return `<span class="kit-type yassir">Yassir · ${esc(o.code)}</span>`;
       if (o.type === 'takeaway') return `<span class="kit-type takeaway">${T.takeaway}</span>`;
       return `<span class="kit-type dineIn">${T.table(esc(o.table))}</span>`;
     };
@@ -13056,7 +13056,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       o.status = 'ready';
       o.readyAt = nowHM();
       paint();
-      const delivery = o.type === 'glovo' || o.type === 'jumia' || o.type === 'takeaway';
+      const delivery = o.type === 'glovo' || o.type === 'yassir' || o.type === 'takeaway';
       // force:true — the ready notification must show even though the KDS is an overlay.
       toast(T.readyToast(num), { type: 'success', duration: 2600, force: true, desc: delivery ? T.notifyCounter : T.notifyServer });
     };
@@ -13248,7 +13248,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const m = modal({
       tag: 'STOCK',
       title: `Mettre « ${item} » en 86 ?`,
-      desc: 'Le plat devient indisponible sur tous les canaux : POS, Glovo, Jumia, QR table.',
+      desc: 'Le plat devient indisponible sur la caisse et le QR table.',
       width: 480,
       body: `<div style="font-size:13px; color:var(--n-600); line-height:1.5;">Le client en train de commander voit le plat barré. Vous pouvez le réactiver dès que le stock revient.</div>`,
       foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-confirm-86>Confirmer le 86</button>`,
@@ -13257,7 +13257,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     setTimeout(() => {
       m.el.querySelector('[data-confirm-86]').addEventListener('click', () => {
         m.close();
-        toast(`${item} en 86`, { type: 'success', desc: 'Désactivé sur POS, Glovo, Jumia, QR table en 3 secondes.' });
+        toast(`${item} en 86`, { type: 'success', desc: 'Désactivé sur la caisse et le QR table.' });
       });
     }, 0);
   };

@@ -271,6 +271,64 @@ CREATE TABLE IF NOT EXISTS orders (
 -- both that and the per-merchant daily number lookup.
 CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders (merchant, updated_ts);
 
+-- ── CANAUX EXTÉRIEURS · une commande Glovo est une commande ─────────────────
+-- Le coursier attend devant le comptoir que l'imprimante DU PRESTATAIRE sorte
+-- son étiquette. Kiwi connaît déjà le chemin « commande extérieure → ticket
+-- cuisine → imprimante » : c'est exactement ce que fait OrderPro depuis le
+-- téléphone d'un client. Une commande de livraison n'est pas un autre objet,
+-- c'est la même commande avec une autre provenance.
+--
+-- D'où trois colonnes sur `orders` plutôt qu'une deuxième table : la caisse qui
+-- interroge sa file, l'écran cuisine, l'acceptation par le personnel et
+-- l'impression fonctionnent alors sans une ligne de code de plus. Une table
+-- parallèle aurait imposé de tout écrire deux fois, et de se tromper une fois.
+--
+--   channel   NULL/'kiwi' = le relais OrderPro d'origine. 'glovo', 'shopify',
+--             'generic'… = une commande arrivée par /api/channel/order.
+--   ext_ref   le numéro que le prestataire imprime sur son propre bordereau.
+--             C'est le seul mot commun entre son écran et le nôtre quand il
+--             faut réconcilier une réclamation ; sans lui, « la commande 4712 »
+--             ne désigne rien chez nous.
+--   customer  JSON {name, phone, address, note}. Le coursier n'est pas le
+--             client : un ticket de livraison sans adresse ni téléphone oblige
+--             à retourner voir la tablette du prestataire, ce qui annule tout
+--             le bénéfice.
+--   ALTER TABLE orders ADD COLUMN channel TEXT;
+--   ALTER TABLE orders ADD COLUMN ext_ref TEXT;
+--   ALTER TABLE orders ADD COLUMN customer TEXT;
+
+-- Le jeton qu'un prestataire présente pour déposer une commande.
+--
+-- Pourquoi pas la porte du site : Glovo, Shopify ou un relais Make n'ont ni
+-- session ni cookie et n'en auront jamais. Il leur faut une clé porteuse, donc
+-- une clé qui ne vaut QUE ça — déposer une commande chez UN commerçant. Elle ne
+-- lit rien, n'accepte rien, ne voit aucune autre commande.
+--
+-- Le secret n'est jamais stocké en clair : la ligne ne garde qu'un SHA-256.
+-- SHA-256 et non PBKDF2 (contrairement aux mots de passe et aux codes
+-- opérateur) parce qu'un jeton de 32 octets tirés au hasard n'a pas de
+-- dictionnaire à lui opposer — l'étirement ne protégerait de rien et coûterait
+-- 100 000 itérations à chaque commande déposée.
+--
+-- `id` voyage DANS le jeton (kwc.<id>.<secret>) : sans lui il faudrait
+-- parcourir toutes les lignes pour retrouver à qui appartient un secret.
+CREATE TABLE IF NOT EXISTS channel_links (
+  id         TEXT PRIMARY KEY,   -- "chl-<uuid>", la partie publique du jeton
+  merchant   TEXT NOT NULL,      -- slugMerchant — même colonne vertébrale que sales/orders
+  channel    TEXT NOT NULL,      -- 'glovo' | 'shopify' | 'generic' | …
+  label      TEXT,               -- ce que le commerçant a écrit ("Glovo Maarif")
+  hash       TEXT NOT NULL,      -- SHA-256 hex du secret ; le secret n'est montré qu'UNE fois
+  config     TEXT,               -- JSON propre au canal (domaine boutique, …)
+  status     TEXT NOT NULL DEFAULT 'active',   -- 'active' | 'paused'
+  created_ts INTEGER NOT NULL,
+  last_ts    INTEGER,            -- dernière commande reçue — « ça marche » se lit ici
+  last_err   TEXT                -- dernier refus, pour diagnostiquer sans les logs
+);
+-- Un commerçant peut avoir plusieurs clés par canal (une par établissement, ou
+-- une de rechange le temps d'une rotation), d'où l'index plutôt qu'une clé
+-- primaire composite.
+CREATE INDEX IF NOT EXISTS idx_channel_links_merchant ON channel_links (merchant, channel);
+
 -- ── BOUTIQUE · inventaire (le stock privé du commerçant) ────────────────────
 -- Le catalogue d'une boutique — produits, déclinaisons couleur × taille, stock
 -- et codes-barres — vivait UNIQUEMENT dans le localStorage du navigateur qui

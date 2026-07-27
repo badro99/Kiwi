@@ -193,7 +193,7 @@ html[data-theme="dark"] .kds-stationbody { background: var(--paper-muted); }
 html[data-theme="dark"] .kds-tk { background: var(--paper-soft); }
 .kds-tk:hover { transform: translateY(-1px); box-shadow: 0 4px 8px -4px rgba(10,15,13,0.12); }
 .kds-tk.glovo { border-left-color: #F29137; }
-.kds-tk.jumia { border-left-color: #E7611A; }
+.kds-tk.yassir { border-left-color: #2B5AA8; }
 .kds-tk.priority { border-left-color: var(--warning); animation: priority-pulse 1.6s infinite; }
 @keyframes priority-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,154,43,0.4); } 50% { box-shadow: 0 0 0 5px rgba(217,154,43,0); } }
 .kds-tk .h { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-family: var(--mono); margin-bottom: 6px; letter-spacing: 0.04em; }

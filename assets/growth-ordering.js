@@ -12,8 +12,15 @@
   const BASE = 48200;                              // online sales / month (MAD)
   const CH = [
     { id: 'kiwi',  label: 'Kiwi Direct', sub: { fr: '0 % commission · paiement Kiwi', en: '0 % commission · Kiwi payment', ar: '0٪ عمولة · دفع كيوي' }, state: 'on' },
-    { id: 'glovo', label: 'Glovo',       sub: { fr: 'Agrégateur · ~30 %', en: 'Aggregator · ~30 %', ar: 'وسيط · ~30٪' }, state: 'linked' },
-    { id: 'jumia', label: 'Jumia Food',  sub: { fr: 'Agrégateur · ~28 %', en: 'Aggregator · ~28 %', ar: 'وسيط · ~28٪' }, state: 'connect' },
+    /* Glovo était marqué `linked`. Il ne l'a jamais été : aucun code n'a jamais
+       parlé à Glovo. « Connecter » ouvre maintenant le vrai connecteur
+       (assets/channel-link.js → /api/channel/order), qui remet au commerçant
+       l'adresse et la clé que le programme POS de Delivery Hero réclame.
+       Jumia Food a été retiré : l'enseigne a quitté le Maroc fin 2023. La
+       laisser dans une liste d'intégrations, c'est dater le produit de trois
+       ans devant le premier restaurateur qui la lit. */
+    { id: 'glovo',  label: 'Glovo',          sub: { fr: 'Agrégateur · ~30 %', en: 'Aggregator · ~30 %', ar: 'وسيط · ~30٪' }, state: 'connect' },
+    { id: 'yassir', label: 'Yassir Express', sub: { fr: 'Agrégateur · commission variable', en: 'Aggregator · variable commission', ar: 'وسيط · عمولة متغيرة' }, state: 'connect' },
     { id: 'cc',    label: 'Click & Collect', sub: { fr: 'Retrait en boutique', en: 'In-store pickup', ar: 'الاستلام من المتجر' }, state: 'on' },
     { id: 'liv',   label: 'Livraison Kiwi', sub: { fr: 'Flotte Kiwi · tarif fixe', en: 'Kiwi fleet · flat fee', ar: 'أسطول كيوي · سعر ثابت' }, state: 'connect' },
   ];
@@ -26,7 +33,7 @@
       keepNote: () => `de plus qu'avec Glovo, chaque mois. Kiwi Direct ne prélève rien, les agrégateurs gardent près du tiers de chaque commande.`,
       onBase: (b) => `Sur ${fmt(b)} MAD/mois en ligne`,
       channels: 'Canaux de vente', channelsHint: 'Connectez vos points de vente',
-      on: 'Activé', linked: 'Connecté', connect: 'Connecter',
+      on: 'Activé', linked: 'Connecté', connect: 'Connecter', waiting: 'Clé remise · en attente',
       inbox: 'Commandes en ligne', inboxHint: (n) => `${n} aujourd'hui`,
       st: { new: 'Nouveau', prep: 'En préparation', ready: 'Prêt' },
       cta: 'Activer la boutique en ligne', close: 'Fermer', toastT: 'Boutique en ligne activée', toastD: 'kiwi.shop/cafe-atlas est en ligne · 0 % de commission.', sent: 'Commande envoyée en cuisine' },
@@ -37,7 +44,7 @@
       keepNote: () => `more than with Glovo, every month. Kiwi Direct takes nothing, aggregators keep nearly a third of every order.`,
       onBase: (b) => `On ${fmt(b)} MAD/mo online`,
       channels: 'Sales channels', channelsHint: 'Connect your points of sale',
-      on: 'On', linked: 'Connected', connect: 'Connect',
+      on: 'On', linked: 'Connected', connect: 'Connect', waiting: 'Key issued · waiting',
       inbox: 'Online orders', inboxHint: (n) => `${n} today`,
       st: { new: 'New', prep: 'Preparing', ready: 'Ready' },
       cta: 'Turn on the online store', close: 'Close', toastT: 'Online store activated', toastD: 'kiwi.shop/cafe-atlas is live · 0 % commission.', sent: 'Order sent to the kitchen' },
@@ -48,7 +55,7 @@
       keepNote: () => `أكثر من Glovo، كل شهر. كيوي دايركت لا يأخذ شيئًا، الوسطاء يحتفظون بقرابة ثلث كل طلب.`,
       onBase: (b) => `على ${fmt(b)} درهم/شهر عبر الإنترنت`,
       channels: 'قنوات البيع', channelsHint: 'اربط نقاط بيعك',
-      on: 'مفعّل', linked: 'متصل', connect: 'ربط',
+      on: 'مفعّل', linked: 'متصل', connect: 'ربط', waiting: 'تم تسليم المفتاح · في الانتظار',
       inbox: 'الطلبات عبر الإنترنت', inboxHint: (n) => `${n} اليوم`,
       st: { new: 'جديد', prep: 'قيد التحضير', ready: 'جاهز' },
       cta: 'تفعيل المتجر الإلكتروني', close: 'إغلاق', toastT: 'تم تفعيل المتجر', toastD: 'kiwi.shop/cafe-atlas مباشر · عمولة 0٪.', sent: 'أُرسل الطلب إلى المطبخ' },
@@ -107,7 +114,7 @@
   .ord-o + .ord-o { border-top:1px solid var(--n-200); }
   .ord-o:hover { background:var(--paper-soft); }
   .ord-o-ch { font-size:10px; font-family:var(--mono); letter-spacing:.04em; padding:4px 9px; border-radius:7px; white-space:nowrap; }
-  .ord-o-ch.kiwi { background:var(--mint-soft); color:#075238; } .ord-o-ch.glovo { background:#FFE9D6; color:#B5651D; } .ord-o-ch.jumia { background:#FDE2E8; color:#B23A5A; }
+  .ord-o-ch.kiwi { background:var(--mint-soft); color:#075238; } .ord-o-ch.glovo { background:#FFE9D6; color:#B5651D; } .ord-o-ch.yassir { background:#E6F0FF; color:#2B5AA8; }
   .ord-o-m { min-width:0; } .ord-o-who { font-size:13px; font-weight:500; } .ord-o-it { font-size:11.5px; color:var(--n-500); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ord-o-amt { font-family:var(--mono); font-size:13px; font-weight:500; }
   .ord-o-st { font-size:10.5px; font-family:var(--mono); padding:3px 8px; border-radius:6px; white-space:nowrap; }
@@ -163,11 +170,11 @@
       { ch: 'kiwi', who: 'Nawal K.', it: [0, 8], amt: 176, st: 'new' },
       { ch: 'glovo', who: 'Karim B.', it: [6], amt: 95, st: 'prep' },
       { ch: 'kiwi', who: 'Salma F.', it: [2, 9], amt: 142, st: 'prep' },
-      { ch: 'jumia', who: 'Mehdi C.', it: [6, 8], amt: 88, st: 'ready' },
+      { ch: 'yassir', who: 'Mehdi C.', it: [6, 8], amt: 88, st: 'ready' },
       { ch: 'kiwi', who: 'Imane S.', it: [2], amt: 50, st: 'ready' },
       { ch: 'kiwi', who: 'Youssef A.', it: [0], amt: 180, st: 'ready' },
     ];
-    const chColor = { kiwi: 'background:var(--riad);color:var(--mint)', glovo: 'background:#FFE9D6;color:#B5651D', jumia: 'background:#FDE2E8;color:#B23A5A', cc: 'background:var(--paper-soft);color:var(--n-600)', liv: 'background:var(--paper-soft);color:var(--n-600)' };
+    const chColor = { kiwi: 'background:var(--riad);color:var(--mint)', glovo: 'background:#FFE9D6;color:#B5651D', yassir: 'background:#E6F0FF;color:#2B5AA8', cc: 'background:var(--paper-soft);color:var(--n-600)', liv: 'background:var(--paper-soft);color:var(--n-600)' };
     const chState = (s) => s === 'connect' ? `<button class="ord-connect" data-ord-connect>${T.connect}</button>`
       : `<span class="ord-pill">${s === 'on' ? T.on : T.linked}</span><button class="gk-tg on" data-ord-tg></button>`;
 
@@ -188,19 +195,19 @@
           <div class="ord-keep-top"><span class="ord-keep-eyebrow">${T.keepEyebrow}</span><span class="ord-keep-base">${T.onBase(BASE)}</span></div>
           <div class="ord-keep-big gk-serif">+${fmt(BASE * 0.30)}<span class="un">${T.keepUnit}</span></div>
           <div class="ord-keep-note">${T.keepNote()}</div>
-          <div class="ord-bars">${bar(0, 'Kiwi Direct')}${bar(0.30, 'Glovo')}${bar(0.28, 'Jumia Food')}</div>
+          <div class="ord-bars">${bar(0, 'Kiwi Direct')}${bar(0.30, 'Glovo')}${bar(0.28, 'Yassir Express')}</div>
         </div>
       </div>
 
       <div class="ord-sec"><span class="ord-sec-t">${T.channels}</span><span class="ord-sec-h">${T.channelsHint}</span></div>
-      <div class="ord-chs">${CH.map(c => `<div class="ord-ch">
+      <div class="ord-chs">${CH.map(c => `<div class="ord-ch" data-ord-ch="${c.id}">
         <div class="ord-ch-ic" style="${chColor[c.id]}">${c.label[0]}</div>
         <div class="ord-ch-b"><div class="ord-ch-n">${c.label}</div><div class="ord-ch-s">${c.sub[lang()] || c.sub.fr}</div></div>
         ${chState(c.state)}</div>`).join('')}</div>
 
       <div class="ord-sec"><span class="ord-sec-t">${T.inbox}</span><span class="ord-sec-h">${T.inboxHint(orders.length)}</span></div>
       <div class="ord-feed">${orders.map(o => `<div class="ord-o" data-ord-order>
-        <div class="ord-o-ch ${o.ch}">${o.ch === 'kiwi' ? 'Kiwi' : o.ch === 'glovo' ? 'Glovo' : 'Jumia'}</div>
+        <div class="ord-o-ch ${o.ch}">${o.ch === 'kiwi' ? 'Kiwi' : o.ch === 'glovo' ? 'Glovo' : 'Yassir'}</div>
         <div class="ord-o-m"><div class="ord-o-who">${o.who}</div><div class="ord-o-it">${o.it.map(pick).join(' · ')}</div></div>
         <div class="ord-o-amt">${fmt(o.amt)} MAD</div>
         <div class="ord-o-st ${o.st}">${T.st[o.st]}</div></div>`).join('')}</div>
@@ -215,7 +222,24 @@
       const cn = e.target.closest('[data-ord-connect]');
       if (cp) { cp.textContent = T.copied; toast(T.copied, { type: 'success' }); }
       else if (e.target.closest('[data-ord-tg]')) { e.target.closest('[data-ord-tg]').classList.toggle('on'); }
-      else if (cn) { cn.outerHTML = `<span class="ord-pill">${T.linked}</span><button class="gk-tg on" data-ord-tg></button>`; toast(T.linked, { type: 'success' }); }
+      /* Ce bouton remplaçait son propre libellé par « Connecté » et affichait un
+         toast de succès. Rien d'autre. Le commerçant repartait convaincu que
+         Glovo écrivait dans sa caisse, et rien ne viendrait jamais le
+         détromper. Il ouvre maintenant le connecteur réel ; l'état ne bascule
+         que si le serveur a bien créé la clé. */
+      else if (cn) {
+        const id = cn.closest('[data-ord-ch]') ? cn.closest('[data-ord-ch]').getAttribute('data-ord-ch') : 'generic';
+        const row = cn.closest('.ord-ch');
+        const name = row ? ((row.querySelector('.ord-ch-n') || {}).textContent || '') : '';
+        if (!window.KiwiChannels) { toast(T.connect, { type: 'info' }); return; }
+        cn.disabled = true;
+        window.KiwiChannels.connect(id, (name || '').trim()).then((okd) => {
+          cn.disabled = false;
+          // « En attente » et non « Connecté » : la clé existe, le prestataire
+          // n'a encore rien envoyé. La pastille verte se mérite.
+          if (okd) cn.textContent = T.waiting;
+        });
+      }
       else if (e.target.closest('[data-ord-order]')) { toast(T.sent, { type: 'info' }); }
       else if (e.target.closest('[data-ord-cta]')) { confetti && confetti(); toast(T.toastT, { type: 'success', desc: T.toastD.replace('cafe-atlas', ordSlug()) }); }
     });

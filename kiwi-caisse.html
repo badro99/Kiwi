@@ -3704,7 +3704,7 @@
     .kit-type { display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 8px; letter-spacing: -0.005em; }
     .kit-type.dineIn { background: rgba(31,93,60,0.10); color: var(--forest); }
     .kit-type.glovo { background: rgba(242,145,55,0.20); color: #99540F; }
-    .kit-type.jumia { background: rgba(231,97,26,0.16); color: #A53E0E; }
+    .kit-type.yassir { background: rgba(43,90,168,0.16); color: #2B5AA8; }
     .kit-type.takeaway { background: var(--mint-tint); color: var(--forest); }
     .kit-status { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
     .kit-order.is-new .kit-status { color: var(--forest); font-weight: 600; }
@@ -3983,6 +3983,11 @@
   <script src="assets/orderpro-inbox.js" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
+  <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
+       pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
+       l'inventaire, les documents du magasin, les commandes en ligne et les
+       modules, sans jamais recharger la page. -->
+  <script src="assets/caisse-refresh.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -4131,6 +4136,18 @@
       // que ce script : on diffère l'init jusqu'à ce que le DOM soit prêt.
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFs);
       else initFs();
+
+      /* « Rafraîchir » de la caisse restaurant. Les métiers reçoivent le leur du
+         dispatcher et le pressing se sert lui-même ; ce shell-ci est statique,
+         alors on le pose sur son rail dès que le DOM est là. Scopé à la sidebar :
+         mount() cherche d'abord un #xx-lock, et un métier déjà ouvert dans la
+         page en a un — le lui donner mettrait le bouton dans l'écran d'à côté. */
+      function initRefresh() {
+        var rail = document.querySelector('.sidebar');
+        if (rail && window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(rail);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRefresh);
+      else initRefresh();
     })();
   </script>
 
@@ -10776,7 +10793,7 @@
           { q: 2, n: 'Tajine poulet citron', stations: ['cuisson'] }, { q: 1, n: 'Cornes de gazelle', stations: ['pastry'] } ] },
         { num: 44, type: 'dineIn', table: '7', status: 'cooking', ago: 620, items: [
           { q: 1, n: 'Couscous royal', stations: ['cuisson'] }, { q: 1, n: 'Pastilla poulet', stations: ['cuisson', 'pastry'] } ] },
-        { num: 45, type: 'jumia', code: '8821', status: 'cooking', ago: 388, items: [
+        { num: 45, type: 'yassir', code: '8821', status: 'cooking', ago: 388, items: [
           { q: 3, n: 'Tajine kefta œuf', stations: ['cuisson'] }, { q: 2, n: 'Cocktail mocktail', stations: ['bar'] } ] },
         { num: 46, type: 'dineIn', table: '2', status: 'cooking', ago: 256, items: [
           { q: 2, n: 'Crêpe complète', stations: ['crepes'] }, { q: 4, n: 'Café noir double', note: '2 sans sucre', stations: ['boissons'] } ] },
@@ -10826,7 +10843,7 @@
 
     function kdsTypeChip(o) {
       if (o.type === 'glovo')    return `<span class="kit-type glovo">Glovo · ${kdsEsc(o.code)}</span>`;
-      if (o.type === 'jumia')    return `<span class="kit-type jumia">Jumia · ${kdsEsc(o.code)}</span>`;
+      if (o.type === 'yassir')   return `<span class="kit-type yassir">Yassir · ${kdsEsc(o.code)}</span>`;
       if (o.type === 'takeaway') return `<span class="kit-type takeaway">À emporter</span>`;
       return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}</span>`;
     }

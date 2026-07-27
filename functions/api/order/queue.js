@@ -41,27 +41,45 @@ export async function onRequestGet(context) {
   const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
   const now = Date.now();
 
-  let rows = { results: [] };
-  try {
-    rows = await env.DB.prepare(
-      `SELECT id, number, mode, table_no, total, lines, status, created_ts, updated_ts
-         FROM orders
+  /* Deux requêtes pour une seule idée. Les colonnes de canal (channel, ext_ref,
+   * customer) sont arrivées avec /api/channel/order ; une base où la migration
+   * n'est pas encore passée fait échouer le SELECT qui les nomme. Sans ce
+   * repli, ajouter la livraison aurait ÉTEINT la file des commandes du
+   * téléphone client sur toute base pas encore migrée — casser ce qui marche
+   * pour livrer ce qui n'existe pas encore. */
+  const COLS = 'id, number, mode, table_no, total, lines, status, created_ts, updated_ts';
+  const WHERE = `FROM orders
         WHERE merchant = ? AND updated_ts > ? AND status IN ('pending','accepted','ready')
         ORDER BY created_ts
-        LIMIT ?`
-    ).bind(merchant, since, MAX_ROWS).all();
+        LIMIT ?`;
+  let rows = { results: [] };
+  try {
+    rows = await env.DB.prepare(`SELECT ${COLS}, channel, ext_ref, customer ${WHERE}`)
+      .bind(merchant, since, MAX_ROWS).all();
   } catch (_) {
-    // Table not migrated yet → an empty queue, never an error the till has to
-    // handle. The caisse keeps polling and lights up when the partner deploys.
-    return json({ ok: true, orders: [], now });
+    try {
+      rows = await env.DB.prepare(`SELECT ${COLS} ${WHERE}`)
+        .bind(merchant, since, MAX_ROWS).all();
+    } catch (_) {
+      // Table pas migrée du tout → une file vide, jamais une erreur que la
+      // caisse aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
+      return json({ ok: true, orders: [], now });
+    }
   }
 
   const orders = (rows.results || []).map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
+    let customer = null;
+    try { customer = r.customer ? JSON.parse(r.customer) : null; } catch (_) { customer = null; }
     return {
       id: r.id, number: r.number, mode: r.mode, table: r.table_no || '',
       total: r.total, lines, status: r.status,
+      // Absent (base pas encore migrée) ⇒ 'kiwi' : une commande sans canal est
+      // une commande du relais d'origine, c'est ce qu'elle a toujours été.
+      channel: r.channel || 'kiwi',
+      ref: r.ext_ref || '',
+      customer,
       created_ts: r.created_ts, updated_ts: r.updated_ts,
     };
   });

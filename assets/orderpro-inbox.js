@@ -81,18 +81,22 @@
   }
 
   /* ── network ──────────────────────────────────────────────────────────── */
+  /* Rend le nombre de commandes EN ATTENTE découvertes par cet appel, ou -1
+   * quand la question n'a pas pu être posée (pas de magasin, module coupé,
+   * hors ligne) — un « Rafraîchir » ne doit pas annoncer « 0 nouvelle » alors
+   * qu'il n'a parlé à personne. */
   function pull() {
     var m = merchant();
-    if (!m) return;
+    if (!m) return Promise.resolve(-1);
     // Module coupé ⇒ personne ne peut commander (functions/api/menu.js et
     // /api/order refusent déjà), donc la file est vide par construction :
     // inutile d'interroger le serveur toutes les quelques secondes pour rien.
-    if (!orderProOn()) { chip(); return; }
-    fetch('/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + state.since, {
+    if (!orderProOn()) { chip(); return Promise.resolve(-1); }
+    return fetch('/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + state.since, {
       headers: { Accept: 'application/json' }, cache: 'no-store',
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (!j || !j.ok) return;
+        if (!j || !j.ok) return -1;
         state.since = j.now || state.since;
         var fresh = 0;
         (j.orders || []).forEach(function (o) {
@@ -101,8 +105,9 @@
         });
         if (fresh) announce(fresh);
         paint();
+        return fresh;
       })
-      .catch(function () { /* no backend / offline → keep the last picture */ });
+      .catch(function () { return -1; });   /* no backend / offline → keep the last picture */
   }
 
   function setStatus(id, status) {

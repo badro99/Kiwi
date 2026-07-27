@@ -1184,7 +1184,14 @@
     removeBarcode: (id, c) => (load(), removeBarcode(id, c)), findByBarcode: (c) => (load(), findByBarcode(c)),
     resolveScan: (c) => (load(), resolveScan(c)), barcodeExists: (c) => (load(), barcodeExists(c)), primaryBarcode,
     // Le stock du MÊME article dans les autres établissements du compte.
-    crossStock,
+    crossStock, crossReset,
+    /* Relire la copie serveur MAINTENANT, sans attendre le retour sur l'onglet.
+     * C'est ce que demande le bouton « Rafraîchir » de la caisse : le commerçant
+     * vient d'importer depuis le tableau de bord, ou l'autre poste a vendu, et il
+     * veut le voir tout de suite. Rend `true` si l'inventaire a bougé.
+     * Le cache « autre boutique » repart aussi à zéro : son stock a pu changer
+     * autant que le nôtre, et la réponse gardée en mémoire vaut 30 s. */
+    sync: () => { crossReset(); load(); return pull(true); },
     // util
     stats: () => (load(), stats()), compat: () => (load(), compat()), exportCsv: () => (load(), exportCsv()),
     get _key() { return KEY; }, get _venue() { return VENUE; },

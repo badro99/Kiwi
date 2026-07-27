@@ -3777,7 +3777,7 @@
   const INTEG_NOTCONN = { fr: 'Non connecté', en: 'Not connected', ar: 'غير متّصل' };
   const INTEG_LIST = [
     { n: 'Glovo', logo: 'G', bg: '#F29137' },
-    { n: 'Jumia Food', logo: 'J', bg: '#E7611A' },
+    { n: 'Yassir Express', logo: 'Y', bg: '#2B5AA8' },
     { n: 'Comptabilité', logo: 'A', bg: '#1D3F6B' },
     { n: 'Bank of Africa', logo: 'B', bg: '#00613E' },
   ];

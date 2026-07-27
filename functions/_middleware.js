@@ -117,6 +117,14 @@ export async function onRequest(context) {
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path.startsWith('/api/media/'))) return next();
   if (method === 'POST' && path === '/api/order') return next();
+  /* Le dépôt d'une commande par un canal extérieur (Glovo, Shopify, un relais
+   * Make). Ces appelants n'ont ni session ni cookie et n'en auront jamais : ils
+   * présentent une clé porteuse dans l'en-tête Authorization, que le handler
+   * vérifie lui-même contre channel_links. Passer cette porte-ci ne prouve donc
+   * toujours rien — exactement comme /api/order, qui est ouvert mais refuse si
+   * Order Pro n'est pas activé. Chemin EXACT : rien sous /api/channel/ d'autre
+   * n'est ouvert, et la gestion des clés reste derrière la porte normale. */
+  if (method === 'POST' && path === '/api/channel/order') return next();
 
   // /order is the short link written onto NFC tags — every byte counts on an
   // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite
