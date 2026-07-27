@@ -27,8 +27,15 @@ assessing whether you two work as a pair.
 
 ### 0:24 – 0:30 · Title card
 
-> **Z:** So we built the whole operating system for the shop. One app, sixteen
+> **Z:** So we built the whole operating system for the shop. One app, fifteen
 > different trades.
+
+> **On "fifteen":** counted from the code, not estimated. `assets/pos-dispatch.js`
+> registers 14 métiers on PINs 0002–0015, plus the restaurant the demo runs on.
+> There is also a non-PIN-routed `pos-mobile.js` and a "pressing" entry outside
+> the registry — if you count either as a trade you sell, set `CONFIG.trades` to
+> 16 in `film.html`, change this line, and re-render. Worth getting right: the
+> demo lock screen prints the PIN range, so it is countable on camera.
 
 ### 0:30 – 1:02 · The montage — one line per trade, 4 s each
 
@@ -110,7 +117,7 @@ survives the interview and an impressive vague one does not.
   section by section makes every section sound like a fresh start.
 - **Don't match the timings exactly.** Land slightly early and let the picture
   run. Silence over a working product reads as confidence.
-- **Say the numbers slowly.** 199, twenty dollars, sixteen — these are the words
+- **Say the numbers slowly.** 199, twenty dollars, fifteen — these are the words
   a partner writes down.
 - **Accents are fine and you should not flatten them.** Speak a little slower
   than feels natural and articulate the consonants.

@@ -177,6 +177,16 @@ em, i, cite, dfn, var { font-style: normal; }
    ═════════════════════════════════════════════════════════════════════════ */
 
 const CONFIG = {
+  /* How many trades the film claims. Counted, not assumed: assets/pos-dispatch.js
+     registers 14 métiers on PINs 0002–0015, plus the restaurant the demo itself
+     runs on = 15. (There is a 15th module, pos-mobile.js, that is not
+     PIN-routed, and a "pressing" entry outside the registry — if either counts
+     as a trade you sell, raise this to 16 and re-render.) Do not round it up on
+     instinct: the demo lock screen prints the PIN range, so anyone watching can
+     count them. */
+  trades: 15,
+  tradesWord: 'Fifteen',
+
   /* ⚠️  REPLACE THIS WITH YOUR REAL NUMBER BEFORE SENDING TO YC.
      The default below is a true statement about the product, so the film is
      shippable as-is — but a traction beat with an actual number (paying shops,
@@ -184,7 +194,7 @@ const CONFIG = {
      Change `line` and `sub`, re-run the render, done. */
   traction: {
     kicker: 'Where we are',
-    line: 'Two founders. Sixteen trades.\nOne system, already built.',
+    line: 'Two founders. Fifteen trades.\nOne system, already built.',
     sub: 'Tanger, Maroc',
   },
   founders: 'Badr-Eddin Bakkioui   ·   Zakariae Attahiri',
@@ -367,7 +377,7 @@ function makeScene(id) {
   a.appendChild(words('One app.'));
   const b = el('div', 'display serif atlas');
   b.style.marginTop = '4px';
-  b.appendChild(words('Sixteen trades.'));
+  b.appendChild(words(CONFIG.tradesWord + ' trades.'));
 
   box.appendChild(a); box.appendChild(b);
   pad.appendChild(box); r.appendChild(pad);
@@ -703,7 +713,7 @@ const DRAW = {
       s.trade.textContent = tr.trade;
       s.venue.textContent = tr.venue;
       s.note.textContent = tr.note;
-      s.pip.textContent = String(i + 1).padStart(2, '0') + ' / 16';
+      s.pip.textContent = String(i + 1).padStart(2, '0') + ' / ' + CONFIG.trades;
       s.__i = i;
     }
     const ca = Math.min(win(u, 0.06, 0.30), 1 - win(u, 0.88, 1));
