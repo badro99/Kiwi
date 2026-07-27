@@ -159,6 +159,105 @@ em, i, cite, dfn, var { font-style: normal; }
   .err{color:var(--warn); font-size:.8rem; min-height:1em; margin:4px 0 0}
   .hint{color:var(--muted); font-size:.78rem; margin:10px 0 0}
   .selname{font-weight:640; color:var(--riad)}
+
+  /* ── Un bloc pleine largeur sous la grille à deux colonnes ─────────────────
+     Les ventes de test et les adresses e-mail ne sont pas des réglages à côté
+     des PINs : ce sont des gestes de support, avec un écran de conséquences.
+     Ils prennent la largeur, et un filet les sépare de ce qui précède. */
+  .blk{margin-top:22px; padding-top:18px; border-top:1px solid var(--line)}
+  .blk-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px}
+  .blk-head .sub{margin:0}
+  .blk-head .spacer{margin-left:auto}
+
+  /* Le bandeau « vous pouvez regarder, pas agir ». Affiché quand la console est
+     ouverte par le laissez-passer d'équipe : le geste demande un code opérateur
+     nommé (functions/auth/_lib.js › isSeniorOperator). Dire pourquoi vaut mieux
+     que griser un bouton et laisser chercher. */
+  .lock-note{display:flex; gap:9px; align-items:flex-start; font-size:.82rem; color:#8a5a00;
+             background:#fdf6e6; border:1px solid #e8d9b0; border-radius:10px; padding:10px 12px; margin:0 0 14px}
+  .lock-note b{color:#6b4600}
+
+  /* Recherche de ventes — les critères d'un opérateur au téléphone : un montant
+     lu sur un reçu, une plage de dates, un numéro de ticket. */
+  .filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px}
+  .filters input, .filters select{font:inherit; font-size:.84rem; padding:8px 10px; border:1.5px solid var(--line);
+                                  border-radius:9px; background:var(--surface); color:var(--ink)}
+  .filters input:focus, .filters select:focus{outline:none; border-color:var(--atlas)}
+  .filters input.q{flex:1; min-width:170px}
+  .filters input.d{width:150px} .filters input.n{width:96px}
+  .filters .fl-lbl{font:600 .68rem/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+
+  .tslist{border:1px solid var(--line); border-radius:11px; overflow:hidden}
+  .tsrow{display:grid; grid-template-columns:auto 128px 96px 78px 1fr auto; align-items:center; gap:10px;
+         padding:9px 12px; border-bottom:1px solid var(--line); font-size:.85rem; cursor:pointer}
+  .tsrow:last-of-type{border-bottom:0}
+  .tsrow:hover{background:#f4f1ea}
+  .tsrow.on{background:#eef7f1}
+  .tsrow.void{opacity:.62}
+  .tsrow .ts-when{font-family:var(--mono); font-size:.76rem; color:var(--muted); white-space:nowrap}
+  .tsrow .ts-amt{font-family:var(--mono); text-align:right; font-weight:640; white-space:nowrap}
+  .tsrow .ts-lbl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  .tsrow .ts-ref{font-family:var(--mono); font-size:.72rem; color:var(--muted)}
+  .tsrow input[type=checkbox]{width:16px; height:16px; accent-color:var(--atlas); cursor:pointer}
+  /* Le ticket complet, ouvert sous sa ligne. « Ouvrir la transaction avant
+     d'agir » n'est pas une politesse : c'est ce qui distingue la vente d'essai
+     à 1 MAD du vrai panier de 940 MAD passé la même minute. */
+  .ts-detail{padding:10px 14px 14px 44px; background:#faf8f3; border-bottom:1px solid var(--line); font-size:.82rem}
+  .ts-detail .l{display:flex; gap:10px; padding:3px 0; color:var(--muted)}
+  .ts-detail .l b{color:var(--ink); font-weight:600; min-width:0; flex:1}
+  .ts-detail .l .q{font-family:var(--mono)}
+  .ts-detail .meta{font-family:var(--mono); font-size:.72rem; color:var(--muted); margin-top:8px}
+  .ts-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0}
+  .ts-bar .n{font-weight:640; color:var(--riad); font-size:.86rem}
+  .vpill{font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; padding:3px 6px;
+         border-radius:5px; background:#fbeecb; color:#8a5a00; border:1px solid #e8d9b0; white-space:nowrap}
+
+  /* L'écran de conséquences. Il n'est pas décoratif : c'est la seule chose qui
+     sépare « je sors une vente d'essai » de « je viens de trouer un Z clôturé ». */
+  .imp{margin-top:14px; border:1.5px solid var(--atlas); border-radius:12px; padding:15px; background:#f3faf6}
+  .imp h4{margin:0 0 4px; font-size:.92rem; color:var(--riad)}
+  .imp .figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:12px 0}
+  .imp .fig{background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:9px 11px}
+  .imp .fig .v{font-family:var(--mono); font-weight:660; font-size:1.02rem; color:var(--riad)}
+  .imp .fig .k{font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:2px}
+  .imp .lst{margin:0 0 10px; font-size:.83rem; color:var(--muted)}
+  .imp .lst b{color:var(--ink)}
+  .imp .box{border-radius:9px; padding:10px 12px; margin:0 0 10px; font-size:.83rem}
+  .imp .box.warn{background:#fdf6e6; border:1px solid #e8d9b0; color:#7a5200}
+  .imp .box.stop{background:#fbeeeb; border:1px solid #e7ccc6; color:#8e3324}
+  .imp .box p{margin:0 0 5px} .imp .box p:last-child{margin:0}
+  .imp .box b{font-weight:660}
+  .imp .reason{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0 0}
+  .imp .reason select, .imp .reason input{font:inherit; font-size:.85rem; padding:9px 11px;
+        border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
+  .imp .reason input{flex:1; min-width:180px}
+  .imp .reason select:focus, .imp .reason input:focus{outline:none; border-color:var(--atlas)}
+  .imp .acts{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 0}
+
+  /* Comptes & adresses. Une ligne par rôle, parce que les rôles ne se corrigent
+     pas dans le même esprit — la clé de connexion n'est pas l'adresse du comptable. */
+  .mailrow{display:grid; grid-template-columns:150px 1fr auto; align-items:center; gap:10px;
+           padding:10px 0; border-bottom:1px solid var(--line); font-size:.87rem}
+  .mailrow:last-of-type{border-bottom:0}
+  .mailrow .k{font:600 .7rem/1.3 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  .mailrow .v{font-family:var(--mono); font-size:.84rem; overflow:hidden; text-overflow:ellipsis}
+  .mailrow .v.none{font-family:inherit; color:var(--muted); font-style:normal}
+  .teamlist{margin-top:10px}
+  .teamlist .tm{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:.82rem; color:var(--muted)}
+  .teamlist .tm b{color:var(--ink); font-weight:600}
+  .teamlist .tm .em{font-family:var(--mono); font-size:.78rem}
+  .rst{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px}
+  .rst .state{font-size:.82rem; color:var(--muted)}
+
+  /* Le journal, désormais commun aux trois panneaux : modules, ventes, comptes. */
+  .aud-row .ab.cut{color:var(--warn); border-color:#e7ccc6}
+  .aud-row .ab.acct{color:var(--riad); border-color:color-mix(in srgb, var(--riad) 34%, transparent)}
+  .aud-why{grid-column:2 / -1; font-size:.76rem; color:var(--muted); padding:0 0 4px}
+  @media(max-width:720px){
+    .tsrow{grid-template-columns:auto 1fr auto; row-gap:2px}
+    .tsrow .ts-ref, .tsrow .ts-when{grid-column:2 / -1}
+    .mailrow{grid-template-columns:1fr; gap:4px}
+  }
   @media (prefers-color-scheme:dark){
     :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
     tbody tr:hover{background:#1a221e} tbody tr.sel{background:#17241d}
@@ -177,6 +276,20 @@ em, i, cite, dfn, var { font-style: normal; }
     tr.store-row td:first-child{border-left-color:#26302b}
     .store-switch{background:#1c2420}
     .store-switch button:hover{color:#cfeeda}
+    .filters input, .filters select{background:#151b18; color:#cfeeda}
+    .tsrow:hover{background:#1a221e} .tsrow.on{background:#17241d}
+    .ts-detail{background:#111713}
+    .imp{background:#111a15; border-color:color-mix(in srgb, var(--atlas) 60%, transparent)}
+    .imp .fig{background:#151b18}
+    .imp .fig .v{color:#bfe8cf}
+    .imp h4{color:#cfeeda}
+    .imp .reason select, .imp .reason input{background:#151b18; color:#cfeeda}
+    .imp .box.warn{background:#211d10; border-color:#3a3320; color:#f0cf8a}
+    .imp .box.stop{background:#241412; border-color:#4a2a24; color:#f0b3a4}
+    .lock-note{background:#211d10; border-color:#3a3320; color:#f0cf8a}
+    .lock-note b{color:#ffe6b0}
+    .vpill{background:#241f10; color:#f0cf8a; border-color:#3a3320}
+    .tslist{border-color:#26302b}
   }
 </style>
 </head>
@@ -233,11 +346,69 @@ em, i, cite, dfn, var { font-style: normal; }
             <div id="type-row"></div>
             <div id="feat-list"></div>
             <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
-            <div class="audit">
-              <p class="sub" style="margin-top:0">Journal des modules</p>
-              <div id="aud-list"></div>
-            </div>
           </div>
+        </div>
+
+        <!-- ══ VENTES DE TEST ══════════════════════════════════════════════
+             Une installation, une formation, un essai d'imprimante laissent de
+             vraies lignes dans les livres. On les sort des chiffres — on ne les
+             efface jamais : la ligne reste en base et revient telle quelle. -->
+        <div class="blk" id="ts-blk">
+          <div class="blk-head">
+            <p class="sub">Ventes de test</p>
+            <span class="count" id="ts-count"></span>
+          </div>
+          <div id="ts-lock"></div>
+          <div class="filters">
+            <input class="q" id="ts-q" placeholder="Libellé, n° de ticket, référence…" aria-label="Recherche" autocomplete="off" />
+            <span class="fl-lbl">du</span><input class="d" id="ts-from" type="date" aria-label="Date de début" />
+            <span class="fl-lbl">au</span><input class="d" id="ts-to" type="date" aria-label="Date de fin" />
+            <span class="fl-lbl">MAD</span>
+            <input class="n" id="ts-min" type="number" min="0" placeholder="min" aria-label="Montant minimum" />
+            <input class="n" id="ts-max" type="number" min="0" placeholder="max" aria-label="Montant maximum" />
+            <select id="ts-method" aria-label="Moyen de paiement">
+              <option value="">Tous moyens</option>
+              <option value="cash">Espèces</option>
+              <option value="card">Carte</option>
+              <option value="tap">Kiwi Tap</option>
+              <option value="qr">QR</option>
+              <option value="wallet">Wallet / virement</option>
+            </select>
+            <select id="ts-state" aria-label="État">
+              <option value="live">Dans les livres</option>
+              <option value="voided">Sorties des livres</option>
+              <option value="all">Toutes</option>
+            </select>
+            <button class="mini" id="ts-search">Chercher</button>
+          </div>
+          <div class="tslist" id="ts-list"></div>
+          <div class="ts-bar" id="ts-bar" hidden></div>
+          <div id="ts-impact"></div>
+          <p class="err" id="ts-err"></p>
+          <p class="hint">Sortir une vente des livres la retire du chiffre d’affaires, du nombre de ventes, du panier moyen, du classement produits, de la répartition des encaissements, des exports et des réponses de Kiwi AI — sur tous les appareils du client. <b>La vente n’est jamais supprimée&nbsp;:</b> montant, panier et horodatage restent en base, et « Remettre dans les livres » la rétablit à l’identique.</p>
+        </div>
+
+        <!-- ══ COMPTE & ADRESSES ═══════════════════════════════════════════ -->
+        <div class="blk" id="acct-blk">
+          <div class="blk-head">
+            <p class="sub">Compte &amp; adresses e-mail</p>
+            <span class="count" id="acct-sub"></span>
+          </div>
+          <div id="acct-lock"></div>
+          <div id="acct-body"></div>
+          <p class="err" id="acct-err"></p>
+        </div>
+
+        <!-- ══ HISTORIQUE ══════════════════════════════════════════════════
+             Les trois panneaux écrivent dans trois tables ; ils racontent la
+             même histoire, donc ils se lisent au même endroit, triés par
+             l'horloge. -->
+        <div class="blk">
+          <div class="blk-head">
+            <p class="sub">Historique administratif</p>
+            <span class="count" id="aud-count"></span>
+          </div>
+          <div id="aud-list"></div>
         </div>
 
         <div class="danger-zone" id="danger-zone">
@@ -488,6 +659,65 @@ em, i, cite, dfn, var { font-style: normal; }
   }
   function saveMock(m){ try { localStorage.setItem(MOCK_KEY, JSON.stringify(m)); } catch(_){} }
 
+  /* ── Les ventes, en mode démo ──────────────────────────────────────────────
+     Le panneau doit se comporter EXACTEMENT comme en production quand la console
+     est ouverte sans backend : c'est là qu'on exerce les parcours qui font peur
+     (journée clôturée, retour, remise dans les livres) sans toucher aux livres
+     d'un vrai commerçant. Les cas difficiles sont donc semés à dessein. */
+  var MOCK_REASONS = {
+    onboarding:'Test d’onboarding', imprimante:'Test d’imprimante',
+    formation:'Transaction de formation', doublon:'Transaction en double',
+    installation:'Vérification d’installation', autre:'Autre',
+  };
+  function seedSales(merchant){
+    var now = Date.now(), H = 3600000, D = 86400000;
+    return [
+      { id:'s-'+merchant+'-1', cursor:101, amount:1, method:'cash', label:'Test', ref:'T-001-A7', ts:now-2*H,
+        lines:[{ name:'Test imprimante', qty:1, total:1 }] },
+      { id:'s-'+merchant+'-2', cursor:102, amount:640, method:'card', label:'Caftan +2 art.', ref:'T-014-A7', ts:now-4*H,
+        lines:[{ name:'Caftan coton', qty:1, total:520, cat:'Prêt-à-porter' }, { name:'Ceinture brodée', qty:2, total:120, cat:'Accessoires' }] },
+      { id:'s-'+merchant+'-3', cursor:103, amount:85, method:'cash', label:'Formation caisse', ref:'T-002-A7', ts:now-1*D },
+      { id:'s-'+merchant+'-4', cursor:104, amount:230, method:'card', label:'Retour · avoir AV-2031', ref:'T-031-A7', ts:now-1*D-2*H },
+      { id:'s-'+merchant+'-5', cursor:105, amount:410, method:'tap', label:'Table 4', ref:'T-044-A7', ts:now-3*D },
+    ];
+  }
+  function mockSales(merchant, f){
+    var m = mock(); m.sales = m.sales || {};
+    if (!m.sales[merchant]){ m.sales[merchant] = seedSales(merchant); saveMock(m); }
+    var rows = m.sales[merchant].slice();
+    f = f || {};
+    if (f.state === 'live') rows = rows.filter(function(s){ return !s.void_ts; });
+    else if (f.state === 'voided') rows = rows.filter(function(s){ return !!s.void_ts; });
+    if (f.q){ var q = String(f.q).toLowerCase();
+      rows = rows.filter(function(s){ return ((s.label||'')+' '+(s.ref||'')+' '+s.id).toLowerCase().indexOf(q) >= 0; }); }
+    if (f.from) rows = rows.filter(function(s){ return s.ts >= +f.from; });
+    if (f.to) rows = rows.filter(function(s){ return s.ts <= +f.to; });
+    if (f.min) rows = rows.filter(function(s){ return s.amount >= +f.min; });
+    if (f.max) rows = rows.filter(function(s){ return s.amount <= +f.max; });
+    if (f.method) rows = rows.filter(function(s){ return s.method === f.method; });
+    rows.forEach(function(s){ s.returnish = /retour|avoir|remb/i.test((s.label||'') + ' ' + (s.ref||'')); });
+    return rows.sort(function(a,b){ return b.ts - a.ts; });
+  }
+  function mockImpact(merchant, ids){
+    var rows = mockSales(merchant, { state:'all' }).filter(function(s){ return ids.indexOf(s.id) >= 0; });
+    var amount = 0, methods = {}, stock = [], warnings = [], blockers = [];
+    var dayOld = Date.now() - 86400000;
+    rows.forEach(function(s){
+      amount += s.amount; methods[s.method] = (methods[s.method]||0) + s.amount;
+      (s.lines||[]).forEach(function(l){ stock.push({ name:l.name, qty:l.qty, cat:l.cat||'', sale:s.id }); });
+      if (s.returnish) warnings.push({ code:'return', sale:s.id,
+        label:'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser — vérifiez le ticket avant.' });
+      if (s.ts < dayOld) blockers.push({ code:'day-closed', sale:s.id,
+        label:'Journée du ' + new Date(s.ts).toISOString().slice(0,10) + ' déjà clôturée. Le Z de cette journée est un instantané : il gardera ses chiffres tant qu’il n’est pas rouvert et re-clôturé.' });
+    });
+    return { merchant:merchant, sales:rows,
+             totals:{ amount:amount, count:rows.length, basket:rows.length ? Math.round(amount/rows.length) : 0 },
+             methods:methods, stock:stock,
+             loyalty: stock.length ? { clients:42, amount:amount } : null,
+             days:[], dayBookKnown:true, warnings:warnings, blockers:blockers,
+             manual:(stock.length ? ['stock'] : []).concat(stock.length ? ['loyalty'] : []) };
+  }
+
   async function api(path, opts){
     var r = await fetch('/api/admin' + path, Object.assign({ headers:{ 'Content-Type':'application/json' } }, opts||{}));
     if (!r.ok) { var e = new Error('http'); e.status = r.status; try { e.body = await r.json(); } catch(_){} throw e; }
@@ -496,7 +726,18 @@ em, i, cite, dfn, var { font-style: normal; }
 
   var store = {
     async clients(){
-      if (LIVE) { return (await api('/clients')).clients; }
+      if (LIVE) {
+        var r = await api('/clients');
+        /* La console apprend son propre niveau de droits en même temps que le
+           roster : lire, tout opérateur ; agir sur les livres et les accès, un
+           code opérateur nommé. Voir isSeniorOperator() côté serveur. */
+        if (typeof r.senior === 'boolean') SENIOR = r.senior;
+        MAIL_OK = !!r.mail;
+        return r.clients;
+      }
+      /* En démo il n'y a pas de code opérateur du tout : on ne fait pas semblant
+         d'être bridé, sinon les parcours ne s'exercent jamais avant la prod. */
+      SENIOR = true; MAIL_OK = false;
       return mock().clients;
     },
     async pins(merchant){
@@ -566,6 +807,82 @@ em, i, cite, dfn, var { font-style: normal; }
       if (LIVE) { return api('/operators?id=' + encodeURIComponent(id), { method:'DELETE' }); }
       var m = mock(); m.operators = m.operators.filter(function(o){ return o.id !== id; }); saveMock(m);
     },
+    /* ── Ventes de test ──────────────────────────────────────────────────── */
+    async sales(merchant, f){
+      var qs = '/sales?merchant=' + encodeURIComponent(merchant);
+      Object.keys(f || {}).forEach(function(k){
+        if (f[k] !== '' && f[k] != null) qs += '&' + k + '=' + encodeURIComponent(f[k]);
+      });
+      if (LIVE) return api(qs);
+      return { sales: mockSales(merchant, f), reasons: MOCK_REASONS };
+    },
+    async saleImpact(merchant, ids){
+      if (LIVE) return api('/sales?impact=1&merchant=' + encodeURIComponent(merchant) + '&ids=' + encodeURIComponent(ids.join(',')));
+      return mockImpact(merchant, ids);
+    },
+    async applySales(merchant, ids, action, reason, note, force){
+      if (LIVE) return api('/sales', { method:'POST', body:JSON.stringify({
+        merchant:merchant, ids:ids, action:action, reason:reason, note:note, force:!!force }) });
+      var m = mock(); m.sales = m.sales || {};
+      (m.sales[merchant] || []).forEach(function(s){
+        if (ids.indexOf(s.id) < 0) return;
+        if (action === 'void'){ s.void_ts = Date.now(); s.void_reason = reason; s.void_note = note; s.void_actor = 'démo'; }
+        else { s.void_ts = null; s.void_reason = null; s.void_note = null; s.void_actor = null; }
+      });
+      m.audit = m.audit || {};
+      ids.forEach(function(id){
+        (m.audit[merchant] = m.audit[merchant] || []).unshift({
+          kind:'sale', sale_id:id, action:action, reason:reason || '', note:note || '',
+          actor:'démo', amount:0, method:'', ref:'', sale_ts:0, ts:Date.now() });
+      });
+      saveMock(m);
+      return { ok:true, count:ids.length };
+    },
+    /* ── Compte & adresses ───────────────────────────────────────────────── */
+    async account(merchant, email){
+      if (LIVE) return api('/account?merchant=' + encodeURIComponent(merchant) +
+                           (email ? '&email=' + encodeURIComponent(email) : ''));
+      var c = (mock().clients || []).filter(function(x){ return x.merchant === merchant; })[0] || {};
+      if (!c.email) return { account:null, reason:'no-account' };
+      var m = mock();
+      var over = (m.emails || {})[c.email] || {};
+      return { account:{ id:'mock-' + c.merchant, login:over.login || c.email, contact:over.contact || '',
+                         billing:over.billing || '', name:c.name || '', business:c.business || '',
+                         status:c.status || 'active', created_ts:Date.now() - 86400000 * 90 },
+               stores:[{ merchant:c.merchant, name:c.business || '' }],
+               team:[{ merchant:c.merchant, name:'Sara Idrissi', role:'Vendeuse', email:'sara@' + c.merchant + '.ma' }],
+               lastReset:(m.resets || {})[c.email] || null, migrated:true,
+               verification:'immediate', mail:false };
+    },
+    async setEmail(payload){
+      if (LIVE) return api('/account', { method:'PUT', body:JSON.stringify(payload) });
+      var m = mock(); m.emails = m.emails || {};
+      var c = (m.clients || []).filter(function(x){ return x.merchant === payload.merchant; })[0] || {};
+      var key = c.email || payload.accountId;
+      var cur = m.emails[key] = m.emails[key] || {};
+      /* La collision est le cas qu'on teste le plus souvent : la démo doit le
+         reproduire, sinon le bouton n'est jamais exercé avant la production. */
+      var taken = (m.clients || []).some(function(x){ return x.email === payload.email && x.merchant !== payload.merchant; });
+      if (payload.field === 'login' && taken){ var e = new Error('taken'); e.body = { error:'email-taken' }; e.status = 409; throw e; }
+      var prev = cur[payload.field] || (payload.field === 'login' ? c.email : '');
+      cur[payload.field] = payload.email;
+      m.audit = m.audit || {};
+      (m.audit[payload.merchant] = m.audit[payload.merchant] || []).unshift({
+        kind:'account', action:payload.field === 'login' ? 'email' : payload.field,
+        prev:prev, next:payload.email, reason:payload.reason || '', actor:'démo',
+        detail:JSON.stringify({ delivery:{ old:'failed:unconfigured', new:'failed:unconfigured' } }), ts:Date.now() });
+      saveMock(m);
+      return { ok:true, prev:prev, next:payload.email,
+               delivery:{ old:'failed:unconfigured', new:'failed:unconfigured' }, verification:'immediate' };
+    },
+    async resetState(accountId){
+      if (LIVE) return api('/reset?accountId=' + encodeURIComponent(accountId));
+      return { canSend:true, lastSent:0, retryAfter:0, mail:false };
+    },
+    async sendReset(accountId, merchant){
+      if (LIVE) return api('/reset', { method:'POST', body:JSON.stringify({ accountId:accountId, merchant:merchant }) });
+      var e = new Error('mail'); e.status = 503; e.body = { error:'mail-unconfigured' }; throw e;
+    },
     async setStatus(email, status){
       if (LIVE) { return api('/clients', { method:'PATCH', body:JSON.stringify({ email:email, status:status }) }); }
       var m = mock();
@@ -590,6 +907,10 @@ em, i, cite, dfn, var { font-style: normal; }
 
   // ── render ─────────────────────────────────────────────────────────────────
   var selected = null;
+  /* null = pas encore su ; true = code opérateur nommé (peut agir) ;
+     false = entré par l'accès équipe partagé (peut regarder). */
+  var SENIOR = null;
+  var MAIL_OK = false;
 
   function renderMode(){
     var b = document.getElementById('mode-badge');
@@ -800,7 +1121,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
-    await Promise.all([renderPins(), renderFeatures(), renderAudit()]);
+    await Promise.all([renderPins(), renderFeatures(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
@@ -973,22 +1294,571 @@ em, i, cite, dfn, var { font-style: normal; }
     return key;
   }
 
+  /* L'historique administratif — modules, ventes de test, adresses, envois de
+     réinitialisation, dans une seule liste triée par l'horloge. Trois tables
+     côté serveur (functions/api/admin/audit.js les fusionne) mais une seule
+     histoire : ce que Kiwi a fait au compte de ce client. Chercher « ce qui
+     s'est passé chez eux en juillet » ne doit pas demander trois écrans.
+
+     Rien n'est jamais retiré d'ici, pas même quand le geste est défait : « sortie
+     le 12, remise le 14 » est exactement ce qu'un litige demande. */
+  function auditLine(r){
+    if (r.kind === 'sale'){
+      var out = r.action === 'void';
+      return {
+        cls: out ? 'ab cut' : 'ab on',
+        tag: out ? 'Vente sortie' : 'Vente remise',
+        what: fmt(r.amount) + ' MAD' + (r.ref ? ' · ' + r.ref : '') +
+              (r.sale_ts ? ' du ' + new Date(r.sale_ts).toLocaleDateString('fr-FR') : ''),
+        why: (r.reason ? (MOCK_REASONS[r.reason] || r.reason) : '') + (r.note ? ' — ' + r.note : ''),
+      };
+    }
+    if (r.kind === 'account'){
+      var d = {};
+      try { d = JSON.parse(r.detail || '{}') || {}; } catch(_){}
+      if (r.action === 'reset'){
+        return {
+          cls:'ab acct',
+          tag: d.completed ? 'Mot de passe changé' : 'Lien envoyé',
+          what: d.completed ? 'par le client' : (r.next || 'adresse du compte'),
+          why: d.completed ? '' : (d.delivery && d.delivery.indexOf('failed') === 0
+                ? 'envoi en échec (' + d.delivery.slice(7) + ')' : ''),
+        };
+      }
+      var lbl = { email:'Connexion', 'email-revert':'Connexion rétablie', contact:'Contact', billing:'Facturation' };
+      var del = (d.delivery || {});
+      var bad = [];
+      if (del.old && del.old.indexOf('failed') === 0) bad.push('ancienne');
+      if (del.new && del.new.indexOf('failed') === 0) bad.push('nouvelle');
+      return {
+        cls:'ab acct',
+        tag: lbl[r.action] || 'Adresse',
+        what: (r.prev || '—') + ' → ' + (r.next || '—'),
+        why: (r.reason || '') + (bad.length ? ' · avis non délivré (' + bad.join(', ') + ')' : ''),
+      };
+    }
+    var on = !!r.enabled;
+    return { cls: on ? 'ab on' : 'ab cut', tag: on ? 'Module activé' : 'Module coupé',
+             what: moduleLabel(r.feature), why:'' };
+  }
+
   async function renderAudit(){
-    var wrap = document.getElementById('aud-list'); if (!wrap) return; clear(wrap);
+    var wrap = document.getElementById('aud-list'); if (!wrap) return;
+    var tok = fresh('aud');
+    clear(wrap);
     var rows = await store.audit(selected.merchant);
+    if (stale('aud', tok)) return;
+    var count = document.getElementById('aud-count');
+    if (count) count.textContent = rows.length ? rows.length + ' entrée' + (rows.length === 1 ? '' : 's') : '';
     if (!rows.length) {
       wrap.appendChild(h('p', { class:'empty' },
-        'Aucun changement enregistré pour ' + (selected.business || selected.merchant) + '.'));
+        'Aucun geste enregistré pour ' + (selected.business || selected.merchant) + '.'));
       return;
     }
     rows.forEach(function(r){
-      var on = !!r.enabled;
+      var L = auditLine(r);
       wrap.appendChild(h('div', { class:'aud-row' },
-        h('span', { class:'ab' + (on ? ' on' : '') }, on ? 'Activé' : 'Coupé'),
-        h('span', { class:'aw' }, h('b', null, moduleLabel(r.feature)), ' · ', r.actor || 'equipe'),
-        h('span', { class:'at' }, ago(r.ts))
+        h('span', { class:L.cls }, L.tag),
+        h('span', { class:'aw' }, h('b', null, L.what), ' · ', r.actor || 'equipe'),
+        h('span', { class:'at' }, ago(r.ts)),
+        L.why ? h('span', { class:'aud-why' }, L.why) : null
       ));
     });
+  }
+
+  /* ═══════════════ VENTES DE TEST ═══════════════
+   * Trois écrans, dans cet ordre, et l'ordre est le garde-fou :
+   *   la LISTE (on cherche, on ouvre le ticket, on coche),
+   *   les CONSÉQUENCES (ce que ça retire, ce que ça ne retire pas, ce qui bloque),
+   *   la CONFIRMATION (le motif, écrit, puis le bouton).
+   * On ne peut pas sauter le deuxième : le bouton de la liste n'annule rien, il
+   * demande l'aperçu au serveur. */
+  var tsRows = [];        // le dernier résultat de recherche
+  var tsSel = {};         // id -> 1, la sélection en cours
+  var tsOpen = '';        // le ticket déplié
+
+  /* Un jeton par panneau rechargeable. Confirmer une sortie déclenche DEUX
+     rendus (la liste, puis le journal) pendant qu'un rendu précédent est encore
+     en vol : le retardataire vidait le conteneur, puis écrivait par-dessus le
+     plus récent. Observé pour de vrai — juste après une annulation, l'historique
+     s'affichait vide alors que le serveur renvoyait deux lignes. Un panneau vide
+     à la seconde où l'on vient d'agir se lit comme « ça n'a rien enregistré »,
+     ce qui est exactement le contraire de la vérité. Le rendu périmé s'arrête
+     donc avant de toucher au DOM. */
+  var renderToken = { ts: 0, aud: 0, acct: 0 };
+  function fresh(k) { return ++renderToken[k]; }
+  function stale(k, t) { return renderToken[k] !== t; }
+
+  function dayMs(v, end){
+    if (!v) return '';
+    var d = new Date(v + (end ? 'T23:59:59.999' : 'T00:00:00'));
+    return isNaN(d) ? '' : d.getTime();
+  }
+  function stamp(ts){
+    if (!ts) return '—';
+    var d = new Date(ts);
+    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) + ' ' +
+           String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  var METHOD_FR = { cash:'Espèces', card:'Carte', tap:'Kiwi Tap', qr:'QR', wallet:'Wallet', split:'Partagée' };
+
+  /* Le bandeau qui explique pourquoi on ne peut pas agir. Rendu dans les deux
+     panneaux : un opérateur entré par l'accès équipe VOIT tout et n'écrit rien. */
+  function lockNote(host){
+    clear(host);
+    if (SENIOR !== false) return false;
+    host.appendChild(h('div', { class:'lock-note' },
+      h('span', null, '⚠'),
+      h('span', null, h('b', null, 'Lecture seule. '),
+        'Ces gestes engagent les livres et les accès d’un client, donc ils doivent porter un nom : ils demandent un ',
+        h('b', null, 'code opérateur'), ' personnel, pas l’accès équipe partagé. Créez-vous un code dans « Opérateurs » ci-dessous, puis rouvrez la console avec.')));
+    return true;
+  }
+
+  function tsFilters(){
+    return {
+      q: document.getElementById('ts-q').value.trim(),
+      from: dayMs(document.getElementById('ts-from').value, false),
+      to: dayMs(document.getElementById('ts-to').value, true),
+      min: document.getElementById('ts-min').value.trim(),
+      max: document.getElementById('ts-max').value.trim(),
+      method: document.getElementById('ts-method').value,
+      state: document.getElementById('ts-state').value,
+    };
+  }
+
+  async function renderTestSales(){
+    if (!selected) return;
+    var tok = fresh('ts');
+    lockNote(document.getElementById('ts-lock'));
+    var list = document.getElementById('ts-list');
+    var err = document.getElementById('ts-err');
+    err.textContent = '';
+    clear(list);
+    clear(document.getElementById('ts-impact'));
+    list.appendChild(h('p', { class:'empty', style:'padding:12px' }, 'Recherche…'));
+
+    var data;
+    try { data = await store.sales(selected.merchant, tsFilters()); }
+    catch(e){
+      if (stale('ts', tok)) return;
+      clear(list);
+      list.appendChild(h('p', { class:'empty', style:'padding:12px' }, 'Lecture impossible.'));
+      err.textContent = (e && e.body && e.body.error) === 'migration-needed'
+        ? 'Base pas encore migrée : relancez schema.sql pour activer les ventes de test.'
+        : 'Échec de la recherche.';
+      return;
+    }
+    if (stale('ts', tok)) return;
+    tsRows = (data && data.sales) || [];
+    document.getElementById('ts-count').textContent =
+      tsRows.length + ' vente' + (tsRows.length === 1 ? '' : 's') + (data && data.truncated ? ' (affinez la recherche)' : '');
+    if (data && data.migration === 'needed'){
+      err.textContent = 'Base pas encore migrée : la recherche fonctionne, l’annulation non. Relancez schema.sql.';
+    }
+    /* Une sélection qui survit à une recherche pointerait vers des lignes que
+       l'opérateur ne voit plus — c'est exactement comme ça qu'on sort la
+       mauvaise vente. Elle repart de zéro à chaque résultat. */
+    tsSel = {}; tsOpen = '';
+    clear(list);
+    if (!tsRows.length){
+      list.appendChild(h('p', { class:'empty', style:'padding:12px' }, 'Aucune vente pour ces critères.'));
+      renderTsBar();
+      return;
+    }
+    tsRows.forEach(function(s){ list.appendChild(tsRow(s)); });
+    renderTsBar();
+  }
+
+  function tsRow(s){
+    var voided = !!s.void_ts;
+    var box = h('input', { type:'checkbox', 'aria-label':'Sélectionner la vente ' + (s.ref || s.id) });
+    box.checked = !!tsSel[s.id];
+    box.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (box.checked) tsSel[s.id] = 1; else delete tsSel[s.id];
+      row.className = 'tsrow' + (box.checked ? ' on' : '') + (voided ? ' void' : '');
+      renderTsBar();
+    });
+    var row = h('div', { class:'tsrow' + (tsSel[s.id] ? ' on' : '') + (voided ? ' void' : '') },
+      box,
+      h('span', { class:'ts-when' }, stamp(s.ts)),
+      h('span', { class:'ts-amt' }, fmt(s.amount) + ' MAD'),
+      h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '—'),
+      h('span', { class:'ts-lbl' }, s.label || '—',
+        s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null),
+      voided ? h('span', { class:'vpill' }, 'sortie') : h('span', { class:'ts-ref' }, s.ref || ''));
+    /* Cliquer la LIGNE ouvre le ticket ; cliquer la case sélectionne. Deux
+       gestes distincts exprès : « ouvrir la transaction complète avant d'agir »
+       ne doit pas coûter une sélection accidentelle. */
+    row.addEventListener('click', function(){
+      tsOpen = (tsOpen === s.id) ? '' : s.id;
+      var list = document.getElementById('ts-list');
+      var scroll = list.scrollTop;
+      clear(list); tsRows.forEach(function(x){ list.appendChild(tsRow(x)); });
+      list.scrollTop = scroll;
+    });
+    if (tsOpen === s.id){
+      var det = h('div', { class:'ts-detail' });
+      if (s.lines && s.lines.length){
+        s.lines.forEach(function(l){
+          det.appendChild(h('div', { class:'l' },
+            h('span', { class:'q' }, '×' + l.qty), h('b', null, l.name || 'Article'),
+            l.cat ? h('span', null, l.cat) : null,
+            h('span', { class:'q' }, fmt(l.total) + ' MAD')));
+        });
+      } else {
+        /* Panier absent ≠ panier vide. Une vente d'avant la colonne `lines`, un
+           lien de paiement, un folio d'hôtel n'en ont jamais eu. */
+        det.appendChild(h('p', { class:'empty', style:'padding:0' }, 'Aucun détail de panier enregistré pour cette vente.'));
+      }
+      det.appendChild(h('div', { class:'meta' },
+        'id ' + s.id + (s.ref ? '  ·  ticket ' + s.ref : '') + '  ·  ' + new Date(s.ts).toLocaleString('fr-FR')));
+      if (voided){
+        det.appendChild(h('div', { class:'meta' },
+          'Sortie des livres le ' + new Date(s.void_ts).toLocaleString('fr-FR') +
+          (s.void_actor ? ' par ' + s.void_actor : '') +
+          (s.void_reason ? ' · ' + (MOCK_REASONS[s.void_reason] || s.void_reason) : '') +
+          (s.void_note ? ' · ' + s.void_note : '')));
+      }
+      var wrap = h('div', null, row, det);
+      return wrap;
+    }
+    return row;
+  }
+
+  function renderTsBar(){
+    var bar = document.getElementById('ts-bar');
+    var ids = Object.keys(tsSel);
+    clear(bar);
+    bar.hidden = !ids.length;
+    if (!ids.length) return;
+    var chosen = tsRows.filter(function(s){ return tsSel[s.id]; });
+    var anyLive = chosen.some(function(s){ return !s.void_ts; });
+    var allVoid = chosen.every(function(s){ return !!s.void_ts; });
+    var total = chosen.reduce(function(a,s){ return a + (s.amount||0); }, 0);
+    bar.appendChild(h('span', { class:'n' },
+      ids.length + ' vente' + (ids.length === 1 ? '' : 's') + ' · ' + fmt(total) + ' MAD'));
+    if (anyLive){
+      bar.appendChild(h('button', { class:'mini warn', disabled: SENIOR === false,
+        onClick:function(){ openImpact(chosen.map(function(s){ return s.id; }), 'void'); } },
+        'Marquer comme ventes de test…'));
+    }
+    if (allVoid){
+      bar.appendChild(h('button', { class:'mini', disabled: SENIOR === false,
+        onClick:function(){ openImpact(chosen.map(function(s){ return s.id; }), 'restore'); } },
+        'Remettre dans les livres…'));
+    }
+    bar.appendChild(h('button', { class:'mini ghost', onClick:function(){
+      tsSel = {}; renderTestSales();
+    } }, 'Tout désélectionner'));
+  }
+
+  /* L'écran de conséquences. Il énumère ce qui se corrige tout seul ET ce qui ne
+     se corrige pas — le stock et les points de fidélité, faute d'un lien en base
+     entre une vente et une déclinaison ou une fiche client. Annoncer une reprise
+     qu'on ne fait pas serait pire que ne rien annoncer. */
+  async function openImpact(ids, action){
+    var host = document.getElementById('ts-impact');
+    clear(host);
+    host.appendChild(h('p', { class:'empty' }, 'Calcul des conséquences…'));
+    var imp;
+    try { imp = await store.saleImpact(selected.merchant, ids); }
+    catch(e){
+      clear(host);
+      host.appendChild(h('div', { class:'imp' }, h('div', { class:'box stop' },
+        h('p', null, (e && e.body && e.body.error) === 'foreign-sale'
+          ? 'Ces ventes n’appartiennent pas à cet établissement. Rien n’a été touché.'
+          : 'Impossible de calculer les conséquences. Rien n’a été touché.'))));
+      return;
+    }
+    clear(host);
+    var restore = action === 'restore';
+    var panel = h('div', { class:'imp' });
+    panel.appendChild(h('h4', null, restore
+      ? 'Remettre ' + ids.length + ' vente' + (ids.length===1?'':'s') + ' dans les livres'
+      : 'Sortir ' + ids.length + ' vente' + (ids.length===1?'':'s') + ' des livres'));
+    panel.appendChild(h('p', { class:'lst' }, restore
+      ? 'Les montants ci-dessous réintègrent le chiffre d’affaires du client, à l’identique.'
+      : 'Voici ce que le client cessera de voir dans ses chiffres, sur tous ses appareils.'));
+
+    var t = imp.totals || {};
+    var figs = h('div', { class:'figs' },
+      h('div', { class:'fig' }, h('div', { class:'v' }, fmt(t.amount) + ' MAD'), h('div', { class:'k' }, restore ? 'CA rendu' : 'CA retiré')),
+      h('div', { class:'fig' }, h('div', { class:'v' }, String(t.count || 0)), h('div', { class:'k' }, 'ventes')),
+      h('div', { class:'fig' }, h('div', { class:'v' }, fmt(t.basket) + ' MAD'), h('div', { class:'k' }, 'panier moyen')));
+    Object.keys(imp.methods || {}).forEach(function(m){
+      figs.appendChild(h('div', { class:'fig' },
+        h('div', { class:'v' }, fmt(imp.methods[m]) + ' MAD'),
+        h('div', { class:'k' }, METHOD_FR[m] || m)));
+    });
+    panel.appendChild(figs);
+
+    panel.appendChild(h('p', { class:'lst' },
+      h('b', null, 'Se corrige tout seul : '),
+      'chiffre d’affaires, nombre de ventes, panier moyen, classement produits, répartition des encaissements, rapport d’une journée non clôturée, exports comptables et réponses de Kiwi AI.'));
+
+    if (!restore && imp.stock && imp.stock.length){
+      var st = h('div', { class:'box warn' },
+        h('p', null, h('b', null, 'Stock à remettre à la main. '),
+          'La ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée — Kiwi ne la devine pas plutôt que de fausser un inventaire réel. À reprendre :'));
+      imp.stock.forEach(function(l){
+        st.appendChild(h('p', null, '· ' + l.name + ' × ' + l.qty + (l.cat ? ' (' + l.cat + ')' : '')));
+      });
+      panel.appendChild(st);
+    }
+    if (!restore && imp.loyalty){
+      panel.appendChild(h('div', { class:'box warn' }, h('p', null,
+        h('b', null, 'Fidélité à vérifier. '),
+        'Ce commerce tient un carnet de ' + imp.loyalty.clients + ' client' + (imp.loyalty.clients > 1 ? 's' : '') +
+        ' et aucune colonne ne relie une vente à une fiche. Si cette vente a crédité un client, retirez-lui ' +
+        fmt(imp.loyalty.amount) + ' MAD de dépense et les points correspondants depuis Clients & Marketing.')));
+    }
+    (imp.warnings || []).forEach(function(w){
+      panel.appendChild(h('div', { class:'box warn' }, h('p', null, w.label)));
+    });
+    var blocked = !restore && (imp.blockers || []).length;
+    if (blocked){
+      var bx = h('div', { class:'box stop' },
+        h('p', null, h('b', null, 'À lire avant de continuer.')));
+      imp.blockers.forEach(function(b){ bx.appendChild(h('p', null, '· ' + b.label)); });
+      bx.appendChild(h('p', null, 'Une correction saisie en caisse est souvent le geste juste ici. Si vous continuez malgré tout, la sortie sera inscrite au journal comme forcée.'));
+      panel.appendChild(bx);
+    }
+
+    var sel = null, note = null;
+    if (!restore){
+      sel = h('select', { 'aria-label':'Motif' });
+      sel.appendChild(h('option', { value:'' }, 'Motif…'));
+      Object.keys(imp.reasons || MOCK_REASONS).forEach(function(k){
+        sel.appendChild(h('option', { value:k }, (imp.reasons || MOCK_REASONS)[k]));
+      });
+      note = h('input', { placeholder:'Explication (obligatoire si « Autre »)', 'aria-label':'Explication' });
+      panel.appendChild(h('div', { class:'reason' }, sel, note));
+    }
+
+    var msg = h('p', { class:'err' });
+    var go = h('button', { class:'mini ' + (restore ? '' : 'danger') }, restore
+      ? 'Confirmer la remise' : (blocked ? 'Sortir malgré l’avertissement' : 'Confirmer la sortie'));
+    go.addEventListener('click', async function(){
+      msg.textContent = '';
+      var reason = sel ? sel.value : '';
+      var txt = note ? note.value.trim() : '';
+      if (!restore && !reason){ msg.textContent = 'Choisissez un motif.'; return; }
+      if (!restore && reason === 'autre' && txt.length < 3){ msg.textContent = 'Décrivez le motif.'; return; }
+      go.disabled = true; go.textContent = 'Enregistrement…';
+      try {
+        await store.applySales(selected.merchant, ids, action, reason, txt, !!blocked);
+        notify(restore ? 'Ventes remises dans les livres.' : 'Ventes sorties des livres, trace conservée.');
+        clear(host);
+        await renderTestSales();
+        renderAudit();
+      } catch(e){
+        go.disabled = false;
+        go.textContent = restore ? 'Confirmer la remise' : 'Confirmer la sortie';
+        var code = (e && e.body && e.body.error) || '';
+        msg.textContent =
+          code === 'operator-code-required' ? 'Il faut un code opérateur personnel pour ce geste.' :
+          code === 'foreign-sale' ? 'Ces ventes n’appartiennent pas à cet établissement. Rien n’a été touché.' :
+          code === 'already-void' ? 'Déjà sortie des livres.' :
+          code === 'migration-needed' ? 'Base pas encore migrée : relancez schema.sql.' :
+          code === 'blocked' ? 'Bloqué : relisez les avertissements.' : 'Échec, rien n’a été touché.';
+      }
+    });
+    panel.appendChild(h('div', { class:'acts' }, go,
+      h('button', { class:'mini ghost', onClick:function(){ clear(host); } }, 'Annuler'), msg));
+    host.appendChild(panel);
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  /* ═══════════════ COMPTE & ADRESSES ═══════════════ */
+  var acct = null;
+
+  async function renderAccount(){
+    if (!selected) return;
+    var tok = fresh('acct');
+    lockNote(document.getElementById('acct-lock'));
+    var host = document.getElementById('acct-body');
+    var err = document.getElementById('acct-err'); err.textContent = '';
+    clear(host);
+    host.appendChild(h('p', { class:'empty' }, 'Lecture du compte…'));
+    var data;
+    try { data = await store.account(selected.merchant, selected.email || ''); }
+    catch(e){
+      if (stale('acct', tok)) return;
+      clear(host); host.appendChild(h('p', { class:'empty' }, 'Lecture impossible.')); return;
+    }
+    if (stale('acct', tok)) return;
+    clear(host);
+    acct = data && data.account;
+    if (!acct){
+      document.getElementById('acct-sub').textContent = '';
+      host.appendChild(h('p', { class:'empty' },
+        'Cet établissement n’est rattaché à aucun compte de connexion — c’est une démo, ou une fiche qu’aucun client n’a encore réclamée.'));
+      return;
+    }
+    document.getElementById('acct-sub').textContent =
+      (data.stores || []).length + ' établissement' + ((data.stores||[]).length === 1 ? '' : 's');
+
+    /* Les quatre rôles, nommés. « L'adresse du client » n'existe pas : il y a
+       celle qui ouvre la porte, celle à laquelle on écrit, celle qui reçoit les
+       factures, et celles des salariés. */
+    [ { f:'login', k:'Connexion', v:acct.login,
+        why:'La clé du compte. C’est ce que le client tape pour entrer, et elle est unique dans tout Kiwi.' },
+      { f:'contact', k:'Contact', v:acct.contact,
+        why:'L’adresse à laquelle Kiwi écrit au commerce. Vide : c’est celle de connexion qui sert.' },
+      { f:'billing', k:'Facturation', v:acct.billing,
+        why:'La comptabilité, quand elle diffère. Vide : c’est celle de connexion qui sert.' },
+    ].forEach(function(r){
+      var row = h('div', { class:'mailrow' },
+        h('span', { class:'k' }, r.k),
+        h('span', { class:'v' + (r.v ? '' : ' none') }, r.v || '— même que la connexion'),
+        h('button', { class:'mini', disabled: SENIOR === false,
+          onClick:function(){ openEmailEditor(r, row); } }, 'Corriger'));
+      row.title = r.why;
+      host.appendChild(row);
+    });
+
+    if ((data.team || []).length){
+      var tl = h('div', { class:'teamlist' });
+      tl.appendChild(h('p', { class:'sub', style:'margin:14px 0 4px' }, 'Adresses de l’équipe (lecture seule)'));
+      data.team.forEach(function(t){
+        tl.appendChild(h('div', { class:'tm' },
+          h('b', null, t.name || '—'), t.role ? h('span', null, t.role) : null,
+          h('span', { class:'em' }, t.email),
+          h('span', null, t.merchant)));
+      });
+      tl.appendChild(h('p', { class:'hint', style:'margin-top:6px' },
+        'Elles appartiennent au registre du personnel que le commerçant tient lui-même et ne servent à aucune connexion. Modifiables par lui, dans Équipe.'));
+      host.appendChild(tl);
+    }
+
+    /* ── Réinitialisation ── */
+    var rst = h('div', { style:'margin-top:16px' });
+    rst.appendChild(h('p', { class:'sub' }, 'Mot de passe'));
+    var state = h('span', { class:'state' }, '…');
+    var btn = h('button', { class:'mini', disabled:true }, 'Envoyer un lien de réinitialisation');
+    rst.appendChild(h('div', { class:'rst' }, btn, state));
+    rst.appendChild(h('p', { class:'hint' },
+      'Le lien part à l’adresse de connexion du compte, vaut une heure et ne fonctionne qu’une fois. ' +
+      'Kiwi ne conserve aucun mot de passe en clair : ni vous ni personne ne peut le lire, et vous ne pouvez pas en choisir un à la place du client. ' +
+      'Le lien lui-même n’apparaît ni ici ni dans l’historique.'));
+    host.appendChild(rst);
+
+    async function paintReset(){
+      var s;
+      try { s = await store.resetState(acct.id); } catch(_){ s = { canSend:true }; }
+      var bits = [];
+      if (s.lastSent) bits.push('dernier envoi ' + ago(s.lastSent));
+      if (s.used) bits.push('réinitialisation effectuée ' + ago(s.used));
+      else if (s.live) bits.push('un lien est encore valable');
+      if (!s.canSend && s.retryAfter) bits.push('nouvel envoi dans ' + Math.ceil(s.retryAfter/60) + ' min');
+      if (data.mail === false) bits.push('envoi d’e-mail non configuré côté serveur');
+      state.textContent = bits.length ? bits.join(' · ') : 'aucun envoi enregistré';
+      btn.disabled = SENIOR === false || !s.canSend;
+    }
+    btn.addEventListener('click', async function(){
+      btn.disabled = true; btn.textContent = 'Envoi…';
+      err.textContent = '';
+      try {
+        var r = await store.sendReset(acct.id, selected.merchant);
+        notify('Lien envoyé à ' + (r && r.to ? r.to : 'l’adresse du compte') + '.');
+      } catch(e){
+        var code = (e && e.body && e.body.error) || '';
+        err.textContent =
+          code === 'mail-unconfigured' ? 'Aucune sortie e-mail configurée (MAIL_WEBHOOK). Rien n’a été envoyé, et aucun lien n’a été créé — l’ancien reste valable.' :
+          code === 'send-failed' ? 'L’e-mail n’est pas parti. Vérifiez l’adresse du compte.' :
+          code === 'too-soon' ? 'Un lien vient d’être envoyé. Attendez avant d’en renvoyer un : chaque envoi périme le précédent.' :
+          code === 'operator-code-required' ? 'Il faut un code opérateur personnel pour ce geste.' :
+          code === 'migration-needed' ? 'Base pas encore migrée : relancez schema.sql.' : 'Échec de l’envoi.';
+      }
+      btn.textContent = 'Envoyer un lien de réinitialisation';
+      await paintReset();
+      renderAudit();
+    });
+    paintReset();
+  }
+
+  /* Corriger une adresse. Tout ce qui compte est à l'écran AVANT le bouton :
+     quel compte, quel client, ce qui se passe pour lui, et le motif — obligatoire,
+     parce que c'est la seule chose que l'historique ne peut pas reconstituer. */
+  function openEmailEditor(r, row){
+    var host = document.getElementById('acct-body');
+    var old = document.getElementById('mail-editor');
+    if (old) old.parentNode.removeChild(old);
+
+    var input = h('input', { type:'email', value:r.v || '', placeholder:'nouvelle adresse',
+                             'aria-label':'Nouvelle adresse', autocomplete:'off', spellcheck:'false' });
+    var why = h('input', { placeholder:'Motif (saisie erronée, adresse perdue…)', 'aria-label':'Motif' });
+    var msg = h('p', { class:'err' });
+    var go = h('button', { class:'mini danger' }, 'Confirmer le changement');
+
+    var box = h('div', { class:'imp', id:'mail-editor' },
+      h('h4', null, 'Corriger l’adresse · ' + r.k),
+      h('p', { class:'lst' },
+        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '—',
+        ' · compte ', h('b', null, acct.login)));
+
+    if (r.f === 'login'){
+      box.appendChild(h('div', { class:'box warn' },
+        h('p', null, h('b', null, 'La nouvelle adresse devient la connexion immédiatement. '),
+          'Kiwi n’a pas d’étape de vérification d’adresse : le client se connectera avec la nouvelle dès l’enregistrement, avec son mot de passe habituel. C’est volontaire — une vérification bloquante enfermerait dehors précisément le client qui a perdu l’accès à son ancienne boîte.'),
+        h('p', null, 'Un avis part à l’ancienne adresse, une confirmation à la nouvelle. Aucun mot de passe n’est transmis.'),
+        h('p', null, h('b', null, 'Ne casse rien : '),
+          'la session, la propriété des établissements et les ventes sont rattachées à l’identifiant du compte, jamais à l’adresse. Pas de second compte, pas de réonboarding, pas de perte de droits — le client reste même connecté.')));
+    }
+    box.appendChild(h('div', { class:'reason' }, input, why));
+    box.appendChild(h('div', { class:'acts' }, go,
+      h('button', { class:'mini ghost', onClick:function(){ box.parentNode.removeChild(box); } }, 'Annuler'), msg));
+
+    /* Une reprise n'est possible que s'il y a quelque chose à reprendre : le
+       bouton n'apparaît donc qu'après un premier changement, et il relit le
+       journal côté serveur plutôt que de faire retaper l'ancienne adresse de
+       mémoire — c'est exactement la saisie qu'on est en train de réparer. */
+    go.addEventListener('click', async function(){ await commitEmail(r, input.value.trim(), why.value.trim(), false, go, msg, box); });
+    box.appendChild(h('p', { class:'hint' },
+      'Le client conteste un changement précédent ? ',
+      h('a', { href:'#', onClick:function(e){ e.preventDefault(); commitEmail(r, '', why.value.trim(), true, go, msg, box); } },
+        'Rétablir l’adresse précédente'), ' — le motif reste obligatoire.'));
+
+    row.parentNode.insertBefore(box, row.nextSibling);
+    setTimeout(function(){ try { input.focus(); } catch(_){} }, 50);
+  }
+
+  async function commitEmail(r, email, reason, revert, go, msg, box){
+    msg.textContent = '';
+    if (!reason){ msg.textContent = 'Indiquez le motif du changement.'; return; }
+    if (!revert && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg.textContent = 'Adresse invalide.'; return; }
+    go.disabled = true; go.textContent = 'Enregistrement…';
+    try {
+      var res = await store.setEmail({ accountId:acct.id, merchant:selected.merchant,
+                                       field:r.f, email:email, reason:reason, revert:revert });
+      var d = (res && res.delivery) || {};
+      var bad = [];
+      if (d.old && d.old.indexOf('failed') === 0) bad.push('l’ancienne adresse');
+      if (d.new && d.new.indexOf('failed') === 0) bad.push('la nouvelle');
+      notify(bad.length
+        ? 'Adresse changée. Avis non délivré à ' + bad.join(' et ') + '.'
+        : 'Adresse changée, les deux adresses ont été prévenues.');
+      if (box.parentNode) box.parentNode.removeChild(box);
+      /* Le nom affiché en tête de console vient de la fiche client : on la
+         recharge, sinon l'ancienne adresse resterait à l'écran. */
+      if (r.f === 'login' && selected) selected.email = res.next;
+      await renderAccount();
+      await renderClients();
+      renderAudit();
+    } catch(e){
+      go.disabled = false; go.textContent = 'Confirmer le changement';
+      var code = (e && e.body && e.body.error) || '';
+      msg.textContent =
+        code === 'email-taken' ? 'Cette adresse appartient déjà à un autre compte' +
+          ((e.body && e.body.business) ? ' (' + e.body.business + ')' : '') + '. Rien n’a été changé.' :
+        code === 'operator-code-required' ? 'Il faut un code opérateur personnel pour ce geste.' :
+        code === 'unchanged' ? 'C’est déjà l’adresse enregistrée.' :
+        code === 'no-history' ? 'Aucun changement précédent à rétablir.' :
+        code === 'bad-email' ? 'Adresse invalide.' :
+        code === 'migration-needed' ? 'Base pas encore migrée : relancez schema.sql.' : 'Échec, rien n’a été changé.';
+    }
   }
 
   async function renderOperators(){
@@ -1033,6 +1903,16 @@ em, i, cite, dfn, var { font-style: normal; }
     } catch(e){ err.textContent = 'Échec de l’ajout.'; }
   });
 
+  document.getElementById('ts-search').addEventListener('click', function(){ renderTestSales(); });
+  ['ts-q','ts-min','ts-max'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if (e.key === 'Enter') renderTestSales();
+    });
+  });
+  ['ts-from','ts-to','ts-method','ts-state'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){ renderTestSales(); });
+  });
+
   document.getElementById('refresh').addEventListener('click', function(){ boot(true); });
   document.getElementById('quit').addEventListener('click', function(){ location.href = '/'; });
 
@@ -1045,7 +1925,7 @@ em, i, cite, dfn, var { font-style: normal; }
     renderMode();
     await renderClients();
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderAudit()]); }
+    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderAudit(), renderTestSales(), renderAccount()]); }
   }
   boot(false);
 })();

@@ -79,19 +79,76 @@ export async function onRequestGet({ request, env }) {
     }
   } catch (_) { /* no session (operator / demo) → own bucket only */ }
 
+  /* ── LES VENTES DE TEST NE SORTENT PAS D'ICI ──────────────────────────────
+   * Une vente qu'un opérateur a sortie des livres (functions/api/admin/sales.js)
+   * porte void_ts. Ce point-ci est le seul endroit à filtrer : tout ce qui
+   * compte l'argent d'un commerçant — chiffre d'affaires, nombre de ventes,
+   * panier moyen, classement produits, répartition des encaissements, rapport
+   * journalier d'une journée ouverte, exports, réponses de Kiwi AI — recalcule
+   * depuis ce flux via window.KiwiSales. Filtrer là, c'est les corriger tous ;
+   * filtrer ailleurs, c'était les corriger un par un et en oublier.
+   *
+   * ── ET CELLES DÉJÀ RECOPIÉES CHEZ LE CLIENT ? ─────────────────────────────
+   * Le flux est un curseur : `rowid > since`. Une vente annulée APRÈS que le
+   * tableau de bord l'a ingérée ne repassera donc jamais par ici — elle
+   * resterait dans le stockage local du navigateur, et dans les totaux, pour
+   * toujours. D'où `voided` : la liste des lignes retirées, renvoyée à CHAQUE
+   * sondage quel que soit le curseur. Le client s'en sert pour retirer ce qu'il
+   * a déjà. C'est idempotent, ça se répare tout seul sur un appareil neuf, et
+   * ça coûte une requête indexée.
+   *
+   * Chaque entrée porte le curseur ET la référence de ticket : le tableau de
+   * bord range ses ventes par curseur, la caisse ne connaît que la référence
+   * imprimée sur le reçu. Une seule liste sert les deux. */
+  /* `voids=1` — le sondage de la CAISSE. Elle ne lit pas le flux (elle n'a pas
+   * de magasin de ventes à remplir) mais elle tient son propre compteur du jour,
+   * et une vente d'essai retirée doit en sortir aussi. Elle ne demande donc que
+   * la liste des retraits, sans rejouer la journée entière toutes les minutes. */
+  const voidsOnly = url.searchParams.get('voids') === '1';
+
   let rows = [];
+  let voided = [];
+  /* Une seule tentative par forme de schéma, de la plus récente à la plus
+   * ancienne. Chaque `catch` ne rattrape QUE la colonne qui manque et retombe
+   * d'un cran ; tout le reste remonte en 500, parce qu'un flux vide servi en
+   * silence est le pire des messages d'erreur. */
   try {
-    const rs = await env.DB.prepare(
-      'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
-      'FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50'
-    ).bind(merchant, legacy || merchant, since).all();
-    rows = (rs && rs.results) || [];
+    if (!voidsOnly) {
+      const rs = await env.DB.prepare(
+        'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
+        'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
+      ).bind(merchant, legacy || merchant, since).all();
+      rows = (rs && rs.results) || [];
+    }
+    const vs = await env.DB.prepare(
+      'SELECT rowid AS cursor, ref FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
+      'ORDER BY void_ts DESC LIMIT 500'
+    ).bind(merchant, legacy || merchant).all();
+    voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, r: r.ref || '' }));
   } catch (e) {
-    /* Older database, no `lines` column yet: serve the sales without the basket
-     * rather than serve nothing. A dashboard that shows no revenue because a
-     * migration has not run is a far worse failure than one that cannot rank
-     * products yet. */
-    if (String((e && e.message) || e).includes('lines')) {
+    const msg = String((e && e.message) || e);
+    /* Base sans void_ts (migration pas encore passée) : on sert le flux comme
+     * avant, sans liste de retraits. Une console qui ne peut pas encore annuler
+     * est un manque ; un tableau de bord qui n'affiche plus aucune vente serait
+     * une panne. */
+    const noVoid = msg.includes('void_ts');
+    /* Base sans `lines` : on sert les ventes sans le panier plutôt que rien —
+     * ne pas savoir classer les produits vaut mieux que ne pas voir sa recette. */
+    const noLines = msg.includes('lines');
+    if (!noVoid && !noLines) {
+      return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
+    }
+    /* La caisse ne demandait que les retraits : sans la colonne, il n'y en a
+       aucun à annoncer, et il n'y a rien d'autre à servir. */
+    if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
+    const cols = 'rowid AS cursor, id, amount, method, label, ref, ts' + (noLines ? '' : ', lines');
+    try {
+      const rs = await env.DB.prepare(
+        `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50`
+      ).bind(merchant, legacy || merchant, since).all();
+      rows = (rs && rs.results) || [];
+    } catch (e2) {
+      /* Il restait la combinaison des deux manques : ni void_ts, ni lines. */
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
@@ -99,10 +156,8 @@ export async function onRequestGet({ request, env }) {
         ).bind(merchant, legacy || merchant, since).all();
         rows = (rs && rs.results) || [];
       } catch (_) {
-        return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
+        return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
       }
-    } else {
-      return json({ sales: [], cursor: since, error: 'db', detail: String(e && e.message || e) }, 500);
     }
   }
   /* Hand the basket back as an array, in the shape the till sent it and the
@@ -129,5 +184,5 @@ export async function onRequestGet({ request, env }) {
    * makes a mis-scoped feed visible from the outside instead of something you
    * have to infer from whose sales showed up. */
   const cursor = rows.length ? rows[rows.length - 1].cursor : since;
-  return json({ sales: rows, cursor, merchant });
+  return json({ sales: rows, cursor, merchant, voided });
 }

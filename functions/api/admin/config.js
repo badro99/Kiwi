@@ -7,21 +7,14 @@
 // full interface), so an absent row = everything on. Turning a module OFF here
 // hides it in that merchant's real app on next load (via /api/config).
 
-import { isOperator, json, readOperatorId } from '../../auth/_lib.js';
+import { isOperator, json, operatorActor } from '../../auth/_lib.js';
 
-/* Qui vient de couper ce module ?
- * Le cookie d'identité est signé (auth/_lib.js › readOperatorId) : sans lui on
- * n'invente pas de nom. 'equipe' = entré par le laissez-passer partagé, ou
- * session ouverte avant que ce cookie existe. Mieux vaut une identité honnête et
- * vague qu'une fausse précision dans un journal. */
-async function actorOf(context) {
-  const id = await readOperatorId(context.request, context.env);
-  if (!id) return { id: '', label: 'equipe' };
-  try {
-    const row = await context.env.DB.prepare('SELECT label FROM operators WHERE id = ?').bind(id).first();
-    return { id, label: (row && row.label) || 'opérateur' };
-  } catch (_) { return { id, label: 'opérateur' }; }
-}
+/* Qui vient de couper ce module ? operatorActor() (auth/_lib.js) répond, et il
+ * répond la même chose aux trois journaux — modules, ventes, comptes. La version
+ * locale qui vivait ici a été remontée telle quelle quand les ventes de test ont
+ * eu besoin d'inscrire le même nom : deux copies de « qui agit » sont deux
+ * occasions de diverger sur la seule colonne dont l'exactitude compte. */
+const actorOf = (context) => operatorActor(context.request, context.env);
 
 /* Une ligne par module RÉELLEMENT changé. Un enregistrement qui ne touche que le
  * plan, ou qui renvoie les mêmes valeurs, n'écrit rien — un journal qui grossit

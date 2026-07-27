@@ -210,6 +210,71 @@
      À appeler au montage pour reconstruire les compteurs de la journée. */
   function today(vertical) { return read(vertical); }
 
+  /* dropRefs(refs) → retire du journal local les ventes que la console
+     opérateur a sorties des livres.
+
+     Le compteur du comptoir est ce que le commerçant a sous les yeux. Une vente
+     d'essai passée pendant l'installation, retirée côté serveur, y resterait
+     jusqu'à minuit — sur l'écran même où on vient de lui promettre le contraire.
+     assets/live-link.js appelle ceci avec les références que /api/feed renvoie
+     (voir watchVoids).
+
+     Par RÉFÉRENCE de ticket, parce que c'est la seule clé que la caisse et le
+     serveur partagent : la caisse ne connaît pas les curseurs du flux, et
+     `ts + montant` confondrait deux ventes identiques de la même seconde.
+     Balaye les quinze journaux métier, pas seulement celui en cours : un
+     terminal partagé (le pressing derrière la boulangerie) en tient plusieurs,
+     et on ne sait pas d'ici lequel a encaissé la ligne.
+
+     Les références sont ÉTIQUETÉES par terminal (stamp() plus bas : « T-642 »
+     devient « T-642-A7 »), et c'est la forme étiquetée qui est partie au
+     serveur. On compare donc les deux sens — sinon une caisse ne reconnaîtrait
+     pas sa propre vente. */
+  function dropRefs(refs) {
+    if (!refs || !refs.length || !isReal()) return 0;
+    var want = {};
+    refs.forEach(function (r) {
+      var s = String(r || '').trim();
+      if (s) want[s] = 1;
+    });
+    if (!Object.keys(want).length) return 0;
+    var hit = function (ref) {
+      var s = String(ref || '').trim();
+      if (!s) return false;
+      if (want[s]) return true;
+      /* La référence locale peut être nue là où le serveur a la version
+         étiquetée, et inversement selon l'ordre des versions. */
+      if (want[stamp(s)]) return true;
+      var bare = s.replace(new RegExp('-' + deviceTag() + '$'), '');
+      return !!want[bare];
+    };
+    var gone = 0;
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(PREFIX) === 0) keys.push(k);
+      }
+    } catch (_) { return 0; }
+    keys.forEach(function (k) {
+      var rows = null;
+      try { rows = JSON.parse(localStorage.getItem(k) || '[]'); } catch (_) { return; }
+      if (!Array.isArray(rows) || !rows.length) return;
+      var kept = rows.filter(function (s) { return !(s && hit(s.ref)); });
+      if (kept.length === rows.length) return;
+      gone += rows.length - kept.length;
+      try { localStorage.setItem(k, JSON.stringify(kept)); } catch (_) {}
+    });
+    /* Les modules métier reconstruisent leurs compteurs depuis today()/totals()
+       au montage. Un signal leur dit de recompter sans qu'on ait à connaître
+       leurs quinze internes ; ceux qui ne l'écoutent pas seront justes au
+       prochain rendu, jamais faux. */
+    if (gone) {
+      try { document.dispatchEvent(new CustomEvent('kiwi-pos-voided', { detail: { count: gone } })); } catch (_) {}
+    }
+    return gone;
+  }
+
   /* totals(vertical) → { total, cash, card, other, count } — le calcul que les
      quinze modules referaient sinon chacun de leur côté. */
   function totals(vertical) {
@@ -282,6 +347,6 @@
 
   window.KiwiPosSale = {
     record: record, today: today, totals: totals, nextSeq: nextSeq,
-    isReal: isReal, deviceTag: deviceTag, stamp: stamp,
+    isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
   };
 })();

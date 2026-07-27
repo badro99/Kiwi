@@ -19,12 +19,20 @@
 // slug match on accounts.business kept for the primary store so nothing that
 // worked before the registry stops working now.
 
-import { isOperator, slugMerchant, json } from '../../auth/_lib.js';
+import { isOperator, isSeniorOperator, slugMerchant, json } from '../../auth/_lib.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   if (!(await isOperator(request, env))) return json({ error: 'forbidden' }, 403);
   if (!env.DB) return json({ error: 'no-db' }, 503);
+
+  /* La console apprend ici son propre niveau de droits. Les gestes sensibles —
+     sortir une vente des livres, corriger une adresse de connexion, envoyer une
+     réinitialisation — exigent un CODE OPÉRATEUR nommé, pas le laissez-passer
+     d'équipe partagé (auth/_lib.js › isSeniorOperator). Le savoir dès le
+     chargement permet d'expliquer pourquoi un bouton est fermé, au lieu de le
+     griser sans raison ou de laisser découvrir un 403 après avoir tout saisi. */
+  const senior = await isSeniorOperator(request, env);
 
   // Start of "today" in the server's clock (UTC on Workers). Good enough for a
   // pilot; the console shows the day's running tally, not an accounting close.
@@ -119,7 +127,7 @@ export async function onRequestGet(context) {
   }
 
   const clients = [...map.values()].sort((a, b) => (b.last_ts || 0) - (a.last_ts || 0));
-  return json({ clients, dayStart, now });
+  return json({ clients, dayStart, now, senior, mail: !!env.MAIL_WEBHOOK });
 }
 
 // PATCH /api/admin/clients — freeze or reactivate an account.
