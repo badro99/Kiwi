@@ -517,7 +517,12 @@
         whatsapp: cfg.msg.whatsapp,
       },
       qr: qrFor(cfg),
-      copy: str(opts.copy, 40),          /* « DUPLICATA » sur une réimpression */
+      /* Le mot qui marque une réimpression. `copy: true` demande celui de la
+       * langue du ticket — un caissier arabophone imprimait « DUPLICATA » parce
+       * que l'appelant écrivait le mot français en dur, sur un reçu par ailleurs
+       * entièrement en arabe. Une chaîne reste acceptée telle quelle : un métier
+       * qui veut son propre mot (« COPIE ATELIER ») le passe encore. */
+      copy: opts.copy === true ? T.copy : str(opts.copy, 40),
       T: T,
     };
     return doc;

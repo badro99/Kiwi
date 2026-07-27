@@ -319,6 +319,23 @@ section('Rafraîchir la caisse (tools/caisse-refresh-test.js)');
   }
 }
 
+/* ── 9 · le bouton « Réimprimer » de la caisse ───────────────────────────────
+ * Une réimpression qui repasse par le chemin d'une vente encaisse deux fois, et
+ * un duplicata qui ne se déclare pas est une pièce qu'on ne peut plus
+ * rapprocher. (tools/pos-reprint-test.js) ────────────────────────────────── */
+section('Réimprimer un ticket (tools/pos-reprint-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'pos-reprint-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`pos-reprint-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
