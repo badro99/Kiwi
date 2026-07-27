@@ -364,7 +364,12 @@
     boutique: { base: 'boutique', questions: [
       { k: 'skus',    type: 'number', ph: 'Ex. 800',           label: { fr: '≈ Nombre de références', en: '≈ Number of SKUs', ar: '≈ عدد المنتجات' } },
       { k: 'surface', type: 'number', ph: 'Ex. 45',            label: { fr: 'Surface (m²)', en: 'Floor area (m²)', ar: 'المساحة (م²)' } },
-      { k: 'hours',   type: 'text',   ph: 'Ex. 9h–20h',        label: { fr: 'Horaires', en: 'Opening hours', ar: 'ساعات العمل' } },
+      /* Plus de question « Horaires » ici. C'était un champ de texte libre posé
+       * à l'inscription, donc rempli à la va-vite (« 9h–20h », « 12-02 ») et
+       * illisible ensuite par la caisse, les réservations ou l'assistant. Les
+       * horaires se règlent une fois, dans Réglages → Heures d'ouverture, avec
+       * de vrais sélecteurs — et de là tout le produit les lit. */
+      { k: 'surface2', type: 'number', ph: 'Ex. 2',            label: { fr: 'Nombre de vendeurs', en: 'Sales staff', ar: 'عدد البائعين' } },
     ] },
     spa: { base: 'spa', questions: [
       { k: 'cabins',  type: 'number', ph: 'Ex. 4',             label: { fr: 'Cabines de soin', en: 'Treatment rooms', ar: 'غرف العناية' } },

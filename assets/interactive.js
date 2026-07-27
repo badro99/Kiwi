@@ -1474,6 +1474,21 @@ ar: {
       const cv = !!(KV && KV.isCustom && KV.isCustom());
       const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
       const getSet = (k, def) => { try { return localStorage.getItem('kiwiSet:' + k) || def; } catch (_) { return def; } };
+      /* Ce que la ligne « Heures d'ouverture » affiche. Elle lit KiwiHours et
+       * RIEN d'autre : l'ancien texte libre (vd.hours, kiwiSet:hours) n'est
+       * plus une source, seulement un vestige à remplacer. Tant que la semaine
+       * n'est pas saisie on le dit — un horaire manquant qui se présente comme
+       * un horaire est ce qui a fait inventer des heures à tout le produit. */
+      const hoursRowValue = (venueData) => {
+        const KH = window.KiwiHours;
+        const legacy = (venueData && venueData.hours) || getSet('hours', '');
+        const unset = tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' });
+        if (!KH) return legacy || unset;
+        if (!KH.isConfigured()) {
+          return legacy ? tr({ fr: 'À convertir · ', en: 'To convert · ', ar: 'للتحويل · ' }) + legacy : unset;
+        }
+        return KH.summary(Date.now()).text;
+      };
       const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
       return drawer({
       title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
@@ -1512,12 +1527,12 @@ ar: {
           <div class="kset-card">
             ${cv ? `
             ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape(vd.typeLabel || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(vd.hours || tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' })), { action: 'settings-edit-venue' })}
+            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
             ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
             ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || tr({ fr: 'Toutes acceptées', en: 'All accepted', ar: 'الكل مقبول' })), { action: 'settings-edit-venue' })}
             ` : `
             ${settingsRow('🏪', escape(getSet('venueName', ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')))), escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(getSet('hours', tr({ fr: '07:00 - 23:00 · tous les jours', en: '07:00 - 23:00 · every day', ar: '07:00 - 23:00 · كل يوم' }))), { action: 'settings-edit-store', arg: 'hours' })}
+            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
             ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(getSet('methods', 'Visa · MC · Kiwi Tap · QR')), { action: 'settings-methods' })}
             ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
             `}
@@ -1650,11 +1665,16 @@ ar: {
         venue: { tag: 'MA BOUTIQUE', title: tr({ fr: 'Nom & emplacement', en: 'Name & location', ar: 'الاسم والموقع' }), fields: [
           { k: 'venueName', label: tr({ fr: 'Nom de la boutique', en: 'Shop name', ar: 'اسم المتجر' }), def: ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')), max: 40 },
           { k: 'venueLoc',  label: tr({ fr: 'Emplacement', en: 'Location', ar: 'الموقع' }), def: 'Emplacement principal', max: 40 } ] },
-        hours: { tag: tr({ fr: 'HORAIRES', en: 'HOURS', ar: 'التوقيت' }), title: tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), fields: [
-          { k: 'hours', label: tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), def: '07:00 - 23:00 · tous les jours', max: 44 } ] },
+        /* `hours` n'est plus ici. Un champ libre supprimé d'un écran mais laissé
+         * dans la table reste atteignable par un lien profond ou un bouton
+         * oublié, et il suffit d'une seule saisie « 12-02 » pour que le produit
+         * reparte avec deux horaires contradictoires. La clé est donc redirigée
+         * vers l'éditeur structuré, plus bas. */
         goal: { tag: tr({ fr: 'OBJECTIF', en: 'GOAL', ar: 'الهدف' }), title: tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), hint: tr({ fr: 'Met à jour la barre d\'objectif du tableau de bord.', en: 'Updates the dashboard goal bar.', ar: 'يُحدّث شريط الهدف في لوحة التحكم.' }), fields: [
           { k: 'goal', label: tr({ fr: 'Chiffre d\'affaires visé par jour · MAD', en: 'Target revenue per day · MAD', ar: 'رقم المعاملات المستهدف يوميًا · درهم' }), def: '28 000', type: 'number' } ] },
       };
+      /* Tout appel restant sur `hours` atterrit sur l'écran structuré. */
+      if (which === 'hours') { try { return handlers['settings-hours'](); } catch (_) { return; } }
       const cfg = CFG[which]; if (!cfg) return;
       const body = '<style>.ks-field:focus{border-color:var(--atlas)!important;}</style>' + cfg.fields.map((f, i) =>
         `<label style="${lbl}${i === 0 ? 'margin-top:2px;' : ''}">${f.label}</label>` +
@@ -1718,6 +1738,39 @@ ar: {
       ]);
     },
 
+    /* Les horaires d'ouverture — l'écran structuré, et le seul.
+     * Il remplace quatre champs de texte libre qui coexistaient (cette fiche,
+     * Mon profil, la question d'onboarding boutique, le réglage de démo) et
+     * qu'aucun module ne pouvait lire. Order Pro, Réservations, la caisse, le
+     * rapport journalier et l'assistant interrogent tous KiwiHours ; ils n'ont
+     * pas de réglage à eux, par construction.
+     *
+     * `legacy` : l'ancienne valeur libre, montrée en haut de l'éditeur pour que
+     * le propriétaire sache CE QU'IL remplace. On ne l'interprète pas — « 12-02 »
+     * n'a pas de lecture sûre, et deviner ici serait exactement l'erreur que ce
+     * chantier corrige. Elle est effacée une fois la semaine enregistrée. */
+    'settings-hours': () => {
+      if (!window.KiwiHoursUI || !window.KiwiHours) return;
+      const KV = window.KiwiVenue;
+      const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+      const legacy = window.KiwiHours.isConfigured()
+        ? ''
+        : (vd.hours || (() => { try { return localStorage.getItem('kiwiSet:hours') || ''; } catch (_) { return ''; } })());
+      window.KiwiHoursUI.open({
+        venueId: (KV && KV.getVenue && KV.getVenue()) || null,
+        title: vd.fullDisplay || vd.name || '',
+        legacy,
+        onSave: () => {
+          /* Le vestige a fini son office : il disparaît, pour qu'aucun écran ne
+           * puisse plus afficher deux horaires différents du même commerce. */
+          try { localStorage.removeItem('kiwiSet:hours'); } catch (_) {}
+          try { if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' }); } catch (_) {}
+          document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
+          setTimeout(() => { try { handlers.settings(); } catch (_) {} }, 110);
+        },
+      });
+    },
+
     /* Edit a user-created venue's identity from Settings → Boutique. */
     'settings-edit-venue': () => {
       const KV = window.KiwiVenue;
@@ -1735,8 +1788,6 @@ ar: {
           <input class="ev-field" data-ev-name style="${fld}" maxlength="40"/>
           <label style="${lbl}">Ville</label>
           <input class="ev-field" data-ev-city style="${fld}" maxlength="30"/>
-          <label style="${lbl}">Heures d'ouverture</label>
-          <input class="ev-field" data-ev-hours placeholder="Ex. 08:00 - 22:00 · tous les jours" style="${fld}" maxlength="44"/>
           <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· MAD</span></label>
           <input class="ev-field" data-ev-goal type="number" inputmode="numeric" style="${fld}" min="0"/>
         `,
@@ -1744,17 +1795,17 @@ ar: {
       });
       m.el.querySelector('[data-ev-name]').value = vd.name || '';
       m.el.querySelector('[data-ev-city]').value = vd.location || '';
-      m.el.querySelector('[data-ev-hours]').value = vd.hours || '';
       m.el.querySelector('[data-ev-goal]').value = vd.goal || '';
       setTimeout(() => m.el.querySelector('[data-ev-name]').focus(), 320);
       m.el.addEventListener('click', (e) => {
         if (!e.target.closest('[data-ev-save]')) return;
         const name = (m.el.querySelector('[data-ev-name]').value || '').trim();
         if (!name) { toast(tr({fr:'Le nom de l\'activité est requis', en:'Activity name is required', ar:'اسم النشاط مطلوب'}), { type: 'warn', force: true }); return; }
+        /* Plus de `hours` ici : les horaires ne sont plus une ligne de texte de
+         * cette fiche, ils ont leur propre écran structuré (settings-hours). */
         KV.updateVenue(KV.getVenue(), {
           name,
           location: m.el.querySelector('[data-ev-city]').value,
-          hours:    m.el.querySelector('[data-ev-hours]').value,
           goal:     m.el.querySelector('[data-ev-goal]').value,
         });
         m.close();

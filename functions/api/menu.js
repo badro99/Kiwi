@@ -39,6 +39,47 @@ function mediaUrl(v) {
   return s.indexOf('/api/media/') === 0 ? s : '';
 }
 
+// Les horaires d'ouverture, publiés AVEC la carte parce qu'ils voyagent au même
+// endroit : le téléphone d'un client. Sans eux la page de commande ne peut pas
+// dire « fermé, nous rouvrons demain à 12:00 » — elle prend la commande d'un
+// restaurant fermé, et c'est le commerçant qui découvre le problème le matin.
+//
+// Même discipline que le reste du fichier : une forme, des bornes, et rien qui
+// vienne du client sans être recopié champ par champ. Sept jours, deux services
+// par jour, quelques exceptions — c'est tout ce qu'une page publique a besoin
+// de savoir, et surtout PAS les dérogations internes (qui a ouvert hors
+// horaires, quand et pourquoi ne regardent pas le public).
+const HHMM = /^([01]\d|2[0-4]):([0-5]\d)$/;
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+function sanitizePeriods(raw) {
+  return (Array.isArray(raw) ? raw.slice(0, 2) : [])
+    .map((p) => ({ from: str(p && p.from, 5), to: str(p && p.to, 5) }))
+    .filter((p) => HHMM.test(p.from) && HHMM.test(p.to) && p.from !== p.to);
+}
+function sanitizeHours(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const week = {};
+  let any = false;
+  const src = raw.week && typeof raw.week === 'object' ? raw.week : {};
+  for (const d of DAY_KEYS) {
+    const periods = sanitizePeriods(src[d] && src[d].periods);
+    const open = !!(src[d] && src[d].open) && periods.length > 0;
+    if (open) any = true;
+    week[d] = { open, periods };
+  }
+  if (!any) return null;                       // une semaine vide n'est pas un horaire
+  const exceptions = (Array.isArray(raw.exceptions) ? raw.exceptions.slice(0, 40) : [])
+    .map((e) => ({
+      from: str(e && e.from, 10), to: str(e && e.to, 10),
+      kind: (e && e.kind) === 'hours' ? 'hours' : 'closed',
+      label: str(e && e.label, 60),
+      periods: sanitizePeriods(e && e.periods),
+    }))
+    .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.from) && /^\d{4}-\d{2}-\d{2}$/.test(e.to)
+      && (e.kind === 'closed' || e.periods.length));
+  return { v: 1, week, exceptions };
+}
+
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
@@ -68,6 +109,7 @@ function sanitizeMenu(raw) {
     photo: mediaUrl(it && it.photo),
     video: mediaUrl(it && it.video),
   })).filter((it) => it.id && it.name);
+  if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
 }
 
@@ -105,6 +147,7 @@ function sanitizeShop(raw) {
   out.colors = (Array.isArray(raw.colors) ? raw.colors.slice(0, 60) : [])
     .map((c) => ({ id: str(c && c.id, 40), label: str(c && c.label, 40), hex: str(c && c.hex, 9) }))
     .filter((c) => c.id);
+  if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
 }
 

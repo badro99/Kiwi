@@ -2729,10 +2729,47 @@ handlers['nav-reservations'] = () => {
     [['12:00','15:00',22,'lunch']],
     [],
   ];
+  /* Les créneaux de service de la semaine. Pour un vrai établissement dont les
+   * horaires sont renseignés, ils viennent des HORAIRES et de rien d'autre :
+   * c'était l'incohérence la plus visible du produit — un restaurant qui ferme
+   * à 02:00 voyait quand même son planning s'arrêter à 22:30, parce que ces
+   * blocs étaient écrits en dur ici. Réservations n'a pas — et ne doit pas
+   * avoir — son propre réglage d'horaires.
+   *
+   * Un service qui franchit minuit est tronqué à 24:00 POUR L'AFFICHAGE
+   * seulement : la piste horizontale représente une journée, on ne peut pas y
+   * dessiner 02:00 du lendemain. La disponibilité réelle, elle, est calculée
+   * par KiwiHours.slotsFor() qui, lui, ne tronque rien. */
+  const KH = window.KiwiHours;
+  const realHours = !!(KH && KH.isConfigured());
+  const scheduleBlocks = (d) => {
+    const r = KH.periodsOn(d);
+    return (r.periods || []).map((p) => {
+      const a = KH.toMin(p.from);
+      const end = Math.min(1440, a + KH.span(p));
+      return [p.from, KH.fromMin(end), 0, a < 15 * 60 ? 'lunch' : 'dinner'];
+    });
+  };
   const days = COVERS.map((covers, i) => {
     const d = new Date(now); d.setDate(now.getDate() + i);
-    return { n: dShort.format(d), covers, blocks: BLOCKS[i], today: i === 0 };
+    return {
+      n: dShort.format(d),
+      covers: realHours ? 0 : covers,
+      blocks: realHours ? scheduleBlocks(d) : BLOCKS[i],
+      today: i === 0,
+    };
   });
+  /* L'amplitude de la piste. Calculée sur ce qui est réellement affiché, avec
+     une demi-heure de marge de chaque côté, pour qu'aucun bloc ne déborde. */
+  const tMin = (s) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+  const TRACK = (() => {
+    let a = 24 * 60, b = 0;
+    days.forEach((d) => (d.blocks || []).forEach(([from, to]) => {
+      a = Math.min(a, tMin(from)); b = Math.max(b, tMin(to));
+    }));
+    if (a >= b) { a = 11 * 60; b = 23 * 60; }       /* semaine vide : la fenêtre héritée */
+    return { a: Math.max(0, a - 30), b: Math.min(1440, b + 30) };
+  })();
   const blockColor = (cap, type) => {
     if (cap >= 30) return 'var(--danger)';
     if (cap >= 18) return 'var(--warning)';
@@ -2780,10 +2817,14 @@ handlers['nav-reservations'] = () => {
               <div class="rcal-name" style="${d.today ? 'color:var(--atlas); font-weight:600;' : ''}">${d.n}${d.today ? ' · ' + T.today : ''}<div style="font-size:10.5px; color:var(--n-500); font-family:var(--mono); margin-top:2px;">${d.covers} ${T.cov}</div></div>
               <div class="rcal-track">
                 ${d.blocks.map(([from, to, cap, type]) => {
-                  const fH = parseInt(from); const tH = parseInt(to);
-                  const left = ((fH - 11) / 12) * 100;
-                  const width = ((tH - fH) / 12) * 100;
-                  return `<div class="rcal-block" style="left:${left}%; width:${width}%; background:${blockColor(cap, type)};">${from}–${to} · ${cap}</div>`;
+                  /* La piste couvre TRACK.a → TRACK.b, calculé sur la semaine
+                     réelle (voir plus haut) et non plus figé sur 11 h–23 h : un
+                     commerce ouvrant à 08:00 sortait de la piste par la gauche,
+                     avec un bloc à left négatif que le navigateur rognait. */
+                  const fM = tMin(from); const tM = Math.max(tMin(to), fM + 30);
+                  const left = ((fM - TRACK.a) / (TRACK.b - TRACK.a)) * 100;
+                  const width = ((tM - fM) / (TRACK.b - TRACK.a)) * 100;
+                  return `<div class="rcal-block" style="left:${Math.max(0, left).toFixed(2)}%; width:${Math.min(100 - Math.max(0, left), width).toFixed(2)}%; background:${blockColor(cap, type)};">${from}–${to}${cap ? ' · ' + cap : ''}</div>`;
                 }).join('')}
               </div>
             </div>
@@ -8100,6 +8141,7 @@ const _TAGS = [
 ];
 
 let _bqxFilter = 'all';
+let _bqxColorFilter = '';
 let _bqxQuery = '';
 let _bqxDrawerPid = null;
 let _bqxModal = null;
@@ -8107,6 +8149,7 @@ let _bqxSubbed = false;
 
 /* one-time styles for the variant matrix, barcode chips and category rows */
 function _bqxCss() {
+  if (window.KiwiColors) window.KiwiColors.injectCss();
   if (document.getElementById('bqx-css')) return;
   const st = document.createElement('style');
   st.id = 'bqx-css';
@@ -8115,7 +8158,25 @@ function _bqxCss() {
     .bqx-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
     .bqx-vtable th { text-align: left; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807b); padding: 8px 10px; background: var(--paper-soft, #f3f1ea); }
     .bqx-vtable td { padding: 9px 10px; border-top: 1px solid var(--line, #eee); vertical-align: middle; }
-    .bqx-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); vertical-align: -2px; margin-right: 7px; }
+    /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) — un seul
+       dessin pour le tableau de bord et la caisse. Ici : ce qui les entoure. */
+    .bqx-cbtn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; padding: 3px 5px; margin: -3px -5px; border-radius: 8px; font: inherit; color: inherit; cursor: pointer; }
+    .bqx-cbtn:hover { background: var(--paper-soft, #f3f1ea); }
+    .bqx-cbtn:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 1px; }
+    /* Famille sur une ligne, nuance d'origine dessous et alignée sous le mot :
+       la colonne reste lisible même quand deux variantes affichent « Bleu ». */
+    .bqx-ccell { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+    .bqx-ccell .bqx-cbtn span { white-space: nowrap; }
+    .bqx-csrc { font-style: normal; font-size: 11px; color: var(--n-500, #77807b); margin-left: 24px; white-space: nowrap; }
+    .bqx-card-cols { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 2px 0 1px; min-height: 16px; }
+    .bqx-card-cols em { font-style: normal; font-size: 10.5px; color: var(--n-500, #77807b); }
+    .bqx-cfilter { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 2px 0 6px; }
+    .bqx-cfilter-l { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807b); margin-right: 2px; }
+    /* Sélectionné dans le filtre = anneau + coche, jamais la couleur seule. */
+    .bqx-cfilter .kc-sw.is-on { box-shadow: 0 0 0 2px var(--paper, #F7F5F0), 0 0 0 4px var(--atlas, #0B6E4F); transform: scale(1.06); }
+    html[data-theme="dark"] .bqx-cfilter .kc-sw.is-on { box-shadow: 0 0 0 2px var(--paper, #0f1512), 0 0 0 4px var(--mint, #7DF2B0); }
+    .bqx-cfilter .kc-sw.is-on::after { content: ''; position: absolute; left: 50%; top: 50%; width: 30%; height: 55%; margin: -32% 0 0 -15%; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(42deg); }
+    .bqx-cfilter .kc-sw.is-on.is-light::after { border-color: #0A0F0D; }
     .bqx-stk { display: inline-flex; align-items: center; gap: 5px; }
     .bqx-stk input { width: 46px; text-align: center; font-family: var(--mono, monospace); font-size: 13px; padding: 4px; border: 1px solid var(--line, #ddd); border-radius: 7px; background: var(--paper, #fff); color: var(--ink, #0A0F0D); }
     .bqx-stk button { width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line, #ddd); background: var(--paper, #fff); cursor: pointer; font-size: 15px; line-height: 1; color: var(--ink, #0A0F0D); }
@@ -8156,10 +8217,28 @@ function _bqxSubscribe() {
   });
 }
 
-/* ─────────────────────────── colours / options helpers ─────────────────────────── */
-function _colorOptions(sel) {
-  return CAT().colors().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.label)}</option>`).join('');
+/* ─────────────────────────── colours / options helpers ───────────────────────────
+   La couleur se choisit à la pastille, jamais dans une liste de noms : une liste
+   déroulante de nuances oblige à lire treize mots pour retrouver le bleu, alors
+   que l'œil le trouve seul. Le sélecteur, son état sélectionné, sa navigation au
+   clavier et son libellé au survol viennent tous de assets/color-palette.js —
+   les mêmes qu'en caisse, à la pastille près. */
+function _colorPicker(sel, opts) {
+  const k = window.KiwiColors;
+  if (!k) return '';
+  return k.picker('bqx-color', sel, Object.assign({ optional: true, label: 'Couleur' }, opts || {}));
 }
+/* La famille qu'une variante affiche, tolérante à un enregistrement écrit avant
+   la normalisation (copie serveur d'un ancien build). */
+function _bqxFam(v) {
+  if (!v) return 'gris';
+  if (v.colorFamily) return v.colorFamily;
+  const k = window.KiwiColors;
+  return k ? k.familyId(v.colorId, v.colorLabel, v.colorHex) : 'gris';
+}
+/* Ce qui distingue deux variantes tombant dans la même famille : la précision
+   saisie par le commerçant, sinon la nuance d'origine. */
+function _bqxVarNote(v) { return (v && (v.note || v.colorSource)) || ''; }
 function _catOptions(sel, includeNone) {
   const none = includeNone ? `<option value="">— Sans catégorie</option>` : '';
   return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
@@ -8173,9 +8252,16 @@ function _kindOptions(sel) {
  * 1. INVENTAIRE PRODUITS
  * ─────────────────────────────────────────────────────────────────────────── */
 function _bqxGridHtml() {
-  const products = CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
+  let products = CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
+  // Filtrer par couleur, c'est filtrer par FAMILLE : on cherche « du bleu », pas
+  // « du bleu nuit ». Une variante marine et une variante turquoise répondent
+  // toutes les deux, et restent malgré tout deux articles distincts.
+  if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
   if (!products.length) {
-    return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${_bqxQuery ? 'Aucun résultat pour cette recherche.' : 'Créez un produit ici, ou depuis la caisse (code 0002) avec la douchette.'}</div></div>`;
+    return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
+      _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
+        : _bqxQuery ? 'Aucun résultat pour cette recherche.'
+        : 'Créez un produit ici, ou depuis la caisse (code 0002) avec la douchette.'}</div></div>`;
   }
   return `<div class="kx-sku-grid">${products.map((p) => {
     const data = CAT().getProduct(p.id);
@@ -8192,7 +8278,8 @@ function _bqxGridHtml() {
       </div>
       <div class="kx-sku-body">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
-        <div class="kx-sku-sku mono">${data.colors.length} coul. · ${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
+        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
+        <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
           <div class="kx-sku-price mono">${_mad(p.priceMAD)} MAD</div>
           <div class="kx-sku-stock ${stockClass} mono">${stock} en stock</div>
@@ -8201,6 +8288,28 @@ function _bqxGridHtml() {
       </div>
     </div>`;
   }).join('')}</div>`;
+}
+
+/* Filtre couleur : uniquement les familles que ce magasin a réellement en rayon.
+   C'est ce qui garde « Transparent » hors du chemin tant qu'aucun article ne
+   l'utilise, et ce qui évite d'afficher treize pastilles à une boutique qui n'en
+   vend que quatre. Rien n'apparaît tant qu'il n'y a pas au moins deux couleurs :
+   filtrer sur la seule couleur du magasin ne sert à rien. */
+function _bqxColorBar(cat) {
+  const kc = window.KiwiColors;
+  if (!kc || !cat.colorsInUse) return '';
+  const used = cat.colorsInUse();
+  if (used.length < 2) return '';
+  return `<div class="bqx-cfilter" role="group" aria-label="Filtrer par couleur">
+    <span class="bqx-cfilter-l">Couleur</span>
+    ${used.map((c) => {
+      const on = _bqxColorFilter === c.id;
+      return `<button class="kc-sw${c.light ? ' is-light' : ''}${on ? ' is-on' : ''}" ${c.pattern ? `data-kc-pattern="${c.pattern}"` : ''} `
+        + `style="${c.pattern ? '' : `background-color:${c.hex};`}" data-action="bqx-cfilter" data-arg="${c.id}" `
+        + `role="button" aria-pressed="${on ? 'true' : 'false'}" title="${_esc(c.label)}" aria-label="${_esc(c.label)}"></button>`;
+    }).join('')}
+    ${_bqxColorFilter ? `<button class="kb ghost xs" data-action="bqx-cfilter" data-arg="">Tout voir</button>` : ''}
+  </div>`;
 }
 
 /* the boutique inventory follows the dashboard's active venue, so every boutique
@@ -8376,6 +8485,8 @@ function _renderInventory() {
         ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
       </div>
 
+      ${_bqxColorBar(cat)}
+
       <div id="bqx-grid">${_bqxGridHtml()}</div>
 
       <div class="kx-foot-hint">
@@ -8401,6 +8512,12 @@ handlers['nav-inventory'] = () => {
 };
 
 handlers['bqx-filter'] = (_el, arg) => { _bqxFilter = arg || 'all'; _renderInventory(); };
+/* Une pastille déjà active se désactive : c'est le geste attendu d'un filtre à
+   choix unique, et ça évite d'ajouter un bouton « tout » de plus. */
+handlers['bqx-cfilter'] = (_el, arg) => {
+  _bqxColorFilter = (_bqxColorFilter === arg) ? '' : (arg || '');
+  _renderInventory();
+};
 handlers['bqx-export'] = () => {
   try {
     const csv = CAT().exportCsv();
@@ -8429,8 +8546,14 @@ function _variantRow(v, kind) {
   const genOrPrint = primary
     ? `<button class="kb ghost xs" data-action="bqx-var-print" data-arg="${v.id}" title="Imprimer l'étiquette">${_ICN.upload}Étiquette</button>`
     : `<button class="kb ghost xs" data-action="bqx-var-gen" data-arg="${v.id}" title="Générer un EAN-13">${_ICN.scan}Générer</button>`;
+  const fam = _bqxFam(v);
+  const note = _bqxVarNote(v);
+  const kc = window.KiwiColors;
   return `<tr>
-    <td><span class="bqx-dot" style="background:${v.colorHex};"></span>${_esc(v.colorLabel)}</td>
+    <td><div class="bqx-ccell">
+      <button class="bqx-cbtn" data-action="bqx-var-color" data-arg="${v.id}" title="Changer la couleur">
+        ${kc ? kc.swatch(fam) : ''}<span>${_esc(kc ? kc.label(fam) : v.colorLabel)}</span></button>
+      ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}</div></td>
     <td class="mono">${_esc(v.size)}</td>
     <td><span class="bqx-stk">
       <button data-action="bqx-var-dec" data-arg="${v.id}" aria-label="−1">−</button>
@@ -8620,7 +8743,7 @@ handlers['bqx-var-add'] = (_el, arg) => {
     width: 480,
     body: `
       <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Couleur</label><select class="kf-input" data-bqx-vcolor>${_colorOptions()}</select></div>
+        <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker('noir')}</div>
         <div class="kf-group"><label class="kf-label">${kind === 'pointure' ? 'Pointure' : kind === 'tu' ? 'Taille' : 'Taille'}</label>
           <input class="kf-input" list="bqx-sizes" data-bqx-vsize value="${_esc(presets[0] || '')}" />
           <datalist id="bqx-sizes">${presets.map((s) => `<option value="${_esc(s)}">`).join('')}</datalist></div>
@@ -8628,21 +8751,54 @@ handlers['bqx-var-add'] = (_el, arg) => {
       <div class="kf-row">
         <div class="kf-group"><label class="kf-label">Stock initial</label><input class="kf-input" type="number" min="0" value="0" data-bqx-vstock /></div>
         <div class="kf-group"><label class="kf-label">Code-barres</label><select class="kf-input" data-bqx-vbc><option value="gen">Générer un EAN-13</option><option value="none">Aucun (plus tard)</option></select></div>
-      </div>`,
+      </div>
+      <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
+        <input class="kf-input" maxlength="60" data-bqx-vnote placeholder="Ex. rayé, délavé, motif" />
+        <div class="kf-help">À remplir seulement si deux variantes partagent la même couleur et doivent rester reconnaissables.</div></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-add-save" data-arg="${arg}">Ajouter</button>`,
   });
 };
 handlers['bqx-var-add-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const colorId = b.querySelector('[data-bqx-vcolor]').value;
+  const colorId = (window.KiwiColors && window.KiwiColors.value(b)) || 'noir';
   const size = b.querySelector('[data-bqx-vsize]').value.trim() || 'TU';
   const stock = parseInt(b.querySelector('[data-bqx-vstock]').value, 10) || 0;
   const bc = b.querySelector('[data-bqx-vbc]').value;
-  const v = CAT().addVariant({ productId: arg, colorId, size, stock });
+  const note = (b.querySelector('[data-bqx-vnote]') || {}).value || '';
+  const v = CAT().addVariant({ productId: arg, colorId, size, stock, note: note.trim() });
   if (v && bc === 'gen') CAT().generateBarcode(v.id);
   if (_bqxModal) _bqxModal.close();
   toast('Variante ajoutée', { desc: `${CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
+};
+
+/* Recolorer une variante existante. Elle garde son stock, ses codes-barres et
+   son identité — deux variantes qui tombent sur la même famille restent deux
+   articles distincts tant qu'un humain n'a pas décidé le contraire. */
+handlers['bqx-var-color'] = (_el, arg) => {
+  const v = (CAT().listVariants(_bqxDrawerPid) || []).find((x) => x.id === arg);
+  if (!v) return;
+  const data = CAT().getProduct(_bqxDrawerPid);
+  _bqxModal = modal({
+    title: 'Couleur de la variante', tag: `TAILLE ${_esc(v.size)}`,
+    desc: data ? `${data.product.name}${v.colorSource ? ` · saisie à l'origine « ${v.colorSource} »` : ''}` : '',
+    width: 460,
+    body: `
+      <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(_bqxFam(v))}</div>
+      <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
+        <input class="kf-input" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. rayé, délavé, motif" />
+        <div class="kf-help">Sert à distinguer deux variantes de même couleur. Le sélecteur, lui, reste simple.</div></div>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer</button>`,
+  });
+};
+handlers['bqx-var-color-save'] = (_el, arg) => {
+  const b = document.querySelector('.kiwi-backdrop');
+  if (!b) return;
+  const colorId = window.KiwiColors && window.KiwiColors.value(b);
+  const note = (b.querySelector('[data-bqx-vcnote]') || {}).value || '';
+  CAT().updateVariant(arg, { colorId: colorId || undefined, note: note.trim() });
+  if (_bqxModal) _bqxModal.close();
+  toast('Couleur mise à jour', { type: 'success', duration: 2000 });
 };
 
 /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only exists

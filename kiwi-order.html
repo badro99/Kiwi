@@ -27,6 +27,13 @@
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
   <script src="assets/lucide.min.js" defer></script>
+  <!-- Les horaires de l'établissement. Cette page tourne sur le téléphone d'un
+       client : elle ne lit aucun réglage local, elle reçoit la semaine PUBLIÉE
+       avec la carte (/api/menu) et l'interroge avec statusOf()/summaryOf(), qui
+       sont des fonctions pures — aucun stockage, aucune session. C'est ce qui
+       permet de dire « fermé, nous rouvrons demain à 12:00 » au lieu de prendre
+       la commande d'un commerce fermé. -->
+  <script src="assets/hours.js" defer></script>
 
   <style>
     /* =========================================================
@@ -2980,6 +2987,9 @@ em, i, cite, dfn, var { font-style: normal; }
         mode_takeout_label: "À emporter",
         mode_takeout_desc: "Paiement à la caisse · on vous prévient quand c'est prêt",
         mode_foot: "Café Atlas · service self-order",
+        closed_now: "Fermé en ce moment",
+        closed_order: "Commande indisponible",
+        closed_why: "Nous n'acceptons pas de commande en dehors des heures d'ouverture.",
         table_ask_pre: "Quel est votre",
         table_ask_em: "numéro de table",
         table_ask_post: "?",
@@ -3138,6 +3148,9 @@ em, i, cite, dfn, var { font-style: normal; }
         mode_takeout_label: "Takeout",
         mode_takeout_desc: "Pay at the counter · we'll notify you when it's ready",
         mode_foot: "Café Atlas · self-order service",
+        closed_now: "Closed right now",
+        closed_order: "Ordering unavailable",
+        closed_why: "We don't take orders outside opening hours.",
         table_ask_pre: "What's your",
         table_ask_em: "table number",
         table_ask_post: "?",
@@ -3296,6 +3309,9 @@ em, i, cite, dfn, var { font-style: normal; }
         mode_takeout_label: "للأخذ معايا",
         mode_takeout_desc: "الخلاص فالكيسة · غادي نخبروك ملي يكون واجد",
         mode_foot: "كافي أطلس · خدمة الطلب الذاتي",
+        closed_now: "مغلق حاليًا",
+        closed_order: "الطلب غير متاح",
+        closed_why: "لا نقبل الطلبات خارج ساعات العمل.",
         table_ask_pre: "شنو هو",
         table_ask_em: "رقم الطاولة ديالك",
         table_ask_post: "؟",
@@ -4354,6 +4370,11 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function sendOrder() {
+      /* Dernier verrou. Le bouton est déjà désactivé quand le commerce est
+       * fermé, mais la fermeture peut tomber entre l'ouverture du panier et le
+       * tap — et un « envoyer » qui part quand même laisse une commande que
+       * personne ne prépare. On explique plutôt que de refuser en silence. */
+      if (shopClosed()) { refreshHoursGate(); return; }
       const btn = $('#send-btn');
       btn.classList.add('is-loading');
       const summary = [...cart.entries()]
@@ -4703,8 +4724,67 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     // Called once the /api/menu fetch resolves.
+    /* ── Les horaires publiés avec la carte ──────────────────────────────────
+     * TENANT_HOURS est le document que le commerçant a réglé dans son tableau
+     * de bord, recopié champ par champ par le serveur. Null tant qu'il n'a rien
+     * renseigné — et dans ce cas on ne bloque RIEN : refuser une commande sur
+     * une donnée qu'on n'a jamais demandée au commerçant serait lui coûter un
+     * client pour un formulaire vide. Le blocage n'existe que lorsque
+     * l'établissement a explicitement déclaré ses heures. */
+    let TENANT_HOURS = null;
+    function shopStatus() {
+      if (!TENANT_HOURS || !window.KiwiHours) return null;
+      try { return window.KiwiHours.statusOf(TENANT_HOURS, Date.now()); } catch (_) { return null; }
+    }
+    function shopClosed() {
+      const st = shopStatus();
+      return !!(st && st.configured && !st.open);
+    }
+    function shopStatusText() {
+      if (!TENANT_HOURS || !window.KiwiHours) return '';
+      try {
+        const L = currentLang === 'en' ? 'en' : currentLang === 'ar' ? 'ar' : 'fr';
+        return window.KiwiHours.summaryOf(TENANT_HOURS, Date.now(), L).text;
+      } catch (_) { return ''; }
+    }
+    /* Le bandeau. Il dit POURQUOI et QUAND ça rouvre — un « indisponible » sec
+     * envoie le client chez le voisin ; « nous rouvrons demain à 12:00 » le
+     * fait revenir. */
+    function renderClosedBanner() {
+      let el = document.getElementById('kh-closed');
+      if (!shopClosed()) { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'kh-closed';
+        el.style.cssText = 'position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:9px;' +
+          'padding:11px 16px;background:#fdecec;color:#8a1c1c;font-size:13px;line-height:1.45;' +
+          'font-family:var(--sans,system-ui);border-bottom:1px solid #f3c9c9;';
+        const host = document.querySelector('.app') || document.body;
+        host.insertBefore(el, host.firstChild);
+      }
+      el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#c0392b;flex-shrink:0;"></span>' +
+        '<span><b>' + t('closed_now') + '</b> · ' + shopStatusText() + '</span>';
+    }
+    /* Le bouton d'envoi suit le même état : désactivé et nommé, jamais un
+       bouton actif qui échouera à la seconde d'après. */
+    function syncSendGate() {
+      const btn = document.getElementById('send-btn');
+      if (!btn) return;
+      const closed = shopClosed();
+      btn.disabled = closed;
+      btn.style.opacity = closed ? '0.55' : '';
+      btn.style.pointerEvents = closed ? 'none' : '';
+      if (closed) btn.setAttribute('title', t('closed_why'));
+      else btn.removeAttribute('title');
+    }
+    function refreshHoursGate() { renderClosedBanner(); syncSendGate(); }
+    /* L'état bascule tout seul à l'heure de fermeture : un client qui a la page
+       ouverte depuis 20 minutes doit le voir sans recharger. */
+    setInterval(refreshHoursGate, 60000);
+
     function applyTenant(payload) {
       const menu = payload && payload.menu;
+      TENANT_HOURS = (menu && menu.hours) || null;
       patchTenantIdentity((payload && payload.name) || prettySlug(KiwiTenant.slug));
       if (menu && menu.items && menu.items.length) {
         const cats = adaptServerMenu(menu);
@@ -4715,6 +4795,7 @@ em, i, cite, dfn, var { font-style: normal; }
         applyLang(currentLang);
         showComingSoon();           // real venue, carte not published yet
       }
+      refreshHoursGate();
       if (window.lucide) window.lucide.createIcons();
     }
 

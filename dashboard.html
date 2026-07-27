@@ -5171,6 +5171,11 @@
       <div class="breadcrumb" data-i18n="dash.breadcrumb">
         Accueil <span class="sep">/</span> <b>Tableau de bord</b>
       </div>
+      <!-- Ouvert / fermé, d'après les horaires de l'établissement. Cliquable :
+           un statut faux ou manquant se corrige là où on le lit. Rempli par
+           assets/hours-ui.js — vide tant que KiwiHours n'a pas répondu, jamais
+           une valeur d'attente qui ressemblerait à un vrai horaire. -->
+      <button class="hours-pill" data-hours-pill hidden data-action="settings-hours" type="button"></button>
       <!-- Role badge — shown only when the manager PIN (0909) is used,
            so the demo viewer knows they're seeing the restricted view. -->
       <div class="role-badge" data-role-badge>
@@ -5923,6 +5928,12 @@
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js" defer fetchpriority="low"></script>
+<!-- Le vocabulaire couleur, défini une seule fois pour les deux applications :
+     des familles générales (Noir · Blanc · Gris · Marron · Beige · Rouge ·
+     Orange · Jaune · Vert · Bleu · Violet · Rose · Multicolore), choisies à la
+     pastille, jamais à la nuance. AVANT boutique-catalog.js, qui s'en sert pour
+     normaliser les variantes au chargement. -->
+<script src="assets/color-palette.js" defer fetchpriority="low"></script>
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js" defer fetchpriority="low"></script>
@@ -5933,6 +5944,13 @@
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
 <script src="assets/cloud-doc.js" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js" defer fetchpriority="low"></script>
+<!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
+     l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
+     ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
+     assistant) interroge KiwiHours — aucun de ces modules n'a de réglage à lui.
+     Après venue-store.js, dont il tient sa fiche par établissement. -->
+<script src="assets/hours.js" defer fetchpriority="low"></script>
+<script src="assets/hours-ui.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->

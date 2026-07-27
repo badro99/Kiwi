@@ -46,6 +46,10 @@
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
        dashboard read/write the SAME product catalog (localStorage). -->
   <script src="assets/barcode.js" defer></script>
+  <!-- Même vocabulaire couleur que le tableau de bord (familles générales,
+       choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
+       normaliser les variantes existantes. -->
+  <script src="assets/color-palette.js" defer></script>
   <script src="assets/boutique-catalog.js" defer></script>
   <!-- Multi-métier PIN dispatcher: 0002–0015 lazy-load one POS vertical each
        (assets/pos-<id>.{js,css}). Tap the pin-foot note for the code legend.
@@ -3958,6 +3962,12 @@
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js" defer></script>
+  <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
+       bord. La caisse les LIT : ouvrir un service hors horaires demande une
+       dérogation nommée, et la journée commerciale du Z suit l'heure de
+       fermeture réelle au lieu d'un seuil fixe. Après venue-store.js, dont il
+       tient sa fiche par établissement. -->
+  <script src="assets/hours.js" defer></script>
   <script src="assets/clients-store.js" defer></script>
   <script src="assets/clients-book.js" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -5110,6 +5120,30 @@
         <button id="zs-skip">Continuer sans imprimer</button>
       </div>
       <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier — même après un rechargement ou depuis un autre appareil.</div>
+    </div>
+  </div>
+
+  <!-- Ouverture hors horaires. Les horaires de l'établissement (Réglages →
+       Heures d'ouverture) disent que le commerce est fermé en ce moment. Ce
+       n'est PAS un blocage : un responsable ouvre pour un groupe qui s'attarde,
+       une commande convenue, un inventaire. C'est une dérogation — délibérée,
+       nommée, et inscrite dans la fiche horaires avec l'heure et la personne.
+       Un service qui se lance sans que personne l'ait décidé est précisément ce
+       qu'un écart de caisse à 3 h du matin ne permet plus d'expliquer. -->
+  <div class="cloture-veil" id="hours-gate" role="dialog" aria-modal="true" aria-labelledby="hg-title">
+    <div class="cloture-card zs-card">
+      <div class="clo-eyebrow">Hors horaires d'ouverture</div>
+      <div class="clo-title" id="hg-title">Ouvrir quand même ?</div>
+      <div class="clo-meta" id="hg-sub"></div>
+      <div class="clo-actions">
+        <button class="clo-btn primary" id="hg-confirm">
+          <i data-lucide="unlock"></i><span>Ouvrir le service</span>
+        </button>
+      </div>
+      <div class="clo-foot">
+        <button id="hg-cancel">Annuler</button>
+      </div>
+      <div class="zs-note">L'ouverture sera enregistrée comme exceptionnelle, avec votre nom et l'heure. Pour changer les horaires habituels, passez par le tableau de bord — Réglages, Heures d'ouverture.</div>
     </div>
   </div>
 
@@ -8603,7 +8637,53 @@
     }
 
     /* ---- Ouverture de caisse — clock-in button ---- */
+    /* Les horaires autorisent-ils d'ouvrir maintenant ?
+     * Trois réponses possibles, et une seule interrompt : ouvert → on continue ;
+     * horaires jamais renseignés → on continue AUSSI (on ne bloque pas un
+     * commerçant sur une donnée qu'on ne lui a jamais demandée, et le tableau de
+     * bord l'invite déjà à la remplir) ; fermé → on demande.
+     * Une dérogation encore active vaut accord : le responsable a déjà décidé
+     * il y a dix minutes, on ne le rappelle pas à chaque écran. */
+    function hoursAllowOpening() {
+      const KH = window.KiwiHours;
+      if (!KH || !KH.isConfigured()) return { ok: true };
+      if (KH.activeOverride()) return { ok: true };
+      const st = KH.statusAt(Date.now());
+      if (st.open) return { ok: true };
+      return { ok: false, text: KH.summary(Date.now()).text };
+    }
+    function askHoursOverride(reasonText, proceed) {
+      const veil = $('#hours-gate');
+      if (!veil) { proceed(); return; }
+      const sub = $('#hg-sub');
+      if (sub) sub.textContent = reasonText || '';
+      veil.classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+      const shut = () => veil.classList.remove('is-open');
+      $('#hg-cancel').onclick = shut;
+      $('#hg-confirm').onclick = () => {
+        try {
+          window.KiwiHours.override({
+            by: (currentCashier && currentCashier.name) || '',
+            reason: 'ouverture hors horaires',
+            minutes: 720,   /* la nuit entière : on ne redemande pas à chaque vente */
+          });
+        } catch (_) {}
+        shut();
+        proceed();
+      };
+    }
+
     function openService() {
+      /* Le contrôle horaire passe AVANT toute écriture d'état : reposer la
+       * question après avoir ouvert le poste laisserait un service à moitié
+       * commencé si le responsable annule. */
+      const gate = hoursAllowOpening();
+      if (!gate.ok) { askHoursOverride(gate.text, doOpenService); return; }
+      doOpenService();
+    }
+
+    function doOpenService() {
       const btn       = document.getElementById('clockin-btn');
       const clockinEl = document.getElementById('clockin-screen');
       if (btn) btn.classList.add('is-confirmed');

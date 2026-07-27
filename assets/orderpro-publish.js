@@ -113,7 +113,11 @@
     products.forEach(function (p) {
       (C.listVariants(p.id) || []).forEach(function (v) {
         variants.push({
-          id: v.id, productId: v.productId, colorId: v.colorId, size: v.size,
+          // Le client ne voit pas les nuances internes : la variante est publiée
+          // sur sa FAMILLE, donc « marine » et « bleu roi » comptent ensemble
+          // dans le même bleu sur la fiche téléphone.
+          id: v.id, productId: v.productId,
+          colorId: (C.colorFamily ? C.colorFamily(v) : v.colorId), size: v.size,
           stock: v.stock,
           // Only the codes — a shopper never needs our barcode bookkeeping.
           barcodes: (v.barcodes || []).map(function (b) { return (b && b.code) != null ? b.code : b; }),
@@ -129,7 +133,10 @@
         };
       }),
       variants: variants,
-      colors: C.colors(),
+      // La page publique parle le même vocabulaire que la boutique : des
+      // familles générales. Les variantes sont publiées sur leur famille (voir
+      // plus haut), donc la table envoyée est celle des familles.
+      colors: C.colors({ optional: true }),
     };
   }
 
@@ -178,6 +185,16 @@
     var catalog = boutiqueSnapshot();
     if (!catalog) return Promise.resolve({ ok: false, error: 'catalogue-empty' });
 
+    /* Les horaires voyagent avec le catalogue — même raison que pour la carte
+     * d'un restaurant : la page client tourne sur le téléphone d'un inconnu et
+     * n'a aucun autre moyen de savoir si la boutique est ouverte. */
+    try {
+      var KH = window.KiwiHours;
+      if (KH && KH.isConfigured()) {
+        var h = KH.get();
+        catalog = Object.assign({}, catalog, { hours: { v: 1, week: h.week, exceptions: h.exceptions } });
+      }
+    } catch (_) {}
     var body = JSON.stringify({ name: biz.name, type: 'boutique', data: catalog });
     if (body === lastSent) return Promise.resolve({ ok: true, skipped: true });
 
@@ -254,6 +271,9 @@
     if (!subscribed) {
       subscribed = true;
       try { if (window.KiwiBoutiqueCatalog) window.KiwiBoutiqueCatalog.subscribe(schedule); } catch (_) {}
+      /* Idem pour les horaires : une fermeture exceptionnelle déclarée le matin
+       * doit atteindre la page client avant les commandes de l'après-midi. */
+      try { if (window.KiwiHours && window.KiwiHours.subscribe) window.KiwiHours.subscribe(schedule); } catch (_) {}
     }
     publishNow();
   }

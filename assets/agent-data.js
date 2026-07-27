@@ -190,6 +190,21 @@
       stkLow: 'Sous le seuil', stkOutCol: 'En rupture',
       stkNoCatalog: 'Je n’ai pas encore de catalogue pour votre établissement. Saisissez vos articles et vos quantités dans Stock, et je vous donne les ruptures, les stocks bas et la valeur immobilisée.',
       andMore: function (n) { return '+ ' + n + ' autre' + (n > 1 ? 's' : ''); },
+      pHours: 'les horaires',
+      hrUnset: 'Vos horaires d’ouverture ne sont pas renseignés, et je ne vais pas les deviner : un horaire inventé, sur l’air de « un restaurant, ça ferme sûrement en soirée », se retrouverait dans vos réservations et vos commandes en ligne. Renseignez votre semaine dans Réglages → Heures d’ouverture, et je réponds ensuite sur l’ouverture, la fermeture et les créneaux réservables.',
+      hrOpen: function (h) { return 'Oui, vous êtes <b>ouvert</b> — jusqu’à <b>' + h + '</b>.'; },
+      hrOpen24: 'Oui, vous êtes <b>ouvert</b> — 24 h/24 aujourd’hui.',
+      hrShut: function (s) { return 'Non, vous êtes <b>fermé</b> en ce moment. ' + s + '.'; },
+      hrCloseAt: function (h) { return 'Vous fermez à <b>' + h + '</b>.'; },
+      hrCloseNext: function (d, h) { return 'Vous êtes fermé en ce moment. La prochaine fermeture est ' + d + ' à <b>' + h + '</b>.'; },
+      hrUntil: function (n) { return n >= 60 ? 'Il reste <b>' + Math.floor(n / 60) + ' h ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> avant la fermeture.' : 'Il reste <b>' + n + ' min</b> avant la fermeture.'; },
+      hrUntilShut: 'Vous êtes déjà fermé, il n’y a pas de compte à rebours.',
+      hrAtOk: function (d, h) { return 'Oui — ' + d + ' à ' + h + ', vous êtes ouvert.'; },
+      hrAtNo: function (d, h, s) { return 'Non — ' + d + ' à ' + h + ', vous êtes fermé. ' + s + '.'; },
+      hrExc: function (l, r, p) { return '<b>' + l + '</b> : ' + r + (p ? ' · ' + p : ' · fermé'); },
+      hrExcNone: 'Aucune période exceptionnelle n’est enregistrée — ni Ramadan, ni Aïd, ni congés. Votre semaine type s’applique toute l’année. Vous en ajoutez une dans Réglages → Heures d’ouverture.',
+      hrWeekCol: 'Semaine', hrTodayCol: 'Aujourd’hui', hrNextCol: 'Prochaine ouverture',
+      hrSrc: 'horaires de l’établissement',
     },
     en: {
       openBtn: function (x) { return 'Open ' + x; },
@@ -236,6 +251,21 @@
       stkLow: 'Below reorder', stkOutCol: 'Out of stock',
       stkNoCatalog: 'I have no catalogue for your venue yet. Enter your items and quantities under Stock and I’ll give you stock-outs, low stock and tied-up value.',
       andMore: function (n) { return '+ ' + n + ' more'; },
+      pHours: 'opening hours',
+      hrUnset: 'Your opening hours aren’t set, and I’m not going to guess them: hours invented on the theory that “a restaurant probably closes in the evening” would end up in your bookings and your online orders. Fill in your week under Settings → Opening hours, and I’ll answer on opening, closing and bookable slots after that.',
+      hrOpen: function (h) { return 'Yes, you are <b>open</b> — until <b>' + h + '</b>.'; },
+      hrOpen24: 'Yes, you are <b>open</b> — 24 hours today.',
+      hrShut: function (s) { return 'No, you are <b>closed</b> right now. ' + s + '.'; },
+      hrCloseAt: function (h) { return 'You close at <b>' + h + '</b>.'; },
+      hrCloseNext: function (d, h) { return 'You are closed right now. The next closing is ' + d + ' at <b>' + h + '</b>.'; },
+      hrUntil: function (n) { return n >= 60 ? '<b>' + Math.floor(n / 60) + 'h ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> left before closing.' : '<b>' + n + ' min</b> left before closing.'; },
+      hrUntilShut: 'You are already closed — there is no countdown.',
+      hrAtOk: function (d, h) { return 'Yes — ' + d + ' at ' + h + ', you are open.'; },
+      hrAtNo: function (d, h, s) { return 'No — ' + d + ' at ' + h + ', you are closed. ' + s + '.'; },
+      hrExc: function (l, r, p) { return '<b>' + l + '</b>: ' + r + (p ? ' · ' + p : ' · closed'); },
+      hrExcNone: 'No exceptional period is on file — no Ramadan, no Eid, no leave. Your weekly schedule applies all year. You add one under Settings → Opening hours.',
+      hrWeekCol: 'Week', hrTodayCol: 'Today', hrNextCol: 'Next opening',
+      hrSrc: 'business opening hours',
     },
     ar: {
       openBtn: function (x) { return 'افتح ' + x; },
@@ -282,6 +312,21 @@
       stkLow: 'تحت العتبة', stkOutCol: 'نافد',
       stkNoCatalog: 'ليس لديّ كتالوج لمحلّك بعد. أدخل أصنافك وكمياتك في «المخزون» وأعطيك النفاد والمخزون المنخفض والقيمة المجمّدة.',
       andMore: function (n) { return '+ ' + n + ' آخر'; },
+      pHours: 'ساعات العمل',
+      hrUnset: 'ساعات عملك غير مُدخلة، ولن أخمّنها: توقيت مُختلق لمطعم «يغلق غالبًا نحو الحادية عشرة» سينتهي به الأمر في حجوزاتك وطلباتك على الإنترنت. أدخل أسبوعك في الإعدادات ← ساعات العمل، وبعدها أجيبك عن الفتح والإغلاق والمواعيد المتاحة.',
+      hrOpen: function (h) { return 'نعم، أنت <b>مفتوح</b> — حتى <b>' + h + '</b>.'; },
+      hrOpen24: 'نعم، أنت <b>مفتوح</b> — 24 ساعة اليوم.',
+      hrShut: function (s) { return 'لا، أنت <b>مغلق</b> الآن. ' + s + '.'; },
+      hrCloseAt: function (h) { return 'تغلق في <b>' + h + '</b>.'; },
+      hrCloseNext: function (d, h) { return 'أنت مغلق الآن. الإغلاق القادم ' + d + ' في <b>' + h + '</b>.'; },
+      hrUntil: function (n) { return n >= 60 ? 'بقيت <b>' + Math.floor(n / 60) + ' س ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> قبل الإغلاق.' : 'بقيت <b>' + n + ' د</b> قبل الإغلاق.'; },
+      hrUntilShut: 'أنت مغلق أصلًا، فلا عدّ تنازلي.',
+      hrAtOk: function (d, h) { return 'نعم — ' + d + ' في ' + h + '، أنت مفتوح.'; },
+      hrAtNo: function (d, h, s) { return 'لا — ' + d + ' في ' + h + '، أنت مغلق. ' + s + '.'; },
+      hrExc: function (l, r, p) { return '<b>' + l + '</b>: ' + r + (p ? ' · ' + p : ' · مغلق'); },
+      hrExcNone: 'لا فترة استثنائية مسجّلة — لا رمضان ولا عيد ولا عطلة. أسبوعك المعتاد يسري طوال السنة. تضيف واحدة من الإعدادات ← ساعات العمل.',
+      hrWeekCol: 'الأسبوع', hrTodayCol: 'اليوم', hrNextCol: 'الفتح القادم',
+      hrSrc: 'ساعات عمل المؤسسة',
     },
   };
   var tr = function (L) { return T[L] || T.fr; };
@@ -597,6 +642,101 @@
     };
   }
 
+  /* ═══════════ horaires d'ouverture ═══════════
+   * « Sommes-nous ouverts ? », « à quelle heure on ferme ? », « un client peut
+   * réserver demain 21 h ? ». Ces réponses viennent de la fiche horaires de
+   * l'établissement et de NULLE PART ailleurs.
+   *
+   * La règle qui compte est celle du silence : quand la semaine n'est pas
+   * renseignée, on le dit et on renvoie aux Réglages. Un assistant qui répond
+   * « vous fermez à 23 h » parce que c'est l'heure habituelle d'un restaurant
+   * fabrique une donnée que le commerçant croira — et qui repartira ensuite
+   * dans ses réservations et ses commandes en ligne. Mieux vaut un manque
+   * affiché qu'une vraisemblance. */
+  function sHours(spec, L) {
+    var t = tr(L);
+    var KH = window.KiwiHours;
+    var openBtn = [{ label: t.openBtn(t.pHours), handler: 'settings-hours' }];
+    if (!KH || !KH.isConfigured()) return { text: t.hrUnset, open: openBtn };
+
+    var now = Date.now();
+    var st = KH.statusAt(now);
+    var hhmm = function (ms) {
+      var d = new Date(ms);
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    };
+    var sum = function (ts) { return KH.summary(ts || now, undefined, L).text; };
+    var prov = { mod: t.hrSrc, count: 7, unit: 'days' };
+    var stats = [
+      { l: t.hrTodayCol, v: sum(now), h: '' },
+      { l: t.hrWeekCol, v: '', h: KH.weekText(undefined, L) },
+    ];
+
+    /* « à quelle heure on ferme ? » */
+    if (spec.agg === 'close') {
+      if (st.open && st.closesAt) return { text: t.hrCloseAt(hhmm(st.closesAt)), stats: stats, prov: prov, open: openBtn };
+      if (st.opensAt) {
+        var nxt = KH.statusAt(st.opensAt + 60000);
+        /* Le jour nommé est celui de la FERMETURE, pas celui de l'ouverture.
+         * Un service qui ouvre lundi 19:00 ferme mardi 02:00 : annoncer « lundi
+         * à 02:00 » mélangeait le jour de l'un avec l'heure de l'autre, et
+         * c'est précisément le genre de phrase sur laquelle un patron cale un
+         * planning de personnel. */
+        if (nxt.closesAt) {
+          var dayL = KH.dayLabel(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(nxt.closesAt).getDay()], L);
+          return { text: t.hrCloseNext(dayL, hhmm(nxt.closesAt)), stats: stats, prov: prov, open: openBtn };
+        }
+      }
+      return { text: t.hrShut(sum(now)), stats: stats, prov: prov, open: openBtn };
+    }
+    /* « combien de temps avant la fermeture ? » */
+    if (spec.agg === 'until') {
+      if (!st.open) return { text: t.hrUntilShut + ' ' + sum(now) + '.', stats: stats, prov: prov, open: openBtn };
+      return { text: t.hrUntil(st.minutesToClose), stats: stats, prov: prov, open: openBtn };
+    }
+    /* « peut-on réserver demain à 21 h ? » — spec.when porte l'instant visé. */
+    if (spec.agg === 'at' && spec.when) {
+      var w = new Date(spec.when);
+      var dl = KH.dayLabel(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][w.getDay()], L);
+      var hm = String(w.getHours()).padStart(2, '0') + ':' + String(w.getMinutes()).padStart(2, '0');
+      var can = KH.canServeAt(spec.when, undefined, { lang: L });
+      return {
+        text: can.ok ? t.hrAtOk(dl, hm) : t.hrAtNo(dl, hm, sum(spec.when)),
+        stats: stats, prov: prov, open: openBtn,
+      };
+    }
+    /* « quels sont nos horaires de Ramadan ? » */
+    if (spec.agg === 'exception') {
+      var doc = KH.get();
+      var xs = (doc.exceptions || []);
+      if (spec.term) {
+        var needle = norm(spec.term);
+        xs = xs.filter(function (e) { return norm(e.label).indexOf(needle) >= 0; });
+      }
+      if (!xs.length) return { text: t.hrExcNone, stats: stats, prov: prov, open: openBtn };
+      var rows = xs.slice(0, 6).map(function (e) {
+        var per = e.kind === 'hours'
+          ? e.periods.map(function (p) { return p.from + '–' + p.to; }).join(', ') : '';
+        return { l: esc(e.label || '—'), v: e.from === e.to ? e.from : e.from + ' → ' + e.to, h: per };
+      });
+      var first = xs[0];
+      return {
+        text: t.hrExc(esc(first.label || '—'),
+                      first.from === first.to ? first.from : first.from + ' → ' + first.to,
+                      first.kind === 'hours' ? first.periods.map(function (p) { return p.from + '–' + p.to; }).join(', ') : ''),
+        stats: rows, prov: prov, open: openBtn,
+      };
+    }
+    /* défaut : « est-ce qu'on est ouvert ? » */
+    if (st.open) {
+      return {
+        text: st.minutesToClose >= 1439 ? t.hrOpen24 : t.hrOpen(hhmm(st.closesAt)),
+        stats: stats, prov: prov, open: openBtn,
+      };
+    }
+    return { text: t.hrShut(sum(now)), stats: stats, prov: prov, open: openBtn };
+  }
+
   /* ═══════════ point d'entrée ═══════════
    * agent.js décide de la route et passe le spec ; ici on ne fait que lire. */
   function reply(spec, L) {
@@ -611,6 +751,7 @@
       }
       if (spec.entity === 'staff') return sStaff(spec, L);
       if (spec.entity === 'stock') return sStockOut(L);
+      if (spec.entity === 'hours') return sHours(spec, L);
     } catch (_) { return null; }
     return null;
   }

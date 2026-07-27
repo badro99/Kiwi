@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v129';
+var CACHE = 'kiwi-app-v130';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -67,6 +67,13 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js',
   '/assets/day-report-dash.js',
+  /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
+     s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
+     Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
+     un contrôle qui ne peut pas se faire doit laisser passer — donc autant
+     qu'il puisse se faire. */
+  '/assets/hours.js',
+  '/assets/hours-ui.js',
   '/assets/merchant-config.js',
   '/assets/staff-roles.js',
   '/assets/identity.js',
@@ -77,6 +84,7 @@ var SHELL = [
   '/assets/escpos.js',
   '/assets/printer-bridge.js',
   '/assets/barcode.js',
+  '/assets/color-palette.js',
   '/assets/boutique-catalog.js',
   '/assets/venue-store.js',
   '/assets/clients-store.js',
