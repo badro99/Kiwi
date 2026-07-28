@@ -105,6 +105,11 @@ const ROUTES = {
   '/api/admin/sales': await import(path.join(ROOT, 'functions/api/admin/sales.js')),
   '/api/admin/account': await import(path.join(ROOT, 'functions/api/admin/account.js')),
   '/api/admin/reset': await import(path.join(ROOT, 'functions/api/admin/reset.js')),
+  // Le diagnostic d'établissement. Absent du banc jusqu'ici, donc la seule chose
+  // qu'on pouvait y voir de ces cartes était « Diagnostic indisponible. » — et
+  // pas leur mise en page, ce qui a laissé passer des cartes claires en mode
+  // sombre jusque sur le site en ligne.
+  '/api/admin/health': await import(path.join(ROOT, 'functions/api/admin/health.js')),
   '/auth/reset': await import(path.join(ROOT, 'functions/auth/reset.js')),
 };
 

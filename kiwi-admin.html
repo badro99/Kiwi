@@ -313,6 +313,21 @@ em, i, cite, dfn, var { font-style: normal; }
     .lock-note b{color:#ffe6b0}
     .vpill{background:#241f10; color:#f0cf8a; border-color:#3a3320}
     .tslist{border-color:#26302b}
+    /* Le diagnostic. Ces cartes n'avaient aucune version sombre : elles gardaient
+       le fond clair du mode jour pendant que le titre, lui, prenait la couleur du
+       texte de nuit — un en-tête presque blanc sur un fond presque blanc. La
+       console est un outil d'opérateur, elle reste sombre de bout en bout. */
+    .health-card{background:#111713}
+    .health-card b{color:#cfeeda}
+    .health-card.warn{background:#211d10; border-color:#3a3320}
+    .health-card.warn b{color:#f0cf8a}
+    .health-card.bad{background:#241412; border-color:#4a2a24}
+    .health-card.bad b{color:#f0b3a4}
+    /* Même oubli, en plus discret : la pastille de rôle d'un PIN et le survol du
+       bouton Supprimer viraient au blanc au milieu d'une ligne sombre. */
+    .pin .role{background:#1c2420; color:#bfe8cf}
+    .mini.danger{color:#f0b3a4; border-color:#4a2a24; background:#1a1210}
+    .mini.danger:hover{background:#241412}
   }
 </style>
 </head>
