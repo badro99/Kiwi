@@ -2116,6 +2116,38 @@
       background: var(--mint); color: var(--ink-bg);
       border-color: var(--mint); font-weight: 700;
     }
+    /* Saisie libre du fond. Repliée tant qu'on n'en veut pas : la rangée de
+       pastilles reste la voie rapide, le champ n'apparaît que sur « Autre ». */
+    .clockin-float-custom {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.16);
+      transition: border-color 150ms, background 150ms;
+      animation: ci-float-open 220ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .clockin-float-custom[hidden] { display: none; }
+    .clockin-float-custom:focus-within {
+      border-color: var(--mint); background: rgba(125,242,176,0.08);
+    }
+    @keyframes ci-float-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .clockin-float-custom { animation: none; } }
+    .ci-float-input {
+      width: 118px; background: transparent; border: 0; padding: 0;
+      font-family: var(--mono); font-size: 15px; font-weight: 600;
+      color: #fff; text-align: right; letter-spacing: 0.01em;
+    }
+    .ci-float-input:focus { outline: none; }
+    .ci-float-input::placeholder { color: rgba(255,255,255,0.3); }
+    /* Les flèches du number natif volent la moitié du champ sur une tablette et
+       n'ont aucun sens pour un montant : on saisit, on ne pas-à-pas pas. */
+    .ci-float-input::-webkit-outer-spin-button,
+    .ci-float-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .ci-float-input { -moz-appearance: textfield; appearance: textfield; }
+    .ci-float-cur {
+      font-family: var(--mono); font-size: 12px; font-weight: 600;
+      color: rgba(255,255,255,0.5); letter-spacing: 0.04em;
+    }
     .clockin-bottom { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%; max-width: 420px; }
     .clockin-btn {
       width: 100%; height: 64px; border-radius: 18px;
@@ -4054,6 +4086,16 @@
           <button class="ci-float-chip" data-float="300">300 MAD</button>
           <button class="ci-float-chip is-active" data-float="500">500 MAD</button>
           <button class="ci-float-chip" data-float="1000">1 000 MAD</button>
+          <!-- Trois montants ronds ne sont que les trois plus fréquents, pas la
+               liste des fonds possibles : un patron ouvre avec ce qu'il a dans le
+               tiroir, 750, 1 200, parfois 0. « Autre » ouvre la saisie libre. -->
+          <button class="ci-float-chip" data-float="custom" aria-expanded="false" aria-controls="ci-float-custom">Autre</button>
+        </div>
+        <div class="clockin-float-custom" id="ci-float-custom" hidden>
+          <input id="ci-float-input" class="ci-float-input" type="number"
+                 inputmode="decimal" min="0" step="any" placeholder="0"
+                 aria-label="Fond d'ouverture, montant libre en dirhams">
+          <span class="ci-float-cur" aria-hidden="true">MAD</span>
         </div>
       </div>
     </div>
@@ -5670,19 +5712,32 @@
     // byte-for-byte. renderSalle() and the occupancy counters tolerate empty tables.
     try { if (storeIsReal()) Object.keys(tables).forEach((k) => delete tables[k]); } catch (_) {}
 
+    /* ── LA FRONTIÈRE DÉMO / RÉEL ────────────────────────────────────────────
+     * Café Atlas est une vitrine, pas un client. Tout ce qui est semé plus bas —
+     * la carte, les commandes de table, les recettes cuisine — n'existe que
+     * pour lui. Un vrai commerçant appairé qui voit « Tajine kefta 180 MAD »
+     * dans sa caisse ne voit pas une démo : il voit un logiciel qui invente des
+     * plats qu'il ne vend pas, et il peut les encaisser.
+     *
+     * Le drapeau est figé au montage (comme assets/pos-boutique.js:457) : un
+     * appairage en cours de session ne doit pas réécrire une carte à moitié
+     * servie. `storeIsReal()` est une déclaration de fonction, donc hissée —
+     * l'appel est légal ici malgré sa définition plus bas dans l'IIFE. */
+    const IS_DEMO = !storeIsReal();
+
     /* ---------- Mock orders per table ---------- */
     /* T2 hand-spec'd. Others generated from a small menu so the demo doesn't break. */
-    const orders = {
+    const orders = IS_DEMO ? {
       T2: [
         { qty: 2, name: 'Salade marocaine',  total: 90  },
         { qty: 2, name: 'Tajine kefta',      total: 360 },
         { qty: 1, name: 'Thé à la menthe',   total: 30  },
         { qty: 1, name: 'Jus d’avocat', total: 50  },
       ],
-    };
+    } : {};
 
     /* For other occupied tables, generate plausible orders (deterministic per table id) */
-    const menu = [
+    const menu = IS_DEMO ? [
       { name: 'Salade marocaine',     unit: 45 },
       { name: 'Briouates',            unit: 60 },
       { name: 'Tajine kefta',         unit: 180 },
@@ -5695,13 +5750,18 @@
       { name: 'Jus d’avocat',    unit: 50 },
       { name: 'Eau Aïn Saïss',        unit: 18 },
       { name: 'Pâtisserie maison',    unit: 45 },
-    ];
+    ] : [];
     function generateOrder(tableId, t) {
       if (orders[tableId]) return orders[tableId];
       // Live order built by cashier — convert to {qty,name,total} format
       if (tableId in tableOrders) {
         return tableOrders[tableId].map(l => ({ qty: l.qty, name: l.name, total: l.price * l.qty, note: l.note || '' }));
       }
+      /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
+         — un couscous royal par couvert — et c'est appelé sans condition par
+         l'addition, le partage de note et la remise : une table réelle sans
+         commande saisie sortait une addition inventée. Une table vide est vide. */
+      if (!IS_DEMO) return [];
       const seed = parseInt(tableId.replace('T',''), 10);
       const lines = [];
       // Mains: one per cover (slight variation)
@@ -6110,6 +6170,11 @@
       const doc = window.KiwiCloudDoc.attach({
         feature: 'floorplan',
         slug: () => window.KiwiCloudDoc.currentSlug(),
+        /* Le pendant de la ligne posée côté tableau de bord : la caisse range sa
+           copie sous le slug, lui sous l'ID d'établissement. Le signet doit dire
+           laquelle des deux il décrit, sinon l'un des deux appareils se croit à
+           jour pour toujours. */
+        localKey: () => { const s = window.KiwiCloudDoc.currentSlug(); return s ? slugMirror(s) : ''; },
         read: () => {
           try {
             const s = window.KiwiCloudDoc.currentSlug();
@@ -6414,7 +6479,11 @@
        Vente rapida — menu + cart
        =========================================================== */
 
-    const catLabels = {
+    /* La carte de la démo. Chez un vrai commerçant elle part vide et c'est
+       rebuildCarte() qui la remplit avec SA carte, publiée depuis le tableau de
+       bord. `let` et non `const` : la carte se remplace quand le patron change
+       un prix au bureau. */
+    let catLabels = IS_DEMO ? {
       all:        'Tout',
       entrees:    'Entrées',
       tajines:    'Tajines',
@@ -6423,12 +6492,12 @@
       sandwiches: 'Sandwiches',
       boissons:   'Boissons',
       desserts:   'Desserts',
-    };
+    } : { all: 'Tout' };
 
     /* Category colour-coding — a muted Moroccan-earth palette used for the tile
        art chip, category label, in-cart glow and quantity badge. Functional
        colour-coding (à la Loyverse/Square) that reads fast without going loud. */
-    const catColor = {
+    let catColor = IS_DEMO ? {
       entrees:    'var(--forest)',
       tajines:    '#B5532A',
       couscous:   '#C9922E',
@@ -6436,9 +6505,20 @@
       sandwiches: '#6E7B3D',
       boissons:   '#2E7D8C',
       desserts:   '#8A5A9E',
-    };
+    } : {};
 
-    const menuItems = [
+    /* L'ordre des pastilles. Il était écrit en dur dans renderCatPills(), ce qui
+       rendait les catégories d'un vrai café impossibles à afficher même une fois
+       ses plats chargés. */
+    let catOrder = IS_DEMO
+      ? ['all', 'entrees', 'tajines', 'couscous', 'pastillas', 'sandwiches', 'boissons', 'desserts']
+      : ['all'];
+
+    /* La palette reste celle de la maison : on la parcourt dans l'ordre des
+       catégories du commerçant plutôt que d'inventer des teintes par hachage. */
+    const CAT_PALETTE = ['var(--forest)', '#B5532A', '#C9922E', '#A8574E', '#6E7B3D', '#2E7D8C', '#8A5A9E'];
+
+    let menuItems = IS_DEMO ? [
       // Entrées
       { id: 'm-001', cat: 'entrees',    name: 'Salade marocaine',     price: 45  },
       { id: 'm-002', cat: 'entrees',    name: 'Briouates au fromage', price: 60  },
@@ -6481,7 +6561,107 @@
       { id: 'm-033', cat: 'desserts',   name: 'Pâtisserie maison',    price: 45  },
       { id: 'm-034', cat: 'desserts',   name: 'Fruit de saison',      price: 30  },
       { id: 'm-035', cat: 'desserts',   name: 'Glace artisanale',     price: 40  },
-    ];
+    ] : [];
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     * LA CARTE VIENT DU BUREAU
+     * -----------------------------------------------------------------------
+     * Le tableau de bord est le cerveau : le patron compose sa carte là-bas
+     * (catégories, sous-catégories, plats, prix) et la caisse la reçoit. Elle
+     * ne la compose jamais et ne la renvoie jamais — deux miroirs pour une même
+     * carte, ce sont deux vérités qui divergent, et c'est la caisse qui perdrait
+     * (elle lirait un cache périmé et écraserait le vrai menu du patron).
+     *
+     * On lit GET /api/menu?merchant=<slug>, publique et sans cookie : elle
+     * existe déjà pour la page client QR, qui n'a ni compte ni session. C'est
+     * pour cette raison qu'on n'ouvre PAS de document cloud sur le menu, et que
+     * assets/menu-catalog.js — module du tableau de bord, qui publie — ne doit
+     * pas être chargé ici.
+     *
+     * Miroir local rangé par slug, comme le plan de salle : hors ligne, la
+     * dernière carte connue reste servie. Un comptoir sans réseau doit encore
+     * pouvoir encaisser.
+     * ═══════════════════════════════════════════════════════════════════════ */
+    const CARTE_MIRROR = 'kiwi:menuMirror:v1:';
+    function carteSlug() {
+      try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
+    }
+    function caisseCarte() {
+      if (IS_DEMO) return null;
+      const slug = carteSlug();
+      if (!slug) return null;
+      try {
+        const raw = localStorage.getItem(CARTE_MIRROR + slug);
+        const d = raw ? JSON.parse(raw) : null;
+        if (d && Array.isArray(d.items)) return d;
+      } catch (_) {}
+      return null;
+    }
+
+    /* Projection : la carte du serveur ({cats:[{id,name,sub}], items:[{id,name,
+       price,catId,…}]}) devient le format que les six écrans de la caisse lisent
+       déjà (menuItems[].cat / catLabels / catColor). Personne d'autre ne change. */
+    function rebuildCarte() {
+      const d = caisseCarte();
+      if (!d) return false;
+      const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
+      const labels = { all: 'Tout' };
+      const colors = {};
+      const order = ['all'];
+      cats.forEach((c, i) => {
+        labels[c.id] = c.name || 'Sans nom';
+        colors[c.id] = CAT_PALETTE[i % CAT_PALETTE.length];
+        order.push(c.id);
+      });
+      /* Un plat sans catégorie ne doit pas disparaître de la caisse : le patron
+         l'a créé, il se vend. On lui ouvre une rubrique « Autres ». */
+      let loose = false;
+      const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
+        const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
+        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: it.station || '' };
+      });
+      if (loose) {
+        labels._autres = 'Autres';
+        colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
+        order.push('_autres');
+      }
+      catLabels = labels;
+      catColor = colors;
+      catOrder = order;
+      menuItems = items;
+      if (!catLabels[activeCat]) activeCat = 'all';
+      try { renderCatPills(); renderMenu(); } catch (_) {}
+      return true;
+    }
+
+    /* Aller chercher la carte. Silencieux par construction : hors ligne ou
+       serveur muet, on garde le miroir — on ne vide jamais une caisse qui
+       marchait il y a une minute. */
+    let _carteAt = 0;
+    function fetchCarte(force) {
+      if (IS_DEMO) return Promise.resolve(false);
+      const slug = carteSlug();
+      if (!slug) return Promise.resolve(false);
+      const now = Date.now();
+      if (!force && now - _carteAt < 20000) return Promise.resolve(false);
+      _carteAt = now;
+      return fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit' })
+        .then(r => (r.ok ? r.json() : null))
+        .then((j) => {
+          const m = j && j.menu;
+          if (!m || !Array.isArray(m.items) || !m.items.length) return false;
+          try { localStorage.setItem(CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
+          return rebuildCarte();
+        })
+        .catch(() => false);
+    }
+    /* « Rafraîchir » au comptoir doit ramener la carte comme il ramène le reste. */
+    window.KiwiCaisseCarte = { fetch: () => fetchCarte(true), rebuild: rebuildCarte };
+
+    /* Les relances sont posées au bootstrap du menu, plus bas : rebuildCarte()
+       touche `activeCat` et `cart`, déclarés après ce bloc — les appeler ici
+       lèverait une ReferenceError que le try/catch avalerait en silence, et la
+       carte ne se chargerait jamais sans que rien ne le dise. */
 
     let activeCat = 'all';
     let cart = []; // line: { uid, id, name, price, qty, note }
@@ -6555,10 +6735,10 @@
     function renderCatPills() {
       const counts = { all: menuItems.length };
       menuItems.forEach(m => { counts[m.cat] = (counts[m.cat] || 0) + 1; });
-      const cats = ['all', 'entrees', 'tajines', 'couscous', 'pastillas', 'sandwiches', 'boissons', 'desserts'];
+      const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
         <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-lens-item data-cat="${c}">
-          ${catLabels[c]}<span class="count mono">${counts[c] || 0}</span>
+          ${escTeam(catLabels[c] || c)}<span class="count mono">${counts[c] || 0}</span>
         </button>
       `).join('');
       window.CaisseFx && window.CaisseFx.lens();
@@ -6621,9 +6801,40 @@
       'm-034': `<path class="fill" d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25v-5"/><path class="fill" d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4z"/><path d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4"/><path class="thin" d="M25 31c-1 3-1 6 1 9"/>`,
       'm-035': `<circle class="fill" cx="28" cy="26" r="6"/><circle class="fill" cx="37" cy="26" r="6"/><path class="fill" d="M24 31h16l-8 22z"/><path d="M24 31h16l-8 22z"/><path class="thin" d="M27 36h10M29 41h6M28 33l3 6M34 33l-3 6"/><circle cx="28" cy="26" r="6"/><circle cx="37" cy="26" r="6"/><circle class="fill" cx="32.5" cy="18" r="2"/><circle cx="32.5" cy="18" r="2"/>`,
     };
-    const menuArt = (id) => `<svg class="menu-art" viewBox="0 0 64 64" aria-hidden="true">${MENU_ART[id] || ''}</svg>`;
+    /* Les 35 dessins ci-dessus sont ceux de la démo, à l'assiette près. La carte
+       d'un vrai commerçant n'en a aucun — sans repli, ses tuiles sortaient avec
+       un carré vide. On retombe sur les silhouettes génériques déjà dessinées
+       (bol, assiette, dôme, pain), choisies par rang de catégorie : tous les
+       plats d'une même rubrique partagent alors une forme, ce qui se lit comme
+       un parti pris et non comme un dessin manquant. */
+    const CAT_GLYPH = [_dish(''), _bowl(''), _dome(''), _bag('')];
+    const menuArt = (id, cat) => {
+      let art = MENU_ART[id];
+      if (!art) {
+        const i = Math.max(0, catOrder.indexOf(cat) - 1);
+        art = CAT_GLYPH[i % CAT_GLYPH.length];
+      }
+      return `<svg class="menu-art" viewBox="0 0 64 64" aria-hidden="true">${art}</svg>`;
+    };
+
+    /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
+       composé la sienne. On le dit, et on dit où la composer — même geste que
+       le plan de salle (emptyPlanHTML). */
+    function emptyMenuHTML() {
+      return '' +
+        '<div class="plan-empty"><div class="plan-empty-card">' +
+          '<div class="plan-empty-ico"><i data-lucide="utensils-crossed"></i></div>' +
+          '<div class="plan-empty-title">Carte pas encore composée</div>' +
+          '<div class="plan-empty-sub">Ajoutez vos catégories et vos plats depuis votre tableau de bord — <b>Menu</b>. Ils apparaîtront ici automatiquement.</div>' +
+        '</div></div>';
+    }
 
     function renderMenu() {
+      if (!menuItems.length) {
+        $('#menu-grid').innerHTML = emptyMenuHTML();
+        if (window.lucide) try { window.lucide.createIcons(); } catch (_) {}
+        return;
+      }
       const items = activeCat === 'all'
         ? menuItems
         : menuItems.filter(m => m.cat === activeCat);
@@ -6645,9 +6856,9 @@
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="0">
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
-            <span class="menu-item-art">${menuArt(m.id)}</span>
-            <span class="menu-item-cat">${catLabels[m.cat]}</span>
-            <span class="menu-item-name">${m.name}</span>
+            <span class="menu-item-art">${menuArt(m.id, m.cat)}</span>
+            <span class="menu-item-cat">${escTeam(catLabels[m.cat] || '')}</span>
+            <span class="menu-item-name">${escTeam(m.name)}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price mono">${m.price} MAD</span>
               ${control}
@@ -6880,13 +7091,40 @@
       }
       if (selectedId) openSplitModal(selectedId);
     });
+    /* L'ADDITION (pré-note remise à table). Ce n'est pas un reçu : ni numéro, ni
+     * ICE, ni TVA — volontairement, parce qu'elle n'est pas une pièce fiscale.
+     * Elle garde donc son propre chemin.
+     *
+     * Ce qu'elle n'avait pas : un repli. KiwiHardware.print() rend
+     * « printer-not-configured » dès qu'aucune imprimante THERMIQUE n'est jointe
+     * et s'arrête là — sur un restaurant équipé d'une imprimante branchée en
+     * USB sous Windows, ce bouton ne sortait donc rien du tout. KiwiPrinter sait
+     * pourtant imprimer par le pilote système (browserReceipt) ; personne ne
+     * l'appelait. Et le message renvoyait vers « l'imprimante dans Réglages »,
+     * un écran qui n'existe pas sur la caisse. */
     function printHardwareTicket(ticket) {
-      if (!window.KiwiHardware) { toast('Imprimante indisponible'); return; }
+      const KP = window.KiwiPrinter;
+      const viaSystem = () => {
+        /* browserReceipt() et non printReceipt() : la première peint le ticket
+           et le donne au pilote du système, la seconde pousse de l'ESC/POS et
+           échoue exactement là où on en est. Même objet en entrée. */
+        if (!KP || !KP.browserReceipt) { toast('Impression indisponible sur cet appareil'); return; }
+        try {
+          Promise.resolve(KP.browserReceipt({
+            shop: ticket && ticket.title, lines: (ticket && ticket.lines) || [],
+            total: ticket && ticket.total, method: ticket && ticket.method,
+          })).then(
+            (r) => toast(r && r.ok ? 'Addition envoyée à l\'imprimante système' : 'Impression échouée'),
+            () => toast('Impression échouée')
+          );
+        } catch (_) { toast('Impression échouée'); }
+      };
+      if (!window.KiwiHardware) { viaSystem(); return; }
       Promise.resolve(window.KiwiHardware.print(ticket)).then(function (res) {
-        if (res && res.printed) toast('Reçu imprimé');
+        if (res && res.printed) toast('Addition imprimée');
         else if (res && res.mock) toast('Aperçu de démonstration, aucun ticket physique imprimé');
-        else toast('Impression impossible, vérifiez l’imprimante dans Réglages');
-      }, function () { toast('Impression impossible, vérifiez l’imprimante dans Réglages'); });
+        else viaSystem();
+      }, viaSystem);
     }
     $$('.meta-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -7172,8 +7410,11 @@
       if (e.target === cardModal) closeCardModal({ paid: reader.actions.classList.contains('is-visible') });
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       if (action === 'close') closeCardModal({ paid: true });
-      if (action === 'print') { toast('Ticket en impression…'); closeCardModal({ paid: true }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp'); closeCardModal({ paid: true }); }
+      /* On ferme d'ABORD : recordSale() tourne à la fermeture du modal, donc
+         c'est elle qui pose lastSaleId. Imprimer avant, c'est imprimer la vente
+         précédente. */
+      if (action === 'print') { closeCardModal({ paid: true }); printSaleTicket(lastSaleEntry()); }
+      if (action === 'send')  { closeCardModal({ paid: true }); sendSaleTicket(lastSaleEntry()); }
     });
 
     /* ---------- CASH modal ---------- */
@@ -7278,8 +7519,11 @@
       if (e.target === cashModal) closeCashModal({ paid: !cashStepInput.hidden ? false : true });
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       if (action === 'close') closeCashModal({ paid: true });
-      if (action === 'print') { toast('Ticket en impression…'); closeCashModal({ paid: true }); }
-      if (action === 'send')  { toast('Envoyé · SMS / WhatsApp'); closeCashModal({ paid: true }); }
+      /* Même ordre qu'au modal carte : fermer enregistre la vente, donc imprimer
+         ensuite. Et le tiroir s'ouvre — KiwiHardware.openDrawer() existait,
+         entièrement écrit, et n'était appelé nulle part. */
+      if (action === 'print') { closeCashModal({ paid: true }); openCashDrawer(); printSaleTicket(lastSaleEntry()); }
+      if (action === 'send')  { closeCashModal({ paid: true }); sendSaleTicket(lastSaleEntry()); }
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -8400,17 +8644,62 @@
 
     /* Roll up the ledger — single source of truth for revenue / tenders */
     function journalTotals() {
-      let revenue = 0, card = 0, cash = 0, tips = 0, cashTips = 0;
+      let revenue = 0, card = 0, cash = 0, tips = 0, cashTips = 0, n = 0;
       for (const e of journal) {
+        if (e.voided) continue;               // sortie des livres par le support
+        n++;
         revenue += e.amount;
         if (e.method === 'cash') cash += e.amount; else card += e.amount;
         const tip = e.tip || 0;
         tips += tip;
         if (e.method === 'cash') cashTips += tip;
       }
-      return { revenue: revenue, card: card, cash: cash, txns: journal.length,
+      return { revenue: revenue, card: card, cash: cash, txns: n,
                tips: tips, cashTips: cashTips };
     }
+
+    /* ── UNE VENTE SORTIE DES LIVRES DOIT QUITTER LE COMPTOIR AUSSI ──────────
+     * Quand le support annule une vente d'essai depuis la console opérateur, le
+     * tableau de bord cesse de la compter immédiatement — mais la caisse, elle,
+     * la gardait dans « encaissé aujourd'hui » jusqu'à minuit. Le patron voyait
+     * alors deux chiffres différents pour la même journée, et c'est toujours la
+     * caisse qu'il croit.
+     *
+     * KiwiLive publie l'ensemble des références annulées à chaque sondage (pas
+     * un delta) : on peut donc aussi bien REMETTRE une vente rétablie. Le
+     * drapeau `voided` porté par l'écriture est le registre — ce qui rend
+     * l'opération idempotente sur les quatre-vingt-dix secondes suivantes.
+     * Même mécanique que la boutique (assets/pos-boutique.js). */
+    function reconcileVoids(refs) {
+      if (!storeIsReal()) return 0;
+      const KP = window.KiwiPosSale;
+      const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
+      let touched = 0;
+      journal.forEach((e) => {
+        if (!e || !e.ref) return;
+        const out = !!(hit && hit(e.ref));
+        if (out === !!e.voided) return;
+        e.voided = out;
+        touched++;
+      });
+      if (!touched) return 0;
+      renderShiftStats();
+      try { if ($('#journal-drawer').classList.contains('is-open')) renderJournal(); } catch (_) {}
+      /* persistShift() écrit le journal — donc les drapeaux. saveProvisional()
+         écrit le rapport du jour. Il faut les DEUX : sans le premier un simple
+         rechargement ressuscitait la vente annulée dans les totaux ; sans le
+         second le rapport provisoire du tableau de bord la comptait encore. */
+      try { persistShift(); } catch (_) {}
+      try { saveProvisional(true); } catch (_) {}
+      return touched;
+    }
+    document.addEventListener('kiwi-sales-voided', (e) => {
+      try { reconcileVoids((e && e.detail && e.detail.refs) || []); } catch (_) {}
+    });
+    /* Le sondage qui a précédé cet écouteur ne se rejouera pas tout seul. */
+    try {
+      if (window.KiwiLive && window.KiwiLive.voidedRefs) reconcileVoids(window.KiwiLive.voidedRefs());
+    } catch (_) {}
 
     /* Seed the ledger so the demo opens mid-service (~2h of transactions) */
     function seedJournal() {
@@ -8555,6 +8844,72 @@
         return K.build(receiptSaleFrom(entry), opts);
       } catch (_) { return null; }
     }
+    /* ── IMPRIMER LE TICKET DE LA VENTE QU'ON VIENT D'ENCAISSER ──────────────
+     * Les boutons « Imprimer ticket » des modaux carte et espèces disaient
+     * « Ticket en impression… » et ne faisaient rien : le client tendait la
+     * main, le caissier regardait l'imprimante, rien ne sortait. C'est le pire
+     * mensonge qu'une caisse puisse faire, et le même que #receipt-print a déjà
+     * corrigé — on réutilise sa mécanique telle quelle.
+     *
+     * La vente visée est `lastSaleId`, posée par recordSale() : on ne refouille
+     * pas le journal par montant, sinon une note partagée en deux imprimerait
+     * deux fois la même moitié.
+     *
+     * KiwiReceipt.print() ne jette jamais et se rabat sur la boîte d'impression
+     * du système quand aucune imprimante ESC/POS n'est jointe — c'est ce qui
+     * fait qu'un restaurant équipé d'une imprimante Windows sort enfin du
+     * papier. Et quand rien ne sort, on le dit. */
+    function lastSaleEntry() {
+      if (!lastSaleId) return null;
+      try { return journal.find(en => en.id === lastSaleId) || null; } catch (_) { return null; }
+    }
+    function printSaleTicket(entry, opts) {
+      if (!entry) { toast('Aucun ticket à imprimer'); return; }
+      const doc = receiptDocFor(entry, opts);
+      if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
+      toast('Impression du ticket…');
+      Promise.resolve(window.KiwiReceipt.print(doc)).then(
+        (r) => toast(r && r.ok ? ticketPrintedWord(r) : 'Impression échouée · vérifiez l\'imprimante'),
+        () => toast('Impression échouée · vérifiez l\'imprimante')
+      );
+    }
+    /* Dire PAR OÙ c'est sorti. Un caissier qui voit « Ticket imprimé » alors que
+       la boîte d'impression du système vient de s'ouvrir croit à une panne. */
+    function ticketPrintedWord(r) {
+      const via = r && r.via;
+      if (via === 'browser') return 'Ticket envoyé à l\'imprimante système';
+      if (via === 'bluetooth') return 'Ticket imprimé · Bluetooth';
+      if (via === 'usb') return 'Ticket imprimé · USB';
+      if (via === 'network') return 'Ticket imprimé · réseau';
+      return 'Ticket imprimé';
+    }
+    /* Le coup de pied du tiroir-caisse. Silencieux : sans imprimante jointe il
+       n'y a pas de tiroir à ouvrir, et un caissier qui encaisse en espèces n'a
+       pas besoin qu'on le lui rappelle à chaque vente. */
+    function openCashDrawer() {
+      try {
+        const H = window.KiwiHardware;
+        if (H && H.openDrawer) Promise.resolve(H.openDrawer()).catch(() => {});
+      } catch (_) {}
+    }
+    /* Envoyer le ticket au client. « Envoyé · SMS / WhatsApp » n'envoyait rien.
+       On ouvre un vrai brouillon WhatsApp, que le caissier valide — même geste
+       que la boutique. Sans numéro connu, wa.me ouvre le sélecteur de contact. */
+    function sendSaleTicket(entry) {
+      if (!entry) { toast('Aucun ticket à envoyer'); return; }
+      const doc = receiptDocFor(entry, {});
+      let txt = '';
+      try { txt = (doc && window.KiwiReceipt && window.KiwiReceipt.text) ? window.KiwiReceipt.text(doc) : ''; } catch (_) {}
+      if (!txt) {
+        txt = [storeName(), '', 'Ticket ' + (entry.ref || ''), fmtMAD(Math.abs(entry.amount)), 'Merci !']
+          .filter(Boolean).join('\n');
+      }
+      try {
+        window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+        toast('Brouillon WhatsApp ouvert');
+      } catch (_) { toast('Envoi indisponible sur cet appareil'); }
+    }
+
     /* Patch the static header labels (top bar, clock-in card, floor-plan) so a real
      * paired store shows ITS name/city — never "Café Atlas · Maarif" or "DÉMO LIVE".
      * No-op for the local demo. Runs on load; re-run after clock-in if needed. */
@@ -9260,7 +9615,10 @@
         `${tot.txns} transaction${tot.txns > 1 ? 's' : ''} · ${fmtMAD(tot.revenue)} encaissés`;
 
       const q = journalSearch.trim().toLowerCase();
-      let list = journal.slice().reverse();  // newest first
+      /* Les ventes sorties des livres ne se réimpriment pas et ne se remboursent
+         pas : les laisser dans la liste, c'est laisser un caissier rendre de
+         l'argent sur une vente qui n'existe plus. */
+      let list = journal.filter(e => !e.voided).reverse();  // newest first
       if (journalFilter !== 'all') list = list.filter(e => e.method === journalFilter);
       if (q) list = list.filter(e =>
         e.label.toLowerCase().includes(q) ||
@@ -9296,7 +9654,7 @@
              +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
-             + `<span class="jr-entry-reprint"><i data-lucide="printer"></i></span>`
+             + `<span class="jr-entry-reprint" data-jr-print="${e.ref}" role="button" tabindex="0" aria-label="Réimprimer le ticket ${e.ref}"><i data-lucide="printer"></i></span>`
              + `</button>`;
       }).join('');
       if (window.lucide) lucide.createIcons();
@@ -9313,6 +9671,16 @@
     $('#journal-drawer-close').addEventListener('click', closeJournal);
     $('#journal-drawer').addEventListener('click', (e) => {
       if (e.target === $('#journal-drawer')) { closeJournal(); return; }
+      /* L'icône imprimante AVANT la ligne : elle est dessinée dedans, donc sans
+         cette interception elle héritait du clic de la ligne et ouvrait l'aperçu.
+         Une imprimante qui ouvre un aperçu n'imprime pas. DUPLICATA, parce qu'un
+         second exemplaire qui circule sans le dire ne se rapproche plus. */
+      const pr = e.target.closest('[data-jr-print]');
+      if (pr) {
+        e.stopPropagation();
+        printSaleTicket(journal.find(en => en.ref === pr.dataset.jrPrint), { copy: true });
+        return;
+      }
       const row = e.target.closest('[data-jr-ref]');
       if (row) {
         const ref = row.dataset.jrRef;
@@ -9419,13 +9787,88 @@
       if (e.target.closest('#cm-confirm')) { confirmCashMove(); return; }
     });
 
-    /* Clock-in fond d'ouverture selector */
-    $('#ci-float-chips').addEventListener('click', (e) => {
+    /* ── Clock-in : le fond d'ouverture ───────────────────────────────────────
+     * Trois pastilles rondes pour la voie rapide, « Autre » pour le montant réel.
+     * Le montant retenu est mémorisé : un café qui ouvre tous les matins avec
+     * 750 MAD ne doit pas le ressaisir tous les matins. Un fond de 0 est
+     * légitime (tiroir vide, comptage plus tard) — seul le négatif ne l'est
+     * pas, et c'est la seule valeur qu'on refuse.
+     *
+     * La mémoire est rangée par établissement (`kiwi:openingFloat:v1:<slug>`) :
+     * un même appareil sert parfois deux commerces du même patron — la boutique
+     * ouvre à 300, le café à 1 200 — et le préfixe `kiwi:` la fait balayer par
+     * purgeTenantState() au changement de compte (assets/identity.js). */
+    function floatMemKey() {
+      try { const p = storePaired(); if (p && p.merchant) return 'kiwi:openingFloat:v1:' + p.merchant; } catch (_) {}
+      return 'kiwi:openingFloat:v1:demo';
+    }
+    const floatChips  = $('#ci-float-chips');
+    const floatCustom = $('#ci-float-custom');
+    const floatInput  = $('#ci-float-input');
+
+    function readFloatInput() {
+      const v = parseFloat(floatInput && floatInput.value);
+      return Number.isFinite(v) && v > 0 ? v : 0;
+    }
+    function rememberFloat(v) {
+      try { localStorage.setItem(floatMemKey(), String(v)); } catch (_) {}
+    }
+    function markFloatChip(chip) {
+      $$('#ci-float-chips .ci-float-chip').forEach(c => c.classList.toggle('is-active', c === chip));
+    }
+    function showFloatCustom(on, focus) {
+      if (!floatCustom) return;
+      floatCustom.hidden = !on;
+      const btn = floatChips && floatChips.querySelector('[data-float="custom"]');
+      if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on && focus && floatInput) { floatInput.focus(); floatInput.select(); }
+    }
+
+    if (floatChips) floatChips.addEventListener('click', (e) => {
       const chip = e.target.closest('[data-float]');
       if (!chip) return;
+      markFloatChip(chip);
+      if (chip.dataset.float === 'custom') {
+        showFloatCustom(true, true);
+        openingFloat = readFloatInput();
+        return;
+      }
+      showFloatCustom(false);
       openingFloat = parseInt(chip.dataset.float, 10) || 500;
-      $$('#ci-float-chips .ci-float-chip').forEach(c => c.classList.toggle('is-active', c === chip));
+      rememberFloat(openingFloat);
     });
+
+    if (floatInput) {
+      floatInput.addEventListener('input', () => {
+        /* Un signe moins saisi par erreur ne doit pas passer dans le Z : on le
+           corrige à la frappe plutôt que de refuser l'ouverture plus tard. */
+        if (floatInput.value && parseFloat(floatInput.value) < 0) floatInput.value = floatInput.value.replace('-', '');
+        openingFloat = readFloatInput();
+        rememberFloat(openingFloat);
+      });
+      /* Entrée = « j'ai fini de taper », pas « ouvre la caisse » : ouvrir sur une
+         touche du clavier tablette ouvrirait des services par accident. */
+      floatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); floatInput.blur(); } });
+    }
+
+    /* Restitution du dernier fond utilisé. Rejouée à l'appairage : la caisse
+       démarre avant de savoir à quel établissement elle est liée, et c'est le
+       slug qui dit quel montant se souvenir. */
+    function restoreFloat() {
+      let saved = NaN;
+      try { saved = parseFloat(localStorage.getItem(floatMemKey())); } catch (_) {}
+      if (!Number.isFinite(saved) || saved < 0) return;
+      openingFloat = saved;
+      const preset = floatChips && floatChips.querySelector(`[data-float="${saved}"]`);
+      if (preset) { markFloatChip(preset); showFloatCustom(false); return; }
+      const other = floatChips && floatChips.querySelector('[data-float="custom"]');
+      if (!other || !floatInput) return;
+      markFloatChip(other);
+      floatInput.value = String(saved);
+      showFloatCustom(true, false);
+    }
+    restoreFloat();
+    document.addEventListener('kiwi-paired', () => { try { restoreFloat(); } catch (_) {} });
 
     /* Clôture cash-count écart */
     $('#clo-count').addEventListener('input', updateEcart);
@@ -10537,7 +10980,23 @@
       if (e.target === handoverModal)            { closeHandover(); return; }
       if (e.target.closest('#ho-count-cancel'))  { closeHandover(); return; }
       if (e.target.closest('#ho-done-close'))    { closeHandover(); return; }
-      if (e.target.closest('#ho-slip-print'))    { toast('Bon de passation envoyé à l\'imprimante'); return; }
+      /* Le bon de passation est déjà peint dans #ho-slip — c'est la pièce que
+         les deux caissiers signent. Il annonçait son envoi à l'imprimante sans
+         rien envoyer. Il n'existe pas d'encodeur ESC/POS pour ce format ; on le
+         donne donc au pilote du système, qui est de toute façon le bon support
+         pour un document qu'on signe à deux. */
+      if (e.target.closest('#ho-slip-print')) {
+        const slip = document.getElementById('ho-slip');
+        const KP = window.KiwiPrinter;
+        if (!slip || !KP || !KP.browserPrintHTML) { toast('Impression indisponible sur cet appareil'); return; }
+        try {
+          Promise.resolve(KP.browserPrintHTML(slip.innerHTML, '80')).then(
+            (r) => toast(r && r.ok ? 'Bon de passation envoyé à l\'imprimante' : 'Impression échouée'),
+            () => toast('Impression échouée')
+          );
+        } catch (_) { toast('Impression échouée'); }
+        return;
+      }
 
       const add = e.target.closest('[data-ho-add]');
       if (add) {
@@ -10613,10 +11072,27 @@
     });
 
     /* ---------- Bootstrap menu (vente rapida) ---------- */
+    /* La carte du commerçant, avant le premier rendu : le miroir local d'abord
+       — instantané, et il marche hors ligne — puis le serveur, qui repeindra si
+       le patron a changé quelque chose depuis. */
+    try { rebuildCarte(); } catch (_) {}
     renderCatPills();
     renderMenu();
     updateTeamCount();
     renderPinDots();
+
+    /* Trois réveils : maintenant ; à l'appairage, parce que la caisse démarre
+       avant de savoir à quel établissement elle appartient ; et au retour sur
+       l'onglet, qui est exactement le geste du patron venant de changer un prix
+       au bureau et qui repasse au comptoir. */
+    try { fetchCarte(true); } catch (_) {}
+    window.addEventListener('storage', (e) => {
+      if (e && e.key && e.key.indexOf(CARTE_MIRROR) === 0) { try { rebuildCarte(); } catch (_) {} }
+    });
+    document.addEventListener('kiwi-paired', () => { try { rebuildCarte(); fetchCarte(true); } catch (_) {} });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { try { fetchCarte(false); } catch (_) {} }
+    });
 
     /* ===========================================================
        ÉCRAN CUISINE — KDS (kitchen display, full-screen)
@@ -10644,7 +11120,11 @@
      * the listed quantities produce), an ingredients list (qty + name), and
      * a prep one-liner. Used to train new cuisiniers — they tap a dish on
      * a ticket and the recipe appears. */
-    const KDS_RECIPES = {
+    /* Recettes de la démo, indexées par le nom des plats de Café Atlas. Chez un
+       vrai commerçant aucune clé ne peut correspondre — et si par hasard il
+       vendait un « Couscous royal », lui afficher NOTRE recette serait pire que
+       de n'en afficher aucune. Les siennes viendront du tableau de bord. */
+    const KDS_RECIPES = IS_DEMO ? {
       'Couscous royal': { yield: 1, ingredients: [
         { q: '150 g',  n: 'Semoule fine' },
         { q: '400 ml', n: 'Bouillon de légumes' },
@@ -10783,7 +11263,7 @@
       'Jus d\'orange': { yield: 1, ingredients: [
         { q: '3 u',    n: 'Oranges fraîches' },
       ], prep: 'Presser à l\'extracteur juste avant service. Servir glacé dans verre 300 ml.' },
-    };
+    } : {};
 
     function kdsHasRecipe(name) {
       const r = KDS_RECIPES[name];
@@ -11427,8 +11907,11 @@
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
       const items  = cart.map(l => {
         const m = menuItems.find(x => x.id === l.id);
+        /* Le poste du plat d'abord — c'est le patron qui l'a choisi au tableau
+           de bord —, la table par catégorie ensuite (elle ne connaît que les
+           catégories de la démo), « cuisson » en dernier recours. */
         return { q: l.qty, n: l.name, p: l.price, note: (l.note || '').trim(),
-          stations: [(m && KDS_CAT_STATION[m.cat]) || 'cuisson'] };
+          stations: [(m && m.station) || (m && KDS_CAT_STATION[m.cat]) || 'cuisson'] };
       });
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
@@ -11436,6 +11919,21 @@
         paid: false, pickedUp: false, pickedUpAt: null, total: total,
       };
       kdsOrders.push(order);
+      /* Le bon de cuisine sur papier. L'encodeur existait (escpos.kitchenTicket,
+         gros caractères, notes en dessous) et n'était appelé de nulle part : les
+         cuisines qui n'ont pas d'écran ne recevaient rien. Silencieux quand
+         aucune imprimante n'est jointe — l'écran cuisine reste le chemin
+         nominal, le papier est un plus, pas une condition d'envoi. */
+      try {
+        const KP = window.KiwiPrinter;
+        if (KP && KP.printKitchen && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
+          Promise.resolve(KP.printKitchen({
+            title: 'CUISINE', order: '#' + order.num,
+            time: pad2HO(order.sentAt.getHours()) + ':' + pad2HO(order.sentAt.getMinutes()),
+            items: items.map(it => ({ qty: it.q, name: it.n, note: it.note })),
+          })).catch(() => {});
+        }
+      } catch (_) {}
       const count = cart.reduce((s, l) => s + l.qty, 0);
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -11714,7 +12212,11 @@
     function restoreShift(d) {
       shiftOpenedAt = new Date(d.openedAt);
       shiftOpenedBy = d.openedBy || '';
-      openingFloat  = d.openingFloat || 500;
+      /* `|| 500` transformait un fond de 0 en 500 à la reprise du poste : le
+         tiroir ouvert vide se voyait alors réclamer 500 MAD d'écart à la
+         clôture. Depuis que la saisie libre accepte 0, il faut le distinguer
+         d'une valeur absente. */
+      openingFloat  = (Number.isFinite(d.openingFloat) && d.openingFloat >= 0) ? d.openingFloat : 500;
       journal.length = 0;
       (d.journal || []).forEach(e => {
         const entry = {

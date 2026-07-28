@@ -3533,8 +3533,13 @@ em, i, cite, dfn, var { font-style: normal; }
       ],
     };
 
-    /* ---------- Menu (same 35 items) ---------- */
-    const catLabels = {
+    /* ---------- Menu (same 35 items) ----------
+       Même frontière que la caisse : la carte de Café Atlas n'appartient qu'à
+       Café Atlas. Un serveur d'un vrai restaurant qui prend une commande sur nos
+       tajines fait entrer en cuisine un plat qui n'existe pas. Sa carte à lui
+       arrive du tableau de bord, par la même route publique que la caisse. */
+    const SV_DEMO = !svReal();
+    let catLabels = SV_DEMO ? {
       all:        'Tout',
       entrees:    'Entrées',
       tajines:    'Tajines',
@@ -3543,7 +3548,10 @@ em, i, cite, dfn, var { font-style: normal; }
       sandwiches: 'Sandwiches',
       boissons:   'Boissons',
       desserts:   'Desserts',
-    };
+    } : { all: 'Tout' };
+    let catOrder = SV_DEMO
+      ? ['all', 'entrees', 'tajines', 'couscous', 'pastillas', 'sandwiches', 'boissons', 'desserts']
+      : ['all'];
 
     /* ---------- Item options (mirrors dashboard Menu → groupes d'options) ----------
        Same model as the caisse: a group is radio (un seul choix, obligatoire),
@@ -3607,7 +3615,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* small inline sliders glyph (no lucide dep, renders immediately) */
     const SLIDERS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
 
-    const menuItems = [
+    let menuItems = SV_DEMO ? [
       { id: 'm-001', cat: 'entrees',    name: 'Salade marocaine',     price: 45  },
       { id: 'm-002', cat: 'entrees',    name: 'Briouates au fromage', price: 60  },
       { id: 'm-003', cat: 'entrees',    name: 'Harira',               price: 35  },
@@ -3643,13 +3651,66 @@ em, i, cite, dfn, var { font-style: normal; }
       { id: 'm-033', cat: 'desserts',   name: 'Pâtisserie maison',    price: 45  },
       { id: 'm-034', cat: 'desserts',   name: 'Fruit de saison',      price: 30  },
       { id: 'm-035', cat: 'desserts',   name: 'Glace artisanale',     price: 40  },
-    ];
+    ] : [];
+
+    /* ── La carte du restaurant, lue depuis le tableau de bord ───────────────
+       Même route que la caisse (GET /api/menu?merchant=…, publique, sans
+       cookie) et même miroir local rangé par slug, pour qu'une tablette de
+       salle hors wifi garde la dernière carte connue. Le serveur ne publie
+       jamais : il lit. */
+    const SV_CARTE_MIRROR = 'kiwi:menuMirror:v1:';
+    function svSlug() {
+      try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
+      try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
+    }
+    function svRebuildCarte() {
+      if (SV_DEMO) return false;
+      const slug = svSlug();
+      if (!slug) return false;
+      let d = null;
+      try { const raw = localStorage.getItem(SV_CARTE_MIRROR + slug); d = raw ? JSON.parse(raw) : null; } catch (_) {}
+      if (!d || !Array.isArray(d.items)) return false;
+      const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
+      const labels = { all: 'Tout' };
+      const order = ['all'];
+      cats.forEach((c) => { labels[c.id] = c.name || 'Sans nom'; order.push(c.id); });
+      let loose = false;
+      const items = d.items.filter(it => it && it.id && it.name && it.avail !== false).map((it) => ({
+        id: it.id,
+        cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
+        name: it.name,
+        price: +it.price || 0,
+      }));
+      if (loose) { labels._autres = 'Autres'; order.push('_autres'); }
+      catLabels = labels; catOrder = order; menuItems = items;
+      if (!catLabels[activeCat]) activeCat = 'all';
+      try { renderCatPills(); renderMenu(); } catch (_) {}
+      return true;
+    }
+    function svFetchCarte() {
+      if (SV_DEMO) return;
+      const slug = svSlug();
+      if (!slug) return;
+      fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit' })
+        .then(r => (r.ok ? r.json() : null))
+        .then((j) => {
+          const m = j && j.menu;
+          if (!m || !Array.isArray(m.items) || !m.items.length) return;
+          try { localStorage.setItem(SV_CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
+          svRebuildCarte();
+        })
+        .catch(() => {});
+    }
 
     /* ---------- Generated orders for occupied tables ---------- */
     /* For tables without a seedOrder, generate a plausible order from menu (deterministic) */
     function buildInitialOrder(id, t) {
       if (seedOrders[id]) return seedOrders[id].map(l => ({ ...l }));
       if (t.status === 'khawya') return [];
+      /* Une table réelle sans commande saisie est vide. La suite invente des
+         lignes à partir de la carte de démo — inoffensif en vitrine, faux chez
+         un client. */
+      if (!SV_DEMO) return [];
       const seed = parseInt(id.replace('T',''), 10);
       const lines = [];
       const mains = menuItems.filter(m => ['tajines','couscous','pastillas'].includes(m.cat));
@@ -4824,15 +4885,21 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderCatPills() {
       const counts = { all: menuItems.length };
       menuItems.forEach(m => { counts[m.cat] = (counts[m.cat] || 0) + 1; });
-      const cats = ['all','entrees','tajines','couscous','pastillas','sandwiches','boissons','desserts'];
+      const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
         <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-cat="${c}">
-          ${catLabels[c]}<span class="count">${counts[c] || 0}</span>
+          ${catLabels[c] || c}<span class="count">${counts[c] || 0}</span>
         </button>
       `).join('');
     }
 
     function renderMenu() {
+      if (!menuItems.length) {
+        $('#menu-grid').innerHTML =
+          '<div class="menu-banner"><div class="menu-banner-text">Carte pas encore composée. ' +
+          'Ajoutez vos catégories et vos plats depuis le tableau de bord — <b>Menu</b>.</div></div>';
+        return;
+      }
       const items = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat);
       const activeOrder = menuContextId ? (tableOrders[menuContextId] || []) : [];
       $('#menu-grid').innerHTML = items.map(m => {
@@ -6031,6 +6098,14 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ---------- Bootstrap ---------- */
+    /* La carte d'abord depuis le miroir (instantanée, hors ligne comprise), puis
+       depuis le serveur ; et au retour sur l'onglet, parce qu'un serveur repose
+       sa tablette entre deux tables et que c'est là que le patron change un prix. */
+    try { svRebuildCarte(); svFetchCarte(); } catch (_) {}
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { try { svFetchCarte(); } catch (_) {} }
+    });
+    document.addEventListener('kiwi-paired', () => { try { svFetchCarte(); } catch (_) {} });
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) lucide.createIcons();
     });

@@ -3987,6 +3987,13 @@ function pdsCloud() {
   pdsDoc = window.KiwiCloudDoc.attach({
     feature: 'floorplan',
     slug: function () { return window.KiwiCloudDoc.currentSlug(); },
+    /* Le signet de révision doit nommer la copie qu'il décrit. Ici la copie
+     * locale est rangée sous l'ID d'établissement (`kiwiPlanDeSalle:<venueId>`)
+     * alors que la caisse range la sienne sous le slug — sans cette ligne les
+     * deux partagent un seul signet, et l'une des deux se déclare à jour en
+     * portant l'ancienne révision. C'est exactement la panne du reçu, réglée
+     * une première fois pour `business`/`receipt` (voir assets/cloud-doc.js). */
+    localKey: pdsKey,
     read: pdsRawState,
     write: function (d) {
       pdsWriteLocal(d);

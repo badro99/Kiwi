@@ -990,7 +990,11 @@
     d.totals = d.totals || { subtotal: 0, discount: 0, tip: 0, total: 0, vat: null };
     d.meta = d.meta || {};
     d.foot = d.foot || {};
-    if (opts.copy) d.copy = str(opts.copy, 40);
+    /* `copy: true` veut dire « marque-le comme duplicata », pas « écris true » :
+       str(true) rendait littéralement « — true — » en travers du ticket, sur le
+       seul chemin qui compte (une réimpression passe toujours par le figé).
+       Même traduction qu'à la construction, dans la langue du ticket d'origine. */
+    if (opts.copy) d.copy = opts.copy === true ? d.T.copy : str(opts.copy, 40);
     if (opts.paper) d.paper = opts.paper;
     return d;
   }

@@ -103,6 +103,12 @@ function sanitizeMenu(raw) {
     subId: str(it && it.subId, 40) || null,
     desc: str(it && it.desc, 400),
     avail: !(it && it.avail === false),
+    // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
+    // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
+    // silencieusement à la publication, et tous les plats d'un vrai restaurant
+    // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
+    // renvoient une chaîne vide, et les deux pages client l'ignorent.
+    station: str(it && it.station, 40),
     // OrderPro additions — a dish photo or a short vertical clip. Absent for
     // every menu published before they existed, and both pages fall back to
     // their icon tile, so this is purely additive.

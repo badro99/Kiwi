@@ -67,9 +67,17 @@
     setTimeout(function () { el.remove(); }, 3300);
   }
 
+  /* Une caisse APPAIRÉE est un vrai commerce, par définition : le code à six
+   * chiffres l'a liée à un établissement nommé. KiwiEnv.isReal() ne connaît que
+   * le domaine et la session marchande — il ignore l'appairage, et c'est le seul
+   * module de la caisse à s'en contenter. Résultat : une caisse liée à sa
+   * boutique mais sans session ouverte répondait « rien à synchroniser » à
+   * chaque appui sur « Rafraîchir ». Même prédicat que partout ailleurs. */
   function real() {
-    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); }
-    catch (_) { return false; }
+    try {
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return false; }
   }
 
   /* ── la synchro ───────────────────────────────────────────────────────────
@@ -101,17 +109,26 @@
     var doc = window.KiwiCloudDoc;
     var box = window.KiwiOrderInbox;
     var cfg = window.KiwiConfig;
+    /* La carte du restaurant/café. Elle ne passe pas par KiwiCloudDoc — elle se
+     * lit sur /api/menu, publique — donc pullAll() ne la ramène pas et
+     * « Rafraîchir » la laissait derrière. C'est pourtant le geste exact du
+     * serveur à qui le patron vient de dire « j'ai changé le prix du tajine ». */
+    var carte = window.KiwiCaisseCarte;
 
     busy = Promise.all([
       cat && cat.sync ? task('inventaire', function () { return cat.sync(); }) : null,
       doc && doc.pullAll ? task('documents', function () { return doc.pullAll(); }) : null,
+      carte && carte.fetch ? task('carte', function () { return carte.fetch(); }) : null,
       cfg && cfg.reload ? task(null, function () { return cfg.reload(); }) : null,
       box && box.refresh
         ? Promise.resolve().then(function () { return box.refresh(); }).catch(function () { return -1; })
         : Promise.resolve(-1),
     ]).then(function (r) {
-      var configOk = r[2] === true;
-      var orders = typeof r[3] === 'number' ? r[3] : -1;
+      /* Les rangs suivent l'ordre du tableau ci-dessus : inventaire, documents,
+       * carte, config, commandes. Toute insertion les décale — c'est pour ça
+       * qu'ils sont nommés ici plutôt que lus à la volée plus bas. */
+      var configOk = r[3] === true;
+      var orders = typeof r[4] === 'number' ? r[4] : -1;
       /* « Joint » veut dire : une réponse est revenue du serveur. /api/config
        * répond à toute caisse appairée, la file de commandes seulement si le
        * module est allumé — d'où les deux, plus toute donnée qui a bougé. */
