@@ -575,10 +575,12 @@ ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
 ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
-ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !o\.opId\)\.map/.test(caisse),
-  'le board cuisine local survit au rechargement sans dupliquer les tickets Order Pro gérés par le serveur');
-ok(/if \(!o \|\| o\.opId\) return;/.test(caisse),
-  'un ancien ticket Order Pro déjà enregistré localement ne ressuscite pas au rechargement');
+ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTicket\(o\)\)\.map/.test(caisse),
+  'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');
+ok(/if \(!o \|\| staleQueuedServerTicket\(o\)\) return;/.test(caisse),
+  'un ancien ticket C-xxx en attente ne ressuscite pas au rechargement');
+ok(/o\.opNum == null.*o\.status !== 'new'.*o\.status !== 'held'/.test(caisse),
+  'la purge vise les tickets serveur en attente, pas une préparation active');
 ok(/let\s+kdsOrderSeq = IS_DEMO \? 52 : 0;/.test(caisse),
   'un vrai commerçant commence sa numérotation à 1, pas à 53');
 

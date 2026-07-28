@@ -13902,6 +13902,16 @@
     const KC_STORE = 'kiwi-caisse-shift';
     let registerClosing = false;
 
+    /* Un bon numéroté C-xxx vient du relais serveur. Les anciens instantanés
+       n'ont pas tous gardé `opId`, mais ils ont gardé `opNum`. S'il attend
+       encore en `new/held` après 30 minutes, c'est un bon abandonné — notamment
+       les taps de test — et non une préparation à restaurer cinq heures après. */
+    function staleQueuedServerTicket(o, now) {
+      if (!o || o.opNum == null || (o.status !== 'new' && o.status !== 'held')) return false;
+      const at = new Date(o.sentAt).getTime();
+      return Number.isFinite(at) && ((now || Date.now()) - at) > 30 * 60 * 1000;
+    }
+
     /* À QUEL commerçant appartient le service actuellement EN MÉMOIRE. Posé à
        l'ouverture et à la reprise, relu à chaque autosave. Sans lui, réappairer
        la caisse en cours de service laissait le journal de A en mémoire et le
@@ -13957,7 +13967,7 @@
              la commande pour de bon. La démo garde son board éphémère, réensemé
              à chaque chargement (kdsSeed), sinon les quinze commandes d'exemple
              se dupliqueraient à chaque visite. */
-          kdsOrders: storeIsReal() ? kdsOrders.filter(o => !o.opId).map(o => Object.assign({}, o, {
+          kdsOrders: storeIsReal() ? kdsOrders.filter(o => !staleQueuedServerTicket(o)).map(o => Object.assign({}, o, {
             sentAt: o.sentAt instanceof Date ? o.sentAt.toISOString() : o.sentAt,
           })) : undefined,
           kdsOrderSeq: storeIsReal() ? kdsOrderSeq : undefined,
@@ -14055,9 +14065,7 @@
       if (Array.isArray(d.kdsOrders) && storeIsReal()) {
         kdsOrders.length = 0;
         d.kdsOrders.forEach((o) => {
-          // Order Pro is server-owned and is reloaded by orderpro-inbox.js.
-          // Restoring the same ticket locally made old phone tests resurrect.
-          if (!o || o.opId) return;
+          if (!o || staleQueuedServerTicket(o)) return;
           const at = new Date(o.sentAt);
           kdsOrders.push(Object.assign({}, o, { sentAt: isNaN(at.getTime()) ? new Date() : at }));
         });
