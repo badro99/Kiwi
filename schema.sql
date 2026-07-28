@@ -170,6 +170,29 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   -- what it can DO: no new sale, no write, no public ordering page.
   -- NULL is read as active, so every row that predates the column is untouched.
   status     TEXT,
+
+  -- ── LA VILLE, ET CE QUE CET ÉTABLISSEMENT NOUS RAPPORTE ───────────────────
+  -- Deux colonnes posées par l'OPÉRATEUR depuis la console, jamais par le
+  -- client. Elles n'existaient nulle part : ni le compte ni la fiche magasin ne
+  -- portaient de ville, et rien dans la base ne disait ce qu'un abonnement vaut.
+  -- La vue d'ensemble en avait besoin pour répondre à « dans quelles villes
+  -- sommes-nous » et « combien faisons-nous par mois » avec des chiffres réels
+  -- plutôt qu'avec une estimation présentée comme un fait.
+  --
+  -- `city` est saisie à la main et NULL tant que personne ne l'a posée. La vue
+  -- compte les non-renseignés à part et le dit — « 12 sur 18 situés » — parce
+  -- qu'un classement de villes construit sur la moitié du parc et présenté
+  -- comme complet est un chiffre faux.
+  --
+  -- `mrr` est le montant mensuel CONVENU pour cet établissement, en dirhams
+  -- entiers. NULL = rien de convenu à la main, donc le tarif public du palier
+  -- s'applique (basic 199 · pro 399 · ultra 1 499). Il existe pour Ultimate,
+  -- qui est sur devis et n'a donc pas de prix public : sans cette colonne un
+  -- client Ultimate compte pour zéro dans le total, ce qui est pire qu'un
+  -- inconnu affiché comme inconnu. Renseigné, il l'emporte sur le tarif du
+  -- palier — c'est ce qui permet aussi d'inscrire une remise consentie.
+  city       TEXT,
+  mrr        INTEGER,
   updated_ts INTEGER NOT NULL
 );
 -- Existing databases (table already created): add the columns once —
@@ -177,6 +200,11 @@ CREATE TABLE IF NOT EXISTS merchant_config (
 --   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
 --   ALTER TABLE merchant_config ADD COLUMN name TEXT;
 --   ALTER TABLE merchant_config ADD COLUMN status TEXT;
+--   ALTER TABLE merchant_config ADD COLUMN city TEXT;
+--   ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;
+-- Tant que city/mrr manquent, la console reste utilisable : /api/admin/overview
+-- retombe sur une requête sans elles et répond `columns:{city:false,mrr:false}`,
+-- que la vue d'ensemble affiche telle quelle au lieu de montrer « 0 ville ».
 CREATE INDEX IF NOT EXISTS idx_config_account ON merchant_config (account_id);
 -- Mirrored up from the client at onboarding (assets/onboarding.js → KiwiConfig
 -- .syncType → POST /api/config); the console reads it to show boutique modules

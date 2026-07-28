@@ -116,6 +116,79 @@ em, i, cite, dfn, var { font-style: normal; }
   .owner-row .mail{color:var(--muted); font-size:.78rem; margin-top:2px}
   .count-chip{display:inline-block; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:4px 7px; white-space:nowrap}
   tr.store-row td:first-child{padding-left:30px; border-left:3px solid #dfe9e2}
+
+  /* ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════════
+     Le premier écran de la console. Il ne parle pas d'UN client : il parle de
+     nous — combien ils sont, ce qu'ils nous versent, ce qu'ils encaissent, où
+     ils sont. Chaque carte porte sa base de calcul juste dessous, parce qu'un
+     grand chiffre sans période ni périmètre n'est pas un chiffre : « 1,2 M »
+     ne veut rien dire tant qu'on ne sait pas sur combien de jours et sur
+     combien d'établissements. Les chiffres sont en chasse fixe pour qu'une
+     colonne de montants s'aligne à l'œil, et romains : aucune italique. */
+  .ov-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line)}
+  .ov-card{background:var(--surface); padding:16px 18px 15px; min-width:0}
+  .ov-k{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em; color:var(--muted)}
+  .ov-v{font-family:var(--mono); font-size:1.85rem; font-weight:500; letter-spacing:-.025em;
+        color:var(--riad); margin-top:10px; line-height:1.04; overflow-wrap:anywhere}
+  .ov-v .u{font-size:.72rem; font-weight:600; color:var(--muted); letter-spacing:.02em; margin-left:5px}
+  .ov-sub{font-size:.76rem; color:var(--muted); margin-top:7px; line-height:1.45}
+  .ov-sub b{font-weight:600; color:var(--riad)}
+  /* Ce qui manque se dit en ocre — la couleur des « à renseigner » de la
+     marque — et jamais en rouge : une ville pas encore saisie n'est pas une
+     panne, c'est du travail qui reste. */
+  .ov-todo{color:#8a5a00}
+  .ov-body{padding:16px 18px 18px; border-top:1px solid var(--line)}
+  .ov-split{display:grid; grid-template-columns:1fr 1fr; gap:26px}
+  .ov-h{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em;
+        color:var(--muted); margin:0 0 12px}
+  /* La courbe des trente jours. Des barres, pas une ligne : on lit « quel jour »
+     et « combien » sur une barre, alors qu'une ligne lissée invente les jours
+     creux qu'elle traverse. */
+  .ov-spark{display:flex; align-items:flex-end; gap:2px; height:74px}
+  .ov-spark i{flex:1 1 0; min-width:0; background:#dfe9e2; border-radius:2px 2px 0 0;
+              min-height:2px; transition:background .15s}
+  .ov-spark i.on{background:var(--atlas)}
+  .ov-spark i:hover{background:var(--riad)}
+  .ov-axis{display:flex; justify-content:space-between; font:500 10.5px/1 var(--mono);
+           color:var(--muted); margin-top:8px}
+  .ov-rows{display:flex; flex-direction:column; gap:9px}
+  .ov-row{display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:baseline}
+  .ov-row .nm{font-size:.86rem; color:var(--ink); min-width:0; overflow-wrap:anywhere}
+  .ov-row .amt{font-family:var(--mono); font-size:.8rem; color:var(--muted); white-space:nowrap}
+  .ov-bar{grid-column:1 / -1; height:5px; border-radius:3px; background:#eef2ee; overflow:hidden}
+  .ov-bar span{display:block; height:100%; background:var(--atlas); border-radius:3px}
+  .ov-empty{font-size:.82rem; color:var(--muted); line-height:1.5}
+  .ov-top{margin-top:22px}
+  .ov-top .ov-row{grid-template-columns:1fr auto auto; gap:8px 14px}
+  .ov-top .city{font:500 11px/1 var(--mono); color:var(--muted); white-space:nowrap}
+  .ov-note{font-size:.76rem; color:var(--muted); line-height:1.5; margin:16px 0 0;
+           padding-top:13px; border-top:1px solid var(--line)}
+  /* Recherche du roster. Un back-office qui tient dix-huit clients se lit ; à
+     cent, on cherche quelqu'un par son nom, sa ville ou son adresse. */
+  .cli-search{margin-left:auto; display:flex; align-items:center; gap:8px}
+  .cli-search input{font:inherit; font-size:.82rem; padding:7px 11px; width:220px;
+    border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
+  .cli-search input:focus{outline:none; border-color:var(--riad)}
+  .cli-search .clr{font:inherit; font-size:.78rem; border:0; background:transparent;
+    color:var(--muted); cursor:pointer; padding:4px 2px}
+  .cli-search .clr:hover{color:var(--riad)}
+  /* La fiche commerciale d'un établissement : sa ville et ce qu'il nous verse.
+     Deux champs d'opérateur, à côté des modules qu'ils financent. */
+  .biz-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+  .biz-row label{display:flex; flex-direction:column; gap:5px; font:600 10px/1 var(--mono);
+    text-transform:uppercase; letter-spacing:.09em; color:var(--muted)}
+  .biz-row .inp{width:170px}
+  .biz-row .inp.n{width:120px; font-family:var(--mono)}
+  @media (max-width:880px){
+    .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ov-split{grid-template-columns:1fr; gap:24px}
+    .cli-search{width:100%; margin-left:0}
+    .cli-search input{width:100%}
+  }
+  @media (max-width:460px){
+    .ov-grid{grid-template-columns:minmax(0,1fr)}
+    .ov-v{font-size:1.6rem}
+  }
   .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:#eafff4; padding:11px 18px; border-radius:11px; font-size:.86rem; font-weight:560; box-shadow:0 10px 30px rgba(5,59,44,.35); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
   .op-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px dashed var(--line)}
@@ -123,6 +196,10 @@ em, i, cite, dfn, var { font-style: normal; }
   .type-select{flex:1; font:inherit; font-size:.86rem; font-weight:560; padding:8px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); cursor:pointer}
   .type-select:focus{outline:none; border-color:var(--atlas)}
   .type-chip{display:inline-block; margin-top:2px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:3px 6px}
+  /* La ville, à côté du métier. Sans fond : le métier est une catégorie fermée,
+     la ville est une saisie libre — deux pastilles pleines côte à côte se
+     liraient comme deux étiquettes de même nature. */
+  .city-chip{display:inline-block; margin:2px 0 0 6px; font:500 10px/1 var(--mono); letter-spacing:.03em; color:var(--muted)}
   .mini:disabled{opacity:.45; cursor:default}
   .mini:disabled:hover{background:var(--surface); border-color:var(--line)}
   .danger-zone{margin-top:22px; padding-top:18px; border-top:1px solid var(--line)}
@@ -300,6 +377,14 @@ em, i, cite, dfn, var { font-style: normal; }
     .mini{background:#151b18;color:#cfeeda} .plan{background:#1c2420;color:#bfe8cf}
     .mini.warn{color:#f0cf8a; border-color:#3a3320; background:#211d10}
     .mini.warn:hover{background:#2b2513}
+    /* La vue d'ensemble. Les jetons de :root suivent tout seuls ; ne restent
+       que les valeurs posées en dur, dont --riad, qui est un vert PROFOND :
+       posé sur une surface de nuit il donnait un chiffre noir sur noir — le
+       titre invisible qu'on avait déjà corrigé sur les cartes de diagnostic. */
+    .ov-v, .ov-sub b{color:#cfeeda}
+    .ov-spark i{background:#1c2420}
+    .ov-bar{background:#1c2420}
+    .ov-todo{color:#f0cf8a}
     .sus-badge{color:#f0cf8a; background:#241f10; border-color:#3a3320}
     tr.suspended{background:rgba(200,160,40,.08)}
     .type-select{background:#151b18; color:#cfeeda}
@@ -356,8 +441,33 @@ em, i, cite, dfn, var { font-style: normal; }
   </header>
 
   <div class="wrap">
+    <!-- ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════
+         La console ouvrait sur le tableau des clients : une ligne par
+         établissement, le chiffre du jour de chacun. C'est l'écran qu'il faut
+         quand on cherche QUELQU'UN — pas celui qu'on veut en arrivant, où la
+         question est « où en est Kiwi ». Les quatre cartes y répondent, et le
+         roster garde son rôle : trouver un client et le gérer.
+         Chaque nombre porte sa base de calcul. Ce qui n'est pas renseigné est
+         compté à part et affiché comme tel — un classement de villes bâti sur
+         la moitié du parc et présenté comme complet ferait décider à faux. -->
+    <section id="overview">
+      <div class="sec-head">
+        <h2>Vue d’ensemble</h2>
+        <span class="count" id="ov-stamp"></span>
+      </div>
+      <div class="ov-grid" id="ov-cards"></div>
+      <div class="ov-body" id="ov-body"></div>
+    </section>
+
     <section>
-      <div class="sec-head"><h2>Clients</h2><span class="count" id="cli-count"></span></div>
+      <div class="sec-head">
+        <h2>Clients</h2><span class="count" id="cli-count"></span>
+        <div class="cli-search">
+          <input id="cli-q" type="search" autocomplete="off" placeholder="Nom, ville, e-mail, clé…"
+                 aria-label="Rechercher un client" />
+          <button type="button" class="clr" id="cli-clr" hidden>Effacer</button>
+        </div>
+      </div>
       <div style="overflow-x:auto">
         <table>
           <thead><tr>
@@ -404,6 +514,36 @@ em, i, cite, dfn, var { font-style: normal; }
             <div id="feat-list"></div>
             <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
           </div>
+        </div>
+
+        <!-- ══ FICHE COMMERCIALE ═══════════════════════════════════════════
+             Les deux choses que seuls nous savons d'un établissement : où il
+             est, et ce qu'il nous verse. Elles n'existaient nulle part — ni le
+             compte ni la fiche magasin ne portaient de ville, et rien ne disait
+             ce qu'un abonnement vaut — donc la vue d'ensemble ne pouvait ni
+             situer le parc ni totaliser nos revenus. C'est ici qu'on les pose,
+             à côté des modules qu'ils financent.
+             Le montant est FACULTATIF : laissé vide, le tarif public du palier
+             s'applique. Il sert aux Ultimate, qui sont sur devis et n'ont donc
+             pas de prix public, et aux remises consenties. -->
+        <div class="blk">
+          <div class="blk-head">
+            <p class="sub">Fiche commerciale</p>
+            <span class="count" id="biz-state"></span>
+          </div>
+          <div class="biz-row">
+            <label>Ville
+              <input class="inp" id="biz-city" placeholder="Casablanca" autocomplete="off"
+                     aria-label="Ville de l’établissement" />
+            </label>
+            <label>Abonnement convenu
+              <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="—"
+                     aria-label="Abonnement mensuel convenu en dirhams" />
+            </label>
+            <button class="mini" id="biz-save" type="button">Enregistrer</button>
+          </div>
+          <p class="err" id="biz-err"></p>
+          <p class="hint" id="biz-hint"></p>
         </div>
 
         <!-- ══ VENTES DE TEST ══════════════════════════════════════════════
@@ -727,20 +867,25 @@ em, i, cite, dfn, var { font-style: normal; }
   // Versioned: the seed is cached in localStorage, so an operator who has opened
   // the console before keeps the OLD roster for good and never sees a change to
   // the demo data. Bump the suffix whenever seedMock() changes.
-  var MOCK_KEY = 'kiwiAdminMock2';
-  try { localStorage.removeItem('kiwiAdminMock'); } catch(_){}
+  var MOCK_KEY = 'kiwiAdminMock3';
+  try { localStorage.removeItem('kiwiAdminMock'); localStorage.removeItem('kiwiAdminMock2'); } catch(_){}
 
   function seedMock(){
     var now = Date.now();
     return {
       clients: [
-        { merchant:'cafe-atlas', business:'Café Atlas', email:'contact@cafeatlas.ma', name:'Yassine', plan:'pro', today_amount:4820, today_count:63, last_ts:now-1000*60*4, demo:true },
-        { merchant:'snack-medina', business:'Snack Medina', email:'medina@snack.ma', name:'Karim', plan:'basic', type:'fastfood', today_amount:1240, today_count:22, last_ts:now-1000*60*38, owner:'medina@snack.ma', owner_name:'Karim', primary:true },
-        { merchant:'riad-noor', business:'Riad Noor', email:'noor@riad.ma', name:'Salma', plan:'ultra', type:'hotel', today_amount:9630, today_count:12, last_ts:now-1000*60*2, owner:'noor@riad.ma', owner_name:'Salma', primary:true },
+        { merchant:'cafe-atlas', business:'Café Atlas', email:'contact@cafeatlas.ma', name:'Yassine', plan:'pro', city:'Casablanca', today_amount:4820, today_count:63, last_ts:now-1000*60*4, demo:true },
+        { merchant:'snack-medina', business:'Snack Medina', email:'medina@snack.ma', name:'Karim', plan:'basic', type:'fastfood', city:'Fès', today_amount:1240, today_count:22, last_ts:now-1000*60*38, owner:'medina@snack.ma', owner_name:'Karim', primary:true },
+        // Ultimate : sur devis, donc sans tarif public — le montant convenu est
+        // saisi à la main. C'est le cas pour lequel merchant_config.mrr existe.
+        { merchant:'riad-noor', business:'Riad Noor', email:'noor@riad.ma', name:'Salma', plan:'ultimate', type:'hotel', city:'Marrakech', mrr:2600, today_amount:9630, today_count:12, last_ts:now-1000*60*2, owner:'noor@riad.ma', owner_name:'Salma', primary:true },
+        // Volontairement SANS ville : la vue d'ensemble doit compter les non
+        // situés à part et le dire, plutôt que de bâtir un classement sur un
+        // parc incomplet en le présentant comme complet.
         { merchant:'boulangerie-zitoun', business:'Boulangerie Zitoun', email:'zitoun@pain.ma', name:'Omar', plan:'basic', type:'bakery', today_amount:2075, today_count:88, last_ts:now-1000*60*71, owner:'zitoun@pain.ma', owner_name:'Omar', primary:true },
         // One client, two trades — the case the grouping exists for.
-        { merchant:'boutique-sport', business:'Boutique Sport', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'boutique', today_amount:3410, today_count:17, last_ts:now-1000*60*9, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:true },
-        { merchant:'cafe-nord', business:'Café Nord', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'cafe', today_amount:860, today_count:31, last_ts:now-1000*60*23, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:false },
+        { merchant:'boutique-sport', business:'Boutique Sport', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'boutique', city:'Casablanca', today_amount:3410, today_count:17, last_ts:now-1000*60*9, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:true },
+        { merchant:'cafe-nord', business:'Café Nord', email:'h.alaoui@sport.ma', name:'Hicham', plan:'pro', type:'cafe', city:'Rabat', today_amount:860, today_count:31, last_ts:now-1000*60*23, owner:'h.alaoui@sport.ma', owner_name:'Hicham Alaoui', primary:false },
       ],
       pins: {
         'cafe-atlas': [ { id:'m1', pin:'0000', name:'Plongeur', role:'plongeur' }, { id:'m2', pin:'1234', name:'Yassine', role:'serveur' } ],
@@ -759,6 +904,106 @@ em, i, cite, dfn, var { font-style: normal; }
     return s;
   }
   function saveMock(m){ try { localStorage.setItem(MOCK_KEY, JSON.stringify(m)); } catch(_){} }
+
+  /* ── La vue d'ensemble, en mode démo ───────────────────────────────────────
+     Recalculée depuis le roster de démonstration par les MÊMES règles que
+     functions/api/admin/overview.js : les démos ne comptent pas, un montant
+     convenu l'emporte sur le tarif du palier, un palier sans tarif ni montant
+     sort en « non tarifé », une ville manquante est comptée à part. Une démo
+     qui appliquerait d'autres règles que la production ne prouverait rien de
+     la production — c'est précisément là qu'on exerce les parcours.
+
+     L'historique, lui, n'existe pas dans le roster de démo : il est dérivé du
+     chiffre du jour par une variation DÉTERMINISTE (empreinte du slug + du
+     rang du jour) plutôt que par Math.random(), pour que la courbe soit la
+     même à chaque rendu. Une courbe qui bouge à chaque clic se lit comme une
+     donnée vivante alors qu'elle ne l'est pas. */
+  var TIER_PRICE = { basic:199, pro:399, ultra:1499 };
+  var TIER_ORDER = ['basic','pro','ultra','ultimate'];
+  function hash32(s){
+    var h = 2166136261;
+    for (var i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+    return h;
+  }
+  function mockOverview(){
+    var m = mock(), now = Date.now(), DAY = 86400000;
+    var rows = m.clients || [];
+    var real = rows.filter(function(c){ return !isDemoClient(c); });
+    var demos = rows.filter(isDemoClient);
+
+    var series = [], d30 = 0, count30 = 0, all = 0;
+    for (var i = 29; i >= 0; i--){
+      var day = 0;
+      real.forEach(function(c){
+        var f = 0.55 + (hash32(c.merchant + ':' + i) % 1000) / 1000 * 0.9;
+        day += Math.round((c.today_amount || 0) * f);
+      });
+      series.push({ d: new Date(now - i * DAY).toISOString().slice(0,10), amount: day });
+      d30 += day;
+    }
+    real.forEach(function(c){
+      count30 += Math.round((c.today_count || 0) * 27);
+      all += Math.round((c.today_amount || 0) * (90 + (hash32(c.merchant) % 120)));
+    });
+    var today = real.reduce(function(s,c){ return s + (c.today_amount||0); }, 0);
+    var d7 = series.slice(-7).reduce(function(s,p){ return s + p.amount; }, 0);
+
+    /* Les paliers et le MRR, règle pour règle avec le serveur. */
+    var tiers = {}, mrr = { total:0, custom:0, customStores:0, untariffed:0, suspended:0, suspendedAmount:0 };
+    real.forEach(function(c){
+      var plan = (c.plan || '').toLowerCase();
+      var listed = TIER_PRICE[plan] || null;
+      var agreed = (c.mrr != null && +c.mrr > 0) ? +c.mrr : null;
+      var amount = agreed != null ? agreed : listed;
+      var key = plan || '—';
+      var t = tiers[key] || (tiers[key] = { plan:key, stores:0, amount:0, unit:listed, untariffed:0, suspended:0 });
+      t.stores++;
+      if (c.status === 'suspended' || c.store_status === 'suspended'){
+        mrr.suspended++; t.suspended++; if (amount) mrr.suspendedAmount += amount; return;
+      }
+      if (amount == null){ mrr.untariffed++; t.untariffed++; return; }
+      mrr.total += amount; t.amount += amount;
+      if (agreed != null){ mrr.custom += agreed; mrr.customStores++; }
+    });
+    var tierList = Object.keys(tiers).map(function(k){ return tiers[k]; }).sort(function(a,b){
+      return (TIER_ORDER.indexOf(a.plan) + 1 || 99) - (TIER_ORDER.indexOf(b.plan) + 1 || 99); });
+
+    /* Les villes, et ce qui n'en a pas. */
+    var cityMap = {}, untagged = 0, owners = {};
+    real.forEach(function(c){
+      owners[c.owner || c.email || c.merchant] = 1;
+      var raw = (c.city || '').trim();
+      if (!raw){ untagged++; return; }
+      var k = raw.toLowerCase();
+      var e = cityMap[k] || (cityMap[k] = { city:raw, stores:0, clients:{}, gmv30:0 });
+      e.stores++; e.clients[c.owner || c.email || c.merchant] = 1;
+      e.gmv30 += Math.round((c.today_amount || 0) * 27);
+    });
+    var cities = Object.keys(cityMap).map(function(k){
+      var e = cityMap[k];
+      return { city:e.city, stores:e.stores, clients:Object.keys(e.clients).length, gmv30:e.gmv30 };
+    }).sort(function(a,b){ return b.stores - a.stores || b.gmv30 - a.gmv30; });
+
+    var top = real.map(function(c){
+      return { merchant:c.merchant, name:c.business || c.merchant, city:c.city || '',
+               plan:c.plan || '', gmv30:Math.round((c.today_amount||0) * 27) };
+    }).sort(function(a,b){ return b.gmv30 - a.gmv30; }).slice(0,5);
+
+    return {
+      now: now, dayStart: new Date(now).setHours(0,0,0,0),
+      columns: { city:true, mrr:true }, voidAware: true,
+      clients: { accounts:Object.keys(owners).length, active:Object.keys(owners).length, suspended:0,
+                 stores:real.length, suspendedStores:mrr.suspended, new30:1,
+                 demo:demos.length, demoGmv30:0 },
+      gmv: { today:today, d7:d7, d30:d30, all:all, count30:count30, countAll:count30 * 12,
+             basket30: count30 ? Math.round(d30 / count30) : 0,
+             activeToday: real.filter(function(c){ return (c.today_amount||0) > 0; }).length,
+             silent7: 0 },
+      series: series,
+      mrr: Object.assign(mrr, { tiers:tierList, prices:TIER_PRICE }),
+      cities: cities, untagged: untagged, top: top,
+    };
+  }
 
   /* ── Les ventes, en mode démo ──────────────────────────────────────────────
      Le panneau doit se comporter EXACTEMENT comme en production quand la console
@@ -872,6 +1117,45 @@ em, i, cite, dfn, var { font-style: normal; }
           { feature:k, enabled:features[k] ? 1 : 0, actor:'démo', ts:Date.now() });
       });
       m.features[merchant] = features; saveMock(m);
+    },
+    /* La vue d'ensemble — nos chiffres, pas ceux d'un client. Un seul appel :
+       le calcul est fait côté serveur, sur toute la base, parce que le faire
+       ici obligerait à télécharger chaque vente de chaque commerçant pour en
+       tirer quatre nombres. */
+    async overview(){
+      if (LIVE) return api('/overview');
+      return mockOverview();
+    },
+    /* La fiche commerciale d'un établissement : sa ville, et le montant convenu
+       s'il y en a un. Elle voyage avec la configuration (même table, même
+       route) — deux renseignements d'opérateur ne justifiaient pas une
+       troisième table ni un troisième appel. */
+    async biz(merchant){
+      if (LIVE) {
+        var r = await api('/config?merchant=' + encodeURIComponent(merchant));
+        return { city:r.city || '', mrr:(r.mrr == null ? null : +r.mrr),
+                 columns:r.columns || { city:true, mrr:true } };
+      }
+      var hit = (mock().clients || []).filter(function(c){ return c.merchant === merchant; })[0] || {};
+      return { city:hit.city || '', mrr:(hit.mrr == null ? null : +hit.mrr),
+               columns:{ city:true, mrr:true } };
+    },
+    /* On renvoie les modules et le palier courants avec : le PUT écrase la
+       ligne entière, donc n'envoyer que la ville effacerait les interrupteurs.
+       Même précaution que setType(), pour la même raison. */
+    async setBiz(merchant, city, mrr){
+      if (LIVE) {
+        var features = await store.config(merchant);
+        var plan = (selected && selected.merchant === merchant && selected.plan) || '';
+        return api('/config', { method:'PUT', body:JSON.stringify({
+          merchant:merchant, features:features, plan:plan, city:city, mrr:mrr }) });
+      }
+      var m = mock();
+      (m.clients || []).forEach(function(c){
+        if (c.merchant === merchant){ c.city = city; c.mrr = mrr; }
+      });
+      saveMock(m);
+      return { ok:true, columns:{ city:true, mrr:true } };
     },
     /* Le journal des changements de modules. `merchant_config` ne garde que le
        dernier état : « les réservations sont coupées » ne dit ni depuis quand,
@@ -1053,6 +1337,15 @@ em, i, cite, dfn, var { font-style: normal; }
     var ops = document.getElementById('op-list'); clear(ops);
     ops.appendChild(h('p', { class:'empty' }, 'Opérateurs indisponibles tant que le service réel ne répond pas.'));
     document.getElementById('op-count').textContent = '';
+    /* La vue d'ensemble se vide avec le reste. Laisser quatre grands chiffres à
+       l'écran pendant que le service est tombé, c'est présenter le dernier état
+       connu comme l'état actuel — exactement l'erreur que le mode « service
+       indisponible » existe pour empêcher. */
+    clear(document.getElementById('ov-cards'));
+    var ov = document.getElementById('ov-body'); clear(ov);
+    ov.appendChild(h('p', { class:'ov-empty', style:'color:var(--warn);font-weight:600' },
+      'Chiffres indisponibles : le service réel ne répond pas. Rien n’est affiché plutôt qu’un état périmé.'));
+    document.getElementById('ov-stamp').textContent = '';
   }
 
   function openDashboard(merchant){
@@ -1067,6 +1360,28 @@ em, i, cite, dfn, var { font-style: normal; }
   // ⇒ demo", since the roster only ever fills email from the accounts table.
   function isDemoClient(c){ return (c.demo != null) ? !!c.demo : !c.email; }
   var demosOpen = false;
+
+  /* ── Chercher un client ────────────────────────────────────────────────────
+     Le roster n'avait aucune recherche : on descendait la liste à l'œil, ce qui
+     tient tant qu'on a douze clients et cesse de tenir bien avant cent.
+     Les accents sont retirés des DEUX côtés — taper « fes » doit trouver Fès,
+     et taper « Fès » doit trouver une fiche saisie « Fes ». normalize('NFD') +
+     suppression des diacritiques est la seule façon de le faire sans tenir une
+     table de correspondance. Sur un navigateur sans normalize (aucun
+     aujourd'hui), on retombe sur la comparaison brute plutôt que d'échouer. */
+  var CLI_Q = '';
+  function foldText(s){
+    s = String(s == null ? '' : s).toLowerCase();
+    try { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(_) { return s; }
+  }
+  function filterClients(rows){
+    if (!CLI_Q) return rows;
+    var q = foldText(CLI_Q);
+    return rows.filter(function(c){
+      return foldText([c.business, c.city, c.name, c.email, c.owner, c.owner_name,
+                       c.owner_business, c.merchant, c.plan].join(' ')).indexOf(q) >= 0;
+    });
+  }
 
   /* Group the roster by CLIENT, not by store. One login can hold several
      établissements — a boutique and a restaurant — and each is its own store with
@@ -1170,7 +1485,13 @@ em, i, cite, dfn, var { font-style: normal; }
       h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
                       storeOff ? h('span', { class:'sus-badge' }, 'fermé') : null,
                       (accountOff && !inGroup) ? h('span', { class:'sus-badge' }, 'compte suspendu') : null),
-                    c.type ? h('div', null, h('span', { class:'type-chip' }, typeLabel(c.type) || c.type)) : null,
+                    /* Le métier, et la ville quand elle est renseignée. La ville
+                       est ce sur quoi on cherche le plus souvent après le nom —
+                       « qui avons-nous à Tanger » — donc elle se lit sur la
+                       ligne, pas seulement dans le panneau de gestion. */
+                    (c.type || c.city) ? h('div', null,
+                      c.type ? h('span', { class:'type-chip' }, typeLabel(c.type) || c.type) : null,
+                      c.city ? h('span', { class:'city-chip' }, c.city) : null) : null,
                     // The contact sits on the band when the client has several
                     // shops — repeating it on every row would bury the one thing
                     // that differs between them, which is the shop itself.
@@ -1249,21 +1570,229 @@ em, i, cite, dfn, var { font-style: normal; }
     }
   }
 
+  /* ══ VUE D'ENSEMBLE ════════════════════════════════════════════════════════
+     Quatre cartes, une courbe, deux classements. Chaque nombre porte sa base de
+     calcul dessous : « 1,24 M » ne veut rien dire tant qu'on ne sait pas sur
+     combien de jours et sur combien d'établissements, et c'est sur cet écran
+     qu'on décidera d'embaucher ou d'ouvrir une ville. Ce qui n'est pas connu
+     est écrit comme inconnu — jamais rangé dans « autre », jamais compté zéro. */
+  function big(n){
+    n = Math.round(+n || 0);
+    if (n >= 1000000) return (n / 1000000).toFixed(2).replace('.', ',') + ' M';
+    return fmt(n);
+  }
+  function plural(n, one, many){ return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function ovCard(k, value, unit, subNodes){
+    var v = h('div', { class:'ov-v' }, String(value));
+    if (unit) v.appendChild(h('span', { class:'u', text:unit }));
+    var card = h('div', { class:'ov-card' }, h('div', { class:'ov-k', text:k }), v);
+    var sub = h('p', { class:'ov-sub' });
+    (subNodes || []).forEach(function(n){ if (n) sub.appendChild(typeof n === 'string' ? document.createTextNode(n) : n); });
+    if (sub.childNodes.length) card.appendChild(sub);
+    return card;
+  }
+  function strong(t){ return h('b', { text:t }); }
+  function todo(t){ return h('span', { class:'ov-todo', text:t }); }
+
+  function ovBarList(host, items, valueOf, labelOf, amountOf){
+    var max = items.reduce(function(m, it){ return Math.max(m, valueOf(it)); }, 0) || 1;
+    var box = h('div', { class:'ov-rows' });
+    items.forEach(function(it){
+      var row = h('div', { class:'ov-row' },
+        h('span', { class:'nm', text:labelOf(it) }),
+        h('span', { class:'amt', text:amountOf(it) }));
+      var bar = h('div', { class:'ov-bar' });
+      bar.appendChild(h('span', { style:'width:' + Math.max(2, Math.round(valueOf(it) / max * 100)) + '%' }));
+      row.appendChild(bar);
+      box.appendChild(row);
+    });
+    host.appendChild(box);
+  }
+
+  async function renderOverview(){
+    var cards = document.getElementById('ov-cards');
+    var body = document.getElementById('ov-body');
+    var stamp = document.getElementById('ov-stamp');
+    if (!cards || !body) return;
+    var o;
+    try { o = await store.overview(); }
+    catch (e) {
+      clear(cards); clear(body);
+      /* Une route pas encore déployée n'est pas une panne de la console : le
+         roster, lui, répond. On le dit et on laisse le reste travailler. */
+      body.appendChild(h('p', { class:'ov-empty', text:
+        (e && e.status === 403)
+          ? 'Vue d’ensemble refusée : cette session n’a pas de droits opérateur.'
+          : 'Vue d’ensemble indisponible (la route /api/admin/overview n’a pas répondu). La liste des clients ci-dessous reste à jour.' }));
+      if (stamp) stamp.textContent = '';
+      return;
+    }
+
+    var c = o.clients || {}, g = o.gmv || {}, m = o.mrr || {}, cities = o.cities || [];
+    var situated = (c.stores || 0) - (o.untagged || 0);
+
+    clear(cards);
+    // 1 · Combien sont-ils.
+    cards.appendChild(ovCard('Clients', fmt(c.accounts || 0), '', [
+      strong(plural(c.stores || 0, 'établissement')),
+      (c.suspended ? ' · ' : ''), (c.suspended ? todo(plural(c.suspended, 'compte suspendu', 'comptes suspendus')) : null),
+      (c.new30 ? ' · ' + c.new30 + ' ce mois' : ''),
+      (c.demo ? ' · ' + c.demo + ' démo' + (c.demo === 1 ? '' : 's') + ' hors comptes' : ''),
+    ]));
+    // 2 · Ce qu'ils nous versent.
+    cards.appendChild(ovCard('Notre MRR', big(m.total || 0), 'MAD / mois', [
+      'abonnements en cours',
+      (m.customStores ? ' · ' + m.customStores + ' sur devis' : ''),
+      (m.untariffed ? ' · ' : ''),
+      (m.untariffed ? todo(plural(m.untariffed, 'sans tarif')) : null),
+      (m.suspended ? ' · ' : ''),
+      (m.suspended ? todo(plural(m.suspended, 'suspendu', 'suspendus') + ' (−' + fmt(m.suspendedAmount || 0) + ')') : null),
+    ]));
+    // 3 · Ce qu'ils encaissent, eux.
+    cards.appendChild(ovCard('Leurs encaissements', big(g.d30 || 0), 'MAD', [
+      '30 jours · ', strong(fmt(g.count30 || 0) + ' ventes'),
+      (g.basket30 ? ' · panier ' + fmt(g.basket30) + ' MAD' : ''),
+    ]));
+    // 4 · Où nous sommes.
+    cards.appendChild(ovCard('Villes', fmt(cities.length), '', [
+      (o.columns && o.columns.city === false)
+        ? todo('colonne ville pas encore appliquée en base')
+        : (o.untagged
+            ? [strong(situated + '/' + (c.stores || 0)), ' situés · ', todo(o.untagged + ' à renseigner')]
+            : [strong(situated + '/' + (c.stores || 0)), ' situés']),
+    ].flat()));
+
+    clear(body);
+
+    // ── La courbe des trente jours ──────────────────────────────────────────
+    var series = o.series || [];
+    if (series.length){
+      var peak = series.reduce(function(x, p){ return Math.max(x, p.amount || 0); }, 0) || 1;
+      var spark = h('div', { class:'ov-spark' });
+      series.forEach(function(p, i){
+        var pct = Math.max(2, Math.round((p.amount || 0) / peak * 100));
+        spark.appendChild(h('i', {
+          class: (i === series.length - 1 ? 'on' : ''),
+          style: 'height:' + pct + '%',
+          title: p.d + ' · ' + fmt(p.amount || 0) + ' MAD',
+        }));
+      });
+      body.appendChild(h('p', { class:'ov-h', text:'Encaissements de nos clients · 30 jours' }));
+      body.appendChild(spark);
+      body.appendChild(h('div', { class:'ov-axis' },
+        h('span', { text:stampDay(series[0].d) }),
+        h('span', { text:'pic ' + fmt(peak) + ' MAD' }),
+        h('span', { text:'aujourd’hui' })));
+    }
+
+    // ── Villes · paliers ────────────────────────────────────────────────────
+    var split = h('div', { class:'ov-split', style:'margin-top:22px' });
+    /* Les barres portent le critère de TRI, et le titre le nomme. Sans ça,
+       quatre villes à un établissement chacune affichent quatre barres pleines
+       à côté de montants qui vont de 23 000 à 260 000 MAD — et la barre, qui
+       compte des magasins, se lit comme si elle comparait de l'argent. */
+    var left = h('div', null, h('p', { class:'ov-h', text:'Villes · par établissements' }));
+    if (o.columns && o.columns.city === false){
+      left.appendChild(h('p', { class:'ov-empty ov-todo', text:
+        'La colonne ville n’est pas encore appliquée sur cette base. Elle se pose une fois : ALTER TABLE merchant_config ADD COLUMN city TEXT;' }));
+    } else if (!cities.length){
+      left.appendChild(h('p', { class:'ov-empty', text:
+        'Aucun établissement situé pour l’instant. La ville se renseigne dans la fiche commerciale, en ouvrant « Gérer » sur un client.' }));
+    } else {
+      ovBarList(left, cities,
+        function(x){ return x.stores; },
+        function(x){ return x.city; },
+        function(x){ return plural(x.stores, 'étab.', 'étab.') + ' · ' + big(x.gmv30) + ' MAD'; });
+      if (o.untagged){
+        left.appendChild(h('p', { class:'ov-note ov-todo', text:
+          plural(o.untagged, 'établissement sans ville', 'établissements sans ville') +
+          ' — ce classement ne les compte pas.' }));
+      }
+    }
+    split.appendChild(left);
+
+    var right = h('div', null, h('p', { class:'ov-h', text:'Paliers · par MRR' }));
+    var tiers = (m.tiers || []).filter(function(t){ return t.stores; });
+    if (!tiers.length){
+      right.appendChild(h('p', { class:'ov-empty', text:'Aucun palier renseigné.' }));
+    } else {
+      ovBarList(right, tiers,
+        function(t){ return t.amount || t.stores; },
+        function(t){ return planName(t.plan); },
+        function(t){
+          var bits = ['×' + t.stores];
+          if (t.amount) bits.push(fmt(t.amount) + ' MAD');
+          if (t.untariffed) bits.push(t.untariffed + ' sans tarif');
+          if (t.suspended) bits.push(t.suspended + ' susp.');
+          return bits.join(' · ');
+        });
+    }
+    split.appendChild(right);
+    body.appendChild(split);
+
+    // ── Les cinq plus gros ──────────────────────────────────────────────────
+    if ((o.top || []).length){
+      var top = h('div', { class:'ov-top' }, h('p', { class:'ov-h', text:'Plus gros encaissements · 30 jours' }));
+      var rows = h('div', { class:'ov-rows' });
+      o.top.forEach(function(t){
+        rows.appendChild(h('div', { class:'ov-row' },
+          h('span', { class:'nm', text:t.name }),
+          h('span', { class:'city', text:t.city || '—' }),
+          h('span', { class:'amt', text:big(t.gmv30) + ' MAD' })));
+      });
+      top.appendChild(rows);
+      body.appendChild(top);
+    }
+
+    /* La méthode, écrite sous les chiffres. Un tableau de bord qui ne dit pas
+       ce qu'il compte se fait croire sur parole, et c'est comme ça qu'on prend
+       une décision sur un périmètre qu'on n'avait pas compris. */
+    var notes = ['Démos exclues.'];
+    notes.push(o.voidAware ? 'Ventes sorties des livres exclues.'
+                           : 'Ventes de test NON exclues sur cette base (colonne void_ts absente).');
+    notes.push('MRR = montant convenu quand il est saisi, sinon le tarif du palier (basic 199 · pro 399 · ultra 1 499). Ultimate est sur devis : sans montant saisi, l’établissement est compté « sans tarif », pas zéro.');
+    notes.push('Suspendus retirés du MRR.');
+    body.appendChild(h('p', { class:'ov-note', text:notes.join(' ') }));
+
+    if (stamp) stamp.textContent = 'au ' + stampTime(o.now || Date.now());
+  }
+  function stampDay(iso){
+    try { return new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' }); }
+    catch(_) { return iso; }
+  }
+  function stampTime(ts){
+    try { return new Date(ts).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }); }
+    catch(_) { return ''; }
+  }
+  function planName(p){
+    if (p === '—' || !p) return 'Sans palier';
+    return p.charAt(0).toUpperCase() + p.slice(1);
+  }
+
   async function renderClients(){
     var body = document.getElementById('cli-body');
     clear(body);
     var list = await store.clients();
-    var real = list.filter(function(c){ return !isDemoClient(c); });
-    var demos = list.filter(isDemoClient);
+    var allReal = list.filter(function(c){ return !isDemoClient(c); });
+    var allDemos = list.filter(isDemoClient);
+    /* La recherche. Un back-office qui tient dix-huit clients se lit d'un coup
+       d'œil ; à cent, on cherche quelqu'un — par son enseigne, sa ville, son
+       adresse ou sa clé. Le filtre porte sur l'ÉTABLISSEMENT, puis le
+       regroupement par propriétaire est refait sur ce qui reste : chercher
+       « Rabat » doit donner la boutique de Rabat, pas les deux magasins de son
+       propriétaire dont l'autre est à Tanger. */
+    var real = filterClients(allReal), demos = filterClients(allDemos);
     var groups = groupByOwner(real);
     // Count CLIENTS and their STORES separately — with multi-shop merchants the
     // two numbers diverge, and "5 clients" for 3 people would be a lie.
     var multi = groups.filter(function(g){ return g.stores.length > 1; }).length;
-    document.getElementById('cli-count').textContent =
-      groups.length + ' client' + (groups.length === 1 ? '' : 's') +
-      (real.length !== groups.length ? ' · ' + real.length + ' établissements' : '') +
-      (multi ? ' · ' + multi + ' multi-site' + (multi === 1 ? '' : 's') : '') +
-      (demos.length ? ' · ' + demos.length + ' démo' + (demos.length === 1 ? '' : 's') : '');
+    document.getElementById('cli-count').textContent = CLI_Q
+      ? (real.length + ' sur ' + allReal.length + ' établissements' +
+         (demos.length ? ' · ' + demos.length + ' démo' + (demos.length === 1 ? '' : 's') : ''))
+      : (groups.length + ' client' + (groups.length === 1 ? '' : 's') +
+        (real.length !== groups.length ? ' · ' + real.length + ' établissements' : '') +
+        (multi ? ' · ' + multi + ' multi-site' + (multi === 1 ? '' : 's') : '') +
+        (demos.length ? ' · ' + demos.length + ' démo' + (demos.length === 1 ? '' : 's') : ''));
 
     groups.forEach(function(g){
       if (g.stores.length > 1) body.appendChild(ownerRow(g));
@@ -1271,7 +1800,9 @@ em, i, cite, dfn, var { font-style: normal; }
     });
     if (!real.length){
       body.appendChild(h('tr', null, h('td', { colspan:'7', style:'padding:20px 12px;color:var(--muted)' },
-        'Aucun client réel pour l’instant, les comptes créés par vos clients apparaîtront ici.')));
+        CLI_Q
+          ? ('Aucun établissement ne correspond à « ' + CLI_Q +' ». La recherche porte sur l’enseigne, la ville, le nom du contact, l’adresse e-mail et la clé.')
+          : 'Aucun client réel pour l’instant, les comptes créés par vos clients apparaîtront ici.')));
     }
 
     // Demos are hidden by default under one collapsible band, so God-mode shows
@@ -1332,7 +1863,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
-    await Promise.all([renderPins(), renderFeatures(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
+    await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
@@ -1518,6 +2049,86 @@ em, i, cite, dfn, var { font-style: normal; }
    * produit : un module appartient à un établissement, et le plan enregistré ne
    * ferme aucune porte. Aucun état n'est donc inventé pour eux — mieux vaut un
    * panneau qui dit vrai qu'un panneau complet et faux. */
+  /* ── La fiche commerciale ──────────────────────────────────────────────────
+     Ville et abonnement convenu. Deux renseignements que seuls nous avons, et
+     que rien dans la base ne portait — d'où une vue d'ensemble incapable de
+     situer le parc ou de totaliser nos revenus tant qu'ils ne sont pas saisis.
+     Enregistrer passe par /api/admin/config, donc par le code opérateur nommé :
+     ce sont nos chiffres commerciaux, pas un réglage d'affichage. */
+  async function renderBiz(){
+    var city = document.getElementById('biz-city');
+    var mrr = document.getElementById('biz-mrr');
+    var save = document.getElementById('biz-save');
+    var state = document.getElementById('biz-state');
+    var hint = document.getElementById('biz-hint');
+    var err = document.getElementById('biz-err');
+    if (!city || !mrr || !save || !selected) return;
+    err.textContent = '';
+
+    var b;
+    try { b = await store.biz(selected.merchant); }
+    catch (_) { b = { city:'', mrr:null, columns:{ city:true, mrr:true } }; }
+    if (!selected) return;
+
+    city.value = b.city || '';
+    mrr.value = (b.mrr == null ? '' : String(b.mrr));
+
+    var noColumn = b.columns && b.columns.city === false;
+    var readOnly = SENIOR === false;
+    city.disabled = mrr.disabled = save.disabled = noColumn || readOnly;
+
+    var plan = (selected.plan || '').toLowerCase();
+    var listed = TIER_PRICE[plan] || null;
+    state.textContent = b.city
+      ? (b.city + (b.mrr != null ? ' · ' + fmt(b.mrr) + ' MAD/mois' : ''))
+      : 'ville non renseignée';
+
+    if (noColumn){
+      hint.textContent = 'Les colonnes ville et abonnement ne sont pas encore appliquées sur cette base. ' +
+        'Une seule fois : ALTER TABLE merchant_config ADD COLUMN city TEXT; ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;';
+    } else if (readOnly){
+      hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
+    } else if (listed){
+      hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
+        'Le montant est facultatif — laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
+    } else {
+      hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé ». ' +
+        (plan === 'ultimate'
+          ? 'Ultimate est sur devis et n’a pas de tarif public : sans montant saisi, cet établissement est compté « sans tarif » dans le MRR, et non pas zéro.'
+          : 'Aucun palier tarifé n’est posé sur cet établissement : sans montant saisi, il est compté « sans tarif » dans le MRR, et non pas zéro.');
+    }
+  }
+
+  async function saveBiz(){
+    if (!selected) return;
+    var city = document.getElementById('biz-city');
+    var mrr = document.getElementById('biz-mrr');
+    var err = document.getElementById('biz-err');
+    err.textContent = '';
+    var raw = mrr.value.trim();
+    var amount = raw === '' ? null : Number(raw);
+    if (amount != null && (!isFinite(amount) || amount < 0)){
+      err.textContent = 'Montant invalide.'; return;
+    }
+    try {
+      var r = await store.setBiz(selected.merchant, city.value.trim(), amount);
+      /* Une base sans les colonnes accepte l'enregistrement des MODULES et
+         laisse tomber la ville. Le dire : « enregistré » sur un geste à moitié
+         fait est le mensonge le plus coûteux d'une console d'assistance. */
+      if (r && r.columns && r.columns.city === false){
+        err.textContent = 'Modules enregistrés, mais la ville et le montant n’ont PAS été retenus : les colonnes manquent sur cette base.';
+        return;
+      }
+      selected.city = city.value.trim();
+      notify('Fiche commerciale enregistrée.');
+      await Promise.all([renderBiz(), renderClients(), renderOverview()]);
+    } catch (e) {
+      err.textContent = (e && e.body && e.body.error === 'operator-code-required')
+        ? 'Code opérateur personnel requis.'
+        : 'Échec de l’enregistrement.';
+    }
+  }
+
   function featState(feats, mod){
     var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
     // Module standard : clé absente ⇒ ALLUMÉ. Option payante (mod.off) : l'inverse.
@@ -2201,6 +2812,32 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById(id).addEventListener('change', function(){ renderTestSales(); });
   });
 
+  document.getElementById('biz-save').addEventListener('click', function(){ saveBiz(); });
+  ['biz-city','biz-mrr'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if (e.key === 'Enter') saveBiz();
+    });
+  });
+
+  /* La recherche du roster. Filtrée à la frappe et localement : le roster est
+     déjà en mémoire, donc une requête par caractère ne rapporterait rien.
+     Échap vide le champ — et c'est pour ça que le raccourci global « Échap
+     referme le panneau » laisse déjà la main aux champs de saisie. */
+  (function(){
+    var q = document.getElementById('cli-q');
+    var clr = document.getElementById('cli-clr');
+    function apply(){
+      CLI_Q = q.value.trim();
+      clr.hidden = !CLI_Q;
+      renderClients();
+    }
+    q.addEventListener('input', apply);
+    q.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && q.value){ e.stopPropagation(); q.value = ''; apply(); }
+    });
+    clr.addEventListener('click', function(){ q.value = ''; apply(); q.focus(); });
+  })();
+
   document.getElementById('manage-close').addEventListener('click', function(){ deselect(); });
 
   /* Cliquer à côté referme aussi — mais « à côté » veut dire le fond de page, et
@@ -2249,9 +2886,14 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     }
     renderMode();
-    await renderClients();
+    /* La vue d'ensemble et le roster partent ensemble : ce sont deux requêtes
+       indépendantes, et attendre l'une pour lancer l'autre doublerait le temps
+       avant le premier écran utile. renderOverview() porte sa propre gestion
+       d'échec (une route pas encore déployée n'empêche pas la console de
+       servir), donc elle ne peut pas faire tomber le démarrage. */
+    await Promise.all([renderOverview(), renderClients()]);
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
+    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
   }
   boot(false);
 })();

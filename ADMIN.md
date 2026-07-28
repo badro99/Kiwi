@@ -26,6 +26,36 @@ lands on `/kiwi-admin.html`. Clients never discover it.
 
 ## What it does
 
+0. **Vue d'ensemble** — the first screen, and the only one that talks about *us*
+   rather than about a client. Four figures, a 30-day curve, two rankings:
+   **combien de clients** (counted by account, not by établissement — one login
+   can hold a boutique and a café), **notre MRR**, **ce que nos clients
+   encaissent** (30 days, sales count, average basket), and **les villes**.
+   Served by `/api/admin/overview` in one call, because computing it in the
+   browser would mean downloading every merchant's every sale to produce four
+   numbers.
+
+   Three rules make the figures worth looking at:
+   - **Demos never count.** An établissement no account owns is demo data — it
+     is counted separately and never added to the real park.
+   - **Voided sales never count.** A sale taken out of a merchant's books
+     (`sales.void_ts`) cannot come back into ours.
+   - **What we don't know is said, not estimated.** An établissement with no
+     city is counted as *non situé*, never filed under "autre" — a city ranking
+     built on half the park and presented as complete decides real budgets. A
+     tier with no list price and no agreed amount lands in *sans tarif*, never
+     as zero. Columns not yet applied to the database are announced as absent
+     rather than rendered as a zero that looks like a fact.
+
+   **MRR** = the agreed amount when one is entered, otherwise the tier's list
+   price (basic 199 · pro 399 · ultra 1 499). **Ultimate is sur devis** and has
+   no list price — that is exactly why `merchant_config.mrr` exists. A suspended
+   établissement leaves the MRR and its shortfall is stated.
+
+   The method is printed under the figures. A dashboard that doesn't say what it
+   counts gets taken on trust, and that is how a decision gets made on a
+   perimeter nobody had understood.
+
 1. **Clients** — a row per merchant: établissement + contact, merchant key,
    plan, **CA du jour**, ventes, last-sale time, live dot. **"Ouvrir dashboard"**
    opens that client's real dashboard (scoped to their merchant key) so we see
@@ -80,6 +110,27 @@ lands on `/kiwi-admin.html`. Clients never discover it.
    undone: *taken out on the 12th, put back on the 14th* is exactly what a
    dispute asks for.
 8. **Opérateurs** — add / delete operator access codes.
+9. **Fiche commerciale** (per établissement) — **ville** and **abonnement
+   convenu**. The two things only *we* know about a shop, and nothing in the
+   database carried them before: no account and no store record held a city,
+   and nothing said what a subscription is worth. Both are operator-entered
+   (`merchant_config.city` / `.mrr`), never client-entered, and they are what
+   feeds the Vue d'ensemble — without a city an établissement is counted *non
+   situé* there, never filed elsewhere. The amount is **optional**: left empty,
+   the tier's list price applies. Filled, it wins — which is how an Ultimate
+   deal or an agreed discount gets recorded. Saving goes through
+   `/api/admin/config`, so it demands a **named operator code**: these are our
+   commercial figures, not a display setting.
+
+   A database missing the two columns still saves the modules and says the city
+   was **not** kept, rather than reporting a half-done save as done.
+
+**Searching the roster.** The client list filters as you type on établissement,
+city, contact name, e-mail, merchant key and plan. Accents are folded on both
+sides — typing `fes` finds *Fès*, and typing `Fès` finds a record entered
+`Fes`. The filter applies to the **établissement**, then the owner grouping is
+rebuilt on what survives: searching *Rabat* returns the Rabat shop, not both
+shops of an owner whose other one is in Tanger.
 
 ## Two levels of operator
 

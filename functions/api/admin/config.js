@@ -53,12 +53,32 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const merchant = (url.searchParams.get('merchant') || '').trim();
   if (!merchant) return json({ error: 'merchant-required' }, 400);
-  const row = await context.env.DB.prepare(
-    `SELECT features, plan, type FROM merchant_config WHERE merchant = ?`
-  ).bind(merchant).first();
+  /* city / mrr sont posées par l'opérateur et peuvent manquer sur une base qui
+     n'a pas encore reçu l'ALTER (voir schema.sql). On retombe alors sur la
+     requête d'origine et on annonce `columns:false` : le panneau affiche « pas
+     encore appliquée en base » au lieu d'un champ vide qu'on remplirait pour
+     rien. */
+  let row = null, hasCols = true;
+  try {
+    row = await context.env.DB.prepare(
+      `SELECT features, plan, type, city, mrr FROM merchant_config WHERE merchant = ?`
+    ).bind(merchant).first();
+  } catch (_) {
+    hasCols = false;
+    row = await context.env.DB.prepare(
+      `SELECT features, plan, type FROM merchant_config WHERE merchant = ?`
+    ).bind(merchant).first();
+  }
   let features = {};
   if (row && row.features) { try { features = JSON.parse(row.features) || {}; } catch (_) { features = {}; } }
-  return json({ features, plan: (row && row.plan) || '', type: (row && row.type) || '' });
+  return json({
+    features,
+    plan: (row && row.plan) || '',
+    type: (row && row.type) || '',
+    city: (row && row.city) || '',
+    mrr: (row && row.mrr != null) ? Number(row.mrr) : null,
+    columns: { city: hasCols, mrr: hasCols },
+  });
 }
 
 export async function onRequestPut(context) {
@@ -88,6 +108,20 @@ export async function onRequestPut(context) {
   const hasOwner = Object.prototype.hasOwnProperty.call(body, 'accountId');
   const accountId = hasOwner ? ((body.accountId || '').toString().trim().slice(0, 64) || null) : null;
 
+  /* ── La ville, et ce que cet établissement nous rapporte ──────────────────
+     Deux renseignements d'opérateur, absents de toute la base jusqu'ici : rien
+     ne portait de ville, rien ne disait ce qu'un abonnement vaut. Ils suivent
+     la règle de `type` — omis ⇒ inchangé, envoyé ⇒ écrit — pour qu'un
+     enregistrement de modules ne les efface jamais au passage.
+     `mrr` accepte explicitement null : c'est ainsi qu'on retire un montant
+     convenu et qu'on rend l'établissement au tarif public de son palier. */
+  const hasCity = Object.prototype.hasOwnProperty.call(body, 'city');
+  const city = hasCity ? (body.city || '').toString().trim().slice(0, 60) : null;
+  const hasMrr = Object.prototype.hasOwnProperty.call(body, 'mrr');
+  const mrrNum = hasMrr ? Number(body.mrr) : NaN;
+  const mrr = (hasMrr && Number.isFinite(mrrNum) && mrrNum > 0)
+    ? Math.min(Math.round(mrrNum), 10000000) : null;
+
   // L'état d'AVANT, lu avant d'écrire : c'est la seule façon de savoir ce qui a
   // changé, et donc quoi inscrire au journal. Couper un module n'efface aucune
   // donnée — le catalogue, les réservations, les notes restent dans leurs tables
@@ -100,15 +134,43 @@ export async function onRequestPut(context) {
     if (before && before.features) { try { prev = JSON.parse(before.features) || {}; } catch (_) { prev = {}; } }
   } catch (_) { /* pas de fiche → tout est nouveau */ }
 
-  await context.env.DB.prepare(
-    `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
-     ON CONFLICT(merchant) DO UPDATE SET
-       features = excluded.features,
-       plan = excluded.plan,
-       type = COALESCE(excluded.type, merchant_config.type),
-       account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
-       updated_ts = excluded.updated_ts`
-  ).bind(merchant, JSON.stringify(clean), plan, type, accountId, Date.now()).run();
+  /* Une base qui n'a pas encore reçu l'ALTER city/mrr fait échouer la requête
+     entière — modules compris. On réessaie donc sans les deux colonnes : les
+     modules, eux, doivent s'enregistrer. La réponse dit alors `columns.city:
+     false`, et la console affiche que la ville n'a PAS été retenue au lieu de
+     laisser croire à un enregistrement complet. */
+  let columns = { city: true, mrr: true };
+  try {
+    await context.env.DB.prepare(
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, city, mrr, updated_ts)
+       VALUES (?,?,?,?,?,?,?,?)
+       ON CONFLICT(merchant) DO UPDATE SET
+         features = excluded.features,
+         plan = excluded.plan,
+         type = COALESCE(excluded.type, merchant_config.type),
+         account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
+         city = ${hasCity ? 'excluded.city' : 'merchant_config.city'},
+         mrr = ${hasMrr ? 'excluded.mrr' : 'merchant_config.mrr'},
+         updated_ts = excluded.updated_ts`
+    ).bind(merchant, JSON.stringify(clean), plan, type, accountId, city, mrr, Date.now()).run();
+  } catch (_) {
+    columns = { city: false, mrr: false };
+    await context.env.DB.prepare(
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
+       ON CONFLICT(merchant) DO UPDATE SET
+         features = excluded.features,
+         plan = excluded.plan,
+         type = COALESCE(excluded.type, merchant_config.type),
+         account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
+         updated_ts = excluded.updated_ts`
+    ).bind(merchant, JSON.stringify(clean), plan, type, accountId, Date.now()).run();
+  }
   await logChanges(context, merchant, prev, clean);
-  return json({ ok: true, features: clean, plan, type: type, accountId: hasOwner ? accountId : undefined });
+  return json({
+    ok: true, features: clean, plan, type: type,
+    accountId: hasOwner ? accountId : undefined,
+    city: hasCity ? city : undefined,
+    mrr: hasMrr ? mrr : undefined,
+    columns,
+  });
 }

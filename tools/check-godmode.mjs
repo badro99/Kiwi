@@ -80,6 +80,7 @@ const R = {
   pins:    await import(path.join(ROOT, 'functions/api/admin/pins.js')),
   operators: await import(path.join(ROOT, 'functions/api/admin/operators.js')),
   health: await import(path.join(ROOT, 'functions/api/admin/health.js')),
+  overview: await import(path.join(ROOT, 'functions/api/admin/overview.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -705,15 +706,129 @@ G('13 · Diagnostic — factuel, cloisonné, explicite si la base manque');
     'une migration absente est nommée, jamais présentée comme zéro canal');
 }
 
+/* ═══ 14bis · LA VUE D'ENSEMBLE ═══════════════════════════════════════════
+ * NOS chiffres, pas ceux d'un client : combien ils sont, ce qu'ils nous
+ * versent, ce qu'ils encaissent, où ils sont. Les contrôles portent sur des
+ * ÉCARTS (mesure, on change une chose, on re-mesure) plutôt que sur des
+ * totaux absolus : les sections précédentes ont déjà écrit dans cette base, et
+ * un contrôle qui dépend de leur ordre casse à la première insertion ajoutée
+ * ailleurs. */
+G('14bis · Vue d’ensemble — nos chiffres, et ce qu’on ne sait pas');
+{
+  const ov = async () => (await call(R.overview, 'GET', '/api/admin/overview')).json;
+
+  const refused = await call(R.overview, 'GET', '/api/admin/overview', { as:'merchant' });
+  ok(refused.status === 403, 'un commerçant connecté ne lit pas les chiffres de Kiwi');
+
+  const base = await ov();
+  ok(base && base.clients && base.mrr && base.cities,
+    'la vue répond à un opérateur, avec parc, revenus et villes');
+
+  /* Un établissement dont aucun compte n'est propriétaire est une DÉMO. Il ne
+     doit ni compter dans le parc ni entrer dans le chiffre d'affaires : c'est
+     la règle qui empêche nos propres jeux d'essai de gonfler nos chiffres. */
+  db.prepare('INSERT INTO merchant_config (merchant,features,plan,account_id,name,updated_ts) VALUES (?,?,?,?,?,?)')
+    .bind('demo-orpheline', '{}', 'pro', null, 'Démo orpheline', now).run();
+  sale('s-demo-ov', 'demo-orpheline', 5000, 'cash', 'Démo', 'T-D-1', now - 3600000, null);
+  const withDemo = await ov();
+  ok(withDemo.clients.stores === base.clients.stores &&
+     withDemo.clients.demo === base.clients.demo + 1,
+    'un établissement sans propriétaire est compté en démo, hors parc');
+  ok(withDemo.gmv.d30 === base.gmv.d30,
+    '…et ses ventes n’entrent pas dans les encaissements de nos clients');
+
+  /* Une vente sortie des livres a déjà quitté le chiffre du commerçant ; elle
+     ne peut pas revenir dans le nôtre. */
+  sale('s-ov-void', 'amira-boutique', 700, 'card', 'Vente', 'T-OV-1', now - 3600000, null);
+  const withSale = await ov();
+  ok(withSale.gmv.d30 === withDemo.gmv.d30 + 700, 'une vente réelle entre dans les encaissements');
+  db.prepare('UPDATE sales SET void_ts = ? WHERE id = ?').bind(now, 's-ov-void').run();
+  const voided = await ov();
+  ok(voided.voidAware && voided.gmv.d30 === withDemo.gmv.d30,
+    'une vente sortie des livres en ressort aussi ici');
+
+  /* Ultimate est SUR DEVIS : pas de tarif public. Sans montant convenu, il
+     doit sortir en « sans tarif » — un client facturé plusieurs milliers de
+     dirhams compté zéro serait pire qu'un inconnu affiché comme inconnu. */
+  db.prepare('INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,updated_ts) VALUES (?,?,?,?,?,?,?)')
+    .bind('rif-annexe', '{}', 'ultimate', 'cafe', 'acc-b', 'Rif Annexe', now).run();
+  const ultimate = await ov();
+  ok(ultimate.mrr.untariffed === voided.mrr.untariffed + 1,
+    'un Ultimate sans montant convenu est compté « sans tarif »');
+  ok(ultimate.mrr.total === voided.mrr.total,
+    '…et surtout pas zéro dirham ajouté au MRR');
+
+  db.prepare('UPDATE merchant_config SET mrr = ? WHERE merchant = ?').bind(2600, 'rif-annexe').run();
+  const agreed = await ov();
+  ok(agreed.mrr.total === voided.mrr.total + 2600 && agreed.mrr.untariffed === voided.mrr.untariffed,
+    'le montant convenu entre dans le MRR et vide « sans tarif »');
+
+  /* Une remise consentie : le montant convenu l'emporte sur le tarif du
+     palier, sinon on ne pourrait inscrire aucun accord commercial. */
+  db.prepare('UPDATE merchant_config SET mrr = ? WHERE merchant = ?').bind(299, 'snack-rif').run();
+  const discount = await ov();
+  ok(discount.mrr.total === agreed.mrr.total - 399 + 299,
+    'un montant convenu l’emporte sur le tarif public du palier');
+
+  /* Un établissement fermé ne facture plus. Le laisser dans le MRR ferait
+     compter comme revenu un client qui est parti. */
+  db.prepare('UPDATE merchant_config SET status = ? WHERE merchant = ?').bind('suspended', 'snack-rif').run();
+  const suspended = await ov();
+  ok(suspended.mrr.total === discount.mrr.total - 299 &&
+     suspended.mrr.suspended === discount.mrr.suspended + 1 &&
+     suspended.mrr.suspendedAmount >= 299,
+    'un établissement suspendu sort du MRR, et le manque à gagner est chiffré');
+  db.prepare('UPDATE merchant_config SET status = NULL, mrr = NULL WHERE merchant = ?').bind('snack-rif').run();
+
+  /* Les villes : ce qui n'est pas renseigné est compté à part et dit, jamais
+     rangé dans un « autre » qui ferait passer un parc à moitié situé pour un
+     classement complet. */
+  const beforeCity = await ov();
+  db.prepare('UPDATE merchant_config SET city = ? WHERE merchant = ?').bind('Casablanca', 'amira-boutique').run();
+  db.prepare('UPDATE merchant_config SET city = ? WHERE merchant = ?').bind('casablanca ', 'amira-cafe').run();
+  const cityOv = await ov();
+  ok(cityOv.untagged === beforeCity.untagged - 2,
+    'un établissement situé quitte le compte des « non situés »');
+  const casa = cityOv.cities.filter((c) => /casablanca/i.test(c.city));
+  ok(casa.length === 1 && casa[0].stores === 2,
+    '« Casablanca » et « casablanca » sont la même ville, pas deux');
+  ok(cityOv.cities.every((c) => c.city && c.city.trim()) && cityOv.untagged > 0,
+    '…et aucune ligne « autre » n’est fabriquée pour les non situés');
+
+  /* Le classement s'appuie sur le parc réel : la démo orpheline n'y figure pas. */
+  ok(!cityOv.top.some((t) => t.merchant === 'demo-orpheline'),
+    'le classement des plus gros encaissements ignore les démos');
+
+  ok(Array.isArray(cityOv.series) && cityOv.series.length === 30,
+    'la courbe couvre trente jours, jours creux compris');
+
+  // On rend la base à peu près comme on l'a trouvée pour la section suivante.
+  db.prepare('DELETE FROM sales WHERE id IN (?,?)').bind('s-demo-ov', 's-ov-void').run();
+  db.prepare('DELETE FROM merchant_config WHERE merchant IN (?,?)').bind('demo-orpheline', 'rif-annexe').run();
+}
+
 /* ═══ 14 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
 G('14 · Révocation — supprimer un droit coupe vraiment la session');
 {
+  /* Le contrôle visait `?merchant=…&email=…`, et il visait à côté depuis que la
+     suppression d'UN établissement existe : avec un merchant, la route prend le
+     chemin « supprimer ce magasin » et répond 400 (confirm manquant), jamais le
+     423 attendu. La règle affirmée — on ne supprime pas un COMPTE — n'a pas
+     bougé ; c'est l'URL qui ne l'exerçait plus. Sans merchant, elle l'exerce. */
   const del = await call(R.clients, 'DELETE',
-    '/api/admin/clients?merchant=amira-boutique&email=amira%40kiwi.test');
+    '/api/admin/clients?email=amira%40kiwi.test');
   ok(del.status === 423 && del.json.error === 'account-deletion-disabled',
     'suppression de compte bloquée tant que l’effacement complet n’existe pas');
-  ok(!!db.prepare('SELECT id FROM accounts WHERE id = ?').bind('acc-a').first(),
-    '…et le compte ainsi que ses données sont restés en place');
+  /* Et le garde-fou de l'autre chemin, celui qui existe : supprimer un
+     établissement demande de recopier son slug, pour qu'un doigt qui glisse ne
+     puisse pas emporter un magasin. */
+  const noConfirm = await call(R.clients, 'DELETE',
+    '/api/admin/clients?merchant=amira-boutique');
+  ok(noConfirm.status === 400 && noConfirm.json.error === 'confirm-mismatch',
+    'supprimer un établissement exige de recopier son slug');
+  ok(!!db.prepare('SELECT id FROM accounts WHERE id = ?').bind('acc-a').first() &&
+     !!db.prepare('SELECT merchant FROM merchant_config WHERE merchant = ?').bind('amira-boutique').first(),
+    '…et le compte comme l’établissement sont restés en place');
 
   const before = await lib.isSeniorOperator(new Request('https://kiwi.test/',
     { headers:{ Cookie:AS.operator } }), env);

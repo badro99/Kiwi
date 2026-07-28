@@ -47,7 +47,7 @@ export async function onRequestGet(context) {
     // demo:true until an account claims this merchant (see the accounts loop).
     // A merchant that only ever appears via demo sales / config is a demo.
     if (!r) {
-      r = { merchant: m, business: '', email: '', name: '', plan: '', type: '',
+      r = { merchant: m, business: '', email: '', name: '', plan: '', type: '', city: '',
             today_amount: 0, today_count: 0, last_ts: 0, demo: true, status: 'active',
             /* `status` est l'état du COMPTE (accounts.status), partagé par toutes
              * les boutiques du même client. `store_status` est celui de CETTE
@@ -85,6 +85,11 @@ export async function onRequestGet(context) {
     const ownerOf = new Map(); // merchant slug → accounts.id
     let cfg;
     try {
+      // `city` est posée par l'opérateur (voir /api/admin/overview) : la console
+      // la montre dans le roster ET la cherche, donc elle voyage avec la ligne.
+      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city FROM merchant_config`).all();
+    } catch (_0) {
+    try {
       cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status FROM merchant_config`).all();
     } catch (_) {
       try {
@@ -93,10 +98,12 @@ export async function onRequestGet(context) {
         cfg = await env.DB.prepare(`SELECT merchant, plan, type FROM merchant_config`).all();
       }
     }
+    }
     for (const c of (cfg.results || [])) {
       const r = row(c.merchant);
       r.plan = c.plan || '';
       r.type = c.type || '';
+      r.city = c.city || '';
       if (c.status === 'suspended') r.store_status = 'suspended';
       if (c.name) r.business = c.name;              // the store's own name
       if (c.account_id) ownerOf.set(c.merchant, c.account_id);
