@@ -894,7 +894,9 @@
       phoneD: '+212 5 39 00 12 00',
       topics: pick({ fr: 'Sujets populaires', en: 'Popular topics', ar: 'مواضيع شائعة' }),
       guides: pick({ fr: 'Guides récents', en: 'Recent guides', ar: 'أدلة حديثة' }),
-      statusT: pick({ fr: 'Kiwi Status · 99,99 % opérationnel · aucun incident', en: 'Kiwi Status · 99.99% operational · no incident', ar: 'حالة كيوي · 99.99٪ تعمل · لا أعطال' }),
+      // Sans chiffre de disponibilité : aucune sonde ne le mesure, et
+      // status.html le dit. Voir dashboard.html, 'dash.status.operational'.
+      statusT: pick({ fr: 'Kiwi Status · opérationnel · aucun incident signalé', en: 'Kiwi Status · operational · no incident reported', ar: 'حالة كيوي · تعمل · لا أعطال مُبلَّغ عنها' }),
       open: pick({ fr: 'Ouvrir le chat WhatsApp', en: 'Open WhatsApp chat', ar: 'فتح محادثة واتساب' }),
     };
     const topics = pick({

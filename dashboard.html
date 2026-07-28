@@ -5871,7 +5871,14 @@
 
     <!-- Status bar -->
     <div class="status-bar">
-      <div><span class="pip"></span><span data-i18n="dash.status.operational">Opérationnel · aucun incident · Kiwi Status : 99,99 %</span></div>
+      <!-- Pas de chiffre de disponibilité ici. « 99,99 % » était écrit en dur —
+           aucune sonde ne le mesurait, et status.html dit le contraire noir sur
+           blanc : « Kiwi ne publie pas encore de mesure de disponibilité
+           automatisée ». Un commerçant qui compare les deux pages y lit soit une
+           erreur, soit un mensonge, et les deux coûtent la confiance qu'on
+           cherchait à acheter avec ce chiffre. Ce qui reste est vrai et vérifié
+           à la main, comme l'annonce status.html. -->
+      <div><span class="pip"></span><span data-i18n="dash.status.operational">Opérationnel · aucun incident signalé</span></div>
       <div data-footer-line>Café Atlas · ICE 0025938400014 · Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">aide WhatsApp</a></div>
     </div>
   </main>

@@ -356,7 +356,9 @@
       'dash.fusion.kpis.title': 'Portfolio indicators',
       'dash.fusion.venues.title': 'Performance by location',
       'dash.fusion.intel.title': 'Cross-site intelligence',
-      'dash.status.operational': 'Operational · no incidents · Kiwi Status: 99.99%',
+      // Le chiffre de disponibilité est parti : rien ne le mesurait, et
+      // status.html annonce l'inverse. Voir dashboard.html, même ligne.
+      'dash.status.operational': 'Operational · no incident reported',
 
       /* Wallet */
       'wal.pill': 'Kiwi Wallet · Available 2026 Q3',
@@ -967,7 +969,7 @@
       'dash.fusion.kpis.title': 'مؤشرات المحفظة',
       'dash.fusion.venues.title': 'الأداء حسب الموقع',
       'dash.fusion.intel.title': 'ذكاء المواقع المتعددة',
-      'dash.status.operational': 'تشغيلي · لا حوادث · حالة كيوي: 99.99%',
+      'dash.status.operational': 'تشغيلي · لا أعطال مُبلَّغ عنها',
 
       /* Wallet */
       'wal.pill': 'كيوي Wallet · متاحة Q3 2026',
