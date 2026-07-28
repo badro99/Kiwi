@@ -224,7 +224,17 @@ export async function onRequestPost(context) {
   const id = String((b && b.id) || '').trim();
   const status = String((b && b.status) || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-request' }, 400);
-  const from = FROM[status];
+  /* hasOwnProperty, et non `FROM[status]`. Un objet littéral hérite d'Object
+   * .prototype, donc `FROM['constructor']`, `FROM['toString']`, `FROM['valueOf']`
+   * — et toute autre clé du prototype — répondaient une FONCTION, qui est
+   * « truthy » : la garde `if (!from)` les laissait passer, puis `from.map()`
+   * quelques lignes plus bas levait un TypeError NON rattrapé (il est hors du
+   * try). Résultat : `{"status":"constructor"}` ne recevait pas le 400
+   * « bad-status » prévu, mais faisait tomber la Function en 500. Rien ne
+   * s'écrivait en base — l'état des commandes n'a jamais été en jeu — mais un
+   * corps malformé pouvait faire crier la caisse au lieu de se faire refuser
+   * proprement, et c'est ce qu'un scanner trouve en premier. */
+  const from = Object.prototype.hasOwnProperty.call(FROM, status) ? FROM[status] : null;
   if (!from) return json({ error: 'bad-status' }, 400);
 
   // Le serveur affecté à la table, posé au moment de l'acceptation : le ticket

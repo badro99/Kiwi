@@ -98,6 +98,12 @@ export async function onRequestPost(context) {
    * téléphone peut alors retirer la ligne et redemander, plutôt que de laisser
    * partir en cuisine un plat qui n'existe plus. */
   const priced = await priceOrder(env, merchant, rawLines);
+  /* Order Pro allumé, mais aucun catalogue lisible en face (rien de publié, ou
+   * une lecture qui a échoué). On refuse, et on le dit : le commerçant publie
+   * sa carte et tout repart. L'ancien comportement — accepter en reprenant les
+   * prix du téléphone — transformait une erreur de configuration réparable en
+   * trente secondes en une commande où l'inconnu fixait le prix. */
+  if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
   if (priced.unknown.length || priced.unavailable.length) {
     return json({
       error: 'menu-changed',
@@ -167,6 +173,34 @@ export async function onRequestPost(context) {
       merchant, today
     ).first();
   } catch (_) {
+    /* ── Avant de dégrader, vérifier que ce n'est pas l'unicité qui a parlé ───
+     * Ce catch attrapait TOUT, y compris la violation de `orders_client_ref`
+     * (l'index unique partiel sur (merchant, client_ref)). Or le repli qui
+     * suit OMET client_ref : deux envois simultanés de la MÊME clé — le
+     * double-tap que cette clé existe précisément pour absorber, ou un réseau
+     * qui rejoue — passaient donc tous les deux. Le premier écrivait sa
+     * commande, le second se faisait refuser par l'index, tombait ici, et
+     * réussissait en seconde chance sans clé : deux tickets, deux numéros,
+     * deux fois le même plat en cuisine, et le second détaché de sa session.
+     * Le SELECT d'idempotence en tête de fonction ne pouvait rien y faire —
+     * il court AVANT l'insertion, donc il ne voit pas la course.
+     *
+     * On relit donc la clé avant de dégrader. Si elle existe maintenant,
+     * c'est que l'autre requête a gagné la course : on rend SA commande,
+     * exactement comme un renvoi tardif. Le repli sans colonnes reste réservé
+     * à ce pour quoi il a été écrit — une base où la migration n'est pas
+     * passée. */
+    if (clientRef) {
+      try {
+        const raced = await env.DB.prepare(
+          `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+        ).bind(merchant, clientRef).first();
+        if (raced) {
+          return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
+                        lines: priced.lines, replayed: true });
+        }
+      } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
+    }
     try {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,

@@ -2052,8 +2052,16 @@
       // venue's end-of-day target so the badge isn't empty.
       // User-created venue → count its recorded sales; demo venue → demo clock.
       const ownV = isCustom(currentVenue) || !!(window.KiwiEnv?.isReal?.());
+      /* La MÊME fenêtre que la tuile « Commandes ». Cette pastille additionnait
+       * tout l'historique du navigateur : au troisième jour elle affichait 47
+       * en face d'une tuile qui affichait 6, sous le même mot. Deux compteurs
+       * identiquement nommés qui divergent à partir du deuxième jour — le
+       * commerçant ne peut pas savoir lequel est sa caisse. */
+      const win = (() => {
+        try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; }
+      })();
       const live = ownV
-        ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue).count) || 0)
+        ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue, win[0], win[1]).count) || 0)
         : window.KiwiDemoClock?.getSimState?.()?.cumTx;
       txCountEl.textContent = String(live != null ? live : (VENUES[currentVenue].txCount || 0));
     }
@@ -7591,10 +7599,22 @@
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }
-  function salesTotals(id) {
+  /* Bornes FACULTATIVES. Sans elles le total reste ce qu'il a toujours été —
+   * tout l'historique — parce que plusieurs appelants veulent précisément ça :
+   * « ce commerce a-t-il déjà vendu une seule fois ? » (interactive.js) n'a pas
+   * de période. Mais la pastille « Commandes » de la barre latérale, elle, en a
+   * une : celle du tableau de bord, affichée juste à côté sous le même mot. */
+  function salesTotals(id, from, to) {
     const list = salesList(id);
-    const revenue = list.reduce((s, x) => s + (x.amount || 0), 0);
-    const count = list.length;
+    const lo = (from == null) ? -Infinity : from;
+    const hi = (to == null) ? Infinity : to;
+    let revenue = 0, count = 0;
+    list.forEach((x) => {
+      const ts = +(x && x.ts) || 0;
+      if (ts < lo || ts >= hi) return;
+      revenue += (x.amount || 0);
+      count++;
+    });
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
   /* Le pendant de miCustomHeroRec pour la bande sous la heatmap. Renvoie null
@@ -7705,6 +7725,23 @@
   };
   // Keep the sidebar "Commandes" badge in lockstep with recorded sales.
   salesSubs.add(() => renderSidebarCounts());
+  /* …et avec la PÉRIODE. Depuis que la pastille compte une fenêtre, changer de
+   * plage sans la redessiner la laissait sur le compte de la plage précédente —
+   * on aurait remplacé un désaccord permanent par un désaccord intermittent,
+   * plus difficile à croire et bien plus difficile à signaler.
+   *
+   * Abonnement DIFFÉRÉ, et c'est la partie qui compte : dashboard.html charge
+   * venues.js AVANT dateRange.js. Au moment où cette ligne s'exécute,
+   * window.KiwiDateRange n'existe donc pas encore, et un `?.subscribe?.()`
+   * optimiste ici ne lève rien — il ne fait simplement RIEN, en silence, ce qui
+   * est la pire façon de rater un abonnement. Les deux fichiers sont `defer`,
+   * donc tous deux ont fini avant DOMContentLoaded : c'est le premier instant
+   * où l'on est sûr que l'autre module est là. */
+  (function wireRangeToSidebar() {
+    const wire = () => { try { window.KiwiDateRange?.subscribe?.(() => renderSidebarCounts()); } catch (_) {} };
+    if (window.KiwiDateRange) wire();
+    else document.addEventListener('DOMContentLoaded', wire, { once: true });
+  })();
 
   /* Active venue's real menu — lets the financial assistant answer menu
    * questions (best/worst sellers, prices, margins) from data instead of

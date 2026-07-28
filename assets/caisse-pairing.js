@@ -113,6 +113,21 @@
       if (was && was.merchant && was.merchant !== venue.merchant) {
         setStaff(null);
         window.__kiwiPairedBoutiqueVenue = null;
+        /* …et le SERVICE de l'autre commerce avec le caissier. Oublier la
+           personne sans oublier sa caisse ne suffisait pas : le service ouvert
+           chez A — journal, additions, tickets cuisine, mouvements d'espèces —
+           restait en place, et le rapport de journée suivant le poussait sous
+           le nom de B, jusque sur le serveur. Le raisonnement est le même que
+           trois lignes plus haut : ce qui appartenait à l'autre commerce n'a
+           rien à faire ici.
+
+           Effacé MAINTENANT, et pas seulement contrôlé au rechargement : la
+           caisse garde son journal en mémoire, et le prochain autosave (toutes
+           les 5 s) le réécrirait estampillé du nouveau commerçant — un blob
+           qui dit B en contenant A passe alors tous les contrôles au
+           rechargement. La garde à la relecture rattrape les appareils déjà
+           dans cet état ; celle-ci empêche d'y entrer. */
+        try { localStorage.removeItem('kiwi-caisse-shift'); } catch (_) {}
       }
     } catch (_) {}
     set('kiwiLiveMerchant', venue.merchant);

@@ -13639,14 +13639,41 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
     const fmt = n => { try { return (Math.round(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR'); } catch (_) { return String(Math.round(n) || 0); } };
-    const total = sales.reduce((a, s) => a + (s.amount || 0), 0);
-    const count = sales.length;
-    const rows = sales.slice().reverse().map((s, i) => {
+    /* ── La MÊME fenêtre que le tableau de bord ────────────────────────────
+     * Cette page additionnait tout l'historique du navigateur et imprimait le
+     * résultat en gros, sous un tableau de bord qui, lui, affichait la période
+     * choisie. « 47 ventes · Total 18 400 MAD » sous un hero à 2 310 MAD : le
+     * commerçant voyait deux fois son argent et n'avait aucun moyen de savoir
+     * lequel des deux était sa caisse.
+     *
+     * Pire, les lignes ne portaient QUE l'heure. Une vente d'hier à 14:32 et
+     * une vente d'aujourd'hui à 14:32 s'écrivaient exactement pareil, l'une
+     * sous l'autre. On borne donc, et quand la fenêtre couvre plus d'un jour
+     * on date la ligne — sans quoi borner n'aurait fait que cacher le problème
+     * au lieu de le dire. */
+    const rangeKey = (() => { try { return window.KiwiDateRange?.getDateRange?.() || ''; } catch (_) { return ''; } })();
+    const win = (() => { try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; } })();
+    const lo = (win[0] == null) ? -Infinity : win[0];
+    const hi = (win[1] == null) ? Infinity : win[1];
+    const inWindow = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const RANGE_L = {
+      fr: { aujourdhui: "aujourd'hui", hier: 'hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'mois dernier', trimestre: 'trimestre', annee: 'année', personnalise: 'période choisie' },
+      en: { aujourdhui: 'today', hier: 'yesterday', septJours: 'last 7 days', trenteJours: 'last 30 days', moisDernier: 'last month', trimestre: 'quarter', annee: 'year', personnalise: 'selected period' },
+      ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يومًا', moisDernier: 'الشهر الماضي', trimestre: 'الربع', annee: 'السنة', personnalise: 'الفترة المختارة' },
+    }[lang] || {};
+    const rangeLabel = RANGE_L[rangeKey] || '';
+    // Une fenêtre d'un seul jour n'a pas besoin d'être datée ligne à ligne.
+    const oneDay = rangeKey === 'aujourdhui' || rangeKey === 'hier';
+    const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
+    const count = inWindow.length;
+    const rows = inWindow.slice().reverse().map((s, i) => {
       const d = new Date(s.ts || Date.now());
       const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const when = oneDay ? hh
+        : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}`;
       const m = L[s.method] || L.vente;
       return `<div class="rtx-row${i === 0 ? ' is-new' : ''}">` +
-        `<span class="rtx-t">${hh}</span>` +
+        `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
         `<span class="rtx-l">${escS(L.vente)}</span>` +
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
@@ -13659,10 +13686,14 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       body: `
         <div data-real-tx class="rtx">
           <div class="rtx-head">
-            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)}</div>
+            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)}${rangeLabel ? ' · ' + escS(rangeLabel) : ''}</div>
             <div class="rtx-total">${escS(SUM.total)} · <b>${fmt(total)} MAD</b></div>
           </div>
-          <div class="rtx-list">${rows}</div>
+          <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-l">${escS(T({
+            fr: 'Aucune vente sur cette période.',
+            en: 'No sales in this period.',
+            ar: 'لا توجد مبيعات في هذه الفترة.',
+          }))}</span></div>`}</div>
         </div>
       `,
     });

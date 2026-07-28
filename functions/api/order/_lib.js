@@ -122,11 +122,28 @@ export async function deskOpen(env, merchant) {
  * recalcule le total. Ce que le téléphone prétendait n'est plus qu'un
  * commentaire qu'on compare pour le journal.
  *
- * Repli assumé : un commerçant qui n'a RIEN publié n'a pas de carte contre
- * laquelle vérifier. Plutôt que de refuser toutes ses commandes, on retombe sur
- * l'ancien comportement et on laisse `priced_ts` à NULL — la ligne dit
- * elle-même « ces prix ne viennent pas de moi ». Dès qu'une carte existe, la
- * règle mord et un identifiant inconnu est refusé. */
+ * ── Ce que le repli « aucune carte publiée » coûtait vraiment ───────────────
+ * Il existait un chemin où l'on reprenait le prix ET le nom du téléphone : quand
+ * aucun index ne pouvait être construit. Présenté comme le cas du commerçant qui
+ * n'a rien publié, c'était en réalité le MÊME trou derrière quatre conditions,
+ * dont une vertical entière :
+ *   · une BOUTIQUE publie {categories, products, variants, colors} avec
+ *     `priceMAD` et AUCUNE clé `items` — donc toute boutique avec Order Pro
+ *     allumé se tarifait depuis le téléphone du client ;
+ *   · une carte publiée avec des catégories mais zéro plat passe `menuEmpty` ;
+ *   · un JSON illisible en base ;
+ *   · une simple panne de lecture sur `menus`.
+ * Dans les quatre cas, un inconnu tenant le slug fixait le prix ET le libellé
+ * imprimé sur le ticket cuisine, sur un point d'entrée non authentifié.
+ *
+ * Deux corrections, donc. On sait désormais lire les DEUX formes de catalogue —
+ * la carte d'un restaurant et le stock d'une boutique. Et quand il n'y a
+ * décidément rien contre quoi vérifier, on REFUSE au lieu de croire : Order Pro
+ * est une option qu'un opérateur a explicitement allumée, et « allumée sans
+ * catalogue » est une erreur de configuration qui se corrige en trente
+ * secondes — pas une raison de laisser le client nommer son prix. Le refus est
+ * explicite (`menu-not-published`), donc réparable ; l'ancien silence ne
+ * l'était pas. */
 const MAX_LINE_QTY = 99;
 
 export async function priceOrder(env, merchant, rawLines) {
@@ -154,6 +171,34 @@ export async function priceOrder(env, merchant, rawLines) {
           });
         }
         menuRev = menuRow.updated_ts || null;
+      } else {
+        /* La forme BOUTIQUE. `priceMAD` au lieu de `price`, et la disponibilité
+         * vient du stock : un article dont toutes les déclinaisons sont à zéro
+         * est épuisé, exactement comme un plat marqué indisponible. Un produit
+         * SANS déclinaison du tout reste commandable — tous les catalogues ne
+         * suivent pas les tailles, et refuser dans le doute fermerait la
+         * boutique au lieu de la protéger. */
+        const products = Array.isArray(parsed && parsed.products) ? parsed.products : [];
+        if (products.length) {
+          const stock = new Map();
+          const variants = Array.isArray(parsed && parsed.variants) ? parsed.variants : [];
+          for (const v of variants) {
+            if (!v || !v.productId) continue;
+            const k = String(v.productId);
+            stock.set(k, (stock.get(k) || 0) + Math.max(0, Number(v.stock) || 0));
+          }
+          index = new Map();
+          for (const p of products) {
+            if (!p || !p.id) continue;
+            const k = String(p.id);
+            index.set(k, {
+              name: String(p.name || ''),
+              price: Math.max(0, Math.round(Number(p.priceMAD) || 0)),
+              avail: stock.has(k) ? stock.get(k) > 0 : true,
+            });
+          }
+          menuRev = menuRow.updated_ts || null;
+        }
       }
     } catch (_) { index = null; }
   }
@@ -163,31 +208,32 @@ export async function priceOrder(env, merchant, rawLines) {
   const unavailable = [];
   let total = 0;
 
+  /* Rien contre quoi vérifier ⇒ on ne devine pas, on le DIT. L'appelant en fait
+   * un 409 explicite ; il n'écrit jamais une commande dont il ne connaît pas le
+   * prix. C'est la seule sortie possible ici : lire `l.unitPrice` reviendrait à
+   * laisser un inconnu tarifer la marchandise d'un commerçant. */
+  if (!index) {
+    return { lines: [], total: 0, priced: false, noCatalogue: true, menuRev: null,
+             unknown: [], unavailable: [] };
+  }
+
   for (const l of rawLines) {
     const id = String((l && l.id) || '').slice(0, 40);
     const qty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(l && l.qty) || 1)));
     const options = String((l && l.options) || '').slice(0, 200);
     const note = String((l && l.note) || '').slice(0, 200);
 
-    if (index) {
-      const ref = id && index.get(id);
-      if (!ref) { unknown.push(id || '?'); continue; }
-      if (!ref.avail) { unavailable.push(ref.name || id); continue; }
-      lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note });
-      total += ref.price * qty;
-    } else {
-      // Aucune carte publiée : on garde ce que le téléphone dit, sans le croire.
-      const unitPrice = Math.max(0, Math.round(Number(l && l.unitPrice) || 0));
-      lines.push({
-        id, name: String((l && l.name) || '').slice(0, 80), qty, unitPrice, options, note,
-      });
-      total += unitPrice * qty;
-    }
+    const ref = id && index.get(id);
+    if (!ref) { unknown.push(id || '?'); continue; }
+    if (!ref.avail) { unavailable.push(ref.name || id); continue; }
+    lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note });
+    total += ref.price * qty;
   }
 
   return {
     lines, total,
-    priced: !!index,          // false ⇒ prix non vérifiés, priced_ts restera NULL
+    priced: true,             // on n'arrive ici qu'avec un catalogue en main
+    noCatalogue: false,
     menuRev,
     unknown, unavailable,
   };

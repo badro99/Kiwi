@@ -219,9 +219,28 @@ export async function onRequest(context) {
 
   // Staff unlock attempt (shared passcode).
   if (sitePassword && request.method === 'POST' && path === UNLOCK_PATH) {
+    /* Le même plafond que la porte d'à côté. Celle-ci n'en avait AUCUN : le code
+     * équipe est un secret partagé, court, tapé sur un téléphone — donc court par
+     * nécessité — et il ouvrait le site entier en essais illimités. Le code
+     * opérateur, quelques lignes plus bas, était compté depuis longtemps ; c'est
+     * la serrure la plus faible qui était restée sans compteur.
+     *
+     * Compteur PROPRE ('gate'), et non le 'op' de la console. Les partager
+     * paraissait plus sévère, mais couplait deux portes qui n'ont ni le même
+     * public ni le même risque : un serveur qui se trompe trois fois de code
+     * équipe pendant le coup de feu aurait fermé la console d'administration au
+     * patron, au même instant et depuis la même adresse IP. Chaque porte porte
+     * sa propre ardoise ; l'attaquant n'en tire aucun essai supplémentaire.
+     *
+     * Faillible vers le haut, comme tout le limiteur : table absente ou D1 qui
+     * tousse ⇒ on laisse passer. Un compteur en panne ne doit jamais enfermer
+     * dehors une équipe en plein service. */
+    const tooMany = await limitCheck(request, env, 'gate');
+    if (tooMany) return tooMany;
     const form = await request.formData();
     const tried = (form.get('passcode') || '').toString();
     if (tried === sitePassword) {
+      await limitClear(request, env, 'gate');
       const staff = await expectedToken(sitePassword);
       return new Response(null, {
         status: 303,
@@ -231,6 +250,7 @@ export async function onRequest(context) {
         },
       });
     }
+    await limitFail(request, env, 'gate');
     return htmlResponse(authPage({ staffError: true, allowStaff: true }));
   }
 

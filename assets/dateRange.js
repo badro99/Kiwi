@@ -3451,7 +3451,18 @@
 
   // Feed rows for a user-created venue — newest 8 of the merchant's sales.
   function buildCustomFeed(venue) {
-    const sales = (window.KiwiSales?.list?.(venue) || []).slice(-8).reverse();
+    /* Bornées à la MÊME période que le sous-titre affiché juste au-dessus.
+     * Ce `.slice(-8)` prenait les huit dernières ventes de tout l'historique,
+     * pendant que le sous-titre, lui, comptait « N commandes aujourd'hui » sur
+     * la seule journée. Un commerçant qui n'avait encore rien vendu ce matin
+     * lisait donc « 0 commande aujourd'hui » posé sur trois tickets d'hier — et
+     * comme les lignes ne portent que l'heure, rien ne trahissait leur date. Le
+     * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
+     * direct, ni du jour. */
+    const [lo, hi] = rangeBounds(effRange());
+    const sales = (window.KiwiSales?.list?.(venue) || [])
+      .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
+      .slice(-8).reverse();
     const lang = getLang();
     /* Every method the till can actually record (see live-link METHOD_LABEL).
      * `cash` was missing, so `L[s.method] || L.card` relabelled EVERY cash sale
@@ -4775,5 +4786,22 @@
     renderKpiBand();
   }
 
-  window.KiwiDateRange = { getDateRange, setDateRange, subscribe, tickLiveRevenue, getShowComparison, setShowComparison };
+  /* `bounds` sort d'ici parce que la fenêtre « en ce moment » doit avoir UNE
+   * définition, pas une par écran. Elle était privée, alors trois surfaces se
+   * sont mises à compter sans fenêtre du tout : la pastille « Commandes » de la
+   * barre latérale (venues.js), la page Ventes (pages-pro.js) et les lignes du
+   * fil en direct (buildCustomFeed, plus haut) additionnaient TOUT l'historique
+   * du navigateur pendant que la tuile « Commandes » — le même mot, à trente
+   * centimètres — ne comptait que la période choisie. Au troisième jour d'un
+   * vrai commerçant, la pastille disait 47 et la tuile 6. Aucune des deux ne
+   * mentait ; elles ne répondaient simplement pas à la même question, et rien
+   * à l'écran ne le disait.
+   *
+   * Exporter la fonction plutôt que recopier ses quatre lignes : une borne
+   * recopiée est une borne qu'on corrigera à un seul endroit sur trois. */
+  window.KiwiDateRange = {
+    getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    getShowComparison, setShowComparison,
+    bounds: (range) => rangeBounds(range || effRange()),
+  };
 })();

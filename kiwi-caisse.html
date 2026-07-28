@@ -9894,6 +9894,8 @@
       // 0 transactions) that fills from real encaissements.
       const _realStore = storeIsReal();
       shiftOpenedAt = _realStore ? new Date() : new Date(Date.now() - 128 * 60 * 1000);
+      // Ce service naît chez CE commerçant — cf. la note sur shiftMerchant.
+      shiftMerchant = currentMerchantSlug();
       /* Qui a ouvert. Figé maintenant et jamais réécrit : après une passation,
          `currentCashier` est la personne qui FERME, et le rapport doit nommer
          les deux. C'était la question sans réponse du Z précédent. */
@@ -13419,12 +13421,41 @@
     const KC_STORE = 'kiwi-caisse-shift';
     let registerClosing = false;
 
+    /* À QUEL commerçant appartient le service actuellement EN MÉMOIRE. Posé à
+       l'ouverture et à la reprise, relu à chaque autosave. Sans lui, réappairer
+       la caisse en cours de service laissait le journal de A en mémoire et le
+       prochain autosave le réécrivait estampillé B : un enregistrement qui dit
+       B en contenant A, et qui passe donc tous les contrôles au rechargement.
+       Effacer le stockage à l'appairage (assets/caisse-pairing.js) ne suffit
+       pas — cinq secondes plus tard il est reconstitué. */
+    function currentMerchantSlug() {
+      try { return (storePaired() || {}).merchant || ''; } catch (_) { return ''; }
+    }
+    let shiftMerchant = currentMerchantSlug();
+
     function persistShift() {
       if (registerClosing || !shiftOpenedAt) return;
+      /* Le service en mémoire n'est plus celui de ce comptoir : on n'écrit pas.
+         Rien de précieux n'est perdu — les ventes déjà encaissées sont dans la
+         file de synchronisation, estampillées de LEUR commerçant au moment de
+         la vente (live-link.js postSale), et le serveur refuse déjà de les
+         classer ailleurs. */
+      if (shiftMerchant !== currentMerchantSlug()) return;
       try {
         localStorage.setItem(KC_STORE, JSON.stringify({
           v: 1,
           savedAt: Date.now(),
+          /* À QUI est ce service. Le blob ne portait aucun commerçant, et la
+             relecture ne comparait donc rien : une caisse appairée chez A puis
+             réappairée chez B rouvrait le service de A sous le nom de B. Ce
+             n'est pas cosmétique — le rapport de journée se construit avec
+             `sales: journal`, c'est-à-dire le journal RESTAURÉ de A, et avec le
+             slug résolu depuis kiwiLiveMerchant, c'est-à-dire B. Le chiffre de
+             A, ses tickets, son mix de paiement et ses lignes par caissier
+             partaient donc dans le rapport de B — en local, puis sur le serveur,
+             poussés par saveProvisional toutes les 90 secondes. Une tablette
+             prêtée d'un commerce à l'autre suffisait. */
+          merchant: shiftMerchant,
           openedAt: shiftOpenedAt.toISOString(),
           openedBy: shiftOpenedBy,
           openingFloat: openingFloat,
@@ -13577,6 +13608,28 @@
       // aggregates (tablesPaid + tables/orders) so the counters recompute from the
       // real journal. The next 5s autosave then rewrites the stored shift seed-free
       // (self-healing). The demo path (storeIsReal false) is untouched — verbatim.
+      /* ── D'ABORD : est-ce le service de CE commerçant ? ────────────────────
+         Avant toute autre question. Le filtre `seed-` qui suit protège la démo
+         du réel ; il ne dit rien du réel contre le réel. Une caisse appairée
+         chez A, puis réappairée chez B, restaurait le service de A — journal,
+         tables, additions ouvertes, tickets cuisine — et le rapport de journée
+         suivant partait chez B avec l'argent de A dedans, jusque sur le serveur
+         (cf. la note dans persistShift).
+
+         On jette, on ne migre pas : un service ouvert chez quelqu'un d'autre
+         n'a aucun sens ici, et le seul geste sûr est de rouvrir propre. Un
+         enregistrement SANS commerçant est d'avant ce correctif ; on ne le
+         garde que si l'on n'est appairé nulle part, sinon rien ne prouve qu'il
+         est d'ici. */
+      try {
+        const here = (function () {
+          try { return (storePaired() || {}).merchant || ''; } catch (_) { return ''; }
+        })();
+        if (here && String(saved.merchant || '') !== here) {
+          localStorage.removeItem(KC_STORE);
+          return;
+        }
+      } catch (_) {}
       try {
         if (storeIsReal()) {
           const genuine = (saved.journal || []).filter((e) => String(e && e.id || '').indexOf('seed-') !== 0);
