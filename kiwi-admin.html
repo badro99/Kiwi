@@ -51,12 +51,27 @@ em, i, cite, dfn, var { font-style: normal; }
      would otherwise let the row shrink below its own names on a narrow panel
      instead of wrapping to its own line. The overflow is the last resort, for a
      client with more shop names than the header is wide. */
+  /* `display:flex` bat le [hidden] du navigateur : sans cette ligne, le sélecteur
+     masqué d'un client à une seule boutique laissait quand même sa pastille vide
+     — et la lentille de sélection avec elle — flotter dans l'en-tête. */
+  .store-switch[hidden]{display:none}
   .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:#eef2ee; max-width:100%; overflow-x:auto}
   .store-switch button{font:inherit; font-size:.78rem; font-weight:600; border:0; border-radius:999px; padding:6px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color .2s}
   .store-switch button:hover{color:var(--riad)}
   .store-switch button.on{color:#eafff4}
   .sec-head h2{font-size:.86rem; margin:0; text-transform:uppercase; letter-spacing:.06em; color:var(--riad)}
   .sec-head .count{font:600 11px/1 var(--mono); color:var(--muted)}
+  /* Refermer le panneau de gestion. Le titre pousse tout le reste à droite, ce
+     qui garde la croix collée au bord que le sélecteur d'établissement soit
+     affiché ou non — sans lui, un client à une seule boutique verrait la croix
+     remonter contre le titre. */
+  #manage .sec-head h2{margin-right:auto}
+  .sec-close{flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; padding:0;
+    border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--muted);
+    font-family:inherit; font-size:1.05rem; font-weight:400; line-height:1;
+    cursor:pointer; transition:background .15s, color .15s}
+  .sec-close:hover{background:#eef2ee; color:var(--riad)}
+  .sec-close:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
   table{width:100%; border-collapse:collapse; font-size:.9rem}
   th,td{text-align:left; padding:11px 18px; border-bottom:1px solid var(--line)}
   th{font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:640}
@@ -282,6 +297,8 @@ em, i, cite, dfn, var { font-style: normal; }
     tr.store-row td:first-child{border-left-color:#26302b}
     .store-switch{background:#1c2420}
     .store-switch button:hover{color:#cfeeda}
+    .sec-close{border-color:#26302b}
+    .sec-close:hover{background:#1c2420; color:#cfeeda}
     .filters input, .filters select{background:#151b18; color:#cfeeda}
     .tsrow:hover{background:#1a221e} .tsrow.on{background:#17241d}
     .ts-detail{background:#111713}
@@ -331,6 +348,11 @@ em, i, cite, dfn, var { font-style: normal; }
              when they have more than one. data-lens-demo/-item is the sanctioned
              opt-in for the brand's selection motion (assets/liquid-lens.js). -->
         <div class="store-switch" id="store-switch" data-lens-demo hidden></div>
+        <!-- Refermer. Un établissement ouvert est le sujet de tout ce qui suit —
+             la recherche de ventes, l'adresse e-mail, le journal — donc on doit
+             pouvoir le reposer, pas seulement en prendre un autre. -->
+        <button type="button" class="sec-close" id="manage-close"
+                aria-label="Fermer la gestion de cet établissement" title="Fermer">×</button>
       </div>
       <div class="panel">
         <div class="grid2">
@@ -1041,9 +1063,13 @@ em, i, cite, dfn, var { font-style: normal; }
     var suspended = c.status === 'suspended';
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
     // login to freeze. Reversible: suspend cuts access now, reactivate restores it.
+    var open = !!(selected && selected.merchant === c.merchant);
     var actions = [
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir dashboard'),
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); select(c); } }, 'Gérer')
+      // Le même bouton ouvre et referme, et il le dit. Un « Gérer » qui ne fait
+      // rien parce que la boutique est déjà ouverte laisse croire à une panne.
+      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
+        open ? 'Fermer' : 'Gérer')
     ];
     if (c.email){
       actions.push(h('button', { class:'mini' + (suspended ? ' warn' : ''),
@@ -1073,7 +1099,7 @@ em, i, cite, dfn, var { font-style: normal; }
       h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(c.last_ts))),
       h('td', null, h.apply(null, ['div', { class:'row-actions' }].concat(actions)))
     );
-    tr.addEventListener('click', function(){ select(c); });
+    tr.addEventListener('click', function(){ toggleSelect(c); });
     return tr;
   }
 
@@ -1181,6 +1207,44 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
 
+  /* Reposer le dossier. Rien n'est supprimé et rien n'est enregistré : on ferme
+     la vue, la boutique et tout ce qu'elle contient restent intacts en base.
+     Ce qui compte ici, c'est que `selected` redevienne null — tant qu'il pointe
+     sur un client, chaque geste de la console vise ce client-là, et un panneau
+     laissé ouvert derrière soi est la façon la plus simple d'agir sur la
+     mauvaise boutique. */
+  function deselect(){
+    if (!selected) return;
+    selected = null;
+    /* Les rendus déjà partis chercher leurs données reviendraient peindre dans
+       un panneau fermé — et le prochain établissement ouvert hériterait des
+       lignes du précédent, le temps d'un aller-retour serveur. */
+    fresh('ts'); fresh('aud'); fresh('acct');
+    tsRows = []; tsSel = {}; tsOpen = '';
+
+    document.getElementById('manage').hidden = true;
+    var sw = document.getElementById('store-switch'); if (sw) sw.hidden = true;
+    var bar = document.getElementById('ts-bar'); if (bar) bar.hidden = true;
+    // Vidé, pas seulement masqué : un panneau caché qui garde les lignes du
+    // client précédent les rendrait visibles une fraction de seconde au suivant.
+    ['pin-list','feat-list','type-row','ts-lock','ts-list','ts-impact',
+     'acct-lock','acct-body','health-grid','aud-list'].forEach(function(id){
+      var n = document.getElementById(id); if (n) clear(n);
+    });
+    ['sel-name','ts-count','ts-err','pin-err','acct-sub','acct-err',
+     'aud-count','health-checked','health-err'].forEach(function(id){
+      var n = document.getElementById(id); if (n) n.textContent = '';
+    });
+    renderDanger();
+    renderClients();   // retire le surlignage et rend « Gérer » à la ligne
+  }
+
+  // Le même geste ouvre et referme : recliquer la boutique déjà ouverte la ferme.
+  function toggleSelect(c){
+    if (selected && selected.merchant === c.merchant) deselect();
+    else select(c);
+  }
+
   function healthAge(ts){
     if (!ts) return 'jamais reçu';
     var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
@@ -1198,7 +1262,9 @@ em, i, cite, dfn, var { font-style: normal; }
     if (!grid || !selected) return;
     clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic en cours…')); err.textContent = '';
     try {
-      var d = await store.health(selected.merchant); clear(grid);
+      var d = await store.health(selected.merchant);
+      if (!selected) return;   // refermé pendant le diagnostic
+      clear(grid);
       document.getElementById('health-checked').textContent = 'vérifié ' + healthAge(d.checked_ts);
       var ac = d.account || {}, sa = d.sales || {}, od = d.orders || {}, ch = d.channels || {};
       grid.appendChild(healthCard('Compte', ac.status || 'introuvable', ac.name || selected.merchant, ac.status === 'suspended' ? 'bad' : (!d.account ? 'warn' : '')));
@@ -1212,6 +1278,7 @@ em, i, cite, dfn, var { font-style: normal; }
         grid.appendChild(healthCard('Migrations', d.missing.length + ' manque(s)', d.missing.map(function(x){ return x.area; }).join(', '), 'bad'));
       }
     } catch(e) {
+      if (!selected) return;   // refermé pendant le diagnostic : rien à annoncer
       clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic indisponible.'));
       err.textContent = 'Le serveur n’a pas pu établir l’état de cet établissement.';
     }
@@ -1269,6 +1336,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('pin-add').disabled = SENIOR === false;
     var wrap = document.getElementById('pin-list'); clear(wrap);
     var pins = await store.pins(selected.merchant);
+    if (!selected) return;   // refermé pendant la lecture
     if (!pins.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun PIN, l’app utilise ses codes par défaut.')); return; }
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
@@ -1331,6 +1399,7 @@ em, i, cite, dfn, var { font-style: normal; }
     renderTypeRow();
     var wrap = document.getElementById('feat-list'); clear(wrap);
     var feats = await store.config(selected.merchant);
+    if (!selected) return;   // refermé pendant la lecture
     modulesForType(selected.type).forEach(function(grp){
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
@@ -2000,6 +2069,34 @@ em, i, cite, dfn, var { font-style: normal; }
   });
   ['ts-from','ts-to','ts-method','ts-state'].forEach(function(id){
     document.getElementById(id).addEventListener('change', function(){ renderTestSales(); });
+  });
+
+  document.getElementById('manage-close').addEventListener('click', function(){ deselect(); });
+
+  /* Cliquer à côté referme aussi — mais « à côté » veut dire le fond de page, et
+     rien d'autre. Le panneau tient des champs, des listes déroulantes et des
+     cases à cocher : un clic dedans qui le ferait disparaître sous les doigts
+     ferait perdre une saisie en cours. On exige donc que la cible n'appartienne
+     à AUCUNE section — ni la gestion, ni la liste des clients (ses lignes ont
+     déjà leur propre bascule), ni les opérateurs, ni l'en-tête.
+     Sur mousedown et pas sur click : sélectionner du texte dans le panneau et
+     relâcher le bouton au-dehors compte comme un clic sur le fond, et refermait
+     le panneau qu'on était en train de lire. */
+  document.addEventListener('mousedown', function(e){
+    if (!selected) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('section, header, dialog, [role="dialog"]')) return;
+    deselect();
+  });
+
+  // Échap referme, sauf quand le curseur est dans un champ : là, Échap appartient
+  // au champ (vider une recherche, refermer une liste déroulante native).
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape' || !selected) return;
+    var a = document.activeElement;
+    if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;
+    deselect();
   });
 
   document.getElementById('refresh').addEventListener('click', function(){ boot(true); });
