@@ -67,7 +67,7 @@ export async function onRequestPost(context) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, b && b.merchant);
+  const merchant = await tenantFor(request, env, b && b.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   /* ── Modifier une clé existante ──────────────────────────────────────────

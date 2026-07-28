@@ -65,7 +65,13 @@
     var me = window.KiwiMe || null;
     var name = String((v && v.name) || (me && me.business) || ls(K.bizName) || '').trim();
     if (!name) return null;
-    return { merchant: slugMerchant(name), name: name, venueId: (v && v.id) || '', type: orderProType(v) };
+    /* Le slug gravé du magasin d'abord (venues.js › slugOf). Re-slugifier le nom
+     * publiait la carte sous une NOUVELLE adresse dès qu'on corrigeait
+     * l'enseigne — et les puces NFC déjà posées sur les tables, elles, pointent
+     * toujours sur l'ancienne. */
+    var pinned = '';
+    try { pinned = (v && v.slug) || ''; } catch (_) {}
+    return { merchant: pinned || slugMerchant(name), name: name, venueId: (v && v.id) || '', type: orderProType(v) };
   }
 
   /* OrderPro has exactly two verticals. Everything that sells a plate is

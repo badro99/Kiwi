@@ -134,8 +134,18 @@ export async function onRequest(context) {
   // et ne renvoie jamais d'adresse e-mail.
   if (isRead && (path === '/reset.html' || path === '/reset')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
-    || path === '/api/order' || path.startsWith('/api/media/'))) return next();
-  if (method === 'POST' && path === '/api/order') return next();
+    || path === '/api/order' || path === '/api/order/session'
+    || path.startsWith('/api/media/'))) return next();
+  /* Les deux seules écritures publiques : déposer une commande, et s'asseoir.
+   * Chemins EXACTS — surtout pas le préfixe /api/order/, qui ouvrirait
+   * /api/order/queue, c'est-à-dire la file du personnel avec ses articles, ses
+   * totaux et le pouvoir d'accepter.
+   *
+   * Ouvrir une session ne prouve rien non plus : le handler refuse si Order Pro
+   * est coupé, ET si le comptoir n'a pas donné signe de vie depuis cinq minutes.
+   * C'est ce deuxième verrou qui empêche de commander de chez soi la nuit — il
+   * se ferme tout seul quand la caisse s'éteint. */
+  if (method === 'POST' && (path === '/api/order' || path === '/api/order/session')) return next();
   /* Le dépôt d'une commande par un canal extérieur (Glovo, Shopify, un relais
    * Make). Ces appelants n'ont ni session ni cookie et n'en auront jamais : ils
    * présentent une clé porteuse dans l'en-tête Authorization, que le handler

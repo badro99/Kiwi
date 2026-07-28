@@ -263,7 +263,7 @@ export async function onRequestPost(context) {
   const feature = featureOf(body && body.feature);
   if (!feature) return json({ error: 'unknown-feature' }, 400);
 
-  const merchant = await tenantFor(request, env, body && body.merchant);
+  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const raw = (body && body.data) || null;

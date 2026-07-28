@@ -1237,6 +1237,59 @@
   }
   const isCustom = id => customIds.has(id || currentVenue);
 
+  /* ═══ L'IDENTITÉ RÉSEAU D'UN ÉTABLISSEMENT ═════════════════════════════════
+   * Le serveur ne connaît un magasin que par un slug — `merchant` — et c'est la
+   * clé primaire de TOUT ce qui lui appartient : sa configuration, ses horaires,
+   * son reçu, sa carte, son catalogue, ses codes équipe, ses clôtures, ses
+   * ventes, l'appairage de sa caisse.
+   *
+   * Ce slug se calculait, partout, en slugifiant le NOM AFFICHÉ. Un nom
+   * s'affiche, donc un nom se corrige — et corriger l'orthographe de son enseigne
+   * ne devrait pas être un acte comptable. C'en était un : « Cafe Amira » devenu
+   * « Amira Café » passait de `cafe-amira` à `amira-cafe`, un slug que personne
+   * n'avait jamais vu. Rien ne suivait. Le serveur, lui, ne voyait pas un magasin
+   * renommé mais un magasin INCONNU, et le premier bonjour venu lui en fabriquait
+   * un neuf (functions/api/config.js › claimStore). La cliente se retrouvait avec
+   * un établissement vide à reconfigurer, son historique orphelin sous l'ancien
+   * slug, et la console en affichait trois là où son sélecteur en montrait deux.
+   *
+   * Le nom et l'identité sont donc séparés pour de bon. `venue.slug` est fixé une
+   * fois — à la création, ou au premier regard pour les établissements d'avant —
+   * et plus jamais recalculé. Renommer ne touche que l'étiquette ; le nouveau nom
+   * part quand même au serveur (merchant-config.js › post), qui le range dans
+   * `merchant_config.name` : la console affiche la correction, sous le même
+   * magasin.
+   *
+   * Jumeau de functions/auth/_lib.js › slugMerchant. */
+  function slugMerchant(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  /* Le slug de CE magasin, la seule réponse à « où écrire ». Vide = on ne sait
+   * pas, et l'appelant ne doit alors rien synchroniser (mieux vaut une page
+   * locale qu'une écriture chez le voisin).
+   *
+   * Le rattrapage des établissements d'avant se fait ICI plutôt qu'au
+   * renommage, et l'instant compte : au premier chargement qui suit le
+   * déploiement, le nom local est encore celui que le serveur connaît, donc le
+   * slug qu'on grave est le bon. Attendre le renommage pour le graver, c'est le
+   * graver depuis un nom qu'on est en train de changer. */
+  function slugOf(id) {
+    const vid = id || currentVenue;
+    const v = VENUES[vid];
+    if (!v || !v.custom) return '';
+    if (v.slug) return String(v.slug);
+    const s = slugMerchant(v.name);
+    if (!s) return '';
+    v.slug = s;
+    if (TRANSIENT_IDS.indexOf(vid) < 0) persistCustomVenues();
+    return s;
+  }
+
   /* Build + register a venue from the wizard config. Returns the new id. */
   function createVenue(cfg) {
     cfg = cfg || {};
@@ -1247,6 +1300,11 @@
     VENUES[id] = {
       id, name, location,
       fullDisplay: location ? `${name} · ${location}` : name,
+      /* L'identité réseau, gravée à la seconde où le magasin naît — c'est le
+       * seul instant où le nom et le slug sont sûrs de coïncider, et c'est ce
+       * slug-là que registerNewStore() va déclarer au serveur trois lignes plus
+       * bas. Il ne rebougera plus, quel que soit ce que devient le nom. */
+      slug: slugMerchant(name),
       type,
       /* The trade picked at onboarding — drives the subtype profile
        * (own sidebar labels + own KPI band, not the base family's) AND the
@@ -1301,6 +1359,12 @@
         if (id === currentVenue) typeOverride = null;
       }
     }
+    /* Graver l'identité AVANT de toucher au nom, jamais après : c'est tout le
+     * correctif. Un établissement d'avant ce code arrive ici sans slug, et le
+     * seul nom qui désigne encore son magasin côté serveur est celui qu'on
+     * s'apprête à remplacer. Le lire une ligne trop tard, c'est fabriquer le
+     * magasin fantôme qu'on cherche à empêcher. */
+    if (patch.name != null && !v.slug) v.slug = slugMerchant(v.name);
     if (patch.name != null)     v.name = String(patch.name).trim() || v.name;
     if (patch.location != null) v.location = String(patch.location).trim();
     if (patch.hours != null)    v.hours = String(patch.hours).trim();
@@ -1544,6 +1608,10 @@
       VENUES[id] = {
         id, name, location: '',
         fullDisplay: name,
+        /* Ici le slug ne se déduit pas, il se sait : il vient du registre du
+         * serveur. C'est même la seule source qui ne peut pas se tromper — et
+         * elle vaut mieux que le nom, qui n'est qu'un reflet. */
+        slug,
         type: base,
         subtype: (s && s.type) || '', profileInfo: null,
         siblings: '', status: 'En service', ice: '—',
@@ -8443,6 +8511,11 @@
     isCustom,
     createVenue,
     updateVenue,
+    /* Le slug serveur de cet établissement. TOUT ce qui écrit chez le serveur
+     * doit passer par ici plutôt que de re-slugifier le nom dans son coin —
+     * cinq modules le faisaient, donc cinq occasions de changer d'identité au
+     * prochain renommage. */
+    slugOf,
     enterFusion,
     exitFusion,
     REAL_VENUES,

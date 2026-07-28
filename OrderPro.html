@@ -475,73 +475,105 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 10px;
       -webkit-overflow-scrolling: touch;
     }
-    /* TikTok-style 2-column video grid — meta BELOW video (sibling) */
-    .menu-list.is-video-grid {
+    /* ═══════════════════════════════════════════════════════════════════════
+       LE FIL — un seul fil, une seule tuile.
+       ---------------------------------------------------------------------
+       La carte était rendue de deux façons : une liste à vignette carrée pour
+       tout le monde, et une grille « Top » qui ne montrait QUE les plats
+       filmés. Un patron qui filme trois plats sur vingt se retrouvait donc
+       avec deux cartes qui ne se ressemblent pas, et l'onglet Top donnait
+       l'impression que le reste de la carte n'existait pas.
+       Ici il n'y en a plus qu'une. Chaque plat occupe EXACTEMENT la même
+       tuile, quelle que soit sa matière :
+         · une vidéo    → elle tourne en boucle, muette, sans aucun bouton ;
+         · une photo    → même cadre, immobile ;
+         · rien du tout → l'icône du plat sur son dégradé, plein cadre.
+       C'est la condition pour que ça se lise comme un fil Instagram et non
+       comme un tableau à trous. Le format est UNE variable : changer
+       --tile-ratio suffit à passer tout le fil en 9/16 ou en carré.
+       ═══════════════════════════════════════════════════════════════════════ */
+    .menu-list.is-feed {
+      --tile-ratio: 4 / 5;
       grid-template-columns: repeat(2, 1fr);
       grid-auto-rows: max-content;
       align-content: start;
       align-items: start;
-      gap: 10px;
+      gap: 12px;
       padding: 4px 14px calc(100px + var(--safe-bottom));
       overflow-y: auto;
     }
-    .video-card {
+    .dish-card {
       display: flex;
       flex-direction: column;
       background: var(--surface);
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       text-align: left;
       transition: transform 200ms ease;
       width: 100%;
       box-shadow: var(--shadow-card);
+      cursor: pointer;
     }
-    .video-card:active { transform: scale(0.97); }
-    .video-thumb {
+    .dish-card:active { transform: scale(0.97); }
+    .dish-media {
       position: relative;
       width: 100%;
-      aspect-ratio: 9 / 16;
-      background: #0A0F0D;
+      aspect-ratio: var(--tile-ratio);
+      background: var(--paper-mute);
       overflow: hidden;
     }
-    .video-thumb video {
+    /* Le même object-fit pour les deux : une vidéo verticale et une photo
+       carrée tombent dans le même cadre, recadrées au centre — c'est ce qui
+       fait qu'une ligne de tuiles reste une ligne. */
+    .dish-media video,
+    .dish-media img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
-    .video-meta {
-      padding: 9px 11px 10px;
+    /* Sans média : l'icône plein cadre sur son dégradé. La tuile garde sa
+       taille, donc le fil ne se déchire pas autour d'un plat non photographié. */
+    .dish-media.is-plain {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .dish-media.is-plain svg { width: 34%; height: 34%; opacity: 0.92; }
+    .dish-meta {
+      padding: 10px 12px 11px;
       background: var(--surface);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
-    .video-name {
+    .dish-name {
       font-size: 13px;
       font-weight: 600;
       letter-spacing: -0.01em;
       color: var(--ink);
       line-height: 1.22;
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
     }
-    .video-foot {
+    .dish-foot {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
     }
-    .video-price {
+    .dish-price {
       font-family: var(--mono);
       font-size: 11.5px;
       font-weight: 500;
       color: var(--ink-3);
       letter-spacing: -0.005em;
     }
-    .video-add {
-      width: 26px; height: 26px;
+    .dish-add {
+      width: 28px; height: 28px;
       border: 0; padding: 0; cursor: pointer; -webkit-appearance: none; appearance: none;
       font-family: inherit;
       border-radius: 999px;
@@ -550,15 +582,16 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 500;
       box-shadow: 0 2px 6px rgba(31,93,60,0.25);
       transition: transform 180ms ease;
+      flex: 0 0 auto;
     }
-    .video-add:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    .video-add:active { transform: scale(0.92); }
-    /* NEW badge (only on items with tag:'new') */
-    .video-tag-new {
+    .dish-add:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .dish-add:active { transform: scale(0.92); }
+    /* Pastille NEW (uniquement sur les plats marqués tag:'new') */
+    .dish-tag {
       position: absolute;
       top: 8px;
       left: 8px;
@@ -574,7 +607,27 @@ em, i, cite, dfn, var { font-style: normal; }
       z-index: 2;
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
-    [dir="rtl"] .video-tag-new { left: auto; right: 8px; }
+    [dir="rtl"] .dish-tag { left: auto; right: 8px; }
+    /* Le plat épuisé reste sur le fil — le retirer ferait croire à une carte
+       plus courte qu'elle n'est — mais il ne se commande pas. */
+    .dish-card.is-out { cursor: default; }
+    .dish-card.is-out .dish-media { filter: grayscale(1); opacity: 0.5; }
+    .dish-card.is-out .dish-add { display: none; }
+    .dish-out {
+      position: absolute; inset: auto 0 0 0;
+      background: rgba(10,15,13,0.72);
+      color: #fff;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 5px 6px;
+      z-index: 2;
+    }
+    /* Un téléphone qui demande moins d'animation n'a pas à subir vingt boucles
+       vidéo : on garde l'affiche fixe. */
+    @media (prefers-reduced-motion: reduce) {
+      .dish-card { transition: none; }
+    }
     .menu-item {
       display: grid;
       grid-template-columns: 64px 1fr auto;
@@ -596,10 +649,13 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 64px;
     }
     .item-img svg { width: 28px; height: 28px; }
-    .item-img.coffee { background: linear-gradient(135deg, #6F4A2E 0%, #B68A5E 100%); }
-    .item-img.pastry { background: linear-gradient(135deg, #C99A4F 0%, #F2D08B 100%); }
-    .item-img.savory { background: linear-gradient(135deg, #6A8C3F 0%, #B4D281 100%); }
-    .item-img.drink  { background: linear-gradient(135deg, #2D7F8C 0%, #6FC6D2 100%); }
+    /* Les quatre teintes de repli, partagées par la vignette du personnalisateur
+       et par la tuile plein cadre du fil : un plat sans photo garde la même
+       couleur partout où il apparaît. */
+    .item-img.coffee, .dish-media.coffee { background: linear-gradient(135deg, #6F4A2E 0%, #B68A5E 100%); }
+    .item-img.pastry, .dish-media.pastry { background: linear-gradient(135deg, #C99A4F 0%, #F2D08B 100%); }
+    .item-img.savory, .dish-media.savory { background: linear-gradient(135deg, #6A8C3F 0%, #B4D281 100%); }
+    .item-img.drink,  .dish-media.drink  { background: linear-gradient(135deg, #2D7F8C 0%, #6FC6D2 100%); }
     .item-body { min-width: 0; }
     .item-name {
       font-size: 14.5px;
@@ -640,7 +696,8 @@ em, i, cite, dfn, var { font-style: normal; }
       box-shadow: 0 2px 8px rgba(31,93,60,0.25);
     }
     .item-add:active { transform: scale(0.92); }
-    .item-add.is-popped {
+    .item-add.is-popped,
+    .dish-add.is-popped {
       animation: add-pop 460ms cubic-bezier(0.34, 1.45, 0.5, 1);
     }
     @keyframes add-pop {
@@ -2426,7 +2483,27 @@ em, i, cite, dfn, var { font-style: normal; }
     .cart-sheet.is-open ~ .lang-picker,
     .bill-sheet.is-open ~ .lang-picker { opacity: 0.4; pointer-events: none; }
     /* Tone down over greeting/ready/cashier dark or full-bleed surfaces */
-    .screen-ready.is-active ~ .lang-picker { display: none; }
+    /* MERCI — même écran plein que « prête », mais calme : rien n'attend le
+       client, donc rien ne doit battre pour attirer son regard. */
+    .screen-thanks {
+      padding: var(--safe-top) 28px var(--safe-bottom);
+      background: var(--gradient);
+      color: #fff;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ready-pulse.is-calm { animation: none; }
+    .ready-pulse.is-calm::before, .ready-pulse.is-calm::after { animation: none; opacity: 0; }
+    .thanks-note {
+      max-width: 320px;
+      margin: 0 auto 8px;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.72);
+    }
+    .screen-ready.is-active ~ .lang-picker,
+    .screen-thanks.is-active ~ .lang-picker { display: none; }
     .kiwi-greet.is-visible ~ .lang-picker { display: none; }
 
     /* =========================================================
@@ -2967,14 +3044,13 @@ em, i, cite, dfn, var { font-style: normal; }
         </button>
       </div>
 
-      <!-- Category tabs: only the universal Top / Tout remain. Add per-client
-           category tabs here (data-tab must match the item `cat` in MENU). -->
+      <!-- Onglets de catégories. Rebâtis depuis la carte publiée par le patron
+           (bootRestaurant) ; data-tab doit valoir le `cat` de l'item. -->
       <div class="menu-tabs" role="tablist">
-        <button class="menu-tab" data-tab="top" data-i18n="tab_top">Top</button>
         <button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">Tout</button>
       </div>
 
-      <div class="menu-list" id="menu-list"></div>
+      <div class="menu-list is-feed" id="menu-list"></div>
 
       <button class="cart-pill" id="cart-pill" type="button">
         <span class="cart-left">
@@ -3088,6 +3164,27 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="arrow-right"></i>
           <span data-i18n="ready_cta">Récupérer au comptoir</span>
         </button>
+      </div>
+    </section>
+
+    <!-- ============ MERCI — la session est close, le service est fini ============
+         L'addition a été réglée (ou la commande remise en main propre). À partir
+         d'ici le téléphone ne peut plus rien envoyer : c'est le point final, et
+         c'est ce qui empêche quelqu'un de garder le lien pour commander de chez
+         lui plus tard. Pas de bouton « recommencer » — reprendre demande de
+         reposer le téléphone sur le tag, ce qui suppose d'être revenu. -->
+    <section class="screen screen-thanks" id="screen-thanks">
+      <div class="ready-top">
+        <div class="ready-pulse is-calm" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </div>
+        <h1 class="ready-title"><span data-i18n="thanks_title_a">Merci de votre</span> <em data-i18n="thanks_title_em">visite.</em></h1>
+        <div class="ready-sub" id="thanks-sub" data-i18n="thanks_sub">Votre addition est réglée. À très bientôt.</div>
+      </div>
+      <div class="ready-bottom">
+        <div class="thanks-note" data-i18n="thanks_again">Pour commander à nouveau, approchez votre téléphone du tag.</div>
       </div>
     </section>
 
@@ -3446,11 +3543,22 @@ em, i, cite, dfn, var { font-style: normal; }
            page reads (functions/api/menu.js), so a merchant publishes once and
            both surfaces see it. → { name, type, menu, shop, orderpro } */
         catalog: () => getJSON('/api/menu?merchant=' + encodeURIComponent(slug)),
-        /* Send one order to the caisse queue → { ok, id, number } */
+        /* Send one order to the caisse queue → { ok, id, number, total, lines } */
         placeOrder: (payload) => postJSON('/api/order', Object.assign({}, payload, { merchant: slug })),
         /* Poll one order's live status → { ok, status, number } */
         orderStatus: (id) => getJSON('/api/order?merchant=' + encodeURIComponent(slug) +
                                      '&id=' + encodeURIComponent(id)),
+        /* S'asseoir. La session lie CE téléphone à CETTE table, et la caisse
+           peut la fermer : encaisser l'addition coupe le robinet, et le client
+           qui aurait gardé le lien ne peut plus commander de chez lui.
+           → { ok, session, mode, table, status } */
+        openSession: (mode, table) => postJSON('/api/order/session',
+          { merchant: slug, mode: mode, table: table || '' }),
+        /* Suis-je encore le bienvenu ? C'est aussi le battement de cœur qui
+           allume la table sur le plan de salle du comptoir.
+           → { ok, status, closedBy, table, mode } */
+        sessionStatus: (id) => getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
+                                       '&session=' + encodeURIComponent(id)),
       };
     })();
 
@@ -3480,8 +3588,8 @@ em, i, cite, dfn, var { font-style: normal; }
         menu_loc: "",
         badge_takeout: "À emporter",
         badge_table: "Table",
-        tab_top: "Top",
         tab_all: "Tout",
+        dish_out: "Épuisé",
         tab_coffee: "Café",
         tab_pastry: "Pâtisserie",
         tab_savory: "Salé",
@@ -3596,6 +3704,17 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "Envoi…",
         order_failed: "Commande non envoyée — réessayez",
         order_offline: "Pas de connexion — commande non envoyée",
+        boot_closed_title: "Service fermé",
+        boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
+        order_closed: "Le service vient de fermer — commande non envoyée",
+        order_refused: "Le comptoir n'a pas pu prendre cette commande",
+        order_served: "Servie · bon appétit",
+        order_gone: "Plus disponible : {n}",
+        thanks_title_a: "Merci de votre",
+        thanks_title_em: "visite.",
+        thanks_sub: "Votre addition est réglée. À très bientôt.",
+        thanks_expired: "Votre session s'est terminée. À très bientôt.",
+        thanks_again: "Pour commander à nouveau, approchez votre téléphone du tag.",
         prep_waiting: "En attente de la caisse",
         prep_accepted: "Acceptée · en préparation",
         // ── boutique vertical ──
@@ -3643,8 +3762,8 @@ em, i, cite, dfn, var { font-style: normal; }
         menu_loc: "",
         badge_takeout: "Takeout",
         badge_table: "Table",
-        tab_top: "Top",
         tab_all: "All",
+        dish_out: "Sold out",
         tab_coffee: "Coffee",
         tab_pastry: "Pastries",
         tab_savory: "Savory",
@@ -3757,6 +3876,17 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "Sending…",
         order_failed: "Order not sent — try again",
         order_offline: "No connection — order not sent",
+        boot_closed_title: "Closed",
+        boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
+        order_closed: "Service just closed — order not sent",
+        order_refused: "The counter couldn't take this order",
+        order_served: "Served · enjoy",
+        order_gone: "No longer available: {n}",
+        thanks_title_a: "Thank you for",
+        thanks_title_em: "visiting.",
+        thanks_sub: "Your bill is settled. See you soon.",
+        thanks_expired: "Your session has ended. See you soon.",
+        thanks_again: "To order again, tap your phone on the tag.",
         prep_waiting: "Waiting for the till",
         prep_accepted: "Accepted · being prepared",
         bq_title: "Our products",
@@ -3803,8 +3933,8 @@ em, i, cite, dfn, var { font-style: normal; }
         menu_loc: "",
         badge_takeout: "للأخذ",
         badge_table: "طاولة",
-        tab_top: "توب",
         tab_all: "الكل",
+        dish_out: "نفد",
         tab_coffee: "قهوة",
         tab_pastry: "حلويات",
         tab_savory: "ساندويتش",
@@ -3917,6 +4047,17 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "كنصيفطو…",
         order_failed: "الطلب ماتصيفطش — عاود جرّب",
         order_offline: "ماكاينش كونيكسيون — الطلب ماتصيفطش",
+        boot_closed_title: "الخدمة محلولة ماشي دابا",
+        boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
+        order_closed: "الخدمة تسدّات — الطلب ماتصيفطش",
+        order_refused: "الكونطوار ماقدرش ياخد هاد الطلب",
+        order_served: "تقدّم · بالصحة",
+        order_gone: "ماكاينش: {n}",
+        thanks_title_a: "شكراً على",
+        thanks_title_em: "الزيارة.",
+        thanks_sub: "الحساب تخلّص. نتلاقاو قريب.",
+        thanks_expired: "الجلسة ديالك سالات. نتلاقاو قريب.",
+        thanks_again: "باش تطلب من جديد، قرّب تيليفونك من التاڭ.",
         prep_waiting: "كنتسناو الكيس",
         prep_accepted: "تقبل · كيتوجد",
         bq_title: "المنتوجات ديالنا",
@@ -4031,7 +4172,6 @@ em, i, cite, dfn, var { font-style: normal; }
     let orderMode = null;       // 'table' | 'takeout'
     let tableNumber = '';
     let orderNumber = '';       // takeout only — like "047"
-    let prepRafId = null;       // animation handle for prep progress
 
     // Cart: lineKey -> { id, options, note, unitPrice, qty }
     const cart = new Map();
@@ -4113,69 +4253,168 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ screen transitions ============ */
+    /* ═══════════════════════════════════════════════════════════════════════
+       Changer d'écran — et pourquoi c'est plus subtil qu'il n'y paraît.
+       ---------------------------------------------------------------------
+       L'ancienne version capturait UN écran sortant et armait une minuterie
+       pour lui retirer `is-active` 360 ms plus tard. Deux navigations
+       rapprochées suffisaient alors à tout éteindre : la minuterie de la
+       première finissait par s'appliquer à l'écran que la seconde venait
+       d'afficher, et le téléphone du client restait BLANC — tous les écrans en
+       display:none, sans erreur, sans rien à quoi se raccrocher.
+       Ça ne se produisait pas tant que chaque changement d'écran venait d'un
+       doigt. Depuis que l'encaissement au comptoir fait avancer l'écran tout
+       seul, deux transitions peuvent se suivre de quelques dizaines de
+       millisecondes — et c'est arrivé du premier coup.
+       Deux règles suffisent : on annule les minuteries en vol, et on ne retire
+       JAMAIS `is-active` à l'écran vers lequel on va.
+       ═══════════════════════════════════════════════════════════════════════ */
+    let screenTimers = [];
     function gotoScreen(targetId) {
-      const cur = $('.screen.is-active');
       const next = document.getElementById(targetId);
-      if (!cur || !next || cur === next) return;
+      if (!next) return;
+      screenTimers.forEach(clearTimeout);
+      screenTimers = [];
+      const leaving = [...document.querySelectorAll('.screen.is-active')].filter(s => s !== next);
+      if (!leaving.length && next.classList.contains('is-active')) return;
+      next.classList.remove('is-leaving');
       next.classList.add('is-active', 'is-entering');
-      setTimeout(() => next.classList.remove('is-entering'), 480);
-      cur.classList.add('is-leaving');
-      setTimeout(() => {
-        cur.classList.remove('is-active', 'is-leaving');
-      }, 360);
+      screenTimers.push(setTimeout(() => next.classList.remove('is-entering'), 480));
+      leaving.forEach(s => s.classList.add('is-leaving'));
+      screenTimers.push(setTimeout(() => {
+        leaving.forEach(s => s.classList.remove('is-active', 'is-leaving'));
+      }, 360));
+      /* Quitter la carte doit vraiment arrêter les boucles : un écran caché en
+         CSS continue sinon à décoder ses vidéos derrière l'addition. */
+      if (targetId === 'screen-menu') setTimeout(() => feedMedia.resume(), 80);
+      else feedMedia.pauseAll();
     }
 
-    /* ============ menu render ============ */
+    /* ═══════════════════════════════════════════════════════════════════════
+       LE FIL — lecture au défilé.
+       ---------------------------------------------------------------------
+       Vingt <video autoplay> dans une page, c'est vingt décodeurs ouverts en
+       même temps : sur un Android d'entrée de gamme la page devient un
+       diaporama, et sur iPhone la batterie s'écroule. Le navigateur ne trie
+       pas ça tout seul — nous, si. Une seule règle :
+         · une tuile qui APPROCHE de l'écran charge sa vidéo (et pas avant :
+           sinon on télécharge toute la carte au premier affichage) ;
+         · une tuile VISIBLE joue ; une tuile sortie de l'écran s'arrête.
+       La photo du plat sert d'affiche à sa propre vidéo, donc la tuile n'est
+       jamais un rectangle noir pendant le chargement.
+       ═══════════════════════════════════════════════════════════════════════ */
+    const feedMedia = (() => {
+      let io = null;
+      const calm = () => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+        catch (_) { return false; }
+      };
+
+      function load(v) {
+        if (!v.getAttribute('src') && v.dataset.src) v.setAttribute('src', v.dataset.src);
+      }
+      function play(v) {
+        load(v);
+        if (calm()) return;                       // affiche fixe, pas de boucle
+        const p = v.play();
+        if (p && p.catch) p.catch(() => {});      // refus d'autoplay → on n'insiste pas
+      }
+
+      function bind() {
+        if (io) { io.disconnect(); io = null; }
+        const list = $('#menu-list');
+        if (!list) return;
+        const vids = list.querySelectorAll('video[data-src]');
+        if (!vids.length) return;
+
+        if (!('IntersectionObserver' in window)) {
+          // Vieux navigateur : on charge tout et on laisse le navigateur faire.
+          vids.forEach(play);
+          return;
+        }
+        io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            const v = e.target;
+            if (!e.isIntersecting) { try { v.pause(); } catch (_) {} return; }
+            if (e.intersectionRatio >= 0.3) play(v);
+            else load(v);                          // en approche : on précharge seulement
+          });
+        }, { root: list, rootMargin: '300px 0px', threshold: [0, 0.3] });
+        vids.forEach(v => io.observe(v));
+      }
+
+      /* L'app passe d'un écran à l'autre : quand la carte n'est plus affichée,
+         rien ne doit continuer à tourner derrière. Idem quand le téléphone se
+         verrouille ou que le client change d'onglet. */
+      function pauseAll() {
+        const list = $('#menu-list');
+        if (!list) return;
+        list.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
+      }
+      function resume() {
+        const list = $('#menu-list');
+        if (!list || !list.closest('.screen.is-active')) return;
+        bind();
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) pauseAll(); else resume();
+      });
+
+      return { bind, pauseAll, resume };
+    })();
+
+    /* Le média d'un plat, dans le cadre commun. L'ordre compte : une vidéo
+       l'emporte sur une photo (elle vend mieux), la photo devient son affiche,
+       et l'icône ne sert que quand le patron n'a rien mis — jamais comme
+       vignette au rabais à côté d'un plat filmé. */
+    function dishMedia(m) {
+      if (m.video) {
+        /* Une vidéo sans affiche est un rectangle VIDE tant qu'elle ne joue
+           pas — et elle ne joue pas toujours : mode économie d'énergie, données
+           réduites, « limiter les animations ». Le plat disparaissait alors du
+           fil sans que rien ne le dise.
+           Donc : avec une photo, elle sert d'affiche et on ne précharge rien ;
+           sans photo, on demande les métadonnées, ce qui suffit au navigateur
+           pour peindre la première image. Le coût réseau ne tombe que sur les
+           plats que le patron n'a pas photographiés. */
+        const poster = m.photo ? ` poster="${escapeHtml(m.photo)}"` : '';
+        const pre = m.photo ? 'none' : 'metadata';
+        return `<div class="dish-media">${dishTag(m)}` +
+          `<video data-src="${escapeHtml(m.video)}"${poster} loop muted playsinline ` +
+          `preload="${pre}" disablepictureinpicture aria-hidden="true"></video></div>`;
+      }
+      if (m.photo) {
+        return `<div class="dish-media">${dishTag(m)}` +
+          `<img src="${escapeHtml(m.photo)}" alt="" loading="lazy" decoding="async" /></div>`;
+      }
+      return `<div class="dish-media is-plain ${ICON_CLASS[m.icon] || 'coffee'}">${dishTag(m)}` +
+        `<i data-lucide="${escapeHtml(m.icon || 'utensils')}"></i></div>`;
+    }
+    function dishTag(m) {
+      return m.tag === 'new' ? `<span class="dish-tag">${escapeHtml(t('tag_new'))}</span>` : '';
+    }
+
     function renderMenu(filter = 'all') {
-      if (filter === 'top') { renderVideoGrid(); return; }
       const list = $('#menu-list');
-      list.classList.remove('is-video-grid');
+      list.classList.add('is-feed');
       const items = MENU.filter(m => filter === 'all' || m.cat === filter);
       list.innerHTML = items.map(m => {
         const i = itemI18n(m.id);
-        // A published photo replaces the icon tile; without one we keep the
-        // icon so an item with no media still looks deliberate, never broken.
-        const tile = m.photo
-          ? `<div class="item-img has-photo"><img src="${escapeHtml(m.photo)}" alt="" loading="lazy" /></div>`
-          : `<div class="item-img ${ICON_CLASS[m.icon] || 'coffee'}"><i data-lucide="${escapeHtml(m.icon || 'utensils')}"></i></div>`;
+        const out = m.avail === false;
         return `
-        <article class="menu-item">
-          ${tile}
-          <div class="item-body">
-            <div class="item-name">${i.name}</div>
-            <div class="item-desc">${i.desc}</div>
-            <div class="item-price">${m.price} ${cur()}</div>
-          </div>
-          <button class="item-add" type="button" data-add="${m.id}" aria-label="${t('btn_add')} ${i.name}">+</button>
-        </article>
-      `;}).join('');
-      if (window.lucide) window.lucide.createIcons();
-    }
-
-    /* ============ TikTok-style video grid — meta below video ============ */
-    function renderVideoGrid() {
-      const list = $('#menu-list');
-      list.classList.add('is-video-grid');
-      const videoItems = MENU.filter(m => m.video);
-      list.innerHTML = videoItems.map(m => {
-        const i = itemI18n(m.id);
-        const newTag = m.tag === 'new' ? `<span class="video-tag-new">${t('tag_new')}</span>` : '';
-        return `
-        <article class="video-card" data-add="${m.id}">
-          <div class="video-thumb">
-            ${newTag}
-            <video src="${m.video}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>
-          </div>
-          <div class="video-meta">
-            <div class="video-name">${i.name}</div>
-            <div class="video-foot">
-              <span class="video-price">${m.price} ${cur()}</span>
-              <button type="button" class="video-add" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
+        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-add="${escapeHtml(m.id)}"`}>
+          ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
+          <div class="dish-meta">
+            <div class="dish-name">${i.name}</div>
+            <div class="dish-foot">
+              <span class="dish-price">${m.price} ${cur()}</span>
+              ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
             </div>
           </div>
         </article>
       `;}).join('');
       if (window.lucide) window.lucide.createIcons();
+      feedMedia.bind();
     }
 
     /* ============ cart logic — line keys support variants ============ */
@@ -4706,6 +4945,11 @@ em, i, cite, dfn, var { font-style: normal; }
        No optimistic UI: if the relay fails the customer is told, because a
        fake "sent to the kitchen" is how a table waits 20 minutes for nothing. */
     let currentOrderId = '';
+    /* La clé d'idempotence de l'envoi en cours. Conservée tant que l'envoi n'a
+       pas abouti, pour qu'un deuxième tap rejoue la même commande au lieu d'en
+       créer une seconde ; effacée dès qu'elle est acceptée, pour que la
+       commande SUIVANTE soit bien une nouvelle commande. */
+    let pendingRef = '';
     async function sendOrder() {
       if (!cart.size) return;
       const btn = $('#send-btn');
@@ -4721,15 +4965,25 @@ em, i, cite, dfn, var { font-style: normal; }
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
 
+      /* Une clé par envoi. Un double-tap, ou un réseau qui repasse pendant que
+         la requête était en vol, doit retrouver LA MÊME commande — pas en
+         créer une seconde avec un second numéro que la cuisine préparerait
+         deux fois. Le serveur la reconnaît et rejoue sa réponse. */
+      if (!pendingRef) pendingRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+      /* On n'envoie plus ni les noms ni les prix : rien que des identifiants et
+         des quantités. Le serveur ouvre la carte publiée par le commerçant, y
+         lit le prix et recalcule le total. Avant, une requête modifiée créait
+         une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
+         avec le faux prix. */
       const res = await NET.placeOrder({
         mode: orderMode,                       // 'table' | 'takeout'
         table: orderMode === 'table' ? tableNumber : '',
-        total: totalNow,
+        session: SESSION.id || '',
+        ref: pendingRef,
         lines: linesCopy.map(l => ({
           id: l.id,
-          name: nameOf(l.id),
           qty: l.qty,
-          unitPrice: l.unitPrice,
           options: describeOptions(l),
           note: l.note || '',
         })),
@@ -4739,11 +4993,35 @@ em, i, cite, dfn, var { font-style: normal; }
       if (label) label.textContent = prevLabel;
 
       if (!res || !res.ok) {
-        showToast(res && res.error === 'network' ? t('order_offline') : t('order_failed'));
+        const err = res && res.error;
+        /* La session a été fermée pendant qu'on commandait : l'addition vient
+           d'être réglée. Le dire franchement vaut mieux qu'un « échec » qui
+           inviterait à réessayer indéfiniment. */
+        if (err === 'session-closed') { SESSION.markClosed('settle'); return; }
+        if (err === 'service-closed') { showToast(t('order_closed')); return; }
+        /* La carte a bougé sous les doigts du client — un plat épuisé, un plat
+           retiré. On le dit avec le nom, et on retire la ligne : réessayer à
+           l'identique échouerait exactement pareil. */
+        if (err === 'menu-changed') {
+          const gone = [].concat(res.unavailable || [], res.unknown || []);
+          showToast(t('order_gone').replace('{n}', gone.join(', ')));
+          pendingRef = '';
+          dropUnavailable(res.unknown || [], res.unavailable || []);
+          return;
+        }
+        showToast(err === 'network' ? t('order_offline') : t('order_failed'));
         return;                                // cart intact — they can retry
       }
 
+      pendingRef = '';
       currentOrderId = String(res.id || '');
+      lastStatus = '';
+      /* Le total qui compte est celui que le SERVEUR a calculé. S'il diffère de
+         ce que le téléphone affichait (un prix changé au bureau il y a dix
+         secondes), c'est le sien qui est vrai, et le client doit voir celui-là
+         sur son écran de confirmation. */
+      const serverTotal = Number(res.total);
+      const shownTotal = isFinite(serverTotal) && serverTotal > 0 ? serverTotal : totalNow;
       closeCart();
       if (orderMode === 'takeout') {
         orderNumber = String(res.number || '').padStart(3, '0');
@@ -4751,12 +5029,12 @@ em, i, cite, dfn, var { font-style: normal; }
         $('#prep-number').textContent = orderNumber;
         $('#ready-number').textContent = orderNumber;
         $('#cashier-items').textContent = summary || '—';
-        $('#cashier-total').textContent = `${totalNow} ${cur()}`;
+        $('#cashier-total').textContent = `${shownTotal} ${cur()}`;
         gotoScreen('screen-cashier');
       } else {
         // Table mode — accumulate into the session for the bill
         for (const l of linesCopy) sentLines.push(l);
-        sessionTotal += totalNow;
+        sessionTotal += shownTotal;
         $('#success-table').textContent = tableNumber;
         $('#success-items').textContent = summary || '—';
         gotoScreen('screen-success');
@@ -4769,27 +5047,231 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Table mode gets the same truth as takeout, just quieter: the ETA line
        becomes the ticket's real state at the till, not a decorative "4–6 min".
        Stops as soon as the kitchen has it, or when the guest leaves the screen. */
-    let tableWatchId = null;
+    /* ═══════════════════════════════════════════════════════════════════════
+       LA SESSION — ce téléphone, assis à cette table
+       ---------------------------------------------------------------------
+       Elle s'ouvre quand on sait où le client est assis, et la caisse peut la
+       FERMER : encaisser l'addition la coupe, et l'app bascule sur le
+       remerciement. C'est ce qui manquait — le lien était éternel, donc
+       quelqu'un pouvait le garder et commander de chez lui.
+
+       Le souvenir local sert à deux choses, et la seconde compte autant que la
+       première : reprendre la même session après un verrouillage d'écran, ET
+       refuser d'en rouvrir une juste après un encaissement. Recharger la page
+       n'est pas distinguable d'un nouveau contact avec le tag — mais une
+       addition réglée il y a deux minutes, si. Passé la demi-heure la table
+       appartient au client suivant, et il n'a de toute façon pas ce souvenir
+       dans SON téléphone.
+       ═══════════════════════════════════════════════════════════════════════ */
+    const SESSION = {
+      id: '', mode: '', table: '', closed: false, closedBy: '',
+      _key() { return 'kiwi-op-ses:' + NET.slug; },
+      _read() {
+        try { return JSON.parse(localStorage.getItem(this._key()) || 'null') || null; }
+        catch (_) { return null; }
+      },
+      _write(v) {
+        try {
+          if (v) localStorage.setItem(this._key(), JSON.stringify(v));
+          else localStorage.removeItem(this._key());
+        } catch (_) {}
+      },
+      /* Une addition réglée à l'instant, sur CETTE table. */
+      recentlySettled(mode, table) {
+        const s = this._read();
+        if (!s || !s.closedAt) return false;
+        if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
+        return (Date.now() - s.closedAt) < 30 * 60 * 1000;
+      },
+      async open(mode, table) {
+        if (this.id && this.mode === mode && String(this.table) === String(table || '')) return true;
+        const res = await NET.openSession(mode, table);
+        if (!res || !res.ok) {
+          /* On n'invente rien : « le service n'est pas ouvert » est une réponse
+             vraie et utile, et bien meilleure qu'une carte qu'on laisse
+             parcourir avant de refuser la commande à la fin.
+             Le refus peut tomber depuis le pavé numérique aussi bien qu'au
+             démarrage : il faut donc REVENIR sur l'écran d'accueil, sinon le
+             message s'écrirait dans un écran que personne ne regarde. */
+          const err = res && res.error;
+          if (err === 'service-closed' || err === 'orderpro-off') {
+            gotoScreen('screen-boot');
+            bootState(err === 'service-closed' ? 'closed' : 'off',
+              { icon: err === 'service-closed' ? 'moon' : 'power-off' });
+          } else {
+            showToast(t('order_offline'));
+          }
+          return false;
+        }
+        this.id = res.session; this.mode = res.mode; this.table = res.table || '';
+        this.closed = false; this.closedBy = '';
+        this._write({ id: this.id, mode: this.mode, table: this.table });
+        LIVE.start();
+        return true;
+      },
+      markClosed(why) {
+        if (this.closed) return;
+        this.closed = true; this.closedBy = why || '';
+        this._write({ id: this.id, mode: this.mode, table: this.table, closedAt: Date.now() });
+        onSessionClosed();
+      },
+    };
+
+    /* Le service est fini pour ce téléphone : plus de carte, plus de panier,
+       plus de commande. On ne se contente pas de masquer le bouton — le panier
+       est vidé et la boucle s'arrête, pour qu'aucun écran resté ouvert derrière
+       ne puisse encore envoyer quoi que ce soit. */
+    function onSessionClosed() {
+      LIVE.stop();
+      cart.clear();
+      refreshCartUI();
+      const sub = $('#thanks-sub');
+      if (sub) {
+        sub.textContent = SESSION.closedBy === 'expiry' ? t('thanks_expired') : t('thanks_sub');
+      }
+      gotoScreen('screen-thanks');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LE DIRECT — une seule boucle, pour la session ET la commande
+       ---------------------------------------------------------------------
+       « Personne ne va rafraîchir » : c'est vrai, les gens parlent et oublient
+       leur téléphone sur la table. Donc rien ici n'attend un geste.
+       Trois règles :
+         · un rythme SOUTENU tant qu'une commande est en cours, LENT quand on
+           ne fait que lire la carte — la batterie d'un client n'est pas à nous ;
+         · rien ne tourne pendant que l'écran est verrouillé ou l'onglet caché,
+           et on redemande TOUT DE SUITE au retour, sans attendre le tour
+           suivant : c'est exactement le moment où le client regarde ;
+         · le réseau qui revient relance aussi.
+       ═══════════════════════════════════════════════════════════════════════ */
+    const LIVE = (() => {
+      const FAST = 4000;      // une commande est en jeu
+      const SLOW = 15000;     // simplement assis, la carte ouverte
+      let timer = null, running = false;
+
+      const busy = () => !!currentOrderId && lastStatus !== 'served' && lastStatus !== 'rejected';
+
+      async function tick() {
+        if (!running || document.hidden) return;
+
+        if (SESSION.id && !SESSION.closed) {
+          const s = await NET.sessionStatus(SESSION.id);
+          // Injoignable ⇒ on ne conclut RIEN. Déclarer la session fermée sur un
+          // réseau qui tousse mettrait le client dehors au milieu du repas.
+          if (s && s.ok && s.status !== 'open') { SESSION.markClosed(s.closedBy); return; }
+        }
+
+        if (currentOrderId) {
+          const r = await NET.orderStatus(currentOrderId);
+          if (r && r.ok) applyOrderStatus(String(r.status || 'pending'));
+        }
+        schedule();
+      }
+
+      function schedule() {
+        clearTimeout(timer);
+        if (!running || document.hidden) return;
+        timer = setTimeout(tick, busy() ? FAST : SLOW);
+      }
+      function start() { running = true; clearTimeout(timer); tick(); }
+      function stop() { running = false; clearTimeout(timer); }
+      function kick() { if (running) { clearTimeout(timer); tick(); } }
+
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
+      window.addEventListener('online', kick);
+      window.addEventListener('pageshow', kick);
+
+      return { start, stop, kick };
+    })();
+
+    /* L'état de la commande, appliqué à l'écran qui est devant les yeux du
+       client. Une seule fonction pour les deux parcours : la table et le
+       comptoir affichent la même vérité, avec des mots différents. */
+    let lastStatus = '';
+    function applyOrderStatus(status) {
+      if (status === lastStatus) return;
+      lastStatus = status;
+
+      // Salle — l'écran « c'est parti »
+      const em = $('.success-eta em');
+      if (em) {
+        em.removeAttribute('data-i18n');
+        em.textContent = status === 'pending' ? t('prep_waiting')
+                       : status === 'ready' ? t('prep_now')
+                       : status === 'served' ? t('order_served')
+                       : t('prep_accepted');
+      }
+
+      // Comptoir — la barre de préparation
+      const bar = $('#prep-bar-fill');
+      const eta = $('#prep-eta');
+      if (bar) bar.style.width = (PREP_STAGE[status] || PREP_STAGE.pending) + '%';
+      if (eta) {
+        eta.textContent = status === 'ready' ? t('prep_now')
+                        : status === 'accepted' ? t('prep_accepted')
+                        : t('prep_waiting');
+      }
+
+      if (status === 'rejected') { showToast(t('order_refused')); currentOrderId = ''; return; }
+
+      /* À emporter : c'est L'ENCAISSEMENT au comptoir qui fait avancer l'écran,
+         pas un bouton que le client devrait penser à taper. Il annonce son
+         numéro, il paie, et son téléphone passe tout seul en préparation —
+         personne ne surveille un écran en attendant qu'on lui dise de cliquer.
+         (Le bouton reste, comme repli, si le client a déjà avancé lui-même.) */
+      if (status === 'accepted' && orderMode === 'takeout'
+          && $('#screen-cashier').classList.contains('is-active')) {
+        /* On ne rappelle PAS startPreparing() ici : cette fonction relance la
+           boucle, et nous sommes précisément à l'intérieur d'un de ses tours —
+           elle se rappellerait elle-même. L'écran suffit ; la barre a déjà été
+           positionnée quelques lignes plus haut. */
+        const etaLabel = $('[data-i18n="prep_ready_in"]');
+        if (etaLabel) etaLabel.textContent = '';
+        gotoScreen('screen-preparing');
+        refreshPermBanner();
+        return;
+      }
+      if (status === 'ready' && orderMode === 'takeout') triggerReady();
+      /* Remise en main propre : pour un retrait au comptoir c'est le point
+         final — il n'y a pas d'addition à encaisser plus tard qui viendrait
+         fermer la session à sa place. */
+      if (status === 'served' && orderMode === 'takeout') SESSION.markClosed('served');
+    }
+
     function watchTableOrder() {
       const em = $('.success-eta em');
-      if (!em || !currentOrderId) return;
-      if (tableWatchId) { clearInterval(tableWatchId); tableWatchId = null; }
-      em.removeAttribute('data-i18n');
-      em.textContent = t('prep_waiting');
-      const poll = async () => {
-        const res = await NET.orderStatus(currentOrderId);
-        if (!res || !res.ok) return;
-        const status = String(res.status || 'pending');
-        em.textContent = status === 'pending' ? t('prep_waiting') : t('prep_accepted');
-        if (status !== 'pending') { clearInterval(tableWatchId); tableWatchId = null; }
-      };
-      poll();
-      tableWatchId = setInterval(poll, 5000);
+      if (em) { em.removeAttribute('data-i18n'); em.textContent = t('prep_waiting'); }
+      lastStatus = '';
+      LIVE.start();
+      LIVE.kick();
+    }
+
+    /* La carte a bougé pendant que le client composait. Plutôt que de laisser
+       le plat dans le panier — où il ferait échouer chaque nouvelle tentative
+       à l'identique — on le retire et on le barre sur le fil, à sa place, dans
+       sa tuile. Le fil ne se réordonne pas sous les doigts : c'est la même
+       carte, avec un plat en moins de disponible. */
+    function dropUnavailable(ids, names) {
+      const byId = new Set((ids || []).map(String));
+      const byName = new Set((names || []).map(n => String(n).toLowerCase()));
+      let hit = false;
+      for (const m of MENU) {
+        const gone = byId.has(m.id) || byName.has(String(m.name || '').toLowerCase());
+        if (gone) { m.avail = false; hit = true; }
+      }
+      for (const [key, line] of [...cart.entries()]) {
+        const m = itemOf(line.id);
+        if (m && m.avail === false) { cart.delete(key); hit = true; }
+      }
+      if (!hit) return;
+      refreshCartUI();
+      const active = $('.menu-tab.is-active');
+      renderMenu((active && active.dataset.tab) || 'all');
     }
 
     /* ============ restart (back to menu after order sent) ============ */
     function restartMenu() {
-      if (tableWatchId) { clearInterval(tableWatchId); tableWatchId = null; }
       cart.clear();
       refreshCartUI();
       $$('.menu-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'all'));
@@ -4798,7 +5280,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ mode choice → next screen ============ */
-    function chooseMode(mode) {
+    async function chooseMode(mode) {
       orderMode = mode;
       if (mode === 'table') {
         tableNumber = '';
@@ -4806,9 +5288,28 @@ em, i, cite, dfn, var { font-style: normal; }
         updateContinueState();
         gotoScreen('screen-table');
       } else {
+        // Un retrait au comptoir s'assoit lui aussi : c'est la session qui
+        // porte la révocation quand la commande est remise au client.
+        if (!(await seatHere('takeout', ''))) return;
         gotoScreen('screen-menu');
         applyMenuMode();
       }
+    }
+
+    /* S'asseoir. Le seul chemin par lequel une session s'ouvre, pour que les
+       trois entrées (tag de table, tag de comptoir, choix à la main) passent
+       par les mêmes refus et les mêmes messages. */
+    async function seatHere(mode, table) {
+      if (SESSION.recentlySettled(mode, table)) {
+        // L'addition vient d'être réglée sur ce téléphone : recharger la page
+        // ne rouvre pas le robinet. Le tag de la table servira au client
+        // suivant, qui n'a pas ce souvenir dans le sien.
+        SESSION.closed = true;
+        SESSION.closedBy = 'settle';
+        onSessionClosed();
+        return false;
+      }
+      return SESSION.open(mode, table);
     }
 
     function applyMenuMode() {
@@ -4836,8 +5337,9 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ continue from table-entry to menu ============ */
-    function commitTable() {
+    async function commitTable() {
       if (!tableNumber) return;
+      if (!(await seatHere('table', tableNumber))) return;
       gotoScreen('screen-menu');
       applyMenuMode();
     }
@@ -4855,34 +5357,21 @@ em, i, cite, dfn, var { font-style: normal; }
        → ready. Staff acceptance is what moves it, exactly as decided. If the
        poll can't reach the store we hold the last known state and keep trying
        rather than declaring an order ready that isn't. */
-    const PREP_STAGE = { pending: 18, accepted: 62, ready: 100 };
+    const PREP_STAGE = { pending: 18, accepted: 62, ready: 100, served: 100 };
     function startPreparing() {
       const bar = $('#prep-bar-fill');
       const eta = $('#prep-eta');
       const etaLabel = $('[data-i18n="prep_ready_in"]');
-      if (prepRafId) { clearInterval(prepRafId); prepRafId = null; }
       if (etaLabel) etaLabel.textContent = '';
-      bar.style.width = PREP_STAGE.pending + '%';
-      eta.textContent = t('prep_waiting');
-
-      const poll = async () => {
-        if (!currentOrderId) return;
-        const res = await NET.orderStatus(currentOrderId);
-        if (!res || !res.ok) return;             // unreachable → keep the last state
-        const status = String(res.status || 'pending');
-        bar.style.width = (PREP_STAGE[status] || PREP_STAGE.pending) + '%';
-        if (status === 'ready') {
-          clearInterval(prepRafId);
-          prepRafId = null;
-          eta.textContent = t('prep_now');
-          triggerReady();
-          return;
-        }
-        eta.textContent = status === 'accepted' ? t('prep_accepted') : t('prep_waiting');
-      };
-      poll();
-      // setInterval (not rAF) so polling survives the phone screen sleeping.
-      prepRafId = setInterval(poll, 5000);
+      if (bar) bar.style.width = PREP_STAGE.pending + '%';
+      if (eta) eta.textContent = t('prep_waiting');
+      /* Le suivi lui-même est tenu par LIVE : une seule boucle pour la commande
+         ET la session, qui se met en veille avec l'écran et repart au réveil.
+         Deux minuteries séparées finissaient par se contredire — l'une arrêtée,
+         l'autre non — et c'est la commande à emporter qui restait figée. */
+      lastStatus = '';
+      LIVE.start();
+      LIVE.kick();
     }
 
     /* ============ takeout: ready (vibrate + chime + system notif) ============ */
@@ -5056,6 +5545,10 @@ em, i, cite, dfn, var { font-style: normal; }
         tableNumber = NET.table;
         renderTableDisplay();
         updateContinueState();
+        /* Le tag porte le numéro de table : le client est assis, on le sait, on
+           s'assoit avec lui tout de suite. C'est ce moment précis qui allume sa
+           table sur le plan de salle du comptoir. */
+        if (!(await seatHere('table', tableNumber))) return;
         gotoScreen('screen-menu');
         applyMenuMode();
       } else if (NET.mode === 'takeout') {
@@ -5092,6 +5585,7 @@ em, i, cite, dfn, var { font-style: normal; }
           photo: it.photo || '',
           video: it.video || '',
           tag: it.tag || '',
+          avail: it.avail !== false,
         });
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
       }
@@ -5099,13 +5593,14 @@ em, i, cite, dfn, var { font-style: normal; }
       // machine-translate it. Every language falls back to what they typed.
       MENU_I18N.fr = names; MENU_I18N.en = {}; MENU_I18N.ar = {};
 
-      // Category tabs are rebuilt from the merchant's own categories. "Top"
-      // only earns a tab when items actually carry video.
+      /* Les onglets sont ceux du patron, et rien d'autre. L'onglet « Top »
+         a été retiré : il ne montrait que les plats filmés, ce qui coupait la
+         carte en deux et laissait croire que le reste n'était pas commandable.
+         Depuis que chaque plat occupe la même tuile, tout le fil EST le fil
+         vidéo — un onglet pour le redire n'aurait plus rien à filtrer. */
       const used = new Set(MENU.map(m => m.cat));
       const tabs = $('.menu-tabs');
-      const hasVideo = MENU.some(m => m.video);
       const parts = [];
-      if (hasVideo) parts.push(`<button class="menu-tab" data-tab="top" data-i18n="tab_top">${escapeHtml(t('tab_top'))}</button>`);
       parts.push(`<button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab

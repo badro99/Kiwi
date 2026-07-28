@@ -109,7 +109,10 @@
       var KV = window.KiwiVenue;
       if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
         var cvd = KV.getCurrentVenueData();
-        var cs = cvd && cvd.name && slugStore(cvd.name);
+        // Le slug gravé (venues.js › slugOf) plutôt que le nom re-slugifié :
+        // renommer son établissement ne doit pas ouvrir un carnet vide à côté
+        // de celui où sont tous les clients.
+        var cs = cvd && ((cvd.slug || '') || (cvd.name && slugStore(cvd.name)));
         if (cs) { adoptLegacyBook(cs); return cs; }
       }
     } catch (_) {}

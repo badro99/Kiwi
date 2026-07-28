@@ -67,8 +67,17 @@ export async function onRequestPost(context) {
     if (!acc) return json({ error: 'unauthorized' }, 401);
     merchant = slugMerchant(acc.business || acc.email);
     accountId = sess.aid;
-    if (name) {
-      const wanted = slugMerchant(name);
+    /* QUEL magasin ? Le panneau l'envoie maintenant en clair (`merchant`) parce
+     * que le déduire du nom affiché ne marche que tant que personne n'a corrigé
+     * son enseigne : « Cafe Amira » renommé « Amira Café » ne donnait plus
+     * `cafe-amira`, la vérification de propriété échouait, et on retombait
+     * silencieusement sur l'établissement principal du compte — la caisse du
+     * café s'est ainsi appairée sous la boutique, et ses ventes avec elle.
+     * Le slug reste une DEMANDE : la ligne ci-dessous n'y consent que si le
+     * registre confirme que ce magasin appartient bien à ce compte. */
+    const asked = String((body && body.merchant) || '').trim().slice(0, 64) || slugMerchant(name || '');
+    if (asked) {
+      const wanted = asked;
       if (wanted && wanted !== merchant) {
         try {
           const owned = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')

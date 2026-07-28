@@ -3913,7 +3913,9 @@ function pdsWriteLocal(state) {
   try {
     var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
     if (vd && vd.custom && vd.name) {
-      var slug = _bqxSlug(vd.name);
+      // Slug gravé d'abord (venues.js › slugOf) : la caisse lit le plan sous le
+      // slug de son appairage, qui ne change pas quand l'enseigne se corrige.
+      var slug = vd.slug || _bqxSlug(vd.name);
       if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
     }
   } catch (e) {}
@@ -8405,10 +8407,15 @@ function _bqxVenue() {
       // from the account name the two ends silently disagreed: stock scanned in
       // at the register never appeared on the dashboard. Identity is only the
       // fallback, for an account that has no store record yet.
+      //
+      // Et c'est le slug GRAVÉ du magasin (venues.js › slugOf), pas une
+      // re-slugification de son nom : le nom se corrige, et un inventaire qui
+      // change de clé parce qu'on a ajouté un accent à l'enseigne est un
+      // inventaire perdu.
       var vd = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
       var biz = (window.KiwiMe && window.KiwiMe.business) || '';
       if (vd.custom && vd.name) {
-        var slug = _bqxSlug(vd.name);
+        var slug = vd.slug || _bqxSlug(vd.name);
         _bqxAdoptLegacy(slug, biz && _bqxSlug(biz));
         return slug;
       }

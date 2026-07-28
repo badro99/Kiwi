@@ -172,12 +172,17 @@ export async function onRequestGet(context) {
   let features = {};
   let pins = [];
   let type = '';
+  /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
+   * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
+   * mieux qu'un écran qui bugue. */
+  let suspended = false;
   try {
     const cfg = await env.DB.prepare(
-      `SELECT features, type FROM merchant_config WHERE merchant = ?`
+      `SELECT features, type, status FROM merchant_config WHERE merchant = ?`
     ).bind(merchant).first();
     if (cfg && cfg.features) { try { features = JSON.parse(cfg.features) || {}; } catch (_) {} }
     if (cfg && cfg.type) type = cfg.type;
+    if (cfg && String(cfg.status || '') === 'suspended') suspended = true;
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
@@ -187,7 +192,7 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, type });
+  return json({ features, pins, type, suspended });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the
@@ -262,6 +267,45 @@ export async function onRequestPost(context) {
        rattacher explicitement une fiche à un compte (admin/config.js). */
     if (owner === '') {          // on est déjà dans la branche wanted !== accSlug
       return json({ error: 'merchant-reserved' }, 403);
+    }
+    /* ── LE GARDE-FOU DU MAGASIN FANTÔME ──────────────────────────────────
+     * `owner === null` : aucune fiche sous ce slug. Deux situations très
+     * différentes se ressemblent ici, et il a fallu un incident pour les
+     * distinguer.
+     *
+     *   · une VRAIE création — le client vient d'ouvrir un établissement.
+     *     Elle arrive avec `fresh: true` (merchant-config.js › registerNewStore,
+     *     appelé par venues.js › createVenue et par l'inscription).
+     *   · un magasin qui a simplement changé de NOM. Le slug se calculait
+     *     depuis le nom affiché, donc corriger l'orthographe de son enseigne
+     *     présentait au serveur un slug inconnu. On lui fabriquait alors un
+     *     établissement neuf et vide : le 28 juillet 2026, une cliente a
+     *     rectifié « Cafe Amira » en « Amira Café » et s'est retrouvée avec un
+     *     troisième établissement dans la console, tandis que son historique
+     *     — clôtures, plan de salle, codes équipe, ventes — restait orphelin
+     *     sous l'ancien slug.
+     *
+     * La cause est corrigée côté client (le slug est désormais gravé sur
+     * l'établissement et ne suit plus le nom), mais un navigateur qui tourne
+     * encore sur l'ancien cache referait exactement la même chose. Alors on
+     * refuse ici : un compte qui possède DÉJÀ des magasins ne peut pas en créer
+     * un de plus sans le dire. On n'écrit rien et on ne se rabat sur rien —
+     * se rabattre sur le slug du compte rangerait les codes du café dans la
+     * boutique, ce qui est pire que ne rien faire. L'appel est fire-and-forget :
+     * un refus ne casse aucun écran.
+     *
+     * Un compte sans aucune fiche enregistrée (client d'avant le registre, base
+     * pas encore migrée) passe librement : c'est lui qui dit bonjour pour la
+     * première fois. */
+    if (owner === null && !(body && body.fresh === true)) {
+      let known = 0;
+      try {
+        const r = await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM merchant_config WHERE account_id = ?'
+        ).bind(sess.aid).first();
+        known = (r && Number(r.n)) || 0;
+      } catch (_) { known = 0; }   // colonne absente ⇒ comportement d'avant
+      if (known > 0) return json({ error: 'merchant-unknown', merchant: wanted }, 404);
     }
     merchant = wanted;
     storeName = wantedName || wanted;

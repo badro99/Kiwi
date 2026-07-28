@@ -163,7 +163,7 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, body && body.merchant);
+  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const raw = (body && body.data) || null;

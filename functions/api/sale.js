@@ -8,6 +8,7 @@
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
 import { entitledMerchant } from '../auth/_lib.js';
+import { storeSuspended } from './_private.js';
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
@@ -41,6 +42,14 @@ export async function onRequestPost({ request, env }) {
    * whatever the body claimed. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* Un établissement suspendu n'encaisse plus. C'est le seul endroit où la
+   * suspension doit vraiment mordre : tout le reste est confort, ceci est la
+   * caisse. La caisse garde sa file locale et retentera — rien n'est perdu, la
+   * boutique rouvre avec sa journée à la réactivation. */
+  if (await storeSuspended(env, merchant)) {
+    return json({ error: 'store-suspended', merchant }, 423);
+  }
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);

@@ -62,7 +62,14 @@
     mediaVid:   { fr: 'Ajouter une vidéo', en: 'Add a video', ar: 'إضافة فيديو' },
     mediaDel:   { fr: 'Retirer', en: 'Remove', ar: 'إزالة' },
     mediaUp:    { fr: 'Envoi…', en: 'Uploading…', ar: 'كيتصيفط…' },
-    mediaHint:  { fr: 'Visible par vos clients sur la carte en ligne.', en: 'Visible to your customers on the online menu.', ar: 'كيبان لكليانتك فالقائمة أونلاين.' },
+    mediaHint:  { fr: 'Aperçu tel que vos clients le verront. Vertical, 3 à 5 secondes : la vidéo tourne en boucle, sans son.', en: 'Preview exactly as your customers will see it. Vertical, 3 to 5 seconds: the clip loops, muted.', ar: 'المعاينة بحال ما غاديين يشوفوها كليانتك. عمودي، من 3 ل 5 ثواني: الفيديو كيدور بلا صوت.' },
+    /* Le fil du client met chaque plat dans la même tuile verticale : une vidéo
+       de trente secondes n'y est pas une vidéo plus riche, c'est une vidéo dont
+       personne ne verra la fin — et un fil où chaque tuile tourne à son rythme
+       cesse de ressembler à un fil. D'où un plafond dit clairement, avec la
+       durée constatée, plutôt qu'un refus muet à l'envoi. */
+    mediaLong:  { fr: 'Clip trop long ({n} s). Filmez 3 à 5 secondes — maximum {max} s.', en: 'Clip too long ({n}s). Film 3 to 5 seconds — {max}s max.', ar: 'الفيديو طويل بزاف ({n} ثانية). صوّر من 3 ل 5 ثواني — الحد {max} ثانية.' },
+    mediaWide:  { fr: 'Filmé à l\'horizontale : il sera recadré. Préférez la verticale.', en: 'Filmed landscape: it will be cropped. Prefer vertical.', ar: 'مصوّر بالعرض: غادي يتقصّ. حسن تصوّر بالطول.' },
     mediaOff:   { fr: 'Stockage média pas encore activé sur votre compte.', en: 'Media storage isn\'t enabled on your account yet.', ar: 'تخزين الميديا مازال ماتفعّلش فالحساب ديالك.' },
     mediaBig:   { fr: 'Fichier trop lourd.', en: 'File too large.', ar: 'الملف ثقيل بزاف.' },
     mediaBad:   { fr: 'Format non pris en charge.', en: 'Format not supported.', ar: 'الصيغة ماخدامة.' },
@@ -325,7 +332,11 @@
       .mx-field textarea { resize: vertical; min-height: 60px; }
       /* media picker — the file inputs stay hidden, these are the affordances */
       .mx-media { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-      .mx-media-prev { width: 64px; height: 64px; border-radius: 11px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); flex: 0 0 auto; }
+      /* 4/5 et non un carré : c'est EXACTEMENT le cadre de la tuile côté
+         client (--tile-ratio dans OrderPro.html). Un aperçu carré montrait au
+         patron une image que ses clients ne verraient jamais, et il découvrait
+         le recadrage une fois la carte publiée. */
+      .mx-media-prev { width: 76px; aspect-ratio: 4 / 5; height: auto; border-radius: 11px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); flex: 0 0 auto; display: block; }
       .mx-media-actions { display: flex; gap: 6px; flex-wrap: wrap; }
       .mx-media-btn { padding: 8px 12px; font-size: 12.5px; }
       .mx-media-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }
@@ -687,8 +698,11 @@
     function renderMedia() {
       const box = q('[data-f-media]');
       if (!box) return;
+      /* L'aperçu TOURNE, comme chez le client : c'est la seule façon pour le
+         patron de juger sa boucle — un point de départ mal choisi ne se voit
+         que quand ça reboucle. */
       const preview = media.video
-        ? `<video class="mx-media-prev" src="${esc(media.video)}" muted playsinline preload="metadata"></video>`
+        ? `<video class="mx-media-prev" src="${esc(media.video)}" autoplay loop muted playsinline preload="metadata" disablepictureinpicture></video>`
         : (media.photo ? `<img class="mx-media-prev" src="${esc(media.photo)}" alt="" />` : '');
       const del = (media.photo || media.video)
         ? `<button class="kb ghost mx-media-btn" type="button" data-f-media-del>${esc(tr(T.mediaDel))}</button>` : '';
@@ -706,9 +720,38 @@
       if (error === 'bad-type') return tr(T.mediaBad);
       return tr(T.mediaErr);
     }
+    /* Ce que le fichier contient VRAIMENT, avant de l'envoyer. Le navigateur
+       sait lire la durée et les dimensions d'un clip sans le téléverser : on
+       refuse donc localement, tout de suite, avec la durée constatée — plutôt
+       que de faire monter quinze mégaoctets pour dire non ensuite. */
+    const MAX_CLIP_S = 10;
+    function probeClip(file) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const v = document.createElement('video');
+        v.preload = 'metadata'; v.muted = true;
+        const done = (r) => { URL.revokeObjectURL(url); resolve(r); };
+        v.onloadedmetadata = () => done({ ok: true, seconds: v.duration || 0, w: v.videoWidth, h: v.videoHeight });
+        v.onerror = () => done({ ok: false });
+        // Un conteneur que le navigateur ne sait pas lire ne doit pas bloquer
+        // l'envoi : le serveur tranchera sur le type MIME.
+        setTimeout(() => done({ ok: false }), 4000);
+        v.src = url;
+      });
+    }
+
     async function handleFile(file, kind) {
       if (!file) return;
       if (!window.KiwiOrderPro || !window.KiwiOrderPro.uploadMedia) { msg(tr(T.mediaOff)); return; }
+      let warn = '';
+      if (kind === 'video') {
+        const p = await probeClip(file);
+        if (p.ok && p.seconds > MAX_CLIP_S + 0.5) {
+          msg(tr(T.mediaLong).replace('{n}', Math.round(p.seconds)).replace('{max}', MAX_CLIP_S));
+          return;
+        }
+        if (p.ok && p.w && p.h && p.w > p.h) warn = tr(T.mediaWide);
+      }
       msg(tr(T.mediaUp));
       const res = await window.KiwiOrderPro.uploadMedia(file);
       if (!res || !res.ok) { msg(uploadErr(res && res.error)); return; }
@@ -716,7 +759,9 @@
       // card can never show two competing things.
       if (kind === 'video') { media.video = res.url; media.photo = ''; }
       else { media.photo = res.url; media.video = ''; }
-      msg(tr(T.mediaHint));
+      // L'avertissement de cadrage survit à l'envoi : c'est APRÈS, en voyant
+      // l'aperçu recadré, qu'il devient compréhensible.
+      msg(warn || tr(T.mediaHint));
       renderMedia();
     }
     m.el.addEventListener('click', (e) => {

@@ -20,7 +20,7 @@
   'use strict';
 
   var POLL_MS = 6000;
-  var state = { orders: {}, since: 0, open: false, timer: null, seen: {} };
+  var state = { orders: {}, sessions: [], since: 0, open: false, timer: null, seen: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
@@ -108,10 +108,13 @@
         if (!j || !j.ok) return -1;
         state.since = j.now || state.since;
         var fresh = 0;
-        (j.orders || []).forEach(function (o) {
+        var delta = j.orders || [];
+        delta.forEach(function (o) {
           if (!state.seen[o.id] && o.status === 'pending') { fresh++; state.seen[o.id] = 1; }
           state.orders[o.id] = o;
         });
+        state.sessions = j.sessions || [];
+        bridge(delta);
         if (fresh) announce(fresh);
         paint();
         return fresh;
@@ -119,9 +122,26 @@
       .catch(function () { return -1; });   /* no backend / offline → keep the last picture */
   }
 
-  function setStatus(id, status) {
+  /* ── Le pont vers la caisse ───────────────────────────────────────────────
+   * Ce fichier savait afficher les commandes dans SON panneau, et c'est tout :
+   * « Accepter · envoyer en cuisine » postait l'état au serveur sans que rien
+   * n'apparaisse jamais sur l'écran cuisine ni sur le tableau À emporter. La
+   * raison était mécanique — kdsOrders, kdsPaint, renderVrapBoard sont des
+   * déclarations locales du script en ligne de kiwi-caisse.html, invisibles
+   * depuis un fichier séparé — et la caisse expose maintenant la porte.
+   * Absente (autre page, ancienne version), on ne fait rien : le panneau
+   * continue de fonctionner seul, exactement comme avant. */
+  function bridge(delta) {
+    try {
+      if (!window.KiwiCaisseKitchen) return;
+      var all = Object.keys(state.orders).map(function (k) { return state.orders[k]; });
+      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions);
+    } catch (_) {}
+  }
+
+  function setStatus(id, status, extra) {
     var m = merchant();
-    if (!m) return;
+    if (!m) return Promise.resolve(null);
     var prev = state.orders[id];
     // Optimistic, then reconciled by the next poll: the till must feel instant.
     if (prev) {
@@ -129,15 +149,44 @@
       else prev.status = status;
       paint();
     }
-    fetch('/api/order/queue', {
+    var body = { merchant: m, id: id, status: status };
+    // Le serveur affecté à la table, posé au moment de l'acceptation, et le
+    // paiement d'un retrait au comptoir : deux informations que SEULE la caisse
+    // détient à cet instant, et qui doivent voyager avec la transition.
+    if (extra && extra.server) body.server = extra.server;
+    if (extra && extra.paid) body.paid = true;
+    return fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: m, id: id, status: status }),
+      body: JSON.stringify(body),
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (j && j.ok) return;
-        if (prev) { state.orders[id] = prev; paint(); }   // server refused → put it back
+        if (j && j.ok) { bridge([]); return j; }
+        /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :
+         * c'est une autre caisse qui a fait le geste avant nous. Remettre
+         * l'état d'avant serait alors faux dans l'autre sens — le prochain
+         * sondage tranchera avec la vérité du serveur. */
+        if (prev) { state.orders[id] = prev; paint(); }
+        return j;
       })
-      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } });
+      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return null; });
+  }
+
+  /* ── L'addition est réglée : on coupe le téléphone ───────────────────────
+   * kiwi-caisse.html émet l'évènement depuis markPaid() — le point de passage
+   * commun à la carte, aux espèces et à l'addition partagée — et l'appel réseau
+   * vit ici. Une vente ne doit jamais attendre le réseau, ni échouer parce
+   * qu'il est tombé : la session se refermera au pire à son expiration. */
+  function closeSession(detail) {
+    var m = merchant();
+    if (!m || !detail) return;
+    var body = { merchant: m, closedBy: detail.why || 'settle' };
+    if (detail.session) body.closeSession = detail.session;
+    else if (detail.table) body.closeTable = String(detail.table);
+    else return;
+    fetch('/api/order/queue', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function () { state.since = 0; return pull(); }).catch(function () {});
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */
@@ -218,7 +267,14 @@
         '</div>'
       : (o.status === 'accepted'
           ? '<div class="kop-acts"><button class="kop-btn go" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button></div>'
-          : '');
+          : (o.status === 'ready'
+              /* Le point final. Sans lui, une commande restait « prête » pour
+               * toujours : le téléphone du client ne recevait jamais son
+               * remerciement, et la file gardait une ligne que plus personne
+               * n'avait à traiter. */
+              ? '<div class="kop-acts"><button class="kop-btn go" data-kop-served="' + esc(o.id) + '">' +
+                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button></div>'
+              : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
       '<div class="kop-top"><span class="kop-num">#' + String(o.number || 0).padStart(3, '0') + '</span>' +
       '<span class="kop-where">' + where + '</span>' + src +
@@ -279,12 +335,24 @@
       root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Commandes OrderPro');
       document.body.appendChild(root);
       root.addEventListener('click', function (e) {
-        var t = e.target.closest('[data-kop-acc],[data-kop-rej],[data-kop-ready],#kop-close');
+        var t = e.target.closest('[data-kop-acc],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
         if (!t) return;
         if (t.id === 'kop-close') { close(); return; }
-        if (t.dataset.kopAcc) setStatus(t.dataset.kopAcc, 'accepted');
-        else if (t.dataset.kopRej) setStatus(t.dataset.kopRej, 'rejected');
+        if (t.dataset.kopAcc) {
+          /* Accepter une commande en salle, c'est aussi décider AU NOM DE QUI
+           * elle part : le bon de cuisine porte le serveur affecté à la table,
+           * et seule la caisse connaît cette affectation à cet instant. */
+          var o = state.orders[t.dataset.kopAcc];
+          var srv = '';
+          try {
+            if (window.KiwiCaisseKitchen && o && o.mode === 'table') {
+              srv = window.KiwiCaisseKitchen.serverFor(o.table) || '';
+            }
+          } catch (_) {}
+          setStatus(t.dataset.kopAcc, 'accepted', { server: srv });
+        } else if (t.dataset.kopRej) setStatus(t.dataset.kopRej, 'rejected');
         else if (t.dataset.kopReady) setStatus(t.dataset.kopReady, 'ready');
+        else if (t.dataset.kopServed) setStatus(t.dataset.kopServed, 'served');
       });
     }
     root.style.display = 'flex';
@@ -321,5 +389,18 @@
   // sans attendre le prochain tour de poll).
   document.addEventListener('kiwi-config', function () { chip(); pull(); });
 
-  window.KiwiOrderInbox = { open: open, close: close, refresh: pull, orders: function () { return state.orders; } };
+  /* L'addition réglée coupe le téléphone. L'évènement vient de markPaid() dans
+   * kiwi-caisse.html — le seul point de passage commun à la carte, aux espèces
+   * et à l'addition partagée. */
+  document.addEventListener('kiwi-table-released', function (e) { closeSession(e.detail); });
+
+  window.KiwiOrderInbox = {
+    open: open, close: close, refresh: pull,
+    orders: function () { return state.orders; },
+    sessions: function () { return state.sessions; },
+    // La caisse pilote les transitions depuis l'écran cuisine et le tableau
+    // À emporter ; c'est le même chemin réseau, pas un second à maintenir.
+    setStatus: setStatus,
+    merchant: merchant,
+  };
 })();
