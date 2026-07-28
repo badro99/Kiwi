@@ -61,6 +61,11 @@ function load(globals) {
 /* ── 1. la phrase ───────────────────────────────────────────────────────── */
 const M = load({}).message;
 
+let reloads = 0;
+const Reload = load({ location: { reload() { reloads++; } } });
+Reload.reload();
+eq('le bouton utilise le vrai rechargement du navigateur', reloads, 1);
+
 eq('démo → dit que c’est une démo',
   M({ real: false, reached: false, changed: [], orders: -1 }),
   "Démo locale, il n'y a pas de serveur à interroger");
