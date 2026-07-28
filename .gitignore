@@ -44,3 +44,7 @@ bridge/package-lock.json
 
 # Rendered video masters — regenerate with video/render.mjs, never commit
 video/out/
+
+# Graphify knowledge graph — generated from the source by `graphify update .`,
+# ~8 Mo including its cache. Rebuild it locally, never commit it.
+graphify-out/

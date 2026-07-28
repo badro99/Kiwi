@@ -1,0 +1,18 @@
+# Ce que graphify ne doit pas lire — même syntaxe que .gitignore.
+#
+# Les bundles minifiés dominaient le graphe : three.min.js et motion.min.js
+# sortaient en tête des hubs, et les identifiants d'un caractère qu'ils
+# produisent (zi, Ue, Dt, Zt…) noyaient les vrais noms du projet. Ce sont des
+# dépendances, pas notre architecture.
+*.min.js
+video/vendor/
+node_modules/
+
+# Sorties générées : le graphe ne doit pas se lire lui-même.
+graphify-out/
+video/out/
+bridge/dist/
+
+# Doublons macOS « fichier 2.html » — 29 copies non suivies qui feraient
+# apparaître chaque page deux fois dans le graphe.
+* 2.*
