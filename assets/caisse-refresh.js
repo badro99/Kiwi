@@ -17,10 +17,9 @@
  *   · les modules et les PIN  KiwiConfig.reload()          → /api/config
  * Chaque module absent de ce métier est simplement sauté.
  *
- * CE QU'IL NE FAIT PAS : recharger la page. Le service worker sert déjà la
- * dernière version au prochain chargement (assets/pwa-update.js), et une vente
- * en cours ne doit jamais être arrachée des mains du caissier. Rafraîchir, ici,
- * veut dire « redemande au serveur », pas « redémarre ».
+ * Le bouton recharge maintenant la page comme le bouton du navigateur. La
+ * caisse sauvegarde déjà le service sur `beforeunload`, donc le rechargement
+ * bénéficie du même filet que Chrome sans exiger sa barre d'outils.
  *
  * Et il ne ment pas. « Déjà à jour » n'est affiché que si au moins un appel a
  * VRAIMENT eu une réponse : sinon le message dit que le serveur n'a pas
@@ -166,29 +165,23 @@
   }
 
   /* ── le bouton ──────────────────────────────────────────────────────────── */
+  function reloadPage() {
+    window.location.reload();
+  }
+
   function click(btn) {
     if (btn.disabled) return;
     btn.disabled = true;
     btn.classList.add('is-busy');
-    var started = Date.now();
-    run().then(function (out) {
-      /* Un aller-retour de 80 ms fait clignoter le bouton sans qu'on ait rien
-       * vu : on laisse le tour tourner le temps de le lire. */
-      var wait = Math.max(0, 420 - (Date.now() - started));
-      setTimeout(function () {
-        btn.disabled = false;
-        btn.classList.remove('is-busy');
-        toast(message(out));
-      }, wait);
-    });
+    reloadPage();
   }
 
   function make(className, label) {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = (className ? className + ' ' : '') + 'kx-refresh';
-    b.title = 'Redemander au serveur : inventaire, commandes en ligne, modules';
-    b.setAttribute('aria-label', 'Rafraîchir les données');
+    b.title = 'Recharger la caisse';
+    b.setAttribute('aria-label', 'Recharger la page de la caisse');
     b.innerHTML = ICON + '<span>' + label + '</span>';
     b.addEventListener('click', function () { click(b); });
     return b;
@@ -221,5 +214,5 @@
     return null;
   }
 
-  window.KiwiCaisseRefresh = { run: run, mount: mount, message: message };
+  window.KiwiCaisseRefresh = { run: run, mount: mount, message: message, reload: reloadPage };
 })();

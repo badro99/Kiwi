@@ -48,6 +48,8 @@
       '#kop-chip svg{width:19px;height:19px;color:var(--mint,#7DF2B0);}',
       '#kop-chip .kop-badge{background:var(--mint,#7DF2B0);color:var(--riad,#053B2C);font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 7px;min-width:18px;text-align:center;}',
       '#kop-chip.is-new{animation:kop-pulse 1.1s ease-in-out infinite;}',
+      '.shell>.main{position:relative;}',
+      '.shell>.main>#kop-chip{position:absolute;right:24px;bottom:22px;z-index:30;}',
       '@keyframes kop-pulse{0%,100%{box-shadow:0 8px 26px rgba(11,110,79,.34)}50%{box-shadow:0 8px 34px rgba(125,242,176,.75)}}',
       '@media (max-width:600px){#kop-chip{right:12px;bottom:74px;padding:11px 15px 11px 13px;}#kop-chip .kop-lbl{display:none;}}',
       /* panel */
@@ -320,8 +322,11 @@
     if (!b) {
       b = document.createElement('button'); b.id = 'kop-chip'; b.type = 'button';
       b.addEventListener('click', open);
-      document.body.appendChild(b);
     }
+    // Keep the order-entry panel clear: this belongs to the ordering workspace,
+    // not above the bill controls on the right.
+    var main = document.querySelector('.shell > .main');
+    (main || document.body).appendChild(b);
     var n = list('pending').length;
     b.innerHTML = ICON.bell + '<span class="kop-lbl">Commandes</span>' + (n ? '<span class="kop-badge">' + n + '</span>' : '');
   }

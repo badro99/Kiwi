@@ -595,6 +595,11 @@
       .mx-st-hint { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 0 0 14px; }
       .mx-st-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
       .mx-st-row { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--mx-line); border-radius: 11px; background: var(--surface); }
+      .mx-st-pick { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid var(--mx-line); border-radius: 11px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; text-align: start; cursor: pointer; }
+      .mx-st-pick:hover, .mx-st-pick.on { border-color: var(--atlas); background: var(--mint-soft); }
+      .mx-st-pick .check { margin-inline-start: auto; color: var(--atlas); font-weight: 700; }
+      .mx-st-new { display: flex; gap: 7px; margin-top: 12px; }
+      .mx-st-new input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--mx-line); border-radius: 9px; background: var(--surface); color: var(--ink); font: inherit; }
       .mx-st-sw { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--mx-line); cursor: pointer; flex: 0 0 22px; padding: 0; }
       .mx-st-nm { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); background: transparent; border: none; outline: none; font-family: var(--sans); padding: 2px 0; border-bottom: 1.5px solid transparent; }
       .mx-st-nm:focus { border-bottom-color: var(--atlas); }
@@ -739,7 +744,7 @@
                 </label>` : ''}
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.stations))}</span></button>
+                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations" data-arg="${cat ? esc(cat.id) : ''}">${BELL}<span>${esc(tr(T.stations))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
                 <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
               </div>
@@ -934,6 +939,68 @@
     // après avoir tapé perdrait la fin du nom. Capture, pour passer avant le
     // gestionnaire de fermeture de la modale.
     m.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') flushName(); }, true);
+    paint();
+  }
+
+  /* Le bouton de la catégorie sert à router CETTE catégorie. Un clic choisit
+   * un poste existant ; créer un poste ici le sélectionne immédiatement. */
+  function categoryStationModal(catId) {
+    const K = window.Kiwi;
+    store.update((d) => ensureKitchen(d));
+    const d0 = store.get();
+    const cat = catById(d0, catId);
+    if (!cat) return;
+    const m = K.modal({
+      tag: cat.name,
+      title: tr(T.stations),
+      width: 440,
+      body: '<div data-cst-body></div>',
+      foot: `<button class="kb ghost" type="button" data-cst-close style="flex:1;justify-content:center;">${esc(tr(T.close))}</button>`,
+    });
+    const body = m.el.querySelector('[data-cst-body]');
+
+    function paint() {
+      const d = store.get();
+      const kid = kitchenIdOf(d);
+      const current = catById(d, catId);
+      const selected = (current && current.station) || kid;
+      body.innerHTML = `<div class="mx-st-list">${stationsOf(d).map((s) => `
+        <button class="mx-st-pick ${s.id === selected ? 'on' : ''}" type="button" data-cst-pick="${esc(s.id)}">
+          <i class="mx-stdot" style="background:${esc(s.color || STATION_COLORS[0])}"></i>
+          <span>${esc(s.name)}</span>
+          ${s.id === kid ? `<small>${esc(tr(T.catStationD))}</small>` : ''}
+          ${s.id === selected ? '<span class="check">✓</span>' : ''}
+        </button>`).join('')}</div>
+        <div class="mx-st-new">
+          <input type="text" data-cst-name placeholder="${esc(tr(T.stationEx))}" aria-label="${esc(tr(T.stationNm))}" />
+          <button class="kb" type="button" data-cst-add>${esc(tr(T.stationAdd))}</button>
+        </div>`;
+    }
+
+    body.addEventListener('click', (e) => {
+      const pick = e.target.closest('[data-cst-pick]');
+      if (pick) {
+        setCategoryStation(catId, pick.dataset.cstPick);
+        m.close(); render();
+        return;
+      }
+      if (e.target.closest('[data-cst-add]')) {
+        const input = body.querySelector('[data-cst-name]');
+        const name = String((input && input.value) || '').trim();
+        if (!name) { if (input) input.focus(); return; }
+        const before = new Set(stationsOf(store.get()).map((s) => s.id));
+        addStation(name);
+        const created = stationsOf(store.get()).find((s) => !before.has(s.id));
+        if (created) setCategoryStation(catId, created.id);
+        m.close(); render();
+      }
+    });
+    body.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.closest('[data-cst-name]')) {
+        e.preventDefault(); body.querySelector('[data-cst-add]').click();
+      }
+    });
+    m.el.querySelector('[data-cst-close]').addEventListener('click', () => m.close());
     paint();
   }
 
@@ -1247,7 +1314,10 @@
       confirmThen(tr(T.delCatQ), () => { deleteCategory(id); if (activeCat === id) { activeCat = null; activeSub = null; } render(); });
     };
     H['mx-sub-add'] = (_el, id) => promptText({ title: tr(T.addSub), placeholder: tr(T.subName), ok: tr(T.addSub) }, (v) => { if (v) { addSubcategory(id, v); activeCat = id; render(); } });
-    H['mx-stations'] = () => stationsModal();
+    // This button belongs to the category currently open in the menu pane.
+    // Do not fall back to the station-management screen: the merchant only
+    // needs to choose or create the single destination for this category.
+    H['mx-stations'] = () => { if (activeCat) categoryStationModal(activeCat); };
     H['mx-opts'] = () => optsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };

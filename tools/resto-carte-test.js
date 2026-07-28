@@ -575,8 +575,10 @@ ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
 ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
-ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.map/.test(caisse),
-  'le board cuisine survit à un rechargement du comptoir, sinon le drapeau `sent` perdrait la commande');
+ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !o\.opId\)\.map/.test(caisse),
+  'le board cuisine local survit au rechargement sans dupliquer les tickets Order Pro gérés par le serveur');
+ok(/if \(!o \|\| o\.opId\) return;/.test(caisse),
+  'un ancien ticket Order Pro déjà enregistré localement ne ressuscite pas au rechargement');
 ok(/let\s+kdsOrderSeq = IS_DEMO \? 52 : 0;/.test(caisse),
   'un vrai commerçant commence sa numérotation à 1, pas à 53');
 
