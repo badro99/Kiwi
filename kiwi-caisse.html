@@ -6973,7 +6973,7 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', kdsReady: false };
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -7000,9 +7000,16 @@
       const labels = { all: 'Tout' };
       const colors = {};
       const order = ['all'];
+      /* Le routage voyage sur la CATÉGORIE, pas sur le plat. La caisse continue
+         de porter un `station` par ligne de menu — c'est ce que lit
+         kdsStationFor — mais c'est celui de sa catégorie, résolu ici une fois
+         pour toutes. Un plat ajouté demain dans « Boissons » part au bar sans
+         que personne n'ait à y penser. */
+      const catStation = {};
       cats.forEach((c, i) => {
         labels[c.id] = c.name || 'Sans nom';
         colors[c.id] = CAT_PALETTE[i % CAT_PALETTE.length];
+        catStation[c.id] = String(c.station || '');
         order.push(c.id);
       });
       /* Un plat sans catégorie ne doit pas disparaître de la caisse : le patron
@@ -7010,16 +7017,17 @@
       let loose = false;
       const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
-        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: it.station || '' };
+        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: catStation[cat] || '' };
       });
       if (loose) {
         labels._autres = 'Autres';
         colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
         order.push('_autres');
       }
-      /* Les postes, dans l'ordre du patron — le premier est le poste par défaut.
-         Une couleur qui n'est pas un #RRGGBB retombe sur la palette : cette
-         valeur part directement dans un attribut style. */
+      /* Les postes, dans l'ordre du patron — c'est l'ordre des onglets de
+         l'écran cuisine, rien de plus. Une couleur qui n'est pas un #RRGGBB
+         retombe sur la palette : cette valeur part directement dans un
+         attribut style. */
       carteState.stations = (Array.isArray(d.stations) ? d.stations : [])
         .filter(s => s && s.id && s.name)
         .map((s, i) => ({
@@ -7027,6 +7035,14 @@
           name: String(s.name),
           raw: /^#[0-9a-fA-F]{6}$/.test(String(s.color || '')) ? String(s.color) : STATION_PALETTE[i % STATION_PALETTE.length],
         }));
+      /* Le repli, NOMMÉ. Sans lui on retomberait sur « le premier de la liste »,
+         et l'ordre des onglets redeviendrait à son insu un réglage de routage :
+         monter le bar d'un cran enverrait toute la carte non routée au bar. Le
+         secours reste le premier poste — une carte écrite avant ce changement
+         doit continuer de router exactement comme hier. */
+      const stIds = carteState.stations.map(s => s.id);
+      carteState.kitchenId = (d.kitchenId && stIds.indexOf(String(d.kitchenId)) >= 0)
+        ? String(d.kitchenId) : (stIds[0] || '');
       catLabels = labels;
       catColor = colors;
       catOrder = order;
@@ -12040,15 +12056,28 @@
     const KDS_CAT_STATION = { entrees: 'salade', tajines: 'cuisson', couscous: 'cuisson',
       pastillas: 'cuisson', sandwiches: 'cuisson', boissons: 'boissons', desserts: 'pastry' };
 
-    /* Où part CE plat. Une seule réponse pour toute la caisse : le poste choisi
-       par le patron s'il existe encore, la table par catégorie en démo, le poste
-       par défaut sinon. Un plat n'atterrit jamais dans un filtre fantôme. */
+    /* La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'a envoyé
+       ailleurs. Elle est nommée dans la carte (kitchenId) plutôt que déduite de
+       l'ordre de la liste : un patron qui réordonne ses onglets ne doit pas
+       détourner sa carte sans le savoir. Le premier poste reste le secours,
+       pour une carte écrite avant que ce réglage existe. */
+    function kdsKitchenId() {
+      const list = kdsStations();
+      if (!IS_DEMO) {
+        const want = carteState.kitchenId;
+        if (want && list.some(s => s.id === want)) return want;
+      }
+      return list[0].id;
+    }
+    /* Où part CE plat. Une seule réponse pour toute la caisse : le poste de sa
+       catégorie s'il existe encore, la table par catégorie en démo, la cuisine
+       sinon. Un plat n'atterrit jamais dans un filtre fantôme. */
     function kdsStationFor(m) {
       const list = kdsStations();
       const want = m && m.station;
       if (want && list.some(s => s.id === want)) return want;
       if (IS_DEMO && m && KDS_CAT_STATION[m.cat]) return KDS_CAT_STATION[m.cat];
-      return list[0].id;
+      return kdsKitchenId();
     }
     /* Le patron a supprimé ou renommé un poste : refaire la barre, et rendre la
        vue « Toutes » si le filtre actif pointait vers un poste disparu — sinon
@@ -13304,15 +13333,20 @@
 
     /* À quel poste envoyer un plat dont on ne connaît que le nom. La commande
        vient du téléphone : elle porte le nom de la carte, pas la catégorie. On
-       retrouve le plat dans la carte chargée par la caisse, sinon « cuisson »
-       — un ticket au mauvais poste reste un ticket ; un ticket nulle part, non. */
+       retrouve le plat dans la carte chargée par la caisse, et on lui applique
+       LA règle commune — pas une seconde, écrite à côté.
+       Le repli était « cuisson », l'identifiant d'un poste de la DÉMO : chez un
+       vrai commerçant ce poste n'existe pas, et le plat partait dans un filtre
+       que personne ne regarde — c'est-à-dire nulle part. La cuisine, elle,
+       existe toujours. Un ticket au mauvais poste reste un ticket ; un ticket
+       nulle part, non. */
     function kdsStationForName(name) {
       const n = String(name || '').toLowerCase();
       try {
         const hit = (menu || []).find(m => String(m.name || '').toLowerCase() === n);
-        if (hit) return hit.station || KDS_CAT_STATION[hit.cat] || 'cuisson';
+        if (hit) return kdsStationFor(hit);
       } catch (_) {}
-      return 'cuisson';
+      return kdsKitchenId();
     }
 
     /* Ce que orderpro-inbox.js appelle à chaque tour de sondage. */
