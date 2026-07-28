@@ -327,19 +327,81 @@
     return { slug: DR() ? DR().storeSlug() : '', name: vd.name || '', location: vd.location || vd.city || '', type: vd.type || '' };
   }
 
-  /* L'instantané s'il existe, sinon un calcul direct. `live` dit lequel, parce
-     que la page n'affiche pas les mêmes promesses dans les deux cas. */
+  /* Les totaux du jour vus par le FEED du tableau de bord (KiwiSales), sans
+     construire le rapport entier. Sert deux fois : le repli sans instantané,
+     et le contrôle de cohérence ci-dessous. */
+  function feedTotals(day) {
+    var d = DR(); if (!d) return null;
+    var b;
+    try { b = d.dayBounds(day); } catch (_) { return null; }
+    var net = 0, gross = 0, txns = 0, seen = Object.create(null);
+    dashSales().forEach(function (raw) {
+      var s = null;
+      try { s = d.normSale(raw); } catch (_) {}
+      if (!s || s.ts < b.from || s.ts >= b.to) return;
+      var k = s.id || (s.ts + ':' + s.amount + ':' + s.ref);
+      if (seen[k]) return;
+      seen[k] = 1;
+      if (s.kind === 'refund' || s.amount < 0) { net -= Math.abs(s.amount); }
+      else { net += s.amount; gross += s.amount; txns++; }
+    });
+    return { net: Math.round(net * 100) / 100, gross: Math.round(gross * 100) / 100, txns: txns };
+  }
+
+  /* L'instantané de la caisse peut avoir RATÉ des ventes que le serveur, lui,
+     a bien reçues — une vente encaissée sans service ouvert n'entre dans aucun
+     journal local, donc dans aucun instantané, mais part quand même en
+     synchronisation. Quand le feed du jour dépasse l'instantané, l'instantané
+     ment par omission et on ne le montre pas tel quel. L'inverse (feed en
+     retrait) ne prouve rien — synchronisation en retard, historique élagué —
+     et l'instantané garde alors le dernier mot. */
+  function snapMissesSales(snap, day) {
+    if (!snap) return false;
+    var f = feedTotals(day);
+    if (!f) return false;
+    return f.txns > (+snap.txns || 0) || f.gross > (+snap.gross || 0) + 0.005;
+  }
+
+  /* Ce que seule la caisse sait, relu depuis son instantané, pour le rendre à
+     build() quand les ventes se recalculent depuis le feed. */
+  function sessionOf(snap) {
+    var c = snap.cash || {};
+    return {
+      openedAt: snap.openedAt, closedAt: snap.closedAt,
+      openedBy: snap.openedBy, closedBy: snap.closedBy,
+      openingFloat: c.opening,
+      cashMovements: c.movements || [],
+      countedCash: c.counted,
+      discounts: snap.discounts && snap.discounts.amount,
+      discountsCount: snap.discounts && snap.discounts.count,
+      cancels: snap.cancels,
+      handovers: snap.handovers || [],
+    };
+  }
+
+  /* L'instantané s'il existe ET couvre tout ce que le feed connaît, sinon un
+     calcul direct. `live` dit lequel, parce que la page n'affiche pas les mêmes
+     promesses dans les deux cas — un recalcul qui a hérité du tiroir de
+     l'instantané n'est PAS `live` : son tiroir, lui, est connu. */
   function resolve(day) {
     var d = DR(); if (!d) return null;
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap) return snap;
+    if (snap && !snapMissesSales(snap, day)) return snap;
     var built = null;
     try {
-      built = d.build({ day: day, sales: dashSales(), session: {}, store: storeInfo(),
-                        source: 'dashboard', categoryIndex: catIndex() });
-    } catch (_) { return null; }
-    if (built) built.live = true;   /* aucun instantané : le tiroir est inconnu */
+      built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
+                        store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() });
+    } catch (_) { return snap; }
+    if (!built) return snap;
+    if (snap) {
+      /* La comptabilité de l'instantané suit : clôtures et révisions sont un
+         historique, pas un calcul. */
+      built.closedCount = snap.closedCount || 0;
+      built.revisions = snap.revisions || [];
+    } else {
+      built.live = true;   /* aucun instantané : le tiroir est inconnu */
+    }
     return built;
   }
 
@@ -351,28 +413,17 @@
     var d = DR(); if (!d) return { net: 0, gross: 0, txns: 0, has: false, closed: false };
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap) {
+    if (snap && !snapMissesSales(snap, day)) {
       return {
         net: +snap.net || 0, gross: +snap.gross || 0, txns: +snap.txns || 0,
         has: !!(snap.txns || (snap.refunds && snap.refunds.count)),
         closed: isClosed(snap),
       };
     }
-    var b, net = 0, gross = 0, txns = 0, seen = Object.create(null);
-    try { b = d.dayBounds(day); } catch (_) { return { net: 0, gross: 0, txns: 0, has: false, closed: false }; }
-    dashSales().forEach(function (raw) {
-      var s = null;
-      try { s = d.normSale(raw); } catch (_) {}
-      if (!s || s.ts < b.from || s.ts >= b.to) return;
-      var k = s.id || (s.ts + ':' + s.amount + ':' + s.ref);
-      if (seen[k]) return;
-      seen[k] = 1;
-      if (s.kind === 'refund' || s.amount < 0) { net -= Math.abs(s.amount); }
-      else { net += s.amount; gross += s.amount; txns++; }
-    });
+    var f = feedTotals(day) || { net: 0, gross: 0, txns: 0 };
     return {
-      net: Math.round(net * 100) / 100, gross: Math.round(gross * 100) / 100,
-      txns: txns, has: txns > 0, closed: false,
+      net: f.net, gross: f.gross, txns: f.txns, has: f.txns > 0,
+      closed: snap ? isClosed(snap) : false,
     };
   }
 
