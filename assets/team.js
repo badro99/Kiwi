@@ -880,6 +880,39 @@
     } catch (_) { return ''; }
   }
 
+  /* A member belongs to one store, never to the whole account. Older records
+   * only carry `venueType` (the browser-local venue id); newer ones also carry
+   * the stable store slug. Keep unknown legacy ids — another device cannot
+   * resolve them — but reject an id we can positively resolve to another store.
+   * This heals rosters that were merged before team documents became per-store
+   * without guessing about records whose origin cannot be proved. */
+  function teamSlug() {
+    const k = teamVenueKey();
+    try { return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : ''; }
+    catch (_) { return ''; }
+  }
+  function memberBelongsToStore(member, slug) {
+    if (!member || !slug) return true;
+    if (member.venueSlug) return String(member.venueSlug) === slug;
+    try {
+      const legacy = member.venueType && window.KiwiCloudDoc
+        ? window.KiwiCloudDoc.slugFor(member.venueType) : '';
+      return !legacy || legacy === slug;
+    } catch (_) { return true; }
+  }
+  function scopeTeamDoc(doc, slug) {
+    const src = doc || {};
+    const members = (Array.isArray(src.members) ? src.members : [])
+      .filter((m) => memberBelongsToStore(m, slug));
+    const alive = Object.create(null);
+    members.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
+    return {
+      members,
+      hours: mergeByDay(src.hours, null, alive),
+      shifts: mergeByDay(src.shifts, null, alive),
+    };
+  }
+
   /* Fusion. Union des membres, cet appareil prioritaire sur un id connu des deux
    * côtés. Un salarié supprimé ici et présent là-bas REVIENT — c'est assumé :
    * entre ressusciter une ligne qu'il faut resupprimer et perdre un salarié avec
@@ -900,6 +933,9 @@
     return out;
   }
   function mergeTeamDoc(mine, theirs) {
+    const slug = teamSlug();
+    mine = scopeTeamDoc(mine, slug);
+    theirs = scopeTeamDoc(theirs, slug);
     const seen = Object.create(null);
     const members = [];
     const take = (m) => { const id = m && m.id; if (!id || seen[id]) return; seen[id] = 1; members.push(m); };
@@ -922,19 +958,20 @@
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
         if (!k) return { members: [], hours: {}, shifts: {} };
-        return {
+        return scopeTeamDoc({
           members: root.byVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
-        };
+        }, teamSlug());
       },
       write: (doc) => {
         const k = teamVenueKey();
         if (!k || !doc) return;
         const root = window.__kiwiTeamV2;
-        root.byVenue[k] = Array.isArray(doc.members) ? doc.members : [];
-        root.hoursByVenue[k] = doc.hours || {};
-        root.shiftsByVenue[k] = doc.shifts || {};
+        const clean = scopeTeamDoc(doc, teamSlug());
+        root.byVenue[k] = clean.members;
+        root.hoursByVenue[k] = clean.hours;
+        root.shiftsByVenue[k] = clean.shifts;
         persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
@@ -959,6 +996,22 @@
     const root = window.__kiwiTeamV2;
     const key = teamKey(venue);
     if (!root.byVenue[key]) root.byVenue[key] = (venue && venue.custom) ? [] : seedFor((venue && venue.type) || 'restaurant');
+    if (venue && venue.custom) {
+      const slug = (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })();
+      if (slug) {
+        const before = root.byVenue[key];
+        const kept = before.filter((m) => memberBelongsToStore(m, slug));
+        if (kept.length !== before.length) {
+          root.byVenue[key] = kept;
+          const alive = Object.create(null);
+          kept.forEach((m) => { if (m && m.id) alive[m.id] = 1; });
+          root.hoursByVenue[key] = mergeByDay(root.hoursByVenue[key], null, alive);
+          root.shiftsByVenue[key] = mergeByDay(root.shiftsByVenue[key], null, alive);
+          persistTeams();
+          setTimeout(() => { afterTeamChange(); teamCloudPush(); }, 0);
+        }
+      }
+    }
     // seedHours() invents 4–8 h a day so the pitch demo looks staffed. A REAL
     // store must never be handed hours nobody worked: those hours are now money
     // on Paie & planning ("à payer · période" = base salaries + hours × rate), so
@@ -2040,6 +2093,7 @@
       notes: (data.notes || '').trim(),
       avatarTone: st.avatarTone || AVATAR_TONES[Math.floor(Math.random() * AVATAR_TONES.length)],
       venueType,
+      venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(venueType) || ''; } catch (_) { return ''; } })(),
       createdAt: st.origCreatedAt || Date.now(),
     };
 
@@ -2843,7 +2897,9 @@
         startDate: '', endDate: '', baseSalary: 0, hourlyRate: 0,
         languages: [], address: '', cin: '', emergencyName: '', emergencyPhone: '', notes: '',
         avatarTone: AVATAR_TONES[list.length % AVATAR_TONES.length],
-        role, venueType: key, createdAt: Date.now(),
+        role, venueType: key,
+        venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })(),
+        createdAt: Date.now(),
       });
       hours[id] = {};
       added++;
