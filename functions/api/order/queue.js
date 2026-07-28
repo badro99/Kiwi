@@ -1,8 +1,22 @@
-// /api/order/queue — the STAFF half of the order relay (the caisse).
+// /api/order/queue — the STAFF half of the order relay (the caisse ET la cuisine).
 //
-//   GET  ?merchant=slug&since=<ts>        → { ok, orders:[…], sessions:[…], now }
+//   GET  ?merchant=slug&since=<ts>[&role=kitchen]   → { ok, orders:[…], sessions:[…], now }
 //   POST { merchant, id, status, server?, paid? }   → { ok, id, status, number }
 //   POST { merchant, closeSession | closeTable }    → { ok, closed }
+//   POST { merchant, create:{…} }                   → { ok, id, number, status }
+//
+// ── Pourquoi la caisse ÉCRIT ici, elle aussi ────────────────────────────────
+// Cette file a été écrite pour le téléphone du client : lui déposait, le
+// comptoir lisait. Le chemin inverse — le serveur tape une commande AU COMPTOIR
+// et la cuisine doit la voir — n'existait tout simplement pas. La caisse
+// poussait son bon dans un tableau en mémoire de sa propre page et imprimait :
+// une tablette posée en cuisine ne recevait RIEN de ce qu'un serveur venait de
+// saisir, parce que rien ne sortait jamais de l'appareil.
+//
+// D'où `create`. Une commande venue de la caisse arrive DÉJÀ ACCEPTÉE : la
+// décision humaine que `pending` attend a été prise par le serveur au moment où
+// il a appuyé sur « Envoyer en cuisine ». La refaire attendre en cuisine
+// n'ajouterait qu'un geste et un retard.
 //
 // NOT public. This path is deliberately left OUT of the gate's OrderPro
 // carve-out (which matches /api/order exactly, not the prefix), so reaching it
@@ -83,7 +97,15 @@ export async function onRequestGet(context) {
   // échouer : une base sans la table `orders` doit quand même compter comme
   // « caisse allumée », sinon activer Order Pro sur une base pas encore migrée
   // fermerait la porte au lieu de l'ouvrir.
-  await deskTouch(env, merchant);
+  //
+  // …mais PAS quand c'est l'écran cuisine qui sonde. Ce pointage est la seule
+  // preuve que le COMPTOIR est allumé, et c'est lui qui autorise un téléphone à
+  // ouvrir une session. Une tablette oubliée allumée en cuisine aurait donc
+  // gardé la commande à distance ouverte toute la nuit, commerce fermé : la
+  // protection « caisse éteinte ⇒ plus personne ne commande » se serait éteinte
+  // avec elle, sans que personne ne s'en aperçoive.
+  const role = (url.searchParams.get('role') || '').trim().toLowerCase();
+  if (role !== 'kitchen') await deskTouch(env, merchant);
 
   // `since` est le curseur de la caisse : elle demande ce qui a changé depuis la
   // dernière réponse, donc un long service coûte une petite réponse par tour.
@@ -376,6 +398,29 @@ export async function onRequestPost(context) {
     return json({ ok: true, closed });
   }
 
+  /* ── Déposer un bon venu de la caisse ─────────────────────────────────────
+   * Le serveur a tapé la commande d'une table (ou une vente à emporter) et
+   * appuyé sur « Envoyer en cuisine ». Jusqu'ici ce geste ne quittait pas
+   * l'appareil : le bon vivait dans un tableau JavaScript de la page et
+   * s'imprimait, point. Une tablette en cuisine ne pouvait rien en savoir.
+   *
+   * Trois choix qui méritent d'être dits :
+   *  · `accepted` d'emblée. La décision humaine que `pending` attend vient
+   *    d'être prise par le serveur ; la redemander en cuisine n'ajouterait
+   *    qu'un geste et un retard au milieu d'un coup de feu.
+   *  · les prix viennent de la caisse, PAS du catalogue. À l'inverse du
+   *    téléphone d'un inconnu (voir priceOrder dans _lib.js), l'appelant est
+   *    ici du personnel authentifié de CE commerce : ce qu'il a tapé au
+   *    comptoir EST la vérité de la vente, remise offerte comprise. On
+   *    recalcule seulement le total, pour qu'il ne puisse pas dériver de ses
+   *    lignes.
+   *  · idempotent sur `id`. La caisse mint son identifiant AVANT d'appeler et
+   *    rejoue le même en cas de réseau tombé ; sans ça, un tunnel de trente
+   *    secondes dans un sous-sol aurait fait sortir le même plat deux fois. */
+  if (b && b.create && typeof b.create === 'object') {
+    return createTicket(env, merchant, b.create, now);
+  }
+
   /* ── Faire avancer une commande ───────────────────────────────────────── */
   const id = String((b && b.id) || '').trim();
   const status = String((b && b.status) || '').trim();
@@ -471,4 +516,114 @@ export async function onRequestPost(context) {
   }
 
   return json({ ok: true, id: row.id, status: row.status, number: row.number });
+}
+
+/* ═══════════ LE BON DE CAISSE DEVIENT UNE LIGNE QUE LA CUISINE PEUT LIRE ════
+ * Appelé par POST { merchant, create:{…} }. `merchant` est déjà résolu par le
+ * serveur — jamais celui que le corps prétend.
+ *
+ * Forme attendue :
+ *   { id, mode:'table'|'takeout', table, server, lines:[{name,qty,unitPrice,note,station}] }
+ *
+ * `station` voyage AVEC la ligne. La cuisine ne connaît pas la carte du
+ * commerçant : sans le poste posé au moment de l'envoi, la tablette devrait
+ * relire le catalogue pour savoir si un plat va au bar ou au piano, et un plat
+ * renommé depuis casserait le rapprochement. Le bon porte donc sa propre
+ * vérité, figée à l'instant où il est parti — comme le ticket papier.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+const MAX_LINES = 60;
+const MAX_QTY = 99;
+
+function cleanLines(raw) {
+  const out = [];
+  if (!Array.isArray(raw)) return out;
+  for (const l of raw.slice(0, MAX_LINES)) {
+    if (!l) continue;
+    const name = String(l.name || '').trim().slice(0, 80);
+    if (!name) continue;
+    out.push({
+      name,
+      qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(l.qty) || 1))),
+      unitPrice: Math.max(0, Math.round(Number(l.unitPrice) || 0)),
+      note: String(l.note || '').slice(0, 200),
+      station: String(l.station || '').slice(0, 40),
+    });
+  }
+  return out;
+}
+
+async function createTicket(env, merchant, c, now) {
+  const id = String(c.id || '').trim();
+  if (!ORDER_ID.test(id)) return json({ error: 'bad-id' }, 400);
+
+  const lines = cleanLines(c.lines);
+  if (!lines.length) return json({ error: 'empty-order' }, 400);
+
+  const mode = c.mode === 'takeout' ? 'takeout' : 'table';
+  const table = mode === 'table' ? normTable(c.table) : '';
+  const server = String(c.server || '').trim().slice(0, 40);
+  const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  const linesJson = JSON.stringify(lines);
+  const today = startOfDay(now);
+
+  /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
+   * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
+   * marquée prête en cuisine entre-temps, et un UPDATE la ferait reculer. */
+  try {
+    const dup = await env.DB.prepare(
+      'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+    ).bind(id, merchant).first();
+    if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status, replayed: true });
+  } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
+
+  /* Même numérotation que le relais téléphone : un compteur par commerçant et
+   * par jour, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
+   * entre « lire le max » et « écrire ». MAX() sans GROUP BY rend toujours une
+   * ligne, donc le premier bon du jour reçoit bien le numéro 1. */
+  const NUMBER = 'COALESCE(MAX(number), 0) + 1';
+  const FROM_TODAY = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
+  const BASE_COLS = 'id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts';
+  const BASE_VALS = `?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?`;
+  const head = [id, merchant, mode, table, total, linesJson, now, now];
+  const tail = [merchant, today];
+
+  /* Les colonnes se sont ajoutées par vagues, et toutes les bases n'ont pas reçu
+   * les mêmes : `server_name` est venu avec la session de table, `channel` avec
+   * les canaux extérieurs. Une base à qui il manque `channel` doit quand même
+   * garder le NOM DU SERVEUR — l'écrire dans le même énoncé que `channel`
+   * faisait tomber les deux ensemble, et le bon sortait anonyme (« c'est pour
+   * qui, la 7 ? », la question que ce champ existe pour supprimer).
+   * Du plus riche au plus pauvre, on s'arrête au premier qui répond. */
+  const SHAPES = [
+    { cols: BASE_COLS + ', server_name, channel, priced_ts',
+      vals: BASE_VALS + `, ?, 'caisse', ?`, mid: [server, now] },
+    { cols: BASE_COLS + ', server_name', vals: BASE_VALS + ', ?', mid: [server] },
+    { cols: BASE_COLS, vals: BASE_VALS, mid: [] },
+  ];
+
+  let row = null;
+  let lastErr = null;
+  for (const s of SHAPES) {
+    try {
+      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_TODAY}`)
+        .bind(...head, ...s.mid, ...tail).first();
+      lastErr = null;
+      break;
+    } catch (e) { lastErr = e; row = null; }
+  }
+
+  if (lastErr) {
+    /* Course avec un rejeu simultané du même identifiant : la clé primaire a
+     * parlé. On relit et on rend la commande de l'autre requête, exactement
+     * comme un renvoi tardif — jamais un deuxième bon. */
+    try {
+      const raced = await env.DB.prepare(
+        'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(id, merchant).first();
+      if (raced) return json({ ok: true, id: raced.id, number: raced.number, status: raced.status, replayed: true });
+    } catch (_) {}
+    return json({ error: 'write-failed', detail: String((lastErr && lastErr.message) || lastErr) }, 500);
+  }
+
+  return json({ ok: true, id, number: (row && row.number) || 1, status: 'accepted', total });
 }

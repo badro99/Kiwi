@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Kiwi Cuisine</title>
+  <meta name="description" content="Écran cuisine Kiwi — les bons de la caisse arrivent ici, sans imprimante." />
+  <meta name="theme-color" content="#053B2C" />
+  <link rel="manifest" href="cuisine.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icons/kiwi-caisse-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Les jetons de marque, partagés avec le tableau de bord et la caisse.
+       L'écran cuisine est le MÊME produit vu depuis le passe : il n'a pas sa
+       propre palette. -->
+  <link rel="stylesheet" href="assets/tokens.css" />
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       KIWI CUISINE — l'écran du passe
+       -----------------------------------------------------------------------
+       Une tablette, posée à hauteur d'yeux, lue à deux mètres, les mains
+       occupées. Trois conséquences qui expliquent tout ce qui suit :
+         · les chiffres sont GROS et le contraste franc — on lit de loin, dans
+           la vapeur, avec des lunettes embuées ;
+         · les cibles tactiles font 56 px minimum — on tape avec le dos du
+           doigt, ou à travers un gant ;
+         · rien ne s'imprime. La tablette EST le passe. Il n'y a volontairement
+           aucun bouton d'impression sur cette page.
+       ═══════════════════════════════════════════════════════════════════════ */
+    :root {
+      --forest:      #0B6E4F;
+      --forest-deep: #053B2C;
+      --danger-mute: #B85245;
+      --warn-ink:    #8A6210;
+      --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+      --line:      #E5E5E5;
+      --line-soft: #EEEEEE;
+      --ink-2: #4A4A4A;
+      --ink-3: #6B6B6B;
+      --ink-4: #9A9A9A;
+      --paper-soft: #F7F7F5;
+      --paper-mute: #F4F4F2;
+      --mint-tint:  #EBF5F0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--sans);
+      background: var(--paper, #F7F5F0);
+      color: var(--ink, #0A0F0D);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      /* Une tablette au passe ne se sélectionne pas, ne se zoome pas et ne
+         rebondit pas : chaque geste parasite est un bon mal bumpé. */
+      -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    button { font-family: inherit; border: 0; background: none; color: inherit; cursor: pointer; }
+    svg { stroke-linecap: round; stroke-linejoin: round; }
+    /* Le romain, partout. Voir la note de marque : l'italique en interface est
+       la signature la plus lisible d'une page fabriquée à la va-vite. */
+    em, i, cite { font-style: normal; }
+
+    /* ── L'appareil n'est encore lié à aucun commerce ───────────────────────── */
+    #pair {
+      position: fixed; inset: 0; z-index: 60;
+      background: linear-gradient(160deg, var(--forest-deep) 0%, #06231A 100%);
+      color: #fff; display: none; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px; padding: 30px;
+    }
+    #pair.on { display: flex; }
+    #pair .kw { font-family: var(--serif); font-size: 34px; letter-spacing: -0.01em; }
+    #pair .kw span { color: var(--mint, #7DF2B0); }
+    #pair .sub { font-size: 14.5px; color: rgba(255,255,255,.62); margin-bottom: 22px; text-align: center; line-height: 1.55; max-width: 380px; }
+    .dots { display: flex; gap: 12px; margin-bottom: 26px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.34); }
+    .dot.on { background: var(--mint, #7DF2B0); border-color: var(--mint, #7DF2B0); }
+    .pad { display: grid; grid-template-columns: repeat(3, 84px); gap: 13px; }
+    .pad button {
+      height: 72px; border-radius: 18px; background: rgba(255,255,255,.08);
+      color: #fff; font-size: 25px; font-weight: 500;
+      border: 1px solid rgba(255,255,255,.1);
+      transition: background 120ms, transform 120ms;
+    }
+    .pad button:active { background: rgba(255,255,255,.2); transform: scale(.95); }
+    .pad button.wide { grid-column: span 1; font-size: 15px; font-weight: 600; }
+    #pair-msg { min-height: 22px; margin-top: 20px; font-size: 14px; color: #FFB4A8; }
+    #pair.err { animation: shake .4s; }
+    @keyframes shake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(5px)} 50%{transform:translateX(-8px)} }
+
+    /* ── L'écran ────────────────────────────────────────────────────────────── */
+    .screen { height: 100%; display: flex; flex-direction: column; }
+
+    .top {
+      display: flex; align-items: center; gap: 14px;
+      padding: 13px 20px; background: var(--surface, #fff);
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: baseline; gap: 9px; flex-shrink: 0; }
+    .brand b { font-family: var(--serif); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
+    .brand .store { font-size: 13px; color: var(--ink-3); max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top .spacer { flex: 1; }
+    .clock { font-family: var(--mono); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; font-feature-settings: "tnum" 1; }
+    .tool {
+      width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--line);
+      background: var(--surface, #fff); display: grid; place-items: center; color: var(--ink-3);
+      flex-shrink: 0;
+    }
+    .tool svg { width: 21px; height: 21px; }
+    .tool:active { background: var(--paper-mute); }
+    .tool.off { color: var(--ink-4); }
+    /* Le lien vivant avec le comptoir. Une cuisine qui ne reçoit plus rien doit
+       le SAVOIR : sans ce point, un wifi tombé ressemble exactement à un
+       service calme, et on ne s'en aperçoit qu'aux clients qui s'impatientent. */
+    .link { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); flex-shrink: 0; }
+    .link i { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-4); display: block; }
+    .link.ok i { background: var(--forest); }
+    .link.down i { background: var(--danger-mute); animation: blink 1.4s infinite; }
+    @keyframes blink { 50% { opacity: .28; } }
+
+    .bar {
+      display: flex; align-items: center; gap: 9px; padding: 11px 20px;
+      background: var(--surface, #fff); border-bottom: 1px solid var(--line);
+      overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+    }
+    .bar::-webkit-scrollbar { display: none; }
+    /* Le même composant que la barre de postes de la caisse (.kit-station) —
+       c'est le MÊME écran cuisine vu d'un autre appareil, pas un second style
+       de sélection. */
+    .st {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 15px;
+      flex-shrink: 0; border-radius: 11px; border: 1px solid var(--line);
+      background: var(--surface, #fff); font-size: 14px; font-weight: 500;
+      color: var(--ink-2); white-space: nowrap;
+      transition: background 130ms, border-color 130ms, color 130ms;
+    }
+    .st i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .st.on { background: var(--ink, #0A0F0D); border-color: var(--ink, #0A0F0D); color: #fff; }
+    .st .ct {
+      font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1;
+      padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--ink-2);
+    }
+    .st.on .ct { background: rgba(255,255,255,.2); color: #fff; }
+
+    .cols { flex: 1; display: grid; grid-template-columns: 1.05fr 1.55fr 1fr; gap: 1px; background: var(--line-soft); min-height: 0; }
+    .col { background: var(--paper, #F7F5F0); display: flex; flex-direction: column; min-height: 0; }
+    .col-head {
+      display: flex; align-items: center; gap: 10px; padding: 13px 17px 11px;
+      font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--ink-3); flex-shrink: 0;
+    }
+    .col-head .n {
+      font-family: var(--mono); font-size: 12px; letter-spacing: 0;
+      padding: 3px 8px; border-radius: 999px; background: var(--surface, #fff);
+      border: 1px solid var(--line); color: var(--ink-2);
+    }
+    .stack { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 22px; display: flex; flex-direction: column; gap: 12px; }
+    .col--cook .stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); align-content: start; }
+
+    /* ── Un bon ─────────────────────────────────────────────────────────────── */
+    .tk {
+      background: var(--surface, #fff); border: 1px solid var(--line);
+      border-radius: 15px; overflow: hidden; display: flex; flex-direction: column;
+      /* La colonne défile ; les bons, eux, ne se compriment JAMAIS. Sans ça,
+         deux bons dans une colonne courte se partagent la hauteur, `overflow:
+         hidden` rogne le bas de la carte, et c'est le bouton — la seule chose
+         qu'on vienne y toucher — qui disparaît en premier. */
+      flex-shrink: 0;
+    }
+    .tk.is-new { border: 2px solid var(--forest); box-shadow: 0 0 0 4px rgba(11,110,79,.09); }
+    .tk.is-late { border-color: var(--danger-mute); }
+    .tk.is-late.is-new { box-shadow: 0 0 0 4px rgba(184,82,69,.12); }
+    .tk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 15px 0; }
+    .tk-no { font-size: 27px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+    .tk-timer {
+      display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono);
+      font-size: 16px; font-weight: 600; padding: 6px 10px; border-radius: 9px;
+      line-height: 1; font-feature-settings: "tnum" 1; flex-shrink: 0;
+    }
+    .tk-timer svg { width: 14px; height: 14px; }
+    .tk-timer.ok   { color: var(--forest); background: rgba(11,110,79,.10); }
+    .tk-timer.warn { color: var(--warn-ink); background: rgba(217,154,43,.17); }
+    .tk-timer.over { color: var(--danger-mute); background: rgba(184,82,69,.13); }
+    .tk-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 15px 0; }
+    .chip { font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 999px; }
+    .chip.table { background: var(--mint-tint); color: var(--forest-deep); }
+    .chip.away  { background: var(--paper-mute); color: var(--ink-2); }
+    .chip.who   { background: none; color: var(--ink-3); padding-left: 0; font-weight: 500; }
+    .tk-items { list-style: none; padding: 12px 15px 4px; display: flex; flex-direction: column; gap: 9px; }
+    .tk-items li { display: flex; gap: 11px; align-items: flex-start; font-size: 17px; line-height: 1.3; }
+    .tk-items li.off { opacity: .3; }
+    .tk-q { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--forest); min-width: 30px; flex-shrink: 0; }
+    .tk-n { font-weight: 500; }
+    .tk-note {
+      display: block; margin-top: 3px; font-size: 14px; font-weight: 600;
+      color: var(--warn-ink); background: rgba(217,154,43,.14);
+      border-radius: 7px; padding: 4px 9px; width: fit-content;
+    }
+    .tk-act {
+      margin: 12px 13px 13px; height: 58px; border-radius: 13px;
+      font-size: 17px; font-weight: 600; display: flex; align-items: center;
+      justify-content: center; gap: 9px; transition: filter 120ms, transform 120ms;
+    }
+    .tk-act:active { transform: scale(.985); filter: brightness(.95); }
+    .tk-act svg { width: 20px; height: 20px; }
+    .act-accept { background: var(--ink, #0A0F0D); color: #fff; }
+    .act-ready   { background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%); color: #fff; }
+    .act-served  { background: var(--paper-mute); color: var(--ink-2); border: 1px solid var(--line); height: 50px; font-size: 15px; }
+    .tk.pass { border-color: rgba(11,110,79,.4); background: var(--mint-tint); }
+    .tk.pass .tk-items li { font-size: 16px; }
+
+    .empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; color: var(--ink-4); font-size: 14.5px; text-align: center;
+      padding: 46px 20px; line-height: 1.6;
+    }
+    .empty svg { width: 34px; height: 34px; opacity: .5; }
+
+    /* Tablette portrait / petit écran : les trois colonnes ne tiennent plus. */
+    @media (max-width: 900px) {
+      .cols { grid-template-columns: 1fr 1fr; }
+      .col--pass { display: none; }
+      .cols.show-pass { grid-template-columns: 1fr; }
+      .cols.show-pass .col--new, .cols.show-pass .col--cook { display: none; }
+      .cols.show-pass .col--pass { display: flex; }
+    }
+    @media (max-width: 620px) {
+      .cols { grid-template-columns: 1fr; }
+      .col--cook { display: none; }
+      .brand .store { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ L'appareil n'est lié à aucun commerce ══════════════════════════════════
+     Même code à six chiffres que la caisse : le patron en édite un depuis son
+     tableau de bord, on le tape ici, et la tablette devient l'écran cuisine de
+     CE restaurant. Le code est à usage unique — une tablette, un code. -->
+<div id="pair" role="dialog" aria-label="Appairer l'écran cuisine">
+  <div class="kw">Kiwi <span>Cuisine</span></div>
+  <p class="sub">Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.</p>
+  <div class="dots" id="pair-dots"></div>
+  <div class="pad" id="pair-pad"></div>
+  <div id="pair-msg" role="status" aria-live="polite"></div>
+</div>
+
+<div class="screen" id="screen" hidden>
+  <header class="top">
+    <div class="brand"><b>Cuisine</b><span class="store" id="store-name"></span></div>
+    <div class="spacer"></div>
+    <span class="link" id="link"><i></i><span id="link-txt">Connexion…</span></span>
+    <span class="clock" id="clock">--:--</span>
+    <button class="tool" id="sound" aria-label="Son des nouvelles commandes"></button>
+    <button class="tool" id="full" aria-label="Plein écran">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+  </header>
+
+  <nav class="bar" id="bar" aria-label="Postes de préparation"></nav>
+
+  <div class="cols" id="cols">
+    <section class="col col--new">
+      <div class="col-head"><span>Nouvelles</span><span class="n" id="n-new">0</span></div>
+      <div class="stack" id="s-new"></div>
+    </section>
+    <section class="col col--cook">
+      <div class="col-head"><span>En préparation</span><span class="n" id="n-cook">0</span></div>
+      <div class="stack" id="s-cook"></div>
+    </section>
+    <section class="col col--pass">
+      <div class="col-head"><span>Au passe</span><span class="n" id="n-pass">0</span></div>
+      <div class="stack" id="s-pass"></div>
+    </section>
+  </div>
+</div>
+
+<!-- Le transport, partagé avec la caisse : même route, même garde, même
+     protocole. La cuisine LIT et fait avancer ; la caisse ÉCRIT. -->
+<script src="assets/kitchen-relay.js" defer></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+ * KIWI CUISINE — l'écran du passe
+ * ---------------------------------------------------------------------------
+ * Ce que le serveur tape au comptoir arrive ici, sur une tablette, en cinq
+ * secondes. Jusqu'à cette page il n'y avait aucun chemin : « Envoyer en
+ * cuisine » poussait le bon dans un tableau JavaScript de la page de la caisse
+ * et l'imprimait — ce qui suppose une imprimante thermique dans la cuisine,
+ * qu'on ne vend pas.
+ *
+ * ── Trois états, et lequel vit où ──────────────────────────────────────────
+ * Le serveur connaît `accepted` → `ready` → `served`. La cuisine, elle, a un
+ * état de plus : « je l'ai vu, je m'en occupe ». Cet état-là est LOCAL et
+ * assumé — il n'existe pas en base, parce qu'il n'appartient qu'à la brigade
+ * qui est devant l'écran, et l'inventer côté serveur obligerait la caisse à
+ * connaître l'organisation de la cuisine. Il survit à un rechargement
+ * (localStorage), ce qui est tout ce qu'on lui demande.
+ *
+ *   accepted + pas encore pris  → « Nouvelles »
+ *   accepted + pris ici         → « En préparation »
+ *   ready                       → « Au passe »
+ *   served                      → sorti du tableau
+ *
+ * Une commande `pending` — un téléphone client que le comptoir n'a pas encore
+ * acceptée — n'apparaît JAMAIS ici. La décision d'accepter appartient au
+ * comptoir ; l'afficher en cuisine ferait lancer des plats qu'on refusera.
+ *
+ * ── Rien ne s'imprime ───────────────────────────────────────────────────────
+ * Il n'y a pas de bouton d'impression sur cette page, et c'est un choix de
+ * produit : la tablette EST le passe.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var POLL_MS = 5000;
+  var LATE_S = 900, WARN_S = 480;      // 15 min = en retard, 8 min = ça presse
+  var STALE_MS = 18 * 60 * 60 * 1000;  // au-delà, le bon n'appartient plus à ce service
+  var COOK_KEY = 'kiwiCuisineCooking'; // l'état local « je m'en occupe »
+  var MUTE_KEY = 'kiwiCuisineMute';
+
+  var S = {
+    orders: {},        // id → commande telle que le serveur la donne
+    cooking: {},       // id → true, purement local
+    since: 0,
+    station: 'all',
+    stations: [],
+    seen: {},
+    live: null,        // null = on n'a pas encore parlé au serveur
+    muted: false,
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+  function put(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+    });
+  }
+
+  var SVG = {
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>',
+    hand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11V6a2 2 0 1 1 4 0v5"/><path d="M13 11V4a2 2 0 1 1 4 0v7"/><path d="M17 11V7a2 2 0 1 1 4 0v9a5 5 0 0 1-5 5h-3a6 6 0 0 1-6-6v-4a2 2 0 1 1 4 0"/></svg>',
+    empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    on: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
+    off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
+  };
+
+  /* ── L'appairage ─────────────────────────────────────────────────────────── */
+  var buf = '';
+  function paired() { return ls('kiwiPaired') === '1' && !!ls('kiwiLiveMerchant'); }
+  function venue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+
+  function drawPad() {
+    $('pair-dots').innerHTML = [0, 1, 2, 3, 4, 5].map(function (i) {
+      return '<span class="dot' + (i < buf.length ? ' on' : '') + '"></span>';
+    }).join('');
+    if (!$('pair-pad').childNodes.length) {
+      $('pair-pad').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) {
+        return '<button data-k="' + n + '">' + n + '</button>';
+      }).join('') + '<button class="wide" data-k="del">Effacer</button>'
+        + '<button data-k="0">0</button><button class="wide" data-k="ok">OK</button>';
+    }
+  }
+  function padFail(msg) {
+    $('pair-msg').textContent = msg;
+    var p = $('pair');
+    p.classList.add('err');
+    setTimeout(function () { p.classList.remove('err'); }, 420);
+    buf = ''; drawPad();
+  }
+  function redeem() {
+    if (buf.length !== 6) return;
+    var code = buf;
+    $('pair-msg').textContent = '';
+    fetch('/api/pair/redeem', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code }),
+    }).then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) {
+        if (!j || !j.ok || !j.merchant) {
+          padFail(j && j.error === 'too_many_attempts'
+            ? 'Trop d’essais. Réessaie dans un quart d’heure.'
+            : 'Code invalide ou expiré.');
+          return;
+        }
+        var v = { merchant: j.merchant, type: j.type || '', subtype: j.subtype || '', name: j.name || '' };
+        put('kiwiLiveMerchant', v.merchant);
+        put('kiwiPaired', '1');
+        put('kiwiLive', '1');
+        put('kiwiPairedVenue', JSON.stringify(v));
+        /* Nouveau commerce ⇒ l'état local de l'ANCIEN n'a plus de sens : les
+           bons « je m'en occupe » désignaient la cuisine d'un autre
+           restaurant. */
+        put(COOK_KEY, '[]');
+        S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {};
+        start();
+      })
+      .catch(function () { padFail('Connexion impossible. Vérifie le wifi.'); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var k = e.target.closest('[data-k]');
+    if (!k) return;
+    var v = k.dataset.k;
+    if (v === 'del') buf = buf.slice(0, -1);
+    else if (v === 'ok') { redeem(); return; }
+    else if (buf.length < 6) buf += v;
+    drawPad();
+    if (buf.length === 6) setTimeout(redeem, 130);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!$('pair').classList.contains('on')) return;
+    if (/^[0-9]$/.test(e.key) && buf.length < 6) { buf += e.key; drawPad(); if (buf.length === 6) setTimeout(redeem, 130); }
+    else if (e.key === 'Backspace') { buf = buf.slice(0, -1); drawPad(); }
+    else if (e.key === 'Enter') redeem();
+  });
+
+  /* ── Les postes du commerçant ────────────────────────────────────────────
+   * Ils viennent de la carte publiée depuis le tableau de bord, dans l'ordre
+   * voulu par le patron — c'est l'ordre des onglets. Le bon, lui, porte déjà
+   * son poste sur chaque ligne : cette lecture ne sert qu'aux LIBELLÉS et aux
+   * couleurs du filtre. Carte injoignable ⇒ pas de barre, et l'écran affiche
+   * tout : mieux vaut un filtre absent qu'un filtre qui cache des plats. */
+  var PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
+  function loadStations() {
+    var m = ls('kiwiLiveMerchant') || '';
+    if (!m) return;
+    fetch('/api/menu?merchant=' + encodeURIComponent(m), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var st = (j && j.menu && j.menu.stations) || [];
+        S.stations = st.map(function (s, i) {
+          return { id: s.id, name: s.name, color: /^#[0-9a-fA-F]{6}$/.test(s.color || '') ? s.color : PALETTE[i % PALETTE.length] };
+        });
+        if (j && j.name) { $('store-name').textContent = j.name; }
+        if (S.station !== 'all' && !S.stations.some(function (s) { return s.id === S.station; })) S.station = 'all';
+        paint();
+      })
+      .catch(function () {});
+  }
+
+  /* ── La file ─────────────────────────────────────────────────────────────── */
+  function pull() {
+    if (!window.KiwiKitchenRelay) return;
+    KiwiKitchenRelay.pull(S.since, 'kitchen').then(function (j) {
+      if (!j || !j.ok) { setLive(false); return; }
+      setLive(true);
+      /* Premier tour après un chargement : on RELIT tout ce qui est encore
+         ouvert, ce qui est exactement ce qu'on veut — mais ce n'est pas une
+         arrivée. Sonner ici ferait carillonner la tablette à chaque
+         rechargement, en plein service, pour des bons déjà connus. */
+      var firstPass = S.since === 0;
+      S.since = j.now || S.since;
+      var fresh = 0;
+      (j.orders || []).forEach(function (o) {
+        if (!o || !o.id) return;
+        /* Un bon `pending` appartient encore au comptoir : la cuisine ne doit
+           pas lancer un plat que le caissier va peut-être refuser. */
+        if (o.status === 'pending' || o.status === 'rejected') { delete S.orders[o.id]; return; }
+        if (o.status === 'served') { delete S.orders[o.id]; delete S.cooking[o.id]; return; }
+        /* Un bon accepté que PERSONNE n'a jamais bumpé reste ouvert en base
+           indéfiniment — la file ne borne dans le temps que les commandes
+           servies. Sans ce filtre, un ticket oublié d'avant-hier s'installerait
+           en tête de « Nouvelles » au premier chargement du matin, et la
+           brigade referait un plat que plus personne n'attend. Dix-huit heures
+           couvrent un service qui finit tard et rouvre le lendemain midi. */
+        if (o.created_ts && (Date.now() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
+        if (!S.seen[o.id] && o.status === 'accepted') { if (!firstPass) fresh++; S.seen[o.id] = 1; }
+        S.orders[o.id] = o;
+      });
+      if (fresh) announce(fresh);
+      saveCooking();
+      paint();
+    });
+  }
+
+  function setLive(up) {
+    if (S.live === up) return;
+    S.live = up;
+    var el = $('link');
+    el.className = 'link ' + (up ? 'ok' : 'down');
+    $('link-txt').textContent = up ? 'Comptoir lié' : 'Hors ligne';
+  }
+
+  /* Un bon qui arrive ne doit pas pouvoir passer inaperçu : personne ne
+     regarde l'écran en permanence, on regarde la plaque. */
+  function announce(n) {
+    try { if (navigator.vibrate) navigator.vibrate([50, 70, 50]); } catch (_) {}
+    if (S.muted) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      [784, 1046].forEach(function (f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        var t0 = ctx.currentTime + i * 0.17;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.36);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0); o.stop(t0 + 0.38);
+      });
+      setTimeout(function () { try { ctx.close(); } catch (_) {} }, 1100);
+    } catch (_) {}
+  }
+
+  /* ── L'état local « je m'en occupe » ─────────────────────────────────────── */
+  function loadCooking() {
+    try {
+      var a = JSON.parse(ls(COOK_KEY) || '[]');
+      if (Array.isArray(a)) a.forEach(function (id) { S.cooking[id] = true; });
+    } catch (_) {}
+  }
+  function saveCooking() {
+    // On ne garde que ce qui est encore sur le tableau : sinon la liste
+    // grossit tout le service et finit par déborder le stockage.
+    var keep = Object.keys(S.cooking).filter(function (id) { return !!S.orders[id]; });
+    var next = {};
+    keep.forEach(function (id) { next[id] = true; });
+    S.cooking = next;
+    put(COOK_KEY, JSON.stringify(keep));
+  }
+
+  /* ── Rendu ───────────────────────────────────────────────────────────────── */
+  function elapsed(o) { return Math.max(0, Math.floor((Date.now() - (o.created_ts || Date.now())) / 1000)); }
+  function urgency(s) { return s < WARN_S ? 'ok' : s < LATE_S ? 'warn' : 'over'; }
+  function mmss(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  function hm(ts) { var d = new Date(ts || Date.now()); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
+  function matches(o) {
+    if (S.station === 'all') return true;
+    return (o.lines || []).some(function (l) { return l.station === S.station; });
+  }
+  function bucket(o) {
+    if (o.status === 'ready') return 'pass';
+    return S.cooking[o.id] ? 'cook' : 'new';
+  }
+  function group(name) {
+    return Object.keys(S.orders).map(function (k) { return S.orders[k]; })
+      .filter(function (o) { return bucket(o) === name && matches(o); })
+      .sort(function (a, b) { return (a.created_ts || 0) - (b.created_ts || 0); });
+  }
+
+  /* Le numéro que TOUT LE MONDE peut prononcer. C'est celui du serveur : le
+     comptoir l'affiche aussi (kiwi-caisse.html · ticketNo), donc « bon 7 prêt »
+     crié depuis le passe désigne bien le bon que le caissier a sous les yeux. */
+  function ticketNo(o) { return 'C-' + String(o.number || 0).padStart(3, '0'); }
+
+  function whereChip(o) {
+    if (o.mode === 'table' && o.table) return '<span class="chip table">Table ' + esc(o.table) + '</span>';
+    if (o.mode === 'delivery') return '<span class="chip away">Livraison</span>';
+    return '<span class="chip away">À emporter</span>';
+  }
+
+  function card(o, kind) {
+    var el = elapsed(o), u = urgency(el);
+    var items = (o.lines || []).map(function (l) {
+      var off = S.station !== 'all' && l.station !== S.station;
+      var note = String(l.note || '').trim();
+      return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + (l.qty || 1) + '×</span>'
+        + '<span class="tk-n">' + esc(l.name) + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
+    }).join('');
+    var act = kind === 'new'
+      ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + 'Je prends</button>'
+      : kind === 'cook'
+        ? '<button class="tk-act act-ready" data-ready="' + esc(o.id) + '">' + SVG.check + 'Prête</button>'
+        : '<button class="tk-act act-served" data-served="' + esc(o.id) + '">Remise au serveur</button>';
+    var right = kind === 'pass'
+      ? '<span class="tk-timer ok">' + SVG.check + hm(o.updated_ts) + '</span>'
+      : '<span class="tk-timer ' + u + '">' + SVG.clock + '<span>' + mmss(el) + '</span></span>';
+    return '<article class="tk ' + (kind === 'new' ? 'is-new' : kind === 'pass' ? 'pass' : '')
+      + (u === 'over' && kind !== 'pass' ? ' is-late' : '') + '" data-tk="' + esc(o.id) + '">'
+      + '<div class="tk-top"><span class="tk-no">' + ticketNo(o) + '</span>' + right + '</div>'
+      + '<div class="tk-meta">' + whereChip(o)
+      + (o.server ? '<span class="chip who">' + esc(o.server) + '</span>' : '') + '</div>'
+      + '<ul class="tk-items">' + items + '</ul>' + act + '</article>';
+  }
+
+  function emptyBox(msg) {
+    return '<div class="empty">' + SVG.empty + '<span>' + esc(msg) + '</span></div>';
+  }
+
+  function stationBar() {
+    var list = S.stations;
+    if (!list.length) return '';
+    var count = function (id) {
+      return Object.keys(S.orders).filter(function (k) {
+        var o = S.orders[k];
+        return o.status !== 'ready'
+          && (id === 'all' || (o.lines || []).some(function (l) { return l.station === id; }));
+      }).length;
+    };
+    var btn = function (id, color, label) {
+      return '<button class="st' + (S.station === id ? ' on' : '') + '" data-st="' + esc(id) + '">'
+        + '<i style="background:' + esc(color) + '"></i><span>' + esc(label) + '</span>'
+        + '<span class="ct">' + count(id) + '</span></button>';
+    };
+    /* Un seul poste ne se filtre pas : « Tous » et « Cuisine » montreraient
+       exactement la même chose. On garde la barre pour le compteur. */
+    return (list.length > 1 ? btn('all', '#0A0F0D', 'Tous') : '')
+      + list.map(function (s) { return btn(s.id, s.color, s.name); }).join('');
+  }
+
+  function paint() {
+    $('bar').innerHTML = stationBar();
+    var n = group('new'), c = group('cook'), p = group('pass');
+    $('n-new').textContent = n.length;
+    $('n-cook').textContent = c.length;
+    $('n-pass').textContent = p.length;
+    $('s-new').innerHTML = n.length ? n.map(function (o) { return card(o, 'new'); }).join('')
+      : emptyBox('Rien de neuf. Les bons du comptoir arrivent ici.');
+    $('s-cook').innerHTML = c.length ? c.map(function (o) { return card(o, 'cook'); }).join('')
+      : emptyBox('Aucun plat en cours.');
+    $('s-pass').innerHTML = p.length ? p.map(function (o) { return card(o, 'pass'); }).join('')
+      : emptyBox('Le passe est vide.');
+  }
+
+  /* Les minuteurs seuls, sans reconstruire le DOM : repeindre une carte sous le
+     doigt d'un cuisinier ferait rater le bump d'une seconde sur deux. */
+  function tickTimers() {
+    document.querySelectorAll('.tk[data-tk]').forEach(function (el) {
+      var o = S.orders[el.dataset.tk];
+      if (!o || o.status === 'ready') return;
+      var t = el.querySelector('.tk-timer');
+      if (!t) return;
+      var s = elapsed(o), u = urgency(s);
+      t.className = 'tk-timer ' + u;
+      var v = t.querySelector('span');
+      if (v) v.textContent = mmss(s);
+      el.classList.toggle('is-late', u === 'over');
+    });
+    $('clock').textContent = hm(Date.now());
+  }
+
+  /* ── Les gestes du passe ─────────────────────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var st = e.target.closest('[data-st]');
+    if (st) { S.station = st.dataset.st; paint(); return; }
+
+    var take = e.target.closest('[data-take]');
+    if (take) {
+      S.cooking[take.dataset.take] = true;
+      saveCooking(); paint();
+      return;
+    }
+    var rdy = e.target.closest('[data-ready]');
+    if (rdy) {
+      var id = rdy.dataset.ready, o = S.orders[id];
+      if (!o) return;
+      /* Optimiste : la brigade ne doit jamais attendre le réseau, elle a les
+         mains dans une poêle. Le prochain sondage tranchera avec la vérité du
+         serveur si l'appel a échoué. */
+      o.status = 'ready'; o.updated_ts = Date.now();
+      delete S.cooking[id];
+      saveCooking(); paint();
+      KiwiKitchenRelay.bump(id, 'ready');
+      return;
+    }
+    var srv = e.target.closest('[data-served]');
+    if (srv) {
+      var sid = srv.dataset.served;
+      delete S.orders[sid];
+      paint();
+      KiwiKitchenRelay.bump(sid, 'served');
+      return;
+    }
+  });
+
+  /* ── Confort d'un écran mural ────────────────────────────────────────────── */
+  function paintSound() { $('sound').innerHTML = S.muted ? SVG.off : SVG.on; $('sound').classList.toggle('off', S.muted); }
+  function bindTools() {
+    S.muted = ls(MUTE_KEY) === '1';
+    paintSound();
+    $('sound').addEventListener('click', function () {
+      S.muted = !S.muted; put(MUTE_KEY, S.muted ? '1' : '0'); paintSound();
+    });
+    $('full').addEventListener('click', function () {
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+      } catch (_) {}
+    });
+  }
+
+  /* L'écran ne doit pas s'éteindre au milieu d'un service. Le verrou se perd
+     quand l'onglet passe en arrière-plan — on le reprend au retour. */
+  var lock = null;
+  function keepAwake() {
+    if (!navigator.wakeLock) return;
+    navigator.wakeLock.request('screen').then(function (l) { lock = l; }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') { keepAwake(); pull(); }
+  });
+
+  /* ── Démarrage ───────────────────────────────────────────────────────────── */
+  var timer = null;
+  function start() {
+    if (!paired()) { $('pair').classList.add('on'); $('screen').hidden = true; drawPad(); return; }
+    $('pair').classList.remove('on');
+    $('screen').hidden = false;
+    var v = venue();
+    if (v && v.name) $('store-name').textContent = v.name;
+    loadCooking();
+    loadStations();
+    paint();
+    tickTimers();
+    keepAwake();
+    pull();
+    if (timer) clearInterval(timer);
+    timer = setInterval(pull, POLL_MS);
+  }
+
+  function boot() {
+    bindTools();
+    setInterval(tickTimers, 1000);
+    start();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

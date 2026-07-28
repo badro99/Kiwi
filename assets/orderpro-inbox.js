@@ -99,10 +99,18 @@
   function pull() {
     var m = merchant();
     if (!m) return Promise.resolve(-1);
-    // Module coupé ⇒ personne ne peut commander (functions/api/menu.js et
-    // /api/order refusent déjà), donc la file est vide par construction :
-    // inutile d'interroger le serveur toutes les quelques secondes pour rien.
-    if (!orderProOn()) { chip(); return Promise.resolve(-1); }
+    /* Module coupé ⇒ aucun CLIENT ne peut commander (functions/api/menu.js et
+     * /api/order refusent déjà). Ce fut longtemps la preuve que la file était
+     * vide par construction — elle ne l'est plus : depuis que la caisse pose
+     * ses propres bons de cuisine dans cette même file (voir
+     * assets/kitchen-relay.js), c'est par elle que le comptoir apprend qu'un
+     * plat est prêt sur la tablette de la cuisine. Ne pas sonder aurait rendu
+     * le relais à sens unique : les bons partaient, les « prêt » ne revenaient
+     * jamais.
+     * On sonde donc aussi quand la page EST une caisse à écran cuisine
+     * (window.KiwiCaisseKitchen). Une caisse boutique ou spa, elle, continue de
+     * se taire : elle n'a ni cuisine ni commandes clients. */
+    if (!orderProOn() && !hasKitchen()) { chip(); return Promise.resolve(-1); }
     return fetch('/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + state.since, {
       headers: { Accept: 'application/json' }, cache: 'no-store',
     }).then(function (r) { return r.ok ? r.json() : null; })
@@ -314,6 +322,12 @@
     try { return !!(window.KiwiConfig && window.KiwiConfig.features
       && window.KiwiConfig.features.orderpro === true); } catch (_) { return false; }
   }
+
+  /* Cette page a-t-elle un écran cuisine ? C'est la caisse restaurant/café qui
+   * expose ce pont (kiwi-caisse.html). Il sert ici à décider s'il vaut la peine
+   * de relever la file : une caisse qui envoie des bons en cuisine doit
+   * apprendre quand ils sont prêts, même sans Order Pro. */
+  function hasKitchen() { return !!window.KiwiCaisseKitchen; }
 
   function chip() {
     if (!merchant() || !orderProOn()) { var ex = document.getElementById('kop-chip'); if (ex) ex.remove(); return; }
