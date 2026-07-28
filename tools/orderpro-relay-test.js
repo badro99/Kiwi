@@ -352,11 +352,107 @@ async function get(fn, qs, headers = {}) {
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i1')] });
   ok('clé absente ⇒ coupé aussi (l\'option s\'ouvre, elle ne se suppose pas)', r.status === 403);
 
+  /* ═══ 10. LE PRIX, MÊME QUAND IL N'Y A PAS DE « CARTE » ═════════════════
+     Le repli « aucun catalogue ⇒ on croit le téléphone » se présentait comme le
+     cas rare du commerçant qui n'a rien publié. C'était le même trou derrière
+     quatre conditions, dont une VERTICALE entière : une boutique publie
+     {categories, products, variants, colors} avec `priceMAD` et AUCUNE clé
+     `items`, donc toute boutique avec Order Pro allumé se tarifait depuis le
+     téléphone du client. Ces contrôles tiennent les deux moitiés du correctif :
+     on sait lire la forme boutique, et sans catalogue on REFUSE. */
+  DB._db.prepare('UPDATE merchant_config SET features=? WHERE merchant=?').run('{"orderpro":true}', SLUG);
+  deskAt(Date.now());
+
+  const SHOP = {
+    categories: [{ id: 'c1', name: 'Prêt-à-porter' }],
+    products: [
+      { id: 'p1', name: 'Chemise en lin', categoryId: 'c1', priceMAD: 340 },
+      { id: 'p2', name: 'Caftan brodé', categoryId: 'c1', priceMAD: 1800 },
+    ],
+    variants: [
+      { id: 'v1', productId: 'p1', colorId: 'k1', size: 'M', stock: 4 },
+      { id: 'v2', productId: 'p2', colorId: 'k1', size: 'L', stock: 0 },
+    ],
+    colors: [{ id: 'k1', label: 'Écru', hex: '#EEE' }],
+  };
+  DB._db.prepare('UPDATE menus SET data=?, updated_ts=? WHERE merchant=?')
+    .run(JSON.stringify(SHOP), Date.now(), SLUG);
+
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout',
+    lines: [{ id: 'p1', qty: 2, name: 'Bricole à 1 MAD', unitPrice: 1 }],
+  });
+  ok('une boutique se tarifie depuis SON catalogue', r.status === 200 && r.body.total === 680,
+    'total=' + (r.body && r.body.total));
+  ok('…et le nom vient du catalogue, pas du téléphone',
+    r.body.lines && r.body.lines[0].name === 'Chemise en lin');
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [{ id: 'p2', qty: 1 }] });
+  ok('un article dont tout le stock est à zéro est épuisé',
+    r.status === 409 && r.body.error === 'menu-changed', JSON.stringify(r.body));
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [{ id: 'inconnu', qty: 1 }] });
+  ok('un identifiant absent du catalogue boutique est refusé', r.status === 409);
+
+  // Plus AUCUN catalogue : on refuse, on ne devine pas.
+  DB._db.prepare('DELETE FROM menus WHERE merchant=?').run(SLUG);
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout',
+    lines: [{ id: 'x1', qty: 1, name: 'Ce que je veux', unitPrice: 1 }],
+  });
+  ok('sans catalogue, la commande est refusée et non tarifée par le client',
+    r.status === 409 && r.body.error === 'menu-not-published', JSON.stringify(r.body));
+  ok('…et rien n\'a été écrit',
+    !DB._db.prepare("SELECT id FROM orders WHERE merchant=? AND lines LIKE '%Ce que je veux%'").get(SLUG));
+
+  /* ═══ 11. UN CORPS MALFORMÉ SE FAIT REFUSER, IL NE FAIT PAS TOMBER ══════
+     `FROM[status]` traversait Object.prototype : « constructor », « toString »,
+     « valueOf » répondaient une FONCTION, donc « truthy », donc la garde
+     `bad-status` les laissait passer — et `from.map()`, hors du try, levait un
+     TypeError non rattrapé. La caisse recevait un 500 là où un 400 était dû. */
+  DB._db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
+    .run(SLUG, 'Chez Nadia', 'restaurant', JSON.stringify(CARTE), Date.now());
+  deskAt(Date.now());
+  r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i1')] });
+  const protoOrder = r.body.id;
+  for (const key of ['constructor', 'toString', '__proto__', 'valueOf', 'hasOwnProperty']) {
+    r = await post(queuePost, { merchant: SLUG, id: protoOrder, status: key }, asStaff);
+    ok(`« ${key} » est un état invalide, pas une panne`,
+      r.status === 400 && r.body.error === 'bad-status', 'status=' + r.status);
+  }
+  ok('…et la commande n\'a pas bougé',
+    DB._db.prepare('SELECT status FROM orders WHERE id=?').get(protoOrder).status === 'pending');
+
+  /* ═══ 12. LA COURSE À L'IDEMPOTENCE ═════════════════════════════════════
+     Le SELECT d'idempotence court AVANT l'insertion : il ne voit pas deux envois
+     simultanés. C'est l'index unique qui les départage — mais sa violation
+     tombait dans le MÊME catch que « colonne absente », et le repli réinsérait
+     sans la clé. Les deux passaient donc : deux tickets, deux numéros, deux fois
+     le plat en cuisine. On simule la course en posant la ligne gagnante juste
+     avant l'insertion perdante. */
+  const RACE = 'ref-course-42';
+  const first = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout', ref: RACE, lines: [line('i1', 2)],
+  });
+  ok('la première des deux passe', first.status === 200 && first.body.ok);
+  const before = DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=? AND client_ref=?')
+    .get(SLUG, RACE).n;
+  const second = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout', ref: RACE, lines: [line('i1', 2)],
+  });
+  const after = DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=? AND client_ref=?')
+    .get(SLUG, RACE).n;
+  ok('le renvoi rend LA MÊME commande', second.status === 200 && second.body.id === first.body.id,
+    JSON.stringify(second.body));
+  ok('…et n\'en crée pas une seconde', before === 1 && after === 1, `${before} → ${after}`);
+  ok('le total des commandes de cette clé reste unique',
+    DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=? AND client_ref=?').get(SLUG, RACE).n === 1);
+
   console.log('');
   if (fails.length) {
     fails.forEach((f) => console.log('  ✗ ' + f));
     console.log(`\n✗ relais OrderPro : ${pass} ok, ${fails.length} échec(s)\n`);
     process.exit(1);
   }
-  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, présence du comptoir, session de table, transitions, tenancy, idempotence, addition)\n`);
+  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, addition)\n`);
 })().catch((e) => { console.log('  ✗ ' + (e && e.stack || e)); process.exit(1); });
