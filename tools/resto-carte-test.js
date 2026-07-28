@@ -128,21 +128,34 @@ const PAYLOAD = {
   ],
 };
 
+/* La palette des postes, telle qu'elle est écrite dans la caisse — on la relit
+   du fichier plutôt que de la recopier, sinon le test validerait sa propre
+   copie le jour où la vraie change. */
+const STATION_PALETTE = JSON.parse(
+  (/const STATION_PALETTE = (\[[^\]]*\]);/.exec(caisse) || [, '[]'])[1].replace(/'/g, '"'));
+
 function runRebuild(payload) {
   const scope = {
-    IS_DEMO: false, CAT_PALETTE,
+    IS_DEMO: false, CAT_PALETTE, STATION_PALETTE,
     catLabels: { all: 'Tout' }, catColor: {}, catOrder: ['all'], menuItems: [],
     activeCat: 'all',
+    // kdsReady: false → rebuildCarte ne doit PAS toucher à l'écran cuisine tant
+    // qu'il n'est pas monté (c'est tout l'objet de ce drapeau : au premier
+    // appel, à l'amorçage, la section KDS n'est pas encore évaluée).
+    carteState: { stations: [], kdsReady: false },
     caisseCarte: () => payload,
     renderCatPills() {}, renderMenu() {},
   };
   const body = extract(caisse, 'rebuildCarte');
   const fn = new Function('scope', `
     let { catLabels, catColor, catOrder, menuItems, activeCat } = scope;
-    const { IS_DEMO, CAT_PALETTE, caisseCarte, renderCatPills, renderMenu } = scope;
+    const { IS_DEMO, CAT_PALETTE, STATION_PALETTE, carteState, caisseCarte, renderCatPills, renderMenu } = scope;
+    // Si rebuildCarte l'appelle alors que kdsReady est faux, le test explose —
+    // et c'est voulu : ce serait la ReferenceError silencieuse de l'amorçage.
+    function kdsRepaintStations() { throw new Error('kdsRepaintStations appelé alors que l\\'écran cuisine n\\'est pas monté'); }
     ${body}
     const changed = rebuildCarte();
-    return { changed, catLabels, catColor, catOrder, menuItems, activeCat };
+    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations };
   `);
   return fn(scope);
 }
@@ -181,14 +194,16 @@ eq(empty.menuItems.length, 0, 'et ne fabrique pas de plats');
 /* La rubrique ouverte doit rester valide après un changement de carte. */
 const stale = (() => {
   const scope = {
-    IS_DEMO: false, CAT_PALETTE,
+    IS_DEMO: false, CAT_PALETTE, STATION_PALETTE,
     catLabels: { all: 'Tout', tajines: 'Tajines' }, catColor: {}, catOrder: ['all', 'tajines'],
     menuItems: [], activeCat: 'tajines',
+    carteState: { stations: [], kdsReady: false },
     caisseCarte: () => PAYLOAD, renderCatPills() {}, renderMenu() {},
   };
   const fn = new Function('scope', `
     let { catLabels, catColor, catOrder, menuItems, activeCat } = scope;
-    const { IS_DEMO, CAT_PALETTE, caisseCarte, renderCatPills, renderMenu } = scope;
+    const { IS_DEMO, CAT_PALETTE, STATION_PALETTE, carteState, caisseCarte, renderCatPills, renderMenu } = scope;
+    function kdsRepaintStations() {}
     ${extract(caisse, 'rebuildCarte')}
     rebuildCarte();
     return { activeCat };
@@ -315,16 +330,216 @@ const receiptSrc = fs.readFileSync(path.join(ROOT, 'assets/receipt.js'), 'utf8')
 ok(/opts\.copy === true \? d\.T\.copy : str\(opts\.copy, 40\)/.test(receiptSrc),
   'une réimpression porte « DUPLICATA » et non « true »');
 
-/* ── 9. le poste de préparation survit au serveur ──────────────────────────── */
+/* ── 9. les postes de préparation, du bureau jusqu'au bon papier ───────────── */
 
 const menuApi = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
 ok(/station: str\(it && it\.station, 40\)/.test(menuApi),
   'sanitizeMenu ne retire plus le poste de préparation à la publication');
-ok(/\(m && m\.station\) \|\| \(m && KDS_CAT_STATION\[m\.cat\]\)/.test(caisse),
-  'la caisse route sur le poste du plat avant la table par catégorie');
+ok(/const stations = Array\.isArray\(raw\.stations\)/.test(menuApi),
+  'sanitizeMenu laisse passer la LISTE des postes, pas seulement celui du plat');
+ok(/\/\^#\[0-9a-fA-F\]\{6\}\$\/\.test/.test(menuApi),
+  'une couleur de poste qui n\'est pas un #RRGGBB est refusée — elle finit dans un attribut style');
+
+/* rebuildCarte projette les postes du patron, dans SON ordre. */
+eq(r.stations.length, 0, 'une carte publiée sans postes n\'en invente aucun');
+
+const withStations = runRebuild(Object.assign({}, PAYLOAD, {
+  stations: [
+    { id: 'bar', name: 'Bar', color: '#3677A6' },
+    { id: 'cuisine', name: 'Cuisine', color: 'rouge vif' },   // couleur illisible
+  ],
+}));
+eq(withStations.stations.length, 2, 'les deux postes du patron descendent au comptoir');
+eq(withStations.stations[0].id, 'bar', 'l\'ordre du patron est conservé — le premier est le poste par défaut');
+eq(withStations.stations[0].raw, '#3677A6', 'une couleur valable passe telle quelle');
+ok(STATION_PALETTE.includes(withStations.stations[1].raw),
+  'une couleur illisible retombe sur la palette, jamais dans un attribut style tel quel');
+
+/* kdsStationFor — LA règle de routage, une seule pour toute la caisse. */
+function runStationFor(opts) {
+  const scope = Object.assign({
+    IS_DEMO: false, STATION_PALETTE,
+    carteState: { stations: [], kdsReady: true },
+    KDS_CAT_STATION: { boissons: 'boissons' },
+    KDS_STATIONS_DEMO: [{ id: 'cuisson', name: 'Cuisson chaude', raw: '#1F5D3C' }],
+    KDS_STATION_SOLO: { id: 'cuisson', name: 'Cuisine', raw: STATION_PALETTE[0] },
+  }, opts);
+  const fn = new Function('scope', `
+    const { IS_DEMO, STATION_PALETTE, carteState, KDS_CAT_STATION, KDS_STATIONS_DEMO, KDS_STATION_SOLO } = scope;
+    let kdsActiveStation = 'all';
+    const $ = () => null;
+    function kdsStationBar() { return ''; }
+    ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsStationFor')}
+    return { stationFor: (m) => kdsStationFor(m), list: kdsStations() };
+  `);
+  return fn(scope);
+}
+
+const solo = runStationFor({});
+eq(solo.list.length, 1, 'un café qui n\'a déclaré aucun poste en a UN, pas zéro et pas les sept de la démo');
+eq(solo.list[0].id, 'cuisson', 'ce poste unique implicite est sa cuisine');
+eq(solo.stationFor({ id: 'x', station: '' }), 'cuisson', 'un plat sans poste y va');
+
+const real = runStationFor({ carteState: { stations: [
+  { id: 'st_1', name: 'Cuisson', raw: '#1F5D3C' },
+  { id: 'st_2', name: 'Bar', raw: '#3677A6' },
+], kdsReady: true } });
+eq(real.stationFor({ id: 'a', station: 'st_2' }), 'st_2', 'le poste choisi par le patron gagne');
+eq(real.stationFor({ id: 'b', station: '' }), 'st_1',
+  'un plat sans poste part vers le PREMIER de la liste — le défaut annoncé au tableau de bord');
+eq(real.stationFor({ id: 'c', station: 'st_supprime' }), 'st_1',
+  'un poste supprimé au bureau ne laisse pas le plat dans un filtre fantôme');
+eq(real.stationFor(null), 'st_1', 'un plat introuvable dans la carte part quand même quelque part');
+eq(real.stationFor({ id: 'd', station: '', cat: 'boissons' }), 'st_1',
+  'la table par catégorie de la DÉMO ne s\'applique pas à un vrai commerçant');
+
+const demo = runStationFor({ IS_DEMO: true });
+eq(demo.list.length, 1, 'la démo garde SA liste de postes');
+eq(demo.stationFor({ id: 'e', station: '', cat: 'boissons' }), 'boissons',
+  'en démo, la table par catégorie route encore');
+
+/* Le bon papier : un par poste, avec SES lignes, et jamais deux jobs en même
+   temps sur une thermique. */
+/* Les bons partent en CHAÎNE (une thermique ne mélange pas deux jobs), donc le
+   premier ne s'imprime qu'au tour de boucle suivant : le test doit rendre la
+   main avant de lire, sinon il ne verrait jamais un seul bon. */
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+function runTickets(items, stations) {
+  const jobs = [];
+  const scope = {
+    STATION_PALETTE, IS_DEMO: false,
+    carteState: { stations: stations, kdsReady: true },
+    KDS_CAT_STATION: {}, KDS_STATIONS_DEMO: [], KDS_STATION_SOLO: { id: 'cuisson', name: 'Cuisine', raw: '#000000' },
+    jobs,
+  };
+  const fn = new Function('scope', `
+    const { STATION_PALETTE, IS_DEMO, carteState, KDS_CAT_STATION, KDS_STATIONS_DEMO, KDS_STATION_SOLO, jobs } = scope;
+    const window = { KiwiPrinter: {
+      isConnected: () => true,
+      printKitchen: (o) => { jobs.push(o); return Promise.resolve({ ok: true }); },
+    } };
+    const pad2HO = (n) => String(n).padStart(2, '0');
+    ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'printKitchenTickets')}
+    printKitchenTickets({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(items)});
+  `);
+  fn(scope);
+  return jobs;
+}
+
+const STS = [{ id: 'st_1', name: 'Cuisson', raw: '#1F5D3C' }, { id: 'st_2', name: 'Bar', raw: '#3677A6' }];
+const split = runTickets([
+  { q: 1, n: 'Café noir', note: '', stations: ['st_2'] },
+  { q: 2, n: 'Harira', note: 'bien chaude', stations: ['st_1'] },
+  { q: 1, n: 'Pastilla', note: '', stations: ['st_1', 'st_2'] },
+], STS);
+const solo1 = runTickets([{ q: 1, n: 'Café noir', note: '', stations: ['st_2'] }], STS);
+const ticketChecks = tick().then(() => {
+  eq(split.length, 2, 'deux postes concernés → deux bons, pas un fourre-tout');
+  if (split.length === 2) {
+    eq(split[0].title, 'CUISSON', 'les bons sortent dans l\'ordre des postes du patron');
+    eq(split[1].title, 'BAR', 'et le second est le sien');
+    eq(split[0].order, '#7', 'chaque bon porte le numéro de commande pour recoller au passe');
+    eq(split[0].time, '12:05', 'et son heure d\'envoi');
+    eq(split[0].items.map((i) => i.name).join('|'), 'Harira|Pastilla', 'la cuisson ne reçoit QUE ses lignes');
+    eq(split[1].items.map((i) => i.name).join('|'), 'Café noir|Pastilla', 'le bar ne reçoit QUE les siennes');
+    eq(split[0].items[0].note, 'bien chaude', 'la note du client suit son plat sur le bon');
+  }
+  eq(solo1.length, 1, 'un seul poste concerné → un seul bon, comme avant');
+  if (solo1.length === 1) eq(solo1[0].title, 'BAR', 'et il est adressé à ce poste');
+});
+
+/* Une caisse SANS imprimante n'envoie rien et ne jette pas : l'écran cuisine
+   reste le chemin nominal, le papier est un plus. */
+const noPrinterJobs = [];
+const noPrinter = (() => {
+  const jobs = noPrinterJobs;
+  const fn = new Function('jobs', `
+    const window = { KiwiPrinter: { isConnected: () => false, printKitchen: (o) => { jobs.push(o); } } };
+    const IS_DEMO = false;
+    const carteState = { stations: [], kdsReady: true };
+    const KDS_CAT_STATION = {}, KDS_STATIONS_DEMO = [], KDS_STATION_SOLO = { id: 'c', name: 'Cuisine', raw: '#000000' };
+    const pad2HO = (n) => String(n).padStart(2, '0');
+    ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'printKitchenTickets')}
+    printKitchenTickets({ num: 1, sentAt: new Date() }, [{ q: 1, n: 'X', note: '', stations: ['c'] }]);
+    return jobs.length;
+  `);
+  return fn(jobs);
+})();
+eq(noPrinter, 0, 'sans imprimante jointe, aucun bon n\'est tenté — et rien ne casse');
+
+/* La salle part en cuisine, elle aussi — et n'y renvoie pas deux fois. */
+ok(/function sendTableToKitchen\(tableId\)/.test(caisse),
+  'une mesa validée a un chemin vers l\'écran cuisine');
+ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent\)/.test(caisse),
+  'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
+ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
+  'et elles sont marquées une fois parties');
+ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.map/.test(caisse),
+  'le board cuisine survit à un rechargement du comptoir, sinon le drapeau `sent` perdrait la commande');
+ok(/let\s+kdsOrderSeq = IS_DEMO \? 52 : 0;/.test(caisse),
+  'un vrai commerçant commence sa numérotation à 1, pas à 53');
+
+/* La tablette du serveur annonce la VRAIE destination. Elle triait sur une
+   catégorie nommée `boissons` — une rubrique de la démo : chez un vrai café, le
+   test ne tombait jamais juste et une tournée de thés partait « · cuisine ». */
+ok(!/const drinkCats = new Set\(\['boissons'\]\)/.test(serveur),
+  'le serveur ne devine plus la destination depuis une catégorie de la démo');
+ok(/function svStationNames\(order\)/.test(serveur),
+  'il nomme les postes réellement concernés');
+ok(/if \(SV_DEMO \|\| !svStations\.length\) return '';/.test(serveur),
+  'et sans postes déclarés il ne nomme rien plutôt que d\'inventer');
+
+function runSvNames(order, stations, items) {
+  const fn = new Function('scope', `
+    const { SV_DEMO } = scope;
+    let svStations = scope.svStations;
+    const menuItems = scope.menuItems;
+    ${extract(serveur, 'svStationNames')}
+    return svStationNames(scope.order);
+  `);
+  return fn({ SV_DEMO: false, svStations: stations, menuItems: items, order });
+}
+const SV_ITEMS = [{ id: 'i1', station: 'st_2' }, { id: 'i2', station: '' }, { id: 'i3', station: 'st_1' }];
+const SV_STS = [{ id: 'st_1', name: 'Cuisson' }, { id: 'st_2', name: 'Bar' }];
+eq(runSvNames([{ id: 'i1', qty: 1 }], SV_STS, SV_ITEMS), 'bar',
+  'une tournée de cafés annonce le bar, pas la cuisine');
+eq(runSvNames([{ id: 'i1', qty: 1 }, { id: 'i3', qty: 1 }], SV_STS, SV_ITEMS), 'cuisson + bar',
+  'deux postes concernés se lisent dans l\'ordre du patron, pas dans celui de la saisie');
+eq(runSvNames([{ id: 'i2', qty: 1 }], SV_STS, SV_ITEMS), 'cuisson',
+  'un plat sans poste part vers le défaut, et on le dit');
+eq(runSvNames([{ id: 'i1', qty: 1 }], [], SV_ITEMS), '',
+  'sans postes déclarés, aucune destination inventée');
+
+/* ── 10. le carnet clients existe VRAIMENT sur la caisse restaurant ────────── */
+
+ok(/creditSaleToClient\(entry\);/.test(caisse),
+  'recordSale crédite la fidélité du client attaché — le carnet n\'était jamais appelé ici');
+ok(/saleClient = null;\s+\/\/ une note = un passage/.test(caisse),
+  'une addition partagée en quatre ne donne pas quatre tampons');
+ok(/KiwiClients\.recordPurchase\(cid, \{ amount: entry\.amount \}\)/.test(caisse),
+  'et c\'est bien KiwiClients qui applique SES règles de fidélité');
+ok(/if \(saleClient && saleClient\.ctx && saleClient\.ctx !== saleContextKey\(\)\) saleClient = null;/.test(caisse),
+  'changer de note détache la fiche — sinon la mesa 7 créditerait le client de la mesa 3');
+ok(/function clientsOn\(\)[\s\S]{0,180}storeIsReal\(\) && window\.KiwiClients/.test(caisse),
+  'le bouton client ne s\'affiche que sur un comptoir réel, qui a un carnet');
+ok(/\.cl-list\[hidden\] \{ display: none; \}/.test(caisse),
+  'display:flex bat [hidden] — sans cette règle la liste resterait sous le formulaire');
 
 /* ═════════════════════════════════════════════════════════════════════════ */
-console.log(fail === 0
-  ? `  ✓ carte du restaurant (${pass} contrôles : frontière démo, projection, retraits, impression)`
-  : `  ✗ ${fail} échec(s) sur ${pass + fail} contrôles`);
-process.exit(fail === 0 ? 0 : 1);
+/* Le bilan attend les contrôles d'impression : eux seuls sont asynchrones,
+   parce que le vrai code chaîne ses bons au lieu de les lancer ensemble. */
+ticketChecks.then(() => {
+  // Une thermique reçoit ses bons l'un après l'autre — s'ils partaient tous en
+  // même temps, elle en perdrait.
+  eq(noPrinterJobs.length, 0, 'et sans imprimante, la chaîne ne pousse rien non plus');
+  console.log(fail === 0
+    ? `  ✓ carte du restaurant (${pass} contrôles : frontière démo, projection, postes, retraits, impression, fidélité)`
+    : `  ✗ ${fail} échec(s) sur ${pass + fail} contrôles`);
+  process.exit(fail === 0 ? 0 : 1);
+});

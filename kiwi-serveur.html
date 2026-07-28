@@ -3659,6 +3659,10 @@ em, i, cite, dfn, var { font-style: normal; }
        salle hors wifi garde la dernière carte connue. Le serveur ne publie
        jamais : il lit. */
     const SV_CARTE_MIRROR = 'kiwi:menuMirror:v1:';
+    /* Les postes de préparation du patron, dans SON ordre — le premier est celui
+       qui reçoit un plat qu'il n'a affecté à rien. Vide tant que la carte n'est
+       pas arrivée, et vide en démo (où le tri se fait par catégorie). */
+    let svStations = [];
     function svSlug() {
       try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
       try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
@@ -3680,13 +3684,43 @@ em, i, cite, dfn, var { font-style: normal; }
         cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
         name: it.name,
         price: +it.price || 0,
+        // Le poste de préparation choisi par le patron, pour annoncer au serveur
+        // OÙ part sa commande (voir svStationNames).
+        station: it.station || '',
       }));
       if (loose) { labels._autres = 'Autres'; order.push('_autres'); }
+      svStations = (Array.isArray(d.stations) ? d.stations : [])
+        .filter(s => s && s.id && s.name)
+        .map(s => ({ id: String(s.id), name: String(s.name) }));
       catLabels = labels; catOrder = order; menuItems = items;
       if (!catLabels[activeCat]) activeCat = 'all';
       try { renderCatPills(); renderMenu(); } catch (_) {}
       return true;
     }
+    /* Où part cette commande, dit avec les mots du patron.
+     *
+     * Avant : « cuisine » / « bar », déduits d'une catégorie nommée `boissons`.
+     * C'est une catégorie de la DÉMO. Chez un vrai café, dont les rubriques
+     * s'appellent cat_1 et cat_2, le test ne tombait jamais juste et le serveur
+     * lisait « · cuisine » pour une tournée de thés. Un message qui se trompe
+     * sur la destination vaut moins que pas de message du tout.
+     *
+     * Maintenant : les postes réellement concernés, dans l'ordre du patron. Sans
+     * postes déclarés (ou en démo), on ne nomme rien plutôt que d'inventer. */
+    function svStationNames(order) {
+      if (SV_DEMO || !svStations.length) return '';
+      const seen = [];
+      (order || []).forEach((l) => {
+        const m = menuItems.find(mm => mm.id === l.id);
+        const want = m && m.station;
+        const st = svStations.find(s => s.id === want) || svStations[0];
+        if (st && seen.indexOf(st.name) === -1) seen.push(st.name);
+      });
+      // L'ordre du patron, pas celui de la saisie.
+      seen.sort((a, b) => svStations.findIndex(s => s.name === a) - svStations.findIndex(s => s.name === b));
+      return seen.join(' + ').toLowerCase();
+    }
+
     function svFetchCarte() {
       if (SV_DEMO) return;
       const slug = svSlug();
@@ -4723,22 +4757,11 @@ em, i, cite, dfn, var { font-style: normal; }
         // Menu panel, which read as a freeze.)
         const sentId = activeTableId;
         dirtyOrders.delete(sentId);
-        // Count routing for a richer toast (food → cuisine, drinks → bar)
         const order = tableOrders[sentId] || [];
-        const drinkCats = new Set(['boissons']);
-        const foodIds = order.filter(l => {
-          const m = menuItems.find(mm => mm.id === l.id);
-          return !m || !drinkCats.has(m.cat);
-        }).reduce((s, l) => s + l.qty, 0);
-        const drinkIds = order.filter(l => {
-          const m = menuItems.find(mm => mm.id === l.id);
-          return m && drinkCats.has(m.cat);
-        }).reduce((s, l) => s + l.qty, 0);
         const hasNotes = order.some(l => (l.note || '').trim());
         let msg = `Mesa ${sentId} · commande envoyée`;
-        if (foodIds > 0 && drinkIds > 0)      msg += ` · cuisine + bar`;
-        else if (foodIds > 0)                 msg += ` · cuisine`;
-        else if (drinkIds > 0)                msg += ` · bar`;
+        const dests = svStationNames(order);
+        if (dests)                            msg += ` · ${dests}`;
         if (hasNotes)                         msg += ` · notes transmises`;
         returnToFloor();
         toast(msg);
