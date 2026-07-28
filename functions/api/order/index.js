@@ -47,6 +47,7 @@ import {
 const MAX_LINES = 60;              // one order, generously
 const MAX_TOTAL = 200000;          // 200 000 MAD — a sanity ceiling, not a rule
 const MAX_PENDING = 60;            // per merchant: a queue no staff could ever work through
+const MAX_PENDING_PER_TABLE = 8;   // per table/session: three times a normal service
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 
 export async function onRequestPost(context) {
@@ -144,6 +145,42 @@ export async function onRequestPost(context) {
     ).bind(merchant, today).first();
     if (pending && pending.n >= MAX_PENDING) return json({ error: 'queue-full' }, 429);
   } catch (_) { /* table not migrated yet → the insert below reports it */ }
+
+  /* ── …et le même plafond, par TABLE ────────────────────────────────────────
+   * Le compte global ci-dessus borne la base, mais il ne protège pas le
+   * commerçant : c'est son allocation de la journée, et un script qui connaît le
+   * slug (il est dans l'URL de chaque tag NFC, et sur le QR que les clients
+   * photographient) la dépense en quelques secondes contre des tables inventées.
+   * À partir de la soixante-et-unième, le 429 tombe aussi sur les vrais convives
+   * de la 7. Le plafond global était donc le MÉCANISME du déni de service, pas
+   * la protection contre lui — et comme le comptoir écoule un ticket par appel
+   * quand la boucle en réinjecte sans limite, personne ne pouvait rattraper la
+   * file depuis l'intérieur du produit.
+   *
+   * Pourquoi PAS par adresse IP, que l'on attendrait ici : les clients d'un café
+   * sont tous derrière le wifi du café. Une seule adresse publique pour toute la
+   * salle — brider par IP aurait bridé le service entier au premier coup de feu,
+   * et l'attaquant, lui, change d'adresse. La table (ou la session quand le
+   * téléphone en a une) est l'axe qui distingue vraiment un convive d'une
+   * boucle : huit commandes NON ENCORE ACCEPTÉES pour une seule table, c'est
+   * déjà trois fois un service normal, et le compteur retombe dès que le
+   * comptoir accepte.
+   *
+   * Un retrait au comptoir sans session n'a pas de table : il reste couvert par
+   * le seul plafond global, comme avant. */
+  const scope = session ? session.id : (table || '');
+  if (scope) {
+    try {
+      const here = session
+        ? await env.DB.prepare(
+            "SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND session_id = ? AND status = 'pending' AND created_ts >= ?"
+          ).bind(merchant, session.id, today).first()
+        : await env.DB.prepare(
+            "SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND status = 'pending' AND created_ts >= ?"
+          ).bind(merchant, table, today).first();
+      if (here && here.n >= MAX_PENDING_PER_TABLE) return json({ error: 'table-queue-full' }, 429);
+    } catch (_) { /* colonne session_id pas migrée → seul le plafond global joue */ }
+  }
 
   const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
   const linesJson = JSON.stringify(priced.lines);

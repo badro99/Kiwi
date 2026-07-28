@@ -448,11 +448,47 @@ async function get(fn, qs, headers = {}) {
   ok('le total des commandes de cette clé reste unique',
     DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=? AND client_ref=?').get(SLUG, RACE).n === 1);
 
+  /* ═══ 13. UNE TABLE NE DÉPENSE PAS LA JOURNÉE DU COMMERÇANT ═════════════
+     Le plafond global (60/jour) borne la base mais ne protège pas le commerce :
+     c'est son allocation, et un script qui connaît le slug la dépense contre des
+     tables inventées. Le plafond par table est ce qui distingue un convive d'une
+     boucle — sans brider la salle entière, qui partage une seule adresse IP
+     derrière le wifi du café. */
+  const FLOOD = 'table-inondee';
+  for (let i = 0; i < 8; i++) {
+    r = await post(placeOrder, {
+      merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-' + i, lines: [line('i2')],
+    });
+    ok(`commande ${i + 1}/8 sur une même table passe`, r.status === 200, JSON.stringify(r.body));
+  }
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-9', lines: [line('i2')],
+  });
+  ok('la neuvième est refusée', r.status === 429 && r.body.error === 'table-queue-full',
+    r.status + ' ' + JSON.stringify(r.body));
+
+  // …et une AUTRE table continue d'être servie normalement.
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: 'voisine', ref: 'voisine-1', lines: [line('i2')],
+  });
+  ok('la table d\'à côté commande toujours', r.status === 200, JSON.stringify(r.body));
+
+  // Le comptoir accepte : la table repasse sous le plafond.
+  const stuck = DB._db.prepare(
+    "SELECT id FROM orders WHERE merchant=? AND table_no=? AND status='pending' ORDER BY created_ts LIMIT 1"
+  ).get(SLUG, FLOOD);
+  await post(queuePost, { merchant: SLUG, id: stuck.id, status: 'accepted' }, asStaff);
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-10', lines: [line('i2')],
+  });
+  ok('dès que le comptoir accepte, la table peut à nouveau commander', r.status === 200,
+    JSON.stringify(r.body));
+
   console.log('');
   if (fails.length) {
     fails.forEach((f) => console.log('  ✗ ' + f));
     console.log(`\n✗ relais OrderPro : ${pass} ok, ${fails.length} échec(s)\n`);
     process.exit(1);
   }
-  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, addition)\n`);
+  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, plafond par table, addition)\n`);
 })().catch((e) => { console.log('  ✗ ' + (e && e.stack || e)); process.exit(1); });
