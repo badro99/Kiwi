@@ -1,0 +1,110 @@
+# Miroir · badro99/Kiwi ──► zaka33333-hash/Kiwi
+#
+# Pourquoi ce fichier existe
+# ──────────────────────────
+# Le produit vit dans DEUX dépôts GitHub :
+#   • badro99/Kiwi          — le dépôt de travail, celui où l'associé pousse
+#   • zaka33333-hash/Kiwi   — le SEUL que Cloudflare Pages construit
+#
+# Rien ne les relie. Un commit poussé sur badro99 n'atteint donc jamais la
+# production tant que quelqu'un ne recopie pas la branche à la main, et
+# « quelqu'un » finit toujours par oublier. Le 28/07/2026 trois commits sont
+# restés invisibles en production de cette façon — dont le plan de salle
+# partagé entre appareils, une fonction qu'un commerçant croit acquise.
+#
+# Ce workflow supprime le geste manuel : ce qui arrive sur main chez badro99
+# repart aussitôt vers le dépôt que Cloudflare surveille, et le déploiement
+# part tout seul.
+#
+# Mise en service — l'unique étape manuelle
+# ─────────────────────────────────────────
+# Créer un jeton d'accès personnel ayant le droit « Contents: write » sur
+# zaka33333-hash/Kiwi, puis l'enregistrer dans badro99/Kiwi sous
+# Settings → Secrets and variables → Actions → New repository secret,
+# nommé exactement  MIRROR_TOKEN.
+#
+# Tant que ce secret n'existe pas, le job s'arrête proprement en disant ce
+# qu'il attend : il ne casse aucun push et ne fait jamais échouer la CI.
+#
+# Sécurité du geste
+# ─────────────────
+# La poussée est en avance rapide STRICTE : pas de --force, jamais. Si les
+# deux dépôts ont réellement divergé, le miroir refuse et le signale plutôt
+# que d'écraser un historique. Réconcilier une divergence est une décision
+# humaine, pas une décision de CI.
+
+name: Miroir vers le dépôt Cloudflare
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Deux pushes rapprochés ne doivent pas se doubler : le second attend le
+  # premier, sinon il pousserait un état déjà périmé.
+  group: mirror-to-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    # Le fichier vit sur main, donc il existe aussi DANS le dépôt miroir.
+    # Sans cette garde, zaka33333-hash se recopierait sur lui-même à chaque
+    # déploiement — une boucle qui ne sert à rien et brouille les journaux.
+    if: github.repository == 'badro99/Kiwi'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer l'historique complet
+        uses: actions/checkout@v4
+        with:
+          # L'avance rapide se vérifie contre l'historique réel : un clone
+          # superficiel ne saurait pas dire si la cible est bien une aïeule.
+          fetch-depth: 0
+
+      - name: Vérifier que le jeton est en place
+        id: gate
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          if [ -z "$MIRROR_TOKEN" ]; then
+            echo "::warning::Miroir inactif — le secret MIRROR_TOKEN n'est pas configuré."
+            echo "Rien n'a été poussé vers zaka33333-hash/Kiwi ; la production ne bougera pas."
+            echo "Pour l'activer, voir l'en-tête de .github/workflows/mirror-to-cloudflare.yml"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pousser main vers le dépôt que Cloudflare construit
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          TARGET="https://x-access-token:${MIRROR_TOKEN}@github.com/zaka33333-hash/Kiwi.git"
+
+          git remote add cloudflare "$TARGET"
+          git fetch cloudflare main || echo "Le dépôt miroir n'a pas encore de branche main."
+
+          if git rev-parse --verify --quiet cloudflare/main >/dev/null; then
+            if git merge-base --is-ancestor cloudflare/main HEAD; then
+              echo "Avance rapide possible : $(git rev-parse --short cloudflare/main) → $(git rev-parse --short HEAD)"
+            else
+              echo "::error::Les deux dépôts ont divergé — le miroir s'arrête."
+              echo "zaka33333-hash/Kiwi porte des commits absents de badro99/Kiwi."
+              echo "Les réconcilier est une décision humaine ; aucune poussée forcée ne sera faite."
+              git log --oneline HEAD..cloudflare/main | head -20
+              exit 1
+            fi
+          fi
+
+          # Sans --force, volontairement. Voir la note « Sécurité du geste ».
+          git push cloudflare HEAD:refs/heads/main
+          echo "Poussé. Cloudflare Pages déclenche son build sur ce dépôt."
+
+      - name: Effacer l'authentification
+        # Le jeton est écrit en clair dans .git/config par `git remote add`.
+        # Le runner est jetable, mais un artefact ramassé entre-temps le
+        # contiendrait : on l'enlève dès qu'il a servi.
+        if: always()
+        run: git remote remove cloudflare 2>/dev/null || true
