@@ -427,8 +427,31 @@
         // cookie opérateur signé, vérifié dans /api/me — qui lève la garde. Coller
         // « ?op=1 » derrière l'adresse ne lève rien du tout, l'écran reste.
         unlockForOperator();
-        run(opId, true, label, (me.type || '').trim(), (me.slug || slug || '').trim());
+        /* Le serveur vient de dire oui : le slug de l'adresse peut enfin
+           s'épingler, pour que la suite de la session (et un « ?op=1 » plus
+           tard) reste sur ce client. Avant cette confirmation, aucun module
+           n'a le droit de l'écrire — voir merchant-config.js › merchant(). */
+        var okSlug = (me.slug || slug || '').trim();
+        if (okSlug) {
+          try { window.KiwiConfig && window.KiwiConfig.confirmScope && window.KiwiConfig.confirmScope(okSlug); } catch (_) {}
+          try { window.KiwiLive && window.KiwiLive.confirmScope && window.KiwiLive.confirmScope(okSlug); } catch (_) {}
+        }
+        run(opId, true, label, (me.type || '').trim(), okSlug);
         return;
+      }
+
+      /* ── LE MAGASIN FANTÔME ────────────────────────────────────────────────
+       * Une portée a été DEMANDÉE dans l'adresse, et le serveur répond non :
+       * ce navigateur n'est pas opérateur, ou pas sur ce magasin-là. Le moteur
+       * de vitrines, lui, s'est déjà mis en attente sur un établissement vide
+       * au premier rendu (venues.js › init) pour ne rien laisser fuir avant la
+       * réponse — et personne ne venait l'en sortir. Le commerçant restait donc
+       * devant « Mon établissement », vide, sans données et sans explication :
+       * le magasin fantôme du rapport de recette.
+       *
+       * On l'en sort ici, et le tableau de bord repart sur SON magasin. */
+      if (slug) {
+        try { window.KiwiVenue && window.KiwiVenue.cancelScope && window.KiwiVenue.cancelScope(); } catch (_) {}
       }
 
       // A real merchant on their own device.

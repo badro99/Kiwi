@@ -49,6 +49,9 @@
    * under the previous (account-derived) slug read kiwiLiveMerchantPrev; they
    * load after this one, so by the time they run the live value has already been
    * rewritten and snapshotting it themselves is too late. */
+  /* Faux tant que /api/me n'a pas confirmé que ce navigateur a le droit de
+     regarder le magasin nommé dans l'adresse. Voir merchant() ci-dessous. */
+  var scopeConfirmed = false;
   function pin(v) {
     try {
       var cur = localStorage.getItem('kiwiLiveMerchant');
@@ -67,8 +70,14 @@
   // 'cafe-atlas'.
   function merchant() {
     try {
+      /* Le paramètre d'adresse répond pour CETTE page ; il ne s'ÉPINGLE qu'une
+       * fois /api/me d'accord (confirmScope, appelé par identity.js). Épinglé
+       * d'office, il faisait basculer kiwiLiveMerchant — donc le locataire sous
+       * lequel les ventes remontent — au premier chargement d'une adresse
+       * portant le slug d'un autre commerce, et durablement. Même raison
+       * qu'assets/merchant-config.js, où c'est écrit en long. */
       var q = new URLSearchParams(location.search).get('merchant');
-      if (q) { pin(q); return q; }
+      if (q) { if (scopeConfirmed) pin(q); return q; }
       // The ACTIVE STORE owns the tenant, not the account. One account can hold
       // several stores (a boutique and a restaurant), and each has its own till,
       // its own feed and its own money — but KiwiMe.business is a single
@@ -672,6 +681,14 @@
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return qRead().length; },
     queueStatus: queueStatus,
+    /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
+       enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */
+    confirmScope: function (slug) {
+      scopeConfirmed = true;
+      var s = String(slug || '').trim();
+      if (s) pin(s);
+      return true;
+    },
     /* Ce que le serveur a sorti des livres, à la dernière réponse. Pour un
        module métier monté APRÈS le premier passage : l'événement lui a échappé,
        l'état, non. */

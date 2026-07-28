@@ -19,15 +19,38 @@
 (function () {
   'use strict';
 
+  /* ── UN ?merchant= N'EST PAS UNE PREUVE ────────────────────────────────────
+   * L'opérateur ouvre un client par « Ouvrir dashboard », c'est-à-dire par un
+   * ?merchant=<slug> dans l'adresse. Ce paramètre était pris pour argent
+   * comptant ET ÉCRIT dans kiwiLiveMerchant — la clé qui désigne le locataire
+   * pour tout le reste : les ventes remontées, le rapport de journée, la
+   * caisse appairée. Conséquence, chez n'importe qui : ouvrir une seule fois
+   * une adresse portant le slug d'un autre commerce faisait basculer la
+   * session entière sous ce slug, et elle y restait après la fermeture de
+   * l'onglet. Observé sur le navigateur du propriétaire pendant la recette.
+   *
+   * Le paramètre vaut donc pour CETTE page, et rien de plus. Il ne s'écrit
+   * nulle part tant que /api/me n'a pas confirmé que l'appelant est bien un
+   * opérateur portant sur ce magasin — c'est identity.js qui appelle alors
+   * confirmScope(). Un commerçant ordinaire qui atterrit sur une telle adresse
+   * regarde une page qui ne lui répond pas, puis retrouve son magasin ; sa
+   * session, elle, n'a pas bougé. */
+  var urlScope = '';
+  try { urlScope = new URLSearchParams(location.search).get('merchant') || ''; } catch (_) {}
+
   function merchant() {
-    try {
-      // A ?merchant= in the URL is authoritative (operator "Ouvrir dashboard"
-      // opens the client scoped this way) and is pinned to localStorage so the
-      // rest of the session stays on that client. Falls back to the last pick.
-      var q = new URLSearchParams(location.search).get('merchant');
-      if (q) { try { localStorage.setItem('kiwiLiveMerchant', q); } catch (_) {} return q; }
-      return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas';
-    } catch (_) { return 'cafe-atlas'; }
+    if (urlScope) return urlScope;
+    try { return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas'; } catch (_) { return 'cafe-atlas'; }
+  }
+
+  /* Le serveur a confirmé la portée : on peut l'inscrire. Appelé par
+     identity.js quand /api/me répond operator + scoped. */
+  function confirmScope(slug) {
+    var s = String(slug || urlScope || '').trim();
+    if (!s) return false;
+    urlScope = s;
+    try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {}
+    return true;
   }
 
   /* `pins` is the ACTIVE store's staff list — the till pad's answer to "who is
@@ -47,6 +70,9 @@
      * propre re-slugification du nom, et la carte déménageait au premier
      * renommage. Une seule réponse à « où écrire », pour tout le monde. */
     storeSlug: storeSlug,
+    /* Voir merchant() : un ?merchant= ne s'inscrit qu'une fois le serveur
+       d'accord. identity.js est le seul appelant légitime. */
+    confirmScope: confirmScope,
     /* Relire la config MAINTENANT. L'opérateur vient d'allumer un module pour ce
      * commerçant : sans ceci, la caisse ne l'apprend qu'au prochain chargement de
      * page — et une caisse de comptoir reste ouverte des jours entiers. */

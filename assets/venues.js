@@ -3235,6 +3235,15 @@
       }
     } catch (_) { /* URLSearchParams missing → fall through to normal init */ }
 
+    pickOwnVenue();
+  }
+
+  /* Le choix de vitrine ORDINAIRE — un commerçant chez lui. Extrait d'init()
+   * pour que cancelScope() puisse le rejouer APRÈS coup : la vue portée décide
+   * au premier rendu, avant que /api/me ait répondu, et il faut bien un chemin
+   * de retour quand la réponse est « non ». */
+  let wired = false;
+  function pickOwnVenue() {
     let stored = null;
     try { stored = localStorage.getItem(STORAGE_KEY); } catch (_) {}
     // Fusion mode is intentionally NOT persisted across reloads — the merchant
@@ -3247,8 +3256,12 @@
       /* Real merchant → their OWN store only. Never a demo venue — even a stale
          kiwiVenue=cafeAtlas persisted by an earlier (broken) session; heal it so
          "my boutique opens as Café Atlas with demo numbers" can't happen. */
-      const firstCustom = [...customIds][0] || null;
-      if (customIds.has(stored)) {
+      /* …et jamais un identifiant TRANSITOIRE non plus ('own', 'scoped'). Sans
+         ce filtre, un retour de portée refusée retenait l'établissement vide
+         fabriqué pour le premier rendu, ET l'inscrivait dans kiwiVenue — le
+         magasin fantôme devenait alors permanent. */
+      const firstCustom = [...customIds].filter(id => TRANSIENT_IDS.indexOf(id) < 0)[0] || null;
+      if (customIds.has(stored) && TRANSIENT_IDS.indexOf(stored) < 0) {
         currentVenue = stored;
       } else if (firstCustom) {
         currentVenue = firstCustom;
@@ -3267,10 +3280,36 @@
     document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
     document.documentElement.removeAttribute('data-theme');
 
-    registerHandlers();
-    setupDropdownClosers();
-    hookI18n();
+    /* Une seule fois : cancelScope() rejoue ce bloc alors que le chemin porté a
+       déjà branché les écouteurs, et les rebrancher les doublerait. */
+    if (!wired) {
+      registerHandlers();
+      setupDropdownClosers();
+      hookI18n();
+      wired = true;
+    }
     renderAll({ skipFade: true });
+  }
+
+  /* ── RETOUR DE PORTÉE REFUSÉE ──────────────────────────────────────────────
+   * init() se met en attente sur un établissement vide dès qu'il voit ?op ou
+   * ?merchant dans l'adresse — c'est volontaire, et c'est ce qui empêche la
+   * vitrine du navigateur de s'afficher une fraction de seconde à la place de
+   * celle du client. Mais rien ne l'en sortait quand /api/me répondait « vous
+   * n'êtes pas opérateur » : le commerçant restait devant « Mon établissement »,
+   * vide, définitivement. C'est le magasin fantôme du rapport de recette.
+   *
+   * Appelé par identity.js, et seulement là. */
+  function cancelScope() {
+    if (scopedActive) {
+      scopedActive = false;
+      scopedSiblings = [];
+      customIds.delete('scoped');
+      try { delete VENUES.scoped; } catch (_) { VENUES.scoped = undefined; }
+    }
+    pickOwnVenue();
+    subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+    return true;
   }
 
   /* init() is invoked at the very end of this IIFE — AFTER the Équipe block
@@ -8458,6 +8497,9 @@
     getTypeLabel: id => typeLabelOf(VENUES[id || currentVenue]),
     applyServerType,
     applyScopedVenue,
+    /* L'inverse : le serveur a refusé la portée demandée dans l'adresse, on
+       rend au commerçant son propre magasin plutôt qu'un écran vide. */
+    cancelScope,
     adoptServerStores,
     getKpiSpec: type => {
       /* Subtype profile first: a custom venue's KPI band speaks its trade's
