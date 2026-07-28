@@ -2172,8 +2172,38 @@
    * component ⇒ the derived tile has no comparison either. With demo data
    * every component is a number, so this behaves exactly like the old r1(sum). */
   const withDelta = (parts, fn) => parts.some((p) => p == null) ? null : r1(fn(...parts));
-  const revOf = (d) => (d.tx && d.panier) ? d.tx.value * d.panier.value : null;
+  /* ── Le chiffre d'affaires ──────────────────────────────────────────────
+   * Il se LIT quand on l'a, il ne se reconstitue qu'en dernier recours.
+   *
+   * Avant, il était toujours reconstitué : nombre de ventes × panier moyen. Or
+   * le panier moyen affiché est ARRONDI à l'entier (Math.round, plus bas dans
+   * le chemin réel) — 37 ventes pour 4 618 MAD donnent un panier de 124,81 qui
+   * s'affiche 125, et le CA reconstitué sort à 4 625. Sept dirhams de trop, nés
+   * d'un arrondi d'affichage. Sur trois cents ventes l'écart passe la centaine,
+   * et il grandit avec le volume : c'est précisément le commerçant le plus
+   * occupé qui voit son tableau de bord s'éloigner le plus de sa caisse.
+   *
+   * Le total exact existait déjà — realSalesTotals() l'additionne vente par
+   * vente et il n'était utilisé nulle part ici. Bénéfice brut, coût matière,
+   * pourboires et CA par jour en dérivent tous, donc les cinq tuiles se
+   * décalaient ensemble et de façon cohérente : impossible à repérer à l'œil,
+   * et faux à chaque fois qu'on rapproche du rouleau de caisse.
+   *
+   * La démo n'a pas de clé `revenue` : elle continue de passer par le produit,
+   * comme avant, avec des paniers déjà entiers — donc rien n'y change. */
+  const revOf = (d) => {
+    if (d.revenue && d.revenue.value != null) return d.revenue.value;
+    return (d.tx && d.panier) ? d.tx.value * d.panier.value : null;
+  };
   const margeOf = (d, ctx) => d.marge ? d.marge.value : (DEFAULT_MARGIN[ctx.venueType] ?? null);
+  /* La VARIATION du chiffre d'affaires, même discipline que sa valeur : réelle
+   * quand la période la connaît, sinon l'approximation d'origine (la somme des
+   * variations du nombre de ventes et du panier moyen). Tout ce qui dérive du
+   * CA la reprend, pour que CA, CA/jour, bénéfice, coût matière et pourboires
+   * ne puissent pas afficher cinq comparaisons différentes de la même chose. */
+  const revDelta = (d) => (d.revenue && d.revenue.delta != null)
+    ? d.revenue.delta
+    : withDelta([d.tx && d.tx.delta, d.panier && d.panier.delta], (a, b) => a + b);
 
   const KPI_CATALOG = {
     tx:         { labels: { default: 'Commandes', spa: 'Rendez-vous' }, i18n: 'dash.kpi.tx',
@@ -2181,17 +2211,17 @@
     panier:     { labels: { default: 'Panier moyen' }, i18n: 'dash.kpi.basket',
                   desc: 'Montant moyen dépensé par vente', derive: (d) => d.panier || null },
     revenue:    { labels: { default: 'Chiffre d’affaires' }, i18n: 'dash.kpi.revenue',
-                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b) }; } },
+                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     revPerDay:  { labels: { default: 'CA par jour' }, i18n: 'dash.kpi.revPerDay',
-                  desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b) }; } },
+                  desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
                   desc: 'Part du CA conservée après coût matière', derive: (d) => d.marge || null },
     profit:     { labels: { default: 'Bénéfice brut' }, i18n: 'dash.kpi.grossProfit',
-                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta, d.marge ? d.marge.delta : 0], (a, b, c) => a + b + c) }; } },
+                  desc: 'Chiffre d’affaires moins le coût matière', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * m / 100, unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a + b) }; } },
     cogs:       { labels: { default: 'Coût matière' }, i18n: 'dash.kpi.cogs',
-                  desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta, d.marge ? d.marge.delta : 0], (a, b, c) => a + b - c) }; } },
+                  desc: 'Dépense en matières premières', derive: (d, ctx) => { const r = revOf(d), m = margeOf(d, ctx); return (r == null || m == null) ? null : { value: r * (1 - m / 100), unit: 'MAD', fmt: 'int', delta: withDelta([revDelta(d), d.marge ? d.marge.delta : 0], (a, b) => a - b) }; } },
     tips:       { labels: { default: 'Pourboires' }, i18n: 'dash.kpi.tips',
-                  desc: 'Pourboires estimés encaissés', derive: (d, ctx) => { const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0; return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: withDelta([d.tx.delta, d.panier.delta], (a, b) => a + b + 5) }; } },
+                  desc: 'Pourboires estimés encaissés', derive: (d, ctx) => { const r = revOf(d), rate = TIP_RATE[ctx.venueType] || 0; return (r == null || !rate) ? null : { value: r * rate, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     success:    { labels: { default: 'Taux succès', spa: 'Taux remplissage' }, i18n: 'dash.kpi.success',
                   desc: 'Paiements aboutis · créneaux remplis', derive: (d) => d.success || null },
     ratio:      { labels: { default: 'Ratio card / cash' }, i18n: 'dash.kpi.ratio',
@@ -2293,6 +2323,11 @@
         ...data,
         tx:     { ...(data.tx || {}),     value: t.count,              delta: realDeltaPct(rng, (s) => s.count) },
         panier: { ...(data.panier || {}), value: Math.round(t.basket), delta: realDeltaPct(rng, (s) => s.basket) },
+        /* Le CA EXACT, additionné vente par vente. Il n'était pas transmis, si
+         * bien que revOf() le reconstituait à partir du panier arrondi
+         * ci-dessus et que le tableau de bord ne tombait jamais juste face au
+         * rouleau de caisse (voir revOf). */
+        revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
       };
@@ -2329,7 +2364,7 @@
        * la comparaison partout où elle n'a PAS été recalculée depuis les ventes
        * réelles, plutôt que d'énumérer les tuiles une à une — une tuile ajoutée
        * demain est couverte sans y penser. */
-      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio']);
+      const REAL_DELTAS = new Set(['tx', 'panier', 'ratio', 'revenue']);
       Object.keys(data).forEach((k) => {
         const tile = data[k];
         if (tile && typeof tile === 'object' && 'delta' in tile && !REAL_DELTAS.has(k)) {

@@ -406,6 +406,25 @@ section('Réimprimer un ticket (tools/pos-reprint-test.js)');
   }
 }
 
+/* ── 9bis · le chiffre d'affaires du tableau de bord ─────────────────────────
+ * Il était reconstitué (ventes × panier moyen) alors que le panier affiché est
+ * arrondi à l'entier : le tableau de bord ne tombait jamais juste face au
+ * rouleau de caisse, et l'écart grandissait avec le volume. Cinq tuiles en
+ * dérivent et se décalaient ensemble, donc rien à l'écran ne pouvait le
+ * trahir. (tools/kpi-ledger-test.js) ──────────────────────────────────────── */
+section('CA au grand livre (tools/kpi-ledger-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'kpi-ledger-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`kpi-ledger-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 10 · les milliers en arabe ──────────────────────────────────────────────
  * « 31 500 MAD » s'affichait « MAD 500 31 » : un chiffre faux sous les yeux du
  * commerçant. Le correctif réécrit des nœuds de texte, donc la garde surveille
