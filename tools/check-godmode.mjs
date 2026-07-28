@@ -912,6 +912,15 @@ G('14 · Révocation — supprimer un droit coupe vraiment la session');
      !!db.prepare('SELECT merchant FROM merchant_config WHERE merchant = ?').bind('amira-boutique').first(),
     '…et le compte comme l’établissement sont restés en place');
 
+  const storeDelete = await call(R.clients, 'DELETE',
+    '/api/admin/clients?merchant=snack-rif&confirm=snack-rif');
+  ok(storeDelete.status === 200 && storeDelete.json.ok,
+    'un établissement confirmé est supprimé');
+  const afterDelete = await call(R.clients, 'GET', '/api/admin/clients');
+  ok(!afterDelete.json.clients.some((c) => c.merchant === 'snack-rif') &&
+     !db.prepare('SELECT id FROM accounts WHERE id = ?').bind('acc-b').first(),
+    '…et son compte unique ne le recrée pas au rechargement');
+
   const before = await lib.isSeniorOperator(new Request('https://kiwi.test/',
     { headers:{ Cookie:AS.operator } }), env);
   ok(before === true, 'la session de l’opérateur vivant est reconnue');

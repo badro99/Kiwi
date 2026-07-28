@@ -301,6 +301,33 @@ export async function onRequestDelete(context) {
     return json({ error: 'confirm-mismatch', detail: 'Répétez le slug exact dans ?confirm=' }, 400);
   }
 
+  /* `accounts` n'a pas de colonne merchant. Sans ce traitement, supprimer le
+     seul magasin d'un client purgeait bien toutes ses données, puis le GET de
+     cette même route le recréait aussitôt depuis accounts.business : visuellement
+     le bouton Supprimer ne faisait donc rien. Si c'est son dernier magasin, le
+     compte et ses liens de reset partent avec lui. S'il en reste un, il devient
+     le magasin principal afin que l'ancien slug ne soit pas synthétisé à nouveau. */
+  let owner = null;
+  let nextStore = null;
+  try {
+    const cfg = await env.DB.prepare(
+      'SELECT account_id FROM merchant_config WHERE merchant = ?'
+    ).bind(merchant).first();
+    if (cfg && cfg.account_id) {
+      owner = await env.DB.prepare(
+        'SELECT id, business FROM accounts WHERE id = ?'
+      ).bind(cfg.account_id).first();
+    } else {
+      const rs = await env.DB.prepare('SELECT id, business, email FROM accounts').all();
+      owner = (rs.results || []).find((a) => slugMerchant(a.business || a.email) === merchant) || null;
+    }
+    if (owner) {
+      nextStore = await env.DB.prepare(
+        'SELECT merchant, name FROM merchant_config WHERE account_id = ? AND merchant != ? ORDER BY merchant LIMIT 1'
+      ).bind(owner.id, merchant).first();
+    }
+  } catch (_) { /* ancienne base sans registre : la purge par merchant continue */ }
+
   let tables;
   try { tables = await merchantTables(env); }
   catch (e) { return json({ error: 'inventory-failed', detail: String(e) }, 500); }
@@ -318,8 +345,17 @@ export async function onRequestDelete(context) {
   }
 
   try {
-    await env.DB.batch(tables.map((t) =>
-      env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant)));
+    const deletes = tables.map((t) =>
+      env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
+    if (owner && nextStore && slugMerchant(owner.business) === merchant) {
+      deletes.push(env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?')
+        .bind(nextStore.name || nextStore.merchant, owner.id));
+    } else if (owner && !nextStore) {
+      deletes.push(env.DB.prepare('DELETE FROM reset_tokens WHERE account_id = ?').bind(owner.id));
+      deletes.push(env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(owner.id));
+      removed.accounts = 1;
+    }
+    await env.DB.batch(deletes);
   } catch (e) {
     return json({ error: 'delete-failed', detail: String(e) }, 500);
   }
