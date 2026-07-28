@@ -146,3 +146,45 @@ Kiwi Pay / Banking / Investing are Phase 2-3 optionality.
 Don't add Pay/Banking/Investing surfaces unless explicitly asked.
 Don't surface internal financials, asks, or projections in any external-facing
 material — public macro market data only (tourists, interchange cap, SME count).
+
+---
+
+## 6. graphify — query the graph before you read the files
+
+This repo carries a knowledge graph in `graphify-out/` (4 300 nodes, 10 400 edges,
+183 communities). Build it with `graphify update .` if the folder is missing.
+
+**Why this rule exists, in numbers.** The files here are enormous:
+`assets/pages-pro.js` is 13 768 lines, roughly **178 k tokens** — larger than most
+context windows. `assets/venues.js` is ~108 k, `assets/agent.js` ~64 k. One
+speculative "let me just read it and see" on any of those burns a session. The
+graph answers *where does this live and what touches it* for a few hundred tokens.
+
+**Use it for:** where a feature lives, what calls what, blast radius of a change,
+which of the fourteen `pos-*` verticals share code, how two modules connect.
+
+```bash
+graphify query "how does the caisse reach the dashboard"
+graphify explain "KiwiMenuStore"
+graphify path "kiwi-caisse.html" "schema.sql"
+```
+
+**Don't use it for:** a file you can already name, a one-line edit, or reading a
+function you are about to modify. Open the file. The graph orients you; it does
+not replace reading the code you are changing. A `graphify` call you did not need
+costs tokens like any other.
+
+**Staleness is the real hazard.** A graph built from older code will answer
+confidently about functions that no longer exist. `GRAPH_REPORT.md` stamps the
+commit it was built from — compare it against `git rev-parse HEAD`. A post-commit
+hook rebuilds changed files automatically, but the hook is local to this clone
+(`.git/hooks/`), so a fresh clone or another machine has to run
+`graphify hook install` again.
+
+`.graphifyignore` excludes the minified vendor bundles. Without it `three.min.js`
+and `motion.min.js` dominate the graph and the hubs come back as `zi`, `Ue`, `Dt`
+instead of our own module names. Don't remove it.
+
+The doc and PDF pass sends content to a model backend. Code extraction is fully
+local (tree-sitter AST, zero tokens). Several markdown files here still contain
+plaintext merchant PINs, so rotate those before running any doc pass.
