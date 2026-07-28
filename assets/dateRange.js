@@ -2363,6 +2363,22 @@
         revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
+        /* ── Un tiret, pas un zéro ──────────────────────────────────────────
+         * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
+         * Kiwi ne compte ni les paiements refusés ni les retours. Le clone de
+         * démonstration remis à zéro les affichait donc « Taux succès 0,00 % »
+         * — et un taux de succès à zéro ne se lit pas « on ne sait pas », il se
+         * lit « AUCUN paiement n'aboutit ». C'est l'alarme la plus grave que
+         * puisse afficher une caisse, sur une tuile qui ne mesure rien. Un
+         * commerçant qui la croit appelle le support un jour d'ouverture ; un
+         * commerçant qui finit par comprendre qu'elle ment cesse de croire les
+         * cinq tuiles d'à côté, qui, elles, sont justes.
+         *
+         * Le tiret est déjà le vocabulaire de la maison pour « rien à
+         * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
+         * encaissement, deux lignes plus haut. */
+        success:    data.success    ? { ...data.success,    text: '—', unit: '', delta: null } : data.success,
+        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '—', unit: '', delta: null } : data.tauxRetour,
       };
 
       /* Bénéfice brut, Coût matière et Marge brute dérivent TOUS de `marge` via

@@ -156,6 +156,17 @@ if (dFrom > 0 && dTo > dFrom) {
     mk(99)(nuit) === new Date(2026, 2, 12, 0, 0).getTime());
 }
 
+/* ── 7. UN TIRET, PAS UN ZÉRO ──────────────────────────────────────────────
+ * Kiwi ne mesure ni les paiements refusés ni les retours. Le clone de démo
+ * remis à zéro affichait pourtant « Taux succès 0,00 % » — qui ne se lit pas
+ * « on ne sait pas » mais « aucun paiement n'aboutit », l'alarme la plus grave
+ * qu'une caisse puisse afficher, sur une tuile qui ne mesure rien. */
+['success', 'tauxRetour'].forEach((k) => {
+  ok(`« ${k} » affiche un tiret chez un vrai commerçant, pas un zéro`,
+    new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '—'").test(SRC),
+    'la tuile retombe encore sur le zéro du clone de démonstration');
+});
+
 /* La règle vaut pour tout le module : plus aucune remise à minuit en dur dans
  * le calcul des plages de ventes réelles. */
 ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
@@ -167,4 +178,4 @@ if (fails.length) {
   console.log(`\n✗ CA au grand livre : ${pass} ok, ${fails.length} échec(s)\n`);
   process.exit(1);
 }
-console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale)\n`);
+console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro)\n`);
