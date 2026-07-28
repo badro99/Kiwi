@@ -5078,6 +5078,10 @@ em, i, cite, dfn, var { font-style: normal; }
       },
       /* Une addition réglée à l'instant, sur CETTE table. */
       recentlySettled(mode, table) {
+        // A counter tag starts a new takeaway purchase each time it is tapped.
+        // Keeping its previous closed session here made the promised NFC retry
+        // reopen the thank-you screen for 30 minutes instead of the menu.
+        if (mode === 'takeout') return false;
         const s = this._read();
         if (!s || !s.closedAt) return false;
         if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
