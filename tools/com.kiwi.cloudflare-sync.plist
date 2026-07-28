@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Agent launchd qui garde la production Cloudflare alignée sur badro99.
+
+  Installation (à refaire sur toute nouvelle machine) :
+    mkdir -p ~/.kiwi
+    cp tools/sync-cloudflare.sh ~/.kiwi/sync-cloudflare.sh
+    chmod +x ~/.kiwi/sync-cloudflare.sh
+    cp tools/com.kiwi.cloudflare-sync.plist ~/Library/LaunchAgents/
+    launchctl load -w ~/Library/LaunchAgents/com.kiwi.cloudflare-sync.plist
+
+  Le script tourne depuis ~/.kiwi et NON depuis le dépôt : macOS refuse à launchd
+  l'exécution de tout fichier situé dans ~/Desktop, ~/Documents ou ~/Downloads
+  (protection TCC — « Operation not permitted »). Le script n'a de toute façon
+  besoin d'aucun fichier du dépôt : il ne fait qu'un appel API.
+
+  Journal : ~/Library/Logs/kiwi-cloudflare-sync.log
+  Arrêter : launchctl unload ~/Library/LaunchAgents/com.kiwi.cloudflare-sync.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.kiwi.cloudflare-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/zaka/.kiwi/sync-cloudflare.sh</string>
+  </array>
+  <key>StartInterval</key><integer>120</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/kiwi-cloudflare-sync.out</string>
+  <key>StandardErrorPath</key><string>/tmp/kiwi-cloudflare-sync.out</string>
+</dict>
+</plist>
