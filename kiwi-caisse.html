@@ -3991,6 +3991,40 @@
   }
   @keyframes cplanPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
   @media (prefers-reduced-motion: reduce) { .cplan-urgent { animation: none; } }
+
+  /* ── Le téléphone du client sur la table ─────────────────────────────────
+     À GAUCHE, parce que la droite est déjà prise : .cplan-urgent (l'addition
+     demandée) et .tbl-server (l'initiale du serveur) y sont posées.
+     Deux niveaux d'insistance, et l'écart entre les deux est voulu :
+       · la pastille verte dit « quelqu'un lit la carte » — bon à savoir, rien
+         à faire, donc elle ne bouge pas ;
+       · le compteur ambré dit « une commande attend » — tant que personne ne
+         tape, la cuisine ne la verra jamais, donc il bat. */
+  .cplan-phone {
+    position: absolute; top: 2px; left: 2px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--emerald, #3FB67A);
+    box-shadow: 0 0 0 3px rgba(63,182,122,.20);
+  }
+  .cplan-order {
+    position: absolute; top: -2px; left: -2px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 999px; background: #C99A2B; color: #fff;
+    font: 700 10px/17px "Inter Tight", system-ui; text-align: center;
+    box-shadow: 0 0 0 3px rgba(201,154,43,.22);
+    animation: cplanPulse 1.1s ease-in-out infinite;
+    z-index: 3; cursor: pointer;
+  }
+  @media (prefers-reduced-motion: reduce) { .cplan-order { animation: none; } }
+  /* Les mêmes pastilles sur la carte du repli non spatial et sur la démo. */
+  .tbl-cell { position: relative; }
+  .tbl-cell .cplan-phone, .tbl-cell .cplan-order { z-index: 4; }
+
+  /* La sélection et le placement d'une file d'attente étaient stylés pour la
+     seule `.tbl-cell` : sur un vrai plan, la table choisie ne se distinguait
+     de rien. */
+  .cplan-tbl.is-selected { outline: 2px solid var(--forest, #1F5D3C); outline-offset: 2px; border-radius: 8px; }
+  body.is-seating .cplan-tbl.wl-seat-dim { opacity: .32; }
+  body.is-seating .cplan-tbl.wl-seat-free { outline: 3px solid var(--emerald, #3FB67A); outline-offset: 1px; border-radius: 8px; }
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css" />
   <link rel="stylesheet" href="assets/pos-mobile.css" />
@@ -5965,6 +5999,7 @@
             ${elapsed}
           </div>
           ${serverBadge}
+          ${phoneBadgeHTML(id)}
           ${chairsHTML}
         </div>
       `;
@@ -6058,7 +6093,7 @@
         `<div class="tbl" data-status="${t.status}">${dot}` +
           `<div class="tbl-head"><span class="tbl-num">${escTeam(id)}</span><span class="tbl-covers">${t.covers}p</span></div>` +
           `<div class="tbl-status">${label}</div>` +
-        `</div>${sb}</div>`;
+        `</div>${sb}${phoneBadgeHTML(id)}</div>`;
     }
 
     /* Service statuses are not design statuses, so the ring is mapped here
@@ -6071,6 +6106,123 @@
       'bgha-ykhlass': { s: '#C0306E', w: 3.0, dash: '' },
       'khlass':       { s: '#6A7A88', w: 2.4, dash: '5 4' },
     };
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LE TÉLÉPHONE DU CLIENT, SUR LE PLAN DE SALLE
+       ---------------------------------------------------------------------
+       Deux choses différentes, et il faut les distinguer d'un coup d'œil :
+         · un client est ASSIS et lit la carte sur son téléphone — discret, une
+           pastille ; il n'y a rien à faire, c'est juste bon à savoir ;
+         · une commande ATTEND d'être acceptée — ça clignote et ça porte un
+           compte, parce que tant que personne ne tape, la cuisine ne voit rien.
+       L'état ne vit PAS dans `tables` : setupRealSalle() efface et reconstruit
+       cet objet dès que le patron touche son plan depuis son téléphone, ce qui
+       emporterait les sessions avec. Il vit dans sa propre carte, indexée par
+       table, et survit à la reconstruction.
+       ═══════════════════════════════════════════════════════════════════════ */
+    const phoneSeats = new Map();     // clé table → { session, since }
+    const phonePending = new Map();   // clé table → nombre de commandes en attente
+
+    /* La même normalisation que le serveur (functions/api/order/_lib.js) :
+       « T7 », « t7 » et « T 7 » désignent la table que le patron a nommée T7. */
+    function tableKey(v) {
+      return String(v == null ? '' : v).toUpperCase().replace(/\s+/g, '').trim();
+    }
+    function phoneBadgeHTML(id) {
+      const k = tableKey(id);
+      const n = phonePending.get(k) || 0;
+      if (n > 0) {
+        return `<span class="cplan-order" aria-label="${n} commande${n > 1 ? 's' : ''} à accepter">${n}</span>`;
+      }
+      if (phoneSeats.has(k)) {
+        return '<span class="cplan-phone" aria-label="Un client commande depuis son téléphone"></span>';
+      }
+      return '';
+    }
+    function phoneSessionOf(id) {
+      const s = phoneSeats.get(tableKey(id));
+      return (s && s.session) || '';
+    }
+
+    /* Libérer la table côté téléphone. Appelée quand l'addition est réglée, et
+       aussi quand la table est rendue sans encaissement — sinon un téléphone
+       resterait « assis » à une table libre et pourrait continuer à commander.
+       L'état local part TOUT DE SUITE (la pastille s'éteint sous le doigt du
+       caissier) et le réseau suit à son rythme, porté par orderpro-inbox.js. */
+    function releasePhoneTable(id, why) {
+      const k = tableKey(id);
+      const seat = phoneSeats.get(k);
+      phoneSeats.delete(k);
+      phonePending.delete(k);
+      if (!seat) return;
+      document.dispatchEvent(new CustomEvent('kiwi-table-released', {
+        detail: { table: String(id), session: seat.session, why: why || 'settle' },
+      }));
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       UNE table, DEUX formes dans le DOM — et il a longtemps manqué la moitié.
+       ---------------------------------------------------------------------
+       La démo dessine des `.tbl-cell` ; un vrai commerçant qui a dessiné sa
+       salle obtient des `.cplan-tbl` (renderRealGrid, branche spatiale). Or
+       CHAQUE interaction du fichier ne cherchait que `.tbl-cell` : le clic, la
+       sélection, le chronomètre, le placement d'une file d'attente, le clavier.
+       Résultat, sur le plan qu'un client voit vraiment, taper une table ne
+       faisait rien du tout — alors que le nœud porte role="button" et un
+       tabindex, donc il a toujours eu l'air cliquable.
+       Un seul sélecteur pour les deux, désormais, et il est nommé pour qu'on
+       n'en oublie plus un. ══════════════════════════════════════════════════ */
+    const TBL_SEL = '.tbl-cell, .cplan-tbl';
+    function markSelectedTable(id) {
+      $$(TBL_SEL).forEach(c => {
+        const on = c.dataset.table === id;
+        // La carte a un fond intérieur à teinter ; la table dessinée, non.
+        const inner = c.querySelector('.tbl');
+        if (inner) inner.classList.toggle('is-selected', on);
+        else c.classList.toggle('is-selected', on);
+      });
+    }
+
+    /* UNE table du plan spatial. Extraite de renderRealGrid pour qu'on puisse
+       en redessiner une seule : elle vivait dans un .map() anonyme, donc le
+       seul moyen de rafraîchir une table était de reconstruire la salle
+       entière — ce qui coupe toute animation en cours et efface la sélection.
+       refreshTableNode() s'en sert maintenant, exactement comme la démo se sert
+       de tableHTML(). */
+    function planTableOf(id) {
+      const list = (__realPlan && __realPlan.tables) || [];
+      return list.find(t => String(t.num || t.id) === String(id)) || null;
+    }
+
+    function cplanTableHTML(t) {
+      const C = window.KiwiFloorCore;
+      if (!C || !t) return '';
+      const PAD = C.PAD;
+      const id = String(t.num || t.id);
+      const live = tables[id] || {};
+      const g = C.geom(t), c = C.color(t);
+      const ring = CAISSE_RING[live.status] || CAISSE_RING.khawya;
+      const covers = live.covers != null ? live.covers : g.seats;
+      const urgent = live.status === 'bgha-ykhlass'
+        ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
+      const sv = live.server && servers[live.server];
+      const badge = sv
+        ? `<span class="tbl-server" style="background:${sv.color};">${serverInitials(sv)}</span>` : '';
+      return `<div class="cplan-tbl" data-table="${escTeam(id)}" role="button" tabindex="0"
+             data-status="${live.status || 'khawya'}"
+             aria-label="Table ${escTeam(id)}, ${covers} couverts"
+             style="left:${t.x - PAD}px; top:${t.y - PAD}px;
+                    width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
+                    --pad:${PAD}px; transform:rotate(${t.rot || 0}deg);">
+          <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
+            ${C.chairsFor(g, g.seats, c)}${C.tableBody(g, c, ring)}
+          </svg>
+          <div class="cplan-face" style="color:${C.ink(c)};">
+            <span class="cplan-num">${escTeam(id)}</span>
+            <span class="cplan-cov">${covers}p</span>
+          </div>${urgent}${badge}${phoneBadgeHTML(id)}
+        </div>`;
+    }
 
     /* Repaint from the CURRENT `tables` (live status from the order flow)
        positioned by the OWNER'S plan. This used to be a flat card grid per
@@ -6118,32 +6270,7 @@
           return st && st !== 'khawya';
         }).length;
 
-        const items = zTables.map(t => {
-          const id = String(t.num || t.id);
-          const live = tables[id] || {};
-          const g = C.geom(t), c = C.color(t);
-          const ring = CAISSE_RING[live.status] || CAISSE_RING.khawya;
-          const covers = live.covers != null ? live.covers : C.geom(t).seats;
-          const urgent = live.status === 'bgha-ykhlass'
-            ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
-          const sv = live.server && servers[live.server];
-          const badge = sv
-            ? `<span class="tbl-server" style="background:${sv.color};">${serverInitials(sv)}</span>` : '';
-          return `<div class="cplan-tbl" data-table="${escTeam(id)}" role="button" tabindex="0"
-                 data-status="${live.status || 'khawya'}"
-                 aria-label="Table ${escTeam(id)}, ${covers} couverts"
-                 style="left:${t.x - PAD}px; top:${t.y - PAD}px;
-                        width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
-                        --pad:${PAD}px; transform:rotate(${t.rot || 0}deg);">
-              <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
-                ${C.chairsFor(g, g.seats, c)}${C.tableBody(g, c, ring)}
-              </svg>
-              <div class="cplan-face" style="color:${C.ink(c)};">
-                <span class="cplan-num">${escTeam(id)}</span>
-                <span class="cplan-cov">${covers}p</span>
-              </div>${urgent}${badge}
-            </div>`;
-        }).join('');
+        const items = zTables.map(t => cplanTableHTML(t)).join('');
 
         html += `<div class="cplan-zone">
             <div class="plan-real-zone-h">${escTeam(z.name || 'Salle')}
@@ -6184,6 +6311,37 @@
         return;
       }
       const zn = {}; (plan.zones || []).forEach(z => { zn[z.id] = z.name || 'Salle'; });
+
+      /* ── L'AFFECTATION DES SERVEURS, enfin reprise ──────────────────────
+         Le patron répartit ses sections en glissant un serveur sur une table
+         (mode Affectation du plan de salle) ; le plan garde ça dans
+         `tb.server`, un identifiant de `plan.staff`. Cette fonction écrivait
+         `server: null` en dur, donc l'affectation était jetée à l'arrivée :
+         aucune table de vrai commerçant n'a JAMAIS porté de serveur, ni sur le
+         plan, ni sur le bandeau de l'addition, ni sur le ticket cuisine.
+         Les deux moitiés existaient et ne se parlaient pas.
+
+         Les identifiants ne coïncident pas, et ne peuvent pas : `servers` est
+         reconstruit depuis les codes d'accès du personnel (rebuildRealRoster,
+         clés S1…Sn), tandis que le plan a ses propres ids. Le NOM est le seul
+         mot commun aux deux. On rapproche donc là-dessus, et faute de
+         correspondance on laisse vide plutôt que d'attribuer une table au
+         mauvais serveur — se tromper de nom est pire que ne pas en avoir. */
+      const staffById = {};
+      (plan.staff || []).forEach(s => { if (s && s.id) staffById[String(s.id)] = s; });
+      const norm = (v) => String(v == null ? '' : v).trim().toLowerCase();
+      const localByName = {};
+      Object.keys(servers).forEach(k => { localByName[norm(servers[k].name)] = k; });
+      function localServerFor(tb) {
+        if (!tb || !tb.server) return null;
+        const key = String(tb.server);
+        // Le plan peut déjà porter la clé locale (S1…) ou un id de son staff.
+        if (servers[key]) return key;
+        const s = staffById[key];
+        const byName = s && localByName[norm(s.name)];
+        return byName || null;
+      }
+
       plan.tables.forEach(tb => {
         const id = String(tb.num || tb.id);
         const zone = zn[tb.zone] || 'Salle';
@@ -6194,7 +6352,7 @@
         tables[id] = {
           designed: true, floor: 0, zone: tb.zone || 'z1', zoneName: zone,
           shape: tb.shape || 'round', covers: designedCovers(tb),
-          status: 'khawya', server: null,
+          status: 'khawya', server: localServerFor(tb),
           x: +tb.x || 0, y: +tb.y || 0, w: +tb.w || 0, h: +tb.h || 0,
           rot: +tb.rot || 0, color: tb.color || null, num: tb.num || id,
           elapsed: 0,
@@ -6454,10 +6612,7 @@
       selectedId = id;
       refreshTableNode(id);
 
-      $$('.tbl-cell').forEach(c => {
-        const inner = c.querySelector('.tbl');
-        if (inner) inner.classList.toggle('is-selected', c.dataset.table === id);
-      });
+      markSelectedTable(id);
 
       renderRightPanel(id);
       $('#rp-empty').hidden = true;
@@ -6497,12 +6652,30 @@
 
     function refreshTableNode(id) {
       const t = tables[id];
-      const old = document.querySelector(`.tbl-cell[data-table="${id}"]`);
-      if (!old) return;
-      old.outerHTML = tableHTML(id, t);
-      lucide.createIcons();
-      // Update floor occupancy count
-      updateFloorCount(t.floor);
+      if (!t) return;
+      /* Le plan SPATIAL (celui que tout vrai commerçant obtient dès qu'il a
+         dessiné sa salle) rend des `.cplan-tbl`, pas des `.tbl-cell`. Cette
+         fonction ne cherchait que la seconde forme : `if (!old) return`
+         partait donc en silence, et AUCUN changement d'état ne se repeignait
+         jamais chez un vrai client — une table encaissée restait verte jusqu'au
+         prochain rechargement complet de la salle. */
+      const cell = document.querySelector(`.tbl-cell[data-table="${id}"]`);
+      if (cell) {
+        cell.outerHTML = tableHTML(id, t);
+        lucide.createIcons();
+        updateFloorCount(t.floor);
+        return;
+      }
+      const spatial = document.querySelector(`.cplan-tbl[data-table="${id}"]`);
+      if (!spatial) return;
+      const pt = planTableOf(id);
+      if (!pt) return;
+      const was = spatial.classList.contains('is-selected');
+      spatial.outerHTML = cplanTableHTML(pt);
+      if (was) {
+        const now = document.querySelector(`.cplan-tbl[data-table="${id}"]`);
+        if (now) now.classList.add('is-selected');
+      }
     }
 
     function updateFloorCount(floor) {
@@ -6522,6 +6695,14 @@
       const t = tables[id];
       t.status = 'khlass';
       t.elapsed = 0;
+      /* L'addition est réglée : le téléphone posé sur cette table cesse d'être
+         un terminal de commande. C'est LE point de passage de tous les
+         encaissements — carte, espèces, addition partagée — donc c'est ici et
+         nulle part ailleurs qu'on coupe, sinon le partage d'addition aurait
+         laissé la session ouverte. L'appel réseau est délégué à
+         orderpro-inbox.js par un évènement : une vente ne doit jamais attendre
+         le réseau, ni échouer parce qu'il est tombé. */
+      releasePhoneTable(id, 'settle');
       refreshTableNode(id);
       shift.tablesPaid += 1;
       renderShiftStats();
@@ -7084,8 +7265,17 @@
 
     /* Event delegation: tables, menu items, cart qty, cat pills */
     document.addEventListener('click', (e) => {
+      /* La pastille « commande en attente » ouvre la file, pas la table : ce
+         que le caissier veut à cet instant, c'est LIRE ce qui a été commandé
+         puis l'accepter — ouvrir l'addition de la table ne le lui montre pas. */
+      const opBadge = e.target.closest('.cplan-order');
+      if (opBadge) {
+        e.stopPropagation();
+        try { if (window.KiwiOrderInbox) KiwiOrderInbox.open(); } catch (_) {}
+        return;
+      }
       // Tables (only in salle mode)
-      const tableEl = e.target.closest('.tbl-cell');
+      const tableEl = e.target.closest(TBL_SEL);
       if (tableEl && mode === 'salle') {
         const id = tableEl.dataset.table;
         const t = tables[id];
@@ -7162,7 +7352,7 @@
       }
     });
     document.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.classList.contains('tbl-cell')) {
+      if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.matches?.(TBL_SEL)) {
         e.preventDefault();
         document.activeElement.click();
       }
@@ -7810,7 +8000,7 @@
 
     /* Flag free tables (selectable) vs occupied (dimmed) for the seating overlay. */
     function markSeatTables() {
-      $$('.tbl-cell').forEach(c => {
+      $$(TBL_SEL).forEach(c => {
         const t = tables[c.dataset.table];
         const free = !!(t && t.status === 'khawya');
         c.classList.toggle('wl-seat-free', free);
@@ -7821,7 +8011,7 @@
     function endSeating(backToList) {
       wlSeating = null;
       document.body.classList.remove('is-seating');
-      $$('.tbl-cell').forEach(c => c.classList.remove('wl-seat-free', 'wl-seat-dim'));
+      $$(TBL_SEL).forEach(c => c.classList.remove('wl-seat-free', 'wl-seat-dim'));
       if (backToList) { setMode('waitlist'); renderWaitlist(); }
     }
 
@@ -8002,10 +8192,7 @@
 
       // Show right panel with the table (pay buttons ready if order > 0)
       selectedId = tableId;
-      $$('.tbl-cell').forEach(c => {
-        const inner = c.querySelector('.tbl');
-        if (inner) inner.classList.toggle('is-selected', c.dataset.table === tableId);
-      });
+      markSelectedTable(tableId);
       showPayButtons(false);
       renderRightPanel(tableId);
       $('#rp-empty').hidden = true;
@@ -8043,6 +8230,9 @@
       });
       const order = {
         num: ++kdsOrderSeq, type: 'dineIn', table: tableId, code: null, status: 'new',
+        // Qui suit cette table. Le bon sortait avec le numéro et rien d'autre,
+        // ce qui obligeait à demander « c'est pour qui, la 7 ? » à voix haute.
+        server: serverNameFor(tableId),
         readyAt: null, items: items, sentAt: new Date(),
         paid: false, pickedUp: false, pickedUpAt: null,
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
@@ -8063,6 +8253,10 @@
       const t = tables[selectedId];
       t.status  = 'khawya';
       t.elapsed = 0;
+      /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
+         « assis » à une table redevenue libre et pourrait continuer à commander
+         — le trou exact que la session existe pour boucher. */
+      releasePhoneTable(selectedId, 'caisse');
       // Restore original covers (2 by default if we changed it)
       refreshTableNode(selectedId);
       selectedId = null;
@@ -11697,7 +11891,14 @@
       if (o.type === 'glovo')    return `<span class="kit-type glovo">Glovo · ${kdsEsc(o.code)}</span>`;
       if (o.type === 'yassir')   return `<span class="kit-type yassir">Yassir · ${kdsEsc(o.code)}</span>`;
       if (o.type === 'takeaway') return `<span class="kit-type takeaway">À emporter</span>`;
-      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}</span>`;
+      /* Le serveur de la table, sur le ticket. La brigade avait la table mais
+         jamais le nom, donc « c'est pour qui, la 7 ? » se criait à travers la
+         cuisine à chaque service. L'affectation existe sur le plan de salle
+         (tables[id].server) ; elle est posée sur la commande au moment où elle
+         est acceptée, pour qu'elle reste vraie même si la table change de main
+         ensuite. */
+      const sv = o.server ? ` <span class="kit-server">· ${kdsEsc(o.server)}</span>` : '';
+      return `<span class="kit-type dineIn">Table ${kdsEsc(o.table)}${sv}</span>`;
     }
 
     function kdsOrderInner(o, withEye) {
@@ -11718,7 +11919,7 @@
         : `<span class="kit-timer ${u}">${KDS_SVG.clock}<span class="kit-timer-v">${kdsFmt(el)}</span></span>`;
       return `
         <div class="kit-order-top">
-          <span class="kit-order-num">#${o.num}</span>
+          <span class="kit-order-num">${ticketNo(o)}</span>
           <div class="kit-order-tr">${topRight}${eye}</div>
         </div>
         <div class="kit-order-meta">
@@ -11760,7 +11961,19 @@
 
     function updateKdsCount() {
       const el = $('#kds-count');
-      if (el) el.textContent = String(kdsOrders.filter(o => o.status !== 'ready').length);
+      // `held` = commande client à emporter, pas encore payée : elle est sur le
+      // tableau À emporter mais la cuisine ne l'a pas encore, donc elle ne doit
+      // pas gonfler le compteur de l'écran cuisine.
+      if (el) el.textContent = String(kdsOrders.filter(o => o.status !== 'ready' && o.status !== 'held').length);
+    }
+
+    /* Le numéro QUE LE CLIENT CONNAÎT. Une commande venue du téléphone porte le
+       numéro donné par le serveur — c'est celui qu'il annoncera au comptoir —
+       tandis qu'une vente au comptoir porte le compteur local. Les afficher tous
+       les deux comme « #N » aurait fait cohabiter deux 7 différents le même
+       midi. Le préfixe les sépare à l'œil sans rien faire calculer à personne. */
+    function ticketNo(o) {
+      return o && o.opNum != null ? 'C-' + String(o.opNum).padStart(3, '0') : '#' + o.num;
     }
 
     function kdsPaint() {
@@ -11791,7 +12004,10 @@
       o.readyAt = kdsNowHM();
       kdsPaint();
       if (o.type === 'takeaway') renderVrapBoard();
-      toast(`Commande #${num} prête`);
+      // Le client apprend que c'est prêt sur son propre téléphone, sans avoir
+      // rien à rafraîchir : c'est tout l'intérêt d'avoir posé la commande là.
+      opPush(o, 'ready');
+      toast(`Commande ${ticketNo(o)} prête`);
     }
 
     function kdsOpenZoom(o) {
@@ -12372,11 +12588,19 @@
         .join('');
       return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? '' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
-          <span class="vrap-order-num">#${o.num}</span>
+          <span class="vrap-order-num">${ticketNo(o)}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
         </div>
         <div class="vrap-order-badges">
-          <span class="vrap-badge ${ready ? 'k-ready' : 'k-cooking'}">${ready ? 'Prête' : 'En préparation'}</span>
+          <span class="vrap-badge ${ready ? 'k-ready' : 'k-cooking'}">${
+            ready ? 'Prête'
+            /* `held` = commande passée depuis un téléphone, pas encore réglée.
+               Elle n'est PAS en préparation : la cuisine ne l'a même pas vue,
+               et c'est justement le paiement qui l'y enverra. Le dire « en
+               préparation » aurait fait attendre le client pour rien, et
+               laissé croire au comptoir que le travail était lancé. */
+            : o.status === 'held' ? 'En attente de paiement'
+            : 'En préparation'}</span>
           <span class="vrap-badge ${o.paid ? 'p-paid' : 'p-unpaid'}">${o.paid ? 'Payé' : 'Non payé'}</span>
         </div>
         <div class="vrap-order-items">${vrapItemsLine(o)}</div>
@@ -12390,7 +12614,7 @@
 
     function vrapHistoryRow(o) {
       return `<div class="vrap-hrow">
-        <span class="vrap-hrow-num">#${o.num}</span>
+        <span class="vrap-hrow-num">${ticketNo(o)}</span>
         <span class="vrap-hrow-items">${vrapItemsLine(o)}</span>
         <span class="vrap-hrow-total">${fmtMAD(o.total)}</span>
         <span class="vrap-hrow-done"><i data-lucide="check"></i> Remise ${kdsEsc(o.pickedUpAt || '')}</span>
@@ -12459,7 +12683,18 @@
           o.paid  = true;
           o.total = currentTotal();         // net of any réduction
           if (cart.length) o.items = vrapCartItems(o);
-          toast(`Commande #${o.num} encaissée · ${fmtMAD(o.total)}`);
+          /* Une commande client à emporter attendait le paiement (`held`) : le
+             client vient d'annoncer son numéro et de payer, donc elle part en
+             cuisine MAINTENANT, et pas avant. C'est ce que le paiement protège
+             — on ne prépare rien pour quelqu'un qui n'est jamais venu. */
+          if (o.status === 'held') {
+            o.status = 'new';
+            o.sentAt = new Date();          // le chrono cuisine part au paiement
+            opPush(o, 'accepted', { paid: true });
+            updateKdsCount();
+            if (kdsEl.classList.contains('is-open')) kdsPaint();
+          }
+          toast(`Commande ${ticketNo(o)} encaissée · ${fmtMAD(o.total)}`);
         }
         vrapEditingNum = null;
         clearCart();
@@ -12521,7 +12756,12 @@
       o.pickedUp = true;
       o.pickedUpAt = kdsNowHM();
       renderVrapBoard();
-      toast(`Commande #${num} remise au client`);
+      /* Remise en main propre : c'est le point final. Le téléphone bascule sur
+         le remerciement et ne peut plus commander — pour un retrait au
+         comptoir, il n'y a pas d'addition à encaisser plus tard qui viendrait
+         fermer la session à sa place. */
+      opPush(o, 'served');
+      toast(`Commande ${ticketNo(o)} remise au client`);
     }
 
     $('#vrap-board').addEventListener('click', (e) => {
@@ -12555,6 +12795,185 @@
         renderVrapBoard();
       }
     }, 25000);
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LE PONT — la commande du téléphone devient un ticket de cette caisse
+       ═══════════════════════════════════════════════════════════════════════
+       assets/orderpro-inbox.js relève déjà la file du serveur toutes les six
+       secondes et sait l'afficher dans son propre panneau. Ce qu'il ne pouvait
+       pas faire, c'est ENTRER : `kdsOrders`, `kdsPaint`, `renderVrapBoard` sont
+       des déclarations locales de ce script — jamais posées sur `window` — donc
+       un fichier séparé n'a aucun moyen de les atteindre. Le bouton
+       « Accepter · envoyer en cuisine » POSTait l'état au serveur et s'arrêtait
+       là : rien n'apparaissait sur l'écran cuisine, rien sur le tableau À
+       emporter. Il disait vrai au serveur et faux au cuisinier.
+       Ce pont est la porte manquante, et la SEULE : tout ce qui vient du
+       téléphone passe par ici.
+
+       Deux numéros, et il faut les garder distincts. `num` est le compteur
+       local (kdsOrderSeq), dont dépendent la recherche par numéro et les clés
+       du DOM ; `opNum` est le numéro que le SERVEUR a donné, c'est-à-dire le
+       seul que le client connaisse et prononcera au comptoir. On affiche le
+       second, on indexe sur le premier — sans quoi une commande client n°7 et
+       une vente au comptoir n°7 se seraient écrasées l'une l'autre. */
+    const opTickets = new Map();   // id serveur → ticket local
+
+    function opMerchant() {
+      try { return (window.KiwiOrderInbox && KiwiOrderInbox.merchant && KiwiOrderInbox.merchant()) || ''; }
+      catch (_) { return ''; }
+    }
+    /* Pousser l'état vers le serveur, pour que le TÉLÉPHONE l'apprenne. Sans
+       cet écho, la cuisine sait que le plat est prêt et le client, non. */
+    function opPush(o, status, extra) {
+      if (!o || !o.opId) return;
+      try {
+        if (window.KiwiOrderInbox && KiwiOrderInbox.setStatus) {
+          KiwiOrderInbox.setStatus(o.opId, status, extra || {});
+        }
+      } catch (_) {}
+    }
+
+    /* Le serveur affecté à la table, tel que le plan de salle le connaît. */
+    function serverNameFor(tableId) {
+      const t = tables[tableId];
+      const s = t && t.server && servers[t.server];
+      return (s && s.name) || '';
+    }
+
+    /* Une commande du serveur → un ticket d'ici. Idempotent : le sondage repasse
+       toutes les six secondes sur les mêmes lignes, et il ne doit jamais en
+       naître un deuxième ticket. */
+    function opIngest(o) {
+      if (!o || !o.id) return;
+      const known = opTickets.get(o.id);
+
+      /* En salle, une commande EN ATTENTE n'entre pas dans la cuisine : elle
+         attend la décision humaine, et c'est la pastille sur la table qui la
+         signale. À emporter, en revanche, elle doit être VISIBLE au comptoir
+         tout de suite avec son numéro — c'est ce numéro que le client vient
+         annoncer pour payer. D'où l'état local `held` : le tableau À emporter
+         l'affiche, l'écran cuisine l'ignore (kdsGroup ne connaît que
+         new/cooking/ready), et le paiement le promeut. */
+      if (!known) {
+        if (o.status === 'rejected') return;
+        if (o.mode === 'table' && o.status === 'pending') return;   // la pastille suffit
+        const isTakeaway = o.mode !== 'table';
+        const t = {
+          num: ++kdsOrderSeq,
+          opId: o.id,
+          opNum: o.number,
+          type: isTakeaway ? 'takeaway' : 'dineIn',
+          table: o.mode === 'table' ? (o.table || '') : null,
+          server: o.server || (o.mode === 'table' ? serverNameFor(o.table) : ''),
+          status: (isTakeaway && o.status === 'pending') ? 'held'
+                : (o.status === 'ready' ? 'ready' : 'new'),
+          readyAt: o.status === 'ready' ? kdsNowHM() : null,
+          items: (o.lines || []).map(l => ({
+            q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
+            note: [l.options, l.note].filter(Boolean).join(' · '),
+            stations: [kdsStationForName(l.name)],
+          })),
+          sentAt: new Date(o.created_ts || Date.now()),
+          paid: !!o.paid, pickedUp: o.status === 'served',
+          pickedUpAt: o.status === 'served' ? kdsNowHM() : null,
+          total: o.total || 0,
+        };
+        kdsOrders.push(t);
+        opTickets.set(o.id, t);
+        return;
+      }
+
+      /* Déjà connue : on ne suit QUE ce que le serveur peut nous apprendre de
+         neuf (une autre caisse, ou le téléphone du client). L'état local de la
+         cuisine — `cooking` — n'existe pas côté serveur et ne doit donc jamais
+         être écrasé par ce sondage. */
+      if (o.status === 'ready' && known.status !== 'ready') {
+        known.status = 'ready'; known.readyAt = known.readyAt || kdsNowHM();
+      }
+      if (o.status === 'served' && !known.pickedUp) {
+        known.pickedUp = true; known.pickedUpAt = known.pickedUpAt || kdsNowHM();
+      }
+      if (o.status === 'accepted' && known.status === 'held') known.status = 'new';
+      if (o.paid && !known.paid) known.paid = true;
+      if (o.server && !known.server) known.server = o.server;
+    }
+
+    /* À quel poste envoyer un plat dont on ne connaît que le nom. La commande
+       vient du téléphone : elle porte le nom de la carte, pas la catégorie. On
+       retrouve le plat dans la carte chargée par la caisse, sinon « cuisson »
+       — un ticket au mauvais poste reste un ticket ; un ticket nulle part, non. */
+    function kdsStationForName(name) {
+      const n = String(name || '').toLowerCase();
+      try {
+        const hit = (menu || []).find(m => String(m.name || '').toLowerCase() === n);
+        if (hit) return hit.station || KDS_CAT_STATION[hit.cat] || 'cuisson';
+      } catch (_) {}
+      return 'cuisson';
+    }
+
+    /* Ce que orderpro-inbox.js appelle à chaque tour de sondage. */
+    window.KiwiCaisseKitchen = {
+      /* `delta` = ce qui a changé depuis le dernier sondage (c'est le curseur
+         `since` qui le décide) ; `all` = tout ce que la caisse connaît encore.
+         La distinction n'est pas cosmétique : compter les commandes en attente
+         sur le DELTA aurait éteint la pastille d'une table dès le sondage
+         suivant, puisqu'une commande qui n'a pas bougé n'y figure plus — la
+         table aurait clignoté six secondes puis se serait tue, avec la commande
+         toujours en attente. Les sessions, elles, arrivent en instantané
+         complet et se relisent telles quelles. */
+      ingest(delta, all, sessions) {
+        let touched = false;
+        (delta || []).forEach(o => { opIngest(o); touched = true; });
+
+        /* Qui est assis, et où une commande attend. Les deux viennent de la
+           même réponse, donc le plan de salle ne se contredit jamais avec la
+           file. On reconstruit les deux cartes à neuf plutôt que d'y ajouter :
+           une table libérée doit s'éteindre, et un « ajout seulement » l'aurait
+           laissée allumée pour le reste du service. */
+        const seats = new Map();
+        (sessions || []).forEach(s => {
+          if (s.mode !== 'table' || !s.table) return;
+          seats.set(tableKey(s.table), { session: s.id, since: s.opened_ts });
+        });
+        const pend = new Map();
+        (all || []).forEach(o => {
+          if (o.mode !== 'table' || o.status !== 'pending' || !o.table) return;
+          const k = tableKey(o.table);
+          pend.set(k, (pend.get(k) || 0) + 1);
+        });
+
+        const changed = !sameMap(seats, phoneSeats, (a, b) => a.session === b.session)
+                     || !sameMap(pend, phonePending, (a, b) => a === b);
+        phoneSeats.clear(); seats.forEach((v, k) => phoneSeats.set(k, v));
+        phonePending.clear(); pend.forEach((v, k) => phonePending.set(k, v));
+
+        if (changed) { storeIsReal() ? renderRealGrid() : renderSalle(); }
+        if (touched) {
+          updateKdsCount();
+          if (kdsEl.classList.contains('is-open')) kdsPaint();
+          if (mode === 'vrap' && vrapView === 'board') renderVrapBoard();
+        }
+      },
+      /* La caisse accepte une commande en salle : elle part en cuisine, au nom
+         du serveur de cette table. */
+      acceptTable(orderId) {
+        const t = opTickets.get(orderId);
+        const server = t ? t.server : '';
+        try {
+          if (window.KiwiOrderInbox && KiwiOrderInbox.setStatus) {
+            KiwiOrderInbox.setStatus(orderId, 'accepted', { server });
+          }
+        } catch (_) {}
+      },
+      sessionOf: phoneSessionOf,
+      serverFor: serverNameFor,
+    };
+
+    function sameMap(a, b, eq) {
+      if (a.size !== b.size) return false;
+      for (const [k, v] of a) { const o = b.get(k); if (o === undefined || !eq(v, o)) return false; }
+      return true;
+    }
 
     /* ===========================================================
        === Persistence ===  (the shift survives a reload)

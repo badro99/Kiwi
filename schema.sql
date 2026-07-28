@@ -163,12 +163,20 @@ CREATE TABLE IF NOT EXISTS merchant_config (
                                      -- decides which module set the operator console shows
   account_id TEXT,                   -- accounts.id of the owner ("acc-<uuid>"); NULL = unclaimed
   name       TEXT,                   -- the store's own name ("Café Nord")
+  -- active | suspended, PER STORE. accounts.status freezes a whole LOGIN, which
+  -- is the wrong instrument for a client who runs a boutique and a café and has
+  -- stopped paying for one of them: freezing the login takes down the shop that
+  -- is paid up too. A suspended store keeps every byte it owns — this only cuts
+  -- what it can DO: no new sale, no write, no public ordering page.
+  -- NULL is read as active, so every row that predates the column is untouched.
+  status     TEXT,
   updated_ts INTEGER NOT NULL
 );
 -- Existing databases (table already created): add the columns once —
 --   ALTER TABLE merchant_config ADD COLUMN type TEXT;
 --   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
 --   ALTER TABLE merchant_config ADD COLUMN name TEXT;
+--   ALTER TABLE merchant_config ADD COLUMN status TEXT;
 CREATE INDEX IF NOT EXISTS idx_config_account ON merchant_config (account_id);
 -- Mirrored up from the client at onboarding (assets/onboarding.js → KiwiConfig
 -- .syncType → POST /api/config); the console reads it to show boutique modules
@@ -263,9 +271,20 @@ CREATE TABLE IF NOT EXISTS orders (
   table_no   TEXT,               -- table number for dine-in, empty for takeout
   total      INTEGER NOT NULL,   -- MAD, whole dirhams
   lines      TEXT NOT NULL,      -- JSON: [{id,name,qty,unitPrice,options,note}]
-  status     TEXT NOT NULL,      -- 'pending' | 'accepted' | 'ready' | 'rejected'
+  status     TEXT NOT NULL,      -- 'pending' | 'accepted' | 'ready' | 'served' | 'rejected'
   created_ts INTEGER NOT NULL,
-  updated_ts INTEGER NOT NULL
+  updated_ts INTEGER NOT NULL,
+  -- ── OrderPro · session de table (voir table_sessions, plus bas) ───────────
+  -- Déclarées ICI pour qu'une base neuve les ait d'emblée, et répétées en ALTER
+  -- commenté plus bas pour la base DÉJÀ déployée, que « CREATE TABLE IF NOT
+  -- EXISTS » ne touchera jamais. Toute lecture qui les nomme doit garder son
+  -- repli (queue.js) : les deux formes de base coexistent en ce moment.
+  session_id  TEXT,               -- table_sessions.id qui a passé la commande
+  server_name TEXT,               -- le serveur affecté à la table, posé à l'acceptation
+  menu_rev    INTEGER,            -- menus.updated_ts ayant servi à tarifer
+  priced_ts   INTEGER,            -- NULL = prix jamais recalculés côté serveur
+  client_ref  TEXT,               -- clé d'idempotence du téléphone
+  paid_ts     INTEGER             -- encaissée (au comptoir, ou avec l'addition de la table)
 );
 -- The caisse polls "WHERE merchant = ? AND updated_ts > ?" — this index covers
 -- both that and the per-merchant daily number lookup.
@@ -567,3 +586,92 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
   actor_id   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_reset_account ON reset_tokens (account_id, created_ts);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ORDERPRO · LA SESSION DE TABLE — le téléphone du client, assis quelque part
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Jusqu'ici, savoir le slug d'un commerce suffisait à commander chez lui, pour
+-- toujours, depuis n'importe où. Le relais était donc honnête (le personnel
+-- accepte chaque commande à la main) mais sans mémoire : rien ne distinguait le
+-- client assis en terrasse de quelqu'un qui a gardé le lien et commande de chez
+-- lui à deux heures du matin.
+--
+-- Une session est ce qui manquait : un lien VIVANT entre un téléphone et une
+-- table, qui s'ouvre au moment où le client pose son téléphone sur le tag, et
+-- que la caisse peut FERMER. Encaisser l'addition la ferme ; à partir de là le
+-- téléphone n'affiche plus la carte mais un remerciement, et ses commandes sont
+-- refusées jusqu'au prochain contact avec le tag.
+--
+-- `id` EST la capacité — pas de mot de passe à côté, comme /api/order?id=… qui
+-- fonctionne déjà ainsi. D'où 22 caractères tirés au sort (≈130 bits) et non un
+-- compteur : un identifiant devinable rendrait la fermeture décorative.
+--
+-- Ce que ça ne prétend PAS être : une identité. On ne sait pas QUI est assis là,
+-- on ne le stocke pas, et on ne veut pas le savoir. Une session ne porte aucune
+-- donnée personnelle — juste « un téléphone est en train de commander à la 7 ».
+CREATE TABLE IF NOT EXISTS table_sessions (
+  id          TEXT PRIMARY KEY,               -- "tsx-<22 caractères aléatoires>" ; c'est le secret
+  merchant    TEXT NOT NULL,                  -- slugMerchant — même colonne vertébrale que sales/orders/menus
+  mode        TEXT NOT NULL DEFAULT 'table',  -- 'table' | 'takeout'
+  table_no    TEXT NOT NULL DEFAULT '',       -- vide pour un retrait au comptoir
+  status      TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'closed'
+  closed_by   TEXT NOT NULL DEFAULT '',       -- 'settle' | 'caisse' | 'expiry' — pourquoi elle s'est fermée
+  opened_ts   INTEGER NOT NULL,
+  seen_ts     INTEGER NOT NULL,               -- dernier signe de vie du téléphone : c'est LUI qui allume la table sur le plan de salle
+  closed_ts   INTEGER
+);
+-- Une seule session VIVANTE par table. L'index PARTIEL est ce qui rend la règle
+-- vraie sans balayage : les sessions closes s'empilent sans jamais bloquer le
+-- client suivant. Même figure que pairings_code_live.
+--
+-- La table EST l'unité, pas le téléphone : deux personnes attablées ensemble
+-- partagent la session, donc la même addition — et l'encaisser les libère
+-- toutes les deux. C'est ce qu'on veut.
+--
+-- `mode = 'table'` dans la condition, sinon la règle mordrait aussi sur les
+-- retraits au comptoir : ils ont tous `table_no = ''`, et le deuxième client à
+-- commander à emporter se serait heurté à l'unicité du premier.
+CREATE UNIQUE INDEX IF NOT EXISTS table_sessions_live
+  ON table_sessions (merchant, table_no) WHERE status = 'open' AND mode = 'table';
+-- La caisse relève « qui est assis en ce moment » à chaque tour de sondage.
+CREATE INDEX IF NOT EXISTS idx_tsess_live ON table_sessions (merchant, status, seen_ts);
+
+-- ── PRÉSENCE DE LA CAISSE · le service est-il ouvert ? ──────────────────────
+-- La protection contre la commande passée de chez soi ne peut pas venir du
+-- téléphone : il ment. Elle vient d'ici. La caisse interroge déjà sa file toutes
+-- les six secondes avec une requête authentifiée ; on en note l'heure, et ouvrir
+-- une session exige que le comptoir ait donné signe de vie récemment.
+--
+-- Conséquence voulue : commerce fermé ⇒ caisse éteinte ⇒ aucune session ne
+-- s'ouvre, et le téléphone dit « le service n'est pas ouvert » — ce qui est vrai.
+-- C'est une porte qui se ferme toute seule le soir, sans horaire à saisir.
+CREATE TABLE IF NOT EXISTS order_desk (
+  merchant TEXT PRIMARY KEY,     -- slugMerchant
+  seen_ts  INTEGER NOT NULL      -- dernier sondage authentifié de /api/order/queue
+);
+
+-- ── Colonnes additives sur `orders` ────────────────────────────────────────
+-- Elles sont DÉJÀ dans le CREATE TABLE plus haut, ce qui suffit à une base
+-- neuve. Voici les six ALTER à passer sur la base DÉJÀ DÉPLOYÉE, que
+-- « CREATE TABLE IF NOT EXISTS » laisse par définition intacte :
+--
+--   ALTER TABLE orders ADD COLUMN session_id  TEXT;
+--   ALTER TABLE orders ADD COLUMN server_name TEXT;
+--   ALTER TABLE orders ADD COLUMN menu_rev    INTEGER;
+--   ALTER TABLE orders ADD COLUMN priced_ts   INTEGER;
+--   ALTER TABLE orders ADD COLUMN client_ref  TEXT;
+--   ALTER TABLE orders ADD COLUMN paid_ts     INTEGER;
+--
+-- Chacune est NULL pour toute commande écrite avant elle, et toute lecture qui
+-- les nomme garde le repli en cascade de queue.js — sans quoi une base pas
+-- encore migrée renverrait une file VIDE au lieu d'une erreur, et le comptoir
+-- ne verrait plus rien sans que personne ne le signale. Tant que les ALTER ne
+-- sont pas passés, la session de table est simplement inerte : les commandes
+-- arrivent comme avant, et rien ne casse.
+CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
+-- Un double-tap sur « Commander », ou un réseau qui repasse, ne doit pas
+-- imprimer deux tickets. Index PARTIEL : les commandes sans client_ref (toutes
+-- celles d'avant, et les canaux extérieurs qui ont déjà leur ext_ref) n'y
+-- entrent pas et ne peuvent donc pas se gêner entre elles.
+CREATE UNIQUE INDEX IF NOT EXISTS orders_client_ref
+  ON orders (merchant, client_ref) WHERE client_ref IS NOT NULL;

@@ -312,6 +312,25 @@ section('Canaux extérieurs (tools/channel-order-test.js)');
   }
 }
 
+/* ── 7ter · le relais OrderPro ───────────────────────────────────────────────
+ * Les trois portes du relais ont l'air justes isolément ; ce qui casse, c'est
+ * leur relation. Un prix qu'on croit vérifié et qui vient du téléphone, une
+ * session qu'on croit fermée et qui laisse encore commander, une étape franchie
+ * qu'un deuxième tap défait. Ce banc-là ouvre un vrai SQLite sur schema.sql,
+ * parce que la moitié de ces règles est tenue par le SQL lui-même. ─────────── */
+section('Relais OrderPro (tools/orderpro-relay-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'orderpro-relay-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`orderpro-relay-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 7bis · la réception native Shopify ──────────────────────────────────────
  * /api/channel/shopify/<id> n'a ni session ni clé porteuse : son adresse est
  * publique par construction, puisque Shopify ne sait envoyer aucun en-tête
