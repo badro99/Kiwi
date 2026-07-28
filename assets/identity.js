@@ -243,12 +243,16 @@
   // `scopeExtra` est rempli plus tard par loadScopeSiblings() : les autres
   // établissements du même client, et son vrai nom d'enseigne.
   var scopeExtra = { siblings: [], name: '' };
-  function applyScopedVenue(label, type) {
+  function applyScopedVenue(label, type, slug) {
     try {
       if (window.KiwiVenue && window.KiwiVenue.applyScopedVenue) {
         window.KiwiVenue.applyScopedVenue({
           name: scopeExtra.name || label,
           type: type || '',
+          // Le slug que le SERVEUR a résolu, pas celui qu'on déduirait du nom
+          // affiché : c'est la seule identité réseau de la vue portée, et donc
+          // la seule chose qui rend ses documents d'établissement lisibles.
+          slug: slug || '',
           siblings: scopeExtra.siblings,
         });
       }
@@ -323,7 +327,7 @@
     var go = function () {
       // In a God-mode scoped view, take over the venue FIRST so the switcher and
       // header render the client; then patch identity on top.
-      if (scoped) applyScopedVenue(label, type);
+      if (scoped) applyScopedVenue(label, type, scopeSlug);
       apply(id);
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);

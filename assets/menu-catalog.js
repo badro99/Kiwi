@@ -68,7 +68,31 @@
     mediaBad:   { fr: 'Format non pris en charge.', en: 'Format not supported.', ar: 'الصيغة ماخدامة.' },
     mediaErr:   { fr: 'Envoi impossible, réessayez.', en: 'Upload failed, try again.', ar: 'التصويفط مامشاش، عاود جرّب.' },
     tags:       { fr: 'Tags NFC', en: 'NFC tags', ar: 'تاڭات NFC' },
+    /* Les postes de préparation. Le vocabulaire est celui de la cuisine, pas
+       celui du logiciel : un « poste », c'est l'endroit où le plat se fait. */
+    stations:   { fr: 'Postes de préparation', en: 'Prep stations', ar: 'محطات التحضير' },
+    stationL:   { fr: 'Poste de préparation', en: 'Prep station', ar: 'محطة التحضير' },
+    stationAdd: { fr: 'Ajouter un poste', en: 'Add a station', ar: 'إضافة محطة' },
+    stationNm:  { fr: 'Nom du poste', en: 'Station name', ar: 'اسم المحطة' },
+    stationEx:  { fr: 'ex. Cuisson, Bar, Pâtisserie', en: 'e.g. Hot line, Bar, Pastry', ar: 'مثل: الطهي، البار، الحلويات' },
+    stationDefB:{ fr: 'par défaut', en: 'default', ar: 'افتراضي' },
+    stationDelQ:{ fr: 'Supprimer ce poste ? Les plats qui y allaient repartiront vers le poste par défaut.', en: 'Delete this station? Dishes routed there fall back to the default station.', ar: 'حذف هذه المحطة؟ الأطباق ديالها غادي ترجع للمحطة الافتراضية.' },
+    stationNone:{ fr: 'Aucun poste défini', en: 'No station defined', ar: 'لا محطة محددة' },
+    stationsHi: { fr: 'La caisse envoie chaque plat au poste que vous lui donnez ici. Un plat sans poste part vers le premier de la liste.', en: 'The till sends each dish to the station you give it here. A dish with no station goes to the first one in the list.', ar: 'الصندوق كيصيفط كل طبق للمحطة اللي كتحددها هنا. الطبق بلا محطة كيمشي للأولى فاللائحة.' },
+    stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine — ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen — which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة — وهادشي كافي لبزاف ديال المقاهي.' },
+    stationCol: { fr: 'Changer la couleur', en: 'Change the colour', ar: 'تغيير اللون' },
+    moveUp:     { fr: 'Monter', en: 'Move up', ar: 'رفع' },
+    moveDown:   { fr: 'Descendre', en: 'Move down', ar: 'خفض' },
+    close:      { fr: 'Fermer', en: 'Close', ar: 'إغلاق' },
+    noStation:  { fr: '— Poste par défaut —', en: '— Default station —', ar: '— المحطة الافتراضية —' },
   };
+
+  /* La palette des postes — exactement les sept teintes que l'écran cuisine de
+   * la caisse utilise déjà pour ses pastilles. Ce ne sont pas des couleurs de
+   * marque : ce sont des repères de lecture à trois mètres, dans une cuisine.
+   * Elles restent donc identiques des deux côtés, sinon le poste « Bar » serait
+   * bleu au bureau et orange au comptoir. */
+  const STATION_COLORS = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
 
   /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only
    * exists once an operator switched it on for this merchant. */
@@ -81,6 +105,14 @@
   function example() {
     return {
       seq: 20,
+      /* Trois postes, parce que c'est la découpe la plus banale d'une cuisine
+       * marocaine : le feu, le froid, et la machine à café. Le patron renomme,
+       * ajoute, supprime — l'exemple n'est qu'un point de départ. */
+      stations: [
+        { id: 'st_1', name: 'Cuisson', color: STATION_COLORS[0] },
+        { id: 'st_2', name: 'Froid', color: STATION_COLORS[1] },
+        { id: 'st_3', name: 'Bar', color: STATION_COLORS[3] },
+      ],
       cats: [
         { id: 'cat_1', name: 'Entrées', sub: [] },
         { id: 'cat_2', name: 'Plats', sub: [{ id: 'sub_1', name: 'Tajines' }, { id: 'sub_2', name: 'Grillades' }] },
@@ -88,22 +120,25 @@
         { id: 'cat_4', name: 'Desserts', sub: [] },
       ],
       items: [
-        { id: 'it_1', name: 'Salade marocaine', price: 32, catId: 'cat_1', subId: null, desc: 'Tomate, concombre, oignon, huile d\'olive', avail: true },
-        { id: 'it_2', name: 'Harira', price: 28, catId: 'cat_1', subId: null, desc: 'Soupe pois chiches & lentilles', avail: true },
-        { id: 'it_3', name: 'Tajine poulet citron', price: 95, catId: 'cat_2', subId: 'sub_1', desc: 'Poulet, olives, citron confit', avail: true },
-        { id: 'it_4', name: 'Tajine kefta œuf', price: 85, catId: 'cat_2', subId: 'sub_1', desc: 'Viande hachée, œuf, tomate', avail: true },
-        { id: 'it_5', name: 'Brochettes mixtes', price: 90, catId: 'cat_2', subId: 'sub_2', desc: 'Bœuf, poulet, merguez, frites', avail: true },
-        { id: 'it_6', name: 'Thé à la menthe', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Gunpowder, menthe fraîche', avail: true },
-        { id: 'it_7', name: 'Café noir', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Espresso', avail: true },
-        { id: 'it_8', name: 'Orange pressée', price: 18, catId: 'cat_3', subId: 'sub_4', desc: 'Pressée minute', avail: true },
-        { id: 'it_9', name: 'Msemen miel', price: 14, catId: 'cat_4', subId: null, desc: 'Crêpe feuilletée, beurre, miel', avail: true },
+        { id: 'it_1', name: 'Salade marocaine', price: 32, catId: 'cat_1', subId: null, desc: 'Tomate, concombre, oignon, huile d\'olive', avail: true, station: 'st_2' },
+        { id: 'it_2', name: 'Harira', price: 28, catId: 'cat_1', subId: null, desc: 'Soupe pois chiches & lentilles', avail: true, station: 'st_1' },
+        { id: 'it_3', name: 'Tajine poulet citron', price: 95, catId: 'cat_2', subId: 'sub_1', desc: 'Poulet, olives, citron confit', avail: true, station: 'st_1' },
+        { id: 'it_4', name: 'Tajine kefta œuf', price: 85, catId: 'cat_2', subId: 'sub_1', desc: 'Viande hachée, œuf, tomate', avail: true, station: 'st_1' },
+        { id: 'it_5', name: 'Brochettes mixtes', price: 90, catId: 'cat_2', subId: 'sub_2', desc: 'Bœuf, poulet, merguez, frites', avail: true, station: 'st_1' },
+        { id: 'it_6', name: 'Thé à la menthe', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Gunpowder, menthe fraîche', avail: true, station: 'st_3' },
+        { id: 'it_7', name: 'Café noir', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Espresso', avail: true, station: 'st_3' },
+        { id: 'it_8', name: 'Orange pressée', price: 18, catId: 'cat_3', subId: 'sub_4', desc: 'Pressée minute', avail: true, station: 'st_3' },
+        { id: 'it_9', name: 'Msemen miel', price: 14, catId: 'cat_4', subId: null, desc: 'Crêpe feuilletée, beurre, miel', avail: true, station: 'st_2' },
       ],
     };
   }
 
   const store = window.KiwiStore.define('menu', {
-    blank: () => ({ seq: 0, cats: [], items: [] }),
+    blank: () => ({ seq: 0, cats: [], items: [], stations: [] }),
     example: example,
+    /* Des postes seuls ne font pas une carte : un établissement qui n'a saisi
+     * que « Bar » et « Cuisson » n'a toujours rien à vendre, et l'écran d'accueil
+     * doit continuer de le lui dire. */
     isEmpty: (d) => !d || (!(d.cats && d.cats.length) && !(d.items && d.items.length)),
   });
 
@@ -112,6 +147,55 @@
   const catById = (d, id) => (d.cats || []).find((c) => c.id === id) || null;
   const itemById = (d, id) => (d.items || []).find((i) => i.id === id) || null;
   const itemsIn = (d, catId, subId) => (d.items || []).filter((i) => i.catId === catId && (subId == null || i.subId === subId));
+  const stationsOf = (d) => (d && Array.isArray(d.stations)) ? d.stations : [];
+  const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
+
+  /* ─── postes de préparation ───
+   * L'ordre compte : le premier de la liste est le poste par défaut, celui où
+   * part un plat auquel personne n'a rien dit. C'est pour ça qu'on peut monter
+   * et descendre un poste — changer le défaut ne doit pas obliger à tout
+   * resaisir. La couleur est un repère de lecture, pas une décoration : elle se
+   * retrouve à l'identique sur la pastille de l'écran cuisine. */
+  function addStation(name) {
+    return store.update((d) => {
+      d.stations = stationsOf(d);
+      const nm = String(name || '').trim() || tr(T.stationNm);
+      d.stations.push({ id: nid(d, 'st'), name: nm, color: STATION_COLORS[d.stations.length % STATION_COLORS.length] });
+      return d;
+    });
+  }
+  function renameStation(id, name) {
+    return store.update((d) => { const s = stationById(d, id); if (s) s.name = String(name || s.name).trim() || s.name; return d; });
+  }
+  function cycleStationColor(id) {
+    return store.update((d) => {
+      const s = stationById(d, id); if (!s) return d;
+      const i = STATION_COLORS.indexOf(s.color);
+      s.color = STATION_COLORS[(i + 1) % STATION_COLORS.length];
+      return d;
+    });
+  }
+  function moveStation(id, delta) {
+    return store.update((d) => {
+      d.stations = stationsOf(d);
+      const i = d.stations.findIndex((s) => s && s.id === id);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= d.stations.length) return d;
+      const [s] = d.stations.splice(i, 1);
+      d.stations.splice(j, 0, s);
+      return d;
+    });
+  }
+  /* Supprimer un poste ne doit pas laisser des plats pointer vers un poste
+   * disparu : la caisse les enverrait dans un filtre que personne ne regarde.
+   * On les rend explicitement au défaut, en une seule écriture. */
+  function deleteStation(id) {
+    return store.update((d) => {
+      d.stations = stationsOf(d).filter((s) => s && s.id !== id);
+      (d.items || []).forEach((it) => { if (it && it.station === id) it.station = ''; });
+      return d;
+    });
+  }
 
   function addCategory(name) {
     return store.update((d) => {
@@ -148,6 +232,10 @@
         subId: data.subId || null,
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
+        // Vide = « poste par défaut ». On ne fige PAS le premier poste ici : le
+        // patron peut réordonner ses postes demain, et un plat qu'il n'a jamais
+        // affecté doit suivre ce changement, pas rester collé à l'ancien.
+        station: String(data.station || ''),
         // Media are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia), never
         // bytes — base64 here would blow the localStorage quota in a dozen items.
         photo: String(data.photo || ''),
@@ -165,6 +253,7 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
+      if ('station' in patch) it.station = String(patch.station || '');
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
       return d;
@@ -242,6 +331,23 @@
       .mx-media-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }
       /* item row thumbnail — only present once the merchant adds media */
       .mx-item .th { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); }
+      /* postes de préparation — la pastille est le même repère que sur l'écran
+         cuisine de la caisse, à la même couleur. */
+      .mx-stdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
+      .mx-item .nm .stag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--n-600); background: var(--paper-soft); padding: 2px 7px; border-radius: 6px; margin-left: 8px; vertical-align: 1px; }
+      .mx-st-hint { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 0 0 14px; }
+      .mx-st-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+      .mx-st-row { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--mx-line); border-radius: 11px; background: var(--surface); }
+      .mx-st-sw { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--mx-line); cursor: pointer; flex: 0 0 22px; padding: 0; }
+      .mx-st-nm { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); background: transparent; border: none; outline: none; font-family: var(--sans); padding: 2px 0; border-bottom: 1.5px solid transparent; }
+      .mx-st-nm:focus { border-bottom-color: var(--atlas); }
+      .mx-st-def { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--atlas); background: var(--mint-soft); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+      .mx-st-act { display: inline-flex; gap: 3px; }
+      .mx-st-act button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--mx-line); background: var(--surface); color: var(--n-500); cursor: pointer; transition: transform 130ms, opacity 130ms, background-color 130ms, border-color 130ms, color 130ms; }
+      .mx-st-act button:hover:not(:disabled) { color: var(--ink); border-color: var(--n-400); }
+      .mx-st-act button:disabled { opacity: 0.32; cursor: default; }
+      .mx-st-act button.del:hover { color: var(--danger); border-color: var(--danger); }
+      .mx-st-empty { padding: 22px 4px 26px; text-align: center; color: var(--n-500); font-size: 13px; line-height: 1.55; }
     `;
     document.head.appendChild(s);
   }
@@ -252,6 +358,10 @@
   const DOWNLOAD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
   const TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
   const SPARK = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
+  /* Une cloche de passe — l'objet qu'on tape quand le plat sort du poste. */
+  const BELL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M20 15a8 8 0 1 0-16 0"/><path d="M12 4V2"/></svg>';
+  const ARR_UP = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+  const ARR_DN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
   /* ───────────────── UI state ───────────────── */
   let activeCat = null;
@@ -271,6 +381,7 @@
     const d = store.get();
     const cats = d.cats || [];
     const items = d.items || [];
+    const stations0 = stationsOf(d);
 
     if (!cats.length && !items.length) return renderEmpty();
 
@@ -308,13 +419,19 @@
     const subName = activeSub && cat ? (cat.sub || []).find((s) => s.id === activeSub) : null;
     const itemRows = shown.length ? shown.map((it) => {
       const sub = (cat.sub || []).find((s) => s.id === it.subId);
+      /* Le poste s'affiche sur la ligne — c'est un réglage qu'on relit vite, pas
+       * un qu'on ouvre pour vérifier. Un plat non affecté montre le poste par
+       * défaut en clair : « rien ici » et « ça part quand même quelque part »
+       * sont deux choses différentes, et c'est la seconde qui est vraie. */
+      const st = stationById(d, it.station) || (stations0.length ? stations0[0] : null);
+      const stTag = st ? `<span class="stag"><i class="mx-stdot" style="background:${esc(st.color || STATION_COLORS[0])}"></i>${esc(st.name)}</span>` : '';
       return `
         <div class="mx-item ${it.avail === false ? 'off' : ''}">
           <div style="display:flex;align-items:center;gap:11px;min-width:0;">
             ${it.video ? `<video class="th" src="${esc(it.video)}" muted playsinline preload="metadata"></video>`
               : (it.photo ? `<img class="th" src="${esc(it.photo)}" alt="" loading="lazy" />` : '')}
             <div style="min-width:0;">
-              <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}</div>
+              <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}${stTag}</div>
               ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
             </div>
           </div>
@@ -342,6 +459,7 @@
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.stations))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
                 <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
               </div>
@@ -399,12 +517,130 @@
     setTimeout(() => { try { input.focus(); input.select(); } catch (_) {} }, 180);
   }
 
+  /* ─── le gestionnaire de postes ───
+   * Un seul écran, qui se repeint sur place : ajouter un poste, le renommer au
+   * clavier, changer sa pastille, le monter (donc en faire le défaut), le
+   * supprimer. Pas d'étape « enregistrer » — chaque geste écrit, comme partout
+   * ailleurs dans la carte, et la publication vers la caisse suit toute seule
+   * (store.subscribe → schedulePublish). */
+  function stationsModal() {
+    const K = window.Kiwi;
+    const m = K.modal({
+      tag: venueName(),
+      title: tr(T.stations),
+      width: 480,
+      body: '<div data-st-body></div>',
+      foot: `<button class="kb ghost" type="button" data-st-close style="flex:1;justify-content:center;">${esc(tr(T.close))}</button>`,
+    });
+    const body = m.el.querySelector('[data-st-body]');
+
+    function paint(focusId) {
+      const list = stationsOf(store.get());
+      const rows = list.map((s, i) => `
+        <div class="mx-st-row" data-st-row="${esc(s.id)}">
+          <button class="mx-st-sw" type="button" data-st-color="${esc(s.id)}"
+                  style="background:${esc(s.color || STATION_COLORS[0])};"
+                  title="${esc(tr(T.stationCol))}" aria-label="${esc(tr(T.stationCol))}"></button>
+          <input class="mx-st-nm" type="text" value="${esc(s.name)}" data-st-name="${esc(s.id)}"
+                 aria-label="${esc(tr(T.stationNm))}" />
+          ${i === 0 ? `<span class="mx-st-def">${esc(tr(T.stationDefB))}</span>` : ''}
+          <div class="mx-st-act">
+            <button type="button" data-st-up="${esc(s.id)}" ${i === 0 ? 'disabled' : ''} title="${esc(tr(T.moveUp))}" aria-label="${esc(tr(T.moveUp))}">${ARR_UP}</button>
+            <button type="button" data-st-down="${esc(s.id)}" ${i === list.length - 1 ? 'disabled' : ''} title="${esc(tr(T.moveDown))}" aria-label="${esc(tr(T.moveDown))}">${ARR_DN}</button>
+            <button type="button" class="del" data-st-del="${esc(s.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
+          </div>
+        </div>`).join('');
+      body.innerHTML = `
+        <div class="mx-st-hint">${esc(tr(list.length ? T.stationsHi : T.stationsEm))}</div>
+        ${list.length ? `<div class="mx-st-list">${rows}</div>` : `<div class="mx-st-empty">${esc(tr(T.stationNone))}</div>`}
+        <button class="mx-cat-add" type="button" data-st-add>${PLUS}<span>${esc(tr(T.stationAdd))}</span></button>`;
+      if (focusId) {
+        const inp = body.querySelector(`[data-st-name="${focusId}"]`);
+        if (inp) { try { inp.focus(); inp.select(); } catch (_) {} }
+      }
+    }
+
+    /* Le nom se sauve à la volée : pas de bouton, donc pas de renommage perdu
+     * parce qu'on a fermé la fenêtre en pensant que c'était pris. Amorti à
+     * 350 ms parce qu'une écriture déclenche l'abonnement du store, donc un
+     * re-rendu de la page carte SOUS la fenêtre — une fois par frappe, ça
+     * repeindrait la liste des produits à chaque lettre. */
+    let nameTimer = null;
+    const flushName = () => {
+      if (!nameTimer) return;
+      clearTimeout(nameTimer.t); nameTimer.run(); nameTimer = null;
+    };
+    body.addEventListener('input', (e) => {
+      const nm = e.target.closest('[data-st-name]');
+      if (!nm) return;
+      const id = nm.dataset.stName, val = nm.value;
+      if (nameTimer) clearTimeout(nameTimer.t);
+      const run = () => { nameTimer = null; renameStation(id, val); };
+      nameTimer = { run, t: setTimeout(run, 350) };
+    });
+    body.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.closest('[data-st-name]')) { e.preventDefault(); e.target.blur(); }
+    });
+    // Quitter le champ écrit tout de suite — fermer la fenêtre juste après une
+    // frappe ne doit pas perdre la dernière lettre.
+    body.addEventListener('focusout', (e) => { if (e.target.closest('[data-st-name]')) flushName(); });
+    body.addEventListener('click', (e) => {
+      // Toute action qui repeint doit d'abord écrire le nom en cours de frappe :
+      // sinon le repaint réaffiche la dernière valeur ENREGISTRÉE et les lettres
+      // tapées dans les 350 dernières millisecondes disparaissent sous les yeux.
+      const col = e.target.closest('[data-st-color]');
+      if (col) { flushName(); cycleStationColor(col.dataset.stColor); paint(); return; }
+      const up = e.target.closest('[data-st-up]');
+      if (up) { flushName(); moveStation(up.dataset.stUp, -1); paint(); return; }
+      const dn = e.target.closest('[data-st-down]');
+      if (dn) { flushName(); moveStation(dn.dataset.stDown, 1); paint(); return; }
+      const del = e.target.closest('[data-st-del]');
+      if (del) {
+        const id = del.dataset.stDel;
+        const row = body.querySelector(`[data-st-row="${id}"]`);
+        // Confirmation en place plutôt qu'une seconde fenêtre par-dessus la
+        // première — deux voiles empilés, on ne sait plus lequel on ferme.
+        if (row && !row.dataset.confirm) {
+          row.dataset.confirm = '1';
+          const act = row.querySelector('.mx-st-act');
+          act.innerHTML = `<button type="button" class="del" data-st-del="${esc(id)}" title="${esc(tr(T.del))}" style="width:auto;padding:0 10px;font-size:11.5px;color:var(--danger);border-color:var(--danger);">${esc(tr(T.del))} ?</button>`;
+          // Le désarmement ne doit ni voler le curseur à quelqu'un qui tape le
+          // nom d'un AUTRE poste, ni repeindre une liste déjà refaite.
+          setTimeout(() => {
+            try {
+              if (!row.dataset.confirm || !body.contains(row)) return;
+              if (body.contains(document.activeElement) && document.activeElement.closest('[data-st-name]')) return;
+              paint();
+            } catch (_) {}
+          }, 4000);
+          return;
+        }
+        flushName(); deleteStation(id); paint(); return;
+      }
+      if (e.target.closest('[data-st-add]')) {
+        flushName();
+        addStation('');
+        const list = stationsOf(store.get());
+        paint(list.length ? list[list.length - 1].id : null);
+        return;
+      }
+    });
+    m.el.querySelector('[data-st-close]').addEventListener('click', () => { flushName(); m.close(); render(); });
+    // Échap ferme la fenêtre sans passer par le bouton, et retirer un champ du
+    // DOM ne déclenche pas focusout : sans ce filet, fermer au clavier juste
+    // après avoir tapé perdrait la fin du nom. Capture, pour passer avant le
+    // gestionnaire de fermeture de la modale.
+    m.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') flushName(); }, true);
+    paint();
+  }
+
   function itemModal(existing) {
     const K = window.Kiwi;
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '' };
+    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', station: '' };
+    const stations = stationsOf(d);
     // Live media state for this modal — mutated by the picker, read on save.
     const media = { photo: it.photo || '', video: it.video || '' };
 
@@ -422,7 +658,13 @@
           <div><label>${esc(tr(T.priceL))}</label><input data-f-price type="number" inputmode="decimal" min="0" step="1" value="${esc(it.price)}" placeholder="0"/></div>
           <div><label>${esc(tr(T.catL))}</label><select data-f-cat>${catOpts}</select></div>
         </div>
-        <div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
+        ${stations.length ? `<div class="mx-field two">
+          <div><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
+          <div><label>${esc(tr(T.stationL))}</label><select data-f-station>
+            <option value="">${esc(tr(T.noStation))}</option>
+            ${stations.map((s) => `<option value="${esc(s.id)}" ${s.id === it.station ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+          </select></div>
+        </div>` : `<div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>`}
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
@@ -488,10 +730,15 @@
 
     q('[data-f-cancel]').addEventListener('click', () => m.close());
     q('[data-f-save]').addEventListener('click', () => {
+      const stEl = q('[data-f-station]');
       const data = {
         name: q('[data-f-name]').value, price: q('[data-f-price]').value,
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
         photo: media.photo, video: media.video,
+        // Pas de sélecteur (aucun poste défini) → on ne touche pas au poste déjà
+        // enregistré : créer un poste puis l'ouvrir/fermer sans y penser ne doit
+        // pas déverser toute la carte sur le poste par défaut.
+        station: stEl ? stEl.value : (existing ? (existing.station || '') : ''),
       };
       if (!data.name.trim()) { q('[data-f-name]').focus(); return; }
       if (existing) updateItem(existing.id, data); else { addItem(data); activeCat = data.catId; activeSub = data.subId || null; }
@@ -520,6 +767,7 @@
       confirmThen(tr(T.delCatQ), () => { deleteCategory(id); if (activeCat === id) { activeCat = null; activeSub = null; } render(); });
     };
     H['mx-sub-add'] = (_el, id) => promptText({ title: tr(T.addSub), placeholder: tr(T.subName), ok: tr(T.addSub) }, (v) => { if (v) { addSubcategory(id, v); activeCat = id; render(); } });
+    H['mx-stations'] = () => stationsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };
     H['mx-item-del'] = (_el, id) => confirmThen(tr(T.delItemQ), () => { deleteItem(id); render(); });
@@ -643,6 +891,10 @@
     const scan = (id) => { const m = /_(\d+)$/.exec(String(id || '')); if (m) max = Math.max(max, +m[1]); };
     (d.cats || []).forEach((c) => { scan(c.id); (c.sub || []).forEach((s) => scan(s.id)); });
     (d.items || []).forEach((i) => scan(i.id));
+    // Les postes tirent du même compteur : sans ce balayage, un navigateur neuf
+    // recréerait st_1 par-dessus un poste existant et les plats du serveur
+    // suivraient le mauvais.
+    (d.stations || []).forEach((s) => scan(s.id));
     d.seq = max;
     return d;
   }
@@ -651,7 +903,15 @@
   // sinon renommer une catégorie sur un poste effacerait les sous-catégories
   // créées sur l'autre.
   function mergeMenus(mine, theirs) {
-    const out = { seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0), cats: [], items: [] };
+    const out = { seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0), cats: [], items: [], stations: [] };
+    /* Les postes fusionnent AVANT le reste et dans l'ordre de cet appareil :
+     * l'ordre EST le réglage (le premier est le poste par défaut), donc celui
+     * qu'on a sous les yeux gagne, et les postes créés ailleurs viennent se
+     * ranger derrière plutôt que de disparaître. */
+    const stSeen = Object.create(null);
+    [((mine && mine.stations) || []), ((theirs && theirs.stations) || [])].forEach((list) => {
+      list.forEach((s) => { if (s && s.id && !stSeen[s.id]) { stSeen[s.id] = 1; out.stations.push(s); } });
+    });
     const byId = Object.create(null);
     ((mine && mine.cats) || []).forEach((c) => {
       if (!c || !c.id || byId[c.id]) return;
@@ -693,7 +953,7 @@
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
         const mine = store.get();
         const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
-        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [] })
+        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [] })
                         : mergeMenus(mine, theirs));
         try { if (isCustom()) render(); } catch (_) {}
         return true;
@@ -803,6 +1063,11 @@
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, addItem, updateItem, deleteItem, renameCategory, deleteCategory,
+    /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE — le
+     * premier est le poste par défaut, et cet ordre voyage jusqu'à l'écran
+     * cuisine de la caisse. */
+    stations: (vid) => (store.get(vid).stations || []),
+    addStation, renameStation, deleteStation, moveStation, cycleStationColor,
     render,
     publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)
     _store: store,

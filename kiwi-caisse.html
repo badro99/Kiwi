@@ -3847,6 +3847,32 @@
     /* the `hidden` attribute is too weak vs. these flex rules — force it */
     #rp-server-row[hidden] { display: none; }
     #rp-send-kitchen[hidden] { display: none; }
+    /* Client & fidélité sur la note — une seule ligne, discrète tant qu'elle est
+       vide, marquée à l'atlas dès qu'un client est attaché. */
+    .rp-client { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; margin-bottom: 9px; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; text-align: left; transition: background 140ms, border-color 140ms, color 140ms; }
+    .rp-client[hidden] { display: none; }
+    .rp-client:hover { border-color: var(--atlas); color: var(--atlas); }
+    .rp-client svg { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.9; }
+    .rp-client .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rp-client.is-on { border-style: solid; border-color: var(--atlas); background: rgba(11,110,79,0.07); color: var(--atlas); }
+    .rp-client .rp-client-x { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; font-size: 15px; line-height: 1; color: var(--ink-3); flex: 0 0 22px; }
+    .rp-client .rp-client-x:hover { background: rgba(0,0,0,0.07); color: var(--ink); }
+    .rp-client .rp-client-x[hidden] { display: none; }
+    /* le sélecteur de client */
+    .cl-list { max-height: 230px; overflow-y: auto; margin: 12px 0 4px; display: flex; flex-direction: column; gap: 6px; }
+    /* display:flex bat le [hidden] du navigateur — sans cette ligne, la liste
+       resterait visible sous le formulaire « nouveau client ». */
+    .cl-list[hidden] { display: none; }
+    .cl-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; font-family: var(--sans); transition: background 130ms, border-color 130ms; }
+    .cl-row:hover { border-color: var(--atlas); background: var(--paper-soft); }
+    .cl-row .ini { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--paper-soft); color: var(--ink-2); font-size: 12px; font-weight: 600; }
+    .cl-row .who { flex: 1; min-width: 0; }
+    .cl-row .who b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cl-row .who span { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+    .cl-row .pts { font-family: var(--mono); font-size: 11.5px; color: var(--atlas); white-space: nowrap; }
+    .cl-empty { padding: 26px 8px; text-align: center; color: var(--ink-3); font-size: 12.5px; line-height: 1.55; }
+    .cl-consent { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+    .cl-consent input { width: 16px; height: 16px; accent-color: var(--atlas); }
     .pay-btn.pay-kitchen { background: var(--forest); color: #fff; }
     .pay-btn.pay-kitchen:hover { background: var(--forest-deep); }
 
@@ -4817,6 +4843,14 @@
         </div>
 
         <div class="rp-pay">
+          <!-- Client & fidélité attaché à CETTE note. Masqué sur la démo : le
+               carnet est celui d'un établissement (assets/clients-store.js), un
+               comptoir non appairé n'en a aucun à ouvrir. -->
+          <button class="rp-client" id="rp-client" hidden>
+            <i data-lucide="user-round-plus"></i>
+            <span class="lbl" id="rp-client-label">Client &amp; fidélité</span>
+            <span class="rp-client-x" id="rp-client-clear" role="button" tabindex="0" aria-label="Détacher le client" hidden>×</span>
+          </button>
           <button class="pay-btn pay-kitchen" id="rp-send-kitchen" hidden>
             <i data-lucide="send"></i>
             <span>Envoyer en cuisine</span>
@@ -4871,6 +4905,30 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- ============ CLIENT / FIDÉLITÉ MODAL ============ -->
+  <div class="modal-veil" id="client-modal" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+    <div class="modal modal-client">
+      <div class="split-badge">Carnet clients</div>
+      <h3 class="modal-title" id="cl-title" style="margin-bottom:10px;">Attacher un client à la note</h3>
+      <input type="text" class="wl-input" id="cl-search" placeholder="Nom ou téléphone" autocomplete="off" />
+      <div class="cl-list" id="cl-list"></div>
+      <div id="cl-new" hidden>
+        <input type="text" class="wl-input" id="cl-new-name" placeholder="Nom du client" autocomplete="off" style="margin-top:12px;" />
+        <input type="tel" class="wl-input" id="cl-new-phone" placeholder="Téléphone" autocomplete="off" inputmode="tel" style="margin-top:8px;" />
+        <label class="cl-consent">
+          <input type="checkbox" id="cl-new-consent" />
+          <span>Le client accepte d'être recontacté</span>
+        </label>
+      </div>
+      <div class="nt-actions">
+        <button class="ma-btn secondary" id="cl-cancel" style="flex:1;">Annuler</button>
+        <button class="ma-btn primary" id="cl-confirm" style="flex:2;">
+          <i data-lucide="user-plus"></i> <span id="cl-confirm-label">Nouveau client</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ NEW TABLE MODAL ============ -->
@@ -6271,6 +6329,8 @@
       // Reset right panel — persist any À emporter edit, drop the edit state
       if (vrapEditingNum != null) { saveVrapEdits(); vrapEditingNum = null; cart = []; }
       vrapDiscount = null;
+      // Changer de mode change de note : la fiche client attachée se relâche.
+      try { renderSaleClient(); } catch (_) {}
       if (newMode === 'salle') {
         showPayButtons(false);
         if (selectedId) renderRightPanel(selectedId);
@@ -6316,6 +6376,8 @@
       const t = tables[id];
       const lines = generateOrder(id, t);
       const total = lines.reduce((sum, l) => sum + l.total, 0);
+      // La note change → la fiche client attachée suit (ou se détache).
+      try { renderSaleClient(); } catch (_) {}
 
       $('#rp-table').textContent = `${id} · ${t.covers} couverts`;
 
@@ -6583,6 +6645,26 @@
      * pouvoir encaisser.
      * ═══════════════════════════════════════════════════════════════════════ */
     const CARTE_MIRROR = 'kiwi:menuMirror:v1:';
+
+    /* ══════════ LES POSTES DE PRÉPARATION VIENNENT AUSSI DU BUREAU ══════════
+     * Le patron déclare ses postes dans le Menu du tableau de bord (Cuisson,
+     * Bar, Pâtisserie…), affecte chaque plat à l'un d'eux, et l'ordre qu'il leur
+     * donne EST un réglage : le premier de sa liste reçoit les plats qu'il n'a
+     * affectés à rien.
+     *
+     * Cet état vit ICI, à côté du lecteur de carte, et PAS dans la section écran
+     * cuisine — elle est déclarée huit cents lignes plus bas, alors que
+     * rebuildCarte() tourne dès l'amorçage. Y toucher d'ici lèverait une
+     * ReferenceError avalée par le try/catch de l'amorçage : la carte ne se
+     * chargerait jamais et rien ne le dirait. `kdsReady` dit si l'écran cuisine
+     * est monté et peut être repeint.
+     *
+     * Les teintes sont celles que les pastilles de l'écran cuisine utilisent
+     * depuis toujours : un poste doit avoir la même couleur au bureau et au
+     * comptoir, sinon la pastille ne sert plus de repère. */
+    const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
+    const carteState = { stations: [], kdsReady: false };
+
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
     }
@@ -6625,12 +6707,26 @@
         colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
         order.push('_autres');
       }
+      /* Les postes, dans l'ordre du patron — le premier est le poste par défaut.
+         Une couleur qui n'est pas un #RRGGBB retombe sur la palette : cette
+         valeur part directement dans un attribut style. */
+      carteState.stations = (Array.isArray(d.stations) ? d.stations : [])
+        .filter(s => s && s.id && s.name)
+        .map((s, i) => ({
+          id: String(s.id),
+          name: String(s.name),
+          raw: /^#[0-9a-fA-F]{6}$/.test(String(s.color || '')) ? String(s.color) : STATION_PALETTE[i % STATION_PALETTE.length],
+        }));
       catLabels = labels;
       catColor = colors;
       catOrder = order;
       menuItems = items;
       if (!catLabels[activeCat]) activeCat = 'all';
       try { renderCatPills(); renderMenu(); } catch (_) {}
+      // L'écran cuisine n'existe pas encore au premier appel (amorçage) — il se
+      // montera juste après avec la bonne liste. Ensuite, un poste supprimé au
+      // bureau doit disparaître de la barre sans recharger la caisse.
+      if (carteState.kdsReady) { try { kdsRepaintStations(); } catch (_) {} }
       return true;
     }
 
@@ -7918,8 +8014,46 @@
       $('#rp-active').style.display = 'flex';
       lucide.createIcons();
 
+      /* « … en cuisine » était un mot, pas un geste : rien ne partait vers
+         l'écran cuisine et aucun bon ne s'imprimait. Le serveur validait, la
+         cuisine ne voyait rien, et le plat n'était lancé qu'au moment où
+         quelqu'un s'en étonnait. */
+      const sent = sendTableToKitchen(tableId);
       const n = (tableOrders[tableId] || []).reduce((s, l) => s + l.qty, 0);
-      toast(`Mesa ${tableId} ouverte · ${n > 0 ? n + ' article' + (n > 1 ? 's' : '') + ' en cuisine' : 'commande vide'}`);
+      toast(`Mesa ${tableId} ouverte · ${n > 0 ? n + ' article' + (n > 1 ? 's' : '') + ' en cuisine' : 'commande vide'}`
+        + (sent && sent.num ? ` · bon #${sent.num}` : ''));
+    }
+
+    /* ═══════ LA SALLE PART EN CUISINE, ELLE AUSSI ═══════════════════════════
+     * Seul « À emporter » atteignait l'écran cuisine. Une mesa validée ne
+     * produisait ni ticket sur le board ni bon papier — dans un restaurant,
+     * c'est-à-dire dans le cas le plus courant.
+     *
+     * On n'envoie que ce qui n'est PAS déjà parti (`l.sent`) : rouvrir une
+     * mesa pour ajouter deux cafés doit envoyer deux cafés, pas relancer tout
+     * le repas. Le drapeau vit sur la ligne, donc il survit au rechargement
+     * avec le reste du service (persistShift). */
+    function sendTableToKitchen(tableId) {
+      const lines = (tableOrders[tableId] || []).filter(l => l && l.qty > 0 && !l.sent);
+      if (!lines.length) return null;
+      const items = lines.map((l) => {
+        const m = menuItems.find(x => x.id === l.id);
+        return { q: l.qty, n: l.name, p: l.price, note: (l.note || '').trim(),
+          stations: [kdsStationFor(m)] };
+      });
+      const order = {
+        num: ++kdsOrderSeq, type: 'dineIn', table: tableId, code: null, status: 'new',
+        readyAt: null, items: items, sentAt: new Date(),
+        paid: false, pickedUp: false, pickedUpAt: null,
+        total: lines.reduce((s, l) => s + l.price * l.qty, 0),
+      };
+      kdsOrders.push(order);
+      lines.forEach((l) => { l.sent = true; });
+      updateKdsCount();
+      if (kdsEl.classList.contains('is-open')) kdsPaint();
+      printKitchenTickets(order, items);
+      try { persistShift(); } catch (_) {}
+      return order;
     }
 
     /* ---- cancel new order ---- */
@@ -8762,12 +8896,193 @@
       attachReceipt(entry);
       journal.push(entry);
       lastSaleId = entry.id;
+      /* Fidélité. Le carnet du commerçant vivait déjà sur ce comptoir mais rien
+         ne l'appelait ici : on pouvait inscrire un client, jamais lui compter
+         un passage. Une note = un passage, même réglée en quatre parts — d'où
+         le détachement immédiat (voir creditSaleToClient). */
+      creditSaleToClient(entry);
       // Live Link (opt-in, off by default): mirror this sale to the owner's
       // dashboard via /api/sale. No-op unless kiwiLive is on. Never blocks the sale.
       try { if (window.KiwiLive) window.KiwiLive.postSale(entry); } catch (_) {}
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
     }
+
+    /* ═══════════ CLIENT & FIDÉLITÉ SUR LA NOTE ══════════════════════════════
+     * assets/clients-store.js (le carnet) et assets/clients-book.js (l'écran)
+     * étaient chargés sur ce comptoir depuis le début, et RIEN dans cette page
+     * ne les appelait : on pouvait inscrire un client depuis le carnet, jamais
+     * lui compter un passage en encaissant. Sur la boutique, si —
+     * assets/pos-boutique.js appelle recordPurchase à l'encaissement. Le
+     * restaurant, lui, tenait un carnet qui ne bougeait jamais.
+     *
+     * Le programme de fidélité (points au dirham, ou tampons) est réglé par le
+     * patron au tableau de bord ; ici on ne fait que déclarer le passage et
+     * laisser KiwiClients appliquer SES règles.
+     *
+     * Une note = un passage. Une addition partagée en quatre appelle recordSale
+     * quatre fois : sans détachement immédiat, la cliente repartirait avec
+     * quatre tampons pour un déjeuner. */
+    let saleClient = null;   // { id, name, phone, ctx } — attaché à la note en cours
+
+    /* À QUELLE note. Le client est attaché à une addition précise, pas au
+       comptoir : passer de la mesa 3 à la mesa 7 avec une fiche encore
+       accrochée créditerait le passage à la mauvaise personne. On étiquette
+       donc l'attache avec son contexte, et on la lâche dès qu'il change. */
+    function saleContextKey() {
+      try { return (mode === 'vrap') ? ('vrap:' + (vrapEditingNum == null ? 'new' : vrapEditingNum)) : ('table:' + (selectedId || '')); }
+      catch (_) { return ''; }
+    }
+
+    function clientsOn() {
+      try { return !!(storeIsReal() && window.KiwiClients && window.KiwiClients.bookId()); }
+      catch (_) { return false; }
+    }
+    function clientInitials(name) {
+      const p = String(name || '').trim().split(/\s+/).filter(Boolean);
+      return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+    }
+    /* « 7/10 » ou « 240 pts » — ce que l'employé doit pouvoir annoncer au
+       client sans ouvrir un autre écran. */
+    function clientProgressLabel(rec) {
+      try {
+        const KC = window.KiwiClients;
+        const cfg = (KC.config && KC.config()) || {};
+        if (cfg.model === 'amount') return (rec.points || 0) + ' pts';
+        const target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
+        return (rec.stamps || 0) + '/' + target;
+      } catch (_) { return ''; }
+    }
+
+    function renderSaleClient() {
+      const btn = $('#rp-client');
+      if (!btn) return;
+      if (saleClient && saleClient.ctx && saleClient.ctx !== saleContextKey()) saleClient = null;
+      btn.hidden = !clientsOn();
+      const lab = $('#rp-client-label');
+      const x = $('#rp-client-clear');
+      if (saleClient) {
+        let rec = null;
+        try { rec = window.KiwiClients.get(saleClient.id); } catch (_) {}
+        const prog = rec ? clientProgressLabel(rec) : '';
+        btn.classList.add('is-on');
+        if (lab) lab.textContent = saleClient.name + (prog ? ' · ' + prog : '');
+        if (x) x.hidden = false;
+      } else {
+        btn.classList.remove('is-on');
+        if (lab) lab.textContent = 'Client & fidélité';
+        if (x) x.hidden = true;
+      }
+    }
+
+    function creditSaleToClient(entry) {
+      if (!saleClient || !clientsOn()) return;
+      const id = saleClient.name, cid = saleClient.id;
+      saleClient = null;                       // une note = un passage
+      try {
+        const res = window.KiwiClients.recordPurchase(cid, { amount: entry.amount });
+        renderSaleClient();
+        if (!res) return;
+        toast(res.rewardReady
+          ? `${id} · récompense atteinte`
+          : `${id} · passage enregistré`);
+      } catch (_) { renderSaleClient(); }
+    }
+
+    /* ---- le sélecteur ---- */
+    const clientModal = $('#client-modal');
+    let clNewMode = false;
+
+    function clRows(q) {
+      let list = [];
+      try { list = window.KiwiClients.list() || []; } catch (_) {}
+      const needle = String(q || '').trim().toLowerCase();
+      if (needle) {
+        const digits = needle.replace(/\D/g, '');
+        list = list.filter(c =>
+          String(c.name || '').toLowerCase().indexOf(needle) !== -1 ||
+          (digits && String(c.phone || '').replace(/\D/g, '').indexOf(digits) !== -1));
+      }
+      // Les plus récents d'abord : au comptoir, c'est presque toujours un habitué.
+      list = list.slice().sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || ''))).slice(0, 40);
+      if (!list.length) {
+        return `<div class="cl-empty">${needle
+          ? 'Personne à ce nom.<br />Créez la fiche avec « Nouveau client ».'
+          : 'Le carnet est vide.<br />Le premier client s\'inscrit ici, au comptoir.'}</div>`;
+      }
+      return list.map(c => `
+        <button type="button" class="cl-row" data-cl-pick="${escTeam(c.id)}">
+          <span class="ini">${escTeam(clientInitials(c.name))}</span>
+          <span class="who"><b>${escTeam(c.name || 'Sans nom')}</b><span>${escTeam(c.phone || '')}</span></span>
+          <span class="pts">${escTeam(clientProgressLabel(c))}</span>
+        </button>`).join('');
+    }
+    function clPaint() {
+      const l = $('#cl-list');
+      if (l) l.innerHTML = clRows($('#cl-search') ? $('#cl-search').value : '');
+      const nw = $('#cl-new'); if (nw) nw.hidden = !clNewMode;
+      const ls = $('#cl-list'); if (ls) ls.hidden = clNewMode;
+      const sr = $('#cl-search'); if (sr) sr.hidden = clNewMode;
+      const cl = $('#cl-confirm-label'); if (cl) cl.textContent = clNewMode ? 'Enregistrer' : 'Nouveau client';
+    }
+    function openClientModal() {
+      if (!clientsOn()) return;
+      clNewMode = false;
+      const s = $('#cl-search'); if (s) s.value = '';
+      ['#cl-new-name', '#cl-new-phone'].forEach(sel => { const el = $(sel); if (el) el.value = ''; });
+      const cs = $('#cl-new-consent'); if (cs) cs.checked = false;
+      clPaint();
+      clientModal.classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => { try { $('#cl-search').focus(); } catch (_) {} }, 120);
+    }
+    function closeClientModal() { clientModal.classList.remove('is-open'); }
+    function attachClient(rec) {
+      if (!rec) return;
+      saleClient = { id: rec.id, name: rec.name || 'Client', phone: rec.phone || '', ctx: saleContextKey() };
+      renderSaleClient();
+      closeClientModal();
+      toast(`${saleClient.name} attaché à la note`);
+    }
+
+    $('#rp-client').addEventListener('click', (e) => {
+      if (e.target.closest('#rp-client-clear')) {
+        e.stopPropagation();
+        saleClient = null; renderSaleClient(); return;
+      }
+      openClientModal();
+    });
+    $('#cl-search').addEventListener('input', clPaint);
+    $('#cl-list').addEventListener('click', (e) => {
+      const row = e.target.closest('[data-cl-pick]');
+      if (!row) return;
+      try { attachClient(window.KiwiClients.get(row.dataset.clPick)); } catch (_) {}
+    });
+    $('#cl-cancel').addEventListener('click', () => { if (clNewMode) { clNewMode = false; clPaint(); } else closeClientModal(); });
+    $('#cl-confirm').addEventListener('click', () => {
+      if (!clNewMode) { clNewMode = true; clPaint(); setTimeout(() => { try { $('#cl-new-name').focus(); } catch (_) {} }, 80); return; }
+      const name = ($('#cl-new-name').value || '').trim();
+      const phone = ($('#cl-new-phone').value || '').trim();
+      /* Un carnet de noms sans numéro ne sert à rien le jour où le patron veut
+         rappeler ses habitués — mais on ne bloque pas une inscription au
+         comptoir pour ça : le nom suffit, le numéro se complète plus tard. */
+      if (!name && !phone) { try { $('#cl-new-name').focus(); } catch (_) {} return; }
+      try {
+        const rec = window.KiwiClients.upsert({
+          name: name || phone, phone: phone,
+          consent: !!($('#cl-new-consent') && $('#cl-new-consent').checked),
+          source: 'caisse',
+        });
+        attachClient(rec);
+      } catch (_) { toast('Enregistrement impossible'); }
+    });
+    clientModal.addEventListener('click', (e) => { if (e.target === clientModal) closeClientModal(); });
+
+    /* Le carnet complet (fiches, historique, récompenses) reste celui de
+       assets/clients-book.js, qui greffe sa propre entrée dans .act-selector. */
+    renderSaleClient();
+    try { if (window.KiwiClients && window.KiwiClients.subscribe) window.KiwiClients.subscribe(renderSaleClient); } catch (_) {}
+    document.addEventListener('kiwi-paired', () => { try { renderSaleClient(); } catch (_) {} });
 
     /* ============ REÇU / TICKET — receipt preview ============ */
     /* Faux but plausible Moroccan establishment identifiers — DEMO ONLY. */
@@ -11102,7 +11417,10 @@
        Accepter → en préparation → Prête → Historique. À emporter
        orders sent from the bill panel land here as new tickets.
        =========================================================== */
-    const KDS_STATIONS = [
+    /* Les sept postes de Café Atlas. Ils restent la vérité de la DÉMO, et d'elle
+       seule : chez un vrai commerçant, les postes sont ceux qu'il a déclarés au
+       tableau de bord (carteState.stations). */
+    const KDS_STATIONS_DEMO = [
       { id: 'cuisson',  name: 'Cuisson chaude', raw: '#1F5D3C' },
       { id: 'salade',   name: 'Salade froide',  raw: '#3FB67A' },
       { id: 'pastry',   name: 'Pâtisserie',     raw: '#D99A2B' },
@@ -11111,9 +11429,37 @@
       { id: 'bbq',      name: 'Barbecue',       raw: '#C24A2E' },
       { id: 'crepes',   name: 'Crêpes bar',     raw: '#C97A4A' },
     ];
-    /* caisse menu category -> kitchen station */
+    /* Un café qui n'a rien déclaré n'a pas zéro poste : il en a UN, sa cuisine.
+       Lui inventer les sept postes de la démo mettrait sept filtres vides dans
+       sa barre ; ne rien lui mettre casserait le filtrage. */
+    const KDS_STATION_SOLO = { id: 'cuisson', name: 'Cuisine', raw: STATION_PALETTE[0] };
+    function kdsStations() {
+      if (IS_DEMO) return KDS_STATIONS_DEMO;
+      return carteState.stations.length ? carteState.stations : [KDS_STATION_SOLO];
+    }
+    /* caisse menu category -> kitchen station — la table de la DÉMO, qui ne
+       connaît que les catégories de Café Atlas. */
     const KDS_CAT_STATION = { entrees: 'salade', tajines: 'cuisson', couscous: 'cuisson',
       pastillas: 'cuisson', sandwiches: 'cuisson', boissons: 'boissons', desserts: 'pastry' };
+
+    /* Où part CE plat. Une seule réponse pour toute la caisse : le poste choisi
+       par le patron s'il existe encore, la table par catégorie en démo, le poste
+       par défaut sinon. Un plat n'atterrit jamais dans un filtre fantôme. */
+    function kdsStationFor(m) {
+      const list = kdsStations();
+      const want = m && m.station;
+      if (want && list.some(s => s.id === want)) return want;
+      if (IS_DEMO && m && KDS_CAT_STATION[m.cat]) return KDS_CAT_STATION[m.cat];
+      return list[0].id;
+    }
+    /* Le patron a supprimé ou renommé un poste : refaire la barre, et rendre la
+       vue « Toutes » si le filtre actif pointait vers un poste disparu — sinon
+       l'écran cuisine resterait vide sans dire pourquoi. */
+    function kdsRepaintStations() {
+      if (kdsActiveStation !== 'all' && !kdsStations().some(s => s.id === kdsActiveStation)) kdsActiveStation = 'all';
+      const bar = $('#kit-bar');
+      if (bar) bar.innerHTML = kdsStationBar();
+    }
 
     /* Recipe catalog for the KDS recipe popup. Keyed by dish name (the same
      * string the kitchen ticket renders). Each entry has a yield (portions
@@ -11271,7 +11617,10 @@
     }
 
     const kdsOrders   = [];
-    let   kdsOrderSeq = 52;
+    /* La démo reprend sa numérotation là où son board s'arrête. Un vrai café
+       ouvert ce matin n'a pas servi 52 commandes : il imprimerait « bon #53 »
+       sur son premier ticket. Il commence donc à 1. */
+    let   kdsOrderSeq = IS_DEMO ? 52 : 0;
     let   kdsActiveStation = 'all';
     let   kdsHistoryOpen   = false;
     let   kdsTimer = null;
@@ -11403,7 +11752,10 @@
         const count = kdsOrders.filter(o => o.status !== 'ready' && kdsMatches(o, id)).length;
         return `<button class="kit-station ${kdsActiveStation === id ? 'on' : ''}" data-kit-st="${id}"><i style="background:${dot};"></i><span>${kdsEsc(label)}</span><span class="kit-station-ct">${count}</span></button>`;
       };
-      return btn('all', 'var(--ink)', 'Toutes') + KDS_STATIONS.map(s => btn(s.id, s.raw, s.name)).join('');
+      const list = kdsStations();
+      /* Un seul poste ne se filtre pas : « Toutes » et « Cuisine » afficheraient
+         rigoureusement la même chose. On garde la barre pour le compteur. */
+      return (list.length > 1 ? btn('all', 'var(--ink)', 'Toutes') : '') + list.map(s => btn(s.id, s.raw, s.name)).join('');
     }
 
     function updateKdsCount() {
@@ -11901,17 +12253,60 @@
     $('#sk-recept-btn').addEventListener('click', openRecept);
     updateStockBadge();
 
+    /* ═══════════ UN BON PAR POSTE ═══════════════════════════════════════════
+     * L'encodeur du bon de cuisine (escpos.kitchenTicket : gros caractères,
+     * notes en dessous) existait et n'était appelé de nulle part — les cuisines
+     * sans écran ne recevaient rien. Il l'est maintenant, et par POSTE.
+     *
+     * Un bon unique qui liste le café ET le tajine oblige le cuisinier à trier
+     * à la main ce que la caisse sait déjà, et le bar ne voit jamais sa ligne.
+     * Chaque poste reçoit donc SES lignes, sous son nom, avec le numéro de
+     * commande pour tout recoller au passe. Un plat affecté à deux postes (une
+     * pastilla : cuisson + pâtisserie) sort sur les deux, volontairement.
+     *
+     * Les bons partent l'un APRÈS l'autre : une thermique ne mélange pas deux
+     * jobs simultanés, elle en perd un. Et un seul poste concerné redonne
+     * exactement le bon d'avant.
+     *
+     * Silencieux sans imprimante : l'écran cuisine reste le chemin nominal, le
+     * papier est un plus, jamais une condition d'envoi. */
+    function printKitchenTickets(order, items) {
+      try {
+        const KP = window.KiwiPrinter;
+        if (!KP || !KP.printKitchen) return;
+        if (!(KP.isConnected ? KP.isConnected() : (KP.isConfigured && KP.isConfigured()))) return;
+        const time = pad2HO(order.sentAt.getHours()) + ':' + pad2HO(order.sentAt.getMinutes());
+        const fallback = kdsStationFor(null);
+        const byStation = new Map();
+        (items || []).forEach((it) => {
+          const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
+          sids.forEach((sid) => {
+            if (!byStation.has(sid)) byStation.set(sid, []);
+            byStation.get(sid).push({ qty: it.q, name: it.n, note: it.note });
+          });
+        });
+        const list = kdsStations();
+        const names = {};
+        list.forEach((s) => { names[s.id] = s.name; });
+        const rank = (id) => { const i = list.findIndex(s => s.id === id); return i < 0 ? 999 : i; };
+        // L'ordre des bons suit celui des postes du patron, pas celui du panier.
+        Array.from(byStation.keys()).sort((a, b) => rank(a) - rank(b))
+          .reduce((chain, sid) => chain.then(() => Promise.resolve(KP.printKitchen({
+            title: String(names[sid] || 'Cuisine').toUpperCase(),
+            order: '#' + order.num, time: time,
+            items: byStation.get(sid),
+          })).catch(() => {})), Promise.resolve());
+      } catch (_) {}
+    }
+
     /* À emporter — push the current cart to the kitchen screen as a new order */
     function sendToKitchen() {
       if (mode !== 'vrap' || cart.length === 0) { toast('Ajoute des articles d\'abord'); return; }
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
       const items  = cart.map(l => {
         const m = menuItems.find(x => x.id === l.id);
-        /* Le poste du plat d'abord — c'est le patron qui l'a choisi au tableau
-           de bord —, la table par catégorie ensuite (elle ne connaît que les
-           catégories de la démo), « cuisson » en dernier recours. */
         return { q: l.qty, n: l.name, p: l.price, note: (l.note || '').trim(),
-          stations: [(m && m.station) || (m && KDS_CAT_STATION[m.cat]) || 'cuisson'] };
+          stations: [kdsStationFor(m)] };
       });
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
@@ -11919,21 +12314,7 @@
         paid: false, pickedUp: false, pickedUpAt: null, total: total,
       };
       kdsOrders.push(order);
-      /* Le bon de cuisine sur papier. L'encodeur existait (escpos.kitchenTicket,
-         gros caractères, notes en dessous) et n'était appelé de nulle part : les
-         cuisines qui n'ont pas d'écran ne recevaient rien. Silencieux quand
-         aucune imprimante n'est jointe — l'écran cuisine reste le chemin
-         nominal, le papier est un plus, pas une condition d'envoi. */
-      try {
-        const KP = window.KiwiPrinter;
-        if (KP && KP.printKitchen && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
-          Promise.resolve(KP.printKitchen({
-            title: 'CUISINE', order: '#' + order.num,
-            time: pad2HO(order.sentAt.getHours()) + ':' + pad2HO(order.sentAt.getMinutes()),
-            items: items.map(it => ({ qty: it.q, name: it.n, note: it.note })),
-          })).catch(() => {});
-        }
-      } catch (_) {}
+      printKitchenTickets(order, items);
       const count = cart.reduce((s, l) => s + l.qty, 0);
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -11945,6 +12326,10 @@
 
     kdsSeed();
     updateKdsCount();
+    /* À partir d'ici l'écran cuisine est monté : une carte qui arrive du bureau
+       peut repeindre sa barre de postes (voir rebuildCarte). */
+    carteState.kdsReady = true;
+    try { kdsRepaintStations(); } catch (_) {}
 
     /* ===========================================================
        À EMPORTER — orders board (landing) + builder toggle
@@ -12048,8 +12433,11 @@
       return cart.map(c => {
         const orig = o && o.items.find(it => it.n === c.name);
         const m = menuItems.find(x => x.id === c.id);
+        /* Cette branche ignorait m.station : rouvrir une commande à emporter pour
+           y ajouter un plat renvoyait TOUTE la commande en cuisson, y compris le
+           café qui devait aller au bar. Même résolution que partout ailleurs. */
         return { q: c.qty, n: c.name, p: c.price, note: (c.note || '').trim(),
-          stations: orig ? orig.stations : [(m && KDS_CAT_STATION[m.cat]) || 'cuisson'] };
+          stations: orig ? orig.stations : [kdsStationFor(m)] };
       });
     }
 
@@ -12193,6 +12581,17 @@
           tables: tables,
           tableOrders: tableOrders,
           orders: orders,
+          /* Le board cuisine, chez un VRAI commerçant seulement. Les lignes
+             envoyées portent un drapeau `sent` qui, lui, était déjà persisté :
+             sans le board en face, un simple rechargement au comptoir effaçait
+             les tickets tout en interdisant de les renvoyer — la cuisine perdait
+             la commande pour de bon. La démo garde son board éphémère, réensemé
+             à chaque chargement (kdsSeed), sinon les quinze commandes d'exemple
+             se dupliqueraient à chaque visite. */
+          kdsOrders: storeIsReal() ? kdsOrders.map(o => Object.assign({}, o, {
+            sentAt: o.sentAt instanceof Date ? o.sentAt.toISOString() : o.sentAt,
+          })) : undefined,
+          kdsOrderSeq: storeIsReal() ? kdsOrderSeq : undefined,
         }));
       } catch (e) {}
     }
@@ -12281,6 +12680,19 @@
         Object.keys(orders).forEach(k => delete orders[k]);
         Object.assign(orders, d.orders);
       }
+      /* Le board cuisine. `sentAt` revient en texte du JSON alors que tout
+         l'écran cuisine calcule un âge dessus (kdsElapsed lit .getTime()) :
+         sans cette reprise en Date, la première peinture jetterait. */
+      if (Array.isArray(d.kdsOrders) && storeIsReal()) {
+        kdsOrders.length = 0;
+        d.kdsOrders.forEach((o) => {
+          if (!o) return;
+          const at = new Date(o.sentAt);
+          kdsOrders.push(Object.assign({}, o, { sentAt: isNaN(at.getTime()) ? new Date() : at }));
+        });
+        if (typeof d.kdsOrderSeq === 'number') kdsOrderSeq = d.kdsOrderSeq;
+        updateKdsCount();
+      }
     }
     function enterShellDirectly() {
       const pin = $('#pin-screen');    if (pin) pin.style.display = 'none';
@@ -12314,7 +12726,7 @@
           if (!genuine.length) { localStorage.removeItem('kiwi-caisse-shift'); return; }
           if (genuine.length !== (saved.journal || []).length) {
             saved.journal = genuine;
-            saved.tables = {}; saved.tableOrders = {}; saved.orders = {};
+            saved.tables = {}; saved.tableOrders = {}; saved.orders = {}; saved.kdsOrders = [];
             if (saved.shift) saved.shift.tablesPaid = 0;
           }
         }

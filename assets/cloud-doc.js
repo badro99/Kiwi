@@ -80,10 +80,32 @@
       .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
 
-  /* venues.js les déclare transitoires et « never persisted » : 'scoped' est la
-   * vue opérateur sur le magasin d'un client, 'own' un placeholder de session.
-   * Ni l'un ni l'autre n'est un magasin : rien ne doit partir sous leur nom. */
-  var TRANSIENT = { scoped: 1, own: 1 };
+  /* venues.js les déclare transitoires et « never persisted » : 'own' est un
+   * placeholder de session — il ne désigne aucun magasin en particulier, et rien
+   * ne doit jamais partir sous son nom.
+   *
+   * 'scoped' était rangé ici avec lui, et c'était l'erreur : la vue opérateur
+   * n'est pas un placeholder, elle porte le magasin d'un client bien réel, celui
+   * que /api/me a résolu. La traiter comme anonyme coupait toute synchronisation
+   * en God mode — l'opérateur ouvrait le tableau de bord d'un client et lisait
+   * « horaires non renseignés » sur un établissement qui les avait enregistrés
+   * depuis des semaines, ainsi que reçu, équipe, fidélité, plan de salle et
+   * rapports de clôture, tous vides pour la même raison. Les fonctionnalités
+   * paraissaient marcher parce qu'elles passent, elles, par /api/config et
+   * /api/catalog, qui prennent le magasin dans l'URL et pas dans la venue. */
+  var TRANSIENT = { own: 1 };
+
+  /* Le magasin de la vue portée. Lu sur la venue synthétique, que venues.js
+   * n'écrit qu'après confirmation du cookie opérateur par le serveur : coller
+   * « ?merchant=… » derrière l'adresse ne suffit donc pas à s'en réclamer. */
+  function scopedSlug() {
+    try {
+      var KV = window.KiwiVenue;
+      var d = KV && KV.getVenueData && KV.getVenueData('scoped');
+      var s = (d && d.id === 'scoped' && d.slug) ? String(d.slug).trim() : '';
+      return s;
+    } catch (_) { return ''; }
+  }
 
   function isReal() {
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); }
@@ -103,11 +125,19 @@
     } catch (_) { return []; }
   }
 
+  /* Attention au repli de getVenueData() : `VENUES[id] || VENUES[courante]`.
+   * Un identifiant INCONNU en ressort donc avec la fiche de la venue affichée —
+   * et comme on en tire un slug, un magasin absent prenait le nom de celui qu'on
+   * regarde. En vue portée, où la seule venue est le client ouvert, ça faisait
+   * reconnaître l'enregistrement local de N'IMPORTE quel autre magasin comme
+   * étant celui du client : carryForward() recopiait les horaires du client
+   * précédent chez le suivant. On exige donc que la fiche rendue soit bien celle
+   * qu'on a demandée. */
   function venueById(id) {
     var KV = window.KiwiVenue;
     try {
       var d = KV && KV.getVenueData && KV.getVenueData(id);
-      if (d) return d;
+      if (d && d.id === id) return d;
     } catch (_) {}
     try {
       var c = KV && KV.getCurrentVenueData && KV.getCurrentVenueData();
@@ -133,6 +163,11 @@
   function slugFor(id) {
     if (!isReal()) return '';
     id = String(id == null ? '' : id).trim();
+    /* La vue portée : son slug est porté par la venue, jamais deviné de son nom
+     * — un magasin peut s'appeler autrement que son slug d'inscription, et se
+     * tromper de slug ferait écrire chez le voisin. Vide tant que le serveur
+     * n'a pas répondu : on ne synchronise rien plutôt que n'importe quoi. */
+    if (id === 'scoped') return scopedSlug();
     if (!id || TRANSIENT[id] || isDemoId(id)) return '';
 
     var vd = venueById(id);

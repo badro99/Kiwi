@@ -44,9 +44,41 @@ const AUTH_SECRET = crypto.randomUUID() + crypto.randomUUID();
 const DAY = 86400000;
 
 /* ── D1 → node:sqlite ─────────────────────────────────────────────────────── */
+
+/* Charger schema.sql d'un bloc ne marche plus, et c'est instructif.
+ *
+ * Les colonnes ajoutées après coup à une table (`orders.session_id`,
+ * `orders.client_ref`, …) sont écrites en COMMENTAIRE dans schema.sql : la base
+ * déployée les a reçues par un ALTER passé à la main, et le fichier n'en garde
+ * que la trace. Les INDEX qui les nomment, eux, sont bien exécutables — donc une
+ * base NEUVE construite depuis ce fichier s'arrête net sur « no such column:
+ * session_id », et tout ce qui suit dans le fichier n'est jamais créé.
+ *
+ * Le banc doit ressembler à la base DÉPLOYÉE, pas à une base neuve. On joue donc
+ * les instructions une par une, on ré-applique les ALTER commentés, puis on
+ * rejoue celles qui avaient échoué — et si l'une d'elles échoue encore, on la
+ * laisse remonter. C'est un contournement DU BANC : provisionner une vraie base
+ * D1 à partir de ce fichier bute sur exactement le même mur. */
+function loadSchema(db) {
+  const raw = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+
+  const additive = raw.split('\n')
+    .map((l) => l.replace(/^\s*--\s*/, '').trim())
+    .filter((l) => /^ALTER TABLE \w+ ADD COLUMN /i.test(l))
+    .map((l) => l.replace(/;.*$/, ''));
+
+  const stmts = raw.replace(/--[^\n]*/g, '')
+    .split(';').map((s) => s.trim()).filter(Boolean);
+
+  const deferred = [];
+  for (const s of stmts) { try { db.exec(s); } catch (_) { deferred.push(s); } }
+  for (const a of additive) { try { db.exec(a); } catch (_) {} }   // déjà présente ⇒ tant mieux
+  for (const s of deferred) db.exec(s);                            // cette fois, ça doit passer
+}
+
 function makeDB() {
   const db = new DatabaseSync(':memory:');
-  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  loadSchema(db);
   const prepare = (query) => {
     let args = [];
     const st = {
@@ -95,6 +127,14 @@ const ROUTES = {
   '/api/clients': await import(path.join(ROOT, 'functions/api/clients.js')),
   '/api/menu': await import(path.join(ROOT, 'functions/api/menu.js')),
   '/api/sale': await import(path.join(ROOT, 'functions/api/sale.js')),
+  /* Le relais OrderPro au complet — les trois portes ensemble, parce que c'est
+     leur RELATION qui casse, jamais l'une d'elles isolément : le prix recalculé
+     contre la carte publiée, la présence du comptoir qui autorise une session,
+     la session qu'encaisser referme. Aucune de ces règles ne se vérifie en
+     lisant un seul fichier, et aucune ne se vérifiait sans déployer. */
+  '/api/order': await import(path.join(ROOT, 'functions/api/order/index.js')),
+  '/api/order/session': await import(path.join(ROOT, 'functions/api/order/session.js')),
+  '/api/order/queue': await import(path.join(ROOT, 'functions/api/order/queue.js')),
   '/api/pair/create': await import(path.join(ROOT, 'functions/api/pair/create.js')),
   '/api/pair/redeem': await import(path.join(ROOT, 'functions/api/pair/redeem.js')),
   '/api/admin/config': await import(path.join(ROOT, 'functions/api/admin/config.js')),
@@ -252,7 +292,20 @@ http.createServer(async (rq, rs) => {
     for await (const c of rq) chunks.push(c);
     // Quelle session ? ?merchant= choisit le commerçant qu'on incarne, ce qui
     // permet d'ouvrir les deux tableaux de bord côte à côte dans deux onglets.
-    const who = SESSIONS[url.searchParams.get('merchant')] || SESSIONS['amira-boutique'];
+    /* …et sur une ÉCRITURE le magasin est dans le CORPS, pas dans l'adresse.
+       Sans cette ligne, tout POST repartait sur la session par défaut : un
+       commerçant enregistrait ses horaires depuis son propre tableau de bord et
+       le banc les rangeait chez amira-boutique. Le symptôme ressemblait trait
+       pour trait à une fuite entre clients dans le produit — c'en était une,
+       mais elle était ICI. Un banc qui se trompe de locataire fait condamner du
+       code juste, ce qui est pire que pas de banc du tout. */
+    let bodyMerchant = '';
+    if (rq.method !== 'GET' && rq.method !== 'HEAD') {
+      try { bodyMerchant = String(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}').merchant || ''); }
+      catch (_) {}
+    }
+    const who = SESSIONS[url.searchParams.get('merchant')] || SESSIONS[bodyMerchant]
+      || SESSIONS['amira-boutique'];
     // Le cookie opérateur va aux routes /api/admin/*, et à TOUT appel venu d'une
     // page ouverte en God mode (?op=1 dans le Referer). En production ce cookie
     // est posé sur l'origine et part avec chaque requête ; le restreindre aux

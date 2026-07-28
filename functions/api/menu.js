@@ -83,8 +83,20 @@ function sanitizeHours(raw) {
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
-  const out = { cats: [], items: [] };
+  const out = { cats: [], items: [], stations: [] };
   if (!raw || typeof raw !== 'object') return out;
+  // Les postes de préparation, dans l'ordre voulu par le commerçant — cet ordre
+  // EST un réglage : le premier poste est celui qui reçoit les plats non
+  // affectés. Un tri ou une déduplication qui le bousculerait changerait le
+  // routage de la cuisine sans que personne ne l'ait demandé.
+  const stations = Array.isArray(raw.stations) ? raw.stations.slice(0, 24) : [];
+  out.stations = stations.map((s) => ({
+    id: str(s && s.id, 40),
+    name: str(s && s.name, 40),
+    // #RRGGBB uniquement : cette valeur part dans un attribut style sur la
+    // caisse ET sur la page client, donc rien qui ne soit pas une couleur.
+    color: /^#[0-9a-fA-F]{6}$/.test(String((s && s.color) || '')) ? String(s.color) : '',
+  })).filter((s) => s.id && s.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
   out.cats = cats.map((c) => ({
     id: str(c && c.id, 40),
