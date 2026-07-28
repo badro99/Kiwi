@@ -121,10 +121,50 @@ ok('aucune tuile ne recompose la variation du CA à la main',
     m ? 'trouvée, mais sans revDelta' : 'tuile introuvable');
 });
 
+/* ── 6. OÙ COMMENCE « AUJOURD'HUI » ────────────────────────────────────────
+ * Le tableau de bord coupait la journée à minuit ; le rapport Z la coupe à la
+ * bascule commerciale (5 h par défaut). Pour un restaurant qui ferme à 1 h du
+ * matin, les ventes de 00 h–01 h étaient donc dans la recette du soir sur le Z
+ * et dans le lendemain sur le tableau de bord — deux chiffres justes chacun de
+ * leur côté, incomparables, et impossibles à départager pour le patron. */
+const dFrom = SRC.indexOf('function dayCutoffH()');
+const dTo = SRC.indexOf('function realSalesList()');
+ok('la définition de la journée est extractible', dFrom > 0 && dTo > dFrom);
+if (dFrom > 0 && dTo > dFrom) {
+  const mk = (h) => new Function('window', SRC.slice(dFrom, dTo) + '\nreturn dayStartMs;')(
+    { KiwiDayReport: h == null ? undefined : { cutoff: () => h } });
+
+  // 12 mars 2026, 00 h 30 — une vente de fin de service.
+  const nuit = new Date(2026, 2, 12, 0, 30).getTime();
+  const veille5h = new Date(2026, 2, 11, 5, 0).getTime();
+  ok('une vente à 00 h 30 appartient encore à la soirée de la veille',
+    mk(5)(nuit) === veille5h, new Date(mk(5)(nuit)).toString());
+
+  // …et une vente en plein service reste dans SA journée.
+  const soir = new Date(2026, 2, 12, 21, 0).getTime();
+  ok('une vente à 21 h appartient à la journée du jour',
+    mk(5)(soir) === new Date(2026, 2, 12, 5, 0).getTime());
+
+  // « Hier » reste exactement 24 h en amont — les bornes de plage en dépendent.
+  ok('la veille reste à 24 h exactement',
+    mk(5)(soir) - mk(5)(nuit) === 864e5, String(mk(5)(soir) - mk(5)(nuit)));
+
+  // Sans module de rapport chargé : minuit, c'est-à-dire l'ancien comportement.
+  ok('sans rapport journalier, on retombe sur minuit (comportement d\'avant)',
+    mk(null)(nuit) === new Date(2026, 2, 12, 0, 0).getTime());
+  ok('une bascule hors bornes est ignorée, pas propagée',
+    mk(99)(nuit) === new Date(2026, 2, 12, 0, 0).getTime());
+}
+
+/* La règle vaut pour tout le module : plus aucune remise à minuit en dur dans
+ * le calcul des plages de ventes réelles. */
+ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
+  !/function dayStartMs\(t\) \{ const d = new Date\(t\); d\.setHours\(0/.test(SRC));
+
 console.log('');
 if (fails.length) {
   fails.forEach((f) => console.log('  ✗ ' + f));
   console.log(`\n✗ CA au grand livre : ${pass} ok, ${fails.length} échec(s)\n`);
   process.exit(1);
 }
-console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose)\n`);
+console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale)\n`);

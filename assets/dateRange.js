@@ -1617,7 +1617,40 @@
    * moves every surface and the figures can never disagree with each other.
    * Placed before renderHero but hoisted as function declarations, so every
    * renderer below can call them. */
-  function dayStartMs(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  /* ── Où commence « aujourd'hui » ────────────────────────────────────────
+   * À la même heure que sur le rapport Z, et pas à minuit.
+   *
+   * Le tableau de bord coupait la journée à minuit. Le rapport de clôture, lui,
+   * la coupe à la bascule commerciale du commerçant — 5 h par défaut, ou
+   * l'heure déduite de ses horaires (assets/day-report.js · cutoff). Pour un
+   * restaurant qui ferme à 1 h du matin, les deux surfaces ne pouvaient donc
+   * pas tomber d'accord : le Z du soir rangeait les ventes de 00 h–01 h dans la
+   * recette de la soirée, la tuile « Aujourd'hui » les comptait dans le
+   * lendemain. Le patron voyait un Z à 8 400 MAD et un tableau de bord qui
+   * n'en montrait que 7 900, sans qu'aucun des deux ne soit faux ni réparable :
+   * ils répondaient à deux questions différentes en prétendant répondre à la
+   * même. Et le décalage frappe précisément les commerces de service du soir,
+   * c'est-à-dire ceux dont la soirée EST le chiffre d'affaires.
+   *
+   * Une seule définition, donc, et c'est celle du rapport — parce que c'est
+   * celle que le commerçant imprime, signe et compare à sa caisse.
+   *
+   * Repli à minuit quand le module de rapport n'est pas chargé : c'est
+   * exactement le comportement d'avant, donc rien ne peut se dégrader. */
+  function dayCutoffH() {
+    try {
+      const h = window.KiwiDayReport?.cutoff?.();
+      return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
+    } catch (_) { return 0; }
+  }
+  function dayStartMs(t) {
+    const h = dayCutoffH();
+    // Reculer de la bascule avant de prendre la date, puis la remettre : une
+    // vente à 00 h 30 avec une bascule à 5 h retombe sur la veille 05 h 00.
+    const d = new Date(t - h * 3600000);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() + h * 3600000;
+  }
   function realSalesList() {
     try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
   }
