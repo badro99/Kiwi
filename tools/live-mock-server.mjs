@@ -185,8 +185,30 @@ db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,
    clôturée, un carnet clients et un registre d'équipe. Les cas faciles se
    testent tout seuls ; ceux-ci sont semés exprès. */
 const NOW = Date.now();
+/* Le café est le SECOND magasin du compte, et c'est lui qui porte Order Pro.
+   Sa fiche est recopiée sur celle d'un vrai client en production : les cinq
+   modules par défaut coupés, `orderpro` rallumé à la main par l'opérateur, et
+   `type` laissé NULL — la console n'écrit ce champ qu'au moment où le client
+   choisit son métier à l'inscription, donc un magasin ajouté ensuite n'en a
+   pas. C'est la configuration exacte dans laquelle l'entrée Order Pro
+   n'apparaissait pas sur la page Carte. */
 db.prepare('INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,updated_ts) VALUES (?,?,?,?,?,?,?)')
-  .bind('amira-cafe', '{}', 'pro', 'cafe', 'acc-old', 'Amira Café', NOW).run();
+  .bind('amira-cafe',
+        '{"terminaux":false,"conformite":false,"reservations":false,"depenses":false,"orderpro":true}',
+        'pro', null, 'acc-old', 'Amira Café', NOW).run();
+/* Une carte non vide : sans elle la page Carte rend son état « vide », qui n'a
+   jamais eu de bouton Order Pro et masquerait le vrai symptôme. */
+db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
+  .bind('amira-cafe', 'Amira Café', 'restaurant', JSON.stringify({
+    seq: 32,
+    cats: [{ id: 'cat_24', name: 'Drinks', sub: [{ id: 'sub_27', name: 'Cold Drinks' }] },
+           { id: 'cat_25', name: 'Shawarma', sub: [] }],
+    items: [
+      { id: 'it_29', name: 'Soda', price: 20, catId: 'cat_24', subId: 'sub_27', desc: '', avail: true, station: '', photo: '', video: '' },
+      { id: 'it_31', name: 'Café', price: 10, catId: 'cat_24', subId: 'sub_27', desc: '', avail: true, station: '', photo: '', video: '' },
+      { id: 'it_33', name: 'Shawarma poulet', price: 45, catId: 'cat_25', subId: '', desc: '', avail: true, station: '', photo: '', video: '' },
+    ],
+  }), NOW).run();
 
 /* Un code patron déposé sous le SECOND magasin, pas sous celui d'inscription.
    C'est le cas qui cassait : le dashboard n'interrogeait que le magasin affiché

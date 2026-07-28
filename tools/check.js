@@ -331,6 +331,28 @@ section('Relais OrderPro (tools/orderpro-relay-test.js)');
   }
 }
 
+/* ── 7quater · la carte suit l'établissement ─────────────────────────────────
+ * Un compte tient plusieurs magasins et on passe de l'un à l'autre sans
+ * recharger la page. Trois pannes vivaient dans ce pli : la carte du second
+ * magasin n'était jamais lue (page Carte vide, et donc plus aucun accès aux
+ * tags Order Pro), le « déjà lu » de la boutique verrouillait le restaurant, et
+ * le slug du dernier magasin lu servait de cible à la publication suivante —
+ * la carte du second restaurant écrasait la fiche du premier, sans un bruit.
+ * On fait tourner le VRAI module dans un bac à sable, avec le décalage de
+ * config qu'un changement d'établissement produit pour de bon. ─────────────── */
+section('Carte par établissement (tools/menu-carte-store-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'menu-carte-store-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`menu-carte-store-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 7bis · la réception native Shopify ──────────────────────────────────────
  * /api/channel/shopify/<id> n'a ni session ni clé porteuse : son adresse est
  * publique par construction, puisque Shopify ne sait envoyer aucun en-tête
