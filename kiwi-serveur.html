@@ -3766,6 +3766,90 @@ em, i, cite, dfn, var { font-style: normal; }
         .catch(() => {});
     }
 
+    /* ── Envoyer la commande en cuisine — pour de vrai ────────────────────────
+     * « Lancer la commande » n'était qu'un toast. Il effaçait le drapeau « non
+     * envoyé » de la table et affichait « commande envoyée · cuisine + bar ».
+     * Rien ne partait : pas de requête, pas de ticket, pas de trace. La cuisine
+     * n'a jamais rien reçu, la caisse non plus, et le serveur avait la
+     * confirmation écrite du contraire. Un onglet rechargé perdait la saisie
+     * sans que personne ne puisse le savoir.
+     *
+     * Le ticket part maintenant vers /api/order/queue (create), la même file que
+     * lit le comptoir. Trois règles tiennent le tout :
+     *
+     * • ON N'ENVOIE QUE LE DELTA. Le serveur relance la même table quand les
+     *   convives ajoutent un dessert. Renvoyer toute la commande sortirait les
+     *   plats déjà servis une deuxième fois en cuisine. Chaque ligne retient ce
+     *   qui est DÉJÀ parti (`sentQty`) et seul l'écart voyage.
+     * • ÉCHEC ⇒ LA TABLE RESTE « NON ENVOYÉE ». C'est le fond du problème
+     *   qu'on corrige : le serveur doit repartir en sachant que la cuisine n'a
+     *   rien reçu, pas avec un accusé de réception inventé.
+     * • UNE CLÉ PAR ENVOI, gardée jusqu'au succès. Le wifi d'un café porte mal
+     *   jusqu'au fond de la terrasse ; un serveur qui ne voit pas sa
+     *   confirmation retape sur « Lancer ». La clé fait rejouer LA commande au
+     *   lieu d'en fabriquer une seconde.
+     *
+     * Une baisse de quantité après l'envoi ne repart pas (l'écart est négatif,
+     * donc nul) : le plat est déjà en cuisine, l'annuler est un geste de caisse,
+     * pas un renvoi. */
+    const svPendingRef = new Map();
+    function svRefFor(id) {
+      let r = svPendingRef.get(id);
+      if (!r) {
+        r = 'sv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        svPendingRef.set(id, r);
+      }
+      return r;
+    }
+    /* Dit au serveur ce qui s'est passé, dans ses mots, sans jamais laisser
+       croire que c'est parti. */
+    const SV_SEND_MSG = {
+      'menu-not-published': 'carte non publiée — à publier depuis le tableau de bord',
+      'menu-changed':       'carte modifiée — un plat n\'est plus disponible',
+      'forbidden-merchant': 'tablette non appairée à ce commerce',
+      'table-required':     'table introuvable',
+      'empty-order':        'rien à envoyer',
+      'not-configured':     'service indisponible — commande NON envoyée',
+      'no-merchant':        'aucun commerce appairé — commande NON envoyée',
+      'offline':            'hors ligne — commande NON envoyée, réessayez',
+    };
+    function svSendOrder(tableId) {
+      const order = tableOrders[tableId] || [];
+      const delta = [];
+      order.forEach((l) => {
+        const dq = Math.max(0, (+l.qty || 0) - (+l.sentQty || 0));
+        if (!dq || !l.id) return;
+        const opts = Array.isArray(l.opts)
+          ? l.opts.map(o => o && o.label).filter(Boolean).join(', ')
+          : '';
+        delta.push({ id: l.id, qty: dq, options: opts, note: (l.note || '').trim() });
+      });
+      if (!delta.length) return Promise.resolve({ ok: true, nothing: true });
+      const slug = svSlug();
+      if (!slug) return Promise.resolve({ ok: false, error: 'no-merchant' });
+      return fetch('/api/order/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          merchant: slug, create: true, mode: 'table', table: tableId,
+          lines: delta, ref: svRefFor(tableId),
+        }),
+      })
+        .then(r => r.json().catch(() => null).then(j => ({ status: r.status, j })))
+        .then(({ status, j }) => {
+          if (status === 200 && j && j.ok) {
+            // Ce qui est parti est parti : on ne le renverra pas au prochain
+            // « Lancer » de cette même table.
+            order.forEach((l) => { l.sentQty = +l.qty || 0; });
+            svPendingRef.delete(tableId);
+            return { ok: true, number: j.number, replayed: !!j.replayed };
+          }
+          return { ok: false, error: (j && j.error) || ('http-' + status) };
+        })
+        .catch(() => ({ ok: false, error: 'offline' }));
+    }
+
     /* ---------- Generated orders for occupied tables ---------- */
     /* For tables without a seedOrder, generate a plausible order from menu (deterministic) */
     function buildInitialOrder(id, t) {
@@ -4786,15 +4870,39 @@ em, i, cite, dfn, var { font-style: normal; }
         // we stayed on the detail screen and the back arrow misrouted to the
         // Menu panel, which read as a freeze.)
         const sentId = activeTableId;
-        dirtyOrders.delete(sentId);
         const order = tableOrders[sentId] || [];
         const hasNotes = order.some(l => (l.note || '').trim());
         let msg = `Mesa ${sentId} · commande envoyée`;
         const dests = svStationNames(order);
         if (dests)                            msg += ` · ${dests}`;
         if (hasNotes)                         msg += ` · notes transmises`;
-        returnToFloor();
-        toast(msg);
+
+        /* La vitrine n'a pas de commerce derrière : rien à envoyer, et le
+           parcours de démonstration doit rester instantané. */
+        if (SV_DEMO) {
+          dirtyOrders.delete(sentId);
+          returnToFloor();
+          toast(msg);
+          return;
+        }
+
+        /* Le bouton se verrouille le temps de l'aller-retour — sans cela un
+           serveur pressé tape deux fois et part avant la réponse. */
+        btn.disabled = true;
+        svSendOrder(sentId).then((res) => {
+          if (res.ok) {
+            dirtyOrders.delete(sentId);
+            returnToFloor();
+            toast(res.number ? `${msg} · ticket #${res.number}` : msg);
+          } else {
+            /* On NE nettoie pas le drapeau : la table doit rester marquée « non
+               envoyée », c'est tout l'objet de ce changement. Le serveur reste
+               sur la table, voit pourquoi, et peut relancer. */
+            btn.disabled = false;
+            renderTableDetail();
+            toast(`Mesa ${sentId} · ${SV_SEND_MSG[res.error] || 'envoi impossible'}`, 4200);
+          }
+        });
       } else if (action === 'ask-bill') {
         const t = tables[activeTableId];
         t.status = 'bgha-ykhlass';

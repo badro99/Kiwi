@@ -28,7 +28,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
-import { startOfDay, deskTouch, normTable, SESSION_ID } from './_lib.js';
+import { startOfDay, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -48,6 +48,8 @@ const FROM = {
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
+const MAX_LINES = 60;              // une commande, généreusement
+const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
 
 /* Les colonnes se sont ajoutées par vagues : `channel/ext_ref/customer` avec la
  * livraison, `session_id/server_name/paid_ts` avec la session de table. Une base
@@ -190,6 +192,149 @@ export async function onRequestPost(context) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   const now = Date.now();
+
+  /* ── La commande prise EN SALLE ────────────────────────────────────────────
+   * Le troisième chemin d'entrée de la file, à côté du téléphone du client
+   * (/api/order) et du comptoir qui fait avancer les états (plus bas).
+   *
+   * Pourquoi il a fallu l'écrire. « Lancer la commande » dans kiwi-serveur.html
+   * n'était qu'un toast : il effaçait le drapeau « non envoyé » de la table et
+   * affichait « commande envoyée · cuisine + bar ». Rien ne partait. La cuisine
+   * n'a jamais reçu ce ticket, la caisse ne l'a jamais vu, et le serveur avait
+   * la confirmation écrite du contraire. Un onglet rechargé perdait la saisie
+   * sans laisser de trace. C'est le seul défaut de cette liste où le produit
+   * AFFIRME avoir fait une chose qu'il n'a pas faite.
+   *
+   * Trois différences assumées avec le chemin public :
+   *
+   * 1. PAS de `orderProEnabled`. Order Pro est l'option du QR client ; la
+   *    tablette de salle est un appareil DU commerçant, derrière la même porte
+   *    que la caisse (entitledMerchant, plus haut). Un restaurant qui ne veut
+   *    pas de commande client doit quand même pouvoir envoyer en cuisine.
+   *
+   * 2. PAS de `deskOpen`. Ce verrou existe contre « je garde le lien et je
+   *    commande de chez moi » — un risque du téléphone d'inconnu, pas du
+   *    serveur en salle, dont la présence EST la preuve que le service tourne.
+   *
+   * 3. …et pas de `deskTouch` non plus, dans l'autre sens : la salle ne doit
+   *    pas faire passer le COMPTOIR pour allumé. C'est ce pointage qui autorise
+   *    les téléphones des clients à ouvrir une session ; l'étendre à la tablette
+   *    de salle rouvrirait la commande client alors que la caisse dort.
+   *
+   * Ce qu'on ne change PAS : le prix. Il vient de la carte publiée
+   * (priceOrder), jamais de la tablette — même règle que pour le téléphone du
+   * client, pour la même raison. Une tablette de salle est plus difficile à
+   * détourner qu'un téléphone d'inconnu, pas impossible, et surtout : un seul
+   * barème rend la caisse, la cuisine et le rapport journalier d'accord entre
+   * eux. Limite connue, suivie à part : les suppléments d'options ne sont pas
+   * encore tarifés côté serveur, donc un plat à options part à son prix de base.
+   *
+   * L'état d'arrivée est `accepted`, pas `pending` : `pending` veut dire « le
+   * comptoir n'a pas encore décidé ». Ici le serveur a pris la commande en
+   * personne, la décision est prise. Passer par `pending` obligerait le
+   * comptoir à ré-accepter chaque table, et surtout ferait expirer en
+   * `rejected` (TTL de trente minutes, plus haut) une commande bel et bien
+   * lancée pendant un coup de feu. */
+  if (b && b.create === true) {
+    const mode = b.mode === 'takeout' ? 'takeout' : 'table';
+    const table = mode === 'table' ? normTable(b.table) : '';
+    if (mode === 'table' && !table) return json({ error: 'table-required' }, 400);
+
+    const rawLines = Array.isArray(b.lines) ? b.lines : [];
+    if (!rawLines.length) return json({ error: 'empty-order' }, 400);
+    if (rawLines.length > MAX_LINES) return json({ error: 'too-many-lines' }, 400);
+
+    const priced = await priceOrder(env, merchant, rawLines);
+    /* Rien de publié en face. On le DIT — le patron publie sa carte depuis le
+     * tableau de bord et la salle repart — au lieu de reprendre les prix de la
+     * tablette, ce qui ferait diverger le ticket cuisine du rapport du soir. */
+    if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
+    if (priced.unknown.length || priced.unavailable.length) {
+      return json({
+        error: 'menu-changed',
+        unknown: priced.unknown,
+        unavailable: priced.unavailable,
+      }, 409);
+    }
+    if (!priced.lines.length) return json({ error: 'empty-order' }, 400);
+    const total = priced.total;
+    if (total <= 0 || total > MAX_TOTAL) return json({ error: 'bad-total' }, 400);
+
+    const server = String((b && b.server) || '').trim().slice(0, 40);
+    const today = startOfDay(now);
+
+    /* Idempotence. Le double-envoi est PLUS probable en salle que sur le
+     * téléphone du client : le wifi d'un café porte mal jusqu'au fond de la
+     * terrasse, et un serveur qui ne voit pas sa confirmation retape sur
+     * « Lancer ». Sans clé, la cuisine sortait deux fois le même plat. */
+    const clientRef = String((b && b.ref) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || null;
+    if (clientRef) {
+      try {
+        const dup = await env.DB.prepare(
+          `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+        ).bind(merchant, clientRef).first();
+        if (dup) {
+          return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
+                        lines: priced.lines, replayed: true });
+        }
+      } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
+    }
+
+    const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+    const linesJson = JSON.stringify(priced.lines);
+    const NUMBER = `COALESCE(MAX(number), 0) + 1`;
+
+    /* Deux écritures, une seule idée — même discipline que index.js : les
+     * colonnes tardives (server_name, menu_rev, priced_ts, client_ref) font
+     * échouer l'INSERT sur une base où la migration n'est pas passée, et il
+     * vaut mieux un ticket sans nom de serveur que pas de ticket du tout. */
+    let row = null;
+    try {
+      row = await env.DB.prepare(
+        `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+                             created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref)
+         SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?
+           FROM orders WHERE merchant = ? AND created_ts >= ?
+         RETURNING number`
+      ).bind(
+        id, merchant, mode, table, total, linesJson, now, now,
+        server || null, priced.menuRev, priced.priced ? now : null, clientRef,
+        merchant, today
+      ).first();
+    } catch (_) {
+      /* La clé a-t-elle parlé avant la migration ? Deux envois simultanés de la
+       * MÊME clé : le second se fait refuser par l'index unique et tombe ici.
+       * Le relire évite qu'il réussisse en seconde chance sans clé — deux
+       * tickets, deux numéros, deux fois le même plat en cuisine. */
+      if (clientRef) {
+        try {
+          const raced = await env.DB.prepare(
+            `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+          ).bind(merchant, clientRef).first();
+          if (raced) {
+            return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
+                          lines: priced.lines, replayed: true });
+          }
+        } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
+      }
+      try {
+        row = await env.DB.prepare(
+          `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+                               created_ts, updated_ts)
+           SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?
+             FROM orders WHERE merchant = ? AND created_ts >= ?
+           RETURNING number`
+        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
+      } catch (e) {
+        return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+      }
+    }
+
+    return json({
+      ok: true, id, number: (row && row.number) || 1,
+      status: 'accepted', total, lines: priced.lines,
+    });
+  }
 
   /* ── Fermer une session ────────────────────────────────────────────────────
    * C'est le geste qui coupe le robinet : l'addition est réglée, le téléphone

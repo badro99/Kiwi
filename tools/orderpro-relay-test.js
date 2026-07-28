@@ -24,6 +24,7 @@
  *   5. TENANCY     un slug ne donne pas la file, ni les commandes d'un autre
  *   6. IDEMPOTENCE un double-tap n'imprime pas deux tickets
  *   7. ADDITION    encaisser ferme la session et solde ses commandes
+ *   8. SALLE       « Lancer la commande » part vraiment en cuisine
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import fs from 'node:fs';
@@ -496,11 +497,136 @@ async function get(fn, qs, headers = {}) {
   ok('dès que le comptoir accepte, la table peut à nouveau commander', r.status === 200,
     JSON.stringify(r.body));
 
+  /* ═══ 8. LA SALLE ═══════════════════════════════════════════════════════
+   * « Lancer la commande » dans kiwi-serveur.html n'était qu'un toast : il
+   * effaçait le drapeau « non envoyé » et affichait « commande envoyée ». Rien
+   * ne partait. Le seul défaut du lot où le produit AFFIRME avoir fait une
+   * chose qu'il n'a pas faite — et le seul, donc, qu'un banc doit garder fermé.
+   *
+   * Ce que ce chemin doit faire AUTREMENT du téléphone du client, et pourquoi
+   * chaque écart est ici vérifié plutôt que commenté :
+   *   • il traverse Order Pro éteint (c'est l'option du QR, pas celle de la salle)
+   *   • il traverse le comptoir éteint (le serveur EST la preuve du service)
+   *   • …mais il ne fait PAS passer le comptoir pour allumé (sinon la salle
+   *     rouvrirait la commande client alors que la caisse dort)
+   *   • il entre en `accepted` (le serveur a déjà décidé ; `pending` ferait
+   *     expirer en `rejected` un ticket bel et bien lancé)
+   * Et ce qu'il fait PAREIL : le prix vient de la carte publiée, jamais de la
+   * tablette. */
+  const SALLE = 'chez-brahim';
+  const ACC_SALLE = 'acc-brahim';
+  DB._db.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
+    .run(ACC_SALLE, 'brahim@example.ma', 'Brahim', 'Chez Brahim', 's', 'h', Date.now());
+  // Order Pro explicitement ÉTEINT : c'est le cas du restaurant qui veut la
+  // salle sans le QR client, et c'est celui qui doit marcher.
+  DB._db.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,updated_ts) VALUES (?,?,?,?,?)')
+    .run(SALLE, '{"orderpro":false}', 'restaurant', ACC_SALLE, Date.now());
+  DB._db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
+    .run(SALLE, 'Chez Brahim', 'restaurant', JSON.stringify(CARTE), Date.now());
+  const asSalle = { Cookie: sessionCookie(await makeSession(ACC_SALLE, SECRET)).split(';')[0] };
+
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T7',
+    lines: [{ id: 'i1', qty: 2, note: 'sans olives' }, { id: 'i2', qty: 3 }],
+  }, asSalle);
+  ok('la salle envoie sa commande, Order Pro éteint', r.status === 200 && r.body.ok,
+    r.status + ' ' + JSON.stringify(r.body));
+  ok('le prix vient de la carte, pas de la tablette', r.body.total === 90 * 2 + 15 * 3,
+    'total=' + r.body.total);
+  const salleRow = DB._db.prepare('SELECT status, table_no, total, lines FROM orders WHERE id=?')
+    .get(r.body.id);
+  ok('elle entre acceptée, pas en attente', salleRow.status === 'accepted', salleRow.status);
+  ok('la table voyage avec', salleRow.table_no === 'T7', salleRow.table_no);
+  ok('la note du convive aussi',
+    JSON.parse(salleRow.lines)[0].note === 'sans olives', salleRow.lines);
+
+  // La caisse la voit. C'est tout l'objet : un ticket que la cuisine reçoit.
+  r = await get(queueGet, 'merchant=' + SALLE + '&since=0', asSalle);
+  ok('le comptoir la voit dans sa file',
+    r.body.orders.some((o) => o.table === 'T7' && o.status === 'accepted'),
+    JSON.stringify(r.body.orders));
+
+  // …et le comptoir n'a jamais pointé : la salle ne doit pas l'avoir fait pour
+  // lui. (Ce GET-ci, si — c'est la caisse. On regarde donc AVANT.)
+  DB._db.prepare('DELETE FROM order_desk').run();
+  await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T8', lines: [{ id: 'i2', qty: 1 }],
+  }, asSalle);
+  ok('la salle ne fait pas passer le comptoir pour allumé',
+    !DB._db.prepare('SELECT seen_ts FROM order_desk WHERE merchant=?').get(SALLE));
+
+  // Comptoir éteint depuis une demi-heure : le téléphone du client est refusé,
+  // la salle passe quand même.
+  DB._db.prepare(
+    'INSERT INTO order_desk (merchant,seen_ts) VALUES (?,?) ON CONFLICT(merchant) DO UPDATE SET seen_ts=excluded.seen_ts'
+  ).run(SALLE, Date.now() - 30 * 60 * 1000);
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T9', lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('comptoir éteint : la salle envoie quand même', r.status === 200 && r.body.ok,
+    r.status + ' ' + JSON.stringify(r.body));
+
+  // Idempotence — le wifi du fond de terrasse, et le serveur qui retape.
+  const REF = 'sv-double-tap';
+  const svFirst = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
+    lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  const again = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
+    lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('un deuxième « Lancer » rejoue le même ticket',
+    again.status === 200 && again.body.replayed === true && again.body.id === svFirst.body.id,
+    JSON.stringify(again.body));
+  ok('…et la cuisine n\'a qu\'un ticket',
+    DB._db.prepare("SELECT COUNT(*) n FROM orders WHERE merchant=? AND table_no='T10'").get(SALLE).n === 1);
+
+  /* Tenancy. `entitledMerchant` ne REFUSE pas un slug étranger réclamé par un
+   * commerçant connecté : il le ramène à SON établissement (voir le commentaire
+   * de la fonction — un slug non possédé retombe sur le compte). L'invariant à
+   * tenir n'est donc pas « 403 », c'est « rien n'est écrit chez le voisin » —
+   * et c'est celui-là qu'on vérifie, sinon le banc décrirait une porte qui
+   * n'existe pas. */
+  const otherBefore = DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=?').get(OTHER).n;
+  r = await post(queuePost, {
+    merchant: OTHER, create: true, mode: 'table', table: 'T-voisin', lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('la salle d\'un commerce n\'écrit rien chez le voisin',
+    DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE merchant=?').get(OTHER).n === otherBefore,
+    r.status + ' ' + JSON.stringify(r.body));
+  ok('…le ticket est retombé chez elle',
+    !!DB._db.prepare("SELECT id FROM orders WHERE merchant=? AND table_no='T-voisin'").get(SALLE));
+
+  // Sans aucune signature, la porte est fermée — c'est la garde d'entrée, pas
+  // le repli ci-dessus.
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T12', lines: [{ id: 'i1', qty: 1 }],
+  });
+  ok('sans cookie, la salle n\'écrit nulle part',
+    r.status === 403 && r.body.error === 'forbidden-merchant', r.status + ' ' + JSON.stringify(r.body));
+
+  // Rien de publié en face : on refuse EN LE DISANT, au lieu de croire la
+  // tablette sur le prix.
+  DB._db.prepare('DELETE FROM menus WHERE merchant=?').run(SALLE);
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T11', lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('carte non publiée ⇒ refus explicite, pas un prix inventé',
+    r.status === 409 && r.body.error === 'menu-not-published', JSON.stringify(r.body));
+
+  // Une table sans nom, une commande vide : les deux refusées avant toute
+  // écriture.
+  r = await post(queuePost, { merchant: SALLE, create: true, mode: 'table', table: '', lines: [{ id: 'i1' }] }, asSalle);
+  ok('une commande sans table est refusée', r.status === 400 && r.body.error === 'table-required');
+  r = await post(queuePost, { merchant: SALLE, create: true, mode: 'table', table: 'T1', lines: [] }, asSalle);
+  ok('une commande vide est refusée', r.status === 400 && r.body.error === 'empty-order');
+
   console.log('');
   if (fails.length) {
     fails.forEach((f) => console.log('  ✗ ' + f));
     console.log(`\n✗ relais OrderPro : ${pass} ok, ${fails.length} échec(s)\n`);
     process.exit(1);
   }
-  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, plafond par table, addition)\n`);
+  console.log(`  ✓ relais OrderPro (${pass} contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, plafond par table, addition, salle)\n`);
 })().catch((e) => { console.log('  ✗ ' + (e && e.stack || e)); process.exit(1); });
