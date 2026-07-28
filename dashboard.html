@@ -6176,6 +6176,29 @@
     const privileged = all.filter((p) => p.access !== 'staff');
     return privileged.length ? privileged : all;
   }
+  /* Un code de démonstration n'est pas un code de commerçant.
+   *
+   * 0505 et 1111 ouvrent des aperçus — le tease « Marketing Suite », la bande
+   * Croissance (Commande en ligne, Commander à table, Clients & Marketing,
+   * Cartes cadeaux). De la matière de pitch, jamais le produit vendu. Deux
+   * chemins les faisaient pourtant surgir chez un vrai client :
+   *
+   *   · un compte qui n'a encore aucun code — la porte plus bas ne peut alors
+   *     rien refuser, et 1111 arrivait jusqu'au sésame ;
+   *   · un patron qui CHOISIT 1111 comme code d'équipe, ce qui n'a rien
+   *     d'exotique : c'est le deuxième code le plus tapé au monde après 0000.
+   *     Sa caissière ouvrait une section que personne ne lui a vendue.
+   *
+   * D'où la règle : un code que le client a lui-même enregistré est une
+   * CONNEXION, jamais un passe-partout — il ne déverrouille plus rien. Et hors
+   * démo, aucun aperçu ne s'ouvre, quel que soit le code. Même barrière que le
+   * bouton « Entrer dans la démo » plus bas, qui passe déjà par demosOn().
+   * 0000 n'est pas concerné : la mise en route d'un vrai compte, pas un aperçu. */
+  function isPreviewCode(code) {
+    if (!demosOn()) return false;
+    try { if (allPins().some((p) => p.code === code)) return false; } catch (_) {}
+    return true;
+  }
   function clearPinError() {
     if (pinRow) pinRow.classList.remove('is-wrong');
     if (helpEl && helpEl.classList.contains('is-error')) {
@@ -6279,6 +6302,11 @@
         const allowed = configuredPins();
         if (allPins().length && !allowed.some((p) => p.code === val)) { rejectPin(); return; }
       }
+      /* Résolu une fois : ce code ouvre-t-il un aperçu, ou est-ce quelqu'un qui
+       * se connecte ? Les deux lectures de 0505 / 1111 doivent tomber d'accord,
+       * sans quoi on refuserait l'aperçu tout en traitant le code comme réservé
+       * — et la caissière qui a choisi 1111 se retrouverait en vue patron. */
+      const previewCode = isPreviewCode(val);
       /* PIN 0000 is the doorway to "your own dashboard" — any other
        * 4-digit PIN unlocks the Café Atlas demo. */
       if (val === '0000') window.__kiwiOnboard = true;
@@ -6286,11 +6314,13 @@
        * normal Café-Atlas unlock + Bonjour Rachid greeting finishes,
        * an Apple-keynote-style "Introducing Marketing Suite" reveal
        * plays. See assets/marketing-suite-tease.js. */
-      if (val === '0505') window.__kiwiMarketingTease = true;
+      if (val === '0505' && previewCode) window.__kiwiMarketingTease = true;
       /* PIN 1111 reveals the gated Croissance growth suite (Commande en ligne,
        * Commander à table, Clients & Marketing, Cartes cadeaux) for this session
-       * only — any other entry (skip, other PIN) keeps it hidden. */
-      if (val === '1111') {
+       * only — any other entry (skip, other PIN) keeps it hidden. Aperçu de
+       * démonstration : isPreviewCode() le refuse hors démo, et le refuse aussi
+       * quand 1111 est un vrai code d'équipe du client. */
+      if (val === '1111' && previewCode) {
         document.body.classList.remove('growth-locked');
         /* 1111 also unlocks the experimental iOS-27 Liquid Glass tier
          * (WWDC-2026 refinements: refractive sidebar, colored icons,
@@ -6309,9 +6339,18 @@
       if (val === '0000' || val === '0505') role = 'owner';  /* config / tease both run as owner */
       else if (val === '0909') role = 'manager';
       /* Client-configured team codes (chosen during onboarding) win for any
-       * non-reserved PIN — each maps to the role + person the owner assigned. */
+       * non-reserved PIN — each maps to the role + person the owner assigned.
+       *
+       * « Réservé » se juge désormais à l'usage, pas au chiffre : 0505 et 1111
+       * ne le sont que lorsqu'ils viennent réellement d'ouvrir un aperçu. Hors
+       * de là ils appartiennent à la personne qui les a enregistrés, et c'est
+       * SON rôle qui s'applique. Auparavant un code d'équipe valant 1111 sautait
+       * cette recherche et retombait sur le rôle par défaut — vue patron, marges
+       * et paie comprises, pour une caissière. */
+      const reserved = val === '0000' || val === '0909'
+        || ((val === '0505' || val === '1111') && previewCode);
       try {
-        if (val !== '0000' && val !== '0505' && val !== '0909' && val !== '1111') {
+        if (!reserved) {
           /* Same set the gate validated against — so an operator-added PIN also
            * gets its assigned tier. accessTier() has already resolved whatever
            * wording the role was stored in; no second guess here. */
