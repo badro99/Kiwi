@@ -1395,6 +1395,30 @@
     return true;
   }
 
+  /* Un opérateur ouvre plusieurs clients l'un après l'autre, et TOUS passent
+   * sous le même identifiant local `scoped` : `kiwi:hours:v1:scoped` contient
+   * donc encore les horaires du client précédent quand le suivant s'affiche.
+   * Ce n'est pas seulement un affichage faux — cloud-doc.js fusionne la copie
+   * locale avec celle du serveur avant de repousser, donc la semaine du client A
+   * finirait ÉCRITE sur le document du client B. On efface la copie portée dès
+   * que le magasin regardé change. Rien n'est perdu : ces enregistrements ne
+   * sont qu'un cache de ce que le serveur détient. */
+  const SCOPE_MARK = 'kiwiScopedSlug';
+  const SCOPED_REC = /^kiwi:[^:]+:v1:scoped$/;
+  function resetScopedRecords(slug) {
+    try {
+      const mark = slug || '-';                       // '-' : magasin inconnu
+      if (localStorage.getItem(SCOPE_MARK) === mark) return;
+      const doomed = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && SCOPED_REC.test(k)) doomed.push(k);
+      }
+      doomed.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+      localStorage.setItem(SCOPE_MARK, mark);
+    } catch (_) {}
+  }
+
   /* Enter operator-scoped mode: replace whatever the operator's browser has
    * locally with a single synthetic venue that IS the scoped client. Called by
    * identity.js only after the server confirms an operator cookie (God mode), so
@@ -1404,9 +1428,19 @@
    *
    * `info.siblings` = les autres établissements du même compte, s'il y en a. Ils
    * ne deviennent pas des venues (voir scopedSiblings) : ils s'affichent sous
-   * l'établissement regardé et un clic recharge la page sur eux. */
+   * l'établissement regardé et un clic recharge la page sur eux.
+   *
+   * `info.slug` = le magasin CÔTÉ SERVEUR, tel que /api/me l'a résolu. Sans lui
+   * la vue portée n'avait aucune identité réseau : cloud-doc.js refusait de
+   * synchroniser un identifiant transitoire, donc l'opérateur voyait tous les
+   * documents d'établissement (horaires, reçu, équipe, fidélité, plan de salle,
+   * rapports de clôture) vides alors qu'ils existaient bel et bien en ligne. On
+   * ne le devine PAS du nom affiché : un magasin peut s'appeler autrement que
+   * son slug d'inscription, et se tromper de slug fait écrire chez le voisin. */
   function applyScopedVenue(info) {
     info = info || {};
+    const slug = String(info.slug || '').trim();
+    resetScopedRecords(slug);
     const name = String(info.name || '').trim() || 'Client';
     const location = String(info.location || '').trim();
     const base = SUBTYPE_BASE[info.type] ||
@@ -1427,7 +1461,7 @@
         subtype: subtypeOf(s.type),
       }));
     VENUES.scoped = {
-      id: 'scoped', name, location,
+      id: 'scoped', name, location, slug,
       fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
       subtype: subtypeOf(info.type), profileInfo: null,
