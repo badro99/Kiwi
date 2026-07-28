@@ -511,6 +511,13 @@
     if (r.closedBy) R('Fermé par', r.closedBy);
     rule();
 
+    /* Le mode « ventes par article » suit l'encodeur ESC/POS coupe pour coupe
+       (KiwiEscPos.dayReport, même drapeau) : sans ça, demander le détail article
+       sur une imprimante pilotée par le système sortait un Z complet — net et
+       tiroir compris — au lieu du petit ticket demandé. */
+    var itemsOnly = !!o.itemsOnly;
+
+    if (!itemsOnly) {
     R('Transactions', String(r.txns || 0));
     R('TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
     var M = o.methodLabels || {};
@@ -523,20 +530,35 @@
     if (r.discounts && r.discounts.amount) R('Remises accordées', '- ' + money(r.discounts.amount));
     if (r.refunds && r.refunds.count) R('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount));
     if (r.cancels) R('Annulations', String(r.cancels));
+    }
 
     if ((r.categories || []).length) {
       rule();
-      out.push('<div class="kpr-c kpr-b">' + esc(o.detailTitle || 'DÉTAIL PAR CATÉGORIE') + '</div>');
+      if (!itemsOnly) out.push('<div class="kpr-c kpr-b">' + esc(o.detailTitle || 'DÉTAIL PAR CATÉGORIE') + '</div>');
       r.categories.forEach(function (c) {
         R(c.name, money(c.total), 'kpr-b');
         (c.products || []).forEach(function (p) {
           R('  ' + p.qty + '× ' + p.name, money(p.total));
         });
-        R('  = ' + c.qty + ' ' + (o.unitWord || 'articles'), money(c.total), 'kpr-sub');
+        R('  = ' + c.qty + ' ' + ((Math.abs(+c.qty || 0) === 1 && o.unitWordOne) ? o.unitWordOne : (o.unitWord || 'articles')), money(c.total), 'kpr-sub');
       });
       if (r.coverage != null && r.coverage < 100) {
         out.push('<div class="kpr-note">* détail portant sur ' + r.coverage + '% du chiffre</div>');
       }
+      if (itemsOnly) {
+        var totQ = 0, totV = 0;
+        r.categories.forEach(function (c) { totQ += (+c.qty || 0); totV += (+c.total || 0); });
+        rule();
+        R('TOTAL ' + String(o.unitWord || 'articles').toUpperCase(), totQ + ' · ' + money(totV), 'kpr-b');
+      }
+    } else if (itemsOnly) {
+      rule();
+      out.push('<div class="kpr-c">' + esc(o.noItemsWord || 'Aucun article détaillé') + '</div>');
+    }
+
+    if (itemsOnly) {
+      out.push('<div class="kpr-c kpr-foot">Kiwi · ' + esc(r.day || '') + '</div>');
+      return '<div class="kpr-ticket">' + out.join('') + '</div>';
     }
 
     var cash = r.cash || {};

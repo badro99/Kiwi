@@ -796,6 +796,7 @@
       drawerTitle: T(L.drawer).toUpperCase(),
       netLabel: T(L.net).toUpperCase(),
       unitWord: V.items,
+      unitWordOne: V.item,
       notCounted: T(L.notCount),
       methodLabels: METHODS[LANG()] || METHODS.fr,
       fmt: money,

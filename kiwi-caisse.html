@@ -2318,6 +2318,88 @@
     .jr-chip:hover { background: var(--line-soft); }
     .jr-chip.is-active { background: var(--forest); color: #fff; }
 
+    /* ---- Rapport du jour — les trois onglets et leurs blocs ---- */
+    .rp-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rp-kpis {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 8px; margin-bottom: 18px;
+    }
+    .rp-kpi { border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 12px 14px; }
+    .rp-kpi.is-lead { background: var(--forest); border-color: var(--forest); }
+    .rp-kpi.is-lead .rp-kpi-l { color: rgba(255,255,255,0.6); }
+    .rp-kpi.is-lead .rp-kpi-v { color: #fff; }
+    .rp-kpi-l { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-4); }
+    .rp-kpi-v {
+      font-family: var(--mono); font-size: 20px; font-weight: 600;
+      color: var(--ink-1); margin-top: 6px; letter-spacing: -0.02em;
+      font-feature-settings: "tnum" 1;
+    }
+    .rp-kpi-v small { font-size: 11px; font-weight: 400; opacity: 0.6; margin-inline-start: 3px; }
+    .rp-h {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+      color: var(--ink-4); padding-bottom: 8px; border-bottom: 1px solid var(--line-soft);
+      margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    }
+    .rp-h em {
+      font-style: normal; font-family: var(--mono); color: var(--ink-2);
+      text-transform: none; letter-spacing: 0; font-size: 12px;
+    }
+    .rp-sec { margin-bottom: 20px; }
+    .rp-r {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+      padding: 7px 2px; border-bottom: 1px solid var(--line-soft);
+    }
+    .rp-r:last-child { border-bottom: 0; }
+    .rp-r-l { font-size: 13.5px; color: var(--ink-2); }
+    .rp-r-v { font-family: var(--mono); font-size: 13.5px; color: var(--ink-1); white-space: nowrap; font-feature-settings: "tnum" 1; }
+    /* La courbe horaire — même lecture que le tableau de bord. */
+    .rp-hrs { display: flex; align-items: stretch; gap: 3px; height: 74px; }
+    .rp-hr { flex: 1; min-width: 0; display: flex; align-items: flex-end; }
+    .rp-hr-b { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--forest) 34%, transparent); }
+    .rp-hr.is-peak .rp-hr-b { background: var(--mint); }
+    .rp-hrx { display: flex; gap: 3px; margin-top: 6px; }
+    .rp-hrx span {
+      flex: 1; min-width: 0; text-align: center; font-family: var(--mono);
+      font-size: 9.5px; color: var(--ink-4); white-space: nowrap; overflow: hidden;
+    }
+    /* Ventes par article — le tableau que la caisse ne montrait nulle part. */
+    .rp-cat { border: 1px solid var(--line-soft); border-radius: var(--r-lg); margin-bottom: 9px; overflow: hidden; }
+    .rp-cat-h {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+      padding: 10px 14px; background: var(--paper-mute);
+    }
+    .rp-cat-n { font-size: 13.5px; font-weight: 600; color: var(--ink-1); }
+    .rp-cat-v { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--forest); white-space: nowrap; }
+    .rp-cat-b { padding: 3px 14px 8px; }
+    .rp-it {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 11px;
+      padding: 7px 0; border-bottom: 1px solid var(--line-soft);
+    }
+    .rp-it:last-child { border-bottom: 0; }
+    .rp-it-q {
+      font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--forest);
+      min-width: 36px; font-feature-settings: "tnum" 1;
+    }
+    .rp-it-n { font-size: 13px; color: var(--ink-1); }
+    .rp-it-t { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+    .rp-note { font-size: 12px; line-height: 1.5; color: var(--ink-4); margin-top: 9px; }
+    .rp-empty { text-align: center; padding: 34px 18px; color: var(--ink-4); font-size: 13px; line-height: 1.6; }
+    /* Le pied d'actions — imprimer ce qu'on est en train de lire. */
+    .rp-foot {
+      flex: 0 0 auto; padding: 12px 24px 16px; border-top: 1px solid var(--line-soft);
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .rp-btn {
+      flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 11px 14px; border-radius: var(--r-lg); border: 1px solid var(--line-soft);
+      background: transparent; color: var(--ink-1); font: inherit; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background 150ms, border-color 150ms;
+    }
+    .rp-btn:hover { background: var(--paper-mute); border-color: var(--forest); }
+    .rp-btn.primary { background: var(--forest); border-color: var(--forest); color: #fff; }
+    .rp-btn.primary:hover { filter: brightness(1.08); }
+    .rp-btn svg { width: 15px; height: 15px; }
+
     .jr-entry {
       width: 100%; text-align: left;
       display: flex; align-items: center; gap: 12px;
@@ -5290,20 +5372,34 @@
     </aside>
   </div>
 
-  <!-- ============ JOURNAL DES VENTES (drawer) ============ -->
+  <!-- ============ RAPPORT DU JOUR (drawer) ============
+       Ce tiroir s'appelait « Journal des ventes » et ne contenait QUE ça : la
+       liste des encaissements, un par ligne, à l'infini. Ouvrir un écran entier
+       pour y lire vente, vente, vente ne répond à aucune question qu'on se pose
+       derrière un comptoir — la première étant « qu'est-ce que j'ai vendu
+       aujourd'hui, et combien de chaque ». Le journal est donc devenu UN onglet
+       sur trois d'un vrai rapport, et la réimpression d'un ticket, qui vivait
+       dans ses lignes, vit maintenant dans le rapport avec le reste.
+       Le compteur de transactions de la barre latérale ouvre toujours ce tiroir,
+       mais sur l'onglet Journal : le geste appris ne change pas. -->
   <div class="drawer-veil" id="journal-drawer" role="dialog" aria-modal="true" aria-labelledby="journal-drawer-title">
-    <aside class="drawer" aria-label="Journal des ventes">
+    <aside class="drawer" aria-label="Rapport du jour">
       <div class="drawer-head">
-        <div class="drawer-title" id="journal-drawer-title">Journal des ventes<em>— ce service</em></div>
+        <div class="drawer-title" id="journal-drawer-title">Rapport du jour<em id="rp-day">— ce service</em></div>
         <button class="drawer-close" id="journal-drawer-close" aria-label="Fermer">
           <i data-lucide="x"></i>
         </button>
       </div>
       <div class="jr-toolbar">
+        <div class="rp-tabs" id="rp-tabs" role="tablist" aria-label="Sections du rapport">
+          <button class="jr-chip is-active" data-rp-tab="resume" role="tab" aria-selected="true">Résumé</button>
+          <button class="jr-chip" data-rp-tab="items" role="tab" aria-selected="false">Ventes par article</button>
+          <button class="jr-chip" data-rp-tab="journal" role="tab" aria-selected="false">Journal</button>
+        </div>
         <div class="jr-summary" id="jr-summary">— transactions</div>
-        <div class="jr-search">
+        <div class="jr-search" id="rp-search">
           <i data-lucide="search"></i>
-          <input type="text" id="jr-search-input" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher une transaction" />
+          <input type="text" id="jr-search-input" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher" />
         </div>
         <div class="jr-filters" id="jr-filters">
           <button class="jr-chip is-active" data-jr-filter="all">Tout</button>
@@ -5312,6 +5408,7 @@
         </div>
       </div>
       <div class="drawer-body" id="journal-body"></div>
+      <div class="rp-foot" id="rp-foot" hidden></div>
     </aside>
   </div>
 
@@ -8853,6 +8950,31 @@
           amount = 90 + Math.floor(Math.random() * 28) * 15;  // 90–495 MAD
           tablesDone++;
         }
+        /* Le panier détaillé, composé de VRAIS plats de la carte chargée. Sans
+           lui, la démo encaissait des montants sans marchandise : l'onglet
+           « ventes par article » du rapport — celui qui répond à « combien j'en
+           ai vendu, de celui-là » — restait vide sur la caisse qu'on montre aux
+           clients, et avait l'air cassé alors qu'il disait la vérité. Le montant
+           suit le panier et non l'inverse : une addition qui ne fait pas la
+           somme de ses lignes est le premier chiffre qu'un restaurateur vérifie.
+           Carte absente (vrai commerce pas encore configuré) : on retombe sur
+           l'ancien comportement, un montant sans lignes. */
+        let lines = null;
+        if (menuItems && menuItems.length) {
+          const nl = isVrap ? 1 + Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 3);
+          const picked = Object.create(null);
+          for (let k = 0; k < nl; k++) {
+            const m = menuItems[Math.floor(Math.random() * menuItems.length)];
+            if (!m) continue;
+            const q = 1 + (Math.random() < 0.22 ? 1 : 0);
+            const p = picked[m.id] || (picked[m.id] = { name: m.name, qty: 0, total: 0, cat: catLabels[m.cat] || '' });
+            p.qty += q;
+            p.total += (+m.price || 0) * q;
+          }
+          lines = Object.keys(picked).map((k) => picked[k]);
+          if (lines.length) amount = lines.reduce((s, l) => s + l.total, 0);
+          else lines = null;
+        }
         // ~45% of tenders carry a small pourboire (rounded to 5 MAD, ~5–12%).
         let tip = 0;
         if (Math.random() < 0.45) {
@@ -8867,6 +8989,7 @@
           tip: tip,
           ref: genRef(),
           cashier: currentCashier.name,
+          lines: lines,
         });
       }
       shift.tablesPaid = tablesDone;
@@ -9796,6 +9919,9 @@
         drawerTitle: 'TIROIR-CAISSE',
         netLabel: 'NET DU JOUR',
         unitWord: V.items || 'articles',
+        /* La forme au singulier, pour que le total d'une catégorie qui n'a
+           vendu qu'une pièce dise « = 1 plat » et pas « = 1 plats ». */
+        unitWordOne: V.item || '',
         notCounted: 'non compté',
         handoverWord: 'Passation',
         reopenWord: 'Clôture n°',
@@ -9922,13 +10048,133 @@
       if (e.target === $('#cloture-modal')) $('#cloture-modal').classList.remove('is-open');
     });
 
-    /* ---- Journal des ventes — drawer ---- */
-    function renderJournal() {
-      const tot = journalTotals();
-      const sumEl = $('#jr-summary');
-      if (sumEl) sumEl.textContent =
-        `${tot.txns} transaction${tot.txns > 1 ? 's' : ''} · ${fmtMAD(tot.revenue)} encaissés`;
+    /* ---- Rapport du jour — le tiroir à trois onglets ----
+     *
+     * Résumé · Ventes par article · Journal. Le troisième est l'ancien tiroir
+     * « Journal des ventes » tel quel ; les deux premiers sont ce qui lui
+     * manquait. Le rapport se recalcule à chaque rendu depuis le journal en
+     * mémoire — c'est la même fonction qui écrit le Z (buildDayReport), donc
+     * ce que le comptoir lit en plein service et ce qui s'imprimera à la
+     * clôture ne peuvent pas raconter deux journées différentes. */
+    let rpTab = 'journal';
 
+    /* Le rapport de l'instant. Non clôturé, sans comptage de tiroir : on ne
+       demande ici que ce que le journal sait déjà. */
+    function rpReport() {
+      try { return buildDayReport(null, 0); } catch (_) { return null; }
+    }
+    function rpVocab() {
+      try { return window.KiwiDayReport ? window.KiwiDayReport.vocab() : null; } catch (_) { return null; }
+    }
+    function rpEsc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function rpHour(h) { return String(h).padStart(2, '0') + 'h'; }
+
+    /* ── Onglet Résumé ── */
+    function renderResume(r) {
+      const body = $('#journal-body');
+      if (!body) return;
+      if (!r || (!r.txns && !(r.refunds && r.refunds.count))) {
+        body.innerHTML = '<div class="rp-empty">Aucune vente pour l’instant.<br>Le rapport se remplit tout seul au premier encaissement.</div>';
+        return;
+      }
+      const kpi = (l, v, sub, lead) =>
+        `<div class="rp-kpi${lead ? ' is-lead' : ''}"><div class="rp-kpi-l">${rpEsc(l)}</div>`
+        + `<div class="rp-kpi-v">${rpEsc(v)}${sub ? `<small>${rpEsc(sub)}</small>` : ''}</div></div>`;
+      const row = (l, v) => `<div class="rp-r"><span class="rp-r-l">${rpEsc(l)}</span><span class="rp-r-v">${rpEsc(v)}</span></div>`;
+      const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien' };
+
+      let html = '<div class="rp-kpis">'
+        + kpi('Net du service', fmtMAD(r.net), '', true)
+        + kpi('Transactions', String(r.txns))
+        + kpi('Ticket moyen', fmtMAD(r.basket))
+        + kpi('Encaissé', fmtMAD(r.gross))
+        + '</div>';
+
+      const meth = Object.keys(r.methods || {}).filter(k => r.methods[k])
+        .sort((a, b) => r.methods[b] - r.methods[a])
+        .map(k => row(M[k] || k, fmtMAD(r.methods[k]))).join('');
+      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement</span><em>${rpEsc(fmtMAD(r.gross))}</em></div>${meth}</div>`;
+
+      /* Le rythme du service. Utile au comptoir pour une raison très concrète :
+         savoir si le coup de feu est passé avant d'envoyer quelqu'un en pause. */
+      const hrs = (r.hours || []).filter(h => h && (h.net > 0 || h.txns > 0));
+      if (hrs.length > 1) {
+        const max = hrs.reduce((m, h) => Math.max(m, h.net), 0);
+        const peak = hrs.reduce((m, h) => (!m || h.net > m.net) ? h : m, null);
+        const every = hrs.length > 7 ? 2 : 1;
+        const cols = hrs.map(h => {
+          const pct = max > 0 ? Math.max(3, Math.round(h.net / max * 100)) : 3;
+          return `<div class="rp-hr${peak && h.h === peak.h ? ' is-peak' : ''}" title="${rpEsc(rpHour(h.h) + ' · ' + fmtMAD(h.net) + ' · ' + h.txns + ' ticket' + (h.txns > 1 ? 's' : ''))}">`
+               + `<span class="rp-hr-b" style="height:${pct}%"></span></div>`;
+        }).join('');
+        const labels = hrs.map((h, i) => `<span>${i % every === 0 ? rpEsc(rpHour(h.h)) : ''}</span>`).join('');
+        html += `<div class="rp-sec"><div class="rp-h"><span>Le rythme du service</span>`
+              + `<em>Pic ${rpEsc(rpHour(peak.h))} · ${rpEsc(fmtMAD(peak.net))}</em></div>`
+              + `<div class="rp-hrs">${cols}</div><div class="rp-hrx">${labels}</div></div>`;
+      }
+
+      let adj = '';
+      if (r.refunds && r.refunds.count) adj += row(`Remboursements (${r.refunds.count})`, '− ' + fmtMAD(r.refunds.amount));
+      if (r.discounts && r.discounts.amount) adj += row('Remises accordées', '− ' + fmtMAD(r.discounts.amount));
+      if (r.tips) adj += row('Pourboires', fmtMAD(r.tips));
+      if (adj) html += `<div class="rp-sec"><div class="rp-h"><span>Ajustements</span></div>${adj}</div>`;
+
+      body.innerHTML = html;
+    }
+
+    /* ── Onglet Ventes par article ──
+       LA question du comptoir : combien j'en ai vendu, de celui-là. Les données
+       existaient déjà (le Z les imprime depuis toujours) mais aucun écran de la
+       caisse ne les montrait — il fallait fermer la journée pour les voir. */
+    function renderItems(r) {
+      const body = $('#journal-body');
+      if (!body) return;
+      const V = rpVocab() || { item: 'article', items: 'articles', cats: 'catégories' };
+      const cats = (r && r.categories) || [];
+      if (!cats.length) {
+        body.innerHTML = (r && r.txns)
+          ? '<div class="rp-empty">Les ventes de ce service ont été encaissées sans panier détaillé.<br>Le détail par article n’existe que pour les ventes passées par la carte ou le catalogue.</div>'
+          : '<div class="rp-empty">Aucun article vendu pour l’instant.</div>';
+        return;
+      }
+      const q = journalSearch.trim().toLowerCase();
+      let totQ = 0, totV = 0, shown = 0;
+      const blocks = cats.map((c) => {
+        const prods = (c.products || []).filter(p => !q || String(p.name).toLowerCase().includes(q));
+        if (!prods.length) return '';
+        shown += prods.length;
+        let cq = 0, cv = 0;
+        const rows = prods.map((p) => {
+          cq += (+p.qty || 0); cv += (+p.total || 0);
+          return `<div class="rp-it"><span class="rp-it-q">${rpEsc(p.qty)}×</span>`
+               + `<span class="rp-it-n">${rpEsc(p.name)}</span>`
+               + `<span class="rp-it-t">${rpEsc(fmtMAD(p.total))}</span></div>`;
+        }).join('');
+        totQ += cq; totV += cv;
+        return `<div class="rp-cat"><div class="rp-cat-h">`
+             + `<span class="rp-cat-n">${rpEsc(c.name)}</span>`
+             + `<span class="rp-cat-v">${rpEsc(fmtMAD(cv))}</span></div>`
+             + `<div class="rp-cat-b">${rows}</div></div>`;
+      }).join('');
+      if (!shown) {
+        body.innerHTML = '<div class="rp-empty">Walo, aucun article ne correspond.</div>';
+        return;
+      }
+      /* La couverture se dit quand elle n'est pas totale : un détail article qui
+         ne couvre que les deux tiers du chiffre a l'air complet si on se tait. */
+      const cover = (!q && r.coverage != null && r.coverage < 100)
+        ? `<div class="rp-note">Ce détail porte sur ${r.coverage}% du chiffre encaissé — les ventes sans panier détaillé n’y figurent pas.</div>` : '';
+      body.innerHTML = `<div class="rp-sec"><div class="rp-h"><span>${rpEsc(V.items)} vendus</span>`
+        + `<em>${rpEsc(String(totQ))} · ${rpEsc(fmtMAD(totV))}</em></div>${blocks}${cover}</div>`;
+    }
+
+    /* ── Onglet Journal ── (l'ancien tiroir, mot pour mot) */
+    function renderJournalList() {
+      /* Le résumé de la barre d'outils est posé par renderJournal() — il change
+         de nature selon l'onglet, donc il ne s'écrit plus ici. */
       const q = journalSearch.trim().toLowerCase();
       /* Les ventes sorties des livres ne se réimpriment pas et ne se remboursent
          pas : les laisser dans la liste, c'est laisser un caissier rendre de
@@ -9974,16 +10220,142 @@
       }).join('');
       if (window.lucide) lucide.createIcons();
     }
-    function openJournal() {
+
+    /* Le chef d'orchestre. Les autres modules appellent renderJournal() quand une
+       vente tombe ou qu'un remboursement passe : ils n'ont pas à savoir quel
+       onglet est ouvert, ils demandent un rafraîchissement et c'est tout. */
+    function renderJournal() {
+      const tot = journalTotals();
+      const sumEl = $('#jr-summary');
+      const searchEl = $('#rp-search');
+      const filtEl = $('#jr-filters');
+      const input = $('#jr-search-input');
+
+      /* Une seule barre d'outils pour trois onglets : ce qui n'a pas de sens
+         disparaît au lieu de rester là sans effet. Les filtres carte/espèces ne
+         veulent rien dire sur un classement d'articles. */
+      if (searchEl) searchEl.hidden = (rpTab === 'resume');
+      if (filtEl) filtEl.hidden = (rpTab !== 'journal');
+      if (input) input.placeholder = (rpTab === 'items')
+        ? 'Rechercher un article' : 'Rechercher, table, montant, réf';
+
+      let r = null;
+      if (rpTab !== 'journal') r = rpReport();
+
+      if (sumEl) {
+        if (rpTab === 'items' && r) {
+          const V = rpVocab() || { items: 'articles' };
+          const n = (r.categories || []).reduce((s, c) => s + (+c.qty || 0), 0);
+          sumEl.textContent = `${n} ${V.items} · ${(r.categories || []).length} ${(r.categories || []).length > 1 ? (V.cats || 'catégories') : (V.cat || 'catégorie')}`;
+        } else {
+          sumEl.textContent = `${tot.txns} transaction${tot.txns > 1 ? 's' : ''} · ${fmtMAD(tot.revenue)} encaissés`;
+        }
+      }
+
+      if (rpTab === 'resume') renderResume(r);
+      else if (rpTab === 'items') renderItems(r);
+      else renderJournalList();
+
+      renderRapportFoot();
+    }
+
+    /* Les actions du pied suivent l'onglet : on imprime ce qu'on est en train
+       de lire, pas un menu d'impressions dont deux sur trois ne correspondent
+       pas à l'écran. */
+    function renderRapportFoot() {
+      const foot = $('#rp-foot');
+      if (!foot) return;
+      const has = journal.some(e => !e.voided);
+      let html = '';
+      if (rpTab === 'items') {
+        html = `<button class="rp-btn primary" data-rp-act="print-items"><i data-lucide="printer"></i><span>Imprimer les ventes par article</span></button>`;
+      } else if (rpTab === 'journal') {
+        html = `<button class="rp-btn" data-rp-act="reprint-last"><i data-lucide="rotate-ccw"></i><span>Réimprimer le dernier ticket</span></button>`;
+      } else {
+        html = `<button class="rp-btn primary" data-rp-act="print-report"><i data-lucide="printer"></i><span>Imprimer le rapport</span></button>`;
+      }
+      foot.innerHTML = html;
+      foot.hidden = !has;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    /* Le ticket « ventes par article ». Il se sort EN PLEIN SERVICE — c'est tout
+       son intérêt — donc il porte « EN COURS » et pas d'heure de fermeture : un
+       ticket daté d'une clôture qui n'a pas eu lieu est un faux. */
+    function printItemSales() {
+      const r = rpReport();
+      if (!r) { toast('Rapport indisponible'); return; }
+      if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) { toast('Imprimante indisponible'); return; }
+      const V = rpVocab() || { items: 'articles' };
+      const opts = dayReportPrintOpts(r, registerClosing ? '' : 'EN COURS');
+      opts.itemsOnly = true;
+      opts.title = 'VENTES PAR ' + String(V.item || 'article').toUpperCase();
+      opts.closedLabel = '';
+      opts.noItemsWord = 'Aucun article détaillé';
+      toast('Impression…');
+      Promise.resolve(window.KiwiPrinter.printDayReport(opts)).then(
+        (res) => toast(res && res.ok ? 'Ventes par article imprimées' : 'Impression impossible'),
+        () => toast('Impression impossible'));
+    }
+    function printLiveReport() {
+      const r = rpReport();
+      if (!r) { toast('Rapport indisponible'); return; }
+      doPrintDayReport(r, registerClosing ? '' : 'EN COURS');
+    }
+    /* Le rouleau bourre sur la dernière vente : c'est le geste de panne le plus
+       fréquent d'un comptoir, il mérite un bouton et pas une chasse dans la
+       liste. Les ventes sorties des livres ne comptent pas. */
+    function reprintLastTicket() {
+      const last = journal.slice().reverse().find(e => e && !e.voided && e.kind !== 'refund');
+      if (!last) { toast('Aucun ticket à réimprimer'); return; }
+      printSaleTicket(last, { copy: true });
+    }
+
+    function openJournal(tab) {
       lastSaleId = null;
+      rpTab = tab || 'journal';
+      $$('#rp-tabs [data-rp-tab]').forEach((b) => {
+        const on = b.dataset.rpTab === rpTab;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      const dayEl = $('#rp-day');
+      if (dayEl) {
+        const d = String(currentBusinessDay() || '').split('-');
+        dayEl.textContent = d.length === 3 ? `— ${d[2]}/${d[1]}` : '— ce service';
+      }
       renderJournal();
       $('#journal-drawer').classList.add('is-open');
     }
     function closeJournal() { $('#journal-drawer').classList.remove('is-open'); }
 
     const txnsCard = $('#stat-txns-card');
-    if (txnsCard) txnsCard.addEventListener('click', openJournal);
+    if (txnsCard) txnsCard.addEventListener('click', () => openJournal('journal'));
     $('#journal-drawer-close').addEventListener('click', closeJournal);
+    $('#rp-tabs').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rp-tab]');
+      if (!b) return;
+      rpTab = b.dataset.rpTab;
+      /* La recherche ne traverse pas les onglets : « tajine » tapé dans les
+         articles ne doit pas vider le journal en y revenant. */
+      journalSearch = '';
+      const input = $('#jr-search-input'); if (input) input.value = '';
+      $$('#rp-tabs [data-rp-tab]').forEach((c) => {
+        const on = c === b;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      renderJournal();
+      const body = $('#journal-body'); if (body) body.scrollTop = 0;
+    });
+    $('#rp-foot').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rp-act]');
+      if (!b) return;
+      const a = b.dataset.rpAct;
+      if (a === 'print-items') printItemSales();
+      else if (a === 'print-report') printLiveReport();
+      else if (a === 'reprint-last') reprintLastTicket();
+    });
     $('#journal-drawer').addEventListener('click', (e) => {
       if (e.target === $('#journal-drawer')) { closeJournal(); return; }
       /* L'icône imprimante AVANT la ligne : elle est dessinée dedans, donc sans

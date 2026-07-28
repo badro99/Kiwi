@@ -214,35 +214,57 @@
     if (r.closedBy) b.line(row('Fermé par', r.closedBy, paper));
     b.line(rule(paper));
 
+    /* itemsOnly — « qu'est-ce que j'ai vendu aujourd'hui, et combien de chaque ».
+       Le même document, amputé de tout ce qui n'est pas la marchandise : ni
+       moyens de paiement, ni tiroir, ni net. C'est un ticket qu'on sort EN PLEIN
+       SERVICE pour savoir s'il reste du tajine, pas une pièce comptable — et
+       comme il ne porte pas le net, il ne peut pas être confondu avec le Z.
+       Une variante du même encodeur plutôt qu'un second : deux mises en page
+       pour un même tableau finissent toujours par diverger. */
+    var itemsOnly = !!o.itemsOnly;
+
     /* L'argent. */
-    b.line(row('Transactions', String(r.txns || 0), paper));
-    b.bold(true).line(row('TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
-    var M = o.methodLabels || {};
-    Object.keys(r.methods || {}).forEach(function (k) {
-      if (!r.methods[k]) return;
-      b.line(row('  ' + (M[k] || k), money(r.methods[k]), paper));
-    });
-    if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
-    if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
-    if (r.discounts && r.discounts.amount) {
-      b.line(row('Remises accordées', '- ' + money(r.discounts.amount), paper));
+    if (!itemsOnly) {
+      b.line(row('Transactions', String(r.txns || 0), paper));
+      b.bold(true).line(row('TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
+      var M = o.methodLabels || {};
+      Object.keys(r.methods || {}).forEach(function (k) {
+        if (!r.methods[k]) return;
+        b.line(row('  ' + (M[k] || k), money(r.methods[k]), paper));
+      });
+      if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
+      if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
+      if (r.discounts && r.discounts.amount) {
+        b.line(row('Remises accordées', '- ' + money(r.discounts.amount), paper));
+      }
+      if (r.refunds && r.refunds.count) {
+        b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
+      }
+      if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
     }
-    if (r.refunds && r.refunds.count) {
-      b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
-    }
-    if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
 
     /* Le détail. Sauté entièrement s'il n'y a rien à détailler — un titre
        « DÉTAIL » suivi du vide laisse croire à une panne. */
     if ((r.categories || []).length) {
       b.line(rule(paper));
-      b.align('center').bold(true).line(o.detailTitle || 'DÉTAIL PAR CATÉGORIE').bold(false).align('left');
+      /* Sur le ticket « ventes par article » le détail EST le document : un
+         second titre « DÉTAIL PAR CATÉGORIE » sous « VENTES PAR PLAT » répète
+         l'en-tête sur un papier où chaque ligne coûte. */
+      if (!itemsOnly) {
+        b.align('center').bold(true).line(o.detailTitle || 'DÉTAIL PAR CATÉGORIE').bold(false).align('left');
+      }
+      /* « = 1 plats ». Le pluriel bâclé sur un total est exactement le détail qui
+         fait douter des chiffres au-dessus. L'arabe ne marque pas le pluriel de
+         la même façon : sans forme singulière fournie, on ne touche à rien. */
+      var unit = function (n) {
+        return (Math.abs(+n || 0) === 1 && o.unitWordOne) ? o.unitWordOne : (o.unitWord || 'articles');
+      };
       r.categories.forEach(function (c) {
         b.bold(true).line(row(c.name, money(c.total), paper)).bold(false);
         (c.products || []).forEach(function (p) {
           b.line(row('  ' + p.qty + '× ' + p.name, money(p.total), paper));
         });
-        b.line(row('  = ' + c.qty + ' ' + (o.unitWord || 'articles'), money(c.total), paper));
+        b.line(row('  = ' + c.qty + ' ' + unit(c.qty), money(c.total), paper));
       });
       /* L'honnêteté du classement : si un tiers du chiffre n'a pas de panier
          détaillé, le détail ci-dessus n'est pas la journée entière et doit le
@@ -250,6 +272,27 @@
       if (r.coverage != null && r.coverage < 100) {
         b.line('* détail portant sur ' + r.coverage + '% du chiffre');
       }
+      /* Le ticket « ventes par article » se ferme sur SON total à lui : combien
+         de pièces sont sorties, pour combien. Sans cette ligne il s'arrêtait sur
+         la dernière catégorie et n'avait pas l'air terminé. */
+      if (itemsOnly) {
+        var totQ = 0, totV = 0;
+        r.categories.forEach(function (c) { totQ += (+c.qty || 0); totV += (+c.total || 0); });
+        b.line(rule(paper));
+        b.bold(true).line(row('TOTAL ' + String(o.unitWord || 'articles').toUpperCase(),
+          totQ + ' · ' + money(totV), paper)).bold(false);
+      }
+    } else if (itemsOnly) {
+      /* Rien à détailler : le dire, plutôt que de sortir un ticket vide qui
+         ressemble à une panne d'imprimante. */
+      b.line(rule(paper));
+      b.align('center').line(o.noItemsWord || 'Aucun article détaillé').align('left');
+    }
+
+    if (itemsOnly) {
+      b.align('center').feed(1).line('Kiwi · ' + (r.day || ''));
+      b.cut();
+      return b.bytes();
     }
 
     /* Le tiroir — la partie qu'on compte et qu'on signe. */
