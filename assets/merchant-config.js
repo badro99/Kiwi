@@ -42,6 +42,11 @@
   var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
     newStore: registerNewStore, off: featureOff,
+    /* Le slug serveur du magasin à l'écran. menu-catalog.js le demandait déjà
+     * (`C.storeSlug`) — il n'a jamais été exposé, donc il retombait sur sa
+     * propre re-slugification du nom, et la carte déménageait au premier
+     * renommage. Une seule réponse à « où écrire », pour tout le monde. */
+    storeSlug: storeSlug,
     /* Relire la config MAINTENANT. L'opérateur vient d'allumer un module pour ce
      * commerçant : sans ceci, la caisse ne l'apprend qu'au prochain chargement de
      * page — et une caisse de comptoir reste ouverte des jours entiers. */
@@ -100,7 +105,19 @@
       return String(v.name).trim();
     } catch (_) { return ''; }
   }
-  function storeSlug() { return slugMerchant(storeName()); }
+  /* Le slug ne se déduit PLUS du nom : il est porté par l'établissement, gravé
+   * une fois (venues.js › slugOf). Sinon corriger l'orthographe de son enseigne
+   * changeait l'identité du magasin, et le POST ci-dessous en faisait naître un
+   * neuf, vide, chez le serveur. Le nom, lui, continue de partir à chaque envoi :
+   * c'est ce qui fait que la correction s'affiche dans la console — sous le même
+   * magasin. Repli sur l'ancien calcul quand le moteur de venues est absent. */
+  function storeSlug() {
+    try {
+      var KV = window.KiwiVenue;
+      if (KV && KV.slugOf && storeName()) { var s = KV.slugOf(); if (s) return s; }
+    } catch (_) {}
+    return slugMerchant(storeName());
+  }
 
   function postRaw(payload) {
     return fetch('/api/config', {
@@ -111,7 +128,7 @@
   }
   function post(payload) {
     var name = storeName();
-    var slug = slugMerchant(name);
+    var slug = storeSlug();
     if (slug) {
       payload.merchant = slug; payload.name = name;
       // Une boutique créée hors ligne n'a jamais pu se déclarer neuve. Le drapeau

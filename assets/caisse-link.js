@@ -61,7 +61,11 @@
     var name = String((custom && v.name) || (me && me.business) || ls(K.bizName) || '').trim();
     if (!name) return null;
     return {
-      merchant: slugMerchant(name),
+      /* Le slug gravé de l'établissement (venues.js › slugOf), pas son nom
+       * re-slugifié. Une caisse appairée est liée à UN magasin pour de bon :
+       * si le nom change et que le slug suit, la caisse continue de vendre
+       * pour un magasin dont le tableau de bord n'écoute plus. */
+      merchant: (custom && v.slug) || slugMerchant(name),
       venueId: (custom && v.id) || '',
       type: (custom && v.type) || '',
       subtype: (custom && v.subtype) || ls(K.bizType) || '',
@@ -124,7 +128,13 @@
    * on another device redeems the same value the panel is showing. */
   function backendCreate(biz, localCode) {
     try {
-      fetch('/api/pair/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: biz.type, subtype: biz.subtype, name: biz.name, location: biz.location }) })
+      fetch('/api/pair/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, /* `merchant` dit QUEL magasin de ce compte s'appaire. Le serveur le
+           déduisait du nom, et se trompait dès que le nom ne donnait plus le
+           slug du magasin : il retombait alors sur l'établissement principal du
+           compte. C'est comme ça que la caisse du café d'Amira s'est retrouvée
+           appairée sous la boutique. Le serveur vérifie la propriété avant de
+           l'accepter — l'envoyer ne donne aucun droit. */
+        body: JSON.stringify({ merchant: biz.merchant, type: biz.type, subtype: biz.subtype, name: biz.name, location: biz.location }) })
         .then(function (r) {
           // 401/403 = server is present but won't mint this store's code (caller
           // is neither the signed-in merchant nor an authed operator). The local

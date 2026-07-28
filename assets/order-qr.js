@@ -64,15 +64,21 @@
   }
   function biz() {
     let name = '';
+    /* Le slug gravé de l'établissement (venues.js › slugOf). Il part sur du
+     * papier — un QR collé sur une table ne se re-imprime pas parce qu'on a
+     * corrigé l'orthographe de l'enseigne, alors que le slug reconstruit depuis
+     * le nom, lui, aurait changé sous les pieds des clients. */
+    let pinned = '';
     // The STORE this code is being printed for, ahead of the account that owns
     // it. The slug goes into the customer-facing ordering link, so deriving it
     // from the single account name made every store on the account print the
     // same URL — a diner scanning the restaurant's code reached the boutique.
-    try { const vd = window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom() && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); if (vd && vd.name) name = String(vd.name).trim(); } catch (_) {}
+    try { const vd = window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom() && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); if (vd && vd.name) name = String(vd.name).trim(); if (vd && vd.slug) pinned = String(vd.slug); } catch (_) {}
     if (!name) { try { if (window.KiwiMe && KiwiMe.business) name = String(KiwiMe.business).trim(); } catch (_) {} }
     if (!name) { try { name = (localStorage.getItem('kiwiBizName') || '').trim(); } catch (_) {} }
     if (!name) name = isReal() ? 'Votre établissement' : 'Café Atlas';
-    const slug = (window.KiwiCaisseLink && KiwiCaisseLink.slugMerchant) ? KiwiCaisseLink.slugMerchant(name) : localSlug(name);
+    const slug = pinned
+      || ((window.KiwiCaisseLink && KiwiCaisseLink.slugMerchant) ? KiwiCaisseLink.slugMerchant(name) : localSlug(name));
     return { name, slug };
   }
   function orderUrl(table) {

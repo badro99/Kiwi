@@ -27,6 +27,7 @@
 //     (GitHub Pages, local) are unaffected.
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../auth/_lib.js';
+import { storeSuspended } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 
@@ -197,10 +198,17 @@ async function storeOwner(env, slug) {
     return row ? (row.account_id || '') : null;
   } catch (_) { return null; }
 }
-async function resolveMerchant(env, aid, accSlug, wanted) {
+async function resolveMerchant(env, aid, accSlug, wanted, strict) {
   const w = str(wanted, 80).trim();
   if (!w || w === accSlug) return accSlug;
-  return (await storeOwner(env, w)) === aid ? w : accSlug;
+  if ((await storeOwner(env, w)) === aid) return w;
+  /* En PUBLICATION, un slug que le registre ne reconnaît pas n'autorise pas à
+   * écrire dans le magasin principal du compte : c'est comme ça que la ligne
+   * `menus` de la boutique d'Amira s'est retrouvée à porter le nom de son café,
+   * le jour où le café renommé s'est présenté sous un slug encore inconnu. En
+   * lecture, le repli reste : montrer sa propre carte vaut mieux qu'une page
+   * vide. */
+  return strict ? '' : accSlug;
 }
 
 // Is the Order Pro add-on switched on for this merchant?
@@ -295,6 +303,14 @@ export async function onRequestGet(context) {
   // working for every merchant exactly as before. OrderPro.html — the NFC
   // white-label app — refuses to open unless it is true, and POST /api/order
   // enforces the same rule server-side.
+  /* Établissement suspendu ⇒ la page publique s'éteint. Un QR sur une table ou
+   * une puce NFC sur un comptoir continue d'exister dans le monde physique bien
+   * après qu'un compte a cessé de payer ; laisser la carte se servir toute seule
+   * ferait prendre des commandes que personne n'ira préparer. */
+  if (await storeSuspended(env, merchant)) {
+    return json({ name, type, menu: null, shop: null, orderpro: false, suspended: true });
+  }
+
   const orderpro = await orderProEnabled(env, merchant);
   return json({ name, type, menu, shop, orderpro });
 }
@@ -315,7 +331,8 @@ export async function onRequestPost(context) {
 
   // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
   // et rabattu sur le slug du compte si la base ne confirme pas la propriété.
-  const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant);
+  const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
+  if (!merchant) return json({ error: 'merchant-unknown' }, 404);
 
   // The display name defaults to the account's own business; a client may send a
   // trimmed override but never another merchant's identity (slug is session-bound).

@@ -134,7 +134,44 @@ export async function ownedStores(request, env, from) {
  *   · opérateur → ce qui est demandé ; c'est tout l'objet de la console.
  *
  * Renvoie '' quand le demandeur n'a droit à rien : l'appelant doit refuser. */
-export async function tenantFor(request, env, asked) {
+/* Ce magasin est-il suspendu ? (merchant_config.status)
+ *
+ * Distinct de accounts.status, et c'est tout l'intérêt : geler un LOGIN ferme
+ * toutes les boutiques du client d'un coup. Un client qui tient une boutique et
+ * un café, et qui ne paie plus que pour l'un des deux, doit pouvoir garder
+ * l'autre ouvert. Rien n'est effacé — c'est un frein, pas une gomme.
+ *
+ * NULL / colonne absente ⇒ actif. Une base pas encore migrée se comporte donc
+ * exactement comme avant, et une erreur de lecture n'a JAMAIS le droit de fermer
+ * un magasin qui paie. */
+export async function storeSuspended(env, slug) {
+  slug = String(slug == null ? '' : slug).trim();
+  if (!slug || !env || !env.DB) return false;
+  try {
+    const r = await env.DB.prepare('SELECT status FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return !!(r && String(r.status || '') === 'suspended');
+  } catch (_) { return false; }
+}
+
+export async function tenantFor(request, env, asked, opts) {
+  /* `strict` — pour les ÉCRITURES. Deux règles s'y ajoutent, et aucune des deux
+   * ne doit gêner une lecture :
+   *   · un slug inconnu ne se rabat plus sur le magasin du compte (voir le
+   *     repli en bas de resolveTenant) ;
+   *   · un magasin SUSPENDU n'écrit plus. Sa lecture reste ouverte — le patron
+   *     doit pouvoir consulter son historique et voir ce qu'il retrouvera en
+   *     payant ; couper la lecture ferait passer une suspension pour une
+   *     suppression.
+   * Le contrôle est ici, sur le magasin RÉSOLU, et pas sur celui qui a été
+   * demandé : c'est le seul point par lequel toutes les branches repassent. */
+  const strict = !!(opts && opts.strict);
+  const who = await resolveTenant(request, env, asked, strict);
+  if (strict && who && await storeSuspended(env, who)) return '';
+  return who;
+}
+
+async function resolveTenant(request, env, asked, strict) {
   asked = String(asked == null ? '' : asked).slice(0, 64).trim();
 
   if (asked) {
@@ -162,5 +199,14 @@ export async function tenantFor(request, env, asked) {
   // lui appartient. Un slug inconnu retombe sur le magasin du compte plutôt que
   // d'ouvrir celui d'un inconnu.
   if ((await storeOwner(env, asked)) === sessionAid) return asked;
+  /* …sauf en écriture. Ce repli est sûr côté SÉCURITÉ — on ne sert jamais le
+   * magasin d'un tiers — mais il range le courrier d'un magasin chez un autre :
+   * l'appelant a nommé A, on écrit dans B, et personne n'est averti. C'est ce
+   * qui est arrivé le 28 juillet 2026, quand un établissement renommé a présenté
+   * un slug que le registre ne connaissait pas encore : la minute suivante, sa
+   * carte est partie dans la ligne `menus` de la boutique du même compte, qui a
+   * pris le nom du café au passage. Un refus laisse le client sur sa copie
+   * locale — il ne perd rien et retentera ; un mauvais destinataire, si. */
+  if (strict) return '';
   return sessionMerchant;
 }

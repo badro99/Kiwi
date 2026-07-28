@@ -138,7 +138,7 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, body && body.merchant);
+  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const c = sanitize(body);
@@ -182,7 +182,10 @@ export async function onRequestDelete(context) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
   const url = new URL(request.url);
-  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
+  // Une suppression est une écriture : un slug inconnu ne doit surtout pas
+  // retomber sur le magasin du compte — on effacerait la fiche d'un client chez
+  // le voisin de palier. Voir tenantFor › strict.
+  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'), { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const id = str(url.searchParams.get('id'), 64);

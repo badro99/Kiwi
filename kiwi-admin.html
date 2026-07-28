@@ -90,6 +90,19 @@ em, i, cite, dfn, var { font-style: normal; }
   .mini.ghost{border-style:dashed}
   .mini.danger{color:var(--warn); border-color:#e7ccc6}
   .mini.danger:hover{background:#fbeeeb}
+  /* Boîte de dialogue — voir modal(). Sombre par défaut comme le reste de la
+     console : cet écran n'est pas fait pour être lisible par-dessus l'épaule. */
+  .md-back{position:fixed; inset:0; background:rgba(8,12,10,.62); display:flex;
+    align-items:center; justify-content:center; padding:20px; z-index:60}
+  .md-card{position:relative; background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:20px 22px; width:min(460px,100%); box-shadow:0 24px 60px rgba(0,0,0,.34)}
+  .md-title{font-weight:640; font-size:1rem; margin:0 26px 6px 0}
+  .md-desc{color:var(--muted); font-size:.84rem; line-height:1.5}
+  .md-x{position:absolute; top:10px; right:12px; font:inherit; font-size:1.1rem; line-height:1;
+    border:0; background:transparent; color:var(--muted); cursor:pointer; padding:4px 6px}
+  .inp{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line);
+    border-radius:9px; background:var(--surface); color:var(--ink); box-sizing:border-box}
+  .inp:focus{outline:none; border-color:var(--riad)}
   .mini.warn{color:#8a5a00; border-color:#e8d9b0; background:#fdf6e6}
   .mini.warn:hover{background:#f6e8c2}
   .sus-badge{display:inline-block; margin-left:8px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:#8a5a00; background:#fbeecb; border:1px solid #e8d9b0; padding:3px 6px; border-radius:5px; vertical-align:middle}
@@ -290,6 +303,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .sus-badge{color:#f0cf8a; background:#241f10; border-color:#3a3320}
     tr.suspended{background:rgba(200,160,40,.08)}
     .type-select{background:#151b18; color:#cfeeda}
+    .md-card{background:#151b18} .inp{background:#111713; color:#cfeeda; border-color:#26302b}
     .type-chip{color:#bfe8cf; background:#1c2420}
     .owner-row td, .owner-row:hover td{background:#141a17}
     .owner-row .who{color:#cfeeda}
@@ -544,6 +558,26 @@ em, i, cite, dfn, var { font-style: normal; }
     void el.offsetWidth; el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+  }
+  /* Une boîte de dialogue, pour les gestes qu'on ne pose pas d'un clic. La
+     console n'en avait pas : tout y était un bouton et un toast, ce qui va très
+     bien pour couper un module et pas du tout pour effacer un établissement.
+     Retourne { el, body, close } — l'appelant remplit `body`. */
+  function modal(title, desc){
+    var body = h('div', { class:'md-body' });
+    var card = h('div', { class:'md-card' },
+      h('div', { class:'md-title' }, title),
+      desc ? h('div', { class:'md-desc' }, desc) : null,
+      body);
+    var el = h('div', { class:'md-back' }, card);
+    function close(){ if (el.parentNode) el.parentNode.removeChild(el); }
+    el.addEventListener('click', function(e){ if (e.target === el) close(); });
+    document.addEventListener('keydown', function esc(e){
+      if (e.key === 'Escape'){ close(); document.removeEventListener('keydown', esc); }
+    });
+    card.appendChild(h('button', { class:'md-x', title:'Fermer', onClick:close }, '×'));
+    document.body.appendChild(el);
+    return { el:el, body:body, close:close };
   }
   function fmt(n){ try { return (Math.round(n)||0).toLocaleString('fr-FR'); } catch(_) { return String(Math.round(n)||0); } }
   function ago(ts){
@@ -966,9 +1000,23 @@ em, i, cite, dfn, var { font-style: normal; }
       saveMock(m);
       return { ok:true };
     },
+    /* Suspendre UN établissement, pas tout le compte. Deux gestes distincts
+       parce que ce sont deux décisions distinctes : fermer une boutique qui ne
+       paie plus, ou couper l'accès d'un client. Un client qui tient un café et
+       une boutique ne doit pas perdre les deux pour l'un. */
+    async setStoreStatus(merchant, status){
+      if (LIVE) { return api('/clients', { method:'PATCH', body:JSON.stringify({ merchant:merchant, status:status }) }); }
+      var m = mock();
+      (m.clients || []).forEach(function(c){ if (c.merchant === merchant) c.store_status = status; });
+      saveMock(m);
+      return { ok:true };
+    },
     async deleteClient(merchant, email){
       if (LIVE) {
+        // `confirm` répète le slug : le serveur refuse sans lui. Un geste
+        // irréversible ne doit pas tenir dans un seul clic.
         var qs = '/clients?merchant=' + encodeURIComponent(merchant) +
+                 '&confirm=' + encodeURIComponent(merchant) +
                  (email ? '&email=' + encodeURIComponent(email) : '');
         return api(qs, { method:'DELETE' });
       }
@@ -1067,15 +1115,30 @@ em, i, cite, dfn, var { font-style: normal; }
       h('td', { class:'num' }, fmt(g.amount) + ' MAD'),
       h('td', { class:'num' }, String(g.count)),
       h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(g.last))),
-      h('td', null, h('div', { class:'row-actions' },
-        h('span', { class:'count-chip' }, g.stores.length + ' établissements')))
+      h('td', null, h.apply(null, ['div', { class:'row-actions' },
+        h('span', { class:'count-chip' }, g.stores.length + ' établissements')].concat(
+        /* Le geste qui porte sur le COMPTE vit ici, sur la bande du compte. Il
+           était sur chaque ligne d'établissement, où il donnait l'impression de
+           ne fermer que cette boutique-là alors qu'il coupait le login et donc
+           toutes. Nommer ce qu'on ferme est la moitié du correctif. */
+        mail ? [h('button', { class:'mini' + (c.status === 'suspended' ? ' warn' : ''),
+          disabled: SENIOR === false,
+          onClick:function(e){ e.stopPropagation(); toggleSuspend(c); } },
+          c.status === 'suspended' ? 'Réactiver le compte' : 'Suspendre le compte')] : [])))
     );
     return tr;
   }
 
   function clientRow(c, inGroup){
     var live = c.last_ts && (Date.now() - c.last_ts < 1000*60*15);
-    var suspended = c.status === 'suspended';
+    /* Deux suspensions, et il faut les tenir séparées à l'écran comme au
+       serveur. `store_status` ferme CET établissement ; `status` gèle le compte,
+       donc tous. Une ligne d'établissement montre la sienne — auparavant elle
+       affichait celle du compte et proposait un bouton qui, lui, gelait tout :
+       le geste ne correspondait pas à l'endroit où on le posait. */
+    var storeOff = c.store_status === 'suspended';
+    var accountOff = c.status === 'suspended';
+    var suspended = storeOff || accountOff;
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
     // login to freeze. Reversible: suspend cuts access now, reactivate restores it.
     var open = !!(selected && selected.merchant === c.merchant);
@@ -1086,22 +1149,27 @@ em, i, cite, dfn, var { font-style: normal; }
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
         open ? 'Fermer' : 'Gérer')
     ];
-    if (c.email){
-      actions.push(h('button', { class:'mini' + (suspended ? ' warn' : ''),
-        disabled: SENIOR === false,
-        onClick:function(e){ e.stopPropagation(); toggleSuspend(c); } },
-        suspended ? 'Réactiver' : 'Suspendre'));
-    }
-    // Permanent deletion is deliberately absent until every merchant-owned data
-    // store is covered by one verified deletion workflow. Suspension remains the
-    // safe, reversible production control.
+    /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
+       remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
+    actions.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
+      disabled: SENIOR === false || accountOff,
+      title: accountOff ? 'Le compte entier est suspendu — réactivez-le d’abord.' : '',
+      onClick:function(e){ e.stopPropagation(); toggleStoreSuspend(c); } },
+      storeOff ? 'Rouvrir' : 'Fermer'));
+    /* La suppression d'un établissement existe désormais, et seulement celle-là :
+       son périmètre est exactement ce que porte son slug, donc il se borne. Elle
+       est irréversible, gardée par le code opérateur nommé, et demande de
+       recopier le slug — voir functions/api/admin/clients.js › onRequestDelete. */
+    actions.push(h('button', { class:'mini danger', disabled: SENIOR === false,
+      onClick:function(e){ e.stopPropagation(); askDeleteStore(c); } }, 'Supprimer'));
 
     var cls = (selected && selected.merchant === c.merchant) ? 'sel' : '';
     if (suspended) cls += (cls ? ' ' : '') + 'suspended';
     if (inGroup) cls += (cls ? ' ' : '') + 'store-row';
     var tr = h('tr', { class: cls },
       h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
-                      (suspended && !inGroup) ? h('span', { class:'sus-badge' }, 'suspendu') : null),
+                      storeOff ? h('span', { class:'sus-badge' }, 'fermé') : null,
+                      (accountOff && !inGroup) ? h('span', { class:'sus-badge' }, 'compte suspendu') : null),
                     c.type ? h('div', null, h('span', { class:'type-chip' }, typeLabel(c.type) || c.type)) : null,
                     // The contact sits on the band when the client has several
                     // shops — repeating it on every row would bury the one thing
@@ -1120,6 +1188,53 @@ em, i, cite, dfn, var { font-style: normal; }
 
   // Freeze / thaw a paying client. Suspending flips accounts.status; the site
   // gate then revokes their live session on the next request (no data deleted).
+  /* Fermer / rouvrir UN établissement. Rien n'est effacé : la caisse cesse
+     d'encaisser, les écrans cessent d'écrire, la page de commande publique
+     s'éteint — et tout revient intact à la réouverture. */
+  async function toggleStoreSuspend(c){
+    var next = c.store_status === 'suspended' ? 'active' : 'suspended';
+    try {
+      await store.setStoreStatus(c.merchant, next);
+      c.store_status = next;
+      await renderClients();
+      notify(next === 'suspended'
+        ? 'Établissement fermé : plus d’encaissement ni de commande en ligne. Rien n’est effacé.'
+        : 'Établissement rouvert, tout est revenu.');
+    } catch(e){
+      var err = (e && e.body && e.body.error) || (e && e.message) || 'erreur';
+      notify(err === 'store-status-unavailable'
+        ? 'La base n’a pas encore la colonne `status` sur merchant_config — migration à passer.'
+        : 'Échec : ' + err);
+    }
+  }
+
+  /* Supprimer un établissement. Irréversible, donc on montre d'abord ce qui va
+     disparaître et on fait recopier le slug — un clic seul ne suffit pas. */
+  function askDeleteStore(c){
+    var m = modal('Supprimer « ' + (c.business || c.merchant) + ' »',
+      'Cet établissement et TOUT ce qu’il contient — ventes, clôtures, catalogue, '
+      + 'carte, clients, codes équipe, appairages — seront effacés définitivement. '
+      + 'Les journaux d’opérateur sont conservés. Recopiez son identifiant pour confirmer.');
+    var input = h('input', { class:'inp', placeholder:c.merchant, style:'width:100%;margin:10px 0' });
+    var go = h('button', { class:'mini danger', disabled:true }, 'Supprimer définitivement');
+    input.addEventListener('input', function(){ go.disabled = input.value.trim() !== c.merchant; });
+    go.addEventListener('click', async function(){
+      go.disabled = true; go.textContent = 'Suppression…';
+      try {
+        var r = await store.deleteClient(c.merchant, '');
+        m.close();
+        await renderClients();
+        var n = Object.keys((r && r.removed) || {}).length;
+        notify('« ' + c.merchant + ' » supprimé — ' + n + ' table(s) purgée(s).');
+      } catch(e){
+        go.disabled = false; go.textContent = 'Supprimer définitivement';
+        notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur'));
+      }
+    });
+    m.body.appendChild(input);
+    m.body.appendChild(h('div', { class:'row-actions' }, go));
+  }
+
   async function toggleSuspend(c){
     var next = c.status === 'suspended' ? 'active' : 'suspended';
     try {

@@ -170,15 +170,23 @@
     if (id === 'scoped') return scopedSlug();
     if (!id || TRANSIENT[id] || isDemoId(id)) return '';
 
+    /* `vd.slug` est l'identité gravée de l'établissement (venues.js › slugOf) ;
+     * `slugStore(vd.name)` n'en est qu'une reconstitution — juste tant que
+     * personne n'a corrigé l'enseigne, fausse ensuite. Un document rangé sous un
+     * slug reconstitué est un document perdu pour le magasin qui le croyait
+     * sien. */
     var vd = venueById(id);
-    if (vd) return (vd.custom && vd.name) ? slugStore(vd.name) : '';
+    if (vd) {
+      if (vd.slug) return String(vd.slug);
+      return (vd.custom && vd.name) ? slugStore(vd.name) : '';
+    }
 
     // Pas une venue : est-ce un slug qu'on sait rattacher à ce compte ?
     if (ls('kiwiLiveMerchant') === id) return id;
     var list = venueList();
     for (var i = 0; i < list.length; i++) {
       var v = list[i];
-      if (v && v.custom && v.name && slugStore(v.name) === id) return id;
+      if (v && v.custom && (v.slug === id || (v.name && slugStore(v.name) === id))) return id;
     }
     try {
       var biz = (window.KiwiMe && window.KiwiMe.business) || '';

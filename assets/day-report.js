@@ -120,7 +120,10 @@
       var KV = window.KiwiVenue;
       if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
         var vd = KV.getCurrentVenueData();
-        var s = vd && vd.name && slugStore(vd.name);
+        // Le slug gravé de l'établissement (venues.js › slugOf) plutôt qu'une
+        // re-slugification du nom : sinon corriger l'enseigne ouvre un cahier
+        // de clôtures vierge à côté de celui qui contient l'année.
+        var s = vd && ((vd.slug || '') || (vd.name && slugStore(vd.name)));
         if (s) return s;
       }
     } catch (_) {}
