@@ -6478,37 +6478,69 @@
        navigateur : si le serveur est encore vide, c'est donc elle qui l'y pose
        — le premier des deux à se connecter sème, peu importe lequel. */
     (function () {
-      if (!window.KiwiCloudDoc) return;
       const slugMirror = (slug) => 'kiwiPlanDeSalle:slug:' + slug;
-      const doc = window.KiwiCloudDoc.attach({
-        feature: 'floorplan',
-        slug: () => window.KiwiCloudDoc.currentSlug(),
-        /* Le pendant de la ligne posée côté tableau de bord : la caisse range sa
-           copie sous le slug, lui sous l'ID d'établissement. Le signet doit dire
-           laquelle des deux il décrit, sinon l'un des deux appareils se croit à
-           jour pour toujours. */
-        localKey: () => { const s = window.KiwiCloudDoc.currentSlug(); return s ? slugMirror(s) : ''; },
-        read: () => {
-          try {
-            const s = window.KiwiCloudDoc.currentSlug();
-            const raw = s ? localStorage.getItem(slugMirror(s)) : null;
-            const d = raw ? JSON.parse(raw) : null;
-            if (d && Array.isArray(d.tables)) return d;
-          } catch (_) {}
-          return { zones: [], tables: [], staff: [] };
-        },
-        write: (d) => {
-          try {
-            const s = window.KiwiCloudDoc.currentSlug();
-            if (s) localStorage.setItem(slugMirror(s), JSON.stringify(d));
-          } catch (_) {}
-          window.KiwiFloorPlan = d;
-          try { setupRealSalle(); } catch (_) {}
-        },
-        isEmpty: (d) => !d || !(d.tables && d.tables.length),
-      });
-      try { doc.bind(); } catch (_) {}
-      document.addEventListener('kiwi-paired', () => { try { doc.bind(); } catch (_) {} });
+      let doc = null;
+
+      function build() {
+        if (doc) return true;
+        if (!window.KiwiCloudDoc) return false;
+        doc = window.KiwiCloudDoc.attach({
+          feature: 'floorplan',
+          slug: () => window.KiwiCloudDoc.currentSlug(),
+          /* Le pendant de la ligne posée côté tableau de bord : la caisse range
+             sa copie sous le slug, lui sous l'ID d'établissement. Le signet doit
+             dire laquelle des deux il décrit, sinon l'un des deux appareils se
+             croit à jour pour toujours. */
+          localKey: () => { const s = window.KiwiCloudDoc.currentSlug(); return s ? slugMirror(s) : ''; },
+          read: () => {
+            try {
+              const s = window.KiwiCloudDoc.currentSlug();
+              const raw = s ? localStorage.getItem(slugMirror(s)) : null;
+              const d = raw ? JSON.parse(raw) : null;
+              if (d && Array.isArray(d.tables)) return d;
+            } catch (_) {}
+            return { zones: [], tables: [], staff: [] };
+          },
+          write: (d) => {
+            try {
+              const s = window.KiwiCloudDoc.currentSlug();
+              if (s) localStorage.setItem(slugMirror(s), JSON.stringify(d));
+            } catch (_) {}
+            window.KiwiFloorPlan = d;
+            try { setupRealSalle(); } catch (_) {}
+          },
+          isEmpty: (d) => !d || !(d.tables && d.tables.length),
+        });
+        // Un appairage noué APRÈS le chargement doit lancer la lecture.
+        document.addEventListener('kiwi-paired', () => { try { doc.bind(); } catch (_) {} });
+        return true;
+      }
+
+      /* ── POURQUOI ON REPASSE ─────────────────────────────────────────────
+         Ce script-ci est EN LIGNE dans la page : il s'exécute pendant l'analyse
+         du document. `assets/cloud-doc.js` porte `defer`, donc il ne s'exécute
+         qu'une fois tout le document analysé — APRÈS ces lignes. Au premier
+         passage `window.KiwiCloudDoc` n'existe pas encore, et la version
+         précédente se contentait d'un `return` : la caisse n'attachait jamais le
+         lecteur du plan, ne demandait donc JAMAIS /api/store?feature=floorplan,
+         et « Rafraîchir » n'avait rien à relire non plus (pullAll ne parcourt
+         que les documents attachés). Le patron dessinait sa salle, le comptoir
+         répondait « pas encore conçu », indéfiniment.
+
+         Seul le MÊME navigateur s'en sortait, par le miroir localStorage : le
+         bogue marchait donc chez celui qui le testait sur son portable, et
+         jamais sur la tablette du comptoir — le cas normal, et le seul qui
+         compte. (C'est exactement pour ce piège que floorplan-core.js est
+         chargé sans `defer`, voir l'en-tête du fichier.)
+
+         Le slug peut lui aussi arriver en retard, le temps que l'appairage se
+         résolve. On repasse donc jusqu'à ce que les deux soient là — borné, une
+         caisse ne doit pas interroger sans fin. */
+      let left = 40;                                   // ~10 s, puis on renonce
+      (function attempt() {
+        if (build() && doc.enabled()) { try { doc.bind(); } catch (_) {} return; }
+        if (--left > 0) setTimeout(attempt, 250);
+      })();
     })();
 
     /* ---------- Floor switching (RDC ↔ 1er étage) ---------- */
