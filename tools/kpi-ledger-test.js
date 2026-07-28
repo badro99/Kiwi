@@ -231,10 +231,120 @@ ok('plus aucune vente n\'est jetée hors de la bande affichée',
 ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
   !/function dayStartMs\(t\) \{ const d = new Date\(t\); d\.setHours\(0/.test(SRC));
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * 6. LA MÊME JOURNÉE AU COMPTOIR ET DANS L'ASSISTANT
+ *
+ * Le tableau de bord et le rapport Z comptent depuis la bascule commerciale.
+ * Deux lecteurs comptaient encore depuis minuit :
+ *   · le journal du terminal (pos-sale.js) — il se VIDAIT à minuit, donc au
+ *     milieu du service d'un restaurant qui ferme à 01h. Le compteur du
+ *     comptoir repartait de zéro pendant que le Z, lui, continuait la soirée ;
+ *   · l'assistant (agent-data.js) — il lisait ce journal sur une fenêtre qui
+ *     démarrait à minuit, donc il ratait les ventes de fin de nuit que le
+ *     journal, lui, gardait. « Rien vendu aujourd'hui », le comptoir encaissant.
+ *
+ * Ce que ce banc vérifie : que les deux lecteurs POSENT la question à
+ * KiwiDayReport et se rangent sur sa réponse. Le stub ci-dessous rejoue la
+ * bascule à l'identique de day-report.js (mêmes trois fonctions, mêmes lignes)
+ * uniquement pour pouvoir fixer l'heure qu'il est — l'arithmétique de la
+ * bascule elle-même est contrôlée ailleurs, pas ici. */
+{
+  const POS = fs.readFileSync(path.join(ROOT, 'assets/pos-sale.js'), 'utf8');
+  const AGT = fs.readFileSync(path.join(ROOT, 'assets/agent-data.js'), 'utf8');
+
+  const cut = (src, a, b, label) => {
+    const i = src.indexOf(a), j = src.indexOf(b);
+    ok(`${label} est extractible`, i > 0 && j > i, `i=${i} j=${j}`);
+    return (i > 0 && j > i) ? src.slice(i, j) : null;
+  };
+  const posSrc = cut(POS, '  function sameDay(a, b) {', '  function key(vertical)', 'le filtre « aujourd\'hui » du comptoir');
+  const agtSrc = cut(AGT, '  function startOfDay() {', '  function inWin(', 'la fenêtre « aujourd\'hui » de l\'assistant');
+
+  if (posSrc && agtSrc) {
+    /* Chaque lecteur reçoit SON `window` : c'est la seule façon d'avoir un
+       terminal avec KiwiDayReport et un autre sans, dans le même banc. */
+    const mkPos = (win) => new Function('window', posSrc + '\nreturn isToday;')(win);
+    const mkAgt = (win) => new Function('window', agtSrc + '\nreturn startOfDay;')(win);
+
+    /* Le stub : businessDay / today / dayBounds recopiés de day-report.js, avec
+       un « maintenant » injecté au lieu de Date.now(). */
+    const mkReport = (nowMs, h) => {
+      const p2 = (n) => String(n).padStart(2, '0');
+      const ymd = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+      const businessDay = (ts) => ymd(new Date(ts - h * 3600000));
+      const today = () => businessDay(nowMs);
+      const dayBounds = (day) => {
+        const p = String(day).split('-');
+        const d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, h, 0, 0, 0);
+        return { from: d.getTime(), to: d.getTime() + 24 * 3600000 };
+      };
+      return { businessDay, today, dayBounds };
+    };
+
+    const at = (D, hh, mm) => new Date(2026, 6, D, hh, mm || 0, 0, 0).getTime();
+    const NOW = at(28, 0, 30);          /* 00h30 — le service n'est pas fini */
+    const veille22 = at(27, 22, 0);     /* la table de 22h, servie il y a 2h30 */
+    const nuit0005 = at(28, 0, 5);      /* le dernier café */
+    const avantHier = at(26, 22, 0);    /* la soirée d'AVANT, elle, est close */
+
+    const w5 = { KiwiDayReport: mkReport(NOW, 5) };
+    const posDay = mkPos(w5);
+
+    ok('à 00h30, la table de 22h est toujours dans la journée du comptoir',
+      posDay(veille22) === true);
+    ok('…et le dernier café de 00h05 aussi', posDay(nuit0005) === true);
+    ok('la soirée de l\'avant-veille, elle, est bien sortie du journal',
+      posDay(avantHier) === false);
+
+    /* Non-vacuité : sans la bascule, la table de 22h serait jetée à minuit —
+       c'est exactement le compteur qui repartait de zéro en plein service. */
+    const posMinuit = mkPos({});
+    const memeDate = new Date(veille22).toDateString() === new Date().toDateString();
+    ok('sans KiwiDayReport le filtre retombe sur le calendrier (ancien comportement)',
+      posMinuit(veille22) === memeDate);
+
+    /* Une bascule à 0 h doit rendre EXACTEMENT le calendrier : un commerce de
+       jour ne doit rien voir changer. */
+    const pos0 = mkPos({ KiwiDayReport: mkReport(NOW, 0) });
+    ok('une bascule à 0 h se comporte comme minuit',
+      pos0(veille22) === false && pos0(nuit0005) === true);
+
+    ok('une date illisible reste refusée', posDay(NaN) === false);
+
+    /* L'assistant lit la MÊME borne. */
+    const agtDay = mkAgt(w5);
+    ok('la fenêtre de l\'assistant démarre à la bascule, pas à minuit',
+      agtDay() === at(27, 5, 0), 'obtenu ' + new Date(agtDay()).toString());
+    ok('…donc la table de 22h que le journal garde, l\'assistant la voit',
+      veille22 >= agtDay() && veille22 < agtDay() + 24 * 3600000);
+    ok('…et il ne remonte pas jusqu\'à la soirée d\'avant',
+      avantHier < agtDay());
+
+    const agtMinuit = mkAgt({});
+    ok('sans KiwiDayReport l\'assistant retombe sur minuit',
+      agtMinuit() === new Date(new Date().setHours(0, 0, 0, 0)).getTime());
+
+    /* Et le journal et l'assistant s'accordent : tout ce que le comptoir garde
+       est dans la fenêtre que l'assistant lit. C'est l'invariant, pas les deux
+       bornes prises séparément. */
+    const dedans = [veille22, nuit0005, at(27, 12, 0)].every(
+      (ts) => posDay(ts) === (ts >= agtDay() && ts < agtDay() + 24 * 3600000));
+    ok('le comptoir et l\'assistant ne peuvent plus se contredire', dedans);
+  }
+
+  /* Les deux gardes portent sur le CODE extrait, pas sur le fichier : un
+     commentaire qui parle de la bascule ne prouve rien, et un garde qu'un
+     commentaire suffit à satisfaire ne garde rien. */
+  ok('le comptoir ne tranche plus « aujourd\'hui » au calendrier seul',
+    !!posSrc && /R\.businessDay\(/.test(posSrc));
+  ok('l\'assistant ne fabrique plus son minuit à la main sans demander',
+    !!agtSrc && /R\.dayBounds\(/.test(agtSrc));
+}
+
 console.log('');
 if (fails.length) {
   fails.forEach((f) => console.log('  ✗ ' + f));
   console.log(`\n✗ CA au grand livre : ${pass} ok, ${fails.length} échec(s)\n`);
   process.exit(1);
 }
-console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe)\n`);
+console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe, comptoir et assistant sur la même journée)\n`);

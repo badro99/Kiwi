@@ -345,11 +345,25 @@
    * les trois sources ne savent pas la lire de la même façon :
    *   · les ventes enregistrées sont datées ⇒ la fenêtre s'applique vraiment ;
    *   · le journal de caisse ne garde QUE la journée en cours (pos-sale.js le
-   *     purge à minuit) ⇒ il sait dire « aujourd'hui » et rien d'autre ;
+   *     purge à la bascule) ⇒ il sait dire « aujourd'hui » et rien d'autre ;
    *   · la carte de démonstration ne date pas ses unités ⇒ mois figé.
    * Une source qui ne sait pas honorer la fenêtre le déclare (`honoured:false`)
    * plutôt que de servir la journée d'aujourd'hui sous l'étiquette d'hier. */
-  function startOfDay() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  /* La MÊME borne que celle qui purge le journal (pos-sale.js) et que celle du
+     rapport Z : la journée commerciale. Lire le journal sur minuit alors qu'il
+     se vide sur la bascule ouvrait une fenêtre où l'assistant ratait les ventes
+     de fin de nuit — présentes dans le journal, hors de la fenêtre lue — et
+     répondait « rien vendu aujourd'hui » à un comptoir qui encaissait. */
+  function startOfDay() {
+    try {
+      var R = window.KiwiDayReport;
+      if (R && R.dayBounds && R.today) {
+        var b = R.dayBounds(R.today());
+        if (b && isFinite(b.from)) return b.from;
+      }
+    } catch (_) {}
+    var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
   function inWin(ts, p) { return !p || (ts >= p.from && ts < p.to); }
 
   function productRanking(period) {

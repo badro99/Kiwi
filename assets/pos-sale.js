@@ -25,7 +25,8 @@
  *     qui permet au terminal de retrouver SA journée après un rechargement, sans
  *     attendre le serveur. Préfixe `kiwi:` : purgé au changement de compte
  *     (TENANT_PREFIXES dans identity.js), et le filtre « aujourd'hui » fait
- *     basculer le compteur tout seul à minuit.
+ *     basculer le compteur tout seul — à la bascule de la JOURNÉE COMMERCIALE
+ *     (KiwiDayReport), la même que le rapport Z, pas à minuit.
  *
  * LA DÉMO N'ÉCRIT RIEN. pvReal() faux ⇒ record() ne persiste pas et ne poste
  * pas : les quinze démos gardent exactement le comportement d'avant, chiffres
@@ -55,9 +56,24 @@
   function sameDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
+  /* « Aujourd'hui » veut dire LA JOURNÉE COMMERCIALE, pas la date du calendrier.
+   * Un restaurant qui ferme à 01h voyait son journal de comptoir se vider au
+   * milieu du service : la vente de 00h05 tombait dans une nouvelle journée, le
+   * compteur du terminal repartait de zéro, et le rapport Z — qui compte, lui,
+   * depuis la bascule — annonçait un autre chiffre pour la même soirée. Deux
+   * nombres pour un seul tiroir, et c'est le comptoir qui contredit la caisse.
+   *
+   * La bascule est celle de KiwiDayReport : réglée par le commerçant, ou déduite
+   * de ses horaires. S'il n'est pas chargé (un module métier monté seul, un
+   * test), on retombe sur minuit — l'ancien comportement, jamais pire. */
   function isToday(ts) {
     var d = new Date(ts);
-    return !isNaN(d) && sameDay(d, new Date());
+    if (isNaN(d)) return false;
+    try {
+      var R = window.KiwiDayReport;
+      if (R && R.businessDay && R.today) return R.businessDay(d.getTime()) === R.today();
+    } catch (_) {}
+    return sameDay(d, new Date());
   }
 
   function key(vertical) { return PREFIX + String(vertical || 'pos'); }
