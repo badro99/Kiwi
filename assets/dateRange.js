@@ -2062,18 +2062,53 @@
      * opens this card to find out. Never borrows Café Atlas's shape. */
     if (ownData(v)) {
       const [from, to] = closedBounds(rng);
-      const rev = new Array(HH_HOURS.length).fill(0);
-      const cov = new Array(HH_HOURS.length).fill(0);
+      const span = HH_HOURS.length;                          // 16 créneaux, la largeur de la carte
+      /* ── La bande suit le commerce, elle ne lui est plus imposée ───────────
+       * Les heures affichées étaient figées de 11 h à 02 h — les heures d'un
+       * restaurant. Toute vente en dehors était JETÉE en silence
+       * (`if (i >= HH_HOURS.length) return`). Une boulangerie qui ouvre à 6 h,
+       * un café qui sert les petits-déjeuners à 8 h : leur matinée entière
+       * disparaissait de la carte « Heures de pointe ». Et la carte ne restait
+       * pas vide — elle affichait un pic à midi, c'est-à-dire le contraire de
+       * la réponse. Un commerçant qui déplace du personnel là-dessus le déplace
+       * à l'envers.
+       *
+       * On garde les seize créneaux (la carte est dessinée pour eux) mais on
+       * choisit OÙ ils commencent : la fenêtre de seize heures qui capte le
+       * plus de recette. À égalité, celle qui commence le plus près de la
+       * première vente, pour ne pas ouvrir sur des créneaux vides. Un
+       * restaurant retombe naturellement sur 11 h–02 h ; une boulangerie sur
+       * 06 h–21 h. Aucun réglage à saisir, et rien n'est plus jeté tant que le
+       * commerce tient dans seize heures d'affilée. */
+      const byHour = new Array(24).fill(0);
+      const covByHour = new Array(24).fill(0);
       realSalesList().forEach((e) => {
         const ts = +e.ts || 0;
         if (ts < from || ts >= to) return;
-        const i = (new Date(ts).getHours() - 11 + 24) % 24;  // 11h → 0 … 02h → 15
-        if (i >= HH_HOURS.length) return;                    // hors de la bande affichée
-        rev[i] += Math.max(0, +e.amount || 0);
-        cov[i] += 1;
+        const h = new Date(ts).getHours();
+        byHour[h] += Math.max(0, +e.amount || 0);
+        covByHour[h] += 1;
       });
+      let start = 11, bestSum = -1, bestLead = 99;
+      for (let s = 0; s < 24; s++) {
+        let sum = 0, lead = 0, counting = true;
+        for (let k = 0; k < span; k++) {
+          const val = byHour[(s + k) % 24];
+          sum += val;
+          if (counting) { if (val > 0) counting = false; else lead++; }
+        }
+        if (sum > bestSum || (sum === bestSum && lead < bestLead)) { bestSum = sum; bestLead = lead; start = s; }
+      }
+      if (bestSum <= 0) start = 11;                          // rien encore vendu : la bande d'origine
+      const rev = [], cov = [], labels = [];
+      for (let k = 0; k < span; k++) {
+        const h = (start + k) % 24;
+        rev.push(byHour[h]);
+        cov.push(covByHour[h]);
+        labels.push(String(h).padStart(2, '0') + 'h');
+      }
       const max = Math.max(...rev);
-      return HH_HOURS.map((h, i) => ({
+      return labels.map((h, i) => ({
         hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
       }));
     }

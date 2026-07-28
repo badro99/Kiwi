@@ -167,6 +167,65 @@ if (dFrom > 0 && dTo > dFrom) {
     'la tuile retombe encore sur le zéro du clone de démonstration');
 });
 
+/* ── 8. LA CARTE DES HEURES DE POINTE SUIT LE COMMERCE ─────────────────────
+ * La bande était figée de 11 h à 02 h — les heures d'un restaurant — et TOUTE
+ * vente en dehors était jetée en silence. La matinée d'une boulangerie
+ * disparaissait, et la carte n'affichait pas « rien » : elle affichait un pic à
+ * midi, c'est-à-dire le contraire de la réponse. On rejoue ici le choix de
+ * fenêtre, seul morceau d'algorithme de cette carte. */
+{
+  const span = 16;
+  const pick = (byHour) => {
+    let start = 11, bestSum = -1, bestLead = 99;
+    for (let s = 0; s < 24; s++) {
+      let sum = 0, lead = 0, counting = true;
+      for (let k = 0; k < span; k++) {
+        const val = byHour[(s + k) % 24];
+        sum += val;
+        if (counting) { if (val > 0) counting = false; else lead++; }
+      }
+      if (sum > bestSum || (sum === bestSum && lead < bestLead)) { bestSum = sum; bestLead = lead; start = s; }
+    }
+    return bestSum <= 0 ? 11 : start;
+  };
+  const hours = (spec) => { const a = new Array(24).fill(0); Object.entries(spec).forEach(([h, v]) => { a[+h] = v; }); return a; };
+
+  /* Un restaurant qui sert dès 11 h retombe exactement sur la bande historique
+     — c'est la non-régression : le métier pour lequel elle avait été écrite ne
+     doit rien voir changer. */
+  const resto = hours({ 11: 300, 12: 900, 13: 1400, 19: 1600, 20: 2100, 21: 1800, 23: 400 });
+  ok('un restaurant qui sert dès 11 h retrouve la bande 11 h–02 h',
+    pick(resto) === 11, 'obtenu ' + pick(resto));
+
+  /* Et s'il n'ouvre qu'à midi, la bande le suit plutôt que d'ouvrir sur une
+     case vide. La règle est « commencer là où le commerce commence », pas
+     « commencer à 11 h ». */
+  const midi = hours({ 12: 900, 13: 1400, 19: 1600, 20: 2100, 21: 1800, 23: 400 });
+  ok('…et s\'il n\'ouvre qu\'à midi, la bande commence à midi',
+    pick(midi) === 12, 'obtenu ' + pick(midi));
+
+  const boul = hours({ 6: 800, 7: 1900, 8: 1500, 9: 600, 11: 400, 13: 700 });
+  ok('une boulangerie ouvre sa bande à 6 h', pick(boul) === 6, 'obtenu ' + pick(boul));
+  ok('…et son vrai pic de 7 h n\'est plus jeté',
+    ((7 - pick(boul) + 24) % 24) < span);
+
+  ok('un commerce qui ne vend qu\'à midi n\'ouvre pas sur douze cases vides',
+    pick(hours({ 12: 500 })) === 12, 'obtenu ' + pick(hours({ 12: 500 })));
+
+  ok('sans aucune vente, la bande d\'origine est conservée',
+    pick(new Array(24).fill(0)) === 11);
+
+  // Un service de nuit passe la minuit sans se couper en deux.
+  const nuit = hours({ 20: 900, 22: 1600, 23: 1400, 0: 1200, 1: 800 });
+  ok('un service de nuit tient dans une seule bande',
+    ((1 - pick(nuit) + 24) % 24) < span && ((20 - pick(nuit) + 24) % 24) < span,
+    'départ ' + pick(nuit));
+}
+
+ok('plus aucune vente n\'est jetée hors de la bande affichée',
+  !/if \(i >= HH_HOURS\.length\) return;/.test(SRC),
+  'le rejet silencieux des heures hors bande est toujours là');
+
 /* La règle vaut pour tout le module : plus aucune remise à minuit en dur dans
  * le calcul des plages de ventes réelles. */
 ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
@@ -178,4 +237,4 @@ if (fails.length) {
   console.log(`\n✗ CA au grand livre : ${pass} ok, ${fails.length} échec(s)\n`);
   process.exit(1);
 }
-console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro)\n`);
+console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe)\n`);
