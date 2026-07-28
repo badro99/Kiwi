@@ -2920,7 +2920,25 @@ ar: {
     },
 
     'kpi-detail': (el, arg) => {
-      const authored = kpiData[arg];
+      /* Les tiroirs « rédigés » de kpiData sont écrits À LA MAIN sur les
+       * chiffres du Café Atlas : 71,4 % de marge, « Boissons chaudes 82 % »,
+       * « Jus pressés 61 % », 99,32 % de taux de succès. Sans cette porte, un
+       * commerçant de Tanger qui cliquait sur SA tuile « Marge brute » se voyait
+       * présenter la structure de coûts d'un café de démonstration comme si
+       * c'était la sienne — et « marge » est une tuile par défaut en
+       * restauration, en spa et en mode fusion, donc le clic était à un doigt.
+       *
+       * Le tiroir générique juste en dessous, lui, LIT la tuile cliquée : il
+       * rend la vraie valeur, le vrai delta, et une explication de lecture qui
+       * ne dépend d'aucun chiffre. C'est le bon repli, et il existait déjà. */
+      const real = (() => {
+        try {
+          if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+          if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return true;
+        } catch (_) {}
+        return false;
+      })();
+      const authored = real ? null : kpiData[arg];
       if (authored) {
         drawer({ title: authored.title, subtitle: authored.subtitle, width: 540, body: authored.body, foot: authored.foot });
         return;

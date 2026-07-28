@@ -59,7 +59,7 @@ const OUTWARD = [
   'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
   'export-payroll', 'stock-send-suggested', 'stock-wa-supplier',
   'stock-program-shortfall', 'audit-export', 'cal-export', 'cf-hyg-export',
-  'hx-taxe-export', 'mi-export', 'fin-tva-send', 'resv-sms'
+  'hx-taxe-export', 'mi-export', 'resv-sms'
 ];
 const ungarded = OUTWARD.filter((k) => !guarded.includes(k));
 check(ungarded.length === 0, `promesses extérieures gardées${ungarded.length ? ' — manque ' + ungarded.join(', ') : ''}`);

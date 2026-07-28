@@ -24,8 +24,13 @@
     /* Exports réglementaires et registres : aucun fichier n'est produit.
      * (« export », « bqx-export » et « margin-export » fabriquent un vrai
      * Blob téléchargeable : eux ne sont pas ici, ils tiennent leur promesse.) */
+    /* 'fin-tva-send' était ici : « Envoyer à mon comptable », sur une
+     * déclaration de TVA entièrement fabriquée. Le panneau a été supprimé de
+     * assets/finance.js (section 6), donc le bouton n'existe plus et la clé
+     * n'a plus rien à garder. Une clé gardée orpheline n'est pas inoffensive :
+     * elle laisse croire que quelque chose est tenu. */
     'audit-export', 'cal-export', 'cf-hyg-export', 'hx-taxe-export',
-    'mi-export', 'fin-tva-send', 'resv-sms'
+    'mi-export', 'resv-sms'
   ]);
 
   function realMerchant() {

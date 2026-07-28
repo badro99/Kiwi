@@ -8600,13 +8600,20 @@ function _bqxProductBody(pid) {
   const data = CAT().getProduct(pid);
   if (!data) return '<p>Produit introuvable.</p>';
   const p = data.product;
-  const margin = p.priceMAD ? Math.round((1 - (p.cost || 0) / p.priceMAD) * 100) : 0;
+  /* « Marge 100 % » était le sort réservé à tout produit dont le prix d'achat
+   * n'était pas saisi : `(p.cost || 0)` faisait de l'absence un zéro, et un coût
+   * nul se lit « tout est bénéfice ». C'est exactement le chiffre inventé qu'on
+   * chasse — et il apparaissait par défaut sur CHAQUE produit d'une boutique qui
+   * vient d'importer son stock. null ⇒ la ligne dit « prix d'achat manquant »,
+   * ce qui est à la fois vrai et actionnable. */
+  const cost = +p.cost > 0 ? +p.cost : null;
+  const margin = (cost != null && p.priceMAD > 0) ? Math.round((1 - cost / p.priceMAD) * 100) : null;
   const rows = data.variants.length
     ? data.variants.map((v) => _variantRow(v, p.kind)).join('')
     : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">Aucune variante. Ajoutez une couleur × taille ci-dessous.</td></tr>`;
   return `
     <div class="kx-stat-3">
-      <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">Marge ${margin} %</div></div>
+      <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
       <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
       <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${data.colors.length} couleurs</div></div>
     </div>

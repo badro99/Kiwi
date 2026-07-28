@@ -44,6 +44,23 @@
     cancel:     { fr: 'Annuler', en: 'Cancel', ar: 'إلغاء' },
     nameL:      { fr: 'Nom du produit', en: 'Product name', ar: 'اسم المنتج' },
     priceL:     { fr: 'Prix (MAD)', en: 'Price (MAD)', ar: 'السعر (درهم)' },
+    /* « Coût de revient » et pas « coût » tout court : le patron doit y mettre
+     * ce que le plat lui coûte À PRODUIRE — matières, emballage, ce qui part
+     * avec — et pas seulement le prix payé au fournisseur pour un ingrédient. */
+    costL:      { fr: 'Coût de revient (MAD)', en: 'Cost price (MAD)', ar: 'تكلفة الإنتاج (درهم)' },
+    costOpt:    { fr: 'facultatif', en: 'optional', ar: 'اختياري' },
+    costHint:   { fr: 'Ce que ce produit vous coûte. Il ne quitte jamais votre tableau de bord.',
+                  en: 'What this product costs you. It never leaves your dashboard.',
+                  ar: 'ما يكلفك هاد المنتج. ما كيخرجش من لوحة التحكم ديالك.' },
+    costNone:   { fr: 'Non chiffré', en: 'Not costed', ar: 'غير محسوب' },
+    /* « Vous gardez » plutôt que « bénéfice » : c'est une marge BRUTE, le loyer
+     * et les salaires ne sont pas déduits. Écrire « bénéfice » ici, c'est
+     * laisser croire que c'est l'argent qui reste à la fin du mois. */
+    costMargin: { fr: 'Vous gardez {mad} MAD · marge {pct} %',
+                  en: 'You keep {mad} MAD · {pct} % margin',
+                  ar: 'كتربح {mad} درهم · هامش {pct} %' },
+    costHT:     { fr: 'calculé hors TVA ({r} %)', en: 'computed excl. VAT ({r} %)', ar: 'محسوب دون ض.ق.م ({r} %)' },
+    costOver:   { fr: 'Ce produit se vend à perte.', en: 'This product sells at a loss.', ar: 'هاد المنتج كيتباع بالخسارة.' },
     catL:       { fr: 'Catégorie', en: 'Category', ar: 'الفئة' },
     subL:       { fr: 'Sous-catégorie (option)', en: 'Sub-category (optional)', ar: 'فئة فرعية (اختياري)' },
     descL:      { fr: 'Description (option)', en: 'Description (optional)', ar: 'وصف (اختياري)' },
@@ -505,7 +522,16 @@
       .mx-item .nm { font-size: 14px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
       .mx-item .nm .tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--n-500); background: var(--paper-soft); padding: 2px 6px; border-radius: 6px; margin-left: 8px; }
       .mx-item .d { font-size: 12px; color: var(--n-500); margin-top: 3px; }
-      .mx-item .pr { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+      .mx-item .pr { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; text-align: right; }
+      /* La marge se lit sous le prix, jamais à sa place : c'est le prix qui est
+         l'information principale de cette ligne. Roman, comme tout le reste. */
+      .mx-item .pr .mg { display: block; font-size: 10.5px; font-weight: 500; font-style: normal; letter-spacing: .01em; color: var(--atlas); margin-top: 2px; }
+      .mx-item .pr .mg.none { color: var(--n-400); }
+      .mx-item .pr .mg.bad { color: var(--danger); }
+      .mx-cost-live { min-height: 16px; margin-top: 7px; font-size: 12px; color: var(--atlas); font-weight: 500; }
+      .mx-cost-live.bad { color: var(--danger); }
+      .mx-cost-live i { font-style: normal; color: var(--n-500); font-weight: 400; }
+      .mx-opt-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-400); margin-left: 6px; }
       .mx-item .sw { width: 34px; height: 20px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; transition: background 160ms; flex-shrink: 0; }
       .mx-item .sw.on { background: var(--atlas); }
       .mx-item .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform 160ms; }
@@ -621,6 +647,11 @@
   let activeSub = null; // null = all subs of the active category
 
   const fmt = (n) => Number(n || 0).toLocaleString(LANG() === 'ar' ? 'ar-MA' : 'fr-FR');
+  /* Un pourcentage de marge, à UNE décimale et avec la virgue du pays. Deux
+     décimales sur un coût que le patron a saisi à la louche, c'est de la
+     précision de façade : « 71,88 % » se lit comme une mesure au centième
+     alors que le chiffre d'entrée est arrondi au dirham. */
+  const fmtPct = (n) => fmt(Math.round((+n || 0) * 10) / 10);
 
   function venueName() {
     const KV = window.KiwiVenue;
@@ -675,6 +706,23 @@
 
     const shown = cat ? itemsIn(d, cat.id, activeSub) : [];
     const subName = activeSub && cat ? (cat.sub || []).find((s) => s.id === activeSub) : null;
+
+    /* Le carnet des coûts et la base TVA sont lus UNE FOIS pour toute la liste.
+     * Cette page se repeint à chaque frappe (voir bindCatStation), et
+     * KiwiCost.itemCost() relit puis reparse le document à chaque appel : par
+     * article, ça faisait autant de parsings de JSON que de lignes affichées,
+     * à chaque lettre tapée dans la recherche. */
+    const KC = window.KiwiCost;
+    const costItems = (KC && KC.doc && KC.doc().items) || {};
+    const mgHtml = (item) => {
+      if (!KC || !KC.marginOf) return '';
+      const e = costItems[item.id];
+      const c = e && +e.cost > 0 ? +e.cost : null;
+      const mg = c == null ? null : KC.marginOf(item.price, c);
+      if (!mg) return `<i class="mg none">${esc(tr(T.costNone))}</i>`;
+      return `<i class="mg${mg.profit < 0 ? ' bad' : ''}">${fmtPct(mg.pct)} %</i>`;
+    };
+
     const itemRows = shown.length ? shown.map((it) => {
       const sub = (cat.sub || []).find((s) => s.id === it.subId);
       /* Plus de pastille de poste par plat : tous les plats affichés ici
@@ -697,7 +745,7 @@
               ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
             </div>
           </div>
-          <div class="pr">${fmt(it.price)} MAD</div>
+          <div class="pr">${fmt(it.price)} MAD${mgHtml(it)}</div>
           <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
           <div class="act">
             <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
@@ -1104,6 +1152,11 @@
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
     const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
+    /* Le coût ne vient pas de l'article : il se lit dans le carnet des coûts,
+       par identifiant. Un article neuf n'en a pas encore — il sera écrit après
+       addItem(), quand l'identifiant existe. */
+    const KC = window.KiwiCost;
+    const costVal = (existing && KC && KC.itemCost(existing.id) != null) ? KC.itemCost(existing.id) : '';
     const groups = optsOf(d);
     const itOpts = Array.isArray(it.opts) ? it.opts : [];
     // Live media state for this modal — mutated by the picker, read on save.
@@ -1122,6 +1175,16 @@
         <div class="mx-field two">
           <div><label>${esc(tr(T.priceL))}</label><input data-f-price type="number" inputmode="decimal" min="0" step="1" value="${esc(it.price)}" placeholder="0"/></div>
           <div><label>${esc(tr(T.catL))}</label><select data-f-cat>${catOpts}</select></div>
+        </div>
+        ${/* Le coût de revient. Il vit dans le document `costs`, PAS sur l'article :
+              GET /api/menu sans ?mine=1 est public (c'est ce que sert une puce NFC),
+              donc un coût posé ici partirait sur l'internet ouvert avec la carte —
+              et la liste blanche de sanitizeMenu l'effacerait de toute façon à la
+              première synchro. Voir l'en-tête de assets/cost.js. */''}
+        <div class="mx-field">
+          <label>${esc(tr(T.costL))} <span class="mx-opt-note">${esc(tr(T.costOpt))}</span></label>
+          <input data-f-cost type="number" inputmode="decimal" min="0" step="0.01" value="${esc(costVal)}" placeholder="0" />
+          <div class="mx-cost-live" data-f-margin></div>
         </div>
         ${/* Aucun sélecteur de poste ici : ce plat part au poste de sa catégorie,
               réglé une fois en tête de la liste des produits. */''}
@@ -1150,6 +1213,34 @@
     });
     const q = (s) => m.el.querySelector(s);
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
+
+    /* ── la marge, pendant qu'il tape ──────────────────────────────────────
+       Le patron apprend le rapport prix/coût en le VOYANT bouger, pas en lisant
+       une définition. C'est aussi là que se corrige la confusion la plus
+       répandue : un coefficient ×1,5 n'est pas 50 % de marge mais 33 %. Le
+       chiffre s'affiche à côté de ce qu'il vient de taper, donc l'écart se
+       constate au lieu de se raconter. Rien ne s'affiche tant que les deux
+       champs ne sont pas remplis — surtout pas « 100 % ». */
+    function paintMargin() {
+      const box = q('[data-f-margin]'); if (!box) return;
+      const price = +q('[data-f-price]').value || 0;
+      const cost = +q('[data-f-cost]').value || 0;
+      const mg = KC && KC.marginOf ? KC.marginOf(price, cost) : null;
+      if (!mg) { box.textContent = ''; box.className = 'mx-cost-live'; return; }
+      const b = KC.basis();
+      const ht = b.mode === 'rate' && b.included
+        ? ` <i>${esc(tr(T.costHT).replace('{r}', b.rate))}</i>` : '';
+      if (mg.profit < 0) {
+        box.className = 'mx-cost-live bad';
+        box.innerHTML = `${esc(tr(T.costOver))}${ht}`;
+        return;
+      }
+      box.className = 'mx-cost-live';
+      box.innerHTML = esc(tr(T.costMargin).replace('{mad}', fmt(mg.profit)).replace('{pct}', fmtPct(mg.pct))) + ht;
+    }
+    q('[data-f-price]').addEventListener('input', paintMargin);
+    q('[data-f-cost]').addEventListener('input', paintMargin);
+    paintMargin();
 
     /* ── media: pick a file → it goes to R2 → we keep the URL ──
        The buttons are always live. If the account has no media storage yet the
@@ -1249,7 +1340,24 @@
           .filter((el) => el.checked).map((el) => el.value),
       };
       if (!data.name.trim()) { q('[data-f-name]').focus(); return; }
-      if (existing) updateItem(existing.id, data); else { addItem(data); activeCat = data.catId; activeSub = data.subId || null; }
+      const costRaw = q('[data-f-cost]').value;
+      let costId = existing ? existing.id : null;
+      if (existing) updateItem(existing.id, data);
+      else {
+        addItem(data); activeCat = data.catId; activeSub = data.subId || null;
+        /* addItem() ne rend pas l'article, seulement le document. Le nouvel
+           article est le dernier poussé — c'est là que son identifiant existe
+           pour la première fois, et donc le premier instant où son coût peut
+           être rangé quelque part. */
+        const nd = store.get(); const last = (nd.items || [])[nd.items.length - 1];
+        costId = last ? last.id : null;
+      }
+      /* Champ vidé ⇒ le coût est EFFACÉ (setItemCost traite 0 et vide de la même
+         façon). Un patron qui efface son chiffre dit « je ne sais plus », et la
+         marge doit redevenir « non chiffré » plutôt que rester sur l'ancien. */
+      if (costId && KC && KC.setItemCost) {
+        try { KC.setItemCost(costId, costRaw === '' ? null : +costRaw, (window.KiwiStaff && window.KiwiStaff.name) || ''); } catch (_) {}
+      }
       m.close(); render();
       if (window.Kiwi.toast) window.Kiwi.toast(tr(T.saved), { type: 'success', force: true });
     });

@@ -4062,14 +4062,13 @@
   .fin-eyebrow { display: flex; justify-content: space-between; align-items: baseline; font-size: 10.5px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-weight: 700; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
   .fin-eyebrow > span:first-child { color: var(--ink); }
   .fin-eyebrow-sub { font-size: 10px; color: var(--n-500); font-weight: 500; letter-spacing: 0.06em; }
-  .fin-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); grid-template-areas: "pnl budget" "bev bev" "service service" "price price" "tva tva"; gap: 16px; }
+  .fin-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); grid-template-areas: "pnl budget" "bev bev" "service service" "price price"; gap: 16px; }
   .fin-grid > .fin-pnl     { grid-area: pnl; }
   .fin-grid > .fin-budget  { grid-area: budget; }
   .fin-grid > .fin-bev     { grid-area: bev; }
   .fin-grid > .fin-service { grid-area: service; }
   .fin-grid > .fin-price   { grid-area: price; }
-  .fin-grid > .fin-tva     { grid-area: tva; }
-  @media (max-width: 980px) { .fin-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pnl" "budget" "bev" "service" "price" "tva"; } }
+  @media (max-width: 980px) { .fin-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pnl" "budget" "bev" "service" "price"; } }
 
   /* ── P&L card ── */
   .fin-pnl-rows { display: flex; flex-direction: column; gap: 0; }
@@ -4168,45 +4167,8 @@
   .fin-note { font-size: 11px; color: var(--n-500); text-align: center; padding: 8px 0 0; max-width: 720px; margin: 0 auto; line-height: 1.5; }
 
   /* ── TVA monthly reconciliation ── */
-  .fin-tva-period { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .fin-tva-period-l { font-size: 10px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-weight: 600; }
-  .fin-tva-period-select { padding: 7px 11px; border: 1px solid var(--n-200); border-radius: 8px; background: var(--paper); color: var(--ink); font-size: 13px; font-family: var(--sans); cursor: pointer; }
-  .fin-tva-period-select:disabled { color: var(--ink); opacity: 1; cursor: default; }
-  .fin-tva-section { margin-top: 16px; }
-  .fin-tva-section-t { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); font-weight: 700; margin-bottom: 10px; }
-  .fin-tva-table { background: var(--paper); border-radius: 10px; padding: 4px 14px; }
-  .fin-tva-head, .fin-tva-row { display: grid; grid-template-columns: 60px 1fr 1fr 1.4fr; gap: 14px; align-items: baseline; padding: 9px 0; font-size: 13px; }
-  .fin-tva-head { font-size: 9.5px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-weight: 600; border-bottom: 1px solid var(--n-200); }
-  .fin-tva-row { color: var(--n-700); border-bottom: 1px dashed var(--n-200); }
-  .fin-tva-row:last-child { border-bottom: 0; }
-  .fin-tva-rate { font-weight: 700; color: var(--ink); font-family: var(--mono); font-feature-settings: "tnum" 1; }
-  .fin-tva-base { font-family: var(--mono); font-feature-settings: "tnum" 1; }
-  .fin-tva-vat { font-weight: 600; color: var(--ink); font-family: var(--mono); font-feature-settings: "tnum" 1; }
-  .fin-tva-label { font-size: 12.5px; color: var(--n-600); }
-  .fin-tva-row-total { background: rgba(11,110,79,0.08); margin: 0 -14px; padding: 11px 14px; border-radius: 0 0 9px 9px; border-bottom: 0; font-weight: 600; color: var(--ink); }
-  .fin-tva-row-total .fin-tva-vat { color: var(--atlas); }
-  .fin-tva-row-total .fin-tva-label { color: var(--atlas); font-weight: 600; }
 
-  .fin-tva-payable { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: center; margin: 18px 0 8px; padding: 18px 20px; background: linear-gradient(135deg, rgba(11,110,79,0.08), rgba(125,242,176,0.08)); border-radius: 12px; border: 1px solid rgba(11,110,79,0.2); }
-  @media (max-width: 720px) { .fin-tva-payable { grid-template-columns: 1fr; } }
-  .fin-tva-payable-l { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--atlas); font-family: var(--mono); font-weight: 700; }
-  .fin-tva-payable-v { font-size: 30px; font-weight: 600; color: var(--atlas); margin-top: 4px; letter-spacing: -0.025em; font-feature-settings: "tnum" 1; }
-  .fin-tva-payable-due { font-size: 13px; color: var(--n-700); margin-top: 6px; }
-  .fin-tva-payable-due b { color: var(--ink); font-weight: 600; }
-  .fin-tva-payable-in { color: var(--warning); font-weight: 600; }
-  .fin-tva-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
-  .fin-tva-btn { padding: 9px 14px; border: 1px solid var(--n-200); background: var(--surface); color: var(--ink); border-radius: 9px; font-size: 13px; font-family: var(--sans); cursor: pointer; transition: border-color 140ms, background 140ms; white-space: nowrap; text-align: center; }
-  .fin-tva-btn:hover { border-color: var(--atlas); }
-  .fin-tva-btn.primary { background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%); color: var(--paper); border-color: transparent; font-weight: 500; }
-  .fin-tva-btn.primary:hover { filter: brightness(1.08); }
 
-  .fin-tva-history { display: flex; flex-direction: column; gap: 0; background: var(--paper); border-radius: 10px; padding: 4px 14px; }
-  .fin-tva-hrow { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; align-items: baseline; padding: 11px 0; font-size: 13px; color: var(--n-700); border-bottom: 1px dashed var(--n-200); }
-  .fin-tva-hrow:last-child { border-bottom: 0; }
-  .fin-tva-hpayable { font-weight: 600; color: var(--ink); font-family: var(--mono); font-feature-settings: "tnum" 1; }
-  .fin-tva-hstatus { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 99px; justify-self: end; }
-  .fin-tva-hstatus-ok   { background: rgba(11,110,79,0.10); color: var(--atlas); }
-  .fin-tva-hstatus-warn { background: rgba(217,154,43,0.14); color: var(--warning); }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * CONFORMITÉ & REGISTRES — full-page audit trail (body.page-conformite)
@@ -5986,6 +5948,16 @@
      la caisse LIT le reçu, elle ne le règle pas. -->
 <script src="assets/receipt.js" defer fetchpriority="low"></script>
 <script src="assets/receipt-ui.js" defer fetchpriority="low"></script>
+<!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
+     Le carnet des coûts vit dans son propre document par établissement, jamais
+     sur l'article de la carte : GET /api/menu sans ?mine=1 est public (c'est ce
+     que sert une puce NFC), donc un coût posé sur l'article partirait sur
+     l'internet ouvert — et la liste blanche de sanitizeMenu l'effacerait de
+     toute façon à la première synchro. Voir l'en-tête de assets/cost.js.
+     APRÈS venue-store.js (il s'y déclare) et receipt.js (il y lit la base TVA
+     de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
+     rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
+<script src="assets/cost.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->

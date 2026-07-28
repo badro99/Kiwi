@@ -425,6 +425,27 @@ section('CA au grand livre (tools/kpi-ledger-test.js)');
   }
 }
 
+/* ── 9 bis · la marge se mesure ──────────────────────────────────────────────
+ * Trois tuiles — Marge brute, Bénéfice brut, Coût matière — dérivaient d'un
+ * chiffre qui rapprochait le LIBELLÉ du ticket (un résumé de panier : « Pain
+ * +3 art. ») du nom d'un produit. Un panier mixte ne se résolvait donc jamais,
+ * un ticket de 4 pains se voyait retrancher UN seul coût, et tout le reste
+ * retombait sur une constante de métier — un café affichait exactement 69,0 %
+ * à vie. Ce banc défend la règle qui remplace tout ça : un coût inconnu ne
+ * produit jamais un nombre. (tools/cost-margin-test.js) ───────────────────── */
+section('Marges & coûts (tools/cost-margin-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'cost-margin-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('·')).forEach((l) => fail(l.trim().replace(/^·\s*/, '')));
+    if (!out.includes('·')) fail(`cost-margin-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 10 · les milliers en arabe ──────────────────────────────────────────────
  * « 31 500 MAD » s'affichait « MAD 500 31 » : un chiffre faux sous les yeux du
  * commerçant. Le correctif réécrit des nœuds de texte, donc la garde surveille

@@ -384,6 +384,16 @@
   };
 
   handlers['margin-export'] = () => {
+    /* Le tiroir au-dessus est gardé (:300) mais pas son bouton d'export : chez
+     * un vrai commerçant, ce CSV sortait le barème du Café Atlas — « Tajine
+     * kefta 75/34 » — dans un fichier qui porte le nom de SON commerce et qu'il
+     * peut envoyer à son comptable. Une fuite de démo qui prend la forme d'un
+     * document est plus durable qu'une fuite à l'écran : elle survit à la
+     * correction. */
+    if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
+      handlers['view-margins']();
+      return;
+    }
     const str = MARGINS_STR[trLang()] || MARGINS_STR.fr;
     const header = `${str.product},${str.price},${str.cost},${str.marginHeader},${str.marginPctHeader},${str.sold}\n`;
     const lines = PRODUCTS.map((p) => {

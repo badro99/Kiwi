@@ -1686,49 +1686,39 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0, card, cash };
   }
-  /* Coût matière RÉEL. Le commerçant saisit un coût par produit ; chaque vente
-   * porte le libellé de ce qu'elle a vendu, donc on relit le coût dans le
-   * catalogue au moment du rendu. Une vente sans libellé — ou dont le produit a
-   * été supprimé depuis — retombe sur la marge type du métier : une seule ligne
-   * non résolue ne doit pas faire chuter le bénéfice de la journée.
-   * Compromis assumé de la résolution au rendu : ce sont les coûts d'AUJOURD'HUI
-   * qui s'appliquent à l'historique, donc corriger un coût réécrit le bénéfice
-   * passé. Pour figer l'histoire il faudrait que la caisse copie le coût sur le
-   * ticket au moment de la vente. */
-  function realGrossProfit(from, to, venueType) {
-    /* Le module catalogue démarre sur la venue de démo et n'est rebasculé que
-     * par les pages Inventaire / Catégories. Sans ce bind, l'accueil lisait le
-     * catalogue de Maison Mansour — vide — et concluait qu'aucun coût n'était
-     * connu. On passe par la clé canonique de pages-pro.js, celle-là même que
-     * l'inventaire et la caisse utilisent. */
-    let prods = [];
-    try {
-      const cat = window.KiwiBoutiqueCatalog;
-      if (cat) {
-        const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
-        if (key) cat.use(key);
-        prods = cat.listProducts({ includeArchived: true }) || [];
-      }
-    } catch (_) { prods = []; }
-    const byName = new Map();
-    prods.forEach((p) => {
-      const n = String(p.name || '').trim().toLowerCase();
-      if (n && !byName.has(n)) byName.set(n, p);
-    });
-    const fallback = (DEFAULT_MARGIN[venueType] ?? DEFAULT_MARGIN.boutique) / 100;
-    let profit = 0, resolved = 0, total = 0;
-    realSalesList().forEach((e) => {
-      const ts = +e.ts || 0;
-      if (ts < from || ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
-      if (!amt) return;
-      total++;
-      const p = byName.get(String(e.label || '').trim().toLowerCase());
-      const cost = (p && p.cost != null) ? Math.max(0, +p.cost || 0) : null;
-      if (cost != null) { profit += Math.max(0, amt - cost); resolved++; }
-      else profit += amt * fallback;
-    });
-    return { profit, resolved, total };
+  /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
+   * désormais le seul endroit de l'application qui sache répondre « combien me
+   * coûte ce produit ».
+   *
+   * ── CE QUE FAISAIT CETTE FONCTION, ET POURQUOI C'ÉTAIT FAUX ───────────────
+   * Elle rapprochait le LIBELLÉ du ticket du nom d'un produit du catalogue. Or
+   * le libellé est un RÉSUMÉ de panier — « Pain complet +3 art. », « Table 4 »
+   * (voir schema.sql, colonne `lines`, qui existe précisément parce que le
+   * libellé ne désigne pas un produit). Trois conséquences mesurées :
+   *
+   *   · un panier de plusieurs articles ne se résolvait jamais ;
+   *   · quand il se résolvait, on retranchait UN coût unitaire du montant du
+   *     ticket ENTIER : quatre pains à 5 MAD donnaient 18 MAD de bénéfice au
+   *     lieu de 12 ;
+   *   · tout le reste retombait sur DEFAULT_MARGIN. Pour un café, dont aucune
+   *     vente ne se résolvait jamais, la tuile « Marge brute » affichait donc
+   *     exactement 69,0 % tous les jours, à vie. Une constante présentée comme
+   *     une mesure — et « Bénéfice brut » et « Coût matière » en dérivant, les
+   *     trois tuiles se confirmaient mutuellement.
+   *
+   * ── CE QU'ELLE FAIT MAINTENANT ────────────────────────────────────────────
+   * Elle lit `e.lines[]` — le panier réel, avec ses quantités, qui remonte déjà
+   * de la caisse jusqu'ici — multiplie le coût par la quantité, et n'invente
+   * RIEN : une ligne dont le coût est inconnu sort du calcul de marge et entre
+   * dans un compteur de couverture. Mieux vaut « marge calculée sur 62 % de vos
+   * ventes » qu'un pourcentage complet en apparence et faux en réalité.
+   *
+   * `revenueCosted`/`pctCosted` remontent jusqu'aux tuiles : sans eux la marge
+   * ne s'affiche pas du tout (un tiret), au lieu de se déguiser en mesure. */
+  function realGrossProfit(from, to) {
+    const C = window.KiwiCost;
+    if (!C || !C.coverage) return null;
+    try { return C.coverage(realSalesList(), from, to); } catch (_) { return null; }
   }
   /* rangeBounds leaves `to` open at Infinity for live ranges; a comparison
    * needs a closed window it can shift backwards, so pin the open end to now. */
@@ -2263,7 +2253,16 @@
     if (d.revenue && d.revenue.value != null) return d.revenue.value;
     return (d.tx && d.panier) ? d.tx.value * d.panier.value : null;
   };
-  const margeOf = (d, ctx) => d.marge ? d.marge.value : (DEFAULT_MARGIN[ctx.venueType] ?? null);
+  /* DEFAULT_MARGIN est une marge TYPE DE MÉTIER, bonne pour habiller la démo et
+   * rien d'autre. Sur les chiffres d'un vrai commerçant elle n'a aucun droit :
+   * appliquée là, elle transformait « je ne connais pas vos coûts » en « votre
+   * marge est de 69 % », tous les jours, à l'identique, sur les trois tuiles à
+   * la fois. Chez un vrai commerçant, pas de coût saisi ⇒ pas de marge affichée. */
+  const margeOf = (d, ctx) => {
+    if (d.marge) return d.marge.value;
+    if (ownData()) return null;
+    return DEFAULT_MARGIN[ctx.venueType] ?? null;
+  };
   /* La VARIATION du chiffre d'affaires, même discipline que sa valeur : réelle
    * quand la période la connaît, sinon l'approximation d'origine (la somme des
    * variations du nombre de ventes et du panier moyen). Tout ce qui dérive du
@@ -2420,10 +2419,28 @@
        * margeOf(). En injectant ici la marge réellement constatée, les trois
        * tuiles sortent d'une seule source et ne peuvent plus se contredire —
        * au lieu des 54 % forfaitaires qui ignoraient le coût que le commerçant
-       * avait pris la peine de saisir. */
-      if (w.revenue > 0) {
-        const gp = realGrossProfit(wFrom, wTo, window.KiwiVenue?.getVenueType?.() || 'boutique');
-        data.marge = { value: (gp.profit / w.revenue) * 100, unit: '%', fmt: 'pct1', delta: null };
+       * avait pris la peine de saisir.
+       *
+       * `marge: null` est un RÉSULTAT, pas une absence de calcul : il dit « ce
+       * commerçant n'a chiffré aucun des produits qu'il a vendus sur cette
+       * période ». Les trois tuiles affichent alors un tiret. C'est le même
+       * vocabulaire que « Taux succès » deux lignes plus haut, et c'est la
+       * seule réponse honnête tant que la carte n'est pas chiffrée : un
+       * pourcentage inventé ici est celui sur lequel le patron changerait ses
+       * prix. `costedPct` accompagne la valeur pour que l'écran puisse dire sur
+       * quelle part des ventes elle porte. */
+      const gp = w.revenue > 0 ? realGrossProfit(wFrom, wTo) : null;
+      if (gp && gp.marginPct != null && gp.revenueCosted > 0) {
+        data.marge = { value: gp.marginPct, unit: '%', fmt: 'pct1', delta: null, costedPct: gp.pctCosted };
+      } else {
+        /* Rien de chiffré ⇒ le tiret, sur les TROIS tuiles. Un zéro se lirait
+         * « vous ne gagnez rien », ce qui est une affirmation, et fausse. Le
+         * tiret est déjà le mot de la maison pour « rien à montrer » — c'est ce
+         * qu'affichent « Taux succès » et le ratio carte/espèces plus haut. */
+        const dash = { text: '—', unit: '', delta: null };
+        data.marge = { ...dash };
+        data.profit = { ...dash };
+        data.cogs = { ...dash };
       }
       // A custom HOTEL's band needs the hotel tiles — there is no hotel demo
       // sibling on this dashboard to zero-clone, so build them blank here.

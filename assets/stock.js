@@ -936,13 +936,34 @@
   };
   const totalValue = (items) => items.reduce((s, it) => s + (currentStockFor(it) * it.costPerUnit), 0);
   const foodCostMonth = (items) => items.reduce((s, it) => s + (it.theoreticalUsage * it.costPerUnit * 4), 0);
+  /* Le dénominateur du ratio « coût matière / chiffre d'affaires ».
+   *
+   * Ces montants sont ceux des trois établissements de démonstration. Le repli
+   * `|| 825000` les servait aussi à un VRAI commerçant : son coût matière, bien
+   * réel, était alors divisé par le chiffre d'affaires du Café Atlas. Le ratio
+   * qui en sortait n'était ni le sien ni celui de personne, et il portait une
+   * pastille verte ou orange qui invitait à agir dessus.
+   *
+   * Chez un vrai commerçant on lit donc ses ventes des 30 derniers jours, et
+   * si on ne les a pas — première semaine, navigateur neuf qui n'a pas fini de
+   * rapatrier le flux — on rend null : la ligne du ratio disparaît au lieu de
+   * s'inventer un dénominateur. */
   const VENUE_REVENUE = { cafeAtlas: 825000, maisonMansour: 358000, spaBahia: 269000, fusion: 1452000 };
   function monthlyRevenue() {
+    if (stShowReal()) {
+      try {
+        const to = Date.now();
+        const t = window.KiwiSales && window.KiwiSales.totals
+          && window.KiwiSales.totals(currentVenueId(), to - 30 * 864e5, to);
+        const rev = t && +t.revenue;
+        return rev > 0 ? rev : null;
+      } catch (_) { return null; }
+    }
     if (isFusion()) {
       if (stVenueFilter && stVenueFilter !== 'all') return VENUE_REVENUE[stVenueFilter] || 825000;
       return VENUE_REVENUE.fusion;
     }
-    return VENUE_REVENUE[currentVenueId()] || 825000;
+    return VENUE_REVENUE[currentVenueId()] || null;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -1096,8 +1117,9 @@
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
     const costWeek = costMonth / 4;
-    const ratio = monthlyRevenue() > 0 ? (costMonth / monthlyRevenue()) * 100 : 0;
-    const ratioClass = ratio < 30 ? 'ok' : ratio < 35 ? '' : 'warn';
+    const mRev = monthlyRevenue();
+    const ratio = mRev > 0 ? (costMonth / mRev) * 100 : null;
+    const ratioClass = ratio == null ? '' : ratio < 30 ? 'ok' : ratio < 35 ? '' : 'warn';
 
     // Next delivery — pick the supplier with the soonest scheduled day
     const nextDelivery = computeNextDelivery();
@@ -1162,7 +1184,7 @@
           <div class="st-kpi-l">${esc(t('kpiCostL'))}<span class="st-kpi-ico">${svg('receipt', 14)}</span></div>
           <div class="st-kpi-v" data-stock-live-foodcost>${esc(fmtMad(costWeek))}</div>
           <div class="st-kpi-sub st-kpi-tip">
-            <span class="${ratioClass === 'ok' ? '' : ratioClass === 'warn' ? '' : ''}" style="color: var(--${ratioClass === 'ok' ? 'success' : ratioClass === 'warn' ? 'warning' : 'n-600'}); font-weight: 600;">${esc(t('kpiCostSub', fmtPct(ratio, 1).replace('+', '')))}</span>
+            <span class="${ratioClass === 'ok' ? '' : ratioClass === 'warn' ? '' : ''}" style="color: var(--${ratioClass === 'ok' ? 'success' : ratioClass === 'warn' ? 'warning' : 'n-600'}); font-weight: 600;">${ratio == null ? '' : esc(t('kpiCostSub', fmtPct(ratio, 1).replace('+', '')))}</span>
             ${svg('info', 11)}
             <div class="st-tt">${esc(t('kpiCostTip'))}</div>
           </div>
