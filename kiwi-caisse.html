@@ -2178,6 +2178,33 @@
       animation: fade-in 220ms ease-out;
     }
     .cloture-veil.is-open { display: flex; }
+    /* La feuille d'options. Elle réutilise le voile de clôture parce que c'est
+       le même geste — l'écran s'arrête, on répond, on repart — et les cibles
+       sont larges : ce n'est pas un formulaire, c'est un doigt au comptoir en
+       plein coup de feu. */
+    .opt-card { text-align: start; }
+    .opt-groups { display: flex; flex-direction: column; gap: 16px; margin: 18px 0 6px;
+      max-height: min(46vh, 420px); overflow-y: auto; }
+    .opt-g-h { font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+      color: rgba(255,255,255,.55); margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }
+    .opt-g-h .req { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+      color: var(--mint); border: 1px solid rgba(125,242,176,.35); border-radius: 999px; padding: 2px 7px; }
+    .opt-g-c { display: flex; flex-wrap: wrap; gap: 8px; }
+    .opt-c { display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+      border: 1px solid rgba(255,255,255,.18); border-radius: 11px; padding: 0 15px;
+      background: rgba(255,255,255,.05); color: rgba(255,255,255,.86);
+      font: inherit; font-size: 14px; cursor: pointer; transition: background 120ms, border-color 120ms; }
+    .opt-c:hover { background: rgba(255,255,255,.1); }
+    .opt-c.on { background: var(--mint); border-color: var(--mint); color: var(--riad); font-weight: 600; }
+    .opt-c b { font-weight: 500; font-size: 12px; opacity: .8; }
+    /* Ce qui manque, dit avant le bouton et non après : on lit la raison au
+       moment où l'on cherche pourquoi « Ajouter » ne répond pas. */
+    .opt-miss { font-size: 12.5px; color: var(--mint); margin: 12px 0 2px; }
+    .clo-btn.primary[disabled] { opacity: .4; pointer-events: none; }
+    /* Les choix, sous le nom, dans le panier — plus petits que le plat : c'est
+       une précision sur la ligne, pas une deuxième ligne. */
+    .rp-item-opts { display: block; font-style: normal; font-size: 11.5px; line-height: 1.35;
+      color: var(--n-500); margin-top: 2px; }
     .cloture-card {
       width: 520px; max-width: calc(100vw - 64px);
       max-height: calc(100vh - 64px); overflow-y: auto;
@@ -6973,7 +7000,7 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kitchenId: '', kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', opts: [], kdsReady: false };
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -7017,7 +7044,10 @@
       let loose = false;
       const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
-        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: catStation[cat] || '' };
+        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: catStation[cat] || '',
+          /* Les groupes d'options que ce produit demande. Des identifiants : le
+             libellé vit une seule fois, dans carteState.opts. */
+          opts: Array.isArray(it.opts) ? it.opts.slice() : [] };
       });
       if (loose) {
         labels._autres = 'Autres';
@@ -7040,6 +7070,18 @@
          monter le bar d'un cran enverrait toute la carte non routée au bar. Le
          secours reste le premier poste — une carte écrite avant ce changement
          doit continuer de router exactement comme hier. */
+      /* La bibliothèque des groupes d'options, telle que le patron l'a écrite.
+         Un groupe sans choix est écarté ici : le comptoir ouvrirait une fenêtre
+         vide, et le vendeur ne pourrait ni répondre ni passer. */
+      carteState.opts = (Array.isArray(d.opts) ? d.opts : [])
+        .filter(g => g && g.id && g.name && Array.isArray(g.choices) && g.choices.length)
+        .map(g => ({
+          id: String(g.id), name: String(g.name),
+          kind: g.kind === 'many' ? 'many' : 'one',
+          required: !!g.required,
+          choices: g.choices.filter(c => c && c.id && c.name)
+            .map(c => ({ id: String(c.id), name: String(c.name), price: Math.max(0, +c.price || 0) })),
+        }));
       const stIds = carteState.stations.map(s => s.id);
       carteState.kitchenId = (d.kitchenId && stIds.indexOf(String(d.kitchenId)) >= 0)
         ? String(d.kitchenId) : (stIds[0] || '');
@@ -7290,16 +7332,59 @@
       }).join('');
     }
 
-    function addToCart(itemId) {
-      const item = menuItems.find(m => m.id === itemId);
-      if (!item) return;
-      // Stack onto the un-noted line; a noted line is "locked" so a fresh add splits off.
-      const line = cart.find(c => c.id === itemId && !(c.note || '').trim());
+    /* ─── Les options d'un produit ─────────────────────────────────────────
+       Un café se commande avec trois laits et deux sucres, une entrecôte avec
+       quatre cuissons. Le patron décrit ces choix UNE fois au tableau de bord ;
+       le comptoir, lui, doit les POSER. D'où la règle : un produit qui porte des
+       options n'entre pas dans la note d'un seul geste — la fenêtre s'ouvre, on
+       répond, on ajoute. Sans ce temps d'arrêt la question ne serait jamais
+       posée et la cuisine devinerait, ce qui veut dire qu'elle se tromperait.
+
+       Un groupe « obligatoire » bloque l'ajout tant qu'il n'a pas de réponse :
+       une entrecôte sans cuisson n'est pas une commande, c'est une question
+       posée au cuisinier au moment où il n'a plus le temps d'y répondre. */
+    function itemOptGroups(item) {
+      const ids = (item && Array.isArray(item.opts)) ? item.opts : [];
+      if (!ids.length) return [];
+      const lib = carteState.opts || [];
+      /* Un identifiant orphelin — groupe supprimé au bureau pendant que la
+         caisse tournait — est écarté ici. Demander un choix qui n'existe plus
+         ouvrirait une fenêtre sans réponse possible, et bloquerait la vente. */
+      return ids.map(id => lib.find(g => g && g.id === id)).filter(Boolean);
+    }
+    const optSig  = (opts) => (opts || []).map(o => o.c).join('|');
+    const optText = (opts) => (opts || []).map(o => o.cn).join(' · ');
+
+    /* Ce que la cuisine doit lire : les choix d'abord — ils changent le plat —
+       la note du serveur ensuite. On passe par la NOTE plutôt que par un champ
+       neuf : elle arrive déjà intacte sur l'écran cuisine ET sur le papier, sans
+       toucher ni à l'un ni à l'autre. */
+    function kitchenNote(l) {
+      const o = optText(l && l.opts), n = ((l && l.note) || '').trim();
+      return (o && n) ? (o + ' · ' + n) : (o || n);
+    }
+    /* Le nom tel qu'il doit apparaître au client, sur le ticket et dans le
+       rapport : « Café (Lait végétal) ». Sans les options, deux lignes au même
+       nom mais pas au même prix seraient indistinguables sur le reçu. */
+    function lineLabel(l) {
+      const o = optText(l && l.opts);
+      return o ? (l.name + ' (' + o + ')') : l.name;
+    }
+
+    function pushCartLine(item, opts) {
+      const sig = optSig(opts);
+      const extra = (opts || []).reduce((s, x) => s + (+x.p || 0), 0);
+      /* Une ligne à options ne se confond qu'avec une ligne AUX MÊMES options :
+         deux cafés, l'un au lait végétal et l'autre nature, sont deux lignes.
+         Les empiler enverrait un seul café en cuisine, et le second client
+         attendrait une boisson que personne n'a commencée. */
+      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && (c.optSig || '') === sig);
       if (line) line.qty++;
-      else cart.push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, note: '' });
+      else cart.push({ uid: newLineUid(), id: item.id, name: item.name, price: item.price + extra,
+                       qty: 1, note: '', opts: (opts || []).slice(), optSig: sig });
 
       // Brief pop animation on the card
-      const card = document.querySelector(`.menu-item[data-menu-id="${itemId}"]`);
+      const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
       if (card) {
         card.classList.remove('pop');
         void card.offsetWidth;
@@ -7308,6 +7393,87 @@
       renderMenu();
       renderCart();
     }
+
+    let optVeil = null;
+    function closeOptSheet() { if (optVeil) { optVeil.classList.remove('is-open'); optVeil.onclick = null; } }
+    function openOptSheet(item, groups) {
+      if (!optVeil) {
+        optVeil = document.createElement('div');
+        optVeil.className = 'cloture-veil opt-veil';
+        optVeil.setAttribute('role', 'dialog');
+        optVeil.setAttribute('aria-modal', 'true');
+        document.body.appendChild(optVeil);
+      }
+      const picked = Object.create(null);
+      groups.forEach(g => { picked[g.id] = []; });
+
+      function paint() {
+        const missing = groups.filter(g => g.required && !picked[g.id].length);
+        let extra = 0;
+        groups.forEach(g => picked[g.id].forEach(cid => {
+          const c = g.choices.find(x => x.id === cid); if (c) extra += (+c.price || 0);
+        }));
+        optVeil.innerHTML = `
+          <div class="cloture-card opt-card">
+            <div class="clo-eyebrow">${kdsEsc(item.name)}</div>
+            <div class="clo-title">Options</div>
+            <div class="opt-groups">${groups.map(g => `
+              <div class="opt-g">
+                <div class="opt-g-h">${kdsEsc(g.name)}${g.required ? '<i class="req">obligatoire</i>' : ''}</div>
+                <div class="opt-g-c">${g.choices.map(c => `
+                  <button type="button" class="opt-c${picked[g.id].indexOf(c.id) >= 0 ? ' on' : ''}"
+                          data-og="${kdsEsc(g.id)}" data-oc="${kdsEsc(c.id)}">
+                    <span>${kdsEsc(c.name)}</span>${c.price ? `<b class="mono">+${fmtMAD(c.price)}</b>` : ''}
+                  </button>`).join('')}</div>
+              </div>`).join('')}</div>
+            ${missing.length ? `<div class="opt-miss">À choisir : ${missing.map(g => kdsEsc(g.name)).join(', ')}</div>` : ''}
+            <div class="clo-actions">
+              <button class="clo-btn primary" data-opt-ok ${missing.length ? 'disabled' : ''}>
+                <span>Ajouter · ${fmtMAD(item.price + extra)}</span>
+              </button>
+            </div>
+            <div class="clo-foot"><button data-opt-cancel>Annuler</button></div>
+          </div>`;
+      }
+      optVeil.onclick = (e) => {
+        const btn = e.target.closest('[data-oc]');
+        if (btn) {
+          const gid = btn.getAttribute('data-og'), cid = btn.getAttribute('data-oc');
+          const g = groups.find(x => x.id === gid); if (!g) return;
+          const cur = picked[gid], at = cur.indexOf(cid);
+          /* « Plusieurs choix » cumule ; « un seul » remplace. Et re-toucher le
+             choix déjà pris le retire — sans quoi un groupe facultatif
+             deviendrait impossible à laisser vide une fois effleuré. */
+          if (g.kind === 'many') { if (at >= 0) cur.splice(at, 1); else cur.push(cid); }
+          else picked[gid] = (at >= 0) ? [] : [cid];
+          paint(); return;
+        }
+        if (e.target === optVeil || e.target.closest('[data-opt-cancel]')) { closeOptSheet(); return; }
+        if (e.target.closest('[data-opt-ok]')) {
+          /* Les choix partent dans l'ordre des groupes du patron, pas dans
+             l'ordre où le vendeur a tapé : le ticket de cuisine se lit toujours
+             de la même façon, quel que soit le doigt qui l'a composé. */
+          const chosen = [];
+          groups.forEach(g => picked[g.id].forEach(cid => {
+            const c = g.choices.find(x => x.id === cid);
+            if (c) chosen.push({ g: g.id, gn: g.name, c: c.id, cn: c.name, p: +c.price || 0 });
+          }));
+          closeOptSheet();
+          pushCartLine(item, chosen);
+        }
+      };
+      paint();
+      optVeil.classList.add('is-open');
+    }
+
+    function addToCart(itemId) {
+      const item = menuItems.find(m => m.id === itemId);
+      if (!item) return;
+      const groups = itemOptGroups(item);
+      if (groups.length) { openOptSheet(item, groups); return; }
+      pushCartLine(item, []);
+    }
+
 
     /* Cart panel +/- — targets one specific line by its uid. */
     function changeCartLineQty(uid, delta) {
@@ -7373,7 +7539,7 @@
             <span class="qty-num mono">${l.qty}</span>
             <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
           </div>
-          <span class="rp-item-name">${l.name}</span>
+          <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
           <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
           <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
             value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
@@ -7672,7 +7838,7 @@
     }
     function currentSaleLines() {
       if (mode === 'vrap') {
-        return cart.map(c => ({ name: c.name, qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
+        return cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
       }
       if (selectedId && tables[selectedId]) {
         return generateOrder(selectedId, tables[selectedId])
@@ -8370,7 +8536,7 @@
       if (!lines.length) return null;
       const items = lines.map((l) => {
         const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: (l.note || '').trim(),
+        return { q: l.qty, n: l.name, p: l.price, note: kitchenNote(l),
           stations: [kdsStationFor(m)] };
       });
       const order = {
@@ -8463,7 +8629,7 @@
       const isVrap = (mode === 'vrap');
       let lines, covers, sourceLabel;
       if (isVrap) {
-        lines = cart.map(c => ({ name: c.name, qty: c.qty, total: c.price * c.qty }));
+        lines = cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty }));
         covers = 2;
         sourceLabel = vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter';
       } else {
@@ -12956,7 +13122,7 @@
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
       const items  = cart.map(l => {
         const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: (l.note || '').trim(),
+        return { q: l.qty, n: l.name, p: l.price, note: kitchenNote(l),
           stations: [kdsStationFor(m)] };
       });
       const order = {

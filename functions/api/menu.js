@@ -84,7 +84,7 @@ function sanitizeHours(raw) {
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
-  const out = { cats: [], items: [], stations: [], kitchenId: '' };
+  const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [] };
   if (!raw || typeof raw !== 'object') return out;
   // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
   // ailleurs. Le nommer est LE réglage de routage du restaurant ; le laisser
@@ -102,6 +102,23 @@ function sanitizeMenu(raw) {
     // caisse ET sur la page client, donc rien qui ne soit pas une couleur.
     color: /^#[0-9a-fA-F]{6}$/.test(String((s && s.color) || '')) ? String(s.color) : '',
   })).filter((s) => s.id && s.name);
+  // Les groupes d'options (« Type de lait », « Cuisson ») et leurs choix. C'est
+  // le comptoir qui les pose au moment de la vente, donc les perdre ici ne se
+  // verrait pas au tableau de bord — seulement au comptoir, où le produit
+  // entrerait dans la note sans qu'on ait demandé quoi que ce soit.
+  const opts = Array.isArray(raw.opts) ? raw.opts.slice(0, 40) : [];
+  out.opts = opts.map((g) => ({
+    id: str(g && g.id, 40),
+    name: str(g && g.name, 60),
+    // Deux règles seulement, et rien d'autre : un choix, ou plusieurs.
+    kind: (g && g.kind) === 'many' ? 'many' : 'one',
+    required: !!(g && g.required),
+    choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => ({
+      id: str(c && c.id, 40),
+      name: str(c && c.name, 60),
+      price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
+    })).filter((c) => c.id && c.name),
+  })).filter((g) => g.id && g.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
   out.cats = cats.map((c) => ({
     id: str(c && c.id, 40),
@@ -130,6 +147,11 @@ function sanitizeMenu(raw) {
     // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
     // renvoient une chaîne vide, et les deux pages client l'ignorent.
     station: str(it && it.station, 40),
+    // Les groupes d'options portés par ce produit — des identifiants, pas des
+    // copies : le libellé vit une seule fois, dans out.opts. Un groupe supprimé
+    // laisse un identifiant orphelin, que la caisse écarte à la lecture.
+    opts: (Array.isArray(it && it.opts) ? it.opts.slice(0, 12) : [])
+      .map((x) => str(x, 40)).filter(Boolean),
     // OrderPro additions — a dish photo or a short vertical clip. Absent for
     // every menu published before they existed, and both pages fall back to
     // their icon tile, so this is purely additive.

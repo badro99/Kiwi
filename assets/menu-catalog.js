@@ -75,6 +75,28 @@
     mediaBad:   { fr: 'Format non pris en charge.', en: 'Format not supported.', ar: 'الصيغة ماخدامة.' },
     mediaErr:   { fr: 'Envoi impossible, réessayez.', en: 'Upload failed, try again.', ar: 'التصويفط مامشاش، عاود جرّب.' },
     tags:       { fr: 'Tags NFC', en: 'NFC tags', ar: 'تاڭات NFC' },
+    /* Les options d'un produit — le lait d'un café, la cuisson d'une viande.
+       Un groupe se définit UNE fois et s'attache aux produits qui le demandent :
+       « Type de lait » vaut pour les douze cafés de la carte, pas pour chacun
+       d'eux réécrit douze fois. Même principe que le poste sur la catégorie. */
+    opts:       { fr: 'Options et suppléments', en: 'Options & extras', ar: 'الخيارات والزيادات' },
+    optsHi:     { fr: 'Un groupe se définit ici, puis s\'attache aux produits qui le demandent. Dès qu\'un produit en porte un, le comptoir demande le choix avant de l\'ajouter à la note.', en: 'Define a group here, then attach it to the products that need it. As soon as a product carries one, the till asks for the choice before adding it to the bill.', ar: 'عرّف مجموعة هنا، ومن بعد ربطها بالمنتجات اللي كيحتاجوها. ملي منتج كيحمل وحدة، الصندوق كيسول على الاختيار قبل ما يزيدو للحساب.' },
+    optsEm:     { fr: 'Aucun groupe d\'options. Créez-en un si un produit se commande en plusieurs façons — un café avec ou sans lait, une viande à point ou bien cuite.', en: 'No option groups yet. Create one if a product is ordered in several ways — a coffee with or without milk, a steak medium or well done.', ar: 'مازال مامجموعات ديال الخيارات. سير واجد وحدة إلا كان منتج كيتطلب بأشكال مختلفة.' },
+    optAdd:     { fr: 'Ajouter un groupe', en: 'Add a group', ar: 'إضافة مجموعة' },
+    optNm:      { fr: 'Nom du groupe', en: 'Group name', ar: 'اسم المجموعة' },
+    optEx:      { fr: 'ex. Type de lait, Cuisson, Suppléments', en: 'e.g. Milk, Doneness, Extras', ar: 'مثل: نوع الحليب، الطهي، الزيادات' },
+    optOne:     { fr: 'Un seul choix', en: 'One choice', ar: 'اختيار واحد' },
+    optMany:    { fr: 'Plusieurs choix', en: 'Several choices', ar: 'عدة اختيارات' },
+    optReq:     { fr: 'Obligatoire', en: 'Required', ar: 'إجباري' },
+    optReqHi:   { fr: 'Le comptoir ne pourra pas ajouter le produit sans avoir répondu.', en: 'The till can\'t add the product until this is answered.', ar: 'الصندوق ما يقدرش يزيد المنتج بلا جواب.' },
+    optChAdd:   { fr: 'Ajouter un choix', en: 'Add a choice', ar: 'إضافة اختيار' },
+    optChNm:    { fr: 'Nom du choix', en: 'Choice name', ar: 'اسم الاختيار' },
+    optChPr:    { fr: 'Supplément', en: 'Extra', ar: 'زيادة' },
+    optChEm:    { fr: 'Ce groupe n\'a aucun choix — le comptoir n\'aurait rien à proposer.', en: 'This group has no choices — the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات — الصندوق ماغاديش يلقى شنو يقترح.' },
+    optDelQ:    { fr: 'Supprimer ce groupe ? Il sera retiré des produits qui l\'utilisent.', en: 'Delete this group? It will be removed from the products using it.', ar: 'حذف هاد المجموعة؟ غادي تتحيد من المنتجات اللي كيستعملوها.' },
+    optAttach:  { fr: 'Options de ce produit', en: 'Options for this product', ar: 'خيارات هاد المنتج' },
+    optNoneYet: { fr: 'Créez d\'abord un groupe d\'options.', en: 'Create an option group first.', ar: 'واجد مجموعة ديال الخيارات لاول.' },
+    optCount:   { fr: '{n} option(s)', en: '{n} option(s)', ar: '{n} خيار' },
     /* Les postes de préparation. Le vocabulaire est celui de la cuisine, pas
        celui du logiciel : un « poste », c'est l'endroit où le plat se fait. */
     stations:   { fr: 'Postes de préparation', en: 'Prep stations', ar: 'محطات التحضير' },
@@ -152,7 +174,7 @@
   }
 
   const store = window.KiwiStore.define('menu', {
-    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '' }),
+    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [] }),
     example: example,
     /* Des postes seuls ne font pas une carte : un établissement qui n'a saisi
      * que « Bar » et « Cuisson » n'a toujours rien à vendre, et l'écran d'accueil
@@ -284,6 +306,92 @@
     });
   }
 
+  /* ─── options et suppléments ───
+   * Un GROUPE se définit une fois pour toute la carte (« Type de lait »,
+   * « Cuisson ») et s'attache aux produits qui le demandent. C'est la même
+   * leçon que le poste sur la catégorie : une phrase dite une fois vaut mieux
+   * que la même phrase répétée sur douze cafés, et surtout que la treizième
+   * qu'on oubliera.
+   *
+   * `kind` : 'one' (une seule réponse — la cuisson d'une viande) ou 'many'
+   * (autant qu'on veut — les suppléments). `required` dit au comptoir qu'il ne
+   * peut pas ajouter le produit sans réponse : une entrecôte sans cuisson n'est
+   * pas une commande, c'est une question posée au cuisinier.
+   *
+   * Un choix peut porter un supplément (`price`, en MAD, 0 = compris). */
+  const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
+  const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
+
+  function addOptGroup(name) {
+    return store.update((d) => {
+      d.opts = optsOf(d);
+      d.opts.push({
+        id: nid(d, 'og'),
+        name: String(name || '').trim() || tr(T.optNm),
+        kind: 'one',
+        required: false,
+        choices: [],
+      });
+      return d;
+    });
+  }
+  function updateOptGroup(id, patch) {
+    return store.update((d) => {
+      const g = optById(d, id); if (!g) return d;
+      if (patch.name != null) g.name = String(patch.name).trim() || g.name;
+      if (patch.kind != null) g.kind = patch.kind === 'many' ? 'many' : 'one';
+      if (patch.required != null) g.required = !!patch.required;
+      return d;
+    });
+  }
+  /* Supprimer un groupe le retire AUSSI des produits qui le portaient : un
+   * produit qui pointe un groupe disparu demanderait au comptoir un choix que
+   * personne ne peut faire, et bloquerait la vente. */
+  function deleteOptGroup(id) {
+    return store.update((d) => {
+      d.opts = optsOf(d).filter((g) => g && g.id !== id);
+      (d.items || []).forEach((it) => {
+        if (it && Array.isArray(it.opts)) it.opts = it.opts.filter((x) => x !== id);
+      });
+      return d;
+    });
+  }
+  function addOptChoice(gid, name, price) {
+    return store.update((d) => {
+      const g = optById(d, gid); if (!g) return d;
+      g.choices = Array.isArray(g.choices) ? g.choices : [];
+      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0) });
+      return d;
+    });
+  }
+  function updateOptChoice(gid, cid, patch) {
+    return store.update((d) => {
+      const g = optById(d, gid); if (!g) return d;
+      const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
+      if (patch.name != null) c.name = String(patch.name).trim() || c.name;
+      if (patch.price != null) c.price = Math.max(0, +patch.price || 0);
+      return d;
+    });
+  }
+  function deleteOptChoice(gid, cid) {
+    return store.update((d) => {
+      const g = optById(d, gid); if (!g) return d;
+      g.choices = (g.choices || []).filter((c) => c && c.id !== cid);
+      return d;
+    });
+  }
+  /* Les groupes portés par un produit, dans l'ordre de la carte — le comptoir
+   * les posera dans cet ordre. Un identifiant qui ne correspond plus à rien est
+   * écarté ici plutôt que de faire échouer la vente au comptoir. */
+  function setItemOpts(itemId, ids) {
+    return store.update((d) => {
+      const it = itemById(d, itemId); if (!it) return d;
+      const want = Array.isArray(ids) ? ids : [];
+      it.opts = optsOf(d).filter((g) => want.indexOf(g.id) >= 0).map((g) => g.id);
+      return d;
+    });
+  }
+
   function addCategory(name) {
     return store.update((d) => {
       // Une catégorie neuve part en cuisine — explicitement, pas par omission.
@@ -328,6 +436,10 @@
         // bytes — base64 here would blow the localStorage quota in a dozen items.
         photo: String(data.photo || ''),
         video: String(data.video || ''),
+        // Les groupes d'options portés par ce produit. Vide = le comptoir
+        // l'ajoute d'un geste, sans rien demander — c'est le cas de presque
+        // tout ce qui se vend.
+        opts: Array.isArray(data.opts) ? data.opts.slice() : [],
       });
       return d;
     });
@@ -341,6 +453,7 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
+      if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
       return d;
@@ -434,6 +547,50 @@
         color: var(--n-500); white-space: nowrap; }
       .mx-catst select { border: 0; background: none; outline: none; font: inherit; font-size: 13px;
         font-weight: 600; color: var(--ink); padding: 0; max-width: 168px; cursor: pointer; }
+      /* Les groupes d'options — une carte par groupe : le nom, la règle, puis
+         les choix. La règle se lit avant les choix parce qu'elle change ce que
+         les choix veulent dire (un seul, ou autant qu'on veut). */
+      .mx-og { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px 10px;
+        margin-bottom: 10px; background: var(--surface); }
+      .mx-og-head { display: flex; align-items: center; gap: 8px; }
+      .mx-og-nm { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit;
+        font-size: 14px; font-weight: 600; color: var(--ink); padding: 2px 0; }
+      .mx-og-nm:focus { box-shadow: 0 1px 0 0 var(--atlas); }
+      .mx-og-head .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+        border: 0; background: none; cursor: pointer; }
+      .mx-og-head .del:hover { color: var(--danger); background: var(--paper-soft); }
+      .mx-og-rules { display: flex; align-items: center; gap: 12px; margin: 9px 0 11px; flex-wrap: wrap; }
+      .mx-og-kind { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+      .mx-og-kind button { border: 0; background: none; font: inherit; font-size: 11.5px; padding: 5px 11px;
+        color: var(--n-500); cursor: pointer; }
+      .mx-og-kind button.on { background: var(--mint-soft); color: var(--riad); font-weight: 600; }
+      .mx-og-req { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
+      .mx-og-list { display: flex; flex-direction: column; gap: 6px; }
+      .mx-og-ch { display: flex; align-items: center; gap: 8px; }
+      .mx-og-ch > input[type="text"] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+        padding: 6px 9px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-soft); outline: none; }
+      .mx-og-ch > input[type="text"]:focus { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-ch .pr { display: inline-flex; align-items: center; gap: 5px; }
+      .mx-og-ch .pr input { width: 62px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+        font: inherit; font-size: 13px; font-family: var(--mono); text-align: right; color: var(--ink);
+        background: var(--paper-soft); outline: none; }
+      .mx-og-ch .pr span { font-family: var(--mono); font-size: 10px; color: var(--n-500); }
+      .mx-og-ch .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+        border: 0; background: none; cursor: pointer; }
+      .mx-og-ch .del:hover { color: var(--danger); background: var(--paper-soft); }
+      .mx-og-empty { font-size: 12px; color: var(--n-500); padding: 4px 0 2px; }
+      /* L'attachement, dans la fiche du produit : des cases, pas une liste
+         déroulante — un produit peut porter plusieurs groupes. */
+      .mx-opts-pick { display: flex; flex-wrap: wrap; gap: 7px; }
+      .mx-opts-pick label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line);
+        border-radius: 999px; padding: 5px 11px 5px 9px; font-size: 12.5px; color: var(--n-600);
+        background: var(--paper-soft); cursor: pointer; }
+      .mx-opts-pick label:has(input:checked) { border-color: var(--atlas); color: var(--riad);
+        background: var(--mint-soft); font-weight: 600; }
+      .mx-opts-pick .req { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: var(--atlas); }
+      .mx-opts-none { font-size: 12.5px; color: var(--n-500); }
+      .mx-item .otag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; color: var(--n-500);
+        background: var(--paper-soft); border-radius: 999px; padding: 2px 7px; margin-inline-start: 7px; }
       .mx-item .nm .stag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--n-600); background: var(--paper-soft); padding: 2px 7px; border-radius: 6px; margin-left: 8px; vertical-align: 1px; }
       .mx-st-hint { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 0 0 14px; }
       .mx-st-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
@@ -530,8 +687,13 @@
       /* Plus de pastille de poste par plat : tous les plats affichés ici
        * partagent la catégorie ouverte, donc son poste. Le répéter sur chaque
        * ligne laisserait croire qu'il se règle ligne par ligne. Il se lit une
-       * fois, en tête de volet, là où il se règle. */
-      const stTag = '';
+       * fois, en tête de volet, là où il se règle.
+       *
+       * En revanche les options, elles, sont propres au plat — et savoir qu'un
+       * produit fera parler le comptoir avant d'entrer dans la note se lit d'un
+       * coup d'œil, sans ouvrir la fiche. */
+      const nOpt = (Array.isArray(it.opts) ? it.opts : []).filter((x) => !!optById(d, x)).length;
+      const stTag = nOpt ? `<span class="otag">${esc(tr(T.optCount).replace('{n}', nOpt))}</span>` : '';
       return `
         <div class="mx-item ${it.avail === false ? 'off' : ''}">
           <div style="display:flex;align-items:center;gap:11px;min-width:0;">
@@ -576,6 +738,7 @@
                   </select>
                 </label>` : ''}
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.stations))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
                 <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
@@ -608,6 +771,14 @@
               <button class="mx-pane-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
               <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
               <button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="mx-load-example">${SPARK ? '' : ''}<span>${esc(tr(T.loadEx))}</span></button>
+              ${/* Order Pro est une option PAYANTE : quand elle est allumée, ses
+                    tags sont la seule chose que le commerçant vient chercher, et
+                    ils ne doivent pas dépendre de l'état de la carte. Le bouton
+                    ne vivait que dans la barre d'outils de la carte remplie —
+                    donc un établissement neuf, ou un magasin dont la carte
+                    n'était pas encore redescendue du serveur, n'avait aucun
+                    moyen d'atteindre ses liens. */''}
+              ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
             </div>
           </div>
         </div>`,
@@ -766,12 +937,130 @@
     paint();
   }
 
+  /* La bibliothèque des groupes d'options. Une fenêtre, pas un écran : on y
+   * entre pour écrire « Type de lait : entier, demi-écrémé, végétal », et on en
+   * ressort. L'attachement aux produits se fait dans la fiche du produit, là où
+   * on a le produit sous les yeux. */
+  function optsModal() {
+    const K = window.Kiwi;
+    const m = K.modal({
+      tag: venueName(),
+      title: tr(T.opts),
+      width: 560,
+      body: '<div data-og-body></div>',
+      foot: `<button class="kb ghost" type="button" data-og-close style="flex:1;justify-content:center;">${esc(tr(T.close))}</button>`,
+    });
+    const body = m.el.querySelector('[data-og-body]');
+
+    function paint(focusSel) {
+      const list = optsOf(store.get());
+      const cards = list.map((g) => {
+        const choices = (g.choices || []).map((c) => `
+          <div class="mx-og-ch" data-oc="${esc(c.id)}">
+            <input type="text" value="${esc(c.name)}" data-oc-name="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChNm))}" />
+            <div class="pr">
+              <input type="number" min="0" step="1" value="${c.price ? esc(c.price) : ''}" placeholder="0"
+                     data-oc-price="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChPr))}" />
+              <span>MAD</span>
+            </div>
+            <button type="button" class="del" data-oc-del="${esc(g.id)}::${esc(c.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
+          </div>`).join('');
+        return `
+        <div class="mx-og" data-og="${esc(g.id)}">
+          <div class="mx-og-head">
+            <input class="mx-og-nm" type="text" value="${esc(g.name)}" data-og-name="${esc(g.id)}"
+                   placeholder="${esc(tr(T.optEx))}" aria-label="${esc(tr(T.optNm))}" />
+            <button type="button" class="del" data-og-del="${esc(g.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
+          </div>
+          <div class="mx-og-rules">
+            <div class="mx-og-kind">
+              <button type="button" class="${g.kind !== 'many' ? 'on' : ''}" data-og-kind="${esc(g.id)}::one">${esc(tr(T.optOne))}</button>
+              <button type="button" class="${g.kind === 'many' ? 'on' : ''}" data-og-kind="${esc(g.id)}::many">${esc(tr(T.optMany))}</button>
+            </div>
+            <label class="mx-og-req" title="${esc(tr(T.optReqHi))}">
+              <input type="checkbox" data-og-req="${esc(g.id)}" ${g.required ? 'checked' : ''} />
+              <span>${esc(tr(T.optReq))}</span>
+            </label>
+          </div>
+          <div class="mx-og-list">
+            ${choices || `<div class="mx-og-empty">${esc(tr(T.optChEm))}</div>`}
+          </div>
+          <button class="mx-sub-add" type="button" data-oc-add="${esc(g.id)}">${PLUS}<span>${esc(tr(T.optChAdd))}</span></button>
+        </div>`;
+      }).join('');
+      body.innerHTML = `
+        <div class="mx-st-hint">${esc(tr(list.length ? T.optsHi : T.optsEm))}</div>
+        ${cards}
+        <button class="mx-cat-add" type="button" data-og-add>${PLUS}<span>${esc(tr(T.optAdd))}</span></button>`;
+      if (focusSel) {
+        const inp = body.querySelector(focusSel);
+        if (inp) { try { inp.focus(); inp.select(); } catch (_) {} }
+      }
+    }
+
+    /* Même règle que pour les postes : on écrit à la volée, amorti, et TOUT
+     * geste qui repeint écrit d'abord la frappe en cours — sinon les lettres
+     * des 350 dernières millisecondes disparaissent sous les yeux. */
+    let tmr = null;
+    const flush = () => { if (!tmr) return; clearTimeout(tmr.t); tmr.run(); tmr = null; };
+    const queue = (run) => { if (tmr) clearTimeout(tmr.t); tmr = { run, t: setTimeout(() => { tmr = null; run(); }, 350) }; };
+    const pair = (v) => String(v || '').split('::');
+
+    body.addEventListener('input', (e) => {
+      const gn = e.target.closest('[data-og-name]');
+      if (gn) { const id = gn.dataset.ogName, v = gn.value; queue(() => updateOptGroup(id, { name: v })); return; }
+      const cn = e.target.closest('[data-oc-name]');
+      if (cn) { const [g, c] = pair(cn.dataset.ocName), v = cn.value; queue(() => updateOptChoice(g, c, { name: v })); return; }
+      const cp = e.target.closest('[data-oc-price]');
+      if (cp) { const [g, c] = pair(cp.dataset.ocPrice), v = cp.value; queue(() => updateOptChoice(g, c, { price: v })); return; }
+    });
+    body.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.closest('input[type="text"], input[type="number"]')) { e.preventDefault(); e.target.blur(); }
+    });
+    body.addEventListener('focusout', (e) => { if (e.target.closest('input')) flush(); });
+    body.addEventListener('change', (e) => {
+      const rq = e.target.closest('[data-og-req]');
+      if (rq) { flush(); updateOptGroup(rq.dataset.ogReq, { required: rq.checked }); }
+    });
+    body.addEventListener('click', (e) => {
+      const kd = e.target.closest('[data-og-kind]');
+      if (kd) { flush(); const [g, k] = pair(kd.dataset.ogKind); updateOptGroup(g, { kind: k }); paint(); return; }
+      const gd = e.target.closest('[data-og-del]');
+      if (gd) { flush(); confirmThen(tr(T.optDelQ), () => { deleteOptGroup(gd.dataset.ogDel); paint(); }); return; }
+      const cd = e.target.closest('[data-oc-del]');
+      if (cd) { flush(); const [g, c] = pair(cd.dataset.ocDel); deleteOptChoice(g, c); paint(); return; }
+      const ca = e.target.closest('[data-oc-add]');
+      if (ca) {
+        flush();
+        const gid = ca.dataset.ocAdd;
+        addOptChoice(gid, '', 0);
+        const g = optById(store.get(), gid);
+        const last = g && g.choices && g.choices[g.choices.length - 1];
+        paint(last ? `[data-oc-name="${gid}::${last.id}"]` : null);
+        return;
+      }
+      if (e.target.closest('[data-og-add]')) {
+        flush();
+        addOptGroup('');
+        const list = optsOf(store.get());
+        const last = list[list.length - 1];
+        paint(last ? `[data-og-name="${last.id}"]` : null);
+        return;
+      }
+    });
+    m.el.querySelector('[data-og-close]').addEventListener('click', () => { flush(); m.close(); render(); });
+    m.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') flush(); }, true);
+    paint();
+  }
+
   function itemModal(existing) {
     const K = window.Kiwi;
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '' };
+    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
+    const groups = optsOf(d);
+    const itOpts = Array.isArray(it.opts) ? it.opts : [];
     // Live media state for this modal — mutated by the picker, read on save.
     const media = { photo: it.photo || '', video: it.video || '' };
 
@@ -792,6 +1081,17 @@
         ${/* Aucun sélecteur de poste ici : ce plat part au poste de sa catégorie,
               réglé une fois en tête de la liste des produits. */''}
         <div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
+        ${/* Les options se COCHENT : un café peut demander le lait ET la taille.
+              Une liste déroulante n'aurait laissé passer qu'une seule. */''}
+        <div class="mx-field">
+          <label>${esc(tr(T.optAttach))}</label>
+          ${groups.length ? `<div class="mx-opts-pick">
+            ${groups.map((g) => `<label>
+              <input type="checkbox" data-f-opt value="${esc(g.id)}" ${itOpts.indexOf(g.id) >= 0 ? 'checked' : ''} />
+              <span>${esc(g.name)}</span>${g.required ? `<i class="req">${esc(tr(T.optReq))}</i>` : ''}
+            </label>`).join('')}
+          </div>` : `<div class="mx-opts-none">${esc(tr(T.optNoneYet))}</div>`}
+        </div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
@@ -898,6 +1198,10 @@
         // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
         // catégorie dans ce formulaire change donc son poste — c'est la même
         // phrase dite une fois, et c'est tout l'intérêt.
+        // Les groupes cochés, dans l'ordre de la bibliothèque : c'est l'ordre
+        // dans lequel le comptoir posera les questions.
+        opts: [].slice.call(m.el.querySelectorAll('[data-f-opt]'))
+          .filter((el) => el.checked).map((el) => el.value),
       };
       if (!data.name.trim()) { q('[data-f-name]').focus(); return; }
       if (existing) updateItem(existing.id, data); else { addItem(data); activeCat = data.catId; activeSub = data.subId || null; }
@@ -944,6 +1248,7 @@
     };
     H['mx-sub-add'] = (_el, id) => promptText({ title: tr(T.addSub), placeholder: tr(T.subName), ok: tr(T.addSub) }, (v) => { if (v) { addSubcategory(id, v); activeCat = id; render(); } });
     H['mx-stations'] = () => stationsModal();
+    H['mx-opts'] = () => optsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };
     H['mx-item-del'] = (_el, id) => confirmThen(tr(T.delItemQ), () => { deleteItem(id); render(); });
@@ -1042,7 +1347,23 @@
    * slugMerchant(nom de l'établissement) côté serveur, résolue depuis la
    * session. Tout établissement créé aujourd'hui ou dans deux ans passe par le
    * même chemin, sans une ligne de code de plus. */
-  const cloud = { read: false, merchant: '', tried: 0, pulling: false };
+  /* ── L'état « nuage » appartient au MAGASIN, pas à la session ──────────────
+   * Un compte tient plusieurs établissements et on passe de l'un à l'autre sans
+   * recharger la page. Un seul objet pour tout le monde, c'était deux pannes
+   * bien réelles :
+   *   · la boutique n'a pas de carte, donc la lecture se court-circuite pour
+   *     elle — et posait `read = true` pour TOUS les magasins. Le restaurant
+   *     ouvert juste après n'allait donc jamais chercher la sienne, et sa page
+   *     Carte s'affichait vide alors que le serveur la détenait ;
+   *   · `merchant` gardait le slug du DERNIER magasin lu et servait ensuite de
+   *     cible à la publication : deux restaurants sur un même compte, et la
+   *     carte du second partait dans la fiche du premier.
+   * Une fiche par slug, donc. */
+  const clouds = Object.create(null);
+  function cloudFor(slug) {
+    const k = slug || '·';
+    return clouds[k] || (clouds[k] = { read: false, merchant: '', tried: 0, pulling: false });
+  }
 
   function storeSlug() {
     try {
@@ -1071,6 +1392,10 @@
     // recréerait st_1 par-dessus un poste existant et les plats du serveur
     // suivraient le mauvais.
     (d.stations || []).forEach((s) => scan(s.id));
+    // Les groupes d'options et leurs choix tirent du MÊME compteur : sans ce
+    // balayage, un navigateur neuf recréerait og_1 par-dessus un groupe existant
+    // et les produits du serveur pointeraient le mauvais.
+    (d.opts || []).forEach((g) => { scan(g.id); (g.choices || []).forEach((c) => scan(c.id)); });
     d.seq = max;
     return d;
   }
@@ -1086,8 +1411,15 @@
     const out = {
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
       kitchenId: (mine && mine.kitchenId) || (theirs && theirs.kitchenId) || '',
-      cats: [], items: [], stations: [],
+      cats: [], items: [], stations: [], opts: [],
     };
+    /* La bibliothèque de groupes d'options, union par id, cet appareil d'abord —
+     * comme les postes. Un groupe perdu ici, et le produit qui le porte
+     * demanderait au comptoir un choix introuvable. */
+    const ogSeen = Object.create(null);
+    [((mine && mine.opts) || []), ((theirs && theirs.opts) || [])].forEach((list) => {
+      list.forEach((g) => { if (g && g.id && !ogSeen[g.id]) { ogSeen[g.id] = 1; out.opts.push(g); } });
+    });
     /* Les postes fusionnent AVANT le reste et dans l'ordre de cet appareil :
      * cet ordre est celui des onglets de l'écran cuisine, donc celui qu'on a
      * sous les yeux gagne, et les postes créés ailleurs viennent se ranger
@@ -1124,31 +1456,55 @@
 
   /* Relire la carte du compte. Adoption pure si ce navigateur est vierge (le cas
    * qui compte : téléphone, iPad, fenêtre privée), fusion sinon. */
+  /* Pour DÉCIDER D'ALLER LIRE, c'est le métier de l'établissement affiché qui
+   * tranche, pas celui que le serveur a renvoyé pour le magasin précédent : au
+   * moment d'un changement d'établissement la config du nouveau n'est pas
+   * encore revenue, et prendre le type périmé faisait sauter la lecture du
+   * restaurant qu'on venait justement d'ouvrir. Se tromper ici ne coûte rien
+   * dans un sens — on interroge une boutique, la réponse ne porte pas de carte,
+   * on ne touche à rien — et coûtait une carte vide dans l'autre. publish(),
+   * lui, garde la précédence au serveur : c'est là qu'un mauvais aiguillage
+   * écrase des données. */
+  function isBoutiqueForRead(vd) {
+    const own = String((vd && (vd.subtype || vd.type)) || '').toLowerCase();
+    if (own) return BOUTIQUE_TRADES.some((t) => own.indexOf(t) !== -1);
+    return isBoutiqueVenue(vd);
+  }
+
   function pull() {
-    if (!isRealSession() || cloud.pulling) return Promise.resolve(false);
+    if (!isRealSession()) return Promise.resolve(false);
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
-    if (isBoutiqueVenue(vd)) { cloud.read = true; return Promise.resolve(false); }
-    cloud.pulling = true;
+    /* Le magasin visé est figé MAINTENANT : la réponse arrive quelques centaines
+     * de millisecondes plus tard, et le patron peut très bien avoir changé
+     * d'établissement entre-temps. Sans ça, la carte du café atterrit dans la
+     * boutique. */
+    const vid = vd && vd.id;
     const slug = storeSlug();
+    const c = cloudFor(slug);
+    if (c.pulling) return Promise.resolve(false);
+    if (isBoutiqueForRead(vd)) return Promise.resolve(false);  // le stock passe par orderpro-publish.js
+    c.pulling = true;
     return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
                  { headers: { Accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        cloud.pulling = false;
+        c.pulling = false;
         if (!j || j.error || j.unreachable) return false;   // injoignable → surtout ne pas publier
-        cloud.merchant = j.merchant || '';
-        cloud.read = true;                                   // à partir d'ici, publier est sûr
+        c.merchant = j.merchant || '';
+        c.read = true;                                       // à partir d'ici, publier est sûr
         const theirs = j.menu;
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
-        const mine = store.get();
+        const mine = store.get(vid);
         const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
-        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '' })
-                        : mergeMenus(mine, theirs));
-        try { if (isCustom()) render(); } catch (_) {}
+        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '', opts: theirs.opts || [] })
+                        : mergeMenus(mine, theirs), vid);
+        /* Ne repeindre que si on est TOUJOURS sur ce magasin, sinon la carte du
+         * café s'afficherait par-dessus la page de la boutique. */
+        try { if (isCustom() && storeSlug() === slug) render(); } catch (_) {}
         return true;
       })
-      .catch(() => { cloud.pulling = false; return false; });   // hors ligne → local reste la vérité
+      .catch(() => { c.pulling = false; return false; });   // hors ligne → local reste la vérité
   }
 
   let syncTimer = null;
@@ -1161,9 +1517,10 @@
     // RÈGLE 1 — rien ne part tant qu'on n'a pas lu. Sans ce verrou, un navigateur
     // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes
     // après l'ouverture du tableau de bord.
-    if (!cloud.read) { if (cloud.tried++ < 3) pull().then(() => { if (cloud.read) publish(vid); }); return; }
+    const c = cloudFor(storeSlug());
+    if (!c.read) { if (c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
     const data = store.get(vid);
-    const slug = cloud.merchant || storeSlug();
+    const slug = c.merchant || storeSlug();
     /* Les horaires partent AVEC la carte. Le téléphone du client ne peut pas
      * lire les réglages du commerçant : sans ce passager, la page de commande
      * ne saurait pas que le restaurant est fermé et prendrait la commande
@@ -1230,6 +1587,27 @@
       }, 1200);
       // Revenir sur l'onglet après avoir modifié la carte sur un autre appareil
       // doit suffire à la voir arriver — sans marteler le réseau.
+      /* CHANGER D'ÉTABLISSEMENT, C'EST CHANGER DE CARTE.
+       * La lecture n'avait lieu qu'une fois, 1,2 s après le chargement de la
+       * page — donc pour le SECOND magasin d'un compte, jamais. Le patron
+       * passait de sa boutique à son café et y trouvait une carte vide alors
+       * que le serveur la détenait ; et comme la page Carte vide n'offrait
+       * aucun bouton, il n'avait plus non plus par où récupérer ses liens
+       * Order Pro. On relit donc à chaque changement. Trois tentatives
+       * espacées, parce que la config du nouveau magasin (merchant-config.js,
+       * abonné au même évènement) doit être revenue pour que le métier soit
+       * connu ; chacune ne coûte rien une fois la carte lue. */
+      try {
+        if (window.KiwiVenue && window.KiwiVenue.subscribe) {
+          window.KiwiVenue.subscribe(function () {
+            [200, 900, 2200].forEach(function (ms) {
+              setTimeout(function () {
+                try { if (!cloudFor(storeSlug()).read) pull(); } catch (_) {}
+              }, ms);
+            });
+          });
+        }
+      } catch (_) {}
       let lastPull = 0;
       document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
@@ -1260,6 +1638,11 @@
     stations: (vid) => (store.get(vid).stations || []),
     kitchenId: (vid) => kitchenIdOf(store.get(vid)),
     setCategoryStation,
+    /* Les groupes d'options. La caisse lit `optionGroups()` + `item.opts`
+     * pour savoir quoi demander avant d'ajouter un produit à la note. */
+    optionGroups: (vid) => (store.get(vid).opts || []),
+    addOptGroup, updateOptGroup, deleteOptGroup,
+    addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
     render,
     publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)

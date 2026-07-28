@@ -145,7 +145,7 @@ function runRebuild(payload) {
     // kdsReady: false → rebuildCarte ne doit PAS toucher à l'écran cuisine tant
     // qu'il n'est pas monté (c'est tout l'objet de ce drapeau : au premier
     // appel, à l'amorçage, la section KDS n'est pas encore évaluée).
-    carteState: { stations: [], kitchenId: '', kdsReady: false },
+    carteState: { stations: [], kitchenId: '', opts: [], kdsReady: false },
     caisseCarte: () => payload,
     renderCatPills() {}, renderMenu() {},
   };
@@ -158,7 +158,7 @@ function runRebuild(payload) {
     function kdsRepaintStations() { throw new Error('kdsRepaintStations appelé alors que l\\'écran cuisine n\\'est pas monté'); }
     ${body}
     const changed = rebuildCarte();
-    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId };
+    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId, opts: carteState.opts };
   `);
   return fn(scope);
 }
@@ -445,6 +445,52 @@ const demo = runStationFor({ IS_DEMO: true });
 eq(demo.list.length, 1, 'la démo garde SA liste de postes');
 eq(demo.stationFor({ id: 'e', station: '', cat: 'boissons' }), 'boissons',
   'en démo, la table par catégorie route encore');
+
+/* ── 9 bis. les options d'un produit, du bureau jusqu'à la question posée ──
+   Le comptoir doit POUVOIR poser la question : sans la bibliothèque de groupes
+   et sans les identifiants portés par le produit, la caisse ajouterait le café
+   à la note sans jamais demander le lait. */
+ok(/out\.opts = opts\.map/.test(menuApi),
+  'sanitizeMenu publie la bibliothèque de groupes d\'options');
+ok(/kind: \(g && g\.kind\) === 'many' \? 'many' : 'one'/.test(menuApi),
+  'deux règles seulement — un choix, ou plusieurs — et rien d\'autre ne passe');
+ok(/required: !!\(g && g\.required\)/.test(menuApi),
+  '« obligatoire » survit à la publication : c\'est lui qui bloque l\'ajout au comptoir');
+ok(/opts: \(Array\.isArray\(it && it\.opts\)/.test(menuApi),
+  'chaque produit garde la liste des groupes qu\'il porte');
+
+const withOpts = runRebuild(Object.assign({}, PAYLOAD, {
+  opts: [
+    { id: 'og_lait', name: 'Type de lait', kind: 'one', required: true, choices: [
+      { id: 'oc_e', name: 'Entier', price: 0 }, { id: 'oc_v', name: 'Végétal', price: 3 } ] },
+    { id: 'og_vide', name: 'Groupe sans choix', kind: 'one', required: false, choices: [] },
+  ],
+  items: PAYLOAD.items.map((it) => (it.id === 'a-02' ? Object.assign({}, it, { opts: ['og_lait', 'og_vide', 'og_fantome'] }) : it)),
+}));
+eq(withOpts.opts.length, 1,
+  'un groupe SANS choix ne descend pas au comptoir — il ouvrirait une fenêtre sans réponse possible');
+eq(withOpts.opts[0].id, 'og_lait', 'le groupe utilisable, lui, descend');
+eq(withOpts.opts[0].required, true, '« obligatoire » arrive jusqu\'au comptoir');
+eq(withOpts.opts[0].choices.length, 2, 'avec ses deux choix');
+eq(withOpts.opts[0].choices[1].price, 3, 'et le supplément de l\'un d\'eux');
+const cafe = withOpts.menuItems.find((m) => m.id === 'a-02');
+eq(cafe.opts.length, 3, 'le produit garde ses identifiants tels quels — le tri se fait à l\'usage');
+const plain = withOpts.menuItems.find((m) => m.id === 'a-01');
+eq(plain.opts.length, 0, 'un produit sans options n\'en invente aucune : il s\'ajoute d\'un seul geste');
+
+/* Le tri à l'usage : un identifiant orphelin (groupe supprimé au bureau, ou
+   groupe vide) ne doit pas ouvrir une question sans réponse. */
+const caisseSrc = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+ok(/return ids\.map\(id => lib\.find\(g => g && g\.id === id\)\)\.filter\(Boolean\)/.test(caisseSrc),
+  'itemOptGroups écarte un groupe disparu plutôt que de bloquer la vente');
+ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOptSheet/.test(caisseSrc),
+  'un produit à options ouvre la feuille AVANT d\'entrer dans la note');
+ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
+  'tant qu\'un groupe obligatoire est sans réponse, « Ajouter » ne répond pas');
+ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
+  'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
+ok(/note: kitchenNote\(l\)/.test(caisseSrc),
+  'les choix partent en cuisine par la note — donc sur l\'écran ET sur le papier');
 
 /* Le bon papier : un par poste, avec SES lignes, et jamais deux jobs en même
    temps sur une thermique. */
