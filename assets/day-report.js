@@ -391,6 +391,16 @@
     var withLines = 0, totalForCoverage = 0;
     var cats = Object.create(null);
     var first = 0, last = 0;
+    /* La courbe horaire, indexée sur l'OFFSET depuis le seuil de journée et non
+       sur l'heure de l'horloge : à 5h de seuil, le coup de feu de minuit doit
+       tomber APRÈS celui de 22h, pas dix-neuf cases avant lui. L'heure lisible
+       repart de l'offset au moment de l'écriture. Tableau creux : un commerce
+       ouvre douze heures, pas vingt-quatre, et chaque case coûte au budget. */
+    var hours = new Array(24);
+    var cut = cutoff(slug);
+    /* Qui a encaissé quoi. Ne sort que si les ventes portent un nom — le
+       clavier de la caisse en met un, une commande OrderPro non. */
+    var byCashier = Object.create(null);
 
     rows.forEach(function (s) {
       var isRefund = s.kind === 'refund' || s.amount < 0;
@@ -404,6 +414,18 @@
       methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
       tips += s.tip;
       if (m === 'cash') cashTips += s.tip;
+
+      var off = Math.floor((s.ts - b.from) / 3600000);
+      if (off >= 0 && off < 24) {
+        var H = hours[off] || (hours[off] = { h: (cut + off) % 24, net: 0, txns: 0 });
+        H.net += isRefund ? -mag : s.amount;
+        if (!isRefund) H.txns++;
+      }
+      if (s.cashier) {
+        var CA = byCashier[s.cashier] || (byCashier[s.cashier] = { name: s.cashier, net: 0, txns: 0 });
+        CA.net += isRefund ? -mag : s.amount;
+        if (!isRefund) CA.txns++;
+      }
 
       if (!isRefund) {
         totalForCoverage += s.amount;
@@ -486,6 +508,12 @@
       },
       openedAt: num(sess.openedAt) || first || 0,
       closedAt: num(sess.closedAt) || 0,
+      /* La journée est close quand la caisse a posé une heure de fermeture, et
+         à ce moment-là seulement. Le drapeau existait déjà côté lecteurs —
+         chip de statut, tampon PROVISOIRE du ticket — mais personne ne
+         l'écrivait : toute journée clôturée s'affichait « non clôturée » et
+         s'imprimait provisoire. */
+      closed: !!num(sess.closedAt),
       firstSaleAt: first || 0,
       lastSaleAt: last || 0,
       openedBy: String(sess.openedBy || ''),
@@ -500,6 +528,10 @@
       methods: methods,
       tips: round2(tips),
       categories: categories,
+      hours: hours.map(function (H) { return { h: H.h, net: round2(H.net), txns: H.txns }; }).filter(Boolean),
+      cashiers: Object.keys(byCashier).map(function (k) {
+        return { name: byCashier[k].name, net: round2(byCashier[k].net), txns: byCashier[k].txns };
+      }).sort(function (a, c) { return c.net - a.net; }),
       coverage: totalForCoverage > 0 ? Math.round(withLines / totalForCoverage * 100) : (txns ? 0 : 100),
       cash: {
         opening: round2(opening),
@@ -546,6 +578,8 @@
     n += (r.cash && r.cash.movements ? r.cash.movements.length : 0) * 5;
     n += (r.handovers || []).length * 5;
     n += (r.revisions || []).length * 7;
+    n += (r.hours || []).length * 4;        /* au plus 24 — une par heure ouverte */
+    n += (r.cashiers || []).length * 4;
     (r.categories || []).forEach(function (c) {
       n += 5 + (c.products || []).length * 4;
     });
