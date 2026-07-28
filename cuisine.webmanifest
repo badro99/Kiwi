@@ -1,0 +1,18 @@
+{
+  "name": "Kiwi Cuisine",
+  "short_name": "Cuisine",
+  "description": "Écran cuisine Kiwi — les bons de la caisse arrivent sur la tablette du passe",
+  "start_url": "kiwi-cuisine.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#053B2C",
+  "theme_color": "#053B2C",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "assets/icons/kiwi-caisse-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/kiwi-caisse-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/kiwi-caisse.svg", "sizes": "512x512 192x192 any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

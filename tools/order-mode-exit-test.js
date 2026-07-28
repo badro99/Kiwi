@@ -74,7 +74,7 @@ ok('une commande COMMENCÉE garde son garde-fou',
 
 // Annuler doit réussir même sans mesa — c'était la dernière issue, et elle
 // partait en `return` silencieux.
-const cancelFn = (CAISSE.match(/function cancelNewOrder\(\)\s*\{[\s\S]{0,1800}?\n {4}\}/) || [''])[0];
+const cancelFn = (CAISSE.match(/function cancelNewOrder\(\)\s*\{[\s\S]{0,3400}?\n {4}\}/) || [''])[0];
 ok('cancelNewOrder existe toujours', !!cancelFn);
 ok("cancelNewOrder ne renonce plus quand il n'y a pas de mesa",
   !/^\s*if \(!selectedId\) return;/m.test(cancelFn));
@@ -100,6 +100,54 @@ const emptyFn = (CAISSE.match(/function showEmpty\(\)\s*\{[\s\S]{0,1400}?\n {4}\
 ok('showEmpty remet le total à zéro (barre repliée du téléphone)',
   /#rp-total'\)\.textContent = fmtMAD\(0\)/.test(emptyFn));
 
+/* ── 1 bis. ROUVRIR une mesa pour ajouter ────────────────────────────────────
+ * Deuxième panne remontée du comptoir : « on met les couverts, on ajoute des
+ * articles, mais on ne peut PAS en rajouter — si quelqu'un arrive, ou si la
+ * table prend un dessert ». Une fois la mesa validée, un clic dessus n'ouvrait
+ * plus que l'addition et ses moyens de paiement. Les deux contournements
+ * possibles étaient faux : annuler la mesa (donc effacer le repas) ou passer
+ * par « À emporter » (l'article se décroche de la table).
+ *
+ * La reprise a une contrainte dure : ce qui est DÉJÀ parti en cuisine ne doit
+ * ni repartir, ni pouvoir être modifié à la caisse, ni disparaître si le
+ * serveur se ravise. */
+ok('le bouton « Ajouter des articles » existe dans le panneau',
+  /id="rp-add-items"/.test(CAISSE));
+const resumeFn = (CAISSE.match(/function resumeTableOrder\(id\)\s*\{[\s\S]{0,1200}?\n {4}\}/) || [''])[0];
+ok('resumeTableOrder existe', !!resumeFn);
+ok('resumeTableOrder retourne bien dans le mode commande', /setMode\('order'\)/.test(resumeFn));
+ok('resumeTableOrder survit à une table disparue du plan', /if \(!t\)/.test(resumeFn));
+ok("resumeTableOrder ne rouvre pas une note déjà encaissée", /'khlass'/.test(resumeFn));
+ok("resumeTableOrder n'écrase pas la commande en cours",
+  /if \(!tableOrders\[id\]\) tableOrders\[id\] = \[\];/.test(resumeFn));
+
+// Le compteur de garde doit ignorer ce qui est déjà en cuisine, sinon la
+// sortie qu'on vient d'ouvrir se referme sur toute mesa rouverte.
+const countFn = (CAISSE.match(/function orderInProgressCount\(\)\s*\{[\s\S]{0,400}?\n {4}\}/) || [''])[0];
+ok('orderInProgressCount ne compte que ce qui n’est pas encore parti',
+  /l\.sent \? 0 : l\.qty/.test(countFn));
+
+// L'empilement d'un article ne doit JAMAIS retomber sur une ligne déjà partie :
+// sinon l'addition monte et aucun bon ne part — facturé, jamais préparé.
+const addFn = (CAISSE.match(/function addToTableOrder\(tableId, itemId\)\s*\{[\s\S]{0,1800}?\n {4}\}/) || [''])[0];
+ok("un ajout ne s'empile jamais sur une ligne déjà en cuisine",
+  /find\(l => l\.id === itemId && !l\.sent/.test(addFn));
+
+// Et une ligne partie ne se décrémente pas depuis la caisse.
+const qtyFn = (CAISSE.match(/function changeTableOrderLineQty\(tableId, uid, delta\)\s*\{[\s\S]{0,900}?\n {4}\}/) || [''])[0];
+ok('une ligne déjà en cuisine ne se modifie pas depuis la caisse',
+  /if \(line\.sent\)/.test(qtyFn));
+
+// Annuler sur une mesa qui mange n'efface que les ajouts.
+ok("annuler sur une mesa servie ne jette que les ajouts",
+  /tableSentCount\(selectedId\) > 0/.test(cancelFn)
+  && /filter\(l => l\.sent\)/.test(cancelFn));
+
+// La cuisine ne reçoit que le neuf — la règle existait, elle doit tenir.
+const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
+ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));
+ok('sendTableToKitchen marque les lignes envoyées', /l\.sent = true/.test(sendFn));
+
 /* ── 2. L'invariant, rejoué ───────────────────────────────────────────────
  * Un modèle réduit de l'état réel (mode, mesa sélectionnée, lignes saisies) et
  * des cinq gestes qui doivent en sortir. La règle unique : après n'importe
@@ -108,15 +156,26 @@ ok('showEmpty remet le total à zéro (barre repliée du téléphone)',
 function makeTill() {
   const s = { mode: 'salle', selected: null, orders: {}, cart: [], kitchen: [], toast: '' };
 
+  /* Ce qui est EN JEU : les lignes saisies et pas encore parties. Une ligne
+     déjà en cuisine ne se perd pas si on sort, donc elle ne doit pas retenir
+     le serveur — c'est toute la différence entre garder son travail et
+     l'emprisonner. */
   const count = () => (s.mode !== 'order' || !s.selected)
-    ? 0 : (s.orders[s.selected] || []).length;
+    ? 0 : (s.orders[s.selected] || []).filter((l) => !l.sent).length;
+  const sentCount = (id) => (s.orders[id] || []).filter((l) => l.sent).length;
   const backToSalle = () => { s.mode = 'salle'; };
 
   return {
     state: s,
     openTable(id) { s.selected = id; s.orders[id] = []; s.mode = 'order'; },
+    // rouvrir une mesa installée pour ajouter (dessert, retardataire)
+    resume(id) {
+      const target = id || s.selected;
+      if (!target || !(target in s.orders)) return;
+      s.selected = target; s.mode = 'order';
+    },
     addDish(n) {
-      if (s.mode === 'order' && s.selected) (s.orders[s.selected] ||= []).push(n);
+      if (s.mode === 'order' && s.selected) (s.orders[s.selected] ||= []).push({ n, sent: false });
       else s.cart.push(n);
     },
     // la croix du panneau
@@ -138,13 +197,23 @@ function makeTill() {
       s.mode = to;
     },
     cancel() {
+      // Une mesa qui mange déjà : on ne jette QUE les ajouts en cours.
+      if (s.selected && sentCount(s.selected) > 0) {
+        s.orders[s.selected] = s.orders[s.selected].filter((l) => l.sent);
+        backToSalle();
+        return;
+      }
       if (s.selected) { delete s.orders[s.selected]; s.selected = null; }
       backToSalle();
     },
     send() {
       if (s.mode !== 'order') return;
       if (!s.selected) { s.cart = []; backToSalle(); s.toast = 'aucune mesa'; return; }
-      s.kitchen.push({ table: s.selected, items: (s.orders[s.selected] || []).slice() });
+      const fresh = (s.orders[s.selected] || []).filter((l) => !l.sent);
+      if (fresh.length) {
+        s.kitchen.push({ table: s.selected, items: fresh.map((l) => l.n) });
+        fresh.forEach((l) => { l.sent = true; });
+      }
       backToSalle();
     },
   };
@@ -226,26 +295,88 @@ const stuck = (t) => t.state.mode === 'order' && !t.state.selected;
   ok('la croix rattrape un état bloqué', !stuck(w));
 }
 
-// f) balayage : aucune suite de gestes ne doit produire l'état bloqué.
+/* g) LE GESTE MANQUANT : la table redemande quelque chose ───────────────────
+ * Le scénario mot pour mot du comptoir — couverts posés, articles saisis,
+ * envoyés… et « on ne peut pas en rajouter ». */
 {
-  const gestes = ['X', 'pillSalle', 'pillVrap', 'send', 'cancel', 'dish'];
-  let bad = null, tried = 0;
-  for (const a of gestes) for (const b of gestes) for (const c of gestes) {
+  const t = makeTill();
+  t.openTable('T4');
+  t.addDish('tajine'); t.addDish('the');
+  t.send();
+  eq('mesa envoyée → retour salle', t.state.mode, 'salle');
+  eq('mesa envoyée → la cuisine a les deux plats', t.state.kitchen[0].items.length, 2);
+
+  // quelqu'un arrive / la table prend un dessert
+  t.resume('T4');
+  eq('on peut rouvrir la commande de la mesa', t.state.mode, 'order');
+  eq('rouvrir ne perd rien de ce qui est déjà en cuisine', t.state.orders.T4.length, 2);
+  t.addDish('cornes de gazelle');
+  t.send();
+  eq('le deuxième envoi ne relance PAS tout le repas', t.state.kitchen.length, 2);
+  eq('le deuxième envoi ne porte que le nouveau plat', t.state.kitchen[1].items.length, 1);
+  eq('… et c’est bien le dessert', t.state.kitchen[1].items[0], 'cornes de gazelle');
+  eq("l'addition porte les trois articles", t.state.orders.T4.length, 3);
+}
+
+// h) rouvrir puis se raviser : les ajouts partent, le repas reste.
+{
+  const t = makeTill();
+  t.openTable('T5'); t.addDish('couscous'); t.send();
+  t.resume('T5'); t.addDish('dessert');
+  t.cancel();
+  eq('annuler un ajout → retour salle', t.state.mode, 'salle');
+  eq('annuler un ajout → le repas en cuisine est intact', t.state.orders.T5.length, 1);
+  eq('annuler un ajout → le repas est bien celui qui cuit', t.state.orders.T5[0].sent, true);
+  ok('annuler un ajout → la mesa reste ouverte', t.state.selected === 'T5');
+  eq('annuler un ajout → rien ne repart en cuisine', t.state.kitchen.length, 1);
+}
+
+// i) rouvrir une mesa qui mange, puis la croix sans rien taper : on sort, et le
+//    repas ne bouge pas. C'est le « ouvert par erreur » version deuxième tour.
+{
+  const t = makeTill();
+  t.openTable('T6'); t.addDish('harira'); t.send();
+  t.resume('T6');
+  t.pressX();
+  eq('mesa servie + croix → retour salle', t.state.mode, 'salle');
+  eq('mesa servie + croix → le repas est intact', t.state.orders.T6.length, 1);
+  ok('mesa servie + croix → pas de blocage', !stuck(t));
+}
+
+// f) balayage : aucune suite de gestes ne doit produire l'état bloqué, NI
+//    faire disparaître un plat déjà lancé en cuisine.
+{
+  const gestes = ['X', 'pillSalle', 'pillVrap', 'send', 'cancel', 'dish', 'resume'];
+  let bad = null, lost = null, tried = 0;
+  for (const a of gestes) for (const b of gestes) for (const c of gestes) for (const d of gestes) {
     const t = makeTill();
     t.openTable('T1');
-    for (const g of [a, b, c]) {
+    for (const g of [a, b, c, d]) {
       if (g === 'X') t.pressX();
       else if (g === 'pillSalle') t.pressPill('salle');
       else if (g === 'pillVrap') t.pressPill('vrap');
       else if (g === 'send') t.send();
       else if (g === 'cancel') t.cancel();
+      else if (g === 'resume') t.resume('T1');
       else t.addDish('plat');
     }
     tried++;
-    if (stuck(t) && !bad) bad = [a, b, c].join(' → ');
+    const seq = [a, b, c, d].join(' → ');
+    if (stuck(t) && !bad) bad = seq;
+    /* Ce qui est parti en cuisine et n'a PAS été délibérément annulé doit se
+       retrouver sur l'addition. Le seul effacement légitime est `cancel` sur
+       une mesa sans rien d'envoyé — donc si la cuisine a reçu quelque chose et
+       que la mesa existe encore, ses lignes envoyées doivent être là. */
+    const sentToKitchen = t.state.kitchen.reduce((n, k) => n + k.items.length, 0);
+    const stillBilled = (t.state.orders.T1 || []).filter((l) => l.sent).length;
+    if (sentToKitchen > 0 && (t.state.orders.T1 !== undefined) && stillBilled !== sentToKitchen && !lost) {
+      lost = seq;
+    }
   }
-  ok(`aucune des ${tried} suites de 3 gestes ne bloque la caisse`
+  ok(`aucune des ${tried} suites de 4 gestes ne bloque la caisse`
     + (bad ? ` (bloquée par : ${bad})` : ''), !bad);
+  ok('aucune suite ne fait disparaître de l’addition un plat déjà en cuisine'
+    + (lost ? ` (perdu par : ${lost})` : ''), !lost);
 }
 
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
@@ -257,6 +388,6 @@ if (fails.length) {
   console.log(line);
   process.exit(1);
 }
-console.log(`  \x1b[32m✓\x1b[0m sorties du mode commande (${pass} contrôles : croix, pastilles, `
-  + 'envoi, annulation, rattrapage, balayage 3 gestes)');
+console.log(`  \x1b[32m✓\x1b[0m mode commande : sorties ET reprises (${pass} contrôles — croix, pastilles, `
+  + 'envoi, annulation,\n    rattrapage, ajout sur mesa servie, balayage 4 gestes)');
 console.log(line);

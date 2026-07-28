@@ -3985,6 +3985,33 @@
     .pay-btn.pay-kitchen { background: var(--forest); color: #fff; }
     .pay-btn.pay-kitchen:hover { background: var(--forest-deep); }
 
+    /* Reprendre la commande d'une mesa installée. En creux (bordé, pas plein) :
+       la couleur pleine appartient à l'encaissement, qui est le geste de fin. */
+    .pay-btn.pay-add-items {
+      background: var(--surface); color: var(--forest);
+      border: 1px solid rgba(11, 110, 79, .30);
+      height: 48px; font-size: 14px;
+    }
+    .pay-btn.pay-add-items:hover { background: var(--mint-tint); border-color: var(--forest); }
+    .pay-btn.pay-add-items[hidden] { display: none; }
+
+    /* Une ligne DÉJÀ PARTIE en cuisine, dans le panneau de commande. Elle reste
+       lisible (le serveur doit voir ce que la table a déjà) mais ne se modifie
+       plus d'un doigt : baisser la quantité d'un plat qui cuit ne le décuit pas,
+       et la caisse ne peut pas le savoir. */
+    .rp-item--sent { opacity: .74; }
+    .rp-item--sent .rp-item-name { color: var(--ink-2); }
+    .rp-sent-mark {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; letter-spacing: .02em;
+      color: var(--forest); background: var(--mint-tint);
+      border-radius: 999px; padding: 3px 9px;
+    }
+    .rp-sent-qty {
+      font-family: var(--mono); font-size: 14px; font-weight: 600;
+      color: var(--ink-2); min-width: 34px; text-align: center;
+    }
+
     /* ===========================================================
        À EMPORTER — orders board (landing) + builder
        =========================================================== */
@@ -4179,6 +4206,13 @@
   <script src="assets/receipt.js" defer></script>
   <script src="assets/clients-store.js" defer></script>
   <script src="assets/clients-book.js" defer></script>
+  <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
+       de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
+       et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
+       pose le bon sur le serveur (file de secours hors ligne comprise) pour que
+       kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
+       appairé. -->
+  <script src="assets/kitchen-relay.js" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js" defer></script>
@@ -4997,6 +5031,14 @@
           <button class="pay-btn pay-kitchen" id="rp-send-kitchen" hidden>
             <i data-lucide="send"></i>
             <span>Envoyer en cuisine</span>
+          </button>
+          <!-- Rouvrir la commande d'une mesa déjà installée. Un repas se commande
+               en plusieurs fois — quelqu'un arrive en retard, la table prend un
+               dessert, un deuxième thé — et il n'y avait AUCUN chemin pour ça :
+               la mesa ouverte n'offrait plus que l'addition. -->
+          <button class="pay-btn pay-add-items" id="rp-add-items" hidden>
+            <i data-lucide="plus"></i>
+            <span>Ajouter des articles</span>
           </button>
           <!-- Normal payment buttons (salle read-to-pay + vrap) -->
           <div id="rp-pay-normal">
@@ -6770,6 +6812,11 @@
       showPayButtons(false);
       // "Envoyer en cuisine" is À emporter only
       $('#rp-send-kitchen').hidden = true;
+      /* La seule porte de retour vers le menu depuis une addition ouverte. Elle
+         n'existe qu'en salle, et pas sur une table déjà encaissée — on ne
+         rouvre pas une note soldée, on rouvre une mesa. */
+      const addBtn = $('#rp-add-items');
+      if (addBtn) addBtn.hidden = !(mode === 'salle' && t.status !== 'khlass');
     }
 
     function openTable(id) {
@@ -8211,6 +8258,12 @@
       if (forOrder) {
         const sk = $('#rp-send-kitchen'); if (sk) sk.hidden = true;
       }
+      /* « Ajouter des articles » n'appartient qu'à l'addition d'une mesa en
+         salle. On l'éteint ICI, au point de passage commun, et renderRightPanel
+         le rallume pour le seul cas qui le mérite : sinon il survivrait au
+         passage en « À emporter » (qui partage ce bloc de boutons) et
+         rouvrirait la commande d'une table qu'on ne regarde plus. */
+      const ai = $('#rp-add-items'); if (ai) ai.hidden = true;
     }
 
     /* ---- covers modal ---- */
@@ -8418,8 +8471,13 @@
         tables[tableId].status = 'ka-yaklo';
         refreshTableNode(tableId);
       }
-      // Stack onto the un-noted line; a noted line splits off so it keeps its note.
-      const line = tableOrders[tableId].find(l => l.id === itemId && !(l.note || '').trim());
+      /* Stack onto the un-noted line ; a noted line splits off so it keeps its
+         note. Et JAMAIS sur une ligne déjà partie en cuisine (`l.sent`) : la
+         cuisine n'envoie que ce qui ne l'est pas encore, donc empiler un
+         deuxième café sur la ligne du premier aurait fait monter l'addition
+         sans qu'aucun bon ne parte. Le plat aurait été facturé et jamais
+         préparé — la panne la plus coûteuse qu'un ajout puisse produire. */
+      const line = tableOrders[tableId].find(l => l.id === itemId && !l.sent && !(l.note || '').trim());
       if (line) line.qty++;
       else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, note: '' });
       // Pop animation on card
@@ -8434,17 +8492,28 @@
       if (!tableOrders[tableId]) return;
       const line = tableOrders[tableId].find(l => l.uid === uid);
       if (!line) return;
+      /* Le plat est en cuisson. Le décrémenter ici ne le décuit pas : ça ne
+         ferait qu'installer un écart entre l'addition et ce qui sort du passe.
+         Un plat lancé s'annule à la cuisine, pas à la caisse. */
+      if (line.sent) { toast('Déjà en cuisine · ça s\'annule à la cuisine'); return; }
       line.qty += delta;
       if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== uid);
       renderMenu();
       renderOrderPanel(tableId);
     }
 
-    /* Menu-card − in order mode — removes one unit (plain line, else the last). */
+    /* Menu-card − in order mode — removes one unit (plain line, else the last).
+       On ne retire que parmi les lignes ENCORE RETIRABLES : le − de la carte
+       s'appliquait à la première ligne trouvée, donc sur une mesa rouverte il
+       tombait sur le plat déjà en cuisine et refusait, alors que le serveur
+       venait juste d'en ajouter un qu'il pouvait parfaitement reprendre. */
     function tableOrderMinusMenu(tableId, itemId) {
-      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId);
+      const lines = (tableOrders[tableId] || []).filter(l => l.id === itemId && !l.sent);
       const line = lines.find(l => !(l.note || '').trim()) || lines[lines.length - 1];
-      if (line) changeTableOrderLineQty(tableId, line.uid, -1);
+      if (line) { changeTableOrderLineQty(tableId, line.uid, -1); return; }
+      if ((tableOrders[tableId] || []).some(l => l.id === itemId)) {
+        toast('Déjà en cuisine · ça s\'annule à la cuisine');
+      }
     }
 
     /* ---- order panel (right panel while building an order) ---- */
@@ -8475,11 +8544,19 @@
       const sc = $('#rp-split-card'); if (sc) sc.hidden = true;
 
       $('#rp-table').textContent = `${tableId} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
+      /* Ce qui est DÉJÀ parti, et ce qui reste à envoyer. La distinction est le
+         cœur d'un ajout : le serveur rouvre une mesa avec quatre plats en
+         cuisine et doit voir, sans compter, que seuls les deux derniers
+         partiront au prochain appui. */
+      const fresh = order.filter(l => !l.sent).reduce((s, l) => s + l.qty, 0);
+      const sentQty = itemCount - fresh;
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
       sub.textContent = order.length === 0
         ? 'Nouvelle mesa, en attente de commande'
-        : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(total)}`;
+        : sentQty > 0
+          ? `${sentQty} en cuisine · ${fresh} à envoyer · ${fmtMAD(total)}`
+          : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(total)}`;
 
       if (order.length === 0) {
         $('#rp-items').innerHTML = `
@@ -8488,7 +8565,14 @@
             <p>Sélectionnez des articles dans le menu à gauche</p>
           </div>`;
       } else {
-        $('#rp-items').innerHTML = order.map(l => `
+        $('#rp-items').innerHTML = order.map(l => l.sent ? `
+          <div class="rp-item rp-item--cart rp-item--sent" data-order-uid="${l.uid}">
+            <span class="rp-sent-qty">${l.qty}×</span>
+            <span class="rp-item-name">${l.name}</span>
+            <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
+            <span class="rp-sent-mark">${KDS_SVG.check}En cuisine</span>
+            ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
+          </div>` : `
           <div class="rp-item rp-item--cart" data-order-uid="${l.uid}">
             <div class="qty-control">
               <button class="qty-btn" data-cart-action="dec" aria-label="Moins">−</button>
@@ -8520,45 +8604,26 @@
          « Envoyer en cuisine » devient un bouton mort de plus — le symptôme même
          qu'on est en train de corriger. On sort proprement. */
       if (!t) { backToSalle(); toast('Cette mesa n\'existe plus sur le plan'); return; }
+      /* Un AJOUT ou une première commande ? La question se pose AVANT l'envoi,
+         parce que c'est l'envoi qui pose les drapeaux `sent`. */
+      const wasAddition = tableSentCount(tableId) > 0;
+      const n = (tableOrders[tableId] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
+
       t.status  = 'ka-yaklo';
       t.elapsed = 0;
       refreshTableNode(tableId);
 
-      // Restore vrap header text
-      const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
-      if (vrapTitle) vrapTitle.innerHTML = 'À emporter<em>— vente au comptoir</em>';
-
-      // Switch back to salle mode directly (bypass guard)
-      mode = 'salle';
-      document.body.dataset.mode = 'salle';
-      $$('.mode-pill').forEach(p =>
-        p.setAttribute('aria-pressed', p.dataset.mode === 'salle' ? 'true' : 'false'));
-      $$('[data-mode-section]').forEach(el => {
-        const m = el.dataset.modeSection;
-        el.hidden = m !== 'salle';
-        el.classList.toggle('is-active', m === 'salle');
-      });
-      const cancelLabel = $('[data-cancel-label]');
-      if (cancelLabel) cancelLabel.textContent = 'Annuler mesa';
-
-      // Show right panel with the table (pay buttons ready if order > 0)
-      selectedId = tableId;
-      markSelectedTable(tableId);
-      showPayButtons(false);
-      renderRightPanel(tableId);
-      $('#rp-empty').hidden = true;
-      $('#rp-empty').style.display = 'none';
-      $('#rp-active').hidden = false;
-      $('#rp-active').style.display = 'flex';
-      lucide.createIcons();
+      // Retour salle, mesa toujours ouverte et sélectionnée : le serveur voit
+      // l'addition à jour à la seconde où il a validé.
+      backToSalle(tableId);
 
       /* « … en cuisine » était un mot, pas un geste : rien ne partait vers
          l'écran cuisine et aucun bon ne s'imprimait. Le serveur validait, la
          cuisine ne voyait rien, et le plat n'était lancé qu'au moment où
          quelqu'un s'en étonnait. */
       const sent = sendTableToKitchen(tableId);
-      const n = (tableOrders[tableId] || []).reduce((s, l) => s + l.qty, 0);
-      toast(`Mesa ${tableId} ouverte · ${n > 0 ? n + ' article' + (n > 1 ? 's' : '') + ' en cuisine' : 'commande vide'}`
+      const what = n > 0 ? `${n} article${n > 1 ? 's' : ''} en cuisine` : 'rien de neuf à envoyer';
+      toast(`${wasAddition ? 'Ajout mesa ' + tableId : 'Mesa ' + tableId + ' ouverte'} · ${what}`
         + (sent && sent.num ? ` · bon #${sent.num}` : ''));
     }
 
@@ -8593,8 +8658,59 @@
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       printKitchenTickets(order, items);
+      relayToKitchen(order);
       try { persistShift(); } catch (_) {}
       return order;
+    }
+
+    /* ═══════ LE BON QUITTE L'APPAREIL ═══════════════════════════════════════
+     * Tout ce qui précède se passait dans CETTE page et nulle part ailleurs :
+     * `kdsOrders` est un tableau JavaScript, `printKitchenTickets` parle à une
+     * imprimante branchée sur ce comptoir. Une tablette posée en cuisine ne
+     * recevait donc rien de ce qu'un serveur venait de saisir — et sans
+     * imprimante thermique, la cuisine n'avait aucun chemin du tout.
+     *
+     * On pose donc le bon sur le serveur. Deux détails qui comptent :
+     *  · le poste voyage AVEC la ligne (`station`). La cuisine ne relit pas la
+     *    carte : le bon porte sa propre vérité, figée à l'instant de l'envoi,
+     *    comme le ticket papier. Un plat renommé au bureau ne redirige pas un
+     *    bon déjà parti.
+     *  · on inscrit le bon dans `opTickets` sous l'identifiant qu'on vient de
+     *    minter. Sans ça, le sondage de la file le retrouverait six secondes
+     *    plus tard, ne le reconnaîtrait pas, et en ferait un SECOND ticket sur
+     *    l'écran cuisine de la caisse — le même plat, deux fois.
+     * Injoignable (pas de backend, pas de réseau, magasin non appairé) : on ne
+     * fait rien de plus, la caisse se comporte exactement comme avant et la
+     * file de secours du relais réessaiera toute seule. */
+    function relayToKitchen(order) {
+      try {
+        if (!order || !window.KiwiKitchenRelay || !KiwiKitchenRelay.merchant()) return;
+        const id = KiwiKitchenRelay.newId();
+        order.opId = id;
+        opTickets.set(id, order);
+        KiwiKitchenRelay.send({
+          id: id,
+          mode: order.type === 'dineIn' ? 'table' : 'takeout',
+          table: order.table || '',
+          server: order.server || '',
+          lines: (order.items || []).map(i => ({
+            name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.note || '',
+            station: (i.stations && i.stations[0]) || '',
+          })),
+        }).then((r) => {
+          /* Le numéro du serveur devient le numéro affiché. C'est le SEUL que
+             les deux écrans puissent connaître : la cuisine ne voit pas le
+             compteur local de ce comptoir. Sans ça, un cuisinier annonçant
+             « bon 7 prêt » aurait désigné un autre bon que celui que le
+             caissier a sous les yeux. */
+          if (r && r.ok && r.number != null) {
+            order.opNum = r.number;
+            updateKdsCount();
+            if (kdsEl.classList.contains('is-open')) kdsPaint();
+            if (mode === 'vrap' && vrapView === 'board') renderVrapBoard();
+          }
+        });
+      } catch (_) {}
     }
 
     /* ═══════ REVENIR À LA SALLE — LA SORTIE QUI N'EXISTAIT PAS ══════════════
@@ -8616,8 +8732,13 @@
      *
      * D'où cette fonction : tout retour à la salle passe par elle, et elle
      * n'exige PAS de table. C'est précisément quand la table a disparu qu'il
-     * faut pouvoir sortir. */
-    function backToSalle() {
+     * faut pouvoir sortir.
+     *
+     * `keepId` — la mesa reste ouverte et sélectionnée, son addition à l'écran.
+     * C'est le retour d'un ENVOI ou d'un ajout annulé : le serveur n'a pas
+     * fermé la table, il vient d'en finir avec le menu. Sans argument, la
+     * salle revient à vide (annulation, table disparue). */
+    function backToSalle(keepId) {
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) vrapTitle.innerHTML = 'À emporter<em>— vente au comptoir</em>';
       mode = 'salle';
@@ -8632,22 +8753,60 @@
       const cancelLabel = $('[data-cancel-label]');
       if (cancelLabel) cancelLabel.textContent = 'Annuler mesa';
       showPayButtons(false);
-      showEmpty();
+      if (keepId && tables[keepId]) {
+        selectedId = keepId;
+        markSelectedTable(keepId);
+        renderRightPanel(keepId);
+        $('#rp-empty').hidden = true;
+        $('#rp-empty').style.display = 'none';
+        $('#rp-active').hidden = false;
+        $('#rp-active').style.display = 'flex';
+      } else {
+        showEmpty();
+      }
       lucide.createIcons();
     }
 
-    /* Combien de plats sont déjà saisis sur la mesa en cours. Sert à distinguer
-       une sortie GRATUITE (le client n'était pas prêt à commander, rien n'est
-       tapé) d'une sortie COÛTEUSE (le serveur a déjà pris la commande). La
-       première doit être immédiate ; la seconde ne doit jamais partir sur un
-       doigt distrait. */
+    /* Combien de plats sont saisis mais PAS ENCORE PARTIS sur la mesa en cours.
+       Sert à distinguer une sortie GRATUITE (le client n'était pas prêt à
+       commander, rien n'est tapé) d'une sortie COÛTEUSE (le serveur a déjà pris
+       la commande). La première doit être immédiate ; la seconde ne doit jamais
+       partir sur un doigt distrait.
+       Ce sont bien les lignes NON ENVOYÉES qui comptent : sur une mesa rouverte
+       pour un dessert, les quatre plats déjà en cuisine ne risquent rien — les
+       compter aurait re-fermé la sortie qu'on vient d'ouvrir. */
     function orderInProgressCount() {
       if (mode !== 'order' || !selectedId) return 0;
-      return (tableOrders[selectedId] || []).reduce((s, l) => s + l.qty, 0);
+      return (tableOrders[selectedId] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
+    }
+
+    /* Cette mesa a-t-elle déjà de la matière en cuisine ? C'est ce qui sépare
+       « annuler la mesa » (rien n'est parti, la table redevient libre) de
+       « annuler mes ajouts » (le repas est en cours, on ne touche pas à ce qui
+       cuit). Le même bouton, deux gestes — et confondre les deux effacerait le
+       repas d'une table qui mange. */
+    function tableSentCount(id) {
+      return (tableOrders[id] || []).reduce((s, l) => s + (l.sent ? l.qty : 0), 0);
     }
 
     /* ---- cancel new order ---- */
     function cancelNewOrder() {
+      /* ── UNE MESA QUI MANGE DÉJÀ ────────────────────────────────────────────
+         Le serveur a rouvert la table pour un dessert, puis se ravise. Ce qui
+         s'annule, ce sont SES ajouts — pas le repas en cours. Vider
+         `tableOrders` ici et rendre la table « khawya » effacerait une addition
+         de quatre couverts au motif qu'on a hésité sur un thé. */
+      if (selectedId && tableSentCount(selectedId) > 0) {
+        const id = selectedId;
+        const dropped = (tableOrders[id] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
+        tableOrders[id] = (tableOrders[id] || []).filter(l => l.sent);
+        renderMenu();
+        backToSalle(id);
+        toast(dropped > 0
+          ? `Ajouts annulés · la mesa ${id} reste ouverte`
+          : `Mesa ${id}`);
+        return;
+      }
       /* Pas de table sous la main ? On sort quand même. Refuser ici était le
          cœur du blocage : la dernière issue ne faisait rien. */
       if (selectedId) {
@@ -8682,6 +8841,39 @@
       toast('Aucune mesa en cours');
     });
     document.getElementById('cancel-new-order').addEventListener('click', cancelNewOrder);
+
+    /* ═══════ ROUVRIR LA COMMANDE D'UNE MESA INSTALLÉE ═══════════════════════
+     * Un repas ne se commande pas d'un bloc. Quelqu'un arrive en retard, la
+     * table demande un dessert, un deuxième thé, une bouteille d'eau — et la
+     * caisse n'avait aucun chemin pour ça : une fois la mesa validée, cliquer
+     * dessus n'ouvrait plus que l'addition et ses moyens de paiement. Le seul
+     * contournement était d'annuler la mesa (donc son repas) et de tout
+     * ressaisir, ou d'ouvrir « À emporter » — ce qui décroche l'article de la
+     * table et fausse l'addition. Deux mauvaises réponses à une question qui
+     * revient à chaque service.
+     *
+     * On retourne donc dans le MÊME mode commande, sur la MÊME liste. Ce qui
+     * est déjà parti garde son drapeau `sent` : la cuisine ne recevra que les
+     * nouveaux plats (sendTableToKitchen filtre là-dessus depuis toujours), et
+     * l'addition, elle, porte les deux. */
+    function resumeTableOrder(id) {
+      if (!id) return;
+      const t = tables[id];
+      /* La table a disparu du plan pendant le service — le patron l'a retirée
+         depuis son téléphone. On ne relance pas une commande sur un fantôme. */
+      if (!t) { backToSalle(); toast('Cette mesa n\'existe plus sur le plan'); return; }
+      if (t.status === 'khlass') { toast('Mesa déjà encaissée'); return; }
+      if (!tableOrders[id]) tableOrders[id] = [];
+      selectedId = id;
+      markSelectedTable(id);
+      setMode('order');
+      const n = tableSentCount(id);
+      if (n > 0) toast(`Mesa ${id} · ${n} article${n > 1 ? 's' : ''} déjà en cuisine`);
+    }
+    $('#rp-add-items').addEventListener('click', () => {
+      if (mode !== 'salle' || !selectedId) return;
+      resumeTableOrder(selectedId);
+    });
 
     /* ===========================================================
        Split Bill
@@ -12624,8 +12816,14 @@
     }
 
     function kdsHistoryRow(o) {
-      return `<button class="kit-hrow" data-kit-eye="${o.num}" aria-label="Agrandir #${o.num}">
-        <span class="kit-hrow-num">#${o.num}</span>
+      /* `ticketNo(o)`, et non `#${o.num}` : l'historique était le seul endroit
+         qui affichait encore le compteur LOCAL. Une commande qui porte un
+         numéro serveur — celles du téléphone, et depuis le relais cuisine
+         toutes les autres — s'y retrouvait donc sous un numéro que personne
+         d'autre ne connaît, alors que la carte juste au-dessus, l'écran de la
+         cuisine et le client en annonçaient un troisième. */
+      return `<button class="kit-hrow" data-kit-eye="${o.num}" aria-label="Agrandir ${ticketNo(o)}">
+        <span class="kit-hrow-num">${ticketNo(o)}</span>
         ${kdsTypeChip(o)}
         <span class="kit-hrow-time">${KDS_SVG.check}Servie ${kdsEsc(o.readyAt || '')}</span>
         <span class="kit-hrow-eye">${KDS_SVG.eye}</span>
@@ -13219,6 +13417,8 @@
       };
       kdsOrders.push(order);
       printKitchenTickets(order, items);
+      // …et sur la tablette de la cuisine, qui n'a pas d'imprimante.
+      relayToKitchen(order);
       const count = cart.reduce((s, l) => s + l.qty, 0);
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -13533,7 +13733,18 @@
        naître un deuxième ticket. */
     function opIngest(o) {
       if (!o || !o.id) return;
-      const known = opTickets.get(o.id);
+      /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
+         rechargement (persistShift). Après un F5 en plein service, `opTickets`
+         repart vide alors que `kdsOrders` contient encore les bons de la caisse
+         avec leur `opId` — le sondage suivant ne les aurait donc pas reconnus
+         et en aurait fabriqué un DEUXIÈME exemplaire pour chacun. On rattache
+         par balayage, une seule fois par bon. Même mécanique quand un SECOND
+         comptoir découvre les bons du premier. */
+      let known = opTickets.get(o.id);
+      if (!known) {
+        known = kdsOrders.find(t => t && t.opId === o.id);
+        if (known) opTickets.set(o.id, known);
+      }
 
       /* En salle, une commande EN ATTENTE n'entre pas dans la cuisine : elle
          attend la décision humaine, et c'est la pastille sur la table qui la
@@ -13559,7 +13770,13 @@
           items: (o.lines || []).map(l => ({
             q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
             note: [l.options, l.note].filter(Boolean).join(' · '),
-            stations: [kdsStationForName(l.name)],
+            /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
+               transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
+               retrouver par le nom du plat serait le recalculer contre une
+               carte qui a pu changer depuis. Le repli par nom reste pour les
+               commandes du téléphone, qui n'ont jamais porté de poste. */
+            stations: [(l.station && kdsStations().some(s => s.id === l.station))
+              ? l.station : kdsStationForName(l.name)],
           })),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
@@ -13577,6 +13794,17 @@
          être écrasé par ce sondage. */
       if (o.status === 'ready' && known.status !== 'ready') {
         known.status = 'ready'; known.readyAt = known.readyAt || kdsNowHM();
+        /* La cuisine vient de bumper depuis SA tablette. Sans un mot ici, le
+           plat attendait au passe pendant que le comptoir regardait ailleurs —
+           c'est la moitié retour du relais, et elle ne sert à rien si personne
+           ne l'entend. (Un « prête » déclenché depuis CETTE caisse ne repasse
+           pas par ici : `known.status` est déjà à 'ready' quand le sondage
+           revient, donc pas de double annonce.) */
+        try {
+          toast(known.table ? `Table ${known.table} · ${ticketNo(known)} prête`
+                            : `${ticketNo(known)} prête`);
+          if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+        } catch (_) {}
       }
       if (o.status === 'served' && !known.pickedUp) {
         known.pickedUp = true; known.pickedUpAt = known.pickedUpAt || kdsNowHM();

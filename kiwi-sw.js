@@ -16,13 +16,19 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v170';
+var CACHE = 'kiwi-app-v171';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
+  /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
+     l'endroit du commerce où le wifi est le plus mauvais — mur porteur, four,
+     sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
+     quand le réseau tousse, au lieu d'une page blanche au milieu du service. */
+  '/kiwi-cuisine.html',
   '/assets/kiwi-env.js',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
+  '/cuisine.webmanifest',
   '/assets/tokens.css',
   '/assets/theme.css',
   '/assets/polish.css',
@@ -113,6 +119,10 @@ var SHELL = [
   '/assets/orderpro-publish.js',
   '/assets/orderpro-panel.js',
   '/assets/orderpro-inbox.js',
+  /* Le relais cuisine — la caisse pose ses bons, la tablette du passe les lit.
+     Dans la coquille pour les deux pages : c'est lui qui porte la file de
+     secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
+  '/assets/kitchen-relay.js',
   '/assets/pos-sale.js',
   '/assets/pos-dispatch.js',
   '/assets/pos-mobile.js',
@@ -196,8 +206,15 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(
       fetch(req).then(function (res) { return put(req, res); }).catch(function () {
         return caches.match(req).then(function (hit) {
-          return hit || caches.match(url.pathname.indexOf('/kiwi-caisse') === 0
-            ? '/kiwi-caisse.html' : '/dashboard.html');
+          if (hit) return hit;
+          /* Le repli doit rendre LA MÊME application, pas une autre. Un écran
+             cuisine hors ligne qui se rouvre sur le tableau de bord du patron
+             n'est pas un repli, c'est une panne déguisée — et sur une tablette
+             murale sans clavier, personne ne s'en sortira. */
+          var p = url.pathname;
+          if (p.indexOf('/kiwi-cuisine') === 0) return caches.match('/kiwi-cuisine.html');
+          if (p.indexOf('/kiwi-caisse') === 0) return caches.match('/kiwi-caisse.html');
+          return caches.match('/dashboard.html');
         });
       })
     );
