@@ -161,15 +161,17 @@ export const F16_Finale: React.FC<{ dur?: number }> = ({ dur = 990 }) => {
 
   const tag = interpolate(frame, [84, 106], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const tiers = interpolate(frame, [140, 162], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  const url = interpolate(frame, [340, 362], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  const labels = interpolate(frame, [360, 382], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  /* the CTA arrives late on purpose — two quiet seconds on the poster first,
+     so the click lands at ~1:51 and the closing hold stays near five seconds */
+  const url = interpolate(frame, [470, 492], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const labels = interpolate(frame, [490, 512], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-  const flyT = interpolate(frame, [214, 282], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const flyT = interpolate(frame, [344, 412], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const fly = 1 - Math.pow(1 - flyT, 2.8);
   const cx = interpolate(fly, [0, 1], [1760, 1030]);
   const cy = interpolate(fly, [0, 1], [140, 802]) + Math.sin(fly * Math.PI) * 110;
-  const press = interpolate(frame, [282, 288, 296], [0, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  const pulse = frame > 292 ? 1 + Math.sin((frame - 292) / 8) * 0.01 : 1;
+  const press = interpolate(frame, [412, 418, 426], [0, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const pulse = frame > 422 ? 1 + Math.sin((frame - 422) / 8) * 0.01 : 1;
 
   const creep = 1 + Math.min(1, frame / dur) * 0.018;
 
@@ -243,7 +245,7 @@ export const F16_Finale: React.FC<{ dur?: number }> = ({ dur = 990 }) => {
       </AbsoluteFill>
 
       {/* the call to action blooms, and the film clicks it */}
-      <BlobWipe at={200} x="50%" y="74%" dur={24}>
+      <BlobWipe at={330} x="50%" y="74%" dur={24}>
         <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 176 }}>
           <div
             style={{
@@ -282,8 +284,8 @@ export const F16_Finale: React.FC<{ dur?: number }> = ({ dur = 990 }) => {
         KIWI.MA
       </div>
 
-      <ClickRing at={284} x={1052} y={820} color={C.atlas} />
-      {frame >= 214 && frame < 330 && <Cursor x={cx} y={cy} press={press} size={104} />}
+      <ClickRing at={414} x={1052} y={820} color={C.atlas} />
+      {frame >= 344 && frame < 460 && <Cursor x={cx} y={cy} press={press} size={104} />}
 
       <KeyLight x="38%" y="10%" color="255,246,224" opacity={0.32} />
       <Grain opacity={0.05} blend="multiply" />
