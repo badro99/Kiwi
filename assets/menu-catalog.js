@@ -538,15 +538,6 @@
       /* postes de préparation — la pastille est le même repère que sur l'écran
          cuisine de la caisse, à la même couleur. */
       .mx-stdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
-      /* Le routage de la catégorie ouverte, en tête de volet. Il se lit comme
-         une phrase — « Part vers · Bar » — et non comme un formulaire : le
-         libellé est petit et gris, la valeur porte le poids. */
-      .mx-catst { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 11px;
-        height: 34px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
-      .mx-catst > span { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
-        color: var(--n-500); white-space: nowrap; }
-      .mx-catst select { border: 0; background: none; outline: none; font: inherit; font-size: 13px;
-        font-weight: 600; color: var(--ink); padding: 0; max-width: 168px; cursor: pointer; }
       /* Les groupes d'options — une carte par groupe : le nom, la règle, puis
          les choix. La règle se lit avant les choix parce qu'elle change ce que
          les choix veulent dire (un seul, ou autant qu'on veut). */
@@ -643,9 +634,6 @@
     const d = store.get();
     const cats = d.cats || [];
     const items = d.items || [];
-    const stations0 = stationsOf(d);
-    const kitchenId = kitchenIdOf(d);
-    const kitchenSt = stationById(d, kitchenId);
 
     if (!cats.length && !items.length) return renderEmpty();
 
@@ -732,16 +720,6 @@
                 <div class="sub">${shown.length} ${esc(tr(shown.length === 1 ? T.product : T.products))}</div>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
-                ${/* Le routage, au seul endroit où on y pense : devant les plats
-                      concernés. Caché tant qu'il n'y a qu'un poste — proposer un
-                      choix qui n'en est pas un, c'est faire douter le patron. */''}
-                ${cat && stations0.length > 1 ? `<label class="mx-catst">
-                  <span>${esc(tr(T.catStationL))}</span>
-                  <select data-cat-station="${esc(cat.id)}" aria-label="${esc(tr(T.catStationL))}">
-                    <option value="">${esc(kitchenSt ? kitchenSt.name : tr(T.kitchenNm))} · ${esc(tr(T.catStationD))}</option>
-                    ${stations0.filter((s) => s.id !== kitchenId).map((s) => `<option value="${esc(s.id)}" ${s.id === cat.station ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
-                  </select>
-                </label>` : ''}
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations" data-arg="${cat ? esc(cat.id) : ''}">${BELL}<span>${esc(tr(T.stations))}</span></button>
@@ -1279,26 +1257,9 @@
   }
 
   /* ───────────────── handlers ───────────────── */
-  /* Le sélecteur de poste est un <select> : la délégation de clic de Kiwi ne le
-   * voit pas, il faut écouter `change`. Posé UNE fois sur le document plutôt
-   * qu'à chaque rendu — la page carte se repeint à chaque frappe d'un nom de
-   * poste, et un écouteur par rendu s'empilerait jusqu'à écrire cent fois. */
-  let catStationBound = false;
-  function bindCatStation() {
-    if (catStationBound) return;
-    catStationBound = true;
-    document.addEventListener('change', (e) => {
-      const sel = e.target && e.target.closest && e.target.closest('[data-cat-station]');
-      if (!sel) return;
-      setCategoryStation(sel.getAttribute('data-cat-station'), sel.value);
-      render();
-    });
-  }
-
   function registerHandlers() {
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) return;
-    bindCatStation();
     H['mx-cat-add'] = () => promptText({ title: tr(T.addCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { const c = addCategory(v); const d = store.get(); const last = d.cats[d.cats.length - 1]; if (last) { activeCat = last.id; activeSub = null; } render(); } });
     H['mx-cat-pick'] = (_el, id) => { activeCat = id; activeSub = null; render(); };
     H['mx-sub-pick'] = (_el, arg) => { const [cid, sid] = String(arg || '').split('::'); activeCat = cid; activeSub = sid || null; render(); };
