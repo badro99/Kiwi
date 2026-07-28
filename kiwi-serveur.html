@@ -3558,7 +3558,7 @@ em, i, cite, dfn, var { font-style: normal; }
        multi (plusieurs choix, certains payants) ou toggle (oui / non).
        A dish that carries one or more groups forces the serveur through the
        options sheet before the line can land in the order. */
-    const optionGroups = {
+    let optionGroups = {
       cuisson:        { name: 'Cuisson',             kind: 'radio',  vals: [{ n: 'Bleu' }, { n: 'Saignant' }, { n: 'À point' }, { n: 'Bien cuit' }] },
       fromage:        { name: 'Suppléments fromage', kind: 'multi',  vals: [{ n: 'Cheddar', p: 8 }, { n: 'Comté', p: 12 }, { n: 'Bleu', p: 10 }, { n: 'Mozzarella', p: 8 }] },
       sauces:         { name: 'Sauces',              kind: 'multi',  vals: [{ n: 'BBQ' }, { n: 'Mayo' }, { n: 'Andalouse' }, { n: 'Algérienne' }, { n: 'Samouraï' }, { n: 'Harissa' }] },
@@ -3568,7 +3568,7 @@ em, i, cite, dfn, var { font-style: normal; }
       piment:         { name: 'Sans piment',         kind: 'toggle', vals: [{ n: 'Oui' }] },
     };
     /* which dishes carry which groups (order = display order in the sheet) */
-    const itemOptions = {
+    let itemOptions = {
       'm-007': ['cuisson', 'coriandre', 'piment'],                  // Tajine kefta (viande hachée + œuf)
       'm-009': ['coriandre', 'pain'],                               // Tajine agneau pruneaux
       'm-003': ['coriandre', 'piment'],                             // Harira
@@ -3580,7 +3580,11 @@ em, i, cite, dfn, var { font-style: normal; }
       'm-022': ['sauces', 'piment'],                                // Wrap végé
     };
     const itemHasOptions = id => Array.isArray(itemOptions[id]) && itemOptions[id].length > 0;
-    const isReqKind = k => k === 'radio';  // radio = obligatoire; multi / toggle = optionnel
+    /* « Obligatoire » est une propriete du GROUPE, pas de sa forme. La demo
+       n'ayant pas ce drapeau, elle retombe sur son ancienne regle (radio =
+       obligatoire) ; une vraie carte, elle, peut tres bien porter un choix
+       unique facultatif — la taille d'un cafe — qui ne doit rien bloquer. */
+    const isReq = def => (def && def.required != null) ? !!def.required : (def && def.kind === 'radio');
 
     /* Build the chosen-options array (and €) from a draft selection. */
     function optsFromSel(itemId, sel) {
@@ -3677,21 +3681,47 @@ em, i, cite, dfn, var { font-style: normal; }
       const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
       const labels = { all: 'Tout' };
       const order = ['all'];
-      cats.forEach((c) => { labels[c.id] = c.name || 'Sans nom'; order.push(c.id); });
+      /* Le routage vit sur la categorie (voir assets/menu-catalog.js). Le
+         serveur lisait it.station, qui n'existe plus : sans ce report, chaque
+         commande annoncait le premier poste de la liste. */
+      const catStation = {};
+      cats.forEach((c) => { labels[c.id] = c.name || 'Sans nom'; catStation[c.id] = String(c.station || ''); order.push(c.id); });
       let loose = false;
       const items = d.items.filter(it => it && it.id && it.name && it.avail !== false).map((it) => ({
         id: it.id,
         cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
         name: it.name,
         price: +it.price || 0,
-        // Le poste de préparation choisi par le patron, pour annoncer au serveur
-        // OÙ part sa commande (voir svStationNames).
-        station: it.station || '',
+        // Le poste de préparation, hérité de sa catégorie, pour annoncer au
+        // serveur OÙ part sa commande (voir svStationNames).
+        station: catStation[(it.catId && labels[it.catId]) ? it.catId : ''] || '',
+        opts: Array.isArray(it.opts) ? it.opts.slice() : [],
       }));
       if (loose) { labels._autres = 'Autres'; order.push('_autres'); }
       svStations = (Array.isArray(d.stations) ? d.stations : [])
         .filter(s => s && s.id && s.name)
         .map(s => ({ id: String(s.id), name: String(s.name) }));
+      /* Les options du patron remplacent celles de la démo — même forme, donc
+         la feuille d'options ci-dessus fonctionne sans changer d'une ligne.
+         Un groupe sans choix est écarté : le serveur ouvrirait une feuille où
+         il n'y a rien à répondre et rien à valider. */
+      const lib = {};
+      (Array.isArray(d.opts) ? d.opts : []).forEach((g) => {
+        if (!g || !g.id || !g.name || !Array.isArray(g.choices) || !g.choices.length) return;
+        lib[String(g.id)] = {
+          name: String(g.name),
+          kind: g.kind === 'many' ? 'multi' : 'radio',
+          required: !!g.required,
+          vals: g.choices.filter(c => c && c.name).map(c => ({ n: String(c.name), p: Math.max(0, +c.price || 0) })),
+        };
+      });
+      optionGroups = lib;
+      const attach = {};
+      items.forEach((m) => {
+        const ids = (m.opts || []).filter(id => !!lib[id]);
+        if (ids.length) attach[m.id] = ids;
+      });
+      itemOptions = attach;
       catLabels = labels; catOrder = order; menuItems = items;
       if (!catLabels[activeCat]) activeCat = 'all';
       try { renderCatPills(); renderMenu(); } catch (_) {}
@@ -5006,7 +5036,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!optDraft) return;
       const item = menuItems.find(m => m.id === optDraft.itemId);
       const groupsHTML = itemOptions[optDraft.itemId].map(g => {
-        const def = optionGroups[g], sel = optDraft.sel[g], required = isReqKind(def.kind);
+        const def = optionGroups[g], sel = optDraft.sel[g], required = isReq(def);
         const unmet = showMissing && required && sel == null;
         const pills = def.vals.map(v => {
           const on = def.kind === 'multi' ? sel.has(v.n)
@@ -5037,7 +5067,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function confirmOptions() {
       if (!optDraft || !menuContextId) return;
-      const missing = itemOptions[optDraft.itemId].some(g => isReqKind(optionGroups[g].kind) && optDraft.sel[g] == null);
+      const missing = itemOptions[optDraft.itemId].some(g => isReq(optionGroups[g]) && optDraft.sel[g] == null);
       if (missing) { renderOptionsSheet(true); toast('Choisissez les options obligatoires'); return; }
       const item = menuItems.find(m => m.id === optDraft.itemId);
       const opts = optsFromSel(optDraft.itemId, optDraft.sel);
