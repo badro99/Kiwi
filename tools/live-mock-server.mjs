@@ -81,6 +81,10 @@ const lib = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 const ROUTES = {
   '/api/config': await import(path.join(ROOT, 'functions/api/config.js')),
   '/api/feed': await import(path.join(ROOT, 'functions/api/feed.js')),
+  // Qui est connecté, et quels établissements il tient. Sans cette route le banc
+  // renvoyait {} : identity.js repartait sur « pas de compte », donc ni God mode,
+  // ni liste de magasins — les deux choses qu'on vient vérifier ici.
+  '/api/me': await import(path.join(ROOT, 'functions/api/me.js')),
   '/api/admin/config': await import(path.join(ROOT, 'functions/api/admin/config.js')),
   '/api/admin/audit': await import(path.join(ROOT, 'functions/api/admin/audit.js')),
   '/api/admin/pins': await import(path.join(ROOT, 'functions/api/admin/pins.js')),
@@ -126,6 +130,13 @@ db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,
 const NOW = Date.now();
 db.prepare('INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,updated_ts) VALUES (?,?,?,?,?,?,?)')
   .bind('amira-cafe', '{}', 'pro', 'cafe', 'acc-old', 'Amira Café', NOW).run();
+
+/* Un code patron déposé sous le SECOND magasin, pas sous celui d'inscription.
+   C'est le cas qui cassait : le dashboard n'interrogeait que le magasin affiché
+   et le magasin primaire, donc un code rangé ailleurs n'ouvrait rien. Il doit
+   maintenant ouvrir le tableau de bord depuis n'importe lequel des deux. */
+db.prepare('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)')
+  .bind('pin-cafe', 'amira-cafe', '7777', 'Amira', 'proprietaire', 0).run();
 
 const seedSale = (id, m, amount, method, label, ref, ts, lines) =>
   db.prepare('INSERT INTO sales (id,merchant,amount,method,label,ref,ts,lines) VALUES (?,?,?,?,?,?,?,?)')
@@ -206,7 +217,21 @@ http.createServer(async (rq, rs) => {
     // Quelle session ? ?merchant= choisit le commerçant qu'on incarne, ce qui
     // permet d'ouvrir les deux tableaux de bord côte à côte dans deux onglets.
     const who = SESSIONS[url.searchParams.get('merchant')] || SESSIONS['amira-boutique'];
-    const cookie = `kiwi_sess=${who}` + (p.startsWith('/api/admin/') ? `; kiwi_op=${OP}; kiwi_op_id=${OPID}` : '');
+    // Le cookie opérateur va aux routes /api/admin/*, et à TOUT appel venu d'une
+    // page ouverte en God mode (?op=1 dans le Referer). En production ce cookie
+    // est posé sur l'origine et part avec chaque requête ; le restreindre aux
+    // seules routes admin rendait /api/me « pas opérateur » sur un dashboard
+    // porté, donc intestable ici. On lit le Referer parce que le paramètre est
+    // sur la PAGE, pas sur l'appel d'API que la page émet.
+    const opView = /[?&]op=1(?:&|$)/.test(String(rq.headers.referer || ''));
+    // KIWI_DEBUG_REF=1 pour voir qui appelle quoi, et si l'appel est reconnu comme
+    // venant d'une page God mode. C'est la première chose qu'on veut savoir quand
+    // une vue portée répond comme une vue ordinaire.
+    if (process.env.KIWI_DEBUG_REF) {
+      console.log('[ref]', rq.url, '←', JSON.stringify(rq.headers.referer || null), 'opérateur=' + opView);
+    }
+    const cookie = `kiwi_sess=${who}`
+      + ((p.startsWith('/api/admin/') || opView) ? `; kiwi_op=${OP}; kiwi_op_id=${OPID}` : '');
     const fn = mod['onRequest' + rq.method[0] + rq.method.slice(1).toLowerCase()];
     if (!fn) { rs.writeHead(405); return rs.end(); }
     try {

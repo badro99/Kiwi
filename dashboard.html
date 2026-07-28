@@ -6119,10 +6119,26 @@
     return 'staff';
   }
 
+  /* Une vue portée sur un client : ?op=1 / ?merchant= — la God mode de la
+   * console. Même définition que merchant-config.js › isScoped() et venues.js.
+   * L'URL seule n'autorise rien ; elle dit seulement « ce dashboard n'est pas
+   * celui de ce navigateur ». */
+  function scopedView() {
+    try { const p = new URLSearchParams(location.search); return p.has('op') || p.has('merchant'); }
+    catch (_) { return false; }
+  }
+
   /* Every 4-digit code this ACCOUNT is known to have, from both sources, each
    * tagged with its tier. `seenPins` is the union across all of the account's
    * stores (see assets/merchant-config.js); `kiwiPins` is what the onboarding
-   * wizard wrote locally, and is usually where the owner's own code lives. */
+   * wizard wrote locally, and is usually where the owner's own code lives.
+   *
+   * `kiwiPins` belongs to THIS BROWSER, so it must never be consulted on a
+   * scoped view. It was: an operator who had set up a shop of their own carried
+   * that shop's code into every client they opened, and it unlocked all of them
+   * — one browser's PIN was a passkey to the whole roster, while the client's
+   * real code (filed on the server, under their slug) was refused. Server-held
+   * codes only when we are looking at somebody else's business. */
   function allPins() {
     const out = [], seen = Object.create(null);
     const add = (x) => {
@@ -6135,10 +6151,12 @@
       const kc = window.KiwiConfig;
       if (kc) { (kc.seenPins || []).forEach(add); if (kc.loaded) (kc.pins || []).forEach(add); }
     } catch (_) {}
-    try {
-      const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
-      if (Array.isArray(p)) p.forEach(add);
-    } catch (_) {}
+    if (!scopedView()) {
+      try {
+        const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
+        if (Array.isArray(p)) p.forEach(add);
+      } catch (_) {}
+    }
     return out;
   }
 

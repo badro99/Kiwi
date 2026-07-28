@@ -455,21 +455,65 @@
     }, 400);
   }
 
-  /* One extra read, on the dashboard only: the ACCOUNT's own config, with no
-   * store named. It feeds nothing but seenPins.
+  /* UN code, pour toute la maison.
    *
-   * The owner's code was filed once, against whichever store existed at the
-   * time. Ask only about the shop currently on screen and you will not find it
-   * from the other one — which is exactly how an owner ended up locked out of
-   * their own dashboard while their newest shop's cashier could walk in. This
-   * costs one request and is session-derived, so it can only ever return codes
-   * belonging to the person already signed in. */
-  function fetchAccountPins() {
-    if (isScoped() || !onDashboard()) return;
-    fetch('/api/config', { headers: { Accept: 'application/json' } })
+   * Les codes du personnel sont rangés par BOUTIQUE (`staff_pins.merchant`) —
+   * c'est juste pour une caisse : le serveur du restaurant n'ouvre pas le tiroir
+   * de l'épicerie. Le dashboard, lui, est la surface du PATRON et il embrasse
+   * tous ses établissements : son code doit l'ouvrir depuis n'importe lequel.
+   *
+   * Le code du patron n'est déposé qu'UNE fois, sous la boutique qui existait ce
+   * jour-là. On ne demandait qu'à celle affichée, plus la boutique « primaire »
+   * de la session — donc un patron dont le code dormait sous son TROISIÈME
+   * magasin restait à la porte de son propre dashboard, pendant que le caissier
+   * du magasin affiché entrait. On demande maintenant à TOUS ses magasins et on
+   * réunit les réponses ; `configuredPins()` côté page ne retient de toute façon
+   * que les codes patron/manager.
+   *
+   * La liste des magasins vient de /api/me, déjà lue par identity.js — aucun
+   * appel de plus pour l'obtenir. Chaque lecture reste dérivée de la session :
+   * le serveur refuse un slug qui n'appartient pas au compte, donc ceci n'élargit
+   * rien, ça finit de poser la question. Compte d'un seul magasin, base pas
+   * encore migrée, ou identity.js absent ⇒ la lecture nue d'avant, à l'identique.
+   * Jamais sur une vue portée : là, l'opérateur entre par son propre code. */
+  function readPinsFrom(url) {
+    fetch(url, { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (d) { if (d && Array.isArray(d.pins)) rememberPins(d.pins); })
       .catch(function () {});
+  }
+  function fetchAccountPins() {
+    if (isScoped() || !onDashboard()) return;
+    /* On attend le portillon d'identité au lieu de le lire tout de suite : ce
+     * fichier est chargé AVANT identity.js dans dashboard.html, et deux scripts
+     * `defer` s'exécutent à la suite avant DOMContentLoaded — donc au moment où
+     * boot() tourne ici, window.KiwiIdentity n'existe pas encore. Lu une seule
+     * fois, la liste des magasins était toujours vide et on retombait chaque fois
+     * sur la lecture nue, c'est-à-dire sur le bug qu'on répare. ~1 s d'attente
+     * maximum, puis on se rabat quand même — jamais de blocage. */
+    var tries = 0;
+    (function waitForIdentity() {
+      var gate = null;
+      try { gate = window.KiwiIdentity && window.KiwiIdentity.ready; } catch (_) {}
+      if (!gate || typeof gate.then !== 'function') {
+        if (++tries > 20) { readPinsFrom('/api/config'); return; }
+        setTimeout(waitForIdentity, 50);
+        return;
+      }
+      gate.then(function (st) {
+        var stores = (st && Array.isArray(st.stores)) ? st.stores : [];
+        // Compte d'un seul magasin, base pas encore migrée, ou rechargement en
+        // cours après un changement de compte ⇒ la lecture nue d'avant.
+        if (!stores.length) { readPinsFrom('/api/config'); return; }
+        var asked = Object.create(null);
+        stores.forEach(function (s) {
+          var m = String((s && s.merchant) || '').trim();
+          if (!m || asked[m]) return;
+          asked[m] = 1;
+          readPinsFrom('/api/config?merchant=' + encodeURIComponent(m));
+        });
+      }).catch(function () { readPinsFrom('/api/config'); });
+    })();
   }
 
   function boot() { fetchConfig(); fetchAccountPins(); watchStore(); }

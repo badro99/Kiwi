@@ -240,15 +240,86 @@
 
   // Drive the venue engine so the switcher/header show the scoped client, not the
   // operator's own local venues. Retried alongside the DOM patch for async nav.
+  // `scopeExtra` est rempli plus tard par loadScopeSiblings() : les autres
+  // établissements du même client, et son vrai nom d'enseigne.
+  var scopeExtra = { siblings: [], name: '' };
   function applyScopedVenue(label, type) {
     try {
       if (window.KiwiVenue && window.KiwiVenue.applyScopedVenue) {
-        window.KiwiVenue.applyScopedVenue({ name: label, type: type || '' });
+        window.KiwiVenue.applyScopedVenue({
+          name: scopeExtra.name || label,
+          type: type || '',
+          siblings: scopeExtra.siblings,
+        });
       }
     } catch (_) {}
   }
 
-  function run(id, scoped, label, type) {
+  /* Les établissements du client regardé, via la liste d'opérateur.
+   *
+   * /api/me ne répond, pour une vue portée, que sur UN magasin : il retrouve le
+   * compte en slugifiant `accounts.business`, ce qui ne matche que le magasin
+   * d'INSCRIPTION. Ouvrir le deuxième magasin d'un client donnait donc un compte
+   * introuvable — nom vide, replié sur le slug embelli — et un sélecteur à une
+   * seule ligne alors que le client en tient deux.
+   *
+   * /api/admin/clients, lui, connaît déjà le registre entier et rattache chaque
+   * magasin à son propriétaire (`owner`, l'e-mail du compte). C'est la liste que
+   * la console affiche ; elle est gardée par le même cookie opérateur. On y prend
+   * le vrai nom de l'enseigne regardée et ses magasins frères — sans rien changer
+   * au serveur, donc ça marche dès le prochain déploiement du front.
+   *
+   * Échec, base non migrée, ou client à un seul magasin ⇒ exactement l'affichage
+   * d'avant. Un magasin sans `owner` est une démo : jamais de frères. */
+  function loadScopeSiblings(activeSlug, redraw) {
+    if (!activeSlug) return;
+    fetch('/api/admin/clients', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return (r && r.ok) ? r.json() : null; })
+      .then(function (d) {
+        var rows = (d && Array.isArray(d.clients)) ? d.clients : [];
+        var me = null;
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i] && rows[i].merchant === activeSlug) { me = rows[i]; break; }
+        }
+        if (!me) return;
+        // `business` est le nom de L'ÉTABLISSEMENT (merchant_config.name) ;
+        // `name` est celui de la PERSONNE au bout du compte. C'est l'enseigne
+        // qu'on affiche — sinon les deux magasins d'Amira s'appelleraient
+        // « amira » tous les deux dans son propre sélecteur.
+        var nm = String(me.business || '').trim() || prettifySlug(me.merchant);
+        if (nm) scopeExtra.name = nm;
+        var owner = String(me.owner || '').trim();
+        if (owner) {
+          scopeExtra.siblings = rows.filter(function (r) {
+            return r && r.merchant !== activeSlug && String(r.owner || '').trim() === owner;
+          }).map(function (r) {
+            return {
+              slug: r.merchant,
+              name: String(r.business || '').trim() || prettifySlug(r.merchant),
+              location: '',
+              type: String(r.type || '').trim(),
+            };
+          });
+        }
+        if (nm || scopeExtra.siblings.length) { try { redraw(); } catch (_) {} }
+      })
+      .catch(function () {});
+  }
+
+  /* Lever l'écran de PIN pour un opérateur confirmé par le serveur.
+   * `reveal()` est la sortie programmatique prévue par dashboard.html (le bouton
+   * « Entrer dans la démo », lui, est mort sur l'app hébergée). Le script du
+   * verrou est en ligne dans la page, donc déjà exécuté quand /api/me répond ;
+   * on réessaie tout de même une fois, au cas où l'ordre changerait. */
+  function unlockForOperator() {
+    var go = function () {
+      try { if (window.__kiwiLock && window.__kiwiLock.reveal) window.__kiwiLock.reveal(); } catch (_) {}
+    };
+    go();
+    setTimeout(go, 300);
+  }
+
+  function run(id, scoped, label, type, scopeSlug) {
     var go = function () {
       // In a God-mode scoped view, take over the venue FIRST so the switcher and
       // header render the client; then patch identity on top.
@@ -260,6 +331,19 @@
     // Re-apply once after the venue engine finishes its async render (it rewrites
     // the location label / chip), so our real identity wins the last word.
     setTimeout(go, 700);
+    // Puis, quand la liste d'opérateur répond : le vrai nom de l'enseigne (au
+    // lieu du slug embelli) et les magasins frères dans le sélecteur.
+    if (scoped && scopeSlug) {
+      loadScopeSiblings(scopeSlug, function () {
+        if (scopeExtra.name) {
+          if (!id.name || id.name === label) id.name = scopeExtra.name;
+          id.business = scopeExtra.name;
+          label = scopeExtra.name;
+          try { window.KiwiMe = id; } catch (_) {}
+        }
+        go();
+      });
+    }
   }
 
   // "kandisky-boutique" → "Kandisky Boutique" — a readable fallback label when an
@@ -329,7 +413,17 @@
         // An operator looking at somebody else's shop is never doing their own
         // setup — the wizard must not open in their face (test G).
         settle({ authenticated: !!me.authenticated, operator: true, onboarded: true, stores: [] });
-        run(opId, true, label, (me.type || '').trim());
+        // Le code opérateur a déjà été donné à la porte : la console ne s'ouvre
+        // pas sans lui. Redemander un PIN ici demandait le code d'un AUTRE — le
+        // commerçant — que le support n'a pas à connaître, et qu'un client qui
+        // l'a oublié ne peut pas fournir au moment précis où il appelle à l'aide.
+        // Le PIN protège le patron de sa propre équipe, pas de Kiwi.
+        //
+        // Ouvert par le SERVEUR, jamais par l'URL : c'est ce `me.operator` — le
+        // cookie opérateur signé, vérifié dans /api/me — qui lève la garde. Coller
+        // « ?op=1 » derrière l'adresse ne lève rien du tout, l'écran reste.
+        unlockForOperator();
+        run(opId, true, label, (me.type || '').trim(), (me.slug || slug || '').trim());
         return;
       }
 

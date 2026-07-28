@@ -1334,6 +1334,16 @@
   // Transient: the synthetic 'scoped' venue is never persisted (see
   // persistCustomVenues) and is rebuilt from the server on each scoped load.
   let scopedActive = false;
+  // Les AUTRES établissements du même client, quand l'opérateur en regarde un.
+  // Un compte peut tenir une boutique et un restaurant ; n'en montrer qu'un
+  // laissait croire que le client n'en avait qu'un, et il n'existait aucun
+  // chemin vers le second — il fallait ressortir vers la console. Ce sont des
+  // lignes de NAVIGATION, pas des venues : elles n'entrent jamais dans VENUES ni
+  // dans customIds (donc ni persistance, ni comptage, ni fusion), et un clic
+  // recharge la page sur le slug voulu — le seul moyen sûr de faire suivre
+  // d'un coup la config, le flux de ventes, l'identité et le rapport du jour.
+  // [{ slug, name, location, type }]
+  let scopedSiblings = [];
   const getVenueType = id => ((!id || id === currentVenue) && typeOverride)
     ? typeOverride
     : (VENUES[id] || VENUES[currentVenue])?.type;
@@ -1389,19 +1399,38 @@
    * locally with a single synthetic venue that IS the scoped client. Called by
    * identity.js only after the server confirms an operator cookie (God mode), so
    * a real client can never trigger it. The venue carries no data (custom path ⇒
-   * zeros), which is the honest truth: a client's own venues/sales live on the
-   * client's device, never on the server. Transient + never persisted. */
+   * zeros); the figures come from the live feed, which ?op=1 forces on.
+   * Transient + never persisted.
+   *
+   * `info.siblings` = les autres établissements du même compte, s'il y en a. Ils
+   * ne deviennent pas des venues (voir scopedSiblings) : ils s'affichent sous
+   * l'établissement regardé et un clic recharge la page sur eux. */
   function applyScopedVenue(info) {
     info = info || {};
     const name = String(info.name || '').trim() || 'Client';
     const location = String(info.location || '').trim();
     const base = SUBTYPE_BASE[info.type] ||
       (TYPE_BASES.indexOf(info.type) >= 0 ? info.type : 'restaurant');
+    /* Le métier précis, pas seulement sa famille. Le serveur range « cafe », et
+     * la famille de « cafe » est « restaurant » : ne garder que la famille faisait
+     * lire « Restaurant » au-dessus d'un café, et privait la vue portée du
+     * vocabulaire de son métier. On garde donc les deux — subtype quand c'est un
+     * métier connu de la liste (assets/trades.js), la famille pour le reste. */
+    const subtypeOf = t => (SUBTYPE_BASE[t] ? String(t) : '');
+    scopedSiblings = (Array.isArray(info.siblings) ? info.siblings : [])
+      .filter(s => s && String(s.slug || '').trim())
+      .map(s => ({
+        slug: String(s.slug).trim(),
+        name: String(s.name || '').trim() || String(s.slug).trim(),
+        location: String(s.location || '').trim(),
+        type: SUBTYPE_BASE[s.type] || (TYPE_BASES.indexOf(s.type) >= 0 ? s.type : 'restaurant'),
+        subtype: subtypeOf(s.type),
+      }));
     VENUES.scoped = {
       id: 'scoped', name, location,
       fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
-      subtype: '', profileInfo: null,
+      subtype: subtypeOf(info.type), profileInfo: null,
       siblings: '', status: 'En service', ice: '—',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
@@ -1603,7 +1632,8 @@
     try { persistedClient = localStorage.getItem('kiwiOnboarded') === '1'; } catch (_) {}
     const onboard = !!window.__kiwiOnboard || persistedClient || !!(window.KiwiEnv && window.KiwiEnv.demosAllowed === false);
     // Operator-scoped (God mode): show ONLY the scoped client, never the
-    // operator's own local venues (those are this browser's test cache).
+    // operator's own local venues (those are this browser's test cache). Les
+    // autres établissements DU CLIENT s'ajoutent en dessous (scopeRows).
     const listIds = scopedActive
       ? ['scoped']
       : onboard
@@ -1623,7 +1653,7 @@
         <button type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
           <div class="venue-row-icon">${TYPE_ICONS[v.type] || TYPE_ICONS.restaurant}</div>
           <div class="venue-row-body">
-            <div class="venue-row-name">${escD(v.name)} · ${escD(v.location)}</div>
+            <div class="venue-row-name">${escD(v.name)}${v.location ? ' · ' + escD(v.location) : ''}</div>
             <div class="venue-row-type">${escD(typeLabelOf(v))}</div>
           </div>
           <div class="venue-row-status" aria-label="${escD(v.status || 'en service')}"><i></i></div>
@@ -1666,7 +1696,24 @@
         </button>
       `;
 
-    wrap.innerHTML = venueRows + cta;
+    /* Les autres établissements du client regardé (God mode). Même dessin que
+     * les vraies lignes — pour l'opérateur c'est le même geste — mais une action
+     * distincte : on ne bascule pas une venue en mémoire, on RECHARGE sur le
+     * slug. Tout ce qui est porté sur l'établissement (config, PINs, flux de
+     * ventes, rapport du jour, identité) est dérivé de ?merchant= au chargement ;
+     * un basculement à chaud en laisserait la moitié sur le magasin précédent. */
+    const scopeRows = scopedActive ? scopedSiblings.map(s => `
+        <button type="button" class="venue-row" data-action="venue-scope" data-scope-slug="${escD(s.slug)}">
+          <div class="venue-row-icon">${TYPE_ICONS[s.type] || TYPE_ICONS.restaurant}</div>
+          <div class="venue-row-body">
+            <div class="venue-row-name">${escD(s.name)}${s.location ? ' · ' + escD(s.location) : ''}</div>
+            <div class="venue-row-type">${escD(typeLabelOf({ type: s.type, subtype: s.subtype || '' }))}</div>
+          </div>
+          <div class="venue-row-status" aria-label="en service"><i></i></div>
+        </button>
+      `).join('') : '';
+
+    wrap.innerHTML = venueRows + scopeRows + cta;
   }
 
   function toggleDropdown() {
@@ -1949,6 +1996,23 @@
       closeDropdown();
     }
   }
+  /* God mode : passer à un AUTRE établissement du même client. On recharge sur
+   * son slug plutôt que de basculer en mémoire — voir scopeRows. Le paramètre
+   * n'autorise rien par lui-même : /api/me revérifie le cookie opérateur, et
+   * sans lui la page redemande un code. */
+  function onVenueScope(el) {
+    const slug = el?.dataset?.scopeSlug;
+    if (!slug) return;
+    closeDropdown();
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('op', '1');
+      u.searchParams.set('merchant', slug);
+      location.href = u.toString();
+    } catch (_) {
+      location.href = '/dashboard.html?op=1&merchant=' + encodeURIComponent(slug);
+    }
+  }
   function onVenueEnterFusion() {
     closeDropdown();
     enterFusion();
@@ -2179,6 +2243,7 @@
       if (window.Kiwi?.handlers) {
         window.Kiwi.handlers['venue-toggle']        = onVenueToggle;
         window.Kiwi.handlers['venue-pick']          = onVenuePick;
+        window.Kiwi.handlers['venue-scope']         = onVenueScope;
         window.Kiwi.handlers['venue-enter-fusion']  = onVenueEnterFusion;
         window.Kiwi.handlers['venue-exit-fusion']   = onVenueExitFusion;
         /* Exclusif Ultra band CTAs — honest demo confirmations. */
