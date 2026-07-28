@@ -123,9 +123,15 @@ export async function onRequestGet(context) {
   // dashboard" on ANY client rendered the operator's own store, name, trade and
   // venue, whichever client had been picked.
   //
-  // Ordering only, not a widening: isOperator() is a signed cookie (kiwi_op /
-  // staff gate), so a plain merchant sending ?merchant=<someone-else> still fails
-  // here, falls through to step 2, and can still only ever read itself.
+  // Ordering only, not a widening: isOperator() demands a NAMED operator code
+  // (kiwi_op + the signed kiwi_op_id, re-checked against the operators table on
+  // every request), so a plain merchant sending ?merchant=<someone-else> still
+  // fails here, falls through to step 2, and can still only ever read itself.
+  //
+  // It used to accept the shared team passcode too, and that is precisely how
+  // this endpoint came to answer `operator:true, scoped:true` for ANY slug — even
+  // one that does not exist — to any browser that had been through "Accès
+  // équipe". See isOperator() in auth/_lib.js.
   const url = new URL(request.url);
   const scopedSlug = (url.searchParams.get('merchant') || '').trim();
   if (scopedSlug && await isOperator(request, env)) {

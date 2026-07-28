@@ -164,39 +164,58 @@ export async function namedOperatorId(request, env) {
   } catch (_) { return null; }
 }
 
-// True if the request carries a valid operator cookie, or a valid staff-bypass
-// cookie (owner/partner = operator-equivalent). A plain merchant session is NOT
-// enough — the admin surface is cross-merchant and privileged.
+/* ── QUI EST OPÉRATEUR ────────────────────────────────────────────────────────
+ * UN CODE NOMMÉ, et rien d'autre. Ni une session commerçant — la console est
+ * transversale — ni, surtout, le laissez-passer d'équipe.
+ *
+ * Ce dernier point est un correctif, pas un choix d'origine. Cette fonction a
+ * longtemps admis AUSSI le cookie kiwi_gate, c'est-à-dire SITE_PASSWORD : le
+ * code court que l'on tape à « Accès équipe », celui que l'on donne à un
+ * partenaire, celui que voit passer toute personne à qui l'on montre le produit.
+ * Comme entitledMerchant() consulte isOperator() AVANT la session du compte,
+ * n'importe quel navigateur ayant franchi cette porte-là devenait lecteur de
+ * TOUS les locataires : il suffisait d'ajouter ?merchant=<slug> à une URL du
+ * tableau de bord. Vérifié en production le 28/07/2026 depuis une simple session
+ * commerçant munie du cookie d'équipe — ventes d'un autre commerce, sa carte,
+ * sa file de commandes, et ses PIN de caisse en clair, noms et rôles compris.
+ *
+ * La ligne juste dessous en dit la raison de fond, écrite ici bien avant la
+ * fuite : un secret partagé ne porte aucun nom. « Tapé par quelqu'un qui
+ * connaissait le code d'équipe » n'est pas une responsabilité, c'est une liste
+ * de suspects. Cette règle était appliquée aux ÉCRITURES (isSeniorOperator) et
+ * pas aux LECTURES ; or lire les PIN d'un commerçant est le geste le plus grave
+ * du lot, puisqu'il ouvre sa caisse.
+ *
+ * Le laissez-passer d'équipe garde exactement le rôle qu'il n'aurait jamais dû
+ * quitter : ouvrir le SITE (_middleware.js, étape 2). Il n'ouvre plus personne
+ * d'autre que soi-même.
+ *
+ * Amorçage : la première fois, la table `operators` est vide et personne ne peut
+ * entrer. Le code se sème hors ligne (tools/, ou un INSERT dans D1) — c'est déjà
+ * le chemin documenté, et la production en compte deux au moment de ce
+ * changement, donc aucun accès n'est perdu ici. */
 export async function isOperator(request, env) {
-  const sitePassword = env && env.SITE_PASSWORD;
-  if (await namedOperatorId(request, env)) return true;
-  if (sitePassword) {
-    const want = await staffToken(sitePassword);
-    if (timingSafeEqualHex(readCookie(request, GATE_COOKIE) || '', want)) return true;
-  }
-  return false;
+  return !!(await namedOperatorId(request, env));
 }
 
 /* ── LE DEUXIÈME NIVEAU : un code opérateur NOMMÉ ─────────────────────────────
- * isOperator() admet deux choses très différentes sous un seul nom : un code de
- * la table `operators`, qui appartient à quelqu'un, et SITE_PASSWORD — le
- * laissez-passer d'équipe, un mot de passe partagé qui ouvre aussi le site de
- * démonstration et que tout le monde connaît. Pour lire la console, les deux se
- * valent. Pour sortir une vente des livres d'un commerçant, changer l'adresse de
- * connexion d'un compte ou lancer une réinitialisation de mot de passe, non :
- * ces gestes doivent porter un nom au journal, et un secret partagé n'en porte
- * aucun. « Tapé par quelqu'un qui connaissait le code d'équipe » n'est pas une
- * responsabilité, c'est une liste de suspects.
+ * Ce niveau existait parce qu'isOperator() admettait deux choses très
+ * différentes sous un seul nom : un code de la table `operators`, qui appartient
+ * à quelqu'un, et SITE_PASSWORD, le laissez-passer d'équipe. Pour LIRE la
+ * console on tolérait les deux ; pour sortir une vente des livres d'un
+ * commerçant, changer l'adresse d'un compte ou lancer une réinitialisation, on
+ * exigeait ici le code nommé — un geste doit porter un nom au journal.
  *
- * D'où ce second niveau, qui n'accepte QUE le cookie kiwi_op (HMAC d'AUTH_SECRET,
- * posé quand un code de la table a été vérifié). Un client, un caissier, un
- * gérant d'établissement n'en ont évidemment aucun : leur session est un
- * kiwi_sess, qui n'est examiné nulle part ici.
+ * Le raisonnement était juste, la frontière ne l'était pas : lire les PIN de
+ * caisse d'un commerçant est plus grave que la plupart des écritures qu'il
+ * protégeait. isOperator() n'accepte donc plus, lui non plus, que le code nommé,
+ * et LES DEUX NIVEAUX COÏNCIDENT AUJOURD'HUI.
  *
- * Conséquence assumée : le propriétaire qui entre par l'accès équipe VOIT les
- * trois panneaux mais ne peut pas agir, et la console le lui dit au lieu de
- * griser un bouton sans raison. Il lui suffit de se créer un code dans
- * « Opérateurs » — c'est déjà le chemin documenté pour amorcer le premier code. */
+ * On garde malgré tout les deux noms, et ce n'est pas de l'inertie : aux points
+ * d'appel, `senior && !isSeniorOperator → 403` dit « ce geste-ci doit être
+ * imputable », ce qu'un `isOperator` de plus ne dirait pas. Si un jour une
+ * lecture doit se rouvrir à un secret partagé, la frontière est déjà tracée au
+ * bon endroit. En attendant, les deux répondent la même chose. */
 export async function isSeniorOperator(request, env) {
   return !!(await namedOperatorId(request, env));
 }
@@ -438,8 +457,11 @@ export async function entitledMerchant(request, env, asked, opts) {
    * dashboard" on any client polled the OPERATOR's own store, so every client's
    * En Direct feed and KPIs showed the operator's takings. The doc above always
    * promised "operator → whatever was asked"; only the ordering said otherwise.
-   * Not a widening: isOperator() is a signed cookie, so a plain merchant still
-   * falls through to the session branch and can still only reach its own shops. */
+   * Not a widening: isOperator() now demands a NAMED operator code — a signed
+   * cookie checked against the live `operators` table on every request — so a
+   * plain merchant, and a browser holding only the shared team passcode, both
+   * fall through to the session branch and reach nothing but their own shops.
+   * That last part is the fix for the cross-tenant read; see isOperator(). */
   if (asked) {
     try { if (await isOperator(request, env)) return asked; } catch (_) {}
   }

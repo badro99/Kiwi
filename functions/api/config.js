@@ -116,7 +116,12 @@ export async function onRequestGet(context) {
   // can do better. The signed-in account is authoritative and OVERRIDES an
   // explicit ?merchant=: the site gate admits every merchant (and the shared
   // staff passcode), so honouring the parameter let any account read any other
-  // account's till PINs just by knowing its slug. It also fixes the "code
+  // account's till PINs just by knowing its slug.
+  //
+  // That first fix left one door open for months: `operator` below still
+  // counted the SHARED team passcode as God mode, so a browser that had been
+  // through "Accès équipe" read any store's PINs anyway. isOperator() now
+  // requires a named operator code. It also fixes the "code
   // incorrect" case where a stale kiwiLiveMerchant from a different account in
   // the same browser made the lock validate against the wrong store's PINs.
   //   · account session → that account's own slug, always.

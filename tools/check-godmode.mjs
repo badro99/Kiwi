@@ -81,6 +81,10 @@ const R = {
   operators: await import(path.join(ROOT, 'functions/api/admin/operators.js')),
   health: await import(path.join(ROOT, 'functions/api/admin/health.js')),
   overview: await import(path.join(ROOT, 'functions/api/admin/overview.js')),
+  /* Pas la console : le point d'entrée ORDINAIRE du produit, celui qui sert les
+     drapeaux de modules et les PIN de caisse à un tableau de bord ou à une
+     caisse appairée. C'est par là que la fuite inter-locataires est sortie. */
+  appConfig: await import(path.join(ROOT, 'functions/api/config.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -116,6 +120,9 @@ sale('s-closed', 'amira-boutique', 300, 'cash', 'Vente', 'T-009-A7', yestTs, nul
 sale('s-return', 'amira-boutique', 230, 'card', 'Retour · avoir AV-2031', 'T-031-A7', now - 4 * 3600000, null);
 sale('s-plain', 'amira-boutique', 410, 'tap', 'Table 4', 'T-044-A7', now - 5 * 3600000, null);
 sale('s-cafe', 'amira-cafe', 88, 'cash', 'Café', 'C-003-B2', now - 3600000, null);
+/* Le VOISIN — un autre compte, un autre commerce. Rien de ce qui suit ne doit
+   jamais franchir cette ligne (section 4bis). */
+sale('s-rif', 'snack-rif', 45, 'cash', 'Tacos', 'R-001-C3', now - 3600000, null);
 
 /* Une journée CLÔTURÉE, telle que la caisse la pousse (store_docs/dayreports). */
 db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
@@ -134,6 +141,14 @@ db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES
     { name: 'Sara Idrissi', role: 'Vendeuse', email: 'sara@amira.test' },
     { name: 'Nadia Alami', role: 'Manager', email: 'nadia@amira.test' },
   ] }), 1, now).run();
+
+/* Les PIN de caisse — la donnée la plus sensible que le produit range par
+   locataire : quatre chiffres qui ouvrent le tiroir. */
+const pin = (m, p, name, role) =>
+  db.prepare('INSERT INTO staff_pins (merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?)')
+    .bind(m, p, name, role, now).run();
+pin('amira-boutique', '1234', 'Sara Idrissi', 'caisse');
+pin('snack-rif', '9876', 'Youssef', 'caisse');
 
 db.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
   .bind('op-1', 'Badr', 'ff', 'ff', now).run();
@@ -157,6 +172,11 @@ const AS = {
   deletedOperator: `kiwi_op=${OP}; kiwi_op_id=${GHOST_OPID}`,
   /* Un commerçant connecté — un client, un caissier, un gérant. */
   merchant: `kiwi_sess=${SESS_A}`,
+  /* LA FORME EXACTE DE LA FUITE observée en production : un commerçant
+     ordinaire, connecté à son compte, dans un navigateur qui avait aussi
+     franchi « Accès équipe » un jour. Deux cookies parfaitement légitimes
+     séparément ; ensemble, ils ouvraient tous les locataires. */
+  merchantWithGate: `kiwi_sess=${SESS_A}; kiwi_gate=${STAFF}`,
   none: '',
 };
 
@@ -201,13 +221,19 @@ G('1 · Droits — un client, un caissier, un gérant n’entrent jamais');
   const merchReset = await call(R.reset, 'POST', '/api/admin/reset', { as: 'merchant', body: { accountId: 'acc-a' } });
   ok(merchReset.status === 403, 'session commerçant : 403 sur l’envoi de réinitialisation', 'reçu ' + merchReset.status);
 
-  /* Le laissez-passer d'équipe : il regarde, il n'agit pas. */
+  /* Le laissez-passer d'équipe : il ouvre le SITE, et rien de plus.
+   *
+   * Il a longtemps ouvert AUSSI la console — « il regarde, il n'agit pas ». La
+   * frontière était mal posée : lire les PIN de caisse d'un commerçant, ou ses
+   * ventes, est plus grave que la plupart des écritures qu'elle protégeait, et
+   * ce cookie-là est un code court, partagé, connu de toute personne à qui l'on
+   * a montré le produit. Il n'est plus un opérateur du tout. */
   const staffRead = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as: 'staff' });
-  ok(staffRead.status === 200, 'accès équipe : peut LIRE les ventes', 'reçu ' + staffRead.status);
+  ok(staffRead.status === 403, 'accès équipe : REFUSÉ même à la LECTURE des ventes', 'reçu ' + staffRead.status);
 
   const staffWrite = await call(R.sales, 'POST', '/api/admin/sales',
     { as: 'staff', body: { merchant: 'amira-boutique', ids: ['s-onboard'], action: 'void', reason: 'onboarding' } });
-  ok(staffWrite.status === 403 && staffWrite.json.error === 'operator-code-required',
+  ok(staffWrite.status === 403,
     'accès équipe : REFUSÉ à l’écriture (un secret partagé ne signe pas un geste)', JSON.stringify(staffWrite.json));
 
   const staffMail = await call(R.account, 'PUT', '/api/admin/account',
@@ -215,27 +241,29 @@ G('1 · Droits — un client, un caissier, un gérant n’entrent jamais');
   ok(staffMail.status === 403, 'accès équipe : REFUSÉ au changement d’adresse', 'reçu ' + staffMail.status);
 
   const staffConfigRead = await call(R.config, 'GET', '/api/admin/config?merchant=amira-boutique', { as: 'staff' });
-  ok(staffConfigRead.status === 200, 'accès équipe : peut lire la configuration');
+  ok(staffConfigRead.status === 403, 'accès équipe : REFUSÉ à la lecture de la configuration');
   const staffConfigWrite = await call(R.config, 'PUT', '/api/admin/config',
     { as: 'staff', body: { merchant:'amira-boutique', features:{ conformite:false }, plan:'pro' } });
-  ok(staffConfigWrite.status === 403 && staffConfigWrite.json.error === 'operator-code-required',
-    'accès équipe : REFUSÉ à la modification des modules');
+  ok(staffConfigWrite.status === 403, 'accès équipe : REFUSÉ à la modification des modules');
 
+  const staffPinRead = await call(R.pins, 'GET', '/api/admin/pins?merchant=amira-boutique', { as:'staff' });
+  ok(staffPinRead.status === 403, 'accès équipe : REFUSÉ à la lecture des PIN de caisse');
   const staffPinWrite = await call(R.pins, 'POST', '/api/admin/pins',
     { as:'staff', body:{ merchant:'amira-boutique', pin:'7788', name:'Test', role:'caisse' } });
-  ok(staffPinWrite.status === 403 && staffPinWrite.json.error === 'operator-code-required',
-    'accès équipe : REFUSÉ à la création d’un PIN');
+  ok(staffPinWrite.status === 403, 'accès équipe : REFUSÉ à la création d’un PIN');
+
+  const staffRoster = await call(R.clients, 'GET', '/api/admin/clients', { as:'staff' });
+  ok(staffRoster.status === 403, 'accès équipe : REFUSÉ au fichier clients');
 
   const staffSuspend = await call(R.clients, 'PATCH', '/api/admin/clients',
     { as:'staff', body:{ email:'amira@kiwi.test', status:'suspended' } });
-  ok(staffSuspend.status === 403 && staffSuspend.json.error === 'operator-code-required',
-    'accès équipe : REFUSÉ à la suspension d’un client');
+  ok(staffSuspend.status === 403, 'accès équipe : REFUSÉ à la suspension d’un client');
   ok(db.prepare('SELECT status FROM accounts WHERE id = ?').bind('acc-a').first().status === 'active',
     '…et le compte est resté actif');
 
   const staffPromote = await call(R.operators, 'POST', '/api/admin/operators',
     { as:'staff', body:{ label:'Intrus', code:'1234567890' } });
-  ok(staffPromote.status === 403 && staffPromote.json.error === 'operator-code-required',
+  ok(staffPromote.status === 403,
     'accès équipe : ne peut pas se promouvoir en opérateur nommé');
 
   const legacy = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as:'legacyOperator' });
@@ -319,6 +347,60 @@ G('4 · Cloisonnement — deux établissements d’un MÊME compte ne se touchen
   const impactCross = await call(R.sales, 'GET',
     '/api/admin/sales?impact=1&merchant=amira-boutique&ids=s-cafe');
   ok(impactCross.status === 409, 'même l’APERÇU refuse une vente d’un autre établissement');
+}
+
+/* ═══ 4bis · LE VOISIN ═════════════════════════════════════════════════════
+ * Le cloisonnement de la section 4 porte sur la CONSOLE. Celui-ci porte sur le
+ * produit ordinaire : /api/feed et /api/config, ceux que le tableau de bord et
+ * la caisse interrogent toute la journée avec un ?merchant= dans l'URL.
+ *
+ * Ce que l'on rejoue ici est la fuite constatée en production le 28/07/2026 :
+ * depuis une session commerçant banale, dans un navigateur ayant aussi le
+ * cookie « accès équipe », ajouter ?merchant=<voisin> renvoyait les ventes du
+ * voisin, sa carte, sa file de commandes — et ses PIN de caisse en clair, noms
+ * et rôles compris. Le trou n'était pas dans ces routes : elles demandaient
+ * « est-ce un opérateur ? », et isOperator() répondait oui au code d'équipe.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+G('4bis · Le voisin — un ?merchant= ne suffit jamais à ouvrir un autre commerce');
+{
+  const cfgFor = async (m, as) =>
+    (await call(R.appConfig, 'GET', '/api/config?merchant=' + m, { as })).json;
+
+  /* a) Session commerçant seule — la règle qui tenait déjà. */
+  const feedNeighbour = await feedFor('snack-rif', 'merchant');
+  ok(!feedNeighbour.sales.some((s) => s.id === 's-rif'),
+    'session commerçant : ?merchant=snack-rif ne rend pas les ventes du voisin');
+
+  /* b) LA FUITE : la même session, plus le cookie d'équipe. */
+  const leakFeed = await feedFor('snack-rif', 'merchantWithGate');
+  ok(!leakFeed.sales.some((s) => s.id === 's-rif'),
+    'session commerçant + code d’équipe : toujours aucune vente du voisin',
+    JSON.stringify(leakFeed.sales || []));
+
+  const leakPins = await cfgFor('snack-rif', 'merchantWithGate');
+  ok(!(leakPins.pins || []).some((p) => p.pin === '9876'),
+    'session commerçant + code d’équipe : les PIN de caisse du voisin restent fermés',
+    JSON.stringify(leakPins.pins || []));
+
+  /* c) Le code d'équipe SEUL, sans aucun compte : il n'ouvre plus rien non plus. */
+  const gateOnly = await cfgFor('snack-rif', 'staff');
+  ok(!(gateOnly.pins || []).length,
+    'code d’équipe seul : aucun PIN, pour aucun commerce');
+
+  /* d) …et l'on n'a rien cassé : chacun lit toujours CHEZ LUI, et l'opérateur
+     nommé garde le God mode dont la console a besoin. */
+  const own = await cfgFor('amira-boutique', 'merchant');
+  ok((own.pins || []).some((p) => p.pin === '1234'),
+    'le commerçant lit toujours les PIN de son propre magasin');
+  const sibling = await cfgFor('amira-cafe', 'merchant');
+  ok(sibling.type === 'cafe',
+    '…et ceux de son second établissement (le registre dit qu’il lui appartient)');
+  const godmode = await cfgFor('snack-rif', 'operator');
+  ok((godmode.pins || []).some((p) => p.pin === '9876'),
+    'un opérateur NOMMÉ garde l’accès transversal — c’est à cela que sert la console');
+  const opFeed = await feedFor('snack-rif', 'operator');
+  ok(opFeed.sales.some((s) => s.id === 's-rif'),
+    '…et le flux d’un client s’ouvre bien depuis la console');
 }
 
 /* ═══ 5 · LE MOTIF EST IMPOSÉ ══════════════════════════════════════════════ */
