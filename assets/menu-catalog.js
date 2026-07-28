@@ -1314,7 +1314,10 @@
       confirmThen(tr(T.delCatQ), () => { deleteCategory(id); if (activeCat === id) { activeCat = null; activeSub = null; } render(); });
     };
     H['mx-sub-add'] = (_el, id) => promptText({ title: tr(T.addSub), placeholder: tr(T.subName), ok: tr(T.addSub) }, (v) => { if (v) { addSubcategory(id, v); activeCat = id; render(); } });
-    H['mx-stations'] = (_el, catId) => catId ? categoryStationModal(catId) : stationsModal();
+    // This button belongs to the category currently open in the menu pane.
+    // Do not fall back to the station-management screen: the merchant only
+    // needs to choose or create the single destination for this category.
+    H['mx-stations'] = () => { if (activeCat) categoryStationModal(activeCat); };
     H['mx-opts'] = () => optsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };
