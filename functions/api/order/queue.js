@@ -531,7 +531,10 @@ export async function onRequestPost(context) {
  * renommé depuis casserait le rapprochement. Le bon porte donc sa propre
  * vérité, figée à l'instant où il est parti — comme le ticket papier.
  * ═══════════════════════════════════════════════════════════════════════════ */
-const MAX_LINES = 60;
+/* MAX_LINES est déclaré une fois pour tout le fichier, en tête — la salle et le
+ * bon de cuisine sont arrivés séparément avec chacun le leur, et la fusion des
+ * deux branches a produit une double déclaration qui ne fait pas tourner un
+ * module ESM (le build Cloudflare échouait avant même de déployer). */
 const MAX_QTY = 99;
 
 function cleanLines(raw) {
