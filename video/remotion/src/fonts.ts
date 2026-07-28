@@ -32,20 +32,39 @@ style.textContent = FACES.map(
 ).join('\n');
 document.head.appendChild(style);
 
+/* Each face races a 25 s in-page ceiling. The config-level ceiling
+ * (setDelayRenderTimeoutInMilliseconds) is a guillotine — when one tab's
+ * FontFace.load() hangs (observed twice on the 2-minute render, with a second
+ * session's studio sharing the machine), it kills the whole render. Racing out
+ * a single face degrades exactly one thing: that tab falls back to the CSS
+ * @font-face declaration above, which still applies the face if the fetch ever
+ * completes. In-page setTimeout does fire during a render — Remotion drives the
+ * animation clock, not the page's timers. */
+const withCeiling = (p: Promise<unknown>, label: string) =>
+  Promise.race([
+    p,
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        // eslint-disable-next-line no-console
+        console.error(`[kiwi] ${label} did not settle in 25s — continuing on the CSS declaration`);
+        resolve();
+      }, 25000)
+    ),
+  ]);
+
 const loadAll = Promise.all(
   FACES.map(([family, file, weight]) =>
-    new FontFace(family, `url(${staticFile('fonts/' + file)})`, { weight, style: 'normal' })
-      .load()
-      .then((loaded) => {
-        document.fonts.add(loaded);
-      })
+    withCeiling(
+      new FontFace(family, `url(${staticFile('fonts/' + file)})`, { weight, style: 'normal' })
+        .load()
+        .then((loaded) => {
+          document.fonts.add(loaded);
+        }),
+      `${family} ${weight}`
+    )
   )
 );
 
-/* No setTimeout ceiling here on purpose. Remotion drives its own clock during
- * a render, so a wall-clock timer is not a dependable escape hatch — a guard
- * that cannot fire is worse than an honest absence of one. The real ceiling is
- * Config.setDelayRenderTimeoutInMilliseconds in remotion.config.ts. */
 loadAll
   .catch((err) => {
     // eslint-disable-next-line no-console
