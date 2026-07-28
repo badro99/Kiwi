@@ -62,6 +62,16 @@
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function lset(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
 
+  /* Deux documents sont-ils le même ? Sert uniquement à ne pas remonter une
+   * fusion qui n'a rien changé. Prudent dans le bon sens : deux documents
+   * identiques rangés dans un ordre de clés différent seront déclarés
+   * différents, et on remontera une fois pour rien — exactement ce que faisait
+   * l'ancien code à chaque fois. L'inverse (déclarer identiques deux documents
+   * qui diffèrent, donc taire une modification) est impossible ici. */
+  function identical(a, b) {
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch (_) { return false; }
+  }
+
   /* Jumeau de slugMerchant (functions/auth/_lib.js). Le nom d'un magasin doit
    * produire le MÊME slug ici, sur la caisse et sur le serveur, sinon les deux
    * bouts se parlent sous deux clés différentes sans jamais s'en apercevoir. */
@@ -279,6 +289,11 @@
    * opts.merge(a, b)    optionnel — a = le nôtre, b = celui du serveur
    * opts.isEmpty(doc)   optionnel
    * opts.onPulled(doc)  optionnel — appelé après une hydratation réussie
+   * opts.localKey()     optionnel — SOUS QUEL NOM ce navigateur range la copie
+   *                     que read()/write() manipulent. Voir LE SIGNET plus bas :
+   *                     sans lui, deux copies locales du même magasin partagent
+   *                     un seul signet de révision et l'une des deux se croit à
+   *                     jour en portant l'autre version.
    */
   function attach(opts) {
     opts = opts || {};
@@ -286,12 +301,37 @@
     var merge = opts.merge || mergeDefault;
     var empty = opts.isEmpty || emptyDefault;
     var slugOf = opts.slug || currentSlug;
+    var localOf = typeof opts.localKey === 'function' ? opts.localKey : null;
 
     var st = { rev: 0, read: Object.create(null), timer: null, busy: false,
                again: false, tries: 0, last: 0 };
 
     function on() { return !!(isReal() && feature && slugOf()); }
-    function revKey(slug) { return REV_PREFIX + feature + ':' + slug; }
+
+    /* ── LE SIGNET DE RÉVISION ────────────────────────────────────────────────
+     * « la copie que je tiens EST la révision N du serveur ». C'est ce signet qui
+     * autorise pull() à ne rien faire quand il n'y a rien de nouveau.
+     *
+     * Il était rangé sous le seul slug du magasin. Or le slug désigne le magasin
+     * CÔTÉ SERVEUR, pas la copie locale : le tableau de bord range la sienne sous
+     * l'identifiant de venue (`kiwi:business:v1:v-amira-boutique`) et la caisse
+     * sous le slug (`kiwi:business:v1:amira-boutique`) — deux enregistrements
+     * distincts, un seul signet, dans le même navigateur. Le propriétaire
+     * corrigeait donc son adresse au bureau ; la remontée estampillait le signet
+     * « révision 2 » ; et la caisse, qui portait encore la révision 1, lisait ce
+     * signet, se déclarait à jour et ne relisait plus JAMAIS — ni au retour sur
+     * l'onglet, ni sur « Rafraîchir », ni au rechargement. Le comptoir imprimait
+     * l'ancienne adresse indéfiniment, sans un mot.
+     *
+     * Le signet nomme donc maintenant la copie qu'il décrit. Les surfaces qui
+     * rangeaient déjà leur copie sous le slug (le rapport journalier, le carnet
+     * de clientes) gardent exactement leur clé : rien à re-synchroniser chez
+     * elles. Un signet perdu ne coûte de toute façon qu'une réconciliation de
+     * plus — jamais une donnée : pull() fusionne au lieu d'écraser. */
+    function revKey(slug) {
+      var lk = localOf ? String(localOf() || '') : '';
+      return REV_PREFIX + feature + ':' + slug + (lk && lk !== slug ? '@' + lk : '');
+    }
     function readRev(slug) { var n = parseInt(ls(revKey(slug)) || '0', 10); return n > 0 ? n : 0; }
     function writeRev(slug, r) { lset(revKey(slug), String(r || 0)); }
 
@@ -335,7 +375,14 @@
           opts.write(next);
           writeRev(slug, serverRev);
           if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
-          if (!adopt) push(0);            // notre fusion doit remonter
+          /* Notre fusion doit remonter — SAUF si elle n'a rien ajouté à ce que le
+           * serveur porte déjà. Repousser une copie identique incrémente `rev`
+           * pour rien, et surtout périme le signet de l'autre appareil : il
+           * relit, refusionne, repousse, et les deux surfaces se renvoient
+           * indéfiniment le même document à chaque retour d'onglet. Observé au
+           * banc : une adresse propagée correctement faisait tout de même passer
+           * la révision de 2 à 3 sans qu'un caractère ait changé. */
+          if (!adopt && !identical(next, theirs)) push(0);
           return true;
         })
         .catch(function () { return false; });   // hors ligne → le local fait foi

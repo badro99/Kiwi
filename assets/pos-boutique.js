@@ -276,6 +276,80 @@
       if (v) cat.adjustStock(v.id, delta);
     } catch (_) {}
   }
+  /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════
+   * La console opérateur peut retirer une vente d'essai des livres (« god mode » ,
+   * functions/api/admin/sales.js) : `void_ts` est daté, /api/feed cesse de servir
+   * la ligne, et le tableau de bord recalcule tout à partir de là — recette,
+   * panier, classement produits. Impeccable côté argent.
+   *
+   * Côté MARCHANDISE, rien ne bougeait. La vente d'essai avait décrémenté le
+   * stock partagé au moment de l'encaissement (persistStock ci-dessus), et ce
+   * mouvement-là restait : le tableau de bord affichait la bonne recette et un
+   * stock faux, et l'article manquait à l'inventaire d'une vente qui, selon
+   * Kiwi lui-même, n'avait jamais eu lieu. Sur une installation où l'on passe
+   * cinq ou six ventes d'essai, c'est tout le comptage d'ouverture qui est
+   * décalé.
+   *
+   * Ce n'est pas le serveur qui peut le réparer. La ligne qu'il détient ne porte
+   * que { nom, quantité, total, rayon } — pas l'identifiant du produit, pas la
+   * couleur, pas la taille (voir le panier construit dans onPaid). La caisse qui
+   * a encaissé, elle, tient tout cela dans son propre journal. C'est donc elle
+   * qui rend le stock, et elle seule : une AUTRE caisse du même magasin ne
+   * trouvera pas la vente dans son journal et ne fera rien — ce qui est
+   * exactement le comportement voulu, sans avoir à se coordonner.
+   *
+   * Trois règles :
+   *  · EXACTEMENT UNE FOIS. La marque `voided` portée par la vente EST le
+   *    registre : on ne rend le stock qu'en la posant. Le serveur renvoyant la
+   *    liste complète des retraits à chaque passage, tout compteur séparé aurait
+   *    fini par gonfler le stock à chaque sondage.
+   *  · DANS LES DEUX SENS. « Remettre » fait disparaître la vente de la liste :
+   *    la marque tombe et le stock ressort. Une vente d'essai remise en jeu par
+   *    erreur ne laisse donc pas de marchandise fantôme.
+   *  · LES LIGNES DÉJÀ RENDUES NE LE SONT PAS DEUX FOIS. Un article retourné au
+   *    comptoir (restoreLines) a déjà regagné le stock ; le retrait des livres
+   *    ne doit pas l'y remettre une seconde fois.
+   *
+   * Une vente plus ancienne que le journal (RETAIN_DAYS) n'est plus là : on ne
+   * fait rien et on ne prétend rien. Rendre à l'aveugle le stock d'une vente de
+   * trois semaines, alors que l'inventaire a été recompté depuis, ferait plus de
+   * dégâts que le décalage qu'on prétend corriger. */
+  function reconcileVoids(refs) {
+    if (IS_DEMO || !pvReal()) return 0;
+    const KP = window.KiwiPosSale;
+    const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
+    let touched = 0;
+    const move = (sale, sign) => {
+      (sale.lines || []).forEach((ln) => {
+        if (!ln || ln.returned) return;          // déjà rendue au comptoir
+        persistStock(ln.pid, ln.size, ln.color, sign * (+ln.qty || 0));
+      });
+    };
+    SALES.forEach((sale) => {
+      if (!sale || !sale.id) return;
+      const out = !!(hit && hit(sale.id));
+      if (out === !!sale.voided) return;         // rien à faire pour celle-ci
+      if (out) { move(sale, +1); sale.voided = true; }   // sortie : la marchandise revient
+      else { move(sale, -1); sale.voided = false; }      // remise : elle repart
+      touched++;
+    });
+    if (touched && root) {
+      persistDay();
+      rebuildCatalog();      /* le stock a bougé : la grille de vente le montre */
+      pruneTicket();
+      refreshOps();
+      /* La ligne d'argent, explicitement : renderView() ne la touche pas, et
+         c'est LE chiffre que l'opérateur vient de promettre au commerçant de
+         faire disparaître. Le stock corrigé sous un total inchangé aurait juste
+         déplacé le mensonge. */
+      const today = $('#bq-today', root);
+      if (today) today.textContent = headSubVente();
+    } else if (touched) {
+      persistDay();
+    }
+    return touched;
+  }
+
   const sizeWord  = (p) => p.kind === 'pointure' ? 'Pointure' : p.kind === 'tu' ? 'Taille unique' : 'Taille';
   const firstFree = (p) => sizesOf(p).find((k) => p.sizes[k] > 0) || null;
 
@@ -402,7 +476,10 @@
       lines: [mkLine('babouche_homme', '42', 'camel', 1)] },
   ] : [];
   SALES.forEach((s) => { s.total = s.lines.reduce((t, l) => t + l.unit * l.qty, 0); });
-  const findSale = (id) => SALES.find((s) => s.id === id);
+  /* Jamais une vente sortie des livres : elle a disparu des écrans, mais un
+     identifiant retenu dans state.ret / state.exchange peut encore la désigner
+     une seconde après le retrait. */
+  const findSale = (id) => SALES.find((s) => s.id === id && !s.voided);
   /* Résout la cliente d'une vente. IMPÉRATIF : passer par clById, pas par CL[…].
      Sur une VRAIE boutique, CLIENTES/CL sont vides (le carnet vit dans KiwiClients),
      donc CL[s.clientId] renvoyait toujours undefined et TOUTE vente s'affichait
@@ -522,8 +599,9 @@
     start.setDate(start.getDate() - (RETAIN_DAYS - 1));       // aujourd'hui inclus
     return x >= start;
   }
-  /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. */
-  const salesToday = () => SALES.filter((s) => s && isToday(s.at));
+  /* Les ventes du JOUR — la seule base admise pour un chiffre d'affaires. Les
+     ventes sorties des livres n'en sont plus (voir reconcileVoids). */
+  const salesToday = () => SALES.filter((s) => s && !s.voided && isToday(s.at));
 
   /* Quand une vente a-t-elle eu lieu ? Le journal couvrant maintenant la semaine,
      un libellé « auj. » écrit en dur mentirait sur une vente de mardi. Sur sept
@@ -794,6 +872,20 @@
       });
     }
     installWedgeScanner();
+
+    /* Les ventes sorties des livres par la console opérateur. On écoute la
+       liste, et on la redemande au montage : la caisse peut avoir été rouverte
+       longtemps après le retrait, auquel cas l'annonce est passée sans nous mais
+       l'état, lui, est toujours là (assets/live-link.js · voidedRefs). */
+    if (!mount._voidsBound) {
+      mount._voidsBound = true;
+      document.addEventListener('kiwi-sales-voided', (e) => {
+        try { reconcileVoids((e && e.detail && e.detail.refs) || []); } catch (_) {}
+      });
+    }
+    try {
+      if (window.KiwiLive && window.KiwiLive.voidedRefs) reconcileVoids(window.KiwiLive.voidedRefs());
+    } catch (_) {}
 
     /* Pitch demo only: a mid-day sale already in progress. A REAL store starts with
        a truly empty ticket and NO client (attached on demand via « Chercher »). */
@@ -1439,7 +1531,7 @@
     if (!c) return;
     const el = $('#bq-fichem', root);
     const av = clAvoirOf(c);
-    const todays = SALES.filter((s) => s.clientId === cid).map((s) => ({
+    const todays = SALES.filter((s) => s.clientId === cid && !s.voided).map((s) => ({
       when: whenLabel(s.at),
       // idem : une vente de la semaine peut porter un article supprimé depuis.
       what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
@@ -1943,7 +2035,10 @@
   function renderEchanges() {
     const panel = $('[data-bq-panel="echanges"]', root);
     const q = state.retQuery;
-    const hits = SALES.filter((s) => saleMatches(s, q));
+    /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
+       marchandise est déjà revenue en stock, et l'échanger créerait un avoir
+       adossé à un encaissement que le serveur ne connaît plus. */
+    const hits = SALES.filter((s) => !s.voided && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
       <div class="bq-ret">

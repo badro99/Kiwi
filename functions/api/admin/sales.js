@@ -342,7 +342,12 @@ async function impactFor(env, merchant, rows) {
     dayBookKnown: !!days,
     warnings, blockers,
     /* Ce qui se corrige tout seul, énuméré pour l'écran de confirmation : ce sont
-       exactement les surfaces qui relisent le flux. */
+       exactement les surfaces qui relisent le flux. Le STOCK n'en fait pas
+       partie et n'en fera jamais partie d'ici : cette ligne de vente ne porte
+       pas la déclinaison décrémentée. Il se rend malgré tout, mais ailleurs et
+       sous condition — c'est la caisse qui a encaissé qui le fait, depuis son
+       propre journal, tant qu'elle tient encore la vente (assets/pos-boutique.js
+       · reconcileVoids). Vu d'ici, donc : à vérifier. */
     auto: ['revenue', 'count', 'basket', 'products', 'methods', 'dayreport-open', 'exports', 'agent'],
     manual: (stock.length ? ['stock'] : []).concat(loyalty ? ['loyalty'] : []),
   };

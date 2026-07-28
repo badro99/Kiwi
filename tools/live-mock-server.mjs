@@ -85,6 +85,18 @@ const ROUTES = {
   // renvoyait {} : identity.js repartait sur « pas de compte », donc ni God mode,
   // ni liste de magasins — les deux choses qu'on vient vérifier ici.
   '/api/me': await import(path.join(ROOT, 'functions/api/me.js')),
+  /* Et le RESTE des routes du client, pour la même raison poussée un cran plus
+     loin : tout ce qui traverse deux appareils — un reçu réglé au bureau qui
+     doit sortir au comptoir, un stock que la caisse tient et que le bureau lit —
+     n'avait aucun banc du tout. Ce sont pourtant exactement les pannes qu'on ne
+     voit pas en lisant le code : chaque bout a l'air juste isolément. */
+  '/api/store': await import(path.join(ROOT, 'functions/api/store.js')),
+  '/api/catalog': await import(path.join(ROOT, 'functions/api/catalog.js')),
+  '/api/clients': await import(path.join(ROOT, 'functions/api/clients.js')),
+  '/api/menu': await import(path.join(ROOT, 'functions/api/menu.js')),
+  '/api/sale': await import(path.join(ROOT, 'functions/api/sale.js')),
+  '/api/pair/create': await import(path.join(ROOT, 'functions/api/pair/create.js')),
+  '/api/pair/redeem': await import(path.join(ROOT, 'functions/api/pair/redeem.js')),
   '/api/admin/config': await import(path.join(ROOT, 'functions/api/admin/config.js')),
   '/api/admin/audit': await import(path.join(ROOT, 'functions/api/admin/audit.js')),
   '/api/admin/pins': await import(path.join(ROOT, 'functions/api/admin/pins.js')),
@@ -207,6 +219,25 @@ http.createServer(async (rq, rs) => {
   if (p === '/__outbox') {
     rs.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     return rs.end(JSON.stringify({ mail: outbox }));
+  }
+
+  /* LE SERVICE WORKER, NEUTRALISÉ ICI — et seulement ici.
+     Les deux pages enregistrent /kiwi-sw.js au chargement, et il sert les assets
+     en « stale-while-revalidate » : sur un banc d'essai, le fichier qu'on vient
+     de corriger n'arrive donc qu'au DEUXIÈME rechargement. On ne teste plus son
+     code mais celui d'avant, sans le savoir — j'ai lu deux fois de suite un
+     correctif « qui ne marche pas » alors que la page ne l'avait pas encore. Le
+     banc renvoie donc un worker qui se désinscrit lui-même : ce qui est mesuré
+     ici est toujours l'état du dépôt. La stratégie de cache réelle se vérifie en
+     déploiement, pas ici. */
+  if (p === '/kiwi-sw.js') {
+    rs.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' });
+    return rs.end("self.addEventListener('install', function () { self.skipWaiting(); });\n"
+      + "self.addEventListener('activate', function (e) {\n"
+      + "  e.waitUntil(caches.keys().then(function (ks) {\n"
+      + "    return Promise.all(ks.map(function (k) { return caches.delete(k); }));\n"
+      + "  }).then(function () { return self.registration.unregister(); }));\n"
+      + '});\n');
   }
 
   const mod = ROUTES[p];

@@ -137,6 +137,13 @@
         },
         merge: opts.merge,
         isEmpty: (d) => empty(d),
+        /* Sous quel nom CE navigateur range la copie que read()/write() touchent.
+         * Le dashboard dit `v-amira-boutique`, la caisse dit `amira-boutique` : un
+         * même magasin, deux enregistrements locaux. Le miroir a besoin de le
+         * savoir pour ne pas leur donner un signet de révision commun — sinon
+         * l'un des deux se croit à jour en portant la version de l'autre (voir
+         * LE SIGNET DE RÉVISION dans cloud-doc.js). */
+        localKey: () => active || currentVenue() || '',
       });
       return doc;
     }

@@ -1017,6 +1017,40 @@
     }, opts);
   }
 
+  /* ═══════════════════ ALLER CHERCHER LA FICHE AVANT D'EN AVOIR BESOIN ═══════
+   * Les deux documents ne partaient chercher leur copie serveur qu'au premier
+   * getBusiness()/getConfig() — et sur une caisse, le premier lecteur est
+   * attachReceipt(), c'est-à-dire l'encaissement lui-même. La lecture est
+   * synchrone, la relecture serveur ne l'est pas : le PREMIER ticket de la
+   * session sortait donc avec ce que la tablette avait sous la main (rien du
+   * tout sur une caisse neuve, la version d'avant sur les autres), et la copie
+   * à jour n'arrivait qu'ensuite. Pire, tant que personne n'avait lu la fiche
+   * elle n'était pas attachée au miroir : « Rafraîchir » ne pouvait pas la
+   * relire, puisqu'il ne savait pas qu'elle existait.
+   *
+   * On la demande donc à l'ouverture de la page. Un simple get() suffit : il
+   * matérialise l'enregistrement, l'attache au miroir et lance la relecture.
+   * Aucune ligne n'est créée côté serveur pour autant — pushNow() refuse de
+   * remonter un document vide qui n'a jamais eu de révision.
+   *
+   * Et on recommence quand la caisse s'appaire : avant le code à six chiffres il
+   * n'y a aucun établissement à lire, donc rien à précharger. */
+  function warm() {
+    try {
+      if (!venueKey()) return;
+      var b = BS(); if (b) b.get();
+      var c = CS(); if (c) c.get();
+    } catch (_) {}
+  }
+  (function bootWarm() {
+    try {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(warm, 0); });
+      } else setTimeout(warm, 0);
+      document.addEventListener('kiwi-paired', function () { setTimeout(warm, 0); });
+    } catch (_) {}
+  })();
+
   /* ═══════════════════ l'API ═══════════════════ */
   window.KiwiReceipt = {
     /* fiche établissement (source unique des mentions légales) */

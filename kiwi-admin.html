@@ -1629,9 +1629,12 @@ em, i, cite, dfn, var { font-style: normal; }
   }
 
   /* L'écran de conséquences. Il énumère ce qui se corrige tout seul ET ce qui ne
-     se corrige pas — le stock et les points de fidélité, faute d'un lien en base
-     entre une vente et une déclinaison ou une fiche client. Annoncer une reprise
-     qu'on ne fait pas serait pire que ne rien annoncer. */
+     se corrige pas. Annoncer une reprise qu'on ne fait pas serait pire que ne
+     rien annoncer — et l'inverse est vrai aussi, d'où la nuance sur le stock :
+     ce n'est pas le serveur qui le rend (sa ligne de vente ne porte pas la
+     déclinaison), c'est la caisse qui a encaissé, et seulement tant qu'elle
+     tient encore la vente. La fidélité, elle, n'est toujours rattrapée par
+     personne : aucune colonne ne relie une vente à une fiche client. */
   async function openImpact(ids, action){
     var host = document.getElementById('ts-impact');
     clear(host);
@@ -1674,8 +1677,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
     if (!restore && imp.stock && imp.stock.length){
       var st = h('div', { class:'box warn' },
-        h('p', null, h('b', null, 'Stock à remettre à la main. '),
-          'La ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée — Kiwi ne la devine pas plutôt que de fausser un inventaire réel. À reprendre :'));
+        h('p', null, h('b', null, 'Stock : rendu par la caisse, à vérifier ici. '),
+          'Le serveur ne peut pas le rendre lui-même — la ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée. La CAISSE qui a encaissé, elle, la connaît : elle remet la marchandise en rayon toute seule dès qu’elle apprend le retrait (au plus tard 90 s après, ou au bouton « Rafraîchir »). Ça ne marche que si elle tient encore la vente dans son journal — sept jours — et qu’elle n’a pas été réinstallée depuis. Au-delà, à reprendre à la main :'));
       imp.stock.forEach(function(l){
         st.appendChild(h('p', null, '· ' + l.name + ' × ' + l.qty + (l.cat ? ' (' + l.cat + ')' : '')));
       });

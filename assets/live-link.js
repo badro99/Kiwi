@@ -454,8 +454,18 @@
    *     caisse ne connaît pas les curseurs du flux.
    *
    * Le serveur renvoie les deux clés pour cette raison — { c: curseur, r: réf }. */
+  /* La liste COMPLÈTE des références sorties des livres, telle que le serveur
+     vient de la donner. Publiée (et non « les nouvelles depuis la dernière
+     fois ») parce que c'est un ÉTAT, pas un événement : un métier qui la reçoit
+     doit pouvoir remettre son journal d'accord avec elle dans les deux sens —
+     une vente sortie des livres, mais aussi une vente REMISE dedans, qui se
+     signale justement par sa disparition de cette liste. Un delta ne dirait
+     jamais la seconde. */
+  var voidedRefs = [];
+  function voided() { return voidedRefs.slice(); }
+
   function applyVoids(list, tenant) {
-    if (!list || !list.length) return;
+    if (!list) return;
     var cursors = [], refs = [];
     list.forEach(function (v) {
       if (!v) return;
@@ -463,6 +473,17 @@
       if (c) { cursors.push(c); if (tenant) delete feedSeen[tenant + '#' + c]; }
       if (v.r) refs.push(String(v.r));
     });
+    voidedRefs = refs;
+    /* Annoncé À CHAQUE passage, même quand la liste est vide ou inchangée. Le
+       module métier qui écoute est idempotent par construction (il compare son
+       journal à cette liste), et c'est ce passage-là qui lui apprend qu'une
+       vente est revenue. */
+    try {
+      document.dispatchEvent(new CustomEvent('kiwi-sales-voided', {
+        detail: { refs: refs.slice(), merchant: tenant || '' },
+      }));
+    } catch (_) {}
+    if (!list.length) return;
     if (cursors.length) {
       var kill = {};
       cursors.forEach(function (c) { kill[c] = 1; });
@@ -651,6 +672,10 @@
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return qRead().length; },
     queueStatus: queueStatus,
+    /* Ce que le serveur a sorti des livres, à la dernière réponse. Pour un
+       module métier monté APRÈS le premier passage : l'événement lui a échappé,
+       l'état, non. */
+    voidedRefs: voided,
     /* What the assistant prints under an answer: which tenant it is reading,
        when the server last answered, how many rows it has bridged, and how
        many sales this device still owes the server. A number a merchant can

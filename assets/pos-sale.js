@@ -230,15 +230,22 @@
      devient « T-642-A7 »), et c'est la forme étiquetée qui est partie au
      serveur. On compare donc les deux sens — sinon une caisse ne reconnaîtrait
      pas sa propre vente. */
-  function dropRefs(refs) {
-    if (!refs || !refs.length || !isReal()) return 0;
+  /* matcher(refs) → une fonction « cette référence est-elle dans la liste ? ».
+     Sortie d'ici parce que la boutique en a besoin aussi : elle tient son propre
+     journal (kiwi:bqDay, une semaine, avec le détail des déclinaisons) et doit
+     reconnaître les mêmes références pour rendre le stock d'une vente sortie des
+     livres. Deux comparateurs pour une même règle, c'est un jour où l'un des
+     deux ne connaîtra pas l'étiquette de terminal. Renvoie null si la liste est
+     vide — l'appelant n'a alors rien à faire. */
+  function matcher(refs) {
+    if (!refs || !refs.length) return null;
     var want = {};
     refs.forEach(function (r) {
       var s = String(r || '').trim();
       if (s) want[s] = 1;
     });
-    if (!Object.keys(want).length) return 0;
-    var hit = function (ref) {
+    if (!Object.keys(want).length) return null;
+    return function (ref) {
       var s = String(ref || '').trim();
       if (!s) return false;
       if (want[s]) return true;
@@ -248,6 +255,12 @@
       var bare = s.replace(new RegExp('-' + deviceTag() + '$'), '');
       return !!want[bare];
     };
+  }
+
+  function dropRefs(refs) {
+    if (!isReal()) return 0;
+    var hit = matcher(refs);
+    if (!hit) return 0;
     var gone = 0;
     var keys = [];
     try {
@@ -348,5 +361,6 @@
   window.KiwiPosSale = {
     record: record, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
+    refMatcher: matcher,
   };
 })();
