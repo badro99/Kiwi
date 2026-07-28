@@ -6664,9 +6664,21 @@
 
     $$('.mode-pill').forEach(btn => {
       btn.addEventListener('click', () => {
-        // Prevent accidentally leaving order mode via pills
+        /* QUITTER LE MODE COMMANDE PAR LES PASTILLES.
+           Le garde-fou refusait tout, toujours — y compris sur une mesa vide, où
+           il n'y a rien à protéger. Or « j'ai ouvert la table par erreur, ils ne
+           commandent pas encore » est le cas courant, et le geste naturel est de
+           retaper « Salle ». Le lui interdire est exactement ce qui donnait une
+           caisse qui ne répond plus. Rien de saisi ⇒ on sort et la mesa
+           redevient libre. Une commande commencée, elle, garde son garde-fou :
+           elle se valide ou s'annule, jamais par inadvertance. */
         if (mode === 'order') {
-          toast('Valide ou annule la commande d\'abord');
+          if (orderInProgressCount() > 0) {
+            toast('Valide ou annule la commande d\'abord');
+            return;
+          }
+          cancelNewOrder();
+          if (btn.dataset.mode && btn.dataset.mode !== 'salle') setMode(btn.dataset.mode);
           return;
         }
         setMode(btn.dataset.mode);
@@ -6791,6 +6803,16 @@
       const empty = $('#rp-empty');
       empty.hidden = false;
       empty.style.display = 'flex';
+      /* Remettre l'addition à zéro AVANT de la masquer. Le panneau caché garde
+         son dernier montant, et sur la disposition téléphone/tablette portrait
+         la barre repliée « Addition » le recopie (caisse-motion.js countTotal) :
+         une caisse vide affichait donc encore les 40 MAD de la note précédente,
+         seul chiffre visible tant que la feuille n'est pas dépliée. Un montant
+         faux en évidence sur un comptoir, c'est une erreur de caisse qui attend
+         son tour. */
+      $('#rp-subtotal').textContent = fmtMAD(0);
+      $('#rp-total').textContent = fmtMAD(0);
+      window.CaisseFx && window.CaisseFx.countTotal();
       // Mode-aware prompt text
       const txt = $('#rp-empty-text');
       if (txt) {
@@ -7676,6 +7698,18 @@
         clearCart();
         return;
       }
+      /* LA CROIX, EN MODE COMMANDE. Elle tombait jusqu'ici dans closeRightPanel()
+         — écrit pour la salle — qui efface la table sélectionnée et laisse le
+         mode en place : la caisse se bloquait (voir backToSalle). Une mesa
+         ouverte par erreur, client pas encore prêt à commander, doit se refermer
+         ici : c'est ce que le geste promet. Dès qu'il y a des plats saisis on ne
+         les jette pas d'un doigt distrait — le panneau reste, et le serveur
+         tranche lui-même entre envoyer et annuler. */
+      if (mode === 'order') {
+        if (orderInProgressCount() > 0) { toast('Valide ou annule la commande d\'abord'); return; }
+        cancelNewOrder();
+        return;
+      }
       // Salle mode: just close the panel — the table keeps its real status.
       closeRightPanel();
     });
@@ -8480,6 +8514,12 @@
     function validateOrder(tableId) {
       if (!tableId) return;
       const t = tables[tableId];
+      /* La table a disparu pendant la saisie (le patron a retouché son plan
+         depuis son téléphone : setupRealSalle() reconstruit `tables`). Sans ce
+         garde, la ligne suivante lève, l'écouteur du bouton meurt sur place, et
+         « Envoyer en cuisine » devient un bouton mort de plus — le symptôme même
+         qu'on est en train de corriger. On sort proprement. */
+      if (!t) { backToSalle(); toast('Cette mesa n\'existe plus sur le plan'); return; }
       t.status  = 'ka-yaklo';
       t.elapsed = 0;
       refreshTableNode(tableId);
@@ -8557,21 +8597,27 @@
       return order;
     }
 
-    /* ---- cancel new order ---- */
-    function cancelNewOrder() {
-      if (!selectedId) return;
-      delete tableOrders[selectedId];
-      const t = tables[selectedId];
-      t.status  = 'khawya';
-      t.elapsed = 0;
-      /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
-         « assis » à une table redevenue libre et pourrait continuer à commander
-         — le trou exact que la session existe pour boucher. */
-      releasePhoneTable(selectedId, 'caisse');
-      // Restore original covers (2 by default if we changed it)
-      refreshTableNode(selectedId);
-      selectedId = null;
-      // Restore vrap header
+    /* ═══════ REVENIR À LA SALLE — LA SORTIE QUI N'EXISTAIT PAS ══════════════
+     * `mode` et `selectedId` sont les deux moitiés d'un même état, et rien ne
+     * les obligeait à bouger ensemble. La croix du panneau appelait
+     * closeRightPanel(), qui efface `selectedId` et laisse `mode` à 'order' :
+     * un seul appui, et la caisse n'était plus utilisable du tout.
+     *   · les pastilles Salle / À emporter répondaient « valide ou annule
+     *     d'abord » — mais il n'y avait plus rien à valider ni à annuler ;
+     *   · « Envoyer en cuisine » et « Annuler commande » partaient avec le
+     *     panneau masqué, et de toute façon les deux commençaient par
+     *     `if (!selectedId) return` : ils ne faisaient rien, sans un mot ;
+     *   · on pouvait continuer à taper des plats et voir le total monter — ils
+     *     tombaient dans le panier « à emporter » (voir la ligne `const list =`
+     *     du gestionnaire de notes) — puis appuyer sur « Envoyer en cuisine »
+     *     sans que rien ne parte nulle part.
+     * Seul un rechargement de la page en sortait. C'est le « on ne peut pas
+     * revenir en arrière, plus aucun bouton ne marche » remonté du comptoir.
+     *
+     * D'où cette fonction : tout retour à la salle passe par elle, et elle
+     * n'exige PAS de table. C'est précisément quand la table a disparu qu'il
+     * faut pouvoir sortir. */
+    function backToSalle() {
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) vrapTitle.innerHTML = 'À emporter<em>— vente au comptoir</em>';
       mode = 'salle';
@@ -8588,11 +8634,52 @@
       showPayButtons(false);
       showEmpty();
       lucide.createIcons();
+    }
+
+    /* Combien de plats sont déjà saisis sur la mesa en cours. Sert à distinguer
+       une sortie GRATUITE (le client n'était pas prêt à commander, rien n'est
+       tapé) d'une sortie COÛTEUSE (le serveur a déjà pris la commande). La
+       première doit être immédiate ; la seconde ne doit jamais partir sur un
+       doigt distrait. */
+    function orderInProgressCount() {
+      if (mode !== 'order' || !selectedId) return 0;
+      return (tableOrders[selectedId] || []).reduce((s, l) => s + l.qty, 0);
+    }
+
+    /* ---- cancel new order ---- */
+    function cancelNewOrder() {
+      /* Pas de table sous la main ? On sort quand même. Refuser ici était le
+         cœur du blocage : la dernière issue ne faisait rien. */
+      if (selectedId) {
+        delete tableOrders[selectedId];
+        const t = tables[selectedId];
+        /* La table peut avoir disparu sous nos pieds — setupRealSalle() efface
+           et reconstruit `tables` dès que le patron touche son plan depuis son
+           téléphone. Ce n'est pas une raison pour rester coincé. */
+        if (t) { t.status = 'khawya'; t.elapsed = 0; }
+        /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
+           « assis » à une table redevenue libre et pourrait continuer à commander
+           — le trou exact que la session existe pour boucher. */
+        releasePhoneTable(selectedId, 'caisse');
+        // Restore original covers (2 by default if we changed it)
+        refreshTableNode(selectedId);
+        selectedId = null;
+      }
+      backToSalle();
       toast('Commande annulée · mesa remise à zéro');
     }
 
     document.getElementById('validate-order').addEventListener('click', () => {
-      if (mode === 'order' && selectedId) validateOrder(selectedId);
+      if (mode !== 'order') return;
+      if (selectedId) { validateOrder(selectedId); return; }
+      /* Mode commande sans mesa : il n'y a rien à envoyer. Se taire laissait le
+         serveur devant un bouton qui ne répond pas — on le ramène à la salle et
+         on le lui dit. Le panier ramassé par erreur pendant ce temps repart avec
+         (il n'appartient à aucune note), sinon il ressortirait tout seul au
+         prochain passage en « À emporter ». */
+      cart = [];
+      backToSalle();
+      toast('Aucune mesa en cours');
     });
     document.getElementById('cancel-new-order').addEventListener('click', cancelNewOrder);
 
