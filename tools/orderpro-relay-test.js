@@ -160,6 +160,18 @@ async function get(fn, qs, headers = {}) {
   const desk = DB._db.prepare('SELECT seen_ts FROM order_desk WHERE merchant=?').get(SLUG);
   ok('le sondage de la caisse pointe la présence', !!desk && (Date.now() - desk.seen_ts) < 5000);
 
+  const staleId = 'ord-stale-test01';
+  const staleAt = Date.now() - 31 * 60 * 1000;
+  DB._db.prepare(
+    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
+  ).run(staleId, SLUG, 999, 'takeout', '', 15, '[]', 'pending', staleAt, staleAt);
+  r = await get(queueGet, 'merchant=' + SLUG + '&since=0', asStaff);
+  ok('une commande test abandonnée ne revient pas après chaque rechargement',
+    !r.body.orders.some((o) => o.id === staleId));
+  ok('…elle est fermée durablement côté serveur',
+    DB._db.prepare('SELECT status FROM orders WHERE id=?').get(staleId).status === 'rejected');
+
   /* ═══ 3. SESSION ════════════════════════════════════════════════════════ */
   r = await post(openSession, { merchant: SLUG, mode: 'table', table: 'T7' });
   const sess = r.body.session;

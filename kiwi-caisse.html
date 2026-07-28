@@ -13729,7 +13729,7 @@
              la commande pour de bon. La démo garde son board éphémère, réensemé
              à chaque chargement (kdsSeed), sinon les quinze commandes d'exemple
              se dupliqueraient à chaque visite. */
-          kdsOrders: storeIsReal() ? kdsOrders.map(o => Object.assign({}, o, {
+          kdsOrders: storeIsReal() ? kdsOrders.filter(o => !o.opId).map(o => Object.assign({}, o, {
             sentAt: o.sentAt instanceof Date ? o.sentAt.toISOString() : o.sentAt,
           })) : undefined,
           kdsOrderSeq: storeIsReal() ? kdsOrderSeq : undefined,
@@ -13827,7 +13827,9 @@
       if (Array.isArray(d.kdsOrders) && storeIsReal()) {
         kdsOrders.length = 0;
         d.kdsOrders.forEach((o) => {
-          if (!o) return;
+          // Order Pro is server-owned and is reloaded by orderpro-inbox.js.
+          // Restoring the same ticket locally made old phone tests resurrect.
+          if (!o || o.opId) return;
           const at = new Date(o.sentAt);
           kdsOrders.push(Object.assign({}, o, { sentAt: isNaN(at.getTime()) ? new Date() : at }));
         });

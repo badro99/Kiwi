@@ -47,6 +47,7 @@ const FROM = {
 };
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 const MAX_ROWS = 100;
+const PENDING_TTL_MS = 30 * 60 * 1000;
 
 /* Les colonnes se sont ajoutées par vagues : `channel/ext_ref/customer` avec la
  * livraison, `session_id/server_name/paid_ts` avec la session de table. Une base
@@ -87,6 +88,16 @@ export async function onRequestGet(context) {
   const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
   const now = Date.now();
   const today = startOfDay(now);
+
+  /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
+   * abandoned carts and customers who walked away used to return after every
+   * caisse refresh because `pending` had no terminal condition. */
+  try {
+    await env.DB.prepare(
+      `UPDATE orders SET status = 'rejected', updated_ts = ?
+        WHERE merchant = ? AND status = 'pending' AND created_ts < ?`
+    ).bind(now, merchant, now - PENDING_TTL_MS).run();
+  } catch (_) { /* older schema / unavailable table: the read below stays fail-soft */ }
 
   /* `served` entre dans la file pour que le comptoir puisse ranger la commande
    * dans son historique — mais seulement celles DU JOUR. Sans cette borne, un
