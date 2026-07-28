@@ -114,13 +114,16 @@ function extract(src, name) {
 
 const CAT_PALETTE = ['var(--forest)', '#B5532A', '#C9922E', '#A8574E', '#6E7B3D', '#2E7D8C', '#8A5A9E'];
 const PAYLOAD = {
+  // Le routage vit sur la CATÉGORIE : « Boissons chaudes → bar », une fois.
   cats: [
-    { id: 'c-chaud', name: 'Boissons chaudes', sub: [] },
+    { id: 'c-chaud', name: 'Boissons chaudes', station: 'bar', sub: [] },
     { id: 'c-froid', name: 'Boissons fraîches', sub: [] },
   ],
   items: [
     { id: 'a-01', name: 'Nous-nous',   price: 14, catId: 'c-chaud', avail: true },
-    { id: 'a-02', name: 'Café noir',   price: 12, catId: 'c-chaud', avail: true, station: 'bar' },
+    // `station` sur le PLAT : un reste de l'ancien modèle. Il ne doit plus rien
+    // décider — sinon un vieux document continuerait de router en douce.
+    { id: 'a-02', name: 'Café noir',   price: 12, catId: 'c-chaud', avail: true, station: 'st_perime' },
     { id: 'a-03', name: 'Citronnade',  price: 20, catId: 'c-froid', avail: true },
     { id: 'a-04', name: 'Épuisé',      price: 30, catId: 'c-froid', avail: false },
     { id: 'a-05', name: 'Bouteille',   price: 8,  catId: null,      avail: true },
@@ -142,7 +145,7 @@ function runRebuild(payload) {
     // kdsReady: false → rebuildCarte ne doit PAS toucher à l'écran cuisine tant
     // qu'il n'est pas monté (c'est tout l'objet de ce drapeau : au premier
     // appel, à l'amorçage, la section KDS n'est pas encore évaluée).
-    carteState: { stations: [], kdsReady: false },
+    carteState: { stations: [], kitchenId: '', kdsReady: false },
     caisseCarte: () => payload,
     renderCatPills() {}, renderMenu() {},
   };
@@ -155,7 +158,7 @@ function runRebuild(payload) {
     function kdsRepaintStations() { throw new Error('kdsRepaintStations appelé alors que l\\'écran cuisine n\\'est pas monté'); }
     ${body}
     const changed = rebuildCarte();
-    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations };
+    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId };
   `);
   return fn(scope);
 }
@@ -174,7 +177,15 @@ const ghost = r.menuItems.find((m) => m.id === 'a-06');
 eq(ghost.cat, '_autres', 'un plat pointant une catégorie disparue atterrit aussi dans « Autres », pas dans le vide');
 
 eq(r.menuItems.find((m) => m.id === 'a-02').price, 12, 'le prix du patron passe tel quel');
-eq(r.menuItems.find((m) => m.id === 'a-02').station, 'bar', 'le poste de préparation suit le plat');
+/* LE point du modèle : le poste vient de la catégorie, pour tous ses plats, y
+   compris ceux auxquels personne n'a jamais rien dit — et un vieux `station`
+   posé sur le plat ne décide plus de rien. */
+eq(r.menuItems.find((m) => m.id === 'a-01').station, 'bar',
+  'un plat auquel personne n\'a rien dit suit sa CATÉGORIE — « Boissons chaudes → bar »');
+eq(r.menuItems.find((m) => m.id === 'a-02').station, 'bar',
+  'un plat qui portait encore un poste de l\'ancien modèle suit quand même sa catégorie');
+eq(r.menuItems.find((m) => m.id === 'a-03').station, '',
+  'une catégorie sans poste ne route rien : ses plats partiront en cuisine');
 eq(r.catLabels['c-chaud'], 'Boissons chaudes', 'la catégorie du patron garde SON nom');
 ok(!r.catLabels.tajines, 'aucune catégorie de la démo ne survit');
 
@@ -333,8 +344,10 @@ ok(/opts\.copy === true \? d\.T\.copy : str\(opts\.copy, 40\)/.test(receiptSrc),
 /* ── 9. les postes de préparation, du bureau jusqu'au bon papier ───────────── */
 
 const menuApi = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
-ok(/station: str\(it && it\.station, 40\)/.test(menuApi),
-  'sanitizeMenu ne retire plus le poste de préparation à la publication');
+ok(/station: str\(c && c\.station, 40\)/.test(menuApi),
+  'sanitizeMenu garde le poste de la CATÉGORIE — c\'est là que vit le routage');
+ok(/out\.kitchenId = str\(raw\.kitchenId, 40\)/.test(menuApi),
+  'sanitizeMenu garde le nom de la cuisine — sans lui la caisse retombe sur « le premier de la liste »');
 ok(/const stations = Array\.isArray\(raw\.stations\)/.test(menuApi),
   'sanitizeMenu laisse passer la LISTE des postes, pas seulement celui du plat');
 ok(/\/\^#\[0-9a-fA-F\]\{6\}\$\/\.test/.test(menuApi),
@@ -350,7 +363,26 @@ const withStations = runRebuild(Object.assign({}, PAYLOAD, {
   ],
 }));
 eq(withStations.stations.length, 2, 'les deux postes du patron descendent au comptoir');
-eq(withStations.stations[0].id, 'bar', 'l\'ordre du patron est conservé — le premier est le poste par défaut');
+eq(withStations.stations[0].id, 'bar', 'l\'ordre du patron est conservé — c\'est l\'ordre des onglets de l\'écran cuisine');
+/* Le repli est NOMMÉ. Ici la carte ne le dit pas : on retombe sur le premier
+   poste, ce qui redonne exactement l'ancien comportement à une carte écrite
+   avant que ce réglage existe. */
+eq(withStations.kitchenId, 'bar', 'sans kitchenId, la cuisine reste le premier poste — aucune carte ne change de routage à la mise à jour');
+const namedKitchen = runRebuild(Object.assign({}, PAYLOAD, {
+  kitchenId: 'cuisine',
+  stations: [
+    { id: 'bar', name: 'Bar', color: '#3677A6' },
+    { id: 'cuisine', name: 'Cuisine', color: '#1F5D3C' },
+  ],
+}));
+eq(namedKitchen.kitchenId, 'cuisine',
+  'la cuisine nommée gagne, même rangée en second — monter un onglet ne détourne plus la carte');
+const ghostKitchen = runRebuild(Object.assign({}, PAYLOAD, {
+  kitchenId: 'st_supprime',
+  stations: [{ id: 'bar', name: 'Bar', color: '#3677A6' }],
+}));
+eq(ghostKitchen.kitchenId, 'bar',
+  'une cuisine supprimée ne laisse pas la caisse sans repli');
 eq(withStations.stations[0].raw, '#3677A6', 'une couleur valable passe telle quelle');
 ok(STATION_PALETTE.includes(withStations.stations[1].raw),
   'une couleur illisible retombe sur la palette, jamais dans un attribut style tel quel');
@@ -359,7 +391,7 @@ ok(STATION_PALETTE.includes(withStations.stations[1].raw),
 function runStationFor(opts) {
   const scope = Object.assign({
     IS_DEMO: false, STATION_PALETTE,
-    carteState: { stations: [], kdsReady: true },
+    carteState: { stations: [], kitchenId: '', kdsReady: true },
     KDS_CAT_STATION: { boissons: 'boissons' },
     KDS_STATIONS_DEMO: [{ id: 'cuisson', name: 'Cuisson chaude', raw: '#1F5D3C' }],
     KDS_STATION_SOLO: { id: 'cuisson', name: 'Cuisine', raw: STATION_PALETTE[0] },
@@ -370,6 +402,7 @@ function runStationFor(opts) {
     const $ = () => null;
     function kdsStationBar() { return ''; }
     ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
     return { stationFor: (m) => kdsStationFor(m), list: kdsStations() };
   `);
@@ -381,18 +414,32 @@ eq(solo.list.length, 1, 'un café qui n\'a déclaré aucun poste en a UN, pas z�
 eq(solo.list[0].id, 'cuisson', 'ce poste unique implicite est sa cuisine');
 eq(solo.stationFor({ id: 'x', station: '' }), 'cuisson', 'un plat sans poste y va');
 
-const real = runStationFor({ carteState: { stations: [
+const STATIONS_2 = [
   { id: 'st_1', name: 'Cuisson', raw: '#1F5D3C' },
   { id: 'st_2', name: 'Bar', raw: '#3677A6' },
-], kdsReady: true } });
-eq(real.stationFor({ id: 'a', station: 'st_2' }), 'st_2', 'le poste choisi par le patron gagne');
+];
+const real = runStationFor({ carteState: { stations: STATIONS_2, kitchenId: 'st_1', kdsReady: true } });
+eq(real.stationFor({ id: 'a', station: 'st_2' }), 'st_2', 'le poste de la catégorie gagne');
 eq(real.stationFor({ id: 'b', station: '' }), 'st_1',
-  'un plat sans poste part vers le PREMIER de la liste — le défaut annoncé au tableau de bord');
+  'un plat qu\'aucune catégorie n\'envoie ailleurs part en cuisine');
 eq(real.stationFor({ id: 'c', station: 'st_supprime' }), 'st_1',
   'un poste supprimé au bureau ne laisse pas le plat dans un filtre fantôme');
 eq(real.stationFor(null), 'st_1', 'un plat introuvable dans la carte part quand même quelque part');
 eq(real.stationFor({ id: 'd', station: '', cat: 'boissons' }), 'st_1',
   'la table par catégorie de la DÉMO ne s\'applique pas à un vrai commerçant');
+
+/* LE piège qu'on vient de retirer : l'ordre de la liste ne route plus rien.
+   Même liste, même carte — seule la cuisine nommée change, et c'est elle seule
+   qui décide. Monter le bar en tête ne déverse plus la carte au bar. */
+const kitchenLast = runStationFor({ carteState: { stations: [
+  { id: 'st_2', name: 'Bar', raw: '#3677A6' },
+  { id: 'st_1', name: 'Cuisson', raw: '#1F5D3C' },
+], kitchenId: 'st_1', kdsReady: true } });
+eq(kitchenLast.stationFor({ id: 'e', station: '' }), 'st_1',
+  'le bar rangé en PREMIER ne devient pas le poste par défaut — l\'ordre n\'est plus un réglage');
+const noKitchen = runStationFor({ carteState: { stations: STATIONS_2, kitchenId: '', kdsReady: true } });
+eq(noKitchen.stationFor({ id: 'f', station: '' }), 'st_1',
+  'une carte d\'avant ce changement route exactement comme hier : premier poste');
 
 const demo = runStationFor({ IS_DEMO: true });
 eq(demo.list.length, 1, 'la démo garde SA liste de postes');
@@ -410,7 +457,7 @@ function runTickets(items, stations) {
   const jobs = [];
   const scope = {
     STATION_PALETTE, IS_DEMO: false,
-    carteState: { stations: stations, kdsReady: true },
+    carteState: { stations: stations, kitchenId: (stations[0] || {}).id || '', kdsReady: true },
     KDS_CAT_STATION: {}, KDS_STATIONS_DEMO: [], KDS_STATION_SOLO: { id: 'cuisson', name: 'Cuisine', raw: '#000000' },
     jobs,
   };
@@ -422,6 +469,7 @@ function runTickets(items, stations) {
     } };
     const pad2HO = (n) => String(n).padStart(2, '0');
     ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
     ${extract(caisse, 'printKitchenTickets')}
     printKitchenTickets({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(items)});
@@ -464,6 +512,7 @@ const noPrinter = (() => {
     const KDS_CAT_STATION = {}, KDS_STATIONS_DEMO = [], KDS_STATION_SOLO = { id: 'c', name: 'Cuisine', raw: '#000000' };
     const pad2HO = (n) => String(n).padStart(2, '0');
     ${extract(caisse, 'kdsStations')}
+    ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
     ${extract(caisse, 'printKitchenTickets')}
     printKitchenTickets({ num: 1, sentAt: new Date() }, [{ q: 1, n: 'X', note: '', stations: ['c'] }]);

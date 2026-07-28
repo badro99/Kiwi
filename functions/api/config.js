@@ -177,9 +177,19 @@ export async function onRequestGet(context) {
    * mieux qu'un écran qui bugue. */
   let suspended = false;
   try {
-    const cfg = await env.DB.prepare(
-      `SELECT features, type, status FROM merchant_config WHERE merchant = ?`
-    ).bind(merchant).first();
+    let cfg;
+    try {
+      cfg = await env.DB.prepare(
+        `SELECT features, type, status FROM merchant_config WHERE merchant = ?`
+      ).bind(merchant).first();
+    } catch (_) {
+      // `status` was added after feature flags. Until that migration reaches a
+      // database, keep returning the flags instead of silently turning every
+      // module back on for the merchant.
+      cfg = await env.DB.prepare(
+        `SELECT features, type FROM merchant_config WHERE merchant = ?`
+      ).bind(merchant).first();
+    }
     if (cfg && cfg.features) { try { features = JSON.parse(cfg.features) || {}; } catch (_) {} }
     if (cfg && cfg.type) type = cfg.type;
     if (cfg && String(cfg.status || '') === 'suspended') suspended = true;

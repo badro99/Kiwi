@@ -84,12 +84,16 @@ function sanitizeHours(raw) {
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
-  const out = { cats: [], items: [], stations: [] };
+  const out = { cats: [], items: [], stations: [], kitchenId: '' };
   if (!raw || typeof raw !== 'object') return out;
-  // Les postes de préparation, dans l'ordre voulu par le commerçant — cet ordre
-  // EST un réglage : le premier poste est celui qui reçoit les plats non
-  // affectés. Un tri ou une déduplication qui le bousculerait changerait le
-  // routage de la cuisine sans que personne ne l'ait demandé.
+  // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
+  // ailleurs. Le nommer est LE réglage de routage du restaurant ; le laisser
+  // tomber ici ferait retomber la caisse sur « le premier de la liste », et
+  // l'ordre des onglets redeviendrait un routage déguisé.
+  out.kitchenId = str(raw.kitchenId, 40);
+  // Les postes de préparation, dans l'ordre voulu par le commerçant — c'est
+  // l'ordre des onglets de l'écran cuisine. Un tri ou une déduplication qui le
+  // bousculerait changerait ce que la cuisine voit sans qu'on l'ait demandé.
   const stations = Array.isArray(raw.stations) ? raw.stations.slice(0, 24) : [];
   out.stations = stations.map((s) => ({
     id: str(s && s.id, 40),
@@ -102,6 +106,10 @@ function sanitizeMenu(raw) {
   out.cats = cats.map((c) => ({
     id: str(c && c.id, 40),
     name: str(c && c.name, 80),
+    // Le poste de la catégorie : c'est ICI que vit le routage de la cuisine.
+    // Vide = la cuisine. Le perdre au passage renverrait toute la carte au
+    // même écran dès la prochaine relecture depuis un autre appareil.
+    station: str(c && c.station, 40),
     sub: Array.isArray(c && c.sub) ? c.sub.slice(0, 40).map((s) => ({
       id: str(s && s.id, 40),
       name: str(s && s.name, 80),

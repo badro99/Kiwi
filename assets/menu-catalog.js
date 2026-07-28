@@ -82,16 +82,21 @@
     stationAdd: { fr: 'Ajouter un poste', en: 'Add a station', ar: 'إضافة محطة' },
     stationNm:  { fr: 'Nom du poste', en: 'Station name', ar: 'اسم المحطة' },
     stationEx:  { fr: 'ex. Cuisson, Bar, Pâtisserie', en: 'e.g. Hot line, Bar, Pastry', ar: 'مثل: الطهي، البار، الحلويات' },
-    stationDefB:{ fr: 'par défaut', en: 'default', ar: 'افتراضي' },
-    stationDelQ:{ fr: 'Supprimer ce poste ? Les plats qui y allaient repartiront vers le poste par défaut.', en: 'Delete this station? Dishes routed there fall back to the default station.', ar: 'حذف هذه المحطة؟ الأطباق ديالها غادي ترجع للمحطة الافتراضية.' },
+    kitchenNm:  { fr: 'Cuisine', en: 'Kitchen', ar: 'المطبخ' },
+    stationDefB:{ fr: 'reçoit le reste', en: 'gets the rest', ar: 'كتوصلها الباقي' },
+    stationDelQ:{ fr: 'Supprimer ce poste ? Les catégories qui y allaient repartiront vers la cuisine.', en: 'Delete this station? Categories routed there fall back to the kitchen.', ar: 'حذف هذه المحطة؟ الفئات ديالها غادي ترجع للمطبخ.' },
     stationNone:{ fr: 'Aucun poste défini', en: 'No station defined', ar: 'لا محطة محددة' },
-    stationsHi: { fr: 'La caisse envoie chaque plat au poste que vous lui donnez ici. Un plat sans poste part vers le premier de la liste.', en: 'The till sends each dish to the station you give it here. A dish with no station goes to the first one in the list.', ar: 'الصندوق كيصيفط كل طبق للمحطة اللي كتحددها هنا. الطبق بلا محطة كيمشي للأولى فاللائحة.' },
+    stationsHi: { fr: 'Le routage se règle sur la catégorie, pas ici : ouvrez une catégorie et donnez-lui son poste. La cuisine reçoit tout ce que vous n\'avez pas envoyé ailleurs — elle ne se supprime pas. L\'ordre ci-dessous est celui des onglets de l\'écran cuisine.', en: 'Routing is set on the category, not here: open a category and give it its station. The kitchen gets everything you haven\'t sent elsewhere — it can\'t be deleted. The order below is the tab order on the kitchen screen.', ar: 'التوجيه كيتحدد فالفئة ماشي هنا: حل فئة وعطيها المحطة ديالها. المطبخ كيوصلو كلشي اللي ما صيفطيهش لمحطة أخرى — وما كيتحدفش. الترتيب تحت هو ترتيب الأبواب فشاشة المطبخ.' },
     stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine — ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen — which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة — وهادشي كافي لبزاف ديال المقاهي.' },
     stationCol: { fr: 'Changer la couleur', en: 'Change the colour', ar: 'تغيير اللون' },
     moveUp:     { fr: 'Monter', en: 'Move up', ar: 'رفع' },
     moveDown:   { fr: 'Descendre', en: 'Move down', ar: 'خفض' },
     close:      { fr: 'Fermer', en: 'Close', ar: 'إغلاق' },
-    noStation:  { fr: '— Poste par défaut —', en: '— Default station —', ar: '— المحطة الافتراضية —' },
+    /* Le routage vit sur la catégorie. « Cuisine » n'est pas une absence de
+       réglage, c'est la réponse par défaut — d'où le nom en clair plutôt qu'un
+       « aucun » qui laisserait croire que le plat ne part nulle part. */
+    catStationL:{ fr: 'Part vers', en: 'Goes to', ar: 'كيمشي ل' },
+    catStationD:{ fr: 'par défaut', en: 'default', ar: 'افتراضي' },
   };
 
   /* La palette des postes — exactement les sept teintes que l'écran cuisine de
@@ -113,35 +118,41 @@
     return {
       seq: 20,
       /* Trois postes, parce que c'est la découpe la plus banale d'une cuisine
-       * marocaine : le feu, le froid, et la machine à café. Le patron renomme,
-       * ajoute, supprime — l'exemple n'est qu'un point de départ. */
+       * marocaine : le feu, le froid, et la machine à café. La cuisine vient en
+       * tête et c'est elle le repli (kitchenId) — les deux autres ne reçoivent
+       * que ce qu'une catégorie leur envoie. Le patron renomme, ajoute,
+       * supprime : l'exemple n'est qu'un point de départ. */
+      kitchenId: 'st_1',
       stations: [
         { id: 'st_1', name: 'Cuisson', color: STATION_COLORS[0] },
         { id: 'st_2', name: 'Froid', color: STATION_COLORS[1] },
         { id: 'st_3', name: 'Bar', color: STATION_COLORS[3] },
       ],
+      /* Le routage, en quatre lignes : les entrées au froid, les boissons au
+       * bar, le reste en cuisine. C'est exactement le geste qu'on demande au
+       * patron — une phrase par catégorie, et plus jamais plat par plat. */
       cats: [
-        { id: 'cat_1', name: 'Entrées', sub: [] },
-        { id: 'cat_2', name: 'Plats', sub: [{ id: 'sub_1', name: 'Tajines' }, { id: 'sub_2', name: 'Grillades' }] },
-        { id: 'cat_3', name: 'Boissons', sub: [{ id: 'sub_3', name: 'Chaudes' }, { id: 'sub_4', name: 'Fraîches' }] },
-        { id: 'cat_4', name: 'Desserts', sub: [] },
+        { id: 'cat_1', name: 'Entrées', station: 'st_2', sub: [] },
+        { id: 'cat_2', name: 'Plats', station: '', sub: [{ id: 'sub_1', name: 'Tajines' }, { id: 'sub_2', name: 'Grillades' }] },
+        { id: 'cat_3', name: 'Boissons', station: 'st_3', sub: [{ id: 'sub_3', name: 'Chaudes' }, { id: 'sub_4', name: 'Fraîches' }] },
+        { id: 'cat_4', name: 'Desserts', station: 'st_2', sub: [] },
       ],
       items: [
-        { id: 'it_1', name: 'Salade marocaine', price: 32, catId: 'cat_1', subId: null, desc: 'Tomate, concombre, oignon, huile d\'olive', avail: true, station: 'st_2' },
-        { id: 'it_2', name: 'Harira', price: 28, catId: 'cat_1', subId: null, desc: 'Soupe pois chiches & lentilles', avail: true, station: 'st_1' },
-        { id: 'it_3', name: 'Tajine poulet citron', price: 95, catId: 'cat_2', subId: 'sub_1', desc: 'Poulet, olives, citron confit', avail: true, station: 'st_1' },
-        { id: 'it_4', name: 'Tajine kefta œuf', price: 85, catId: 'cat_2', subId: 'sub_1', desc: 'Viande hachée, œuf, tomate', avail: true, station: 'st_1' },
-        { id: 'it_5', name: 'Brochettes mixtes', price: 90, catId: 'cat_2', subId: 'sub_2', desc: 'Bœuf, poulet, merguez, frites', avail: true, station: 'st_1' },
-        { id: 'it_6', name: 'Thé à la menthe', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Gunpowder, menthe fraîche', avail: true, station: 'st_3' },
-        { id: 'it_7', name: 'Café noir', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Espresso', avail: true, station: 'st_3' },
-        { id: 'it_8', name: 'Orange pressée', price: 18, catId: 'cat_3', subId: 'sub_4', desc: 'Pressée minute', avail: true, station: 'st_3' },
-        { id: 'it_9', name: 'Msemen miel', price: 14, catId: 'cat_4', subId: null, desc: 'Crêpe feuilletée, beurre, miel', avail: true, station: 'st_2' },
+        { id: 'it_1', name: 'Salade marocaine', price: 32, catId: 'cat_1', subId: null, desc: 'Tomate, concombre, oignon, huile d\'olive', avail: true },
+        { id: 'it_2', name: 'Harira', price: 28, catId: 'cat_1', subId: null, desc: 'Soupe pois chiches & lentilles', avail: true },
+        { id: 'it_3', name: 'Tajine poulet citron', price: 95, catId: 'cat_2', subId: 'sub_1', desc: 'Poulet, olives, citron confit', avail: true },
+        { id: 'it_4', name: 'Tajine kefta œuf', price: 85, catId: 'cat_2', subId: 'sub_1', desc: 'Viande hachée, œuf, tomate', avail: true },
+        { id: 'it_5', name: 'Brochettes mixtes', price: 90, catId: 'cat_2', subId: 'sub_2', desc: 'Bœuf, poulet, merguez, frites', avail: true },
+        { id: 'it_6', name: 'Thé à la menthe', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Gunpowder, menthe fraîche', avail: true },
+        { id: 'it_7', name: 'Café noir', price: 12, catId: 'cat_3', subId: 'sub_3', desc: 'Espresso', avail: true },
+        { id: 'it_8', name: 'Orange pressée', price: 18, catId: 'cat_3', subId: 'sub_4', desc: 'Pressée minute', avail: true },
+        { id: 'it_9', name: 'Msemen miel', price: 14, catId: 'cat_4', subId: null, desc: 'Crêpe feuilletée, beurre, miel', avail: true },
       ],
     };
   }
 
   const store = window.KiwiStore.define('menu', {
-    blank: () => ({ seq: 0, cats: [], items: [], stations: [] }),
+    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '' }),
     example: example,
     /* Des postes seuls ne font pas une carte : un établissement qui n'a saisi
      * que « Bar » et « Cuisson » n'a toujours rien à vendre, et l'écran d'accueil
@@ -158,14 +169,80 @@
   const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
 
   /* ─── postes de préparation ───
-   * L'ordre compte : le premier de la liste est le poste par défaut, celui où
-   * part un plat auquel personne n'a rien dit. C'est pour ça qu'on peut monter
-   * et descendre un poste — changer le défaut ne doit pas obliger à tout
-   * resaisir. La couleur est un repère de lecture, pas une décoration : elle se
-   * retrouve à l'identique sur la pastille de l'écran cuisine. */
+   * LE ROUTAGE VIT SUR LA CATÉGORIE. « Boissons → Bar » se dit une fois et vaut
+   * pour les boissons d'aujourd'hui comme pour celles de l'année prochaine ;
+   * affecter les plats un par un, c'est un travail qui ne finit jamais et qu'on
+   * oublie à chaque ajout.
+   *
+   * Et il n'y a plus de « premier de la liste = poste par défaut ». Cette règle
+   * faisait de l'ORDRE un réglage : monter le Bar d'un cran, et toute la carte
+   * non affectée partait au bar sans que rien ne le dise. Le repli est nommé —
+   * la cuisine — il existe dès le premier jour, il ne se supprime pas, et
+   * l'ordre ne sert plus qu'aux onglets de l'écran cuisine.
+   *
+   * La couleur est un repère de lecture, pas une décoration : elle se retrouve
+   * à l'identique sur la pastille de l'écran cuisine. */
+
+  /* La cuisine, telle qu'elle est. `d.kitchenId` la nomme ; à défaut on retombe
+   * sur le premier poste, ce qui redonne EXACTEMENT l'ancien comportement pour
+   * une carte écrite avant ce changement — personne ne voit son routage bouger
+   * le jour de la mise à jour. */
+  function kitchenIdOf(d) {
+    const list = stationsOf(d);
+    const want = d && d.kitchenId;
+    if (want && list.some((s) => s && s.id === want)) return want;
+    return list.length ? list[0].id : '';
+  }
+  /* Appelée dès qu'on touche aux postes ou au routage : la cuisine se crée sans
+   * rien demander (le patron n'a pas à déclarer que sa cuisine existe), et le
+   * repli implicite d'hier devient explicite.
+   *
+   * Reprise des affectations par plat : la version précédente les posait sur le
+   * plat. On les remonte à leur catégorie quand elles y sont unanimes — le
+   * patron qui avait pris le temps d'envoyer ses boissons au bar les retrouve
+   * routées, sans avoir rien à refaire. En cas de désaccord dans une même
+   * catégorie on ne tranche pas : deviner reviendrait à détourner des plats en
+   * silence, et la catégorie part simplement en cuisine. */
+  function ensureKitchen(d) {
+    d.stations = stationsOf(d);
+    if (!d.stations.length) {
+      d.stations.push({ id: nid(d, 'st'), name: tr(T.kitchenNm), color: STATION_COLORS[0] });
+    }
+    d.kitchenId = kitchenIdOf(d);
+    const known = (id) => !!id && d.stations.some((s) => s && s.id === id);
+    (d.cats || []).forEach((c) => {
+      if (!c) return;
+      // Un poste supprimé ne doit pas laisser une catégorie pointer dans le vide.
+      if (c.station && !known(c.station)) c.station = '';
+      // Déjà réglée une fois — « en cuisine » EST un réglage. On n'y revient pas :
+      // la reprise ci-dessous ne doit jamais écraser un choix du patron.
+      if ('station' in c) return;
+      const found = (d.items || []).reduce((acc, it) => {
+        if (acc === false || !it || it.catId !== c.id) return acc;
+        const s = known(it.station) ? it.station : '';
+        if (!s) return acc;
+        return acc === null ? s : (acc === s ? acc : false);
+      }, null);
+      c.station = (found && found !== d.kitchenId) ? found : '';
+    });
+    return d;
+  }
+  /* Le seul geste de routage de toute la carte. '' = la cuisine, et c'est un
+   * choix qu'on écrit comme les autres — pas une case laissée vide. */
+  function setCategoryStation(catId, stationId) {
+    return store.update((d) => {
+      ensureKitchen(d);
+      const c = catById(d, catId); if (!c) return d;
+      const ok = stationId && d.stations.some((s) => s && s.id === stationId);
+      c.station = (ok && stationId !== d.kitchenId) ? String(stationId) : '';
+      return d;
+    });
+  }
   function addStation(name) {
     return store.update((d) => {
-      d.stations = stationsOf(d);
+      // Le premier poste ajouté n'est jamais le premier poste tout court : la
+      // cuisine naît avant lui, sinon « Bar » deviendrait le repli de la carte.
+      ensureKitchen(d);
       const nm = String(name || '').trim() || tr(T.stationNm);
       d.stations.push({ id: nid(d, 'st'), name: nm, color: STATION_COLORS[d.stations.length % STATION_COLORS.length] });
       return d;
@@ -193,20 +270,24 @@
       return d;
     });
   }
-  /* Supprimer un poste ne doit pas laisser des plats pointer vers un poste
-   * disparu : la caisse les enverrait dans un filtre que personne ne regarde.
-   * On les rend explicitement au défaut, en une seule écriture. */
+  /* La cuisine ne se supprime pas : c'est le repli, et un repli qu'on peut
+   * effacer n'en est pas un. Pour les autres, supprimer ne doit pas laisser une
+   * catégorie pointer vers un poste disparu — la caisse l'enverrait dans un
+   * filtre que personne ne regarde. Elle rentre en cuisine, en une écriture. */
   function deleteStation(id) {
     return store.update((d) => {
-      d.stations = stationsOf(d).filter((s) => s && s.id !== id);
-      (d.items || []).forEach((it) => { if (it && it.station === id) it.station = ''; });
+      ensureKitchen(d);
+      if (!id || id === d.kitchenId) return d;
+      d.stations = d.stations.filter((s) => s && s.id !== id);
+      (d.cats || []).forEach((c) => { if (c && c.station === id) c.station = ''; });
       return d;
     });
   }
 
   function addCategory(name) {
     return store.update((d) => {
-      const c = { id: nid(d, 'cat'), name: String(name || tr(T.catName)).trim() || tr(T.catName), sub: [] };
+      // Une catégorie neuve part en cuisine — explicitement, pas par omission.
+      const c = { id: nid(d, 'cat'), name: String(name || tr(T.catName)).trim() || tr(T.catName), sub: [], station: '' };
       d.cats.push(c);
       return d;
     });
@@ -239,10 +320,10 @@
         subId: data.subId || null,
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
-        // Vide = « poste par défaut ». On ne fige PAS le premier poste ici : le
-        // patron peut réordonner ses postes demain, et un plat qu'il n'a jamais
-        // affecté doit suivre ce changement, pas rester collé à l'ancien.
-        station: String(data.station || ''),
+        // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
+        // par la version précédente restent dans le document et ne sont plus
+        // lues — ensureKitchen() les a remontées à la catégorie une fois pour
+        // toutes, les effacer ne rendrait service à personne.
         // Media are URLs (uploaded to R2 via KiwiOrderPro.uploadMedia), never
         // bytes — base64 here would blow the localStorage quota in a dozen items.
         photo: String(data.photo || ''),
@@ -260,7 +341,6 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
-      if ('station' in patch) it.station = String(patch.station || '');
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
       return d;
@@ -345,6 +425,15 @@
       /* postes de préparation — la pastille est le même repère que sur l'écran
          cuisine de la caisse, à la même couleur. */
       .mx-stdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
+      /* Le routage de la catégorie ouverte, en tête de volet. Il se lit comme
+         une phrase — « Part vers · Bar » — et non comme un formulaire : le
+         libellé est petit et gris, la valeur porte le poids. */
+      .mx-catst { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 11px;
+        height: 34px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+      .mx-catst > span { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+        color: var(--n-500); white-space: nowrap; }
+      .mx-catst select { border: 0; background: none; outline: none; font: inherit; font-size: 13px;
+        font-weight: 600; color: var(--ink); padding: 0; max-width: 168px; cursor: pointer; }
       .mx-item .nm .stag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--n-600); background: var(--paper-soft); padding: 2px 7px; border-radius: 6px; margin-left: 8px; vertical-align: 1px; }
       .mx-st-hint { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 0 0 14px; }
       .mx-st-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
@@ -393,6 +482,8 @@
     const cats = d.cats || [];
     const items = d.items || [];
     const stations0 = stationsOf(d);
+    const kitchenId = kitchenIdOf(d);
+    const kitchenSt = stationById(d, kitchenId);
 
     if (!cats.length && !items.length) return renderEmpty();
 
@@ -409,10 +500,16 @@
           <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.name)}</span>
           <span style="font-family:var(--mono);font-size:10px;opacity:.6;">${itemsIn(d, c.id, s.id).length}</span>
         </div>`).join('');
+      /* La pastille ne s'affiche QUE pour une catégorie détournée. Un point sur
+       * chaque ligne serait du bruit — c'est l'exception qu'on veut voir sauter
+       * aux yeux, et « pas de pastille » se lit alors « ça part en cuisine ». */
+      const cSt = c.station ? stationById(d, c.station) : null;
+      const cDot = cSt ? `<i class="mx-stdot" style="background:${esc(cSt.color || STATION_COLORS[0])}" title="${esc(cSt.name)}"></i>` : '';
       return `
         <div class="mx-cat ${isOn ? 'on' : ''}">
           <div class="mx-cat-head" data-action="mx-cat-pick" data-arg="${c.id}">
             <span class="nm">${esc(c.name)}</span>
+            ${cDot}
             <span class="ct">${count}</span>
             <span class="ed" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}">${EDIT}</span>
           </div>
@@ -430,12 +527,11 @@
     const subName = activeSub && cat ? (cat.sub || []).find((s) => s.id === activeSub) : null;
     const itemRows = shown.length ? shown.map((it) => {
       const sub = (cat.sub || []).find((s) => s.id === it.subId);
-      /* Le poste s'affiche sur la ligne — c'est un réglage qu'on relit vite, pas
-       * un qu'on ouvre pour vérifier. Un plat non affecté montre le poste par
-       * défaut en clair : « rien ici » et « ça part quand même quelque part »
-       * sont deux choses différentes, et c'est la seconde qui est vraie. */
-      const st = stationById(d, it.station) || (stations0.length ? stations0[0] : null);
-      const stTag = st ? `<span class="stag"><i class="mx-stdot" style="background:${esc(st.color || STATION_COLORS[0])}"></i>${esc(st.name)}</span>` : '';
+      /* Plus de pastille de poste par plat : tous les plats affichés ici
+       * partagent la catégorie ouverte, donc son poste. Le répéter sur chaque
+       * ligne laisserait croire qu'il se règle ligne par ligne. Il se lit une
+       * fois, en tête de volet, là où il se règle. */
+      const stTag = '';
       return `
         <div class="mx-item ${it.avail === false ? 'off' : ''}">
           <div style="display:flex;align-items:center;gap:11px;min-width:0;">
@@ -469,6 +565,16 @@
                 <div class="sub">${shown.length} ${esc(tr(shown.length === 1 ? T.product : T.products))}</div>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
+                ${/* Le routage, au seul endroit où on y pense : devant les plats
+                      concernés. Caché tant qu'il n'y a qu'un poste — proposer un
+                      choix qui n'en est pas un, c'est faire douter le patron. */''}
+                ${cat && stations0.length > 1 ? `<label class="mx-catst">
+                  <span>${esc(tr(T.catStationL))}</span>
+                  <select data-cat-station="${esc(cat.id)}" aria-label="${esc(tr(T.catStationL))}">
+                    <option value="">${esc(kitchenSt ? kitchenSt.name : tr(T.kitchenNm))} · ${esc(tr(T.catStationD))}</option>
+                    ${stations0.filter((s) => s.id !== kitchenId).map((s) => `<option value="${esc(s.id)}" ${s.id === cat.station ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+                  </select>
+                </label>` : ''}
                 ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.stations))}</span></button>
                 <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
@@ -545,22 +651,37 @@
     });
     const body = m.el.querySelector('[data-st-body]');
 
+    /* La cuisine se crée ici, sans rien demander — on ouvre la fenêtre des
+     * postes, elle est déjà là. Écrit une seule fois : ensuite kitchenId est
+     * posé et rouvrir la fenêtre ne touche plus à la carte. */
+    const d0 = store.get();
+    if (!stationsOf(d0).length || !d0.kitchenId) store.update((d) => ensureKitchen(d));
+
     function paint(focusId) {
-      const list = stationsOf(store.get());
-      const rows = list.map((s, i) => `
+      const dNow = store.get();
+      const list = stationsOf(dNow);
+      const kid = kitchenIdOf(dNow);
+      const rows = list.map((s, i) => {
+        /* La cuisine se renomme et se déplace comme les autres — c'est un poste
+         * réel, pas une ligne système. Elle ne se supprime pas : le bouton
+         * n'est pas désactivé, il n'existe pas. Un bouton grisé invite à
+         * chercher pourquoi ; une absence se comprend toute seule. */
+        const isKitchen = s.id === kid;
+        return `
         <div class="mx-st-row" data-st-row="${esc(s.id)}">
           <button class="mx-st-sw" type="button" data-st-color="${esc(s.id)}"
                   style="background:${esc(s.color || STATION_COLORS[0])};"
                   title="${esc(tr(T.stationCol))}" aria-label="${esc(tr(T.stationCol))}"></button>
           <input class="mx-st-nm" type="text" value="${esc(s.name)}" data-st-name="${esc(s.id)}"
                  aria-label="${esc(tr(T.stationNm))}" />
-          ${i === 0 ? `<span class="mx-st-def">${esc(tr(T.stationDefB))}</span>` : ''}
+          ${isKitchen ? `<span class="mx-st-def">${esc(tr(T.stationDefB))}</span>` : ''}
           <div class="mx-st-act">
             <button type="button" data-st-up="${esc(s.id)}" ${i === 0 ? 'disabled' : ''} title="${esc(tr(T.moveUp))}" aria-label="${esc(tr(T.moveUp))}">${ARR_UP}</button>
             <button type="button" data-st-down="${esc(s.id)}" ${i === list.length - 1 ? 'disabled' : ''} title="${esc(tr(T.moveDown))}" aria-label="${esc(tr(T.moveDown))}">${ARR_DN}</button>
-            <button type="button" class="del" data-st-del="${esc(s.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
+            ${isKitchen ? '' : `<button type="button" class="del" data-st-del="${esc(s.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>`}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       body.innerHTML = `
         <div class="mx-st-hint">${esc(tr(list.length ? T.stationsHi : T.stationsEm))}</div>
         ${list.length ? `<div class="mx-st-list">${rows}</div>` : `<div class="mx-st-empty">${esc(tr(T.stationNone))}</div>`}
@@ -650,8 +771,7 @@
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', station: '' };
-    const stations = stationsOf(d);
+    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '' };
     // Live media state for this modal — mutated by the picker, read on save.
     const media = { photo: it.photo || '', video: it.video || '' };
 
@@ -669,13 +789,9 @@
           <div><label>${esc(tr(T.priceL))}</label><input data-f-price type="number" inputmode="decimal" min="0" step="1" value="${esc(it.price)}" placeholder="0"/></div>
           <div><label>${esc(tr(T.catL))}</label><select data-f-cat>${catOpts}</select></div>
         </div>
-        ${stations.length ? `<div class="mx-field two">
-          <div><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
-          <div><label>${esc(tr(T.stationL))}</label><select data-f-station>
-            <option value="">${esc(tr(T.noStation))}</option>
-            ${stations.map((s) => `<option value="${esc(s.id)}" ${s.id === it.station ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
-          </select></div>
-        </div>` : `<div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>`}
+        ${/* Aucun sélecteur de poste ici : ce plat part au poste de sa catégorie,
+              réglé une fois en tête de la liste des produits. */''}
+        <div class="mx-field"><label>${esc(tr(T.subL))}</label><select data-f-sub>${subOptsHtml(it.catId, it.subId)}</select></div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
@@ -775,15 +891,13 @@
 
     q('[data-f-cancel]').addEventListener('click', () => m.close());
     q('[data-f-save]').addEventListener('click', () => {
-      const stEl = q('[data-f-station]');
       const data = {
         name: q('[data-f-name]').value, price: q('[data-f-price]').value,
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
         photo: media.photo, video: media.video,
-        // Pas de sélecteur (aucun poste défini) → on ne touche pas au poste déjà
-        // enregistré : créer un poste puis l'ouvrir/fermer sans y penser ne doit
-        // pas déverser toute la carte sur le poste par défaut.
-        station: stEl ? stEl.value : (existing ? (existing.station || '') : ''),
+        // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
+        // catégorie dans ce formulaire change donc son poste — c'est la même
+        // phrase dite une fois, et c'est tout l'intérêt.
       };
       if (!data.name.trim()) { q('[data-f-name]').focus(); return; }
       if (existing) updateItem(existing.id, data); else { addItem(data); activeCat = data.catId; activeSub = data.subId || null; }
@@ -794,9 +908,26 @@
   }
 
   /* ───────────────── handlers ───────────────── */
+  /* Le sélecteur de poste est un <select> : la délégation de clic de Kiwi ne le
+   * voit pas, il faut écouter `change`. Posé UNE fois sur le document plutôt
+   * qu'à chaque rendu — la page carte se repeint à chaque frappe d'un nom de
+   * poste, et un écouteur par rendu s'empilerait jusqu'à écrire cent fois. */
+  let catStationBound = false;
+  function bindCatStation() {
+    if (catStationBound) return;
+    catStationBound = true;
+    document.addEventListener('change', (e) => {
+      const sel = e.target && e.target.closest && e.target.closest('[data-cat-station]');
+      if (!sel) return;
+      setCategoryStation(sel.getAttribute('data-cat-station'), sel.value);
+      render();
+    });
+  }
+
   function registerHandlers() {
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) return;
+    bindCatStation();
     H['mx-cat-add'] = () => promptText({ title: tr(T.addCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { const c = addCategory(v); const d = store.get(); const last = d.cats[d.cats.length - 1]; if (last) { activeCat = last.id; activeSub = null; } render(); } });
     H['mx-cat-pick'] = (_el, id) => { activeCat = id; activeSub = null; render(); };
     H['mx-sub-pick'] = (_el, arg) => { const [cid, sid] = String(arg || '').split('::'); activeCat = cid; activeSub = sid || null; render(); };
@@ -948,24 +1079,38 @@
   // sinon renommer une catégorie sur un poste effacerait les sous-catégories
   // créées sur l'autre.
   function mergeMenus(mine, theirs) {
-    const out = { seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0), cats: [], items: [], stations: [] };
+    /* kitchenId voyage avec la carte. C'est LE réglage qui dit où part ce que
+     * personne n'a routé ; le perdre à la fusion ferait retomber le repli sur
+     * « le premier de la liste », c'est-à-dire exactement le piège qu'on vient
+     * de retirer. Celui de cet appareil gagne, l'autre sert de secours. */
+    const out = {
+      seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      kitchenId: (mine && mine.kitchenId) || (theirs && theirs.kitchenId) || '',
+      cats: [], items: [], stations: [],
+    };
     /* Les postes fusionnent AVANT le reste et dans l'ordre de cet appareil :
-     * l'ordre EST le réglage (le premier est le poste par défaut), donc celui
-     * qu'on a sous les yeux gagne, et les postes créés ailleurs viennent se
-     * ranger derrière plutôt que de disparaître. */
+     * cet ordre est celui des onglets de l'écran cuisine, donc celui qu'on a
+     * sous les yeux gagne, et les postes créés ailleurs viennent se ranger
+     * derrière plutôt que de disparaître. */
     const stSeen = Object.create(null);
     [((mine && mine.stations) || []), ((theirs && theirs.stations) || [])].forEach((list) => {
       list.forEach((s) => { if (s && s.id && !stSeen[s.id]) { stSeen[s.id] = 1; out.stations.push(s); } });
     });
+    /* `station` fait partie de la catégorie au même titre que son nom : c'est le
+     * routage. L'oublier ici renverrait toute la carte en cuisine au premier
+     * rechargement depuis un autre appareil — une panne silencieuse, découverte
+     * au coup de feu. Cet appareil gagne ; l'autre comble un trou, jamais plus. */
     const byId = Object.create(null);
+    const mkCat = (c) => ({ id: c.id, name: c.name, station: c.station || '', sub: (c.sub || []).slice() });
     ((mine && mine.cats) || []).forEach((c) => {
       if (!c || !c.id || byId[c.id]) return;
-      byId[c.id] = { id: c.id, name: c.name, sub: (c.sub || []).slice() };
+      byId[c.id] = mkCat(c);
       out.cats.push(byId[c.id]);
     });
     ((theirs && theirs.cats) || []).forEach((c) => {
       if (!c || !c.id) return;
-      if (!byId[c.id]) { byId[c.id] = { id: c.id, name: c.name, sub: (c.sub || []).slice() }; out.cats.push(byId[c.id]); return; }
+      if (!byId[c.id]) { byId[c.id] = mkCat(c); out.cats.push(byId[c.id]); return; }
+      if (!byId[c.id].station && c.station) byId[c.id].station = c.station;
       const have = Object.create(null);
       byId[c.id].sub.forEach((s) => { if (s && s.id) have[s.id] = 1; });
       (c.sub || []).forEach((s) => { if (s && s.id && !have[s.id]) byId[c.id].sub.push(s); });
@@ -998,7 +1143,7 @@
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
         const mine = store.get();
         const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
-        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [] })
+        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '' })
                         : mergeMenus(mine, theirs));
         try { if (isCustom()) render(); } catch (_) {}
         return true;
@@ -1108,10 +1253,13 @@
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, addItem, updateItem, deleteItem, renameCategory, deleteCategory,
-    /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE — le
-     * premier est le poste par défaut, et cet ordre voyage jusqu'à l'écran
-     * cuisine de la caisse. */
+    /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
+     * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
+     * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et
+     * le repli se nomme : `kitchenId()`. */
     stations: (vid) => (store.get(vid).stations || []),
+    kitchenId: (vid) => kitchenIdOf(store.get(vid)),
+    setCategoryStation,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
     render,
     publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)
