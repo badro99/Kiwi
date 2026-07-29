@@ -30,8 +30,16 @@
   align-items: stretch;
   overflow: hidden;
 }
-#pos-boutique > .bq-rail,
-#pos-boutique > .bq-main { height: auto; min-height: 0; align-self: stretch; }
+#pos-boutique > .bq-rail {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  height: auto; min-height: 0;
+}
+#pos-boutique > .bq-main {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 212px;
+  width: auto; height: auto; min-height: 0;
+}
 
 /* ═══════════════ LEFT RAIL (dark, dashboard-matching) ═══════════════ */
 .bq-rail {
