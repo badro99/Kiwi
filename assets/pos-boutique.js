@@ -770,6 +770,7 @@
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>
           <button class="bq-lock" id="bq-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
+          ${IS_DEMO ? '' : '<button class="bq-lock" id="bq-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
           <button class="bq-lock" id="bq-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
@@ -816,7 +817,14 @@
       const b = e.target.closest('[data-bq-view]');
       if (b) switchView(b.dataset.bqView);
     });
-    $('#bq-lock', root).addEventListener('click', () => window.KiwiPosDispatch.lock());
+    $('#bq-lock', root).addEventListener('click', () => {
+      /* La feuille de clôture vit au niveau du body (au-dessus du root) : la
+         laisser ouverte pendant le verrouillage la poserait sur l'écran PIN. */
+      if (bqCloVeil) bqCloVeil.classList.remove('is-open');
+      window.KiwiPosDispatch.lock();
+    });
+    const closeDay = $('#bq-close-day', root);
+    if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
     $('#bq-net', root).addEventListener('click', toggleOffline);
     setupFullscreenBtn();
     $$('.modal-veil', root).forEach((v) => {
@@ -893,6 +901,10 @@
     if (IS_DEMO) seedDemoTicket();
 
     renderAll();
+
+    /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
+       d'ouverture d'abord, la vente ensuite. La démo entre directement. */
+    bqMaybeOpenScreen();
   }
 
   /* Pick the first two in-stock articles from the live catalogue for the
@@ -927,6 +939,7 @@
   function onShow() {
     if (!root) return;
     syncTillStaff();                      // a new shift may have unlocked the till
+    bqMaybeOpenScreen();                  // re-unlock without a poste open → fond d'ouverture
     const today = $('#bq-today', root);
     if (today) today.textContent = headSubVente();
     renderBadges();
@@ -2341,11 +2354,13 @@
             const rec = {
               id: `${TK}-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
               methods: parts.map((x) => x.m).join(' + '),
+              parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
               lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
               total: diff,
             };
             SALES.unshift(rec);
             persistDay();
+            bqSaveProvisional();
             $('#bq-today', root).textContent = headSubVente();
             refreshOps();
             return { ref: rec.id, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
@@ -2496,12 +2511,18 @@
         const sale = {
           id: t.num, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
+          /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
+             de la clôture exact quand un ticket est réglé moitié carte moitié
+             espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
+          parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
+          discount: Math.round(tot.remise + tot.reward),
           lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, unit: lineUnit(ln), returned: false, note: '' })),
           reward: rewardUsed ? t.reward.label : null,
           total,
         };
         SALES.unshift(sale);
         persistDay();
+        bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
         saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
@@ -4547,6 +4568,502 @@
       // For the chooser (Imprimer / Enregistrer en PDF), the modal speaks for itself.
       if (res && res.ok && res.via) toast(`${what} envoyée à l'imprimante`);
     });
+  }
+
+  /* ═══════════════════════ FIN DE SERVICE ═══════════════════════
+     Le cycle de poste de la caisse restaurant, porté à la boutique : fond
+     d'ouverture au déverrouillage, clôture avec tiroir-caisse et comptage,
+     rapport Z imprimé et classé (KiwiDayReport) — le MÊME document que le
+     tableau de bord rouvre le lendemain, rangé sous le même slug. Réservé aux
+     VRAIES boutiques : la démo (PIN 0002) garde son entrée directe — elle n'a
+     ni tiroir ni comptabilité, et KiwiDayReport refuse de toute façon
+     d'archiver une démo. L'écran d'ouverture et la feuille de clôture
+     réutilisent les styles .clockin-* / .clo-* de kiwi-caisse.html : même
+     geste, même dessin, zéro CSS dupliqué. */
+
+  const BQ_SHIFT_KEY = 'kiwi:bqShift';
+  let bqShift = null;               /* { openedAt: ms, openedBy, float } */
+  (function bqShiftRestore() {
+    if (IS_DEMO) return;
+    try {
+      const s = JSON.parse(localStorage.getItem(BQ_SHIFT_KEY) || 'null');
+      if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0 };
+    } catch (_) {}
+  })();
+  function bqShiftPersist() {
+    try {
+      if (bqShift) localStorage.setItem(BQ_SHIFT_KEY, JSON.stringify(bqShift));
+      else localStorage.removeItem(BQ_SHIFT_KEY);
+    } catch (_) {}
+  }
+
+  /* Ce que chaque vente a réellement mis dans le tiroir. Les parts de règlement
+     sont figées sur la vente à l'encaissement (sale.parts) ; une vente d'avant
+     cette version n'en porte pas, et on retombe sur `methods` — exact pour un
+     règlement simple, et pour un mixte le total est posé sur le premier moyen
+     monétaire (approximation limitée au jour de la transition). Un avoir n'est
+     jamais de l'argent qui rentre : il consomme une dette déjà comptée. */
+  function bqMoneyParts(s) {
+    if (Array.isArray(s.parts) && s.parts.length) {
+      return s.parts.filter((p) => p && p.m !== 'avoir' && +p.amount > 0)
+        .map((p) => ({ m: p.m, amount: +p.amount }));
+    }
+    const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
+    return names.length && +s.total > 0 ? [{ m: names[0], amount: +s.total }] : [];
+  }
+  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'livraison': 'delivery' };
+
+  function bqDayTotals() {
+    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, items: 0, discounts: 0, discountsN: 0 };
+    salesToday().forEach((s) => {
+      let took = 0;
+      bqMoneyParts(s).forEach((p) => {
+        took += p.amount;
+        if (p.m === 'espèces') t.cash += p.amount;
+        else if (p.m === 'carte') t.card += p.amount;
+        else if (p.m === 'livraison') t.delivery += p.amount;
+        else t.other += p.amount;
+      });
+      if (took > 0) { t.moneyIn += took; t.txns++; }
+      (s.lines || []).forEach((ln) => { if (!ln.returned) t.items += +ln.qty || 0; });
+      const d = +s.discount || 0;
+      if (d > 0) { t.discounts += d; t.discountsN++; }
+    });
+    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
+    return t;
+  }
+
+  /* Le journal du jour, traduit vers la forme que KiwiDayReport.build attend.
+     Une entrée PAR PART monétaire — la même écriture que la caisse restaurant,
+     où chaque part d'un règlement partagé passe par recordSale : c'est ce qui
+     rend le tiroir exact quand un ticket est réglé moitié carte moitié espèces.
+     Le panier ne voyage qu'avec la première part, sinon le classement par
+     rayon compterait chaque article deux fois. */
+  function bqReportSales() {
+    const out = [];
+    salesToday().forEach((s) => {
+      const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
+      const lines = (s.lines || []).filter((ln) => !ln.returned).map((ln) => ({
+        name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
+        qty: +ln.qty || 0,
+        total: Math.round((+ln.unit || 0) * (+ln.qty || 0)),
+        cat: rayonOf(ln.pid) || '',
+      }));
+      let first = true;
+      bqMoneyParts(s).forEach((p, i) => {
+        out.push({
+          id: s.id + (i ? '#' + i : ''),
+          ts: at,
+          amount: p.amount,
+          method: BQ_SRV_METHOD[p.m] || 'wallet',
+          label: s.kind === 'echange' ? 'Différence échange' : 'Vente',
+          ref: s.id,
+          cashier: s.by || '',
+          lines: first && lines.length ? lines : null,
+        });
+        first = false;
+      });
+    });
+    return out;
+  }
+
+  function bqReportSession(counted) {
+    const t = bqDayTotals();
+    return {
+      openedAt: bqShift ? bqShift.openedAt : 0,
+      openedBy: bqShift ? bqShift.openedBy : '',
+      closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
+      openingFloat: bqShift ? bqShift.float : 0,
+      cashMovements: [], handovers: [],
+      discounts: t.discounts, discountsCount: t.discountsN, cancels: 0,
+      countedCash: counted,
+    };
+  }
+  /* La journée commerciale d'un service est celle de son OUVERTURE (même règle
+     que la caisse restaurant) : une boutique de souk ouverte jusqu'après minuit
+     clôture UNE journée, pas deux. */
+  function bqBuildReport(counted, closedAt) {
+    const DR = window.KiwiDayReport;
+    if (!DR) return null;
+    const sess = bqReportSession(counted);
+    if (closedAt) sess.closedAt = closedAt;
+    const pv = pvPaired() || {};
+    return DR.build({
+      day: DR.businessDay(bqShift ? bqShift.openedAt : Date.now()),
+      sales: bqReportSales(),
+      session: sess,
+      store: { slug: DR.storeSlug(), name: pv.name || '', location: pv.location || '', type: pv.type || 'boutique' },
+      source: 'caisse',
+    });
+  }
+  /* L'instantané provisoire (closed:false) tient le tableau de bord à jour
+     pendant le service, sans compter comme une clôture — même contrat que
+     saveProvisional() côté restaurant. */
+  let bqLastProv = 0;
+  function bqSaveProvisional(force) {
+    if (IS_DEMO || !window.KiwiDayReport || !bqShift) return;
+    if (!force && Date.now() - bqLastProv < 90000) return;
+    bqLastProv = Date.now();
+    try {
+      const r = bqBuildReport(null, 0);
+      if (!r) return;
+      r.closed = false;
+      window.KiwiDayReport.save(r, { reopen: false, note: 'en cours', by: bqShift.openedBy });
+    } catch (_) {}
+  }
+
+  function bqPrintReport(report, copyLabel) {
+    if (!window.KiwiPrinter || !window.KiwiPrinter.printDayReport) {
+      toast('Imprimante indisponible'); return Promise.resolve({ ok: false });
+    }
+    const DR = window.KiwiDayReport;
+    const V = DR ? DR.vocab() : { items: 'articles', item: 'article', cat: 'rayon' };
+    const hm = (ms) => { if (!ms) return ''; const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+    const p = String(report.day || '').split('-');
+    const pv = pvPaired() || {};
+    return window.KiwiPrinter.printDayReport({
+      report: report,
+      shop: pv.name || 'Kiwi',
+      address: pv.location || '',
+      title: 'RAPPORT JOURNALIER',
+      dateLabel: p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : report.day,
+      copy: copyLabel || '',
+      openedLabel: hm(report.openedAt),
+      closedLabel: hm(report.closedAt || Date.now()),
+      detailTitle: 'DÉTAIL PAR ' + String(V.cat || 'rayon').toUpperCase(),
+      drawerTitle: 'TIROIR-CAISSE',
+      netLabel: 'NET DU JOUR',
+      unitWord: V.items || 'articles',
+      unitWordOne: V.item || '',
+      notCounted: 'non compté',
+      handoverWord: 'Passation',
+      reopenWord: 'Clôture n°',
+      methodLabels: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
+      fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
+    }).then((res) => {
+      if (res && res.ok) toast(res.via === 'browser' ? 'Rapport envoyé au pilote système' : 'Rapport imprimé');
+      else toast('Impression impossible · le rapport reste dans le tableau de bord');
+      return res || { ok: false };
+    }, () => { toast('Impression impossible · le rapport reste dans le tableau de bord'); return { ok: false }; });
+  }
+
+  /* ── l'écran d'ouverture (fond de caisse) ──
+     Même dessin que le clock-in restaurant, mêmes classes ; seul le conteneur
+     porte .bq-clockin, que pos-boutique.css ré-affiche par-dessus le masquage
+     body.is-pos. Le fond retenu est mémorisé PAR ÉTABLISSEMENT, sous la même
+     clé que la caisse restaurant : un appareil qui sert deux commerces retient
+     deux montants. */
+  function bqFloatMemKey() {
+    try { const p = pvPaired(); if (p && p.merchant) return 'kiwi:openingFloat:v1:' + p.merchant; } catch (_) {}
+    return 'kiwi:openingFloat:v1:boutique';
+  }
+  let bqFloat = 500;
+  function bqMaybeOpenScreen() {
+    if (IS_DEMO || bqShift) return;
+    bqShowOpenScreen();
+  }
+  function bqShowOpenScreen() {
+    if (document.getElementById('bq-clockin')) return;
+    const pv = pvPaired() || {};
+    const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
+    const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
+    const DDAYS = ['Lhad', 'Ltnin', 'Tlata', 'Larb3a', 'Lkhmis', 'Ljm3a', 'Sbt'];
+    const DMONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const el = document.createElement('div');
+    el.className = 'clockin-screen bq-clockin';
+    el.id = 'bq-clockin';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `
+      <div class="clockin-top">
+        <div class="clockin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+        <div class="clockin-tagline">— version commerçant</div>
+      </div>
+      <div class="clockin-mid">
+        <div class="clockin-greet">Sba7 lkhir <em>${esc(who)}</em></div>
+        <div class="clockin-role">${esc(role)} · ${esc(pv.name || 'Boutique')}</div>
+        <div class="clockin-clock" id="bqci-time">--:--</div>
+        <div class="clockin-date" id="bqci-date"></div>
+        <div class="clockin-float">
+          <span class="clockin-float-label">Fond d'ouverture</span>
+          <div class="clockin-float-chips" id="bqci-chips">
+            <button class="ci-float-chip" data-float="300">300 MAD</button>
+            <button class="ci-float-chip is-active" data-float="500">500 MAD</button>
+            <button class="ci-float-chip" data-float="1000">1 000 MAD</button>
+            <button class="ci-float-chip" data-float="custom" aria-expanded="false" aria-controls="bqci-custom">Autre</button>
+          </div>
+          <div class="clockin-float-custom" id="bqci-custom" hidden>
+            <input id="bqci-input" class="ci-float-input" type="number"
+                   inputmode="decimal" min="0" step="any" placeholder="0"
+                   aria-label="Fond d'ouverture, montant libre en dirhams">
+            <span class="ci-float-cur" aria-hidden="true">MAD</span>
+          </div>
+        </div>
+      </div>
+      <div class="clockin-bottom">
+        <button class="clockin-btn" id="bqci-btn">
+          <i data-lucide="unlock" class="clockin-btn-ic"></i>
+          <span class="clockin-btn-label">Ouvrir la caisse</span>
+          <span class="clockin-btn-check" aria-hidden="true"><i data-lucide="check"></i></span>
+        </button>
+        <div class="clockin-foot">${esc(pv.location || '')}</div>
+      </div>`;
+    document.body.appendChild(el);
+
+    const chips  = el.querySelector('#bqci-chips');
+    const custom = el.querySelector('#bqci-custom');
+    const input  = el.querySelector('#bqci-input');
+    const mark = (chip) => el.querySelectorAll('.ci-float-chip').forEach((c) => c.classList.toggle('is-active', c === chip));
+    const showCustom = (on, focus) => {
+      custom.hidden = !on;
+      const b = chips.querySelector('[data-float="custom"]');
+      if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on && focus) { input.focus(); input.select(); }
+    };
+    const remember = () => { try { localStorage.setItem(bqFloatMemKey(), String(bqFloat)); } catch (_) {} };
+
+    /* Restitution du dernier fond utilisé par CE magasin. */
+    let saved = NaN;
+    try { saved = parseFloat(localStorage.getItem(bqFloatMemKey())); } catch (_) {}
+    if (Number.isFinite(saved) && saved >= 0) {
+      bqFloat = saved;
+      const preset = chips.querySelector(`[data-float="${saved}"]`);
+      if (preset) mark(preset);
+      else { mark(chips.querySelector('[data-float="custom"]')); input.value = String(saved); showCustom(true, false); }
+    } else bqFloat = 500;
+
+    chips.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-float]');
+      if (!chip) return;
+      mark(chip);
+      if (chip.dataset.float === 'custom') {
+        showCustom(true, true);
+        const v = parseFloat(input.value);
+        bqFloat = Number.isFinite(v) && v > 0 ? v : 0;
+        return;
+      }
+      showCustom(false);
+      bqFloat = parseInt(chip.dataset.float, 10) || 500;
+      remember();
+    });
+    input.addEventListener('input', () => {
+      if (input.value && parseFloat(input.value) < 0) input.value = input.value.replace('-', '');
+      const v = parseFloat(input.value);
+      bqFloat = Number.isFinite(v) && v > 0 ? v : 0;
+      remember();
+    });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+
+    const tick = () => {
+      const n = new Date();
+      const tEl = el.querySelector('#bqci-time'), dEl = el.querySelector('#bqci-date');
+      if (tEl) tEl.textContent = pad2(n.getHours()) + ':' + pad2(n.getMinutes());
+      if (dEl) dEl.textContent = DDAYS[n.getDay()] + ' ' + n.getDate() + ' ' + DMONTHS[n.getMonth()];
+    };
+    tick();
+    const timer = setInterval(tick, 10000);
+
+    el.querySelector('#bqci-btn').addEventListener('click', () => {
+      el.querySelector('#bqci-btn').classList.add('is-confirmed');
+      icons();
+      bqShift = { openedAt: Date.now(), openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat };
+      bqShiftPersist();
+      bqSaveProvisional(true);
+      setTimeout(() => el.classList.add('is-leaving'), 420);
+      setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+    });
+
+    requestAnimationFrame(() => { el.classList.add('is-visible'); el.setAttribute('aria-hidden', 'false'); icons(); });
+  }
+
+  /* ── la clôture ── */
+  let bqCloVeil = null, bqCloExpected = 0, bqClosedReport = null;
+  function bqFmtDur(min) {
+    if (min < 60) return `${min} mn`;
+    return `${Math.floor(min / 60)}h${pad2(min % 60)}`;
+  }
+  function bqUpdateEcart() {
+    const v = bqCloVeil; if (!v) return;
+    const line = v.querySelector('#bqclo-ecart-line'), out = v.querySelector('#bqclo-ecart'), inp = v.querySelector('#bqclo-count');
+    if (!line || !out) return;
+    line.classList.remove('is-ok', 'is-off');
+    const raw = inp ? inp.value : '';
+    if (raw === '' || raw == null) { out.textContent = '—'; return; }
+    const ecart = (parseFloat(raw) || 0) - bqCloExpected;
+    out.textContent = (ecart > 0 ? '+ ' : (ecart < 0 ? '− ' : '')) + fmtMAD(Math.abs(ecart));
+    line.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
+  }
+  function bqOpenCloture() {
+    if (!bqCloVeil) {
+      bqCloVeil = document.createElement('div');
+      bqCloVeil.className = 'cloture-veil';
+      bqCloVeil.id = 'bq-cloture';
+      bqCloVeil.setAttribute('role', 'dialog');
+      bqCloVeil.setAttribute('aria-modal', 'true');
+      document.body.appendChild(bqCloVeil);
+    }
+    const v = bqCloVeil;
+    const now = new Date();
+    const openedAt = bqShift ? new Date(bqShift.openedAt) : now;
+    const durMin = Math.max(0, Math.floor((now - openedAt) / 60000));
+    const t = bqDayTotals();
+    const pv = pvPaired() || {};
+    const DR = window.KiwiDayReport;
+    const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+
+    const rows = [
+      ['Service ouvert à', fmtHM(openedAt), false, ''],
+      ['Durée du service', bqFmtDur(durMin), false, ''],
+      ['Transactions', String(t.txns), false, ''],
+      ['Articles vendus', String(t.items), false, ''],
+      ['Total encaissé', fmtMAD(t.moneyIn), true, 'total'],
+      ['dont Carte', fmtMAD(t.card), true, 'sub'],
+      ['dont Espèces', fmtMAD(t.cash), true, 'sub'],
+    ];
+    if (t.delivery > 0) rows.push(['dont Livraison · à recevoir', fmtMAD(t.delivery), true, 'sub']);
+    if (t.other > 0) rows.push(['dont Autres', fmtMAD(t.other), true, 'sub']);
+    rows.push(['Ticket moyen', fmtMAD(t.txns > 0 ? t.moneyIn / t.txns : 0), true, '']);
+    rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
+    const avToday = AVOIRS.filter((a) => a && a.at && isToday(a.at)).reduce((s, a) => s + (+a.amount || 0), 0);
+    if (avToday > 0) rows.push(['Avoirs émis', fmtMAD(avToday), true, '']);
+
+    /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
+       caisse — les lignes qui n'existent pas ne s'affichent pas. */
+    bqCloExpected = (bqShift ? bqShift.float : 0) + t.cash;
+    const dLines = [
+      ["Fond d'ouverture", fmtMAD(bqShift ? bqShift.float : 0), ''],
+      ['Espèces encaissées', '+ ' + fmtMAD(t.cash), ''],
+      ['Attendu en caisse', fmtMAD(bqCloExpected), 'is-total'],
+    ];
+
+    const nCats = (() => {
+      const seen = {};
+      salesToday().forEach((s) => (s.lines || []).forEach((ln) => { const r = rayonOf(ln.pid); if (r) seen[r] = 1; }));
+      return Object.keys(seen).length;
+    })();
+    const hlText = t.txns
+      ? `<em>${t.items}</em> ${V.items} vendus sur ${t.txns} ticket${t.txns > 1 ? 's' : ''}${nCats ? `, ${nCats} ${nCats > 1 ? V.cats : V.cat}` : ''}.`
+      : 'Aucune vente sur ce service.';
+
+    v.innerHTML = `
+      <div class="cloture-card">
+        <div class="clo-eyebrow">Fin de service</div>
+        <div class="clo-title">Clôture de caisse</div>
+        <div class="clo-meta">${esc(pv.name || 'Boutique')} · ${esc((STAFF.caissiere && STAFF.caissiere.name) || '')} · ${fmtDay(now)}</div>
+        <div class="clo-rows">${rows.map((r, i) => {
+          const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : ''));
+          const vCls = 'clo-row-value' + (r[2] ? ' mono' : '');
+          return `<div class="${cls}" style="animation-delay:${i * 70}ms"><span class="clo-row-label">${r[0]}</span><span class="${vCls}">${r[1]}</span></div>`;
+        }).join('')}</div>
+        <div class="clo-drawer-box">
+          <div class="clo-drawer-title">Tiroir-caisse</div>
+          ${dLines.map((l) => `<div class="clo-drawer-line ${l[2]}"><span>${l[0]}</span><span class="mono">${l[1]}</span></div>`).join('')}
+          <div class="clo-count-row">
+            <label for="bqclo-count">Espèces comptées</label>
+            <input class="clo-count-input" id="bqclo-count" type="number" inputmode="numeric" min="0" step="10" placeholder="—" />
+          </div>
+          <div class="clo-ecart-line" id="bqclo-ecart-line">
+            <span>Écart</span><span class="mono" id="bqclo-ecart">—</span>
+          </div>
+        </div>
+        <div class="clo-highlight">
+          <div class="clo-highlight-icon"><i data-lucide="shopping-bag"></i></div>
+          <div class="clo-highlight-text">${hlText}</div>
+        </div>
+        <div class="clo-actions">
+          <button class="clo-btn secondary" id="bqclo-print"><i data-lucide="printer"></i><span>Imprimer le rapport Z</span></button>
+          <button class="clo-btn primary" id="bqclo-close"><i data-lucide="lock"></i><span>Fermer la caisse</span></button>
+        </div>
+        <div class="clo-foot"><button id="bqclo-continue">Continuer le service</button></div>
+      </div>`;
+    v.classList.add('is-open');
+    icons();
+
+    v.querySelector('#bqclo-count').addEventListener('input', bqUpdateEcart);
+    v.querySelector('#bqclo-continue').onclick = () => v.classList.remove('is-open');
+    /* Imprimer AVANT de fermer — un tirage avec le comptage saisi à l'instant,
+       aucune écriture (même contrat que #clo-print côté restaurant). */
+    v.querySelector('#bqclo-print').onclick = () => {
+      const raw = v.querySelector('#bqclo-count').value;
+      const r = bqBuildReport(raw === '' || raw == null ? null : parseFloat(raw), 0);
+      if (!r) { toast('Rapport indisponible'); return; }
+      bqPrintReport(r, 'AVANT CLÔTURE');
+    };
+    v.querySelector('#bqclo-close').onclick = bqCloseRegister;
+  }
+
+  /* L'ORDRE COMPTE (cf. closeRegister() restaurant) : le rapport s'écrit AVANT
+     d'effacer le poste et avant le rechargement. Les ventes ne sont jamais
+     touchées — une clôture produit un document, elle ne modifie pas le registre. */
+  function bqCloseRegister() {
+    const v = bqCloVeil;
+    const raw = v ? v.querySelector('#bqclo-count').value : '';
+    const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
+    if (v) v.classList.remove('is-open');
+    let report = null;
+    try {
+      report = bqBuildReport(counted, Date.now());
+      if (report && window.KiwiDayReport) {
+        report.closed = true;
+        window.KiwiDayReport.save(report, { by: (STAFF.caissiere && STAFF.caissiere.name) || '' });
+        /* La page se recharge dans un instant : sans flush(), la remontée
+           serveur débattue partirait après la mort de l'onglet — jamais. */
+        window.KiwiDayReport.flush();
+      }
+    } catch (_) {}
+    bqShift = null;
+    bqShiftPersist();
+    if (report) bqShowPostClose(report); else bqFinishClose();
+  }
+  function bqFinishClose() {
+    const z = document.getElementById('bq-zsheet');
+    if (z) z.classList.remove('is-open');
+    toast('Caisse fermée · à bientôt');
+    setTimeout(() => location.reload(), 640);
+  }
+  /* L'écran d'après-clôture : une décision, la trace papier. */
+  function bqShowPostClose(report) {
+    bqClosedReport = report;
+    const DR = window.KiwiDayReport;
+    const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
+    const nCat = (report.categories || []).length;
+    const nItems = (report.categories || []).reduce((s, c) => s + (c.qty || 0), 0);
+    const bits = [`${report.txns} transaction${report.txns > 1 ? 's' : ''}`];
+    if (nCat) bits.push(`${nItems} ${V.items} · ${nCat} ${nCat > 1 ? V.cats : V.cat}`);
+    if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
+      bits.push(`écart ${(report.cash.ecart > 0 ? '+ ' : '− ')}${fmtMAD(Math.abs(report.cash.ecart))}`);
+    }
+    const z = document.createElement('div');
+    z.className = 'cloture-veil is-open';
+    z.id = 'bq-zsheet';
+    z.setAttribute('role', 'dialog');
+    z.setAttribute('aria-modal', 'true');
+    z.innerHTML = `
+      <div class="cloture-card zs-card">
+        <div class="clo-eyebrow">Journée clôturée</div>
+        <div class="clo-title">Rapport journalier</div>
+        <div class="zs-total mono">${fmtMAD(report.net)}</div>
+        <div class="clo-meta">${bits.join(' · ')}</div>
+        <div class="clo-actions">
+          <button class="clo-btn primary" id="bqzs-print"><i data-lucide="printer"></i><span>Imprimer le rapport</span></button>
+          <button class="clo-btn secondary" id="bqzs-reprint" hidden><i data-lucide="copy"></i><span>Réimprimer</span></button>
+        </div>
+        <div class="clo-foot"><button id="bqzs-skip">Continuer sans imprimer</button></div>
+        <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier — même après un rechargement ou depuis un autre appareil.</div>
+      </div>`;
+    document.body.appendChild(z);
+    icons();
+    const print = z.querySelector('#bqzs-print'), reprint = z.querySelector('#bqzs-reprint');
+    const doPrint = (btn) => {
+      if (!bqClosedReport) return bqFinishClose();
+      btn.disabled = true;
+      bqPrintReport(bqClosedReport, btn === reprint ? 'DUPLICATA' : '').then(() => {
+        btn.disabled = false;
+        if (reprint) { reprint.hidden = false; icons(); }
+      });
+    };
+    print.onclick = () => doPrint(print);
+    reprint.onclick = () => doPrint(reprint);
+    z.querySelector('#bqzs-skip').onclick = bqFinishClose;
   }
 
   /* La boutique n'encaisse pas dans le journal partagé (KiwiPosSale) : elle

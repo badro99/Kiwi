@@ -1092,3 +1092,13 @@
   .bq-cam { animation: none; }
   .bq-cam-laser { animation: none; top: 50%; }
 }
+
+/* ── Fin de service ─────────────────────────────────────────────────────────
+   L'écran d'ouverture (fond de caisse) réutilise les styles .clockin-* de
+   kiwi-caisse.html. Le shell is-pos masque .clockin-screen par classe pour
+   cacher CELUI du restaurant ; on ré-affiche uniquement le nôtre. */
+body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
+/* display:inline-flex de .clo-btn bat le [hidden] du navigateur (même motif
+   que rp-server-row dans kiwi-caisse.html) : sans cette ligne, « Réimprimer »
+   s'affiche avant même le premier tirage. */
+#bqzs-reprint[hidden] { display: none; }
