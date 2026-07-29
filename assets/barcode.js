@@ -371,11 +371,11 @@
     // Height budget in mm: padding + title line(s) + meta + number + margins;
     // the bars take everything left, never less than 5 mm.
     const PT = 0.3528;                                   // 1 pt in mm
-    const titlePt = short ? 12 : 11;
-    const metaPt = short ? 10 : 9;
-    const numberPt = short ? 8 : 7;
-    const used = (short ? 1.2 : 3.5) + lines * titlePt * 1.05 * PT + metaPt * 1.1 * PT + numberPt * 1.1 * PT + (short ? 0.8 : 1.4);
-    const barMM = Math.max(short ? 6 : 5, +(L.h - used).toFixed(1));
+    const titlePt = short ? 13 : 11;
+    const metaPt = short ? 10.5 : 9;
+    const numberPt = short ? 10 : 7;
+    const used = (short ? 1.2 : 3.5) + lines * titlePt * 1.05 * PT + metaPt * 1.1 * PT + numberPt * 1.1 * PT + (short ? 1.1 : 1.4);
+    const barMM = Math.max(short ? 5.5 : 5, +(L.h - used).toFixed(1));
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
@@ -398,11 +398,11 @@
         }
         .kbl-m { font-size: ${metaPt}pt; color: #444; margin-top: ${short ? '0.2mm' : '0.4mm'}; }
         .kbl-m b { color: #0A0F0D; font-size: ${short ? '12pt' : '10.5pt'}; }
-        .kbl-bc { width: 100%; line-height: 0; margin-top: ${short ? '0.2mm' : '0.4mm'}; }
-        .kbl-bc svg { width: 100%; height: ${barMM}mm; }
+        .kbl-bc { width: 100%; line-height: 0; margin-top: ${short ? 'auto' : '0.4mm'}; flex-shrink: 0; }
+        .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
           font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: ${numberPt}pt;
-          letter-spacing: 0.5px; line-height: 1.1; margin-top: ${short ? '0.15mm' : '0.3mm'};
+          letter-spacing: 0.6px; line-height: 1; margin-top: ${short ? '0.55mm' : '0.3mm'};
         }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
@@ -491,20 +491,20 @@
       let s = '';
       const title = clip(l.title || '', 22);
       const short = L.h <= 24;
-      const titleSize = short ? 12 : 11;
-      const metaSize = short ? 10 : 9;
-      const numberSize = short ? 8 : 7;
-      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 10 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const titleSize = short ? 13 : 11;
+      const metaSize = short ? 10.5 : 9;
+      const numberSize = short ? 10 : 7;
+      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 11 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       let meta = l.sub || '';
       if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F1 ' + metaSize + ' Tf ' + cx(meta, metaSize, false).toFixed(1) + ' ' + (PH - (short ? 21 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F1 ' + metaSize + ' Tf ' + cx(meta, metaSize, false).toFixed(1) + ' ' + (PH - (short ? 22.5 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
         const bits = enc.modules, pad = short ? 3 : 8, mW = (PW - pad * 2) / bits.length;
-        const barY = short ? 14.5 : 13.5;
-        const barH = Math.max(short ? 17 : 10, PH - (short ? 23 : 29) - barY);
+        const barY = short ? 17 : 13.5;
+        const barH = Math.max(short ? 12.5 : 10, PH - (short ? 27.5 : 29) - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -512,7 +512,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 5 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 4 Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
