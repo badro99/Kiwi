@@ -372,10 +372,10 @@
     // (the price is intentionally larger) + number + margins. Keeping a small
     // guard prevents printer-driver rounding from scaling the whole 20 mm page.
     const PT = 0.3528;                                   // 1 pt in mm
-    const titlePt = short ? 13 : 11;
+    const titlePt = short ? 12 : 11;
     const metaPt = short ? 10 : 9;
-    const pricePt = short ? 16 : 10.5;
-    const numberPt = short ? 8 : 7;
+    const pricePt = short ? 22 : 10.5;
+    const numberPt = short ? 6.5 : 7;
     const used = (short ? 0.8 : 3.5)
       + lines * titlePt * (short ? 1 : 1.05) * PT
       + (short ? 0.1 : 0.4) + Math.max(metaPt, pricePt) * 0.95 * PT
@@ -411,7 +411,7 @@
         .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
         .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
         .kbl-bc {
-          width: 100%; line-height: 0; margin-top: auto; flex-shrink: 0;
+          width: ${short ? '86%' : '100%'}; line-height: 0; margin-top: auto; flex-shrink: 0;
         }
         .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
@@ -505,20 +505,20 @@
       let s = '';
       const short = L.h <= 24;
       const title = clip(l.title || '', short ? 20 : 22);
-      const titleSize = short ? 13 : 11;
-      const metaSize = short ? 16 : 9;
-      const numberSize = short ? 8 : 7;
-      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 11 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const titleSize = short ? 12 : 11;
+      const metaSize = short ? 22 : 9;
+      const numberSize = short ? 6.5 : 7;
+      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 9.5 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
       if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 26 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
-        const bits = enc.modules, pad = short ? 3 : 8, mW = (PW - pad * 2) / bits.length;
-        const barY = short ? 12 : 13.5;
-        const barH = short ? 14 : Math.max(10, PH - 29 - barY);
+        const bits = enc.modules, pad = short ? 10 : 8, mW = (PW - pad * 2) / bits.length;
+        const barY = short ? 9 : 13.5;
+        const barH = short ? 12 : Math.max(10, PH - 29 - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -526,7 +526,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' ' + (short ? '3.5' : '11') + ' Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' ' + (short ? '2' : '11') + ' Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
