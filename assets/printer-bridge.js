@@ -435,9 +435,11 @@
   function printLabels(labels) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
     var list = (Array.isArray(labels) ? labels : [labels]).filter(Boolean);
-    var paper = getConfig().paper;
+    var cfg = getConfig();
+    var paper = cfg.paper;
+    var label = cfg.label;
     // Concatenate each label's bytes into one job.
-    var chunks = list.map(function (l) { return window.KiwiEscPos.label(Object.assign({ paper: paper }, l)); });
+    var chunks = list.map(function (l) { return window.KiwiEscPos.label(Object.assign({ paper: paper, label: label }, l)); });
     var total = chunks.reduce(function (n, c) { return n + c.length; }, 0);
     var all = new Uint8Array(total); var off = 0;
     chunks.forEach(function (c) { all.set(c, off); off += c.length; });

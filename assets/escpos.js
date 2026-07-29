@@ -17,6 +17,7 @@
  *   KiwiEscPos.label(o)                       → Uint8Array (barcode étiquette)
  *   KiwiEscPos.testSlip(o)                    → Uint8Array (printer test)
  *   o.paper: '58' | '80'  (mm; default '80')
+ *   o.label: { w, h }     (mm; barcode labels only)
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -51,6 +52,7 @@
   Builder.prototype.text = function (s) { return this.raw(encodeCp1252(s)); };
   Builder.prototype.line = function (s) { return this.text(s == null ? '' : s).raw([0x0A]); };
   Builder.prototype.feed = function (n) { return this.raw([ESC, 0x64, Math.max(0, n | 0)]); };   // ESC d n
+  Builder.prototype.feedDots = function (n) { return this.raw([ESC, 0x4A, Math.max(0, Math.min(255, n | 0))]); }; // ESC J n
   Builder.prototype.align = function (a) { var m = a === 'center' ? 1 : a === 'right' ? 2 : 0; return this.raw([ESC, 0x61, m]); };
   Builder.prototype.bold = function (on) { return this.raw([ESC, 0x45, on ? 1 : 0]); };
   // GS ! n — width multiplier in high nibble, height in low nibble (1–8 → 0–7).
@@ -60,6 +62,7 @@
   };
   Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA]); };    // kick pin 2
   Builder.prototype.cut = function () { return this.feed(3).raw([GS, 0x56, 0x00]); };            // feed + full cut
+  Builder.prototype.cutNow = function () { return this.raw([GS, 0x56, 0x00]); };                  // full cut, no receipt feed
 
   // Barcode via GS k format 2 (length-prefixed). HRI text below.
   //   ean13: 12 or 13 ASCII digits (m=67).   code128: "{B"+data (m=73).
@@ -161,6 +164,18 @@
   function label(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init().align('center');
+    var compact = o.label && Number(o.label.h) <= 24;
+    // A 50 × 20 mm label has room for exactly the hierarchy used by the browser
+    // and PDF renderers: name, dominant price, compact scannable barcode. The
+    // receipt-style three-line cutter feed used to make this path much taller
+    // than the selected stock, so compact labels cut after a few printer dots.
+    if (compact) {
+      if (o.title) b.bold(true).line(o.title).bold(false);
+      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(String(o.price) + ' MAD').size(1, 1).bold(false);
+      b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
+      b.feedDots(4).cutNow();
+      return b.bytes();
+    }
     if (o.title) b.bold(true).line(o.title).bold(false);
     if (o.sub) b.line(o.sub);
     if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(String(o.price) + ' MAD').size(1, 1).bold(false);
