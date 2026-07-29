@@ -63,7 +63,7 @@
     { w: 110, h: 30 }, { w: 110, h: 50 }, { w: 100, h: 50 }, { w: 100, h: 150 },
   ];
   function labelOptions(sel) {
-    var cur = (sel && sel.w ? sel.w : 50) + 'x' + (sel && sel.h ? sel.h : 30);
+    var cur = (sel && sel.w ? sel.w : 50) + 'x' + (sel && sel.h ? sel.h : 20);
     return LABEL_SIZES.map(function (l) {
       var v = l.w + 'x' + l.h;
       return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + l.w + ' × ' + l.h + ' mm</option>';
@@ -157,7 +157,7 @@
    * WebUSB and the network path all fail at once (Windows owns the USB device,
    * and a USB printer has no IP). */
   function getConfig() {
-    var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 30 } };
+    var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 20 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
   function setConfig(cfg) { set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {}))); }
@@ -835,11 +835,11 @@
 
     var $ = function (id) { return ov.querySelector(id); };
     function readForm() {
-      var lv = ($('#kpr-label') ? $('#kpr-label').value : '50x30').split('x');
+      var lv = ($('#kpr-label') ? $('#kpr-label').value : '50x20').split('x');
       return {
         ip: $('#kpr-ip').value.trim(), port: $('#kpr-port').value.trim() || '9100',
         model: $('#kpr-model').value, paper: $('#kpr-paper').value,
-        label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 30 },
+        label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 20 },
       };
     }
     function close() { ov.remove(); }

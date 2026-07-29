@@ -371,8 +371,11 @@
     // Height budget in mm: padding + title line(s) + meta + number + margins;
     // the bars take everything left, never less than 5 mm.
     const PT = 0.3528;                                   // 1 pt in mm
-    const used = (short ? 2.0 : 3.5) + lines * 11 * 1.08 * PT + 9 * 1.2 * PT + 7 * 1.15 * PT + 1.4;
-    const barMM = Math.max(5, +(L.h - used).toFixed(1));
+    const titlePt = short ? 12 : 11;
+    const metaPt = short ? 10 : 9;
+    const numberPt = short ? 8 : 7;
+    const used = (short ? 1.2 : 3.5) + lines * titlePt * 1.05 * PT + metaPt * 1.1 * PT + numberPt * 1.1 * PT + (short ? 0.8 : 1.4);
+    const barMM = Math.max(short ? 6 : 5, +(L.h - used).toFixed(1));
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
@@ -382,7 +385,7 @@
         .kbl-sheet { display: block; }
         .kbl {
           width: ${L.w}mm; height: ${L.h}mm; box-sizing: border-box; overflow: hidden;
-          padding: ${short ? '1.2mm 2mm 0.8mm' : '2mm 2.5mm 1.5mm'};
+          padding: ${short ? '0.7mm 0.8mm 0.5mm' : '2mm 2.5mm 1.5mm'};
           display: flex; flex-direction: column; align-items: center; justify-content: space-between;
           page-break-after: always; break-after: page; text-align: center;
           font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D;
@@ -390,16 +393,16 @@
         .kbl:last-child { page-break-after: auto; break-after: auto; }
         .kbl-head { width: 100%; }
         .kbl-t {
-          font-size: 11pt; font-weight: 700; line-height: 1.08;
+          font-size: ${titlePt}pt; font-weight: 700; line-height: 1.05;
           display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .kbl-m { font-size: 9pt; color: #444; margin-top: 0.4mm; }
-        .kbl-m b { color: #0A0F0D; font-size: 10.5pt; }
-        .kbl-bc { width: 100%; line-height: 0; margin-top: 0.4mm; }
+        .kbl-m { font-size: ${metaPt}pt; color: #444; margin-top: ${short ? '0.2mm' : '0.4mm'}; }
+        .kbl-m b { color: #0A0F0D; font-size: ${short ? '12pt' : '10.5pt'}; }
+        .kbl-bc { width: 100%; line-height: 0; margin-top: ${short ? '0.2mm' : '0.4mm'}; }
         .kbl-bc svg { width: 100%; height: ${barMM}mm; }
         .kbl-n {
-          font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7pt;
-          letter-spacing: 0.5px; line-height: 1.15; margin-top: 0.3mm;
+          font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: ${numberPt}pt;
+          letter-spacing: 0.5px; line-height: 1.1; margin-top: ${short ? '0.15mm' : '0.3mm'};
         }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
@@ -410,8 +413,8 @@
    * WD8210 alone takes 110 mm-wide stock — and printing a 50 x 30 page onto it
    * scales or clips every sticker. So the size is a setting (kiwiPrinterCfg.label)
    * and BOTH renderers (browser @page and the PDF) read it from here, so they can
-   * never disagree. Falls back to the long-standing 50 x 30 default. */
-  const LABEL_DEFAULT = { w: 50, h: 30 };
+   * never disagree. Boutique stock defaults to the deployed 50 x 20 mm roll. */
+  const LABEL_DEFAULT = { w: 50, h: 20 };
   function labelSize() {
     try {
       const cfg = (window.KiwiPrinter && window.KiwiPrinter.getConfig && window.KiwiPrinter.getConfig()) || {};
@@ -487,15 +490,21 @@
       let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
       let s = '';
       const title = clip(l.title || '', 22);
-      if (title) s += 'BT /F2 11 Tf ' + cx(title, 11, true).toFixed(1) + ' ' + (PH - 13).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const short = L.h <= 24;
+      const titleSize = short ? 12 : 11;
+      const metaSize = short ? 10 : 9;
+      const numberSize = short ? 8 : 7;
+      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 10 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       let meta = l.sub || '';
       if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F1 9 Tf ' + cx(meta, 9, false).toFixed(1) + ' ' + (PH - 25).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F1 ' + metaSize + ' Tf ' + cx(meta, metaSize, false).toFixed(1) + ' ' + (PH - (short ? 21 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
-        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barY = 13.5, barH = Math.max(10, PH - 25 - 4 - barY);
+        const bits = enc.modules, pad = short ? 3 : 8, mW = (PW - pad * 2) / bits.length;
+        const barY = short ? 14.5 : 13.5;
+        const barH = Math.max(short ? 17 : 10, PH - (short ? 23 : 29) - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -503,7 +512,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 7 Tf ' + cx(num, 7, false).toFixed(1) + ' 6 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 5 Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
