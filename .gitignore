@@ -28,6 +28,13 @@ npm-debug.log*
 /tmp-preview/
 *.pid
 
+# Supabase / Cloudflare credentials and local link state
+.env
+.env.*
+!.env.example
+.dev.vars
+supabase/.temp/
+
 # Local preview tooling (machine-specific dev server)
 .claude/launch.json
 .claude/static-server.js
