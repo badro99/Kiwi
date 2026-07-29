@@ -368,44 +368,54 @@
     // below the bars, so it never scales with them.
     const short = L.h <= 24;
     const lines = short ? 1 : 2;
-    // Height budget in mm: padding + title line(s) + meta + number + margins;
-    // the bars take everything left, never less than 5 mm.
+    // Height budget in mm: padding + title line(s) + the largest meta glyph
+    // (the price is intentionally larger) + number + margins. Keeping a small
+    // guard prevents printer-driver rounding from scaling the whole 20 mm page.
     const PT = 0.3528;                                   // 1 pt in mm
     const titlePt = short ? 11.5 : 11;
     const metaPt = short ? 11 : 9;
+    const pricePt = short ? 14 : 10.5;
     const numberPt = short ? 9 : 7;
-    const used = (short ? 1.2 : 3.5) + lines * titlePt * 1.05 * PT + metaPt * PT + numberPt * PT + (short ? 0.5 : 1.4);
+    const used = (short ? 0.8 : 3.5)
+      + lines * titlePt * 1.05 * PT
+      + (short ? 0.1 : 0.4) + Math.max(metaPt, pricePt) * 0.95 * PT
+      + (short ? 0.2 : 0.3) + numberPt * 0.9 * PT
+      + 0.3;
     const barMM = Math.max(5, +(L.h - used).toFixed(1));
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
         html, body { background: var(--surface) !important; margin: 0 !important; padding: 0 !important; }
         body > *:not(#kbl-print-root) { display: none !important; }
-        #kbl-print-root { display: block !important; position: static; }
-        .kbl-sheet { display: block; }
+        #kbl-print-root { display: block !important; position: static; margin: 0; padding: 0; }
+        .kbl-sheet { display: block; margin: 0; padding: 0; }
         .kbl {
-          width: ${L.w}mm; height: ${L.h}mm; box-sizing: border-box; overflow: hidden;
-          padding: ${short ? '0.7mm 0.8mm 0.5mm' : '2mm 2.5mm 1.5mm'};
-          display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-          page-break-after: always; break-after: page; text-align: center;
+          width: ${L.w}mm; height: calc(${L.h}mm - 0.2mm); box-sizing: border-box; overflow: hidden;
+          padding: ${short ? '0.45mm 0.35mm 0.35mm' : '2mm 2.5mm 1.5mm'};
+          display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+          page-break-inside: avoid; break-inside: avoid-page; text-align: center;
           font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D;
         }
-        .kbl:last-child { page-break-after: auto; break-after: auto; }
+        .kbl + .kbl { page-break-before: always; break-before: page; }
         .kbl-head { width: 100%; }
         .kbl-t {
           font-size: ${titlePt}pt; font-weight: 700; line-height: 1.05;
           display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .kbl-m { font-size: ${metaPt}pt; line-height: 1; color: #333; margin-top: ${short ? '0.1mm' : '0.4mm'}; }
-        .kbl-m b { color: #0A0F0D; font-size: ${short ? '14pt' : '10.5pt'}; }
+        .kbl-m {
+          width: 100%; min-width: 0; display: flex; align-items: baseline; justify-content: center;
+          gap: 0.5mm; white-space: nowrap; overflow: hidden;
+          font-size: ${metaPt}pt; line-height: 0.95; color: #333; margin-top: ${short ? '0.1mm' : '0.4mm'};
+        }
+        .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kbl-m b { color: #0A0F0D; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
         .kbl-bc {
-          width: 100%; line-height: 0; margin-top: ${short ? 'auto' : '0.4mm'}; flex-shrink: 0;
-          transform: ${short ? 'translateY(-2.4mm)' : 'none'};
+          width: 100%; line-height: 0; margin-top: auto; flex-shrink: 0;
         }
         .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
           font-family: Arial, Helvetica, sans-serif; font-size: ${numberPt}pt;
-          letter-spacing: 0.5px; line-height: 1; margin-top: ${short ? '0.2mm' : '0.3mm'};
+          letter-spacing: 0.5px; line-height: 0.9; margin-top: ${short ? '0.2mm' : '0.3mm'};
         }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
@@ -446,8 +456,8 @@
     // Show a price only when it's a real, positive amount — a "0 MAD" on a shelf
     // label is noise, and it's exactly what read as broken on the empty sheet.
     const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
-    const priceStr = hasPrice ? ` · <b>${escapeXml(String(l.price))} MAD</b>` : '';
-    const meta = (l.sub || hasPrice) ? `<div class="kbl-m">${escapeXml(l.sub || '')}${priceStr}</div>` : '';
+    const priceStr = hasPrice ? `<b>${escapeXml(String(l.price))} MAD</b>` : '';
+    const meta = (l.sub || hasPrice) ? `<div class="kbl-m"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${priceStr}</div>` : '';
     return `<div class="kbl">` +
              `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
