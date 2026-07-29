@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v181';
+var CACHE = 'kiwi-app-v182';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -131,6 +131,11 @@ var SHELL = [
   '/assets/pos-sale.js',
   '/assets/pos-dispatch.js',
   '/assets/pos-mobile.js',
+  /* La boutique est chargée après le code employé. La garder dans la coquille
+     versionnée évite qu'une ancienne mise en page reste centrée/coupée après
+     une mise à jour de la caisse. */
+  '/assets/pos-boutique.css',
+  '/assets/pos-boutique.js',
   '/assets/caisse-pairing.js',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

@@ -18,15 +18,20 @@
      chain was still sizing itself from its content on short/windowed screens.
      That left a blank band above/below and made the product grid look cropped.
      Pin the root and its two direct columns to the available viewport height. */
-  inset: 0 !important;
-  width: 100vw;
-  height: 100dvh;
-  min-height: 100vh;
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
   align-items: stretch;
   overflow: hidden;
 }
 #pos-boutique > .bq-rail,
-#pos-boutique > .bq-main { height: 100%; }
+#pos-boutique > .bq-main { height: auto; min-height: 0; align-self: stretch; }
 
 /* ═══════════════ LEFT RAIL (dark, dashboard-matching) ═══════════════ */
 .bq-rail {
