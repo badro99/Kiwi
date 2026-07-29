@@ -59,7 +59,7 @@
    * labelSize()), so a 110 mm roll stops being printed as a 50 mm sticker. */
   var LABEL_SIZES = [
     { w: 50, h: 30 }, { w: 50, h: 20 }, { w: 40, h: 30 }, { w: 40, h: 25 }, { w: 30, h: 20 },
-    { w: 60, h: 40 }, { w: 58, h: 40 },
+    { w: 60, h: 30 }, { w: 60, h: 40 }, { w: 58, h: 40 },
     { w: 110, h: 30 }, { w: 110, h: 50 }, { w: 100, h: 50 }, { w: 100, h: 150 },
   ];
   function labelOptions(sel) {

@@ -359,9 +359,20 @@
     // makes a browser/PDF print look like a real étiquette instead of a small
     // sticker lost on an A4 sheet (the "empty page" problem). Each label
     // force-breaks to its own page, so "print all" yields a tidy multi-page job.
-    // Short stock (20 mm-class) has no room for a second title line or the tall
-    // barcode — one line each, tighter padding, barcode capped to what remains.
+    // Short stock (20 mm-class) has no room for a second title line — one line,
+    // tighter padding. The bars are a fixed-height block STRETCHED to the full
+    // label width (preserveAspectRatio="none" on the svg): bar widths are
+    // relative, so horizontal stretch stays scannable. Letting the svg keep its
+    // aspect ratio under a max-height shrank the whole block — bars AND the
+    // number — to half the sticker. The human-readable number is plain HTML
+    // below the bars, so it never scales with them.
     const short = L.h <= 24;
+    const lines = short ? 1 : 2;
+    // Height budget in mm: padding + title line(s) + meta + number + margins;
+    // the bars take everything left, never less than 5 mm.
+    const PT = 0.3528;                                   // 1 pt in mm
+    const used = (short ? 2.0 : 3.5) + lines * 11 * 1.08 * PT + 9 * 1.2 * PT + 7 * 1.15 * PT + 1.4;
+    const barMM = Math.max(5, +(L.h - used).toFixed(1));
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
@@ -379,13 +390,17 @@
         .kbl:last-child { page-break-after: auto; break-after: auto; }
         .kbl-head { width: 100%; }
         .kbl-t {
-          font-size: 10pt; font-weight: 700; line-height: 1.12;
-          display: -webkit-box; -webkit-line-clamp: ${short ? 1 : 2}; -webkit-box-orient: vertical; overflow: hidden;
+          font-size: 11pt; font-weight: 700; line-height: 1.08;
+          display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .kbl-m { font-size: 8.5pt; color: #444; margin-top: 0.5mm; }
-        .kbl-m b { color: #0A0F0D; font-size: 10pt; }
-        .kbl-bc { width: 100%; line-height: 0; margin-top: 0.5mm; }
-        .kbl-bc svg { width: 100%; height: auto; max-height: ${short ? Math.max(7, L.h - 11) : 15}mm; }
+        .kbl-m { font-size: 9pt; color: #444; margin-top: 0.4mm; }
+        .kbl-m b { color: #0A0F0D; font-size: 10.5pt; }
+        .kbl-bc { width: 100%; line-height: 0; margin-top: 0.4mm; }
+        .kbl-bc svg { width: 100%; height: ${barMM}mm; }
+        .kbl-n {
+          font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7pt;
+          letter-spacing: 0.5px; line-height: 1.15; margin-top: 0.3mm;
+        }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
     document.head.appendChild(st);
@@ -411,7 +426,17 @@
 
   function labelHTML(l) {
     l = l || {};
-    const svg = api.svg(l.code, { format: l.format, height: 40, module: 1.5, showText: true, textSize: 9 });
+    // Bars only — the number is rendered as HTML below (see ensurePrintCss for
+    // why). preserveAspectRatio="none" lets the CSS stretch the bars to the full
+    // label width whatever the stock height.
+    const bars = api.svg(l.code, { format: l.format, height: 40, module: 1.5, showText: false, quiet: 8 })
+      .replace('<svg ', '<svg preserveAspectRatio="none" ');
+    let num = '';
+    try {
+      const enc = encode(l.code, l.format);
+      num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
+    } catch (e) { num = ''; }
+    const svg = bars + (num ? `<div class="kbl-n">${escapeXml(num)}</div>` : '');
     // Show a price only when it's a real, positive amount — a "0 MAD" on a shelf
     // label is noise, and it's exactly what read as broken on the empty sheet.
     const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
@@ -461,16 +486,16 @@
     flat.forEach((l) => {
       let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
       let s = '';
-      const title = clip(l.title || '', 24);
-      if (title) s += 'BT /F2 9.5 Tf ' + cx(title, 9.5, true).toFixed(1) + ' ' + (PH - 13).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const title = clip(l.title || '', 22);
+      if (title) s += 'BT /F2 11 Tf ' + cx(title, 11, true).toFixed(1) + ' ' + (PH - 13).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       let meta = l.sub || '';
       if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F1 8 Tf ' + cx(meta, 8, false).toFixed(1) + ' ' + (PH - 24).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F1 9 Tf ' + cx(meta, 9, false).toFixed(1) + ' ' + (PH - 25).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
-        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barY = 14.5, barH = Math.max(12, PH - 24 - 6 - barY);
+        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barY = 13.5, barH = Math.max(10, PH - 25 - 4 - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
