@@ -2419,7 +2419,7 @@
     /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
        chemin, inchangé. */
     const pv = pvPaired();
-    const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces' };
+    const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces', 'livraison': 'Livraison · à recevoir' };
     const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
     const doc = {
       shop: (pv && pv.name) || 'Kiwi',
@@ -2514,7 +2514,8 @@
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
             const pm = (parts || []).map((x) => x.m);
-            const method = pm.indexOf('carte') >= 0 ? 'card' : (pm.indexOf('espèces') >= 0 ? 'cash' : 'wallet');
+            const isDelivery = pm.indexOf('livraison') >= 0;
+            const method = isDelivery ? 'delivery' : (pm.indexOf('carte') >= 0 ? 'card' : (pm.indexOf('espèces') >= 0 ? 'cash' : 'wallet'));
             const first = t.lines[0];
             const pieces = t.lines.reduce((n, ln) => n + ln.qty, 0);
             const name = (first && P[first.pid]) ? P[first.pid].name : 'Vente';
@@ -2527,7 +2528,7 @@
                entièrement en avoir, il ne reste rien à remonter et postSale
                (montant ≤ 0) passe son tour, ce qui est le bon comptage.
                sale.total garde la valeur du ticket : c'est la vente, pas la caisse. */
-            const cashIn = (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
+            const cashIn = isDelivery ? total : (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
             /* LE PANIER, qui ne partait pas. On ne remontait que {montant,
                moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
                (« Caftan +3 art. ») : le tableau de bord ne pouvait donc pas dire
@@ -2569,7 +2570,10 @@
         freshTicket();
         $('#bq-today', root).textContent = headSubVente();
         renderTicket(); renderGrid(); renderBadges(); icons();
-        return { ref: sale.id, line: `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };
+        const delivery = parts.some((x) => x.m === 'livraison');
+        return { ref: sale.id, delivery, line: delivery
+          ? `Vente ${sale.id} en livraison, ${fmtMAD(total)} à recevoir${ptsLine}`
+          : `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };
       },
     });
   }
@@ -2604,6 +2608,11 @@
             <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
             <span class="amt">${fmtMAD(due())}</span>
           </button>
+          <button class="bq-pay-opt" data-bq-m="livraison">
+            <span class="ic"><i data-lucide="truck"></i></span>
+            <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
+            <span class="amt">${fmtMAD(due())}</span>
+          </button>
           ${avoirPart ? '' : avs.length ? `
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
@@ -2621,6 +2630,12 @@
           const m = b.dataset.bqM;
           if (m === 'especes') stepCash();
           else if (m === 'carte') stepCard();
+          else if (m === 'livraison') {
+            const parts = [];
+            if (avoirPart) parts.push(avoirPart);
+            parts.push({ m: 'livraison', amount: due() });
+            commit(parts);
+          }
           else if (m === 'avoir') stepAvoir();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
@@ -2753,16 +2768,17 @@
 
     const stepSuccess = (parts, res) => {
       const cash = parts.find((x) => x.m === 'espèces');
+      const delivery = parts.some((x) => x.m === 'livraison');
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">C'est encaissé</h3>
+        <h3 class="modal-title">${delivery ? 'Livraison enregistrée' : "C'est encaissé"}</h3>
         <p class="modal-subtle">${res.line ? esc(res.line) : esc(opts.title)}</p>
         ${cash && cash.rendu > 0 ? `
           <div class="cash-success-rendu">${fmtMAD(cash.rendu)}</div>
           <div class="cash-success-label">rendu à la cliente</div>` : `
           <div class="modal-amount size-md">${fmtMAD(opts.amount)}</div>`}
         <div class="bq-pay-break">
-          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `Avoir ${x.code}` : x.m === 'carte' ? 'Carte, lecteur partenaire' : 'Espèces'}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
+          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `Avoir ${x.code}` : x.m === 'carte' ? 'Carte, lecteur partenaire' : x.m === 'livraison' ? 'Livraison · à recevoir' : 'Espèces'}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
         </div>
         <div class="modal-actions is-visible">
           <button class="ma-btn secondary" id="bq-pay-print"><i data-lucide="printer"></i>Reçu 80 mm</button>
@@ -2787,7 +2803,7 @@
           ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} — ${fmtMAD(l.amount)}`),
           '',
           `TOTAL ${fmtMAD(opts.amount)}`,
-          (parts || []).map((x) => x.m === 'carte' ? 'Carte' : x.m === 'avoir' ? 'Avoir' : 'Espèces').join(' + '),
+          (parts || []).map((x) => x.m === 'carte' ? 'Carte' : x.m === 'avoir' ? 'Avoir' : x.m === 'livraison' ? 'Livraison · à recevoir' : 'Espèces').join(' + '),
           '',
           'Merci !',
         ].filter((x) => x !== undefined).join('\n');

@@ -135,9 +135,9 @@
     noSale:    { fr: 'aucune vente', en: 'no sales', ar: 'لا مبيعات' },
   };
   var METHODS = {
-    fr: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien' },
-    en: { cash: 'Cash', card: 'Card', wallet: 'Transfer', tap: 'Kiwi Tap', qr: 'QR', link: 'Link' },
-    ar: { cash: 'نقدًا', card: 'بطاقة', wallet: 'تحويل', tap: 'Kiwi Tap', qr: 'QR', link: 'رابط' },
+    fr: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien', delivery: 'Livraison · à recevoir' },
+    en: { cash: 'Cash', card: 'Card', wallet: 'Transfer', tap: 'Kiwi Tap', qr: 'QR', link: 'Link', delivery: 'Delivery · receivable' },
+    ar: { cash: 'نقدًا', card: 'بطاقة', wallet: 'تحويل', tap: 'Kiwi Tap', qr: 'QR', link: 'رابط', delivery: 'توصيل · مبلغ مستحق' },
   };
   function methodLabel(k) { return (METHODS[LANG()] || METHODS.fr)[k] || k; }
 
