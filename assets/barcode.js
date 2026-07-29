@@ -398,7 +398,10 @@
         }
         .kbl-m { font-size: ${metaPt}pt; color: #444; margin-top: ${short ? '0.2mm' : '0.4mm'}; }
         .kbl-m b { color: #0A0F0D; font-size: ${short ? '12pt' : '10.5pt'}; }
-        .kbl-bc { width: 100%; line-height: 0; margin-top: ${short ? 'auto' : '0.4mm'}; flex-shrink: 0; }
+        .kbl-bc {
+          width: 100%; line-height: 0; margin-top: ${short ? 'auto' : '0.4mm'}; flex-shrink: 0;
+          transform: ${short ? 'translateY(-1.2mm)' : 'none'};
+        }
         .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
           font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: ${numberPt}pt;
@@ -503,8 +506,8 @@
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
         const bits = enc.modules, pad = short ? 3 : 8, mW = (PW - pad * 2) / bits.length;
-        const barY = short ? 17 : 13.5;
-        const barH = Math.max(short ? 12.5 : 10, PH - (short ? 27.5 : 29) - barY);
+        const barY = short ? 20.5 : 13.5;
+        const barH = Math.max(10, PH - (short ? 30 : 29) - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -512,7 +515,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 4 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 7.5 Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
