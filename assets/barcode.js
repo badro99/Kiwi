@@ -327,7 +327,7 @@
       const label = enc.format === 'ean13'
         ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3')
         : enc.text;
-      txt = `<text x="${w / 2}" y="${height + textH - 3}" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="${opts.textSize || 11}" letter-spacing="1" fill="${color}">${escapeXml(label)}</text>`;
+      txt = `<text x="${w / 2}" y="${height + textH - 3}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${opts.textSize || 11}" letter-spacing="1" fill="${color}">${escapeXml(label)}</text>`;
     }
     const bgRect = opts.bg && opts.bg !== 'transparent' ? `<rect width="${w}" height="${h}" fill="${opts.bg}"/>` : '';
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="code-barres ${escapeXml(enc.text)}">${bgRect}${rects}${txt}</svg>`;
@@ -404,7 +404,7 @@
         }
         .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
-          font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: ${numberPt}pt;
+          font-family: Arial, Helvetica, sans-serif; font-size: ${numberPt}pt;
           letter-spacing: 0.5px; line-height: 1; margin-top: ${short ? '0.2mm' : '0.3mm'};
         }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
