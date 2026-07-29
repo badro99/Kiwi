@@ -359,6 +359,9 @@
     // makes a browser/PDF print look like a real étiquette instead of a small
     // sticker lost on an A4 sheet (the "empty page" problem). Each label
     // force-breaks to its own page, so "print all" yields a tidy multi-page job.
+    // Short stock (20 mm-class) has no room for a second title line or the tall
+    // barcode — one line each, tighter padding, barcode capped to what remains.
+    const short = L.h <= 24;
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
@@ -368,7 +371,7 @@
         .kbl-sheet { display: block; }
         .kbl {
           width: ${L.w}mm; height: ${L.h}mm; box-sizing: border-box; overflow: hidden;
-          padding: 2mm 2.5mm 1.5mm;
+          padding: ${short ? '1.2mm 2mm 0.8mm' : '2mm 2.5mm 1.5mm'};
           display: flex; flex-direction: column; align-items: center; justify-content: space-between;
           page-break-after: always; break-after: page; text-align: center;
           font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D;
@@ -376,13 +379,13 @@
         .kbl:last-child { page-break-after: auto; break-after: auto; }
         .kbl-head { width: 100%; }
         .kbl-t {
-          font-size: 8.5pt; font-weight: 700; line-height: 1.12;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          font-size: 10pt; font-weight: 700; line-height: 1.12;
+          display: -webkit-box; -webkit-line-clamp: ${short ? 1 : 2}; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .kbl-m { font-size: 7pt; color: #444; margin-top: 0.6mm; }
-        .kbl-m b { color: #0A0F0D; font-size: 8.5pt; }
+        .kbl-m { font-size: 8.5pt; color: #444; margin-top: 0.5mm; }
+        .kbl-m b { color: #0A0F0D; font-size: 10pt; }
         .kbl-bc { width: 100%; line-height: 0; margin-top: 0.5mm; }
-        .kbl-bc svg { width: 100%; height: auto; max-height: 15mm; }
+        .kbl-bc svg { width: 100%; height: auto; max-height: ${short ? Math.max(7, L.h - 11) : 15}mm; }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
     document.head.appendChild(st);
@@ -458,14 +461,16 @@
     flat.forEach((l) => {
       let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
       let s = '';
-      const title = clip(l.title || '', 26);
-      if (title) s += 'BT /F2 8 Tf ' + cx(title, 8, true).toFixed(1) + ' ' + (PH - 12).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const title = clip(l.title || '', 24);
+      if (title) s += 'BT /F2 9.5 Tf ' + cx(title, 9.5, true).toFixed(1) + ' ' + (PH - 13).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
       let meta = l.sub || '';
       if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F1 6.5 Tf ' + cx(meta, 6.5, false).toFixed(1) + ' ' + (PH - 21).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      if (meta) s += 'BT /F1 8 Tf ' + cx(meta, 8, false).toFixed(1) + ' ' + (PH - 24).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
-        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barH = 30, barY = 15;
+        // Bars take whatever height the text leaves: a fixed 30 pt bar block
+        // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
+        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barY = 14.5, barH = Math.max(12, PH - 24 - 6 - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -473,7 +478,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 6.5 Tf ' + cx(num, 6.5, false).toFixed(1) + ' 6.5 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 7 Tf ' + cx(num, 7, false).toFixed(1) + ' 6 Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
