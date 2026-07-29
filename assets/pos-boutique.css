@@ -14,7 +14,19 @@
   --bq-warn: #8A6210;
   --bq-warn-bg: rgba(217, 154, 43, 0.16);
   --bq-ok-bg: rgba(31, 93, 60, 0.10);
+  /* The dispatcher root is fixed to the viewport, but the boutique's flex
+     chain was still sizing itself from its content on short/windowed screens.
+     That left a blank band above/below and made the product grid look cropped.
+     Pin the root and its two direct columns to the available viewport height. */
+  inset: 0 !important;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100vh;
+  align-items: stretch;
+  overflow: hidden;
 }
+#pos-boutique > .bq-rail,
+#pos-boutique > .bq-main { height: 100%; }
 
 /* ═══════════════ LEFT RAIL (dark, dashboard-matching) ═══════════════ */
 .bq-rail {
