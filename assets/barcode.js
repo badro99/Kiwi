@@ -357,8 +357,8 @@
     st.setAttribute('data-size', stamp);
     // ONE label per page, the page sized to the label stock itself. This is what
     // makes a browser/PDF print look like a real étiquette instead of a small
-    // sticker lost on an A4 sheet (the "empty page" problem). Each label
-    // force-breaks to its own page, so "print all" yields a tidy multi-page job.
+    // sticker lost on an A4 sheet (the "empty page" problem). Every label after
+    // the first starts a new page, avoiding a trailing blank sticker.
     // Short stock (20 mm-class) has no room for a second title line — one line,
     // tighter padding. The bars are a fixed-height block STRETCHED to the full
     // label width (preserveAspectRatio="none" on the svg): bar widths are
@@ -372,12 +372,12 @@
     // (the price is intentionally larger) + number + margins. Keeping a small
     // guard prevents printer-driver rounding from scaling the whole 20 mm page.
     const PT = 0.3528;                                   // 1 pt in mm
-    const titlePt = short ? 11.5 : 11;
-    const metaPt = short ? 11 : 9;
-    const pricePt = short ? 14 : 10.5;
-    const numberPt = short ? 9 : 7;
+    const titlePt = short ? 13 : 11;
+    const metaPt = short ? 10 : 9;
+    const pricePt = short ? 16 : 10.5;
+    const numberPt = short ? 8 : 7;
     const used = (short ? 0.8 : 3.5)
-      + lines * titlePt * 1.05 * PT
+      + lines * titlePt * (short ? 1 : 1.05) * PT
       + (short ? 0.1 : 0.4) + Math.max(metaPt, pricePt) * 0.95 * PT
       + (short ? 0.2 : 0.3) + numberPt * 0.9 * PT
       + 0.3;
@@ -399,7 +399,7 @@
         .kbl + .kbl { page-break-before: always; break-before: page; }
         .kbl-head { width: 100%; }
         .kbl-t {
-          font-size: ${titlePt}pt; font-weight: 700; line-height: 1.05;
+          font-size: ${titlePt}pt; font-weight: 700; line-height: ${short ? '1' : '1.05'};
           display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical; overflow: hidden;
         }
         .kbl-m {
@@ -408,7 +408,8 @@
           font-size: ${metaPt}pt; line-height: 0.95; color: #333; margin-top: ${short ? '0.1mm' : '0.4mm'};
         }
         .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .kbl-m b { color: #0A0F0D; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
+        .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
+        .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
         .kbl-bc {
           width: 100%; line-height: 0; margin-top: auto; flex-shrink: 0;
         }
@@ -457,7 +458,7 @@
     // label is noise, and it's exactly what read as broken on the empty sheet.
     const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
     const priceStr = hasPrice ? `<b>${escapeXml(String(l.price))} MAD</b>` : '';
-    const meta = (l.sub || hasPrice) ? `<div class="kbl-m"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${priceStr}</div>` : '';
+    const meta = (l.sub || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${priceStr}</div>` : '';
     return `<div class="kbl">` +
              `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
@@ -502,22 +503,22 @@
     flat.forEach((l) => {
       let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
       let s = '';
-      const title = clip(l.title || '', 22);
       const short = L.h <= 24;
-      const titleSize = short ? 11.5 : 11;
-      const metaSize = short ? 11 : 9;
-      const numberSize = short ? 9 : 7;
-      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 9.5 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const title = clip(l.title || '', short ? 20 : 22);
+      const titleSize = short ? 13 : 11;
+      const metaSize = short ? 16 : 9;
+      const numberSize = short ? 8 : 7;
+      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 11 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
-      let meta = l.sub || '';
-      if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 20 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
+      if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
+      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 26 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
         const bits = enc.modules, pad = short ? 3 : 8, mW = (PW - pad * 2) / bits.length;
-        const barY = short ? 22 : 13.5;
-        const barH = Math.max(10, PH - (short ? 30 : 29) - barY);
+        const barY = short ? 12 : 13.5;
+        const barH = short ? 14 : Math.max(10, PH - 29 - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -525,7 +526,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' 11 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' ' + (short ? '3.5' : '11') + ' Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
