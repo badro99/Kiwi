@@ -32,6 +32,10 @@
  * donc avec provide() et ce ticket-là ressort tel quel, à l'octet près — c'est
  * mieux qu'un ticket recomposé.
  *
+ * JUSQU'OÙ ON REMONTE. Le jour en cours toujours ; les jours d'avant seulement
+ * quand la vente porte son ticket figé. Le détail — et pourquoi — est au-dessus
+ * de rows().
+ *
  * LA DÉMO NE CHANGE PAS. isReal() faux ⇒ aucun bouton n'est posé. Les quinze
  * démos gardent exactement l'écran d'avant, et de toute façon elles n'écrivent
  * rien dans le journal : un bouton y aurait ouvert une liste vide.
@@ -92,12 +96,64 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  /* ── le jour d'une vente, dit comme au comptoir ───────────────────────────
+   * La liste pouvant désormais couvrir plus d'une journée, une heure seule ne
+   * suffit plus : « 18:34 » sans le jour, c'est le ticket de mardi qu'on
+   * ressort en croyant prendre celui d'aujourd'hui. Chaque groupe porte donc
+   * son jour, et le premier groupe dit « Aujourd'hui » plutôt que rien — une
+   * liste qui commence sans en-tête se lit comme une liste du jour.
+   *
+   * Écrit DIRECTEMENT dans la langue du comptoir, et pas en français à faire
+   * traduire ensuite : « samedi 25 » porte un quantième, donc la phrase change
+   * chaque jour et aucun dictionnaire à correspondance exacte ne peut la
+   * rattraper — une caissière arabophone lirait un jour français au milieu de
+   * son écran. Les deux mots du dessus (aujourd'hui, hier) suivent la même
+   * route, pour que le groupe entier parle d'une seule voix. */
+  var DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+  var WORDS = {
+    fr: { today: "Aujourd'hui", yest: 'Hier' },
+    en: { today: 'Today', yest: 'Yesterday' },
+    ar: { today: 'اليوم', yest: 'أمس' },
+  };
+  function lang() {
+    try {
+      var l = window.KiwiCaisseLang && window.KiwiCaisseLang.get();
+      return WORDS[l] ? l : 'fr';
+    } catch (_) { return 'fr'; }
+  }
+  function dayLabel(ts) {
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    var L = lang();
+    var n = new Date();
+    if (sameDay(d, n)) return WORDS[L].today;
+    n.setDate(n.getDate() - 1);
+    if (sameDay(d, n)) return WORDS[L].yest;
+    try {
+      return d.toLocaleDateString(LOCALE[L], { weekday: 'long', day: 'numeric' });
+    } catch (_) { return DAYS[d.getDay()] + ' ' + d.getDate(); }
+  }
+
   /* ── ce que la liste montre ───────────────────────────────────────────────
-   * Les ventes d'AUJOURD'HUI, la plus récente d'abord. Le jour, parce que c'est
-   * la seule fenêtre où le ticket recomposé est fidèle : le pied de page, la
-   * TVA et l'adresse sont relus de la fiche ACTUELLE, et sur la journée en
-   * cours ils n'ont pas pu changer. Un ticket de mardi réimprimé avec l'entête
-   * de jeudi serait un faux — mieux vaut ne pas le proposer.
+   * Le jour en cours, la vente la plus récente d'abord — PLUS les jours
+   * précédents dont on a gardé le ticket exact.
+   *
+   * La règle a longtemps été « aujourd'hui, point », et elle avait une bonne
+   * raison : un ticket RECOMPOSÉ relit l'en-tête, la TVA et l'adresse de la
+   * fiche ACTUELLE, si bien qu'un ticket de mardi réimprimé jeudi sortirait
+   * avec le pied de page de jeudi. C'est un faux, et on ne le propose pas.
+   *
+   * Mais la boutique fige le VRAI ticket remis dans `rc`, au moment du paiement
+   * (voir pos-boutique.js). Celui-là ressort à l'octet près : l'objection ne le
+   * concerne pas. L'interdire quand même privait la caissière de la seule pièce
+   * dont elle dispose quand une cliente revient le lendemain — alors que le
+   * journal garde une semaine et que l'écran des échanges l'affichait déjà.
+   *
+   * D'où la règle exacte : le jour en cours toujours, les jours d'avant
+   * seulement s'ils portent leur ticket figé. Les quinze autres métiers lisent
+   * un journal qui ne tient que la journée (KiwiPosSale.today) : pour eux, la
+   * liste est celle d'avant, au ticket près.
    *
    * Le tri est fait ici et pas laissé au journal : le journal partagé pousse en
    * fin de tableau, la boutique empile en tête. Deux ordres, une seule liste. */
@@ -114,7 +170,10 @@
     return src.filter(function (e) {
       if (!e) return false;
       var d = new Date(e.ts);
-      if (isNaN(d.getTime()) || !sameDay(d, now)) return false;
+      if (isNaN(d.getTime())) return false;
+      /* Hors du jour : seulement avec le ticket figé. Sans lui, il faudrait le
+       * recomposer avec l'en-tête d'aujourd'hui — voir plus haut. */
+      if (!sameDay(d, now) && !e.rc) return false;
       /* Un montant nul ou négatif n'a pas de ticket à ressortir : un différé
        * n'a rien encaissé, et un remboursement porte son propre reçu. */
       return (+e.total || 0) > 0;
@@ -191,6 +250,9 @@
       '.kx-rp-head h3 { margin: 0 0 4px; font-size: 17px; }',
       '.kx-rp-head p { margin: 0; font-size: 12.5px; opacity: .62; line-height: 1.45; }',
       '.kx-rp-list { max-height: min(52vh, 420px); overflow-y: auto; padding: 4px 12px 12px; }',
+      '.kx-rp-day { padding: 13px 12px 5px; font-size: 10.5px; letter-spacing: .07em;',
+      '  text-transform: uppercase; opacity: .45; }',
+      '.kx-rp-list > .kx-rp-day:first-child { padding-top: 4px; }',
       '.kx-rp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px;',
       '  border: 0; border-radius: 12px; background: transparent; cursor: pointer; text-align: left;',
       '  font: inherit; color: inherit; }',
@@ -224,22 +286,31 @@
     var box = veil.querySelector('.modal');
     var list = rows(vertical);
 
-    var body = list.length
-      ? list.map(function (e, i) {
-        return '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '">'
+    var body = '';
+    if (list.length) {
+      /* Un en-tête quand le jour change, et pas une ligne de plus. La liste
+       * étant déjà triée du plus récent au plus ancien, les jours sortent
+       * groupés d'eux-mêmes — il n'y a rien à regrouper, juste à annoncer. */
+      var day = null;
+      list.forEach(function (e, i) {
+        var lab = dayLabel(e.ts);
+        if (lab !== day) { day = lab; body += '<div class="kx-rp-day">' + esc(lab) + '</div>'; }
+        body += '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '">'
           + '<span class="kx-rp-t">' + esc(hm(e.ts)) + '</span>'
           + '<span class="kx-rp-m"><span class="kx-rp-l">' + esc(e.label || 'Vente') + '</span>'
           + '<span class="kx-rp-r">' + esc(e.ref || 'sans numéro') + '</span></span>'
           + '<span class="kx-rp-a">' + esc(mad(e.total)) + '</span></button>';
-      }).join('')
+      });
+    } else {
       /* Dire POURQUOI c'est vide. « Aucun ticket » laisserait croire à une
-       * panne le soir d'une bonne journée, alors que le journal ne garde que
-       * le jour en cours. */
-      : '<div class="kx-rp-empty">Aucune vente encaissée aujourd\'hui sur ce terminal.<br>'
-        + 'La liste repart à zéro chaque matin.</div>';
+       * panne le soir d'une bonne journée, alors qu'il s'agit d'une fenêtre. */
+      body = '<div class="kx-rp-empty">Aucun ticket à ressortir sur ce terminal.<br>'
+        + 'La liste tient les ventes du jour, et celles des jours précédents dont '
+        + 'le ticket a été gardé.</div>';
+    }
 
     box.innerHTML = '<div class="kx-rp-head"><h3>Réimprimer un ticket</h3>'
-      + '<p>Les ventes d\'aujourd\'hui sur ce terminal. Le duplicata garde le numéro '
+      + '<p>Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
       + 'et l\'heure d\'origine, et porte la mention « duplicata ».</p></div>'
       + '<div class="kx-rp-list">' + body + '</div>'
       + '<div class="kx-rp-foot"><button type="button" class="ma-btn" data-kx-rp-close>Fermer</button></div>';
@@ -271,7 +342,7 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.className = ((lock.className || '').replace(/\bkx-reprint\b/g, '').trim() + ' kx-reprint').trim();
-    b.title = "Ressortir un ticket de la journée, avec son numéro d'origine";
+    b.title = "Ressortir un ticket déjà encaissé, avec son numéro d'origine";
     b.setAttribute('aria-label', 'Réimprimer un ticket');
     b.innerHTML = ICON + '<span>Réimprimer</span>';
     b.addEventListener('click', function () { open(vertical); });

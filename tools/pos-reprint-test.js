@@ -147,17 +147,35 @@ const SALE = {
   ok('et il porte lui aussi la mention', state.fromSnap.opts.copy === true);
 }
 
-/* ═══ la liste : aujourd'hui, le plus récent d'abord ═══ */
+/* ═══ la liste : le jour en cours, le plus récent d'abord ═══ */
 {
   const vieille = Object.assign({}, SALE, { ref: 'HIER', ts: T - 30 * 3600000 });
   const recente = Object.assign({}, SALE, { ref: 'RECENTE', ts: at(2) });
   const differee = Object.assign({}, SALE, { ref: 'DIFFERE', ts: at(10), total: 0 });
   const { RP } = load({ today: [SALE, vieille, recente, differee] });
   const r = RP.rows('boulangerie');
-  eq('la veille ne figure pas dans la liste du jour', r.filter((x) => x.ref === 'HIER').length, 0);
+  eq('la veille SANS ticket figé ne figure pas dans la liste', r.filter((x) => x.ref === 'HIER').length, 0);
   eq('un encaissement différé (0 MAD) n\'a pas de ticket', r.filter((x) => x.ref === 'DIFFERE').length, 0);
   eq('la plus récente est en tête', r[0].ref, 'RECENTE');
   eq('les ventes du jour sont toutes là', r.length, 2);
+}
+
+/* ═══ au-delà du jour : le ticket figé, et lui seul ═══
+ * Une vente d'avant-hier ne peut être RECOMPOSÉE sans risquer d'y coller
+ * l'en-tête d'aujourd'hui. Avec son `rc`, il n'y a rien à recomposer — c'est le
+ * document remis à la cliente, à l'octet près. La liste doit donc trancher sur
+ * la présence du ticket figé, pas sur la date. */
+{
+  const avantHier = T - 40 * 3600000;
+  const nue = Object.assign({}, SALE, { ref: 'NUE', ts: avantHier });
+  const figee = Object.assign({}, SALE, { ref: 'FIGEE', ts: avantHier, rc: { frozen: true } });
+  const { RP } = load({});
+  RP.provide('boutique', () => [nue, figee, Object.assign({}, SALE, { ref: 'AUJ', ts: at(5) })]);
+  const r = RP.rows('boutique');
+  eq('une vente d\'avant-hier AVEC son ticket figé reste ressortable',
+    r.filter((x) => x.ref === 'FIGEE').length, 1);
+  eq('la même sans ticket figé ne l\'est pas', r.filter((x) => x.ref === 'NUE').length, 0);
+  eq('le jour en cours passe toujours devant', r[0].ref, 'AUJ');
 }
 
 /* ═══ un métier qui tient son propre journal s'annonce ═══ */

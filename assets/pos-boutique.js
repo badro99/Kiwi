@@ -5998,7 +5998,17 @@
          supprimé depuis — le cas qui avait déjà vidé la page des échanges — et
          relirait de toute façon un prix qui a pu changer depuis la vente. */
       const lineName = (ln) => ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : '');
-      window.KiwiPosReprint.provide('boutique', () => salesToday().map((s) => {
+      /* TOUTE la fenêtre du journal, pas seulement aujourd'hui. salesToday()
+         est fait pour l'ARGENT — la recette du jour ne doit jamais sommer une
+         semaine — et la réimpression n'est pas de l'argent : c'est du papier.
+         Une cliente qui revient le lendemain sans son ticket ne trouvait donc
+         personne pour le lui ressortir, alors que l'écran des échanges affichait
+         sa vente juste à côté et que `rc` en garde le document exact.
+         C'est pos-reprint.js qui tranche ensuite : au-delà du jour, il n'accepte
+         que les ventes portant ce ticket figé. Lui passer la fenêtre entière
+         évite de refaire ici un filtre qui vit là-bas. */
+      const salesWeek = () => SALES.filter((s) => s && !s.voided && withinRetention(s.at));
+      window.KiwiPosReprint.provide('boutique', () => salesWeek().map((s) => {
         const lines = (s.lines || []).map((ln) => ({
           name: lineName(ln),
           qty: ln.qty,

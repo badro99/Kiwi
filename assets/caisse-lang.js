@@ -177,6 +177,28 @@
       'Supprimer': 'Delete', 'Garder': 'Keep', 'Modifier': 'Edit',
       'Mettre en pause': 'Pause', 'Reprendre': 'Resume', 'Fermer': 'Close',
 
+      /* ── réimprimer un ticket ──
+         Le panneau n'était pas traduit du tout : le bouton du rail disait bien
+         « Reprint », et la fenêtre qui s'ouvrait derrière restait en français.
+         Les jours (aujourd'hui, hier, samedi 25) ne passent pas par ici — ils
+         portent un quantième, donc pos-reprint.js les écrit lui-même dans la
+         langue en cours. */
+      'Réimprimer un ticket': 'Reprint a receipt',
+      'Les ventes encaissées sur ce terminal. Le duplicata garde le numéro et l’heure d’origine, et porte la mention « duplicata ».':
+        'Sales taken on this terminal. The copy keeps the original number and time, and is marked as a duplicate.',
+      'Les ventes encaissées sur ce terminal. Le duplicata garde le numéro et l\'heure d\'origine, et porte la mention « duplicata ».':
+        'Sales taken on this terminal. The copy keeps the original number and time, and is marked as a duplicate.',
+      'Aucun ticket à ressortir sur ce terminal.': 'No receipt to reprint on this terminal.',
+      'La liste tient les ventes du jour, et celles des jours précédents dont le ticket a été gardé.':
+        'The list holds today’s sales, plus earlier ones whose receipt was kept.',
+      'sans numéro': 'no number',
+      'Impression du reçu…': 'Printing the receipt…',
+      'Duplicata imprimé': 'Duplicate printed',
+      'Impression échouée, le ticket n’est pas sorti': 'Printing failed — no receipt came out',
+      'Impression échouée, le ticket n\'est pas sorti': 'Printing failed — no receipt came out',
+      'Impression indisponible sur cet appareil': 'Printing is unavailable on this device',
+      'Ticket introuvable': 'Receipt not found',
+
       /* ── clientes / carnet ── */
       'Carnet clients': 'Customer book', 'Nouveau client': 'New customer',
       'Rechercher un nom ou 06…': 'Search a name or 06…', '06… ou nom': '06… or name',
@@ -312,6 +334,23 @@
       'Aucune promotion terminée.': 'لا يوجد عرض منتهٍ.',
       'Supprimer': 'حذف', 'Garder': 'إبقاء', 'Modifier': 'تعديل',
       'Mettre en pause': 'إيقاف مؤقت', 'Reprendre': 'استئناف', 'Fermer': 'إغلاق',
+
+      /* ── réimprimer un ticket ── (voir la note côté anglais) */
+      'Réimprimer un ticket': 'إعادة طباعة تذكرة',
+      'Les ventes encaissées sur ce terminal. Le duplicata garde le numéro et l’heure d’origine, et porte la mention « duplicata ».':
+        'المبيعات المسجَّلة على هذا الصندوق. النسخة تحتفظ برقم وساعة التذكرة الأصلية، وتحمل عبارة « نسخة ».',
+      'Les ventes encaissées sur ce terminal. Le duplicata garde le numéro et l\'heure d\'origine, et porte la mention « duplicata ».':
+        'المبيعات المسجَّلة على هذا الصندوق. النسخة تحتفظ برقم وساعة التذكرة الأصلية، وتحمل عبارة « نسخة ».',
+      'Aucun ticket à ressortir sur ce terminal.': 'لا توجد تذكرة لإعادة طباعتها على هذا الصندوق.',
+      'La liste tient les ventes du jour, et celles des jours précédents dont le ticket a été gardé.':
+        'اللائحة تضم مبيعات اليوم، ومبيعات الأيام السابقة التي حُفظت تذكرتها.',
+      'sans numéro': 'بدون رقم',
+      'Impression du reçu…': 'جارٍ طبع الوصل…',
+      'Duplicata imprimé': 'طُبعت النسخة',
+      'Impression échouée, le ticket n’est pas sorti': 'فشل الطبع، لم تخرج التذكرة',
+      'Impression échouée, le ticket n\'est pas sorti': 'فشل الطبع، لم تخرج التذكرة',
+      'Impression indisponible sur cet appareil': 'الطبع غير متاح على هذا الجهاز',
+      'Ticket introuvable': 'التذكرة غير موجودة',
 
       /* ── clientes / carnet ── */
       'Carnet clients': 'دفتر الزبناء', 'Nouveau client': 'زبون جديد',
