@@ -25,4 +25,11 @@ assert.deepEqual(normalized.lines, [{ name: 'Tea' }]);
 assert.equal(normalized.customer, null);
 assert.equal(normalized.total, 20);
 
+assert.equal(
+  normalizeRow({ name: 'account_audit' }, { detail: 'legacy audit detail' }).detail,
+  'legacy audit detail',
+);
+
+assert.ok(TABLES.every((item) => /^[a-z_]+$/.test(item.name)));
+
 console.log('Supabase migration transform tests passed');

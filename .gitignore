@@ -34,6 +34,7 @@ npm-debug.log*
 !.env.example
 .dev.vars
 supabase/.temp/
+.wrangler/
 
 # Local preview tooling (machine-specific dev server)
 .claude/launch.json

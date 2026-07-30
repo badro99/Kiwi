@@ -40,10 +40,12 @@ No production cutover is performed by this migration.
 
 ## Shadow importer
 
-`tools/migrate-d1-to-supabase.mjs` reads Cloudflare D1 through the query API and
-upserts batches into Supabase staging. It never issues a D1 write or delete. It
-also refuses to run unless `MIGRATION_CONFIRM=kiwi-staging` and the Supabase URL
-matches `SUPABASE_EXPECTED_PROJECT_REF`.
+`tools/migrate-d1-to-supabase.mjs` reads either Cloudflare D1 through the query
+API or a local SQLite snapshot exported by Wrangler, then upserts batches into
+Supabase staging. It never issues a D1 write or delete. Set `D1_SQLITE_PATH` to
+use a local snapshot without a Cloudflare API token. The importer also refuses
+to run unless `MIGRATION_CONFIRM=kiwi-staging` and the Supabase URL matches
+`SUPABASE_EXPECTED_PROJECT_REF`.
 
 Required secrets are documented by name in `.env.example`; values must remain
 outside Git and browser code. The importer records its result in `import_runs`

@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from 'node:url';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const PAGE_SIZE = 500;
 const EXPECTED_CONFIRMATION = 'kiwi-staging';
+const execFile = promisify(execFileCallback);
 
 export const TABLES = [
   { name: 'accounts', conflict: 'id' },
@@ -21,7 +24,9 @@ export const TABLES = [
   { name: 'clients', conflict: 'merchant,id' },
   { name: 'config_audit', conflict: 'id' },
   { name: 'sale_audit', conflict: 'id', json: ['impact'] },
-  { name: 'account_audit', conflict: 'id', json: ['detail'] },
+  // Legacy D1 stores account_audit.detail as plain text, while Supabase keeps
+  // it safely in jsonb as a JSON string.
+  { name: 'account_audit', conflict: 'id' },
   { name: 'reset_tokens', conflict: 'selector' },
   { name: 'table_sessions', conflict: 'id' },
   { name: 'order_desk', conflict: 'merchant' },
@@ -68,13 +73,36 @@ function migrationConfig(env = process.env) {
     throw new Error(`Refusing target ${host}; expected ${expectedRef}.supabase.co`);
   }
 
+  const d1SqlitePath = String(env.D1_SQLITE_PATH || '').trim();
+  const source = d1SqlitePath
+    ? { d1SqlitePath }
+    : {
+        cloudflareAccountId: required('CLOUDFLARE_ACCOUNT_ID', env),
+        cloudflareDatabaseId: required('CLOUDFLARE_D1_DATABASE_ID', env),
+        cloudflareToken: required('CLOUDFLARE_API_TOKEN', env),
+      };
+
   return {
-    cloudflareAccountId: required('CLOUDFLARE_ACCOUNT_ID', env),
-    cloudflareDatabaseId: required('CLOUDFLARE_D1_DATABASE_ID', env),
-    cloudflareToken: required('CLOUDFLARE_API_TOKEN', env),
+    ...source,
     supabaseUrl,
     supabaseSecret: required('SUPABASE_SECRET_KEY', env),
   };
+}
+
+function quoteIdentifier(value) {
+  return `\"${String(value).replaceAll('"', '""')}\"`;
+}
+
+function quoteLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+async function sqliteQuery(config, sql) {
+  const { stdout } = await execFile('sqlite3', ['-json', config.d1SqlitePath, sql], {
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const output = stdout.trim();
+  return output ? JSON.parse(output) : [];
 }
 
 async function d1Query(config, sql, params = []) {
@@ -97,6 +125,13 @@ async function d1Query(config, sql, params = []) {
 }
 
 async function d1TableExists(config, table) {
+  if (config.d1SqlitePath) {
+    const rows = await sqliteQuery(
+      config,
+      `select name from sqlite_master where type = 'table' and name = ${quoteLiteral(table)}`,
+    );
+    return rows.length === 1;
+  }
   const rows = await d1Query(
     config,
     "select name from sqlite_master where type = 'table' and name = ?",
@@ -106,11 +141,21 @@ async function d1TableExists(config, table) {
 }
 
 async function d1Count(config, table) {
+  if (config.d1SqlitePath) {
+    const rows = await sqliteQuery(config, `select count(*) as count from ${quoteIdentifier(table)}`);
+    return Number(rows[0]?.count || 0);
+  }
   const rows = await d1Query(config, `select count(*) as count from \"${table}\"`);
   return Number(rows[0]?.count || 0);
 }
 
 async function d1Page(config, table, offset) {
+  if (config.d1SqlitePath) {
+    return sqliteQuery(
+      config,
+      `select * from ${quoteIdentifier(table)} order by rowid limit ${PAGE_SIZE} offset ${Number(offset)}`,
+    );
+  }
   return d1Query(
     config,
     `select * from \"${table}\" order by rowid limit ? offset ?`,
@@ -195,7 +240,7 @@ async function finalizeSequences(config) {
 export async function main(env = process.env) {
   const config = migrationConfig(env);
   const run = await recordImportRun(config, {
-    source: 'cloudflare-d1',
+    source: config.d1SqlitePath ? 'cloudflare-d1-snapshot' : 'cloudflare-d1',
     source_snapshot: new Date().toISOString(),
     status: 'running',
   });
