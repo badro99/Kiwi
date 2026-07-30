@@ -516,7 +516,47 @@
     if (wireScheduled) return; wireScheduled = true;
     setTimeout(function () { wireScheduled = false; try { wireCaisseEntry(); ensureChip(); } catch (_) {} }, 120);
   }
+  /* ── le carnet est une PAGE, pas une fenêtre ──────────────────────────────
+     Il s'ouvre depuis le rail, à côté de Vente, Inventaire et Promotions, et il
+     occupe la même zone de travail qu'elles. Il devait donc se comporter comme
+     elles : toucher une autre entrée du rail l'emporte. Tant qu'il fallait le
+     FERMER d'abord, il se comportait comme une boîte de dialogue — deux gestes
+     là où le reste de la caisse en demande un, et la seule page du métier à
+     réclamer ça.
+     On écoute à la CAPTURE, avant que le métier ne traite son propre clic : la
+     page suivante se dessine sur une zone déjà libre, jamais sous le carnet. */
+  function isOpen() {
+    var r = document.getElementById('kcb-root');
+    return r && r.style.display !== 'none' ? r : null;
+  }
+  function sheetOpen() {
+    var s = document.getElementById('kcb-sheet');
+    return s && s.style.display !== 'none' ? s : null;
+  }
+  function wireDismiss() {
+    document.addEventListener('click', function (e) {
+      var root = isOpen(); if (!root) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (root.contains(t)) return;                        // clic DANS le carnet
+      var sh = sheetOpen(); if (sh && sh.contains(t)) return;
+      // Une autre entrée du rail — et seulement le rail : un clic ailleurs sur
+      // l'écran ne ferme rien, sinon le carnet deviendrait impossible à garder
+      // ouvert pendant qu'on lit.
+      if (!t.closest('nav[class$="-nav"], .sidebar, .act-selector')) return;
+      if (t.closest('[data-kcb-navitem], [data-kcb-redirect]')) return;  // sa propre entrée
+      close();
+    }, true);
+    // Échap : d'abord la fiche cliente ouverte par-dessus, puis le carnet.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      if (sheetOpen()) { closeSheet(); return; }
+      close();
+    });
+  }
+
   function boot() {
+    wireDismiss();
     window.addEventListener('resize', function () { var r = document.getElementById('kcb-root'); if (r && r.style.display !== 'none') positionRoot(r); });
     window.addEventListener('storage', function (e) {
       if (!e.key) return;

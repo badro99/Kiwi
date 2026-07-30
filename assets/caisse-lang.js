@@ -58,6 +58,12 @@
       'En ligne': 'Online', 'Hors-ligne': 'Offline', 'Hors ligne': 'Offline',
       'En ligne · synchronisé': 'Online · synced', 'Langue': 'Language',
       'Le même Kiwi, un seul compte.': 'One Kiwi, one account.',
+      /* La signature du rail est coupée par un `<b>` : « Le même Kiwi,
+         <b>un seul compte</b>. » Le balayage travaille nœud par nœud, il ne voit
+         donc JAMAIS la phrase entière — seulement ses deux moitiés. On donne les
+         deux, dans le même ordre dans les trois langues : le gras tombe au bon
+         endroit sans qu'on ait à toucher au gabarit. */
+      'Le même Kiwi,': 'One Kiwi,', 'un seul compte': 'one account',
 
       /* ── écran de vente ── */
       'Scannez un code-barres, ou touchez un article': 'Scan a barcode, or tap an item',
@@ -99,6 +105,13 @@
       'En pause, aucun prix n’est modifié': 'Paused, no price is changed',
       'En pause, aucun prix n\'est modifié': 'Paused, no price is changed',
       '{n} ou moins': '{n} or fewer', '{n} jours': '{n} days',
+      /* Le bandeau du jour : « jeu. 30 juil. · 18:55 · 5 ventes · 5 550 MAD
+         aujourd'hui ». C'est la ligne la plus regardée de l'écran de vente. */
+      '{n} vente': '{n} sale', '{n} ventes': '{n} sales',
+      '{n} MAD aujourd’hui': '{n} MAD today', '{n} MAD aujourd\'hui': '{n} MAD today',
+      /* « par Salma » — un mot d'interface suivi d'une donnée du commerçant.
+         Le {x} traverse intact : c'est le prénom de la caissière. */
+      'par {x}': 'by {x}',
       'Nouvelle promotion': 'New promotion', 'Modifier la promotion': 'Edit promotion',
       'En cours': 'Running', 'À venir': 'Upcoming', 'Terminées': 'Finished',
       'Programmée': 'Scheduled', 'En pause': 'Paused', 'Terminée': 'Finished',
@@ -159,6 +172,7 @@
       'En ligne': 'متصل', 'Hors-ligne': 'غير متصل', 'Hors ligne': 'غير متصل',
       'En ligne · synchronisé': 'متصل · متزامن', 'Langue': 'اللغة',
       'Le même Kiwi, un seul compte.': 'نفس كيوي، حساب واحد.',
+      'Le même Kiwi,': 'نفس كيوي،', 'un seul compte': 'حساب واحد',
 
       /* ── écران de vente ── */
       'Scannez un code-barres, ou touchez un article': 'امسح رمزاً شريطياً، أو المس منتجاً',
@@ -200,6 +214,9 @@
       'En pause, aucun prix n’est modifié': 'موقوف، لا يتغيّر أي ثمن',
       'En pause, aucun prix n\'est modifié': 'موقوف، لا يتغيّر أي ثمن',
       '{n} ou moins': '{n} أو أقل', '{n} jours': '{n} أيام',
+      '{n} vente': '{n} مبيعة', '{n} ventes': '{n} مبيعات',
+      '{n} MAD aujourd’hui': '{n} MAD اليوم', '{n} MAD aujourd\'hui': '{n} MAD اليوم',
+      'par {x}': 'بواسطة {x}',
       'Nouvelle promotion': 'عرض جديد', 'Modifier la promotion': 'تعديل العرض',
       'En cours': 'جارٍ', 'À venir': 'قادم', 'Terminées': 'منتهية',
       'Programmée': 'مبرمج', 'En pause': 'موقوف', 'Terminée': 'منتهٍ',
@@ -250,6 +267,43 @@
     },
   };
 
+  /* ───────────────────────── les dates ─────────────────────────
+     Une date n'est pas une phrase, c'est un GABARIT À JETONS : « jeu. 30 juil. »
+     n'apparaîtra jamais deux fois de suite, aucune clé fixe ne peut l'attraper,
+     et il y en a 366 par an. On traduit donc les jetons — le jour, le mois —
+     et on laisse le nombre à sa place.
+
+     Les mois sont ceux du Maroc (يوليوز, غشت, شتنبر…), pas ceux du Levant : une
+     caissière de Casablanca ne lit pas « تموز ». Et ces jetons vivent à part du
+     dictionnaire : « mai » est aussi un mot, et une robe appelée « Mai » ne doit
+     pas devenir un mois parce qu'elle passe dans le même balayage. */
+  var DATES = {
+    en: {
+      'lun.': 'Mon', 'mar.': 'Tue', 'mer.': 'Wed', 'jeu.': 'Thu',
+      'ven.': 'Fri', 'sam.': 'Sat', 'dim.': 'Sun',
+      'janv.': 'Jan', 'févr.': 'Feb', 'mars': 'Mar', 'avr.': 'Apr',
+      'mai': 'May', 'juin': 'Jun', 'juil.': 'Jul', 'août': 'Aug',
+      'sept.': 'Sep', 'oct.': 'Oct', 'nov.': 'Nov', 'déc.': 'Dec',
+      'auj.': 'today', 'hier': 'yesterday', 'demain': 'tomorrow',
+    },
+    ar: {
+      'lun.': 'الاثنين', 'mar.': 'الثلاثاء', 'mer.': 'الأربعاء', 'jeu.': 'الخميس',
+      'ven.': 'الجمعة', 'sam.': 'السبت', 'dim.': 'الأحد',
+      'janv.': 'يناير', 'févr.': 'فبراير', 'mars': 'مارس', 'avr.': 'أبريل',
+      'mai': 'ماي', 'juin': 'يونيو', 'juil.': 'يوليوز', 'août': 'غشت',
+      'sept.': 'شتنبر', 'oct.': 'أكتوبر', 'nov.': 'نونبر', 'déc.': 'دجنبر',
+      'auj.': 'اليوم', 'hier': 'أمس', 'demain': 'غدًا',
+    },
+  };
+  /* Le garde-fou : on ne remplace un jeton que si le segment RESSEMBLE à une
+     date de bout en bout — jour, quantième, mois, heure, rien d'autre. */
+  var DATE_LIKE = new RegExp(
+    '^(?:(lun|mar|mer|jeu|ven|sam|dim)\\.|auj\\.|hier|demain)?\\s*' +
+    '(?:\\d{1,2})?\\s*' +
+    '(?:(janv|févr|avr|juil|sept|oct|nov|déc)\\.|mars|mai|juin|août)?\\s*' +
+    '(?:\\d{1,2}:\\d{2})?$');
+  var DATE_TOK = /(lun|mar|mer|jeu|ven|sam|dim|janv|févr|avr|juil|sept|oct|nov|déc|auj)\.|\b(mars|mai|juin|août|hier|demain)\b/g;
+
   /* ───────────────────────── état ───────────────────────── */
   var cur = 'fr';
   try { var saved = localStorage.getItem(KEY); if (saved && DICT[saved]) cur = saved; else if (saved === 'fr') cur = 'fr'; } catch (_) {}
@@ -269,6 +323,38 @@
   var NUM = /\d[\d\s\u202f\u00a0.,]*\d|\d/g;
   var ATTRS = ['placeholder', 'title', 'aria-label'];
   var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, SVG: 1, CANVAS: 1 };
+
+  /* ───────────────── les montants, en arabe ─────────────────
+     « 4 785 MAD » s'affichait « MAD 4 785 », et « −1 115 MAD » devenait
+     « MAD 1 115− ». Ce n'est pas une faute de traduction, c'est l'algorithme
+     bidirectionnel : l'espace entre le nombre et la devise est un caractère
+     NEUTRE, il revient donc au sens du paragraphe (l'arabe), et la séquence se
+     coupe en deux morceaux que l'affichage remet de droite à gauche.
+
+     La parade se pose sur le texte, pas sur des classes CSS : une règle nommée
+     ne protège que ce qu'elle nomme, et il y a quinze métiers. On entoure chaque
+     montant de U+2066 / U+2069 — deux caractères invisibles qui disent « ceci
+     est un îlot latin, garde-le tel quel ». Sans effet en français ni en
+     anglais : l'isolement n'est posé que si la langue s'écrit à l'envers. */
+  var LRI = '\u2066', PDI = '\u2069';
+  /* Le préfixe latin collé au nombre fait partie de l'îlot : « MM-1208 » est
+     UN code de ticket, pas un « MM » suivi d'un « −1208 ». Isolé en deux
+     morceaux, il s'affichait « 1208MM- » sur le ticket. */
+  var AMOUNT = /(?:[A-Za-z]{1,8}-)?[-\u2212+]?\d[\d\s\u202f\u00a0.,:]*(?:MAD|DH|dh|%|pts)?/g;
+  function isolate(s) {
+    /* On repart toujours d'un texte nu. Le balayage rejoue à chaque rendu de la
+       caisse — une vente, un scan, un changement de rayon — et empiler les
+       marques ferait grossir le nœud d'un caractère invisible par frappe. */
+    if (s.indexOf(LRI) >= 0 || s.indexOf(PDI) >= 0) s = s.replace(/[\u2066\u2069]/g, '');
+    return s.replace(AMOUNT, function (m0) {
+      var core = m0.replace(/\s+$/, '');       // l'espace de fin reste dehors
+      return core ? LRI + core + PDI + m0.slice(core.length) : m0;
+    });
+  }
+  function isRtl() {
+    var l = LANGS.filter(function (x) { return x.id === cur; })[0];
+    return !!l && l.dir === 'rtl';
+  }
 
   // `tagName` garde sa casse sur les éléments SVG ('svg', pas 'SVG') : sans le
   // passage en majuscules, tout l'intérieur des icônes serait balayé.
@@ -292,6 +378,11 @@
     if (!core) return;
     var hit = translateCore(core);
     var out = hit == null ? fr : (m[1] + hit + m[3]);
+    /* L'isolement des montants s'applique APRÈS la traduction et sur TOUS les
+       nœuds — y compris ceux que le dictionnaire ne connaît pas. Un prix
+       d'article est une donnée du commerçant : elle n'est pas traduite, mais
+       elle doit quand même s'afficher à l'endroit. */
+    if (isRtl()) out = isolate(out);
     if (!had && out !== fr) origText.set(node, fr);
     if (node.nodeValue !== out) node.nodeValue = out;
   }
@@ -343,7 +434,31 @@
     // Repli : un nombre EN TÊTE suivi d'un mot connu (« 2 articles »).
     var m = /^([\d][\d\s\u202f\u00a0.,]*)\s(.+)$/.exec(seg);
     if (m && d[m[2]]) return m[1] + ' ' + d[m[2]];
-    return null;
+
+    /* Un mot d'interface suivi d'une DONNÉE : « par Salma ». La clé porte son
+       propre {x} — la donnée traverse sans être lue, et une langue qui préfère
+       mettre le nom devant peut le faire. */
+    var px = /^(\S+)\s+([\s\S]+)$/.exec(seg);
+    if (px && d[px[1] + ' {x}']) return d[px[1] + ' {x}'].replace('{x}', px[2]);
+
+    // Une date : des jetons, pas une phrase.
+    return translateDate(seg);
+  }
+
+  /* On ne touche aux jetons de date QUE si le segment RESSEMBLE de bout en bout
+     à une date. « mai » tout seul dans un nom d'article n'est pas un mois ;
+     « sam. 14:32 » en est une. Le garde-fou est le motif, pas le mot. */
+  function translateDate(seg) {
+    var tok = DATES[cur];
+    if (!tok || !DATE_LIKE.test(seg)) return null;
+    var any = false;
+    var out = seg.replace(DATE_TOK, function (m0) {
+      var v = tok[m0];
+      if (v == null) return m0;
+      any = true;
+      return v;
+    });
+    return any ? out : null;
   }
 
   function applyAttrs(el) {
@@ -500,6 +615,15 @@
       '.bq-rail-foot .kcl,.pos-rail-foot .kcl{background:rgba(255,255,255,.06);}',
       /* RTL — ce que le retournement automatique ne couvre pas. */
       '.kiwi-rtl .kcl-it{letter-spacing:0;}',
+      /* Les deux pastilles flottantes d'assets/caisse-pwa.js sont posées en
+         coordonnées PHYSIQUES, dans un style en ligne (`left:12px` pour l'état
+         réseau, `right:16px` pour l'invite d'installation). `dir` ne retourne
+         pas ça : en arabe l'état de synchronisation restait dans le coin
+         gauche, du côté que l'œil quitte, pendant que tout le reste avait
+         basculé. Le `!important` n'est pas un caprice — il faut battre un style
+         en ligne. */
+      '.kiwi-rtl #kiwi-net{left:auto!important;right:12px!important;}',
+      '.kiwi-rtl #kiwi-install{right:auto!important;left:16px!important;}',
     ].join('');
     document.head.appendChild(st);
   }
@@ -531,6 +655,10 @@
     // phrases interpolées, et une découpe qui se casse ne se voit pas à l'œil —
     // l'écran reste simplement en français.
     tr: function (core) { var r = translateCore(String(core)); return r == null ? String(core) : r; },
+    /* Exposé pour la même raison que `tr` : un montant mal isolé s'affiche
+       « MAD 4 785 » au lieu de « 4 785 MAD », et ça ne lève aucune erreur —
+       c'est juste un prix que la cliente lit de travers au comptoir. */
+    bidi: function (s) { return isRtl() ? isolate(String(s)) : String(s); },
     langs: LANGS.slice(),
     dict: function () { return dict(); },
     apply: function (root) { run(root || document.body); },

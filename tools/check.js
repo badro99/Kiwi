@@ -265,7 +265,7 @@ section('Langue du comptoir (tools/caisse-lang-test.js)');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-lang-test.js')], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
   if (r.status === 0) {
-    ok(`langue gate green (${(out.match(/✓/g) || []).length - 1} contrôles : découpe, intégrité fr/en/ar)`);
+    ok(`langue gate green (${(out.match(/✓/g) || []).length - 1} contrôles : découpe, dates, montants en arabe, intégrité fr/en/ar)`);
   } else {
     out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`caisse-lang-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);

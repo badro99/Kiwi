@@ -1404,11 +1404,9 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
 .kiwi-rtl #pos-boutique > .bq-rail { left: auto; right: 0; }
 .kiwi-rtl #pos-boutique > .bq-main { inset: 0 212px 0 0; }
 .kiwi-rtl .bq-rail { border-right: 0; border-left: 1px solid rgba(255,255,255,0.06); }
-/* Le prix barré d'une promotion : en écriture arabe la séquence « ancien
-   nouveau » se relit à l'envers si on la laisse suivre le flux du texte. On
-   épingle les deux prix en lecture latine — ce sont des CHIFFRES, ils se lisent
-   de gauche à droite dans les deux langues. */
-.kiwi-rtl .bq-card-price,
-.kiwi-rtl .bq-line-price,
-.kiwi-rtl .bq-look-price,
-.kiwi-rtl .bq-prc-srow .pz { direction: ltr; }
+/* Le prix barré d'une promotion. Chaque montant est déjà tenu à l'endroit un
+   par un, dans son propre îlot (assets/caisse-lang.js) : « 4 200 MAD » ne peut
+   plus se relire « MAD 4 200 ». Il ne reste donc qu'à laisser la PAIRE suivre
+   l'écriture — l'ancien prix du côté où commence la lecture, le nouveau après.
+   Épingler tout le bloc en latin, comme on le faisait, mettait l'ancien prix
+   là où l'œil arabe finit sa ligne : la cliente lisait la remise à l'envers. */

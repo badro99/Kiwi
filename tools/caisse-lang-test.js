@@ -70,7 +70,10 @@ check(L.t('Caftan Fassi') === 'Caftan Fassi', 'un nom d\'article du commerçant 
 check(L.tr('Encaisser · 4 785 MAD') === 'Take payment · 4 785 MAD', 'le bouton d\'encaissement se traduit sans toucher au montant');
 check(L.tr('2 articles') === '2 items', 'un compte suivi d\'un mot connu se traduit, le nombre reste');
 check(L.tr('1 article') === '1 item', 'le singulier aussi');
-check(L.tr('Ticket · MM-1208 · par Salma') === 'Sale · MM-1208 · par Salma', 'le numéro de ticket et le prénom de la caissière ne sont pas traduits');
+/* « par Salma » : le mot d'interface passe, le prénom NON. C'est la frontière
+   qui compte — le dictionnaire s'arrête net où commence la donnée. */
+check(L.tr('Ticket · MM-1208 · par Salma') === 'Sale · MM-1208 · by Salma', 'le mot « par » se traduit, le numéro de ticket et le prénom de la caissière non');
+check(L.tr('par Yasmine El Fassi') === 'by Yasmine El Fassi', 'un nom composé traverse entier');
 /* Un segment inconnu ne doit pas empêcher les autres de passer, et surtout ne
    doit RIEN inventer. */
 check(L.tr('Bonjour · Total') === 'Bonjour · Total', 'une phrase dont aucun morceau n\'est connu reste intacte');
@@ -86,7 +89,48 @@ check(L.tr('Il en reste 5 ou moins') === '5 left or fewer', 'le seuil de fin de 
 check(L.tr('Il en reste 5 ou moins').indexOf('5') === 0, 'et il se déplace là où la langue le demande');
 check(L.tr('4 785 MAD') === '4 785 MAD', 'un montant n\'est pas un gabarit : il traverse intact');
 
+/* ── les dates ───────────────────────────────────────────────────────────── */
+check(L.tr('jeu. 30 juil.') === 'Thu 30 Jul', 'le jour et le mois se traduisent, le quantième reste');
+check(L.tr('auj. 14:32') === 'today 14:32', '« auj. » devient un mot, l\'heure ne bouge pas');
+check(L.tr('hier 09:05') === 'yesterday 09:05', 'hier aussi');
+check(L.tr('sam. 18:00') === 'Sat 18:00', 'un jour seul suivi d\'une heure');
+check(L.tr('Encaisser · jeu. 30 juil.') === 'Take payment · Thu 30 Jul', 'une date à l\'intérieur d\'une phrase découpée');
+/* LE garde-fou. « mai » et « mars » sont des mois ET des mots ; un article de la
+   boutique qui s'appelle « Robe Mai » ne doit pas repartir traduit. On ne
+   remplace un jeton que si le segment ENTIER a la forme d'une date. */
+check(L.tr('Robe mai') === 'Robe mai', 'un nom d\'article contenant un mois n\'est pas une date');
+check(L.tr('mars') === 'Mar', 'un mois SEUL en est une, en revanche');
+check(L.tr('Caftan mars soirée') === 'Caftan mars soirée', 'et un mois au milieu d\'un nom ne l\'est pas');
+
 /* ── arabe ───────────────────────────────────────────────────────────────── */
+L.set('ar');
+check(L.tr('jeu. 30 juil.') === 'الخميس 30 يوليوز', 'la date passe en arabe, avec les mois du Maroc');
+check(L.tr('août') === 'غشت', 'غشت et non أغسطس — c\'est un comptoir marocain');
+
+/* ── les montants, en arabe ──────────────────────────────────────────────────
+   « 4 785 MAD » s'affichait « MAD 4 785 » : l'espace avant la devise est un
+   caractère neutre, l'algorithme bidirectionnel le rend au paragraphe arabe, et
+   la séquence se coupe en deux morceaux qui s'inversent. On vérifie donc que
+   chaque montant repart entouré de U+2066 / U+2069, et rien d'autre. */
+const LRI = '⁦', PDI = '⁩';
+const wrapped = (s, inner) => s.indexOf(LRI + inner + PDI) >= 0;
+check(wrapped(L.bidi('4 785 MAD'), '4 785 MAD'), 'un montant part isolé, devise comprise');
+check(wrapped(L.bidi('−1 115 MAD'), '−1 115 MAD'), 'le signe négatif reste collé au montant');
+check(wrapped(L.bidi('−10 %'), '−10 %'), 'un pourcentage aussi');
+check(wrapped(L.bidi('18:55'), '18:55'), 'une heure ne se relit pas « 55:18 »');
+check(wrapped(L.bidi('المجموع 4 785 MAD'), '4 785 MAD'), 'un montant au milieu d\'une phrase arabe');
+check(L.bidi('المجموع').indexOf(LRI) < 0, 'un texte sans chiffre n\'est pas touché');
+/* Un code de ticket est UN bloc. Coupé entre « MM » et « -1208 », il
+   s'affichait « 1208MM- » en tête de ticket — le numéro qu'on dicte au
+   téléphone quand une cliente rappelle. */
+check(wrapped(L.bidi('MM-1208'), 'MM-1208'), 'un numéro de ticket ne se coupe pas en deux');
+/* Idempotence : le balayage repasse à chaque rendu de la caisse — une vente,
+   un scan, un changement de rayon. S'il ré-isolait ce qu'il a déjà isolé, le
+   nœud grossirait d'un caractère invisible à chaque frappe. */
+const once = L.bidi('4 785 MAD');
+check(L.bidi(once) === once, 'ré-isoler un montant déjà isolé ne l\'empile pas');
+L.set('fr');
+check(L.bidi('4 785 MAD') === '4 785 MAD', 'en français on ne pose aucun caractère invisible');
 L.set('ar');
 check(L.t('Promotions') === 'العروض', 'le rail parle arabe');
 check(L.tr('Encaisser · 4 785 MAD') === 'تحصيل · 4 785 MAD', 'le montant reste lisible en arabe');
