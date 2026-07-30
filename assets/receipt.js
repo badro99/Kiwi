@@ -61,11 +61,25 @@
 
   /* ═══════════════════ petites fonctions pures ═══════════════════ */
 
+  /* La langue du ticket, quand le réglage dit « auto ».
+   *
+   * KiwiI18n est la langue du TABLEAU DE BORD — et il n'est pas chargé sur
+   * kiwi-caisse.html. « Auto » retombait donc systématiquement sur le français
+   * au comptoir : une caissière basculait son écran en arabe et continuait de
+   * tendre des reçus français, sur la seule surface où le ticket est imprimé.
+   * On lit donc AUSSI la langue du comptoir (assets/caisse-lang.js), qui est
+   * la bonne réponse là où le papier sort. Le réglage explicite du commerçant
+   * (print.lang) l'emporte toujours sur les deux — il n'entre même pas ici. */
   function lang() {
-    try {
-      var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang();
-      return (l === 'en' || l === 'ar') ? l : 'fr';
-    } catch (_) { return 'fr'; }
+    var l = '';
+    /* Le comptoir d'abord : KiwiCaisseLang n'existe QUE sur kiwi-caisse.html
+       (dashboard.html ne le charge pas), donc sa présence dit à elle seule que
+       le papier sort ici, et c'est la langue de la personne qui le tend. */
+    try { l = (window.KiwiCaisseLang && window.KiwiCaisseLang.get && window.KiwiCaisseLang.get()) || ''; } catch (_) {}
+    if (!l) {
+      try { l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || ''; } catch (_) {}
+    }
+    return (l === 'en' || l === 'ar') ? l : 'fr';
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return o; } }
@@ -555,6 +569,95 @@
     return doc;
   }
 
+  /* ═══════════════════ LA LISTE DES VENTES, EN TICKET ═══════════════════
+   * Un récapitulatif — les ventes d'une journée, une ligne chacune — sorti sur
+   * le MÊME papier que les reçus : le logo du commerçant, son en-tête, ses
+   * mentions légales, sa largeur de rouleau, sa langue, ses décimales. C'est
+   * tout l'intérêt de passer par ici plutôt que d'écrire une mise en page à
+   * part : le commerçant a choisi son ticket une fois, dans le tableau de bord,
+   * et ce document-là en hérite sans qu'on ait à le lui redemander.
+   *
+   * CE N'EST PAS UN REÇU, et ça doit se voir. Un récapitulatif porte son titre
+   * en bandeau, n'affiche ni mode de paiement encaissé, ni rendu, ni cliente,
+   * et ne s'appelle jamais « duplicata ». Un papier de 17 670 MAD qu'on peut
+   * confondre avec un ticket de vente est un papier dangereux.
+   *
+   * On ne recalcule rien : chaque ligne est une vente déjà encaissée, et le
+   * total est leur somme. Le détail par mode de paiement, quand les ventes le
+   * portent, parce que c'est ce qu'on compare au tiroir en fin de journée. */
+  function buildSummary(sales, opts) {
+    opts = opts || {};
+    var vid = venueKey(opts.venueId);
+    var cfg = opts.config ? normalizeConfig(opts.config) : getConfig(vid);
+    var biz = opts.business ? normalizeBusiness(opts.business) : getBusiness(vid);
+    var L = cfg.print.lang === 'auto' ? lang() : cfg.print.lang;
+    var T = dict(L);
+    var list = (Array.isArray(sales) ? sales : []).slice(0, 300);
+
+    var rows = list.map(function (s) {
+      var at = new Date(s && s.ts != null ? s.ts : Date.now());
+      if (isNaN(at.getTime())) at = new Date();
+      return {
+        time: pad2(at.getHours()) + ':' + pad2(at.getMinutes()),
+        ts: at.getTime(),
+        ref: str(s && s.ref, 40),
+        label: str(s && s.label, 60) || T.article,
+        amount: Math.abs(num(s && s.total)),
+        method: methodLabel((s && (s.raw || s.method)) || '', T),
+      };
+    });
+    var total = rows.reduce(function (a, r) { return a + r.amount; }, 0);
+
+    /* Par mode de paiement. Une vente sans mode reconnu ne va nulle part
+       plutôt que dans un panier « Autre » qui affirmerait ce qu'on ignore. */
+    var order = [], by = {};
+    rows.forEach(function (r) {
+      if (!r.method) return;
+      if (!by[r.method]) { by[r.method] = { label: r.method, amount: 0, n: 0 }; order.push(r.method); }
+      by[r.method].amount += r.amount;
+      by[r.method].n++;
+    });
+
+    var from = opts.from != null ? new Date(opts.from) : (rows.length ? new Date(rows[rows.length - 1].ts) : new Date());
+    var to = opts.to != null ? new Date(opts.to) : (rows.length ? new Date(rows[0].ts) : new Date());
+
+    return {
+      v: VER,
+      lang: L, second: cfg.print.second || '',
+      paper: opts.paper || cfg.print.paper,
+      density: cfg.print.density,
+      decimals: decimalsFor(cfg.print.decimals, [total].concat(rows.map(function (r) { return r.amount; }))),
+      kind: 'summary',
+      shop: shopBlock(biz, cfg),
+      welcome: '',
+      meta: {
+        ref: '',
+        date: pad2(to.getDate()) + '/' + pad2(to.getMonth() + 1) + '/' + to.getFullYear(),
+        time: pad2(from.getHours()) + ':' + pad2(from.getMinutes()) + ' — ' + pad2(to.getHours()) + ':' + pad2(to.getMinutes()),
+        ts: to.getTime(),
+        label: '',
+      },
+      summary: {
+        title: str(opts.title, 40) || T.report,
+        rows: rows,
+        byMethod: order.map(function (k) { return by[k]; }),
+        count: rows.length,
+      },
+      lines: [],
+      totals: { subtotal: total, discount: 0, promo: 0, promoLabel: '', tip: 0, total: total, vat: null },
+      pay: [],
+      cash: null,
+      customer: null,
+      refund: null,
+      foot: {
+        thanks: '', policy: '', social: '', web: cfg.msg.web, whatsapp: '',
+      },
+      qr: '',
+      copy: '',
+      T: T,
+    };
+  }
+
   function round2(n) { return Math.round(num(n) * 100) / 100; }
   function decimalsFor(mode, amounts) {
     if (mode === 'always') return true;
@@ -649,9 +752,9 @@
 
   /* ═══════════════════ les mots ═══════════════════ */
   var DICT = {
-    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', ref: 'Réf.' },
-    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', ref: 'Ref.' },
-    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', ref: 'مرجع' },
+    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.' },
+    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.' },
+    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع' },
   };
   function dict(l) { return DICT[l] || DICT.fr; }
 
@@ -698,12 +801,17 @@
     doc.shop.legal.forEach(function (l) { b.line(l); });
     if (doc.welcome) b.feed(1).line(doc.welcome);
     if (refund) b.feed(1).bold(true).size(2, 2).line(T.refund).size(1, 1).bold(false);
+    /* Le bandeau du récapitulatif. En gras et en grand, pour la même raison que
+       celui du remboursement : ce papier ne doit pas pouvoir passer pour un
+       ticket de vente. */
+    if (doc.summary) b.feed(1).bold(true).size(1, 2).line(doc.summary.title).size(1, 1).bold(false);
     if (doc.copy) b.bold(true).line('— ' + doc.copy + ' —').bold(false);
 
     /* — quoi, quand, qui — */
     b.align('left'); rule();
     if (doc.meta.ref) row(T.no, doc.meta.ref);
-    row(T.date, doc.meta.date + '  ' + doc.meta.time);
+    if (doc.summary) row(T.period, doc.meta.date + '  ' + doc.meta.time);
+    else row(T.date, doc.meta.date + '  ' + doc.meta.time);
     if (doc.meta.label) row('', doc.meta.label);
     if (doc.meta.cashier) row(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) row(T.terminal, doc.meta.terminal);
@@ -714,6 +822,30 @@
     }
     if (doc.refund && doc.refund.of) row(T.origin, doc.refund.of);
     if (doc.refund && doc.refund.reason) row(T.reason, doc.refund.reason);
+
+    /* — la liste des ventes, quand c'en est une — */
+    if (doc.summary) {
+      rule();
+      doc.summary.rows.forEach(function (r) {
+        row(r.time + '  ' + r.label, moneyMAD(r.amount, doc));
+        if (r.ref) b.line('    ' + r.ref + (r.method ? '  ·  ' + r.method : ''));
+      });
+      rule();
+      row(T.count, String(doc.summary.count));
+      doc.summary.byMethod.forEach(function (m) {
+        row('  ' + m.label + ' (' + m.n + ')', moneyMAD(m.amount, doc));
+      });
+      b.size(1, 2);
+      row(T.total, moneyMAD(doc.totals.total, doc), true);
+      b.size(1, 1);
+      b.align('center').feed(1);
+      if (doc.foot.web) b.line(doc.foot.web);
+      if (doc.second) secondLanguage(b, doc, cols);
+      b.feed(1).line('Kiwi');
+      b.cut();
+      if (o.openDrawer) b.drawer();
+      return b.bytes();
+    }
 
     /* — le panier — */
     rule();
@@ -790,6 +922,22 @@
     var T = doc.T || dict(doc.lang);
     var refund = doc.kind === 'refund';
     var out = [];
+    /* ── LES CODES NE SE LISENT PAS À L'ENVERS ────────────────────────────────
+     * Dans un ticket arabe, le moteur bidirectionnel réordonne les segments
+     * latins : « SS-28-GQ » s'affichait « GQ-SS-28 », et « 30/07/2026 21:01 —
+     * 21:29 » ressortait « 21:29 — 2026 21:01/07/30 ». Ce ne sont pas des
+     * détails : un numéro de ticket recopié à l'envers ne retrouve aucune vente,
+     * et une période illisible rend le papier inutilisable au rapprochement.
+     * On isole donc chaque valeur latine (LRI … PDI) — le rendu suit la ligne
+     * arabe, la valeur garde son propre sens de lecture. */
+    var code = function (s) {
+      s = String(s == null ? '' : s);
+      return s ? '<bdi dir="ltr" class="kr-code">' + esc(s) + '</bdi>' : '';
+    };
+    var Rh = function (k, vHtml, cls) {
+      out.push('<div class="kr-r' + (cls ? ' ' + cls : '') + '"><span>' + esc(k) + '</span><span>' + vHtml + '</span></div>');
+    };
+    var Ph = function (cls, h) { out.push('<div class="' + cls + '">' + h + '</div>'); };
     var P = function (cls, txt) { out.push('<div class="' + cls + '">' + esc(txt) + '</div>'); };
     var R = function (k, v, cls) {
       out.push('<div class="kr-r' + (cls ? ' ' + cls : '') + '"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>');
@@ -804,11 +952,12 @@
     doc.shop.legal.forEach(function (l) { P('kr-c kr-xs', l); });
     if (doc.welcome) P('kr-c kr-welcome', doc.welcome);
     if (refund) P('kr-banner', T.refund);
+    if (doc.summary) P('kr-banner', doc.summary.title);
     if (doc.copy) P('kr-c kr-copy', '— ' + doc.copy + ' —');
 
     out.push('<div class="kr-rule"></div>');
-    if (doc.meta.ref) R(T.no, doc.meta.ref);
-    R(T.date, doc.meta.date + '  ' + doc.meta.time);
+    if (doc.meta.ref) Rh(T.no, code(doc.meta.ref));
+    Rh(doc.summary ? T.period : T.date, code(doc.meta.date + '  ' + doc.meta.time));
     if (doc.meta.label) R('', doc.meta.label);
     if (doc.meta.cashier) R(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) R(T.terminal, doc.meta.terminal);
@@ -817,18 +966,43 @@
       if (doc.customer.points != null) R(T.points, String(doc.customer.points));
       if (doc.customer.loyalty) P('kr-sm', doc.customer.loyalty);
     }
-    if (doc.refund && doc.refund.of) R(T.origin, doc.refund.of);
+    if (doc.refund && doc.refund.of) Rh(T.origin, code(doc.refund.of));
     if (doc.refund && doc.refund.reason) R(T.reason, doc.refund.reason);
+
+    if (doc.summary) {
+      out.push('<div class="kr-rule"></div>');
+      doc.summary.rows.forEach(function (r) {
+        out.push('<div class="kr-r kr-item"><span>' + esc(r.time + '  ' + r.label) + '</span><span>'
+          + esc(moneyMAD(r.amount, doc)) + '</span></div>');
+        var sub = [];
+        if (r.ref) sub.push(code(r.ref));
+        if (r.method) sub.push(esc(r.method));
+        if (sub.length) Ph('kr-sub', sub.join(' · '));
+      });
+      out.push('<div class="kr-rule"></div>');
+      R(T.count, String(doc.summary.count));
+      doc.summary.byMethod.forEach(function (m) { R(m.label + ' (' + m.n + ')', moneyMAD(m.amount, doc)); });
+      R(T.total, moneyMAD(doc.totals.total, doc), 'kr-total');
+      out.push('<div class="kr-rule"></div>');
+      if (doc.foot.web) P('kr-c kr-xs', doc.foot.web);
+      if (doc.second) {
+        var T2s = dict(doc.second);
+        P('kr-c kr-sm', T2s.total + ' : ' + moneyMAD(doc.totals.total, doc));
+      }
+      P('kr-c kr-xs kr-kiwi', 'Kiwi');
+      out.push('</div>');
+      return out.join('');
+    }
 
     out.push('<div class="kr-rule"></div>');
     doc.lines.forEach(function (l) {
       out.push('<div class="kr-r kr-item"><span>' + esc(l.qty + '× ' + l.name) + '</span><span>' + esc(moneyMAD(l.total, doc)) + '</span></div>');
       var sub = [];
-      if (l.unit) sub.push(money(l.unit, doc) + ' × ' + l.qty);
-      if (l.ref) sub.push(T.ref + ' ' + l.ref);
-      if (l.barcode) sub.push(l.barcode);
-      if (l.note) sub.push('> ' + l.note);
-      if (sub.length) P('kr-sub', sub.join(' · '));
+      if (l.unit) sub.push(code(money(l.unit, doc) + ' × ' + l.qty));
+      if (l.ref) sub.push(esc(T.ref) + ' ' + code(l.ref));
+      if (l.barcode) sub.push(code(l.barcode));
+      if (l.note) sub.push(esc('> ' + l.note));
+      if (sub.length) Ph('kr-sub', sub.join(' · '));
     });
 
     out.push('<div class="kr-rule"></div>');
@@ -887,6 +1061,11 @@
       '.kr-r>span:first-child{overflow-wrap:anywhere;}',
       '.kr-item>span:first-child{font-weight:500;}',
       '.kr-sub{font-size:9px;opacity:.75;padding-inline-start:4mm;}',
+      /* Un numero de ticket, un code-barres, une date : des valeurs latines qui
+         gardent leur sens de lecture au milieu d une ligne arabe. Sans cela
+         « SS-28-GQ » sort « GQ-SS-28 », et un numero recopie a l envers ne
+         retrouve aucune vente. */
+      '.kr-code{unicode-bidi:isolate;direction:ltr;}',
       '.kr-total{font-weight:700;font-size:14px;margin:1.4mm 0;}',
       '.kr-thanks{margin-top:1mm;}',
       '.kr-qr{word-break:break-all;}',
@@ -909,12 +1088,21 @@
     doc.shop.contact.forEach(function (c) { out.push(c); });
     doc.shop.legal.forEach(function (l) { out.push(l); });
     if (doc.kind === 'refund') out.push(T.refund);
+    if (doc.summary) out.push(doc.summary.title);
     if (doc.copy) out.push('— ' + doc.copy + ' —');
     out.push(new Array(cols + 1).join('-'));
     if (doc.meta.ref) out.push(row(T.no, doc.meta.ref));
-    out.push(row(T.date, doc.meta.date + ' ' + doc.meta.time));
+    out.push(row(doc.summary ? T.period : T.date, doc.meta.date + ' ' + doc.meta.time));
     if (doc.meta.cashier) out.push(row(T.cashier, doc.meta.cashier));
     out.push(new Array(cols + 1).join('-'));
+    if (doc.summary) {
+      doc.summary.rows.forEach(function (r) { out.push(row(r.time + ' ' + r.label, moneyMAD(r.amount, doc))); });
+      out.push(new Array(cols + 1).join('-'));
+      out.push(row(T.count, String(doc.summary.count)));
+      doc.summary.byMethod.forEach(function (m) { out.push(row(m.label + ' (' + m.n + ')', moneyMAD(m.amount, doc))); });
+      out.push(row(T.total, moneyMAD(doc.totals.total, doc)));
+      return out.join('\n');
+    }
     doc.lines.forEach(function (l) { out.push(row(l.qty + '× ' + l.name, moneyMAD(l.total, doc))); });
     out.push(new Array(cols + 1).join('-'));
     if (doc.totals.promo > 0) out.push(row(doc.totals.promoLabel || T.promo, '- ' + moneyMAD(doc.totals.promo, doc)));
@@ -1134,7 +1322,8 @@
     config: getConfig, saveConfig: setConfig, blankConfig: blankConfig,
     normalizeConfig: normalizeConfig, isConfigured: isConfigured,
     /* construire / rendre */
-    build: build, html: html, escpos: escpos, text: text, print: print,
+    build: build, buildSummary: buildSummary,
+    html: html, escpos: escpos, text: text, print: print,
     ensureCSS: ensureCSS, sample: sample,
     /* figer / rouvrir */
     snapshot: snapshot, fromSnapshot: fromSnapshot,

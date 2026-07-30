@@ -198,6 +198,13 @@
       'Impression échouée, le ticket n\'est pas sorti': 'Printing failed — no receipt came out',
       'Impression indisponible sur cet appareil': 'Printing is unavailable on this device',
       'Ticket introuvable': 'Receipt not found',
+      'Imprimer la liste': 'Print the list',
+      'Impression de la liste…': 'Printing the list…',
+      'Liste imprimée': 'List printed',
+      'Impression échouée, la liste n’est pas sortie': 'Printing failed — no list came out',
+      'Impression échouée, la liste n\'est pas sortie': 'Printing failed — no list came out',
+      'Aucune vente à imprimer': 'No sale to print',
+      'Récapitulatif indisponible': 'Summary unavailable',
 
       /* ── clientes / carnet ── */
       'Carnet clients': 'Customer book', 'Nouveau client': 'New customer',
@@ -351,6 +358,13 @@
       'Impression échouée, le ticket n\'est pas sorti': 'فشل الطبع، لم تخرج التذكرة',
       'Impression indisponible sur cet appareil': 'الطبع غير متاح على هذا الجهاز',
       'Ticket introuvable': 'التذكرة غير موجودة',
+      'Imprimer la liste': 'طبع اللائحة',
+      'Impression de la liste…': 'جارٍ طبع اللائحة…',
+      'Liste imprimée': 'طُبعت اللائحة',
+      'Impression échouée, la liste n’est pas sortie': 'فشل الطبع، لم تخرج اللائحة',
+      'Impression échouée, la liste n\'est pas sortie': 'فشل الطبع، لم تخرج اللائحة',
+      'Aucune vente à imprimer': 'لا توجد مبيعات للطبع',
+      'Récapitulatif indisponible': 'التقرير غير متاح',
 
       /* ── clientes / carnet ── */
       'Carnet clients': 'دفتر الزبناء', 'Nouveau client': 'زبون جديد',

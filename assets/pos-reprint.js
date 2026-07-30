@@ -244,6 +244,40 @@
     );
   }
 
+  /* ── imprimer LA LISTE ────────────────────────────────────────────────────
+   * Le même papier que les reçus — logo, en-tête, mentions, largeur de rouleau,
+   * langue — parce que c'est KiwiReceipt qui le compose (buildSummary). Le
+   * commerçant a choisi son ticket une fois dans le tableau de bord ; ce
+   * récapitulatif en hérite au lieu de lui demander une deuxième fois.
+   *
+   * Ce n'est PAS un duplicata : pas de `copy`, un bandeau qui dit ce que c'est,
+   * et aucune ligne d'encaissement. Et comme une réimpression, ça n'écrit rien
+   * nulle part — ni vente, ni numéro, ni stock. */
+  function printList(list) {
+    var K = window.KiwiReceipt;
+    if (!K || !K.buildSummary || !K.print) { toast("Impression indisponible sur cet appareil"); return Promise.resolve(null); }
+    if (!list || !list.length) { toast('Aucune vente à imprimer'); return Promise.resolve(null); }
+    var doc;
+    try {
+      doc = K.buildSummary(list, {
+        /* Les bornes viennent de la liste elle-même, pas de l'horloge : le
+           papier doit dire la période qu'il CONTIENT. */
+        from: list[list.length - 1].ts,
+        to: list[0].ts,
+      });
+    } catch (_) { doc = null; }
+    if (!doc) { toast('Récapitulatif indisponible'); return Promise.resolve(null); }
+
+    toast('Impression de la liste…');
+    return Promise.resolve(K.print(doc)).then(
+      function (r) {
+        toast(r && r.ok ? 'Liste imprimée' : "Impression échouée, la liste n'est pas sortie");
+        return r;
+      },
+      function () { toast("Impression échouée, la liste n'est pas sortie"); return null; }
+    );
+  }
+
   /* ── le panneau ──────────────────────────────────────────────────────────
    * Le kit modal de la caisse (.modal-veil / .modal), pour ressembler aux
    * fenêtres du métier sans les redéfinir. */
@@ -272,7 +306,10 @@
       '.kx-rp-r { display: block; font-size: 11.5px; opacity: .55; font-variant-numeric: tabular-nums; }',
       '.kx-rp-a { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; }',
       '.kx-rp-empty { padding: 26px 20px 30px; text-align: center; font-size: 13px; opacity: .6; line-height: 1.5; }',
-      '.kx-rp-foot { padding: 10px 16px 16px; display: flex; justify-content: flex-end; }',
+      '.kx-rp-foot { padding: 10px 16px 16px; display: flex; justify-content: flex-end;',
+      '  gap: 8px; flex-wrap: wrap; }',
+      '.kx-rp-all { margin-inline-end: auto; display: inline-flex; align-items: center; gap: 7px; }',
+      '.kx-rp-all svg { width: 15px; height: 15px; }',
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -368,7 +405,13 @@
       + '<p>Les ventes encaissées sur ce terminal. Le duplicata garde le numéro '
       + 'et l\'heure d\'origine, et porte la mention « duplicata ».</p></div>'
       + '<div class="kx-rp-list">' + body + '</div>'
-      + '<div class="kx-rp-foot"><button type="button" class="ma-btn" data-kx-rp-close>Fermer</button></div>';
+      /* « Imprimer la liste » à gauche, « Fermer » à droite, et seulement quand
+         il y a quelque chose à imprimer : un bouton qui sort une feuille vide
+         est un bouton qu'on n'ose plus toucher. */
+      + '<div class="kx-rp-foot">'
+      + (list.length ? '<button type="button" class="ma-btn kx-rp-all" data-kx-rp-all>' + ICON
+        + '<span>Imprimer la liste</span></button>' : '')
+      + '<button type="button" class="ma-btn" data-kx-rp-close>Fermer</button></div>';
 
     box.querySelectorAll('[data-kx-rp]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -379,6 +422,8 @@
     });
     var x = box.querySelector('[data-kx-rp-close]');
     if (x) x.addEventListener('click', close);
+    var all = box.querySelector('[data-kx-rp-all]');
+    if (all) all.addEventListener('click', function () { close(); printList(list); });
 
     veil.classList.add('is-open');
     if (window.lucide) try { window.lucide.createIcons(); } catch (_) {}
@@ -419,6 +464,6 @@
 
   window.KiwiPosReprint = {
     mount: mount, open: open, rows: rows, docFrom: docFrom,
-    reprint: reprint, provide: provide,
+    reprint: reprint, printList: printList, provide: provide,
   };
 })();
