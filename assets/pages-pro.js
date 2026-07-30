@@ -13410,7 +13410,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      the nav first and swapped in the generic "Encore rien ici" starter. Their own
      empty state is strictly better: it names the register, keeps the tabs, and
      tells the merchant what will fill it. */
-  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
+  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'promos', 'equipe', 'menu', 'tables',
     'conformite', 'stock', 'finance', 'payroll']);
 
   /* Data-conditional destinations: a module that builds a real per-venue page but

@@ -321,7 +321,9 @@
   function cloud(slugFn) {
     if (doc || !window.KiwiCloudDoc) return doc;
     doc = window.KiwiCloudDoc.attach({
-      feature: 'promos',
+      /* Must match functions/api/store.js. `promos` was rejected as an unknown
+       * feature, so rules appeared locally but never reached another device. */
+      feature: 'promotions',
       slug: slugFn || window.KiwiCloudDoc.currentSlug,
       localKey: function () { return VENUE; },
       read: function () { load(); return db; },
