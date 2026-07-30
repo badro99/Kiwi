@@ -340,12 +340,14 @@
   body.role-manager .role-badge { display: inline-flex; }
   body.role-manager .sidebar a[data-nav="finance"],
   body.role-manager .sidebar a[data-nav="depenses"],
+  body.role-manager .sidebar a[data-nav="promos"],
   body.role-manager .sidebar a[data-nav="payroll"] { display: none !important; }
   /* Staff (an onboarding-created team code) — operational surfaces only:
    * caisse, commandes, salle, KDS, stock. No money, no admin, no compliance. */
   body.role-staff .role-badge { display: inline-flex; }
   body.role-staff .sidebar a[data-nav="finance"],
   body.role-staff .sidebar a[data-nav="depenses"],
+  body.role-staff .sidebar a[data-nav="promos"],
   body.role-staff .sidebar a[data-nav="payroll"],
   body.role-staff .sidebar a[data-nav="conformite"],
   body.role-staff .sidebar a[data-nav="equipe"] { display: none !important; }
@@ -6033,7 +6035,7 @@
    * removes the doorway, not the room: these handlers are reachable from a
    * data-action anywhere in the DOM, from a leftover shortcut, and from the
    * console. Only nav-payroll was ever wrapped — Dépenses was open. */
-  ['nav-payroll', 'nav-depenses'].forEach(wrap);
+  ['nav-payroll', 'nav-depenses', 'nav-promos'].forEach(wrap);
   /* Staff-only exclusions: the badge that cannot see Équipe cannot see the
    * team's contracts or the compliance file either. */
   if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach(wrap);

@@ -41,6 +41,7 @@
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
   // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
+  function wantsOperatorAccess() { try { return /[?&]op=1\b/.test(location.search || ''); } catch (_) { return false; } }
   /* Read and CONSUME the hand-off. Consuming it matters: it is a one-shot
    * instruction from a specific click, and leaving it behind would re-bind the
    * device on some later unrelated visit. Stale ones are ignored — a record older
@@ -362,6 +363,25 @@
     askStaff(venue, function () { bootVertical(venue); });          // none configured → fail-soft
   }
 
+  /* God mode may inspect a selected store's till without borrowing an employee
+   * PIN. Never trust ?op=1 or the hand-off by themselves: /api/me validates the
+   * httpOnly named-operator session and confirms that it is scoped to THIS slug.
+   * If that proof fails, the normal staff gate remains intact. */
+  function bootForOperator(venue) {
+    var merchant = String((venue && venue.merchant) || '');
+    if (!wantsOperatorAccess() || !merchant) { bootWithPin(venue); return; }
+    fetch('/api/me?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.operator !== true || d.scoped !== true || String(d.slug || '') !== merchant) {
+          bootWithPin(venue); return;
+        }
+        setStaff({ name: 'Kiwi Support', role: 'owner' });
+        bootVertical(venue);
+      })
+      .catch(function () { bootWithPin(venue); });
+  }
+
   /* A locked terminal must re-ask WHO is taking over, not just "a code".
    * KiwiPosDispatch.lock() calls __kiwiPinReset(), which restores the NATIVE pad
    * — the one that accepts any four digits and identifies nobody — so a shift
@@ -510,7 +530,11 @@
       // The dashboard named the store on its way here — no server round-trip is
       // needed or wanted for a hand-off inside one browser.
       var h = takeHandoff();
-      if (h) { bootWithPin(applyPairing('', h).venue); return; }
+      if (h) {
+        var handed = applyPairing('', h).venue;
+        if (h.operator === true) bootForOperator(handed); else bootWithPin(handed);
+        return;
+      }
       // Older path: a 6-digit code still pending in this browser.
       var code = newestPending();
       if (code) {

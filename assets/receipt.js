@@ -1052,7 +1052,7 @@
          ligne : une image que le navigateur traite autrement restait collée à
          gauche. `display:block` + marges auto centrent la BOÎTE, pas le flux. */
       '.kr-logo{text-align:center;margin:0 auto 3mm;}',
-      '.kr-logo img{display:block;margin:0 auto;max-width:60%;max-height:18mm;object-fit:contain;}',
+      '.kr-logo img{display:block;margin:0 auto;max-width:90%;max-height:27mm;object-fit:contain;}',
       '.kr-shop{text-align:center;font-weight:700;font-size:16px;letter-spacing:-0.01em;margin-bottom:1mm;}',
       '.kr-c{text-align:center;}.kr-sm{font-size:10px;}.kr-xs{font-size:9px;opacity:.85;}',
       '.kr-sub{font-size:9px;opacity:.75;}',

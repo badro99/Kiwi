@@ -168,8 +168,18 @@
 
     /* Le lot serveur vient compléter, jamais remplacer : une référence déjà
        connue localement garde sa version locale, seule porteuse du ticket figé. */
-    var seen = {};
-    src.forEach(function (e) { if (e && e.ref) seen[String(e.ref)] = 1; });
+    var seen = {}, remoteByRef = {};
+    (serverDay[String(vertical)] || []).forEach(function (e) {
+      if (e && e.ref) remoteByRef[String(e.ref)] = e;
+    });
+    src.forEach(function (e) {
+      if (!e || !e.ref) return;
+      seen[String(e.ref)] = 1;
+      /* The local copy has the exact frozen receipt; the server copy has the
+         database id required to cancel it. Keep both advantages on one row. */
+      var remote = remoteByRef[String(e.ref)];
+      if (remote && remote.saleId) e.saleId = remote.saleId;
+    });
     src = src.concat((serverDay[String(vertical)] || []).filter(function (e) {
       return e && e.ref && !seen[String(e.ref)];
     }));
@@ -310,6 +320,17 @@
       '  gap: 8px; flex-wrap: wrap; }',
       '.kx-rp-all { margin-inline-end: auto; display: inline-flex; align-items: center; gap: 7px; }',
       '.kx-rp-all svg { width: 15px; height: 15px; }',
+      '.kx-rp-ticket { padding: 4px 20px 18px; }',
+      '.kx-rp-ticket-lines { margin: 12px 0 16px; border-top: 1px solid rgba(128,128,128,.18); }',
+      '.kx-rp-ticket-line { display:flex;justify-content:space-between;gap:12px;padding:9px 0;',
+      '  border-bottom:1px solid rgba(128,128,128,.13);font-size:13px; }',
+      '.kx-rp-ticket-actions { display:flex;gap:8px; }',
+      '.kx-rp-ticket-actions .ma-btn { flex:1;justify-content:center; }',
+      '.kx-rp-cancel { color:#b53b31!important;border-color:rgba(181,59,49,.35)!important; }',
+      '.kx-rp-pin { padding: 0 20px 18px; }',
+      '.kx-rp-pin input { box-sizing:border-box;width:100%;padding:13px 14px;border:1px solid rgba(128,128,128,.3);',
+      '  border-radius:11px;background:transparent;color:inherit;font:600 20px/1 monospace;text-align:center;letter-spacing:.32em; }',
+      '.kx-rp-error { min-height:18px;margin:8px 0 0;color:#b53b31;font-size:12px; }',
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -347,6 +368,7 @@
     }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var out = ((j && j.sales) || []).map(function (s) {
         return {
+          saleId: String(s.id || ''),
           ts: +s.ts || 0,
           total: +s.amount || 0,
           ref: String(s.ref || ''),
@@ -364,6 +386,79 @@
   var veil = null;
 
   function close() { if (veil) veil.classList.remove('is-open'); }
+
+  function cancelSale(entry, pin) {
+    var m = merchant();
+    if (!m || !entry || !entry.saleId || typeof fetch !== 'function') {
+      return Promise.reject(new Error('sale-unavailable'));
+    }
+    return fetch('/api/sale/cancel', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || '') }),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok || !j.ok) { var err = new Error((j && j.error) || 'cancel-failed'); err.code = j && j.error; throw err; }
+        return j;
+      });
+    });
+  }
+
+  function showTicket(vertical, entry) {
+    var box = veil && veil.querySelector('.modal');
+    if (!box || !entry) return;
+    var lines = (entry.lines || []).map(function (l) {
+      return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || 'Article'))
+        + '</span><b>' + esc(mad(l.total || 0)) + '</b></div>';
+    }).join('');
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.ref || 'Ticket') + '</h3>'
+      + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts)) + ' · ' + esc(mad(entry.total)) + '</p></div>'
+      + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
+      + '<div class="kx-rp-ticket-actions"><button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
+      + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
+      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button></div></div>';
+    box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
+    box.querySelector('[data-kx-rp-print]').addEventListener('click', function () { close(); reprint(vertical, entry); });
+    var cancel = box.querySelector('[data-kx-rp-cancel]');
+    if (!entry.saleId) {
+      cancel.disabled = true;
+      cancel.title = 'Synchronisation de la vente en cours';
+    } else cancel.addEventListener('click', function () { showPin(vertical, entry); });
+  }
+
+  function showPin(vertical, entry) {
+    var box = veil && veil.querySelector('.modal');
+    if (!box) return;
+    box.innerHTML = '<div class="kx-rp-head"><h3>Confirmer l’annulation</h3>'
+      + '<p>Entrez votre code personnel. Cette annulation sera visible par le propriétaire avec votre nom, le ticket et le montant.</p></div>'
+      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code personnel à 4 chiffres">'
+      + '<div class="kx-rp-error" data-kx-rp-error></div><div class="kx-rp-ticket-actions">'
+      + '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
+      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>Annuler définitivement</button></div></div>';
+    var input = box.querySelector('[data-kx-rp-pin]');
+    var error = box.querySelector('[data-kx-rp-error]');
+    var confirm = box.querySelector('[data-kx-rp-confirm]');
+    box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
+    function submit() {
+      if (!/^\d{4}$/.test(input.value)) { error.textContent = 'Entrez votre code personnel à 4 chiffres.'; return; }
+      confirm.disabled = true; error.textContent = '';
+      cancelSale(entry, input.value).then(function () {
+        serverDay[String(vertical)] = (serverDay[String(vertical)] || []).filter(function (e) { return e.saleId !== entry.saleId; });
+        close();
+        try { document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [entry.ref], merchant: merchant() } })); } catch (_) {}
+        toast('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total));
+      }).catch(function (err) {
+        confirm.disabled = false;
+        error.textContent = err && err.code === 'bad-pin' ? 'Code personnel incorrect.'
+          : err && err.code === 'sale-too-old' ? 'Cette vente est trop ancienne pour être annulée en caisse.'
+          : err && err.code === 'already-cancelled' ? 'Cette vente est déjà annulée.'
+          : 'Annulation impossible. Vérifiez la connexion et réessayez.';
+      });
+    }
+    confirm.addEventListener('click', submit);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    setTimeout(function () { try { input.focus(); } catch (_) {} }, 0);
+  }
 
   function open(vertical, opts) {
     css();
@@ -416,8 +511,7 @@
     box.querySelectorAll('[data-kx-rp]').forEach(function (b) {
       b.addEventListener('click', function () {
         var e = list[+b.getAttribute('data-kx-rp')];
-        close();
-        reprint(vertical, e);
+        showTicket(vertical, e);
       });
     });
     var x = box.querySelector('[data-kx-rp-close]');
@@ -435,7 +529,8 @@
       var before = list.length;
       fetchDay(vertical).then(function () {
         if (!veil || !veil.classList.contains('is-open')) return;
-        if (rows(vertical).length === before) return;
+        /* Even with the same row count, the server may have supplied the id
+           that turns a local receipt into a cancellable sale. */
         open(vertical, { noFetch: true });
       });
     }
@@ -464,6 +559,6 @@
 
   window.KiwiPosReprint = {
     mount: mount, open: open, rows: rows, docFrom: docFrom,
-    reprint: reprint, printList: printList, provide: provide,
+    reprint: reprint, printList: printList, provide: provide, cancelSale: cancelSale,
   };
 })();
