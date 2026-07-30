@@ -13632,8 +13632,36 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-m{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);white-space:nowrap}' +
       '.rtx-l{font-size:14px;color:var(--ink)}' +
       '.rtx-a{font-family:var(--mono);font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap}' +
-      '.rtx-cur{font-size:10px;color:var(--n-500)}';
+      '.rtx-cur{font-size:10px;color:var(--n-500)}' +
+      '.rtx-voids{margin-top:26px;padding-top:18px;border-top:1px solid var(--n-200)}' +
+      '.rtx-void-title{font-size:14px;font-weight:650;margin-bottom:4px}.rtx-void-sub{font-size:12px;color:var(--n-500);margin-bottom:10px}' +
+      '.rtx-void-row{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(150px,2fr) auto;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}';
     document.head.appendChild(s);
+  }
+
+  let cancelAudit = [];
+  let cancelAuditMerchant = '';
+  let cancelAuditLoading = false;
+  let cancelAuditVoidSig = '';
+  function auditMerchant() {
+    try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
+  }
+  function loadCancelAudit(force) {
+    const merchant = auditMerchant();
+    if (!merchant || cancelAuditLoading || (!force && cancelAuditMerchant === merchant)) return;
+    if (cancelAuditMerchant && cancelAuditMerchant !== merchant) cancelAudit = [];
+    cancelAuditLoading = true;
+    const from = Date.now() - 366 * 86400000;
+    fetch(`/api/sale/cancel?merchant=${encodeURIComponent(merchant)}&from=${from}`, { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        cancelAudit = (j && Array.isArray(j.cancellations)) ? j.cancellations : [];
+        cancelAuditMerchant = merchant;
+        const H = window.Kiwi && window.Kiwi.handlers;
+        if (document.querySelector('[data-real-tx], [data-starter-nav="transactions"]') && H?.['nav-transactions']) H['nav-transactions']();
+      }).catch(() => {}).finally(() => { cancelAuditLoading = false; });
   }
 
   /* A custom/real venue's Ventes page shows the merchant's ACTUAL sales from
@@ -13694,6 +13722,16 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
         `</div>`;
     }).join('');
+    const voids = cancelAudit.filter((v) => {
+      const ts = +(v && v.ts) || 0;
+      return ts >= lo && ts < hi;
+    });
+    const voidRows = voids.map((v) => {
+      const d = new Date(v.ts || Date.now());
+      const when = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const detail = (v.lines || []).map(l => `${Number(l.qty) || 1} × ${l.name || 'Article'}`).join(' · ') || v.label || 'Vente';
+      return `<div class="rtx-void-row"><span class="rtx-t">${escS(when)}</span><span class="rtx-void-who">${escS(v.actor || 'Employé')} · ${escS(v.ref || '')}</span><span class="rtx-void-lines" title="${escS(detail)}">${escS(detail)}</span><span class="rtx-void-amount">− ${fmt(v.amount)} MAD</span></div>`;
+    }).join('');
     const startingUp = T({ fr: 'compte en démarrage', en: 'account getting started', ar: 'حساب قيد الإعداد' });
     window.Kiwi.appPage('transactions', {
       title: starterTitle(nav, meta),
@@ -13709,15 +13747,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             en: 'No sales in this period.',
             ar: 'لا توجد مبيعات في هذه الفترة.',
           }))}</span></div>`}</div>
+          ${voids.length ? `<div class="rtx-voids"><div class="rtx-void-title">${escS(T({ fr:'Annulations employés', en:'Staff cancellations', ar:'إلغاءات الموظفين' }))}</div><div class="rtx-void-sub">${escS(T({ fr:'Vente neutralisée · employé, ticket, articles et montant conservés dans le journal.', en:'Voided sale · employee, receipt, items and amount retained in the audit log.', ar:'بيع ملغى · يتم حفظ الموظف والإيصال والمواد والمبلغ في السجل.' }))}</div>${voidRows}</div>` : ''}
         </div>
       `,
     });
+    loadCancelAudit();
   }
 
   function renderStarter(nav, meta) {
     /* Ventes: once the merchant has real sales (rung locally OR bridged from a
      * Live-Link caisse), show the actual list, not the "nothing yet" placeholder. */
-    if (nav === 'transactions' && window.KiwiSales?.list && window.KiwiSales.list().length) {
+    if (nav === 'transactions' && ((window.KiwiSales?.list && window.KiwiSales.list().length) || cancelAudit.length)) {
       return renderRealTransactions(nav, meta);
     }
     /* Cette destination est celle affichée : une copie serveur qui arrive
@@ -13795,6 +13835,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       const orig = H[key];
       if (orig && orig.__kiwiStarter) return;
       const wrapped = function () {
+        if (nav === 'transactions') loadCancelAudit();
         const realOrCustom = window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.();
         const allowed = REAL_FOR_CUSTOM.has(nav) || (REAL_WHEN[nav] && REAL_WHEN[nav]());
         if (realOrCustom && !allowed) return renderStarter(nav, meta);
@@ -13823,6 +13864,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
       const H = window.Kiwi && window.Kiwi.handlers;
       try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
+    });
+    document.addEventListener('kiwi-sales-voided', (e) => {
+      const sig = JSON.stringify((e && e.detail && e.detail.refs) || []);
+      if (sig === cancelAuditVoidSig) return;
+      cancelAuditVoidSig = sig;
+      loadCancelAudit(true);
     });
   });
 })();

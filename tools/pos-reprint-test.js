@@ -79,6 +79,8 @@ function load(extra) {
       },
     }, (extra && extra.window) || {}),
     document: stubDom(),
+    fetch: extra && extra.fetch,
+    localStorage: (extra && extra.localStorage) || { getItem: () => null },
     setTimeout, clearTimeout, Promise, Date, Math, JSON, Array, String, Number, RegExp, isNaN,
   };
   ctx.window.document = ctx.document;
@@ -209,11 +211,31 @@ const SALE = {
   });
 }
 
+/* ═══ annuler transmet l'id serveur, le magasin et le PIN personnel ═══ */
+{
+  let sent = null;
+  const { RP } = load({
+    localStorage: { getItem: (k) => k === 'kiwiLiveMerchant' ? 'amira-cafe' : null },
+    fetch: (url, opts) => {
+      sent = { url, opts, body: JSON.parse(opts.body) };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
+    },
+  });
+  RP.cancelSale({ saleId: 'sale-42', ref: '1042' }, '2819').then(() => {
+    eq('l’annulation passe par la route dédiée', sent.url, '/api/sale/cancel');
+    eq('elle cible la vente serveur exacte', sent.body.id, 'sale-42');
+    eq('elle reste bornée au magasin appairé', sent.body.merchant, 'amira-cafe');
+    eq('elle transmet le code personnel au serveur', sent.body.pin, '2819');
+  }).catch((e) => fails.push(`annulation — ${e && e.message}`));
+}
+
 function done() {
-  if (fails.length) {
-    console.log(`\n  ✗ réimprimer un ticket — ${fails.length} échec(s) sur ${pass + fails.length}`);
-    fails.forEach((f) => console.log(`     · ${f}`));
-    process.exit(1);
-  }
-  console.log(`  ✓ réimprimer un ticket (${pass} contrôles : pas de double encaissement, numéro et heure d'origine, mention du duplicata, démo intacte)`);
+  setTimeout(() => {
+    if (fails.length) {
+      console.log(`\n  ✗ réimprimer un ticket — ${fails.length} échec(s) sur ${pass + fails.length}`);
+      fails.forEach((f) => console.log(`     · ${f}`));
+      process.exit(1);
+    }
+    console.log(`  ✓ réimprimer un ticket (${pass} contrôles : pas de double encaissement, numéro et heure d'origine, mention du duplicata, démo intacte)`);
+  }, 0);
 }
