@@ -376,20 +376,33 @@ ar: {
   /* ─────────── INJECTED STYLES ─────────── */
   const CSS = `
   /* Toasts */
-  .kiwi-toasts { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: var(--z-toast, 400); pointer-events: none; max-width: 360px; }
-  .kiwi-toast { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; padding: 14px 16px; min-width: 280px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 20px 40px -20px rgba(10,15,13,0.25), 0 2px 4px rgba(10,15,13,0.04); pointer-events: all; opacity: 0; transform: translateY(-10px); transition: opacity 220ms, transform 220ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
+  /* Action feedback must sit above full-page drawers/modals (z-9990). The old
+     token value (400) painted confirmations underneath the very surface whose
+     Save button was clicked, making a working action look inert. */
+  .kiwi-toasts { position: fixed; top: max(20px, env(safe-area-inset-top)); right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10020; pointer-events: none; max-width: 390px; }
+  .kiwi-toast { position: relative; overflow: hidden; background: color-mix(in srgb, var(--surface) 96%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.12); backdrop-filter: blur(18px) saturate(1.12); border: 1px solid color-mix(in srgb, var(--n-200) 78%, var(--atlas)); border-radius: 16px; padding: 15px 16px 16px; min-width: 300px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 24px 55px -24px rgba(10,15,13,0.38), 0 8px 18px -14px rgba(11,110,79,0.30), 0 1px 0 rgba(255,255,255,0.82) inset; pointer-events: all; opacity: 0; transform: translateY(-12px) scale(.985); transition: opacity 220ms, transform 260ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
   .kiwi-toast.in { opacity: 1; transform: translateY(0); }
-  .kiwi-toast .ti { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kiwi-toast .ti { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .kiwi-toast.success .ti { background: color-mix(in srgb, var(--atlas) 14%, var(--surface)); color: var(--atlas); }
   .kiwi-toast.info .ti { background: color-mix(in srgb, var(--info) 14%, var(--surface)); color: var(--info); }
   .kiwi-toast.warn .ti { background: color-mix(in srgb, var(--warn-ink) 16%, var(--surface)); color: var(--warn-ink); }
   .kiwi-toast.danger .ti { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
   .kiwi-toast .tb { flex: 1; min-width: 0; }
-  .kiwi-toast .tm { font-size: 14px; font-weight: 500; line-height: 1.35; letter-spacing: -0.005em; }
+  .kiwi-toast .tm { font-size: 14px; font-weight: 650; line-height: 1.35; letter-spacing: -0.008em; }
   .kiwi-toast .ts { font-size: 12.5px; color: var(--n-500); margin-top: 3px; line-height: 1.4; }
   .kiwi-toast .ta { margin-top: 8px; font-size: 12.5px; color: var(--atlas); font-weight: 500; cursor: pointer; background: none; border: 0; padding: 0; }
-  .kiwi-toast .tx { background: none; border: 0; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin-left: 4px; }
+  .kiwi-toast .tx { width: 28px; height: 28px; border-radius: 8px; background: transparent; border: 0; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin: -1px -3px 0 4px; display:flex; align-items:center; justify-content:center; }
   .kiwi-toast .tx:hover { color: var(--ink); }
+  .kiwi-toast .tp { position:absolute; left:0; right:0; bottom:0; height:3px; background:color-mix(in srgb,var(--atlas) 70%,var(--mint)); transform-origin:left; animation:kiwi-toast-life var(--toast-duration,3600ms) linear forwards; }
+  .kiwi-toast.info .tp { background:var(--info); }
+  .kiwi-toast.warn .tp,.kiwi-toast.pend .tp { background:var(--warn-ink); }
+  .kiwi-toast.danger .tp { background:var(--danger); }
+  .kiwi-toast.is-paused .tp { animation-play-state:paused; }
+  @keyframes kiwi-toast-life { from { transform:scaleX(1); } to { transform:scaleX(0); } }
+  .kb.is-feedback-pending { cursor:wait; opacity:.82; }
+  .kb.is-feedback-done { background:var(--atlas)!important; color:var(--paper)!important; border-color:var(--atlas)!important; }
+  .kiwi-button-spinner { width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:kiwi-spin 650ms linear infinite; }
+  @media (prefers-reduced-motion:reduce) { .kiwi-toast,.kiwi-toast .tp { transition:none!important; animation:none!important; } }
 
   /* Modal */
   .kiwi-backdrop { position: fixed; inset: 0; background: rgba(10,15,13,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 9990; opacity: 0; transition: opacity 260ms; padding: 20px; }
@@ -682,6 +695,7 @@ ar: {
       /* Live region — screen readers announce toasts instead of missing them. */
       c.setAttribute('role', 'status');
       c.setAttribute('aria-live', 'polite');
+      c.setAttribute('aria-atomic', 'true');
       document.body.appendChild(c);
     }
     return c;
@@ -714,7 +728,7 @@ ar: {
    *    drawer/modal — the button visibly worked, so the toast is just noise.
    *    Inert/stub buttons open nothing, so they still get their one toast.
    *  · Pass { force: true } for a toast that must always show. */
-  function toast(title, {desc = '', type = 'success', duration = 3000, action = null, force = false} = {}) {
+  function toast(title, {desc = '', type = 'success', duration = 3600, action = null, force = false} = {}) {
     const baseline = window.__kiwiOverlayBaseline || 0;
     const fromClick = (performance.now() - (window.__kiwiClickTs || -1e9)) < 1000;
     // Defer a frame so any drawer/modal this click opened is already in the DOM.
@@ -725,23 +739,70 @@ ar: {
       c.querySelectorAll('.kiwi-toast').forEach(el => el.remove());  // max one
       const t = document.createElement('div');
       const s = GENERAL_STR[kiwiLang()] || GENERAL_STR.fr;
+      duration = Math.max(2200, Number(duration) || 3600);
       t.className = `kiwi-toast ${type}`;
+      t.style.setProperty('--toast-duration', duration + 'ms');
+      if (type === 'danger') t.setAttribute('role', 'alert');
       t['inner' + 'HTML'] = `
-        <div class="ti">${I[type] || I.info}</div>
+        <div class="ti">${type === 'success' ? I.check : (I[type] || I.info)}</div>
         <div class="tb">
           <div class="tm">${escape(title)}</div>
           ${desc ? `<div class="ts">${escape(desc)}</div>` : ''}
           ${action ? `<button class="ta">${escape(action.label)}</button>` : ''}
         </div>
         <button class="tx" aria-label="${s.close}">×</button>
+        <div class="tp" aria-hidden="true"></div>
       `;
       c.appendChild(t);
       requestAnimationFrame(() => t.classList.add('in'));
       const dismiss = () => { t.classList.remove('in'); setTimeout(() => t.remove(), 280); };
-      const timer = setTimeout(dismiss, duration);
+      let remaining = duration, started = performance.now(), timer = null;
+      const schedule = () => { started = performance.now(); timer = setTimeout(dismiss, remaining); };
+      const pause = () => { if (!timer) return; clearTimeout(timer); timer = null; remaining = Math.max(0, remaining - (performance.now() - started)); t.classList.add('is-paused'); };
+      const resume = () => { if (timer || remaining <= 0) return; t.classList.remove('is-paused'); schedule(); };
+      schedule();
+      t.addEventListener('mouseenter', pause);
+      t.addEventListener('mouseleave', resume);
+      t.addEventListener('focusin', pause);
+      t.addEventListener('focusout', resume);
       t.querySelector('.tx').onclick = () => { clearTimeout(timer); dismiss(); };
       if (action) t.querySelector('.ta').onclick = () => { clearTimeout(timer); dismiss(); action.onClick?.(); };
+      try { window.dispatchEvent(new CustomEvent('kiwi:toast', { detail: { title: String(title || ''), desc: String(desc || ''), type } })); } catch (_) {}
     });
+  }
+
+  /* Visible state on the button itself. Toasts confirm the result; this closes
+     the immediate 100–300 ms gap after a click, when users otherwise click a
+     second time because nothing appears to have happened. */
+  function buttonFeedback(button, { pending = 'Enregistrement…', done = 'Enregistré', duration = 1500 } = {}) {
+    if (!button) return { success() {}, error() {} };
+    const original = button.innerHTML;
+    const wasDisabled = button.disabled;
+    let restoreTimer = null;
+    button.disabled = true;
+    button.classList.add('is-feedback-pending');
+    button.replaceChildren();
+    const spin = document.createElement('span'); spin.className = 'kiwi-button-spinner'; spin.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span'); label.textContent = pending;
+    button.append(spin, label);
+    const restore = () => {
+      clearTimeout(restoreTimer);
+      button.innerHTML = original;
+      button.disabled = wasDisabled;
+      button.classList.remove('is-feedback-pending', 'is-feedback-done');
+    };
+    return {
+      success(text = done) {
+        button.classList.remove('is-feedback-pending');
+        button.classList.add('is-feedback-done');
+        button.replaceChildren();
+        const check = document.createElement('span'); check.setAttribute('aria-hidden', 'true'); check.textContent = '✓';
+        const doneLabel = document.createElement('span'); doneLabel.textContent = text;
+        button.append(check, doneLabel);
+        restoreTimer = setTimeout(restore, duration);
+      },
+      error() { restore(); },
+    };
   }
 
   /* ═══════════════════════ MODAL ═══════════════════════ */
@@ -4071,7 +4132,7 @@ ar: {
   }
 
   window.Kiwi = {
-    toast, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
+    toast, buttonFeedback, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
     setActivePage, syncSidebar, pageShell,
     get activePage() { return activePage; },
   };

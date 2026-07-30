@@ -473,6 +473,11 @@
 .bq-btn.ghost { background: none; color: var(--ink-3); }
 .bq-btn.ghost:hover { color: var(--ink); background: var(--paper-mute); }
 .bq-btn:disabled { opacity: 0.35; cursor: default; }
+.bq-btn.is-busy { cursor: wait; opacity: .78; }
+.bq-btn.is-done { background: var(--forest); color: #fff; }
+.bq-btn-spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: bq-btn-spin 650ms linear infinite; }
+@keyframes bq-btn-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .bq-btn-spinner { animation-duration: 1.8s; } }
 
 /* ═══════════════ APPROBATION GÉRANTE ═══════════════ */
 .modal.bq-approve { width: 440px; padding: 24px 24px 20px; }

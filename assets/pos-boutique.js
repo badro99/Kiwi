@@ -50,12 +50,20 @@
   }
   function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
 
-  function toast(msg, ms) {
+  function toast(msg, ms, kind, desc) {
+    if (typeof window.KiwiCaisseToast === 'function') { window.KiwiCaisseToast(msg, ms, kind, desc); return; }
     const stack = $('#toast-stack');
     if (!stack) return;
+    const lower = String(msg || '').toLowerCase();
+    kind = kind || (/refus|erreur|illisible|impossible|requis/.test(lower) ? 'danger' : /d'abord|attention|déjà|scannez/.test(lower) ? 'warn' : 'success');
     const el = document.createElement('div');
-    el.className = 'toast';
-    el.textContent = msg;
+    el.className = `toast is-${kind}`;
+    el.setAttribute('role', kind === 'danger' ? 'alert' : 'status');
+    const copy = document.createElement('span'); copy.className = 'toast-copy';
+    const title = document.createElement('span'); title.className = 'toast-title'; title.textContent = msg;
+    copy.appendChild(title);
+    if (desc) { const detail = document.createElement('span'); detail.className = 'toast-desc'; detail.textContent = desc; copy.appendChild(detail); }
+    el.appendChild(copy);
     stack.appendChild(el);
     setTimeout(() => el.classList.add('fade'), ms || 2200);
     setTimeout(() => el.remove(), (ms || 2200) + 280);
@@ -3624,6 +3632,12 @@
         if (newCat) catId = cat.addCategory(newCat).id;
         const size = $('#bqi-n-size', el).value.trim() || 'TU';
         const stock = Math.max(0, parseInt($('#bqi-n-stock', el).value, 10) || 0);
+        const saveBtn = $('#bqi-n-save', el);
+        const oldSave = saveBtn.innerHTML;
+        saveBtn.disabled = true;
+        saveBtn.classList.add('is-busy');
+        saveBtn.innerHTML = '<span class="bq-btn-spinner" aria-hidden="true"></span><span>Création…</span>';
+        const restoreSave = () => { saveBtn.disabled = false; saveBtn.classList.remove('is-busy', 'is-done'); saveBtn.innerHTML = oldSave; };
         let p = null, ev = null, res = null, genCode = null;
         cat.batch(() => {
           p = cat.addProduct({ name, categoryId: catId, kind: kindSel.value, art: icon, priceMAD: bqMoney($('#bqi-n-price', el).value), cost: bqMoney($('#bqi-n-cost', el).value) });
@@ -3637,17 +3651,20 @@
         });
         if (mode === 'existing') {
           if (!res || !res.ok) {
-            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé');
+            restoreSave();
+            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé', 3600, 'danger');
             return;
           }
-          toast(`${name} créé · code ${raw} conservé, aucune étiquette imprimée`);
+          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code fournisseur conservé`);
         } else if (mode === 'gen') {
-          toast(genCode ? `${name} créé · EAN-13 ${genCode} généré` : `${name} créé`);
+          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size}${genCode ? ' · code Kiwi généré' : ''}`);
         } else {
-          toast(`${name} créé · code à ajouter plus tard`);
+          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code à ajouter plus tard`);
         }
+        saveBtn.classList.remove('is-busy'); saveBtn.classList.add('is-done');
+        saveBtn.innerHTML = '<span aria-hidden="true">✓</span><span>Article créé</span>';
         disarmScanCapture();
-        openInvProduct(p.id);
+        setTimeout(() => openInvProduct(p.id), 320);
       };
       $('#bqi-n-save', el).addEventListener('click', save);
       setMode('existing');

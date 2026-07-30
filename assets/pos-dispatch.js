@@ -78,11 +78,8 @@
     st.textContent = `
       body.is-pos .shell, body.is-pos .topbar,
       body.is-pos .clockin-screen, body.is-pos .welcome-banner { display: none !important; }
-      /* #toast-stack ships at z-index 90 — equal to the vertical roots and below
-         the modal kit (z-100), so confirmations would paint UNDER the open
-         vertical. Lift it above both whenever a métier is active (scoped: the
-         restaurant caisse is untouched). */
-      body.is-pos #toast-stack { z-index: 200; }
+      /* Action confirmations stay above every métier modal and camera overlay. */
+      body.is-pos #toast-stack { z-index: 10050; }
       .vx-screen {
         --atlas: #0B6E4F; --riad: #053B2C;
         position: fixed; inset: 0; z-index: 90; display: none;
@@ -152,11 +149,17 @@
   }
 
   function toast(msg) {
+    if (typeof window.KiwiCaisseToast === 'function') { window.KiwiCaisseToast(msg); return; }
     const stack = document.getElementById('toast-stack');
     if (!stack) return;
+    const lower = String(msg || '').toLowerCase();
+    const kind = /refus|erreur|illisible|impossible|requis/.test(lower) ? 'danger' : /d'abord|attention|déjà|scannez/.test(lower) ? 'warn' : 'success';
     const el = document.createElement('div');
-    el.className = 'toast';
-    el.textContent = msg;
+    el.className = `toast is-${kind}`;
+    el.setAttribute('role', kind === 'danger' ? 'alert' : 'status');
+    const copy = document.createElement('span'); copy.className = 'toast-copy';
+    const title = document.createElement('span'); title.className = 'toast-title'; title.textContent = msg;
+    copy.appendChild(title); el.appendChild(copy);
     stack.appendChild(el);
     setTimeout(() => el.classList.add('fade'), 2200);
     setTimeout(() => el.remove(), 2480);

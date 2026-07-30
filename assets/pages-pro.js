@@ -3049,8 +3049,10 @@ const PDS_STR = {
     modeRotateDesc: 'Faites tourner les serveurs entre zones et tables pour éviter la lassitude, équité automatique.',
     /* Top bar */
     save: 'Sauvegarder',
+    saving: 'Enregistrement…',
+    savedButton: 'Enregistré',
     saved: 'Plan enregistré',
-    savedDesc: 'Disposition, zones, serveurs et rotation sauvegardés dans le navigateur.',
+    savedDesc: 'Toutes les modifications ont bien été enregistrées.',
     reset: 'Réinitialiser',
     resetTitle: 'Réinitialiser le plan ?',
     resetDesc: 'Supprime toutes les tables, zones et affectations · charge le template par défaut. Action irréversible.',
@@ -3246,8 +3248,10 @@ const PDS_STR = {
     modeAssignDesc: 'Drag a server onto a table to assign · click a table to reassign.',
     modeRotateDesc: 'Rotate servers across zones and tables so they don\'t burn out, fairness built-in.',
     save: 'Save',
+    saving: 'Saving…',
+    savedButton: 'Saved',
     saved: 'Plan saved',
-    savedDesc: 'Layout, zones, servers and rotation saved in your browser.',
+    savedDesc: 'All floor-plan changes were saved successfully.',
     reset: 'Reset',
     resetTitle: 'Reset the plan?',
     resetDesc: 'Removes all tables, zones and assignments · loads the default template. Cannot be undone.',
@@ -3428,8 +3432,10 @@ const PDS_STR = {
     modeAssignDesc: 'اسحب نادلًا فوق طاولة لإسنادها · انقر طاولة لإعادة الإسناد.',
     modeRotateDesc: 'قم بتدوير النوادل بين المناطق والطاولات حتى لا يملّوا، العدالة تلقائية.',
     save: 'حفظ',
+    saving: 'جارٍ الحفظ…',
+    savedButton: 'تم الحفظ',
     saved: 'تم حفظ المخطط',
-    savedDesc: 'تم حفظ الترتيب والمناطق والنوادل والتدوير في المتصفح.',
+    savedDesc: 'تم حفظ جميع تغييرات مخطط القاعة بنجاح.',
     reset: 'إعادة تعيين',
     resetTitle: 'إعادة تعيين المخطط؟',
     resetDesc: 'يحذف كل الطاولات والمناطق والإسنادات · يحمّل القالب الافتراضي. لا يمكن التراجع.',
@@ -6006,8 +6012,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
   switch (action) {
     case 'save': {
+      const feedback = Kiwi.buttonFeedback?.(btn, { pending: T.saving, done: T.savedButton });
       pdsSave(state);
-      toast(T.saved, { type: 'success', desc: T.savedDesc });
+      feedback?.success(T.savedButton);
+      toast(T.saved, { type: 'success', desc: T.savedDesc, force: true });
       break;
     }
     case 'reset': {

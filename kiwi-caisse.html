@@ -1441,22 +1441,37 @@
 
     /* ---------- Toast ---------- */
     #toast-stack {
-      position: fixed; bottom: 24px; left: 50%;
+      position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%;
       transform: translateX(-50%);
       display: flex; flex-direction: column; gap: 8px;
-      z-index: 90;
+      z-index: 10050;
       pointer-events: none;
+      width: min(390px, calc(100vw - 32px));
     }
     .toast {
-      background: var(--ink);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 999px;
-      font-size: 13px;
-      box-shadow: var(--shadow-2);
+      position: relative; overflow: hidden;
+      display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 11px; align-items: center;
+      width: 100%; box-sizing: border-box;
+      background: rgba(255,255,255,.96); color: var(--ink);
+      -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15);
+      padding: 13px 15px;
+      border: 1px solid rgba(11,110,79,.18); border-radius: 16px;
+      font-size: 13px; line-height: 1.35; font-weight: 650;
+      box-shadow: 0 24px 55px -24px rgba(10,15,13,.46), 0 8px 18px -14px rgba(11,110,79,.30);
       animation: toast-in 240ms ease-out;
       pointer-events: all;
     }
+    .toast::before {
+      content: '✓'; display: grid; place-items: center; width: 30px; height: 30px;
+      border-radius: 10px; background: rgba(11,110,79,.12); color: var(--emerald);
+      font-size: 15px; font-weight: 800;
+    }
+    .toast.is-info::before { content: 'i'; background: rgba(39,102,184,.11); color: #2766B8; }
+    .toast.is-warn::before { content: '!'; background: rgba(188,113,0,.12); color: #9A5C00; }
+    .toast.is-danger::before { content: '×'; background: rgba(185,44,44,.11); color: #B92C2C; }
+    .toast-copy { min-width: 0; }
+    .toast-title { display:block; }
+    .toast-desc { display:block; margin-top:2px; color:var(--ink-3); font-size:12px; font-weight:450; }
     @keyframes toast-in {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -6196,6 +6211,10 @@
         if (el) el.textContent = `${occupied} / ${floorIds.length} occupées`;
       });
     }
+    /* Phone-order state must exist before the first floor render: tableHTML()
+       asks phoneBadgeHTML() for each table during this initial paint. */
+    const phoneSeats = new Map();     // clé table → { session, since }
+    const phonePending = new Map();   // clé table → nombre de commandes en attente
     renderSalle();
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -6286,9 +6305,6 @@
        emporterait les sessions avec. Il vit dans sa propre carte, indexée par
        table, et survit à la reconstruction.
        ═══════════════════════════════════════════════════════════════════════ */
-    const phoneSeats = new Map();     // clé table → { session, since }
-    const phonePending = new Map();   // clé table → nombre de commandes en attente
-
     /* La même normalisation que le serveur (functions/api/order/_lib.js) :
        « T7 », « t7 » et « T 7 » désignent la table que le patron a nommée T7. */
     function tableKey(v) {
@@ -6728,14 +6744,23 @@
     });
 
     /* ---------- Toast ---------- */
-    function toast(msg, ms = 1800) {
+    function toast(msg, ms = 3200, kind = '', desc = '') {
+      const lower = String(msg || '').toLowerCase();
+      if (!kind) kind = /refus|erreur|illisible|impossible|requis/.test(lower) ? 'danger' : /d'abord|attention|d\u00e9j\u00e0|scannez/.test(lower) ? 'warn' : 'success';
       const el = document.createElement('div');
-      el.className = 'toast';
-      el.textContent = msg;
+      el.className = `toast is-${kind}`;
+      el.setAttribute('role', kind === 'danger' ? 'alert' : 'status');
+      const copy = document.createElement('span'); copy.className = 'toast-copy';
+      const title = document.createElement('span'); title.className = 'toast-title'; title.textContent = msg;
+      copy.appendChild(title);
+      if (desc) { const detail = document.createElement('span'); detail.className = 'toast-desc'; detail.textContent = desc; copy.appendChild(detail); }
+      el.appendChild(copy);
       $('#toast-stack').appendChild(el);
       setTimeout(() => { el.classList.add('fade'); }, ms);
       setTimeout(() => { el.remove(); }, ms + 280);
+      try { window.dispatchEvent(new CustomEvent('kiwi:toast', { detail: { title: String(msg || ''), desc: String(desc || ''), type: kind } })); } catch (_) {}
     }
+    window.KiwiCaisseToast = toast;
 
     /* ---------- Right panel state ---------- */
     let selectedId = null;
