@@ -256,6 +256,22 @@ section('Règles de promotions (tools/promos-test.js)');
   }
 }
 
+/* ── 4d-ter · langue du comptoir ────────────────────────────────────────────
+ * Une traduction qui échoue ne lève aucune erreur : l'écran reste simplement en
+ * français, personne ne signale rien, et la fonctionnalité meurt en silence. */
+section('Langue du comptoir (tools/caisse-lang-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-lang-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`langue gate green (${(out.match(/✓/g) || []).length - 1} contrôles : découpe, intégrité fr/en/ar)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`caisse-lang-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4e · production action honesty ────────────────────────────────────────
  * Presentation workflows must fail honestly for a real merchant, even if a
  * later navigation change accidentally exposes one of their buttons. */

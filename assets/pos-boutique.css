@@ -1392,3 +1392,23 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
 .bq-prl-d { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--ink-2); }
 .bq-prl-d .note { font-size: 11.5px; color: var(--ink-3); }
 .bq-promom .bq-prc-warn { margin: 10px 24px 0; }
+
+/* ── Arabe · ce que le retournement automatique ne fait pas ──────────────────
+   `dir="rtl"` retourne les dispositions en flex et en grille tout seul, mais
+   pas ce qui est posé en coordonnées PHYSIQUES. La coquille du métier tient le
+   rail et la zone de travail en absolu (`left: 0` / `inset: 0 0 0 212px`) :
+   sans ces deux règles, tout l'intérieur passait à droite pendant que le rail
+   restait collé à gauche — une caisse à moitié retournée, ce qui est pire que
+   pas retournée du tout. La bordure suit le même raisonnement : elle sépare le
+   rail de la zone de travail, donc elle change de côté avec lui. */
+.kiwi-rtl #pos-boutique > .bq-rail { left: auto; right: 0; }
+.kiwi-rtl #pos-boutique > .bq-main { inset: 0 212px 0 0; }
+.kiwi-rtl .bq-rail { border-right: 0; border-left: 1px solid rgba(255,255,255,0.06); }
+/* Le prix barré d'une promotion : en écriture arabe la séquence « ancien
+   nouveau » se relit à l'envers si on la laisse suivre le flux du texte. On
+   épingle les deux prix en lecture latine — ce sont des CHIFFRES, ils se lisent
+   de gauche à droite dans les deux langues. */
+.kiwi-rtl .bq-card-price,
+.kiwi-rtl .bq-line-price,
+.kiwi-rtl .bq-look-price,
+.kiwi-rtl .bq-prc-srow .pz { direction: ltr; }
