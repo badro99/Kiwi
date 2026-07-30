@@ -4,6 +4,25 @@ Kiwi production continues to use Cloudflare D1. The Supabase project is a
 staging shadow until row counts, representative records, tenancy, and rollback
 have all been verified.
 
+## Access model — the browser never writes
+
+Kiwi is server-authoritative and stays that way. The browser talks to a
+Cloudflare Function; the Function talks to the database. That is not an
+implementation detail, it is what keeps the books straight: voiding a sale
+writes `sales.void_ts` and the matching `sale_audit` row in one request,
+because one piece of code owns both.
+
+So **writes belong to `service_role`** — that is, to the Functions. `anon` and
+`authenticated` hold no `insert`, `update`, or `delete` on any table. RLS is
+not the door here, it is the second turn of the key: what still holds when a
+policy is written wrong or a publishable key leaks.
+
+Reads granted to `authenticated` are scoped by `private.owns_merchant()`, and
+the commercial record (`merchant_config` — plan, MRR, active modules) by
+`private.manages_merchant()`, which requires role `owner` or `manager`.
+`staff_pins` is reachable by nobody but the server: a four-digit secret a
+waiter can read no longer authenticates the waiter.
+
 ## Safety rules
 
 - Never commit the database password, a secret/service-role key, or a D1 token.
@@ -28,13 +47,17 @@ storage.
 
 ## Cutover gates
 
-1. Apply the schema migration to Supabase staging.
+1. Apply both schema migrations to Supabase staging.
 2. Export a read-only D1 snapshot and import it into staging.
 3. Compare every table's row count and a sample of tenant-owned records.
-4. Verify anonymous access exposes only published menus.
-5. Verify two test merchants cannot read or update each other's rows.
-6. Exercise login, sales, inventory, clients, orders, and offline recovery.
-7. Keep D1 untouched and authoritative until explicit production approval.
+4. **Provision tenancy** — `tools/supabase-provision-tenancy.mjs`. Without it
+   `account_users` is empty and every policy denies everything, including a
+   merchant's own rows.
+5. Verify anonymous access exposes only published menus.
+6. Verify two test merchants cannot read or update each other's rows —
+   `node tools/supabase-tenancy-test.mjs`.
+7. Exercise login, sales, inventory, clients, orders, and offline recovery.
+8. Keep D1 untouched and authoritative until explicit production approval.
 
 No production cutover is performed by this migration.
 
@@ -47,6 +70,33 @@ use a local snapshot without a Cloudflare API token. The importer also refuses
 to run unless `MIGRATION_CONFIRM=kiwi-staging` and the Supabase URL matches
 `SUPABASE_EXPECTED_PROJECT_REF`.
 
+Paging is by `rowid` cursor, not `limit/offset`, so a row deleted mid-run
+cannot shift the window and skip the rows behind it. The row-count check is
+deliberately asymmetric: fewer rows in Supabase than were read from D1 is a
+loss and stops the run; more is expected and only logged, because the tenancy
+gate seeds its own test merchants in the same schema.
+
 Required secrets are documented by name in `.env.example`; values must remain
 outside Git and browser code. The importer records its result in `import_runs`
-and stops on the first row-count mismatch.
+and stops on the first shortfall.
+
+## Tenancy provisioning
+
+`account_users` is the one table with no D1 source — D1 knows nothing of
+Supabase Auth, and `accounts` carries Kiwi's own salt and hash, not an
+`auth.users` identity. `tools/supabase-provision-tenancy.mjs` finds or creates
+the Supabase user matching each `accounts.email`, then writes the membership
+row. It sends no email (`email_confirm: true`), and the password it sets is
+random and never printed, returned, or stored — signing in for real means a
+reset from the Supabase console, by the owner.
+
+It also lists any `merchant_config` row with a NULL `account_id`. Those
+establishments reach no member at all: their owner would see zeros everywhere,
+with no error to explain it. Attach them before any cutover.
+
+`tools/supabase-tenancy-test.mjs` then proves the isolation rather than
+assuming it. Each negative assertion is preceded by its positive — that
+merchant A sees its *own* sales is checked before checking that it sees none of
+B's, because an empty result proves nothing on its own. It seeds two merchants
+and three members (owner, staff, stranger), exercises them, and deletes them
+again, including on failure.

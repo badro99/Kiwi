@@ -482,6 +482,26 @@ section('Pages publiques (tools/public-assets-test.js)');
   }
 }
 
+/* ── 12 · l'import D1 → Supabase ─────────────────────────────────────────────
+ * Les transformations de l'import (tools/migrate-d1-to-supabase.mjs) changent
+ * la forme des données sans jamais lever d'erreur : un objet JSON recopié dans
+ * une colonne jsonb y devient une chaîne, et la requête qui l'interroge rendra
+ * NULL pendant des mois avant que quelqu'un s'en aperçoive. Le module s'exerce
+ * hors réseau, donc il entre ici comme les autres.
+ * (tools/supabase-migration-test.mjs) ─────────────────────────────────────── */
+section('Import Supabase (tools/supabase-migration-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'supabase-migration-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`supabase-migration-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
