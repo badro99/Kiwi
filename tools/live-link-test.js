@@ -70,5 +70,36 @@ function check(ok, label) {
   check(queue().length === 205, 'long outage does not trim the oldest sales');
   check(window.KiwiLive.queueStatus().pending === 205, 'cashier status exposes the true pending count');
 
-  if (!process.exitCode) console.log('\n✓ 7 live-link resilience checks passed.');
+  /* ── Le miroir est-il allumé, et pour qui ? ──────────────────────────────
+   * Le journal de caisse est la seule donnée du commerce qui n'existait nulle
+   * part ailleurs que dans le stockage d'un onglet : le stock revient de
+   * /api/catalog, le carnet de /api/clients, la carte de /api/menu. Les ventes,
+   * non. Un iPad remplacé, un « effacer les données du site », et le chiffre
+   * d'affaires n'était plus nulle part.
+   *
+   * Les deux sens comptent autant l'un que l'autre. Allumé chez un vrai
+   * commerçant, sinon la correction ne sert à rien ; ÉTEINT en démonstration,
+   * sinon une vente fabriquée part sous le locataire partagé — et c'est cette
+   * moitié-là qu'on casse sans s'en apercevoir. */
+  const wasReal = window.KiwiEnv.isReal;
+  data.delete('kiwiLive');
+  check(window.KiwiLive.isOn() === true, 'un vrai commerçant miroite ses ventes sans rien régler');
+
+  window.KiwiEnv.isReal = () => false;
+  check(window.KiwiLive.isOn() === false, 'une démonstration locale n\'envoie rien au serveur');
+
+  data.set('kiwiLive', '1');
+  check(window.KiwiLive.isOn() === true, 'le forçage explicite reste possible en démonstration');
+
+  window.KiwiEnv.isReal = wasReal;
+  data.set('kiwiLive', '0');
+  check(window.KiwiLive.isOn() === false, 'le refus explicite prime sur le défaut');
+
+  delete window.KiwiEnv;
+  data.delete('kiwiLive');
+  check(window.KiwiLive.isOn() === false, 'sans KiwiEnv on se tait plutôt que de deviner');
+  window.KiwiEnv = { isReal: wasReal };
+  data.set('kiwiLive', '1');
+
+  if (!process.exitCode) console.log('\n✓ 12 live-link resilience checks passed.');
 })().catch((e) => { console.error(e); process.exit(1); });

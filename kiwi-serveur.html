@@ -16,6 +16,13 @@
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
+  <!-- Sans defer et AVANT tout le reste : KiwiEnv.isReal() est le verrou qui
+       décide si les additions réglées ici remontent vers /api/sale. Il était
+       absent de cette page seule — la caisse et le tableau de bord le chargent
+       depuis toujours — donc live-link.js y lisait un `window.KiwiEnv`
+       indéfini et se croyait en démonstration. Une table encaissée au sol ne
+       quittait pas le téléphone du serveur. -->
+  <script src="assets/kiwi-env.js"></script>
   <script src="assets/lucide.min.js" defer></script>
 
   <style>

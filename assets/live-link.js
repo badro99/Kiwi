@@ -1,7 +1,9 @@
-/* Kiwi Live Link — optional $0 backend bridge (Cloudflare Pages Functions + D1).
+/* Kiwi Live Link — le pont ventes ↔ serveur (Cloudflare Pages Functions + D1).
  *
- * OFF by default: the apps run their normal mocked, per-browser demo. Turn it on
- * with  localStorage.kiwiLive = '1'  (or add  ?live=1  to the URL once). When on:
+ * ALLUMÉ dès qu'il s'agit d'un vrai commerçant (KiwiEnv.isReal()), comme le
+ * stock, le carnet client et la carte. Éteint en démonstration locale, où les
+ * ventes fabriquées ne doivent atteindre aucun serveur. `kiwiLive = '0'` refuse
+ * explicitement, `'1'` et `?live=1` forcent. Quand c'est allumé :
  *   • the CAISSE POSTs every confirmed sale to  /api/sale
  *   • the SERVEUR POSTs every settled table (card · cash · split) to  /api/sale
  *   • the DASHBOARD polls  /api/feed  and pushes what it gets into KiwiSales, so
@@ -31,10 +33,41 @@
   // ?live=1 or ?op=1 (operator view) both turn the live feed on.
   function urlFlag() { try { return /[?&](?:live=1|op=1)(?:&|$)/.test(location.search); } catch (_) { return false; } }
   function opMode() { try { return /[?&]op=1(?:&|$)/.test(location.search); } catch (_) { return false; } }
+
+  /* Le même verrou que partout ailleurs : hébergé ⇒ toujours vrai (les démos
+     sont une facilité de localhost), en local ⇒ seulement avec une vraie
+     session. C'est ce qui empêche une vente de démonstration de partir sous le
+     locataire partagé « cafe-atlas ». */
+  function realEnv() {
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); }
+    catch (_) { return false; }
+  }
+
+  /* ALLUMÉ par défaut chez un vrai commerçant — et c'était le dernier endroit
+   * où ça ne l'était pas.
+   *
+   * Le stock passe par /api/catalog, le carnet client par /api/clients, la
+   * carte par /api/menu, les horaires et les rapports Z par /api/store. Tous
+   * s'activent sur `isReal()`, sans rien demander. Les VENTES, elles,
+   * attendaient un drapeau que personne ne pose : sans `?live=1`, le journal du
+   * comptoir ne quittait jamais le navigateur.
+   *
+   * Ce que ça coûtait n'est pas une fonctionnalité en moins, c'est la seule
+   * donnée irremplaçable du commerce posée dans le stockage d'un onglet. Un
+   * iPad qu'on remplace, un « effacer les données du site » pour régler un
+   * affichage, une fenêtre privée, iOS qui purge le stockage d'un site laissé
+   * de côté sept jours : la caisse repart à zéro et le chiffre d'affaires n'est
+   * nulle part ailleurs. Le stock, lui, revenait tout seul.
+   *
+   * Le refus explicite reste possible et prioritaire (`kiwiLive = '0'`) — on ne
+   * retire pas l'interrupteur, on change ce que fait l'absence de choix. */
   function on() {
     try {
       if (urlFlag()) { localStorage.setItem(LS, '1'); return true; }
-      return localStorage.getItem(LS) === '1';
+      var v = localStorage.getItem(LS);
+      if (v === '1') return true;
+      if (v === '0') return false;
+      return realEnv();
     } catch (_) { return urlFlag(); }
   }
   // slugMerchant() twin (functions/auth/_lib.js): "MixMax Test" → "mixmax-test".

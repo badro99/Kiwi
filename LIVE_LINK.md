@@ -4,11 +4,19 @@ Turns the demo from "each browser is its own island" into a real link: a sale ru
 on the **caisse** (any device) appears on the owner's **dashboard** (any device),
 live. Runs entirely on the **free** Cloudflare Pages + D1 tiers.
 
-**Real and paired stores are live automatically** (`KiwiEnv.isReal()` turns the
-spine on — no flag needed). The `kiwiLive` / `?live=1` flag described below
-remains as the manual switch for ad-hoc use. With neither, the showcase venues
-keep their seeded per-browser behaviour — nothing here can disturb them, and
-they can never leak into a real store's feed.
+**Real stores are live automatically** (`KiwiEnv.isReal()` turns the spine on —
+no flag needed). The `kiwiLive` / `?live=1` flag described below remains as the
+manual switch for ad-hoc use, and `kiwiLive = '0'` is an explicit refusal that
+outranks the default. Showcase venues keep their seeded per-browser behaviour —
+nothing here can disturb them, and they can never leak into a real store's feed.
+
+> This paragraph described the intent from the start, but until 2026-07-30 the
+> code did not honour it: `on()` read `kiwiLive === '1'` and nothing else. Only
+> *paired* tills were live, and by side effect — `caisse-pairing.js` sets the
+> flag when a code is redeemed. A real merchant who never paired a second
+> device rang up sales that never left the browser. Sales were the last store
+> still working that way; stock, clients, the carte and the Z reports had all
+> moved to `isReal()`.
 
 > **✅ Provisioned (2026-07-07).** The one-time Cloudflare setup below is already
 > done on the `kiwi-maroc` Pages project: D1 database **`kiwi-sales`** created,
