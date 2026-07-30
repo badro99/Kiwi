@@ -100,6 +100,42 @@
       'Se termine dans {n} jours': 'Ends in {n} days', 'Démarre dans {n} jours': 'Starts in {n} days',
       'Se termine demain': 'Ends tomorrow', 'Démarre demain': 'Starts tomorrow',
       'Il en reste {n} ou moins': '{n} left or fewer',
+      /* Le bandeau du carnet clients : « 1 pt / MAD · palier 100 ». */
+      '{n} pt / MAD': '{n} pt per MAD', 'palier {n}': 'tier {n}',
+      /* Les segments d'une fiche cliente. « Nouveau » est un mot courant : il ne
+         se traduit que seul, dans son propre nœud — jamais au milieu d'un nom. */
+      'Régulier': 'Regular', 'Nouveau': 'New', 'Dormant': 'Dormant',
+      /* La fiche cliente et son formulaire — le carnet est une page à part
+         entière, il se lit en entier dans la langue du comptoir. */
+      'Récompense prête': 'Reward ready', 'récompense {x}': 'reward {x}',
+      'Visites': 'Visits', 'Dépensé (MAD)': 'Spent (MAD)', 'Dernière visite': 'Last visit',
+      'Email': 'Email', 'Ville': 'City', 'Adresse': 'Address', 'Anniversaire': 'Birthday',
+      'Genre': 'Gender', 'Notes': 'Notes', 'Consentement': 'Consent', 'Aucun': 'None',
+      'Enregistrer un achat': 'Record a purchase', 'Ajouter un tampon': 'Add a stamp',
+      'Valider': 'Confirm', 'Ajouter': 'Add', 'Retour': 'Back', 'Sans nom': 'No name',
+      'Offrir la récompense': 'Give the reward', 'réinitialiser': 'reset',
+      'Montant en MAD': 'Amount in MAD',
+      'Modifier le client': 'Edit customer', 'Nom complet': 'Full name', 'Téléphone': 'Phone',
+      'Femme': 'Woman', 'Homme': 'Man', 'Autre': 'Other',
+      'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.':
+        'Fill in as much as you can — it feeds loyalty and marketing.',
+      'Accepte les messages': 'Accepts messages via', 'Accepte les': 'Accepts',
+      'emails marketing': 'marketing emails',
+      '(offres, fidélité). Consentement requis': '(offers, loyalty). Consent required',
+      'CNDP loi 09-08.': 'CNDP law 09-08.',
+      'Prénom Nom': 'First name Last name', 'nom@email.com': 'name@email.com',
+      'Quartier, rue…': 'District, street…',
+      'Préférences, tailles, allergies…': 'Preferences, sizes, allergies…',
+      'visite': 'visit', 'visites': 'visits', 'achat': 'purchase', 'achats': 'purchases',
+      '{n} j': '{n} d',
+      '+1 tampon': '+1 stamp',
+      'Client ajouté': 'Customer added', 'Client mis à jour': 'Customer updated',
+      'Client supprimé': 'Customer deleted', 'Client déjà enregistré': 'Customer already on file',
+      'Achat enregistré': 'Purchase recorded', 'Saisissez un montant': 'Enter an amount',
+      'Récompense offerte': 'Reward given', 'Carte réinitialisée.': 'Card reset.',
+      'Renseignez au moins un nom ou un numéro': 'Enter at least a name or a number',
+      'Le consentement est requis': 'Consent is required',
+      'Cochez la case WhatsApp / SMS pour enregistrer.': 'Tick the WhatsApp / SMS box to save.',
       'Sans date de fin, jusqu’à ce que vous l’arrêtiez': 'No end date, until you stop it',
       'Sans date de fin, jusqu\'à ce que vous l\'arrêtiez': 'No end date, until you stop it',
       'En pause, aucun prix n’est modifié': 'Paused, no price is changed',
@@ -209,6 +245,37 @@
       'Se termine dans {n} jours': 'ينتهي بعد {n} أيام', 'Démarre dans {n} jours': 'يبدأ بعد {n} أيام',
       'Se termine demain': 'ينتهي غداً', 'Démarre demain': 'يبدأ غداً',
       'Il en reste {n} ou moins': 'يبقى منه {n} أو أقل',
+      '{n} pt / MAD': '{n} نقطة لكل MAD', 'palier {n}': 'عتبة {n}',
+      'Régulier': 'منتظم', 'Nouveau': 'جديد', 'Dormant': 'خامل',
+      'Récompense prête': 'المكافأة جاهزة', 'récompense {x}': 'مكافأة {x}',
+      'Visites': 'الزيارات', 'Dépensé (MAD)': 'المصروف (MAD)', 'Dernière visite': 'آخر زيارة',
+      'Email': 'البريد الإلكتروني', 'Ville': 'المدينة', 'Adresse': 'العنوان', 'Anniversaire': 'تاريخ الميلاد',
+      'Genre': 'النوع', 'Notes': 'ملاحظات', 'Consentement': 'الموافقة', 'Aucun': 'لا شيء',
+      'Enregistrer un achat': 'تسجيل شراء', 'Ajouter un tampon': 'إضافة طابع',
+      'Valider': 'تأكيد', 'Ajouter': 'إضافة', 'Retour': 'رجوع', 'Sans nom': 'بدون اسم',
+      'Offrir la récompense': 'منح المكافأة', 'réinitialiser': 'إعادة البدء',
+      'Montant en MAD': 'المبلغ بالدرهم',
+      'Modifier le client': 'تعديل الزبون', 'Nom complet': 'الاسم الكامل', 'Téléphone': 'الهاتف',
+      'Femme': 'أنثى', 'Homme': 'ذكر', 'Autre': 'آخر',
+      'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.':
+        'املأ أكبر قدر من المعلومات — منها يتغذّى الوفاء والتسويق.',
+      'Accepte les messages': 'يقبل الرسائل عبر', 'Accepte les': 'يقبل',
+      'emails marketing': 'الرسائل التسويقية',
+      '(offres, fidélité). Consentement requis': '(عروض، وفاء). الموافقة إلزامية',
+      'CNDP loi 09-08.': 'قانون CNDP 09-08.',
+      'Prénom Nom': 'الاسم والنسب', 'nom@email.com': 'name@email.com',
+      'Quartier, rue…': 'الحي، الشارع…',
+      'Préférences, tailles, allergies…': 'التفضيلات، المقاسات، الحساسية…',
+      'visite': 'زيارة', 'visites': 'زيارات', 'achat': 'شراء', 'achats': 'مشتريات',
+      '{n} j': '{n} ي',
+      '+1 tampon': '+1 طابع',
+      'Client ajouté': 'تمت إضافة الزبون', 'Client mis à jour': 'تم تحديث الزبون',
+      'Client supprimé': 'تم حذف الزبون', 'Client déjà enregistré': 'الزبون مسجَّل من قبل',
+      'Achat enregistré': 'تم تسجيل الشراء', 'Saisissez un montant': 'أدخل مبلغاً',
+      'Récompense offerte': 'تم منح المكافأة', 'Carte réinitialisée.': 'تمت إعادة البطاقة.',
+      'Renseignez au moins un nom ou un numéro': 'أدخل على الأقل اسماً أو رقماً',
+      'Le consentement est requis': 'الموافقة إلزامية',
+      'Cochez la case WhatsApp / SMS pour enregistrer.': 'فعّل خانة WhatsApp / SMS للتسجيل.',
       'Sans date de fin, jusqu’à ce que vous l’arrêtiez': 'بدون تاريخ نهاية، إلى أن توقفه',
       'Sans date de fin, jusqu\'à ce que vous l\'arrêtiez': 'بدون تاريخ نهاية، إلى أن توقفه',
       'En pause, aucun prix n’est modifié': 'موقوف، لا يتغيّر أي ثمن',
@@ -340,7 +407,11 @@
   /* Le préfixe latin collé au nombre fait partie de l'îlot : « MM-1208 » est
      UN code de ticket, pas un « MM » suivi d'un « −1208 ». Isolé en deux
      morceaux, il s'affichait « 1208MM- » sur le ticket. */
-  var AMOUNT = /(?:[A-Za-z]{1,8}-)?[-\u2212+]?\d[\d\s\u202f\u00a0.,:]*(?:MAD|DH|dh|%|pts)?/g;
+  /* Le trait d'union INTERNE — celui qui est collé des deux côtés à un chiffre —
+     appartient lui aussi à l'îlot. « 1985-04-12 » découpé en trois morceaux se
+     relisait « -12-041985 » sur la date de naissance d'une fiche cliente. Un
+     tiret suivi d'une espace, lui, reste dehors : c'est une ponctuation. */
+  var AMOUNT = /(?:[A-Za-z]{1,8}-)?[-\u2212+]?\d(?:[\d\s\u202f\u00a0.,:]|-(?=\d))*(?:MAD|DH|dh|%|pts)?/g;
   function isolate(s) {
     /* On repart toujours d'un texte nu. Le balayage rejoue à chaque rendu de la
        caisse — une vente, un scan, un changement de rayon — et empiler les

@@ -88,6 +88,10 @@ check(L.tr('Il en reste 5 ou moins') === '5 left or fewer', 'le seuil de fin de 
    de porter {n} dans la traduction plutôt que de recoller le nombre en tête. */
 check(L.tr('Il en reste 5 ou moins').indexOf('5') === 0, 'et il se déplace là où la langue le demande');
 check(L.tr('4 785 MAD') === '4 785 MAD', 'un montant n\'est pas un gabarit : il traverse intact');
+/* Le bandeau du carnet clients, découpé en deux segments par le « · ». */
+check(L.tr('1 pt / MAD · palier 100') === '1 pt per MAD · tier 100', 'le programme de fidélité du carnet se traduit des deux côtés du point');
+check(L.t('Régulier') === 'Regular', 'le segment d\'une fiche cliente se traduit');
+check(L.tr('Caftan Nouveau Souss') === 'Caftan Nouveau Souss', '… mais « Nouveau » dans un nom d\'article ne bouge pas');
 
 /* ── les dates ───────────────────────────────────────────────────────────── */
 check(L.tr('jeu. 30 juil.') === 'Thu 30 Jul', 'le jour et le mois se traduisent, le quantième reste');
@@ -124,6 +128,13 @@ check(L.bidi('المجموع').indexOf(LRI) < 0, 'un texte sans chiffre n\'est p
    s'affichait « 1208MM- » en tête de ticket — le numéro qu'on dicte au
    téléphone quand une cliente rappelle. */
 check(wrapped(L.bidi('MM-1208'), 'MM-1208'), 'un numéro de ticket ne se coupe pas en deux');
+/* Une date ISO — la date de naissance d'une fiche cliente — se coupait en trois
+   îlots (1985 / -04 / -12) qui s'inversaient : « -12-041985 ». */
+check(wrapped(L.bidi('1985-04-12'), '1985-04-12'), 'une date ISO reste d\'un seul tenant');
+check(wrapped(L.bidi('10-20 MAD'), '10-20 MAD'), 'une fourchette de prix aussi');
+/* … mais un tiret qui n'est PAS collé à un chiffre reste dehors : c'est de la
+   ponctuation, et l'îlot ne doit pas avaler la moitié de la phrase. */
+check(L.bidi('3 - 4').indexOf(LRI + '3 - 4' + PDI) < 0, 'un tiret entouré d\'espaces n\'est pas un lien');
 /* Idempotence : le balayage repasse à chaque rendu de la caisse — une vente,
    un scan, un changement de rayon. S'il ré-isolait ce qu'il a déjà isolé, le
    nœud grossirait d'un caractère invisible à chaque frappe. */
@@ -154,7 +165,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);

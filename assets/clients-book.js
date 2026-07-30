@@ -260,32 +260,39 @@
     root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
     root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
   }
-  function open() {
+  /* Pas de croix : une page ne se ferme pas, elle se quitte. On sort du carnet
+     comme on sort de l'Inventaire — en touchant l'entrée suivante du rail. */
+  function open(entry) {
     css();
     var root = document.getElementById('kcb-root');
     if (!root) {
       root = document.createElement('div'); root.id = 'kcb-root';
-      root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Carnet clients');
+      root.setAttribute('aria-label', 'Carnet clients');
       document.body.appendChild(root);
     }
     root.style.display = 'flex';
     positionRoot(root);
+    markNav(entry);
     root.innerHTML =
-      '<div class="kcb-head"><h2>Carnet clients</h2><span class="kcb-prog">' + esc(progLabel()) + '</span>' +
-        '<button class="kcb-x" id="kcb-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
+      '<div class="kcb-head"><h2>Carnet clients</h2><span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
       '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
         '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
         '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
       '<div class="kcb-list" id="kcb-list"></div>';
     renderList();
     if (KC.pull) KC.pull(function (ch) { if (ch) { renderList(); ensureChip(); } }); // cross-device refresh
-    root.querySelector('#kcb-close').onclick = close;
     root.querySelector('#kcb-add').onclick = function () { openForm(null); };
     var q = root.querySelector('#kcb-q');
     q.oninput = function () { state.q = q.value; renderList(); };
     q.focus();
   }
-  function close() { var r = document.getElementById('kcb-root'); if (r) r.style.display = 'none'; ensureChip(); }
+  function close() {
+    // La fiche cliente part avec le carnet : ouverte par-dessus, elle restait
+    // sinon posée seule au milieu de l'écran de vente.
+    closeSheet();
+    var r = document.getElementById('kcb-root'); if (r) r.style.display = 'none';
+    clearNav(); ensureChip();
+  }
 
   function matches(c, q) {
     q = q.trim().toLowerCase(); if (!q) return true;
@@ -364,7 +371,9 @@
       '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : 'checked') + '>' +
         '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité). Consentement requis · CNDP loi 09-08.</span></label>' +
       '<label class="kcb-consent" style="margin-top:8px"><input type="checkbox" id="kcb-f-consent-email" ' + (c.consentEmail ? 'checked' : '') + '>' +
-        '<span>Accepte les <b>emails</b> marketing.</span></label>' +
+        /* « emails marketing » d'un seul tenant : coupé en deux nœuds, l'anglais
+           reconstruisait « Accepts marketing emails marketing ». */
+        '<span>Accepte les <b>emails marketing</b>.</span></label>' +
       '<div class="kcb-actions">' +
         (editing ? '<button class="kcb-btn danger" id="kcb-f-del" aria-label="Supprimer">' + ICON.trash + '</button>' : '') +
         '<button class="kcb-btn ghost" id="kcb-f-cancel">Annuler</button>' +
@@ -414,9 +423,11 @@
     } else {
       var target = cfg.model === 'product' ? cfg.product.target : cfg.visit.target;
       var unit = cfg.model === 'product' ? (cfg.product.item || 'achat') : 'visite';
-      progTxt = (c.stamps || 0) + ' / ' + target + ' ' + esc(unit) + (target > 1 ? 's' : '');
+      // L'unité dans son propre nœud : « visites » se traduit, « cafés » (mot du
+      // commerçant) traverse — le balayage ne voit qu'un mot à la fois.
+      progTxt = (c.stamps || 0) + ' / ' + target + ' <span>' + esc(unit) + (target > 1 ? 's' : '') + '</span>';
       recordBlock = '<div class="kcb-record"><div class="rl">Ajouter un tampon</div><div class="kcb-recrow">' +
-        '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 ' + esc(unit) + '</button></div></div>';
+        '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 <span>' + esc(unit) + '</span></button></div></div>';
     }
     var infoRows = [];
     if (c.email) infoRows.push(['Email', c.email]);
@@ -435,13 +446,17 @@
         '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
         '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '—') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
         '<button class="kcb-x" id="kcb-d-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
-      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + 'Récompense prête — ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
+      /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
+         du commerçant, elle doit traverser telle quelle. */
+      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> — ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
         '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">Visites</div></div>' +
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +
-        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '—' : KC.daysSince(c.lastSeen) + 'j') + '</div><div class="l">Dernière visite</div></div></div>' +
+        // « 3 j » et non « 3j » : l'abréviation doit être un mot à part pour se
+        // traduire — collée au nombre elle se relisait « j3 » en arabe.
+        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '—' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
@@ -472,6 +487,37 @@
   // One implementation, every store type: for each vertical rail (<nav class="XX-nav">)
   // we redirect its existing client button to the carnet, or inject a native-looking
   // "Clients" item; for the restaurant caisse we add a "Clients" pill to .act-selector.
+  /* ── le rail doit montrer où l'on est ────────────────────────────────────
+     Le carnet détourne l'entrée « Clientes » du métier (capture +
+     stopImmediatePropagation) : le vertical ne bascule donc jamais son propre
+     état sélectionné, et le rail continuait d'éclairer la page précédente
+     pendant qu'on lisait le carnet. On pose le marqueur nous-mêmes, avec le
+     mot exact que ce rail-là emploie pour ses autres pages — et on le rend en
+     partant, pour ne pas laisser deux entrées allumées si on sort par Échap. */
+  var ACTIVE = /^(on|is-on|active|is-active|sel|selected)$/;
+  var navMark = null;   // { entry, token, prev }
+  function markNav(entry) {
+    clearNav();
+    if (!entry || !entry.parentNode) return;
+    var sibs = entry.parentNode.children, token = null, prev = null;
+    for (var i = 0; i < sibs.length && !token; i++) {
+      if (sibs[i] === entry || !sibs[i].classList) continue;
+      for (var j = 0; j < sibs[i].classList.length; j++) {
+        if (!ACTIVE.test(sibs[i].classList[j])) continue;
+        token = sibs[i].classList[j]; prev = sibs[i]; break;
+      }
+    }
+    if (!token) return;                       // ce rail ne marque rien : on n'invente pas
+    prev.classList.remove(token);
+    entry.classList.add(token);
+    navMark = { entry: entry, token: token, prev: prev };
+  }
+  function clearNav() {
+    if (!navMark) return;
+    navMark.entry.classList.remove(navMark.token);
+    navMark.prev.classList.add(navMark.token);
+    navMark = null;
+  }
   function makeItem(tag, cls, label) {
     var el = document.createElement(tag);
     if (tag === 'button') el.type = 'button';
@@ -479,7 +525,7 @@
     if (tag === 'a') el.setAttribute('href', '#');
     el.innerHTML = ICON.users + '<span>' + label + '</span>';
     el.setAttribute('data-kcb-navitem', '1');
-    el.addEventListener('click', function (e) { e.preventDefault(); open(); });
+    el.addEventListener('click', function (e) { e.preventDefault(); open(el); });
     return el;
   }
   function wireCaisseEntry() {
@@ -494,7 +540,7 @@
       if (existing) {
         if (existing.getAttribute('data-kcb-redirect')) return;
         existing.setAttribute('data-kcb-redirect', '1');
-        existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(); }, true);
+        existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(existing); }, true);
       } else {
         if (nav.querySelector('[data-kcb-navitem]')) return;
         var sample = buttons[0];
