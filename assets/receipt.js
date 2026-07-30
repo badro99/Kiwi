@@ -921,6 +921,14 @@
     out.push(row(refunded ? T.totalRefund : T.total,
       (refunded ? '- ' : '') + moneyMAD(doc.totals.total + doc.totals.tip, doc)));
     doc.pay.forEach(function (p) { out.push(row(p.label, moneyMAD(p.amount, doc))); });
+    /* Reçu / Rendu. Le thermique (escpos) et l'écran (html) les portaient déjà ;
+       cette sortie-ci les oubliait, et c'est elle qui part à l'imprimante
+       système. Un ticket sans le rendu est précisément celui qu'on rouvre pour
+       vérifier le rendu. */
+    if (doc.cash) {
+      out.push(row(T.received, moneyMAD(doc.cash.received, doc)));
+      out.push(row(T.change, moneyMAD(doc.cash.change, doc)));
+    }
     out.push(doc.foot.thanks || T.thanks);
     return out.join('\n');
   }

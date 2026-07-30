@@ -2582,7 +2582,14 @@
         total: opts.amount,
         customer: opts.customer || null,
         pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
-        received: (parts || []).some((x) => x.m === 'espèces' && x.rendu > 0) ? opts.amount + (parts.find((x) => x.m === 'espèces').rendu || 0) : null,
+        /* Le « reçu » du ticket, c'est ce que la main du client a posé sur le
+           comptoir — donc la PART espèces plus le rendu, pas le total de la
+           vente. Avec un paiement partagé (moitié carte, moitié espèces), le
+           total imprimait un billet que personne n'avait donné. */
+        received: (function () {
+          const c = (parts || []).find((x) => x.m === 'espèces' && x.rendu > 0);
+          return c ? (+c.amount || 0) + (+c.rendu || 0) : null;
+        })(),
         change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
       });
       /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
@@ -2784,40 +2791,83 @@
     });
   }
 
+  /* ── UNE VENTE, PLUSIEURS RÈGLEMENTS ──────────────────────────────────────
+     « La moitié en espèces, la moitié en carte » n'est pas deux ventes : c'est
+     une vente à deux règlements. La caisse ne savait faire qu'un seul mode par
+     vente (l'avoir excepté), et la caissière devait donc encaisser deux tickets
+     — deux numéros, deux lignes dans le journal, un panier moyen faux et un
+     tiroir qui ne tombe jamais juste.
+
+     `settled` porte ce qui est déjà réglé ; `share` la part que le prochain
+     mode prendra. Le reste retourne à l'écran des modes tant qu'il n'est pas
+     couvert, ce qui donne gratuitement les partages à trois. */
   function openPay(opts) {
     const el = $('#bq-paym', root);
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
-    const due = () => opts.amount - (avoirPart ? avoirPart.amount : 0);
+    const settled = [];                     /* les règlements déjà posés */
+    let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
+    let custom = 0;                          /* un montant saisi à la main */
+    const r2 = (n) => Math.round((+n || 0) * 100) / 100;
+    const paid = () => settled.reduce((s, p) => s + (+p.amount || 0), 0);
+    const due = () => r2(opts.amount - (avoirPart ? avoirPart.amount : 0) - paid());
+    /* Ce que prend le prochain mode. Jamais plus que le reste : une part de 50 %
+       sur un reste de 3 MAD ne doit pas produire un règlement de 1,50 MAD qu'on
+       n'a pas les pièces pour rendre — mais surtout jamais PLUS que dû. */
+    const portion = () => {
+      if (custom > 0) return Math.min(custom, due());
+      if (share >= 1) return due();
+      return Math.min(due(), Math.max(0.01, r2(due() * share)));
+    };
     const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-pay-veil'); });
 
-    const appliedBanner = () => avoirPart ? `
-      <div class="bq-pay-applied"><i data-lucide="ticket"></i>
-        Avoir <b>${avoirPart.code}</b> appliqué, −${fmtMAD(avoirPart.amount)}
-      </div>` : '';
+    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
+
+    const appliedBanner = () => {
+      const rows = [];
+      if (avoirPart) rows.push(`<i data-lucide="ticket"></i> Avoir <b>${avoirPart.code}</b> appliqué, −${fmtMAD(avoirPart.amount)}`);
+      settled.forEach((p) => rows.push(`<i data-lucide="check"></i> ${mLabel(p.m)} <b>${fmtMAD(p.amount)}</b> réglé`));
+      return rows.map((r) => `<div class="bq-pay-applied">${r}</div>`).join('');
+    };
+
+    /* Le partage. Volontairement à quatre touches et pas un clavier de plus :
+       au comptoir, « la moitié » est le cas qui revient, et tout le reste se
+       saisit au montant. */
+    const splitBar = () => `
+      <div class="bq-split" role="group" aria-label="Partager le paiement">
+        <span class="bq-split-l">Partager</span>
+        <button class="bq-split-c${share >= 1 && !custom ? ' is-on' : ''}" data-bq-share="1">Tout</button>
+        <button class="bq-split-c${share === 0.5 && !custom ? ' is-on' : ''}" data-bq-share="0.5">50 %</button>
+        <button class="bq-split-c${share === 0.25 && !custom ? ' is-on' : ''}" data-bq-share="0.25">25 %</button>
+        <button class="bq-split-c${custom ? ' is-on' : ''}" data-bq-share="x">Montant…</button>
+        <input class="bq-split-in mono" id="bq-split-in" type="number" inputmode="decimal" min="0" step="1"
+               placeholder="MAD" value="${custom || ''}" ${custom ? '' : 'hidden'} aria-label="Montant de cette part" />
+      </div>
+      <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
       const avs = activeAvoirs();
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${esc(opts.title)}</h3>
-        <p class="modal-subtle">${opts.subtitle}</p>
+        <p class="modal-subtle">${settled.length ? `Reste à régler sur ${fmtMAD(opts.amount)}` : opts.subtitle}</p>
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
+        ${due() > 0.01 ? splitBar() : ''}
         <div class="bq-pay-opts">
           <button class="bq-pay-opt" data-bq-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
             <span class="l"><b>Espèces</b><span>Rendu calculé, flous comptés une fois</span></span>
-            <span class="amt">${fmtMAD(due())}</span>
+            <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
-            <span class="amt">${fmtMAD(due())}</span>
+            <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="livraison">
             <span class="ic"><i data-lucide="truck"></i></span>
             <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
-            <span class="amt">${fmtMAD(due())}</span>
+            <span class="amt">${fmtMAD(portion())}</span>
           </button>
           ${avoirPart ? '' : avs.length ? `
           <button class="bq-pay-opt" data-bq-m="avoir">
@@ -2831,21 +2881,61 @@
           </button>`}
         </div>`;
       icons(); closeBtns();
+      const inp = $('#bq-split-in', el);
+      $$('[data-bq-share]', el).forEach((b) => {
+        b.onclick = () => {
+          const v = b.dataset.bqShare;
+          if (v === 'x') {
+            /* On ne re-rend pas : le champ apparaît sous la main de la caissière
+               et prend le curseur. Un re-rendu le lui reprendrait. */
+            if (inp) { inp.hidden = false; inp.focus(); inp.select(); }
+            return;
+          }
+          custom = 0; share = +v || 1; stepMethods();
+        };
+      });
+      if (inp) {
+        inp.oninput = () => {
+          custom = Math.max(0, Math.min(due(), r2(inp.value)));
+          /* La pastille suit la saisie. On ne re-rend pas la barre (le champ
+             perdrait le curseur en pleine frappe), donc on déplace le marqueur
+             à la main — sans quoi « Tout » reste allumé sur une part de 100 MAD. */
+          $$('[data-bq-share]', el).forEach((b) => {
+            b.classList.toggle('is-on', custom > 0 ? b.dataset.bqShare === 'x' : b.dataset.bqShare === String(share));
+          });
+          const note = $('.bq-split-note', el);
+          if (note) {
+            note.hidden = !(portion() < due());
+            note.textContent = `Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}`;
+          }
+          /* L'avoir ne se partage pas : il se DÉDUIT du total, pour ce qu'il
+             porte. Sa ligne garde donc son propre montant (et son signe). */
+          $$('[data-bq-m]', el).forEach((b) => {
+            if (/^avoir/.test(b.dataset.bqM)) return;
+            const a = $('.amt', b); if (a) a.textContent = fmtMAD(portion());
+          });
+        };
+      }
       $$('[data-bq-m]', el).forEach((b) => {
         b.onclick = () => {
           const m = b.dataset.bqM;
-          if (m === 'especes') stepCash();
-          else if (m === 'carte') stepCard();
-          else if (m === 'livraison') {
-            const parts = [];
-            if (avoirPart) parts.push(avoirPart);
-            parts.push({ m: 'livraison', amount: due() });
-            commit(parts);
-          }
+          if (m === 'especes') stepCash(portion());
+          else if (m === 'carte') stepCard(portion());
+          else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
           else if (m === 'avoir') stepAvoir();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
         };
       });
+    };
+
+    /* Un règlement de plus est posé. Tant qu'il reste quelque chose à payer on
+       revient aux modes — c'est ce retour, et rien d'autre, qui rend possibles
+       les partages à trois ou quatre. */
+    const settle = (part) => {
+      settled.push(part);
+      share = 1; custom = 0;
+      if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
+      else commit();
     };
 
     const stepAvoir = () => {
@@ -2870,19 +2960,20 @@
           const av = AVOIRS.find((a) => a.code === b.dataset.bqAvUse);
           const applied = Math.min(av.balance, due());
           avoirPart = { m: 'avoir', amount: applied, code: av.code };
-          if (due() <= 0) commit([avoirPart]);
+          if (due() <= 0.009) commit();
           else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
         };
       });
     };
 
-    const stepCash = () => {
-      const amount = due();
+    const stepCash = (amount) => {
+      amount = amount > 0 ? amount : due();
+      const rest = r2(due() - amount);
       let received = amount;
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Espèces · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${opts.subtitle}</p>
+        <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle}</p>
         ${appliedBanner()}
         <div class="cash-grid">
           <div class="cash-input-row">
@@ -2909,20 +3000,17 @@
       });
       refresh();
       $('#bq-cash-ok', el).onclick = () => {
-        const parts = [];
-        if (avoirPart) parts.push(avoirPart);
-        parts.push({ m: 'espèces', amount, rendu: Math.max(0, received - amount) });
-        commit(parts);
+        settle({ m: 'espèces', amount, rendu: Math.max(0, received - amount) });
       };
     };
 
-    const stepCard = () => {
-      const amount = due();
-      const cardParts = () => { const p = []; if (avoirPart) p.push(avoirPart); p.push({ m: 'carte', amount }); return p; };
+    const stepCard = (amount) => {
+      amount = amount > 0 ? amount : due();
+      const rest = r2(due() - amount);
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Carte · ${fmtMAD(amount)}</h3>
-        <p class="modal-subtle">${opts.subtitle} · Kiwi affiche, le lecteur encaisse</p>
+        <p class="modal-subtle">${rest > 0.009 ? `Part sur ${fmtMAD(due())} · restera ${fmtMAD(rest)}` : opts.subtitle} · Kiwi affiche, le lecteur encaisse</p>
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="bq-reader-disc"><i data-lucide="credit-card"></i></div>
           <div class="reader-status" id="bq-reader-status">Montant envoyé au lecteur<span class="ellipsis"></span></div>
@@ -2952,13 +3040,14 @@
         if (cw) cw.hidden = false;
         icons();
         const ok = $('#bq-card-ok', el);
-        if (ok) ok.onclick = () => commit(cardParts());
+        if (ok) ok.onclick = () => settle({ m: 'carte', amount });
         const cancel = $('#bq-card-cancel', el);
         if (cancel) cancel.onclick = () => closeVeil('#bq-pay-veil');
       }, 1400);
     };
 
-    const commit = (parts) => {
+    const commit = () => {
+      const parts = (avoirPart ? [avoirPart] : []).concat(settled);
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
