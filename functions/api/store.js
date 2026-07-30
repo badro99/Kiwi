@@ -96,8 +96,20 @@ const FEATURES = {
   business:     { keys: ['name', 'tradeName', 'legal'],            max: 20000 },
   /* L'apparence du reçu — logo, en-tête, messages, ce qu'on affiche, largeur
    * du rouleau. `max` généreux à cause du logo, qui est une image en data: URI
-   * (bornée à 200 ko côté client, voir assets/receipt.js). */
-  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 400000 },
+   * (bornée à 200 ko côté client, voir assets/receipt.js).
+   *
+   * `maxStr` : le logo est UNE chaîne de plusieurs dizaines de milliers de
+   * caractères, et le bornage générique refuse toute chaîne au-delà de 4 000.
+   * Le document entier était donc rejeté (413 · string-too-long) DÈS QU'UN
+   * COMMERÇANT POSAIT SON LOGO — en silence : le tableau de bord gardait sa
+   * copie locale et montrait le nouveau reçu dans l'aperçu, le serveur n'en
+   * recevait rien, et la caisse continuait d'imprimer l'ancien ticket
+   * indéfiniment. Observé chez un client le 30/07/2026.
+   *
+   * On ne relâche la borne QUE pour cette fonctionnalité-là : partout ailleurs
+   * une chaîne de 500 ko est une anomalie, ici c'est le format normal d'une
+   * image. `max` reste le vrai plafond du document. */
+  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 700000, maxStr: 500000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },
@@ -150,16 +162,17 @@ const MAX_STR = 4000;
 const MAX_ARRAY = 20000;
 const MAX_KEYS = 400;
 
-function bounded(raw) {
+function bounded(raw, maxStr) {
   let nodes = 0;
   let overflow = '';
+  const strCap = maxStr > 0 ? maxStr : MAX_STR;
 
   function walk(v, depth) {
     if (++nodes > MAX_NODES) { overflow = overflow || 'too-many-nodes'; return null; }
     if (v == null) return null;
     const t = typeof v;
     if (t === 'string') {
-      if (v.length > MAX_STR) { overflow = overflow || 'string-too-long'; return null; }
+      if (v.length > strCap) { overflow = overflow || 'string-too-long'; return null; }
       return v;
     }
     if (t === 'number') return Number.isFinite(v) ? v : 0;
@@ -273,7 +286,7 @@ export async function onRequestPost(context) {
   // supprimé) porte quand même ses clés, donc il passe.
   if (!shapeOk(feature, raw)) return json({ error: 'shape-mismatch', expected: feature }, 409);
 
-  const clean = bounded(raw);
+  const clean = bounded(raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);

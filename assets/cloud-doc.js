@@ -378,6 +378,22 @@
     function readRev(slug) { var n = parseInt(ls(revKey(slug)) || '0', 10); return n > 0 ? n : 0; }
     function writeRev(slug, r) { lset(revKey(slug), String(r || 0)); }
 
+    /* ── LA REMONTÉE REFUSÉE ────────────────────────────────────────────────
+     * Un 413 (document hors bornes) laissait la copie locale intacte — c'est la
+     * bonne décision — puis PLUS RIEN. Le commentaire disait « on retentera » ;
+     * personne ne retentait. Le commerçant posait son logo, le voyait dans son
+     * aperçu, et son ticket de caisse ne changeait jamais.
+     *
+     * On garde donc une marque du refus, à côté du signet de révision. Elle
+     * survit au rechargement, et le prochain contact avec le serveur repropose
+     * le document : le jour où la borne serveur bouge, la copie en attente
+     * repart toute seule, sans que le commerçant ait à ré-enregistrer ce qu'il
+     * avait déjà enregistré. Une tentative par ouverture de page, pas plus. */
+    function refusedKey(slug) { return 'kiwiDocRefused:v1:' + revKey(slug).slice(REV_PREFIX.length); }
+    function markRefused(slug, why) { lset(refusedKey(slug), String(why || '1')); }
+    function clearRefused(slug) { try { localStorage.removeItem(refusedKey(slug)); } catch (_) {} }
+    function isRefused(slug) { return !!ls(refusedKey(slug)); }
+
     /* Lit la copie serveur et la réconcilie avec la locale. `first` = tout
      * premier contact pour ce magasin : c'est le SEUL cas où un document local
      * vide est remplacé en bloc (le navigateur neuf adopte l'établissement).
@@ -410,8 +426,13 @@
             return false;
           }
           st.rev = serverRev;
-          // Déjà à jour : notre dernière remontée EST ce que le serveur porte.
-          if (!mineEmpty && readRev(slug) === serverRev) return false;
+          /* Déjà à jour : notre dernière remontée EST ce que le serveur porte.
+             Sauf si une remontée a été refusée : le signet dit alors « à jour »
+             pour une copie que le serveur n'a jamais acceptée. On repropose. */
+          if (!mineEmpty && readRev(slug) === serverRev) {
+            if (isRefused(slug)) push(0);
+            return false;
+          }
 
           var adopt = first && mineEmpty;
           var next = adopt ? theirs : merge(mine, theirs);
@@ -471,7 +492,20 @@
           if (res.status === 200 && res.j && res.j.ok) {
             st.rev = +res.j.rev || 0;
             writeRev(slug, st.rev);
+            clearRefused(slug);
             st.tries = 0;
+            return;
+          }
+          /* 413 : le document dépasse une borne du serveur. La copie locale est
+             intacte, mais elle ne quittera JAMAIS cet appareil tant que rien ne
+             change — un silence qui se lit comme « c'est enregistré ». On le
+             marque, on le retentera, et la surface qui sait parler au commerçant
+             peut le lui dire. */
+          if (res.status === 413) {
+            markRefused(slug, (res.j && res.j.why) || 'too-large');
+            if (opts.onRefused) {
+              try { opts.onRefused((res.j && res.j.why) || 'too-large'); } catch (_) {}
+            }
             return;
           }
           // 409 : le serveur a bougé (ou a refusé un envoi vide). Il rend sa

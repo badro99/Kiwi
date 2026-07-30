@@ -137,6 +137,10 @@
         },
         merge: opts.merge,
         isEmpty: (d) => empty(d),
+        // Le serveur a refusé la copie (document hors bornes) : la fonctionnalité
+        // doit pouvoir le dire au commerçant plutôt que de le laisser croire que
+        // son réglage a suivi sur ses autres appareils.
+        onRefused: opts.onRefused,
         /* Sous quel nom CE navigateur range la copie que read()/write() touchent.
          * Le dashboard dit `v-amira-boutique`, la caisse dit `amira-boutique` : un
          * même magasin, deux enregistrements locaux. Le miroir a besoin de le

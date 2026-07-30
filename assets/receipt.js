@@ -248,6 +248,9 @@
   /* ═══════════════════ persistance ═══════════════════ */
 
   var bizStore = null, cfgStore = null;
+  /* Pourquoi la dernière remontée n'est pas partie, quand elle n'est pas partie.
+     Vide = rien à signaler. Lu par l'éditeur (receipt-ui.js) pour prévenir. */
+  var refused = '';
   function BS() {
     if (bizStore) return bizStore;
     if (!window.KiwiStore || !window.KiwiStore.define) return null;
@@ -265,6 +268,11 @@
       blank: blankConfig, cloud: true,
       isEmpty: function (d) { return configEmpty(d); },
       merge: mergeByDate(configEmpty),
+      /* Le reçu est le seul document de Kiwi qui porte une IMAGE. C'est donc le
+       * seul qui puisse se faire refuser pour sa taille — et le refuser en
+       * silence serait le pire des cas : le commerçant voit son nouveau ticket
+       * dans l'aperçu du tableau de bord et son comptoir imprime l'ancien. */
+      onRefused: function (why) { refused = why || 'too-large'; fire(venueKey()); },
     });
     return cfgStore;
   }
@@ -380,6 +388,8 @@
   function setConfig(cfg, venueId) {
     var vid = venueKey(venueId);
     var s = CS(); if (!s || !vid) return null;
+    refused = '';                      /* on repart optimiste : le refus, s'il
+                                          revient, viendra du serveur lui-même */
     var doc = normalizeConfig(cfg);
     doc.updatedAt = Date.now();
     s.set(doc, vid);
@@ -1100,6 +1110,10 @@
     nextRef: nextRef,
     /* divers */
     venueKey: venueKey, subscribe: subscribe, money: money, moneyMAD: moneyMAD,
+    /* '' quand la copie serveur est à jour ; sinon la raison du refus. Un reçu
+       réglé qui ne quitte pas l'appareil est un reçu que la caisse n'imprimera
+       jamais : l'éditeur doit pouvoir le dire. */
+    syncRefused: function () { return refused; },
     /* Ce qu'un propriétaire ne peut PAS retirer de son reçu. Exporté pour que
      * l'éditeur affiche la liste au lieu de la sous-entendre. */
     LOCKED: ['shop', 'ref', 'date', 'lines', 'totals', 'pay'],

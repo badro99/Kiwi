@@ -79,6 +79,7 @@
       preview: 'Aperçu', testPrint: 'Imprimer un ticket test',
       testNote: 'N’enregistre aucune vente et ne consomme aucun numéro.',
       save: 'Enregistrer', cancel: 'Annuler', saved: 'Reçu enregistré',
+      notSynced: 'Gardé sur cet appareil seulement — logo trop lourd pour partir vers la caisse. Choisissez une image plus légère.',
       printing: 'Envoi du ticket test…', printed: 'Ticket test imprimé', printFail: 'Impression impossible',
       logoBig: 'Image trop lourde (max 300 ko).', logoBad: 'Format non reconnu — utilisez un PNG ou un JPEG.',
       noVenue: 'Sélectionnez un établissement pour régler son reçu.',
@@ -117,6 +118,7 @@
       preview: 'Preview', testPrint: 'Print a test receipt',
       testNote: 'Records no sale and uses up no receipt number.',
       save: 'Save', cancel: 'Cancel', saved: 'Receipt saved',
+      notSynced: 'Kept on this device only — the logo is too heavy to reach the till. Choose a lighter image.',
       printing: 'Sending the test ticket…', printed: 'Test ticket printed', printFail: 'Could not print',
       logoBig: 'Image too large (max 300 kB).', logoBad: 'Unrecognised format — use a PNG or a JPEG.',
       noVenue: 'Select a business to set up its receipt.',
@@ -155,6 +157,7 @@
       preview: 'معاينة', testPrint: 'طبع وصل تجريبي',
       testNote: 'لا يسجل أي عملية بيع ولا يستهلك أي رقم.',
       save: 'حفظ', cancel: 'إلغاء', saved: 'تم حفظ الوصل',
+      notSynced: 'محفوظ على هذا الجهاز فقط — الشعار ثقيل ولم يصل إلى الصندوق. اختاروا صورة أخف.',
       printing: 'إرسال الوصل التجريبي…', printed: 'تم طبع الوصل التجريبي', printFail: 'تعذرت الطباعة',
       logoBig: 'الصورة ثقيلة جداً (300 كب كحد أقصى).', logoBad: 'صيغة غير معروفة — استعملوا PNG أو JPEG.',
       noVenue: 'اختاروا مؤسسة لضبط وصلها.',
@@ -467,6 +470,13 @@
       var saved = K.saveConfig(cfg, vid);
       m.close();
       toast(L.saved, 'success');
+      /* La remontée part en différé : on regarde une seconde plus tard si le
+         serveur l'a refusée. Un reçu enregistré ici mais jamais accepté là-bas
+         n'atteindra pas le comptoir, et le commerçant doit l'apprendre
+         maintenant — pas en découvrant l'ancien ticket dans la main du client. */
+      setTimeout(function () {
+        try { if (K.syncRefused && K.syncRefused()) toast(L.notSynced, 'info'); } catch (_) {}
+      }, 2500);
       if (opts.onSave) { try { opts.onSave(saved); } catch (_) {} }
     });
 
