@@ -149,7 +149,173 @@
   /* `removed` : les SUPPRESSIONS, nommées. Voir la note au-dessus de mergeDocs —
      sans cette carte, une absence ne se distingue pas d'une ignorance, et un
      article supprimé revient à chaque synchronisation. */
-  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {} }; }
+  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {}, moves: [] }; }
+
+  /* ═══ LE STOCK EST UN JOURNAL, PAS UN NOMBRE ════════════════════════════════
+   *
+   * Première version : chaque déclinaison portait `stock`, un nombre, et la
+   * fusion gardait celui de l'appareil local. Un onglet resté ouvert
+   * réécrasait donc le stock vendu par la caisse, indéfiniment (cf. 4 078).
+   *
+   * Deuxième version : `stockAt`, un horodatage, et la fusion gardait le plus
+   * récent. Ça règle l'écrasement par un document périmé — mais pas le vrai
+   * problème du comptage à deux mains : DEUX VENTES SIMULTANÉES NE S'ADDITIONNENT
+   * PAS. La caisse vend 2 (10 → 8), le tableau de bord en vend 1 (10 → 9) dans
+   * la même minute ; « le plus récent gagne » retient 8 ou 9, jamais 7. Un
+   * article part sans sortir du stock, et personne ne peut le voir.
+   *
+   * Un nombre absolu ne PEUT pas fusionner : il dit où l'on est arrivé, pas ce
+   * qui s'est passé. Deux personnes qui décrivent leur arrivée ne se
+   * réconcilient pas ; deux personnes qui décrivent leurs PAS, si.
+   *
+   * D'où ce modèle, à deux étages :
+   *
+   *   · UN SOCLE. `base` + `baseAt` — un comptage ABSOLU, posé par un geste qui
+   *     affirme un état : création de la déclinaison, inventaire physique,
+   *     saisie directe d'une quantité. Il ANNULE tout ce qui précède : quand on
+   *     compte les cartons à la main, l'historique d'avant ne discute pas.
+   *
+   *   · DES MOUVEMENTS. `db.moves` — une vente, un retour, une réception, un
+   *     ±1 au comptoir : chacun est une écriture IMMUABLE, avec un id unique
+   *     par appareil, un delta et un instant. Deux appareils qui vendent en
+   *     même temps produisent deux mouvements DIFFÉRENTS, donc l'union les
+   *     garde tous les deux, donc les deux ventes comptent. Idempotent : le
+   *     même mouvement reçu deux fois reste un mouvement.
+   *
+   * `stock` continue d'exister, matérialisé (socle + somme des mouvements
+   * postérieurs). Les cent lecteurs de `v.stock` — grilles, ruptures, valeur
+   * d'inventaire, étiquettes, recherche — n'ont pas à savoir tout ceci. Seuls
+   * les ÉCRIVAINS et la fusion changent.
+   *
+   * COMPACTION. Un journal qui ne se vide jamais finit par peser plus que le
+   * catalogue. Les mouvements de plus de MOVE_DAYS jours sont donc REPLIÉS dans
+   * le socle — jamais jetés : `base += Σ deltas`, `baseAt = leur dernier
+   * instant`. Le stock matérialisé ne bouge pas d'une unité. Et comme la règle
+   * de fusion ne retient que les mouvements POSTÉRIEURS au socle le plus
+   * récent, un appareil qui a compacté et un appareil qui ne l'a pas encore
+   * fait arrivent au même nombre.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  var MOVE_DAYS = 45;
+  var MOVE_MAX = 12000;
+
+  /* L'appareil, pour que deux mouvements nés à la même milliseconde sur deux
+     comptoirs ne portent jamais le même id — c'est tout ce qui empêche l'union
+     de prendre deux ventes pour une. */
+  var DEV = null;
+  function devId() {
+    if (DEV) return DEV;
+    try {
+      DEV = localStorage.getItem('kiwiCatalogDev');
+      if (!DEV) {
+        DEV = Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('kiwiCatalogDev', DEV);
+      }
+    } catch (e) { DEV = DEV || Math.random().toString(36).slice(2, 8); }
+    return DEV;
+  }
+  var moveSeq = 0;
+  function moveId() { moveSeq++; return devId() + '-' + Date.now().toString(36) + '-' + moveSeq; }
+
+  /* ── une horloge qui ne rend jamais deux fois le même instant ─────────────
+     La règle de fusion est stricte : un mouvement ne compte que s'il est
+     POSTÉRIEUR au socle. Or créer une déclinaison puis la vendre peut tomber
+     dans la même milliseconde — au comptoir avec une douchette, ce n'est pas
+     une hypothèse d'école. Le mouvement était alors réputé antérieur au socle,
+     donc ignoré : la vente disparaissait sans un mot. Un compteur monotone
+     suffit à rendre l'ordre des écritures locales indiscutable. */
+  var lastNow = 0;
+  function now() {
+    var t = Date.now();
+    if (t <= lastNow) t = lastNow + 1;
+    lastNow = t;
+    return t;
+  }
+
+  /* Le socle d'une déclinaison, tolérant des deux formes antérieures : un
+     document d'avant ce modèle n'a pas de `base` (son `stock` EST son socle) et
+     peut ne porter qu'un `stockAt`. Sans cette lecture-là, la première fusion
+     après déploiement remettrait tout le monde à zéro. */
+  function baseOf(v) { return v && v.base != null ? (+v.base || 0) : Math.max(0, +(v && v.stock) || 0); }
+  function baseAtOf(v) { return +(v && (v.baseAt || v.stockAt)) || 0; }
+
+  /* stock = socle + tout ce qui s'est passé DEPUIS le socle. */
+  function materialize(doc, vid) {
+    var vs = (doc.variants || []).filter(function (v) { return v && (!vid || v.id === vid); });
+    if (!vs.length) return;
+    var by = Object.create(null);
+    vs.forEach(function (v) { by[v.id] = { v: v, n: baseOf(v), at: baseAtOf(v) }; });
+    (doc.moves || []).forEach(function (m) {
+      var slot = m && by[m.vid];
+      if (!slot) return;
+      if ((+m.at || 0) <= slot.at) return;      // antérieur au comptage : replié
+      slot.n += (+m.d || 0);
+    });
+    Object.keys(by).forEach(function (id) {
+      var s = by[id];
+      /* Le socle n'est PAS recalculé ici — seul un comptage (setAbsolute) ou une
+         compaction le déplace. On ne fait que normaliser une déclinaison d'avant
+         ce modèle, pour qu'elle cesse d'être ambiguë. */
+      if (s.v.base == null) { s.v.base = baseOf(s.v); s.v.baseAt = s.at; }
+      s.v.stock = Math.max(0, Math.round(s.n));
+    });
+  }
+
+  /* Un geste qui AFFIRME un état : comptage physique, saisie directe, création.
+     Il repose le socle et rend caducs les mouvements d'avant. */
+  function setAbsolute(v, n) {
+    if (!v) return v;
+    v.base = Math.max(0, n | 0);
+    v.baseAt = now();
+    v.stock = v.base;
+    /* Les mouvements de cette déclinaison antérieurs au comptage ne servent
+       plus à rien ici — la règle de fusion les ignore déjà, autant ne pas les
+       traîner. Ceux des AUTRES déclinaisons ne bougent pas. */
+    if (Array.isArray(db.moves)) {
+      db.moves = db.moves.filter(function (m) { return !m || m.vid !== v.id || (+m.at || 0) > v.baseAt; });
+    }
+    return v;
+  }
+
+  /* Un geste qui RACONTE un événement : vente, retour, réception, ±1. */
+  function move(v, d, why) {
+    if (!v || !(d = d | 0)) return v;
+    if (!Array.isArray(db.moves)) db.moves = [];
+    db.moves.push({ id: moveId(), vid: v.id, d: d, at: now(), why: String(why || 'ajust').slice(0, 16) });
+    materialize(db, v.id);
+    return v;
+  }
+
+  /* Replie ce qui est vieux dans le socle, et borne le journal. Rien n'est
+     perdu : un mouvement replié a été ADDITIONNÉ au socle avant d'être retiré. */
+  function compact(doc) {
+    var moves = Array.isArray(doc.moves) ? doc.moves.filter(Boolean) : [];
+    if (!moves.length) { doc.moves = []; return doc; }
+    var cutoff = Date.now() - MOVE_DAYS * 86400000;
+    /* Un mouvement antérieur au socle de sa déclinaison est déjà replié : il ne
+       pourra plus jamais changer un stock. Le garder ferait grossir le document
+       à chaque comptage physique, sans effet. */
+    var socles = Object.create(null);
+    (doc.variants || []).forEach(function (v) { if (v && v.id) socles[v.id] = baseAtOf(v); });
+    moves = moves.filter(function (m) { return !(m.vid in socles) || (+m.at || 0) > socles[m.vid]; });
+    if (!moves.length) { doc.moves = []; return doc; }
+    /* Trop de mouvements : on replie aussi les plus anciens au-delà du plafond,
+       sinon un très gros commerce ferait grossir le document sans fin. */
+    moves.sort(function (a, b) { return (+a.at || 0) - (+b.at || 0); });
+    var over = Math.max(0, moves.length - MOVE_MAX);
+    var byId = Object.create(null);
+    (doc.variants || []).forEach(function (v) { if (v && v.id) byId[v.id] = v; });
+    var keep = [];
+    moves.forEach(function (m, i) {
+      var old = (+m.at || 0) <= cutoff || i < over;
+      var v = byId[m.vid];
+      if (!old || !v) { if (!old) keep.push(m); return; }   // mouvement orphelin : il tombe
+      if ((+m.at || 0) <= baseAtOf(v)) return;              // déjà replié
+      v.base = Math.max(0, baseOf(v) + (+m.d || 0));
+      v.baseAt = Math.max(baseAtOf(v), +m.at || 0);
+    });
+    doc.moves = keep;
+    return doc;
+  }
 
   /* ── une suppression est un FAIT, pas un vide ──────────────────────────────
      On note l'id et l'instant. Rien ne relit cette carte en local (le tableau
@@ -160,8 +326,8 @@
   var TOMB_DAYS = 180;
   function tomb(ids) {
     if (!db.removed) db.removed = {};
-    var now = Date.now();
-    (Array.isArray(ids) ? ids : [ids]).forEach(function (id) { if (id) db.removed[id] = now; });
+    var t = now();
+    (Array.isArray(ids) ? ids : [ids]).forEach(function (id) { if (id) db.removed[id] = t; });
   }
   function pruneTombs(map) {
     var out = Object.create(null);
@@ -198,8 +364,14 @@
       dropIndex();
       if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
-    } else if (migrate()) {
-      persist();   // teach older records their colour family, once, in place
+    } else {
+      /* Un document d'avant le journal n'a ni socle ni mouvements : on le
+         normalise une fois, en place, pour qu'il cesse d'être ambigu. compact()
+         replie au passage ce qui a vieilli. */
+      const had = JSON.stringify(db.moves || []) + '|' + (db.variants || []).length;
+      if (!Array.isArray(db.moves)) db.moves = [];
+      compact(db); materialize(db);
+      if (migrate() || had !== JSON.stringify(db.moves || []) + '|' + (db.variants || []).length) persist();
     }
     return db;
   }
@@ -229,6 +401,7 @@
   // le réseau pour encaisser.
   function commit() {
     if (batchDepth > 0) { batchDirty = true; return; }
+    cloud.dirty = true;      // une mutation locale : nous avons quelque chose à dire
     persist(); notify(); schedulePush();
   }
 
@@ -318,7 +491,11 @@
    * local : c'est de l'édition, pas du comptage, et la dernière main qui a tapé
    * est là, devant l'écran. */
   const REV_KEY = (slug) => 'kiwiCatalogRev:v1:' + slug;
-  const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0 };
+  /* `dirty` : ce navigateur porte une écriture que le serveur n'a pas encore
+     acceptée. Posé par commit() (toute mutation locale passe par là), levé
+     seulement quand le serveur a dit oui. C'est ce drapeau, avec `ahead.mine`,
+     qui empêche un appareil sans rien à dire de republier en boucle. */
+  const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0, dirty: false };
 
   // La démo (Maison Mansour) ne quitte jamais ce navigateur : elle est semée
   // localement et n'appartient à aucun compte.
@@ -335,12 +512,25 @@
     try { localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {}
   }
 
+  /* Ce que la dernière fusion a appris, et de qui. `mine` vrai = nous portons
+     quelque chose que le serveur n'a pas, donc il faut remonter. `theirs` vrai =
+     nous venons d'apprendre quelque chose. Lu par pull() pour ne PAS republier un
+     document auquel nous n'avons rien ajouté — voir la note là-bas. */
+  var ahead = { mine: false, theirs: false };
+
   function mergeDocs(mine, theirs) {
+    ahead = { mine: false, theirs: false };
     /* Les suppressions des deux côtés, réunies : celle que l'autre appareil a
        faite compte autant que la nôtre. */
     const gone = pruneTombs(Object.assign(
       Object.create(null), (theirs && theirs.removed) || {}, (mine && mine.removed) || {}
     ));
+    /* Une suppression que nous portons et qu'ils n'ont pas est exactement ce
+       qu'il faut leur transmettre — sans ce test, un pull « propre » la garderait
+       pour lui et l'article resterait vivant sur l'autre comptoir. */
+    Object.keys(gone).forEach((id) => {
+      if (!((theirs && theirs.removed) || {})[id]) ahead.mine = true;
+    });
     const out = {
       v: 1, categories: [], products: [], variants: [],
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
@@ -349,19 +539,30 @@
     ['categories', 'products', 'variants'].forEach((k) => {
       const seen = Object.create(null);
       const list = [];
+      /* Ce que l'autre côté connaît déjà. Sert uniquement à savoir si NOUS
+         portons du neuf — sans quoi pull() ne peut pas décider s'il a quelque
+         chose à remonter. */
+      const theirIds = Object.create(null);
+      ((theirs && theirs[k]) || []).forEach((e) => { if (e && e.id) theirIds[e.id] = 1; });
       const take = (e) => {
         if (!e || !e.id) return;
         if (gone[e.id]) return;                     // supprimé ici ou là-bas
-        if (!seen[e.id]) { seen[e.id] = 1; list.push(e); return; }
-        /* Connu des deux côtés. On garde l'enregistrement local (l'édition est
-           locale) mais la QUANTITÉ suit l'horloge, pas l'appareil. */
+        if (!seen[e.id]) { seen[e.id] = 1; list.push(e); ahead.theirs = true; return; }
+        /* Connu des deux côtés. L'enregistrement local est gardé — le nom, le
+           prix, la couleur, les codes-barres sont de l'ÉDITION, et la dernière
+           main qui a tapé est devant l'écran.
+           Le SOCLE, lui, n'est pas de l'édition : c'est un comptage. Le plus
+           récent des deux gagne, parce qu'un inventaire physique fait ce matin
+           n'a pas à céder devant un chiffre d'hier. Les MOUVEMENTS ne sont
+           arbitrés nulle part ici : ils sont réunis plus bas, tous. */
         if (k !== 'variants') return;
         const kept = seen[e.id];
         if (kept === 1) return;
-        if ((+e.stockAt || 0) > (+kept.stockAt || 0)) {
-          kept.stock = Math.max(0, +e.stock || 0);
-          kept.stockAt = +e.stockAt || 0;
-        }
+        if (baseAtOf(e) > baseAtOf(kept)) {
+          kept.base = baseOf(e);
+          kept.baseAt = baseAtOf(e);
+          ahead.theirs = true;
+        } else if (baseAtOf(kept) > baseAtOf(e)) { ahead.mine = true; }
       };
       /* Deux passes, pour que la seconde puisse RETROUVER l'enregistrement gardé
          et non seulement savoir qu'il existe. */
@@ -369,15 +570,44 @@
         if (!e || !e.id || gone[e.id] || seen[e.id]) return;
         seen[e.id] = k === 'variants' ? e : 1;
         list.push(e);
+        if (!theirIds[e.id]) ahead.mine = true;   // créé ici, inconnu là-bas
       });
       ((theirs && theirs[k]) || []).forEach(take);
       out[k] = list;
     });
+
+    /* ── LES MOUVEMENTS : UNE UNION, PAS UN ARBITRAGE ────────────────────────
+       C'est ici que deux ventes simultanées s'additionnent enfin. Chaque
+       mouvement porte un id unique par appareil ; réunir les deux journaux par
+       id garde donc les deux ventes, et recevoir deux fois le même mouvement ne
+       le compte qu'une fois. Rien à départager : un événement qui a eu lieu a
+       eu lieu. */
+    const byMove = Object.create(null);
+    const theirMove = Object.create(null);
+    ((theirs && theirs.moves) || []).forEach((m) => { if (m && m.id) theirMove[m.id] = m; });
+    ((mine && mine.moves) || []).forEach((m) => {
+      if (!m || !m.id) return;
+      byMove[m.id] = m;
+      if (!theirMove[m.id]) ahead.mine = true;   // une vente d'ici qu'ils ignorent
+    });
+    Object.keys(theirMove).forEach((id) => {
+      if (!byMove[id]) { byMove[id] = theirMove[id]; ahead.theirs = true; }
+    });
+    out.moves = Object.keys(byMove).map((id) => byMove[id])
+      .filter((m) => !gone[m.vid]);   // les mouvements d'un article supprimé s'en vont avec lui
+
     // Une déclinaison dont le produit a été supprimé des deux côtés n'a plus de
     // parent : elle deviendrait un article fantôme, invendable et invisible.
     const alive = Object.create(null);
     out.products.forEach((p) => { alive[p.id] = 1; });
     out.variants = out.variants.filter((v) => alive[v.productId]);
+
+    /* Replier le vieux, puis recalculer : le stock affiché est TOUJOURS le socle
+       plus les mouvements postérieurs, jamais un nombre qu'on se serait
+       transmis. C'est ce qui rend la fusion reproductible — deux appareils
+       partis des mêmes deux journaux arrivent au même stock. */
+    compact(out);
+    materialize(out);
     return out;
   }
 
@@ -441,7 +671,17 @@
         dropIndex();
         migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();
-        if (!adopt) schedulePush(0);   // notre fusion doit remonter
+        /* ── NE PAS REPUBLIER CE QU'ON VIENT DE LIRE ──────────────────────────
+           On repoussait après CHAQUE fusion, systématiquement. Un appareil qui
+           n'avait rien changé republiait donc le document qu'il venait de
+           recevoir : le serveur incrémentait sa révision, l'autre appareil
+           relisait, refusionnait, republiait à son tour. C'est cette boucle qui
+           a porté le document d'un client à la révision 165 pour 41 articles —
+           et c'est sous ce bruit que l'écrasement du stock passait inaperçu.
+           On ne remonte donc que si nous portons vraiment quelque chose que le
+           serveur n'a pas : une vente, une création, une suppression, un
+           comptage plus récent. mergeDocs vient de le dire. */
+        if (!adopt && (cloud.dirty || ahead.mine)) schedulePush(0);
         return true;
       })
       .catch(() => false);   // hors ligne → la copie locale reste la vérité
@@ -475,6 +715,9 @@
         if (res.status === 200 && res.j && res.j.ok) {
           cloud.rev = +res.j.rev || 0;
           writeRev(slug, cloud.rev);
+          /* Accepté : plus rien à remonter. Levé ICI et nulle part ailleurs — un
+             drapeau baissé sur un envoi refusé perdrait la vente silencieusement. */
+          cloud.dirty = false;
           cloud.tries = 0;
           return;
         }
@@ -668,7 +911,9 @@
       colorId: String(colorId || n.family.id),
       colorFamily: n.family.id,
       colorLabel: n.family.label, colorHex: n.family.hex,
-      size: String(size), stock: Math.max(0, stock | 0), stockAt: Date.now(), sku: '', barcodes: [],
+      size: String(size), stock: Math.max(0, stock | 0),
+      base: Math.max(0, stock | 0), baseAt: now(),
+      sku: '', barcodes: [],
     };
     if (n.source) {
       v.colorSource = n.source;
@@ -918,7 +1163,9 @@
        plus bas dans mergeDocs, mais il ne peut agir que si le produit reste
        supprimé — et une déclinaison non marquée revient avec son stock, ce qui
        remettrait l'article en vente sous un produit fantôme. */
-    tomb(db.variants.filter((v) => v.productId === id).map((v) => v.id).concat([id]));
+    const vids = db.variants.filter((v) => v.productId === id).map((v) => v.id);
+    tomb(vids.concat([id]));
+    if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || vids.indexOf(m.vid) < 0);
     db.variants = db.variants.filter((v) => v.productId !== id);
     db.products = db.products.filter((p) => p.id !== id);
     dropIndex();
@@ -960,7 +1207,7 @@
     // own stock and its own barcode. Merging them is a deliberate act, not a
     // side effect of picking the same swatch.
     const dup = db.variants.find((v) => v.productId === data.productId && v.colorId === data.colorId && v.size === String(data.size));
-    if (dup) { if (data.stock != null) { stamp(dup, data.stock); commit(); } return dup; }
+    if (dup) { if (data.stock != null) { setAbsolute(dup, data.stock); commit(); } return dup; }
     const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0, {
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
@@ -969,7 +1216,7 @@
   }
   function updateVariant(id, patch) {
     const v = varById(id); if (!v) return null;
-    if (patch.stock != null) stamp(v, patch.stock);
+    if (patch.stock != null) setAbsolute(v, patch.stock);   // un champ de formulaire est un état, pas un delta
     if (patch.size != null) v.size = String(patch.size);
     if (patch.sku != null) v.sku = String(patch.sku);
     if (patch.note != null) v.note = String(patch.note).slice(0, 60);
@@ -996,10 +1243,18 @@
      horodatage, et lui seul, qui permet à la fusion de savoir lequel des deux
      appareils a le compte le plus récent (voir mergeDocs). Une écriture de
      stock qui oublie de le poser est une vente que le stock finira par oublier. */
-  function stamp(v, n) { if (v) { v.stock = Math.max(0, n | 0); v.stockAt = Date.now(); } return v; }
-  function setStock(id, n) { const v = varById(id); if (v) { stamp(v, n); commit(); } return v; }
-  function adjustStock(id, d) { const v = varById(id); if (v) { stamp(v, (v.stock || 0) + (d | 0)); commit(); } return v; }
-  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); tomb(id); dropIndex(); commit(); }
+  /* setStock AFFIRME un état (saisie directe, inventaire physique) : il repose le
+     socle. adjustStock RACONTE un événement (vente, retour, ±1 au comptoir) : il
+     écrit un mouvement, et c'est ce qui permet à deux ventes simultanées de
+     s'additionner au lieu de s'écraser. La distinction n'est pas cosmétique —
+     c'est toute la différence entre « il y en a 8 » et « il en est parti 2 ». */
+  function setStock(id, n) { const v = varById(id); if (v) { setAbsolute(v, n); commit(); } return v; }
+  function adjustStock(id, d, why) { const v = varById(id); if (v) { move(v, d, why || 'ajust'); commit(); } return v; }
+  function deleteVariant(id) {
+    db.variants = db.variants.filter((v) => v.id !== id);
+    if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || m.vid !== id);
+    tomb(id); dropIndex(); commit();
+  }
 
   /* ─────────── les trois gestes d'inventaire, jamais confondus ───────────
    * Une reprise de stock existant se fait à la douchette, vite, et trois gestes
@@ -1043,7 +1298,7 @@
     const n = Math.floor(Number(qty));
     if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: 'quantite' };
     const before = v.stock || 0;
-    stamp(v, before + n);
+    move(v, n, 'reception');   // une réception est un événement : elle s'additionne
     commit();
     return { ok: true, added: n, before, stock: v.stock };
   }
@@ -1296,6 +1551,10 @@
        simplement au commerçant un stock qu'il croyait avoir corrigé. */
     _merge: (mine, theirs) => mergeDocs(mine, theirs),
     _doc: () => (load(), db),
+    /* Ce que la dernière fusion a appris, et de qui. Exposé pour que le garde-fou
+       puisse vérifier qu'un appareil sans rien à dire ne republie pas — la boucle
+       qui a porté le document d'un client à la révision 165. */
+    _ahead: () => ({ mine: ahead.mine, theirs: ahead.theirs }),
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
     // variants
@@ -1304,7 +1563,9 @@
     // qu'un appelant qui pousserait dedans ne fasse pas mentir l'index.
     listVariants: (pid) => (load(), variantsOf(pid).slice()), addVariant: (d) => (load(), addVariant(d)),
     updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
-    adjustStock: (id, d) => (load(), adjustStock(id, d)), deleteVariant: (id) => (load(), deleteVariant(id)),
+    // Le MOTIF fait partie de l'appel : sans lui, une vente arrive au journal
+    // étiquetée « ajust » et le journal cesse d'être lisible.
+    adjustStock: (id, d, why) => (load(), adjustStock(id, d, why)), deleteVariant: (id) => (load(), deleteVariant(id)),
     // intake — les trois gestes distincts (voir le bloc au-dessus de findVariant)
     findVariant: (pid, c, s) => (load(), findVariant(pid, c, s)),
     ensureVariant: (d) => (load(), ensureVariant(d)),

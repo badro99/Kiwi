@@ -51,7 +51,7 @@ const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
  * inattendue est ramenée à du vide plutôt que rejetée — sauf le garde-fou de
  * forme dans onRequestPost, qui refuse un document qui n'est pas un catalogue. */
 function sanitize(raw) {
-  const out = { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {} };
+  const out = { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {}, moves: [] };
   if (!raw || typeof raw !== 'object') return out;
 
   out.seq = num(raw.seq, 1e12) | 0;
@@ -72,6 +72,27 @@ function sanitize(raw) {
       .slice(0, 20000)
       .forEach(([id, t]) => { out.removed[id] = t; });
   }
+
+  /* ── LE JOURNAL DES MOUVEMENTS ────────────────────────────────────────────
+   * Une vente, un retour, une réception : chacun une écriture immuable avec un
+   * id unique par appareil. C'est l'union de ces journaux qui fait que deux
+   * ventes simultanées s'ADDITIONNENT au lieu de s'écraser — donc ils doivent
+   * traverser le serveur, sinon chaque appareil ne connaît que ses propres
+   * ventes et on retombe sur un arbitrage entre deux nombres absolus.
+   * 12 000 mouvements, les plus RÉCENTS d'abord : le client replie les vieux
+   * dans le socle (compact()), donc perdre les plus anciens ne perd aucune
+   * unité — perdre les plus récents, si. */
+  out.moves = (Array.isArray(raw.moves) ? raw.moves : [])
+    .map((m) => ({
+      id: str(m && m.id, 64),
+      vid: str(m && m.vid, 40),
+      d: Math.max(-1e6, Math.min(1e6, Math.round(Number(m && m.d) || 0))),
+      at: ts(m && m.at),
+      why: str(m && m.why, 16),
+    }))
+    .filter((m) => m.id && m.vid && m.d && m.at)
+    .sort((a, b) => b.at - a.at)
+    .slice(0, 12000);
 
   // Les champs sont énumérés un par un, et ils doivent refléter EXACTEMENT la
   // forme de assets/boutique-catalog.js. Un champ oublié ici ne provoque pas une
@@ -129,11 +150,18 @@ function sanitize(raw) {
       colorLabel: str(v && v.colorLabel, 40),
       colorHex: str(v && v.colorHex, 9),
       size: str(v && v.size, 12),
+      // `stock` est MATÉRIALISÉ : socle + mouvements postérieurs. On le transporte
+      // parce que cent lecteurs s'en servent tel quel, mais ce n'est pas la
+      // source de vérité — `base`/`baseAt` et le journal `moves` le sont.
       stock: num(v && v.stock, 1e6) | 0,
-      // L'INSTANT de la dernière écriture de cette quantité. C'est lui qui décide
-      // quel appareil a le compte le plus récent (voir mergeDocs dans
-      // assets/boutique-catalog.js). Sans lui ici, la fusion redevient « le
-      // dernier onglet ouvert gagne » et un stock vendu remonte tout seul.
+      // LE SOCLE : un comptage absolu (création, inventaire physique, saisie
+      // directe) et son instant. Le plus récent des deux appareils gagne, parce
+      // qu'un comptage à la main ne cède pas devant un chiffre de la veille.
+      base: num(v && v.base, 1e6) | 0,
+      baseAt: ts(v && v.baseAt),
+      // Gardé le temps que tous les appareils passent au journal : un client qui
+      // n'a pas encore rechargé envoie encore `stockAt`, et baseAtOf() sait le
+      // lire. Le supprimer d'ici remettrait son stock à l'arbitrage d'avant.
       stockAt: ts(v && v.stockAt),
       sku: str(v && v.sku, 40),
       // Précision facultative : ce qui distingue deux variantes de même couleur.

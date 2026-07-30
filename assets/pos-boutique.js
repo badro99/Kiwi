@@ -281,7 +281,11 @@
              || sameSize.find((x) => x.colorId === color)
              || sameSize.find((x) => fam(x) === color)
              || sameSize[0];
-      if (v) cat.adjustStock(v.id, delta);
+      /* Le MOTIF suit le mouvement. Le stock est désormais un journal
+         (assets/boutique-catalog.js) : « vente » et « retour » distinguent une
+         sortie au comptoir d'une reprise, ce qui rend le journal lisible le jour
+         où quelqu'un demande où sont passées douze pièces. */
+      if (v) cat.adjustStock(v.id, delta, delta < 0 ? 'vente' : 'retour');
     } catch (_) {}
   }
   /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════

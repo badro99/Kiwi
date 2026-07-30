@@ -167,7 +167,7 @@ const vr = (stock, stockAt) => ({ id: 'var_1', productId: 'prod_1', size: 'M', s
   C.use('santos-store');
   const p = C.addProduct({ name: 'Test', priceMAD: 100 });
   const v = C.addVariant({ productId: p.id, colorId: 'noir', size: 'M', stock: 7 });
-  ok(!!(v && v.stockAt), 'une déclinaison créée porte son horodatage de stock');
+  ok(!!(v && v.baseAt && v.base != null), 'une déclinaison créée porte son socle et son instant');
 
   const serveur = JSON.parse(JSON.stringify(C._doc()));   // ce que l'autre appareil a lu
   C.deleteProduct(p.id);
@@ -183,10 +183,126 @@ const vr = (stock, stockAt) => ({ id: 'var_1', productId: 'prod_1', size: 'M', s
 {
   const p = C.addProduct({ name: 'Test 2', priceMAD: 100 });
   const v = C.addVariant({ productId: p.id, colorId: 'blanc', size: 'L', stock: 10 });
-  const avant = v.stockAt;
-  const after = C.adjustStock(v.id, -3);
+  const after = C.adjustStock(v.id, -3, 'vente');
   eq(after.stock, 7, 'la vente décrémente');
-  ok(after.stockAt >= avant, 'et elle horodate');
+  const j = (C._doc().moves || []).filter((m) => m.vid === v.id);
+  eq(j.length, 1, 'et elle écrit un mouvement plutôt que d\'écraser le compte');
+}
+
+/* ═══ 7 · DEUX VENTES SIMULTANÉES S'ADDITIONNENT ════════════════════════════
+ * Le trou que l'horodatage ne bouchait pas. La caisse vend 2 (10 → 8), le
+ * tableau de bord en vend 1 (10 → 9) dans la même minute. « Le plus récent
+ * gagne » retient 8 ou 9 — jamais 7, et un article part sans sortir du stock.
+ * Deux mouvements distincts, en revanche, s'additionnent. */
+{
+  const socle = (n, at) => ({ id: 'var_1', productId: 'prod_1', size: 'M', stock: n, base: n, baseAt: at });
+  const base = { v: 1, seq: 10, categories: [], products: [{ id: 'prod_1', name: 'Chemise' }] };
+  const caisse = Object.assign({}, base, {
+    variants: [socle(10, NOW - 7200000)], removed: {},
+    moves: [{ id: 'dev-A-1', vid: 'var_1', d: -2, at: NOW - 60000, why: 'vente' }],
+  });
+  const dash = Object.assign({}, base, {
+    variants: [socle(10, NOW - 7200000)], removed: {},
+    moves: [{ id: 'dev-B-1', vid: 'var_1', d: -1, at: NOW - 30000, why: 'vente' }],
+  });
+
+  const m = C._merge(caisse, dash);
+  eq(m.variants[0].stock, 7, 'deux ventes simultanées sur deux appareils s\'additionnent');
+  eq(m.moves.length, 2, 'les deux mouvements survivent');
+
+  const m2 = C._merge(dash, caisse);
+  eq(m2.variants[0].stock, 7, 'et dans l\'autre sens aussi (la fusion est commutative)');
+
+  /* IDEMPOTENCE. Le même journal reçu deux fois ne doit pas vendre deux fois —
+     sinon chaque sondage réseau ferait fondre le stock. */
+  const m3 = C._merge(m, dash);
+  eq(m3.variants[0].stock, 7, 'refusionner ne redéduit pas les mêmes ventes');
+  const m4 = C._merge(m3, m3);
+  eq(m4.variants[0].stock, 7, 'ni fusionner un document avec lui-même');
+}
+
+/* ═══ 8 · UN COMPTAGE PHYSIQUE ANNULE CE QUI PRÉCÈDE ════════════════════════
+ * Quand on compte les cartons à la main, l'historique d'avant ne discute pas.
+ * Mais une vente POSTÉRIEURE au comptage doit encore s'appliquer. */
+{
+  const base = { v: 1, seq: 10, categories: [], products: [{ id: 'prod_1', name: 'Chemise' }], removed: {} };
+  const compte = Object.assign({}, base, {
+    variants: [{ id: 'var_1', productId: 'prod_1', size: 'M', stock: 50, base: 50, baseAt: NOW - 1000 }],
+    moves: [],
+  });
+  const vieux = Object.assign({}, base, {
+    variants: [{ id: 'var_1', productId: 'prod_1', size: 'M', stock: 3, base: 3, baseAt: NOW - 86400000 }],
+    moves: [{ id: 'dev-C-1', vid: 'var_1', d: -1, at: NOW - 80000000, why: 'vente' }],
+  });
+
+  const m = C._merge(vieux, compte);
+  eq(m.variants[0].stock, 50, 'le comptage du jour l\'emporte sur le chiffre de la veille');
+  eq(m.moves.length, 0, 'et les mouvements qu\'il annule ne traînent pas');
+
+  const apresVente = Object.assign({}, compte, {
+    moves: [{ id: 'dev-C-2', vid: 'var_1', d: -4, at: NOW, why: 'vente' }],
+  });
+  const m2 = C._merge(compte, apresVente);
+  eq(m2.variants[0].stock, 46, 'une vente POSTÉRIEURE au comptage s\'applique quand même');
+}
+
+/* ═══ 9 · LA VENTE, PAR L'API PUBLIQUE, EST UN MOUVEMENT ════════════════════
+ * adjustStock() est ce que la caisse appelle par article vendu. S'il repose un
+ * socle au lieu d'écrire un mouvement, tout le reste est décoratif. */
+{
+  const p = C.addProduct({ name: 'Test 3', priceMAD: 100 });
+  const v = C.addVariant({ productId: p.id, colorId: 'rouge', size: 'S', stock: 20 });
+  C.adjustStock(v.id, -5, 'vente');
+  const doc = C._doc();
+  const mv = (doc.moves || []).filter((m) => m.vid === v.id);
+  eq(mv.length, 1, 'une vente écrit UN mouvement');
+  eq(mv[0].d, -5, 'du bon delta');
+  eq(mv[0].why, 'vente', 'avec son motif');
+  eq(C.getVariant ? C.getVariant(v.id).stock : doc.variants.find((x) => x.id === v.id).stock, 15,
+    'et le stock matérialisé suit');
+
+  /* Un comptage direct, lui, repose le socle et efface le journal de cet article. */
+  C.setStock(v.id, 12);
+  const doc2 = C._doc();
+  eq((doc2.moves || []).filter((m) => m.vid === v.id).length, 0,
+    'un comptage direct annule le journal de cette déclinaison');
+  eq(doc2.variants.find((x) => x.id === v.id).stock, 12, 'et pose le nouveau compte');
+}
+
+/* ═══ 10 · NE PAS REPUBLIER CE QU'ON VIENT DE LIRE ══════════════════════════
+ * La boucle qui a porté le document d'un client à la révision 165 pour 41
+ * articles. Un appareil qui n'a rien à dire ne doit rien remonter — c'est sous
+ * ce bruit que l'écrasement du stock passait inaperçu. */
+{
+  const doc1 = {
+    v: 1, seq: 5, categories: [], removed: {}, moves: [],
+    products: [{ id: 'prod_1', name: 'Chemise' }],
+    variants: [{ id: 'var_1', productId: 'prod_1', size: 'M', stock: 4, base: 4, baseAt: NOW - 1000 }],
+  };
+  const copie = JSON.parse(JSON.stringify(doc1));
+
+  C._merge(doc1, copie);
+  ok(C._ahead && C._ahead().mine === false,
+    'fusionner deux documents identiques ne donne RIEN à remonter');
+
+  /* Mais dès qu'on porte quelque chose de neuf, il faut remonter. */
+  const avecVente = JSON.parse(JSON.stringify(doc1));
+  avecVente.moves = [{ id: 'dev-D-1', vid: 'var_1', d: -1, at: NOW, why: 'vente' }];
+  C._merge(avecVente, copie);
+  ok(C._ahead().mine === true, 'une vente d\'ici doit remonter');
+
+  const avecSuppr = JSON.parse(JSON.stringify(doc1));
+  avecSuppr.products = [];
+  avecSuppr.removed = { prod_1: NOW };
+  C._merge(avecSuppr, copie);
+  ok(C._ahead().mine === true, 'une suppression d\'ici doit remonter');
+
+  /* Et à l'inverse : ce que l'AUTRE porte ne nous oblige pas à republier. */
+  const leurVente = JSON.parse(JSON.stringify(doc1));
+  leurVente.moves = [{ id: 'dev-E-1', vid: 'var_1', d: -1, at: NOW, why: 'vente' }];
+  C._merge(copie, leurVente);
+  ok(C._ahead().mine === false, 'apprendre la vente de l\'autre ne nous fait pas republier');
+  ok(C._ahead().theirs === true, 'mais elle est bien apprise');
 }
 
 if (fail) {
