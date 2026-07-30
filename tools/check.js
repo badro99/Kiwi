@@ -440,6 +440,24 @@ section('Réimprimer un ticket (tools/pos-reprint-test.js)');
   }
 }
 
+/* ── 9ter · la fusion du catalogue boutique ──────────────────────────────────
+ * Deux appareils tiennent le même inventaire ; mergeDocs() décide ce qui
+ * survit quand ils ne sont pas d'accord. Une erreur là-dedans ne lève rien —
+ * elle rend au commerçant un stock qu'il croyait avoir corrigé, indéfiniment.
+ * (tools/catalog-merge-test.js) ──────────────────────────────────────────── */
+section('Fusion du catalogue boutique (tools/catalog-merge-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'catalog-merge-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`catalog-merge-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9bis · le chiffre d'affaires du tableau de bord ─────────────────────────
  * Il était reconstitué (ventes × panier moyen) alors que le panier affiché est
  * arrondi à l'entier : le tableau de bord ne tombait jamais juste face au

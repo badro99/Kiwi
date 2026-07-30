@@ -40,16 +40,38 @@ import { tenantFor } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
+/* Un INSTANT en millisecondes. Pas `num(...) | 0` : l'opérateur binaire ramène à
+ * un entier 32 bits, et un horodatage d'aujourd'hui (~1,78 × 10¹²) y déborde —
+ * il ressortait donc en une date arbitraire. C'est ce qui arrivait déjà à
+ * `createdAt`, en silence, depuis toujours. */
+const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
 
 /* Bornage du document. On fait confiance au commerçant (c'est son propre stock)
  * mais un client qui déraille ne doit pas pouvoir gonfler la ligne. Toute forme
  * inattendue est ramenée à du vide plutôt que rejetée — sauf le garde-fou de
  * forme dans onRequestPost, qui refuse un document qui n'est pas un catalogue. */
 function sanitize(raw) {
-  const out = { v: 1, categories: [], products: [], variants: [], seq: 0 };
+  const out = { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {} };
   if (!raw || typeof raw !== 'object') return out;
 
   out.seq = num(raw.seq, 1e12) | 0;
+
+  /* ── LES SUPPRESSIONS ──────────────────────────────────────────────────────
+   * La carte des ids supprimés, avec l'instant. Elle doit traverser le serveur,
+   * sinon l'appareil d'à côté ne peut PAS apprendre qu'un article a été
+   * supprimé : il le renverrait, et la fusion le ferait réapparaître. C'est
+   * exactement ce qui se passait — un article supprimé revenait à la
+   * synchronisation suivante, indéfiniment.
+   * Bornée à 20 000 entrées : au-delà, on garde les plus récentes, ce sont
+   * celles que l'autre appareil n'a pas encore vues. */
+  if (raw.removed && typeof raw.removed === 'object' && !Array.isArray(raw.removed)) {
+    Object.keys(raw.removed)
+      .map((id) => [str(id, 40), ts(raw.removed[id])])
+      .filter(([id, t]) => id && t > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20000)
+      .forEach(([id, t]) => { out.removed[id] = t; });
+  }
 
   // Les champs sont énumérés un par un, et ils doivent refléter EXACTEMENT la
   // forme de assets/boutique-catalog.js. Un champ oublié ici ne provoque pas une
@@ -81,7 +103,7 @@ function sanitize(raw) {
       // Médias : des URLs (/api/media/…), jamais des octets.
       photo: str(p && p.photo, 300),
       video: str(p && p.video, 300),
-      createdAt: num(p && p.createdAt, 1e15) | 0 || 0,
+      createdAt: ts(p && p.createdAt),
       archived: !!(p && p.archived),
     }))
     .filter((p) => p.id && p.name);
@@ -108,6 +130,11 @@ function sanitize(raw) {
       colorHex: str(v && v.colorHex, 9),
       size: str(v && v.size, 12),
       stock: num(v && v.stock, 1e6) | 0,
+      // L'INSTANT de la dernière écriture de cette quantité. C'est lui qui décide
+      // quel appareil a le compte le plus récent (voir mergeDocs dans
+      // assets/boutique-catalog.js). Sans lui ici, la fusion redevient « le
+      // dernier onglet ouvert gagne » et un stock vendu remonte tout seul.
+      stockAt: ts(v && v.stockAt),
       sku: str(v && v.sku, 40),
       // Précision facultative : ce qui distingue deux variantes de même couleur.
       note: str(v && v.note, 60),

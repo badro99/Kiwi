@@ -146,7 +146,32 @@
 
   function nextId(prefix) { db.seq = (db.seq || 0) + 1; return prefix + '_' + db.seq; }
 
-  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0 }; }
+  /* `removed` : les SUPPRESSIONS, nommées. Voir la note au-dessus de mergeDocs —
+     sans cette carte, une absence ne se distingue pas d'une ignorance, et un
+     article supprimé revient à chaque synchronisation. */
+  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {} }; }
+
+  /* ── une suppression est un FAIT, pas un vide ──────────────────────────────
+     On note l'id et l'instant. Rien ne relit cette carte en local (le tableau
+     est déjà filtré) : elle n'existe que pour la fusion, et c'est précisément
+     là qu'elle manquait. Bornée à 180 jours — au-delà, l'autre appareil a
+     forcément resynchronisé, et une carte qui ne se vide jamais finit par peser
+     plus lourd que le catalogue. */
+  var TOMB_DAYS = 180;
+  function tomb(ids) {
+    if (!db.removed) db.removed = {};
+    var now = Date.now();
+    (Array.isArray(ids) ? ids : [ids]).forEach(function (id) { if (id) db.removed[id] = now; });
+  }
+  function pruneTombs(map) {
+    var out = Object.create(null);
+    var floor = Date.now() - TOMB_DAYS * 86400000;
+    Object.keys(map || {}).forEach(function (id) {
+      var t = +map[id] || 0;
+      if (t > floor) out[id] = t;
+    });
+    return out;
+  }
 
   // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
   // only. A real signed-in / hosted merchant or a paired till must never inherit
@@ -265,11 +290,33 @@
    *  3. NE JAMAIS POUSSER AVANT D'AVOIR LU. Un navigateur neuf a un catalogue
    *     vide ; s'il poussait en premier il effacerait le vrai stock.
    *
-   * Fusion : union par id. Ce que CET appareil affiche l'emporte sur un id connu
-   * des deux côtés, et tout ce que l'autre a ajouté vient s'ajouter. Deux
-   * appareils qui modifient LA MÊME déclinaison en même temps voient donc un des
-   * deux comptes gagner — mais rien ne disparaît jamais, ce qui est le seul
-   * arbitrage acceptable sur un inventaire. */
+   * Fusion : union par id, plus deux arbitrages qui manquaient et qui ont coûté
+   * cher à un vrai commerçant le 30/07/2026 — son stock revenait indéfiniment à
+   * 4 078 unités quoi qu'il vende ou supprime.
+   *
+   *  · UNE SUPPRESSION EST UN FAIT, PAS UN VIDE. « Union par id, rien ne
+   *    disparaît jamais » paraît prudent sur un inventaire, et c'est faux : une
+   *    ABSENCE ne se distingue pas d'une IGNORANCE. L'appareil qui supprime un
+   *    article se retrouve simplement à ne plus l'avoir, la copie serveur l'a
+   *    encore, la fusion le rend — puis le repousse au serveur. La suppression
+   *    n'était pas perdue, elle était ANNULÉE, et le geste ne pouvait pas
+   *    aboutir un seul jour. D'où `removed` : la carte des ids supprimés, avec
+   *    l'instant. Les ids ne sont jamais réattribués (nextId monte), donc un id
+   *    marqué supprimé est supprimé, des deux côtés.
+   *
+   *  · LE COMPTE LE PLUS RÉCENT GAGNE, PAS LE COMPTE LOCAL. « cet appareil
+   *    d'abord » se juge depuis chaque appareil : la caisse vend, son compte
+   *    baisse ; l'onglet tableau de bord resté ouvert garde l'ancien, et quand
+   *    c'est LUI qui pousse, c'est l'ancien qui gagne. Les deux se renvoyaient
+   *    le même document (révision 165 en production, pour un catalogue de 41
+   *    déclinaisons) et le stock ne bougeait plus. Chaque écriture de quantité
+   *    horodate donc `stockAt`, et la fusion prend la plus récente des deux.
+   *    Un document d'avant ce correctif n'a pas d'horodatage : il compte pour le
+   *    plus ancien, donc la première vente qui suit le remet dans le vrai.
+   *
+   * Le reste des champs (nom, prix, couleur, codes-barres) suit toujours l'appareil
+   * local : c'est de l'édition, pas du comptage, et la dernière main qui a tapé
+   * est là, devant l'écran. */
   const REV_KEY = (slug) => 'kiwiCatalogRev:v1:' + slug;
   const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0 };
 
@@ -289,16 +336,41 @@
   }
 
   function mergeDocs(mine, theirs) {
+    /* Les suppressions des deux côtés, réunies : celle que l'autre appareil a
+       faite compte autant que la nôtre. */
+    const gone = pruneTombs(Object.assign(
+      Object.create(null), (theirs && theirs.removed) || {}, (mine && mine.removed) || {}
+    ));
     const out = {
       v: 1, categories: [], products: [], variants: [],
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      removed: gone,
     };
     ['categories', 'products', 'variants'].forEach((k) => {
       const seen = Object.create(null);
       const list = [];
-      const take = (e) => { if (e && e.id && !seen[e.id]) { seen[e.id] = 1; list.push(e); } };
-      ((mine && mine[k]) || []).forEach(take);     // cet appareil d'abord
-      ((theirs && theirs[k]) || []).forEach(take); // puis ce que l'autre a ajouté
+      const take = (e) => {
+        if (!e || !e.id) return;
+        if (gone[e.id]) return;                     // supprimé ici ou là-bas
+        if (!seen[e.id]) { seen[e.id] = 1; list.push(e); return; }
+        /* Connu des deux côtés. On garde l'enregistrement local (l'édition est
+           locale) mais la QUANTITÉ suit l'horloge, pas l'appareil. */
+        if (k !== 'variants') return;
+        const kept = seen[e.id];
+        if (kept === 1) return;
+        if ((+e.stockAt || 0) > (+kept.stockAt || 0)) {
+          kept.stock = Math.max(0, +e.stock || 0);
+          kept.stockAt = +e.stockAt || 0;
+        }
+      };
+      /* Deux passes, pour que la seconde puisse RETROUVER l'enregistrement gardé
+         et non seulement savoir qu'il existe. */
+      ((mine && mine[k]) || []).forEach((e) => {
+        if (!e || !e.id || gone[e.id] || seen[e.id]) return;
+        seen[e.id] = k === 'variants' ? e : 1;
+        list.push(e);
+      });
+      ((theirs && theirs[k]) || []).forEach(take);
       out[k] = list;
     });
     // Une déclinaison dont le produit a été supprimé des deux côtés n'a plus de
@@ -596,7 +668,7 @@
       colorId: String(colorId || n.family.id),
       colorFamily: n.family.id,
       colorLabel: n.family.label, colorHex: n.family.hex,
-      size: String(size), stock: Math.max(0, stock | 0), sku: '', barcodes: [],
+      size: String(size), stock: Math.max(0, stock | 0), stockAt: Date.now(), sku: '', barcodes: [],
     };
     if (n.source) {
       v.colorSource = n.source;
@@ -786,6 +858,7 @@
     const reassignTo = opts.reassignTo || null; // null → uncategorised
     db.products.forEach((p) => { if (p.categoryId === id) p.categoryId = reassignTo; });
     db.categories = db.categories.filter((c) => c.id !== id);
+    tomb(id);
     commit();
   }
   function categoryCount(id) { return db.products.filter((p) => p.categoryId === id && !p.archived).length; }
@@ -841,6 +914,11 @@
   }
   function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; commit(); } return p; }
   function deleteProduct(id) {
+    /* Les déclinaisons AUSSI, nommément. Le nettoyage par parent absent existe
+       plus bas dans mergeDocs, mais il ne peut agir que si le produit reste
+       supprimé — et une déclinaison non marquée revient avec son stock, ce qui
+       remettrait l'article en vente sous un produit fantôme. */
+    tomb(db.variants.filter((v) => v.productId === id).map((v) => v.id).concat([id]));
     db.variants = db.variants.filter((v) => v.productId !== id);
     db.products = db.products.filter((p) => p.id !== id);
     dropIndex();
@@ -882,7 +960,7 @@
     // own stock and its own barcode. Merging them is a deliberate act, not a
     // side effect of picking the same swatch.
     const dup = db.variants.find((v) => v.productId === data.productId && v.colorId === data.colorId && v.size === String(data.size));
-    if (dup) { if (data.stock != null) { dup.stock = Math.max(0, data.stock | 0); commit(); } return dup; }
+    if (dup) { if (data.stock != null) { stamp(dup, data.stock); commit(); } return dup; }
     const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0, {
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
@@ -891,7 +969,7 @@
   }
   function updateVariant(id, patch) {
     const v = varById(id); if (!v) return null;
-    if (patch.stock != null) v.stock = Math.max(0, patch.stock | 0);
+    if (patch.stock != null) stamp(v, patch.stock);
     if (patch.size != null) v.size = String(patch.size);
     if (patch.sku != null) v.sku = String(patch.sku);
     if (patch.note != null) v.note = String(patch.note).slice(0, 60);
@@ -914,9 +992,14 @@
     }
     commit(); return v;
   }
-  function setStock(id, n) { const v = varById(id); if (v) { v.stock = Math.max(0, n | 0); commit(); } return v; }
-  function adjustStock(id, d) { const v = varById(id); if (v) { v.stock = Math.max(0, (v.stock || 0) + (d | 0)); commit(); } return v; }
-  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); dropIndex(); commit(); }
+  /* TOUT changement de quantité passe par ici et s'horodate. C'est cet
+     horodatage, et lui seul, qui permet à la fusion de savoir lequel des deux
+     appareils a le compte le plus récent (voir mergeDocs). Une écriture de
+     stock qui oublie de le poser est une vente que le stock finira par oublier. */
+  function stamp(v, n) { if (v) { v.stock = Math.max(0, n | 0); v.stockAt = Date.now(); } return v; }
+  function setStock(id, n) { const v = varById(id); if (v) { stamp(v, n); commit(); } return v; }
+  function adjustStock(id, d) { const v = varById(id); if (v) { stamp(v, (v.stock || 0) + (d | 0)); commit(); } return v; }
+  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); tomb(id); dropIndex(); commit(); }
 
   /* ─────────── les trois gestes d'inventaire, jamais confondus ───────────
    * Une reprise de stock existant se fait à la douchette, vite, et trois gestes
@@ -960,7 +1043,7 @@
     const n = Math.floor(Number(qty));
     if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: 'quantite' };
     const before = v.stock || 0;
-    v.stock = before + n;
+    stamp(v, before + n);
     commit();
     return { ok: true, added: n, before, stock: v.stock };
   }
@@ -1207,6 +1290,12 @@
     // products
     listProducts: (o) => (load(), listProducts(o)), getProduct: (id) => (load(), getProduct(id)),
     addProduct: (d) => (load(), addProduct(d)), updateProduct: (id, p) => (load(), updateProduct(id, p)),
+    /* Exposé pour tools/catalog-merge-test.js. La fusion est la pièce la plus
+       dangereuse de ce fichier : elle décide ce qui SURVIT quand deux appareils
+       ne sont pas d'accord, et une erreur là-dedans ne lève rien — elle rend
+       simplement au commerçant un stock qu'il croyait avoir corrigé. */
+    _merge: (mine, theirs) => mergeDocs(mine, theirs),
+    _doc: () => (load(), db),
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
     // variants
