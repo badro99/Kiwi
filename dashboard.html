@@ -5935,6 +5935,9 @@
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
 <script src="assets/cloud-doc.js" defer fetchpriority="low"></script>
+<!-- Promotions use the same per-boutique catalogue key. The owner edits them
+     here; the caisse only consumes the resulting prices. -->
+<script src="assets/promos.js" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js" defer fetchpriority="low"></script>
 <!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
      l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
@@ -5976,6 +5979,7 @@
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js" defer fetchpriority="low"></script>
 <script src="assets/pages-pro.js" defer fetchpriority="low"></script>
+<script src="assets/boutique-promos-dashboard.js" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js" defer fetchpriority="low"></script>

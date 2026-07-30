@@ -899,7 +899,6 @@
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
-          <button class="bq-nav-it" data-bq-view="promotions"><i data-lucide="tag"></i><span>Promotions</span><b class="bq-nav-badge" id="bq-badge-promo"></b></button>
         </nav>
         <div class="bq-rail-foot">
           <button class="bq-net" id="bq-net" title="Simuler une coupure réseau">
@@ -939,7 +938,6 @@
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
-        <section class="bq-view" data-bq-panel="promotions"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
       <div class="modal-veil" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
@@ -948,8 +946,7 @@
       <div class="modal-veil" id="bq-exch-veil"><div class="modal bq-exch bq-rel" id="bq-exchm"></div></div>
       <div class="modal-veil" id="bq-pay-veil"><div class="modal bq-pay bq-rel" id="bq-paym"></div></div>
       <div class="modal-veil" id="bq-inv-veil"><div class="modal bq-invm bq-rel" id="bq-invmm"></div></div>
-      <div class="modal-veil" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>
-      <div class="modal-veil" id="bq-promo-veil"><div class="modal bq-promom bq-rel" id="bq-promomm"></div></div>`;
+      <div class="modal-veil" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>`;
 
     $('#bq-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-bq-view]');
@@ -1133,7 +1130,6 @@
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
     if (view === 'clientes') renderClientes();
-    if (view === 'promotions') renderPromos();
   }
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
@@ -1147,15 +1143,6 @@
     set('#bq-badge-scan', state.scanLog.length);
     set('#bq-badge-ret', avs);
     set('#bq-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
-    /* Le badge compte les promotions EN COURS, pas le total : une pastille « 7 »
-       sur un magasin où six promotions sont terminées annoncerait des prix qui
-       ne s'appliquent plus. */
-    const prBadge = $('#bq-badge-promo', root);
-    if (prBadge) {
-      const n = window.KiwiPromos ? window.KiwiPromos.stats().active : 0;
-      prBadge.textContent = n || '';
-      prBadge.style.display = n ? '' : 'none';
-    }
     const invBadge = $('#bq-badge-inv', root);
     if (invBadge) { const st = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.stats() : null; const n = st ? st.ruptures + st.low : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }
   }
