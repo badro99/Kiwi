@@ -239,8 +239,13 @@
     const rows = KCl.list().filter((c) => KCl.segment(c) === segId && c.consent && c.phone);
     const msg = crmMsg(T, segId).replace(/\{[^}]+\}/g, '');
     const head = ['Nom', 'Téléphone', 'Segment', 'Message'];
+    const csvCell = (v) => {
+      let s = String(v == null ? '' : v);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
     const csv = [head].concat(rows.map((c) => [c.name || '', c.phone || '', segId, msg]))
-      .map((r) => r.map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      .map((r) => r.map(csvCell).join(',')).join('\r\n');
     try {
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);

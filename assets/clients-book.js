@@ -312,7 +312,7 @@
     host.innerHTML = rows.map(function (c) {
       var seg = KC.segment(c);
       var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + ' <small>pts</small>') : ((c.stamps || 0) + '<small>/' + (cfg.model === 'product' ? cfg.product.target : cfg.visit.target) + '</small>');
-      return '<div class="kcb-row" data-id="' + c.id + '">' +
+      return '<div class="kcb-row" data-id="' + esc(c.id) + '">' +
         '<div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
         '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '—') + '</div></div>' +
         '<div class="kcb-meta"><div class="kcb-pts">' + ptsTxt + '</div><span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>';

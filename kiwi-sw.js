@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v205';
+var CACHE = 'kiwi-app-v207';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -148,6 +148,35 @@ var SHELL = [
      une mise à jour de la caisse. */
   '/assets/pos-boutique.css',
   '/assets/pos-boutique.js',
+  /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
+     they are not pre-cached, an installed till that loses Wi-Fi before a
+     particular métier has ever been opened cannot unlock that métier at all. */
+  '/assets/pos-spa.css',
+  '/assets/pos-spa.js',
+  '/assets/pos-hotel.css',
+  '/assets/pos-hotel.js',
+  '/assets/pos-fastfood.css',
+  '/assets/pos-fastfood.js',
+  '/assets/pos-boulangerie.css',
+  '/assets/pos-boulangerie.js',
+  '/assets/pos-pizzeria.css',
+  '/assets/pos-pizzeria.js',
+  '/assets/pos-traiteur.css',
+  '/assets/pos-traiteur.js',
+  '/assets/pos-foodtruck.css',
+  '/assets/pos-foodtruck.js',
+  '/assets/pos-epicerie.css',
+  '/assets/pos-epicerie.js',
+  '/assets/pos-pharmacie.css',
+  '/assets/pos-pharmacie.js',
+  '/assets/pos-librairie.css',
+  '/assets/pos-librairie.js',
+  '/assets/pos-fleuriste.css',
+  '/assets/pos-fleuriste.js',
+  '/assets/pos-coiffure.css',
+  '/assets/pos-coiffure.js',
+  '/assets/pos-gym.css',
+  '/assets/pos-gym.js',
   '/assets/caisse-pairing.js',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

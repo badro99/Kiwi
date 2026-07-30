@@ -3892,8 +3892,8 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <li class="cart-row">
             <div class="info">
-              <span class="label">${nameOf(line.id)}</span>
-              ${opts ? `<div class="cart-item-opts">${opts}</div>` : ''}
+              <span class="label">${escapeHtml(nameOf(line.id))}</span>
+              ${opts ? `<div class="cart-item-opts">${escapeHtml(opts)}</div>` : ''}
               ${note}
             </div>
             <span class="qty">
@@ -3967,7 +3967,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
-      imgEl.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+      imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
 
       // Render option groups
       const opts = $('#custom-options');
@@ -4093,8 +4093,8 @@ em, i, cite, dfn, var { font-style: normal; }
           return `
             <li class="bill-row">
               <div class="bill-row-info">
-                <div class="bill-row-name">${l.qty}× ${nameOf(l.id)}</div>
-                ${opts ? `<div class="bill-row-opts">${opts}</div>` : ''}
+                <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
+                ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
               <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
             </li>
@@ -4104,7 +4104,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Update bill subtitle (e.g. "Table 7 · Café Atlas")
       const subtitleEl = $('#bill-subtitle');
-      if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span> · ${VENUE_NAME}`;
+      if (subtitleEl) subtitleEl.innerHTML = `${escapeHtml(t('badge_table'))} <span id="bill-table">${escapeHtml(tableNumber)}</span> · ${escapeHtml(VENUE_NAME)}`;
 
       $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
       setTipPercent(billItems.length === 0 ? 0 : 15);
@@ -4283,7 +4283,7 @@ em, i, cite, dfn, var { font-style: normal; }
                data-split-item="${idx}" ${isOther ? `data-owner="${escapeHtml(ownerLabel)}"` : ''}>
             <span class="info">
               <span class="qty">${line.qty}×</span>
-              <span class="name">${nameOf(line.id)}</span>
+              <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
             <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
           </div>
@@ -4763,7 +4763,7 @@ em, i, cite, dfn, var { font-style: normal; }
         host.insertBefore(el, host.firstChild);
       }
       el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#c0392b;flex-shrink:0;"></span>' +
-        '<span><b>' + t('closed_now') + '</b> · ' + shopStatusText() + '</span>';
+        '<span><b>' + escapeHtml(t('closed_now')) + '</b> · ' + escapeHtml(shopStatusText()) + '</span>';
     }
     /* Le bouton d'envoi suit le même état : désactivé et nommé, jamais un
        bouton actif qui échouera à la seconde d'après. */

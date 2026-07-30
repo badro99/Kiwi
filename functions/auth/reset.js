@@ -35,7 +35,7 @@
  */
 
 import {
-  json, hashPassword, makeSession, sessionCookie,
+  PASSWORD_MAX, json, hashPassword, makeSession, sessionCookie,
   splitResetToken, resetVerifierHash,
   limitCheck, limitFail, limitClear,
 } from './_lib.js';
@@ -92,7 +92,7 @@ export async function onRequestPost(context) {
   /* Le même plancher qu'à l'inscription (functions/auth/signup.js). Un seuil
      plus bas ici ferait de la réinitialisation le chemin faible pour arriver à
      un compte, ce qui viderait la règle de son sens. */
-  if (password.length < 8) return json({ error: 'weak' }, 400);
+  if (password.length < 8 || password.length > PASSWORD_MAX) return json({ error: 'weak' }, 400);
 
   const row = await lookup(env, body.token);
   if (!row) { await limitFail(request, env, 'reset'); return json({ error: 'invalid' }, 400); }

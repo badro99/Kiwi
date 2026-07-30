@@ -65,7 +65,7 @@ async function accountActive(env, aid) {
   }
 }
 
-export async function onRequest(context) {
+async function routeRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
   const path = url.pathname;
@@ -305,6 +305,29 @@ export async function onRequest(context) {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });
+}
+
+/* Apply baseline response hardening to every route, including Pages Functions
+ * reached through next(). SAMEORIGIN preserves the intentional same-site
+ * iframes in the business plan while blocking third-party clickjacking. A full
+ * CSP needs the inline-heavy app to be migrated first; pretending otherwise
+ * would either break the product or require unsafe-inline everywhere. */
+function secureResponse(response) {
+  if (!response) return response;
+  const headers = new Headers(response.headers);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export async function onRequest(context) {
+  return secureResponse(await routeRequest(context));
 }
 
 function htmlResponse(body) {

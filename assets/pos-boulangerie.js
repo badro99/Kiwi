@@ -615,14 +615,13 @@
     setTimeout(() => {
       const disc = $('#bl-reader-disc', el);
       if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-      disc.classList.remove('is-pulsing');
-      disc.classList.add('is-success');
-      disc.innerHTML = '<i data-lucide="check"></i>';
       const st = $('#bl-reader-status', el);
-      st.textContent = 'Khlass! Paiement confirmé sur le lecteur';
-      st.classList.add('is-success');
-      icons();
-      setTimeout(() => o.onPaid('carte', 0), 900);
+      const hw = window.KiwiHardware;
+      if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); st.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+      hw.authorizeCard(o.amount, disc, st).then((result) => {
+        icons();
+        if (result && result.approved) setTimeout(() => o.onPaid('carte', 0), 900);
+      });
     }, 1900);
   }
 

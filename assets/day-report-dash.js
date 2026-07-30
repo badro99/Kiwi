@@ -863,7 +863,11 @@
     var st = storeInfo();
     var V = (DR() ? DR().vocab(st.type || undefined) : { cats: 'catégories', items: 'articles' });
     var q = function (arr) {
-      return arr.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+      return arr.map(function (v) {
+        var s = String(v == null ? '' : v);
+        if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+        return '"' + s.replace(/"/g, '""') + '"';
+      }).join(',');
     };
     var out = [];
     out.push(q([T(L.title), st.name || (r.store && r.store.name) || '', dayLabel(r.day)]));

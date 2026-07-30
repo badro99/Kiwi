@@ -123,7 +123,14 @@
     var body = rows.map(function (c) {
       return [c.name || '', c.phone || '', c.email || '', c.city || '', c.birthday || '', c.visits || 0, c.spend || 0, c.points || 0, SEG_LBL(T, c.seg), c.consent ? 'oui' : 'non', c.consentEmail ? 'oui' : 'non'];
     });
-    var csv = [head].concat(body).map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    var csvCell = function (v) {
+      var s = String(v == null ? '' : v);
+      // Excel/LibreOffice execute cells beginning with these characters. Client
+      // names and emails are untrusted input, even when correctly CSV-quoted.
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    var csv = [head].concat(body).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
     try {
       var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
       var url = URL.createObjectURL(blob);

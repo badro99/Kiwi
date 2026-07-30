@@ -394,6 +394,27 @@
     function clearRefused(slug) { try { localStorage.removeItem(refusedKey(slug)); } catch (_) {} }
     function isRefused(slug) { return !!ls(refusedKey(slug)); }
 
+    /* Une panne réseau n'est pas un refus applicatif, mais elle doit survivre au
+     * rechargement de la page de la même façon. Sans cette marque, le signet de
+     * révision reste égal au serveur et le prochain pull conclut à tort que la
+     * copie locale (modifiée hors ligne) est déjà synchronisée. Le jeton change
+     * à chaque modification : une réponse à un ancien POST ne peut donc pas
+     * effacer la marque d'une saisie plus récente faite pendant son trajet. */
+    function dirtyKey(slug) { return 'kiwiDocDirty:v1:' + revKey(slug).slice(REV_PREFIX.length); }
+    function markDirty(slug) {
+      var token = Date.now().toString(36) + ':' + Math.random().toString(36).slice(2);
+      lset(dirtyKey(slug), token);
+      return token;
+    }
+    function dirtyToken(slug) { return ls(dirtyKey(slug)); }
+    function clearDirty(slug, token) {
+      try {
+        if (!token || localStorage.getItem(dirtyKey(slug)) === token) {
+          localStorage.removeItem(dirtyKey(slug));
+        }
+      } catch (_) {}
+    }
+
     /* Lit la copie serveur et la réconcilie avec la locale. `first` = tout
      * premier contact pour ce magasin : c'est le SEUL cas où un document local
      * vide est remplacé en bloc (le navigateur neuf adopte l'établissement).
@@ -407,11 +428,11 @@
                    { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (res) {
-          st.read[slug] = 1;
-          st.last = Date.now();
           // Le commerçant a changé de magasin pendant l'aller-retour : cette
           // réponse concerne un autre établissement, on la jette.
           if (!res || slug !== slugOf()) return false;
+          st.read[slug] = 1;
+          st.last = Date.now();
 
           var serverRev = +res.rev || 0;
           var theirs = res.data;
@@ -430,7 +451,7 @@
              Sauf si une remontée a été refusée : le signet dit alors « à jour »
              pour une copie que le serveur n'a jamais acceptée. On repropose. */
           if (!mineEmpty && readRev(slug) === serverRev) {
-            if (isRefused(slug)) push(0);
+            if (isRefused(slug) || dirtyToken(slug)) push(0, true);
             return false;
           }
 
@@ -452,8 +473,9 @@
         .catch(function () { return false; });   // hors ligne → le local fait foi
     }
 
-    function push(delay) {
+    function push(delay, alreadyDirty) {
       if (!on()) return;
+      if (!alreadyDirty) markDirty(slugOf());
       if (st.timer) clearTimeout(st.timer);
       st.timer = setTimeout(function () { pushNow(); }, delay == null ? DEBOUNCE : delay);
     }
@@ -462,6 +484,7 @@
       st.timer = null;
       if (!on()) return;
       var slug = slugOf();
+      var sentDirty = dirtyToken(slug) || markDirty(slug);
       // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
       if (!st.read[slug]) { pull(true); return; }
       /* Rien à dire au serveur : le document est vide ET il n'y a encore aucune
@@ -470,7 +493,10 @@
        * matérialiser, que le commerçant n'a jamais choisie. Le prochain appareil
        * l'aurait alors reçue comme un vrai réglage. Un document vidé APRÈS coup
        * (rev > 0) passe, lui : c'est une suppression, pas un silence. */
-      if (!st.rev && empty(opts.read())) return;
+      if (!st.rev && empty(opts.read())) {
+        clearDirty(slug, sentDirty);
+        return;
+      }
       if (st.busy) { st.again = true; return; }
       st.busy = true;
       fetch('/api/store', {
@@ -493,6 +519,7 @@
             st.rev = +res.j.rev || 0;
             writeRev(slug, st.rev);
             clearRefused(slug);
+            clearDirty(slug, sentDirty);
             st.tries = 0;
             return;
           }
@@ -544,6 +571,18 @@
       if (document.visibilityState !== 'visible') return;
       if (!on() || Date.now() - st.last < COOLDOWN) return;
       pull(false);
+    });
+
+    /* `online` est le seul signal immédiat du navigateur après une coupure. Une
+     * copie sale repart sans attendre une nouvelle saisie ni un aller-retour
+     * d'onglet ; une copie propre relit simplement ce que les autres appareils
+     * ont pu faire pendant la panne. Le POST garde baseRev, donc un serveur qui
+     * a avancé répondra 409 et passera par la fusion normale. */
+    window.addEventListener('online', function () {
+      var slug = slugOf();
+      if (!on()) return;
+      if (dirtyToken(slug) || isRefused(slug)) push(0, true);
+      else pull(false);
     });
 
     // Une modification en attente ne doit pas mourir avec l'onglet.

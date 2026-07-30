@@ -4405,7 +4405,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-add="${escapeHtml(m.id)}"`}>
           ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
           <div class="dish-meta">
-            <div class="dish-name">${i.name}</div>
+            <div class="dish-name">${escapeHtml(i.name)}</div>
             <div class="dish-foot">
               <span class="dish-price">${m.price} ${cur()}</span>
               ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
@@ -4498,8 +4498,8 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <li class="cart-row">
             <div class="info">
-              <span class="label">${nameOf(line.id)}</span>
-              ${opts ? `<div class="cart-item-opts">${opts}</div>` : ''}
+              <span class="label">${escapeHtml(nameOf(line.id))}</span>
+              ${opts ? `<div class="cart-item-opts">${escapeHtml(opts)}</div>` : ''}
               ${note}
             </div>
             <span class="qty">
@@ -4573,7 +4573,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
-      imgEl.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+      imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
 
       // Render option groups
       const opts = $('#custom-options');
@@ -4699,8 +4699,8 @@ em, i, cite, dfn, var { font-style: normal; }
           return `
             <li class="bill-row">
               <div class="bill-row-info">
-                <div class="bill-row-name">${l.qty}× ${nameOf(l.id)}</div>
-                ${opts ? `<div class="bill-row-opts">${opts}</div>` : ''}
+                <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
+                ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
               <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
             </li>
@@ -4889,7 +4889,7 @@ em, i, cite, dfn, var { font-style: normal; }
                data-split-item="${idx}" ${isOther ? `data-owner="${escapeHtml(ownerLabel)}"` : ''}>
             <span class="info">
               <span class="qty">${line.qty}×</span>
-              <span class="name">${nameOf(line.id)}</span>
+              <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
             <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
           </div>

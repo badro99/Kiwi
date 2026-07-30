@@ -1,6 +1,6 @@
 // POST /auth/login — verify credentials, start a session.
 // Body JSON: { email, password }.
-import { verifyPassword, makeSession, sessionCookie, json, normEmail, limitCheck, limitFail, limitClear } from './_lib.js';
+import { PASSWORD_MAX, verifyPassword, makeSession, sessionCookie, json, normEmail, limitCheck, limitFail, limitClear } from './_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -18,6 +18,13 @@ export async function onRequestPost(context) {
 
   const email = normEmail(body.email);
   const password = String(body.password || '');
+
+  // Reject hostile oversized inputs before a DB lookup or an expensive PBKDF2.
+  // Keep the same generic response as ordinary invalid credentials.
+  if (email.length > 254 || password.length > PASSWORD_MAX) {
+    await limitFail(request, env, 'login');
+    return json({ error: 'bad-creds' }, 401);
+  }
 
   const row = await env.DB.prepare('SELECT id, salt, hash FROM accounts WHERE email = ?').bind(email).first();
   // Verify even when the row is missing to avoid leaking which emails exist.
