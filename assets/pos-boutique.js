@@ -332,6 +332,10 @@
     const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
     let touched = 0;
     const move = (sale, sign) => {
+      /* Une copie importée du serveur peut venir d'une AUTRE caisse. Seule la
+         caisse qui a réellement décrémenté le stock répare un void God mode ;
+         celle-ci marque la vente sortie mais ne rend pas la marchandise deux fois. */
+      if (sale.remote) return;
       (sale.lines || []).forEach((ln) => {
         if (!ln || ln.returned) return;          // déjà rendue au comptoir
         persistStock(ln.pid, ln.size, ln.color, sign * (+ln.qty || 0));
@@ -721,6 +725,73 @@
        sur le nom du commerçant, qui lui ne se devine pas. */
     if (Array.isArray(blob)) persistDay();
   })();
+
+  /* ── les tickets du magasin, pas seulement ceux de CET écran ─────────────
+   * Échanges & avoirs lisait uniquement `kiwi:bqDay`, donc le journal local de
+   * cette tablette. Une vente bien présente dans le dashboard (ou encaissée sur
+   * la deuxième caisse) restait introuvable au retour client. Le serveur est le
+   * registre commun : on relit la journée et on complète SALES. La copie locale
+   * gagne toujours, car elle porte la variante exacte et l'état des retours.
+   *
+   * Les anciennes lignes serveur portent le nom imprimé (« Jean noir M »), pas
+   * encore l'id de variante. On les rattache au produit par le plus long nom de
+   * catalogue, puis à sa taille. Ce repli rend les ventes déjà faites utilisables
+   * immédiatement ; aucune donnée n'est inventée si aucun produit ne correspond. */
+  const srvMethod = (m) => ({ cash: 'espèces', card: 'carte', delivery: 'livraison' }[m] || m || 'paiement');
+  function remoteLine(line) {
+    if (!line) return null;
+    const raw = String(line.name || '').trim();
+    let item = line.pid && P[line.pid] ? P[line.pid] : null;
+    if (!item && raw) {
+      const low = raw.toLocaleLowerCase('fr');
+      const uniq = [];
+      Object.keys(P).forEach((k) => { const p = P[k]; if (p && !uniq.includes(p)) uniq.push(p); });
+      item = uniq.filter((p) => {
+        const n = String(p.name || '').toLocaleLowerCase('fr');
+        return low === n || low.indexOf(n + ' ') === 0;
+      }).sort((a, b) => String(b.name || '').length - String(a.name || '').length)[0] || null;
+    }
+    if (!item) return null;
+    const suffix = raw.slice(String(item.name || '').length).trim();
+    const sizes = sizesOf(item);
+    const size = String(line.size || (sizes.includes(suffix) ? suffix : '') || sizes[0] || 'TU');
+    const variant = (item._variants || []).find((v) => String(v.size) === size) || (item._variants || [])[0];
+    const qty = Math.max(1, Number(line.qty) || 1);
+    return {
+      pid: item.id, size, color: String(line.color || (variant && variant.colorId) || ''), qty,
+      remise: 0, unit: Number(line.unit) || ((Number(line.total) || 0) / qty),
+      returned: false, note: '', name: item.name,
+    };
+  }
+  function syncReturnSales() {
+    if (IS_DEMO || typeof fetch !== 'function') return Promise.resolve(0);
+    const merchant = merchantSlug();
+    if (!merchant) return Promise.resolve(0);
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
+      credentials: 'same-origin', headers: { Accept: 'application/json' },
+    }).then((r) => r.ok ? r.json() : null).then((data) => {
+      let added = 0;
+      ((data && data.sales) || []).forEach((row) => {
+        const ref = String(row.ref || '');
+        if (!ref || SALES.some((s) => s && s.id === ref)) return;
+        const lines = (Array.isArray(row.lines) ? row.lines : []).map(remoteLine).filter(Boolean);
+        if (!lines.length) return; // sans article identifiable, aucun échange honnête à proposer
+        SALES.push({
+          id: ref, serverId: String(row.id || ''), at: new Date(Number(row.ts) || Date.now()),
+          clientId: null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
+          total: lines.reduce((sum, l) => sum + l.unit * l.qty, 0), remote: true,
+        });
+        added++;
+      });
+      if (added) {
+        SALES.sort((a, b) => new Date(b.at) - new Date(a.at));
+        persistDay();
+        if (root && state.view === 'echanges') { renderEchanges(); renderBadges(); icons(); }
+      }
+      return added;
+    }).catch(() => 0);
+  }
   const state = {
     view: 'vente',
     rayon: 'tous',
@@ -1113,6 +1184,7 @@
     if (IS_DEMO) seedDemoTicket();
 
     renderAll();
+    syncReturnSales();
 
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
