@@ -356,6 +356,9 @@
     });
     doc.updatedAt = Date.now();
     s.set(doc, vid);
+    /* Enregistrer dans l'éditeur est une action explicite : ne pas attendre le
+       debounce générique avant d'envoyer la fiche que la caisse doit imprimer. */
+    try { var bc = s.cloud && s.cloud(); if (bc && bc.flush) bc.flush(); } catch (_) {}
     fire(vid);
     return doc;
   }
@@ -393,6 +396,9 @@
     var doc = normalizeConfig(cfg);
     doc.updatedAt = Date.now();
     s.set(doc, vid);
+    /* Même garantie pour l'apparence du reçu. Le bouton Enregistrer doit rendre
+       le nouveau ticket disponible au comptoir tout de suite. */
+    try { var cc = s.cloud && s.cloud(); if (cc && cc.flush) cc.flush(); } catch (_) {}
     fire(vid);
     return doc;
   }
@@ -1092,12 +1098,30 @@
       var c = CS(); if (c) c.get();
     } catch (_) {}
   }
+  var livePullTimer = null;
+  function isCaissePage() {
+    try { return /\/kiwi-caisse(?:\.html)?$/.test(location.pathname || ''); } catch (_) { return false; }
+  }
+  function pullReceiptNow() {
+    if (!isCaissePage()) return;
+    try { if (document.visibilityState === 'hidden') return; } catch (_) {}
+    [BS(), CS()].forEach(function (s) {
+      try { var c = s && s.cloud && s.cloud(); if (c && c.pull) c.pull(false); } catch (_) {}
+    });
+  }
+  function startLivePull() {
+    if (livePullTimer || !isCaissePage() || typeof setInterval !== 'function') return;
+    /* /api/store n'offre pas de flux poussé. Une relecture légère pendant que la
+       caisse est visible donne au comptoir le reçu enregistré au dashboard en
+       moins de deux secondes, sans recharger ni attendre un changement d'onglet. */
+    livePullTimer = setInterval(pullReceiptNow, 1500);
+  }
   (function bootWarm() {
     try {
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { setTimeout(warm, 0); });
-      } else setTimeout(warm, 0);
-      document.addEventListener('kiwi-paired', function () { setTimeout(warm, 0); });
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(warm, 0); startLivePull(); });
+      } else { setTimeout(warm, 0); startLivePull(); }
+      document.addEventListener('kiwi-paired', function () { setTimeout(warm, 0); startLivePull(); });
     } catch (_) {}
   })();
 
