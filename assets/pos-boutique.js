@@ -624,14 +624,75 @@
     return `${DAYS[x.getDay()]} ${fmtHM(x)}`;
   }
 
+  /* ── À QUI EST CE JOURNAL ─────────────────────────────────────────────────
+     Il ne le disait pas. Une caisse ré-appairée d'une enseigne à une autre
+     relisait donc les ventes de la PREMIÈRE et les servait sous le nom de la
+     SECONDE : « Échanges & avoirs » listait les ventes d'un autre commerce,
+     « Réimprimer » proposait leurs tickets, et l'en-tête en comptait une dans
+     la recette du jour. Constaté le 30/07/2026 sur une caisse en production —
+     le journal local disait CM-15-44 pendant que le comptoir tapait des tickets
+     SS-16-44 et que le tableau de bord, lui, comptait juste.
+
+     Deux gardes, parce qu'elles ne couvrent pas la même population :
+
+      · LE TAMPON, pour tout ce qui s'écrit désormais. Le blob porte son
+        commerçant ; à la relecture, un autre nom et on n'adopte rien.
+      · LE PRÉFIXE DE TICKET, pour les blobs déjà sur les appareils, qui n'ont
+        aucun tampon. Une référence porte l'initiale de l'enseigne (voir
+        ticketPrefix) : « CM- » relu sous une enseigne qui tape « SS- » n'est
+        pas d'ici. C'est la seule preuve que porte l'ancien format, et elle
+        suffit à réparer les caisses déjà contaminées sans attendre un
+        ré-appairage.
+
+     Une enseigne qui se RENOMME perd ainsi sa semaine de journal — sept jours
+     de réimpression et de retours. C'est le prix, et il est plus petit que
+     l'inverse : montrer à une commerçante les ventes de quelqu'un d'autre. */
+  function merchantSlug() {
+    try {
+      const pv = pvPaired();
+      return String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
+    } catch (_) { return ''; }
+  }
   function persistDay() {
     if (IS_DEMO) return;
-    try { localStorage.setItem(DAY_KEY, JSON.stringify(SALES.filter((s) => s && withinRetention(s.at)))); } catch (_) {}
+    try {
+      localStorage.setItem(DAY_KEY, JSON.stringify({
+        v: 1, m: merchantSlug(), s: SALES.filter((s) => s && withinRetention(s.at)),
+      }));
+    } catch (_) {}
   }
   (function restoreDay() {
     if (IS_DEMO) return;
-    let saved = null;
-    try { saved = JSON.parse(localStorage.getItem(DAY_KEY) || '[]'); } catch (_) { return; }
+    let blob = null;
+    try { blob = JSON.parse(localStorage.getItem(DAY_KEY) || 'null'); } catch (_) { return; }
+    if (!blob) return;
+
+    let saved;
+    if (Array.isArray(blob)) {
+      /* Ancien format, sans tampon : on juge sur le préfixe des références. Un
+         journal dont AUCUNE référence ne commence par le préfixe d'ici vient
+         d'ailleurs. On ne juge que sur les références lisibles — un journal sans
+         aucune référence exploitable est adopté, faute de preuve du contraire. */
+      const refs = blob.map((s) => String((s && s.id) || '')).filter((r) => /^[A-Z]{2,}-/.test(r));
+      const mine = refs.filter((r) => r.indexOf(TK + '-') === 0);
+      if (refs.length && !mine.length) {
+        try { localStorage.removeItem(DAY_KEY); } catch (_) {}
+        return;
+      }
+      saved = blob;
+    } else if (blob && Array.isArray(blob.s)) {
+      const now = merchantSlug();
+      /* Tampon présent et différent : ce journal est celui d'un autre commerce.
+         On l'efface plutôt que de le laisser dormir — il ressortirait au
+         prochain ré-appairage vers son propriétaire d'origine, avec une semaine
+         de retard et des stocks qui ne correspondent plus. */
+      if (blob.m && now && blob.m !== now) {
+        try { localStorage.removeItem(DAY_KEY); } catch (_) {}
+        return;
+      }
+      saved = blob.s;
+    } else return;
+
     if (!Array.isArray(saved) || !saved.length) return;
     let maxSeq = 0;
     saved.forEach((s) => {
@@ -647,6 +708,12 @@
     });
     SALES.sort((a, b) => b.at - a.at);                       // le plus récent d'abord, comme unshift
     if (maxSeq >= saleSeq) saleSeq = maxSeq + 1;
+    /* Adopté : on le tamponne TOUT DE SUITE. Sinon un journal d'ancien format
+       reste jugé sur son préfixe de ticket jusqu'à la prochaine vente — c'est
+       la preuve la plus faible dont on dispose, et une enseigne qui se renomme
+       la ferait échouer. Une écriture au démarrage, et la garde repose ensuite
+       sur le nom du commerçant, qui lui ne se devine pas. */
+    if (Array.isArray(blob)) persistDay();
   })();
   const state = {
     view: 'vente',

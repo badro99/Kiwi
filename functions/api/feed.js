@@ -61,7 +61,20 @@ export async function onRequestGet({ request, env }) {
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
-  const merchant = await entitledMerchant(request, env, asked);
+  /* `allowTill` — une caisse appairée lit les ventes de SA boutique.
+   *
+   * Elle avait déjà le droit de les ÉCRIRE (functions/api/sale.js passe la même
+   * option) ; il lui manquait celui de les relire, et ce manque avait un coût
+   * concret au comptoir : « Réimprimer » ne connaît que le journal de CET
+   * appareil. Une boutique à deux caisses vendait 28 tickets sur l'une et 2 sur
+   * l'autre, et aucune des deux ne pouvait ressortir le reçu de sa voisine —
+   * pendant que le tableau de bord, lui, affichait bien les trente.
+   *
+   * Ce n'est pas un élargissement : isTillFor() vérifie que cet appareil est
+   * appairé À CE COMMERÇANT-LÀ, exactement le contrôle qui autorise déjà
+   * l'écriture. Une caisse ne peut toujours lire que la boutique où elle est
+   * posée. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ sales: [], cursor: since, merchant: '' });
 
   /* Which buckets this store reads: its own, plus the account's pre-split one
@@ -106,6 +119,22 @@ export async function onRequestGet({ request, env }) {
    * la liste des retraits, sans rejouer la journée entière toutes les minutes. */
   const voidsOnly = url.searchParams.get('voids') === '1';
 
+  /* `from=<ms>` — la lecture PAR JOURNÉE, pour le comptoir.
+   *
+   * Le flux normal est un curseur croissant : on le remonte depuis le début des
+   * temps. C'est ce qu'il faut au tableau de bord, qui ingère une fois puis
+   * suit. Ça ne convient pas à « Réimprimer », qui veut les ventes d'AUJOURD'HUI
+   * et rien d'autre : sur une boutique qui tourne depuis un an, il faudrait
+   * paginer des milliers de lignes pour arriver à ce matin.
+   *
+   * La borne vient du CLIENT et pas d'ici : c'est l'appareil qui sait où
+   * commence sa journée. Le serveur ne connaît ni le fuseau du commerce ni
+   * l'heure à laquelle il considère qu'une journée bascule, et deviner l'un ou
+   * l'autre produirait un rapport juste onze mois sur douze. */
+  const from = Number(url.searchParams.get('from')) || 0;
+  const byDay = from > 0;
+  const DAY_LIMIT = 300;
+
   let rows = [];
   let voided = [];
   /* Une seule tentative par forme de schéma, de la plus récente à la plus
@@ -114,10 +143,16 @@ export async function onRequestGet({ request, env }) {
    * silence est le pire des messages d'erreur. */
   try {
     if (!voidsOnly) {
-      const rs = await env.DB.prepare(
-        'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
-        'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
-      ).bind(merchant, legacy || merchant, since).all();
+      const rs = byDay
+        ? await env.DB.prepare(
+          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
+          'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
+          `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
+        ).bind(merchant, legacy || merchant, from).all()
+        : await env.DB.prepare(
+          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
+          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
+        ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
     }
     const vs = await env.DB.prepare(
@@ -142,18 +177,25 @@ export async function onRequestGet({ request, env }) {
        aucun à annoncer, et il n'y a rien d'autre à servir. */
     if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
     const cols = 'rowid AS cursor, id, amount, method, label, ref, ts' + (noLines ? '' : ', lines');
+    /* Les mêmes replis, dans la forme demandée. Servir le curseur à qui a
+       demandé une journée renverrait les toutes premières ventes du commerce
+       sous le titre « aujourd'hui » — une erreur plus coûteuse qu'une liste
+       vide, parce qu'elle a l'air juste. */
+    const where = byDay ? 'ts >= ?' : 'rowid > ?';
+    const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : 'rowid ASC LIMIT 50';
+    const bound = byDay ? from : since;
     try {
       const rs = await env.DB.prepare(
-        `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50`
-      ).bind(merchant, legacy || merchant, since).all();
+        `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
+      ).bind(merchant, legacy || merchant, bound).all();
       rows = (rs && rs.results) || [];
     } catch (e2) {
       /* Il restait la combinaison des deux manques : ni void_ts, ni lines. */
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
-          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50'
-        ).bind(merchant, legacy || merchant, since).all();
+          `FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
+        ).bind(merchant, legacy || merchant, bound).all();
         rows = (rs && rs.results) || [];
       } catch (_) {
         return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
@@ -183,6 +225,9 @@ export async function onRequestGet({ request, env }) {
    * for — an unclaimed store still snaps back to the account slug. Reporting it
    * makes a mis-scoped feed visible from the outside instead of something you
    * have to infer from whose sales showed up. */
-  const cursor = rows.length ? rows[rows.length - 1].cursor : since;
+  /* Une lecture par journée ne fait pas avancer le curseur : elle est triée à
+     l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
+     comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
+  const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
   return json({ sales: rows, cursor, merchant, voided });
 }

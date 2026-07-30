@@ -128,6 +128,29 @@
            rechargement. La garde à la relecture rattrape les appareils déjà
            dans cet état ; celle-ci empêche d'y entrer. */
         try { localStorage.removeItem('kiwi-caisse-shift'); } catch (_) {}
+
+        /* ── ET TOUT LE RESTE DE L'AUTRE COMMERCE ────────────────────────────
+           Le caissier et le service partaient ; le JOURNAL DES VENTES restait.
+           Une caisse ré-appairée d'une enseigne à une autre gardait donc, sous
+           le nom du nouveau commerçant : ses ventes de la semaine (kiwi:bqDay),
+           son catalogue, son carnet de clientes, ses réglages par établissement.
+           Concrètement, chez un client : l'écran « Échanges & avoirs » listait
+           les ventes d'un AUTRE commerce, « Réimprimer » proposait leurs
+           tickets, et l'en-tête comptait l'une d'elles dans la recette du jour.
+           Constaté le 30/07/2026 sur une caisse en production.
+
+           Le tableau de bord connaît déjà cette porte-là : identity.js purge
+           l'état du locataire quand un AUTRE COMPTE se connecte. Mais une caisse
+           ne se connecte pas — elle s'appaire. La deuxième porte n'avait pas de
+           serrure. On appelle donc exactement la même purge, plutôt que d'en
+           écrire une seconde qui divergera au premier ajout de clé.
+
+           Purge AVANT d'écrire kiwiLiveMerchant : la règle balaye tout ce qui
+           commence par « kiwi: », et l'ordre inverse effacerait l'appairage
+           qu'on vient de poser. */
+        try {
+          if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
+        } catch (_) {}
       }
     } catch (_) {}
     set('kiwiLiveMerchant', venue.merchant);

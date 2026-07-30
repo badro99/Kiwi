@@ -4198,6 +4198,10 @@
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js" defer></script>
+  <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
+       AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
+       serrure chargée après la porte ne ferme rien. -->
+  <script src="assets/tenant-purge.js" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une

@@ -164,7 +164,15 @@
       if (p) src = p() || [];
       else if (window.KiwiPosSale && window.KiwiPosSale.today) src = window.KiwiPosSale.today(vertical) || [];
     } catch (_) { return []; }
-    if (!Array.isArray(src)) return [];
+    if (!Array.isArray(src)) src = [];
+
+    /* Le lot serveur vient compléter, jamais remplacer : une référence déjà
+       connue localement garde sa version locale, seule porteuse du ticket figé. */
+    var seen = {};
+    src.forEach(function (e) { if (e && e.ref) seen[String(e.ref)] = 1; });
+    src = src.concat((serverDay[String(vertical)] || []).filter(function (e) {
+      return e && e.ref && !seen[String(e.ref)];
+    }));
 
     var now = new Date();
     return src.filter(function (e) {
@@ -269,11 +277,58 @@
     document.head.appendChild(st);
   }
 
+  /* ── LES VENTES DE LA BOUTIQUE, PAS SEULEMENT CELLES DE CE COMPTOIR ───────
+   * Le journal local ne contient que ce que CET appareil a encaissé. Sur une
+   * boutique à deux caisses, chacune ignore l'autre : une cliente servie au
+   * comptoir A qui redemande son ticket au comptoir B s'entendait répondre
+   * qu'aucune vente n'existait — pendant que le tableau de bord, qui lit le
+   * serveur, affichait bien les deux. Constaté chez un client le 30/07/2026 :
+   * 28 tickets sur un terminal, 2 sur l'autre, aucune passerelle.
+   *
+   * On demande donc au serveur la journée du commerce. Deux règles :
+   *
+   *  · LE LOCAL GAGNE. Une vente présente des deux côtés garde sa version
+   *    locale, parce qu'elle seule porte le ticket FIGÉ (`rc`) — le document
+   *    réellement remis. La copie serveur, elle, doit être recomposée.
+   *  · ÇA NE BLOQUE JAMAIS. La liste s'ouvre immédiatement sur le journal
+   *    local ; le serveur complète après. Un bouton de secours qui attend le
+   *    réseau n'est pas un secours (c'est aussi pourquoi ce fichier est dans la
+   *    coquille hors ligne). */
+  var serverDay = {};                             /* le dernier lot serveur, par métier */
+  function startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function merchant() {
+    try {
+      var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
+    } catch (_) { return ''; }
+  }
+  function fetchDay(vertical) {
+    var m = merchant();
+    if (!m || typeof fetch !== 'function') return Promise.resolve([]);
+    return fetch('/api/feed?merchant=' + encodeURIComponent(m) + '&from=' + startOfToday(), {
+      credentials: 'same-origin',
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var out = ((j && j.sales) || []).map(function (s) {
+        return {
+          ts: +s.ts || 0,
+          total: +s.amount || 0,
+          ref: String(s.ref || ''),
+          label: String(s.label || ''),
+          method: String(s.method || ''),
+          lines: Array.isArray(s.lines) ? s.lines : [],
+          remote: true,                            /* recomposé : pas de ticket figé */
+        };
+      });
+      serverDay[String(vertical)] = out;
+      return out;
+    }).catch(function () { return []; });
+  }
+
   var veil = null;
 
   function close() { if (veil) veil.classList.remove('is-open'); }
 
-  function open(vertical) {
+  function open(vertical, opts) {
     css();
     if (!veil) {
       veil = document.createElement('div');
@@ -327,6 +382,18 @@
 
     veil.classList.add('is-open');
     if (window.lucide) try { window.lucide.createIcons(); } catch (_) {}
+
+    /* La journée du commerce, demandée APRÈS l'ouverture. Si elle apporte
+       quelque chose que ce comptoir ne connaissait pas, on redessine — une
+       seule fois, et seulement si le panneau est encore ouvert. */
+    if (!opts || !opts.noFetch) {
+      var before = list.length;
+      fetchDay(vertical).then(function () {
+        if (!veil || !veil.classList.contains('is-open')) return;
+        if (rows(vertical).length === before) return;
+        open(vertical, { noFetch: true });
+      });
+    }
   }
 
   /* ── le bouton ───────────────────────────────────────────────────────────

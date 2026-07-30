@@ -41,6 +41,12 @@
   window.KiwiIdentity = {
     ready: new Promise(function (res) { settleGate = res; }),
     state: null,
+    /* Renseigné plus bas, une fois purgeTenantState() défini. Exposé parce que
+       le changement de commerçant n'arrive PAS que par la connexion : une caisse
+       change d'enseigne en se ré-appairant, sans qu'aucun compte ne se connecte
+       (voir assets/caisse-pairing.js). Une seule règle de purge pour les deux
+       portes, sinon la seconde oublie ce que la première efface. */
+    purgeTenantState: null,
   };
   function settle(state) {
     if (gateSettled) return;
@@ -77,40 +83,18 @@
    * ADOPTED, not wiped. kiwiAccountKey is written BEFORE any reload, so a reload
    * loop is impossible (the next load sees key===email). Never runs on the demo
    * (no account → not authenticated). */
-  var TENANT_KEYS = [
-    'kiwiCustomVenues', 'kiwiVenue', 'kiwiVenueCount', 'kiwiOnboarded', 'kiwiSkipOnboard',
-    'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiTeamSize', 'kiwiGoals',
-    'kiwiPins', 'kiwiLiveMerchant', 'kiwiLive', 'kiwiPaired', 'kiwiPairedVenue', 'kiwiPairings',
-    'kiwiBizExtra', 'kiwiTeamV2:custom', 'kiwiSet:ownerName', 'kiwiSet:ownerEmail',
-    'kiwiOwnerEmail', 'kiwiRole',
-  ];
-  // Any key starting with one of these is per-venue tenant data → purge on switch.
-  var TENANT_PREFIXES = ['kiwi:', 'kiwiSales:', 'kiwiBoutiqueCatalog:', 'kiwiLiveIngested:', 'kiwiBarcodeSeq:', 'kiwiSet:biz:'];
-  // Device/UI chrome that is NOT tenant data — must survive an account switch.
-  var PRESERVE = {
-    kiwiAccountKey: 1, kiwiLang: 1, kiwiTheme: 1, kiwiMode: 1, kiwiDesign2026: 1,
-    // kiwiDateRange is deliberately NOT preserved. It is a view into ONE tenant's
-    // data, not a device preference: carrying it across an account switch landed a
-    // brand-new store on "Hier", printing ENCAISSÉ HIER 0,00 MAD directly above a
-    // live 450 MAD sale. A store that has just been created has no yesterday.
-    kiwiDesignIOS27: 1, kiwiRamadan: 1, kiwiRevCompare: 1,
-    kiwiHeroView: 1, kiwiKpiLayout: 1, kiwiGlassLevel: 1, cafeAtlasLang: 1, kiwiDemos: 1,
-  };
+  /* La liste des clés et la purge elle-même vivent dans assets/tenant-purge.js.
+     Elles en sont sorties le jour où l'on a compris qu'un appareil change AUSSI
+     de commerçant sans connexion — une caisse se ré-appaire — et que ce
+     fichier-ci n'est même pas chargé sur kiwi-caisse.html. Deux portes, une
+     seule serrure : elle est là-bas, et les deux s'en servent. */
   function slugish(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
   function purgeTenantState() {
     try {
-      TENANT_KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
-      var kill = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (!k || PRESERVE[k]) continue;
-        for (var p = 0; p < TENANT_PREFIXES.length; p++) {
-          if (k.indexOf(TENANT_PREFIXES[p]) === 0) { kill.push(k); break; }
-        }
-      }
-      kill.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+      if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
     } catch (_) {}
   }
+  try { window.KiwiIdentity.purgeTenantState = purgeTenantState; } catch (_) {}
   // Returns true when it purged (caller should reload for a clean re-init).
   function reconcileAccount(me) {
     var email = String(me && me.email || '').trim().toLowerCase();
