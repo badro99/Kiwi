@@ -1048,9 +1048,14 @@
       '.kr-ticket.kr-w58{--kr-w:52mm;font-size:10px;}',
       '.kr-d-compact{line-height:1.34;}.kr-d-airy{line-height:1.72;}',
       '.kr-rtl{direction:rtl;}',
-      '.kr-logo{text-align:center;margin-bottom:3mm;}.kr-logo img{max-width:70%;max-height:18mm;object-fit:contain;}',
+      /* Le logo en HAUT, AU MILIEU. `text-align` ne centre que du contenu en
+         ligne : une image que le navigateur traite autrement restait collée à
+         gauche. `display:block` + marges auto centrent la BOÎTE, pas le flux. */
+      '.kr-logo{text-align:center;margin:0 auto 3mm;}',
+      '.kr-logo img{display:block;margin:0 auto;max-width:60%;max-height:18mm;object-fit:contain;}',
       '.kr-shop{text-align:center;font-weight:700;font-size:16px;letter-spacing:-0.01em;margin-bottom:1mm;}',
       '.kr-c{text-align:center;}.kr-sm{font-size:10px;}.kr-xs{font-size:9px;opacity:.85;}',
+      '.kr-sub{font-size:9px;opacity:.75;}',
       '.kr-saved{text-align:center;font-weight:700;margin-top:2px;}',
       '.kr-welcome{margin-top:2mm;font-style:normal;}',
       '.kr-banner{text-align:center;font-weight:700;font-size:13px;letter-spacing:.08em;margin:2mm 0;padding:1mm 0;border:1px solid currentColor;}',
@@ -1177,7 +1182,24 @@
       'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
       'body>*:not(#kr-print-root):not(#kpr-print-root){display:none!important;}' +
       '#kr-print-root{display:block!important;position:static!important;}' +
-      '#kr-print-root .kr-ticket,#kpr-print-root .kr-ticket{--kr-w:' + (mm - 6) + 'mm;box-shadow:none;}}';
+      '#kr-print-root .kr-ticket,#kpr-print-root .kr-ticket{--kr-w:' + (mm - 6) + 'mm;box-shadow:none;}' +
+      /* ── UN GRIS N'EST PAS UNE NUANCE, C'EST UNE BOUILLIE ────────────────────
+       * L'aperçu à l'écran atténue les mentions secondaires (opacity .85, .75,
+       * .6) : c'est joli sur une dalle rétro-éclairée. Sur PAPIER, une tête
+       * thermique ne connaît que noir ou rien — elle tramote ce gris en points
+       * espacés, et à 9 px le pied de page sort délavé, illisible en biais.
+       * C'est exactement ce qu'un client nous a montré sur son ticket : entête
+       * et TOTAL nets, conditions de retour et « Kiwi » presque effacés.
+       * À l'impression, donc : tout en noir plein, et un plancher de taille. */
+      '#kr-print-root .kr-ticket *,#kpr-print-root .kr-ticket *{opacity:1!important;color:#000!important;}' +
+      '#kr-print-root .kr-xs,#kpr-print-root .kr-xs,' +
+      '#kr-print-root .kr-sub,#kpr-print-root .kr-sub{font-size:10px!important;}' +
+      '#kr-print-root .kr-sm,#kpr-print-root .kr-sm{font-size:11px!important;}' +
+      /* Le logo : centré et net. `print-color-adjust` empêche le navigateur
+         d'« économiser l'encre » en éclaircissant l'image — sur un rouleau
+         thermique cette économie-là efface le logo. */
+      '#kr-print-root .kr-logo img,#kpr-print-root .kr-logo img{display:block;margin:0 auto;' +
+      'print-color-adjust:exact;-webkit-print-color-adjust:exact;}}';
     document.head.appendChild(st);
   }
 

@@ -561,7 +561,9 @@
     return ini || 'KW';
   }
   const TK = ticketPrefix();
-  let saleSeq = IS_DEMO ? 1208 : 1;  /* démo : MM-1203…1207 vendues, MM-1208 en cours */
+  /* 1000 : quatre chiffres, qui se disent d'un trait au téléphone, et qui ne
+     donnent pas « ticket n°1 » à lire à la première cliente. Voir freshTicket. */
+  let saleSeq = IS_DEMO ? 1208 : 1000;
 
   /* ── le journal du jour survit à un rechargement (boutiques réelles) ───────
      SALES ne vivait qu'en mémoire : recharger la caisse remettait son en-tête à
@@ -737,12 +739,52 @@
      imprimaient toutes les deux le même numéro le même jour. L'étiquette de
      terminal (KiwiPosSale.stamp) les sépare : MM-1208-A7 vs MM-1208-K3. En
      démo, pas d'étiquette — les captures restent lisibles. */
-  function posRef(n) {
-    try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
-    catch (_) { return n; }
-  }
+  /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ──────────────────
+   * C'était « SS-28-GQ » : initiales de l'enseigne, numéro, étiquette du
+   * terminal. Chaque morceau avait sa raison — mais personne au comptoir ne
+   * dicte ça au téléphone, et une cliente qui revient avec « GQ » recopié à la
+   * place de « QG » n'est plus retrouvable. On garde le seul morceau qui sert :
+   * le numéro. Il part de 1000, parce qu'un commerce n'affiche pas « ticket
+   * n°1 » — et parce que quatre chiffres se disent d'un trait.
+   *
+   * L'ÉTIQUETTE DE TERMINAL SERVAIT À QUELQUE CHOSE, et il faut le remplacer :
+   * elle empêchait deux comptoirs de sortir le même numéro. Sans elle, un
+   * appareil remplacé ou ré-appairé repartirait à 1000 sur un commerce qui en
+   * est à 1043 — ce commerce a eu exactement ça aujourd'hui, deux terminaux
+   * repartis chacun à 1. Le compteur se cale donc sur le plus grand numéro
+   * connu DU COMMERCE, demandé au serveur (voir seedSeq), et pas seulement sur
+   * ce que cet appareil-ci a en mémoire.
+   *
+   * Ce qui reste vrai et qu'il faut savoir : deux comptoirs qui vendent en même
+   * temps SANS RÉSEAU peuvent tomber sur le même numéro. Le serveur les
+   * départage au recalage suivant ; hors ligne, rien ne peut les départager. */
   function freshTicket() {
-    state.ticket = { num: posRef(`${TK}-${saleSeq}`), lines: [], client: null, remiseAuth: false };
+    state.ticket = { num: String(saleSeq), lines: [], client: null, remiseAuth: false };
+  }
+
+  /* Se caler au-dessus de ce que le COMMERCE a déjà émis, tous comptoirs
+     confondus. Sans réseau on garde le compteur local : mieux vaut un numéro
+     peut-être déjà pris qu'une caisse qui refuse de vendre. */
+  function seedSeq() {
+    if (IS_DEMO) return;
+    let m = '';
+    try {
+      const pv = pvPaired();
+      m = String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
+    } catch (_) { return; }
+    if (!m || typeof fetch !== 'function') return;
+    fetch('/api/feed?seq=1&merchant=' + encodeURIComponent(m), { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const n = j && +j.seq;
+        if (n && n >= saleSeq) {
+          saleSeq = n + 1;
+          /* Le ticket ouvert porte encore l'ancien numéro : on le renumérote
+             tant qu'il est vide. Rien n'a été encaissé, personne n'a rien lu. */
+          if (state.ticket && !(state.ticket.lines || []).length) freshTicket();
+        }
+      })
+      .catch(() => {});
   }
   function ticketClient() {
     const t = state.ticket;
@@ -2583,7 +2625,7 @@
           onPaid: (parts) => {
             apply();
             const rec = {
-              id: `${TK}-${saleSeq++}`, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
+              id: String(saleSeq++), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
               methods: parts.map((x) => x.m).join(' + '),
               parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
               lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
@@ -6093,6 +6135,11 @@
       }));
     }
   } catch (_) {}
+
+  /* Se caler sur la numérotation DU COMMERCE avant la première vente. Lancé
+     ici, au chargement du métier : le temps que la caissière compose son
+     premier ticket, la réponse est là. Sans réseau, le compteur local sert. */
+  try { seedSeq(); } catch (_) {}
 
   window.KiwiPosDispatch.register({
     id: 'boutique',
