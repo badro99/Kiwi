@@ -410,6 +410,14 @@
         .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
         .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
+        /* Le prix barré d'une promotion. Volontairement PLUS PETIT que le prix
+           courant : sur une étiquette de rayon, deux nombres de même taille se
+           lisent comme une hésitation, et c'est le nouveau prix qu'on vient
+           chercher. Le barré n'est pas décoratif — c'est lui qui dit « celui-ci
+           ne s'applique plus », sans quoi une cliente lit deux prix et demande
+           lequel est le bon. */
+        .kbl-m s { color: #6B7280; font-family: Arial, Helvetica, sans-serif;
+                   font-size: ${(pricePt * 0.5).toFixed(1)}pt; line-height: 0.95; flex: 0 0 auto; }
         .kbl-bc {
           width: ${short ? '86%' : '100%'}; line-height: 0; margin-top: auto; flex-shrink: 0;
         }
@@ -458,7 +466,14 @@
     // label is noise, and it's exactly what read as broken on the empty sheet.
     const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
     const priceStr = hasPrice ? `<b>${escapeXml(String(l.price))} MAD</b>` : '';
-    const meta = (l.sub || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${priceStr}</div>` : '';
+    // `was` = l'ancien prix, barré, quand l'article est en promotion. On ne le
+    // pose que s'il est RÉELLEMENT plus haut que le prix imprimé : une étiquette
+    // qui barre un prix identique, ou plus bas, annonce une remise qui n'existe
+    // pas — et sur une vitrine, c'est un problème d'affichage des prix.
+    const wasNum = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
+    const hasWas = hasPrice && Number.isFinite(wasNum) && wasNum > parseFloat(String(l.price).replace(',', '.'));
+    const wasStr = hasWas ? `<s>${escapeXml(String(l.was))}</s>` : '';
+    const meta = (l.sub || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${wasStr}${priceStr}</div>` : '';
     return `<div class="kbl">` +
              `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
@@ -510,8 +525,16 @@
       const numberSize = short ? 6.5 : 7;
       if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 9.5 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
+      /* Pas de barré possible ici (texte PDF nu), donc on l'écrit en toutes
+         lettres — et seulement sur les grandes étiquettes. Sur une 20 mm il n'y
+         a la place que d'UN nombre, et ce nombre doit être le prix à payer :
+         imprimer l'ancien à côté sans pouvoir le barrer serait pire que de ne
+         pas le mentionner du tout. */
+      const wasNum2 = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
+      const hasWas2 = hasPrice && Number.isFinite(wasNum2) && wasNum2 > parseFloat(String(l.price).replace(',', '.'));
       let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
       if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
+      if (!short && hasWas2) meta += ' (au lieu de ' + l.was + ')';
       if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
@@ -613,7 +636,9 @@
     }
   }
 
-  // labels: [{ title, sub, price, code, format }]. opts: { copies }
+  // labels: [{ title, sub, price, was, code, format }]. opts: { copies }
+  // `was` : ancien prix, barré, quand l'article part en promotion (ignoré s'il
+  // n'est pas strictement supérieur au prix imprimé).
   // When a printer is actively CONNECTED (Bluetooth or the network bridge) we send
   // ESC/POS straight to it. Otherwise clicking print opens the connect-a-printer
   // modal (with Imprimer / Enregistrer-en-PDF quick actions inside it).

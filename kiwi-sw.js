@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v190';
+var CACHE = 'kiwi-app-v191';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -108,6 +108,10 @@ var SHELL = [
   '/assets/barcode.js',
   '/assets/color-palette.js',
   '/assets/boutique-catalog.js',
+  /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
+     qui a perdu ses promotions vend au prix plein pendant que la vitrine
+     annonce −30 % — et c'est la caissière qui doit s'en expliquer. */
+  '/assets/promos.js',
   '/assets/venue-store.js',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :

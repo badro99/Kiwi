@@ -677,7 +677,51 @@
     const t = state.ticket;
     return t.client && t.client !== 'passage' ? clById(t.client) : null;
   }
-  const lineUnit  = (ln) => Math.round(P[ln.pid].price * (100 - ln.remise) / 100);
+  /* ── PROMOTIONS ───────────────────────────────────────────────────────────
+   * La règle vit dans assets/promos.js ; ici on ne fait que la LIRE, par une
+   * seule porte, pour que la grille, la fiche variante, le ticket et le reçu
+   * annoncent tous le même prix. Deux lectures indépendantes du même catalogue
+   * finissent toujours par diverger d'un arrondi, et c'est l'étiquette en rayon
+   * qui contredit alors le ticket, devant la cliente.
+   *
+   * `stock` compte parce qu'une promotion peut viser « ce qui descend à N
+   * pièces » : la projection vivante (celle que le ticket en cours entame) est
+   * la bonne référence pour ce que le rayon affiche à cet instant. */
+  function promoFor(pid) {
+    const p = P[pid];
+    if (!p || !window.KiwiPromos) return null;
+    try { return window.KiwiPromos.priceFor(p, { stock: stockOf(p) }); } catch (_) { return null; }
+  }
+  /* ── LE PRIX D'UNE LIGNE : LE MEILLEUR DES DEUX ───────────────────────────
+   * Le prix promo est estampillé sur la ligne quand elle entre sur le ticket
+   * (voir addToTicket), et la règle est relue à chaque rendu. On retient le PLUS
+   * BAS des deux. Les deux moitiés comptent, et pour des raisons opposées :
+   *
+   *   · la promotion se TERMINE pendant qu'une cliente attend au comptoir —
+   *     l'estampille tient, on encaisse le prix annoncé au moment du scan. Une
+   *     caisse qui remonte ses prix entre le rayon et le paiement, c'est une
+   *     dispute au comptoir, et le magasin a tort.
+   *   · la promotion COMMENCE pendant le ticket — la règle du jour prend le
+   *     dessus. Sans ça, deux lignes du même caftan cohabitaient à 2 400 et
+   *     2 160 sur le même ticket, et personne n'aurait su expliquer laquelle
+   *     était la bonne.
+   *
+   * Une seule phrase à tenir devant la cliente : « on ne vous facture jamais
+   * plus que le prix affiché au moment où l'article a été scanné, ni plus que
+   * celui affiché maintenant. » C'est aussi ce qui rend un retour juste trois
+   * jours plus tard : la ligne de vente porte le prix réellement payé. */
+  function lineDeal(ln) {
+    const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? ln.promo : null;
+    const live = promoFor(ln.pid);
+    const full = P[ln.pid].price;
+    let best = { price: full, promo: null };
+    if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
+    if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
+    return best;
+  }
+  const linePromo = (ln) => lineDeal(ln).promo;
+  const lineBase  = (ln) => lineDeal(ln).price;
+  const lineUnit  = (ln) => Math.round(lineBase(ln) * (100 - ln.remise) / 100);
   const lineTotal = (ln) => lineUnit(ln) * ln.qty;
   /* Remise fidélité au niveau du TICKET (distincte de la remise gérante par ligne).
      Attachée au client via clientId : si on détache/change la cliente, elle cesse
@@ -689,12 +733,28 @@
     if (r.kind === 'free' && t.lines.length) return Math.min.apply(null, t.lines.map(lineUnit));
     return 0;
   }
+  /* Trois baisses, trois lignes séparées, jamais une seule « remise » fourre-tout :
+     la promotion est une décision du magasin, la remise un geste de la gérante,
+     la récompense un dû de la cliente. Les confondre au total, c'est rendre le
+     rapport de clôture incapable de dire ce que les promotions ont coûté. */
   function ticketTotals(t) {
     const sub = t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0);
+    const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
     const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
     const reward = rewardDiscount(t, afterLines);
     const total = Math.max(0, afterLines - reward);
-    return { sub, remise: sub - afterLines, reward, total };
+    return { sub, promo: sub - afterPromo, remise: afterPromo - afterLines, reward, total };
+  }
+  /* Le nom à écrire sur le reçu. Une seule promotion en jeu → son nom ; deux ou
+     plus → le mot générique, parce qu'en nommer une seule laisserait croire que
+     l'autre n'a pas été appliquée. */
+  function promoLabelForTicket(t) {
+    const names = [];
+    t.lines.forEach((ln) => {
+      const pr = linePromo(ln);
+      if (pr && pr.name && names.indexOf(pr.name) < 0) names.push(pr.name);
+    });
+    return names.length === 1 ? names[0] : '';
   }
   const ticketCount = (t) => t.lines.reduce((s, ln) => s + ln.qty, 0);
   /* Sur salesToday(), jamais sur SALES : le journal garde une semaine pour les
@@ -772,6 +832,7 @@
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
+          <button class="bq-nav-it" data-bq-view="promotions"><i data-lucide="tag"></i><span>Promotions</span><b class="bq-nav-badge" id="bq-badge-promo"></b></button>
         </nav>
         <div class="bq-rail-foot">
           <button class="bq-net" id="bq-net" title="Simuler une coupure réseau">
@@ -811,6 +872,7 @@
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
+        <section class="bq-view" data-bq-panel="promotions"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
       <div class="modal-veil" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
@@ -819,7 +881,8 @@
       <div class="modal-veil" id="bq-exch-veil"><div class="modal bq-exch bq-rel" id="bq-exchm"></div></div>
       <div class="modal-veil" id="bq-pay-veil"><div class="modal bq-pay bq-rel" id="bq-paym"></div></div>
       <div class="modal-veil" id="bq-inv-veil"><div class="modal bq-invm bq-rel" id="bq-invmm"></div></div>
-      <div class="modal-veil" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>`;
+      <div class="modal-veil" id="bq-avoir-veil"><div class="modal bq-avoirm bq-rel" id="bq-avoirmm"></div></div>
+      <div class="modal-veil" id="bq-promo-veil"><div class="modal bq-promom bq-rel" id="bq-promomm"></div></div>`;
 
     $('#bq-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-bq-view]');
@@ -869,6 +932,37 @@
         || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
         || (pvReal() ? 'boutique-live' : 'maisonMansour');
       window.KiwiBoutiqueCatalog.use(_bqKey);
+      /* Les promotions suivent EXACTEMENT la même clé que le catalogue : ce sont
+         les prix de ce magasin-là. Une promotion rangée sous une autre clé que
+         les articles qu'elle vise remiserait le catalogue du voisin — et,
+         au retour d'une démo, brader la vraie boutique. */
+      if (window.KiwiPromos) {
+        window.KiwiPromos.use(_bqKey);
+        /* Remontée serveur : le patron pose la promotion depuis le bureau, le
+           comptoir doit la voir sans qu'on aille toucher la tablette. Le slug
+           est celui du commerce, pas la clé locale (voir localKey dans
+           promos.js) — deux surfaces du même magasin rangent leur copie sous
+           des noms différents mais parlent au même document. */
+        try {
+          if (pvReal() && window.KiwiCloudDoc) {
+            window.KiwiPromos.cloud(() => window.KiwiCloudDoc.slugFor(_bqKey));
+          }
+        } catch (_) {}
+        if (!mount._promoSubbed) {
+          mount._promoSubbed = true;
+          window.KiwiPromos.subscribe(() => {
+            /* Une promotion qui change repeint les PRIX : la grille, le rayon
+               courant, le badge du rail. Le ticket en cours, lui, garde ses prix
+               figés — voir linePromo. */
+            if (!root || intake.open) return;
+            /* renderCats() aussi : le filtre « En promo » n'existe que s'il a
+               quelque chose à montrer, donc il apparaît et disparaît AVEC les
+               promotions. Le laisser hors du repeint, c'était un onglet qui ne
+               s'affichait qu'au prochain changement de rayon. */
+            try { renderCats(); renderView(state.view); renderBadges(); icons(); } catch (_) {}
+          });
+        }
+      }
     }
     rebuildCatalog();
     injectInvCss();
@@ -972,6 +1066,7 @@
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
     if (view === 'clientes') renderClientes();
+    if (view === 'promotions') renderPromos();
   }
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
@@ -985,6 +1080,15 @@
     set('#bq-badge-scan', state.scanLog.length);
     set('#bq-badge-ret', avs);
     set('#bq-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
+    /* Le badge compte les promotions EN COURS, pas le total : une pastille « 7 »
+       sur un magasin où six promotions sont terminées annoncerait des prix qui
+       ne s'appliquent plus. */
+    const prBadge = $('#bq-badge-promo', root);
+    if (prBadge) {
+      const n = window.KiwiPromos ? window.KiwiPromos.stats().active : 0;
+      prBadge.textContent = n || '';
+      prBadge.style.display = n ? '' : 'none';
+    }
     const invBadge = $('#bq-badge-inv', root);
     if (invBadge) { const st = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.stats() : null; const n = st ? st.ruptures + st.low : 0; invBadge.textContent = n || ''; invBadge.style.display = n ? '' : 'none'; }
   }
@@ -1013,8 +1117,18 @@
   /* ═══════════════════════ VENTE — grille par rayon ═══════════════════════ */
   function renderCats() {
     const all = RAYONS.reduce((s, r) => s + r.items.length, 0);
+    /* « C'est en promo ? » est LA question du comptoir un jour de soldes, et
+       jusqu'ici la caissière n'avait aucun moyen d'y répondre autrement qu'en
+       parcourant la grille à l'œil. Le filtre n'apparaît que s'il a quelque
+       chose à montrer : un onglet vide en permanence est du bruit. */
+    const promoN = promoedIds().size;
+    /* La dernière promotion vient de s'arrêter pendant qu'on regardait ce
+       filtre : sans ce repli, l'onglet disparaît et la grille reste vide sans
+       qu'aucun bouton ne soit sélectionné — la caisse a l'air cassée. */
+    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous';
     $('#bq-cats', root).innerHTML =
       `<button class="bq-cat ${state.rayon === 'tous' ? 'on' : ''}" data-bq-cat="tous">Tous <span class="bq-cat-ct">${all}</span></button>` +
+      (promoN ? `<button class="bq-cat is-promo ${state.rayon === '_promo' ? 'on' : ''}" data-bq-cat="_promo">En promo <span class="bq-cat-ct">${promoN}</span></button>` : '') +
       RAYONS.map((r) =>
         `<button class="bq-cat ${state.rayon === r.id ? 'on' : ''}" data-bq-cat="${r.id}">${esc(r.label)} <span class="bq-cat-ct">${r.items.length}</span></button>`
       ).join('');
@@ -1034,18 +1148,40 @@
     return '';
   }
 
+  /* Les articles qui portent une étiquette promo en ce moment. Un Set : deux
+     promotions sur le même caftan ne le comptent pas deux fois. */
+  function promoedIds() {
+    const out = new Set();
+    if (!window.KiwiPromos) return out;
+    RAYONS.forEach((r) => r.items.forEach((it) => { if (promoFor(it.id)) out.add(it.id); }));
+    return out;
+  }
+
   function renderGrid() {
-    const rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
+    let rayons;
+    if (state.rayon === '_promo') {
+      const ids = promoedIds();
+      rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
+    } else {
+      rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
+    }
     let i = 0;
     $('#bq-gridwrap', root).innerHTML = rayons.map((r) => `
       <div class="bq-cat-head">${esc(r.label)}</div>
-      <div class="bq-grid">${r.items.map((p) => `
-        <button class="bq-card ${stockOf(p) === 0 ? 'is-out' : ''}" data-bq-item="${p.id}" style="--i:${i++}">
+      <div class="bq-grid">${r.items.map((p) => {
+        /* Le prix promo se lit SUR LA CARTE, pas seulement au ticket. Une
+           caissière qui doit ouvrir la fiche pour savoir si l'article est en
+           promotion ne répondra pas à « c'est combien ? » sans regarder son
+           écran — et l'affiche en vitrine, elle, est déjà lue par la cliente. */
+        const pr = promoFor(p.id);
+        return `
+        <button class="bq-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-bq-item="${p.id}" style="--i:${i++}">
           <span class="bq-card-art">${artOf(p.art)}</span>
           <span class="bq-card-name">${esc(p.name)}</span>
-          <span class="bq-card-price">${fmtMAD(p.price)}</span>
+          <span class="bq-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : p.price)}</span>
           ${cardFlag(p)}
-        </button>`).join('')}
+          ${pr ? `<span class="bq-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
+        </button>`; }).join('')}
       </div>`).join('');
     $('#bq-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-bq-item]');
@@ -1120,7 +1256,7 @@
 
   function renderTicket() {
     const t = state.ticket;
-    const { remise, reward, total } = ticketTotals(t);
+    const { promo, remise, reward, total } = ticketTotals(t);
     const count = ticketCount(t);
     const el = $('#bq-ticket', root);
     el.innerHTML = `
@@ -1139,6 +1275,7 @@
       <div class="bq-tk-foot">
         <div class="bq-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
+          ${promo ? `<span class="rem promo">Promotions · −${fmtMAD(promo)}</span>` : ''}
           ${remise ? `<span class="rem">Remise · −${fmtMAD(remise)}</span>` : ''}
           ${reward ? `<span class="rem rew">Récompense · −${fmtMAD(reward)}</span>` : ''}
         </div>
@@ -1195,6 +1332,11 @@
   function lineRow(ln, i) {
     const p = P[ln.pid];
     const u = lineUnit(ln);
+    const pr = linePromo(ln);
+    /* Les deux baisses sont NOMMÉES séparément sur la ligne. Une pastille
+       « −40 % » unique laisserait croire à une promotion là où la gérante a
+       ajouté son propre geste par-dessus — et personne, au moment du retour,
+       ne saurait plus démêler ce qui venait du magasin de ce qui venait d'elle. */
     return `<div class="bq-line">
       <span class="bq-line-art">${artOf(p.art)}</span>
       <span class="bq-line-mid">
@@ -1202,11 +1344,12 @@
         <span class="bq-line-sub">
           ${colorDot(ln.color)}
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
+          ${pr ? `<span class="bq-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
           ${ln.remise ? `<span class="bq-line-rem">−${ln.remise} %</span>` : ''}
         </span>
       </span>
       <span class="bq-line-right">
-        <span class="bq-line-price">${ln.remise ? `<span class="was">${fmtMAD(p.price * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
+        <span class="bq-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(p.price * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
         <span class="bq-line-qty">
           <button data-bq-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-bq-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -1222,9 +1365,15 @@
       return false;
     }
     stockAdd(pid, cfg.size, -cfg.qty);
+    /* Le prix promo du moment est recopié sur la ligne. Il ne fige rien à lui
+       seul : lineDeal() le compare ensuite à la règle en vigueur et garde le
+       plus bas. Deux lignes identiques peuvent donc fusionner sans risque —
+       elles se résoudront au même prix, le meilleur pour la cliente. */
+    const pr = promoFor(pid);
+    const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
     const same = state.ticket.lines.find((l) => l.pid === pid && l.size === cfg.size && l.color === cfg.color && l.remise === cfg.remise);
-    if (same) same.qty += cfg.qty;
-    else state.ticket.lines.push({ pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise });
+    if (same) { same.qty += cfg.qty; if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp; }
+    else state.ticket.lines.push({ pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });
     renderTicket(); renderGrid(); renderBadges(); icons();
     if (!opts || !opts.quiet) toast(`${p.name} · ${cfg.size}, sur le ticket`);
     return true;
@@ -1256,7 +1405,12 @@
   function renderSheet() {
     const p = P[sheet.pid];
     const c = ticketClient();
-    const unit = Math.round(p.price * (100 - sheet.remise) / 100);
+    /* La fiche variante affiche le prix QU'ON VA ENCAISSER. Elle calculait le
+       sien à partir du prix catalogue : en promotion elle annonçait donc un
+       prix, et le ticket en affichait un autre deux secondes plus tard. */
+    const shPromo = promoFor(sheet.pid);
+    const shBase = shPromo ? shPromo.price : p.price;
+    const unit = Math.round(shBase * (100 - sheet.remise) / 100);
     const canAdd = (p.sizes[sheet.size] || 0) > 0;
     const el = $('#bq-sheetm', root);
     el.innerHTML = `
@@ -1269,6 +1423,11 @@
           <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
         </span>
       </div>
+      ${shPromo ? `
+      <div class="bq-sheet-promo">
+        <i data-lucide="tag"></i>
+        <span class="l"><b>${esc(shPromo.promo.name)}</b><span>${esc(shPromo.badge)} · ${fmtMAD(shPromo.price)} au lieu de ${fmtMAD(shPromo.was)}</span></span>
+      </div>` : ''}
 
       <div class="bq-f">
         <div class="bq-f-lbl">${sizeWord(p)} <span class="opt">· stock par taille en direct</span></div>
@@ -1310,12 +1469,12 @@
       <div class="bq-sheet-foot">
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
-          ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(p.price)}</button>`
+          ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(shBase)}</button>`
           : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i>Ajouter au ticket · <span id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
       </div>`;
 
     const refreshPrice = () => {
-      const u = Math.round(p.price * (100 - sheet.remise) / 100);
+      const u = Math.round(shBase * (100 - sheet.remise) / 100);
       $('#bq-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
       $('#bq-sheet-per', el).classList.toggle('rem', !!sheet.remise);
@@ -1641,7 +1800,13 @@
             <b>${esc(p.name)}</b>
             <span>${ray ? esc(ray) + ' · ' : ''}EAN ${esc(lk.ean)} · ${fmtHM(lk.at)}</span>
           </div>
-          <span class="bq-look-price">${fmtMAD(p.price)}</span>
+          <span class="bq-look-price">${(function () {
+            /* La fiche « disponibilité » est ce qu'on montre à une cliente qui
+               demande « il coûte combien ? » : citer le prix catalogue pendant
+               une promotion, c'est annoncer un prix qu'on n'encaissera pas. */
+            const pr = promoFor(lk.pid);
+            return pr ? `<s>${fmtMAD(pr.was)}</s> ${fmtMAD(pr.price)}` : fmtMAD(p.price);
+          })()}</span>
         </div>
         <div class="bq-look-avail">
           <div class="bq-look-avail-head">
@@ -2509,6 +2674,12 @@
          reçu affiche un total qui ne correspond pas à l'addition des lignes et
          personne ne peut vérifier sa remise. */
       subtotal: t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0),
+      /* Trois baisses, deux lignes distinctes sur le reçu. `promo` porte son
+         NOM quand une seule promotion a joué — la cliente retrouve l'affiche
+         qu'elle a lue en vitrine. Quand plusieurs se croisent sur le même
+         ticket, le mot générique est la seule chose vraie : nommer l'une des
+         deux ferait croire que l'autre n'a pas été appliquée. */
+      promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
       discount: tot.remise + tot.reward,
       customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
@@ -2524,7 +2695,13 @@
              espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
           discount: Math.round(tot.remise + tot.reward),
-          lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, unit: lineUnit(ln), returned: false, note: '' })),
+          promoOff: Math.round(tot.promo),        // ce que les promotions ont coûté, pour la clôture
+          /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
+             `unit` (le prix réellement payé), mais un échange ou une réclamation
+             trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
+             sinon la caissière voit un caftan à 700 sur un ticket, 1 000 en rayon,
+             et n'a aucun moyen de trancher. */
+          lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln), unit: lineUnit(ln), returned: false, note: '' })),
           reward: rewardUsed ? t.reward.label : null,
           total,
         };
@@ -3372,6 +3549,546 @@
     if (state.view !== 'inventaire') switchView('inventaire');
     if (!intake.open) { intake.open = true; intakeReset(); }
     intakeTake(raw);
+  }
+
+  /* ═══════════════════════ PROMOTIONS ═══════════════════════
+   * L'écran où le magasin décide de ses prix. La règle vit dans
+   * assets/promos.js ; ici on ne fait que la composer et la montrer.
+   *
+   * Le pari de cet écran : un commerçant ne crée pas une promotion « en
+   * pourcentage sur une catégorie » — il veut « écouler les caftans d'été » ou
+   * « vider ce qui traîne depuis six mois ». Les cibles sont donc écrites dans
+   * ces mots-là, et l'aperçu chiffre la décision AVANT de l'enregistrer :
+   * combien d'articles, combien ça coûte, combien passeraient sous le prix
+   * d'achat. Une promotion qu'on enregistre sans savoir ce qu'elle touche est
+   * une promotion qu'on découvre au comptoir, article par article. */
+
+  const PRM = () => window.KiwiPromos || null;
+  const promoState = { filter: 'active' };
+
+  const PROMO_DAY = 86400000;
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const endOfDay   = (d) => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x.getTime(); };
+
+  /* La cible, écrite comme le commerçant la dirait à voix haute. Un « scope.type
+     = avant » affiché tel quel n'apprend rien à personne. */
+  function promoScopeText(p) {
+    const sc = p.scope || {};
+    if (sc.type === 'tout') return 'Tout le magasin';
+    if (sc.type === 'rayon') {
+      const names = (sc.ids || []).map((id) => (RAYONS.find((r) => r.id === id) || {}).label).filter(Boolean);
+      if (!names.length) return 'Aucun rayon choisi';
+      return names.length <= 2 ? names.join(' et ') : `${names[0]} et ${names.length - 1} autres rayons`;
+    }
+    if (sc.type === 'produits') {
+      const n = (sc.ids || []).length;
+      if (!n) return 'Aucun article choisi';
+      if (n === 1) { const it = P[sc.ids[0]]; return it ? it.name : '1 article'; }
+      return `${n} articles choisis`;
+    }
+    if (sc.type === 'avant') return sc.before ? `Entré en stock avant le ${fmtDay(new Date(sc.before))}` : 'Aucune date choisie';
+    if (sc.type === 'stock') return `Il en reste ${sc.max || 0} ou moins`;
+    return '—';
+  }
+
+  /* La période, en clair, avec ce qu'il reste à courir. « du 12 au 19 » ne dit
+     pas si c'est fini ; « se termine dans 3 jours » se lit d'un coup d'œil. */
+  function promoWhenText(p, now) {
+    now = now || Date.now();
+    const st = PRM().status(p, now);
+    if (st === 'paused') return 'En pause, aucun prix n\'est modifié';
+    if (st === 'scheduled') {
+      const j = Math.ceil((p.from - now) / PROMO_DAY);
+      return `Démarre ${j <= 1 ? 'demain' : `dans ${j} jours`} · ${fmtDay(new Date(p.from))}`;
+    }
+    if (st === 'ended') return `Terminée le ${fmtDay(new Date(p.to))}`;
+    if (!p.to) return 'Sans date de fin, jusqu\'à ce que vous l\'arrêtiez';
+    const left = p.to - now;
+    if (left < 2 * 3600000) return `Se termine à ${fmtHM(new Date(p.to))}`;
+    const j = Math.ceil(left / PROMO_DAY);
+    return j <= 1 ? `Se termine aujourd'hui à ${fmtHM(new Date(p.to))}` : `Se termine dans ${j} jours · ${fmtDay(new Date(p.to))}`;
+  }
+
+  /* Le catalogue vu comme une liste plate — ce que preview() attend. */
+  const promoItems = () => Object.keys(P).filter((k) => P[k] && P[k].id === k).map((k) => P[k]);
+
+  function promoCount(p) {
+    const pr = PRM();
+    if (!pr) return 0;
+    return pr.preview(p, promoItems(), { stockOf: (it) => stockOf(it) }).count;
+  }
+
+  function renderPromos() {
+    const pr = PRM();
+    const el = $('[data-bq-panel="promotions"]', root);
+    if (!pr) {
+      el.innerHTML = `<div class="bq-pr-wrap"><div class="bq-pr-empty"><i data-lucide="tag"></i>
+        <div><b>Promotions indisponibles</b><span>Le module de promotions n'a pas été chargé sur cette caisse.</span></div></div></div>`;
+      icons(); return;
+    }
+    const now = Date.now();
+    const all = pr.list();
+    const st = pr.stats(now);
+    /* En pause et programmée vivent dans le même onglet « à venir » : ce sont
+       les deux façons d'avoir une promotion prête qui ne s'applique pas encore. */
+    const groups = {
+      active: all.filter((p) => pr.status(p, now) === 'active'),
+      soon: all.filter((p) => ['scheduled', 'paused'].indexOf(pr.status(p, now)) >= 0),
+      ended: all.filter((p) => pr.status(p, now) === 'ended'),
+    };
+    const shown = groups[promoState.filter] || groups.active;
+
+    /* Ce que les promotions ont coûté aujourd'hui — la seule mesure qui dit si
+       elles marchent. Lue sur les ventes du jour, pas estimée. */
+    const offToday = salesToday().reduce((s, x) => s + (+x.promoOff || 0), 0);
+    const touched = groups.active.length ? promoArticleCount(groups.active) : 0;
+    const sub = [
+      `${st.active} promotion${st.active > 1 ? 's' : ''} en cours`,
+      touched ? `${touched} article${touched > 1 ? 's' : ''} remisé${touched > 1 ? 's' : ''}` : null,
+      offToday ? `${fmtMAD(offToday)} offerts aujourd'hui` : null,
+    ].filter(Boolean).join(' · ');
+
+    el.innerHTML = `
+      <div class="bq-pr-wrap">
+        <header class="bq-head">
+          <div><h1>Promotions</h1><div class="bq-head-sub">${esc(sub)}</div></div>
+          <button class="bq-btn primary bq-pr-new" id="bq-pr-new"><i data-lucide="plus"></i>Nouvelle promotion</button>
+        </header>
+
+        ${all.length ? `
+        <div class="bq-seg bq-pr-seg" data-lens-demo id="bq-pr-filter">
+          <button class="bq-seg-it ${promoState.filter === 'active' ? 'on' : ''}" data-lens-item data-prf="active">En cours<small>${groups.active.length}</small></button>
+          <button class="bq-seg-it ${promoState.filter === 'soon' ? 'on' : ''}" data-lens-item data-prf="soon">À venir<small>${groups.soon.length}</small></button>
+          <button class="bq-seg-it ${promoState.filter === 'ended' ? 'on' : ''}" data-lens-item data-prf="ended">Terminées<small>${groups.ended.length}</small></button>
+        </div>` : ''}
+
+        ${all.length ? (shown.length ? `
+        <div class="bq-pr-list">
+          ${shown.map((p) => promoCardHtml(p, now)).join('')}
+        </div>` : `
+        <div class="bq-pr-empty soft"><i data-lucide="tag"></i>
+          <div><b>Rien ici</b><span>${promoState.filter === 'active' ? 'Aucune promotion ne tourne en ce moment.' : promoState.filter === 'soon' ? 'Aucune promotion en attente.' : 'Aucune promotion terminée.'}</span></div>
+        </div>`) : promoEmptyHtml()}
+      </div>`;
+
+    $('#bq-pr-new', el).onclick = () => openPromoComposer(null);
+    const seg = $('#bq-pr-filter', el);
+    if (seg) seg.onclick = (e) => {
+      const b = e.target.closest('[data-prf]');
+      if (!b) return;
+      promoState.filter = b.dataset.prf;
+      renderPromos();
+    };
+    $$('[data-pr-starter]', el).forEach((b) => {
+      b.onclick = () => openPromoComposer(promoStarter(b.dataset.prStarter));
+    });
+    $$('[data-pr-edit]', el).forEach((b) => { b.onclick = () => openPromoComposer(pr.get(b.dataset.prEdit)); });
+    $$('[data-pr-toggle]', el).forEach((b) => {
+      b.onclick = () => {
+        const p = pr.get(b.dataset.prToggle); if (!p) return;
+        pr.setPaused(p.id, !p.paused);
+        toast(p.paused ? `${p.name} reprend` : `${p.name} en pause, les prix repassent au plein tarif`);
+        renderPromos(); renderGrid(); renderBadges(); icons(); lens();
+      };
+    });
+    $$('[data-pr-del]', el).forEach((b) => { b.onclick = () => confirmPromoDelete(b.dataset.prDel); });
+    icons(); lens();
+  }
+
+  /* Combien d'articles portent une étiquette promo en ce moment, sans les
+     compter deux fois quand deux promotions visent le même. */
+  function promoArticleCount(running) {
+    const seen = new Set();
+    const items = promoItems();
+    running.forEach((p) => {
+      items.forEach((it) => { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); });
+    });
+    return seen.size;
+  }
+
+  function promoCardHtml(p, now) {
+    const pr = PRM();
+    const st = pr.status(p, now);
+    const n = promoCount(p);
+    const tone = st === 'active' ? 'on' : st === 'ended' ? 'off' : 'wait';
+    return `
+      <article class="bq-pr-card is-${tone}">
+        <div class="bq-pr-ribbon"><b>${esc(pr.badgeOf(p))}</b><span>${p.kind === 'fixed' ? 'prix fixe' : 'de remise'}</span></div>
+        <div class="bq-pr-body">
+          <div class="bq-pr-top">
+            <h3>${esc(p.name)}</h3>
+            <span class="bq-pr-state ${tone}">${st === 'active' ? 'En cours' : st === 'scheduled' ? 'Programmée' : st === 'paused' ? 'En pause' : 'Terminée'}</span>
+          </div>
+          <div class="bq-pr-meta">
+            <span><i data-lucide="target"></i>${esc(promoScopeText(p))}</span>
+            <span><i data-lucide="clock"></i>${esc(promoWhenText(p, now))}</span>
+          </div>
+          <div class="bq-pr-foot">
+            <span class="bq-pr-n">${n} article${n > 1 ? 's' : ''} concerné${n > 1 ? 's' : ''}</span>
+            <span class="bq-pr-acts">
+              ${st !== 'ended' ? `<button class="bqi-mini" data-pr-toggle="${esc(p.id)}" title="${p.paused ? 'Reprendre' : 'Mettre en pause'}"><i data-lucide="${p.paused ? 'play' : 'pause'}"></i></button>` : ''}
+              <button class="bqi-mini" data-pr-edit="${esc(p.id)}" title="Modifier"><i data-lucide="pencil"></i></button>
+              <button class="bqi-mini danger" data-pr-del="${esc(p.id)}" title="Supprimer"><i data-lucide="trash-2"></i></button>
+            </span>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  /* L'écran vide APPREND la fonctionnalité au lieu de la décrire. Trois
+     promotions réelles, prêtes en un geste, qui couvrent les trois raisons pour
+     lesquelles une boutique baisse ses prix : écouler l'ancien, finir les
+     séries, faire venir du monde. Le commerçant touche, ajuste, enregistre. */
+  const PROMO_STARTERS = {
+    destock: { name: 'Déstockage', kind: 'percent', value: 30, scope: { type: 'avant' }, months: 6,
+               title: 'Déstocker l\'ancienne saison', desc: 'Tout ce qui est en stock depuis plus de six mois, −30 %' },
+    finserie: { name: 'Fins de série', kind: 'percent', value: 20, scope: { type: 'stock', max: 5 },
+               title: 'Écouler les fins de série', desc: 'Les articles où il reste 5 pièces ou moins, −20 %' },
+    weekend: { name: 'Week-end', kind: 'percent', value: 10, scope: { type: 'tout' }, days: 2,
+               title: 'Animer le week-end', desc: 'Tout le magasin, −10 %, jusqu\'à dimanche soir' },
+  };
+  function promoStarter(key) {
+    const s = PROMO_STARTERS[key];
+    if (!s) return null;
+    const now = Date.now();
+    const p = { name: s.name, kind: s.kind, value: s.value, scope: JSON.parse(JSON.stringify(s.scope)) };
+    if (s.months) p.scope.before = startOfDay(new Date(now - s.months * 30 * PROMO_DAY));
+    if (s.days) p.to = endOfDay(new Date(now + s.days * PROMO_DAY));
+    return p;
+  }
+  function promoEmptyHtml() {
+    return `
+      <div class="bq-pr-zero">
+        <div class="bq-pr-zero-head">
+          <i data-lucide="tag"></i>
+          <h2>Baissez vos prix une fois, la caisse s'en souvient</h2>
+          <p>Une promotion s'applique toute seule aux articles que vous visez, pendant la durée que vous fixez.
+             Les étiquettes, la grille de vente et le reçu de la cliente suivent sans un geste de plus.</p>
+        </div>
+        <div class="bq-pr-starters">
+          ${Object.keys(PROMO_STARTERS).map((k) => `
+            <button class="bq-pr-starter" data-pr-starter="${k}">
+              <b>${esc(PROMO_STARTERS[k].title)}</b>
+              <span>${esc(PROMO_STARTERS[k].desc)}</span>
+              <i data-lucide="arrow-right"></i>
+            </button>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function confirmPromoDelete(id) {
+    const pr = PRM(); const p = pr.get(id); if (!p) return;
+    const el = $('#bq-promomm', root);
+    el.innerHTML = `
+      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">Supprimer « ${esc(p.name)} » ?</h3>
+      <p class="modal-subtle">Les articles concernés repassent immédiatement au prix plein.
+         Les ventes déjà encaissées gardent le prix payé — rien ne change dans le journal.</p>
+      <div class="bqi-modfoot">
+        <button class="bq-btn secondary" data-bq-close>Garder</button>
+        <button class="bq-btn danger" id="bq-pr-delok"><i data-lucide="trash-2"></i>Supprimer</button>
+      </div>`;
+    openVeil('#bq-promo-veil'); icons();
+    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-promo-veil'); });
+    $('#bq-pr-delok', el).onclick = () => {
+      pr.remove(id);
+      closeVeil('#bq-promo-veil');
+      toast(`${p.name} supprimée, prix pleins rétablis`);
+      renderPromos(); renderGrid(); renderBadges(); icons();
+    };
+  }
+
+  /* ─── le compositeur ─────────────────────────────────────────────────────
+     Un seul écran, pas d'assistant en trois étapes : les trois décisions
+     (combien, sur quoi, jusqu'à quand) se répondent l'une l'autre, et un
+     assistant qui les sépare oblige à revenir en arrière pour comprendre ce
+     qu'on vient de faire. L'aperçu se recalcule à chaque frappe. */
+  const composer = { draft: null, editing: null };
+
+  function openPromoComposer(seed) {
+    const pr = PRM(); if (!pr) return;
+    composer.editing = (seed && seed.id) ? seed.id : null;
+    composer.draft = pr.normalize(seed || { name: '', kind: 'percent', value: 20, scope: { type: 'tout' } });
+    if (!seed) composer.draft.name = '';
+    renderPromoComposer();
+    openVeil('#bq-promo-veil');
+    icons(); lens();
+  }
+
+  const PROMO_SCOPES = [
+    { id: 'tout', label: 'Tout le magasin', icon: 'store' },
+    { id: 'rayon', label: 'Un rayon', icon: 'layout-grid' },
+    { id: 'produits', label: 'Des articles', icon: 'shirt' },
+    { id: 'avant', label: 'Ancien stock', icon: 'calendar-clock' },
+    { id: 'stock', label: 'Fin de série', icon: 'package-minus' },
+  ];
+
+  function promoDraftValid(d) {
+    if (!d.value) return 'Choisissez de combien vous baissez le prix';
+    const sc = d.scope || {};
+    if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return 'Choisissez au moins un élément à viser';
+    if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
+    if (sc.type === 'stock' && !sc.max) return 'Indiquez à partir de combien de pièces l\'article est visé';
+    if (d.to && d.from && d.to <= d.from) return 'La date de fin doit venir après le début';
+    return '';
+  }
+
+  const toInput = (ms) => { if (!ms) return ''; const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+
+  function renderPromoComposer() {
+    const pr = PRM();
+    const d = composer.draft;
+    const el = $('#bq-promomm', root);
+    const prev = pr.preview(d, promoItems(), { stockOf: (it) => stockOf(it) });
+    const problem = promoDraftValid(d);
+    const sc = d.scope || {};
+
+    el.innerHTML = `
+      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">${composer.editing ? 'Modifier la promotion' : 'Nouvelle promotion'}</h3>
+
+      <div class="bq-prc">
+        <div class="bq-prc-form">
+
+          <div class="bq-f">
+            <div class="bq-f-lbl">Nom <span class="opt">· ce que la cliente lira sur son reçu</span></div>
+            <input class="bq-input" id="bq-prc-name" maxlength="80" placeholder="Soldes d'été, Déstockage caftans…" value="${esc(d.name)}" />
+          </div>
+
+          <div class="bq-f">
+            <div class="bq-f-lbl">De combien</div>
+            <div class="bq-seg" data-lens-demo id="bq-prc-kind">
+              <button class="bq-seg-it ${d.kind === 'percent' ? 'on' : ''}" data-lens-item data-prk="percent">En pourcentage<small>−20 %</small></button>
+              <button class="bq-seg-it ${d.kind === 'amount' ? 'on' : ''}" data-lens-item data-prk="amount">En dirhams<small>−50 MAD</small></button>
+              <button class="bq-seg-it ${d.kind === 'fixed' ? 'on' : ''}" data-lens-item data-prk="fixed">Prix fixe<small>tout à 99</small></button>
+            </div>
+            <div class="bq-prc-val">
+              <input class="bq-input" id="bq-prc-value" type="number" min="0" inputmode="numeric" value="${d.value}" />
+              <span class="unit">${d.kind === 'percent' ? '%' : 'MAD'}</span>
+              <div class="bq-chips" id="bq-prc-quick">
+                ${(d.kind === 'percent' ? [10, 20, 30, 50] : d.kind === 'amount' ? [20, 50, 100, 200] : [49, 99, 149, 199]).map((v) =>
+                  `<button class="bq-chip ${d.value === v ? 'on' : ''}" data-prv="${v}">${d.kind === 'percent' ? `−${v} %` : d.kind === 'amount' ? `−${v}` : v}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="bq-f">
+            <div class="bq-f-lbl">Sur quoi</div>
+            <div class="bq-prc-scopes" id="bq-prc-scope">
+              ${PROMO_SCOPES.map((s) => `
+                <button class="bq-prc-scope ${sc.type === s.id ? 'on' : ''}" data-prs="${s.id}">
+                  <i data-lucide="${s.icon}"></i><span>${esc(s.label)}</span>
+                </button>`).join('')}
+            </div>
+            <div class="bq-prc-scopebody" id="bq-prc-scopebody">${promoScopeControl(d)}</div>
+          </div>
+
+          <div class="bq-f">
+            <div class="bq-f-lbl">Jusqu'à quand</div>
+            <div class="bq-chips" id="bq-prc-when">
+              ${[
+                { k: 'today', l: 'Aujourd\'hui' }, { k: 'we', l: 'Ce week-end' },
+                { k: '7', l: '7 jours' }, { k: '30', l: '30 jours' }, { k: 'none', l: 'Sans fin' },
+              ].map((o) => `<button class="bq-chip" data-prw="${o.k}">${o.l}</button>`).join('')}
+            </div>
+            <div class="bq-row-2 bq-prc-dates">
+              <div class="bq-f">
+                <div class="bq-f-lbl">Début <span class="opt">· vide = tout de suite</span></div>
+                <input class="bq-input" id="bq-prc-from" type="date" value="${toInput(d.from)}" />
+              </div>
+              <div class="bq-f">
+                <div class="bq-f-lbl">Fin <span class="opt">· vide = sans fin</span></div>
+                <input class="bq-input" id="bq-prc-to" type="date" value="${toInput(d.to)}" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="bq-prc-prev">
+          <div class="bq-prc-prev-head">
+            <span class="lbl">Ce que ça touche</span>
+            <b class="n">${prev.count}</b>
+            <span class="u">article${prev.count > 1 ? 's' : ''}</span>
+          </div>
+          ${prev.count ? `
+            <div class="bq-prc-swap">
+              <div><span>Valeur au prix plein</span><b>${fmtMAD(prev.from)}</b></div>
+              <i data-lucide="arrow-right"></i>
+              <div class="next"><span>Au prix promo</span><b>${fmtMAD(prev.to)}</b></div>
+            </div>
+            <div class="bq-prc-give">Vous offrez <b>${fmtMAD(prev.from - prev.to)}</b> si tout part.</div>
+            ${prev.under ? `
+              <div class="bq-prc-warn"><i data-lucide="alert-triangle"></i>
+                <span><b>${prev.under} article${prev.under > 1 ? 's passeraient' : ' passerait'} sous son prix d'achat.</b>
+                Déstocker à perte est parfois le bon choix — mais autant le décider en le sachant.</span>
+              </div>` : ''}
+            <div class="bq-prc-sample">
+              ${prev.sample.map((x) => `
+                <div class="bq-prc-srow ${x.under ? 'is-under' : ''}">
+                  <span class="nm">${esc(x.name)}</span>
+                  <span class="pz"><s>${fmtMAD(x.was)}</s><b>${fmtMAD(x.price)}</b></span>
+                </div>`).join('')}
+              ${prev.count > prev.sample.length ? `<div class="bq-prc-more">et ${prev.count - prev.sample.length} autre${prev.count - prev.sample.length > 1 ? 's' : ''}…</div>` : ''}
+            </div>` : `
+            <div class="bq-prc-none"><i data-lucide="search-x"></i>
+              <span>${esc(problem || 'Aucun article ne correspond à cette cible.')}</span>
+            </div>`}
+        </aside>
+      </div>
+
+      <div class="bqi-modfoot bq-prc-foot">
+        ${problem ? `<span class="bq-prc-block"><i data-lucide="info"></i>${esc(problem)}</span>` : '<span></span>'}
+        <span class="acts">
+          <button class="bq-btn secondary" data-bq-close>Annuler</button>
+          <button class="bq-btn primary" id="bq-prc-save" ${problem || !prev.count ? 'disabled' : ''}>
+            <i data-lucide="check"></i>${composer.editing ? 'Enregistrer' : 'Lancer la promotion'}
+          </button>
+        </span>
+      </div>`;
+
+    icons(); lens();
+    wirePromoComposer(el);
+  }
+
+  function promoScopeControl(d) {
+    const sc = d.scope || {};
+    if (sc.type === 'tout') return '<div class="bq-prc-hint">Chaque article du magasin, sans exception.</div>';
+    if (sc.type === 'rayon') {
+      return `<div class="bq-chips wrap" id="bq-prc-rayons">
+        ${RAYONS.map((r) => `<button class="bq-chip ${(sc.ids || []).indexOf(r.id) >= 0 ? 'on' : ''}" data-prr="${esc(r.id)}">${esc(r.label)}<small>${r.items.length}</small></button>`).join('')}
+      </div>`;
+    }
+    if (sc.type === 'produits') {
+      const ids = sc.ids || [];
+      return `
+        <div class="bqx-scanbox slim"><i data-lucide="search"></i>
+          <input id="bq-prc-q" placeholder="Chercher un article, ou scanner son code-barres…" autocomplete="off" />
+        </div>
+        <div class="bq-prc-picked" id="bq-prc-picked">
+          ${ids.length ? ids.map((id) => { const it = P[id]; return `<button class="bq-chip on" data-prp="${esc(id)}">${esc(it ? it.name : id)} <i data-lucide="x"></i></button>`; }).join('')
+            : '<span class="bq-prc-hint">Aucun article choisi pour l\'instant.</span>'}
+        </div>
+        <div class="bq-prc-hits" id="bq-prc-hits"></div>`;
+    }
+    if (sc.type === 'avant') {
+      /* Les raccourcis d'abord : « plus de six mois » est la phrase que le
+         commerçant a en tête, pas une date de calendrier qu'il devra calculer. */
+      return `
+        <div class="bq-chips" id="bq-prc-age">
+          ${[{ m: 3, l: 'Plus de 3 mois' }, { m: 6, l: 'Plus de 6 mois' }, { m: 12, l: 'Plus d\'un an' }].map((o) =>
+            `<button class="bq-chip" data-pra="${o.m}">${o.l}</button>`).join('')}
+        </div>
+        <input class="bq-input" id="bq-prc-before" type="date" value="${toInput(sc.before)}" />
+        <div class="bq-prc-hint">Vise les articles entrés dans l'inventaire avant cette date. Un arrivage postérieur n'est jamais remisé, même s'il porte le même nom.</div>`;
+    }
+    if (sc.type === 'stock') {
+      return `
+        <div class="bq-chips" id="bq-prc-max">
+          ${[2, 3, 5, 10].map((n) => `<button class="bq-chip ${sc.max === n ? 'on' : ''}" data-prm="${n}">${n} ou moins</button>`).join('')}
+        </div>
+        <input class="bq-input" id="bq-prc-maxn" type="number" min="1" value="${sc.max || ''}" placeholder="ou un seuil à vous" />
+        <div class="bq-prc-hint">La cible se recalcule toute seule : un article qui repasse au-dessus du seuil après un réassort sort de la promotion, un autre qui descend y entre.</div>`;
+    }
+    return '';
+  }
+
+  function wirePromoComposer(el) {
+    const pr = PRM();
+    const d = composer.draft;
+    const redraw = () => renderPromoComposer();
+    /* Le nom se saisit SANS redessiner : un re-rendu à chaque touche vole le
+       curseur au milieu du mot. Il ne change aucun prix, il n'a rien à repeindre. */
+    const nameEl = $('#bq-prc-name', el);
+    if (nameEl) nameEl.oninput = () => { d.name = nameEl.value; const b = $('#bq-prc-save', el); if (b) b.disabled = !!promoDraftValid(d) || !pr.preview(d, promoItems(), { stockOf: (it) => stockOf(it) }).count; };
+
+    $$('[data-prk]', el).forEach((b) => b.onclick = () => { d.kind = b.dataset.prk; redraw(); });
+    const val = $('#bq-prc-value', el);
+    if (val) val.oninput = () => { d.value = Math.max(0, Math.round(+val.value || 0)); redraw(); };
+    $$('[data-prv]', el).forEach((b) => b.onclick = () => { d.value = +b.dataset.prv; redraw(); });
+    $$('[data-prs]', el).forEach((b) => b.onclick = () => { d.scope = pr.normalize({ scope: { type: b.dataset.prs } }).scope; redraw(); });
+
+    $$('[data-prr]', el).forEach((b) => b.onclick = () => {
+      const ids = d.scope.ids || (d.scope.ids = []);
+      const i = ids.indexOf(b.dataset.prr);
+      if (i >= 0) ids.splice(i, 1); else ids.push(b.dataset.prr);
+      redraw();
+    });
+    $$('[data-prp]', el).forEach((b) => b.onclick = () => {
+      const ids = d.scope.ids || [];
+      const i = ids.indexOf(b.dataset.prp);
+      if (i >= 0) ids.splice(i, 1);
+      redraw();
+    });
+    const q = $('#bq-prc-q', el);
+    if (q) {
+      const hits = $('#bq-prc-hits', el);
+      const paint = () => {
+        const term = q.value.trim().toLowerCase();
+        if (!term) { hits.innerHTML = ''; return; }
+        /* Un code-barres scanné dans ce champ désigne un article précis : on
+           passe par la base, pas par le nom, sinon la douchette ne sert à rien ici. */
+        const byCode = BY_EAN[q.value.trim()];
+        const found = byCode ? [P[byCode]].filter(Boolean)
+          : promoItems().filter((it) => it.name.toLowerCase().indexOf(term) >= 0).slice(0, 8);
+        hits.innerHTML = found.map((it) => `<button class="bq-prc-hit" data-prpick="${esc(it.id)}">
+            <span>${esc(it.name)}</span><b>${fmtMAD(it.price)}</b></button>`).join('')
+          || '<div class="bq-prc-hint">Aucun article ne porte ce nom.</div>';
+        $$('[data-prpick]', hits).forEach((b) => b.onclick = () => {
+          const ids = d.scope.ids || (d.scope.ids = []);
+          if (ids.indexOf(b.dataset.prpick) < 0) ids.push(b.dataset.prpick);
+          redraw();
+        });
+      };
+      q.oninput = paint;
+      q.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); paint(); } };
+    }
+    $$('[data-pra]', el).forEach((b) => b.onclick = () => { d.scope.before = startOfDay(new Date(Date.now() - (+b.dataset.pra) * 30 * PROMO_DAY)); redraw(); });
+    const before = $('#bq-prc-before', el);
+    if (before) before.onchange = () => { d.scope.before = before.value ? startOfDay(new Date(before.value + 'T12:00:00')) : 0; redraw(); };
+    $$('[data-prm]', el).forEach((b) => b.onclick = () => { d.scope.max = +b.dataset.prm; redraw(); });
+    const maxn = $('#bq-prc-maxn', el);
+    if (maxn) maxn.oninput = () => { d.scope.max = Math.max(0, Math.round(+maxn.value || 0)); redraw(); };
+
+    $$('[data-prw]', el).forEach((b) => b.onclick = () => {
+      const k = b.dataset.prw, now = new Date();
+      if (k === 'none') { d.to = 0; }
+      else if (k === 'today') { d.to = endOfDay(now); }
+      else if (k === 'we') {
+        /* « Ce week-end » = jusqu'à dimanche soir. Un dimanche, c'est ce soir —
+           pas dans sept jours : le commerçant qui pose sa promotion le dimanche
+           matin veut qu'elle finisse le soir même. */
+        const toSunday = (7 - now.getDay()) % 7;
+        d.to = endOfDay(new Date(now.getTime() + toSunday * PROMO_DAY));
+      } else { d.to = endOfDay(new Date(now.getTime() + (+k) * PROMO_DAY)); }
+      redraw();
+    });
+    const from = $('#bq-prc-from', el);
+    if (from) from.onchange = () => { d.from = from.value ? startOfDay(new Date(from.value + 'T12:00:00')) : 0; redraw(); };
+    const to = $('#bq-prc-to', el);
+    if (to) to.onchange = () => { d.to = to.value ? endOfDay(new Date(to.value + 'T12:00:00')) : 0; redraw(); };
+
+    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-promo-veil'); });
+    const save = $('#bq-prc-save', el);
+    if (save) save.onclick = () => {
+      if (promoDraftValid(d)) return;
+      if (!d.name.trim()) d.name = promoAutoName(d);
+      if (composer.editing) d.id = composer.editing;
+      pr.save(d);
+      closeVeil('#bq-promo-veil');
+      toast(composer.editing ? `${d.name} enregistrée` : `${d.name} lancée, les prix sont à jour`);
+      renderPromos(); renderGrid(); renderBadges(); icons(); lens();
+    };
+  }
+
+  /* Un nom laissé vide ne doit pas produire « Promotion » sur le reçu de la
+     cliente : on écrit ce que la promotion FAIT, c'est plus utile qu'un blanc. */
+  function promoAutoName(d) {
+    const sc = d.scope || {};
+    if (sc.type === 'avant') return 'Déstockage';
+    if (sc.type === 'stock') return 'Fins de série';
+    if (sc.type === 'rayon') return promoScopeText(d);
+    if (sc.type === 'produits') return 'Sélection';
+    return d.kind === 'percent' ? `Tout le magasin −${d.value} %` : 'Promotion';
   }
 
   /* ─── the inventory panel ─── */
@@ -4554,12 +5271,25 @@
   }
 
   /* ─── label printing (printer wired to the caisse) ─── */
+  /* L'étiquette de rayon porte le prix QU'ON ENCAISSE, pas le prix catalogue.
+     Sans ça, lancer une promotion obligeait à réimprimer tout un rayon à la
+     main — ou, pire, laissait les étagères annoncer l'ancien prix pendant que
+     la caisse en encaisse un autre : c'est le commerçant qui se retrouve à
+     devoir expliquer l'écart à la cliente, au comptoir, sans savoir d'où il
+     vient. `was` fait ressortir l'ancien prix barré, comme une vraie affiche de
+     soldes. Quand la promotion s'arrête, réimprimer redonne le prix plein. */
   function labelForVariant(pid, v) {
     const cat = catDB(); const p = cat.getProduct(pid).product;
     const code = cat.primaryBarcode(v);
     if (!code) return null;
     const extra = v.note || v.colorSource || '';
-    return { title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`, price: fmtNum(p.priceMAD), code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128' };
+    const pr = promoFor(pid);
+    return {
+      title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`,
+      price: fmtNum(pr ? pr.price : p.priceMAD),
+      was: pr ? fmtNum(pr.was) : null,
+      code, format: window.KiwiBarcode.isValidEan13(code) ? 'ean13' : 'code128',
+    };
   }
   function printVariantLabel(vid) {
     const cat = catDB();
@@ -4631,7 +5361,7 @@
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'livraison': 'delivery' };
 
   function bqDayTotals() {
-    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, items: 0, discounts: 0, discountsN: 0 };
+    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0 };
     salesToday().forEach((s) => {
       let took = 0;
       bqMoneyParts(s).forEach((p) => {
@@ -4645,8 +5375,12 @@
       (s.lines || []).forEach((ln) => { if (!ln.returned) t.items += +ln.qty || 0; });
       const d = +s.discount || 0;
       if (d > 0) { t.discounts += d; t.discountsN++; }
+      /* Compté À PART des réductions. Une gérante qui voit « 4 200 MAD de
+         réductions accordées » sans savoir que 3 900 viennent de la promotion
+         qu'elle a elle-même lancée croit que son équipe brade le magasin. */
+      t.promoOff += +s.promoOff || 0;
     });
-    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
+    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts', 'promoOff'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
 
@@ -4939,6 +5673,7 @@
     if (t.delivery > 0) rows.push(['dont Livraison · à recevoir', fmtMAD(t.delivery), true, 'sub']);
     if (t.other > 0) rows.push(['dont Autres', fmtMAD(t.other), true, 'sub']);
     rows.push(['Ticket moyen', fmtMAD(t.txns > 0 ? t.moneyIn / t.txns : 0), true, '']);
+    if (t.promoOff > 0) rows.push(['Promotions du magasin', fmtMAD(t.promoOff), true, '']);
     rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
     const avToday = AVOIRS.filter((a) => a && a.at && isToday(a.at)).reduce((s, a) => s + (+a.amount || 0), 0);
     if (avToday > 0) rows.push(['Avoirs émis', fmtMAD(avToday), true, '']);

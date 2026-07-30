@@ -474,7 +474,18 @@
     var subtotal = sale.subtotal != null ? Math.abs(num(sale.subtotal)) : (linesSum || total + discount);
     var tip = Math.abs(num(sale.tip));
 
-    var totals = { subtotal: subtotal, discount: discount, tip: tip, total: total, vat: null };
+    /* ── LA PROMOTION EST NOMMÉE, PAS FONDUE DANS « REMISE » ──
+     * Une promotion et une remise n'ont pas la même origine : l'une est une
+     * décision du magasin qui vaut pour tout le monde, l'autre un geste fait à
+     * cette cliente-ci. Les additionner sous un seul mot rend le reçu
+     * invérifiable — la cliente a vu « −30 % » en vitrine, elle veut retrouver
+     * ces −30 % sur son ticket, et non un total de remise qui ne correspond à
+     * aucune affiche. C'est aussi ce qui permet, trois jours plus tard, de
+     * savoir à quel titre l'article avait baissé. */
+    var promo = Math.abs(num(sale.promo != null ? (sale.promo.amount != null ? sale.promo.amount : sale.promo) : 0));
+    var promoLabel = str((sale.promo && sale.promo.label) || '', 40);
+
+    var totals = { subtotal: subtotal, discount: discount, promo: promo, promoLabel: promoLabel, tip: tip, total: total, vat: null };
     if (cfg.vat.mode === 'rate' && total > 0) {
       var r = cfg.vat.rate / 100;
       var ht = cfg.vat.included ? total / (1 + r) : total;
@@ -622,9 +633,9 @@
 
   /* ═══════════════════ les mots ═══════════════════ */
   var DICT = {
-    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', ref: 'Réf.' },
-    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', ref: 'Ref.' },
-    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', ref: 'مرجع' },
+    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', ref: 'Réf.' },
+    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', ref: 'Ref.' },
+    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', ref: 'مرجع' },
   };
   function dict(l) { return DICT[l] || DICT.fr; }
 
@@ -701,12 +712,20 @@
     /* — l'argent — */
     rule();
     var t = doc.totals;
-    if (t.discount > 0) { row(T.subtotal, moneyMAD(t.subtotal, doc)); row(T.discount, '- ' + moneyMAD(t.discount, doc)); }
+    if (t.discount > 0 || t.promo > 0) row(T.subtotal, moneyMAD(t.subtotal, doc));
+    if (t.promo > 0) row(t.promoLabel || T.promo, '- ' + moneyMAD(t.promo, doc));
+    if (t.discount > 0) row(T.discount, '- ' + moneyMAD(t.discount, doc));
     if (t.vat) { row(T.ht, moneyMAD(t.vat.ht, doc)); row(T.vat + ' ' + t.vat.rate + ' %', moneyMAD(t.vat.tva, doc)); }
     if (t.tip > 0) row(T.tip, moneyMAD(t.tip, doc));
     b.size(1, 2);
     row(refund ? T.totalRefund : T.total, (refund ? '- ' : '') + moneyMAD(t.total + t.tip, doc), true);
     b.size(1, 1);
+    /* Ce que la cliente a économisé, en toutes lettres, sous le total. C'est la
+       ligne qu'on relit dans le sac en rentrant — et la seule preuve papier que
+       la promotion affichée en vitrine a bien été appliquée. */
+    if (!refund && (t.promo + t.discount) > 0) {
+      b.align('center').bold(true).line(T.saved + ' ' + moneyMAD(t.promo + t.discount, doc)).bold(false).align('left');
+    }
     doc.pay.forEach(function (p) { row(p.label, moneyMAD(p.amount, doc)); });
     if (doc.cash) { row(T.received, moneyMAD(doc.cash.received, doc)); row(T.change, moneyMAD(doc.cash.change, doc)); }
 
@@ -798,10 +817,13 @@
 
     out.push('<div class="kr-rule"></div>');
     var t = doc.totals;
-    if (t.discount > 0) { R(T.subtotal, moneyMAD(t.subtotal, doc)); R(T.discount, '- ' + moneyMAD(t.discount, doc)); }
+    if (t.discount > 0 || t.promo > 0) R(T.subtotal, moneyMAD(t.subtotal, doc));
+    if (t.promo > 0) R(t.promoLabel || T.promo, '- ' + moneyMAD(t.promo, doc));
+    if (t.discount > 0) R(T.discount, '- ' + moneyMAD(t.discount, doc));
     if (t.vat) { R(T.ht, moneyMAD(t.vat.ht, doc)); R(T.vat + ' ' + t.vat.rate + ' %', moneyMAD(t.vat.tva, doc)); }
     if (t.tip > 0) R(T.tip, moneyMAD(t.tip, doc));
     R(refund ? T.totalRefund : T.total, (refund ? '- ' : '') + moneyMAD(t.total + t.tip, doc), 'kr-total');
+    if (!refund && (t.promo + t.discount) > 0) P('kr-saved', T.saved + ' ' + moneyMAD(t.promo + t.discount, doc));
     doc.pay.forEach(function (p) { R(p.label, moneyMAD(p.amount, doc)); });
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
 
@@ -839,6 +861,7 @@
       '.kr-logo{text-align:center;margin-bottom:3mm;}.kr-logo img{max-width:70%;max-height:18mm;object-fit:contain;}',
       '.kr-shop{text-align:center;font-weight:700;font-size:16px;letter-spacing:-0.01em;margin-bottom:1mm;}',
       '.kr-c{text-align:center;}.kr-sm{font-size:10px;}.kr-xs{font-size:9px;opacity:.85;}',
+      '.kr-saved{text-align:center;font-weight:700;margin-top:2px;}',
       '.kr-welcome{margin-top:2mm;font-style:normal;}',
       '.kr-banner{text-align:center;font-weight:700;font-size:13px;letter-spacing:.08em;margin:2mm 0;padding:1mm 0;border:1px solid currentColor;}',
       '.kr-copy{font-weight:700;margin-top:1mm;}',
@@ -878,6 +901,7 @@
     out.push(new Array(cols + 1).join('-'));
     doc.lines.forEach(function (l) { out.push(row(l.qty + '× ' + l.name, moneyMAD(l.total, doc))); });
     out.push(new Array(cols + 1).join('-'));
+    if (doc.totals.promo > 0) out.push(row(doc.totals.promoLabel || T.promo, '- ' + moneyMAD(doc.totals.promo, doc)));
     if (doc.totals.discount > 0) out.push(row(T.discount, '- ' + moneyMAD(doc.totals.discount, doc)));
     if (doc.totals.vat) out.push(row(T.vat + ' ' + doc.totals.vat.rate + ' %', moneyMAD(doc.totals.vat.tva, doc)));
     /* Le signe et le libellé du remboursement, comme dans les deux autres
@@ -987,7 +1011,11 @@
     }
     d.lines = d.lines || [];
     d.pay = d.pay || [];
-    d.totals = d.totals || { subtotal: 0, discount: 0, tip: 0, total: 0, vat: null };
+    d.totals = d.totals || { subtotal: 0, discount: 0, promo: 0, promoLabel: '', tip: 0, total: 0, vat: null };
+    // Un reçu réimprimé depuis une version antérieure n'a pas ces champs : sans
+    // ce repli, la ligne « Promotion » afficherait `undefined` sur un duplicata.
+    if (d.totals.promo == null) d.totals.promo = 0;
+    if (d.totals.promoLabel == null) d.totals.promoLabel = '';
     d.meta = d.meta || {};
     d.foot = d.foot || {};
     /* `copy: true` veut dire « marque-le comme duplicata », pas « écris true » :

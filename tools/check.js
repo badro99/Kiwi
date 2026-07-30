@@ -238,6 +238,24 @@ section('Live sale resilience (tools/live-link-test.js)');
   }
 }
 
+/* ── 4d-bis · règles de promotions ──────────────────────────────────────────
+ * Une promotion se voit sur un PRIX, pas sur une capture d'écran : deux
+ * affiches qui se cumulent, une promotion terminée qui s'applique encore, un
+ * déstockage sans date qui vise tout le magasin — rien de tout ça n'est
+ * visible à l'œil, et tout coûte de l'argent au commerçant. */
+section('Règles de promotions (tools/promos-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'promos-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`promotions gate green (${(out.match(/✓/g) || []).length - 1} règles de prix vérifiées)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`promos-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4e · production action honesty ────────────────────────────────────────
  * Presentation workflows must fail honestly for a real merchant, even if a
  * later navigation change accidentally exposes one of their buttons. */

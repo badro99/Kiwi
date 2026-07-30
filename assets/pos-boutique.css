@@ -1132,3 +1132,253 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
    que rp-server-row dans kiwi-caisse.html) : sans cette ligne, « Réimprimer »
    s'affiche avant même le premier tirage. */
 #bqzs-reprint[hidden] { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROMOTIONS
+   Le vocabulaire visuel d'une affiche de magasin : le prix barré, la pastille,
+   le ruban. Rien d'inventé — le rayon parle déjà cette langue, et une caisse
+   qui l'écrit autrement force la caissière à traduire.
+   Le vert Atlas porte la baisse ; le rouge est réservé à l'alerte « sous le
+   prix d'achat », parce qu'une promotion n'est pas un incident.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── l'article en promotion, là où on le choisit ── */
+.bq-card.is-promo { border-color: var(--mint-edge); }
+.bq-card.is-promo .bq-card-price s {
+  color: var(--ink-4); text-decoration-thickness: 1px; margin-inline-end: 3px; font-weight: 400;
+}
+.bq-card.is-promo .bq-card-price { color: var(--forest); font-weight: 700; }
+.bq-card-promo {
+  position: absolute; top: 8px; inset-inline-end: 8px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em;
+  color: #fff; background: var(--atlas);
+  padding: 3px 7px; border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(11, 110, 79, 0.32);
+}
+.bq-card { position: relative; }
+
+/* ── sur la ligne de ticket ── */
+.bq-line-promo {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  color: var(--forest); background: var(--mint-tint);
+  border: 1px solid var(--mint-edge);
+  padding: 1px 6px; border-radius: 999px;
+}
+.bq-line-promo svg { width: 10px; height: 10px; }
+.bq-tk-tot .rem.promo { color: var(--forest); }
+
+/* ── le bandeau de la fiche variante ── */
+.bq-sheet-promo {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 4px;
+  padding: 10px 13px;
+  background: var(--mint-tint);
+  border: 1px solid var(--mint-edge);
+  border-radius: var(--r-lg, 13px);
+}
+.bq-sheet-promo > svg { width: 17px; height: 17px; color: var(--forest); flex-shrink: 0; }
+.bq-sheet-promo .l { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bq-sheet-promo .l b { font-size: 12.5px; color: var(--ink); }
+.bq-sheet-promo .l span { font-size: 11.5px; color: var(--forest); font-family: var(--mono); }
+
+/* ── l'écran ── */
+/* `.bq-view` est un conteneur flex (l'écran de vente y pose sa grille ET son
+   ticket côte à côte). Sans `flex: 1`, ce panneau se réduit à la largeur de son
+   contenu : l'en-tête se serrait autour du titre et la grille de cartes
+   retombait sur une seule colonne au milieu d'un écran vide. */
+.bq-pr-wrap { flex: 1; min-width: 0; height: 100%; overflow-y: auto; padding: 0 22px 40px; }
+.bq-pr-wrap .bq-head { padding-inline: 0; }
+/* Deux classes, pour battre `.bq-btn.primary { flex: 2 }` : dans une barre
+   d'actions ce ratio est juste, mais dans un en-tête il étirait le bouton sur
+   toute la largeur de l'écran. */
+.bq-btn.bq-pr-new { flex: 0 0 auto; width: auto; white-space: nowrap; }
+.bq-pr-seg { margin: 4px 0 16px; width: fit-content; }
+
+.bq-pr-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+
+.bq-pr-card {
+  display: flex; overflow: hidden;
+  background: var(--paper-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl, 18px);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+.bq-pr-card:hover { box-shadow: var(--shadow-1); }
+.bq-pr-card.is-on { border-color: var(--mint-edge); }
+.bq-pr-card.is-off { opacity: 0.62; }
+
+/* Le ruban porte le chiffre. C'est la seule information qu'on lit à trois
+   mètres, donc c'est la seule qui a droit à cette taille. */
+.bq-pr-ribbon {
+  flex: 0 0 84px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: var(--riad, #053B2C); color: #fff;
+  padding: 16px 6px;
+}
+.bq-pr-card.is-on .bq-pr-ribbon { background: var(--atlas); }
+.bq-pr-ribbon b { font-family: var(--mono); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.bq-pr-ribbon span { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7; text-align: center; }
+
+.bq-pr-body { flex: 1; min-width: 0; padding: 13px 15px; display: flex; flex-direction: column; gap: 8px; }
+.bq-pr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.bq-pr-top h3 {
+  margin: 0; min-width: 0;
+  font-family: var(--serif); font-weight: 400; font-size: 17px; letter-spacing: -0.01em;
+  color: var(--ink); line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bq-pr-state {
+  flex-shrink: 0;
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  color: var(--ink-3); background: var(--paper-mute); border: 1px solid var(--line);
+}
+.bq-pr-state.on { color: var(--forest); background: var(--mint-tint); border-color: var(--mint-edge); }
+.bq-pr-state.wait { color: var(--bq-warn); background: var(--bq-warn-bg); border-color: rgba(217,154,43,0.35); }
+
+.bq-pr-meta { display: flex; flex-direction: column; gap: 4px; }
+.bq-pr-meta span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); line-height: 1.3; }
+.bq-pr-meta svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--ink-4); }
+
+.bq-pr-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line-soft);
+}
+.bq-pr-n { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.bq-pr-acts { display: inline-flex; gap: 5px; }
+.bq-pr-acts .bqi-mini { width: 30px; height: 30px; }
+.bq-pr-acts .bqi-mini svg { width: 14px; height: 14px; }
+
+/* ── l'écran vide : il apprend, il ne s'excuse pas ── */
+.bq-pr-zero { max-width: 640px; margin: 26px auto 0; text-align: center; }
+/* `margin-inline:auto` et non `text-align:center` : un reset global pose
+   `svg { display: block }`, et un bloc ne se centre pas au texte. */
+.bq-pr-zero-head > svg { width: 30px; height: 30px; color: var(--forest); margin-inline: auto; }
+.bq-pr-zero h2 {
+  margin: 12px 0 8px;
+  font-family: var(--serif); font-weight: 400; font-size: 25px; letter-spacing: -0.015em;
+  color: var(--ink); line-height: 1.18;
+}
+.bq-pr-zero p { margin: 0 auto; max-width: 470px; font-size: 13.5px; line-height: 1.55; color: var(--ink-3); }
+.bq-pr-starters { display: flex; flex-direction: column; gap: 9px; margin-top: 22px; text-align: start; }
+.bq-pr-starter {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px;
+  padding: 14px 16px;
+  background: var(--paper-elev); border: 1px solid var(--line); border-radius: var(--r-lg, 14px);
+  cursor: pointer; text-align: start;
+  transition: border-color 160ms ease, transform 160ms cubic-bezier(0.34, 1.45, 0.5, 1);
+}
+.bq-pr-starter:hover { border-color: var(--atlas); transform: translateY(-1px); }
+.bq-pr-starter b { grid-column: 1; font-size: 13.5px; color: var(--ink); }
+.bq-pr-starter span { grid-column: 1; font-size: 12px; line-height: 1.4; color: var(--ink-3); }
+.bq-pr-starter svg { grid-column: 2; grid-row: 1 / 3; width: 16px; height: 16px; color: var(--forest); }
+
+.bq-pr-empty {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  padding: 46px 20px; color: var(--ink-3); text-align: start;
+}
+.bq-pr-empty svg { width: 22px; height: 22px; color: var(--ink-4); }
+.bq-pr-empty b { display: block; font-size: 13.5px; color: var(--ink); }
+.bq-pr-empty span { font-size: 12.5px; }
+
+/* ── le compositeur ── */
+.bq-promom { max-width: 940px; width: min(940px, 94vw); }
+.bq-prc { display: grid; grid-template-columns: 1fr 300px; gap: 18px; padding: 0 24px; align-items: start; }
+.bq-prc-form { display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+
+.bq-input {
+  width: 100%; box-sizing: border-box;
+  padding: 11px 13px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 11px;
+  font: inherit; font-size: 14px; color: var(--ink); outline: none;
+}
+.bq-input:focus { border-color: var(--atlas); }
+
+.bq-prc-val { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.bq-prc-val .bq-input { width: 96px; font-family: var(--mono); font-size: 17px; font-weight: 600; }
+.bq-prc-val .unit { font-family: var(--mono); font-size: 14px; color: var(--ink-3); margin-inline-start: -4px; }
+.bq-prc-val .bq-chips { flex: 1; justify-content: flex-end; }
+
+.bq-prc-scopes { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 7px; }
+.bq-prc-scope {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; text-align: center;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.bq-prc-scope svg { width: 18px; height: 18px; color: var(--ink-3); }
+.bq-prc-scope:hover { border-color: var(--ink-4); }
+.bq-prc-scope.on { background: var(--atlas); border-color: var(--atlas); color: #fff; }
+.bq-prc-scope.on svg { color: #fff; }
+
+.bq-prc-scopebody { margin-top: 10px; display: flex; flex-direction: column; gap: 9px; }
+.bq-prc-hint { font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+.bq-prc-picked { display: flex; flex-wrap: wrap; gap: 6px; }
+.bq-prc-hits { display: flex; flex-direction: column; gap: 4px; max-height: 168px; overflow-y: auto; }
+.bq-prc-hit {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 12.5px; color: var(--ink); cursor: pointer; text-align: start;
+}
+.bq-prc-hit:hover { border-color: var(--atlas); }
+.bq-prc-hit b { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.bq-prc-dates { margin-top: 9px; }
+
+/* ── l'aperçu : la moitié qui fait la différence ── */
+.bq-prc-prev {
+  position: sticky; top: 0;
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 15px;
+  background: var(--paper-mute); border: 1px solid var(--line); border-radius: var(--r-xl, 16px);
+}
+.bq-prc-prev-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.bq-prc-prev-head .lbl { flex: 1 0 100%; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.bq-prc-prev-head .n { font-family: var(--mono); font-size: 27px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); line-height: 1; }
+.bq-prc-prev-head .u { font-size: 12.5px; color: var(--ink-3); }
+
+.bq-prc-swap { display: flex; align-items: center; gap: 9px; }
+.bq-prc-swap > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bq-prc-swap span { font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.bq-prc-swap b { font-family: var(--mono); font-size: 13.5px; color: var(--ink-3); }
+.bq-prc-swap .next b { color: var(--forest); font-weight: 700; }
+.bq-prc-swap > svg { width: 14px; height: 14px; color: var(--ink-4); flex-shrink: 0; }
+.bq-prc-give { font-size: 12px; color: var(--ink-2); }
+.bq-prc-give b { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+
+.bq-prc-warn {
+  display: flex; gap: 8px;
+  padding: 10px 11px;
+  background: var(--bq-warn-bg); border: 1px solid rgba(217,154,43,0.35); border-radius: 11px;
+  font-size: 11.5px; line-height: 1.45; color: var(--bq-warn);
+}
+.bq-prc-warn svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.bq-prc-warn b { display: block; }
+
+.bq-prc-sample { display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--line); padding-top: 10px; }
+.bq-prc-srow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11.5px; }
+.bq-prc-srow .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.bq-prc-srow .pz { flex-shrink: 0; font-family: var(--mono); font-size: 11px; }
+.bq-prc-srow .pz s { color: var(--ink-4); margin-inline-end: 5px; }
+.bq-prc-srow .pz b { color: var(--forest); font-weight: 700; }
+.bq-prc-srow.is-under .pz b { color: var(--danger-mute); }
+.bq-prc-more { font-size: 11px; color: var(--ink-4); }
+.bq-prc-none { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 8px; text-align: center; }
+.bq-prc-none svg { width: 20px; height: 20px; color: var(--ink-4); }
+.bq-prc-none span { font-size: 12px; line-height: 1.45; color: var(--ink-3); }
+
+.bq-prc-foot { align-items: center; justify-content: space-between; }
+.bq-prc-foot .acts { display: inline-flex; gap: 8px; margin-inline-start: auto; }
+.bq-prc-foot .acts .bq-btn { white-space: nowrap; }
+.bq-prc-block { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); }
+.bq-prc-block svg { width: 13px; height: 13px; }
+
+@media (max-width: 900px) {
+  .bq-prc { grid-template-columns: 1fr; }
+  .bq-prc-prev { position: static; }
+}
+.bq-cat.is-promo { color: var(--forest); border-color: var(--mint-edge); }
+.bq-cat.is-promo.on { background: var(--atlas); border-color: var(--atlas); color: #fff; }
+.bq-look-price s { color: var(--ink-4); font-weight: 400; margin-inline-end: 4px; }

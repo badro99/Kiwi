@@ -1121,6 +1121,13 @@
         id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag, sku: p.sku || '',
         ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
+        /* Deux champs que la vente ne dessine pas mais dont les PROMOTIONS ont
+           besoin (assets/promos.js) : `createdAt` porte la cible « tout ce qui
+           est entré avant telle date » — un déstockage vise l'ancienneté, pas
+           le rayon — et `cost` sert à prévenir le commerçant quand une remise
+           ferait passer un article sous son prix d'achat. Sans eux, la règle
+           « avant » ne viserait rien et l'alerte à perte serait muette. */
+        createdAt: p.createdAt || 0, cost: p.cost || 0,
       };
       P[p.id] = item;
       // Alias the seed's legacy id (e.g. 'caftan_ete') so the caisse's demo
