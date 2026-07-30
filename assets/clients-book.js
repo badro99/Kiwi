@@ -205,13 +205,38 @@
    * the owner asked for) instead of a full-viewport takeover. Café/resto exposes a
    * 280px .sidebar; pos verticals a vertical nav rail. Unknown layouts fall back to
    * full-bleed (inset:0) so nothing is ever hidden. */
+  /* La barre latérale, pas la LISTE de boutons qu'elle contient.
+   *
+   * On mesurait le `<nav>` trouvé par le sélecteur. Dans la caisse boutique ce
+   * `<nav class="bq-nav">` est imbriqué dans `<aside class="bq-rail">` sous le
+   * logo et le bloc établissement : son bord haut est à ~270 px du sommet. Le
+   * carnet héritait donc de ce 270 px et s'ouvrait à mi-hauteur, décalé, en
+   * laissant dépasser l'écran de vente au-dessus de lui — alors que toutes les
+   * autres pages du métier occupent la zone de travail entière.
+   *
+   * On remonte donc les ancêtres tant qu'on reste sur une bande verticale de
+   * largeur comparable, et on garde la plus haute. Une caisse dont le `<nav>`
+   * EST déjà le rail ne bouge pas d'un pixel : son parent est la page, trop
+   * large, et la boucle s'arrête tout de suite. */
+  function railBox(el) {
+    var best = el.getBoundingClientRect();
+    var p = el.parentElement;
+    while (p && p !== document.body && p.nodeType === 1) {
+      var r = p.getBoundingClientRect();
+      if (r.width > best.width * 1.6) break;      // ce n'est plus une bande, c'est la page
+      if (r.height > best.height) best = r;
+      p = p.parentElement;
+    }
+    return best;
+  }
+
   function panelInset() {
     var res = { left: 0, top: 0, right: 0, bottom: 0 };
     try {
       var rail = null, cands = document.querySelectorAll('.sidebar, nav[class$="-nav"]');
       for (var i = 0; i < cands.length; i++) {
         var el = cands[i]; if (el.offsetParent === null) continue;
-        var rr = el.getBoundingClientRect();
+        var rr = railBox(el);
         // a vertical rail hugging a screen edge (taller than wide), not a top bar
         if (rr.height > rr.width * 1.4 && (rr.left < 60 || rr.right > window.innerWidth - 60)) { rail = rr; break; }
       }

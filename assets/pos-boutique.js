@@ -3691,6 +3691,7 @@
         renderPromos(); renderGrid(); renderBadges(); icons(); lens();
       };
     });
+    $$('[data-pr-print]', el).forEach((b) => { b.onclick = () => openPromoLabels(b.dataset.prPrint); });
     $$('[data-pr-del]', el).forEach((b) => { b.onclick = () => confirmPromoDelete(b.dataset.prDel); });
     icons(); lens();
   }
@@ -3726,6 +3727,7 @@
           <div class="bq-pr-foot">
             <span class="bq-pr-n">${n} article${n > 1 ? 's' : ''} concerné${n > 1 ? 's' : ''}</span>
             <span class="bq-pr-acts">
+              ${n ? `<button class="bqi-mini" data-pr-print="${esc(p.id)}" title="Imprimer les étiquettes de cette promotion"><i data-lucide="printer"></i></button>` : ''}
               ${st !== 'ended' ? `<button class="bqi-mini" data-pr-toggle="${esc(p.id)}" title="${p.paused ? 'Reprendre' : 'Mettre en pause'}"><i data-lucide="${p.paused ? 'play' : 'pause'}"></i></button>` : ''}
               <button class="bqi-mini" data-pr-edit="${esc(p.id)}" title="Modifier"><i data-lucide="pencil"></i></button>
               <button class="bqi-mini danger" data-pr-del="${esc(p.id)}" title="Supprimer"><i data-lucide="trash-2"></i></button>
@@ -3774,6 +3776,82 @@
             </button>`).join('')}
         </div>
       </div>`;
+  }
+
+  /* ─── réimprimer le rayon d'une promotion ────────────────────────────────
+   * Le geste qui manquait entre « je lance ma promotion » et « mes étiquettes
+   * disent le bon prix ». labelForVariant() pose déjà le prix promo et l'ancien
+   * barré (voir plus bas) ; ce qui manquait, c'était de pouvoir sortir d'un coup
+   * les étiquettes des articles que CETTE promotion touche, sans rouvrir
+   * l'inventaire produit par produit pour les retrouver à la main.
+   *
+   * Deux filtres, tous deux volontaires :
+   *  · pas de code-barres → pas d'étiquette. On ne peut pas imprimer une
+   *    étiquette scannable pour une déclinaison qui n'a pas de code.
+   *  · stock à zéro → pas d'étiquette. Une étiquette de promotion sur une
+   *    étagère vide ne sert à rien, et sur un magasin entier ça peut faire des
+   *    dizaines de vignettes jetées.
+   * Le total est ANNONCÉ avant impression : une promotion « tout le magasin »
+   * peut représenter plusieurs centaines de vignettes, et on ne découvre pas ça
+   * au bruit de l'imprimante. */
+  function promoLabelPlan(id) {
+    const pr = PRM(); const p = pr && pr.get(id);
+    const cat = catDB();
+    const out = { promo: p, labels: [], products: 0, skippedNoCode: 0, skippedEmpty: 0 };
+    if (!p || !cat) return out;
+    promoItems().forEach((item) => {
+      if (!pr.matches(p, item, stockOf(item))) return;
+      const d = cat.getProduct(item.id);
+      if (!d) return;
+      let taken = 0;
+      d.variants.forEach((v) => {
+        if (!(v.stock > 0)) { out.skippedEmpty++; return; }
+        const l = labelForVariant(item.id, v);
+        if (!l) { out.skippedNoCode++; return; }
+        out.labels.push(l); taken++;
+      });
+      if (taken) out.products++;
+    });
+    return out;
+  }
+
+  function openPromoLabels(id) {
+    const plan = promoLabelPlan(id);
+    if (!plan.promo) return;
+    const el = $('#bq-promomm', root);
+    const n = plan.labels.length;
+    const notes = [];
+    if (plan.skippedEmpty) notes.push(`${plan.skippedEmpty} déclinaison${plan.skippedEmpty > 1 ? 's' : ''} épuisée${plan.skippedEmpty > 1 ? 's' : ''}, sans étiquette`);
+    if (plan.skippedNoCode) notes.push(`${plan.skippedNoCode} sans code-barres, générez-en un depuis l'inventaire`);
+    el.innerHTML = `
+      <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">Étiquettes · ${esc(plan.promo.name)}</h3>
+      ${n ? `
+        <p class="modal-subtle">Chaque étiquette portera le prix promotionnel, l'ancien prix barré à côté.
+           Quand la promotion s'arrêtera, réimprimez pour revenir au prix plein.</p>
+        <div class="bq-prl">
+          <div class="bq-prl-n"><b>${n}</b><span>étiquette${n > 1 ? 's' : ''}</span></div>
+          <div class="bq-prl-d">
+            <span>${plan.products} article${plan.products > 1 ? 's' : ''} concerné${plan.products > 1 ? 's' : ''}</span>
+            ${notes.map((t) => `<span class="note">${esc(t)}</span>`).join('')}
+          </div>
+        </div>
+        ${n > 60 ? `<div class="bq-prc-warn"><i data-lucide="alert-triangle"></i>
+          <span>C'est un gros tirage. Vérifiez le rouleau avant de lancer.</span></div>` : ''}
+      ` : `
+        <p class="modal-subtle">Aucune étiquette à imprimer pour cette promotion : les articles visés n'ont pas de
+           code-barres, ou il n'en reste aucun en stock.${plan.skippedNoCode ? ' Générez leurs codes depuis l\'inventaire.' : ''}</p>`}
+      <div class="bqi-modfoot">
+        <button class="bq-btn secondary" data-bq-close>${n ? 'Annuler' : 'Fermer'}</button>
+        ${n ? `<button class="bq-btn primary" id="bq-prl-go"><i data-lucide="printer"></i>Imprimer ${n} étiquette${n > 1 ? 's' : ''}</button>` : ''}
+      </div>`;
+    openVeil('#bq-promo-veil'); icons();
+    $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-promo-veil'); });
+    const go = $('#bq-prl-go', el);
+    if (go) go.onclick = () => {
+      closeVeil('#bq-promo-veil');
+      labelToast(window.KiwiBarcode.printLabels(plan.labels, { copies: 1 }), `${n} étiquette${n > 1 ? 's' : ''}`);
+    };
   }
 
   function confirmPromoDelete(id) {

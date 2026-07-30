@@ -1382,3 +1382,13 @@ body.is-pos .clockin-screen.bq-clockin { display: flex !important; }
 .bq-cat.is-promo { color: var(--forest); border-color: var(--mint-edge); }
 .bq-cat.is-promo.on { background: var(--atlas); border-color: var(--atlas); color: #fff; }
 .bq-look-price s { color: var(--ink-4); font-weight: 400; margin-inline-end: 4px; }
+
+/* ── le tirage d'étiquettes d'une promotion ── */
+.bq-prl { display: flex; align-items: center; gap: 16px; margin: 0 24px; padding: 14px 16px;
+  background: var(--paper-mute); border: 1px solid var(--line); border-radius: var(--r-lg, 14px); }
+.bq-prl-n { display: flex; flex-direction: column; align-items: center; line-height: 1; flex-shrink: 0; }
+.bq-prl-n b { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.bq-prl-n span { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
+.bq-prl-d { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--ink-2); }
+.bq-prl-d .note { font-size: 11.5px; color: var(--ink-3); }
+.bq-promom .bq-prc-warn { margin: 10px 24px 0; }
