@@ -160,8 +160,8 @@
     var seen = new Set();
     groups.active.forEach(function (p) { items(ctx).forEach(function (it) { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); }); });
     var sub = groups.active.length + ' promotion' + (groups.active.length > 1 ? 's' : '') + ' en cours' + (seen.size ? ' · ' + seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') : '');
-    K.appPage('promos', { title: 'Promotions & offres', subtitle: sub, body:
-      '<div class="bpd-page"><div class="bpd-head"><div><h2>Promotions</h2><div class="bpd-sub">' + esc(sub) + ' · prix partagés avec la caisse</div></div><button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div>' +
+    K.appPage('promos', { title: 'Promotions', subtitle: sub, body:
+      '<div class="bpd-page"><div class="bpd-head"><div class="bpd-sub">' + esc(sub) + ' · prix partagés avec la caisse</div><button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div>' +
       (all.length ? '<div class="bpd-seg"><button class="' + (filter === 'active' ? 'on' : '') + '" data-action="bpd-filter" data-arg="active">En cours <small>' + groups.active.length + '</small></button><button class="' + (filter === 'soon' ? 'on' : '') + '" data-action="bpd-filter" data-arg="soon">À venir <small>' + groups.soon.length + '</small></button><button class="' + (filter === 'ended' ? 'on' : '') + '" data-action="bpd-filter" data-arg="ended">Terminées <small>' + groups.ended.length + '</small></button></div>' : '') +
       (all.length ? (shown.length ? '<div class="bpd-list">' + shown.map(function (p) { return card(ctx, p, now); }).join('') + '</div>' : '<div class="bpd-empty"><i data-lucide="tag"></i><h2>Rien ici</h2><p>Aucune promotion dans cette section.</p></div>') : emptyHtml()) + '</div>' });
     icons();

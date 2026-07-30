@@ -9272,7 +9272,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const totalUplift = 47820;
 
     window.Kiwi.appPage('promos', {
-      title: 'Promotions & offres',
+      title: 'Promotions',
       subtitle: 'Maison Mansour · Gueliz · 4 campagnes en direct · 1 planifiée',
       body: `
         <div class="p-hero" style="background: linear-gradient(135deg, var(--riad), var(--atlas));">

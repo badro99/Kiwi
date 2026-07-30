@@ -309,7 +309,7 @@
       items: [
         { nav: 'inventory',  label: 'Inventaire produits', i18n: 'sidebar.boutique.inventory',  tag: 'LIVE', icon: ICONS.inventory },
         { nav: 'categories', label: 'Catégories',          i18n: 'sidebar.boutique.categories',              icon: ICONS.categories },
-        { nav: 'promos',     label: 'Promotions & offres', i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
+        { nav: 'promos',     label: 'Promotions',          i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
         { nav: 'returns',    label: 'Retours & échanges',  i18n: 'sidebar.boutique.returns',                 icon: ICONS.returns },
       ],
     },
