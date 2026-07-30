@@ -5469,8 +5469,14 @@
   }
   function printProductLabels(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
-    const labels = d.variants.map((v) => labelForVariant(pid, v)).filter(Boolean);
-    if (!labels.length) { toast('Aucun code à imprimer, générez au moins un EAN-13'); return; }
+    const labels = [];
+    d.variants.forEach((v) => {
+      const label = labelForVariant(pid, v);
+      if (!label) return;
+      const stock = Math.max(0, Math.floor(Number(v.stock) || 0));
+      for (let i = 0; i < stock; i++) labels.push(label);
+    });
+    if (!labels.length) { toast('Aucune unité en stock avec un code-barres à imprimer'); return; }
     labelToast(window.KiwiBarcode.printLabels(labels, { copies: 1 }), `${labels.length} étiquette(s)`);
   }
   // Toast the true outcome of a print (thermal / browser / connect-a-printer),
