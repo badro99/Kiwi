@@ -1,0 +1,430 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * KIWI · SKIN "VEXEL" — the landing-page dashboard, brought back into the product
+ *
+ * The hero of the marketing site (vexel-clone/src/components/KiwiDashboard.tsx)
+ * is not a screenshot: it is real DOM, hand-built to LOOK like this dashboard.
+ * It ended up better looking than the thing it depicts. This file closes that
+ * gap in the other direction — it re-skins the real dashboard to the mockup.
+ *
+ * ── How it works ──────────────────────────────────────────────────────────
+ * This is a DELTA, not a theme. The controller (design-vexel.js) sets BOTH
+ * `html[data-theme="dark"]` and `body.design-vexel`, so the 324 lines of
+ * already-debugged dark-mode work in theme.css do the heavy lifting — every
+ * modal, drawer, toast and hardcoded-white patch in there is inherited rather
+ * than re-derived. What is left below is only what makes dark mode read as the
+ * mockup instead of as Kiwi's warm dark: black instead of #0B1210, glass cards
+ * instead of solid panels, one mint accent instead of Atlas green.
+ *
+ * That layering is deliberate. A from-scratch dark skin would have re-fought
+ * every one of theme.css's per-component fixes, and lost some of them.
+ *
+ * ── Where the values come from ────────────────────────────────────────────
+ * Measured off the mockup's own source, not sampled from a screenshot:
+ *   CARD    = "rounded-[22px] border border-white/[0.07] bg-black/30
+ *              backdrop-blur-[2px]"          KiwiDashboard.tsx:61
+ *   ACCENT  = var(--color-accent) = #00ffae   globals.css (hue 161°)
+ *   ACCENT_DEEP #17b98a · AMBER #ffb347 · DANGER #ff6b5f   KiwiDashboard.tsx:49
+ *   TXT     dim .58 · faint .34 · ghost .22   KiwiDashboard.tsx:64
+ *
+ * ── Reverting ─────────────────────────────────────────────────────────────
+ * `KiwiDesignVexel.disable()` in the console, or delete the <link> and
+ * <script> pair in dashboard.html. Nothing outside these two files changed.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 1 · TOKENS
+ * The whole recolour is mostly this block: the dashboard reads its palette
+ * from tokens.css custom properties, so overriding them here re-tints
+ * components this file never names.
+ * ───────────────────────────────────────────────────────────────────────── */
+html[data-theme="dark"] body.design-vexel,
+body.design-vexel {
+  /* Surfaces. The mockup's panels are BLACK at 30%, not white at 3.5% — the
+   * gutters between cards are alpha 0, so the backdrop shows through the gaps
+   * at full strength and the cards sit over it as darker glass. Lifting cards
+   * with white inverts that and the panel stops reading as something laid over
+   * the scene. (KiwiDashboard.tsx:53-60, kept verbatim in spirit.) */
+  --paper: #000000;
+  --paper-soft: rgba(0, 0, 0, 0.30);
+  --paper-muted: rgba(255, 255, 255, 0.045);
+  --surface: rgba(0, 0, 0, 0.30);
+  --paper-elev: rgba(0, 0, 0, 0.38);
+
+  /* Hairlines. One value on every card in the mockup. --n-200 is what the
+   * dark theme hands to card borders, so it is the one that has to move. */
+  --n-200: rgba(255, 255, 255, 0.07);
+  --n-300: rgba(255, 255, 255, 0.12);
+
+  /* Type. White, then the mockup's three dims. */
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.85);
+  --n-400: rgba(255, 255, 255, 0.34);   /* faint  */
+  --n-500: rgba(255, 255, 255, 0.58);   /* dim    */
+  --n-600: rgba(255, 255, 255, 0.72);
+  --n-700: rgba(255, 255, 255, 0.86);
+  --n-800: #ffffff;
+
+  /* The one accent. The mockup runs a single green at hue 161° so that every
+   * accent on the page is one green rather than three near-misses; Atlas and
+   * mint both collapse onto it here. --atlas keeps the deeper value because it
+   * is used as a FILL behind white text, where #00ffae would blind. */
+  --mint: #00ffae;
+  --mint-soft: rgba(0, 255, 174, 0.12);
+  --atlas: #17b98a;
+  --atlas-600: #00ffae;
+  --atlas-700: #12a074;
+  --riad: rgba(0, 0, 0, 0.42);
+  --riad-deep: #000000;
+
+  /* Semantic, matched to the mockup's own three. */
+  --success: #00ffae;
+  --warning: #ffb347;
+  --danger: #ff6b5f;
+  --warn-soft: rgba(255, 179, 71, 0.12);
+  --warn-ink: #ffb347;
+
+  /* Depth is a hairline and a glow, never a drop shadow — there is no light
+   * source in this composition, so a cast shadow reads as a mistake. */
+  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 40px -12px rgba(0, 255, 174, 0.18);
+
+  /* 22px on every card in the mockup. */
+  --r-lg: 22px;
+  --r-xl: 22px;
+  --r-2xl: 26px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 2 · THE PAGE
+ * The warm four-blob ambient system in dashboard.html's inline <style> is the
+ * light theme's signature and it is exactly wrong here — it paints cream and
+ * amber over black. Replace it wholesale with the mockup's backdrop: black,
+ * with the WebGL dome's glow rising from the bottom.
+ *
+ * !important because the rules being replaced are in an inline <style> that
+ * also uses it; this file cannot out-specify that with ordering alone.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel {
+  background-color: #000 !important;
+  background-image:
+    radial-gradient(85% 55% at 50% 108%, rgba(0, 255, 174, 0.16), transparent 70%),
+    radial-gradient(60% 45% at 8% 100%, rgba(23, 185, 138, 0.13), transparent 72%),
+    radial-gradient(55% 40% at 96% 92%, rgba(0, 255, 174, 0.09), transparent 70%),
+    radial-gradient(70% 50% at 50% -10%, rgba(23, 185, 138, 0.07), transparent 68%) !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  background-size: 100% 100% !important;
+  color: #fff !important;
+  /* The ambient-drift keyframes animate background-position on a gradient set
+   * this file has replaced; letting it keep running slides the new dome. */
+  animation: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 3 · CARDS
+ * One rule carries most of the look. Kept as a list rather than a wildcard:
+ * a `[class*="card"]` sweep would also catch the payment-card glyphs, the
+ * loyalty stamp cards and the floor-plan tiles, which are artwork, not chrome.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .card,
+body.design-vexel .block,
+body.design-vexel .kpi-m,
+body.design-vexel .kpi-c,
+body.design-vexel .kp,
+body.design-vexel .integ-card,
+body.design-vexel .tx-big,
+body.design-vexel .feed-row,
+body.design-vexel .testi-card,
+body.design-vexel .settle,
+body.design-vexel .timeline-day,
+body.design-vexel .prod.paper {
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 22px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: none;
+}
+
+/* Hover lifts with light, not with elevation — the border brightens and a low
+ * mint bloom comes up under the card. */
+body.design-vexel .card:hover,
+body.design-vexel .kpi-m:hover,
+body.design-vexel .integ-card:hover,
+body.design-vexel .feed-row:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 40px -14px rgba(0, 255, 174, 0.22);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 4 · THE HERO CARD
+ * `.hero-today` is the deep Atlas-green slab at the top of the page. In the
+ * mockup its equivalent is the same glass as everything else — the headline
+ * number carries the emphasis, not a coloured ground.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .hero-today {
+  background: rgba(0, 0, 0, 0.34) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 22px !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: #fff;
+}
+/* design-2026 lays a mix-blend sheen over this card via ::after. Over black it
+ * reads as a grey wash across the headline figure. */
+body.design-vexel .hero-today::after { content: none !important; }
+
+body.design-vexel .hero-today .g-fill,
+body.design-vexel .goal-bar .g-fill { background: var(--mint) !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 5 · SIDEBAR + TOPBAR
+ * Both are their own dark slab in the product. In the mockup the sidebar is
+ * flush with the page — no seam, just a hairline — and the topbar floats.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .sidebar {
+  background: rgba(0, 0, 0, 0.42) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+body.design-vexel .sidebar .brand { color: #fff; }
+body.design-vexel .sidebar .brand i { background: var(--mint); }
+
+/* Nav rows: the active one is a mint-tinted pill, the rest are dim until
+ * hovered. Matches NAV_MAIN's `active` treatment in the mockup. */
+body.design-vexel .sidebar a,
+body.design-vexel .sidebar .nav-item { color: rgba(255, 255, 255, 0.58); }
+body.design-vexel .sidebar a:hover,
+body.design-vexel .sidebar .nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+body.design-vexel .sidebar a.active,
+body.design-vexel .sidebar .nav-item.active,
+body.design-vexel .sidebar a[aria-current="page"] {
+  color: var(--mint) !important;
+  background: rgba(0, 255, 174, 0.09) !important;
+  border-color: rgba(0, 255, 174, 0.18) !important;
+}
+body.design-vexel .sidebar .sec,
+body.design-vexel .sidebar .group-label {
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.14em;
+}
+
+body.design-vexel .topbar {
+  background: rgba(0, 0, 0, 0.42) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+body.design-vexel .topbar-inner { color: rgba(255, 255, 255, 0.58); }
+body.design-vexel .breadcrumb b { color: #fff; }
+
+/* The venue switcher sits in the sidebar as its own inset card. */
+body.design-vexel .loc-switch {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 16px;
+}
+body.design-vexel .loc-switch .name { color: #fff; }
+body.design-vexel .loc-switch .meta { color: rgba(255, 255, 255, 0.34); }
+body.design-vexel .loc-switch .badge { color: var(--mint); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 6 · CONTROLS
+ * Pills, icon buttons, search. All the same glass, all hairline-bordered.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .pill,
+body.design-vexel .icon-btn,
+body.design-vexel .btn-slim,
+body.design-vexel .search,
+body.design-vexel .search-big,
+body.design-vexel .kf-input,
+body.design-vexel .seg,
+body.design-vexel .chip {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+body.design-vexel .pill:hover,
+body.design-vexel .icon-btn:hover,
+body.design-vexel .btn-slim:hover,
+body.design-vexel .chip:hover {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+}
+
+/* The selected date-range pill. The liquid-lens highlight rides behind these,
+ * so the ON state is the lens fill, not a per-pill background. */
+body.design-vexel .pill.on,
+body.design-vexel .pill[aria-selected="true"],
+body.design-vexel .seg.on,
+body.design-vexel [data-on="true"] {
+  background: rgba(0, 255, 174, 0.10) !important;
+  border-color: rgba(0, 255, 174, 0.22) !important;
+  color: #fff !important;
+}
+body.design-vexel .kw-lens,
+body.design-vexel .lens {
+  background: rgba(0, 255, 174, 0.12) !important;
+  border: 1px solid rgba(0, 255, 174, 0.22);
+}
+
+/* Primary action. The mockup's "Générer le rapport" is a mint pill that glows
+ * — the one place on the page with real light in it. */
+body.design-vexel .btn-primary,
+body.design-vexel .btn-slim.primary,
+body.design-vexel .kb.primary,
+body.design-vexel [data-action="generate-report"] {
+  background: var(--mint) !important;
+  color: #04120c !important;
+  border-color: transparent !important;
+  font-weight: 600;
+  box-shadow: 0 0 28px -6px rgba(0, 255, 174, 0.45);
+}
+body.design-vexel .btn-primary:hover,
+body.design-vexel .btn-slim.primary:hover {
+  box-shadow: 0 0 38px -4px rgba(0, 255, 174, 0.6);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 7 · DATA
+ * Charts, rings and sparklines already stroke with var(--mint) / var(--atlas),
+ * so the token block above moved most of them. These are the ones that
+ * hardcode, plus the readouts whose weight the mockup changes.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* Two nodes set `color: #0A0F0D` as a literal instead of taking var(--ink),
+ * so the token flip left them black-on-black — the "47 couverts" headline was
+ * not dim, it was invisible, and the selected date-range pill's label was
+ * unreadable against the lens fill. Their child spans looked fine because
+ * dark-fixes.js had already patched those; it is the bare text nodes on the
+ * parents that had no owner. Found by walking every text-bearing element and
+ * comparing its computed colour against its first opaque ancestor, rather than
+ * by reading the page — at a glance the 47 simply looks like data that has not
+ * loaded yet. */
+body.design-vexel .big,
+body.design-vexel .dr-pill.on,
+body.design-vexel .dr-pill[aria-selected="true"] { color: #fff !important; }
+
+/* Big figures run LIGHT in the mockup, not semibold — at 32-56px a 600 weight
+ * on white over black blooms and loses its counters. */
+body.design-vexel .kpi-m .v,
+body.design-vexel .kpi-c .v,
+body.design-vexel .hero-today .big,
+body.design-vexel .big-num,
+body.design-vexel .stat-v {
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+/* Grid lines and axes: barely there. */
+body.design-vexel .grid line,
+body.design-vexel .axis line,
+body.design-vexel .axis path,
+body.design-vexel .chart-grid line { stroke: rgba(255, 255, 255, 0.07) !important; }
+body.design-vexel .axis text,
+body.design-vexel .chart-axis text,
+body.design-vexel .tick text { fill: rgba(255, 255, 255, 0.34) !important; }
+
+/* Revenue curve: mint stroke over a mint-to-nothing fill. */
+body.design-vexel .rev-line { stroke: var(--mint) !important; }
+body.design-vexel .rev-cmp { stroke: rgba(23, 185, 138, 0.75) !important; }
+body.design-vexel .rev-area { fill: url(#kwVexelArea) !important; }
+body.design-vexel .rev-line-halo { stroke: rgba(0, 255, 174, 0.25) !important; }
+
+/* Tooltips are a solid dark card, not glass — they have to stay readable when
+ * they land over the brightest part of the curve. */
+body.design-vexel .tip,
+body.design-vexel .tooltip,
+body.design-vexel .chart-tip,
+body.design-vexel .hh-tooltip {
+  background: rgba(10, 14, 12, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 14px !important;
+  color: #fff !important;
+  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.9);
+}
+
+/* Donut rings — the mockup's three: mint, deep, amber, on a faint track.
+ *
+ * The payment-mix donut is the one widget on the page that does NOT read from
+ * tokens: its track and four segments are hardcoded hex (#EBE8E0, #0B6E4F,
+ * #46A878, #7DF2B0, #D99A2B), so the token block above cannot reach it. On
+ * black the cream track was the brightest ring in the card — a bezel around
+ * the data rather than a backdrop for it.
+ *
+ * Addressed by position rather than by name because the segments carry no
+ * per-series class. `circle` order is track first, then the four series, so
+ * the segments are children 2-5. Re-ordering the legend would re-order these;
+ * that is the cost of the widget not exposing its own colour hooks. */
+body.design-vexel [data-mix-donut] circle:not(.seg),
+body.design-vexel [data-mix-donut] .track,
+body.design-vexel .ring-track { stroke: rgba(255, 255, 255, 0.07) !important; }
+body.design-vexel [data-mix-donut] .seg:nth-of-type(2) { stroke: #00ffae !important; }
+body.design-vexel [data-mix-donut] .seg:nth-of-type(3) { stroke: #17b98a !important; }
+body.design-vexel [data-mix-donut] .seg:nth-of-type(4) { stroke: #0e8f66 !important; }
+body.design-vexel [data-mix-donut] .seg:nth-of-type(5) { stroke: #ffb347 !important; }
+
+/* The light theme's amber (#D99A2B) is a print amber — on black it goes
+ * muddy brown. The mockup's is #ffb347. These are the nodes that set it as a
+ * literal rather than through --warning. */
+body.design-vexel .av.c,
+body.design-vexel .dot.warn,
+body.design-vexel [style*="D99A2B"] { background-color: #ffb347 !important; }
+
+/* The peer/benchmark bar sat at 58% white — brighter than the merchant's own
+ * bar beside it, which inverted the comparison it exists to make. */
+body.design-vexel .peer { background: rgba(255, 255, 255, 0.20) !important; }
+
+/* Deltas. Up is mint, down is the mockup's coral — never the light theme's
+ * brick red, which goes muddy on black. */
+body.design-vexel .up, body.design-vexel .delta.up, body.design-vexel .pos { color: var(--mint) !important; }
+body.design-vexel .down, body.design-vexel .delta.down, body.design-vexel .neg { color: #ff6b5f !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 8 · OVERLAYS
+ * Modals, drawers and toasts inherit theme.css's dark treatment; they only
+ * need the glass geometry and the black ground.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .kiwi-modal,
+body.design-vexel .kiwi-drawer,
+body.design-vexel .ai-drawer,
+body.design-vexel .kiwi-menu,
+body.design-vexel .venue-dropdown {
+  background: rgba(8, 11, 10, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 22px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+body.design-vexel .kiwi-toast {
+  background: rgba(8, 11, 10, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: #fff !important;
+}
+
+/* The Kiwi AI pill in the topbar is the mockup's one dark-on-dark control,
+ * ringed in mint rather than filled. */
+body.design-vexel .ai-pill,
+body.design-vexel [data-action="open-agent"] {
+  background: rgba(0, 0, 0, 0.55) !important;
+  border: 1px solid rgba(0, 255, 174, 0.28) !important;
+  color: #fff !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 9 · STAND-DOWNS
+ * design-2026 and design-ios27 both paint their own glass. Two glass systems
+ * stacked read as fog, so where they overlap this skin wins.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel.design-2026 .card::before,
+body.design-vexel.design-2026 .block::before,
+body.design-vexel.design-ios27 .card::before { content: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel * { animation-duration: 0.001ms !important; }
+}

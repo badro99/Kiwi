@@ -4931,6 +4931,10 @@
 <link rel="stylesheet" href="assets/design-2026.css" />
 <!-- iOS-27 tier · WWDC-2026 Liquid Glass refinements — inert unless body.design-ios27 (PIN 1111 only, reversible) -->
 <link rel="stylesheet" href="assets/design-ios27.css" />
+<!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
+     Inert unless body.design-vexel. OFF by default — KiwiDesignVexel.enable()
+     or ?skin=vexel. Loads LAST of the three skins so it wins where they overlap. -->
+<link rel="stylesheet" href="assets/design-vexel.css" />
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
@@ -5999,6 +6003,7 @@
 <script src="assets/account.js" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
+<script src="assets/design-vexel.js" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) — powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
