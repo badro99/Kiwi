@@ -438,6 +438,585 @@ body.design-vexel.design-2026 .card::before,
 body.design-vexel.design-2026 .block::before,
 body.design-vexel.design-ios27 .card::before { content: none !important; }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * 10 · HOME COMPOSITION
+ * The marketing surface is a fixed 1600px canvas.  The product's useful
+ * column is about 88% of its main-canvas width at 1440px, so the measurements
+ * below are the source values scaled to 0.88 instead of copied literally.
+ * design-vexel-layout.js only gathers existing live widgets into these rows;
+ * every selector remains inert without body.design-vexel.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel #kw-main > .container {
+  padding: 28px 32px 80px;
+}
+
+body.design-vexel .vexel-compose {
+  --vx-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Header row: the range label remains the real dateRange.js render target. */
+body.design-vexel .vexel-compose > .dash-date-range {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-height: 56px;
+  margin: 0 0 25px !important;
+}
+body.design-vexel .vexel-compose .dash-date-range > div:first-child {
+  flex: none;
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(32px, 3vw, 39px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: #fff;
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-sub { display: none; }
+body.design-vexel .vexel-venue {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-inline-start: 23px;
+  min-width: 0;
+  font-size: 16.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-venue span { color: rgba(255,255,255,.34); }
+body.design-vexel .vexel-venue strong {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  font-weight: 500;
+}
+body.design-vexel .vexel-venue svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: rgba(255,255,255,.34);
+}
+body.design-vexel .vexel-report-btn {
+  margin-inline-start: 12px;
+  display: inline-flex !important;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 23px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #00ffae !important;
+  color: #04241a !important;
+  box-shadow: 0 0 44px rgba(0,255,174,.34) !important;
+  font: 600 16px/1 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.design-vexel .vexel-report-btn svg { width: 16px; height: 16px; flex: none; }
+body.design-vexel .vexel-report-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+body.design-vexel .vexel-compose .dash-date-range .dr-control {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-pills { flex-wrap: nowrap; }
+
+/* KPI band: dateRange.js still owns and rebuilds the cards.  The adapter adds
+ * only the baseline/comparison wrappers after every rebuild. */
+body.design-vexel .vexel-kpi-section {
+  position: relative;
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-kpi-section > .kpi-band-head {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  inset-inline-end: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0;
+}
+body.design-vexel .vexel-kpi-section > [data-kpi-band] {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: var(--vx-gap) !important;
+  margin: 0 !important;
+}
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m {
+  min-width: 0;
+  min-height: 126px;
+  padding: 19px 21px !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 22px !important;
+  background: rgba(0,0,0,.30) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+/* The mockup band contains four KPIs; configurable overflow tiles remain in
+ * the DOM and return untouched with the skin off. */
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(n+5) {
+  display: none !important;
+}
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
+  padding-inline-end: 120px;
+}
+body.design-vexel .vexel-compose .kpi-m > .l {
+  display: block;
+  overflow: hidden;
+  color: rgba(255,255,255,.58);
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+body.design-vexel .vexel-compose .kpi-m > .l .ico,
+body.design-vexel .vexel-compose .kpi-m > .sp { display: none !important; }
+body.design-vexel .vexel-kpi-baseline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+}
+body.design-vexel .vexel-compose .kpi-m .v {
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(27px, 2.35vw, 33.5px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-compose .kpi-m .v .u {
+  margin-inline-start: 5px;
+  color: rgba(255,255,255,.34);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+body.design-vexel .vexel-kpi-delta {
+  display: inline-flex !important;
+  align-items: center;
+  margin-inline-start: auto;
+  margin-top: 0 !important;
+  flex: none;
+  color: #00ffae;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+body.design-vexel .vexel-kpi-delta.down { color: #ff6b5f; }
+body.design-vexel .vexel-kpi-comparison {
+  margin-top: 9px;
+  overflow: hidden;
+  color: rgba(255,255,255,.22);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Revenue row */
+body.design-vexel .vexel-revenue-row {
+  display: flex !important;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  height: 331px !important;
+  gap: var(--vx-gap);
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-revenue-row > .hero-today {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  margin: 0 !important;
+  padding: 21px 25px !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 22px !important;
+  background: rgba(0,0,0,.30) !important;
+  color: #fff;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+body.design-vexel .vexel-revenue-row .hero-grid {
+  display: block !important;
+  height: 100%;
+}
+body.design-vexel .vexel-revenue-row .hero-left {
+  display: block;
+  height: 100%;
+}
+body.design-vexel .vexel-revenue-row .hero-left-today,
+body.design-vexel .vexel-revenue-row .hero-right,
+body.design-vexel .vexel-revenue-row .hero-view-toggle {
+  display: none !important;
+  visibility: hidden !important;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart > .block-head {
+  display: block;
+  margin: 0 0 11px;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t {
+  display: block;
+  color: #fff;
+  font-size: 18.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+body.design-vexel .vexel-revenue-row [data-rev-range-badge],
+body.design-vexel .vexel-revenue-row .rev-hero-val,
+body.design-vexel .vexel-revenue-row .rev-hero-delta,
+body.design-vexel .vexel-revenue-row [data-rev-sub],
+body.design-vexel .vexel-revenue-row [data-rev-compare-caption],
+body.design-vexel .vexel-revenue-row .block-head .right-actions,
+body.design-vexel .vexel-revenue-row .chart-legend { display: none !important; }
+body.design-vexel .vexel-revenue-legend {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  inset-inline-end: 0;
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  color: rgba(255,255,255,.58);
+  font-size: 14px;
+  line-height: 1;
+}
+body.design-vexel .vexel-revenue-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-revenue-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ffae;
+}
+body.design-vexel .vexel-revenue-legend span:last-child i { background: #17b98a; }
+body.design-vexel .vexel-revenue-row .chart-wrap {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 250px !important;
+  overflow: visible;
+}
+body.design-vexel .vexel-revenue-row .chart-wrap text {
+  fill: rgba(255,255,255,.22) !important;
+  font-size: 11px;
+}
+
+body.design-vexel .vexel-revenue-rail {
+  display: flex !important;
+  flex: none;
+  flex-basis: 300px;
+  flex-direction: column;
+  gap: var(--vx-gap);
+  width: 300px;
+  min-width: 300px;
+  height: 331px;
+}
+body.design-vexel .vexel-rail-card,
+body.design-vexel .vexel-goals-card,
+body.design-vexel .vexel-bottom-row > [data-mix-block] {
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 22px !important;
+  background: rgba(0,0,0,.30) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+body.design-vexel .vexel-rail-card { padding: 19px 23px; }
+body.design-vexel .vexel-day-goal { flex: 0 0 151px; height: 151px; }
+body.design-vexel .vexel-clients { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+body.design-vexel .vexel-rail-label {
+  color: rgba(255,255,255,.58);
+  font-size: 16px;
+  font-weight: 500;
+}
+body.design-vexel .vexel-goal-values {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 11px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-goal-values strong {
+  color: #fff;
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+body.design-vexel .vexel-goal-values span {
+  overflow: hidden;
+  color: rgba(255,255,255,.34);
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+body.design-vexel .vexel-goal-track {
+  height: 6px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+}
+body.design-vexel .vexel-goal-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #00ffae;
+  box-shadow: 0 0 16px #00ffae;
+}
+body.design-vexel .vexel-goal-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  color: rgba(255,255,255,.22);
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-clients > svg { width: 100%; height: 66px; display: block; flex: none; }
+body.design-vexel .vexel-clients svg .fill { fill: url(#vexelClientFill); }
+body.design-vexel .vexel-clients svg .line {
+  fill: none;
+  stroke: #00ffae;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+body.design-vexel .vexel-clients svg circle { fill: #00ffae; }
+body.design-vexel .vexel-client-foot {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+body.design-vexel .vexel-client-foot > div { display: flex; flex-direction: column; }
+body.design-vexel .vexel-client-foot strong {
+  color: #fff;
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+body.design-vexel .vexel-client-foot span {
+  margin-top: 6px;
+  color: rgba(255,255,255,.58);
+  font-size: 14px;
+}
+body.design-vexel .vexel-client-foot b {
+  margin-inline-start: auto;
+  padding-bottom: 3px;
+  color: #00ffae;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Bottom row: generated service-goal rings + the existing live payment card. */
+body.design-vexel .vexel-bottom-row {
+  display: flex;
+  min-height: 327px;
+  gap: var(--vx-gap);
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-goals-card,
+body.design-vexel .vexel-bottom-row > [data-mix-block] {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 21px 25px !important;
+}
+body.design-vexel .vexel-goals-card h2,
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  margin: 0;
+  color: #fff;
+  font-size: 18.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.design-vexel .vexel-goals-card p {
+  margin: 5px 0 0;
+  color: rgba(255,255,255,.22);
+  font-size: 13px;
+}
+body.design-vexel .vexel-rings {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-around;
+  height: 210px;
+  max-height: 210px;
+  overflow: hidden;
+}
+body.design-vexel .vexel-ring-item {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+body.design-vexel .vexel-ring-item svg {
+  width: 97px;
+  min-width: 97px;
+  height: 97px;
+  min-height: 97px;
+  flex: none;
+}
+body.design-vexel .vexel-ring-item circle {
+  fill: none;
+  stroke-width: 10;
+}
+body.design-vexel .vexel-ring-item .track { stroke: rgba(255,255,255,.09); }
+body.design-vexel .vexel-ring-item .value {
+  stroke: #00ffae;
+  stroke-linecap: round;
+}
+body.design-vexel .vexel-ring-item .value.deep { stroke: #17b98a; }
+body.design-vexel .vexel-ring-item .value.amber { stroke: #ffb347; }
+body.design-vexel .vexel-ring-item text {
+  fill: #fff;
+  font: 600 26px var(--sans);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+body.design-vexel .vexel-ring-item strong {
+  margin-top: 10px;
+  color: #fff;
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-ring-item span {
+  margin-top: 5px;
+  color: rgba(255,255,255,.58);
+  font-size: 14px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-ring-item small {
+  margin-top: 2px;
+  color: rgba(255,255,255,.22);
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head { margin-bottom: 18px; }
+body.design-vexel .vexel-bottom-row [data-mix-block] .donut-row {
+  justify-content: center;
+  gap: 30px;
+}
+body.design-vexel .vexel-bottom-row [data-mix-block] .donut-legend { max-width: 250px; }
+
+/* Remaining native actions stay available below the four mockup blocks. */
+body.design-vexel .vexel-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-utilities .page-head {
+  display: block;
+  margin: 0;
+}
+body.design-vexel .vexel-utilities .quick-acts { display: flex; }
+body.design-vexel .vexel-utilities .quick-acts [data-action="export"] { display: none; }
+
+/* Widgets outside the four-block composition continue as a clean two-rail
+ * stack beneath it. */
+body.design-vexel .dash-standard > .oppo-band,
+body.design-vexel .dash-standard > .dash-cols,
+body.design-vexel .dash-standard > .dash-more-wrap,
+body.design-vexel .dash-standard > .dash-more-clip {
+  position: relative;
+}
+
+@media (max-width: 1080px) {
+  body.design-vexel .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
+    padding-inline-end: 0;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(2) > .l {
+    padding-inline-end: 120px;
+  }
+  body.design-vexel .vexel-revenue-row { height: auto !important; flex-direction: column; }
+  body.design-vexel .vexel-revenue-row > .hero-today { height: 331px; }
+  body.design-vexel .vexel-revenue-rail {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    flex-basis: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  body.design-vexel .vexel-bottom-row { flex-direction: column; }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel #kw-main > .container { padding-inline: 18px; }
+  body.design-vexel .vexel-compose > .dash-date-range { flex-wrap: wrap; height: auto; }
+  body.design-vexel .vexel-venue { order: 3; width: 100%; margin: 10px 0 0; }
+  body.design-vexel .vexel-report-btn { padding-inline: 15px; }
+  body.design-vexel .vexel-report-btn span { display: none; }
+  body.design-vexel .vexel-kpi-section > [data-kpi-band] { grid-template-columns: 1fr !important; }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(2) > .l {
+    padding-inline-end: 0;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:first-child > .l {
+    padding-inline-end: 120px;
+  }
+  body.design-vexel .vexel-revenue-rail { grid-template-columns: 1fr; height: auto; }
+  body.design-vexel .vexel-revenue-legend { position: static; margin-top: 8px; }
+  body.design-vexel .vexel-rings {
+    height: auto;
+    max-height: none;
+    padding-top: 24px;
+    overflow: visible;
+    flex-direction: column;
+    gap: 24px;
+  }
+  body.design-vexel .vexel-bottom-row { min-height: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body.design-vexel * { animation-duration: 0.001ms !important; }
+  body.design-vexel * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
