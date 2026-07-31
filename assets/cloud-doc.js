@@ -108,8 +108,24 @@
   }
 
   function isReal() {
-    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); }
-    catch (_) { return false; }
+    try {
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      /* Une caisse appairée n'a normalement PAS de session propriétaire — et
+         c'est voulu. La traiter comme une démo coupait pourtant TOUS les
+         documents cloud du comptoir : horaires, rapports journaliers, équipe,
+         reçu, plan de salle… La caisse calculait alors sa journée commerciale
+         avec le seuil local par défaut pendant que le dashboard connaissait les
+         vraies heures du magasin.
+
+         L'appairage ne donne aucun droit ici : /api/store vérifie encore le
+         cookie httpOnly kiwi_till et le slug. Il dit seulement au navigateur
+         qu'il doit tenter la synchronisation de CE terminal réel. */
+      var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
+        && window.KiwiCaissePairing.pairedVenue();
+      if (pv && pv.merchant) return true;
+      var saved = JSON.parse(ls('kiwiPairedVenue') || 'null');
+      return !!(saved && saved.merchant);
+    } catch (_) { return false; }
   }
 
   /* Les magasins de démonstration ne quittent jamais ce navigateur : ils sont
