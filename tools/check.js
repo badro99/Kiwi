@@ -436,6 +436,18 @@ section('Documents caisse appairée (tools/cloud-doc-paired-test.js)');
   }
 }
 
+section('Liquid Glass par défaut (tools/glass-default-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'glass-default-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    fail(`glass-default-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9 · le bouton « Réimprimer » de la caisse ───────────────────────────────
  * Une réimpression qui repasse par le chemin d'une vente encaisse deux fois, et
  * un duplicata qui ne se déclare pas est une pièce qu'on ne peut plus
