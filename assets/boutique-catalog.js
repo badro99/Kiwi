@@ -502,7 +502,18 @@
   function cloudOn() {
     try {
       if (!VENUE || VENUE === DEMO_VENUE) return false;
-      return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      /* Une caisse APPAIRÉE est un appareil réel, même sans session du
+         propriétaire. KiwiEnv ne voit que la session/le domaine : sur la
+         tablette du magasin il répondait donc faux, cloudBind() ne lisait
+         jamais /api/catalog, et le stock restait celui d'un vieux localStorage
+         pendant que le dashboard et God mode affichaient la copie serveur.
+
+         On n'ouvre que LE magasin lié à ce terminal. Le serveur revérifie le
+         cookie httpOnly kiwi_till dans /api/catalog ; ce test client décide
+         seulement s'il faut tenter la synchro, il n'accorde aucun accès. */
+      const paired = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return !!(paired && paired.merchant && String(paired.merchant) === String(VENUE));
     } catch (e) { return false; }
   }
   function readRev(slug) {

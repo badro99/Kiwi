@@ -36,7 +36,8 @@ const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + 
 const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`);
 
 /* ── un navigateur de poche ───────────────────────────────────────────────── */
-function makeWindow() {
+function makeWindow(opts) {
+  opts = opts || {};
   const store = new Map();
   const localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -61,9 +62,9 @@ function makeWindow() {
     addEventListener() {}, removeEventListener() {},
     /* Un commerçant RÉEL : c'est le seul cas où la copie serveur existe, donc le
        seul où la fusion a lieu. La démo ne quitte jamais son navigateur. */
-    KiwiEnv: { isReal: () => true, local: false, hosted: true, demosAllowed: false },
+    KiwiEnv: { isReal: () => opts.real !== false, local: false, hosted: true, demosAllowed: false },
     setTimeout, clearTimeout,
-    fetch: () => Promise.reject(new Error('hors ligne')),
+    fetch: opts.fetch || (() => Promise.reject(new Error('hors ligne'))),
     CustomEvent: class { constructor(t, o) { this.type = t; this.detail = (o || {}).detail; } },
     navigator: { userAgent: 'node' },
   };
@@ -87,6 +88,32 @@ const C = win.KiwiBoutiqueCatalog;
 if (!C || !C._merge) {
   console.log('  ✗ KiwiBoutiqueCatalog._merge introuvable');
   process.exit(1);
+}
+
+/* ═══ 0 · UNE CAISSE APPAIRÉE EST UN APPAREIL CLOUD ════════════════════════
+ * La tablette n'a pas de session propriétaire : KiwiEnv.isReal() y est faux.
+ * Son cookie d'appairage est pourtant précisément ce qui l'autorise à lire le
+ * stock de CE magasin. Sans cette branche, elle garde un vieux localStorage et
+ * affiche « épuisé » pendant que le dashboard montre le vrai stock. */
+{
+  const calls = [];
+  const paired = makeWindow({ real: false, fetch: (url) => { calls.push(url); return Promise.reject(new Error('stop')); } });
+  paired.localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: 'santos-store', name: 'Santos Store' }));
+  load(paired, 'assets/barcode.js');
+  load(paired, 'assets/color-palette.js');
+  load(paired, 'assets/boutique-catalog.js');
+  paired.KiwiBoutiqueCatalog.use('santos-store');
+  ok(calls.some((u) => String(u).includes('/api/catalog?merchant=santos-store')),
+    'une caisse appairée relit le catalogue serveur même sans session propriétaire');
+
+  const foreignCalls = [];
+  const foreign = makeWindow({ real: false, fetch: (url) => { foreignCalls.push(url); return Promise.reject(new Error('stop')); } });
+  foreign.localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: 'autre-store' }));
+  load(foreign, 'assets/barcode.js');
+  load(foreign, 'assets/color-palette.js');
+  load(foreign, 'assets/boutique-catalog.js');
+  foreign.KiwiBoutiqueCatalog.use('santos-store');
+  eq(foreignCalls.length, 0, 'l’appairage d’un autre magasin ne déclenche aucune lecture');
 }
 
 const NOW = Date.now();
