@@ -223,6 +223,22 @@ section('Hardware honesty (tools/hardware-test.js)');
   }
 }
 
+/* ── 4c bis · unauthenticated auth input bounds ────────────────────────────
+ * Password hashing is intentionally CPU-heavy; accepting an arbitrarily large
+ * password lets an anonymous request amplify that cost before authentication. */
+section('Auth input bounds (tools/auth-input-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'auth-input-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`auth-input-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 4d · live sale resilience ──────────────────────────────────────────────
  * A Wi-Fi outage may delay a sale but must never erase or duplicate it. */
 section('Live sale resilience (tools/live-link-test.js)');
@@ -235,6 +251,19 @@ section('Live sale resilience (tools/live-link-test.js)');
   } else {
     out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`live-link-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── Receipt numbers are allocated, not inferred from the sales ledger. ─── */
+section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'ticket-sequence-test.mjs')], { encoding: 'utf8' });
+  const out = String(r.stdout || '') + String(r.stderr || '');
+  process.stdout.write(out);
+  if (r.status !== 0) {
+    if (!out.includes('✗')) fail(`ticket-sequence-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    else failures++;
   }
 }
 
@@ -488,6 +517,23 @@ section('Fusion du catalogue boutique (tools/catalog-merge-test.js)');
   }
 }
 
+/* ── 9quater · les documents métier hors ligne ───────────────────────────────
+ * Une adresse de reçu, un planning ou un plan de salle modifié hors ligne doit
+ * repartir même après rechargement. Et un GET en erreur ne doit jamais donner
+ * à une copie locale neuve le droit d'écraser le serveur. */
+section('Documents métier hors ligne (tools/cloud-doc-offline-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'cloud-doc-offline-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`cloud-doc-offline-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9bis · le chiffre d'affaires du tableau de bord ─────────────────────────
  * Il était reconstitué (ventes × panier moyen) alors que le panier affiché est
  * arrondi à l'entier : le tableau de bord ne tombait jamais juste face au
@@ -582,6 +628,38 @@ section('Import Supabase (tools/supabase-migration-test.mjs)');
     out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`supabase-migration-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
+}
+
+/* ── 13 · whole-project regression suites ──────────────────────────────────
+ * These used to live beside the main gate but were never executed by it. That
+ * made green CI compatible with broken admin rights, kitchen relay, floor-plan
+ * sync, offline POS shells and stock restoration. Keep the slower/integration
+ * checks in one compact section while still failing on the first bad suite. */
+section('Whole-project regressions');
+{
+  const { spawnSync } = require('child_process');
+  const suites = [
+    'check-godmode.mjs',
+    'floorplan-sync-test.js',
+    'kitchen-relay-test.js',
+    'order-mode-exit-test.js',
+    'resto-carte-test.js',
+    'void-stock-test.js',
+    'clients-sync-test.mjs',
+    'pwa-shell-test.js',
+    'api-boundaries-test.mjs',
+    'security-regression-test.js',
+  ];
+  suites.forEach((name) => {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
+    const out = (r.stdout || '') + (r.stderr || '');
+    if (r.status === 0) ok(name + ' green');
+    else {
+      const lines = out.split('\n').filter((l) => /[✗·]/.test(l)).slice(-8);
+      if (lines.length) lines.forEach((l) => fail(name + ' — ' + l.trim()));
+      else fail(`${name} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+    }
+  });
 }
 
 /* ── summary ────────────────────────────────────────────────────────────── */

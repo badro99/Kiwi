@@ -8059,7 +8059,20 @@
       renderPayTip();
       lucide.createIcons();
 
-      cardSuccessTimer = setTimeout(triggerCardSuccess, 2000);
+      cardSuccessTimer = setTimeout(() => {
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) {
+          reader.disc.classList.remove('is-pulsing', 'is-success');
+          reader.status.textContent = 'Paiement non confirmé · lecteur indisponible';
+          reader.foot.classList.add('is-visible');
+          return;
+        }
+        Promise.resolve(hw.authorizeCard(currentTotal() + payTipAmount(), reader.disc, reader.status))
+          .then((result) => {
+            if (result && result.approved) triggerCardSuccess();
+            else { reader.method.style.display = 'none'; reader.foot.classList.add('is-visible'); lucide.createIcons(); }
+          });
+      }, 2000);
     }
     function triggerCardSuccess() {
       reader.disc.classList.remove('is-pulsing');
@@ -8123,7 +8136,7 @@
        * si l'approbation est passée, ce que dit `reader.actions`. */
       if (e.target === cardModal) closeCardModal({ paid: reader.actions.classList.contains('is-visible') });
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
-      if (action === 'close') closeCardModal({ paid: true });
+      if (action === 'close') closeCardModal({ paid: reader.actions.classList.contains('is-visible') });
       /* On ferme d'ABORD : recordSale() tourne à la fermeture du modal, donc
          c'est elle qui pose lastSaleId. Imprimer avant, c'est imprimer la vente
          précédente. */
@@ -9481,7 +9494,7 @@
       const subEl    = document.getElementById('greet-sub');
       if (line1El) line1El.textContent = 'L-cuisine,';
       if (emEl)    emEl.textContent    = 'service bda.';
-      if (subEl)   subEl.innerHTML     = `${storeName()} <em>·</em> file de préparation`;
+      if (subEl)   subEl.innerHTML     = `${escTeam(storeName())} <em>·</em> file de préparation`;
 
       // Wrap <em> in .em-clip and measure natural width (same as cashier path).
       let emClip = null;

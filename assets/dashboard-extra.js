@@ -997,7 +997,11 @@
       const v = ((k.querySelector('.v') || {}).textContent || '').replace(/\s+/g, ' ').trim();
       if (l && v) rows.push([l, v]);
     });
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = rows.map((r) => r.map((c) => {
+      let s = String(c == null ? '' : c);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    }).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
     a.download = miscStr.exportToastD;

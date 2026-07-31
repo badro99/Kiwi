@@ -99,6 +99,33 @@ ok('/dashboard.html reste privé', !publiclyReadable('/dashboard.html'));
 ok('/kiwi-admin.html reste privé', !publiclyReadable('/kiwi-admin.html'));
 ok('/kiwi-caisse.html reste privé', !publiclyReadable('/kiwi-caisse.html'));
 
+/* ── données du commerçant sur les pages publiques ──────────────────────────
+ * Une carte est saisie par un commerçant puis rendue sur le même origin que le
+ * dashboard. Son nom, ses plats et ses libellés ne doivent jamais atteindre un
+ * innerHTML sans encodage : un compte compromis deviendrait sinon un XSS stocké
+ * contre les clients — ou contre un patron connecté qui ouvre sa propre page. */
+for (const page of ['kiwi-order.html', 'OrderPro.html']) {
+  const html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+  ok(`${page} échappe les noms dans le panier`,
+    html.includes('${escapeHtml(nameOf(line.id))}') && !html.includes('<span class="label">${nameOf(line.id)}</span>'));
+  ok(`${page} échappe les noms dans l’addition`,
+    html.includes('${l.qty}× ${escapeHtml(nameOf(l.id))}') && !html.includes('${l.qty}× ${nameOf(l.id)}'));
+  ok(`${page} échappe les noms dans le partage par article`,
+    html.includes('<span class="name">${escapeHtml(nameOf(line.id))}</span>'));
+}
+{
+  const html = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  ok('OrderPro échappe le nom du plat dans le fil public',
+    html.includes('<div class="dish-name">${escapeHtml(i.name)}</div>'));
+}
+{
+  const html = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
+  ok('kiwi-order échappe l’enseigne dans le sous-titre de l’addition',
+    html.includes('${escapeHtml(VENUE_NAME)}'));
+  ok('kiwi-order échappe le libellé horaire public',
+    html.includes('escapeHtml(shopStatusText())'));
+}
+
 /* ── et les fichiers ouverts ne portent pas de secret ────────────────────────
  * /assets ne contient que du statique. On vérifie qu'aucun n'embarque de clé
  * en clair — c'est la contrepartie de les avoir ouverts. */

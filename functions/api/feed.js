@@ -29,6 +29,7 @@
 import {
   json, readSession, readCookie, SESS_COOKIE, slugMerchant, entitledMerchant,
 } from '../auth/_lib.js';
+import { reserveTicketRange } from './ticket-sequence.js';
 
 /* ── THE PRE-SPLIT BUCKET ─────────────────────────────────────────────────────
  * Before stores had their own tenant, every sale an account rang up landed under
@@ -135,29 +136,18 @@ export async function onRequestGet({ request, env }) {
   const byDay = from > 0;
   const DAY_LIMIT = 300;
 
-  /* `seq=1` — LE PLUS GRAND NUMÉRO DE TICKET DÉJÀ UTILISÉ PAR CE COMMERCE.
-   *
-   * Les numéros sont désormais de simples entiers (1000, 1001, …), sans
-   * préfixe d'enseigne ni étiquette de terminal. Lisible au comptoir, mais un
-   * compteur purement local recommence à 1000 dès qu'un appareil est remplacé,
-   * ré-appairé ou vidé — et deux ventes différentes se présentent alors sous le
-   * même numéro. Ce n'est pas théorique : ce commerce a eu deux terminaux
-   * repartis chacun à 1 le même jour.
-   *
-   * La caisse demande donc ce maximum au démarrage et se place au-dessus. Le
-   * serveur est le seul endroit qui voie TOUS les comptoirs.
-   *
-   * Sur les numéros ENTIERS uniquement : les anciennes références (« SS-28-GQ »)
-   * ne sont pas comparables, et les inclure ferait repartir le compteur sur un
-   * fragment de leur numéro. Elles restent lisibles, elles ne comptent plus. */
+  /* Compatibility for tills that still have the previous service-worker bundle
+   * open during deployment. That client asks for a maximum then uses `seq + 1`;
+   * reserve a real range and describe its first value in the old protocol. New
+   * clients call /api/ticket-sequence directly. This can be removed after v206
+   * has aged out. */
   if (url.searchParams.get('seq') === '1') {
     try {
-      const r = await env.DB.prepare(
-        "SELECT MAX(CAST(ref AS INTEGER)) AS n FROM sales " +
-        "WHERE merchant IN (?, ?) AND ref GLOB '[0-9]*' AND CAST(ref AS INTEGER) > 0"
-      ).bind(merchant, legacy || merchant).first();
-      return json({ seq: (r && Number(r.n)) || 0, merchant });
-    } catch (_) { return json({ seq: 0, merchant }); }
+      const lease = await reserveTicketRange(env, merchant, 500, 1000, new Date().getUTCFullYear());
+      return json({ seq: lease.start - 1, merchant, legacyLeaseEnd: lease.end });
+    } catch (e) {
+      return json({ error: 'ticket-sequence', detail: String((e && e.message) || e) }, 500);
+    }
   }
 
   let rows = [];

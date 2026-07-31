@@ -10,6 +10,7 @@
 // handlers (signup/login/logout) and by _middleware.js.
 
 const ITER = 100000;            // PBKDF2 rounds
+export const PASSWORD_MAX = 1024;
 export const SESS_COOKIE = 'kiwi_sess';
 const SESS_DAYS = 30;
 
@@ -55,12 +56,16 @@ async function pbkdf2(password, saltBytes) {
 }
 
 export async function hashPassword(password) {
+  password = String(password || '');
+  if (password.length > PASSWORD_MAX) throw new RangeError('password-too-long');
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const hash = await pbkdf2(password, salt);
   return { salt: toHex(salt), hash: toHex(hash) };
 }
 
 export async function verifyPassword(password, saltHex, hashHex) {
+  password = String(password || '');
+  if (password.length > PASSWORD_MAX) return false;
   if (!saltHex || !hashHex) return false;
   const hash = await pbkdf2(password, fromHex(saltHex));
   return timingSafeEqualHex(toHex(hash), hashHex);

@@ -21,7 +21,8 @@ export async function onRequestGet(context) {
 
   // [[key]] catches the rest of the path as an array of segments.
   const raw = Array.isArray(params.key) ? params.key.join('/') : String(params.key || '');
-  const key = decodeURIComponent(raw);
+  let key;
+  try { key = decodeURIComponent(raw); } catch (_) { return NOT_FOUND(); }
   // Defence in depth: no traversal, no absolute paths, nothing but the shape we
   // write in index.js (merchant-slug / file).
   if (!key || key.includes('..') || key.startsWith('/') || key.length > 200) return NOT_FOUND();

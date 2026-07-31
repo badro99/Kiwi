@@ -384,6 +384,7 @@
     VENUE = v;
     KEY = keyFor(VENUE);
     db = null;
+    cloud.dirty = false;
     dropIndex();
     crossReset();  // « l'autre boutique » ne désigne plus les mêmes
     load();
@@ -401,7 +402,7 @@
   // le réseau pour encaisser.
   function commit() {
     if (batchDepth > 0) { batchDirty = true; return; }
-    cloud.dirty = true;      // une mutation locale : nous avons quelque chose à dire
+    markCatalogDirty();      // une mutation locale : nous avons quelque chose à dire
     persist(); notify(); schedulePush();
   }
 
@@ -424,13 +425,18 @@
     try { return fn(); }
     finally {
       batchDepth--;
-      if (batchDepth === 0 && batchDirty) { batchDirty = false; persist(); notify(); schedulePush(); }
+      if (batchDepth === 0 && batchDirty) {
+        batchDirty = false;
+        markCatalogDirty();
+        persist(); notify(); schedulePush();
+      }
     }
   }
   function notify() { subs.forEach((fn) => { try { fn(); } catch (e) {} }); }
 
   // Cross-tab: another tab wrote the catalog → reload + notify our listeners.
   window.addEventListener('storage', (e) => {
+    if (e.key === DIRTY_KEY(VENUE)) { cloud.dirty = !!e.newValue; return; }
     if (e.key !== KEY) return;
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
     dropIndex();
@@ -491,6 +497,7 @@
    * local : c'est de l'édition, pas du comptage, et la dernière main qui a tapé
    * est là, devant l'écran. */
   const REV_KEY = (slug) => 'kiwiCatalogRev:v1:' + slug;
+  const DIRTY_KEY = (slug) => 'kiwiCatalogDirty:v1:' + slug;
   /* `dirty` : ce navigateur porte une écriture que le serveur n'a pas encore
      acceptée. Posé par commit() (toute mutation locale passe par là), levé
      seulement quand le serveur a dit oui. C'est ce drapeau, avec `ahead.mine`,
@@ -521,6 +528,25 @@
   }
   function writeRev(slug, rev) {
     try { localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {}
+  }
+  function dirtyToken(slug) {
+    try { return localStorage.getItem(DIRTY_KEY(slug)); } catch (e) { return null; }
+  }
+  function markCatalogDirty() {
+    cloud.dirty = true;
+    try {
+      const token = Date.now().toString(36) + ':' + Math.random().toString(36).slice(2);
+      localStorage.setItem(DIRTY_KEY(VENUE), token);
+      return token;
+    } catch (e) { return null; }
+  }
+  function clearCatalogDirty(slug, token) {
+    try {
+      if (!token || localStorage.getItem(DIRTY_KEY(slug)) === token) {
+        localStorage.removeItem(DIRTY_KEY(slug));
+      }
+    } catch (e) {}
+    cloud.dirty = !!dirtyToken(slug);
   }
 
   /* Ce que la dernière fusion a appris, et de qui. `mine` vrai = nous portons
@@ -656,11 +682,15 @@
     })
       .then((r) => (r && r.ok ? r.json() : null))
       .then((res) => {
-        cloud.read[slug] = 1;
-        cloud.last = Date.now();
         // Le commerçant a changé de magasin pendant l'aller-retour : cette
         // réponse concerne l'inventaire d'une autre boutique, on la jette.
         if (!res || slug !== VENUE) return false;
+        /* Only a valid server document satisfies "read before write". A 500 used
+           to become `null` but still set cloud.read, licensing the next local
+           mutation to overwrite a server copy this browser had never seen. */
+        cloud.read[slug] = 1;
+        cloud.last = Date.now();
+        cloud.dirty = cloud.dirty || !!dirtyToken(slug);
 
         const serverRev = +res.rev || 0;
         const theirs = res.data;
@@ -675,7 +705,14 @@
           return false;
         }
         cloud.rev = serverRev;
-        if (!mineEmpty && readRev(slug) === serverRev) { healSeq(); return false; } // déjà à jour
+        if (!mineEmpty && readRev(slug) === serverRev) {
+          /* Same revision does not mean "nothing to do" when a prior offline
+             push failed. The local movement is still dirty and must leave now
+             that the server is reachable again. */
+          if (cloud.dirty) schedulePush(0);
+          healSeq();
+          return false;
+        }
 
         const adopt = first && mineEmpty;
         db = adopt ? theirs : mergeDocs(db, theirs);
@@ -700,6 +737,7 @@
 
   function schedulePush(delay) {
     if (!cloudOn()) return;
+    if (!cloud.dirty || !dirtyToken(VENUE)) markCatalogDirty();
     if (cloud.timer) clearTimeout(cloud.timer);
     cloud.timer = setTimeout(pushNow, delay == null ? 900 : delay);
   }
@@ -711,6 +749,7 @@
     // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
     if (!cloud.read[slug]) { pull(true); return; }
     if (cloud.busy) { cloud.again = true; return; }
+    const sentDirty = dirtyToken(slug);
     cloud.busy = true;
     fetch('/api/catalog', {
       method: 'POST',
@@ -728,7 +767,7 @@
           writeRev(slug, cloud.rev);
           /* Accepté : plus rien à remonter. Levé ICI et nulle part ailleurs — un
              drapeau baissé sur un envoi refusé perdrait la vente silencieusement. */
-          cloud.dirty = false;
+          clearCatalogDirty(slug, sentDirty);
           cloud.tries = 0;
           return;
         }
@@ -844,6 +883,7 @@
   function cloudBind() {
     const slug = VENUE;
     if (!cloudOn() || cloud.read[slug]) return;
+    cloud.dirty = !!dirtyToken(slug);
     pull(true);
   }
 
@@ -854,6 +894,15 @@
     if (document.visibilityState !== 'visible') return;
     if (!cloudOn() || Date.now() - cloud.last < 20000) return;
     pull(false);
+  });
+
+  /* An offline stock movement must not wait for a second sale to reach D1.
+     Browser `online` is only a wake-up hint; pushNow still handles failures and
+     revision conflicts safely. */
+  window.addEventListener('online', () => {
+    if (!cloudOn()) return;
+    if (cloud.dirty) schedulePush(0);
+    else if (Date.now() - cloud.last >= 20000) pull(false);
   });
 
   // Une modification en attente ne doit pas mourir avec l'onglet.
@@ -1523,7 +1572,12 @@
         });
       });
     });
-    return rows.map((r) => r.map((c) => /[",;\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
+    const cell = (c) => {
+      let s = String(c == null ? '' : c);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    return rows.map((r) => r.map(cell).join(',')).join('\n');
   }
 
   function reset() { db = blank(); seed(); commit(); }

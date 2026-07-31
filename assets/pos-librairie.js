@@ -925,13 +925,13 @@
       setTimeout(() => {
         const disc = $('#lb-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#lb-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#lb-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const status = $('#lb-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(total, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 

@@ -1240,17 +1240,18 @@
       setTimeout(() => {
         const disc = $('#gy-reader-disc', el);
         if (!disc || !veil.classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#gy-reader-status', el).textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        $('#gy-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => {
-          if (!veil.classList.contains('is-open')) return;
-          close();
-          cfg.onPaid('carte', 0);
-        }, 900);
+        const status = $('#gy-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(cfg.amount, disc, status).then((result) => {
+          icons();
+          if (!(result && result.approved)) return;
+          setTimeout(() => {
+            if (!veil.classList.contains('is-open')) return;
+            close();
+            cfg.onPaid('carte', 0);
+          }, 900);
+        });
       }, 1900);
     };
 

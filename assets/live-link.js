@@ -213,14 +213,26 @@
    * the previous queue intact; the cashier UI turns that into a blocking red
    * support state instead of pretending synchronization is healthy. */
   function qWrite(a) {
-    try { localStorage.setItem(Q_KEY, JSON.stringify(a)); queueSignal(); return true; }
-    catch (_) { queueSignal(); return false; }
+    try {
+      localStorage.setItem(Q_KEY, JSON.stringify(a));
+      queueStorageError = false;
+      queueSignal();
+      return true;
+    } catch (_) {
+      queueStorageError = true;
+      queueSignal();
+      return false;
+    }
   }
   function queueStatus() {
     var q = qRead();
+    var active = merchant();
+    var current = active ? q.filter(function (x) { return x && x.merchant === active; }) : q;
     return {
-      pending: q.length,
-      blocked: q.filter(function (x) { return x && x._blocked; }).length,
+      pending: current.length,
+      blocked: current.filter(function (x) { return x && x._blocked; }).length,
+      foreign: q.length - current.length,
+      total: q.length,
       storageError: !!queueStorageError,
     };
   }
@@ -246,9 +258,13 @@
     if (flushing) return;
     var q = qRead();
     if (!q.length) return;
+    var active = merchant();
+    if (!active) { queueSignal(); return; }
     /* A rejected record stays available for support but cannot hold every valid
-       sale behind it hostage. Send the first record that is still retryable. */
-    var body = q.find(function (x) { return x && !x._blocked; });
+       sale behind it hostage. A queue can also survive a terminal re-pairing:
+       retain the former merchant's debt for support, but never submit it with
+       the new merchant's till cookie or let it block the new store's sales. */
+    var body = q.find(function (x) { return x && !x._blocked && x.merchant === active; });
     if (!body) { queueSignal(); return; }
     flushing = true;
     function done(settled, blocked, status) {
@@ -330,8 +346,7 @@
        twice; INSERT OR IGNORE remains the server-side second lock. */
     if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
     q.push(body);
-    queueStorageError = !qWrite(q);
-    if (queueStorageError) return { ok: false, reason: 'queue-storage-full', id: body.id };
+    if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
     pingLocal();     // a dashboard in this browser starts polling before the POST lands
     flushQueue();
     return { ok: true, queued: true, id: body.id };

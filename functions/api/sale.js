@@ -10,6 +10,8 @@
 import { entitledMerchant } from '../auth/_lib.js';
 import { storeSuspended } from './_private.js';
 
+const MAX_AMOUNT = 200000; // same sanity ceiling as Order Pro
+
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status: status || 200,
@@ -23,8 +25,11 @@ export async function onRequestPost({ request, env }) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const amount = Math.round(Number(b && b.amount) || 0);
-  if (amount <= 0) return json({ error: 'bad-amount' }, 400);
+  const rawAmount = Number(b && b.amount);
+  const amount = Math.round(rawAmount);
+  if (!Number.isFinite(rawAmount) || amount <= 0 || amount > MAX_AMOUNT) {
+    return json({ error: 'bad-amount' }, 400);
+  }
 
   // A sale MUST name its store. The old fallback to a literal 'default' bucket
   // meant every device whose identity had not resolved yet wrote into one shared
@@ -53,7 +58,12 @@ export async function onRequestPost({ request, env }) {
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
-  const ts = Number(b && b.ts) || Date.now();
+  const rawTs = Number(b && b.ts);
+  // A broken device clock must not create a sale dated years in the future,
+  // which would poison daily reports indefinitely. Old offline sales remain
+  // valid; only non-finite/non-positive/future values are normalised.
+  const now = Date.now();
+  const ts = Number.isFinite(rawTs) && rawTs > 0 && rawTs <= now + 86400000 ? rawTs : now;
 
   // The row id is the caller's idempotency key. A till that loses WiFi mid-POST
   // cannot know whether the sale landed, so it retries from its offline queue —

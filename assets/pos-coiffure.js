@@ -1309,14 +1309,13 @@
       setTimeout(() => {
         const disc = $('#cf-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
         const st = $('#cf-reader-status', el);
-        st.textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        st.classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); st.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, st).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 

@@ -68,6 +68,19 @@ CREATE TABLE IF NOT EXISTS sales (
 -- (You cannot name rowid in CREATE INDEX — SQLite rejects it.)
 CREATE INDEX IF NOT EXISTS idx_sales_merchant ON sales (merchant);
 
+-- Numeric receipt references are allocated independently from the money ledger.
+-- `next_value` is the first number that has never been reserved. A till advances
+-- it atomically by a small range, persists that lease locally, and can therefore
+-- continue offline without colliding with another till. Gaps are intentional:
+-- losing an unused lease must never make its numbers available to somebody else.
+CREATE TABLE IF NOT EXISTS ticket_sequences (
+  merchant   TEXT NOT NULL,
+  period     INTEGER NOT NULL, -- calendar year; keeps the visible ref at <= 5 digits
+  next_value INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, period)
+);
+
 -- ── Accounts (merchant login + lead capture) ────────────────────────────────
 -- One row per merchant who signs up. Passwords are PBKDF2-SHA256: `salt` and
 -- `hash` are hex; the plaintext password is never stored. This table doubles as
@@ -492,6 +505,14 @@ CREATE TABLE IF NOT EXISTS clients (
 );
 -- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».
 CREATE INDEX IF NOT EXISTS idx_clients_sync ON clients (merchant, srv_ts);
+
+-- Atomic cursor allocator for /api/clients. Reading MAX(srv_ts) and then
+-- writing Date.now() is racy: two tills can receive the same cursor, causing a
+-- third device to skip one of the two records forever after advancing `since`.
+CREATE TABLE IF NOT EXISTS client_sync_sequences (
+  merchant TEXT PRIMARY KEY,
+  last_ts  INTEGER NOT NULL
+);
 
 -- ── Journal des modules (qui a activé/désactivé quoi, où, quand) ────────────
 -- Une ligne PAR MODULE CHANGÉ, écrite par functions/api/admin/config.js à chaque

@@ -80,14 +80,30 @@ function sanitize(raw) {
  * ni deux fois la même valeur. Deux fiches écrites dans la même milliseconde
  * auraient sinon le même curseur, et la seconde serait sautée à la page
  * suivante (`srv_ts > since`) — un client perdu, silencieusement. */
-async function nextSrvTs(env, merchant) {
+export async function nextSrvTs(env, merchant) {
   const now = Date.now();
   try {
+    // Kept here as well as schema.sql so an existing deployment heals before
+    // its next explicit migration. The UPDATE is the serialized write: unlike
+    // SELECT MAX() + Date.now(), concurrent tills cannot receive the same value.
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS client_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+    ).run();
     const row = await env.DB.prepare('SELECT MAX(srv_ts) AS m FROM clients WHERE merchant = ?')
       .bind(merchant).first();
     const last = (row && row.m) || 0;
-    return last >= now ? last + 1 : now;
+    await env.DB.prepare(
+      'INSERT OR IGNORE INTO client_sync_sequences (merchant, last_ts) VALUES (?, ?)'
+    ).bind(merchant, last).run();
+    const allocated = await env.DB.prepare(
+      `UPDATE client_sync_sequences
+          SET last_ts = CASE WHEN last_ts >= ? THEN last_ts + 1 ELSE ? END
+        WHERE merchant = ?
+        RETURNING last_ts AS value`
+    ).bind(now, now, merchant).first();
+    if (allocated && Number(allocated.value) > 0) return Number(allocated.value);
   } catch (_) { return now; }
+  return now;
 }
 
 export async function onRequestGet(context) {
@@ -202,9 +218,10 @@ export async function onRequestDelete(context) {
       `UPDATE clients
           SET deleted = 1, name = '', phone = '', email = '', birthday = '',
               gender = '', city = '', address = '', notes = '',
-              updated_ts = ?, srv_ts = ?
+              updated_ts = CASE WHEN updated_ts >= ? THEN updated_ts + 1 ELSE ? END,
+              srv_ts = ?
         WHERE merchant = ? AND id = ?`
-    ).bind(Date.now(), srv, merchant, id).run();
+    ).bind(Date.now(), Date.now(), srv, merchant, id).run();
   } catch (_) {
     return json({ error: 'unmigrated' }, 503);
   }

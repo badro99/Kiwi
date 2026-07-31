@@ -116,6 +116,23 @@ if (!C || !C._merge) {
   eq(foreignCalls.length, 0, 'l’appairage d’un autre magasin ne déclenche aucune lecture');
 }
 
+/* The offline transport guards are as important as merge arithmetic: a local
+ * movement that never retries is still lost to the other device, and a failed
+ * first read must never authorize a blind overwrite. */
+{
+  const source = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
+  const valid = source.indexOf('if (!res || slug !== VENUE) return false;');
+  const mark = source.indexOf('cloud.read[slug] = 1;', valid);
+  ok(valid >= 0 && mark > valid, 'un GET serveur en erreur ne valide jamais la lecture avant écriture');
+  ok(source.includes("window.addEventListener('online'") && source.includes('if (cloud.dirty) schedulePush(0)'),
+    'un mouvement de stock hors-ligne repart dès le retour du réseau');
+  ok(source.includes("'kiwiCatalogDirty:v1:'") && source.includes('cloud.dirty = !!dirtyToken(slug)') &&
+    source.includes('clearCatalogDirty(slug, sentDirty)'),
+  'le stock en attente survit au rechargement et seul le POST correspondant peut l’acquitter');
+  ok(/batchDirty = false;\s*markCatalogDirty\(\);/.test(source),
+    'un import ou autre mutation groupée est marqué en attente comme une vente isolée');
+}
+
 const NOW = Date.now();
 /* Un document minimal, à la forme du vrai. */
 const doc = (variants, removed) => ({
