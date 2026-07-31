@@ -4112,7 +4112,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const r = activeRole;
       const greetEl = $('.ci-greeting');
       const roleEl  = $('.ci-role');
-      if (greetEl) greetEl.innerHTML = `Slm <em>${r.name}</em>`;
+      if (greetEl) greetEl.innerHTML = `Slm <em>${esc(r.name)}</em>`;
       if (roleEl)  roleEl.textContent = svName('Café Atlas') ? `${r.role} · ${svName('Café Atlas')}` : `${r.role}`;
     }
 
@@ -4470,15 +4470,16 @@ em, i, cite, dfn, var { font-style: normal; }
 
       const showAmount = total > 0;
       const urgentDot = t.status === 'bgha-ykhlass' ? '<span class="tc-pulse-dot"></span>' : '';
-      const serverChip = (opts.showServer && t.server && t.server !== currentUser)
-        ? `<span class="tc-server-chip">${servers[t.server].initials}</span>`
+      const serverInfo = t.server && servers[t.server];
+      const serverChip = (opts.showServer && t.server !== currentUser && serverInfo)
+        ? `<span class="tc-server-chip">${esc(serverInfo.initials)}</span>`
         : '';
 
       return `
-        <div class="table-card" data-status="${t.status}" data-table="${id}" role="button" tabindex="0">
-          <div class="tc-num">${id}</div>
+        <div class="table-card" data-status="${esc(t.status)}" data-table="${esc(id)}" role="button" tabindex="0">
+          <div class="tc-num">${esc(id)}</div>
           <div class="tc-info">
-            <div class="tc-line1">${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''} ${serverChip} ${urgentDot}</div>
+            <div class="tc-line1">${esc(id)} · ${t.covers} couvert${t.covers > 1 ? 's' : ''} ${serverChip} ${urgentDot}</div>
             <div class="tc-line2">${line2}</div>
           </div>
           <div class="tc-right">
@@ -4518,7 +4519,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="colleague-alert" data-go-all="${id}">
               <div class="colleague-alert-icon"><i data-lucide="coffee"></i></div>
               <div class="colleague-alert-text">
-                <div class="colleague-alert-title">${s.name} en pause</div>
+                <div class="colleague-alert-title">${esc(s.name)} en pause</div>
                 <div class="colleague-alert-sub">${n} table${n > 1 ? 's' : ''} à couvrir · tapez pour voir</div>
               </div>
               <i data-lucide="chevron-right" class="colleague-alert-chev"></i>
@@ -4582,9 +4583,9 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <div class="zone-block">
             <div class="colleague-header">
-              <div class="colleague-avatar ${isOnPause ? 'on-pause' : ''} ${isMe ? 'is-me' : ''}">${s.initials}</div>
+              <div class="colleague-avatar ${isOnPause ? 'on-pause' : ''} ${isMe ? 'is-me' : ''}">${esc(s.initials)}</div>
               <div class="colleague-info">
-                <div class="colleague-name">${s.name}${isMe ? ' <span class="colleague-you">· vous</span>' : ''}</div>
+                <div class="colleague-name">${esc(s.name)}${isMe ? ' <span class="colleague-you">· vous</span>' : ''}</div>
                 <div class="colleague-status ${isOnPause ? 'on-pause' : ''}">${statusText}</div>
               </div>
               <span class="colleague-count">${ids.length} table${ids.length > 1 ? 's' : ''}</span>
@@ -4686,7 +4687,7 @@ em, i, cite, dfn, var { font-style: normal; }
                   <span class="td-qty-num">${l.qty}</span>
                   <button class="td-qty-btn plus" data-qty="inc" aria-label="Plus">+</button>
                 </div>
-                <span class="td-item-name">${l.name}</span>
+                <span class="td-item-name">${esc(l.name)}</span>
                 <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
                 ${optLine}
                 <input class="td-item-note${noteTxt ? ' has-note' : ''}" data-note-uid="${l.uid}"
@@ -4697,7 +4698,7 @@ em, i, cite, dfn, var { font-style: normal; }
             return `
               <div class="td-item">
                 <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
-                <span class="td-item-name">${l.name}</span>
+                <span class="td-item-name">${esc(l.name)}</span>
                 <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
                 ${optLine}
                 ${noteTxt ? `<span class="td-item-noteline">Note cuisine · ${esc(noteTxt)}</span>` : ''}
@@ -4809,7 +4810,7 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
         <div class="td-item" style="opacity:0.55">
           <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
-          <span class="td-item-name">${l.name}</span>
+          <span class="td-item-name">${esc(l.name)}</span>
           <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
           ${optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : ''}
         </div>`;
@@ -5055,8 +5056,8 @@ em, i, cite, dfn, var { font-style: normal; }
       menuItems.forEach(m => { counts[m.cat] = (counts[m.cat] || 0) + 1; });
       const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
-        <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-cat="${c}">
-          ${catLabels[c] || c}<span class="count">${counts[c] || 0}</span>
+        <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-cat="${esc(c)}">
+          ${esc(catLabels[c] || c)}<span class="count">${counts[c] || 0}</span>
         </button>
       `).join('');
     }
@@ -5081,10 +5082,10 @@ em, i, cite, dfn, var { font-style: normal; }
              </span>`
           : `<span class="menu-item-add">+</span>`;
         return `
-          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" role="button" tabindex="0">
+          <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${esc(m.id)}" role="button" tabindex="0">
             ${itemHasOptions(m.id) ? `<span class="menu-item-optflag">${SLIDERS_SVG}Options</span>` : ''}
-            <span class="menu-item-cat">${catLabels[m.cat]}</span>
-            <span class="menu-item-name">${m.name}</span>
+            <span class="menu-item-cat">${esc(catLabels[m.cat] || '')}</span>
+            <span class="menu-item-name">${esc(m.name)}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price">${m.price} MAD</span>
               ${control}
@@ -5199,7 +5200,8 @@ em, i, cite, dfn, var { font-style: normal; }
       if (line) line.qty++;
       else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, note: '', opts, optsSig: sig });
       markDirty(tableId);
-      const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
+      const card = Array.from(document.querySelectorAll('.menu-item'))
+        .find((node) => node.dataset.menuId === String(item.id));
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
       renderMenu();
       renderCartBar();
@@ -6030,7 +6032,7 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <div class="split-item-card ${isAssigned ? 'is-assigned' : ''}">
             <div class="split-item-card-head">
-              <div class="split-item-card-name">${l.qty > 1 ? `${l.qty}× ` : ''}${l.name}</div>
+              <div class="split-item-card-name">${l.qty > 1 ? `${l.qty}× ` : ''}${esc(l.name)}</div>
               <div class="split-item-card-price">${fmtMAD(l.total)}</div>
             </div>
             <div class="split-item-card-body">
@@ -6121,7 +6123,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="split-part-num">${idx + 1}</div>
           <div class="split-part-info">
             <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
-            <div class="split-part-label">${p.label}</div>
+            <div class="split-part-label">${esc(p.label)}</div>
           </div>
           <div class="split-part-btns">
             <button class="split-part-btn carte" data-pay-part="${idx}" data-pay-method="carte">

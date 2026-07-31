@@ -246,8 +246,10 @@ export async function onRequestPost(context) {
            FROM orders WHERE merchant = ? AND created_ts >= ?
          RETURNING number`
       ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
-    } catch (e) {
-      return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+    } catch (_) {
+      // Public endpoint: do not expose database/schema details to an anonymous
+      // phone. The stable code is enough for the UI and support correlation.
+      return json({ error: 'write-failed' }, 500);
     }
   }
 

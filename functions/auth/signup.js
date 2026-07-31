@@ -1,6 +1,6 @@
 // POST /auth/signup — create a merchant account, start a session, mirror the
 // lead. Body JSON: { email, name, business, password }.
-import { hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead } from './_lib.js';
+import { PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead } from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -17,9 +17,9 @@ export async function onRequestPost(context) {
   const business = String(body.business || '').trim().slice(0, 120);
   const password = String(body.password || '');
 
-  if (!EMAIL_RE.test(email)) return json({ error: 'email' }, 400);
+  if (email.length > 254 || !EMAIL_RE.test(email)) return json({ error: 'email' }, 400);
   if (!name) return json({ error: 'name' }, 400);
-  if (password.length < 8) return json({ error: 'weak' }, 400);
+  if (password.length < 8 || password.length > PASSWORD_MAX) return json({ error: 'weak' }, 400);
 
   const existing = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
   if (existing) return json({ error: 'exists' }, 409);

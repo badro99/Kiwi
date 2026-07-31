@@ -1,0 +1,32 @@
+# Kiwi · le Worker qui garde la production alignée sur GitHub.
+# Voir l'en-tête de src/index.js pour le pourquoi.
+#
+# Mise en service — une seule étape, et elle n'appartient qu'au propriétaire :
+#
+#   1. Créer un jeton à portée fine sur https://github.com/settings/personal-access-tokens/new
+#        Resource owner ......... zaka33333-hash
+#        Repository access ...... Only select repositories → zaka33333-hash/Kiwi
+#        Permissions ............ Repository permissions → Contents: Read and write
+#        Expiration ............. le plus long possible
+#      (Aucun droit sur badro99 n'est nécessaire : le Worker TIRE, il ne pousse pas.)
+#
+#   2. npx wrangler secret put GITHUB_TOKEN --name kiwi-sync
+#      puis coller le jeton.
+#
+# Déployer :  npx wrangler deploy          (depuis ce dossier)
+# Surveiller : npx wrangler tail kiwi-sync
+# État en déplacement : ouvrir l'URL du Worker depuis un téléphone.
+
+name = "kiwi-sync"
+main = "src/index.js"
+compatibility_date = "2025-09-23"
+
+# Toutes les deux minutes. Un réveil coûte un appel API qui ne renvoie rien
+# dans l'immense majorité des cas ; 720 par jour restent très loin des quotas.
+[triggers]
+crons = ["*/2 * * * *"]
+
+# Sans ça, les console.log du Worker ne sont pas conservés et on ne peut plus
+# répondre à « depuis quand la production est-elle figée ? ».
+[observability]
+enabled = true

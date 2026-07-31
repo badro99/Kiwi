@@ -64,6 +64,21 @@ function check(ok, label) {
   await wait(); await wait();
   check(queue().length === 1 && !queue()[0]._blocked, 'authentication failure stays retryable');
 
+  /* A re-paired till may still owe the former merchant a queued sale. Keep it,
+   * but do not submit it with the new till cookie and do not let it hold the new
+   * merchant's valid sales behind it. */
+  data.set('kiwiSaleQueue', JSON.stringify([{ id: 'old-debt', merchant: 'amira-boutique', amount: 40, ref: '1040' }]));
+  data.set('kiwiPairedVenue', JSON.stringify({ merchant: 'rival-shop', name: 'Rival Shop' }));
+  const sent = [];
+  reply = (_url, opts) => { sent.push(JSON.parse(opts.body)); return Promise.resolve({ ok: true, status: 200 }); };
+  window.KiwiLive.postSale({ id: 'sale-rival', amount: 55, ref: '1000' });
+  await wait(); await wait(); await wait();
+  check(sent.length === 1 && sent[0].merchant === 'rival-shop',
+    'un ancien locataire ne bloque pas la nouvelle caisse');
+  check(queue().length === 1 && queue()[0].merchant === 'amira-boutique' && window.KiwiLive.queueStatus().foreign === 1,
+    'la dette de l’ancien commerce reste conservée pour support');
+  data.set('kiwiPairedVenue', JSON.stringify({ merchant: 'amira-boutique', name: 'Amira Boutique' }));
+
   data.set('kiwiSaleQueue', '[]');
   reply = () => new Promise(() => {});
   for (let i = 0; i < 205; i++) window.KiwiLive.postSale({ id: 'LONG-' + i, amount: i + 1, ref: 'LONG-' + i });
@@ -101,5 +116,15 @@ function check(ok, label) {
   window.KiwiEnv = { isReal: wasReal };
   data.set('kiwiLive', '1');
 
-  if (!process.exitCode) console.log('\n✓ 12 live-link resilience checks passed.');
+  /* The customer-facing number is not an idempotency key. Two legitimate
+   * records carrying the same printed reference must remain two records when
+   * their internal UUIDs differ. */
+  data.set('kiwiSaleQueue', '[]');
+  reply = () => new Promise(() => {});
+  const twinA = window.KiwiLive.postSale({ id: 'sale-uuid-a', amount: 80, ref: '1000' });
+  const twinB = window.KiwiLive.postSale({ id: 'sale-uuid-b', amount: 90, ref: '1000' });
+  check(twinA && twinB && queue().length === 2 && queue()[0].id !== queue()[1].id,
+    'deux UUID distincts survivent même avec la même référence imprimée');
+
+  if (!process.exitCode) console.log('\n✓ 15 live-link resilience checks passed.');
 })().catch((e) => { console.error(e); process.exit(1); });

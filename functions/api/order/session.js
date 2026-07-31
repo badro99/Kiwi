@@ -117,7 +117,7 @@ export async function onRequestPost(context) {
         if (other) return json({ ok: true, session: other.id, mode, table, status: 'open', resumed: true });
       } catch (_) {}
     }
-    return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+    return json({ error: 'write-failed' }, 500);
   }
 
   return json({ ok: true, session: id, mode, table, status: 'open' });

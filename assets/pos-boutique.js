@@ -480,15 +480,15 @@
     return { pid, size, color, qty, remise: rem, unit: Math.round(p.price * (100 - rem) / 100), returned: false, note: '' };
   };
   const SALES = IS_DEMO ? [
-    { id: 'MM-1207', at: new Date(NOW - 24 * MIN),  clientId: 'c4', by: 'Rania', kind: 'vente', methods: 'espèces',
+    { id: '1207', at: new Date(NOW - 24 * MIN),  clientId: 'c4', by: 'Rania', kind: 'vente', methods: 'espèces',
       lines: [mkLine('caftan_ete', 'S', 'ivoire', 1), mkLine('broche_perles', 'TU', 'argent', 1)] },
-    { id: 'MM-1206', at: new Date(NOW - 57 * MIN),  clientId: 'c3', by: 'Aicha', kind: 'vente', methods: 'carte',
+    { id: '1206', at: new Date(NOW - 57 * MIN),  clientId: 'c3', by: 'Aicha', kind: 'vente', methods: 'carte',
       lines: [mkLine('takchita_sultane', 'M', 'dore', 1, 10)] },
-    { id: 'MM-1205', at: new Date(NOW - 96 * MIN),  clientId: null, by: 'Aicha', kind: 'vente', methods: 'espèces',
+    { id: '1205', at: new Date(NOW - 96 * MIN),  clientId: null, by: 'Aicha', kind: 'vente', methods: 'espèces',
       lines: [mkLine('cabas_berbere', 'TU', 'terracotta', 1)] },
-    { id: 'MM-1204', at: new Date(NOW - 135 * MIN), clientId: 'c2', by: 'Salma', kind: 'vente', methods: 'carte',
+    { id: '1204', at: new Date(NOW - 135 * MIN), clientId: 'c2', by: 'Salma', kind: 'vente', methods: 'carte',
       lines: [mkLine('babouche_brodee', '38', 'rose', 1), mkLine('foulard_soie', 'TU', 'safran', 1)] },
-    { id: 'MM-1203', at: new Date(NOW - 170 * MIN), clientId: null, by: 'Rania', kind: 'vente', methods: 'espèces',
+    { id: '1203', at: new Date(NOW - 170 * MIN), clientId: null, by: 'Rania', kind: 'vente', methods: 'espèces',
       lines: [mkLine('babouche_homme', '42', 'camel', 1)] },
   ] : [];
   SALES.forEach((s) => { s.total = s.lines.reduce((t, l) => t + l.unit * l.qty, 0); });
@@ -507,7 +507,7 @@
   /* avoirs actifs — store credit. AV-2031 vient du retour cherbil d'hier. */
   const AVOIRS = IS_DEMO ? [
     { code: 'AV-2031', amount: 350, balance: 350, holderId: 'c2', holderName: 'Salma Bennis',
-      motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: 'MM-1188' },
+      motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
   ] : [];
   let avSeq = 2032;
   const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0);
@@ -548,12 +548,8 @@
   })();
 
   /* ───────────────────────── state ───────────────────────── */
-  /* Le numéro de ticket porte les initiales de la boutique. « MM » = Maison
-     Mansour, la boutique de démo : imprimé tel quel chez un vrai commerçant, il
-     met les initiales d'une AUTRE enseigne sur son reçu, et démarre sa toute
-     première vente au n° 1208. Une vraie boutique prend donc ses propres
-     initiales et repart de 1 (restoreDay() reprend ensuite au-delà du dernier
-     numéro encaissé du jour). La démo garde MM-1208, inchangée. */
+  /* Le préfixe ne sert plus qu'à reconnaître les anciens journaux locaux lors
+     de leur migration. Les nouveaux tickets réels n'affichent que des chiffres. */
   function ticketPrefix() {
     if (IS_DEMO) return 'MM';
     const pv = pvPaired();
@@ -565,9 +561,11 @@
     return ini || 'KW';
   }
   const TK = ticketPrefix();
-  /* 1000 : quatre chiffres, qui se disent d'un trait au téléphone, et qui ne
-     donnent pas « ticket n°1 » à lire à la première cliente. Voir freshTicket. */
+  /* 1000 : quatre chiffres, qui se disent d'un trait au téléphone. Pour une
+     vraie boutique ce n'est qu'un plancher de migration : le serveur réserve les
+     plages qui font autorité et saleSeq ne peut que le pousser vers le haut. */
   let saleSeq = IS_DEMO ? 1208 : 1000;
+  let saleSeqPeriod = new Date().getFullYear();
 
   /* ── le journal du jour survit à un rechargement (boutiques réelles) ───────
      SALES ne vivait qu'en mémoire : recharger la caisse remettait son en-tête à
@@ -713,7 +711,7 @@
       // Le plus grand numéro TOUTES JOURNÉES CONFONDUES : un numéro déjà encaissé
       // ne doit jamais resservir, même s'il vient d'hier.
       const n = parseInt(String(s.id || '').replace(/^\D+/, ''), 10);
-      if (n > maxSeq) maxSeq = n;
+      if (new Date(s.at).getFullYear() === new Date().getFullYear() && n > maxSeq) maxSeq = n;
       SALES.push(s);
     });
     SALES.sort((a, b) => b.at - a.at);                       // le plus récent d'abord, comme unshift
@@ -804,58 +802,187 @@
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
     scanIdx: 0,
     scanBusy: false,
-    offline: false, queued: 0,
+    offline: (typeof navigator !== 'undefined' && navigator.onLine === false),
+    simulatedOffline: false,
+    queued: 0,
+    syncBlocked: false,
+    syncStorageError: false,
+    ticketStorageError: false,
   };
-  /* Deux caisses de la même boutique partaient du même compteur local et
-     imprimaient toutes les deux le même numéro le même jour. L'étiquette de
-     terminal (KiwiPosSale.stamp) les sépare : MM-1208-A7 vs MM-1208-K3. En
-     démo, pas d'étiquette — les captures restent lisibles. */
   /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ──────────────────
-   * C'était « SS-28-GQ » : initiales de l'enseigne, numéro, étiquette du
-   * terminal. Chaque morceau avait sa raison — mais personne au comptoir ne
-   * dicte ça au téléphone, et une cliente qui revient avec « GQ » recopié à la
-   * place de « QG » n'est plus retrouvable. On garde le seul morceau qui sert :
-   * le numéro. Il part de 1000, parce qu'un commerce n'affiche pas « ticket
-   * n°1 » — et parce que quatre chiffres se disent d'un trait.
-   *
-   * L'ÉTIQUETTE DE TERMINAL SERVAIT À QUELQUE CHOSE, et il faut le remplacer :
-   * elle empêchait deux comptoirs de sortir le même numéro. Sans elle, un
-   * appareil remplacé ou ré-appairé repartirait à 1000 sur un commerce qui en
-   * est à 1043 — ce commerce a eu exactement ça aujourd'hui, deux terminaux
-   * repartis chacun à 1. Le compteur se cale donc sur le plus grand numéro
-   * connu DU COMMERCE, demandé au serveur (voir seedSeq), et pas seulement sur
-   * ce que cet appareil-ci a en mémoire.
-   *
-   * Ce qui reste vrai et qu'il faut savoir : deux comptoirs qui vendent en même
-   * temps SANS RÉSEAU peuvent tomber sur le même numéro. Le serveur les
-   * départage au recalage suivant ; hors ligne, rien ne peut les départager. */
-  function freshTicket() {
-    state.ticket = { num: String(saleSeq), lines: [], client: null, remiseAuth: false };
+   * Une référence lisible (1000, 1001…) et un identifiant technique sont deux
+   * choses différentes. `syncId` est un UUID : deux ventes ne deviennent jamais
+   * le même INSERT OR IGNORE, même si un ancien client nous remet un jour une
+   * référence erronée. `num` vient d'une plage atomiquement réservée au serveur :
+   * deux comptoirs reçoivent des plages disjointes, puis peuvent les consommer
+   * hors ligne. Une plage perdue crée un trou ; elle ne revient jamais en vente. */
+  const TICKET_LEASE_KEY = 'kiwi:bqTicketLease';
+  /* 500 numbers = several busy offline days for a boutique, while staying well
+     below the five-digit annual ceiling. The range is persisted immediately. */
+  const TICKET_LEASE_SIZE = 500;
+  let ticketLease = null;
+  let ticketLeaseRequest = null;
+
+  function ticketPeriod() { return new Date().getFullYear(); }
+  function syncTicketPeriod() {
+    if (!IS_DEMO && saleSeqPeriod !== ticketPeriod()) {
+      saleSeq = 1000;
+      saleSeqPeriod = ticketPeriod();
+      ticketLease = null;
+    }
   }
 
-  /* Se caler au-dessus de ce que le COMMERCE a déjà émis, tous comptoirs
-     confondus. Sans réseau on garde le compteur local : mieux vaut un numéro
-     peut-être déjà pris qu'une caisse qui refuse de vendre. */
-  function seedSeq() {
-    if (IS_DEMO) return;
-    let m = '';
+  function newSaleId() {
     try {
-      const pv = pvPaired();
-      m = String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
-    } catch (_) { return; }
-    if (!m || typeof fetch !== 'function') return;
-    fetch('/api/feed?seq=1&merchant=' + encodeURIComponent(m), { credentials: 'same-origin' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        const n = j && +j.seq;
-        if (n && n >= saleSeq) {
-          saleSeq = n + 1;
-          /* Le ticket ouvert porte encore l'ancien numéro : on le renumérote
-             tant qu'il est vide. Rien n'a été encaissé, personne n'a rien lu. */
-          if (state.ticket && !(state.ticket.lines || []).length) freshTicket();
-        }
-      })
-      .catch(() => {});
+      if (crypto && crypto.randomUUID) return 'sale-' + crypto.randomUUID();
+      if (crypto && crypto.getRandomValues) {
+        const b = new Uint32Array(2); crypto.getRandomValues(b);
+        return 'sale-' + Date.now().toString(36) + '-' + b[0].toString(36) + b[1].toString(36);
+      }
+    } catch (_) {}
+    return 'sale-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function readTicketLease() {
+    const m = merchantSlug();
+    const period = ticketPeriod();
+    if (ticketLease && ticketLease.m === m && ticketLease.period === period) return ticketLease;
+    ticketLease = null;
+    try {
+      const x = JSON.parse(localStorage.getItem(TICKET_LEASE_KEY) || 'null');
+      if (x && x.m === m && +x.period === period && Number.isInteger(+x.next) && Number.isInteger(+x.end) && +x.next <= +x.end) {
+        ticketLease = { m, period, next: +x.next, end: +x.end };
+      }
+    } catch (_) {}
+    return ticketLease;
+  }
+
+  function saveTicketLease() {
+    try {
+      if (ticketLease) localStorage.setItem(TICKET_LEASE_KEY, JSON.stringify(ticketLease));
+      state.ticketStorageError = false;
+      return true;
+    } catch (_) {
+      state.ticketStorageError = true;
+      return false;
+    }
+  }
+
+  function takeTicketNumber() {
+    if (IS_DEMO) return String(saleSeq);
+    syncTicketPeriod();
+    const lease = readTicketLease();
+    if (!lease) return '';
+    const n = Math.max(+lease.next || 0, saleSeq, 1000);
+    if (n > lease.end || n > 99999) return '';
+    const previousNext = lease.next;
+    const previousSeq = saleSeq;
+    lease.next = n + 1;
+    saleSeq = n + 1;
+    /* The number is not claimed until its successor is durable. Otherwise a
+       full/private localStorage can reload the old `next` and print the same
+       visible receipt number twice. Losing the whole server-reserved range is
+       acceptable; reusing one of its numbers is not. */
+    if (!saveTicketLease()) {
+      lease.next = previousNext;
+      saleSeq = previousSeq;
+      return '';
+    }
+    return String(n);
+  }
+
+  function ensureTicketLease() {
+    if (IS_DEMO) return Promise.resolve(ticketLease);
+    syncTicketPeriod();
+    const existing = readTicketLease();
+    if (existing && Math.max(existing.next, saleSeq) <= existing.end) return Promise.resolve(existing);
+    if (ticketLeaseRequest) return ticketLeaseRequest;
+    const m = merchantSlug();
+    if (!m || typeof fetch !== 'function') return Promise.reject(new Error('merchant-unavailable'));
+    ticketLeaseRequest = fetch('/api/ticket-sequence', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: m, size: TICKET_LEASE_SIZE, floor: saleSeq, period: ticketPeriod() }),
+    }).then((r) => {
+      if (!r.ok) throw new Error('ticket-sequence-' + r.status);
+      return r.json();
+    }).then((j) => {
+      const start = +j.start, end = +j.end;
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1000 || end < start || end > 99999 || +j.period !== ticketPeriod()) {
+        throw new Error('ticket-sequence-invalid');
+      }
+      ticketLease = { m, period: ticketPeriod(), next: start, end };
+      if (!saveTicketLease()) {
+        ticketLease = null;
+        throw new Error('ticket-lease-storage');
+      }
+      return ticketLease;
+    }).finally(() => { ticketLeaseRequest = null; });
+    return ticketLeaseRequest;
+  }
+
+  function withTicketLock(work) {
+    /* Two tabs on the SAME till share localStorage. Without a cross-tab lock they
+       can both read `next: 1042` before either writes 1043. Web Locks serializes
+       that tiny critical section; the fallback still serializes calls in one
+       tab, and storage events invalidate the cache in other legacy browsers. */
+    try {
+      if (navigator && navigator.locks && navigator.locks.request) {
+        return navigator.locks.request('kiwi-ticket:' + merchantSlug(), work);
+      }
+    } catch (_) {}
+    return Promise.resolve().then(work);
+  }
+
+  function claimTicketNumber() {
+    return withTicketLock(() => {
+      /* Another tab may have advanced the persisted lease while this tab kept
+         its in-memory copy. Always re-read after acquiring the lock. */
+      ticketLease = null;
+      const ready = takeTicketNumber();
+      if (ready) return ready;
+      return ensureTicketLease().then(() => {
+        ticketLease = null;
+        const n = takeTicketNumber();
+        if (!n) throw new Error('ticket-sequence-empty');
+        return n;
+      });
+    });
+  }
+
+  function assignTicketNumber(ticket) {
+    if (!ticket || ticket.num) return Promise.resolve(ticket && ticket.num);
+    ticket.numbering = true;
+    return claimTicketNumber().then((n) => {
+      /* The ticket object, not merely state.ticket, is captured. A reset while
+         the request is in flight cannot put the old response on the new cart. */
+      ticket.num = n;
+      ticket.period = ticketPeriod();
+      ticket.numbering = false;
+      if (state.ticket === ticket && root) { renderTicket(); icons(); }
+      return n;
+    }).catch((e) => {
+      ticket.numbering = false;
+      if (state.ticket === ticket && root) { renderTicket(); icons(); }
+      throw e;
+    });
+  }
+
+  function nextStandaloneTicketNumber() {
+    if (IS_DEMO) return Promise.resolve(String(saleSeq++));
+    return claimTicketNumber();
+  }
+
+  function freshTicket() {
+    const ticket = {
+      num: IS_DEMO ? String(saleSeq) : '',
+      period: ticketPeriod(),
+      syncId: newSaleId(),
+      lines: [], client: null, remiseAuth: false,
+    };
+    state.ticket = ticket;
+    if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {});
   }
   function ticketClient() {
     const t = state.ticket;
@@ -947,9 +1074,16 @@
   const caToday = () => salesToday().reduce((s, x) => s + x.total, 0);
   function queueIfOffline(label) {
     if (!state.offline) return false;
-    state.queued++;
+    try {
+      const q = window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus();
+      if (q) {
+        state.queued = +q.pending || 0;
+        state.syncStorageError = !!q.storageError;
+        state.syncBlocked = state.syncStorageError || (+q.blocked || 0) > 0;
+      }
+    } catch (_) {}
     renderNet();
-    toast(`${label}, enregistré hors-ligne (${state.queued} en attente)`);
+    toast(`${label}, enregistré sur cette caisse${state.queued ? ` (${state.queued} vente${state.queued > 1 ? 's' : ''} à synchroniser)` : ''}`);
     return true;
   }
 
@@ -1018,7 +1152,7 @@
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
         </nav>
         <div class="bq-rail-foot">
-          <button class="bq-net" id="bq-net" title="Simuler une coupure réseau">
+          <button class="bq-net" id="bq-net" title="${IS_DEMO ? 'Simuler une coupure réseau' : 'État de la synchronisation'}">
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>
           <button class="bq-lock" id="bq-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
@@ -1078,6 +1212,18 @@
     const closeDay = $('#bq-close-day', root);
     if (closeDay) closeDay.addEventListener('click', bqOpenCloture);
     $('#bq-net', root).addEventListener('click', toggleOffline);
+    if (!mount._netBound) {
+      mount._netBound = true;
+      const refresh = () => syncNetworkState();
+      window.addEventListener('online', refresh);
+      window.addEventListener('offline', refresh);
+      window.addEventListener('kiwi:sale-queue', (e) => syncNetworkState(e && e.detail));
+      window.addEventListener('storage', (e) => {
+        if (!e || e.key === 'kiwiSaleQueue') syncNetworkState();
+        if (e && e.key === TICKET_LEASE_KEY) ticketLease = null;
+      });
+    }
+    syncNetworkState();
     setupFullscreenBtn();
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
@@ -1433,7 +1579,7 @@
     const el = $('#bq-ticket', root);
     el.innerHTML = `
       <div class="bq-tk-head">
-        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num} · par ${esc(STAFF.caissiere.name)}</span></div>
+        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num || 'attribution…'} · par ${esc(STAFF.caissiere.name)}</span></div>
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
       <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
@@ -1452,8 +1598,8 @@
           ${reward ? `<span class="rem rew">Récompense · −${fmtMAD(reward)}</span>` : ''}
         </div>
         <div class="bq-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
-        <button class="bq-validate" id="bq-validate" ${t.lines.length ? '' : 'disabled'}>
-          <i data-lucide="banknote"></i> Encaisser · ${fmtMAD(total)}
+        <button class="bq-validate" id="bq-validate" ${t.lines.length && t.num ? '' : 'disabled'}>
+          <i data-lucide="banknote"></i> ${t.num ? `Encaisser · ${fmtMAD(total)}` : 'Attribution du numéro…'}
         </button>
       </div>`;
     const reset = $('#bq-tk-reset', el);
@@ -2686,37 +2832,76 @@
     };
 
     $('#bq-exch-go', el).onclick = () => {
-      closeVeil('#bq-exch-veil');
       if (diff > 0) {
-        openPay({
-          amount: diff,
-          title: 'Différence échange',
-          subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
-          doneLabel: 'Terminer',
-          waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
-          onPaid: (parts) => {
-            apply();
-            const rec = {
-              id: String(saleSeq++), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
-              methods: parts.map((x) => x.m).join(' + '),
-              parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-              lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
-              total: diff,
-            };
-            SALES.unshift(rec);
-            persistDay();
-            bqSaveProvisional();
-            $('#bq-today', root).textContent = headSubVente();
-            refreshOps();
-            return { ref: rec.id, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
-          },
+        const go = $('#bq-exch-go', el);
+        if (go) go.disabled = true;
+        nextStandaloneTicketNumber().then((exchangeNumber) => {
+          closeVeil('#bq-exch-veil');
+          openPay({
+            amount: diff,
+            title: 'Différence échange',
+            subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
+            ref: exchangeNumber,
+            lines: [{
+              qty: 1,
+              name: `Différence échange · ${oldP.name} → ${newP.name}`,
+              amount: diff,
+              ref: newPid,
+              barcode: newP.barcode || '',
+            }],
+            subtotal: diff,
+            doneLabel: 'Terminer',
+            waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
+            onPaid: (parts) => {
+              apply();
+              const rec = {
+                id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
+                methods: parts.map((x) => x.m).join(' + '),
+                parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
+                lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
+                total: diff,
+              };
+              SALES.unshift(rec);
+              persistDay();
+              bqSaveProvisional();
+              /* A positive exchange difference is real money received. It used
+                 to exist only in this tablet's journal, so the dashboard missed
+                 it even though the customer had paid and received a numbered
+                 receipt. Mirror it with the same UUID/ref split as a sale. */
+              try {
+                if (window.KiwiLive && window.KiwiLive.isOn()) {
+                  const pm = (parts || []).map((x) => x.m);
+                  const isDelivery = pm.indexOf('livraison') >= 0;
+                  const method = isDelivery ? 'delivery' : (pm.indexOf('carte') >= 0 ? 'card' : (pm.indexOf('espèces') >= 0 ? 'cash' : 'wallet'));
+                  const cashIn = isDelivery ? diff : (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
+                  window.KiwiLive.postSale({
+                    id: rec.syncId,
+                    amount: cashIn,
+                    method,
+                    label: `Différence échange ${sale.id}`,
+                    ref: rec.id,
+                    time: rec.at,
+                    lines: [{ name: newP.name + (newSize ? ' ' + newSize : ''), qty: 1, total: diff, cat: rayonOf(newPid) || '' }],
+                  });
+                }
+              } catch (_) {}
+              $('#bq-today', root).textContent = headSubVente();
+              refreshOps();
+              return { ref: rec.id, sale: rec, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
+            },
+          });
+        }).catch(() => {
+          if (go) go.disabled = false;
+          toast('Numéro de ticket indisponible', 'Reconnectez cette caisse pour réserver sa prochaine série.');
         });
       } else if (diff < 0) {
+        closeVeil('#bq-exch-veil');
         apply();
         const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
         refreshOps();
         openVoucher(av, { mode: 'fresh' });
       } else {
+        closeVeil('#bq-exch-veil');
         apply();
         refreshOps();
         toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}, khlass`);
@@ -2746,10 +2931,11 @@
     if (K) {
       const doc = K.build({
         ref: opts.ref || '',
-        ts: Date.now(),
+        ts: (opts.sale && opts.sale.at) || Date.now(),
         cashier: (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
         lines: (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, total: l.amount, ref: l.ref, barcode: l.barcode })),
         subtotal: opts.subtotal,
+        promo: opts.promo || null,
         discount: opts.discount,
         total: opts.amount,
         customer: opts.customer || null,
@@ -2831,6 +3017,25 @@
   function checkout() {
     const t = state.ticket;
     if (!t.lines.length) return;
+    if (state.syncStorageError || state.ticketStorageError) {
+      toast('Vente suspendue', 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
+      return;
+    }
+    /* A cart left open over New Year's midnight belongs to the new annual
+       sequence at payment time. It has not been printed or committed yet, so
+       replacing the number is safe and prevents a January sale from consuming
+       a number leased for December. */
+    if (!IS_DEMO && t.period !== ticketPeriod()) {
+      t.num = '';
+      t.period = ticketPeriod();
+    }
+    if (!t.num) {
+      assignTicketNumber(t).then(() => { if (state.ticket === t) checkout(); })
+        .catch(() => toast('Numéro de ticket indisponible', state.ticketStorageError
+          ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
+          : 'Reconnectez cette caisse pour réserver sa prochaine série.'));
+      return;
+    }
     const tot = ticketTotals(t);
     const total = tot.total;
     const c = ticketClient();
@@ -2867,7 +3072,7 @@
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
-          id: t.num, at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
+          id: t.num, syncId: t.syncId || newSaleId(), at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -2887,7 +3092,7 @@
         SALES.unshift(sale);
         persistDay();
         bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
-        saleSeq++;
+        if (IS_DEMO) saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
         // next catalogue sync). Real/paired store only; the local demo stays in-memory.
@@ -2928,7 +3133,7 @@
               total: Math.round(lineUnit(ln) * ln.qty),
               cat: rayonOf(ln.pid) || '',
             }));
-            window.KiwiLive.postSale({ amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at, lines: basket });
+            window.KiwiLive.postSale({ id: sale.syncId, amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at, lines: basket });
           }
         } catch (_) {}
         let ptsLine = '';
@@ -2956,7 +3161,7 @@
         $('#bq-today', root).textContent = headSubVente();
         renderTicket(); renderGrid(); renderBadges(); icons();
         const delivery = parts.some((x) => x.m === 'livraison');
-        return { ref: sale.id, delivery, line: delivery
+        return { ref: sale.id, sale, delivery, line: delivery
           ? `Vente ${sale.id} en livraison, ${fmtMAD(total)} à recevoir${ptsLine}`
           : `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };
       },
@@ -2977,6 +3182,7 @@
     const el = $('#bq-paym', root);
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
+    let committed = false;                  /* double tap must never book twice */
     let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
     let custom = 0;                          /* un montant saisi à la main */
     const r2 = (n) => Math.round((+n || 0) * 100) / 100;
@@ -2990,7 +3196,18 @@
       if (share >= 1) return due();
       return Math.min(due(), Math.max(0.01, r2(due() * share)));
     };
-    const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-pay-veil'); });
+    const closeBtns = () => $$('[data-bq-close]', el).forEach((b) => {
+      b.onclick = () => {
+        /* Once one payment part is confirmed, closing would forget money already
+           received (especially a card charge) while leaving the cart unpaid.
+           Finish the remaining balance; the success screen can close normally. */
+        if (!committed && (settled.length || avoirPart)) {
+          toast('Paiement commencé', `Il reste ${fmtMAD(due())} à régler avant de fermer.`);
+          return;
+        }
+        closeVeil('#bq-pay-veil');
+      };
+    });
 
     const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
 
@@ -3214,11 +3431,16 @@
         const ok = $('#bq-card-ok', el);
         if (ok) ok.onclick = () => settle({ m: 'carte', amount });
         const cancel = $('#bq-card-cancel', el);
-        if (cancel) cancel.onclick = () => closeVeil('#bq-pay-veil');
+        if (cancel) cancel.onclick = () => {
+          if (settled.length || avoirPart) stepMethods();
+          else closeVeil('#bq-pay-veil');
+        };
       }, 1400);
     };
 
     const commit = () => {
+      if (committed) return;
+      committed = true;
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
@@ -3234,6 +3456,7 @@
     };
 
     const stepSuccess = (parts, res) => {
+      if (res && res.sale) opts.sale = res.sale;
       const cash = parts.find((x) => x.m === 'espèces');
       const delivery = parts.some((x) => x.m === 'livraison');
       el.innerHTML = `
@@ -3287,29 +3510,54 @@
     openVeil('#bq-pay-veil');
   }
 
-  /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
+  /* ═══════════════════════ OFFLINE + VRAIE FILE SERVEUR ══════════════════ */
+  function syncNetworkState(snapshot) {
+    try {
+      const q = snapshot || (window.KiwiLive && window.KiwiLive.queueStatus && window.KiwiLive.queueStatus());
+      if (q) {
+        state.queued = +q.pending || 0;
+        state.syncStorageError = !!q.storageError;
+        state.syncBlocked = state.syncStorageError || (+q.blocked || 0) > 0;
+      }
+    } catch (_) {}
+    const browserOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    state.offline = !!state.simulatedOffline || browserOffline;
+    if (root) renderNet();
+  }
+
   function toggleOffline() {
-    state.offline = !state.offline;
-    if (!state.offline && state.queued) {
-      toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
-      state.queued = 0;
-    } else if (state.offline) {
-      toast('Mode hors-ligne, la boutique continue, tout est mis en file');
+    if (!IS_DEMO) {
+      syncNetworkState();
+      toast(state.syncBlocked ? 'Synchronisation bloquée, contactez le support'
+        : state.offline ? 'Wi-Fi indisponible, les ventes restent sur cette caisse'
+          : state.queued ? `${state.queued} vente${state.queued > 1 ? 's' : ''} en cours de synchronisation`
+            : 'Caisse en ligne, toutes les ventes sont synchronisées');
+      return;
     }
-    renderNet();
+    state.simulatedOffline = !state.simulatedOffline;
+    syncNetworkState();
+    toast(state.offline ? 'Mode hors-ligne simulé, la boutique continue' : 'Réseau simulé rétabli');
   }
   function renderNet() {
     const net = $('#bq-net', root);
-    net.classList.toggle('is-off', state.offline);
-    $('.bq-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    if (!net) return;
+    net.classList.toggle('is-off', state.offline || state.syncBlocked);
+    $('.bq-net-label', net).textContent = state.syncBlocked ? 'Sync bloquée' : state.offline ? 'Hors-ligne' : state.queued ? 'Synchronisation' : 'En ligne';
     let q = $('.bq-net-queue', net);
-    if (state.offline && state.queued) {
+    if (state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'bq-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#bq-offline-note', root);
-    note.hidden = !state.offline;
-    $('#bq-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    if (!note) return;
+    note.hidden = !state.offline && !state.syncBlocked;
+    if (state.syncBlocked) {
+      note.innerHTML = 'La synchronisation est bloquée. Les ventes restent sur cette caisse : contactez le support avant de vider les données du navigateur. <b id="bq-queue-count"></b>';
+    } else {
+      note.innerHTML = 'Hors-ligne, les ventes sont enregistrées sur la tablette et synchronisées au retour du réseau. <b id="bq-queue-count"></b>';
+    }
+    const count = $('#bq-queue-count', root);
+    if (count) count.textContent = state.queued ? `${state.queued} en attente` : '';
   }
 
   /* ═══════════════════════ register ═══════════════════════ */
@@ -6207,11 +6455,6 @@
       }));
     }
   } catch (_) {}
-
-  /* Se caler sur la numérotation DU COMMERCE avant la première vente. Lancé
-     ici, au chargement du métier : le temps que la caissière compose son
-     premier ticket, la réponse est là. Sans réseau, le compteur local sert. */
-  try { seedSeq(); } catch (_) {}
 
   window.KiwiPosDispatch.register({
     id: 'boutique',

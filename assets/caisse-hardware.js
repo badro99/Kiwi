@@ -19,6 +19,37 @@
 
   function failed(reason) { return Promise.resolve({ ok: false, reason: reason }); }
 
+  function readCard(amount) {
+    if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
+    return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
+  }
+
+  /* One visual adapter for every POS vertical. It may paint success only after
+     readCard() returns approved=true; production therefore cannot manufacture
+     an approval with a timer. The caller still owns the actual sale commit. */
+  function authorizeCard(amount, disc, status) {
+    return readCard(amount).then(function (result) {
+      if (disc && disc.classList) disc.classList.remove('is-pulsing');
+      if (disc && disc.replaceChildren && document.createElement) {
+        var icon = document.createElement('i');
+        icon.setAttribute('data-lucide', result && result.approved ? 'check' : 'x');
+        disc.replaceChildren(icon);
+      }
+      if (result && result.approved) {
+        if (disc && disc.classList) disc.classList.add('is-success');
+        if (status) { status.textContent = 'Khlass ! Paiement confirmé sur le lecteur'; status.classList && status.classList.add('is-success'); }
+      } else {
+        if (disc && disc.classList) disc.classList.remove('is-success');
+        if (status) { status.textContent = 'Paiement non confirmé · lecteur indisponible'; status.classList && status.classList.remove('is-success'); }
+      }
+      return result;
+    }, function () {
+      if (disc && disc.classList) disc.classList.remove('is-pulsing', 'is-success');
+      if (status) { status.textContent = 'Paiement non confirmé · erreur lecteur'; status.classList && status.classList.remove('is-success'); }
+      return { approved: false, ok: false, amount: amount, reason: 'payment-terminal-error' };
+    });
+  }
+
   function el(tag, css, text) {
     var n = document.createElement(tag);
     if (css) n.style.cssText = css;
@@ -95,9 +126,7 @@
     },
     // NO certified EMV provider is connected here. A real till gets an explicit
     // rejection instead of a fabricated approval that could mark an unpaid sale paid.
-    readCard: function (amount) {
-      if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
-      return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
-    }
+    readCard: readCard,
+    authorizeCard: authorizeCard,
   };
 })();
