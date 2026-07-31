@@ -89,33 +89,49 @@
     if (svg) svg.remove();
   }
 
+  /**
+   * Dark mode is shared property. fusion-mode (venues.js) sets the same
+   * `data-theme="dark"` for its own reasons, so this skin may only take the
+   * attribute back off if it was the one that put it on.
+   *
+   * The ownership flag therefore has to be recorded CONDITIONALLY, at the
+   * moment of turning on, based on what the attribute already was. An earlier
+   * version stamped `vexelSetTheme = '1'` unconditionally on every enable —
+   * which meant enabling the skin inside a fusion-mode session and then
+   * disabling it stripped fusion-mode's own dark theme out from under it. The
+   * comment claiming the code avoided that was simply wrong.
+   */
   function apply(on, persist) {
+    var html = document.documentElement;
     document.body.classList.toggle(CLASS, on);
-    /* Only touch data-theme when turning ON. Removing it on disable would
-     * clobber fusion-mode, which sets the same attribute for its own reasons
-     * (venues.js) and has nothing to do with this skin. */
+
     if (on) {
-      document.documentElement.setAttribute('data-theme', 'dark');
+      var alreadyDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', 'dark');
+      if (!alreadyDark) html.dataset.vexelSetTheme = '1';
       injectGradient();
     } else {
-      if (document.documentElement.getAttribute('data-theme') === 'dark' &&
-          document.documentElement.dataset.vexelSetTheme === '1') {
-        document.documentElement.removeAttribute('data-theme');
+      if (html.dataset.vexelSetTheme === '1') {
+        html.removeAttribute('data-theme');
+        delete html.dataset.vexelSetTheme;
       }
       removeGradient();
     }
-    if (on) document.documentElement.dataset.vexelSetTheme = '1';
-    else delete document.documentElement.dataset.vexelSetTheme;
 
     if (persist !== false) {
       try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
     }
   }
 
+  /* `?skin=off` has to run apply(false) rather than fall through, or it can
+   * only ever fail to turn the skin on for one page load — the stored '1'
+   * would still be there on the next navigation. It is the documented way out,
+   * so it has to actually clear the preference. */
   function init() {
     var url = fromUrl();
     var v = url !== null ? url : stored();
     if (v === '1') apply(true, url !== null);
+    else if (url === '0') apply(false, true);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

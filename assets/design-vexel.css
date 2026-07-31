@@ -170,9 +170,13 @@ body.design-vexel .hero-today {
   -webkit-backdrop-filter: blur(2px);
   color: #fff;
 }
-/* design-2026 lays a mix-blend sheen over this card via ::after. Over black it
- * reads as a grey wash across the headline figure. */
-body.design-vexel .hero-today::after { content: none !important; }
+/* Both pseudo-elements have to go, not just one. ::after is design-2026's
+ * mix-blend sheen, which over black reads as a grey wash across the headline
+ * figure. ::before is the card's own mint radial glow — sized for a deep-green
+ * slab, and on black glass it blooms straight through the figure sitting on
+ * top of it. Killing only ::after leaves the louder of the two. */
+body.design-vexel .hero-today::after,
+body.design-vexel .hero-today::before { content: none !important; }
 
 body.design-vexel .hero-today .g-fill,
 body.design-vexel .goal-bar .g-fill { background: var(--mint) !important; }
@@ -207,7 +211,7 @@ body.design-vexel .sidebar a[aria-current="page"] {
   background: rgba(0, 255, 174, 0.09) !important;
   border-color: rgba(0, 255, 174, 0.18) !important;
 }
-body.design-vexel .sidebar .sec,
+body.design-vexel .sidebar .sect,
 body.design-vexel .sidebar .group-label {
   color: rgba(255, 255, 255, 0.22);
   letter-spacing: 0.14em;
@@ -236,14 +240,21 @@ body.design-vexel .loc-switch .badge { color: var(--mint); }
  * 6 · CONTROLS
  * Pills, icon buttons, search. All the same glass, all hairline-bordered.
  * ───────────────────────────────────────────────────────────────────────── */
+/* `.chip` is deliberately NOT blanket-styled. Status chips carry meaning in
+ * their fill — theme.css:207-209 gives .ok/.pend/.ref their green, amber and
+ * red on dark — and a flat `!important` here outranks all three, so every
+ * status collapsed to the same neutral grey. Only the plain chips are
+ * neutralised; the semantic ones keep the colour that IS their content.
+ *
+ * `.seg` is likewise excluded: it is the payment donut's segment class, not a
+ * segmented-control class, so styling it here reached into the chart. */
 body.design-vexel .pill,
 body.design-vexel .icon-btn,
 body.design-vexel .btn-slim,
 body.design-vexel .search,
 body.design-vexel .search-big,
 body.design-vexel .kf-input,
-body.design-vexel .seg,
-body.design-vexel .chip {
+body.design-vexel .chip:not(.ok):not(.pend):not(.ref):not(.warn):not(.danger) {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
   color: rgba(255, 255, 255, 0.72) !important;
@@ -251,7 +262,7 @@ body.design-vexel .chip {
 body.design-vexel .pill:hover,
 body.design-vexel .icon-btn:hover,
 body.design-vexel .btn-slim:hover,
-body.design-vexel .chip:hover {
+body.design-vexel .chip:not(.ok):not(.pend):not(.ref):hover {
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #fff !important;
 }
@@ -357,17 +368,17 @@ body.design-vexel .hh-tooltip {
  * black the cream track was the brightest ring in the card — a bezel around
  * the data rather than a backdrop for it.
  *
- * Addressed by position rather than by name because the segments carry no
- * per-series class. `circle` order is track first, then the four series, so
- * the segments are children 2-5. Re-ordering the legend would re-order these;
- * that is the cost of the widget not exposing its own colour hooks. */
+ * Addressed through the `data-seg="0..3"` hooks dateRange.js already emits on
+ * each segment. An earlier pass used `:nth-of-type(2..5)` on the circles, which
+ * worked but bound the palette to DOM order — re-ordering the legend, or the
+ * widget ever drawing the track last, would silently shuffle the colours. */
 body.design-vexel [data-mix-donut] circle:not(.seg),
 body.design-vexel [data-mix-donut] .track,
 body.design-vexel .ring-track { stroke: rgba(255, 255, 255, 0.07) !important; }
-body.design-vexel [data-mix-donut] .seg:nth-of-type(2) { stroke: #00ffae !important; }
-body.design-vexel [data-mix-donut] .seg:nth-of-type(3) { stroke: #17b98a !important; }
-body.design-vexel [data-mix-donut] .seg:nth-of-type(4) { stroke: #0e8f66 !important; }
-body.design-vexel [data-mix-donut] .seg:nth-of-type(5) { stroke: #ffb347 !important; }
+body.design-vexel [data-mix-donut] [data-seg="0"] { stroke: #00ffae !important; }
+body.design-vexel [data-mix-donut] [data-seg="1"] { stroke: #17b98a !important; }
+body.design-vexel [data-mix-donut] [data-seg="2"] { stroke: #0e8f66 !important; }
+body.design-vexel [data-mix-donut] [data-seg="3"] { stroke: #ffb347 !important; }
 
 /* The light theme's amber (#D99A2B) is a print amber — on black it goes
  * muddy brown. The mockup's is #ffb347. These are the nodes that set it as a
@@ -408,9 +419,11 @@ body.design-vexel .kiwi-toast {
 }
 
 /* The Kiwi AI pill in the topbar is the mockup's one dark-on-dark control,
- * ringed in mint rather than filled. */
-body.design-vexel .ai-pill,
-body.design-vexel [data-action="open-agent"] {
+ * ringed in mint rather than filled. The class is `.ai-btn` and the action is
+ * `open-assistant`; an earlier pass guessed `.ai-pill` / `open-agent` from the
+ * mockup's naming and matched nothing at all. */
+body.design-vexel .ai-btn,
+body.design-vexel [data-action="open-assistant"] {
   background: rgba(0, 0, 0, 0.55) !important;
   border: 1px solid rgba(0, 255, 174, 0.28) !important;
   color: #fff !important;
