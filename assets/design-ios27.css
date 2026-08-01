@@ -188,3 +188,17 @@ body.design-2026.design-ios27 .topbar {
             backdrop-filter: url(#kiwi-lg) blur(30px) saturate(1.6);
   }
 }
+
+/* ── Permanent dashboard rail ──────────────────────────────────────────────
+ * The transparency control is no longer exposed, but old accounts can still
+ * carry `clear` or `frosted` in localStorage. The sidebar must never inherit
+ * those historical choices: it is the fixed navigation spine for every venue,
+ * current and future. Keep it truly opaque black in both themes and disable
+ * every blur/refraction path, including the higher-specificity url() rule above. */
+body.design-2026.design-ios27 .sidebar,
+html[data-theme="dark"] body.design-2026.design-ios27 .sidebar,
+html[data-kiwi-glass="on"] body.design-2026.design-ios27 .sidebar {
+  background: #05090B !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}

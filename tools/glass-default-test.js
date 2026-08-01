@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'design-ios27.js'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '..', 'assets', 'design-ios27.css'), 'utf8');
 
 function load(saved) {
   const values = new Map(Object.entries(saved || {}));
@@ -38,3 +39,11 @@ for (const choice of ['clear', 'standard', 'frosted', 'opaque']) {
 }
 
 console.log('  ✓ Liquid Glass defaults to opaque and preserves all saved owner choices');
+
+if (!/Permanent dashboard rail/.test(css)
+    || !/background:\s*#05090B\s*!important/.test(css)
+    || !/-webkit-backdrop-filter:\s*none\s*!important/.test(css)
+    || !/backdrop-filter:\s*none\s*!important/.test(css)) {
+  throw new Error('the dashboard sidebar must stay opaque black for every saved glass level');
+}
+console.log('  ✓ dashboard sidebar is permanently opaque black');
