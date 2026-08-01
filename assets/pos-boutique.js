@@ -766,6 +766,7 @@
     const merchant = merchantSlug();
     if (!merchant) return Promise.resolve(0);
     const start = new Date(); start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (RETAIN_DAYS - 1));
     return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
     }).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -797,6 +798,7 @@
     exchange: null,              /* { saleId, idx } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, motif } sur la vue échanges */
     retQuery: '',
+    retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     clQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
@@ -809,6 +811,58 @@
     syncStorageError: false,
     ticketStorageError: false,
   };
+
+  /* Journal partagé des retours. Avant ceci, le stock et l'avoir changeaient
+     bien à la caisse, mais le dashboard ne recevait aucun retour et continuait
+     d'afficher ses exemples. */
+  const RETURN_LOG_KEY = 'kiwi:bqReturns';
+  let RETURN_LOG = [];
+  let returnCloudHandle = null;
+  (function restoreReturnLog() {
+    if (IS_DEMO) return;
+    try {
+      const d = JSON.parse(localStorage.getItem(RETURN_LOG_KEY) || 'null');
+      if (d && (!d.m || !merchantSlug() || d.m === merchantSlug()) && Array.isArray(d.list)) RETURN_LOG = d.list;
+    } catch (_) {}
+  })();
+  function persistReturnLog() {
+    if (IS_DEMO) return;
+    try { localStorage.setItem(RETURN_LOG_KEY, JSON.stringify({ m: merchantSlug(), list: RETURN_LOG })); } catch (_) {}
+  }
+  function ensureReturnCloud() {
+    if (IS_DEMO || returnCloudHandle || !window.KiwiCloudDoc) return returnCloudHandle;
+    returnCloudHandle = window.KiwiCloudDoc.attach({
+      feature: 'returns', slug: merchantSlug,
+      read: () => ({ list: RETURN_LOG }),
+      write: (doc) => {
+        RETURN_LOG = Array.isArray(doc && doc.list) ? doc.list : [];
+        persistReturnLog();
+      },
+      isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
+    });
+    returnCloudHandle.bind();
+    return returnCloudHandle;
+  }
+  function recordReturn(sale, idxs, amount, reason, kind, reference) {
+    if (IS_DEMO || !sale) return;
+    const items = idxs.map((i) => sale.lines[i]).filter(Boolean).map((ln) => ({
+      name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
+      qty: Number(ln.qty) || 1,
+      amount: Math.round((Number(ln.unit) || 0) * (Number(ln.qty) || 1)),
+    }));
+    const now = Date.now();
+    const client = saleClient(sale);
+    RETURN_LOG.unshift({
+      id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
+      reason: reason || '', amount: Math.round(Number(amount) || 0), reference: reference || '',
+      actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
+      client: (client && client.name) || 'Cliente de passage', items,
+    });
+    RETURN_LOG = RETURN_LOG.slice(0, 500);
+    persistReturnLog();
+    const cloud = ensureReturnCloud();
+    if (cloud) cloud.push();
+  }
   /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ──────────────────
    * Une référence lisible (1000, 1001…) et un identifiant technique sont deux
    * choses différentes. `syncId` est un UUID : deux ventes ne deviennent jamais
@@ -1331,6 +1385,7 @@
 
     renderAll();
     syncReturnSales();
+    ensureReturnCloud();
 
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
@@ -2542,7 +2597,13 @@
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
-    const hits = SALES.filter((s) => !s.voided && saleMatches(s, q));
+    const dateKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const oldest = new Date(today); oldest.setDate(oldest.getDate() - (RETAIN_DAYS - 1));
+    const todayKey = dateKey(today), yesterdayKey = dateKey(yesterday), oldestKey = dateKey(oldest);
+    if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
+    const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
       <div class="bq-ret">
@@ -2551,6 +2612,13 @@
           <div class="bq-search"><i data-lucide="search"></i>
             <input id="bq-ret-q" placeholder="N° de ticket ou téléphone…" value="${esc(q)}" /></div>
         </header>
+        <div class="bq-ret-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0;">
+          <button class="bq-pill ${state.retDate === todayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${todayKey}">Aujourd'hui</button>
+          <button class="bq-pill ${state.retDate === yesterdayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${yesterdayKey}">Hier</button>
+          <label class="bq-ret-bar-lbl" style="margin-left:4px;">Date
+            <input id="bq-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" style="margin-left:7px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);" />
+          </label>
+        </div>
         <div class="bq-ret-scroll"><div class="bq-ret-inner">
           ${activeAvoirs().length ? `
             <div class="bq-ret-bar" style="margin-top:14px;">
@@ -2572,7 +2640,14 @@
       renderEchanges(); icons();
       const i = $('#bq-ret-q', panel); i.focus(); moveCaretEnd(i);
     };
+    $('#bq-ret-date', panel).onchange = (e) => {
+      state.retDate = String(e.target.value || todayKey);
+      state.ret = null;
+      renderEchanges(); icons();
+    };
     panel.onclick = (e) => {
+      const dayB = e.target.closest('[data-bq-ret-day]');
+      if (dayB) { state.retDate = dayB.dataset.bqRetDay; state.ret = null; renderEchanges(); icons(); return; }
       const avB = e.target.closest('[data-bq-av]');
       if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.bqAv), { mode: 'view' }); return; }
       const lnB = e.target.closest('[data-bq-pick]');
@@ -2685,6 +2760,7 @@
     restoreLines(sale, idxs, `avoir (${ret.motif.toLowerCase()})`);
     const c = saleClient(sale);
     const av = issueAvoir(amount, c, `${ret.motif}, retour ${sale.id}`, sale.id);
+    recordReturn(sale, idxs, amount, ret.motif, 'avoir', av.code);
     state.ret = null;
     refreshOps();
     openVoucher(av, { mode: 'fresh' });
@@ -2817,7 +2893,10 @@
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
 
+    let applied = false;
     const apply = () => {
+      if (applied) return;
+      applied = true;
       stockAdd(ln.pid, ln.size, 1);
       stockAdd(newPid, newSize, -1);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
@@ -2825,6 +2904,7 @@
       persistStock(newPid, newSize, newColor, -1);
       ln.returned = true;
       ln.note = `échangée → ${newP.name} · ${newSize}`;
+      recordReturn(sale, [ex.idx], ln.unit, 'Echange', 'echange');
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);

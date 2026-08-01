@@ -9574,8 +9574,33 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
    * Retours & échanges. Width 980. Pending list, return-policy editor, fraud
    * watch, refund issuance row.
    * ─────────────────────────────────────────────────────────────────────────── */
+  let liveReturns = [];
+  let liveReturnsCloud = null;
+  let liveReturnsSlug = '';
+  function realReturnsStore() {
+    try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  }
+  function bindLiveReturns() {
+    if (!realReturnsStore() || !window.KiwiCloudDoc) return;
+    const slug = window.KiwiCloudDoc.currentSlug();
+    if (slug !== liveReturnsSlug) { liveReturnsSlug = slug; liveReturns = []; }
+    if (!liveReturnsCloud) {
+      liveReturnsCloud = window.KiwiCloudDoc.attach({
+        feature: 'returns', slug: () => window.KiwiCloudDoc.currentSlug(),
+        read: () => ({ list: liveReturns }),
+        write: (doc) => {
+          liveReturns = Array.isArray(doc && doc.list) ? doc.list : [];
+          if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+        },
+        isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
+      });
+    }
+    liveReturnsCloud.bind();
+  }
   handlers['nav-returns'] = () => {
-    const pending = [
+    const real = realReturnsStore();
+    bindLiveReturns();
+    const demoPending = [
       { id: 'R-7821', d: '24/04', name: 'Caftan brodé taille S',         amt: 2450,  reason: 'Taille',                client: 'Anna M. (DE)',     status: 'pend',  emoji: 'C' },
       { id: 'R-7822', d: '23/04', name: 'Babouches cuir caramel',         amt: 380,   reason: 'Défaut · couture',      client: 'Sophie L. (FR)',   status: 'pend',  emoji: 'B' },
       { id: 'R-7823', d: '23/04', name: 'Tapis berbère 1,2 × 1,8 m',     amt: 4200,  reason: 'Cadeau non désiré',     client: 'Karen B. (US)',    status: 'pend',  emoji: 'T' },
@@ -9583,26 +9608,37 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { id: 'R-7825', d: '22/04', name: 'Coussin tissé Kilim',            amt: 290,   reason: 'Défaut · tache',        client: 'Hassan J. (MA)',   status: 'pend',  emoji: 'CO' },
       { id: 'R-7826', d: '21/04', name: 'Bracelet argent berbère',       amt: 1200,  reason: 'Taille',                client: 'Karima O. (MA)',   status: 'neutral', emoji: 'BR' },
     ];
+    const pending = real ? liveReturns.flatMap((ret) => {
+      const items = Array.isArray(ret && ret.items) ? ret.items : [];
+      return items.map((item, i) => ({
+        id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
+        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+        name: `${Number(item.qty) || 1} × ${item.name || 'Article'}${item.size ? ' · ' + item.size : ''}`,
+        amt: Number(item.amount) || Number(ret.amount) || 0,
+        reason: ret.reason || (ret.kind === 'echange' ? 'Échange' : 'Avoir'),
+        client: ret.client || 'Cliente de passage', status: 'ok', emoji: '', actor: ret.actor || 'Caisse',
+      }));
+    }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
 
-    const flagged = [
+    const flagged = real ? [] : [
       { name: 'Diana K. (US)',  reason: '4 retours en 28 j · 2 sur articles soldés', amt: '4 280 MAD', risk: 'Élevé' },
       { name: 'Sofia A. (FR)',  reason: '3 retours en 30 j · pattern post-Instagram', amt: '2 940 MAD', risk: 'Modéré' },
     ];
 
     window.Kiwi.appPage('returns', {
       title: 'Retours & échanges',
-      subtitle: 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
+      subtitle: real ? `${pending.length} article${pending.length > 1 ? 's' : ''} retourné${pending.length > 1 ? 's' : ''}` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
-          <div class="l">FENÊTRE DE RETOUR · 14 JOURS</div>
-          <div class="big">${pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">en attente</span></div>
-          <div class="sub">Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas</div>
+        <div class="p-hero" data-live-returns style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+          <div class="l">FENÊTRE DE RETOUR · ${real ? '7' : '14'} JOURS</div>
+          <div class="big">${real ? pending.length : pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">${real ? 'articles retournés' : 'en attente'}</span></div>
+          <div class="sub">${real ? 'Retours et échanges enregistrés depuis la caisse de cette boutique.' : "Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas"}</div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
           <div>
-            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">DEMANDES EN ATTENTE</div>
-            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l'historique client complet.</div>
+            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">${real ? 'ARTICLES RETOURNÉS' : 'DEMANDES EN ATTENTE'}</div>
+            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">${real ? 'Article, montant, motif, client et employé enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l\'historique client complet.'}</div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="kb ghost" data-action="ret-export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>Exporter</button>
@@ -9612,17 +9648,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <div class="p-card" style="padding: 8px 18px 12px;">
           ${pending.map(r => `
-            <div class="b-ret-row" data-action="ret-detail" data-arg="${r.id}">
+            <div class="b-ret-row" ${real ? '' : `data-action="ret-detail" data-arg="${r.id}"`}>
               <div class="b-ret-id">${r.id}<br><span style="opacity:0.7; font-size: 10px;">${r.d}</span></div>
               <div class="b-ret-thumb">${SVG.box}</div>
               <div class="b-ret-body">
                 <div class="n">${r.name}</div>
                 <div class="reason">Raison : ${r.reason}</div>
-                <div class="who">${r.client}</div>
+                <div class="who">${r.client}${real ? ' · ' + r.actor : ''}</div>
               </div>
               <div class="b-ret-amt">${fmtMAD(r.amt, 0)} MAD</div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <span class="chip ${r.status}" style="font-size: 10.5px;">${r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
+                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.reason === 'Echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
                 ${r.status === 'pend' ? `
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-approve" data-arg="${r.id}" data-bubble="stop" title="Approuver">${SVG.check}</button>
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px; color: var(--danger);" data-action="ret-refuse" data-arg="${r.id}" data-bubble="stop" title="Refuser">${SVG.x}</button>
@@ -9631,6 +9667,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               </div>
             </div>
           `).join('')}
+          ${real && !pending.length ? '<div style="padding:24px 4px;color:var(--n-500);">Aucun retour enregistré pour cette boutique.</div>' : ''}
         </div>
 
         <div class="p-grid-2" style="margin-top: 18px;">
@@ -9643,7 +9680,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="b-ret-policy" id="retPolicy">
               <div class="field">
                 <div class="lbl">FENÊTRE DE RETOUR</div>
-                <input type="number" value="14" min="0" max="90" step="1"/>
+                <input type="number" value="${real ? 7 : 14}" min="0" max="90" step="1"/>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">jours après l'achat</div>
               </div>
               <div class="field">
