@@ -141,13 +141,15 @@
   ];
 
   function blankBusiness() {
-    return { v: VER, name: '', tradeName: '', legal: {}, updatedAt: 0 };
+    return { v: VER, name: '', tradeName: '', logo: '', slogan: '', legal: {}, updatedAt: 0 };
   }
   function normalizeBusiness(d) {
     var o = blankBusiness();
     if (!d || typeof d !== 'object') return o;
     o.name = str(d.name, 90);
     o.tradeName = str(d.tradeName, 90);
+    if (typeof d.logo === 'string' && d.logo.indexOf('data:image/') === 0) o.logo = d.logo.slice(0, 350000);
+    o.slogan = str(d.slogan, 120);
     var src = (d.legal && typeof d.legal === 'object') ? d.legal : d;
     LEGAL_FIELDS.forEach(function (f) {
       var v = str(src[f.k], f.k === 'address' ? 160 : 90);
@@ -158,7 +160,7 @@
   }
   function businessEmpty(d) {
     d = normalizeBusiness(d);
-    return !d.name && !d.tradeName && !Object.keys(d.legal).length;
+    return !d.name && !d.tradeName && !d.logo && !d.slogan && !Object.keys(d.legal).length;
   }
 
   /* ═══════════════════ LA FICHE REÇU (receipt) ═══════════════════ */
@@ -362,6 +364,8 @@
     patch = patch || {};
     if (patch.name != null) doc.name = str(patch.name, 90);
     if (patch.tradeName != null) doc.tradeName = str(patch.tradeName, 90);
+    if (patch.logo != null) doc.logo = (typeof patch.logo === 'string' && patch.logo.indexOf('data:image/') === 0) ? patch.logo.slice(0, 350000) : '';
+    if (patch.slogan != null) doc.slogan = str(patch.slogan, 120);
     var src = patch.legal || patch;
     LEGAL_FIELDS.forEach(function (f) {
       if (src[f.k] == null) return;
