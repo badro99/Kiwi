@@ -13601,6 +13601,22 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       salesDayByMerchant[merchant] = Math.max(0, Math.min(6, Number(offset) || 0));
       renderRealTransactions('transactions', STARTERS.transactions);
     };
+    H['sales-method'] = (_el, method) => {
+      const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
+      const allowed = ['cash', 'card', 'delivery'];
+      const current = (salesMethodsByMerchant[merchant] || []).filter((m) => allowed.includes(m));
+      if (method === 'all' || !allowed.includes(method)) {
+        salesMethodsByMerchant[merchant] = [];
+      } else if (current.includes(method)) {
+        salesMethodsByMerchant[merchant] = current.filter((m) => m !== method);
+      } else if (current.length >= 2) {
+        /* A third simultaneous type becomes the simpler, honest "Tout" view. */
+        salesMethodsByMerchant[merchant] = [];
+      } else {
+        salesMethodsByMerchant[merchant] = current.concat(method);
+      }
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
   }
 
   function starterTitle(nav, meta) {
@@ -13632,6 +13648,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-days{display:flex;gap:7px;overflow-x:auto;padding:0 0 16px;scrollbar-width:thin}' +
       '.rtx-day{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;white-space:nowrap;font:600 11px var(--sans);cursor:pointer}' +
       '.rtx-day.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}' +
+      '.rtx-methods{display:flex;gap:7px;flex-wrap:wrap;padding:0 0 16px}' +
+      '.rtx-method{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 11px var(--sans);cursor:pointer}' +
+      '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
       '.rtx-list{display:flex;flex-direction:column}' +
       '.rtx-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:start;gap:14px;padding:14px 2px;border-bottom:1px solid var(--n-100)}' +
       '.rtx-row.is-new{animation:rtx-in .45s cubic-bezier(.32,.72,0,1)}' +
@@ -13656,6 +13675,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   let cancelAuditLoading = false;
   let cancelAuditVoidSig = '';
   const salesDayByMerchant = Object.create(null);
+  const salesMethodsByMerchant = Object.create(null);
+  function salesMethodKey(s) {
+    const raw = String((s && s.method) || '').toLowerCase();
+    return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' })[raw] || raw;
+  }
   function auditMerchant() {
     try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
   }
@@ -13707,12 +13731,16 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * au lieu de le dire. */
     const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
     const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
+    const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
     const selectedDay = new Date();
     selectedDay.setHours(0, 0, 0, 0);
     selectedDay.setDate(selectedDay.getDate() - dayOffset);
     const lo = selectedDay.getTime();
     const hi = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate() + 1).getTime();
-    const inWindow = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const daySales = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const inWindow = selectedMethods.length
+      ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
+      : daySales;
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
       : selectedDay.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'long', day: 'numeric', month: 'short' });
@@ -13723,15 +13751,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         : d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'short', day: 'numeric', month: 'short' });
       return `<button class="rtx-day${offset === dayOffset ? ' on' : ''}" type="button" data-action="sales-day" data-arg="${offset}" aria-pressed="${offset === dayOffset}">${escS(label)}</button>`;
     }).join('');
+    const methodLabels = {
+      all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
+      cash: L.cash, card: L.card, delivery: L.delivery,
+    };
+    const methodButtons = ['all', 'cash', 'card', 'delivery'].map((method) => {
+      const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
+      return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
+    }).join('');
     const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
     const count = inWindow.length;
     const rows = inWindow.slice().reverse().map((s, i) => {
       const d = new Date(s.ts || Date.now());
       const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       const when = hh;
-      const methodKey = String(s.method || '').toLowerCase();
-      const aliases = { 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' };
-      const m = L[aliases[methodKey] || methodKey] || L.unknown;
+      const m = L[salesMethodKey(s)] || L.unknown;
       const lines = Array.isArray(s.lines) ? s.lines.filter((l) => l && l.name) : [];
       const products = lines.length ? lines.map((l) => {
         const qty = Math.max(1, Number(l.qty) || 1);
@@ -13766,6 +13800,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="rtx-total">${escS(SUM.total)} · <b>${fmt(total)} MAD</b></div>
           </div>
           <div class="rtx-days" role="group" aria-label="${escS(T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }))}">${dayButtons}</div>
+          <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
           <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
             fr: 'Aucune vente sur cette période.',
             en: 'No sales in this period.',
