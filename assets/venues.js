@@ -7509,67 +7509,14 @@
     catch (_) { return []; }
   }
 
-  /* Une vente encaissée pendant que le tableau de bord tenait encore un id
-   * transitoire — 'own', le placeholder d'une session réelle dont la venue
-   * n'est pas encore en cache — atterrissait dans kiwiSales:own. La vraie venue
-   * prenait ensuite la main, et cet argent disparaissait des livres : encaissé
-   * pour de bon, invisible partout. Ici on adopte ces ventes orphelines dans la
-   * venue réelle.
-   *
-   * Déduplication par `cursor` (le rowid du flux Live-Link, déjà persisté pour
-   * cette raison) et, pour une vente saisie à la main qui n'en a pas, par
-   * ts+montant. On efface ensuite la clé transitoire : l'adoption ne peut donc
-   * pas se rejouer et rien ne peut être compté deux fois. Ne tourne JAMAIS
-   * quand la venue courante est elle-même transitoire — ce sont alors les
-   * ventes de la session en cours, pas des orphelines. */
-  function adoptTransientSales(realId) {
-    if (!realId || TRANSIENT_IDS.indexOf(realId) >= 0) return 0;
-    let movedTotal = 0;
-    TRANSIENT_IDS.forEach((tid) => {
-      let orphans = [];
-      try { orphans = JSON.parse(localStorage.getItem(SALES_KEY(tid)) || '[]'); } catch (_) { orphans = []; }
-      if (!Array.isArray(orphans) || !orphans.length) return;
-      const target = salesList(realId);
-      const seenCursor = new Set(target.map((s) => s.cursor).filter((c) => c != null));
-      const seenStamp = new Set(target.map((s) => `${s.ts}|${s.amount}`));
-      let moved = 0;
-      orphans.forEach((o) => {
-        if (!o || !(+o.amount > 0)) return;
-        if (o.cursor != null) { if (seenCursor.has(o.cursor)) return; }
-        else if (seenStamp.has(`${o.ts}|${o.amount}`)) return;
-        target.push(o);
-        if (o.cursor != null) seenCursor.add(o.cursor);
-        seenStamp.add(`${o.ts}|${o.amount}`);
-        moved++;
-      });
-      if (moved) {
-        target.sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
-        try { localStorage.setItem(SALES_KEY(realId), JSON.stringify(target)); } catch (_) {}
-        movedTotal += moved;
-      }
-      try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
-    });
-    if (movedTotal) salesSubs.forEach((fn) => { try { fn(realId); } catch (_) {} });
-    return movedTotal;
-  }
-  /* init() a déjà arrêté currentVenue plus haut (venues.js est `defer`, donc la
-   * branche synchrone a tourné). Le hook DOMContentLoaded couvre le cas où elle
-   * a été différée. */
-  try { adoptTransientSales(currentVenue); } catch (_) {}
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      try { adoptTransientSales(currentVenue); } catch (_) {}
-    });
-  }
-  /* …et de nouveau à CHAQUE changement de venue. L'identité réelle se résout
-   * après un aller-retour serveur : une vente encaissée dans cet intervalle —
-   * le pont Live Link, le pavé « Nouvelle vente » — atterrit sous l'id
-   * transitoire, et l'adoption au chargement était déjà passée. L'argent
-   * restait donc dans kiwiSales:own jusqu'au rechargement suivant : présent
-   * sur le serveur, absent du tableau de bord ET de l'assistant, c'est-à-dire
-   * exactement la contradiction que ce lot corrige ailleurs. Idempotent
-   * (dédup par cursor, puis la clé transitoire est effacée). */
-  subscribers.add((id) => { try { adoptTransientSales(id); } catch (_) {} });
+  /* `own` and `scoped` are shared browser placeholders, not tenant ids. Moving
+   * their money into the next resolved venue leaked client A's takings into
+   * client B when one browser served both accounts. Live Link already replays a
+   * tenant-stamped server backlog after resolution, so fail closed and discard
+   * these unsafe local buckets. */
+  TRANSIENT_IDS.forEach((tid) => {
+    try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
+  });
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);
@@ -7635,6 +7582,21 @@
     const gone = list.length - kept.length;
     if (!gone) return 0;
     try { localStorage.setItem(SALES_KEY(id), JSON.stringify(kept)); } catch (_) {}
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return gone;
+  }
+  /* Repair devices contaminated before tenant isolation. After Live Link has
+   * replayed the complete authoritative feed, cursor-backed rows absent from
+   * that feed cannot belong to this store. Local/manual rows have no cursor and
+   * remain untouched. */
+  function salesRetainCursors(id, cursors) {
+    id = id || currentVenue;
+    const keep = new Set((cursors || []).map(Number).filter(Boolean));
+    const list = salesList(id);
+    const clean = list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
+    const gone = list.length - clean.length;
+    if (!gone) return 0;
+    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(clean)); } catch (_) {}
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }
@@ -7759,6 +7721,7 @@
     add: salesAdd,
     list: salesList,
     remove: salesRemove,
+    retainCursors: salesRetainCursors,
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
   };

@@ -399,8 +399,11 @@
              curseur : idempotent, et un appareil neuf se retrouve d'aplomb au
              premier passage. */
           if (Array.isArray(data.voided)) applyVoids(data.voided, tenant);
-          if (Array.isArray(data.sales) && data.sales.length) {
-            since = data.cursor || since;
+          if (Array.isArray(data.sales)) {
+            if (data.sales.length) since = data.cursor || since;
+            /* /api/feed pages at 50. A shorter page proves the complete
+               entitled history has arrived, so local reconciliation is safe. */
+            if (data.sales.length < 50) feedComplete[tenant] = true;
             try { onSales(data.sales, backfill, tenant); } catch (_) {}
           }
           // Only a real answer retires "backfill": the first successful poll
@@ -489,6 +492,7 @@
   var lastSync = 0;     // when the server last answered a poll (0 = never)
   var feedSales = [];   // every sale the feed has returned this session
   var feedSeen = {};    // merchant + '#' + cursor -> 1 (dedup across polls)
+  var feedComplete = {}; // tenant -> authoritative replay reached its last page
 
   /* ─── une vente sortie des livres s'en va d'ici aussi ───
    * Trois endroits gardent une copie d'une vente sur cet appareil, et les trois
@@ -598,6 +602,14 @@
          merchant whose caisse is not in this same browser. */
       try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts, label: s.label, lines: s.lines }); have[cur] = 1; } catch (_) {}
     });
+    /* Fail closed once the full entitled history is known. Any server-backed
+       local row absent from it is foreign (or voided), including rows copied by
+       the former shared-placeholder migration. */
+    if (feedComplete[tenant] && window.KiwiSales.retainCursors) {
+      var allowed = feedSales.filter(function (row) { return row && row.tenant === tenant; })
+        .map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
+      try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) {}
+    }
   }
 
   /* The pump. Deliberately DOM-free: it no longer needs a host element to mount a
