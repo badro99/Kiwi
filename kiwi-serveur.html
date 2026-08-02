@@ -2800,6 +2800,26 @@ em, i, cite, dfn, var { font-style: normal; }
         transition-duration: 0.001ms !important;
       }
     }
+
+    /* ---------- Focus ----------
+       This app had no focus styling at all — the only one of the four staff
+       surfaces with none. It is a touch app, so this is invisible in normal
+       use, which is exactly why it went missing: nobody driving it with a
+       thumb ever needed it.
+
+       It still has to exist. The handset is handed to a new server on their
+       first shift with VoiceOver or Switch Control already on, and an
+       external keyboard is how the demo gets driven on a laptop. :focus-visible
+       means a thumb never sees the ring, so nothing changes for the ordinary
+       case.
+
+       --mint rather than --emerald: the chrome here is dark, and mint is the
+       lighter of the two, so the ring clears 3:1 against both the panel and
+       the filled --forest buttons it will sometimes land on. */
+    :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+      outline: 2px solid var(--mint);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 

@@ -9,6 +9,21 @@
   --mint: #7DF2B0;
   --mint-soft: #C9F6DC;
 
+  /* The functional mid-green, for success/paid states. Not new: it was
+     declared four separate times — kiwi-caisse, kiwi-serveur, kiwi-order and
+     OrderPro each carried its own identical copy — and hard-coded as a raw
+     literal in eight more files. The brand has no equivalent, because --mint
+     is too light to carry a filled state and --atlas too dark to read as
+     "done" at a glance. One declaration now; the apps keep theirs only where
+     they do not yet link this file.
+
+     Its old partner --forest (#1F5D3C) is deliberately NOT promoted here.
+     kiwi-cuisine.html declares --forest as #0B6E4F — i.e. --atlas — so the
+     same token name already means two different greens in two apps. Hoisting
+     either value would silently repaint the other. That collision needs a
+     rename to resolve, which is a decision, not a cleanup. */
+  --emerald: #3FB67A;
+
   /* Portfolio chart series — one brand green + warm neutrals */
   --fs-bahia:   #16774F;
   --fs-mansour: #BBB199;
@@ -29,6 +44,24 @@
    * mode overrides these in theme.css (subtler, no green cast). */
   --elev-1: 0 1px 2px -1px rgba(11,110,79,.10), 0 10px 26px -20px rgba(11,110,79,.22), inset 0 1px 0 rgba(255,255,255,.7);
   --elev-2: 0 3px 8px -3px rgba(11,110,79,.16), 0 24px 48px -22px rgba(11,110,79,.32), inset 0 1px 0 rgba(255,255,255,.85);
+  /* The estate's actual workhorse curve, counted rather than chosen: 305 uses
+     across the HTML and CSS, against 75 for --spring. It is the flat ease-out
+     everything that is not a selection uses — drawers, sheets, fades, hovers.
+     It was never declared, so 305 sites each carried the literal and roughly
+     twenty near-misses had drifted in beside it (0.22,0.72,0,1 · 0.2,0,0,1 ·
+     0.4,0,0.2,1 …). Naming it is what makes those visible as drift rather than
+     as intent.
+
+     --spring overshoots and is for SELECTION only (the liquid lens). --glide
+     does not overshoot and is for everything else. If a new animation wants a
+     third curve, it probably wants one of these two. */
+  --glide: cubic-bezier(0.32, 0.72, 0, 1);
+  /* The third real curve — ease-out-expo, 40 uses, and the one the entrances
+     and reveals run on where --glide would arrive too flatly. It was already
+     consistent in behaviour and inconsistent only in spelling: written as
+     0.16,1,0.3,1 · 0.16,1,0.30,1 · .16,1,.30,1 across the estate, which is
+     three strings a search will not group. */
+  --expo: cubic-bezier(0.16, 1, 0.3, 1);
   /* Signature spring — la lentille liquide settle curve. Single source; the
      caisse skin and motion layer both reference var(--spring). */
   --spring: cubic-bezier(0.34, 1.45, 0.5, 1);

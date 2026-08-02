@@ -35,6 +35,14 @@
        la commande d'un commerce fermé. -->
   <script src="assets/hours.js" defer></script>
 
+  <!-- The shared token sheet, linked BEFORE the inline block so anything this
+       page declares for itself still wins. Verified safe rather than assumed:
+       the only custom property this file references without declaring is
+       --em-w, and tokens.css does not define it, so nothing that renders today
+       changes value. What the link buys is the neutral ramp, the elevation and
+       motion tokens, and a single place to change a brand colour. -->
+  <link rel="stylesheet" href="assets/tokens.css" />
+
   <style>
     /* =========================================================
        Tokens — same brand system as kiwi-serveur

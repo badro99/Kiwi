@@ -36,6 +36,11 @@
        relecture. Le fichier était déjà vendu dans assets/. -->
   <script src="assets/lucide.min.js" defer></script>
 
+  <!-- Shared tokens, linked before the inline block so local declarations still
+       win. Safe by measurement, not assumption: --em-w is the only property
+       this file uses without declaring, and tokens.css does not define it. -->
+  <link rel="stylesheet" href="assets/tokens.css" />
+
   <style>
     /* =========================================================
        Tokens — same brand system as kiwi-serveur

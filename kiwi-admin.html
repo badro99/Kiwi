@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Console opérateur</title>
+<!-- Shared tokens. This page linked no stylesheet at all and re-declared the
+     brand by hand; the values below are identical to tokens.css's, so linking
+     it changes nothing that renders and gives the console the neutral ramp,
+     the elevation and the motion tokens it was copying by eye. The local :root
+     stays and still wins — --line here is #e4e0d7, warmer than the shared
+     value, and that is this page's own choice. --sans is the only property it
+     used without declaring. -->
+<link rel="stylesheet" href="assets/tokens.css" />
 <style>
   :root{
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
@@ -428,6 +436,53 @@ em, i, cite, dfn, var { font-style: normal; }
     .mini.danger{color:#f0b3a4; border-color:#4a2a24; background:#1a1210}
     .mini.danger:hover{background:#241412}
   }
+
+/* ── Focus ──────────────────────────────────────────────────────────────────
+   Nine rules on this page already handle focus, and every one of them does it
+   the same way: `outline:none` plus a border-colour change. That is a real
+   signal on a text input, where the border is a large shape the eye tracks —
+   but it is the only signal, and it is carried entirely by hue, so it is
+   invisible to anyone who cannot separate --atlas from --n-300 and it fails
+   the 3:1 non-text contrast floor against several of this page's own fills.
+
+   This restores a ring on top of what is already there rather than replacing
+   it: the border-colour change stays (it is good affordance), and the ring
+   gives it a second, non-chromatic channel. :focus-visible so a mouse click
+   into a field is still silent.
+
+   This is the operator console — it revokes accounts and rotates merchant
+   PINs. It is exactly the surface where "which control am I about to press"
+   should never be a guess. */
+:is(button, a, input, select, textarea, [tabindex]):focus-visible{
+  outline:2px solid var(--atlas);
+  outline-offset:2px;
+}
+
+/* The ring has to change colour with the theme, which the existing
+   .sec-close rule above does not do. Measured against this page's own dark
+   surfaces (#1c2420, #151b18), --atlas comes out at 2.6:1 and 2.9:1 — under
+   the 3:1 floor for a non-text indicator, i.e. a focus ring you cannot see in
+   dark mode, which is the mode this console actually ships in. --mint on the
+   same surfaces measures 11.5:1 and 13.3:1. Light mode keeps --atlas, which
+   is 5.7:1 on --paper. */
+@media (prefers-color-scheme:dark){
+  :is(button, a, input, select, textarea, [tabindex]):focus-visible,
+  .sec-close:focus-visible{
+    outline-color:var(--mint);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────
+   Eight animated rules, none carrying information the layout does not already
+   state. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
 </style>
 </head>
 <body>

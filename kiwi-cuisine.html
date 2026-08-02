@@ -240,6 +240,30 @@
       .col--cook { display: none; }
       .brand .store { display: none; }
     }
+
+    /* Focus is NOT declared here on purpose. assets/tokens.css, which this
+       page links, already ships a global
+         :focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px }
+       and --atlas on this page's warm paper measures 5.74:1, well clear of the
+       3:1 floor. An earlier pass added a 3px --mint ring here on the assumption
+       that the pass screen was dark chrome. It is not — the body is --paper
+       #F7F5F0 — and mint on that measures 1.27:1, i.e. an accessibility rule
+       that was itself invisible. Deleted rather than re-tuned: the shared ring
+       was already correct and a second declaration only invites the two to
+       drift apart. */
+
+    /* ── Reduced motion ───────────────────────────────────────────────────
+       Five animated rules on this page, none of them load-bearing: they mark
+       arrivals and state changes that the colour and position already state.
+       Honouring the OS setting costs the screen nothing. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
