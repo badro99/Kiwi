@@ -105,13 +105,14 @@
         '<div class="vexel-goal-foot"><span data-vexel-goal-pct>—</span><span data-vexel-goal-rest></span></div>' +
       '</section>' +
       '<section class="vexel-rail-card vexel-clients">' +
+        '<div class="vexel-client-label" data-vexel-client-label></div>' +
         '<svg width="340" height="76" viewBox="0 0 340 76" preserveAspectRatio="none" aria-hidden="true">' +
           '<defs><linearGradient id="vexelClientFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ffae" stop-opacity=".28"/><stop offset="1" stop-color="#00ffae" stop-opacity="0"/></linearGradient></defs>' +
           '<path class="fill" d="M0 58 C28 52 43 62 70 50 S112 38 137 45 S183 29 207 34 S250 17 278 24 S318 9 340 12 L340 76 L0 76 Z"/>' +
           '<path class="line" d="M0 58 C28 52 43 62 70 50 S112 38 137 45 S183 29 207 34 S250 17 278 24 S318 9 340 12"/>' +
           '<circle cx="338" cy="12" r="5"/>' +
         '</svg>' +
-        '<div class="vexel-client-foot"><div><strong data-vexel-client-value>—</strong><span>Clients ce mois</span></div><b data-vexel-client-delta></b></div>' +
+        '<div class="vexel-client-foot"><div><strong data-vexel-client-value>—</strong><span data-vexel-client-caption></span></div><b data-vexel-client-delta></b></div>' +
       '</section>';
     return rail;
   }
@@ -125,6 +126,11 @@
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
     en: { aujourdhui: 'Today', hier: 'Yesterday', septJours: 'Last 7 days', trenteJours: 'Last 30 days', moisDernier: 'Last month', trimestre: 'This quarter', annee: 'This year', personnalise: 'Custom period' },
     ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يوما', moisDernier: 'الشهر الماضي', trimestre: 'هذا الربع', annee: 'هذه السنة', personnalise: 'فترة مخصصة' }
+  };
+  var CLIENT_STR = {
+    fr: { label: 'Croissance clients', caption: 'Clients ce mois' },
+    en: { label: 'Customer growth', caption: 'Customers this month' },
+    ar: { label: 'نمو العملاء', caption: 'عملاء هذا الشهر' }
   };
 
   function lang() {
@@ -225,11 +231,12 @@
     var circumference = 2 * Math.PI * radius;
     /* Aucun objectif par canal n'existe : l'anneau reste honnêtement vide. */
     var dash = '0';
-    return '<div class="vexel-ring-item">' +
+    return '<div class="vexel-ring-item' + (amount == null ? ' is-empty' : '') + '">' +
       '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true"><circle class="track" cx="55" cy="55" r="' + radius + '"/>' +
       '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" stroke-dasharray="' + dash + ' ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
       '<text x="55" y="57">—</text></svg>' +
-      '<strong>' + (amount == null ? '—' : esc(serviceAmount(amount))) + '</strong><span>' + esc(label) + '</span><small>' + esc(amount == null ? copy.noData : ('MAD · ' + copy.goalUnavailable)) + '</small>' +
+      (amount == null ? '' : '<strong>' + esc(serviceAmount(amount)) + '</strong>') + '<span>' + esc(label) + '</span>' +
+      (amount == null ? '' : '<small>MAD · ' + esc(copy.goalUnavailable) + '</small>') +
     '</div>';
   }
 
@@ -242,12 +249,15 @@
     if (!card) return;
     var l = lang();
     var copy = SERVICE_STR[l] || SERVICE_STR.fr;
+    var clientCopy = CLIENT_STR[l] || CLIENT_STR.fr;
     var channels = currentChannels();
     var amounts = channelAmounts(channels);
     var hasAmounts = Object.keys(amounts).length > 0;
     var period = servicePeriodLabel(range, l);
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
+    setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
+    setText(document.querySelector('[data-vexel-client-caption]'), clientCopy.caption);
     setText(card.querySelector('h2'), copy.title);
     setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.goalUnavailable : copy.unavailable) + ' · ' + period);
     var tones = ['mint', 'deep', 'amber', 'deep'];
@@ -436,7 +446,8 @@
     var clientCard = document.querySelector('[data-kpi="regulars"], [data-kpi="clients"]');
     var clientValue = document.querySelector('[data-vexel-client-value]');
     var clientDelta = document.querySelector('[data-vexel-client-delta]');
-    setText(clientValue, clientCard ? (clientCard.querySelector('.v') || {}).textContent || '—' : '—');
+    var clientText = clientCard ? (clientCard.querySelector('.v') || {}).textContent || '—' : '—';
+    setText(clientValue, String(clientText).replace(/\s*\/\s*/g, '/').trim());
     setText(clientDelta, clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '');
   }
 
