@@ -4947,7 +4947,7 @@
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. OFF by default — KiwiDesignVexel.enable()
      or ?skin=vexel. Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2015" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2016" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/design-vexel.js"></script>
@@ -5175,9 +5175,11 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 
     <!-- Topbar -->
     <div class="topbar"><div class="topbar-inner">
-      <div class="breadcrumb" data-i18n="dash.breadcrumb">
-        Accueil <span class="sep">/</span> <b>Tableau de bord</b>
-      </div>
+      <nav class="breadcrumb" aria-label="Fil d’Ariane" data-i18n="dash.breadcrumb">
+        <span class="breadcrumb-home">Accueil</span>
+        <span class="sep" aria-hidden="true">/</span>
+        <b>Tableau de bord</b>
+      </nav>
       <!-- Ouvert / fermé, d'après les horaires de l'établissement. Cliquable :
            un statut faux ou manquant se corrige là où on le lit. Rempli par
            assets/hours-ui.js — vide tant que KiwiHours n'a pas répondu, jamais
