@@ -2810,6 +2810,199 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
   box-shadow: 0 10px 22px -19px rgba(10, 24, 18, 0.42) !important;
 }
 
+/* Revenue is the dashboard's hero metric. Give it a real information
+ * hierarchy instead of leaving a small title above an oversized empty plot. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+  height: 430px !important;
+  min-height: 430px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  height: 430px !important;
+  min-height: 430px;
+  padding: 27px 29px 22px !important;
+  border-color: rgba(7, 112, 77, 0.22) !important;
+  background:
+    radial-gradient(520px 270px at 88% -12%, rgba(33, 194, 137, 0.14), transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(7, 112, 77, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 4px 12px rgba(10, 24, 18, 0.06),
+    0 26px 54px -34px rgba(7, 77, 55, 0.42) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::before {
+  position: absolute;
+  z-index: 0;
+  top: -145px;
+  right: -100px;
+  width: 440px;
+  height: 330px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(68, 219, 161, 0.13), transparent 68%);
+  content: "" !important;
+  pointer-events: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart > .block-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 20px;
+  min-height: 112px;
+  margin: 0;
+  padding: 0 0 15px;
+  border-bottom: 0;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart .block-head .t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--n-600);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row [data-rev-range-badge] {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px !important;
+  border: 1px solid rgba(7, 112, 77, 0.14);
+  border-radius: 999px;
+  background: rgba(31, 181, 125, 0.08);
+  color: #087451;
+  font-family: var(--mono);
+  font-size: 9.5px !important;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
+  display: block !important;
+  margin-top: 9px;
+  color: #071711;
+  font-size: clamp(38px, 3.1vw, 48px);
+  font-weight: 680;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-cur {
+  margin-inline-start: 9px;
+  color: var(--n-400);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  vertical-align: 0.24em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(7, 126, 87, 0.08);
+  color: #087451;
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta.down {
+  background: rgba(211, 67, 48, 0.08);
+  color: #bd3f30;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta svg {
+  width: 13px;
+  height: 13px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta .lbl {
+  color: currentColor;
+  opacity: 0.62;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row [data-rev-sub] {
+  display: block !important;
+  margin-top: 8px;
+  color: var(--n-400);
+  font-size: 11.5px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .block-head .right-actions {
+  display: block !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(10, 24, 18, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--n-500);
+  font-size: 11.5px;
+  box-shadow: 0 8px 22px -18px rgba(10, 24, 18, 0.55);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn:hover,
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn.on {
+  border-color: rgba(7, 112, 77, 0.24);
+  background: rgba(7, 126, 87, 0.08);
+  color: #087451;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-legend {
+  display: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .chart-wrap {
+  min-height: 245px;
+  border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(7, 93, 66, 0.055) 1px, transparent 1px) 0 6px / 100% 33.333%,
+    linear-gradient(180deg, rgba(231, 245, 238, 0.16), rgba(255, 255, 255, 0));
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-line {
+  stroke: #087856;
+  stroke-width: 2.8;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-line-halo {
+  stroke: #2ac58c;
+  stroke-width: 7;
+  stroke-opacity: 0.16;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row #gfill stop:first-child {
+  stop-color: #20b77f;
+  stop-opacity: 0.28;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-live-dot {
+  fill: #087856;
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+  height: 430px;
+  grid-template-rows: minmax(184px, auto) minmax(228px, 1fr);
+}
+
 @media (max-width: 1100px) {
   body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -2822,8 +3015,8 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
   }
 
   body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
-    height: 320px !important;
-    min-height: 320px;
+    height: 410px !important;
+    min-height: 410px;
   }
 
   body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
@@ -2846,5 +3039,15 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
 
   body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m {
     min-height: 116px;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+    height: 390px !important;
+    min-height: 390px;
+    padding: 22px 18px 18px !important;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
+    font-size: 36px;
   }
 }
