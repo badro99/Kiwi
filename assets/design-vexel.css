@@ -1813,3 +1813,197 @@ html[lang="ar"] body.design-vexel .vexel-goals-card h2,
 html[lang="ar"] body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
   letter-spacing: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER E · VEXEL-LIGHT DASHBOARD ART DIRECTION
+ *
+ * A focused visual pass for the opt-in light dashboard. The landing page's
+ * glow, generous framing and crisp depth are translated into a warm product
+ * surface without turning the working dashboard into a marketing page.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode="light"] #kw-main {
+  background:
+    radial-gradient(circle at 42% -8%, var(--vx-dome-side), transparent 30%),
+    radial-gradient(circle at 92% 4%, var(--vx-dome-main), transparent 24%),
+    var(--vx-page);
+}
+
+body.design-vexel[data-vexel-mode="light"] #kw-main > .container {
+  padding-top: 24px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  position: relative;
+  isolation: isolate;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title report"
+    "range range";
+  align-items: center;
+  gap: 20px 24px;
+  min-height: 0;
+  margin-bottom: 18px !important;
+  padding: 27px 28px 25px;
+  overflow: hidden;
+  border: 1px solid var(--n-200);
+  border-radius: 28px;
+  background: var(--vx-hero-bg);
+  box-shadow: var(--elev-2);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 360px;
+  height: 240px;
+  inset: -145px auto auto -80px;
+  border-radius: 50%;
+  background: var(--vx-dome-main);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range > div:first-child {
+  grid-area: title;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(35px, 3.4vw, 48px);
+  line-height: 0.95;
+}
+
+/* The venue remains available in the sidebar; repeating it beside the page
+ * title made the command area feel like a form and squeezed the date controls. */
+body.design-vexel[data-vexel-mode="light"] .vexel-venue {
+  display: none !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+  grid-area: range;
+  width: 100%;
+  margin: 0;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-pills {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--n-200);
+  border-radius: 999px;
+  background: var(--vx-white-045);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-report-btn {
+  grid-area: report;
+  margin: 0;
+  min-height: 46px;
+  padding-inline: 21px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head {
+  min-height: 34px;
+  margin-bottom: 10px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .kpi-customize {
+  border-color: var(--n-200);
+  background: var(--paper-soft);
+  box-shadow: var(--elev-1);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today,
+body.design-vexel[data-vexel-mode="light"] .vexel-rail-card,
+body.design-vexel[data-vexel-mode="light"] .vexel-goals-card,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] {
+  border-color: var(--n-200) !important;
+  background: var(--paper-elev) !important;
+  box-shadow: var(--elev-2) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m {
+  position: relative;
+  overflow: hidden;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--vx-accent);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  border-color: var(--vx-accent-18) !important;
+  background:
+    linear-gradient(135deg, var(--vx-active-bg-strong), transparent 58%),
+    var(--paper-elev) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child::before,
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover::before {
+  opacity: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+  z-index: 1;
+  transform: translateY(-2px);
+  border-color: var(--vx-card-hover-border) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 420px;
+  height: 220px;
+  inset: auto -150px -145px auto;
+  border-radius: 50%;
+  background: var(--vx-dome-side);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+@media (max-width: 920px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    padding: 24px;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-pills {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+    padding: 21px 18px;
+    border-radius: 22px;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+    font-size: clamp(30px, 10vw, 39px);
+  }
+}
