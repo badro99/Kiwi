@@ -2539,6 +2539,28 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols > * {
   background-color: #fff !important;
 }
 
+/* Ambient emerald light is reserved for cards that carry momentum or a
+ * decision. Repeating it everywhere would turn the page into a green wash;
+ * here it creates rhythm without competing with the data. */
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols .settle {
+  background:
+    radial-gradient(260px 205px at 96% -4%, rgba(38, 183, 128, 0.25), rgba(38, 183, 128, 0.09) 46%, transparent 73%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+  background:
+    radial-gradient(165px 130px at 100% 0%, rgba(38, 183, 128, 0.105), transparent 72%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+  background:
+    radial-gradient(200px 155px at 98% 0%, rgba(38, 183, 128, 0.14), rgba(38, 183, 128, 0.045) 48%, transparent 74%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
 body.design-vexel[data-vexel-mode="light"] .vexel-rail-label,
 body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .lbl {
   color: var(--n-500);
