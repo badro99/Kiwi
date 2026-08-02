@@ -11,7 +11,7 @@
   var CLASS = 'design-vexel';
   var state = {
     active: false, root: null, moves: [], concealed: [], observer: null,
-    rangeUnsubscribe: null, raf: 0
+    rangeUnsubscribe: null, langHandler: null, raf: 0
   };
 
   function el(tag, className, html) {
@@ -68,13 +68,14 @@
   }
 
   function reportButton() {
+    var labels = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     var button = el('button', 'vexel-report-btn');
     button.type = 'button';
     button.dataset.action = 'export';
     button.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>' +
-      '</svg><span>Générer le rapport</span>';
+      '</svg><span>' + labels[lang()] + '</span>';
     return button;
   }
 
@@ -105,33 +106,144 @@
     return rail;
   }
 
-  function ringMarkup(pct, amount, label, tone) {
+  var SERVICE_STR = {
+    fr: { title: 'Objectifs par service', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', noData: 'Donnée indisponible' },
+    en: { title: 'Goals by service', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', noData: 'Data unavailable' },
+    ar: { title: 'الأهداف حسب الخدمة', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', noData: 'البيانات غير متاحة' }
+  };
+  var RANGE_STR = {
+    fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
+    en: { aujourdhui: 'Today', hier: 'Yesterday', septJours: 'Last 7 days', trenteJours: 'Last 30 days', moisDernier: 'Last month', trimestre: 'This quarter', annee: 'This year', personnalise: 'Custom period' },
+    ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يوما', moisDernier: 'الشهر الماضي', trimestre: 'هذا الربع', annee: 'هذه السنة', personnalise: 'فترة مخصصة' }
+  };
+
+  function lang() {
+    var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang();
+    return l === 'en' || l === 'ar' ? l : 'fr';
+  }
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function activeTrade() {
+    var raw = '';
+    try { raw = localStorage.getItem('kiwiBizType') || ''; } catch (_) {}
+    if (!raw) {
+      try {
+        var data = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+        raw = data && (data.subtype || data.type) || '';
+      } catch (_) {}
+    }
+    if (!raw) {
+      try { raw = window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType() || ''; } catch (_) {}
+    }
+    return raw || 'autre';
+  }
+
+  function currentChannels() {
+    var registry = window.KiwiTrades;
+    return registry && registry.channels ? registry.channels(activeTrade()) : [];
+  }
+
+  function realSession() {
+    try {
+      return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
+        || !!(window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom());
+    } catch (_) { return false; }
+  }
+
+  function channelKey(raw, channelIds) {
+    var key = String(raw || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    var direct = {
+      salle: 'dining', dining: 'dining', surplace: channelIds.indexOf('dining') >= 0 ? 'dining' : (channelIds.indexOf('cabin') >= 0 ? 'cabin' : (channelIds.indexOf('counter') >= 0 ? 'counter' : 'onsite')),
+      terrasse: 'terrace', terrace: 'terrace', comptoir: 'counter', counter: 'counter',
+      emporter: 'takeaway', takeaway: 'takeaway', retrait: 'pickup', pickup: 'pickup', clickcollect: 'pickup',
+      livraison: 'delivery', delivery: 'delivery', glovo: 'delivery', yassir: 'delivery',
+      boutique: 'store', store: 'store', cabine: 'cabin', cabin: 'cabin', domicile: 'home', home: 'home',
+      produit: 'products', products: 'products', club: 'club', distance: 'remote', remote: 'remote',
+      direct: 'direct', online: 'online', evenement: 'catering', catering: 'catering'
+    };
+    var resolved = direct[key] || key;
+    return channelIds.indexOf(resolved) >= 0 ? resolved : '';
+  }
+
+  /* Le journal de ventes ne porte actuellement pas de canal. Cette lecture est
+   * prête pour le jour où il en portera un, mais ne déduit jamais un canal du
+   * moyen de paiement ou du libellé du ticket. */
+  function channelAmounts(channels) {
+    var out = Object.create(null);
+    if (!realSession() || !window.KiwiSales || !window.KiwiSales.list) return out;
+    var venue = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+    var rows = [];
+    try { rows = window.KiwiSales.list(venue) || []; } catch (_) { return out; }
+    var bounds = window.KiwiDateRange && window.KiwiDateRange.bounds && window.KiwiDateRange.bounds();
+    var from = bounds ? bounds[0] : -Infinity;
+    var to = bounds && bounds[1] !== Infinity ? bounds[1] : Date.now() + 1;
+    var ids = channels.map(function (c) { return c.id; });
+    rows.forEach(function (sale) {
+      var ts = +(sale && sale.ts) || 0;
+      if (ts < from || ts >= to) return;
+      var key = channelKey(sale && sale.channel, ids);
+      if (!key) return;
+      out[key] = (out[key] || 0) + Math.max(0, +(sale && sale.amount || 0));
+    });
+    return out;
+  }
+
+  function serviceAmount(value) {
+    if (!(value >= 0)) return '—';
+    var locale = lang() === 'en' ? 'en-GB' : 'fr-FR';
+    return Math.round(value).toLocaleString(locale);
+  }
+
+  function servicePeriodLabel(range, l) {
+    var fallback = (RANGE_STR[l] || RANGE_STR.fr)[range] || RANGE_STR.fr.aujourdhui;
+    if (range !== 'personnalise') return fallback;
+    try {
+      var raw = localStorage.getItem('kiwiCustomRange') || '';
+      var dates = raw.split('|');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dates[0]) && /^\d{4}-\d{2}-\d{2}$/.test(dates[1])) return dates[0] + ' — ' + dates[1];
+    } catch (_) {}
+    return fallback;
+  }
+
+  function ringMarkup(amount, label, tone, copy) {
     var radius = 48;
     var circumference = 2 * Math.PI * radius;
-    var dash = (circumference * pct / 100).toFixed(1);
+    /* Aucun objectif par canal n'existe : l'anneau reste honnêtement vide. */
+    var dash = '0';
     return '<div class="vexel-ring-item">' +
       '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true"><circle class="track" cx="55" cy="55" r="' + radius + '"/>' +
       '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" stroke-dasharray="' + dash + ' ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
-      '<text x="55" y="57">' + pct + '%</text></svg>' +
-      '<strong>' + amount + '</strong><span>' + label + '</span><small>MAD ce mois</small>' +
+      '<text x="55" y="57">—</text></svg>' +
+      '<strong>' + (amount == null ? '—' : esc(serviceAmount(amount))) + '</strong><span>' + esc(label) + '</span><small>' + esc(amount == null ? copy.noData : ('MAD · ' + copy.goalUnavailable)) + '</small>' +
     '</div>';
   }
 
   function serviceGoals() {
-    return el('section', 'vexel-goals-card',
-      '<h2>Objectifs par service</h2><p>Part de l’objectif mensuel atteinte · 30 j</p>' +
-      '<div class="vexel-rings">' +
-        ringMarkup(74, '92 980', 'Salle', 'mint') +
-        ringMarkup(46, '28 546', 'Terrasse', 'deep') +
-        ringMarkup(14, '14 008', 'Livraison', 'amber') +
-      '</div>');
+    return el('section', 'vexel-goals-card', '<h2></h2><p data-vexel-service-sub></p><div class="vexel-rings"></div>');
   }
 
-  function decorateHeader(header) {
-    var venue = el('div', 'vexel-venue');
-    venue.innerHTML = '<span>Établissement :</span><strong data-vexel-venue>—</strong>' +
-      '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
-    header.appendChild(venue);
+  function renderServiceGoals(range) {
+    var card = document.querySelector('.vexel-goals-card');
+    if (!card) return;
+    var l = lang();
+    var copy = SERVICE_STR[l] || SERVICE_STR.fr;
+    var channels = currentChannels();
+    var amounts = channelAmounts(channels);
+    var hasAmounts = Object.keys(amounts).length > 0;
+    var period = servicePeriodLabel(range, l);
+    var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
+    setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
+    setText(card.querySelector('h2'), copy.title);
+    setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.goalUnavailable : copy.unavailable) + ' · ' + period);
+    var tones = ['mint', 'deep', 'amber', 'deep'];
+    card.querySelector('.vexel-rings').innerHTML = channels.map(function (channel, index) {
+      return ringMarkup(hasAmounts && amounts[channel.id] != null ? amounts[channel.id] : null, channel.label, tones[index % tones.length], copy);
+    }).join('');
   }
 
   function updateGoalRangeLabel(range) {
@@ -170,8 +282,14 @@
       setText(document.querySelector('[data-vexel-goal-label]'), '');
       return;
     }
-    updateGoalRangeLabel(api.getDateRange());
-    state.rangeUnsubscribe = api.subscribe(updateGoalRangeLabel);
+    var update = function (range) {
+      updateGoalRangeLabel(range);
+      renderServiceGoals(range);
+    };
+    update(api.getDateRange());
+    state.rangeUnsubscribe = api.subscribe(update);
+    state.langHandler = function () { update(api.getDateRange()); };
+    window.addEventListener('kiwi:langchange', state.langHandler);
   }
 
   function createLayout() {
@@ -195,7 +313,6 @@
     state.root = root;
 
     rememberMove(header, root);
-    decorateHeader(header);
     rememberMove(dateControl, header);
     header.appendChild(reportButton());
 
@@ -261,7 +378,7 @@
       baseline.remove();
     });
     document.querySelectorAll('[data-kpi-band] .vexel-kpi-comparison').forEach(function (node) { node.remove(); });
-    document.querySelectorAll('.vexel-venue, .vexel-report-btn, .vexel-revenue-legend').forEach(function (node) { node.remove(); });
+    document.querySelectorAll('.vexel-report-btn, .vexel-revenue-legend').forEach(function (node) { node.remove(); });
   }
 
   function numberFrom(text) {
@@ -275,10 +392,6 @@
     if (!state.active || !document.body.classList.contains(CLASS)) return;
 
     document.querySelectorAll('.vexel-compose [data-kpi-band] .kpi-m').forEach(splitDelta);
-
-    var venueSource = document.querySelector('.loc-switch .name, [data-venue-name]');
-    var venueTarget = document.querySelector('[data-vexel-venue]');
-    setText(venueTarget, venueSource ? venueSource.textContent.trim() : 'Café Atlas');
 
     var amountSource = document.querySelector('[data-hero-amount]');
     var goalLabel = document.querySelector('[data-goal-label]');
@@ -331,6 +444,8 @@
     state.observer = null;
     if (state.rangeUnsubscribe) state.rangeUnsubscribe();
     state.rangeUnsubscribe = null;
+    if (state.langHandler) window.removeEventListener('kiwi:langchange', state.langHandler);
+    state.langHandler = null;
     if (state.raf) cancelAnimationFrame(state.raf);
     state.raf = 0;
 

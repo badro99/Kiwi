@@ -1,97 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * KIWI · SKIN "VEXEL" — the landing-page dashboard, brought back into the product
+ * KIWI · SKIN "VEXEL"
  *
- * The hero of the marketing site (vexel-clone/src/components/KiwiDashboard.tsx)
- * is not a screenshot: it is real DOM, hand-built to LOOK like this dashboard.
- * It ended up better looking than the thing it depicts. This file closes that
- * gap in the other direction — it re-skins the real dashboard to the mockup.
- *
- * ── How it works ──────────────────────────────────────────────────────────
- * This is a DELTA, not a theme. The controller (design-vexel.js) sets BOTH
- * `html[data-theme="dark"]` and `body.design-vexel`, so the 324 lines of
- * already-debugged dark-mode work in theme.css do the heavy lifting — every
- * modal, drawer, toast and hardcoded-white patch in there is inherited rather
- * than re-derived. What is left below is only what makes dark mode read as the
- * mockup instead of as Kiwi's warm dark: black instead of #0B1210, glass cards
- * instead of solid panels, one mint accent instead of Atlas green.
- *
- * That layering is deliberate. A from-scratch dark skin would have re-fought
- * every one of theme.css's per-component fixes, and lost some of them.
- *
- * ── Where the values come from ────────────────────────────────────────────
- * Measured off the mockup's own source, not sampled from a screenshot:
- *   CARD    = "rounded-[22px] border border-white/[0.07] bg-black/30
- *              backdrop-blur-[2px]"          KiwiDashboard.tsx:61
- *   ACCENT  = var(--color-accent) = #00ffae   globals.css (hue 161°)
- *   ACCENT_DEEP #17b98a · AMBER #ffb347 · DANGER #ff6b5f   KiwiDashboard.tsx:49
- *   TXT     dim .58 · faint .34 · ghost .22   KiwiDashboard.tsx:64
- *
- * ── Reverting ─────────────────────────────────────────────────────────────
- * `KiwiDesignVexel.disable()` in the console, or delete the <link> and
- * <script> pair in dashboard.html. Nothing outside these two files changed.
- * ─────────────────────────────────────────────────────────────────────────── */
+ * Layer A contains geometry and component rules shared by both climates.
+ * Every colour in those rules is indirected through a custom property.
+ * Layers B and C, at the end of the file, are the only colour sources.
+ * The skin remains inert until the controller adds body.design-vexel.
+ * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─────────────────────────────────────────────────────────────────────────
- * 1 · TOKENS
- * The whole recolour is mostly this block: the dashboard reads its palette
- * from tokens.css custom properties, so overriding them here re-tints
- * components this file never names.
- * ───────────────────────────────────────────────────────────────────────── */
-html[data-theme="dark"] body.design-vexel,
+/* ── LAYER A · SHAPE (mode-independent; no colour literals) ─────────────── */
 body.design-vexel {
-  /* Surfaces. The mockup's panels are BLACK at 30%, not white at 3.5% — the
-   * gutters between cards are alpha 0, so the backdrop shows through the gaps
-   * at full strength and the cards sit over it as darker glass. Lifting cards
-   * with white inverts that and the panel stops reading as something laid over
-   * the scene. (KiwiDashboard.tsx:53-60, kept verbatim in spirit.) */
-  --paper: #000000;
-  --paper-soft: rgba(0, 0, 0, 0.30);
-  --paper-muted: rgba(255, 255, 255, 0.045);
-  --surface: rgba(0, 0, 0, 0.30);
-  --paper-elev: rgba(0, 0, 0, 0.38);
-
-  /* Hairlines. One value on every card in the mockup. --n-200 is what the
-   * dark theme hands to card borders, so it is the one that has to move. */
-  --n-200: rgba(255, 255, 255, 0.07);
-  --n-300: rgba(255, 255, 255, 0.12);
-
-  /* Type. White, then the mockup's three dims. */
-  --ink: #ffffff;
-  --ink-soft: rgba(255, 255, 255, 0.85);
-  --n-400: rgba(255, 255, 255, 0.34);   /* faint  */
-  --n-500: rgba(255, 255, 255, 0.58);   /* dim    */
-  --n-600: rgba(255, 255, 255, 0.72);
-  --n-700: rgba(255, 255, 255, 0.86);
-  --n-800: #ffffff;
-
-  /* The one accent. The mockup runs a single green at hue 161° so that every
-   * accent on the page is one green rather than three near-misses; Atlas and
-   * mint both collapse onto it here. --atlas keeps the deeper value because it
-   * is used as a FILL behind white text, where #00ffae would blind. */
-  --mint: #00ffae;
-  --mint-soft: rgba(0, 255, 174, 0.12);
-  --atlas: #17b98a;
-  --atlas-600: #00ffae;
-  --atlas-700: #12a074;
-  --riad: rgba(0, 0, 0, 0.42);
-  --riad-deep: #000000;
-
-  /* Semantic, matched to the mockup's own three. */
-  --success: #00ffae;
-  --warning: #ffb347;
-  --danger: #ff6b5f;
-  --warn-soft: rgba(255, 179, 71, 0.12);
-  --warn-ink: #ffb347;
-
-  /* Depth is a hairline and a glow, never a drop shadow — there is no light
-   * source in this composition, so a cast shadow reads as a mistake. */
-  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.02);
-  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 40px -12px rgba(0, 255, 174, 0.18);
-
-  /* 22px on every card in the mockup. */
   --r-lg: 22px;
   --r-xl: 22px;
   --r-2xl: 26px;
+  --vx-gap: 16px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -105,16 +26,16 @@ body.design-vexel {
  * also uses it; this file cannot out-specify that with ordering alone.
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel {
-  background-color: #000 !important;
+  background-color: var(--vx-page) !important;
   background-image:
-    radial-gradient(85% 55% at 50% 108%, rgba(0, 255, 174, 0.16), transparent 70%),
-    radial-gradient(60% 45% at 8% 100%, rgba(23, 185, 138, 0.13), transparent 72%),
-    radial-gradient(55% 40% at 96% 92%, rgba(0, 255, 174, 0.09), transparent 70%),
-    radial-gradient(70% 50% at 50% -10%, rgba(23, 185, 138, 0.07), transparent 68%) !important;
+    radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
+    radial-gradient(60% 45% at 8% 100%, var(--vx-dome-side), var(--vx-transparent) 72%),
+    radial-gradient(55% 40% at 96% 92%, var(--vx-active-bg), var(--vx-transparent) 70%),
+    radial-gradient(70% 50% at 50% -10%, var(--vx-dome-top), var(--vx-transparent) 68%) !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
   background-size: 100% 100% !important;
-  color: #fff !important;
+  color: var(--ink) !important;
   /* The ambient-drift keyframes animate background-position on a gradient set
    * this file has replaced; letting it keep running slides the new dome. */
   animation: none !important;
@@ -138,8 +59,8 @@ body.design-vexel .testi-card,
 body.design-vexel .settle,
 body.design-vexel .timeline-day,
 body.design-vexel .prod.paper {
-  background: rgba(0, 0, 0, 0.30);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--surface);
+  border: 1px solid var(--n-200);
   border-radius: 22px;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
@@ -152,8 +73,8 @@ body.design-vexel .card:hover,
 body.design-vexel .kpi-m:hover,
 body.design-vexel .integ-card:hover,
 body.design-vexel .feed-row:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 0 40px -14px rgba(0, 255, 174, 0.22);
+  border-color: var(--vx-card-hover-border);
+  box-shadow: 0 0 40px -14px var(--vx-accent-22);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -163,12 +84,12 @@ body.design-vexel .feed-row:hover {
  * number carries the emphasis, not a coloured ground.
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel .hero-today {
-  background: rgba(0, 0, 0, 0.34) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  border-radius: 22px !important;
+  background: var(--vx-hero-bg);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-  color: #fff;
+  color: var(--ink);
 }
 /* Both pseudo-elements have to go, not just one. ::after is design-2026's
  * mix-blend sheen, which over black reads as a grey wash across the headline
@@ -176,10 +97,10 @@ body.design-vexel .hero-today {
  * slab, and on black glass it blooms straight through the figure sitting on
  * top of it. Killing only ::after leaves the louder of the two. */
 body.design-vexel .hero-today::after,
-body.design-vexel .hero-today::before { content: none !important; }
+body.design-vexel .hero-today::before { content: none; }
 
 body.design-vexel .hero-today .g-fill,
-body.design-vexel .goal-bar .g-fill { background: var(--mint) !important; }
+body.design-vexel .goal-bar .g-fill { background: var(--mint); }
 
 /* ─────────────────────────────────────────────────────────────────────────
  * 5 · SIDEBAR + TOPBAR
@@ -187,54 +108,102 @@ body.design-vexel .goal-bar .g-fill { background: var(--mint) !important; }
  * flush with the page — no seam, just a hairline — and the topbar floats.
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel .sidebar {
-  background: rgba(0, 0, 0, 0.42) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  --ink: var(--vx-sidebar-ink);
+  --ink-soft: var(--vx-sidebar-ink);
+  --n-700: var(--vx-sidebar-ink);
+  --n-600: var(--vx-sidebar-muted);
+  --n-500: var(--vx-sidebar-muted);
+  --n-400: var(--vx-sidebar-ghost);
+  --n-300: var(--vx-sidebar-border);
+  --n-200: var(--vx-sidebar-border);
+  --n-100: var(--vx-sidebar-hover);
+  --mint: var(--vx-sidebar-accent);
+  --atlas: var(--vx-sidebar-accent-deep);
+  background: var(--vx-sidebar-bg);
+  border-right: 1px solid var(--vx-sidebar-border);
+  color: var(--vx-sidebar-ink);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-body.design-vexel .sidebar .brand { color: #fff; }
-body.design-vexel .sidebar .brand i { background: var(--mint); }
+body.design-vexel .sidebar .brand { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .brand i { background: var(--vx-sidebar-accent); }
 
 /* Nav rows: the active one is a mint-tinted pill, the rest are dim until
  * hovered. Matches NAV_MAIN's `active` treatment in the mockup. */
 body.design-vexel .sidebar a,
-body.design-vexel .sidebar .nav-item { color: rgba(255, 255, 255, 0.58); }
+body.design-vexel .sidebar .nav-item { color: var(--vx-sidebar-muted); }
 body.design-vexel .sidebar a:hover,
 body.design-vexel .sidebar .nav-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--vx-sidebar-ink);
+  background: var(--vx-sidebar-hover);
 }
 body.design-vexel .sidebar a.active,
 body.design-vexel .sidebar .nav-item.active,
 body.design-vexel .sidebar a[aria-current="page"] {
-  color: var(--mint) !important;
-  background: rgba(0, 255, 174, 0.09) !important;
-  border-color: rgba(0, 255, 174, 0.18) !important;
+  color: var(--vx-sidebar-accent);
+  background: var(--vx-sidebar-active);
+  border-color: var(--vx-sidebar-accent-border);
 }
 body.design-vexel .sidebar .sect,
 body.design-vexel .sidebar .group-label {
-  color: rgba(255, 255, 255, 0.22);
+  color: var(--vx-sidebar-ghost);
   letter-spacing: 0.14em;
 }
 
 body.design-vexel .topbar {
-  background: rgba(0, 0, 0, 0.42) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  background: var(--vx-shell-bg);
+  border-bottom: 1px solid var(--n-200);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-body.design-vexel .topbar-inner { color: rgba(255, 255, 255, 0.58); }
-body.design-vexel .breadcrumb b { color: #fff; }
+body.design-vexel .topbar-inner { color: var(--n-500); }
+body.design-vexel .breadcrumb b { color: var(--ink); }
 
 /* The venue switcher sits in the sidebar as its own inset card. */
 body.design-vexel .loc-switch {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  background: var(--vx-sidebar-surface);
+  border: 1px solid var(--vx-sidebar-border);
   border-radius: 16px;
 }
-body.design-vexel .loc-switch .name { color: #fff; }
-body.design-vexel .loc-switch .meta { color: rgba(255, 255, 255, 0.34); }
-body.design-vexel .loc-switch .badge { color: var(--mint); }
+body.design-vexel .loc-switch:hover,
+body.design-vexel .loc-switch.open { background: var(--vx-sidebar-hover); }
+body.design-vexel .loc-switch .name { color: var(--vx-sidebar-ink); }
+body.design-vexel .loc-switch .meta { color: var(--vx-sidebar-muted); }
+body.design-vexel .loc-switch .badge { color: var(--vx-sidebar-accent); }
+
+/* The sidebar remains the composition's dark anchor in both modes. Its venue
+ * popover and account chrome therefore consume the panel's own foreground
+ * pair, never the page-mode paper/ink pair. */
+body.design-vexel .sidebar .venue-dropdown {
+  background: var(--vx-sidebar-popover);
+  border-color: var(--vx-sidebar-border);
+  color: var(--vx-sidebar-ink);
+}
+body.design-vexel .sidebar :is(.venue-row:hover, .venue-row.active) {
+  background: var(--vx-sidebar-hover);
+}
+body.design-vexel .sidebar .venue-row-name { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .venue-row-type { color: var(--vx-sidebar-muted); }
+body.design-vexel .sidebar .venue-action.fusion-cta {
+  background-color: var(--vx-sidebar-accent-deep);
+  color: var(--vx-sidebar-ink);
+}
+body.design-vexel .sidebar .venue-action.fusion-cta .va-title { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .upsell {
+  background: var(--vx-sidebar-surface);
+  border-color: var(--vx-sidebar-accent-border);
+}
+body.design-vexel .sidebar .upsell .t,
+body.design-vexel .sidebar .loc-ultra { color: var(--vx-sidebar-accent); }
+body.design-vexel .sidebar .upsell h4,
+body.design-vexel .sidebar .m-info .n { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar :is(.upsell p, .upsell .us-line, .upsell .us-manage, .m-info .r, .m-caret) {
+  color: var(--vx-sidebar-muted);
+}
+body.design-vexel .sidebar .upsell button {
+  background: var(--vx-sidebar-accent);
+  color: var(--vx-sidebar-primary-ink);
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
  * 6 · CONTROLS
@@ -255,32 +224,31 @@ body.design-vexel .search,
 body.design-vexel .search-big,
 body.design-vexel .kf-input,
 body.design-vexel .chip:not(.ok):not(.pend):not(.ref):not(.warn):not(.danger) {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  color: rgba(255, 255, 255, 0.72) !important;
+  background: var(--paper-muted);
+  border: 1px solid var(--n-200);
+  color: var(--n-600);
 }
 body.design-vexel .pill:hover,
 body.design-vexel .icon-btn:hover,
 body.design-vexel .btn-slim:hover,
-body.design-vexel .chip:not(.ok):not(.pend):not(.ref):hover {
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  color: #fff !important;
+body.design-vexel .chip:not(.ok):not(.pend):not(.ref):not(.warn):not(.danger):hover {
+  border-color: var(--vx-control-border-hover);
+  color: var(--ink);
 }
 
 /* The selected date-range pill. The liquid-lens highlight rides behind these,
  * so the ON state is the lens fill, not a per-pill background. */
 body.design-vexel .pill.on,
 body.design-vexel .pill[aria-selected="true"],
-body.design-vexel .seg.on,
 body.design-vexel [data-on="true"] {
-  background: rgba(0, 255, 174, 0.10) !important;
-  border-color: rgba(0, 255, 174, 0.22) !important;
-  color: #fff !important;
+  background: var(--vx-active-bg-strong);
+  border-color: var(--vx-accent-22);
+  color: var(--ink);
 }
 body.design-vexel .kw-lens,
 body.design-vexel .lens {
-  background: rgba(0, 255, 174, 0.12) !important;
-  border: 1px solid rgba(0, 255, 174, 0.22);
+  background: var(--mint-soft);
+  border: 1px solid var(--vx-accent-22);
 }
 
 /* Primary action. The mockup's "Générer le rapport" is a mint pill that glows
@@ -289,15 +257,15 @@ body.design-vexel .btn-primary,
 body.design-vexel .btn-slim.primary,
 body.design-vexel .kb.primary,
 body.design-vexel [data-action="generate-report"] {
-  background: var(--mint) !important;
-  color: #04120c !important;
-  border-color: transparent !important;
+  background: var(--mint);
+  color: var(--vx-primary-ink);
+  border-color: var(--vx-transparent);
   font-weight: 600;
-  box-shadow: 0 0 28px -6px rgba(0, 255, 174, 0.45);
+  box-shadow: 0 0 28px -6px var(--vx-primary-shadow-color-strong);
 }
 body.design-vexel .btn-primary:hover,
 body.design-vexel .btn-slim.primary:hover {
-  box-shadow: 0 0 38px -4px rgba(0, 255, 174, 0.6);
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -307,7 +275,7 @@ body.design-vexel .btn-slim.primary:hover {
  * hardcode, plus the readouts whose weight the mockup changes.
  * ───────────────────────────────────────────────────────────────────────── */
 
-/* Two nodes set `color: #0A0F0D` as a literal instead of taking var(--ink),
+/* Two nodes set `color: var(--ink)` as a literal instead of taking var(--ink),
  * so the token flip left them black-on-black — the "47 couverts" headline was
  * not dim, it was invisible, and the selected date-range pill's label was
  * unreadable against the lens fill. Their child spans looked fine because
@@ -318,7 +286,7 @@ body.design-vexel .btn-slim.primary:hover {
  * loaded yet. */
 body.design-vexel .big,
 body.design-vexel .dr-pill.on,
-body.design-vexel .dr-pill[aria-selected="true"] { color: #fff !important; }
+body.design-vexel .dr-pill[aria-selected="true"] { color: var(--ink); }
 
 /* Big figures run LIGHT in the mockup, not semibold — at 32-56px a 600 weight
  * on white over black blooms and loses its counters. */
@@ -329,23 +297,23 @@ body.design-vexel .big-num,
 body.design-vexel .stat-v {
   font-weight: 400;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: var(--ink);
 }
 
 /* Grid lines and axes: barely there. */
 body.design-vexel .grid line,
 body.design-vexel .axis line,
 body.design-vexel .axis path,
-body.design-vexel .chart-grid line { stroke: rgba(255, 255, 255, 0.07) !important; }
+body.design-vexel .chart-grid line { stroke: var(--n-200); }
 body.design-vexel .axis text,
 body.design-vexel .chart-axis text,
-body.design-vexel .tick text { fill: rgba(255, 255, 255, 0.34) !important; }
+body.design-vexel .tick text { fill: var(--n-400); }
 
 /* Revenue curve: mint stroke over a mint-to-nothing fill. */
-body.design-vexel .rev-line { stroke: var(--mint) !important; }
-body.design-vexel .rev-cmp { stroke: rgba(23, 185, 138, 0.75) !important; }
-body.design-vexel .rev-area { fill: url(#kwVexelArea) !important; }
-body.design-vexel .rev-line-halo { stroke: rgba(0, 255, 174, 0.25) !important; }
+body.design-vexel .rev-line { stroke: var(--mint); }
+body.design-vexel .rev-cmp { stroke: var(--vx-chart-compare); }
+body.design-vexel .rev-area { fill: url(#kwVexelArea); }
+body.design-vexel .rev-line-halo { stroke: var(--vx-accent-25); }
 
 /* Tooltips are a solid dark card, not glass — they have to stay readable when
  * they land over the brightest part of the curve. */
@@ -353,18 +321,18 @@ body.design-vexel .tip,
 body.design-vexel .tooltip,
 body.design-vexel .chart-tip,
 body.design-vexel .hh-tooltip {
-  background: rgba(10, 14, 12, 0.94) !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  border-radius: 14px !important;
-  color: #fff !important;
-  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.9);
+  background: var(--vx-tooltip-bg);
+  border: 1px solid var(--vx-border-strong);
+  border-radius: 14px;
+  color: var(--ink);
+  box-shadow: 0 18px 40px -20px var(--vx-shadow-heavy);
 }
 
 /* Donut rings — the mockup's three: mint, deep, amber, on a faint track.
  *
  * The payment-mix donut is the one widget on the page that does NOT read from
- * tokens: its track and four segments are hardcoded hex (#EBE8E0, #0B6E4F,
- * #46A878, #7DF2B0, #D99A2B), so the token block above cannot reach it. On
+ * tokens: its track and four segments are hardcoded hex (var(--n-200), var(--atlas),
+ * var(--vx-accent-mid), var(--vx-mint-fill), var(--warning)), so the token block above cannot reach it. On
  * black the cream track was the brightest ring in the card — a bezel around
  * the data rather than a backdrop for it.
  *
@@ -374,27 +342,27 @@ body.design-vexel .hh-tooltip {
  * widget ever drawing the track last, would silently shuffle the colours. */
 body.design-vexel [data-mix-donut] circle:not(.seg),
 body.design-vexel [data-mix-donut] .track,
-body.design-vexel .ring-track { stroke: rgba(255, 255, 255, 0.07) !important; }
-body.design-vexel [data-mix-donut] [data-seg="0"] { stroke: #00ffae !important; }
-body.design-vexel [data-mix-donut] [data-seg="1"] { stroke: #17b98a !important; }
-body.design-vexel [data-mix-donut] [data-seg="2"] { stroke: #0e8f66 !important; }
-body.design-vexel [data-mix-donut] [data-seg="3"] { stroke: #ffb347 !important; }
+body.design-vexel .ring-track { stroke: var(--n-200); }
+body.design-vexel [data-mix-donut] [data-seg="0"] { stroke: var(--vx-accent); }
+body.design-vexel [data-mix-donut] [data-seg="1"] { stroke: var(--vx-accent-deep); }
+body.design-vexel [data-mix-donut] [data-seg="2"] { stroke: var(--vx-accent-mid); }
+body.design-vexel [data-mix-donut] [data-seg="3"] { stroke: var(--warning); }
 
-/* The light theme's amber (#D99A2B) is a print amber — on black it goes
- * muddy brown. The mockup's is #ffb347. These are the nodes that set it as a
+/* The light theme's amber (var(--warning)) is a print amber — on black it goes
+ * muddy brown. The mockup's is var(--warning). These are the nodes that set it as a
  * literal rather than through --warning. */
 body.design-vexel .av.c,
 body.design-vexel .dot.warn,
-body.design-vexel [style*="D99A2B"] { background-color: #ffb347 !important; }
+body.design-vexel [style*="D99A2B"] { background-color: var(--warning) !important; }
 
 /* The peer/benchmark bar sat at 58% white — brighter than the merchant's own
  * bar beside it, which inverted the comparison it exists to make. */
-body.design-vexel .peer { background: rgba(255, 255, 255, 0.20) !important; }
+body.design-vexel .peer { background: var(--vx-peer); }
 
 /* Deltas. Up is mint, down is the mockup's coral — never the light theme's
  * brick red, which goes muddy on black. */
-body.design-vexel .up, body.design-vexel .delta.up, body.design-vexel .pos { color: var(--mint) !important; }
-body.design-vexel .down, body.design-vexel .delta.down, body.design-vexel .neg { color: #ff6b5f !important; }
+body.design-vexel .up, body.design-vexel .delta.up, body.design-vexel .pos { color: var(--mint); }
+body.design-vexel .down, body.design-vexel .delta.down, body.design-vexel .neg { color: var(--danger); }
 
 /* ─────────────────────────────────────────────────────────────────────────
  * 8 · OVERLAYS
@@ -406,16 +374,16 @@ body.design-vexel .kiwi-drawer,
 body.design-vexel .ai-drawer,
 body.design-vexel .kiwi-menu,
 body.design-vexel .venue-dropdown {
-  background: rgba(8, 11, 10, 0.92) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  background: var(--vx-overlay-bg);
+  border: 1px solid var(--vx-track);
   border-radius: 22px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 body.design-vexel .kiwi-toast {
-  background: rgba(8, 11, 10, 0.94) !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  color: #fff !important;
+  background: var(--vx-toast-bg);
+  border: 1px solid var(--vx-border-strong);
+  color: var(--ink);
 }
 
 /* The Kiwi AI pill in the topbar is the mockup's one dark-on-dark control,
@@ -424,9 +392,10 @@ body.design-vexel .kiwi-toast {
  * mockup's naming and matched nothing at all. */
 body.design-vexel .ai-btn,
 body.design-vexel [data-action="open-assistant"] {
-  background: rgba(0, 0, 0, 0.55) !important;
-  border: 1px solid rgba(0, 255, 174, 0.28) !important;
-  color: #fff !important;
+  background: linear-gradient(135deg, rgba(7,45,33,0.96), rgba(3,20,15,0.98)) !important;
+  border: 1px solid var(--vx-accent-28);
+  color: var(--paper);
+  box-shadow: inset 0 1px 0 rgba(0,255,174,0.18), 0 0 24px -10px rgba(0,255,174,0.75);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -436,7 +405,7 @@ body.design-vexel [data-action="open-assistant"] {
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel.design-2026 .card::before,
 body.design-vexel.design-2026 .block::before,
-body.design-vexel.design-ios27 .card::before { content: none !important; }
+body.design-vexel.design-ios27 .card::before { content: none; }
 
 /* ─────────────────────────────────────────────────────────────────────────
  * 10 · HOME COMPOSITION
@@ -474,52 +443,28 @@ body.design-vexel .vexel-compose .dash-date-range .dr-label {
   line-height: 1;
   font-weight: 600;
   letter-spacing: -0.035em;
-  color: #fff;
+  color: var(--ink);
 }
 body.design-vexel .vexel-compose .dash-date-range .dr-sub { display: none; }
-body.design-vexel .vexel-venue {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-inline-start: 23px;
-  min-width: 0;
-  font-size: 16.5px;
-  line-height: 1;
-  white-space: nowrap;
-}
-body.design-vexel .vexel-venue span { color: rgba(255,255,255,.34); }
-body.design-vexel .vexel-venue strong {
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #fff;
-  font-weight: 500;
-}
-body.design-vexel .vexel-venue svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-  color: rgba(255,255,255,.34);
-}
 body.design-vexel .vexel-report-btn {
   margin-inline-start: 12px;
-  display: inline-flex !important;
+  display: inline-flex;
   flex: none;
   align-items: center;
   gap: 9px;
   padding: 12px 23px;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: #00ffae !important;
-  color: #04241a !important;
-  box-shadow: 0 0 44px rgba(0,255,174,.34) !important;
+  border: 0;
+  border-radius: 999px;
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-report-shadow);
   font: 600 16px/1 var(--sans);
   white-space: nowrap;
   cursor: pointer;
 }
 body.design-vexel .vexel-report-btn svg { width: 16px; height: 16px; flex: none; }
 body.design-vexel .vexel-report-btn:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
 
@@ -530,43 +475,56 @@ body.design-vexel .vexel-compose .dash-date-range .dr-control {
 }
 body.design-vexel .vexel-compose .dash-date-range .dr-pills { flex-wrap: nowrap; }
 
+/* tokens.css:146 sets `section { padding: 96px 0 }` — landing-page rhythm on a
+ * bare element selector, so it reaches every <section> in the app. The compose
+ * children are app chrome, not marketing bands: .vexel-kpi-section was carrying
+ * 192px of dead vertical space around a 129px card, which pushed the revenue
+ * chart most of a screen down. Reset it here rather than renaming the tag, and
+ * scope it to the compose children so any <section> added later is born clean.
+ * Cards further in (.vexel-rail-card, .vexel-goals-card) set their own padding
+ * and already win on specificity — this rule deliberately does not reach them. */
+body.design-vexel .vexel-compose > section {
+  padding-block: 0;
+}
+
 /* KPI band: dateRange.js still owns and rebuilds the cards.  The adapter adds
  * only the baseline/comparison wrappers after every rebuild. */
 body.design-vexel .vexel-kpi-section {
   position: relative;
   margin: 0 0 var(--vx-gap);
 }
+/* Kept in flow. It used to be absolutely positioned at top:14px, which only
+ * looked deliberate because the leaked `section` padding above left 96px of
+ * empty room to float in. With that gone the button landed on top of the last
+ * KPI card, so it now sits in its own right-aligned strip — one line of height
+ * instead of ninety-six, and it no longer overlaps anything at any width. */
 body.design-vexel .vexel-kpi-section > .kpi-band-head {
-  position: absolute;
-  z-index: 2;
-  top: 14px;
-  inset-inline-end: 16px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  margin: 0;
+  margin: 0 0 10px;
 }
 body.design-vexel .vexel-kpi-section > [data-kpi-band] {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: var(--vx-gap) !important;
-  margin: 0 !important;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--vx-gap);
+  margin: 0;
 }
 body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m {
   min-width: 0;
   min-height: 126px;
-  padding: 19px 21px !important;
-  border: 1px solid rgba(255,255,255,.07) !important;
-  border-radius: 22px !important;
-  background: rgba(0,0,0,.30) !important;
-  box-shadow: none !important;
+  padding: 19px 21px;
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: none;
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
 /* The mockup band contains four KPIs; configurable overflow tiles remain in
  * the DOM and return untouched with the skin off. */
 body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(n+5) {
-  display: none !important;
+  display: none;
 }
 body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
   padding-inline-end: 120px;
@@ -574,7 +532,7 @@ body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
 body.design-vexel .vexel-compose .kpi-m > .l {
   display: block;
   overflow: hidden;
-  color: rgba(255,255,255,.58);
+  color: var(--n-500);
   font-size: 16px;
   line-height: 1.2;
   font-weight: 500;
@@ -584,7 +542,7 @@ body.design-vexel .vexel-compose .kpi-m > .l {
   text-overflow: ellipsis;
 }
 body.design-vexel .vexel-compose .kpi-m > .l .ico,
-body.design-vexel .vexel-compose .kpi-m > .sp { display: none !important; }
+body.design-vexel .vexel-compose .kpi-m > .sp { display: none; }
 body.design-vexel .vexel-kpi-baseline {
   display: flex;
   align-items: baseline;
@@ -595,7 +553,7 @@ body.design-vexel .vexel-kpi-baseline {
 body.design-vexel .vexel-compose .kpi-m .v {
   min-width: 0;
   margin: 0;
-  color: #fff;
+  color: var(--ink);
   font-size: clamp(27px, 2.35vw, 33.5px);
   line-height: 1;
   font-weight: 600;
@@ -605,28 +563,28 @@ body.design-vexel .vexel-compose .kpi-m .v {
 }
 body.design-vexel .vexel-compose .kpi-m .v .u {
   margin-inline-start: 5px;
-  color: rgba(255,255,255,.34);
+  color: var(--n-400);
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0;
 }
 body.design-vexel .vexel-kpi-delta {
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   margin-inline-start: auto;
-  margin-top: 0 !important;
+  margin-top: 0;
   flex: none;
-  color: #00ffae;
+  color: var(--vx-accent);
   font-size: 15px;
   line-height: 1;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-body.design-vexel .vexel-kpi-delta.down { color: #ff6b5f; }
+body.design-vexel .vexel-kpi-delta.down { color: var(--danger); }
 body.design-vexel .vexel-kpi-comparison {
   margin-top: 9px;
   overflow: hidden;
-  color: rgba(255,255,255,.22);
+  color: var(--vx-text-ghost);
   font-size: 13px;
   line-height: 1.2;
   white-space: nowrap;
@@ -648,10 +606,10 @@ body.design-vexel .vexel-revenue-row > .hero-today {
   height: 100%;
   margin: 0 !important;
   padding: 21px 25px !important;
-  border: 1px solid rgba(255,255,255,.07) !important;
+  border: 1px solid var(--n-200) !important;
   border-radius: 22px !important;
-  background: rgba(0,0,0,.30) !important;
-  color: #fff;
+  background: var(--surface) !important;
+  color: var(--ink);
   box-shadow: none !important;
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
@@ -686,7 +644,7 @@ body.design-vexel .vexel-revenue-row .hero-left-chart > .block-head {
 }
 body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t {
   display: block;
-  color: #fff;
+  color: var(--ink);
   font-size: 18.5px;
   line-height: 1.2;
   font-weight: 600;
@@ -699,15 +657,19 @@ body.design-vexel .vexel-revenue-row [data-rev-sub],
 body.design-vexel .vexel-revenue-row [data-rev-compare-caption],
 body.design-vexel .vexel-revenue-row .block-head .right-actions,
 body.design-vexel .vexel-revenue-row .chart-legend { display: none !important; }
+/* inset-inline-end was 0, which butted "Comparaison" flush against the card's
+ * own overflow:hidden boundary and shaved the last glyph — it read as truncated
+ * copy even though the DOM text was complete (scrollWidth === clientWidth).
+ * The inset matches the card's internal padding rhythm. */
 body.design-vexel .vexel-revenue-legend {
   position: absolute;
   z-index: 2;
   top: 1px;
-  inset-inline-end: 0;
+  inset-inline-end: 21px;
   display: flex;
   align-items: center;
   gap: 19px;
-  color: rgba(255,255,255,.58);
+  color: var(--n-500);
   font-size: 14px;
   line-height: 1;
 }
@@ -721,23 +683,29 @@ body.design-vexel .vexel-revenue-legend i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00ffae;
+  background: var(--vx-accent);
 }
-body.design-vexel .vexel-revenue-legend span:last-child i { background: #17b98a; }
+body.design-vexel .vexel-revenue-legend span:last-child i { background: var(--vx-accent-deep); }
 body.design-vexel .vexel-revenue-row .chart-wrap {
   display: block;
   flex: 1 1 auto;
-  min-height: 0 !important;
-  height: 250px !important;
+  min-height: 0;
+  height: 250px;
   overflow: visible;
 }
-body.design-vexel .vexel-revenue-row .chart-wrap text {
-  fill: rgba(255,255,255,.22) !important;
+/* Axis labels only. `.chart-wrap text` reads as "the chart's tick labels", but
+ * SVG has no other text primitive — the same selector also caught the three
+ * <text> nodes inside .rev-tip, whose fill="#7DF2B0"/"#FFFFFF" presentation
+ * attributes lose to any stylesheet rule. The hover tooltip was rendering
+ * ghost-grey on its own hardcoded dark-green pill: illegible in light mode,
+ * washed out in dark. Excluding the tooltip subtree restores its own fills. */
+body.design-vexel .vexel-revenue-row .chart-wrap text:not(.rev-tip text) {
+  fill: var(--vx-text-ghost);
   font-size: 11px;
 }
 
 body.design-vexel .vexel-revenue-rail {
-  display: flex !important;
+  display: flex;
   flex: none;
   flex-basis: 300px;
   flex-direction: column;
@@ -749,10 +717,10 @@ body.design-vexel .vexel-revenue-rail {
 body.design-vexel .vexel-rail-card,
 body.design-vexel .vexel-goals-card,
 body.design-vexel .vexel-bottom-row > [data-mix-block] {
-  border: 1px solid rgba(255,255,255,.07) !important;
-  border-radius: 22px !important;
-  background: rgba(0,0,0,.30) !important;
-  box-shadow: none !important;
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: none;
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
@@ -760,7 +728,7 @@ body.design-vexel .vexel-rail-card { padding: 19px 23px; }
 body.design-vexel .vexel-day-goal { flex: 0 0 151px; height: 151px; }
 body.design-vexel .vexel-clients { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 body.design-vexel .vexel-rail-label {
-  color: rgba(255,255,255,.58);
+  color: var(--n-500);
   font-size: 16px;
   font-weight: 500;
 }
@@ -772,7 +740,7 @@ body.design-vexel .vexel-goal-values {
   white-space: nowrap;
 }
 body.design-vexel .vexel-goal-values strong {
-  color: #fff;
+  color: var(--ink);
   font-size: 25px;
   line-height: 1;
   font-weight: 600;
@@ -781,7 +749,7 @@ body.design-vexel .vexel-goal-values strong {
 }
 body.design-vexel .vexel-goal-values span {
   overflow: hidden;
-  color: rgba(255,255,255,.34);
+  color: var(--n-400);
   font-size: 13px;
   text-overflow: ellipsis;
 }
@@ -790,33 +758,35 @@ body.design-vexel .vexel-goal-track {
   margin-top: 13px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255,255,255,.1);
+  background: var(--vx-border-strong);
 }
 body.design-vexel .vexel-goal-track i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #00ffae;
-  box-shadow: 0 0 16px #00ffae;
+  background: var(--vx-accent);
+  box-shadow: 0 0 16px var(--vx-accent);
 }
 body.design-vexel .vexel-goal-foot {
   display: flex;
   justify-content: space-between;
   gap: 8px;
   margin-top: 9px;
-  color: rgba(255,255,255,.22);
+  color: var(--vx-text-ghost);
   font-size: 12px;
   white-space: nowrap;
 }
 body.design-vexel .vexel-clients > svg { width: 100%; height: 66px; display: block; flex: none; }
 body.design-vexel .vexel-clients svg .fill { fill: url(#vexelClientFill); }
+body.design-vexel #vexelClientFill stop:first-child { stop-color: var(--vx-accent); }
+body.design-vexel #vexelClientFill stop:last-child { stop-color: var(--vx-accent); }
 body.design-vexel .vexel-clients svg .line {
   fill: none;
-  stroke: #00ffae;
+  stroke: var(--vx-accent);
   stroke-width: 3;
   stroke-linecap: round;
 }
-body.design-vexel .vexel-clients svg circle { fill: #00ffae; }
+body.design-vexel .vexel-clients svg circle { fill: var(--vx-accent); }
 body.design-vexel .vexel-client-foot {
   display: flex;
   align-items: flex-end;
@@ -824,7 +794,7 @@ body.design-vexel .vexel-client-foot {
 }
 body.design-vexel .vexel-client-foot > div { display: flex; flex-direction: column; }
 body.design-vexel .vexel-client-foot strong {
-  color: #fff;
+  color: var(--ink);
   font-size: 27px;
   line-height: 1;
   font-weight: 600;
@@ -832,13 +802,13 @@ body.design-vexel .vexel-client-foot strong {
 }
 body.design-vexel .vexel-client-foot span {
   margin-top: 6px;
-  color: rgba(255,255,255,.58);
+  color: var(--n-500);
   font-size: 14px;
 }
 body.design-vexel .vexel-client-foot b {
   margin-inline-start: auto;
   padding-bottom: 3px;
-  color: #00ffae;
+  color: var(--vx-accent);
   font-size: 14px;
   font-weight: 600;
 }
@@ -854,13 +824,13 @@ body.design-vexel .vexel-goals-card,
 body.design-vexel .vexel-bottom-row > [data-mix-block] {
   flex: 1 1 0;
   min-width: 0;
-  margin: 0 !important;
-  padding: 21px 25px !important;
+  margin: 0;
+  padding: 21px 25px;
 }
 body.design-vexel .vexel-goals-card h2,
 body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
   margin: 0;
-  color: #fff;
+  color: var(--ink);
   font-size: 18.5px;
   line-height: 1.2;
   font-weight: 600;
@@ -869,7 +839,7 @@ body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
 }
 body.design-vexel .vexel-goals-card p {
   margin: 5px 0 0;
-  color: rgba(255,255,255,.22);
+  color: var(--vx-text-ghost);
   font-size: 13px;
 }
 body.design-vexel .vexel-rings {
@@ -899,22 +869,22 @@ body.design-vexel .vexel-ring-item circle {
   fill: none;
   stroke-width: 10;
 }
-body.design-vexel .vexel-ring-item .track { stroke: rgba(255,255,255,.09); }
+body.design-vexel .vexel-ring-item .track { stroke: var(--vx-track); }
 body.design-vexel .vexel-ring-item .value {
-  stroke: #00ffae;
+  stroke: var(--vx-accent);
   stroke-linecap: round;
 }
-body.design-vexel .vexel-ring-item .value.deep { stroke: #17b98a; }
-body.design-vexel .vexel-ring-item .value.amber { stroke: #ffb347; }
+body.design-vexel .vexel-ring-item .value.deep { stroke: var(--vx-accent-deep); }
+body.design-vexel .vexel-ring-item .value.amber { stroke: var(--warning); }
 body.design-vexel .vexel-ring-item text {
-  fill: #fff;
+  fill: var(--ink);
   font: 600 26px var(--sans);
   text-anchor: middle;
   dominant-baseline: central;
 }
 body.design-vexel .vexel-ring-item strong {
   margin-top: 10px;
-  color: #fff;
+  color: var(--ink);
   font-size: 21px;
   line-height: 1;
   font-weight: 600;
@@ -923,13 +893,13 @@ body.design-vexel .vexel-ring-item strong {
 }
 body.design-vexel .vexel-ring-item span {
   margin-top: 5px;
-  color: rgba(255,255,255,.58);
+  color: var(--n-500);
   font-size: 14px;
   white-space: nowrap;
 }
 body.design-vexel .vexel-ring-item small {
   margin-top: 2px;
-  color: rgba(255,255,255,.22);
+  color: var(--vx-text-ghost);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -965,7 +935,551 @@ body.design-vexel .dash-standard > .dash-more-clip {
   position: relative;
 }
 
-@media (max-width: 1080px) {
+/* ─────────────────────────────────────────────────────────────────────────
+ * 11 · INTERNAL SURFACES
+ * Drawers are assembled at runtime by pages.js, pages-pro.js, features.js and
+ * agent.js. Their component classes are stable, so the skin reaches them here
+ * without changing the product's default modules or their semantic artwork.
+ * Floor-plan tables, country flags and status chips are deliberately excluded.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel :is(
+  .p-card, .sh-section, .comp-score, .comp-item, .pr-card,
+  .resv-card, .resv-section, .kds-ticket, .kds-side,
+  .b-inv-card, .b-promo-card, .b-ret-row, .kw-cat-card, .kw-item,
+  .kw-st-card, .kx-pane, .kx-kpi, .kx-sku-row, .gp-starter,
+  .s-kpi, .s-detail-hero, .s-cal-shell, .s-heat-shell,
+  .pds-rail-card, .pds-inspector, .pds-wiz-card, .pds-strat-card
+) {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+body.design-vexel :is(.p-card, .sh-section, .pr-card, .resv-card, .kw-cat-card, .kx-sku-row):hover {
+  border-color: var(--vx-card-hover-border);
+  box-shadow: 0 0 40px -14px var(--vx-accent-22);
+}
+
+body.design-vexel :is(.p-hero, .zk-hero, .s-ai-banner, .menu-ai) {
+  background: var(--vx-hero-bg) !important;
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink) !important;
+  box-shadow: none;
+}
+
+body.design-vexel :is(
+  .kiwi-drawer, .kiwi-modal, .ai-drawer
+) :is(h1, h2, h3, h4, h5, h6, b, strong) {
+  color: var(--ink);
+}
+
+body.design-vexel :is(
+  .kiwi-drawer-head, .kiwi-drawer-foot, .kiwi-modal-head, .kiwi-modal-foot,
+  .sh-section-head, .p-toolbar, .kx-tree-bar, .kw-menu-toolbar,
+  .kds-toolbar, .pds-canvas-bar
+) {
+  border-color: var(--n-200);
+}
+
+body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) :is(th, td),
+body.design-vexel :is(.menu-row, .stock-row, .team-mem, .sh-clock-row, .sc-history-row) {
+  border-color: var(--n-200);
+}
+
+body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) th,
+body.design-vexel :is(.sh-section-head .sub, .genpage-head p, .kiwi-drawer-head p) {
+  color: var(--n-500);
+}
+
+body.design-vexel :is(
+  input, select, textarea, .p-search, .kx-ios, .pds-input, .bqx-stk input
+) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  color: var(--ink);
+}
+
+body.design-vexel :is(input, select, textarea)::placeholder { color: var(--n-400); }
+
+/* Opaque paired colours keep the shortcut legible even when the surrounding
+ * search glass is translucent and the effective background is composited. */
+body.design-vexel .search-big .k {
+  background: var(--vx-key-bg);
+  border-color: var(--vx-key-border);
+  color: var(--vx-key-ink);
+}
+
+body.design-vexel :is(.kb.ghost, .kw-menu-action, .pds-tool, .pds-mode, .pds-zone) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  color: var(--n-600);
+}
+
+body.design-vexel :is(.kb.ghost, .kw-menu-action, .pds-tool, .pds-mode, .pds-zone):hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-control-border-hover);
+  color: var(--ink);
+}
+
+body.design-vexel :is(.kb.atlas, .kb.primary) {
+  background: var(--vx-accent) !important;
+  border-color: var(--vx-transparent) !important;
+  color: var(--vx-primary-ink) !important;
+  box-shadow: var(--vx-primary-shadow);
+}
+
+/* The liquid lens owns selected fills for all registered internal groups. */
+body.design-vexel :is(
+  .dr-pills, .resv-tabs, .kds-pills, .p-tabs, .pds-modes,
+  .pds-zone-tabs, .sc-pills, .kw-menu-tabs, .kx-tabs
+) .kw-lens {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent-22);
+}
+
+body.design-vexel :is(
+  .dr-pill.on, .resv-tab.on, .kds-pill.on, .p-tab.on,
+  .pds-mode.active, .pds-zone.active, .sc-pill.on, .kw-menu-tab.on, .kx-tab.on
+) {
+  color: var(--ink);
+}
+
+/* Runtime inline surfaces use product tokens; pin them to the same glass. */
+body.design-vexel [style*="background:var(--surface)"],
+body.design-vexel [style*="background: var(--surface)"],
+body.design-vexel [style*="background:var(--paper-soft)"],
+body.design-vexel [style*="background: var(--paper-soft)"] {
+  background: var(--surface) !important;
+  border-color: var(--n-200) !important;
+}
+
+/* Inline inverse panels and Riad avatars need an explicit foreground pair;
+ * --paper is the dark canvas in Vexel dark, not a universal on-colour token. */
+body.design-vexel [style*="linear-gradient(135deg, var(--ink)"] {
+  background: var(--vx-inverse-surface) !important;
+  color: var(--vx-inverse-ink) !important;
+}
+body.design-vexel [style*="linear-gradient(135deg, var(--ink)"] [style*="color:var(--paper)"],
+body.design-vexel [style*="background:var(--riad)"][style*="color:var(--paper)"] {
+  color: var(--vx-on-riad) !important;
+}
+body.design-vexel :is(.team-mem .av.b, .sh-tip-pool .av.b, .sh-tip-pool .av.d) {
+  color: var(--vx-on-riad);
+}
+body.design-vexel .pr-calc-out {
+  background: var(--vx-inverse-surface) !important;
+  color: var(--vx-inverse-ink) !important;
+}
+body.design-vexel .pr-calc-out .br b { color: var(--vx-inverse-ink) !important; }
+body.design-vexel .sc-tier.argent { color: var(--ink); }
+body.design-vexel .kc-card { color: var(--vx-on-riad); }
+
+/* Vexel turns the legacy Atlas settlement slab into page glass. Its inherited
+ * --paper foreground must turn with that surface; coloured time/status accents
+ * remain semantic and are deliberately left alone. */
+body.design-vexel .settle { color: var(--ink); }
+body.design-vexel .settle .sub { color: var(--n-500); }
+body.design-vexel .settle .instant { background: var(--paper-muted); }
+
+/* Payroll labour-cost SVG: the second text node in each day group is the
+ * percentage above a bar. It follows the mode; bars retain semantic green. */
+body.design-vexel .sh-lvs > svg > line { stroke: var(--n-300); }
+body.design-vexel .sh-lvs > svg > text { fill: var(--n-500); }
+body.design-vexel .sh-lvs > svg > g > rect { fill: var(--vx-chart-bar); }
+body.design-vexel .sh-lvs > svg > g:nth-of-type(6) > rect { fill: var(--atlas); }
+body.design-vexel .sh-lvs > svg > g > text:first-of-type { fill: var(--n-500); }
+body.design-vexel .sh-lvs > svg > g > text:nth-of-type(2) { fill: var(--ink); }
+body.design-vexel .sh-lvs-foot i { background: var(--n-400); }
+body.design-vexel .sh-lvs-foot label:first-child i { background: var(--atlas); }
+body.design-vexel .sh-lvs-foot label:nth-child(2) i { background: var(--vx-chart-bar); }
+
+/* The floor-plan drawing is semantic artwork. Its cream room, furniture and
+ * table-status colours stay intact; only the surrounding editor chrome moves. */
+body.design-vexel :is(.pds-rail-card, .pds-canvas-bar, .pds-inspector, .pds-wiz) {
+  background: var(--surface);
+  border-color: var(--n-200);
+  color: var(--ink);
+}
+body.design-vexel .pds-plan-room { box-shadow: var(--vx-plan-shadow); }
+
+/* CRM communication previews need explicit paired colours. The injected dark
+ * rule uses --paper as text, which is the page canvas in Vexel dark mode. */
+body.design-vexel .sc-wa-preview { background: var(--vx-whatsapp-canvas); }
+body.design-vexel .sc-wa-bubble {
+  background: var(--vx-whatsapp-bubble);
+  color: var(--vx-whatsapp-ink);
+}
+body.design-vexel .sc-gift .s { color: var(--vx-gift-muted); }
+body.design-vexel .pr-calc-out .br span { color: var(--vx-inverse-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 13 · ENTRY SURFACES
+ * The PIN lock, first-run setup and account gate use the page-mode tokens,
+ * not the sidebar's fixed-dark set. They are the beginning of the same path
+ * as the dashboard content, so the climate must not change at the hand-off.
+ * Their legacy rules remain untouched underneath this opt-in layer.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) {
+  background-color: var(--vx-page);
+  background-image:
+    radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
+    radial-gradient(60% 45% at 8% 100%, var(--vx-dome-side), var(--vx-transparent) 72%),
+    radial-gradient(55% 40% at 96% 92%, var(--vx-active-bg), var(--vx-transparent) 70%),
+    radial-gradient(70% 50% at 50% -10%, var(--vx-dome-top), var(--vx-transparent) 68%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: var(--ink);
+}
+
+body.design-vexel :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink);
+  box-shadow: var(--elev-2);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+body.design-vexel .kiwi-lock-inner {
+  box-sizing: border-box;
+  width: calc(100% - 48px);
+  padding: 44px 38px 38px;
+}
+
+/* This overlay is the three-second bridge between a valid PIN and the app.
+ * Leaving its legacy cream canvas in place would be a full-screen light flash
+ * in dark mode, so it shares the entry dome as well. */
+body.design-vexel .kiwi-greet::before { background: var(--vx-transparent); }
+body.design-vexel .kiwi-greet h1 {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 500;
+  text-shadow: none;
+}
+body.design-vexel .kiwi-greet h1 em {
+  color: var(--vx-accent);
+  font-style: normal;
+}
+body.design-vexel .kiwi-greet h1 .em-clip.is-typing::after { background: var(--vx-accent); }
+body.design-vexel .kiwi-greet-sub { color: var(--n-500); }
+
+body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-legacy, .reset-brand-legacy) {
+  display: none;
+}
+
+body.design-vexel .vx-entry-logo {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+}
+
+body.design-vexel .vx-entry-logo img {
+  display: none;
+  width: auto;
+  height: 28px;
+  max-width: none;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vx-entry-logo .brand-logo-dark,
+body.design-vexel[data-vexel-mode="light"] .vx-entry-logo .brand-logo-light {
+  display: block;
+}
+
+body.design-vexel .kiwi-lock-brand {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 30px;
+  color: var(--ink);
+}
+
+body.design-vexel .kiwi-lock-title {
+  margin-bottom: 7px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+body.design-vexel .kiwi-lock-sub {
+  margin-bottom: 36px;
+  color: var(--vx-accent);
+}
+
+body.design-vexel .kiwi-lock-pin { gap: 10px; margin-bottom: 22px; }
+body.design-vexel .kiwi-pin-cell {
+  width: 62px;
+  height: 76px;
+  background: var(--paper-muted);
+  border: 1px solid var(--n-300);
+  border-radius: 22px;
+  color: var(--ink);
+  font-weight: 500;
+}
+body.design-vexel .kiwi-pin-cell.is-filled {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 4px var(--warn-soft);
+}
+body.design-vexel .kiwi-lock-help,
+body.design-vexel .kiwi-lock-help b { color: var(--n-600); }
+body.design-vexel .kiwi-lock-help b { font-weight: 500; }
+body.design-vexel .kiwi-lock-help.is-error { color: var(--danger); }
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch) { color: var(--n-500); }
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):hover {
+  background: var(--vx-hover-bg);
+  color: var(--ink);
+}
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):focus-visible {
+  color: var(--ink);
+  outline-color: var(--vx-accent);
+}
+
+body.design-vexel .kob-root { color: var(--ink); }
+body.design-vexel .kob-card {
+  max-width: 580px;
+  padding: 30px 32px 26px;
+}
+body.design-vexel .kob-brand { color: var(--ink); }
+body.design-vexel .kob-config-label { color: var(--n-500); }
+body.design-vexel .kob-rail b { background: var(--n-300); }
+body.design-vexel .kob-rail b.on { background: var(--vx-accent); }
+body.design-vexel .kob-rail b.done { background: var(--vx-accent-deep); }
+body.design-vexel .kob-body::-webkit-scrollbar-thumb { background: var(--n-300); }
+body.design-vexel .kob-eyebrow { color: var(--vx-accent); }
+body.design-vexel .kob-h {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+body.design-vexel .kob-h .k-sans { font-weight: 500; }
+body.design-vexel .kob-sub { color: var(--n-600); }
+body.design-vexel .kob-lbl { color: var(--n-600); }
+body.design-vexel .kob-lbl .opt { color: var(--n-500); }
+
+body.design-vexel .kob-field {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  border-radius: 14px;
+  color: var(--ink);
+}
+body.design-vexel .kob-field::placeholder { color: var(--n-500); }
+body.design-vexel .kob-field:focus {
+  background: var(--paper-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+
+body.design-vexel :is(.kob-type, .kob-chip, .kob-acc, .kob-recap) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  border-radius: 22px;
+  color: var(--n-700);
+}
+body.design-vexel :is(.kob-type, .kob-chip):hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-control-border-hover);
+}
+body.design-vexel :is(.kob-type, .kob-chip).sel {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent);
+  color: var(--ink);
+}
+body.design-vexel :is(.kob-type, .kob-chip) svg { color: var(--n-600); }
+body.design-vexel :is(.kob-type, .kob-chip).sel svg { color: var(--vx-accent); }
+body.design-vexel :is(.kob-more, .kob-acc-add) {
+  border-color: var(--n-300);
+  color: var(--n-600);
+}
+body.design-vexel :is(.kob-more, .kob-acc-add):hover {
+  border-color: var(--vx-accent);
+  color: var(--vx-accent);
+}
+
+body.design-vexel .kob-step button {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--ink);
+}
+body.design-vexel .kob-step button:hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-accent);
+}
+body.design-vexel .kob-step .kob-num { color: var(--ink); }
+body.design-vexel .kob-step .kob-num small { color: var(--n-500); }
+body.design-vexel .kob-acc.filled {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent-22);
+}
+body.design-vexel .kob-acc-ttl { color: var(--ink); }
+body.design-vexel .kob-acc-perm { color: var(--n-500); }
+body.design-vexel .kob-acc-tag {
+  background: var(--mint-soft);
+  color: var(--vx-accent);
+}
+body.design-vexel .kob-acc-tag.req {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+body.design-vexel .kob-role {
+  background-image:
+    linear-gradient(45deg, var(--vx-transparent) 50%, var(--n-600) 50%),
+    linear-gradient(135deg, var(--n-600) 50%, var(--vx-transparent) 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+}
+body.design-vexel .kob-role option { color: var(--ink); }
+body.design-vexel .kob-acc-rm { color: var(--n-500); }
+body.design-vexel .kob-acc-rm:hover {
+  background: var(--warn-soft);
+  color: var(--danger);
+}
+
+body.design-vexel .kob-btn { border-radius: 14px; font-weight: 500; }
+body.design-vexel .kob-btn.primary {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .kob-btn.primary:hover {
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
+}
+body.design-vexel .kob-btn.ghost {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--n-700);
+}
+body.design-vexel .kob-btn.ghost:hover {
+  background: var(--vx-hover-bg);
+  color: var(--ink);
+}
+body.design-vexel :is(.kob-back, .kob-skip) { color: var(--n-500); }
+body.design-vexel :is(.kob-back, .kob-skip):hover { color: var(--ink); }
+body.design-vexel .kob-err { color: var(--danger); }
+body.design-vexel .kob-recap .r + .r { border-color: var(--n-200); }
+body.design-vexel .kob-recap .r span { color: var(--n-500); }
+body.design-vexel .kob-recap .r b { color: var(--ink); font-weight: 500; }
+body.design-vexel .kob-hero-mark {
+  background: var(--mint-soft);
+  border: 1px solid var(--vx-accent-22);
+  border-radius: 18px;
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .kob-hero-mark svg [fill]:not([fill="none"]) { fill: var(--vx-accent); }
+body.design-vexel .kob-hero-mark svg { stroke: var(--vx-accent-deep); }
+body.design-vexel .kob-hero-mark svg [stroke] { stroke: var(--vx-accent-deep); }
+
+body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) :is(em, i, cite, dfn, var),
+body.design-vexel.vx-auth-page :is(em, i, cite, dfn, var) {
+  font-style: normal;
+}
+body.design-vexel :is(.kiwi-lock, .kob-root, .vx-auth-card) :focus-visible {
+  outline: 2px solid var(--vx-accent);
+  outline-offset: 3px;
+}
+
+body.design-vexel.vx-auth-page { color: var(--ink); }
+body.design-vexel .vx-auth-card {
+  max-width: 440px;
+  padding: 38px 34px 30px;
+}
+body.design-vexel .vx-auth-card .brand { color: var(--ink); }
+body.design-vexel .vx-auth-card .head { margin-top: 28px; }
+body.design-vexel .vx-auth-card h1 {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 500;
+}
+body.design-vexel .vx-auth-card h1 em { color: var(--vx-accent); }
+body.design-vexel .vx-auth-card :is(.sub, .hint, .staff-link, .foot) { color: var(--n-500); }
+body.design-vexel .vx-auth-card .tabs {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  border-radius: 14px;
+}
+body.design-vexel .vx-auth-card .tab { color: var(--n-500); }
+body.design-vexel .vx-auth-card .tab[aria-selected="true"] { color: var(--ink); }
+body.design-vexel .vx-auth-card .pill {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  box-shadow: var(--elev-1);
+}
+body.design-vexel .vx-auth-card label { color: var(--n-600); }
+body.design-vexel .vx-auth-card input {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--ink);
+}
+body.design-vexel .vx-auth-card input::placeholder { color: var(--n-500); }
+body.design-vexel .vx-auth-card input:hover { border-color: var(--vx-control-border-hover); }
+body.design-vexel .vx-auth-card input:focus {
+  background: var(--paper-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+body.design-vexel .vx-auth-card :is(.go, .staff button) {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .vx-auth-card :is(.go, .staff button):hover {
+  background: var(--vx-accent);
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
+}
+body.design-vexel .vx-auth-card :is(.err, .staff-err) { color: var(--danger); }
+body.design-vexel .vx-auth-card .revoked {
+  background: var(--warn-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+body.design-vexel .vx-auth-card .staff-link:hover { color: var(--ink); }
+body.design-vexel .vx-auth-card .foot { border-color: var(--n-200); }
+
+body.design-vexel.vx-reset-page .vx-auth-card .mark { margin-bottom: 24px; }
+body.design-vexel.vx-reset-page .vx-auth-card h1 { margin-bottom: 7px; }
+body.design-vexel.vx-reset-page .vx-auth-card p { color: var(--n-500); }
+body.design-vexel.vx-reset-page .vx-auth-card label { color: var(--n-600); }
+body.design-vexel.vx-reset-page .vx-auth-card button {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel.vx-reset-page .vx-auth-card .msg.bad { color: var(--danger); }
+body.design-vexel.vx-reset-page .vx-auth-card .msg.ok,
+body.design-vexel.vx-reset-page .vx-auth-card .back { color: var(--vx-accent); }
+
+/* Semantic status chips remain outside all neutral-control selectors. */
+body.design-vexel :is(.chip.ok, .chip.pend, .chip.ref, .chip.warn, .chip.danger) {
+  box-shadow: none;
+}
+
+/* New logo: the sidebar stays dark in both page modes, so the mark follows its
+ * support rather than data-vexel-mode. Both files are still fetched up front. */
+body.design-vexel .brand-logo { height: 24px; width: auto; flex: none; }
+body.design-vexel .brand-logo-light { display: none; }
+body.design-vexel .brand-logo-dark { display: block; }
+
+/* The sidebar consumes 260px, so a 1280px viewport leaves only ~1,000px for
+ * the compose area. Four KPI cards technically fit there, but the labels and
+ * comparison values become cramped. Treat the effective content width as the
+ * breakpoint and use a readable 2×2 band before the app collapses to mobile. */
+@media (max-width: 1340px) {
   body.design-vexel .vexel-kpi-section > [data-kpi-band] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
@@ -990,7 +1504,6 @@ body.design-vexel .dash-standard > .dash-more-clip {
 @media (max-width: 720px) {
   body.design-vexel #kw-main > .container { padding-inline: 18px; }
   body.design-vexel .vexel-compose > .dash-date-range { flex-wrap: wrap; height: auto; }
-  body.design-vexel .vexel-venue { order: 3; width: 100%; margin: 10px 0 0; }
   body.design-vexel .vexel-report-btn { padding-inline: 15px; }
   body.design-vexel .vexel-report-btn span { display: none; }
   body.design-vexel .vexel-kpi-section > [data-kpi-band] { grid-template-columns: 1fr !important; }
@@ -1019,4 +1532,204 @@ body.design-vexel .dash-standard > .dash-more-clip {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ── LAYER B · DARK TOKENS ──────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="dark"] {
+  --paper: #000000;
+  --paper-soft: rgba(0, 0, 0, 0.30);
+  --paper-muted: rgba(255, 255, 255, 0.04);
+  --surface: rgba(0, 0, 0, 0.30);
+  --paper-elev: rgba(0, 0, 0, 0.38);
+  --n-100: rgba(255, 255, 255, 0.045);
+  --n-200: rgba(255, 255, 255, 0.07);
+  --n-300: rgba(255, 255, 255, 0.12);
+  --n-400: rgba(255, 255, 255, 0.34);
+  --n-500: rgba(255, 255, 255, 0.58);
+  --n-600: rgba(255, 255, 255, 0.72);
+  --n-700: rgba(255, 255, 255, 0.86);
+  --n-800: #ffffff;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.85);
+  --mint: #00ffae;
+  --mint-soft: rgba(0, 255, 174, 0.12);
+  --atlas: #17b98a;
+  --atlas-600: #00ffae;
+  --atlas-700: #12a074;
+  --riad: rgba(0, 0, 0, 0.42);
+  --riad-deep: #000000;
+  --success: #00ffae;
+  --warning: #ffb347;
+  --danger: #ff6b5f;
+  --info: #62b8f3;
+  --warn-soft: rgba(255, 179, 71, 0.12);
+  --warn-ink: #ffb347;
+  --line: rgba(255, 255, 255, 0.07);
+  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 40px -12px rgba(0, 255, 174, 0.18);
+
+  --vx-page: #000000;
+  --vx-transparent: transparent;
+  --vx-white-02: rgba(255, 255, 255, 0.02);
+  --vx-white-045: rgba(255, 255, 255, 0.045);
+  --vx-text-ghost: rgba(255, 255, 255, 0.22);
+  --vx-track: rgba(255, 255, 255, 0.09);
+  --vx-border-strong: rgba(255, 255, 255, 0.10);
+  --vx-card-hover-border: rgba(255, 255, 255, 0.14);
+  --vx-control-border-hover: rgba(255, 255, 255, 0.16);
+  --vx-peer: rgba(255, 255, 255, 0.20);
+  --vx-hover-bg: rgba(255, 255, 255, 0.05);
+  --vx-hero-bg: rgba(0, 0, 0, 0.34);
+  --vx-shell-bg: rgba(0, 0, 0, 0.42);
+  --vx-ai-bg: rgba(0, 0, 0, 0.55);
+  --vx-overlay-bg: rgba(8, 11, 10, 0.92);
+  --vx-toast-bg: rgba(8, 11, 10, 0.94);
+  --vx-tooltip-bg: rgba(10, 14, 12, 0.94);
+  --vx-shadow-heavy: rgba(0, 0, 0, 0.90);
+  --vx-dome-main: rgba(0, 255, 174, 0.16);
+  --vx-dome-side: rgba(23, 185, 138, 0.13);
+  --vx-dome-top: rgba(23, 185, 138, 0.07);
+  --vx-active-bg: rgba(0, 255, 174, 0.09);
+  --vx-active-bg-strong: rgba(0, 255, 174, 0.10);
+  --vx-accent: #00ffae;
+  --vx-accent-deep: #17b98a;
+  --vx-accent-mid: #0e8f66;
+  --vx-accent-18: rgba(0, 255, 174, 0.18);
+  --vx-accent-22: rgba(0, 255, 174, 0.22);
+  --vx-accent-25: rgba(0, 255, 174, 0.25);
+  --vx-accent-28: rgba(0, 255, 174, 0.28);
+  --vx-mint-fill: #7df2b0;
+  --vx-chart-bar: #7df2b0;
+  --vx-chart-compare: rgba(23, 185, 138, 0.75);
+  --vx-primary-ink: #04241a;
+  --vx-primary-shadow-color: rgba(0, 255, 174, 0.34);
+  --vx-primary-shadow-color-strong: rgba(0, 255, 174, 0.45);
+  --vx-primary-shadow-color-hover: rgba(0, 255, 174, 0.60);
+  --vx-primary-shadow: 0 0 28px -6px rgba(0, 255, 174, 0.45);
+  --vx-report-shadow: 0 0 44px rgba(0, 255, 174, 0.34);
+  --vx-plan-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.65);
+  --vx-whatsapp-canvas: rgba(255, 255, 255, 0.04);
+  --vx-whatsapp-bubble: rgba(125, 242, 176, 0.18);
+  --vx-whatsapp-ink: #ffffff;
+  --vx-inverse-muted: rgba(255, 255, 255, 0.72);
+  --vx-gift-muted: rgba(0, 0, 0, 0.68);
+  --vx-inverse-surface: rgba(255, 255, 255, 0.08);
+  --vx-inverse-ink: #ffffff;
+  --vx-on-riad: #ffffff;
+  --vx-key-bg: #17231F;
+  --vx-key-border: rgba(255, 255, 255, 0.14);
+  --vx-key-ink: rgba(255, 255, 255, 0.72);
+  --vx-sidebar-bg: rgba(10, 15, 13, 0.92);
+  --vx-sidebar-popover: #101713;
+  --vx-sidebar-surface: rgba(247, 245, 240, 0.05);
+  --vx-sidebar-hover: rgba(247, 245, 240, 0.08);
+  --vx-sidebar-active: rgba(0, 255, 174, 0.10);
+  --vx-sidebar-border: rgba(247, 245, 240, 0.09);
+  --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
+  --vx-sidebar-ink: #F7F5F0;
+  --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-accent: #00FFAE;
+  --vx-sidebar-accent-deep: #0B6E4F;
+  --vx-sidebar-primary-ink: #04241A;
+}
+
+/* ── LAYER C · LIGHT TOKENS ─────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="light"] {
+  --paper: #F7F5F0;
+  --paper-soft: rgba(255, 255, 255, 0.62);
+  --paper-muted: rgba(10, 15, 13, 0.04);
+  --surface: rgba(255, 255, 255, 0.72);
+  --paper-elev: rgba(255, 255, 255, 0.86);
+  --n-100: rgba(10, 15, 13, 0.04);
+  --n-200: rgba(10, 15, 13, 0.08);
+  --n-300: rgba(10, 15, 13, 0.14);
+  --n-400: rgba(10, 15, 13, 0.34);
+  --n-500: rgba(10, 15, 13, 0.58);
+  --n-600: rgba(10, 15, 13, 0.72);
+  --n-700: rgba(10, 15, 13, 0.86);
+  --n-800: #0A0F0D;
+  --ink: #0A0F0D;
+  --ink-soft: rgba(10, 15, 13, 0.85);
+  --mint: #0B6E4F;
+  --mint-soft: rgba(11, 110, 79, 0.10);
+  --atlas: #0B6E4F;
+  --atlas-600: #095B41;
+  --atlas-700: #095B41;
+  --riad: #053B2C;
+  --riad-deep: #04241A;
+  --success: #0B6E4F;
+  --warning: #B26A00;
+  --danger: #C2402F;
+  --info: #216A93;
+  --warn-soft: rgba(178, 106, 0, 0.12);
+  --warn-ink: #8A5100;
+  --line: rgba(10, 15, 13, 0.08);
+  --elev-1: 0 1px 2px rgba(10, 15, 13, 0.06);
+  --elev-2: 0 18px 38px -26px rgba(10, 15, 13, 0.28);
+
+  --vx-page: #F7F5F0;
+  --vx-transparent: transparent;
+  --vx-white-02: rgba(10, 15, 13, 0.02);
+  --vx-white-045: rgba(10, 15, 13, 0.045);
+  --vx-text-ghost: rgba(10, 15, 13, 0.34);
+  --vx-track: rgba(10, 15, 13, 0.10);
+  --vx-border-strong: rgba(10, 15, 13, 0.14);
+  --vx-card-hover-border: rgba(10, 15, 13, 0.18);
+  --vx-control-border-hover: rgba(10, 15, 13, 0.24);
+  --vx-peer: rgba(10, 15, 13, 0.20);
+  --vx-hover-bg: rgba(11, 110, 79, 0.07);
+  --vx-hero-bg: rgba(255, 255, 255, 0.78);
+  --vx-shell-bg: rgba(255, 255, 255, 0.62);
+  --vx-ai-bg: rgba(255, 255, 255, 0.68);
+  --vx-overlay-bg: rgba(255, 255, 255, 0.94);
+  --vx-toast-bg: rgba(255, 255, 255, 0.96);
+  --vx-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --vx-shadow-heavy: rgba(10, 15, 13, 0.28);
+  --vx-dome-main: rgba(11, 110, 79, 0.10);
+  --vx-dome-side: rgba(125, 242, 176, 0.08);
+  --vx-dome-top: rgba(11, 110, 79, 0.04);
+  --vx-active-bg: rgba(11, 110, 79, 0.08);
+  --vx-active-bg-strong: rgba(11, 110, 79, 0.10);
+  --vx-accent: #0B6E4F;
+  --vx-accent-deep: #095B41;
+  --vx-accent-mid: #0B6E4F;
+  --vx-accent-18: rgba(11, 110, 79, 0.18);
+  --vx-accent-22: rgba(11, 110, 79, 0.22);
+  --vx-accent-25: rgba(11, 110, 79, 0.25);
+  --vx-accent-28: rgba(11, 110, 79, 0.28);
+  --vx-mint-fill: #7DF2B0;
+  --vx-chart-bar: #7DF2B0;
+  --vx-chart-compare: rgba(9, 91, 65, 0.72);
+  --vx-primary-ink: #F7F5F0;
+  --vx-primary-shadow-color: rgba(10, 15, 13, 0.22);
+  --vx-primary-shadow-color-strong: rgba(10, 15, 13, 0.24);
+  --vx-primary-shadow-color-hover: rgba(10, 15, 13, 0.28);
+  --vx-primary-shadow: 0 12px 30px -16px rgba(10, 15, 13, 0.32);
+  --vx-report-shadow: 0 12px 30px -16px rgba(10, 15, 13, 0.32);
+  --vx-plan-shadow: 0 18px 40px -30px rgba(10, 15, 13, 0.24);
+  --vx-whatsapp-canvas: #ECE5DD;
+  --vx-whatsapp-bubble: #DCF8C6;
+  --vx-whatsapp-ink: #0A0F0D;
+  --vx-inverse-muted: rgba(247, 245, 240, 0.76);
+  --vx-gift-muted: rgba(247, 245, 240, 0.76);
+  --vx-inverse-surface: #053B2C;
+  --vx-inverse-ink: #F7F5F0;
+  --vx-on-riad: #F7F5F0;
+  --vx-key-bg: #E4E0D7;
+  --vx-key-border: rgba(10, 15, 13, 0.14);
+  --vx-key-ink: rgba(10, 15, 13, 0.72);
+  --vx-sidebar-bg: rgba(10, 15, 13, 0.92);
+  --vx-sidebar-popover: #101713;
+  --vx-sidebar-surface: rgba(247, 245, 240, 0.05);
+  --vx-sidebar-hover: rgba(247, 245, 240, 0.08);
+  --vx-sidebar-active: rgba(0, 255, 174, 0.10);
+  --vx-sidebar-border: rgba(247, 245, 240, 0.09);
+  --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
+  --vx-sidebar-ink: #F7F5F0;
+  --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-accent: #00FFAE;
+  --vx-sidebar-accent-deep: #0B6E4F;
+  --vx-sidebar-primary-ink: #04241A;
 }
