@@ -2325,20 +2325,22 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 body.design-vexel[data-vexel-mode="light"] {
-  --vx-card-radius: 20px;
-  --vx-card-gap: 16px;
+  --vx-card-radius: 18px;
+  --vx-card-gap: 18px;
   --vx-card-pad: 24px;
-  --vx-card-bg: rgba(255, 255, 255, 0.94);
-  --vx-card-border: rgba(10, 15, 13, 0.085);
-  --vx-card-border-hover: rgba(10, 15, 13, 0.16);
+  --vx-card-bg: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+  --vx-card-border: rgba(10, 24, 18, 0.12);
+  --vx-card-border-hover: rgba(7, 112, 77, 0.34);
   --vx-card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 1px 2px rgba(10, 15, 13, 0.035),
-    0 18px 42px -34px rgba(10, 15, 13, 0.32);
+    inset 0 2px 0 rgba(7, 112, 77, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 2px 5px rgba(10, 24, 18, 0.055),
+    0 18px 38px -26px rgba(10, 24, 18, 0.28);
   --vx-card-shadow-hover:
-    inset 0 1px 0 rgba(255, 255, 255, 0.96),
-    0 2px 4px rgba(10, 15, 13, 0.045),
-    0 22px 46px -34px rgba(10, 15, 13, 0.38);
+    inset 0 2px 0 rgba(7, 112, 77, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 4px 10px rgba(10, 24, 18, 0.075),
+    0 24px 46px -28px rgba(10, 24, 18, 0.38);
 }
 
 /* Shared shell: opaque enough to read as a product surface, without the
@@ -2377,7 +2379,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
   .dash-standard > .dash-more-clip [data-integ-card]
 ):hover {
   z-index: 1;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: var(--vx-card-border-hover) !important;
   box-shadow: var(--vx-card-shadow-hover) !important;
 }
@@ -2425,6 +2427,12 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
 body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
   min-height: 126px;
   padding: 20px 21px;
+  border-inline-start: 1px solid var(--vx-card-border) !important;
+  background: #fff !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  content: none !important;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m > .l {
@@ -2437,9 +2445,30 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   text-transform: uppercase;
 }
 
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m > .l,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .dash-standard .block-head .t,
+  .oppo-t,
+  .vexel-rail-label
+)::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 9px;
+  border-radius: 2px;
+  background: #08734f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  vertical-align: 0.12em;
+}
+
 body.design-vexel[data-vexel-mode="light"] .vexel-compose .kpi-m .v {
   font-size: clamp(28px, 2.15vw, 34px);
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.045em;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-kpi-comparison {
@@ -2462,6 +2491,13 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
   height: 348px !important;
   min-height: 348px;
   padding: var(--vx-card-pad) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart .block-head,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row .block-head,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(10, 24, 18, 0.075);
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-grid,
@@ -2490,6 +2526,12 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
 body.design-vexel[data-vexel-mode="light"] .vexel-rail-card {
   width: 100%;
   padding: 21px 22px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-rail-card,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > *,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols > * {
+  background-color: #fff !important;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-rail-label,
