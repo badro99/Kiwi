@@ -2372,14 +2372,19 @@ body.design-vexel[data-vexel-mode="light"] :is(
 }
 
 body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose > .dash-date-range,
   .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
   .dash-standard > .oppo-band .oppo-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
   .dash-standard > .dash-more-clip [data-integ-card]
 ):hover {
   z-index: 1;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: var(--vx-card-border-hover) !important;
   box-shadow: var(--vx-card-shadow-hover) !important;
 }
@@ -2594,8 +2599,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-grid {
   gap: 12px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card,
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
   min-height: 78px !important;
   padding: 15px 17px !important;
   transform: none !important;
@@ -2603,6 +2607,12 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
   border-radius: 14px !important;
   background: var(--paper-soft) !important;
   box-shadow: none !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--vx-card-border-hover) !important;
+  box-shadow: 0 10px 22px -19px rgba(10, 24, 18, 0.42) !important;
 }
 
 @media (max-width: 1100px) {
