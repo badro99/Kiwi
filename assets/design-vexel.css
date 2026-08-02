@@ -3201,3 +3201,183 @@ body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-ca
     font-size: 36px;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * VEXEL LIGHT · BLACK NAVIGATION RAIL
+ * A true-black product spine with restrained emerald wayfinding. The rail is
+ * deliberately free of gradients and translucency so it stays crisp beside
+ * the warm dashboard canvas.
+ * ────────────────────────────────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="light"] .sidebar {
+  --vx-sidebar-bg: #000;
+  --vx-sidebar-popover: #080a09;
+  --vx-sidebar-surface: #090b0a;
+  --vx-sidebar-hover: rgba(255, 255, 255, 0.055);
+  --vx-sidebar-active: rgba(25, 211, 145, 0.13);
+  --vx-sidebar-border: rgba(255, 255, 255, 0.09);
+  --vx-sidebar-accent-border: rgba(49, 225, 160, 0.32);
+  --vx-sidebar-ink: #f7faf8;
+  --vx-sidebar-muted: rgba(247, 250, 248, 0.68);
+  --vx-sidebar-ghost: rgba(247, 250, 248, 0.34);
+  --vx-sidebar-accent: #31e1a0;
+  background: #000 !important;
+  border-right-color: rgba(49, 225, 160, 0.13);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.025), 18px 0 42px -36px rgba(0, 0, 0, 0.95);
+  backdrop-filter: none;
+  scrollbar-color: rgba(49, 225, 160, 0.24) transparent;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar::-webkit-scrollbar-thumb {
+  background: rgba(49, 225, 160, 0.22);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .brand {
+  margin-block: 8px 24px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .brand-logo {
+  filter: brightness(0) invert(1);
+  opacity: 0.96;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch-wrap {
+  margin-bottom: 24px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 13px;
+  background: #090b0a;
+  border-color: rgba(255, 255, 255, 0.105);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 14px 28px -24px rgba(49, 225, 160, 0.45);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch::before {
+  content: "";
+  position: absolute;
+  inset: 14px auto 14px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: #31e1a0;
+  opacity: 0.72;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch:hover,
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch.open {
+  background: #0d100e;
+  border-color: rgba(49, 225, 160, 0.3);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .badge {
+  font-weight: 650;
+  letter-spacing: 0.105em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .badge i {
+  box-shadow: 0 0 0 3px rgba(49, 225, 160, 0.1), 0 0 12px rgba(49, 225, 160, 0.34);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .name {
+  margin-top: 9px;
+  font-weight: 580;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .meta {
+  margin-top: 5px;
+  color: rgba(247, 250, 248, 0.54);
+  line-height: 1.45;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav {
+  gap: 3px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a {
+  min-height: 38px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: rgba(247, 250, 248, 0.67);
+  font-weight: 470;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a svg {
+  color: rgba(91, 226, 178, 0.74);
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover {
+  color: #f7faf8;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover svg {
+  color: #72e8bd;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"] {
+  color: #eafff7;
+  background: rgba(25, 211, 145, 0.13);
+  border-color: rgba(49, 225, 160, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 25px -20px rgba(49, 225, 160, 0.9);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active::before,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"]::before {
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  background: #31e1a0;
+  box-shadow: 0 0 12px rgba(49, 225, 160, 0.65);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active svg,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"] svg {
+  color: #31e1a0;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .sect {
+  margin: 22px 11px 9px;
+  color: rgba(247, 250, 248, 0.32);
+  font-weight: 650;
+  letter-spacing: 0.16em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .venue-dropdown {
+  background: #080a09;
+  border-color: rgba(255, 255, 255, 0.11);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.68);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .upsell {
+  background: #080a09;
+  border-color: rgba(49, 225, 160, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .merchant {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  margin-top: 14px;
+  padding: 15px 10px 8px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .merchant:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 11px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .avatar {
+  box-shadow: 0 0 0 3px rgba(49, 225, 160, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover {
+    transform: none;
+  }
+}
