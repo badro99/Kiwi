@@ -11,7 +11,7 @@
   var CLASS = 'design-vexel';
   var state = {
     active: false, root: null, moves: [], concealed: [], observer: null,
-    rangeUnsubscribe: null, langHandler: null, raf: 0
+    rangeUnsubscribe: null, venueUnsubscribe: null, langHandler: null, raf: 0
   };
 
   function el(tag, className, html) {
@@ -146,13 +146,13 @@
 
   function activeTrade() {
     var raw = '';
-    try { raw = localStorage.getItem('kiwiBizType') || ''; } catch (_) {}
-    if (!raw) {
-      try {
-        var data = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
-        raw = data && (data.subtype || data.type) || '';
-      } catch (_) {}
-    }
+    /* The selected venue wins over the onboarding default. Otherwise a venue
+     * switch can leave the service card showing the previous trade's channels. */
+    try {
+      var data = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+      raw = data && (data.subtype || data.type) || '';
+    } catch (_) {}
+    if (!raw) try { raw = localStorage.getItem('kiwiBizType') || ''; } catch (_) {}
     if (!raw) {
       try { raw = window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType() || ''; } catch (_) {}
     }
@@ -162,6 +162,29 @@
   function currentChannels() {
     var registry = window.KiwiTrades;
     return registry && registry.channels ? registry.channels(activeTrade()) : [];
+  }
+
+  /* Keep each establishment on its own operational surface. Universal cards
+   * remain shared; restaurant-only fixtures declare data-venue-types in the
+   * source markup. Integration cards can be rebuilt by dateRange.js, so tag
+   * the restaurant delivery partners again before applying the gate. */
+  function applyVenueRelevance() {
+    var type = 'restaurant';
+    try { type = window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType() || type; } catch (_) {}
+    document.body.dataset.venueType = type;
+
+    document.querySelectorAll('.integ-card').forEach(function (card) {
+      var name = ((card.querySelector('.n') || {}).textContent || '').trim();
+      if (name === 'Glovo' || name === 'Yassir Express') card.dataset.venueTypes = 'restaurant';
+    });
+
+    document.querySelectorAll('[data-venue-types]').forEach(function (node) {
+      var allowed = String(node.dataset.venueTypes || '').split(/\s+/).filter(Boolean);
+      var relevant = allowed.indexOf(type) >= 0;
+      node.hidden = !relevant;
+      if (relevant) node.removeAttribute('aria-hidden');
+      else node.setAttribute('aria-hidden', 'true');
+    });
   }
 
   function realSession() {
@@ -305,9 +328,15 @@
     var update = function (range) {
       updateGoalRangeLabel(range);
       renderServiceGoals(range);
+      applyVenueRelevance();
     };
     update(api.getDateRange());
     state.rangeUnsubscribe = api.subscribe(update);
+    if (window.KiwiVenue && typeof window.KiwiVenue.subscribe === 'function') {
+      state.venueUnsubscribe = window.KiwiVenue.subscribe(function () {
+        update(api.getDateRange());
+      });
+    }
     state.langHandler = function () { update(api.getDateRange()); };
     window.addEventListener('kiwi:langchange', state.langHandler);
   }
@@ -471,6 +500,8 @@
     state.observer = null;
     if (state.rangeUnsubscribe) state.rangeUnsubscribe();
     state.rangeUnsubscribe = null;
+    if (state.venueUnsubscribe) state.venueUnsubscribe();
+    state.venueUnsubscribe = null;
     if (state.langHandler) window.removeEventListener('kiwi:langchange', state.langHandler);
     state.langHandler = null;
     if (state.raf) cancelAnimationFrame(state.raf);
