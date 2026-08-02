@@ -1,0 +1,8 @@
+User-Agent: *
+Allow: /
+Disallow: /fr/robot
+Disallow: /en/robot
+Disallow: /ar/robot
+
+Host: https://kiwi.ma
+Sitemap: https://kiwi.ma/sitemap.xml

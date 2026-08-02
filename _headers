@@ -1,0 +1,33 @@
+# Cloudflare Pages headers.
+#
+# 1. The Open Graph images.
+#
+#    Next's metadata route emits `fr/opengraph-image` — a real 1200x630 PNG with
+#    NO file extension. Static hosts derive Content-Type from the extension, so
+#    without this rule the file goes out as application/octet-stream and every
+#    scraper that fetches it (WhatsApp, Facebook, iMessage, Slack, Twitter)
+#    silently drops the preview image. The link still shares; it just shares
+#    naked. That matters more than usual here because the site's own demo CTA
+#    is a wa.me link, so WhatsApp is the channel the page is most often pasted
+#    into.
+#
+#    Kept as three explicit paths rather than a wildcard: `/*/opengraph-image`
+#    would also match any future locale, which is the intent, but Pages matches
+#    a bare `*` greedily across slashes and the explicit form is unambiguous.
+
+/fr/opengraph-image
+  Content-Type: image/png
+/en/opengraph-image
+  Content-Type: image/png
+/ar/opengraph-image
+  Content-Type: image/png
+
+# 2. Next's fingerprinted bundles.
+#
+#    Everything under `_next/static` carries a content hash in its filename, so
+#    a given URL's bytes never change. Year-long immutable caching is the
+#    contract that filename is making; without it the CDN revalidates 2 MB of
+#    unchanged JavaScript on every visit.
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
