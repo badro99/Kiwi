@@ -2599,11 +2599,23 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-gri
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
   min-height: 192px;
   padding: 22px;
+  isolation: isolate;
 }
 
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-d {
   max-width: 76%;
   margin-top: 1px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-art {
+  inset-inline-end: 9px;
+  bottom: 8px;
+  width: 100px;
+  height: 80px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card:hover .oppo-art {
+  transform: translateY(-2px) rotate(-1deg);
 }
 
 /* Native operational cards use one inset and clip child rows to the radius. */
