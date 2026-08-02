@@ -35,7 +35,7 @@
     b.textContent = 'Installer Kiwi';
     b.style.cssText = 'position:fixed;right:16px;bottom:96px;z-index:9998;padding:12px 18px;' +
       'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
-      'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
+      'box-shadow:0 10px 24px -16px rgba(10,15,13,.52);cursor:pointer';
     b.addEventListener('click', function () {
       if (!deferred) return;
       deferred.prompt();

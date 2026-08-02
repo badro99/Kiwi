@@ -402,10 +402,16 @@ body.design-vexel .kiwi-toast {
  * mockup's naming and matched nothing at all. */
 body.design-vexel .ai-btn,
 body.design-vexel [data-action="open-assistant"] {
-  background: linear-gradient(135deg, rgba(7,45,33,0.96), rgba(3,20,15,0.98)) !important;
+  background: #04241A !important;
   border: 1px solid var(--vx-accent-28);
   color: var(--paper);
-  box-shadow: inset 0 1px 0 rgba(0,255,174,0.18), 0 0 24px -10px rgba(0,255,174,0.75);
+  box-shadow: 0 10px 24px -18px rgba(10, 15, 13, 0.72);
+}
+
+body.design-vexel .ai-btn .ai-btn-ico {
+  color: var(--vx-mint-fill);
+  background: rgba(125, 242, 176, 0.12);
+  box-shadow: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -2086,10 +2092,7 @@ html[lang="ar"] body.design-vexel .vexel-bottom-row [data-mix-block] .block-head
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 body.design-vexel[data-vexel-mode="light"] #kw-main {
-  background:
-    radial-gradient(circle at 42% -8%, var(--vx-dome-side), transparent 30%),
-    radial-gradient(circle at 92% 4%, var(--vx-dome-main), transparent 24%),
-    var(--vx-page);
+  background: var(--vx-page);
 }
 
 body.design-vexel[data-vexel-mode="light"] #kw-main > .container {
@@ -2119,16 +2122,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  width: 360px;
-  height: 240px;
-  inset: -145px auto auto -80px;
-  border-radius: 50%;
-  background: var(--vx-dome-main);
-  filter: blur(8px);
-  pointer-events: none;
+  content: none;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range > div:first-child {
@@ -2230,16 +2224,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  width: 420px;
-  height: 220px;
-  inset: auto -150px -145px auto;
-  border-radius: 50%;
-  background: var(--vx-dome-side);
-  filter: blur(16px);
-  pointer-events: none;
+  content: none;
 }
 
 @media (max-width: 920px) {
