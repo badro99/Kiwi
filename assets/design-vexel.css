@@ -1544,6 +1544,269 @@ body.design-vexel .brand-logo-dark { display: block; }
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER F · UNIFIED CARD SYSTEM + ALIGNED DASHBOARD GRID
+ *
+ * The native dashboard used independent column stacks. Their cards had three
+ * radii, several paddings and unrelated shadows, so the two columns drifted
+ * vertically as soon as their content heights differed. Vexel-light uses one
+ * card specification and explicit grid rows instead.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode="light"] {
+  --vx-card-radius: 20px;
+  --vx-card-pad: 24px;
+  --vx-card-gap: 16px;
+  --vx-card-bg: rgba(255, 255, 255, 0.88);
+  --vx-card-border: rgba(10, 15, 13, 0.085);
+  --vx-card-shadow: 0 18px 42px -32px rgba(10, 15, 13, 0.34);
+  --vx-card-shadow-hover: 0 22px 48px -32px rgba(10, 15, 13, 0.42);
+}
+
+/* Compact command deck: no large empty middle row on wide screens. */
+body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-areas: "title range report";
+  gap: 22px;
+  padding: 23px 26px;
+  border-radius: var(--vx-card-radius);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(34px, 3vw, 44px);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+  width: auto;
+}
+
+/* One outer-card recipe. Small integration tiles remain nested sub-cards. */
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+) {
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+):hover {
+  border-color: var(--vx-card-hover-border) !important;
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* Every KPI has equal visual weight. The previous first-card tint and rail
+ * removed similarity even though all four values belong to one metric tier. */
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  padding: 21px 22px;
+  border-color: var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  display: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+  transform: translateY(-2px);
+}
+
+/* Shared card interiors. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-more-clip [data-integ-card] {
+  padding: var(--vx-card-pad) !important;
+  color: var(--ink);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .t,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .big {
+  color: var(--ink);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .t {
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .s,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .sub {
+  color: var(--n-500);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle::after {
+  opacity: 0.12;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .instant {
+  border: 1px solid var(--n-200);
+  background: var(--paper-muted);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .instant:hover {
+  background: var(--vx-hover-bg);
+}
+
+/* Recommendation row joins the same rhythm and card proportions. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band {
+  margin: 0 0 var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-eyebrow {
+  margin: 0 0 10px 2px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-grid {
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+  min-height: 158px;
+  padding: 21px 22px;
+}
+
+/* Main operations area: align heatmap with evening service, then orders with
+ * stock. design-vexel.js already moved payment mix into the composed top area. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+  grid-template-rows: auto auto;
+  gap: var(--vx-card-gap);
+  align-items: stretch;
+  margin-bottom: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col {
+  display: contents;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-hh-row]) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .settle {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-feed]) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* Secondary analytics: health aligns with benchmark; products aligns with
+ * team performance. Both cards in each row now share a bottom edge. */
+body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: var(--vx-card-gap);
+  align-items: stretch;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col {
+  display: contents;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more [data-health-card] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more [data-bench-card] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .block:has([data-products-list]) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .block:has([data-staff-list]) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col > .block {
+  height: 100%;
+}
+
+/* Integration is a parent card; its four tools use a quieter nested style. */
+body.design-vexel[data-vexel-mode="light"] .dash-more [data-integ-card] {
+  margin-top: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-grid {
+  gap: 12px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
+  min-height: 74px;
+  border-color: var(--n-200);
+  border-radius: 14px;
+  background: var(--paper-soft);
+  box-shadow: none;
+}
+
+@media (max-width: 1180px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+  }
+}
+
+@media (max-width: 900px) {
+  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even),
+  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vx-card-gap);
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col,
+  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col {
+    display: contents;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col > *,
+  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col > * {
+    width: 100%;
+    height: auto;
+  }
+}
+
 /* ── LAYER B · DARK TOKENS ──────────────────────────────────────────────── */
 body.design-vexel[data-vexel-mode="dark"] {
   --paper: #000000;
@@ -2005,5 +2268,63 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::bef
 
   body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
     font-size: clamp(30px, 10vw, 39px);
+  }
+}
+
+/* Layer F is declared before the mode-token/type layers. These final rules
+ * intentionally settle the few selectors Layer E also owns. */
+body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-areas: "title range report";
+  gap: 22px;
+  padding: 23px 26px;
+  border: 1px solid var(--vx-card-border);
+  border-radius: var(--vx-card-radius);
+  background: var(--vx-card-bg);
+  box-shadow: var(--vx-card-shadow);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(34px, 3vw, 44px);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+  width: auto;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block]
+) {
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  border-color: var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+    padding: 21px 18px;
   }
 }
