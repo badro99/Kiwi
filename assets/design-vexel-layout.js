@@ -79,6 +79,16 @@
     return button;
   }
 
+  function topbarMerchant() {
+    var source = document.querySelector('.sidebar .merchant');
+    if (!source) return null;
+    var profile = source.cloneNode(true);
+    profile.classList.add('vexel-topbar-merchant');
+    profile.dataset.action = 'profile-menu';
+    profile.setAttribute('aria-label', (profile.querySelector('.n') || {}).textContent || 'Compte');
+    return profile;
+  }
+
   function revenueLegend() {
     return el('div', 'vexel-revenue-legend',
       '<span><i></i>Période</span>' +
@@ -302,6 +312,7 @@
     var hero = standard && standard.querySelector('.hero-today');
     var mix = standard && standard.querySelector('[data-mix-block]');
     var dateControl = header && header.querySelector('.dr-control');
+    var topbarInner = document.querySelector('.topbar > .topbar-inner');
     if (!standard || !header || !kpis || !hero || !mix) return false;
 
     var root = el('div', 'vexel-compose');
@@ -334,6 +345,9 @@
 
     root.appendChild(utilities);
     rememberMove(pageHead, utilities);
+
+    var profile = topbarMerchant();
+    if (profile && topbarInner) topbarInner.appendChild(profile);
 
     state.active = true;
     bindRangeLabel();
@@ -380,7 +394,7 @@
       baseline.remove();
     });
     document.querySelectorAll('[data-kpi-band] .vexel-kpi-comparison').forEach(function (node) { node.remove(); });
-    document.querySelectorAll('.vexel-report-btn, .vexel-revenue-legend').forEach(function (node) { node.remove(); });
+    document.querySelectorAll('.vexel-report-btn, .vexel-revenue-legend, .vexel-topbar-merchant').forEach(function (node) { node.remove(); });
   }
 
   function numberFrom(text) {
