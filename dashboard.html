@@ -4947,7 +4947,9 @@
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. OFF by default — KiwiDesignVexel.enable()
      or ?skin=vexel. Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2023" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2024" />
+<!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
+<link rel="stylesheet" href="assets/invoicing.css?v=4" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/design-vexel.js"></script>
@@ -5376,6 +5378,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
         <button class="kpi-customize" data-action="customize-kpi" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10M4 12h7M4 18h13M16 4v4M11 10v4M19 16v4"/></svg>
           <span data-i18n="dash.kpi.customize">Personnaliser</span>
+        </button>
+        <button class="kpi-customize invoice-pill" data-action="invoicing" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>
+          <span data-invoicing-label>Facturation</span>
         </button>
       </div>
       <div class="kpi-band" data-kpi-band></div>
@@ -5910,6 +5916,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/trades.js" defer></script>
 <script src="assets/interactive.js" defer></script>
 <script src="assets/features.js" defer></script>
+<script src="assets/invoicing.js?v=2" defer></script>
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>

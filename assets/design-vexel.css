@@ -2320,18 +2320,28 @@ body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head {
   min-height: 34px;
   gap: 8px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head :is(
   .kpi-customize,
-  .btn-slim[data-action="payment-link"]
+  .btn-slim[data-action="payment-link"],
+  [data-action="invoicing"]
 ) {
   min-height: 34px;
+  width: 148px;
+  min-width: 148px;
   padding: 0 13px;
+  justify-content: center;
   border-color: var(--n-200);
   border-radius: 999px;
   background: var(--paper-soft);
   box-shadow: var(--elev-1);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head [data-action="invoicing"] {
+  color: var(--atlas);
+  border-color: color-mix(in srgb, var(--atlas) 24%, var(--n-200));
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
