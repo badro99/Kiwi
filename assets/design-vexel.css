@@ -1698,7 +1698,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-car
  * stock. design-vexel.js already moved payment mix into the composed top area. */
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: auto auto;
   gap: var(--vx-card-gap);
   align-items: stretch;
@@ -1710,22 +1710,22 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash
 }
 
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-hh-row]) {
-  grid-column: 1;
+  grid-column: 1 / span 2;
   grid-row: 1;
 }
 
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .settle {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
 }
 
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-feed]) {
-  grid-column: 1;
+  grid-column: 1 / span 2;
   grid-row: 2;
 }
 
 body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 2;
 }
 
