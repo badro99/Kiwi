@@ -103,6 +103,16 @@ async function routeRequest(context) {
   // clean URL adds no surface: it is the same document, GET/HEAD only.
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
+
+  // The marketing landing page is public. Keep the merchant application and
+  // its APIs behind the account/staff gate below, but let visitors reach the
+  // homepage (and the static Next assets it renders) before signing in.
+  const isLandingPath = path === '/' || path === '/fr' || path === '/fr/'
+    || path === '/en' || path === '/en/' || path === '/ar' || path === '/ar/'
+    || path.startsWith('/_next/') || path.startsWith('/images/')
+    || path.startsWith('/model/') || path.startsWith('/draco/');
+  if (isRead && isLandingPath) return next();
+
   /* Les fichiers statiques que ces pages CHARGENT. Allow-lister la page sans ses
    * scripts, c'est servir un document qui demande ensuite `assets/lucide.min.js`
    * et reçoit l'écran de connexion à la place : le navigateur tente de lire du
@@ -337,10 +347,9 @@ function htmlResponse(body) {
   });
 }
 
-// Self-contained login / signup screen — no external assets (it must render
-// while the site is locked). Uses the real Kiwi wordmark (`kiwi` in Inter Tight
-// 700 with a mint dot, per the brand system) — no leaf, no pictogram, per
-// brand.html §01. Brand tokens inlined; dark-mode aware. Tab pill uses the
+// Login / signup screen. /assets/* is explicitly public above, so the opt-in
+// Vexel layer and its two cropped wordmarks can load while the gate is closed;
+// the complete legacy palette remains inlined as the no-skin fallback. Tab pill uses the
 // signature spring easing. Vertical centering uses `margin: auto` inside a
 // flex column so the card centers when it fits and lets the body scroll when
 // the "Créer un compte" form pushes it past the viewport (fixes the previous
@@ -459,6 +468,7 @@ function authPage(opts) {
     translate: 0 -1px;
     box-shadow: 0 0 0 4px rgba(125,242,176,.22);
   }
+  .brand .vx-entry-logo { display: none; }
   .head { margin: 26px 0 24px; }
   h1 {
     font-size: 26px;
@@ -707,10 +717,13 @@ function authPage(opts) {
     .staff button:hover { background: #0e8560; }
   }
 </style>
+<link rel="stylesheet" href="/assets/design-vexel.css" />
+<script src="/assets/design-vexel.js"></script>
 </head>
-<body>
-  <!-- Liquid Glass displacement filter (inline — this page is served pre-auth, so it
-       can't depend on /assets/*). Drives the dark-mode .card glass in the <style> above. -->
+<body class="vx-auth-page">
+  <script>window.KiwiDesignVexel && window.KiwiDesignVexel.prime();</script>
+  <!-- Liquid Glass displacement filter stays inline so the legacy dark fallback
+       remains autonomous even if an optional skin asset fails to load. -->
   <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
     <filter id="kiwi-lg" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="12" result="n"/>
@@ -718,8 +731,14 @@ function authPage(opts) {
       <feDisplacementMap in="SourceGraphic" in2="nb" scale="46" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </svg>
-  <main class="card">
-    <div class="brand" id="brand-mark" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+  <main class="card vx-auth-card">
+    <div class="brand" id="brand-mark" aria-label="Kiwi">
+      <span class="auth-brand-legacy">kiwi<i aria-hidden="true"></i></span>
+      <span class="vx-entry-logo" aria-hidden="true">
+        <img class="brand-logo-light" src="/assets/kiwi-logo.svg" width="846" height="446" alt="" />
+        <img class="brand-logo-dark" src="/assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />
+      </span>
+    </div>
     <div class="head">
       <h1>Bienvenue <em>chez Kiwi</em>.</h1>
       <p class="sub">Votre espace commerçant, en un seul lien.</p>
