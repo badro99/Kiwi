@@ -107,8 +107,25 @@ async function routeRequest(context) {
   // The marketing landing page is public. Keep the merchant application and
   // its APIs behind the account/staff gate below, but let visitors reach the
   // homepage (and the static Next assets it renders) before signing in.
-  const isLandingPath = path === '/' || path === '/fr' || path === '/fr/'
-    || path === '/en' || path === '/en/' || path === '/ar' || path === '/ar/'
+  //
+  // Chaque dossier de langue est ouvert EN ENTIER, pas seulement son index.
+  // Un export Next ne se réduit pas à `/fr/index.html` : à côté vivent la
+  // charge RSC de navigation (`index.txt`, `__next._tree.txt`,
+  // `__next.$d$locale.__PAGE__.txt` …) et `opengraph-image`. N'autoriser que
+  // le chemin exact `/fr/` les laissait tous en 401, et rien ne le signalait :
+  // Next voit échouer sa navigation douce, retombe sur un rechargement complet
+  // de la page — qui, lui, répond 200 — et le site paraît fonctionner. Le prix
+  // était invisible : un aller-retour 401 gaspillé à chaque préchargement, un
+  // rechargement complet à chaque changement de langue, et surtout aucun
+  // aperçu de lien, puisque le scraper WhatsApp recevait l'écran de connexion
+  // à la place de l'image OG.
+  //
+  // Ça n'ouvre rien : ces trois dossiers sont la sortie statique du site
+  // vitrine, ils ne contiennent ni données marchandes ni API.
+  const isLandingPath = path === '/'
+    || path === '/fr' || path.startsWith('/fr/')
+    || path === '/en' || path.startsWith('/en/')
+    || path === '/ar' || path.startsWith('/ar/')
     || path.startsWith('/_next/') || path.startsWith('/images/')
     || path.startsWith('/model/') || path.startsWith('/draco/');
   if (isRead && isLandingPath) return next();
