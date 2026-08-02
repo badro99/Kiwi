@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Kiwi · Tableau de bord commerçant</title>
-<link rel="icon" href="assets/favicon-dark.svg" />
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="manifest" href="dashboard.webmanifest" />
 <meta name="theme-color" content="#053B2C" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -82,15 +82,16 @@
   }
 
   /* App shell */
-  .app { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 37px); }
+  .app { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: calc(100vh - 37px); }
   @media (max-width: 1100px) { .app { grid-template-columns: 1fr; } }
 
   /* ─────────────── SIDEBAR ─────────────── */
   .sidebar { background: var(--ink); color: #b5b9b6; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
   .sidebar::-webkit-scrollbar { width: 4px; }
   .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 4px; }
-  .sidebar .brand { display: flex; align-items: baseline; gap: 4px; color: var(--paper); font-weight: 700; font-size: 24px; letter-spacing: -0.05em; margin: 4px 10px 18px; }
-  .sidebar .brand i { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+  .sidebar .brand { display: flex; align-items: center; min-height: 29px; margin: 4px 10px 18px; }
+  .sidebar .brand-logo { display: block; width: auto; height: 24px; flex: none; }
+  .sidebar .brand-logo-light { display: none; }
 
   /* Location switcher (now opens the venue dropdown) */
   .loc-switch-wrap { position: relative; margin: 0 4px 22px; }
@@ -299,7 +300,11 @@
   .sidebar .m-caret { color: #6a6e6c; }
 
   /* ─────────────── MAIN ─────────────── */
-  .main { padding: 0; max-width: 1320px; margin: 0 auto; width: 100%; }
+  /* Grid items default to min-width:auto, which let a long feed/KPI label
+     widen the main column past the viewport. At 1280px that made the fourth
+     KPI and right rail visibly disappear off-screen. Keep the shell bounded
+     and let its internal grids do the responsive work instead. */
+  .main { padding: 0; max-width: 1320px; margin: 0 auto; width: 100%; min-width: 0; box-sizing: border-box; }
 
   /* ─────────────── TOPBAR · liquid glass float ─────────────── */
   .topbar {
@@ -320,7 +325,7 @@
       0 4px 12px -4px rgba(10,15,13,0.08);
   }
   @media (max-width: 1100px) { .topbar { margin: 12px 12px 0; } }
-  .topbar > .topbar-inner { max-width: 1320px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 12px; }
+  .topbar > .topbar-inner { max-width: 1320px; margin: 0 auto; width: 100%; min-width: 0; display: flex; align-items: center; gap: 12px; }
   .breadcrumb { font-size: 13px; color: var(--n-500); display: flex; align-items: center; gap: 8px; font-family: var(--mono); }
   .breadcrumb b { color: var(--ink); font-family: var(--sans); font-weight: 500; }
   .breadcrumb .sep { color: var(--n-300); }
@@ -395,23 +400,27 @@
   .icon-btn:hover { background: rgba(255,255,255,0.85); color: var(--ink); transform: translateY(-1px); }
   .icon-btn .badge { position: absolute; top: -3px; right: -3px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid rgba(250,248,242,0.9); font-family: var(--mono); }
   .ai-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 16px;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 8px 16px 8px 10px;
     border-radius: 999px;
-    background: var(--ink); color: var(--paper);
+    background: linear-gradient(135deg, rgba(7,45,33,0.96), rgba(3,20,15,0.98));
+    border: 1px solid rgba(0,255,174,0.22);
+    color: var(--paper);
     font-size: 13px; font-weight: 500;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px -2px rgba(10,15,13,0.25);
-    transition: transform 150ms, background 150ms;
+    box-shadow: inset 0 1px 0 rgba(0,255,174,0.18), 0 0 24px -10px rgba(0,255,174,0.75);
+    transition: transform 150ms, background 150ms, box-shadow 150ms;
   }
-  .ai-btn:hover { background: var(--ink-soft); transform: translateY(-1px); }
+  .ai-btn:hover { background: linear-gradient(135deg, rgba(8,62,45,0.98), rgba(3,25,18,0.98)); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(0,255,174,0.24), 0 0 30px -8px rgba(0,255,174,0.9); }
   .ai-btn svg { color: var(--mint); }
-  /* Moroccan merchant icon — black PNG recoloured to mint via filter chain */
   .ai-btn-ico {
-    width: 17px; height: 17px; flex-shrink: 0;
-    color: var(--mint);
+    width: 24px; height: 24px; flex-shrink: 0;
+    padding: 4px; border-radius: 50%;
+    color: #aaf0c1;
+    background: radial-gradient(circle, rgba(0,255,174,0.38), rgba(0,255,174,0.08) 62%, transparent 70%);
+    box-shadow: 0 0 14px rgba(0,255,174,0.35);
   }
 
-  .container { padding: 28px 32px 80px; }
+  .container { padding: 28px 32px 80px; width: 100%; min-width: 0; box-sizing: border-box; }
 
   /* ─────────────── HERO TODAY CARD ─────────────── */
   .hero-today { position: relative; background: linear-gradient(135deg, #0A4A38 0%, var(--atlas) 40%, #05301F 100%); color: var(--paper); border-radius: 22px; padding: 54px 40px 36px; overflow: hidden; margin-bottom: 16px; }
@@ -1346,6 +1355,7 @@
     letter-spacing: -0.06em;
     margin-bottom: 32px;
   }
+  .kiwi-lock-brand .vx-entry-logo { display: none; }
   .kiwi-lock-brand i {
     width: 8px; height: 8px; background: var(--mint); border-radius: 50%;
     animation: kw-lock-pulse 2.4s ease-in-out infinite;
@@ -1878,7 +1888,7 @@
   }
   body.fusion-mode .venue-action.return-cta .va-title { color: var(--ink) !important; }
 
-  /* Hero "Net après Kiwi" + breakdown text */
+  /* Hero comparison breakdown text (vs hier / semaine / mois) */
   body.fusion-mode .hero-breakdown .b .v,
   body.fusion-mode .hero-breakdown .b .v .d { color: #fff !important; }
   body.fusion-mode .hero-breakdown .b .v .d { color: var(--fs-bahia) !important; }
@@ -4934,7 +4944,10 @@
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. OFF by default — KiwiDesignVexel.enable()
      or ?skin=vexel. Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=89537" />
+<!-- Read the persisted Vexel climate while the document is still in <head>.
+     The first line after <body> applies it before any visible markup exists. -->
+<script src="assets/design-vexel.js"></script>
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
@@ -4944,6 +4957,7 @@
 <link rel="stylesheet" href="assets/agent-skin.css" />
 </head>
 <body>
+<script>window.KiwiDesignVexel && window.KiwiDesignVexel.prime();</script>
 <a class="skip-link" href="#kw-main" data-i18n="a11y.skip">Aller au contenu</a>
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GATE — runs before the sidebar markup renders.
@@ -4985,7 +4999,13 @@
 <!-- PIN lock screen (full-viewport, shown until 4-digit unlock) -->
 <div class="kiwi-lock" data-kiwi-lock>
   <div class="kiwi-lock-inner">
-    <div class="kiwi-lock-brand">kiwi<i></i></div>
+    <div class="kiwi-lock-brand" aria-label="Kiwi">
+      <span class="kiwi-lock-brand-legacy">kiwi<i></i></span>
+      <span class="vx-entry-logo" aria-hidden="true">
+        <img class="brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="" />
+        <img class="brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />
+      </span>
+    </div>
     <div class="kiwi-lock-title" data-i18n="dash.lock.welcome">Bienvenue</div>
     <div class="kiwi-lock-sub" data-i18n="dash.lock.sub">Tableau de bord commerçant</div>
     <div class="kiwi-lock-pin" data-kiwi-pin>
@@ -5017,7 +5037,10 @@
 
   <!-- ══════════════ SIDEBAR ══════════════ -->
   <aside class="sidebar">
-    <div class="brand">kiwi<i></i></div>
+    <div class="brand" data-kiwi-logo aria-label="Kiwi">
+      <img class="brand-logo brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="Kiwi" />
+      <img class="brand-logo brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" aria-hidden="true" />
+    </div>
 
     <div class="loc-switch-wrap">
       <div class="loc-switch" data-action="venue-toggle" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
@@ -5174,7 +5197,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       </button>
       <button class="ai-btn" data-action="open-assistant">
-        <svg class="ai-btn-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="currentColor"/></svg>
+        <svg class="ai-btn-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5.5 15.8c3.9-.1 7.4-2.5 9.4-6.8l1.1-2.4 1.4 1.7c1.5 1.8 1.5 4.5-.1 6.2-2.7 2.8-7.7 3.2-11.8 1.3Z" fill="currentColor"/><path d="M5.3 16.1c2.2-2.4 4.8-4.2 8-5.5" stroke="#0b6e4f" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span data-i18n="dash.agent">Kiwi AI · Agent</span>
       </button>
     </div></div>
@@ -6003,7 +6026,6 @@
 <script src="assets/account.js" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel.js" defer fetchpriority="low"></script>
 <script src="assets/design-vexel-layout.js" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) — powers 0000-onboarded hotels
