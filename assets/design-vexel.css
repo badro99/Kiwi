@@ -2164,11 +2164,18 @@ body.design-vexel[data-vexel-mode="light"] .vexel-report-btn {
 
 body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head {
   min-height: 34px;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .kpi-customize {
+body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head :is(
+  .kpi-customize,
+  .btn-slim[data-action="payment-link"]
+) {
+  min-height: 34px;
+  padding: 0 13px;
   border-color: var(--n-200);
+  border-radius: 999px;
   background: var(--paper-soft);
   box-shadow: var(--elev-1);
 }
