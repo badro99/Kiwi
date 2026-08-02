@@ -13,6 +13,16 @@ body.design-vexel {
   --r-xl: 22px;
   --r-2xl: 26px;
   --vx-gap: 16px;
+
+  /* Display tracking is a constant on the marketing site, not a per-size
+   * judgement call. Held as a token so the three display tiers (range label,
+   * KPI value, block head) cannot drift apart later. Applied in Layer D.
+   *
+   * NOT --vx-track: that name is already a rail colour in Layers B and C, and
+   * those layers come later in the file — a letter-spacing reading it would be
+   * handed an rgba(), go invalid at computed-value time, and silently fall
+   * back to the inherited tracking. Which is what happened. */
+  --vx-display-track: -0.06em;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -1732,4 +1742,74 @@ body.design-vexel[data-vexel-mode="light"] {
   --vx-sidebar-accent: #00FFAE;
   --vx-sidebar-accent-deep: #0B6E4F;
   --vx-sidebar-primary-ink: #04241A;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER D · TYPE DISCIPLINE (mode-independent; no colour literals)
+ *
+ * The marketing site's identity survives being stripped of its palette. What
+ * is left is a type system, and three of its rules were near-misses here:
+ * display tracking sat at -0.035em instead of the site's constant -0.06em,
+ * block heads were set at 1.2 rather than solid, and the KPI labels were 16px
+ * sentence-case body copy where the site's single most recognisable move is a
+ * 12/16 uppercase micro-label at +0.16em.
+ *
+ * None of this touches the mockup's composition — the four-up grid, the 16px
+ * gaps and the hidden .dr-sub are what make this skin read as the mockup, and
+ * transplanting the site's 200/750/180 section rhythm onto a data grid would
+ * be arbitrary rather than composed. Nor does it add a reveal: dashboard.html
+ * already ships an entrance choreography gated on body.cards-enter, and a
+ * second observer would double-animate the same panels.
+ *
+ * Colour is likewise untouched — Layers B and C remain the only colour
+ * sources in this file.
+ *
+ * Deliberately last. Every rule below re-states a selector Layer A already
+ * declares, at identical specificity, and wins on document order alone.
+ * Moving this block earlier silently disables it.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Solid-set display type at one tracking value. The range label and the KPI
+ * value were already set solid; only their tracking changes. Both tighten, so
+ * neither can overflow the nowrap boxes they sit in. */
+body.design-vexel .vexel-compose .dash-date-range .dr-label,
+body.design-vexel .vexel-compose .kpi-m .v {
+  letter-spacing: var(--vx-display-track);
+}
+
+/* Block heads join the same system: set solid, tracked with the rest. They
+ * were the one display tier still at letter-spacing 0. */
+body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t,
+body.design-vexel .vexel-goals-card h2,
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  line-height: 1;
+  letter-spacing: var(--vx-display-track);
+}
+
+/* The micro-label. 12/16, uppercase, +0.16em, weight 500 — the piece of the
+ * site's type system with no equivalent anywhere in the product. The label box
+ * loses ~3px of height doing this; the card's 126px min-height absorbs it, and
+ * uppercase at 12px is narrower than sentence-case at 16px, so the ellipsis
+ * this rule inherits has more room than before, not less. */
+body.design-vexel .vexel-compose .kpi-m > .l {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+/* Arabic neutralises tracking and uppercase in one locale-root rule, exactly
+ * as the site does: +0.16em on Arabic letterforms breaks the joins, and case
+ * is meaningless in a script that has none. */
+html[lang="ar"] body.design-vexel .vexel-compose .kpi-m > .l {
+  text-transform: none;
+  letter-spacing: 0;
+}
+html[lang="ar"] body.design-vexel .vexel-compose .dash-date-range .dr-label,
+html[lang="ar"] body.design-vexel .vexel-compose .kpi-m .v,
+html[lang="ar"] body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t,
+html[lang="ar"] body.design-vexel .vexel-goals-card h2,
+html[lang="ar"] body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  letter-spacing: 0;
 }
