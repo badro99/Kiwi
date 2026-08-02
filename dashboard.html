@@ -4951,6 +4951,14 @@
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/design-vexel.js"></script>
+<!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper —
+     solid-set type at -0.06em, the +0.16em micro-label, real glass over a still
+     field, one page-wide reveal. Not its palette: the two tiers are a decision
+     (kiwi-dna § "Two tiers, on purpose"), and this surface staying light is what
+     keeps dark mode an Ultra upsell. Inert unless body.design-vitrine. OFF by
+     default — KiwiDesignVitrine.enable() or ?skin=vitrine. -->
+<link rel="stylesheet" href="assets/design-vitrine.css" />
+<script src="assets/design-vitrine.js"></script>
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
@@ -4960,7 +4968,8 @@
 <link rel="stylesheet" href="assets/agent-skin.css" />
 </head>
 <body>
-<script>window.KiwiDesignVexel && window.KiwiDesignVexel.prime();</script>
+<script>window.KiwiDesignVexel && window.KiwiDesignVexel.prime();
+window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <a class="skip-link" href="#kw-main" data-i18n="a11y.skip">Aller au contenu</a>
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GATE — runs before the sidebar markup renders.
