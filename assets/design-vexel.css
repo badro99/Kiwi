@@ -2172,17 +2172,33 @@ body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn .badge {
 
 body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn {
   order: 2;
-  min-height: 46px;
-  padding: 7px 16px 7px 9px;
+  min-height: 50px;
+  gap: 12px;
+  padding: 7px 21px 7px 13px;
   border-radius: 999px;
-  border-color: rgba(125, 242, 176, 0.24);
-  background: rgba(1, 24, 17, 0.74) !important;
-  box-shadow: 0 0 0 7px rgba(17, 111, 82, 0.26), 0 12px 24px -18px rgba(0, 0, 0, 0.80);
+  border-color: rgba(13, 174, 123, 0.66);
+  background: rgba(1, 18, 13, 0.96) !important;
+  color: #f3f8f5;
+  box-shadow: 0 0 0 9px rgba(5, 105, 76, 0.18), inset 0 0 0 1px rgba(5, 195, 137, 0.08), 0 16px 28px -20px rgba(0, 34, 24, 0.92);
+  font-size: 14.5px;
+  font-weight: 540;
+  letter-spacing: 0.005em;
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico {
-  width: 25px;
-  height: 25px;
+  width: 29px;
+  height: 32px;
+  padding: 0;
+  border-radius: 0;
+  color: #16d49a;
+  background: none;
+  box-shadow: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn:hover {
+  border-color: rgba(19, 220, 158, 0.80);
+  background: rgba(2, 27, 19, 0.98) !important;
+  box-shadow: 0 0 0 9px rgba(6, 128, 91, 0.23), inset 0 0 0 1px rgba(21, 222, 159, 0.12), 0 18px 30px -20px rgba(0, 34, 24, 0.95);
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
