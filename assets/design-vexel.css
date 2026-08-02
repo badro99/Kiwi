@@ -2313,3 +2313,291 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
     padding: 21px 18px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER G · VEXEL-LIGHT CARD DNA
+ *
+ * One surface and one content rhythm across every dashboard card. This final
+ * layer also keeps the desktop composition intact at compact laptop widths;
+ * the previous 1340px breakpoint turned four KPIs into oversized 2×2 tiles
+ * and collapsed the revenue chart because its percentage height lost a
+ * definite parent.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode="light"] {
+  --vx-card-radius: 20px;
+  --vx-card-gap: 16px;
+  --vx-card-pad: 24px;
+  --vx-card-bg: rgba(255, 255, 255, 0.94);
+  --vx-card-border: rgba(10, 15, 13, 0.085);
+  --vx-card-border-hover: rgba(10, 15, 13, 0.16);
+  --vx-card-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 1px 2px rgba(10, 15, 13, 0.035),
+    0 18px 42px -34px rgba(10, 15, 13, 0.32);
+  --vx-card-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 2px 4px rgba(10, 15, 13, 0.045),
+    0 22px 46px -34px rgba(10, 15, 13, 0.38);
+}
+
+/* Shared shell: opaque enough to read as a product surface, without the
+ * green haze and mismatched glass treatments that separated card families. */
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose > .dash-date-range,
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+) {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+):hover {
+  z-index: 1;
+  transform: translateY(-1px);
+  border-color: var(--vx-card-border-hover) !important;
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* A common header hierarchy. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row [data-mix-block] .block-head {
+  min-height: 38px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .dash-standard .block-head .t,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .oppo-t
+) {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.18;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-transform: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .dash-standard .block-head .s,
+  .vexel-goals-card p,
+  .oppo-d
+) {
+  color: var(--n-500);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* KPI cards stay compact and form one scan line on desktop. */
+body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band] {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  min-height: 126px;
+  padding: 20px 21px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m > .l {
+  padding-inline-end: 0 !important;
+  color: var(--n-500);
+  font-size: 11.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose .kpi-m .v {
+  font-size: clamp(28px, 2.15vw, 34px);
+  font-weight: 600;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-kpi-comparison {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+/* Preserve the chart + rail composition through normal laptop widths. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+  align-items: stretch;
+  height: 348px !important;
+  min-height: 348px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  width: auto;
+  height: 348px !important;
+  min-height: 348px;
+  padding: var(--vx-card-pad) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-grid,
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left,
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart {
+  height: 100% !important;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .chart-wrap {
+  height: auto !important;
+  min-height: 210px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(149px, auto) minmax(175px, 1fr);
+  width: auto;
+  min-width: 0;
+  height: 348px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-rail-card {
+  width: 100%;
+  padding: 21px 22px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-rail-label,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .lbl {
+  color: var(--n-500);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-goal-track i {
+  box-shadow: none;
+}
+
+/* Both analytic cards use the same dimensions and header baseline. */
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  min-height: 327px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-goals-card,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] {
+  width: auto;
+  height: 100%;
+  padding: var(--vx-card-pad);
+}
+
+/* Recommendation cards share the same spacing and keep their illustration
+ * subordinate to the message rather than behaving like a different widget. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-grid {
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+  min-height: 192px;
+  padding: 22px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-d {
+  max-width: 76%;
+  margin-top: 1px;
+}
+
+/* Native operational cards use one inset and clip child rows to the radius. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-more-clip [data-integ-card] {
+  padding: var(--vx-card-pad) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .settle::after {
+  content: none;
+}
+
+/* Integrations are nested controls, not a second glowing card family. */
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-grid {
+  gap: 12px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card,
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
+  min-height: 78px !important;
+  padding: 15px 17px !important;
+  transform: none !important;
+  border: 1px solid var(--n-200) !important;
+  border-radius: 14px !important;
+  background: var(--paper-soft) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1100px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+    display: flex !important;
+    height: auto !important;
+    flex-direction: column;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+    height: 320px !important;
+    min-height: 320px;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band],
+  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m {
+    min-height: 116px;
+  }
+}
