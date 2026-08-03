@@ -2164,31 +2164,63 @@ body.design-vexel[data-vexel-mode] .topbar .icon-btn[aria-label="Paramètres"] {
 
 /* The search was 659px of fully transparent nothing — no border, no fill, no
  * radius — so the single widest element in the header had no affordance at all
- * and read as a stray line of placeholder copy. It becomes a real object:
- * a glass capsule, capped at a sane reading width, with the ⌘K cap put back on
- * (it was display:none, which is why nobody could tell it was a control).
- * margin-inline-end:auto is what pushes the whole right-hand cluster right. */
+ * and read as a stray line of placeholder copy. It became a real object; this
+ * is the second pass on HOW that object is drawn.
+ *
+ * The stadium capsule + outlined keycap is the 2018 SaaS header search, and it
+ * was the one shape in the whole dashboard that answered to nothing else: every
+ * card, drawer and KPI here is a 12–18px squircle, so a 999px pill with a
+ * hairline stroke read as a component borrowed from another product. Three
+ * things carried the dated look and all three are gone:
+ *   · the pill radius        → 12px, the same corner as the cards behind it
+ *   · the 1px outline        → none; a recessed fill is the affordance instead
+ *   · the boxed ⌘K keycap    → bare mono glyphs, no border, no chip
+ * What's left is a quiet inset well — dark chrome states a field by carving
+ * INTO the surface, not by drawing a frame on top of it. The stroke only
+ * appears on hover, and only in mint, so the field is silent until aimed at. */
 body.design-vexel[data-vexel-mode="light"] .search-big {
   order: 1;
   width: 100%;
-  height: 40px;
-  max-width: 430px;
+  height: 38px;
+  max-width: 408px;
   margin: 0 auto 0 0;
-  padding: 0 6px 0 14px;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  color: rgba(236, 247, 242, 0.5);
-  transition: border-color 190ms ease, background 190ms ease, color 190ms ease;
+  padding: 0 12px 0 12px;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.038);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.22);
+  color: rgba(236, 247, 242, 0.46);
+  font-size: 13px;
+  transition: border-color 190ms ease, background 190ms ease, color 190ms ease,
+              box-shadow 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .search-big svg {
+  opacity: 1;
+  color: rgba(236, 247, 242, 0.42);
+  transition: color 190ms ease;
 }
 
 body.design-vexel[data-vexel-mode="light"] .search-big:hover {
-  border-color: rgba(125, 242, 176, 0.28);
-  background: rgba(255, 255, 255, 0.075);
-  color: rgba(236, 247, 242, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  border-color: rgba(125, 242, 176, 0.22);
+  background: rgba(255, 255, 255, 0.062);
+  color: rgba(236, 247, 242, 0.86);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+body.design-vexel[data-vexel-mode="light"] .search-big:hover svg {
+  color: rgba(141, 246, 190, 0.85);
+}
+
+/* The paper-skin focus ring (a white fill + atlas-green border) is invisible
+ * against black chrome — restate it in mint. */
+body.design-vexel[data-vexel-mode="light"] .search-big:focus-visible {
+  outline: none;
+  border-color: rgba(125, 242, 176, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(236, 247, 242, 0.92);
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.16);
 }
 
 body.design-vexel[data-vexel-mode] .search-big .ph {
@@ -2197,18 +2229,27 @@ body.design-vexel[data-vexel-mode] .search-big .ph {
   white-space: nowrap;
 }
 
+/* Not a keycap. The glyphs alone, tracked open, at the weight of a footnote —
+ * the people who use ⌘K already know it's a key, and the people who don't were
+ * never going to be told by a rounded rectangle. */
 body.design-vexel[data-vexel-mode="light"] .search-big .k {
   display: inline-flex;
   align-items: center;
   margin-inline-start: auto;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(236, 247, 242, 0.48);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: rgba(236, 247, 242, 0.34);
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.02em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  transition: color 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .search-big:hover .k {
+  color: rgba(236, 247, 242, 0.58);
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn {
