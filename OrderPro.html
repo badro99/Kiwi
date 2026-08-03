@@ -5042,7 +5042,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const shownTotal = isFinite(serverTotal) && serverTotal > 0 ? serverTotal : totalNow;
       closeCart();
       if (orderMode === 'takeout') {
-        orderNumber = String(res.number || '');
+        orderNumber = 'OPD-' + String(res.number || '');
         $('#cashier-number-digits').textContent = orderNumber;
         $('#prep-number').textContent = orderNumber;
         $('#ready-number').textContent = orderNumber;

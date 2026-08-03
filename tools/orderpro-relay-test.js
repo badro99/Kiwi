@@ -116,6 +116,16 @@ async function get(fn, qs, headers = {}) {
   const asStaff = { Cookie: staff };
   const line = (id, qty = 1) => ({ id, qty });
 
+  const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  const caissePage = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
+  ok('OrderPro affiche OPD sur le retrait',
+    /orderNumber\s*=\s*'OPD-'\s*\+\s*String\(res\.number/.test(orderProPage));
+  ok('la caisse distingue OP et OPD selon le mode OrderPro',
+    /o\.opChannel\s*===\s*'kiwi'[\s\S]{0,120}'OPD-'\s*:\s*'OP-'/.test(caissePage));
+  ok('l\'\u00e9cran cuisine distingue OP et OPD selon le mode OrderPro',
+    /o\.channel\s*===\s*'kiwi'[\s\S]{0,120}'OPD-'\s*:\s*'OP-'/.test(kitchenPage));
+
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
   ok('le dimanche reste dans la semaine qui précède',

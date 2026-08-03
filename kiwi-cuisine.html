@@ -562,7 +562,11 @@
   /* Le numéro que TOUT LE MONDE peut prononcer. C'est celui du serveur : le
      comptoir l'affiche aussi (kiwi-caisse.html · ticketNo), donc « bon 7 prêt »
      crié depuis le passe désigne bien le bon que le caissier a sous les yeux. */
-  function ticketNo(o) { return 'C-' + String(o.number || 0).padStart(3, '0'); }
+  function ticketNo(o) {
+    var n = String((o && o.number) || 0);
+    if (o && o.channel === 'kiwi') return (o.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+    return n;
+  }
 
   function whereChip(o) {
     if (o.mode === 'table' && o.table) return '<span class="chip table">Table ' + esc(o.table) + '</span>';

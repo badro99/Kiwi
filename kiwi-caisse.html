@@ -12914,7 +12914,12 @@
        le compteur simple et hebdomadaire du serveur ; pendant le bref instant
        hors ligne avant sa réponse, on garde le compteur local en repli. */
     function ticketNo(o) {
-      return o && o.opNum != null ? String(o.opNum) : String(o.num);
+      if (o && o.opNum != null) {
+        const n = String(o.opNum);
+        if (o.opChannel === 'kiwi') return (o.type === 'takeaway' ? 'OPD-' : 'OP-') + n;
+        return n;
+      }
+      return String(o.num);
     }
 
     function kdsPaint() {
@@ -13816,6 +13821,7 @@
           num: ++kdsOrderSeq,
           opId: o.id,
           opNum: o.number,
+          opChannel: o.channel || 'kiwi',
           type: isTakeaway ? 'takeaway' : 'dineIn',
           table: o.mode === 'table' ? (o.table || '') : null,
           server: o.server || (o.mode === 'table' ? serverNameFor(o.table) : ''),
@@ -13842,6 +13848,11 @@
         kdsOrders.push(t);
         opTickets.set(o.id, t);
         return;
+      } else {
+        /* Après un rechargement, un ancien instantané peut ne pas avoir gardé
+           la provenance. La file serveur la rend : on restaure donc le préfixe
+           exact sans recréer le ticket. */
+        known.opChannel = o.channel || known.opChannel || 'kiwi';
       }
 
       /* Déjà connue : on ne suit QUE ce que le serveur peut nous apprendre de
