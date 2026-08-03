@@ -674,6 +674,7 @@ section('Whole-project regressions');
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
+    'table-refresh-test.js',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });

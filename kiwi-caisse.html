@@ -14214,9 +14214,18 @@
       } catch (_) {}
       try {
         if (storeIsReal()) {
-          const genuine = (saved.journal || []).filter((e) => String(e && e.id || '').indexOf('seed-') !== 0);
-          if (!genuine.length) { localStorage.removeItem('kiwi-caisse-shift'); return; }
-          if (genuine.length !== (saved.journal || []).length) {
+          const originalJournal = saved.journal || [];
+          const genuine = originalJournal.filter((e) => String(e && e.id || '').indexOf('seed-') !== 0);
+          const hadDemoSeeds = genuine.length !== originalJournal.length;
+          /* Un service réel peut parfaitement n'avoir encore AUCUNE vente : une
+             table est ouverte, sa commande est partie en cuisine, mais personne
+             n'a encore payé. L'ancien `if (!genuine.length)` supprimait alors
+             tout le snapshot au F5 — table, addition et lignes — simplement parce
+             que le journal d'encaissement était vide. On ne jette un journal vide
+             que lorsqu'il est devenu vide APRÈS retrait de vraies lignes de démo.
+             Zéro ligne au départ est un service en cours, pas une contamination. */
+          if (hadDemoSeeds && !genuine.length) { localStorage.removeItem(KC_STORE); return; }
+          if (hadDemoSeeds) {
             saved.journal = genuine;
             saved.tables = {}; saved.tableOrders = {}; saved.orders = {}; saved.kdsOrders = [];
             if (saved.shift) saved.shift.tablesPaid = 0;
