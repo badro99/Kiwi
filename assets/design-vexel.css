@@ -1212,7 +1212,7 @@ body.design-vexel .vx-entry-logo img {
 }
 
 body.design-vexel[data-vexel-mode="dark"] .vx-entry-logo .brand-logo-dark,
-body.design-vexel[data-vexel-mode="light"] .vx-entry-logo .brand-logo-light {
+body.design-vexel[data-vexel-mode] .vx-entry-logo .brand-logo-light {
   display: block;
 }
 
@@ -1586,11 +1586,11 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
   border-radius: var(--vx-card-radius);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
   font-size: clamp(34px, 3vw, 44px);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
   width: auto;
 }
 
@@ -1634,11 +1634,11 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   background: var(--vx-card-bg) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
   display: none;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover {
   transform: translateY(-2px);
 }
 
@@ -1649,7 +1649,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-more-clip [dat
   color: var(--ink);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head {
+body.design-vexel[data-vexel-mode] .dash-standard .block-head {
   align-items: flex-start;
   gap: 14px;
   margin-bottom: 20px;
@@ -1660,7 +1660,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .big {
   color: var(--ink);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .t {
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .t {
   font-size: 17px;
   line-height: 1.15;
   letter-spacing: -0.035em;
@@ -1671,7 +1671,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .sub {
   color: var(--n-500);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle::after {
+body.design-vexel[data-vexel-mode] .dash-standard .settle::after {
   opacity: 0.12;
 }
 
@@ -1685,26 +1685,26 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .instant:hover
 }
 
 /* Recommendation row joins the same rhythm and card proportions. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band {
   margin: 0 0 var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-eyebrow {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-eyebrow {
   margin: 0 0 10px 2px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-grid {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-grid {
   gap: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card {
   min-height: 158px;
   padding: 21px 22px;
 }
 
 /* Main operations area: align heatmap with evening service, then orders with
  * stock. design-vexel.js already moved payment mix into the composed top area. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: auto auto;
@@ -1713,33 +1713,33 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash
   margin-bottom: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col {
   display: contents;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-hh-row]) {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-hh-row]) {
   grid-column: 1 / span 2;
   grid-row: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .settle {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .settle {
   grid-column: 3;
   grid-row: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-feed]) {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-feed]) {
   grid-column: 1 / span 2;
   grid-row: 2;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
   grid-column: 3;
   grid-row: 2;
 }
 
 /* Secondary analytics: health aligns with benchmark; products aligns with
  * team performance. Both cards in each row now share a bottom edge. */
-body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even {
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: auto auto;
@@ -1747,40 +1747,40 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even {
   align-items: stretch;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col {
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col {
   display: contents;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more [data-health-card] {
+body.design-vexel[data-vexel-mode] .dash-more [data-health-card] {
   grid-column: 1;
   grid-row: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more [data-bench-card] {
+body.design-vexel[data-vexel-mode] .dash-more [data-bench-card] {
   grid-column: 2;
   grid-row: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .block:has([data-products-list]) {
+body.design-vexel[data-vexel-mode] .dash-more .block:has([data-products-list]) {
   grid-column: 1;
   grid-row: 2;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .block:has([data-staff-list]) {
+body.design-vexel[data-vexel-mode] .dash-more .block:has([data-staff-list]) {
   grid-column: 2;
   grid-row: 2;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col > .block {
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col > .block {
   height: 100%;
 }
 
 /* Integration is a parent card; its four tools use a quieter nested style. */
-body.design-vexel[data-vexel-mode="light"] .dash-more [data-integ-card] {
+body.design-vexel[data-vexel-mode] .dash-more [data-integ-card] {
   margin-top: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-grid {
+body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
   gap: 12px;
 }
 
@@ -1793,7 +1793,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
 }
 
 @media (max-width: 1180px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title report"
@@ -1802,20 +1802,20 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
 }
 
 @media (max-width: 900px) {
-  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even),
-  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even {
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even),
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even {
     display: flex;
     flex-direction: column;
     gap: var(--vx-card-gap);
   }
 
-  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col,
-  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col {
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col,
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col {
     display: contents;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col > *,
-  body.design-vexel[data-vexel-mode="light"] .dash-more .dash-cols--even > .dash-col > * {
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col > *,
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col > * {
     width: 100%;
     height: auto;
   }
@@ -2128,19 +2128,24 @@ body.design-vexel[data-vexel-mode="light"] .topbar {
    * against the sidebar's true black — it separates the two regions without
    * having to draw a line between them. */
   background: linear-gradient(180deg, #0A1512 0%, #050A08 100%) !important;
-  box-shadow: 0 18px 40px -34px rgba(2, 16, 11, 0.92) !important;
+  /* The inset hairline along the top edge is what stops black chrome reading as
+   * a hole in the page. It is the same trick a physical bezel does with light:
+   * one lit edge is enough to say "this surface has a front". */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 18px 40px -34px rgba(2, 16, 11, 0.92) !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar > .topbar-inner {
+body.design-vexel[data-vexel-mode] .topbar > .topbar-inner {
   min-height: 72px;
   padding: 0;
   gap: 12px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar :is(.breadcrumb, .hours-pill),
-body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn[aria-label="Paramètres"] {
+body.design-vexel[data-vexel-mode] .topbar :is(.breadcrumb, .hours-pill),
+body.design-vexel[data-vexel-mode] .topbar .icon-btn[aria-label="Paramètres"] {
   display: none !important;
 }
 
@@ -2173,7 +2178,7 @@ body.design-vexel[data-vexel-mode="light"] .search-big:hover {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-body.design-vexel[data-vexel-mode="light"] .search-big .ph {
+body.design-vexel[data-vexel-mode] .search-big .ph {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2237,7 +2242,14 @@ body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn {
   border-radius: 999px;
   background: linear-gradient(180deg, #8DF6BE 0%, #5FE9A4 100%) !important;
   color: #04231A;
-  box-shadow: 0 10px 24px -14px rgba(93, 233, 164, 0.7);
+  /* Two shadows doing different jobs: a tight one that seats the button on the
+   * bar, and a wide diffuse bloom so the mint reads as a light source in the
+   * black rather than a flat swatch pasted onto it. Deliberately NOT the 9px
+   * hard spread this replaced — that had a visible edge, which is what made it
+   * look like a stuck focus ring. */
+  box-shadow:
+    0 10px 24px -14px rgba(93, 233, 164, 0.7),
+    0 0 32px -6px rgba(125, 242, 176, 0.26);
   font-size: 13.5px;
   font-weight: 640;
   letter-spacing: 0.005em;
@@ -2273,29 +2285,50 @@ body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn:hover {
 
 body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
   order: 4;
+  position: relative;
   display: grid;
-  grid-template-columns: 38px minmax(0, auto) 14px;
+  grid-template-columns: 34px minmax(0, auto) 14px;
   align-items: center;
   gap: 10px;
-  min-width: 190px;
-  padding-inline-start: 4px;
+  min-width: 178px;
+  margin-inline-start: 4px;
+  padding-inline-start: 16px;
   color: #fff;
   cursor: pointer;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .avatar {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 50%;
-  background: #20d9a0;
-  color: #073326;
-  font-size: 12px;
-  font-weight: 750;
+/* Hairline between the app's tools and who is signed in. The bell and the
+ * merchant block used to sit 14px apart with no boundary, so the account read
+ * as one more control in the row. */
+body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  width: 1px;
+  height: 26px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.09);
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .m-info {
+/* Was a solid mint disc. With the agent button now filled mint, two mint
+ * objects sat 60px apart and split the eye — and the one that won was the
+ * avatar, which is the least actionable thing in the bar. It gives the fill up
+ * and keeps mint only in its initials. */
+body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8DF6BE;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-info {
   min-width: 0;
 }
 
@@ -2320,22 +2353,22 @@ body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .m-car
 }
 
 @media (max-width: 1100px) {
-  body.design-vexel[data-vexel-mode="light"] .topbar {
+  body.design-vexel[data-vexel-mode] .topbar {
     margin: 0;
     padding-inline: 16px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant {
     min-width: 0;
     grid-template-columns: 38px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant :is(.m-info, .m-caret) {
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant :is(.m-info, .m-caret) {
     display: none;
   }
 }
 
-body.design-vexel[data-vexel-mode="light"] #kw-main > .container {
+body.design-vexel[data-vexel-mode] #kw-main > .container {
   padding-top: 24px;
 }
 
@@ -2361,26 +2394,26 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
   backdrop-filter: blur(18px);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range::before {
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range::before {
   content: none;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range > div:first-child {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range > div:first-child {
   grid-area: title;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
   font-size: clamp(35px, 3.4vw, 48px);
   line-height: 0.95;
 }
 
 /* The venue remains available in the sidebar; repeating it beside the page
  * title made the command area feel like a form and squeezed the date controls. */
-body.design-vexel[data-vexel-mode="light"] .vexel-venue {
+body.design-vexel[data-vexel-mode] .vexel-venue {
   display: none !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
   grid-area: range;
   width: 100%;
   margin: 0;
@@ -2395,14 +2428,14 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-p
   background: var(--vx-white-045);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-report-btn {
+body.design-vexel[data-vexel-mode] .vexel-report-btn {
   grid-area: report;
   margin: 0;
   min-height: 46px;
   padding-inline: 21px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head {
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head {
   min-height: 34px;
   gap: 8px;
   margin-bottom: 10px;
@@ -2440,7 +2473,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] 
   box-shadow: var(--elev-2) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
   position: relative;
   overflow: hidden;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2463,8 +2496,8 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
     var(--paper-elev) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child::before,
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover::before {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child::before,
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover::before {
   opacity: 1;
 }
 
@@ -2474,24 +2507,24 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   border-color: var(--vx-card-hover-border) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
   position: relative;
   isolation: isolate;
   overflow: hidden;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::before {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today::before {
   content: none;
 }
 
 @media (max-width: 920px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
     grid-template-columns: 1fr auto;
     gap: 18px;
     padding: 24px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-pills {
+  body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-pills {
     width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
@@ -2499,7 +2532,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::bef
 }
 
 @media (max-width: 720px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "title report"
@@ -2508,7 +2541,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::bef
     border-radius: 22px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+  body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
     font-size: clamp(30px, 10vw, 39px);
   }
 }
@@ -2526,11 +2559,11 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
   box-shadow: var(--vx-card-shadow);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-label {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
   font-size: clamp(34px, 3vw, 44px);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-control {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
   width: auto;
 }
 
@@ -2552,12 +2585,12 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   background: var(--vx-card-bg) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
   display: none;
 }
 
 @media (max-width: 1180px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title report"
@@ -2566,7 +2599,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
 }
 
 @media (max-width: 720px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
     padding: 21px 18px;
   }
 }
@@ -2647,8 +2680,8 @@ body.design-vexel[data-vexel-mode="light"] :is(
 }
 
 /* A common header hierarchy. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head,
-body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row [data-mix-block] .block-head {
+body.design-vexel[data-vexel-mode] .dash-standard .block-head,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] .block-head {
   min-height: 38px;
   align-items: flex-start;
   margin-bottom: 20px;
@@ -2680,7 +2713,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
 }
 
 /* KPI cards stay compact and form one scan line on desktop. */
-body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band] {
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: var(--vx-card-gap);
 }
@@ -2693,7 +2726,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   background: #fff !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
   content: none !important;
 }
 
@@ -2727,19 +2760,19 @@ body.design-vexel[data-vexel-mode="light"] :is(
   vertical-align: 0.12em;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .kpi-m .v {
+body.design-vexel[data-vexel-mode] .vexel-compose .kpi-m .v {
   font-size: clamp(28px, 2.15vw, 34px);
   font-weight: 650;
   letter-spacing: -0.045em;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-kpi-comparison {
+body.design-vexel[data-vexel-mode] .vexel-kpi-comparison {
   margin-top: 10px;
   font-size: 12px;
 }
 
 /* Preserve the chart + rail composition through normal laptop widths. */
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
   align-items: stretch;
@@ -2748,7 +2781,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
   gap: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
   width: auto;
   height: 348px !important;
   min-height: 348px;
@@ -2762,20 +2795,20 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head {
   border-bottom: 1px solid rgba(10, 24, 18, 0.075);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-grid,
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left,
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-grid,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart {
   height: 100% !important;
   min-height: 0;
   flex: 1 1 auto;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .chart-wrap {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .chart-wrap {
   height: auto !important;
   min-height: 210px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) !important;
   grid-template-rows: minmax(149px, auto) minmax(175px, 1fr);
@@ -2785,7 +2818,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
   gap: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-rail-card {
+body.design-vexel[data-vexel-mode] .vexel-rail-card {
   width: 100%;
   padding: 21px 22px;
 }
@@ -2827,12 +2860,12 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .lbl {
   text-transform: uppercase;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-goal-track i {
+body.design-vexel[data-vexel-mode] .vexel-goal-track i {
   box-shadow: none;
 }
 
 /* Both analytic cards use the same dimensions and header baseline. */
-body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row {
+body.design-vexel[data-vexel-mode] .vexel-bottom-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
@@ -2840,8 +2873,8 @@ body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row {
   gap: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-goals-card,
-body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] {
+body.design-vexel[data-vexel-mode] .vexel-goals-card,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row > [data-mix-block] {
   width: auto;
   height: 100%;
   padding: var(--vx-card-pad);
@@ -2849,44 +2882,44 @@ body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] 
 
 /* Recommendation cards share the same spacing and keep their illustration
  * subordinate to the message rather than behaving like a different widget. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-grid {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-grid {
   gap: var(--vx-card-gap);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card {
   min-height: 192px;
   padding: 22px;
   isolation: isolate;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-d {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-d {
   max-width: 76%;
   margin-top: 1px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-art {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-art {
   inset-inline-end: 9px;
   bottom: 8px;
   width: 100px;
   height: 80px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card:hover .oppo-art {
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card:hover .oppo-art {
   transform: translateY(-2px) rotate(-1deg);
 }
 
 /* Native operational cards use one inset and clip child rows to the radius. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols :is(.block, .settle),
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-more-clip [data-integ-card] {
+body.design-vexel[data-vexel-mode] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-more-clip [data-integ-card] {
   padding: var(--vx-card-pad) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle::after {
+body.design-vexel[data-vexel-mode] .dash-standard .settle::after {
   content: none;
 }
 
 /* Integrations are nested controls, not a second glowing card family. */
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-grid {
+body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
   gap: 12px;
 }
 
@@ -2908,7 +2941,7 @@ body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
 
 /* Revenue is the dashboard's hero metric. Give it a real information
  * hierarchy instead of leaving a small title above an oversized empty plot. */
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row {
   height: 430px !important;
   min-height: 430px;
 }
@@ -2942,12 +2975,12 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::bef
   pointer-events: none;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-grid {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-grid {
   position: relative;
   z-index: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart > .block-head {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart > .block-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
@@ -3022,7 +3055,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta.do
   color: #bd3f30;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta svg {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta svg {
   width: 13px;
   height: 13px;
 }
@@ -3039,7 +3072,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row [data-rev-sub] {
   font-size: 11.5px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .block-head .right-actions {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .block-head .right-actions {
   display: block !important;
 }
 
@@ -3061,7 +3094,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn.on {
   color: #087451;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-legend {
+body.design-vexel[data-vexel-mode] .vexel-revenue-legend {
   display: none;
 }
 
@@ -3146,7 +3179,7 @@ body.design-vexel .vexel-revenue-row .chart-wrap.is-hover .rev-live {
   transition: opacity 160ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
   height: 430px;
   grid-template-rows: minmax(184px, auto) minmax(228px, 1fr);
 }
@@ -3154,34 +3187,34 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
 /* Card audit · the rail rows used to reserve 184px while the goal card kept a
  * hard 151px height. That invisible 33px hole made the customer card look
  * detached from the revenue card. Both cards now fill the rows they own. */
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail > .vexel-rail-card {
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail > .vexel-rail-card {
   height: 100%;
   min-height: 0;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-day-goal {
+body.design-vexel[data-vexel-mode] .vexel-day-goal {
   flex: none;
 }
 
 /* Customer growth · compact chart, one coherent value line, grounded delta. */
-body.design-vexel[data-vexel-mode="light"] .vexel-clients {
+body.design-vexel[data-vexel-mode] .vexel-clients {
   display: flex;
   flex-direction: column;
   padding-block: 17px 18px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-clients > svg {
+body.design-vexel[data-vexel-mode] .vexel-clients > svg {
   height: 76px;
   margin-top: 7px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-client-foot {
+body.design-vexel[data-vexel-mode] .vexel-client-foot {
   align-items: center;
   min-height: 38px;
   margin-top: auto;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-client-foot > div {
+body.design-vexel[data-vexel-mode] .vexel-client-foot > div {
   display: flex;
   flex-direction: row;
   align-items: baseline;
@@ -3189,7 +3222,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-client-foot > div {
   min-width: 0;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-client-foot strong {
+body.design-vexel[data-vexel-mode] .vexel-client-foot strong {
   font-size: 29px;
 }
 
@@ -3212,14 +3245,14 @@ body.design-vexel[data-vexel-mode="light"] .vexel-client-foot b {
 
 /* Service goals · one unavailable message belongs in the subtitle, not four
  * times under four rings. Empty channels keep their identity without colliding. */
-body.design-vexel[data-vexel-mode="light"] .vexel-rings {
+body.design-vexel[data-vexel-mode] .vexel-rings {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   justify-content: stretch;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-ring-item span {
+body.design-vexel[data-vexel-mode] .vexel-ring-item span {
   max-width: 100%;
   font-size: 12px;
   line-height: 1.25;
@@ -3227,31 +3260,31 @@ body.design-vexel[data-vexel-mode="light"] .vexel-ring-item span {
   white-space: normal;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-ring-item.is-empty svg {
+body.design-vexel[data-vexel-mode] .vexel-ring-item.is-empty svg {
   width: 90px;
   min-width: 90px;
   height: 90px;
   min-height: 90px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-ring-item.is-empty span {
+body.design-vexel[data-vexel-mode] .vexel-ring-item.is-empty span {
   margin-top: 11px;
 }
 
 /* Main operations · the ten-order feed can be tall; the stock card should end
  * with its final action instead of stretching into hundreds of blank pixels. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) {
   align-items: start;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
   height: auto !important;
   align-self: start;
 }
 
 /* The generated summary cards now share the same quiet response as native
  * cards. No bright wash, just the emerald edge and a small elevation. */
-body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-card) {
+body.design-vexel[data-vexel-mode] :is(.vexel-rail-card, .vexel-goals-card) {
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
@@ -3262,22 +3295,22 @@ body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-ca
 }
 
 @media (max-width: 1100px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band] {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row {
     display: flex !important;
     height: auto !important;
     flex-direction: column;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
     height: 410px !important;
     min-height: 410px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
@@ -3285,32 +3318,32 @@ body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-ca
     grid-template-rows: 214px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row {
+  body.design-vexel[data-vexel-mode] .vexel-bottom-row {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > [data-kpi-band],
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band],
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
     grid-template-columns: 1fr !important;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
     grid-template-rows: minmax(184px, auto) minmax(210px, auto) !important;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m {
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
     min-height: 116px;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
     height: 390px !important;
     min-height: 390px;
     padding: 22px 18px 18px !important;
   }
 
-  body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-val {
     font-size: 36px;
   }
 }
@@ -3344,16 +3377,16 @@ body.design-vexel[data-vexel-mode="light"] .sidebar::-webkit-scrollbar-thumb {
   background: rgba(49, 225, 160, 0.22);
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar .brand {
+body.design-vexel[data-vexel-mode] .sidebar .brand {
   margin-block: 8px 24px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar .brand-logo {
+body.design-vexel[data-vexel-mode] .sidebar .brand-logo {
   filter: brightness(0) invert(1);
   opacity: 0.96;
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch-wrap {
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch-wrap {
   margin-bottom: 24px;
 }
 
@@ -3383,7 +3416,7 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch.open {
   border-color: rgba(49, 225, 160, 0.3);
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .badge {
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch .badge {
   font-weight: 650;
   letter-spacing: 0.105em;
 }
@@ -3392,7 +3425,7 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .badge i {
   box-shadow: 0 0 0 3px rgba(49, 225, 160, 0.1), 0 0 12px rgba(49, 225, 160, 0.34);
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .name {
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch .name {
   margin-top: 9px;
   font-weight: 580;
 }
@@ -3403,7 +3436,7 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .meta {
   line-height: 1.45;
 }
 
-body.design-vexel[data-vexel-mode="light"] .sidebar nav {
+body.design-vexel[data-vexel-mode] .sidebar nav {
   gap: 3px;
 }
 
@@ -3490,7 +3523,7 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .avatar {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover {
+  body.design-vexel[data-vexel-mode] .sidebar nav a:hover {
     transform: none;
   }
 }
