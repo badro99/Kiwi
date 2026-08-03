@@ -342,10 +342,25 @@
   const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
   const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
   const OPT_EMOJIS = Object.freeze([
-    '🥬', '🍅', '🧅', '🥒', '🥕', '🌶️', '🫑', '🍋', '🫒', '🧄',
-    '🧀', '🥚', '🥓', '🍗', '🥩', '🍤', '🐟', '🍟', '🍚', '🍞',
-    '🥙', '🌯', '🍕', '🍔', '🥗', '🥣', '🥫', '🍯', '🥛', '☕',
-    '🥤', '🧊', '🔥', '✅', '🚫', '⚠️',
+    // Fruits, légumes, aromates et ingrédients bruts.
+    '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
+    '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
+    '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
+    '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
+    // Boulangerie, protéines et plats préparés.
+    '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
+    '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
+    '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
+    '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
+    '🥠', '🥮', '🍢', '🍡', '🥡',
+    // Desserts et boissons.
+    '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
+    '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
+    '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
+    // Repères opérationnels : validation, interdiction, température, matériel et couleurs.
+    '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
+    '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
+    '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
   ]);
   const cleanOptEmoji = (value) => {
     const emoji = String(value || '').trim();
@@ -606,7 +621,8 @@
       .mx-og-emoji:hover, .mx-og-emoji:focus, .mx-og-emoji[aria-expanded="true"] { border-color: var(--atlas); background: var(--surface); }
       .mx-og-emoji-picker { position: absolute; z-index: 30; inset-inline-start: 0; top: calc(100% + 6px); width: 254px;
         padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface);
-        box-shadow: 0 12px 32px rgba(10, 30, 22, .16); }
+        box-shadow: 0 12px 32px rgba(10, 30, 22, .16); max-height: 360px; overflow-y: auto;
+        overscroll-behavior: contain; }
       .mx-og-emoji-picker[hidden] { display: none; }
       .mx-og-emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
       .mx-og-emoji-pick { height: 34px; border: 1px solid transparent; border-radius: 7px; background: transparent;
