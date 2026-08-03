@@ -30,6 +30,16 @@ import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../aut
 import { storeSuspended } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const OPTION_EMOJIS = new Set([
+  '🥬', '🍅', '🧅', '🥒', '🥕', '🌶️', '🫑', '🍋', '🫒', '🧄',
+  '🧀', '🥚', '🥓', '🍗', '🥩', '🍤', '🐟', '🍟', '🍚', '🍞',
+  '🥙', '🌯', '🍕', '🍔', '🥗', '🥣', '🥫', '🍯', '🥛', '☕',
+  '🥤', '🧊', '🔥', '✅', '🚫', '⚠️',
+]);
+const optionEmoji = (v) => {
+  const value = str(v, 16).trim();
+  return OPTION_EMOJIS.has(value) ? value : '';
+};
 
 // Media are stored as URLs (uploaded to R2 via /api/media), never as bytes. Only
 // same-origin /api/media/ paths are kept: a published menu is rendered on a
@@ -118,7 +128,7 @@ function sanitizeMenu(raw) {
       name: str(c && c.name, 60),
       // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
       // publiées avant cette clé continuent avec une chaîne vide.
-      emoji: str(c && c.emoji, 16),
+      emoji: optionEmoji(c && c.emoji),
       price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
     })).filter((c) => c.id && c.name),
   })).filter((g) => g.id && g.name);

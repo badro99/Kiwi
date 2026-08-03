@@ -491,8 +491,9 @@ ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
 ok(/paperNote: kitchenNote\(l\), visuals: optVisuals\(l\.opts\)/.test(caisseSrc),
   'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
-ok(/emoji: str\(c && c\.emoji, 16\)/.test(menuApi),
-  'le repère visuel facultatif survit à la publication de la carte');
+ok(/emoji: optionEmoji\(c && c\.emoji\)/.test(menuApi)
+  && /OPTION_EMOJIS = new Set/.test(menuApi),
+  'le repère visuel choisi survit à la publication sans accepter de texte libre');
 ok(/emoji: String\(c\.emoji \|\| ''\)/.test(caisseSrc),
   'la caisse conserve le repère visuel de chaque choix');
 

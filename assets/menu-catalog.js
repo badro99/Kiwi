@@ -110,6 +110,7 @@
     optChNm:    { fr: 'Nom du choix', en: 'Choice name', ar: 'اسم الاختيار' },
     optChEmoji: { fr: 'Repère visuel', en: 'Visual marker', ar: 'رمز بصري' },
     optEmojiHi: { fr: 'Ajoutez un emoji facultatif à chaque choix pour le rendre immédiatement reconnaissable sur l’écran cuisine.', en: 'Add an optional emoji to each choice so it is immediately recognisable on the kitchen display.', ar: 'زيد إيموجي اختياري لكل اختيار باش يتعرف عليه العامل بسرعة فشاشة المطبخ.' },
+    optEmojiNone:{ fr: 'Aucun repère', en: 'No marker', ar: 'بلا رمز' },
     optChPr:    { fr: 'Supplément', en: 'Extra', ar: 'زيادة' },
     optChEm:    { fr: 'Ce groupe n\'a aucun choix — le comptoir n\'aurait rien à proposer.', en: 'This group has no choices — the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات — الصندوق ماغاديش يلقى شنو يقترح.' },
     optDelQ:    { fr: 'Supprimer ce groupe ? Il sera retiré des produits qui l\'utilisent.', en: 'Delete this group? It will be removed from the products using it.', ar: 'حذف هاد المجموعة؟ غادي تتحيد من المنتجات اللي كيستعملوها.' },
@@ -340,6 +341,16 @@
    * Un choix peut porter un supplément (`price`, en MAD, 0 = compris). */
   const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
   const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
+  const OPT_EMOJIS = Object.freeze([
+    '🥬', '🍅', '🧅', '🥒', '🥕', '🌶️', '🫑', '🍋', '🫒', '🧄',
+    '🧀', '🥚', '🥓', '🍗', '🥩', '🍤', '🐟', '🍟', '🍚', '🍞',
+    '🥙', '🌯', '🍕', '🍔', '🥗', '🥣', '🥫', '🍯', '🥛', '☕',
+    '🥤', '🧊', '🔥', '✅', '🚫', '⚠️',
+  ]);
+  const cleanOptEmoji = (value) => {
+    const emoji = String(value || '').trim();
+    return OPT_EMOJIS.indexOf(emoji) >= 0 ? emoji : '';
+  };
 
   function addOptGroup(name) {
     return store.update((d) => {
@@ -379,7 +390,7 @@
     return store.update((d) => {
       const g = optById(d, gid); if (!g) return d;
       g.choices = Array.isArray(g.choices) ? g.choices : [];
-      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0), emoji: String(emoji || '').trim().slice(0, 16) });
+      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0), emoji: cleanOptEmoji(emoji) });
       return d;
     });
   }
@@ -389,7 +400,7 @@
       const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
       if (patch.name != null) c.name = String(patch.name).trim() || c.name;
       if (patch.price != null) c.price = Math.max(0, +patch.price || 0);
-      if (patch.emoji != null) c.emoji = String(patch.emoji || '').trim().slice(0, 16);
+      if (patch.emoji != null) c.emoji = cleanOptEmoji(patch.emoji);
       return d;
     });
   }
@@ -587,14 +598,26 @@
       .mx-og-req { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
       .mx-og-list { display: flex; flex-direction: column; gap: 6px; }
       .mx-og-ch { display: flex; align-items: center; gap: 8px; }
-      .mx-og-emoji { width: 48px; flex: 0 0 48px; border: 1px solid var(--line); border-radius: 8px;
-        padding: 5px 4px; font: inherit; font-size: 20px; line-height: 1.2; text-align: center;
+      .mx-og-emoji-wrap { position: relative; width: 48px; flex: 0 0 48px; }
+      .mx-og-emoji { width: 48px; height: 34px; border: 1px solid var(--line); border-radius: 8px;
+        padding: 4px; font: inherit; font-size: 20px; line-height: 1; text-align: center; cursor: pointer;
         color: var(--ink); background: var(--paper-soft); outline: none; }
-      .mx-og-emoji:focus { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-emoji.empty { color: var(--n-500); font-size: 18px; }
+      .mx-og-emoji:hover, .mx-og-emoji:focus, .mx-og-emoji[aria-expanded="true"] { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-emoji-picker { position: absolute; z-index: 30; inset-inline-start: 0; top: calc(100% + 6px); width: 254px;
+        padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface);
+        box-shadow: 0 12px 32px rgba(10, 30, 22, .16); }
+      .mx-og-emoji-picker[hidden] { display: none; }
+      .mx-og-emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+      .mx-og-emoji-pick { height: 34px; border: 1px solid transparent; border-radius: 7px; background: transparent;
+        font-size: 20px; line-height: 1; cursor: pointer; }
+      .mx-og-emoji-pick:hover, .mx-og-emoji-pick:focus { border-color: var(--line); background: var(--paper-soft); outline: none; }
+      .mx-og-emoji-clear { width: 100%; margin-top: 7px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px;
+        background: var(--paper-soft); color: var(--n-600); font: inherit; font-size: 11.5px; cursor: pointer; }
       .mx-og-visual-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); margin: -3px 0 10px; }
-      .mx-og-ch > input[type="text"]:not(.mx-og-emoji) { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+      .mx-og-ch > input[type="text"] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
         padding: 6px 9px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-soft); outline: none; }
-      .mx-og-ch > input[type="text"]:not(.mx-og-emoji):focus { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-ch > input[type="text"]:focus { border-color: var(--atlas); background: var(--surface); }
       .mx-og-ch .pr { display: inline-flex; align-items: center; gap: 5px; }
       .mx-og-ch .pr input { width: 62px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
         font: inherit; font-size: 13px; font-family: var(--mono); text-align: right; color: var(--ink);
@@ -1056,11 +1079,21 @@
     function paint(focusSel) {
       const list = optsOf(store.get());
       const cards = list.map((g) => {
-        const choices = (g.choices || []).map((c) => `
+        const choices = (g.choices || []).map((c) => {
+          const emoji = cleanOptEmoji(c.emoji);
+          return `
           <div class="mx-og-ch" data-oc="${esc(c.id)}">
-            <input class="mx-og-emoji" type="text" value="${esc(c.emoji || '')}" maxlength="16"
-                   placeholder="🥬" inputmode="text" data-oc-emoji="${esc(g.id)}::${esc(c.id)}"
-                   aria-label="${esc(tr(T.optChEmoji))}" title="${esc(tr(T.optChEmoji))}" />
+            <div class="mx-og-emoji-wrap">
+              <button class="mx-og-emoji ${emoji ? '' : 'empty'}" type="button"
+                      data-oc-emoji-open="${esc(g.id)}::${esc(c.id)}" aria-expanded="false"
+                      aria-label="${esc(tr(T.optChEmoji))}" title="${esc(tr(T.optChEmoji))}">${emoji ? esc(emoji) : '+'}</button>
+              <div class="mx-og-emoji-picker" data-oc-emoji-picker="${esc(g.id)}::${esc(c.id)}" hidden>
+                <div class="mx-og-emoji-grid">
+                  ${OPT_EMOJIS.map((icon) => `<button class="mx-og-emoji-pick" type="button" data-oc-emoji-pick="${esc(g.id)}::${esc(c.id)}" data-emoji="${esc(icon)}" aria-label="${esc(icon)}">${esc(icon)}</button>`).join('')}
+                </div>
+                <button class="mx-og-emoji-clear" type="button" data-oc-emoji-pick="${esc(g.id)}::${esc(c.id)}" data-emoji="">${esc(tr(T.optEmojiNone))}</button>
+              </div>
+            </div>
             <input type="text" value="${esc(c.name)}" data-oc-name="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChNm))}" />
             <div class="pr">
               <input type="number" min="0" step="1" value="${c.price ? esc(c.price) : ''}" placeholder="0"
@@ -1068,7 +1101,8 @@
               <span>MAD</span>
             </div>
             <button type="button" class="del" data-oc-del="${esc(g.id)}::${esc(c.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
-          </div>`).join('');
+          </div>`;
+        }).join('');
         return `
         <div class="mx-og" data-og="${esc(g.id)}">
           <div class="mx-og-head">
@@ -1116,8 +1150,6 @@
       if (gn) { const id = gn.dataset.ogName, v = gn.value; queue(() => updateOptGroup(id, { name: v })); return; }
       const cn = e.target.closest('[data-oc-name]');
       if (cn) { const [g, c] = pair(cn.dataset.ocName), v = cn.value; queue(() => updateOptChoice(g, c, { name: v })); return; }
-      const ce = e.target.closest('[data-oc-emoji]');
-      if (ce) { const [g, c] = pair(ce.dataset.ocEmoji), v = ce.value; queue(() => updateOptChoice(g, c, { emoji: v })); return; }
       const cp = e.target.closest('[data-oc-price]');
       if (cp) { const [g, c] = pair(cp.dataset.ocPrice), v = cp.value; queue(() => updateOptChoice(g, c, { price: v })); return; }
     });
@@ -1130,6 +1162,26 @@
       if (rq) { flush(); updateOptGroup(rq.dataset.ogReq, { required: rq.checked }); }
     });
     body.addEventListener('click', (e) => {
+      const picked = e.target.closest('[data-oc-emoji-pick]');
+      if (picked) {
+        flush();
+        const [g, c] = pair(picked.dataset.ocEmojiPick);
+        updateOptChoice(g, c, { emoji: picked.dataset.emoji || '' });
+        paint();
+        return;
+      }
+      const opener = e.target.closest('[data-oc-emoji-open]');
+      if (opener) {
+        const id = opener.dataset.ocEmojiOpen;
+        const picker = body.querySelector(`[data-oc-emoji-picker="${id}"]`);
+        const willOpen = !!(picker && picker.hidden);
+        body.querySelectorAll('[data-oc-emoji-picker]').forEach((el) => { el.hidden = true; });
+        body.querySelectorAll('[data-oc-emoji-open]').forEach((el) => { el.setAttribute('aria-expanded', 'false'); });
+        if (picker && willOpen) { picker.hidden = false; opener.setAttribute('aria-expanded', 'true'); }
+        return;
+      }
+      body.querySelectorAll('[data-oc-emoji-picker]').forEach((el) => { el.hidden = true; });
+      body.querySelectorAll('[data-oc-emoji-open]').forEach((el) => { el.setAttribute('aria-expanded', 'false'); });
       const kd = e.target.closest('[data-og-kind]');
       if (kd) { flush(); const [g, k] = pair(kd.dataset.ogKind); updateOptGroup(g, { kind: k }); paint(); return; }
       const gd = e.target.closest('[data-og-del]');
