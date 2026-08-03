@@ -7,6 +7,21 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const root = process.cwd();
+
+/* Le chemin demandé reste-t-il SOUS la racine servie ?
+ *
+ * `path.join(root, '/../../.ssh/id_rsa')` remonte : ce serveur est jetable,
+ * mais il écoute sur toutes les interfaces, et « jetable » ne veut pas dire
+ * « seul sur le réseau » — un café, un coworking, et n'importe qui lit les
+ * fichiers que ce processus peut lire.
+ *
+ * On compare après `resolve` ET sur un séparateur : un simple startsWith
+ * laisserait passer /kiwi-secrets quand la racine est /kiwi. */
+function within(dir, file) {
+  const base = path.resolve(dir);
+  const target = path.resolve(file);
+  return target === base || target.startsWith(base + path.sep);
+}
 const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 const sales = []; // { rowid, id, merchant, amount, method, label, ref, ts }
 
@@ -178,6 +193,7 @@ http.createServer((req, res) => {
   let p = decodeURIComponent(u.pathname.split('?')[0]);
   if (p === '/') p = '/index.html';
   let file = path.join(root, p);
+  if (!within(root, file)) { res.statusCode = 403; res.end('forbidden'); return; }
   if (!fs.existsSync(file) && fs.existsSync(file + '.html')) file = file + '.html';
   fs.readFile(file, (err, buf) => {
     if (err) { res.statusCode = 404; res.end('not found'); return; }
