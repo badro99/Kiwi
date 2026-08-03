@@ -2105,16 +2105,30 @@ body.design-vexel[data-vexel-mode="light"] #kw-main {
 
 /* Seamless application header: the landing mockup's quiet dark rail, with an
  * unboxed search field and identity at the far edge. */
+/* ── Chrome ──────────────────────────────────────────────────────────────────
+ * The sidebar is square and pure #000. The bar beside it was a green gradient
+ * with rounded BOTTOM corners only — a shape that reads as a panel dropped from
+ * the viewport edge, except it is flush to that edge already, and it sat next
+ * to a black column it did not match. Two adjacent darks that disagree read as
+ * a seam, not as a design.
+ *
+ * So the bar stops competing: it takes the sidebar's black and its square
+ * corners, and the two become one continuous L of chrome wrapped around the
+ * paper. Everything worth looking at now floats INSIDE that black — which is
+ * the point, because the bar's own surface carries no information. */
 body.design-vexel[data-vexel-mode="light"] .topbar {
   top: 0;
   margin: 0;
-  padding: 0 22px;
+  padding: 0 24px 0 26px;
   overflow: visible;
   border: 0 !important;
-  border-bottom: 1px solid rgba(125, 242, 176, 0.13) !important;
-  border-radius: 0 0 18px 18px !important;
-  background: linear-gradient(100deg, #103b2e 0%, #0b2a21 58%, #0b241d 100%) !important;
-  box-shadow: 0 16px 36px -30px rgba(2, 16, 11, 0.90) !important;
+  border-bottom: 1px solid rgba(125, 242, 176, 0.10) !important;
+  border-radius: 0 !important;
+  /* Not flat #000. A riad lift of a few points keeps the bar from going dead
+   * against the sidebar's true black — it separates the two regions without
+   * having to draw a line between them. */
+  background: linear-gradient(180deg, #0A1512 0%, #050A08 100%) !important;
+  box-shadow: 0 18px 40px -34px rgba(2, 16, 11, 0.92) !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
 }
@@ -2122,7 +2136,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar {
 body.design-vexel[data-vexel-mode="light"] .topbar > .topbar-inner {
   min-height: 72px;
   padding: 0;
-  gap: 14px;
+  gap: 12px;
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar :is(.breadcrumb, .hours-pill),
@@ -2130,83 +2144,131 @@ body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn[aria-label="Paramè
   display: none !important;
 }
 
+/* The search was 659px of fully transparent nothing — no border, no fill, no
+ * radius — so the single widest element in the header had no affordance at all
+ * and read as a stray line of placeholder copy. It becomes a real object:
+ * a glass capsule, capped at a sane reading width, with the ⌘K cap put back on
+ * (it was display:none, which is why nobody could tell it was a control).
+ * margin-inline-end:auto is what pushes the whole right-hand cluster right. */
 body.design-vexel[data-vexel-mode="light"] .search-big {
   order: 1;
-  height: 44px;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: rgba(236, 247, 242, 0.58);
+  width: 100%;
+  height: 40px;
+  max-width: 430px;
+  margin: 0 auto 0 0;
+  padding: 0 6px 0 14px;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: rgba(236, 247, 242, 0.5);
+  transition: border-color 190ms ease, background 190ms ease, color 190ms ease;
 }
 
 body.design-vexel[data-vexel-mode="light"] .search-big:hover {
-  border-color: transparent;
-  background: transparent;
-  color: rgba(236, 247, 242, 0.82);
-  box-shadow: none;
+  border-color: rgba(125, 242, 176, 0.28);
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(236, 247, 242, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+body.design-vexel[data-vexel-mode="light"] .search-big .ph {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.design-vexel[data-vexel-mode="light"] .search-big .k {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(236, 247, 242, 0.48);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn {
   order: 3;
-  width: 38px;
-  height: 38px;
-  border-color: transparent;
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
   box-shadow: none;
-  color: rgba(236, 247, 242, 0.60);
+  color: rgba(236, 247, 242, 0.55);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn:hover {
-  border-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
   transform: none;
 }
 
+/* Ring colour has to match the bar it punches through, not the old #0b1813. */
 body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn .badge {
-  top: -2px;
-  right: -2px;
-  border-color: #0b1813;
+  top: -1px;
+  right: -1px;
+  border-color: #070D0A;
+  background: #7DF2B0;
+  color: #04231A;
+  font-weight: 700;
 }
 
+/* The one lit object in the chrome. It was dark-on-dark wearing a 9px mint
+ * spread — a halo that reads as a focus ring someone forgot to clear, not as
+ * emphasis. Inverted instead: the agent is the product's differentiator, so it
+ * gets the header's only fill, and everything else stays glass on black. This
+ * is the whole mint budget for the bar; the avatar gives its mint up below so
+ * there is exactly one thing here competing for the eye. */
 body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn {
   order: 2;
-  min-height: 50px;
-  gap: 12px;
-  padding: 7px 21px 7px 13px;
+  min-height: 40px;
+  gap: 9px;
+  padding: 0 17px 0 12px;
+  border: 0 !important;
   border-radius: 999px;
-  border-color: rgba(13, 174, 123, 0.66);
-  background: rgba(1, 18, 13, 0.96) !important;
-  color: #f3f8f5;
-  box-shadow: 0 0 0 9px rgba(5, 105, 76, 0.18), inset 0 0 0 1px rgba(5, 195, 137, 0.08), 0 16px 28px -20px rgba(0, 34, 24, 0.92);
-  font-size: 14.5px;
-  font-weight: 540;
+  background: linear-gradient(180deg, #8DF6BE 0%, #5FE9A4 100%) !important;
+  color: #04231A;
+  box-shadow: 0 10px 24px -14px rgba(93, 233, 164, 0.7);
+  font-size: 13.5px;
+  font-weight: 640;
   letter-spacing: 0.005em;
+  transition: background 190ms ease, box-shadow 190ms ease, transform 190ms ease;
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico {
-  width: 29px;
-  height: 32px;
+  width: 22px;
+  height: 24px;
   padding: 0;
   border-radius: 0;
-  color: #16d49a;
+  color: #04231A;
   background: none;
   box-shadow: none;
 }
 
+/* The mark ships two paths: one on currentColor, one hardcoded fill="#8ff4cf".
+ * That second path was mint on a dark button; on a mint button it vanishes.
+ * Both are re-cut in ink so the two-tone reading survives the inversion. */
+body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico path {
+  fill: currentColor;
+}
+
+body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico path + path {
+  fill: rgba(4, 35, 26, 0.5);
+}
+
 body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn:hover {
-  border-color: rgba(19, 220, 158, 0.80);
-  background: rgba(2, 27, 19, 0.98) !important;
-  box-shadow: 0 0 0 9px rgba(6, 128, 91, 0.23), inset 0 0 0 1px rgba(21, 222, 159, 0.12), 0 18px 30px -20px rgba(0, 34, 24, 0.95);
+  background: linear-gradient(180deg, #9CF8C9 0%, #6EEFB0 100%) !important;
+  box-shadow: 0 14px 30px -14px rgba(93, 233, 164, 0.85);
+  transform: translateY(-1px);
 }
 
 body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
@@ -3057,6 +3119,22 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-label {
 
 body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-value {
   fill: #FFFFFF;
+}
+
+/* Two hover marks were still wearing their dark-dashboard colours and had gone
+ * invisible on paper. The crosshair is drawn white at 32 % — on a white card it
+ * is not faint, it is absent, so the scrub had no vertical anchor at all. The
+ * comparison dot is bone at 55 %, which disappears the moment "Comparer" is on.
+ * Both restated against the light surface, keyed to the comparison line's own
+ * muted atlas so the pair reads as one series. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-cross-line {
+  stroke: rgba(7, 48, 31, 0.20);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-active-cmp {
+  fill: #3F7A63;
+  stroke: #fff;
+  stroke-width: 2;
 }
 
 /* The live pulse marks "now"; the active dot marks "where you are pointing".
