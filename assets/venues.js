@@ -271,6 +271,7 @@
     categories: '<path d="M3 6h7l2 2h9v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/>',
     promos: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L3 13V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
     returns: '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
+    sold: '<path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/><path d="M2 19h22"/>',
     // spa
     appointments: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>',
     // Lucide gift — "forfaits" = packages (was a star, which read as "favourite").
@@ -311,6 +312,7 @@
         { nav: 'categories', label: 'Catégories',          i18n: 'sidebar.boutique.categories',              icon: ICONS.categories },
         { nav: 'promos',     label: 'Promotions',          i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
         { nav: 'returns',    label: 'Retours & échanges',  i18n: 'sidebar.boutique.returns',                 icon: ICONS.returns },
+        { nav: 'sold',       label: 'Vendus',              i18n: 'sidebar.boutique.sold',                    icon: ICONS.sold },
       ],
     },
     spa: {
@@ -1935,6 +1937,12 @@
           return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: b.icon || '' };
         }),
       };
+    }
+    /* Tous les sous-métiers boutique gardent la vue Vendus, même si leur
+       profil plus ancien remplace la liste de navigation de la base. */
+    if (sect && (typeOverride || v.type) === 'boutique' && !sect.items.some((x) => x.nav === 'sold')) {
+      const sold = VERTICAL_SECTIONS.boutique.items.find((x) => x.nav === 'sold');
+      sect = { ...sect, items: sect.items.concat(sold) };
     }
     if (!sect) return;
 

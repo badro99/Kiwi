@@ -1203,6 +1203,7 @@
           <button class="bq-nav-it" data-bq-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="bq-nav-badge" id="bq-badge-scan"></b></button>
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
+          <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
         </nav>
         <div class="bq-rail-foot">
@@ -1242,6 +1243,7 @@
         <section class="bq-view" data-bq-panel="scan"></section>
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
+        <section class="bq-view" data-bq-panel="vendus"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
@@ -1448,6 +1450,11 @@
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
+    if (view === 'vendus') {
+      const panel = $('[data-bq-panel="vendus"]', root);
+      if (window.KiwiSoldInsights) window.KiwiSoldInsights.renderTill(panel);
+      else panel.innerHTML = '<div class="bq-empty" style="margin:40px;">Analyse des ventes indisponible.</div>';
+    }
     if (view === 'clientes') renderClientes();
   }
   function renderBadges() {
