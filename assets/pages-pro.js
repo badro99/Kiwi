@@ -3089,6 +3089,9 @@ const PDS_STR = {
     /* Add table palette */
     paletteTitle: 'Ajouter une table',
     paletteHint: 'Cliquez pour ajouter, la table apparaît au centre de la zone.',
+    /* Une table comme un comptoir s'ouvrent de la même façon ; rien ne le
+       disait, et le comptoir passait pour un décor qu'on ne peut pas toucher. */
+    editHint: 'Cliquez un objet posé — table, comptoir, cuisine, plante — pour le redimensionner ou le supprimer.',
     structTitle: 'Éléments structurels',
     structHint: 'Murs, portes, fenêtres et plantes, purement visuels.',
     elWall: 'Mur',
@@ -3285,6 +3288,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `Zone renamed to "${n}".`,
     paletteTitle: 'Add a table',
     paletteHint: 'Click to add, the table appears at the center of the zone.',
+    editHint: 'Click any placed object — table, counter, kitchen, plant — to resize or delete it.',
     structTitle: 'Structural elements',
     structHint: 'Walls, doors, windows and plants, visual only.',
     elWall: 'Wall',
@@ -3469,6 +3473,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `تمت إعادة تسمية المنطقة إلى "${n}".`,
     paletteTitle: 'إضافة طاولة',
     paletteHint: 'انقر للإضافة، تظهر الطاولة في وسط المنطقة.',
+    editHint: 'انقر أي عنصر موضوع — طاولة، بار، مطبخ، نبتة — لتغيير حجمه أو حذفه.',
     structTitle: 'العناصر الهيكلية',
     structHint: 'جدران، أبواب، نوافذ ونباتات، للعرض فقط.',
     elWall: 'جدار',
@@ -4750,7 +4755,7 @@ function pdsRenderLayoutRail(state, T) {
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.paletteTitle}</div>
-      <div class="pds-rail-hint">${T.paletteHint}</div>
+      <div class="pds-rail-hint">${T.paletteHint} ${T.editHint}</div>
       <div class="pds-palette">
         ${types.map(k => {
           const t = PDS_TABLE_TYPES[k];
@@ -5654,6 +5659,12 @@ function pdsAttach(root, state, T, dr) {
     if (!f) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
     inspector.innerHTML = pdsRenderInspector(state, T, f.o);
     bind();
+    /* Sous 1100px l'inspecteur passe sous le plan : sélectionner un objet
+       ouvrait alors un panneau qu'on ne voyait pas. 'nearest' ne bouge rien
+       quand il est déjà à l'écran, donc la colonne large ne saute pas.
+       Sans 'smooth' : mesuré dans ce tiroir, l'animation ne défile pas d'un
+       pixel là où le saut direct parcourt ses 561. */
+    try { inspector.scrollIntoView({ block: 'nearest' }); } catch (_) {}
   };
   /* Open bulk inspector */
   const openBulkInspector = () => {
@@ -6710,8 +6721,31 @@ const PDS_INLINE_CSS = `
   .pds-zone-add { padding:7px 10px; color:var(--atlas); font-weight:700; font-size:14px; }
   .pds-zone-add:hover { background:var(--paper); }
 
-  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; }
+  /* align-items:start est la moitié qui compte : une piste de grille s'étire
+     par défaut à la hauteur de la plus haute, et la palette fait deux mille
+     six cents pixels. Le plan partait donc hors de l'écran dès qu'on
+     descendait chercher une plante. Les deux colonnes latérales défilent
+     maintenant chez elles, et le plan ne bouge plus. */
+  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; align-items:start; }
   @media (max-width: 1100px) { .pds-stage-grid { grid-template-columns: 200px 1fr; } .pds-inspector { grid-column: 1 / -1; } }
+
+  /* overscroll-behavior:contain arrête la chaîne : arrivé en bas de la
+     palette, la molette ne repart pas dans le tiroir. C'est ce report-là
+     qui donnait la sensation de défilement sans fin. */
+  .pds-rail, .pds-inspector {
+    position:sticky; top:0;
+    max-height:calc(100vh - 210px); min-height:320px;
+    overflow-y:auto; overscroll-behavior:contain;
+    padding-right:4px; scrollbar-width:thin;
+  }
+  /* Sous 1100px l'inspecteur devient une rangée pleine largeur sous le plan :
+     le coller ou le plafonner n'a plus de sens, il suit le flux. La palette,
+     elle, garde son propre défilement — c'est elle qui fait deux mille pixels,
+     à toutes les largeurs. */
+  @media (max-width: 1100px) {
+    .pds-rail { position:static; max-height:calc(100vh - 260px); }
+    .pds-inspector { position:static; max-height:none; min-height:0; overflow:visible; }
+  }
 
   .pds-rail { display:flex; flex-direction:column; gap:10px; }
   .pds-rail-card { background:var(--paper-soft); border:1px solid var(--n-200); border-radius:12px; padding:14px; }
@@ -7213,6 +7247,13 @@ const PDS_INLINE_CSS = `
     font:600 9.5px/1.2 var(--mono, monospace);
     letter-spacing:0.16em; text-transform:uppercase;
     pointer-events:none; text-align:center; overflow:hidden;
+  }
+  /* Le curseur « grab » annonce le glisser, pas l'édition : rien ne disait
+     qu'un comptoir s'ouvre, se redimensionne et se supprime comme une table.
+     Le survol le dit maintenant, avec la même élévation que les tables. */
+  .pds-el:not(.is-locked):not(.is-dragging):hover {
+    filter: drop-shadow(0 4px 9px rgba(20,15,10,0.20));
+    outline: 1.5px solid rgba(11,110,79,0.55); outline-offset: 2px;
   }
   .pds-el.is-selected { z-index:60; }
   .pds-el.is-locked   { cursor:default; }
