@@ -42,7 +42,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
-import { startOfDay, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
+import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -284,6 +284,7 @@ export async function onRequestPost(context) {
 
     const server = String((b && b.server) || '').trim().slice(0, 40);
     const today = startOfDay(now);
+    const week = startOfWeek(now);
 
     /* Idempotence. Le double-envoi est PLUS probable en salle que sur le
      * téléphone du client : le wifi d'un café porte mal jusqu'au fond de la
@@ -321,7 +322,7 @@ export async function onRequestPost(context) {
       ).bind(
         id, merchant, mode, table, total, linesJson, now, now,
         server || null, priced.menuRev, priced.priced ? now : null, clientRef,
-        merchant, today
+        merchant, week
       ).first();
     } catch (_) {
       /* La clé a-t-elle parlé avant la migration ? Deux envois simultanés de la
@@ -346,7 +347,7 @@ export async function onRequestPost(context) {
            SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?
              FROM orders WHERE merchant = ? AND created_ts >= ?
            RETURNING number`
-        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
+        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, week).first();
       } catch (e) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
@@ -573,7 +574,7 @@ async function createTicket(env, merchant, c, now) {
   const server = String(c.server || '').trim().slice(0, 40);
   const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const linesJson = JSON.stringify(lines);
-  const today = startOfDay(now);
+  const week = startOfWeek(now);
 
   /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
    * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
@@ -586,15 +587,15 @@ async function createTicket(env, merchant, c, now) {
   } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
 
   /* Même numérotation que le relais téléphone : un compteur par commerçant et
-   * par jour, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
+   * par semaine, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
    * entre « lire le max » et « écrire ». MAX() sans GROUP BY rend toujours une
-   * ligne, donc le premier bon du jour reçoit bien le numéro 1. */
+   * ligne, donc le premier bon de la semaine reçoit bien le numéro 1. */
   const NUMBER = 'COALESCE(MAX(number), 0) + 1';
-  const FROM_TODAY = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
+  const FROM_WEEK = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
   const BASE_COLS = 'id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts';
   const BASE_VALS = `?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?`;
   const head = [id, merchant, mode, table, total, linesJson, now, now];
-  const tail = [merchant, today];
+  const tail = [merchant, week];
 
   /* Les colonnes se sont ajoutées par vagues, et toutes les bases n'ont pas reçu
    * les mêmes : `server_name` est venu avec la session de table, `channel` avec
@@ -614,7 +615,7 @@ async function createTicket(env, merchant, c, now) {
   let lastErr = null;
   for (const s of SHAPES) {
     try {
-      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_TODAY}`)
+      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_WEEK}`)
         .bind(...head, ...s.mid, ...tail).first();
       lastErr = null;
       break;

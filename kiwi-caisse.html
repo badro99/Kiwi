@@ -12910,13 +12910,11 @@
       if (el) el.textContent = String(kdsOrders.filter(o => o.status !== 'ready' && o.status !== 'held').length);
     }
 
-    /* Le numéro QUE LE CLIENT CONNAÎT. Une commande venue du téléphone porte le
-       numéro donné par le serveur — c'est celui qu'il annoncera au comptoir —
-       tandis qu'une vente au comptoir porte le compteur local. Les afficher tous
-       les deux comme « #N » aurait fait cohabiter deux 7 différents le même
-       midi. Le préfixe les sépare à l'œil sans rien faire calculer à personne. */
+    /* Le numéro QUE LE CLIENT CONNAÎT. Toute commande restaurant relayée reçoit
+       le compteur simple et hebdomadaire du serveur ; pendant le bref instant
+       hors ligne avant sa réponse, on garde le compteur local en repli. */
     function ticketNo(o) {
-      return o && o.opNum != null ? 'C-' + String(o.opNum).padStart(3, '0') : '#' + o.num;
+      return o && o.opNum != null ? String(o.opNum) : String(o.num);
     }
 
     function kdsPaint() {
@@ -13960,7 +13958,7 @@
     const KC_STORE = 'kiwi-caisse-shift';
     let registerClosing = false;
 
-    /* Un bon numéroté C-xxx vient du relais serveur. Les anciens instantanés
+    /* Un bon portant `opNum` vient du relais serveur. Les anciens instantanés
        n'ont pas tous gardé `opId`, mais ils ont gardé `opNum`. S'il attend
        encore en `new/held` après 30 minutes, c'est un bon abandonné — notamment
        les taps de test — et non une préparation à restaurer cinq heures après. */

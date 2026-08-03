@@ -36,6 +36,7 @@ import { makeSession, sessionCookie, SESS_COOKIE } from '../functions/auth/_lib.
 import { onRequestPost as placeOrder, onRequestGet as readOrder } from '../functions/api/order/index.js';
 import { onRequestPost as openSession, onRequestGet as readSession } from '../functions/api/order/session.js';
 import { onRequestPost as queuePost, onRequestGet as queueGet } from '../functions/api/order/queue.js';
+import { startOfWeek } from '../functions/api/order/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SECRET = 'test-secret-not-a-real-key';
@@ -114,6 +115,11 @@ async function get(fn, qs, headers = {}) {
   const staff = sessionCookie(await makeSession(ACC, SECRET)).split(';')[0];
   const asStaff = { Cookie: staff };
   const line = (id, qty = 1) => ({ id, qty });
+
+  ok('la semaine restaurant commence lundi à minuit au Maroc',
+    startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
+  ok('le dimanche reste dans la semaine qui précède',
+    startOfWeek(Date.parse('2026-08-02T12:00:00Z')) === Date.parse('2026-07-26T23:00:00Z'));
 
   /* ═══ 1. PRIX ═══════════════════════════════════════════════════════════ */
   deskAt(Date.now());
@@ -529,12 +535,26 @@ async function get(fn, qs, headers = {}) {
     .run(SALLE, 'Chez Brahim', 'restaurant', JSON.stringify(CARTE), Date.now());
   const asSalle = { Cookie: sessionCookie(await makeSession(ACC_SALLE, SECRET)).split(';')[0] };
 
+  /* La semaine restaurant est lundi–dimanche, heure Maroc. Un ancien numéro de
+   * la semaine courante compte ; celui de la semaine précédente ne compte plus. */
+  const thisWeek = startOfWeek(Date.now());
+  DB._db.prepare(
+    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
+  ).run('ord-week-current', SALLE, 41, 'table', 'OLD', 90, '[]', 'served', thisWeek + 1000, thisWeek + 1000);
+  DB._db.prepare(
+    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
+  ).run('ord-week-before', SALLE, 99, 'table', 'OLD', 90, '[]', 'served', thisWeek - 1000, thisWeek - 1000);
+
   r = await post(queuePost, {
     merchant: SALLE, create: true, mode: 'table', table: 'T7',
     lines: [{ id: 'i1', qty: 2, note: 'sans olives', visuals: [{ emoji: '🚫🫒', name: 'Sans olives' }] }, { id: 'i2', qty: 3 }],
   }, asSalle);
   ok('la salle envoie sa commande, Order Pro éteint', r.status === 200 && r.body.ok,
     r.status + ' ' + JSON.stringify(r.body));
+  ok('le numéro restaurant continue sur la semaine courante', r.body.number === 42,
+    'number=' + r.body.number);
   ok('le prix vient de la carte, pas de la tablette', r.body.total === 90 * 2 + 15 * 3,
     'total=' + r.body.total);
   const salleRow = DB._db.prepare('SELECT status, table_no, total, lines FROM orders WHERE id=?')

@@ -41,7 +41,7 @@
 
 import { json } from '../../auth/_lib.js';
 import {
-  startOfDay, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
+  startOfDay, startOfWeek, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
 } from './_lib.js';
 
 const MAX_LINES = 60;              // one order, generously
@@ -118,6 +118,7 @@ export async function onRequestPost(context) {
 
   const now = Date.now();
   const today = startOfDay(now);
+  const week = startOfWeek(now);
 
   /* Idempotence. Le téléphone tire une clé par commande ; un renvoi (double
    * tap, réseau qui repasse, onglet rechargé) doit retrouver SA commande, pas
@@ -207,7 +208,7 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, mode, table, total, linesJson, now, now,
       session ? session.id : null, priced.menuRev, priced.priced ? now : null, clientRef,
-      merchant, today
+      merchant, week
     ).first();
   } catch (_) {
     /* ── Avant de dégrader, vérifier que ce n'est pas l'unicité qui a parlé ───
@@ -245,7 +246,7 @@ export async function onRequestPost(context) {
          SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'pending', ?, ?
            FROM orders WHERE merchant = ? AND created_ts >= ?
          RETURNING number`
-      ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
+      ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, week).first();
     } catch (_) {
       // Public endpoint: do not expose database/schema details to an anonymous
       // phone. The stable code is enough for the UI and support correlation.

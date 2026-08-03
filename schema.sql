@@ -301,13 +301,13 @@ CREATE TABLE IF NOT EXISTS menus (
 -- an order: a ticket the kitchen never saw is worse than a customer who waited to
 -- be told. The phone polls the same row, so what it shows is the real state.
 --
--- `number` is the per-day human ticket number the customer reads out at the
+-- `number` is the per-week human ticket number the customer reads out at the
 -- counter ("commande 047"). It is assigned inside the INSERT (one statement), so
 -- two phones ordering in the same second can never be handed the same number.
 CREATE TABLE IF NOT EXISTS orders (
   id         TEXT PRIMARY KEY,   -- "ord-<ts>-<rand>"
   merchant   TEXT NOT NULL,      -- tenant key (slugMerchant — same spine as sales/menus)
-  number     INTEGER NOT NULL,   -- human ticket number (per merchant, per day)
+  number     INTEGER NOT NULL,   -- human ticket number (per merchant, Mon–Sun)
   mode       TEXT NOT NULL,      -- 'table' | 'takeout'
   table_no   TEXT,               -- table number for dine-in, empty for takeout
   total      INTEGER NOT NULL,   -- MAD, whole dirhams

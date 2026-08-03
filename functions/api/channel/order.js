@@ -36,6 +36,7 @@
 // Jumia Food, encore listé dans plusieurs écrans, a quitté le Maroc fin 2023.
 
 import { json } from '../../auth/_lib.js';
+import { startOfWeek } from '../order/_lib.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -60,13 +61,6 @@ function sameHex(a, b) {
   let d = 0;
   for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
-}
-
-function startOfDay(now) {
-  // Les numéros de ticket repartent chaque jour. Le Maroc est à UTC+1 toute
-  // l'année : une commande de 00h30 appartient au jour qui commence.
-  const shifted = now + 3600000;
-  return Math.floor(shifted / 86400000) * 86400000 - 3600000;
 }
 
 /* À qui appartient cette clé ? Renvoie la ligne, ou null. */
@@ -201,7 +195,7 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, mode, total, JSON.stringify(lines), now, now,
       channel, ref, JSON.stringify(customer),
-      merchant, startOfDay(now)
+      merchant, startOfWeek(now)
     ).first();
   } catch (e) {
     const detail = String((e && e.message) || e);

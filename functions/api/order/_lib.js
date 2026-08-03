@@ -11,14 +11,23 @@
 // c'est la bibliothèque des trois autres (même convention que functions/auth/_lib.js).
 
 /* ── Le jour d'ouverture ───────────────────────────────────────────────────
- * Les numéros de ticket repartent à 1 chaque jour. Le Maroc est à UTC+1 toute
+ * Les limites de file repartent à 1 chaque jour. Le Maroc est à UTC+1 toute
  * l'année, donc la frontière se calcule à +1h : une commande de 00h30
- * appartient au jour qui commence, pas à la numérotation de la veille.
+ * appartient au jour qui commence, pas aux limites de la veille.
  * (Ce n'est PAS le « jour commercial » du rapport Z, qui suit les horaires
  * saisis par le commerçant — deux notions voisines et volontairement distinctes.) */
 export function startOfDay(now) {
   const shifted = now + 3600000;
   return Math.floor(shifted / 86400000) * 86400000 - 3600000;
+}
+
+/* Les numéros lisibles des commandes restaurant repartent à 1 chaque lundi
+ * à 00:00 (heure Maroc). Cette borne est distincte du jour commercial et ne
+ * touche pas aux tickets boutique, dont la séquence sert aux retours. */
+export function startOfWeek(now) {
+  const day = startOfDay(now);
+  const shiftedDay = new Date(day + 3600000).getUTCDay(); // 0 dim. … 6 sam.
+  return day - ((shiftedDay + 6) % 7) * 86400000;
 }
 
 /* ── L'option est-elle ouverte chez ce commerçant ? ────────────────────────

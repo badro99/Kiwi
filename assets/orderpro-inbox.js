@@ -286,7 +286,7 @@
                 (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button></div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
-      '<div class="kop-top"><span class="kop-num">#' + String(o.number || 0).padStart(3, '0') + '</span>' +
+      '<div class="kop-top"><span class="kop-num">' + String(o.number || 0) + '</span>' +
       '<span class="kop-where">' + where + '</span>' + src +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
       lines + custHtml(o) + acts + '</div>';
