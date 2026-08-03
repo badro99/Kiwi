@@ -485,12 +485,21 @@ ok(/return ids\.map\(id => lib\.find\(g => g && g\.id === id\)\)\.filter\(Boolea
   'itemOptGroups écarte un groupe disparu plutôt que de bloquer la vente');
 ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOptSheet/.test(caisseSrc),
   'un produit à options ouvre la feuille AVANT d\'entrer dans la note');
+ok(/function addToTableOrder\(tableId, itemId\)[\s\S]{0,260}itemOptGroups\(item\)[\s\S]{0,220}openOptSheet\(item, groups,[\s\S]{0,100}pushTableOrderLine/.test(caisseSrc),
+  'la prise de commande à table ouvre la même feuille d\'options que la vente à emporter');
+ok(/const line = tableOrders\[tableId\]\.find\(l => l\.id === item\.id[\s\S]{0,180}\(l\.optSig \|\| ''\) === sig/.test(caisseSrc)
+  && /price: item\.price \+ extra, qty: 1, note: '', opts: \(opts \|\| \[\]\)\.slice\(\), optSig: sig/.test(caisseSrc),
+  'une table conserve chaque combinaison d\'options sur une ligne distincte et tarifée');
+ok(/name: lineLabel\(l\)/.test(caisseSrc),
+  'les options de la table restent lisibles sur l\'addition et le reçu');
 ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
   'tant qu\'un groupe obligatoire est sans réponse, « Ajouter » ne répond pas');
 ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
 ok(/paperNote: kitchenNote\(l\), visuals: optVisuals\(l\.opts\)/.test(caisseSrc),
   'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
+ok(/note: i\.paperNote \|\| i\.note \|\| '', visuals: i\.visuals \|\| \[\]/.test(caisseSrc),
+  'le relais vers une tablette cuisine distante conserve aussi le texte des options');
 ok(/emoji: optionEmoji\(c && c\.emoji\)/.test(menuApi)
   && /OPTION_EMOJIS = new Set/.test(menuApi),
   'le repère visuel choisi survit à la publication sans accepter de texte libre');

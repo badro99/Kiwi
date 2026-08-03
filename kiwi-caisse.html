@@ -6046,7 +6046,8 @@
       if (orders[tableId]) return orders[tableId];
       // Live order built by cashier — convert to {qty,name,total} format
       if (tableId in tableOrders) {
-        return tableOrders[tableId].map(l => ({ qty: l.qty, name: l.name, total: l.price * l.qty, note: l.note || '' }));
+        return tableOrders[tableId].map(l => ({ id: l.id, qty: l.qty, name: lineLabel(l),
+          total: l.price * l.qty, note: l.note || '' }));
       }
       /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
          — un couscous royal par couvert — et c'est appelé sans condition par
@@ -7508,7 +7509,7 @@
 
     let optVeil = null;
     function closeOptSheet() { if (optVeil) { optVeil.classList.remove('is-open'); optVeil.onclick = null; } }
-    function openOptSheet(item, groups) {
+    function openOptSheet(item, groups, onChosen) {
       if (!optVeil) {
         optVeil = document.createElement('div');
         optVeil.className = 'cloture-veil opt-veil';
@@ -7571,7 +7572,11 @@
             if (c) chosen.push({ g: g.id, gn: g.name, c: c.id, cn: c.name, e: c.emoji || '', p: +c.price || 0 });
           }));
           closeOptSheet();
-          pushCartLine(item, chosen);
+          /* La feuille sert aux deux prises de commande : à emporter ET table.
+             L'appelant choisit seulement où ranger la ligne une fois les
+             réponses obtenues ; la question, les prix et les repères KDS sont
+             rigoureusement les mêmes dans les deux modes. */
+          (onChosen || pushCartLine)(item, chosen);
         }
       };
       paint();
@@ -8518,29 +8523,44 @@
     setInterval(() => { if (mode === 'waitlist') renderWaitlist(); }, 30000);
 
     /* ---- table order management ---- */
-    function addToTableOrder(tableId, itemId) {
+    function pushTableOrderLine(tableId, item, opts) {
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
-      const item = menuItems.find(m => m.id === itemId);
-      if (!item) return;
       // First item taken → order started, table is now being served (eating)
       if (tables[tableId] && tables[tableId].status === 'a-commander') {
         tables[tableId].status = 'ka-yaklo';
         refreshTableNode(tableId);
       }
+      const sig = optSig(opts);
+      const extra = (opts || []).reduce((s, x) => s + (+x.p || 0), 0);
       /* Stack onto the un-noted line ; a noted line splits off so it keeps its
          note. Et JAMAIS sur une ligne déjà partie en cuisine (`l.sent`) : la
          cuisine n'envoie que ce qui ne l'est pas encore, donc empiler un
          deuxième café sur la ligne du premier aurait fait monter l'addition
          sans qu'aucun bon ne parte. Le plat aurait été facturé et jamais
-         préparé — la panne la plus coûteuse qu'un ajout puisse produire. */
-      const line = tableOrders[tableId].find(l => l.id === itemId && !l.sent && !(l.note || '').trim());
+         préparé — la panne la plus coûteuse qu'un ajout puisse produire.
+         Deux choix différents restent également deux lignes : salade + harissa
+         ne doit jamais se confondre avec sans salade + sauce blanche. */
+      const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
+        && !(l.note || '').trim() && (l.optSig || '') === sig);
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, note: '' });
+      else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name,
+        price: item.price + extra, qty: 1, note: '', opts: (opts || []).slice(), optSig: sig });
       // Pop animation on card
-      const card = document.querySelector(`.menu-item[data-menu-id="${itemId}"]`);
+      const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
       renderMenu();
       renderOrderPanel(tableId);
+    }
+
+    function addToTableOrder(tableId, itemId) {
+      const item = menuItems.find(m => m.id === itemId);
+      if (!item) return;
+      const groups = itemOptGroups(item);
+      if (groups.length) {
+        openOptSheet(item, groups, (_item, chosen) => pushTableOrderLine(tableId, item, chosen));
+        return;
+      }
+      pushTableOrderLine(tableId, item, []);
     }
 
     /* Order panel +/- — targets one specific line by its uid. */
@@ -8624,7 +8644,7 @@
         $('#rp-items').innerHTML = order.map(l => l.sent ? `
           <div class="rp-item rp-item--cart rp-item--sent" data-order-uid="${l.uid}">
             <span class="rp-sent-qty">${l.qty}×</span>
-            <span class="rp-item-name">${l.name}</span>
+            <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <span class="rp-sent-mark">${KDS_SVG.check}En cuisine</span>
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
@@ -8635,7 +8655,7 @@
               <span class="qty-num mono">${l.qty}</span>
               <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
             </div>
-            <span class="rp-item-name">${l.name}</span>
+            <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
               value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
@@ -8750,7 +8770,10 @@
           table: order.table || '',
           server: order.server || '',
           lines: (order.items || []).map(i => ({
-            name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.note || '', visuals: i.visuals || [],
+            /* Le relais doit porter la phrase d'options, pas seulement les
+               emojis. Une tablette KDS distante doit encore lire « Tomates ·
+               Oignons » si le patron n'a pas associé de repère à ces choix. */
+            name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.paperNote || i.note || '', visuals: i.visuals || [],
             station: (i.stations && i.stations[0]) || '',
           })),
         }).then((r) => {

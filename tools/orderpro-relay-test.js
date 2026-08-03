@@ -137,6 +137,7 @@ async function get(fn, qs, headers = {}) {
     merchant: SLUG, mode: 'table', table: '7',
     total: 1,                                   // le mensonge
     lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1,
+      options: 'Tomate',
       visuals: [{ emoji: '🍅', name: 'Tomate' }] }],
   });
   ok('une commande passe', r.status === 200 && r.body.ok, JSON.stringify(r.body));
@@ -145,6 +146,14 @@ async function get(fn, qs, headers = {}) {
   ok('le repère visuel de l’option arrive avec la ligne',
     r.body.lines[0].visuals[0].emoji === '🍅' && r.body.lines[0].visuals[0].name === 'Tomate',
     JSON.stringify(r.body.lines[0].visuals));
+  ok('le libellé de l’option OrderPro arrive lui aussi avec la ligne',
+    r.body.lines[0].options === 'Tomate', JSON.stringify(r.body.lines[0]));
+  ok('OrderPro ouvre les options avec le même ajout en salle et à emporter',
+    /function handleAddClick\(itemId\)[\s\S]{0,220}item\.options && item\.options\.length > 0[\s\S]{0,80}openCustomizer\(item\)/.test(orderProPage)
+      && !/function handleAddClick\(itemId\)[\s\S]{0,220}orderMode\s*===/.test(orderProPage));
+  ok('OrderPro envoie le texte et les repères visuels choisis',
+    /options: describeOptions\(l\)/.test(orderProPage)
+      && /visuals: describeOptionVisuals\(l\)/.test(orderProPage));
   const priced = DB._db.prepare('SELECT total, priced_ts, menu_rev FROM orders WHERE id=?').get(r.body.id);
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
