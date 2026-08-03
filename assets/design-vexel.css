@@ -1578,7 +1578,7 @@ body.design-vexel[data-vexel-mode="light"] {
 }
 
 /* Compact command deck: no large empty middle row on wide screens. */
-body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
   grid-template-columns: minmax(190px, 1fr) auto auto;
   grid-template-areas: "title range report";
   gap: 22px;
@@ -1595,7 +1595,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
 }
 
 /* One outer-card recipe. Small integration tiles remain nested sub-cards. */
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .vexel-revenue-row > .hero-today,
   .vexel-rail-card,
@@ -1614,7 +1614,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
   backdrop-filter: blur(18px);
 }
 
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .dash-standard > .oppo-band .oppo-card,
   .dash-standard .dash-cols .block,
@@ -1627,8 +1627,8 @@ body.design-vexel[data-vexel-mode="light"] :is(
 
 /* Every KPI has equal visual weight. The previous first-card tint and rail
  * removed similarity even though all four values belong to one metric tier. */
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
   padding: 21px 22px;
   border-color: var(--vx-card-border) !important;
   background: var(--vx-card-bg) !important;
@@ -1643,8 +1643,8 @@ body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover
 }
 
 /* Shared card interiors. */
-body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols :is(.block, .settle),
-body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-more-clip [data-integ-card] {
+body.design-vexel[data-vexel-mode] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-more-clip [data-integ-card] {
   padding: var(--vx-card-pad) !important;
   color: var(--ink);
 }
@@ -1655,8 +1655,8 @@ body.design-vexel[data-vexel-mode] .dash-standard .block-head {
   margin-bottom: 20px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .t,
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .big {
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .t,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .big {
   color: var(--ink);
 }
 
@@ -1666,8 +1666,8 @@ body.design-vexel[data-vexel-mode] .dash-standard .block-head .t {
   letter-spacing: -0.035em;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head .s,
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .sub {
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .s,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .sub {
   color: var(--n-500);
 }
 
@@ -1675,12 +1675,12 @@ body.design-vexel[data-vexel-mode] .dash-standard .settle::after {
   opacity: 0.12;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .instant {
+body.design-vexel[data-vexel-mode] .dash-standard .settle .instant {
   border: 1px solid var(--n-200);
   background: var(--paper-muted);
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .instant:hover {
+body.design-vexel[data-vexel-mode] .dash-standard .settle .instant:hover {
   background: var(--vx-hover-bg);
 }
 
@@ -1784,7 +1784,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
   gap: 12px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
+body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   min-height: 74px;
   border-color: var(--n-200);
   border-radius: 14px;
@@ -2099,7 +2099,7 @@ html[lang="ar"] body.design-vexel .vexel-bottom-row [data-mix-block] .block-head
  * surface without turning the working dashboard into a marketing page.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-body.design-vexel[data-vexel-mode="light"] #kw-main {
+body.design-vexel[data-vexel-mode] #kw-main {
   background: var(--vx-page);
 }
 
@@ -2282,7 +2282,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico {
 /* The mark ships two paths: one on currentColor, one hardcoded fill="#8ff4cf".
  * That second path was mint on a dark button; on a mint button it vanishes.
  * Both are re-cut in ink so the two-tone reading survives the inversion. */
-body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico path {
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path {
   fill: currentColor;
 }
 
@@ -2385,7 +2385,7 @@ body.design-vexel[data-vexel-mode] #kw-main > .container {
   padding-top: 24px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
   position: relative;
   isolation: isolate;
   display: grid !important;
@@ -2432,7 +2432,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
   margin: 0;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose .dash-date-range .dr-pills {
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-pills {
   width: fit-content;
   max-width: 100%;
   padding: 4px;
@@ -2455,7 +2455,7 @@ body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head {
   flex-wrap: wrap;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head :is(
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head :is(
   .kpi-customize,
   .btn-slim[data-action="payment-link"],
   [data-action="invoicing"]
@@ -2471,16 +2471,16 @@ body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head :
   box-shadow: var(--elev-1);
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-kpi-section > .kpi-band-head [data-action="invoicing"] {
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head [data-action="invoicing"] {
   color: var(--atlas);
   border-color: color-mix(in srgb, var(--atlas) 24%, var(--n-200));
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today,
-body.design-vexel[data-vexel-mode="light"] .vexel-rail-card,
-body.design-vexel[data-vexel-mode="light"] .vexel-goals-card,
-body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > [data-mix-block] {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today,
+body.design-vexel[data-vexel-mode] .vexel-rail-card,
+body.design-vexel[data-vexel-mode] .vexel-goals-card,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row > [data-mix-block] {
   border-color: var(--n-200) !important;
   background: var(--paper-elev) !important;
   box-shadow: var(--elev-2) !important;
@@ -2492,7 +2492,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m::before {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
@@ -2502,7 +2502,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi
   transition: opacity 180ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
   border-color: var(--vx-accent-18) !important;
   background:
     linear-gradient(135deg, var(--vx-active-bg-strong), transparent 58%),
@@ -2514,7 +2514,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover
   opacity: 1;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover {
   z-index: 1;
   transform: translateY(-2px);
   border-color: var(--vx-card-hover-border) !important;
@@ -2561,7 +2561,7 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today::before {
 
 /* Layer F is declared before the mode-token/type layers. These final rules
  * intentionally settle the few selectors Layer E also owns. */
-body.design-vexel[data-vexel-mode="light"] .vexel-compose > .dash-date-range {
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
   grid-template-columns: minmax(190px, 1fr) auto auto;
   grid-template-areas: "title range report";
   gap: 22px;
@@ -2580,7 +2580,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
   width: auto;
 }
 
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .vexel-revenue-row > .hero-today,
   .vexel-rail-card,
@@ -2593,7 +2593,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
   box-shadow: var(--vx-card-shadow) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
   border-color: var(--vx-card-border) !important;
   background: var(--vx-card-bg) !important;
 }
@@ -2646,9 +2646,40 @@ body.design-vexel[data-vexel-mode="light"] {
     0 24px 46px -28px rgba(10, 24, 18, 0.38);
 }
 
+/* The dark half of the card DNA. These six names were declared ONLY inside
+ * light-gated blocks (layer F and the block above), so in dark mode every
+ * var(--vx-card-*) reference resolved to nothing: `background: !important`
+ * is invalid at computed-value time, the declaration is dropped, and the card
+ * falls back to the page. That is why dark had no card surfaces at all — not a
+ * missing rule, a missing token.
+ *
+ * The light card is lit from above: a 2px atlas rim on the top edge, a white
+ * highlight under it, then ambient and contact shadows. Dark keeps the same
+ * construction and swaps the light source — mint rim, a much fainter white
+ * highlight — because on black an ambient shadow does almost no work and the
+ * border plus the lit edge are what separate the card from the page. */
+body.design-vexel[data-vexel-mode="dark"] {
+  --vx-card-radius: 18px;
+  --vx-card-gap: 18px;
+  --vx-card-pad: 24px;
+  --vx-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.026) 100%);
+  --vx-card-border: rgba(255, 255, 255, 0.10);
+  --vx-card-border-hover: rgba(0, 255, 174, 0.34);
+  --vx-card-shadow:
+    inset 0 2px 0 rgba(0, 255, 174, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 18px 38px -26px rgba(0, 0, 0, 0.85);
+  --vx-card-shadow-hover:
+    inset 0 2px 0 rgba(0, 255, 174, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 4px 10px rgba(0, 0, 0, 0.55),
+    0 24px 46px -28px rgba(0, 0, 0, 0.9);
+}
+
 /* Shared shell: opaque enough to read as a product surface, without the
  * green haze and mismatched glass treatments that separated card families. */
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .vexel-compose > .dash-date-range,
   .vexel-compose [data-kpi-band] > .kpi-m,
   .vexel-revenue-row > .hero-today,
@@ -2674,7 +2705,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
     box-shadow 180ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .vexel-compose > .dash-date-range,
   .vexel-compose [data-kpi-band] > .kpi-m,
   .vexel-revenue-row > .hero-today,
@@ -2700,7 +2731,7 @@ body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] .block-hea
   margin-bottom: 20px;
 }
 
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .dash-standard .block-head .t,
   .vexel-revenue-row .hero-left-chart .block-head .t,
   .vexel-goals-card h2,
@@ -2715,7 +2746,7 @@ body.design-vexel[data-vexel-mode="light"] :is(
   text-transform: none;
 }
 
-body.design-vexel[data-vexel-mode="light"] :is(
+body.design-vexel[data-vexel-mode] :is(
   .dash-standard .block-head .s,
   .vexel-goals-card p,
   .oppo-d
@@ -2743,7 +2774,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::befo
   content: none !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m > .l {
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m > .l {
   padding-inline-end: 0 !important;
   color: var(--n-500);
   font-size: 11.5px;
@@ -2864,8 +2895,8 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash
     linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-rail-label,
-body.design-vexel[data-vexel-mode="light"] .dash-standard .settle .lbl {
+body.design-vexel[data-vexel-mode] .vexel-rail-label,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .lbl {
   color: var(--n-500);
   font-size: 11px;
   font-weight: 600;
@@ -2936,7 +2967,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
   gap: 12px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card {
+body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   min-height: 78px !important;
   padding: 15px 17px !important;
   transform: none !important;
@@ -3004,7 +3035,7 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart > .block-
   border-bottom: 0;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart .block-head .t {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart .block-head .t {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3040,7 +3071,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
   font-variant-numeric: tabular-nums;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-cur {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-cur {
   margin-inline-start: 9px;
   color: var(--n-400);
   font-size: 12px;
@@ -3073,12 +3104,12 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta svg {
   height: 13px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta .lbl {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta .lbl {
   color: currentColor;
   opacity: 0.62;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row [data-rev-sub] {
+body.design-vexel[data-vexel-mode] .vexel-revenue-row [data-rev-sub] {
   display: block !important;
   margin-top: 8px;
   color: var(--n-400);
@@ -3239,7 +3270,7 @@ body.design-vexel[data-vexel-mode] .vexel-client-foot strong {
   font-size: 29px;
 }
 
-body.design-vexel[data-vexel-mode="light"] .vexel-client-foot span {
+body.design-vexel[data-vexel-mode] .vexel-client-foot span {
   margin: 0;
   color: var(--n-500);
   font-size: 12px;
@@ -3539,4 +3570,147 @@ body.design-vexel[data-vexel-mode="light"] .sidebar .avatar {
   body.design-vexel[data-vexel-mode] .sidebar nav a:hover {
     transform: none;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER H · VEXEL-DARK ART DIRECTION
+ *
+ * The dark counterpart to the raw-literal rules in layers E and G. Everything
+ * in those layers that resolves through a token is already mode-agnostic and
+ * needs nothing here; this block exists only where the light rule hardcodes a
+ * light value — a paper background, an ink colour, an atlas green — and dark
+ * therefore had no declaration at all.
+ *
+ * Metrics are copied from the light rule verbatim on purpose. The two modes
+ * must differ in colour and in nothing else: if a size, weight or spacing
+ * drifts here the skins stop being one design with two palettes.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Layer A hides the hero readout with `display: none !important` and expects
+ * each mode to re-show it. Light did; dark never had the rule, which is why
+ * the most important number on the dashboard was absent from the dark card. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-val {
+  display: block !important;
+  margin-top: 9px;
+  color: var(--ink);
+  font-size: clamp(38px, 3.1vw, 48px);
+  font-weight: 680;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row [data-rev-range-badge] {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px !important;
+  border: 1px solid rgba(0, 255, 174, 0.20);
+  border-radius: 999px;
+  background: rgba(0, 255, 174, 0.10);
+  /* The badge sits inside .block-head .t, which sets color on the whole head.
+   * Without the flag the chip inherits --n-600 and reads as plain grey text
+   * rather than as a live-range marker. */
+  color: var(--vx-accent) !important;
+  font-family: var(--mono);
+  font-size: 9.5px !important;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-delta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(0, 255, 174, 0.10);
+  color: var(--vx-accent);
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-delta.down {
+  background: rgba(255, 107, 95, 0.12);
+  color: var(--danger);
+}
+
+/* Section-head bullet. The light rule carries the whole construction —
+ * content, box, radius — alongside its colour, so dark inherited none of it
+ * and the pseudo-element was never generated (content resolved to `none`).
+ * Restated in full rather than patched: #08734f is legible on paper and nearly
+ * invisible on black, so the dark bullet steps up to the accent and drops the
+ * white inset highlight — a top-lit bevel on a 6px square reads as a stray
+ * pixel here. */
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m > .l,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .dash-standard .block-head .t,
+  .oppo-t,
+  .vexel-rail-label
+)::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 9px;
+  border-radius: 2px;
+  background: var(--vx-accent-deep);
+  box-shadow: none;
+  vertical-align: 0.12em;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .hero-left-chart .block-head,
+body.design-vexel[data-vexel-mode="dark"] .vexel-bottom-row .block-head,
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .block-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn {
+  border: 1px solid var(--vx-border-strong);
+  background: var(--vx-white-045);
+  color: var(--n-500);
+  box-shadow: none;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn:hover,
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn.on {
+  border-color: var(--vx-accent-25);
+  background: var(--vx-active-bg);
+  color: var(--vx-accent);
+}
+
+/* Plot bed: the same three unlabelled gridlines and the same top-down wash as
+ * light, inverted. Without it the curve floats on the card with no floor. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .chart-wrap {
+  border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 6px / 100% 33.333%,
+    linear-gradient(180deg, rgba(0, 255, 174, 0.035), rgba(0, 0, 0, 0));
+}
+
+body.design-vexel[data-vexel-mode="dark"] :is(.vexel-rail-card, .vexel-goals-card):hover {
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* Hover chip. dateRange.js ships a riad→atlas gradient authored for the old
+ * dark dashboard; against the new lifted card it sits too close to the surface
+ * to separate. Flat, one step lighter, with the mint hairline dark keeps and
+ * light drops — on black the border is what defines the chip's edge. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-rect {
+  fill: #0E3A29;
+  stroke: rgba(0, 255, 174, 0.24);
+  filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.6));
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-label {
+  fill: rgba(0, 255, 174, 0.82);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
+  fill: var(--ink);
 }
