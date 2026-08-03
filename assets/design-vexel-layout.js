@@ -11,7 +11,8 @@
   var CLASS = 'design-vexel';
   var state = {
     active: false, root: null, moves: [], concealed: [], observer: null,
-    rangeUnsubscribe: null, venueUnsubscribe: null, langHandler: null, raf: 0
+    rangeUnsubscribe: null, venueUnsubscribe: null, langHandler: null, raf: 0,
+    goalSignature: ''
   };
 
   function el(tag, className, html) {
@@ -117,10 +118,14 @@
     return rail;
   }
 
+  /* La carte montre une PART, pas un objectif : aucun objectif par canal
+   * n'existe côté produit, et en inventer un ferait lire « 74 % de l'objectif
+   * salle atteint » à un commerçant qui n'en a jamais fixé. Une part de
+   * chiffre d'affaires, elle, se déduit honnêtement du total de la période. */
   var SERVICE_STR = {
-    fr: { title: 'Objectifs par service', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', noData: 'Donnée indisponible' },
-    en: { title: 'Goals by service', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', noData: 'Data unavailable' },
-    ar: { title: 'الأهداف حسب الخدمة', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', noData: 'البيانات غير متاحة' }
+    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', noData: 'Donnée indisponible' },
+    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', noData: 'Data unavailable' },
+    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', noData: 'البيانات غير متاحة' }
   };
   var RANGE_STR = {
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
@@ -473,10 +478,46 @@
     return out;
   }
 
+  /* Poids de démonstration, un par canal du registre métier. Ils ne sont pas
+   * une donnée : ils habillent le jeu de démo au même titre que « Visa 48 % »
+   * dans le mix de paiement, et ne sortent jamais de ce chemin — `realSession()`
+   * renvoie les vraies ventes, et une venue créée par un client n'a aucun
+   * chiffre de démo à emprunter. Normalisés sur les canaux réellement présents,
+   * donc un café (salle · terrasse · comptoir · à emporter) et une boutique
+   * (comptoir · retrait · livraison) se répartissent chacun 100 %. */
+  var DEMO_CHANNEL_WEIGHT = {
+    dining: 100, terrace: 52, counter: 74, takeaway: 38, delivery: 27,
+    catering: 30, pickup: 22, store: 88, cabin: 96, home: 27,
+    products: 19, club: 92, remote: 24, direct: 40, online: 26, onsite: 88
+  };
+
+  /* Le total de la période, lu là où le tableau de bord l'affiche déjà. */
+  function periodRevenue() {
+    var node = document.querySelector('[data-hero-amount]');
+    return node ? numberFrom(node.textContent) : 0;
+  }
+
+  function demoChannelAmounts(channels) {
+    if (realSession()) return {};
+    var total = periodRevenue();
+    if (!(total > 0) || !channels.length) return {};
+    var weights = channels.map(function (c) { return DEMO_CHANNEL_WEIGHT[c.id] || 20; });
+    var sum = weights.reduce(function (a, b) { return a + b; }, 0);
+    if (!sum) return {};
+    var out = Object.create(null);
+    channels.forEach(function (channel, index) {
+      out[channel.id] = total * (weights[index] / sum);
+    });
+    return out;
+  }
+
   function serviceAmount(value) {
     if (!(value >= 0)) return '—';
     var locale = lang() === 'en' ? 'en-GB' : 'fr-FR';
-    return Math.round(value).toLocaleString(locale);
+    /* Intl groupe en fr-FR avec une espace fine insécable (U+202F) ; le reste
+     * du tableau de bord sépare ses milliers par une espace normale. Deux
+     * largeurs pour le même chiffre se voient dès qu'on empile les cartes. */
+    return Math.round(value).toLocaleString(locale).replace(/\u202F/g, ' ');
   }
 
   function servicePeriodLabel(range, l) {
@@ -490,17 +531,20 @@
     return fallback;
   }
 
-  function ringMarkup(amount, label, tone, copy) {
+  function ringMarkup(amount, share, label, tone, caption) {
     var radius = 48;
     var circumference = 2 * Math.PI * radius;
-    /* Aucun objectif par canal n'existe : l'anneau reste honnêtement vide. */
-    var dash = '0';
-    return '<div class="vexel-ring-item' + (amount == null ? ' is-empty' : '') + '">' +
+    var empty = amount == null;
+    /* L'arc porte la part du canal dans le total de la période. Sans part
+     * connue il reste vide — un anneau plein par défaut mentirait. */
+    var dash = empty ? 0 : Math.max(0, Math.min(1, share)) * circumference;
+    var pct = empty ? '—' : Math.round(share * 100) + ' %';
+    return '<div class="vexel-ring-item' + (empty ? ' is-empty' : '') + '">' +
       '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true"><circle class="track" cx="55" cy="55" r="' + radius + '"/>' +
-      '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" stroke-dasharray="' + dash + ' ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
-      '<text x="55" y="57">—</text></svg>' +
-      (amount == null ? '' : '<strong>' + esc(serviceAmount(amount)) + '</strong>') + '<span>' + esc(label) + '</span>' +
-      (amount == null ? '' : '<small>MAD · ' + esc(copy.goalUnavailable) + '</small>') +
+      '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" data-dash="' + dash.toFixed(1) + '" stroke-dasharray="0 ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
+      '<text x="55" y="57">' + esc(pct) + '</text></svg>' +
+      (empty ? '' : '<strong>' + esc(serviceAmount(amount)) + '</strong>') + '<span>' + esc(label) + '</span>' +
+      (empty ? '' : '<small>' + esc(caption) + '</small>') +
     '</div>';
   }
 
@@ -516,19 +560,50 @@
     var clientCopy = CLIENT_STR[l] || CLIENT_STR.fr;
     var channels = currentChannels();
     var amounts = channelAmounts(channels);
+    if (!Object.keys(amounts).length) amounts = demoChannelAmounts(channels);
     var hasAmounts = Object.keys(amounts).length > 0;
     var period = servicePeriodLabel(range, l);
+    var total = channels.reduce(function (sum, channel) {
+      return sum + (amounts[channel.id] > 0 ? amounts[channel.id] : 0);
+    }, 0);
+
+    /* Le rendu est relancé à chaque mutation du tableau de bord ; réécrire les
+     * anneaux à l'identique casserait leur animation d'arc en boucle. */
+    var signature = [l, range, total.toFixed(0), channels.map(function (c) { return c.id; }).join(',')].join('|');
+    if (state.goalSignature === signature) return;
+    state.goalSignature = signature;
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
     setText(document.querySelector('[data-vexel-client-caption]'), clientCopy.caption);
     setText(card.querySelector('h2'), copy.title);
-    setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.goalUnavailable : copy.unavailable) + ' · ' + period);
-    var tones = ['mint', 'deep', 'amber', 'deep'];
-    var rings = channels.map(function (channel, index) {
-      return ringMarkup(hasAmounts && amounts[channel.id] != null ? amounts[channel.id] : null, channel.label, tones[index % tones.length], copy);
+    setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.share : copy.unavailable) + ' · ' + period);
+    /* Dégradé monochrome, du canal le plus fort au plus faible. L'ambre est la
+     * couleur d'alerte du tableau de bord : l'employer ici ferait lire « à
+     * emporter » comme un problème alors que c'est une part comme une autre. */
+    var tones = ['t1', 't2', 't3', 't4'];
+    /* Le ton suit le RANG, pas l'ordre du registre métier : sur une boutique
+     * la livraison passe devant le retrait, et une rampe posée dans l'ordre de
+     * déclaration donnerait le vert le plus pâle à la part la plus grosse. */
+    var rank = channels.map(function (channel, index) { return index; }).sort(function (a, b) {
+      return (amounts[channels[b].id] || 0) - (amounts[channels[a].id] || 0);
     });
-    card.querySelector('.vexel-rings').innerHTML = rings.join('');
+    var toneFor = [];
+    rank.forEach(function (channelIndex, position) { toneFor[channelIndex] = tones[Math.min(position, tones.length - 1)]; });
+    var rings = channels.map(function (channel, index) {
+      var amount = hasAmounts && amounts[channel.id] != null ? amounts[channel.id] : null;
+      return ringMarkup(amount, total > 0 && amount != null ? amount / total : 0, channel.label, toneFor[index], 'MAD');
+    });
+    var ringHost = card.querySelector('.vexel-rings');
+    ringHost.innerHTML = rings.join('');
+    /* Un timer, pas un requestAnimationFrame : un onglet en arrière-plan n'en
+     * exécute aucun, et la signature interne empêche un second rendu — les
+     * anneaux resteraient vides jusqu'au prochain changement de plage. */
+    ringHost.querySelectorAll('.value[data-dash]').forEach(function (arc, index) {
+      setTimeout(function () {
+        arc.setAttribute('stroke-dasharray', arc.dataset.dash + ' ' + (2 * Math.PI * 48).toFixed(1));
+      }, 60 + index * 110);
+    });
 
     /* Every ring empty means the card is 342px of paper showing three dashes —
      * on a boutique that is exactly the dead real estate this pass is removing.
@@ -708,6 +783,14 @@
 
     document.querySelectorAll('.vexel-compose [data-kpi-band] .kpi-m').forEach(splitDelta);
 
+    /* Les anneaux se déduisent du total de la période, qui n'est écrit qu'après
+     * le changement de plage — d'où une seconde passe ici. La signature interne
+     * absorbe les appels qui ne changent rien. */
+    try {
+      var api = window.KiwiDateRange;
+      if (api && typeof api.getDateRange === 'function') renderServiceGoals(api.getDateRange());
+    } catch (_) {}
+
     var amountSource = document.querySelector('[data-hero-amount]');
     var goalLabel = document.querySelector('[data-goal-label]');
     var goalPct = document.querySelector('[data-goal-pct]');
@@ -766,6 +849,7 @@
     state.langHandler = null;
     if (state.raf) cancelAnimationFrame(state.raf);
     state.raf = 0;
+    state.goalSignature = '';
 
     cleanDecorations();
     restoreConcealed();
