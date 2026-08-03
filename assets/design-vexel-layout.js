@@ -185,6 +185,154 @@
       if (relevant) node.removeAttribute('aria-hidden');
       else node.setAttribute('aria-hidden', 'true');
     });
+
+    scheduleBackfill(true);
+  }
+
+  /* ── Backfill the cells venue gating empties ────────────────────────────────
+   *
+   * .dash-cols is a THREE-column grid whose .dash-col children are
+   * display:contents — the cards themselves are the grid items, the columns are
+   * only DOM grouping. So hiding a card does not shrink a column, it leaves a
+   * cell. A boutique loses both of the side column's cards (evening service,
+   * stock reorder) and the row renders two cards across three tracks: a third
+   * of the row is blank paper.
+   *
+   * Meanwhile five genuinely venue-agnostic analyses sit collapsed behind
+   * "Plus d'analyses". Promote them into the empty cells.
+   *
+   * Selection is by FIT, not by topic: take whichever card's height sits
+   * closest to the cards already in the row, so the promoted card completes the
+   * row instead of introducing a new silhouette. Cards MOVE rather than copy —
+   * each lives in exactly one place and the toggle's count follows. */
+  var backfilled = [];
+  var backfillTimer = 0;
+  var backfillTries = 0;
+
+  /* The venue gate fires before the row is laid out, so a pass triggered
+   * straight off it reads every height as 0 and would pick blind. Give the
+   * layout a moment, and retry a bounded number of times until the geometry the
+   * fit depends on actually exists. */
+  function scheduleBackfill(fresh) {
+    if (fresh) backfillTries = 0;
+    clearTimeout(backfillTimer);
+    backfillTimer = setTimeout(backfillVacatedCells, 120);
+  }
+
+  function restoreBackfill() {
+    for (var i = backfilled.length - 1; i >= 0; i -= 1) {
+      var move = backfilled[i];
+      if (move.marker.parentNode) {
+        move.marker.parentNode.insertBefore(move.node, move.marker);
+        move.marker.remove();
+      }
+    }
+    backfilled = [];
+  }
+
+  /* The toggle's count chip is filled once at page load from the pool size.
+   * Promoting a card out of the pool makes that number a lie. */
+  function syncMoreCount() {
+    var pool = document.querySelector('[data-dash-more]');
+    var chip = document.querySelector('[data-dmt-count]');
+    if (!pool || !chip) return;
+    var left = pool.querySelectorAll('.block').length;
+    chip.textContent = String(left);
+    chip.hidden = left === 0;
+  }
+
+  function itemHeight(node) {
+    return (!node || node.hidden) ? 0 : node.getBoundingClientRect().height;
+  }
+
+  /* Grid items of a .dash-cols row: the cards themselves, reached through the
+   * display:contents columns. */
+  function rowItems(row) {
+    var items = [];
+    var kids = row.children;
+    for (var i = 0; i < kids.length; i += 1) {
+      if (kids[i].classList.contains('dash-col')) {
+        var inner = kids[i].children;
+        for (var j = 0; j < inner.length; j += 1) items.push(inner[j]);
+      } else {
+        items.push(kids[i]);
+      }
+    }
+    return items;
+  }
+
+  function backfillVacatedCells() {
+    restoreBackfill();
+
+    var pool = document.querySelector('[data-dash-more]');
+    if (!pool) return;
+
+    var rows = document.querySelectorAll('.dash-cols');
+    for (var r = 0; r < rows.length; r += 1) {
+      var row = rows[r];
+      /* Never rob the pool to fill the pool. */
+      if (row.closest('[data-dash-more]')) continue;
+
+      var tracks = getComputedStyle(row).gridTemplateColumns.split(' ').filter(Boolean).length;
+      if (tracks < 2) continue;
+
+      /* Count by the `hidden` attribute, not by measured height. The gate that
+       * creates the hole runs before the row has been laid out, so heights are
+       * still 0 at this point; only the FIT below needs real geometry. */
+      var items = rowItems(row);
+      var visible = items.filter(function (n) { return !n.hidden; });
+      if (!visible.length) continue;
+
+      /* Only fill what the VENUE GATE emptied. A trailing gap that the row
+       * always had — four cards across three tracks on a restaurant — is the
+       * grid's own remainder, not dead space this pass created, and promoting
+       * analyses into it would rewrite the default dashboard for the one venue
+       * type that has no problem. */
+      var gated = items.filter(function (n) {
+        return n.hidden && n.hasAttribute('data-venue-types');
+      }).length;
+      if (!gated) continue;
+
+      var trailing = (tracks - (visible.length % tracks)) % tracks;
+      var vacant = Math.min(trailing, gated);
+      if (!vacant) continue;
+
+      /* Fit needs real geometry. If the row has not been laid out yet, come
+       * back rather than pick on zeroes. */
+      var measured = visible.some(function (n) { return itemHeight(n) > 0; });
+      if (!measured) {
+        if (backfillTries < 12) { backfillTries += 1; scheduleBackfill(false); }
+        return;
+      }
+
+      /* Height to match: the mean of what is already in the row. */
+      var target = visible.reduce(function (sum, n) { return sum + itemHeight(n); }, 0) / visible.length;
+
+      /* The empty column is the natural landing spot — appending there keeps
+       * DOM order aligned with visual order. Fall back to the row itself. */
+      var host = row.querySelector('.dash-col:last-of-type') || row;
+
+      for (var v = 0; v < vacant; v += 1) {
+        var candidates = [].slice.call(pool.querySelectorAll('.block')).filter(function (b) {
+          return !b.hidden;
+        });
+        if (!candidates.length) break;
+
+        var best = candidates[0];
+        var bestGap = Math.abs(itemHeight(best) - target);
+        for (var c = 1; c < candidates.length; c += 1) {
+          var gap = Math.abs(itemHeight(candidates[c]) - target);
+          if (gap < bestGap) { best = candidates[c]; bestGap = gap; }
+        }
+
+        var marker = document.createComment('vexel-backfill-origin');
+        best.parentNode.insertBefore(marker, best);
+        backfilled.push({ node: best, marker: marker });
+        host.appendChild(best);
+      }
+    }
+
+    syncMoreCount();
   }
 
   function realSession() {
@@ -284,9 +432,20 @@
     setText(card.querySelector('h2'), copy.title);
     setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.goalUnavailable : copy.unavailable) + ' · ' + period);
     var tones = ['mint', 'deep', 'amber', 'deep'];
-    card.querySelector('.vexel-rings').innerHTML = channels.map(function (channel, index) {
+    var rings = channels.map(function (channel, index) {
       return ringMarkup(hasAmounts && amounts[channel.id] != null ? amounts[channel.id] : null, channel.label, tones[index % tones.length], copy);
-    }).join('');
+    });
+    card.querySelector('.vexel-rings').innerHTML = rings.join('');
+
+    /* Every ring empty means the card is 342px of paper showing three dashes —
+     * on a boutique that is exactly the dead real estate this pass is removing.
+     * Reserve the space only when there is something to put in it. */
+    var allEmpty = !channels.length || rings.every(function (markup) {
+      return markup.indexOf('is-empty') >= 0;
+    });
+    card.hidden = allEmpty;
+    if (allEmpty) card.setAttribute('aria-hidden', 'true');
+    else card.removeAttribute('aria-hidden');
   }
 
   function updateGoalRangeLabel(range) {
@@ -509,6 +668,10 @@
 
     cleanDecorations();
     restoreConcealed();
+    /* Before restoreMoves(), so promoted cards go home to "Plus d'analyses"
+     * rather than travelling with whatever container the adapter unwinds. */
+    restoreBackfill();
+    syncMoreCount();
     restoreMoves();
     if (state.root) state.root.remove();
     state.root = null;
