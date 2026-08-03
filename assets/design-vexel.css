@@ -2116,6 +2116,19 @@ body.design-vexel[data-vexel-mode="light"] #kw-main {
  * corners, and the two become one continuous L of chrome wrapped around the
  * paper. Everything worth looking at now floats INSIDE that black — which is
  * the point, because the bar's own surface carries no information. */
+/* The base sheet caps .main AND .topbar-inner at 1320px and centres both with
+ * margin:auto (dashboard.html:310 / :331). .main is centred in whatever is left
+ * beside the sidebar, so past ~1580px the whole app detaches from both edges —
+ * at 1920 that is 170px of bare paper down each side, with the chrome floating
+ * in the middle of it. A centred measure is right for an article; this is a
+ * dashboard, and its chrome is supposed to frame the viewport, not sit inside
+ * it. Both caps come off together: releasing .main alone would leave the bar
+ * full-bleed with its own contents still bunched in a 1320px column. */
+body.design-vexel[data-vexel-mode="light"] .main,
+body.design-vexel[data-vexel-mode="light"] .topbar > .topbar-inner {
+  max-width: none;
+}
+
 body.design-vexel[data-vexel-mode="light"] .topbar {
   top: 0;
   margin: 0;
