@@ -450,11 +450,13 @@
     return store.update((d) => { const c = catById(d, id); if (c) c.name = String(name || c.name).trim() || c.name; return d; });
   }
   function deleteCategory(id) {
-    return store.update((d) => {
+    const next = store.update((d) => {
       d.cats = (d.cats || []).filter((c) => c.id !== id);
       d.items = (d.items || []).filter((i) => i.catId !== id);
       return d;
     });
+    authorizeExplicitEmpty(next);
+    return next;
   }
   function addSubcategory(catId, name) {
     return store.update((d) => {
@@ -506,7 +508,9 @@
     });
   }
   function deleteItem(id) {
-    return store.update((d) => { d.items = (d.items || []).filter((i) => i.id !== id); return d; });
+    const next = store.update((d) => { d.items = (d.items || []).filter((i) => i.id !== id); return d; });
+    authorizeExplicitEmpty(next);
+    return next;
   }
 
   /* ───────────────── styles ───────────────── */
@@ -1583,7 +1587,37 @@
   const clouds = Object.create(null);
   function cloudFor(slug) {
     const k = slug || '·';
-    return clouds[k] || (clouds[k] = { read: false, merchant: '', tried: 0, pulling: false });
+    return clouds[k] || (clouds[k] = {
+      read: false, merchant: '', tried: 0, pulling: false,
+      updatedTs: 0, explicitEmpty: false,
+    });
+  }
+
+  /* Une carte vide n'est publiable que si le commerçant vient réellement de
+   * supprimer son dernier contenu. Le démarrage, l'hydratation et un nouvel
+   * appareil ne passent jamais ici. */
+  function authorizeExplicitEmpty(data) {
+    if (data && ((data.cats && data.cats.length) || (data.items && data.items.length))) return;
+    const c = cloudFor(storeSlug());
+    if (c.read && c.updatedTs) c.explicitEmpty = true;
+  }
+
+  /* Un même magasin a pu changer d'identifiant local (`v<horloge>` puis
+   * `v-<slug>`). Avant d'afficher du vide, recopier sa carte orpheline si le
+   * navigateur la possède encore. Copie seulement : aucune preuve de secours
+   * n'est détruite. */
+  function recoverLocalMenu(vid, slug) {
+    try {
+      const KCD = window.KiwiCloudDoc;
+      if (!KCD || !KCD.carryForward || !vid || !slug) return false;
+      const raw = KCD.carryForward('menu', vid, slug, function (value) {
+        try {
+          const d = JSON.parse(value || 'null');
+          return !!(d && ((d.cats && d.cats.length) || (d.items && d.items.length)));
+        } catch (_) { return false; }
+      });
+      return !!raw;
+    } catch (_) { return false; }
   }
 
   function storeSlug() {
@@ -1705,6 +1739,7 @@
     const c = cloudFor(slug);
     if (c.pulling) return Promise.resolve(false);
     if (isBoutiqueForRead(vd)) return Promise.resolve(false);  // le stock passe par orderpro-publish.js
+    recoverLocalMenu(vid, slug);
     c.pulling = true;
     return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
                  { headers: { Accept: 'application/json' } })
@@ -1713,6 +1748,7 @@
         c.pulling = false;
         if (!j || j.error || j.unreachable) return false;   // injoignable → surtout ne pas publier
         c.merchant = j.merchant || '';
+        c.updatedTs = +j.updatedTs || 0;
         c.read = true;                                       // à partir d'ici, publier est sûr
         const theirs = j.menu;
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
@@ -1742,6 +1778,10 @@
     if (!c.read) { if (c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
     const data = store.get(vid);
     const slug = c.merchant || storeSlug();
+    const empty = !((data.cats && data.cats.length) || (data.items && data.items.length));
+    /* Le simple fait d'avoir relu le serveur n'autorise jamais un effacement.
+     * Seule la suppression explicite du dernier contenu pose ce jeton. */
+    if (empty && !c.explicitEmpty) return;
     /* Les horaires partent AVEC la carte. Le téléphone du client ne peut pas
      * lire les réglages du commerçant : sans ce passager, la page de commande
      * ne saurait pas que le restaurant est fermé et prendrait la commande
@@ -1764,8 +1804,15 @@
           merchant: slug || undefined,
           // On a relu le serveur : une carte vide ici est une carte vidée exprès,
           // pas un navigateur qui n'a rien trouvé. Le serveur refuse l'inverse.
-          allowEmpty: true,
+          allowEmpty: empty && c.explicitEmpty,
+          expectedUpdatedTs: empty && c.explicitEmpty ? c.updatedTs : undefined,
         }),
+      }).then(function (r) {
+        return r && r.ok ? r.json() : null;
+      }).then(function (j) {
+        if (!j || !j.ok) return;
+        c.updatedTs = +j.updatedTs || c.updatedTs;
+        if (empty) c.explicitEmpty = false;
       }).catch(function () {});                    // fire-and-forget, fail-soft
     } catch (_) {}
   }

@@ -180,7 +180,9 @@ function makeWorld(venues, opts) {
       const menu = world.serverMenus[slug];
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(menu ? { merchant: slug, menu } : { merchant: slug }),
+        json: () => Promise.resolve(menu
+          ? { merchant: slug, menu, published: true, updatedTs: 1234 }
+          : { merchant: slug, published: false, updatedTs: 0 }),
       });
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
@@ -291,6 +293,7 @@ const suite = [
     const w = makeWorld([CAFE], { serverMenus: {}, orderProOn: true });
     const API = load(w);
     await sleep(1500);
+    eq('un navigateur neuf ne publie jamais une carte vide au démarrage', menuPosts(w).length, 0);
     w.pages.length = 0;
     API.render();
     const body = (w.pages[w.pages.length - 1] || {}).body || '';

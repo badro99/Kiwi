@@ -304,7 +304,7 @@ export async function onRequestGet(context) {
 
     let row = null;
     try {
-      row = await env.DB.prepare('SELECT name, type, data FROM menus WHERE merchant = ?').bind(merchant).first();
+      row = await env.DB.prepare('SELECT name, type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
     } catch (_) { return json({ merchant, menu: null, shop: null, unreachable: true }); }
 
     let parsed = null;
@@ -320,6 +320,7 @@ export async function onRequestGet(context) {
       menu: parsed && !isShop(type) ? sanitizeMenu(parsed) : null,
       shop: parsed && isShop(type) ? sanitizeShop(parsed) : null,
       published: !!row,
+      updatedTs: +(row && row.updated_ts) || 0,
     });
   }
 
@@ -428,19 +429,32 @@ export async function onRequestPost(context) {
    * Vider sa carte reste évidemment permis — mais il faut le dire (allowEmpty),
    * et seul un client qui a d'abord RELU la carte du serveur l'affirme. */
   const wasEmpty = shop ? shopEmpty(data) : menuEmpty(data);
-  if (wasEmpty && !(body && body.allowEmpty === true)) {
+  if (wasEmpty) {
     let cur = null;
+    let currentUpdatedTs = 0;
     try {
-      const row = await env.DB.prepare('SELECT type, data FROM menus WHERE merchant = ?').bind(merchant).first();
+      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
       if (row && row.data) {
+        currentUpdatedTs = +row.updated_ts || 0;
         const parsed = JSON.parse(row.data);
         cur = isShop(row.type) ? sanitizeShop(parsed) : sanitizeMenu(parsed);
         if (isShop(row.type) ? shopEmpty(cur) : menuEmpty(cur)) cur = null;
       }
     } catch (_) { cur = null; }   // pas de table / base absente → rien à protéger
-    if (cur) return json({ error: 'refused-empty', merchant, data: cur }, 409);
+    if (cur) {
+      /* `allowEmpty:true` tout seul n'est pas une preuve : les anciennes
+       * versions l'envoyaient automatiquement au démarrage. Pour effacer une
+       * vraie carte, le navigateur doit nommer la révision exacte qu'il vient
+       * de lire. Un onglet neuf, ancien ou en retard ne peut donc plus vider la
+       * fiche du serveur. */
+      const expected = +(body && body.expectedUpdatedTs) || 0;
+      if (!(body && body.allowEmpty === true) || !expected || expected !== currentUpdatedTs) {
+        return json({ error: 'refused-empty', merchant, data: cur, updatedTs: currentUpdatedTs }, 409);
+      }
+    }
   }
 
+  const updatedTs = Date.now();
   try {
     await env.DB.prepare(
       `INSERT INTO menus (merchant, name, type, data, updated_ts)
@@ -448,10 +462,10 @@ export async function onRequestPost(context) {
        ON CONFLICT(merchant) DO UPDATE SET
          name = excluded.name, type = excluded.type,
          data = excluded.data, updated_ts = excluded.updated_ts`
-    ).bind(merchant, name, type, JSON.stringify(data), Date.now()).run();
+    ).bind(merchant, name, type, JSON.stringify(data), updatedTs).run();
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return shop
-    ? json({ ok: true, merchant, products: data.products.length, variants: data.variants.length })
-    : json({ ok: true, merchant, items: data.items.length, cats: data.cats.length });
+    ? json({ ok: true, merchant, products: data.products.length, variants: data.variants.length, updatedTs })
+    : json({ ok: true, merchant, items: data.items.length, cats: data.cats.length, updatedTs });
 }
