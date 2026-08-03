@@ -182,11 +182,31 @@
       var allowed = String(node.dataset.venueTypes || '').split(/\s+/).filter(Boolean);
       var relevant = allowed.indexOf(type) >= 0;
       node.hidden = !relevant;
-      if (relevant) node.removeAttribute('aria-hidden');
-      else node.setAttribute('aria-hidden', 'true');
+      if (relevant) {
+        node.removeAttribute('aria-hidden');
+        node.style.removeProperty('display');
+      } else {
+        node.setAttribute('aria-hidden', 'true');
+        /* `hidden` on its own is a suggestion: .integ-card carries its own
+         * `display: flex`, which outranks the browser's [hidden] rule — so the
+         * gate was setting the attribute while a spa carried on being offered
+         * Glovo and Yassir Express. Say it in a voice the cascade can hear. */
+        node.style.setProperty('display', 'none', 'important');
+      }
     });
 
     scheduleBackfill(true);
+  }
+
+  /* The gate is the adapter's, so its verdict leaves with the adapter — without
+   * this, turning the skin off left a boutique's restaurant cards hidden. */
+  function ungate() {
+    document.querySelectorAll('[data-venue-types]').forEach(function (node) {
+      node.hidden = false;
+      node.removeAttribute('aria-hidden');
+      node.style.removeProperty('display');
+    });
+    delete document.body.dataset.venueType;
   }
 
   /* ── Backfill the cells venue gating empties ────────────────────────────────
@@ -206,6 +226,7 @@
    * row instead of introducing a new silhouette. Cards MOVE rather than copy —
    * each lives in exactly one place and the toggle's count follows. */
   var backfilled = [];
+  var pinned = [];
   var backfillTimer = 0;
   var backfillTries = 0;
 
@@ -230,19 +251,54 @@
     backfilled = [];
   }
 
+  /* Move a card, leaving a marker where it stood so disable() can put it back
+   * exactly — the adapter never destroys markup it did not create. */
+  function relocate(node, host) {
+    var marker = document.createComment('vexel-backfill-origin');
+    node.parentNode.insertBefore(marker, node);
+    backfilled.push({ node: node, marker: marker });
+    host.appendChild(node);
+  }
+
+  /* Inline overrides this pass writes, each remembering what it displaced. */
+  function pin(node, prop, value) {
+    pinned.push({ node: node, prop: prop, prev: node.style[prop] });
+    node.style[prop] = value;
+  }
+
+  function restorePins() {
+    for (var i = pinned.length - 1; i >= 0; i -= 1) pinned[i].node.style[pinned[i].prop] = pinned[i].prev;
+    pinned = [];
+  }
+
   /* The toggle's count chip is filled once at page load from the pool size.
    * Promoting a card out of the pool makes that number a lie. */
   function syncMoreCount() {
     var pool = document.querySelector('[data-dash-more]');
     var chip = document.querySelector('[data-dmt-count]');
     if (!pool || !chip) return;
-    var left = pool.querySelectorAll('.block').length;
+    var left = [].filter.call(pool.querySelectorAll('.block'), function (b) { return !b.hidden; }).length;
     chip.textContent = String(left);
     chip.hidden = left === 0;
   }
 
   function itemHeight(node) {
     return (!node || node.hidden) ? 0 : node.getBoundingClientRect().height;
+  }
+
+  /* Count TRACK CELLS, not cards. A card carrying `grid-column: 1 / span 2`
+   * fills two of them, which is how a row holding five cells across three
+   * tracks first read as "three cards, nothing missing". */
+  function cellSpan(node) {
+    var match = /span\s+(\d+)/.exec(getComputedStyle(node).gridColumn);
+    return match ? Math.min(parseInt(match[1], 10), 12) : 1;
+  }
+
+  /* A seat this session emptied: gated away by venue, or given up by a card
+   * that had nothing to show. A row that was always short keeps its shape. */
+  function vacated(node) {
+    return node.hidden
+      && (node.hasAttribute('data-venue-types') || node.hasAttribute('data-vexel-vacated'));
   }
 
   /* Grid items of a .dash-cols row: the cards themselves, reached through the
@@ -263,16 +319,13 @@
 
   function backfillVacatedCells() {
     restoreBackfill();
+    restorePins();
 
     var pool = document.querySelector('[data-dash-more]');
-    if (!pool) return;
 
-    var rows = document.querySelectorAll('.dash-cols');
+    var rows = document.querySelectorAll('.dash-cols, .vexel-bottom-row, .integ-grid');
     for (var r = 0; r < rows.length; r += 1) {
       var row = rows[r];
-      /* Never rob the pool to fill the pool. */
-      if (row.closest('[data-dash-more]')) continue;
-
       var tracks = getComputedStyle(row).gridTemplateColumns.split(' ').filter(Boolean).length;
       if (tracks < 2) continue;
 
@@ -283,56 +336,96 @@
       var visible = items.filter(function (n) { return !n.hidden; });
       if (!visible.length) continue;
 
-      /* Only fill what the VENUE GATE emptied. A trailing gap that the row
-       * always had — four cards across three tracks on a restaurant — is the
-       * grid's own remainder, not dead space this pass created, and promoting
-       * analyses into it would rewrite the default dashboard for the one venue
-       * type that has no problem. */
-      var gated = items.filter(function (n) {
-        return n.hidden && n.hasAttribute('data-venue-types');
-      }).length;
+      /* Only close what this session emptied. A trailing gap the row always
+       * had — four cards across three tracks on a restaurant — is the grid's
+       * own remainder, not dead space, and rewriting it would change the
+       * default dashboard for the one venue type that has no problem. */
+      var gated = items.filter(vacated).length;
       if (!gated) continue;
 
-      var trailing = (tracks - (visible.length % tracks)) % tracks;
+      var cells = visible.reduce(function (sum, n) { return sum + cellSpan(n); }, 0);
+      var trailing = (tracks - (cells % tracks)) % tracks;
       var vacant = Math.min(trailing, gated);
       if (!vacant) continue;
 
-      /* Fit needs real geometry. If the row has not been laid out yet, come
-       * back rather than pick on zeroes. */
-      var measured = visible.some(function (n) { return itemHeight(n) > 0; });
-      if (!measured) {
-        if (backfillTries < 12) { backfillTries += 1; scheduleBackfill(false); }
-        return;
-      }
-
-      /* Height to match: the mean of what is already in the row. */
-      var target = visible.reduce(function (sum, n) { return sum + itemHeight(n); }, 0) / visible.length;
-
-      /* The empty column is the natural landing spot — appending there keeps
-       * DOM order aligned with visual order. Fall back to the row itself. */
-      var host = row.querySelector('.dash-col:last-of-type') || row;
-
-      for (var v = 0; v < vacant; v += 1) {
-        var candidates = [].slice.call(pool.querySelectorAll('.block')).filter(function (b) {
-          return !b.hidden;
-        });
-        if (!candidates.length) break;
-
-        var best = candidates[0];
-        var bestGap = Math.abs(itemHeight(best) - target);
-        for (var c = 1; c < candidates.length; c += 1) {
-          var gap = Math.abs(itemHeight(candidates[c]) - target);
-          if (gap < bestGap) { best = candidates[c]; bestGap = gap; }
+      /* Promotion only makes sense for the main grid, where the cards in the
+       * pool are the same species as the cards around the hole — and never for
+       * a row inside the pool itself, which would rob it to fill it. Those rows
+       * still get re-gridded below; the integrations live in one. */
+      var filled = 0;
+      if (pool && row.classList.contains('dash-cols') && !row.closest('[data-dash-more]')) {
+        /* Fit needs real geometry. If the row has not been laid out yet, come
+         * back rather than pick on zeroes. */
+        var measured = visible.some(function (n) { return itemHeight(n) > 0; });
+        if (!measured) {
+          if (backfillTries < 12) { backfillTries += 1; scheduleBackfill(false); }
+          return;
         }
 
-        var marker = document.createComment('vexel-backfill-origin');
-        best.parentNode.insertBefore(marker, best);
-        backfilled.push({ node: best, marker: marker });
-        host.appendChild(best);
+        /* Height to match: the mean of what is already in the row. */
+        var target = visible.reduce(function (sum, n) { return sum + itemHeight(n); }, 0) / visible.length;
+
+        /* The empty column is the natural landing spot — appending there keeps
+         * DOM order aligned with visual order. Fall back to the row itself. */
+        var host = row.querySelector('.dash-col:last-of-type') || row;
+
+        for (var v = 0; v < vacant; v += 1) {
+          var candidates = [].slice.call(pool.querySelectorAll('.block')).filter(function (b) {
+            return !b.hidden;
+          });
+          if (!candidates.length) break;
+
+          var best = candidates[0];
+          var bestGap = Math.abs(itemHeight(best) - target);
+          for (var c = 1; c < candidates.length; c += 1) {
+            var gap = Math.abs(itemHeight(candidates[c]) - target);
+            if (gap < bestGap) { best = candidates[c]; bestGap = gap; }
+          }
+
+          relocate(best, host);
+          filled += 1;
+        }
+      }
+
+      /* Whatever nothing was promoted into stays blank paper. When every
+       * surviving card fits on one line, drop the empty tracks instead and let
+       * the row re-grid to the cards it actually has: a spa's two integrations
+       * become two half-width tiles rather than two tiles and a void. Grids
+       * that run to a second row keep their tracks — re-gridding those would
+       * break the cards spanning two of them. */
+      if (filled < vacant && cells + filled < tracks) {
+        pin(row, 'gridTemplateColumns', 'repeat(' + (cells + filled) + ', minmax(0, 1fr))');
       }
     }
 
+    balancePool();
     syncMoreCount();
+  }
+
+  /* "Plus d'analyses" is a two-column grid. An odd number of cards leaves the
+   * short column trailing a card-sized hole — and promoting one out of the pool
+   * is exactly what flips it odd. Give the last card the full width instead. */
+  function balancePool() {
+    var grid = document.querySelector('[data-dash-more] .dash-cols');
+    if (!grid) return;
+    if (getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length !== 2) return;
+
+    var cols = grid.querySelectorAll('.dash-col');
+    if (cols.length !== 2) return;
+
+    var left = [].filter.call(cols[0].children, function (n) { return !n.hidden; });
+    var right = [].filter.call(cols[1].children, function (n) { return !n.hidden; });
+    if ((left.length + right.length) % 2 === 0) return;
+
+    var longer = left.length > right.length ? left : right;
+    if (!longer.length) return;
+    var odd = longer[longer.length - 1];
+
+    /* The per-column CSS pins each card to its own track, so the odd one has to
+     * sit in the first column's flow before a full-width span reads as the last
+     * row rather than a stray third row. */
+    if (longer === right) relocate(odd, cols[0]);
+    pin(odd, 'gridColumn', '1 / -1');
   }
 
   function realSession() {
@@ -444,8 +537,16 @@
       return markup.indexOf('is-empty') >= 0;
     });
     card.hidden = allEmpty;
-    if (allEmpty) card.setAttribute('aria-hidden', 'true');
-    else card.removeAttribute('aria-hidden');
+    if (allEmpty) {
+      card.setAttribute('aria-hidden', 'true');
+      /* Tell the dead-cell pass this seat was vacated, not merely absent — it
+       * only re-grids rows that lost something. */
+      card.setAttribute('data-vexel-vacated', '');
+    } else {
+      card.removeAttribute('aria-hidden');
+      card.removeAttribute('data-vexel-vacated');
+    }
+    scheduleBackfill(true);
   }
 
   function updateGoalRangeLabel(range) {
@@ -671,6 +772,8 @@
     /* Before restoreMoves(), so promoted cards go home to "Plus d'analyses"
      * rather than travelling with whatever container the adapter unwinds. */
     restoreBackfill();
+    restorePins();
+    ungate();
     syncMoreCount();
     restoreMoves();
     if (state.root) state.root.remove();
