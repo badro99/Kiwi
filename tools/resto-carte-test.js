@@ -489,8 +489,12 @@ ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
   'tant qu\'un groupe obligatoire est sans réponse, « Ajouter » ne répond pas');
 ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
-ok(/note: kitchenNote\(l\)/.test(caisseSrc),
-  'les choix partent en cuisine par la note — donc sur l\'écran ET sur le papier');
+ok(/paperNote: kitchenNote\(l\), visuals: optVisuals\(l\.opts\)/.test(caisseSrc),
+  'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
+ok(/emoji: str\(c && c\.emoji, 16\)/.test(menuApi),
+  'le repère visuel facultatif survit à la publication de la carte');
+ok(/emoji: String\(c\.emoji \|\| ''\)/.test(caisseSrc),
+  'la caisse conserve le repère visuel de chaque choix');
 
 /* Le bon papier : un par poste, avec SES lignes, et jamais deux jobs en même
    temps sur une thermique. */

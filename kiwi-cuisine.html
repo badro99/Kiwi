@@ -207,6 +207,10 @@
       color: var(--warn-ink); background: rgba(217,154,43,.14);
       border-radius: 7px; padding: 4px 9px; width: fit-content;
     }
+    .tk-visuals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .tk-visual { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px 5px 7px;
+      border-radius: 8px; color: var(--forest-deep); background: var(--mint-tint); font-size: 14px; font-weight: 700; }
+    .tk-visual-emoji { font-size: 25px; line-height: 1; }
     .tk-act {
       margin: 12px 13px 13px; height: 58px; border-radius: 13px;
       font-size: 17px; font-weight: 600; display: flex; align-items: center;
@@ -571,8 +575,12 @@
     var items = (o.lines || []).map(function (l) {
       var off = S.station !== 'all' && l.station !== S.station;
       var note = String(l.note || '').trim();
+      var visuals = (Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) { return v && v.emoji && v.name; });
+      var visualHtml = visuals.length ? '<span class="tk-visuals">' + visuals.map(function (v) {
+        return '<span class="tk-visual"><span class="tk-visual-emoji">' + esc(v.emoji) + '</span><span>' + esc(v.name) + '</span></span>';
+      }).join('') + '</span>' : '';
       return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + (l.qty || 1) + '×</span>'
-        + '<span class="tk-n">' + esc(l.name) + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
+        + '<span class="tk-n">' + esc(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
     }).join('');
     var act = kind === 'new'
       ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + 'Je prends</button>'

@@ -120,11 +120,15 @@ async function get(fn, qs, headers = {}) {
   let r = await post(placeOrder, {
     merchant: SLUG, mode: 'table', table: '7',
     total: 1,                                   // le mensonge
-    lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1 }],
+    lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1,
+      visuals: [{ emoji: '🍅', name: 'Tomate' }] }],
   });
   ok('une commande passe', r.status === 200 && r.body.ok, JSON.stringify(r.body));
   ok('le prix vient de la carte, pas du téléphone', r.body.total === 90, 'total=' + r.body.total);
   ok('le nom aussi', r.body.lines[0].name === 'Tajine poulet', r.body.lines[0].name);
+  ok('le repère visuel de l’option arrive avec la ligne',
+    r.body.lines[0].visuals[0].emoji === '🍅' && r.body.lines[0].visuals[0].name === 'Tomate',
+    JSON.stringify(r.body.lines[0].visuals));
   const priced = DB._db.prepare('SELECT total, priced_ts, menu_rev FROM orders WHERE id=?').get(r.body.id);
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
@@ -527,7 +531,7 @@ async function get(fn, qs, headers = {}) {
 
   r = await post(queuePost, {
     merchant: SALLE, create: true, mode: 'table', table: 'T7',
-    lines: [{ id: 'i1', qty: 2, note: 'sans olives' }, { id: 'i2', qty: 3 }],
+    lines: [{ id: 'i1', qty: 2, note: 'sans olives', visuals: [{ emoji: '🚫🫒', name: 'Sans olives' }] }, { id: 'i2', qty: 3 }],
   }, asSalle);
   ok('la salle envoie sa commande, Order Pro éteint', r.status === 200 && r.body.ok,
     r.status + ' ' + JSON.stringify(r.body));
@@ -539,6 +543,8 @@ async function get(fn, qs, headers = {}) {
   ok('la table voyage avec', salleRow.table_no === 'T7', salleRow.table_no);
   ok('la note du convive aussi',
     JSON.parse(salleRow.lines)[0].note === 'sans olives', salleRow.lines);
+  ok('le repère visuel de la cuisine aussi',
+    JSON.parse(salleRow.lines)[0].visuals[0].emoji === '🚫🫒', salleRow.lines);
 
   // La caisse la voit. C'est tout l'objet : un ticket que la cuisine reçoit.
   r = await get(queueGet, 'merchant=' + SALLE + '&since=0', asSalle);

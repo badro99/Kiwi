@@ -222,11 +222,17 @@ export async function priceOrder(env, merchant, rawLines) {
     const qty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(l && l.qty) || 1)));
     const options = String((l && l.options) || '').slice(0, 200);
     const note = String((l && l.note) || '').slice(0, 200);
+    const visuals = (Array.isArray(l && l.visuals) ? l.visuals.slice(0, 12) : [])
+      .map((v) => ({
+        emoji: String((v && v.emoji) || '').trim().slice(0, 16),
+        name: String((v && v.name) || '').trim().slice(0, 60),
+      }))
+      .filter((v) => v.emoji && v.name);
 
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
     if (!ref.avail) { unavailable.push(ref.name || id); continue; }
-    lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note });
+    lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note, visuals });
     total += ref.price * qty;
   }
 

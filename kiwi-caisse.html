@@ -3877,6 +3877,12 @@
     .kit-inote { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; font-weight: 600; color: #B47A14; }
     .kit-inote svg { width: 12px; height: 12px; flex-shrink: 0; }
     .kit-zoom .kit-inote { font-size: 14px; }
+    .kit-visuals { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .kit-visual { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px;
+      border-radius: 7px; background: var(--mint-soft); color: var(--riad); font-size: 12px; font-weight: 700; }
+    .kit-visual-emoji { font-size: 20px; line-height: 1; }
+    .kit-zoom .kit-visual { font-size: 14px; padding: 5px 9px 5px 7px; }
+    .kit-zoom .kit-visual-emoji { font-size: 25px; }
     .kit-items { list-style: none; margin: 0; padding: 13px 15px 15px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; flex: 1; }
     .kit-item { display: flex; align-items: flex-start; gap: 11px; }
     .kit-q { flex-shrink: 0; min-width: 28px; height: 25px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); background: var(--paper-soft); border-radius: 7px; }
@@ -7185,7 +7191,7 @@
           kind: g.kind === 'many' ? 'many' : 'one',
           required: !!g.required,
           choices: g.choices.filter(c => c && c.id && c.name)
-            .map(c => ({ id: String(c.id), name: String(c.name), price: Math.max(0, +c.price || 0) })),
+            .map(c => ({ id: String(c.id), name: String(c.name), emoji: String(c.emoji || ''), price: Math.max(0, +c.price || 0) })),
         }));
       const stIds = carteState.stations.map(s => s.id);
       carteState.kitchenId = (d.kitchenId && stIds.indexOf(String(d.kitchenId)) >= 0)
@@ -7459,11 +7465,11 @@
     }
     const optSig  = (opts) => (opts || []).map(o => o.c).join('|');
     const optText = (opts) => (opts || []).map(o => o.cn).join(' · ');
+    const optVisuals = (opts) => (opts || []).filter(o => o && o.e).map(o => ({ emoji: o.e, name: o.cn }));
 
-    /* Ce que la cuisine doit lire : les choix d'abord — ils changent le plat —
-       la note du serveur ensuite. On passe par la NOTE plutôt que par un champ
-       neuf : elle arrive déjà intacte sur l'écran cuisine ET sur le papier, sans
-       toucher ni à l'un ni à l'autre. */
+    /* Le papier garde une phrase lisible avec tous les choix. Le KDS reçoit en
+       plus les repères visuels structurés (`optVisuals`) afin de pouvoir rendre
+       l'emoji en grand sans confondre une option avec la note libre du serveur. */
     function kitchenNote(l) {
       const o = optText(l && l.opts), n = ((l && l.note) || '').trim();
       return (o && n) ? (o + ' · ' + n) : (o || n);
@@ -7528,7 +7534,7 @@
                 <div class="opt-g-c">${g.choices.map(c => `
                   <button type="button" class="opt-c${picked[g.id].indexOf(c.id) >= 0 ? ' on' : ''}"
                           data-og="${kdsEsc(g.id)}" data-oc="${kdsEsc(c.id)}">
-                    <span>${kdsEsc(c.name)}</span>${c.price ? `<b class="mono">+${fmtMAD(c.price)}</b>` : ''}
+                    <span>${c.emoji ? `${kdsEsc(c.emoji)} ` : ''}${kdsEsc(c.name)}</span>${c.price ? `<b class="mono">+${fmtMAD(c.price)}</b>` : ''}
                   </button>`).join('')}</div>
               </div>`).join('')}</div>
             ${missing.length ? `<div class="opt-miss">À choisir : ${missing.map(g => kdsEsc(g.name)).join(', ')}</div>` : ''}
@@ -7561,7 +7567,7 @@
           const chosen = [];
           groups.forEach(g => picked[g.id].forEach(cid => {
             const c = g.choices.find(x => x.id === cid);
-            if (c) chosen.push({ g: g.id, gn: g.name, c: c.id, cn: c.name, p: +c.price || 0 });
+            if (c) chosen.push({ g: g.id, gn: g.name, c: c.id, cn: c.name, e: c.emoji || '', p: +c.price || 0 });
           }));
           closeOptSheet();
           pushCartLine(item, chosen);
@@ -8690,7 +8696,7 @@
       if (!lines.length) return null;
       const items = lines.map((l) => {
         const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: kitchenNote(l),
+        return { q: l.qty, n: l.name, p: l.price, note: ((l.note || '').trim()), paperNote: kitchenNote(l), visuals: optVisuals(l.opts),
           stations: [kdsStationFor(m)] };
       });
       const order = {
@@ -8743,7 +8749,7 @@
           table: order.table || '',
           server: order.server || '',
           lines: (order.items || []).map(i => ({
-            name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.note || '',
+            name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.note || '', visuals: i.visuals || [],
             station: (i.stations && i.stations[0]) || '',
           })),
         }).then((r) => {
@@ -12836,8 +12842,10 @@
       const items = o.items.map(i => {
         const off = kdsActiveStation !== 'all' && !i.stations.includes(kdsActiveStation);
         const note = (i.note || '').trim();
+        const visuals = (Array.isArray(i.visuals) ? i.visuals : []).filter(v => v && v.emoji && v.name);
+        const visualHtml = visuals.length ? `<span class="kit-visuals">${visuals.map(v => `<span class="kit-visual"><span class="kit-visual-emoji">${kdsEsc(v.emoji)}</span><span>${kdsEsc(v.name)}</span></span>`).join('')}</span>` : '';
         const hasRec = kdsHasRecipe(i.n);
-        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRec ? ' has-recipe' : ''}"${hasRec ? ` data-kit-recipe="${kdsEsc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${kdsEsc(i.n)}${note ? `<span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(note)}</span></span>` : ''}</span>${hasRec ? KDS_SVG.book : ''}</li>`;
+        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRec ? ' has-recipe' : ''}"${hasRec ? ` data-kit-recipe="${kdsEsc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${kdsEsc(i.n)}${visualHtml}${note ? `<span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(note)}</span></span>` : ''}</span>${hasRec ? KDS_SVG.book : ''}</li>`;
       }).join('');
       const act = isReady ? ''
         : isNew ? `<button class="kit-act kit-act-accept" data-kit-accept="${o.num}">Accepter</button>`
@@ -13433,7 +13441,7 @@
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
             if (!byStation.has(sid)) byStation.set(sid, []);
-            byStation.get(sid).push({ qty: it.q, name: it.n, note: it.note });
+            byStation.get(sid).push({ qty: it.q, name: it.n, note: it.paperNote || it.note });
           });
         });
         const list = kdsStations();
@@ -13456,7 +13464,7 @@
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
       const items  = cart.map(l => {
         const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: kitchenNote(l),
+        return { q: l.qty, n: l.name, p: l.price, note: ((l.note || '').trim()), paperNote: kitchenNote(l), visuals: optVisuals(l.opts),
           stations: [kdsStationFor(m)] };
       });
       const order = {
@@ -13818,7 +13826,8 @@
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
           items: (o.lines || []).map(l => ({
             q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
-            note: [l.options, l.note].filter(Boolean).join(' · '),
+            note: [(Array.isArray(l.visuals) && l.visuals.length) ? '' : l.options, l.note].filter(Boolean).join(' · '),
+            visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
             /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
                transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
                retrouver par le nom du plat serait le recalculer contre une

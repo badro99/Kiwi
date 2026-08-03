@@ -108,6 +108,8 @@
     optReqHi:   { fr: 'Le comptoir ne pourra pas ajouter le produit sans avoir répondu.', en: 'The till can\'t add the product until this is answered.', ar: 'الصندوق ما يقدرش يزيد المنتج بلا جواب.' },
     optChAdd:   { fr: 'Ajouter un choix', en: 'Add a choice', ar: 'إضافة اختيار' },
     optChNm:    { fr: 'Nom du choix', en: 'Choice name', ar: 'اسم الاختيار' },
+    optChEmoji: { fr: 'Repère visuel', en: 'Visual marker', ar: 'رمز بصري' },
+    optEmojiHi: { fr: 'Ajoutez un emoji facultatif à chaque choix pour le rendre immédiatement reconnaissable sur l’écran cuisine.', en: 'Add an optional emoji to each choice so it is immediately recognisable on the kitchen display.', ar: 'زيد إيموجي اختياري لكل اختيار باش يتعرف عليه العامل بسرعة فشاشة المطبخ.' },
     optChPr:    { fr: 'Supplément', en: 'Extra', ar: 'زيادة' },
     optChEm:    { fr: 'Ce groupe n\'a aucun choix — le comptoir n\'aurait rien à proposer.', en: 'This group has no choices — the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات — الصندوق ماغاديش يلقى شنو يقترح.' },
     optDelQ:    { fr: 'Supprimer ce groupe ? Il sera retiré des produits qui l\'utilisent.', en: 'Delete this group? It will be removed from the products using it.', ar: 'حذف هاد المجموعة؟ غادي تتحيد من المنتجات اللي كيستعملوها.' },
@@ -373,11 +375,11 @@
       return d;
     });
   }
-  function addOptChoice(gid, name, price) {
+  function addOptChoice(gid, name, price, emoji) {
     return store.update((d) => {
       const g = optById(d, gid); if (!g) return d;
       g.choices = Array.isArray(g.choices) ? g.choices : [];
-      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0) });
+      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0), emoji: String(emoji || '').trim().slice(0, 16) });
       return d;
     });
   }
@@ -387,6 +389,7 @@
       const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
       if (patch.name != null) c.name = String(patch.name).trim() || c.name;
       if (patch.price != null) c.price = Math.max(0, +patch.price || 0);
+      if (patch.emoji != null) c.emoji = String(patch.emoji || '').trim().slice(0, 16);
       return d;
     });
   }
@@ -584,9 +587,14 @@
       .mx-og-req { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
       .mx-og-list { display: flex; flex-direction: column; gap: 6px; }
       .mx-og-ch { display: flex; align-items: center; gap: 8px; }
-      .mx-og-ch > input[type="text"] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+      .mx-og-emoji { width: 48px; flex: 0 0 48px; border: 1px solid var(--line); border-radius: 8px;
+        padding: 5px 4px; font: inherit; font-size: 20px; line-height: 1.2; text-align: center;
+        color: var(--ink); background: var(--paper-soft); outline: none; }
+      .mx-og-emoji:focus { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-visual-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); margin: -3px 0 10px; }
+      .mx-og-ch > input[type="text"]:not(.mx-og-emoji) { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
         padding: 6px 9px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-soft); outline: none; }
-      .mx-og-ch > input[type="text"]:focus { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-ch > input[type="text"]:not(.mx-og-emoji):focus { border-color: var(--atlas); background: var(--surface); }
       .mx-og-ch .pr { display: inline-flex; align-items: center; gap: 5px; }
       .mx-og-ch .pr input { width: 62px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
         font: inherit; font-size: 13px; font-family: var(--mono); text-align: right; color: var(--ink);
@@ -1050,6 +1058,9 @@
       const cards = list.map((g) => {
         const choices = (g.choices || []).map((c) => `
           <div class="mx-og-ch" data-oc="${esc(c.id)}">
+            <input class="mx-og-emoji" type="text" value="${esc(c.emoji || '')}" maxlength="16"
+                   placeholder="🥬" inputmode="text" data-oc-emoji="${esc(g.id)}::${esc(c.id)}"
+                   aria-label="${esc(tr(T.optChEmoji))}" title="${esc(tr(T.optChEmoji))}" />
             <input type="text" value="${esc(c.name)}" data-oc-name="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChNm))}" />
             <div class="pr">
               <input type="number" min="0" step="1" value="${c.price ? esc(c.price) : ''}" placeholder="0"
@@ -1076,6 +1087,7 @@
             </label>
           </div>
           <div class="mx-og-list">
+            <div class="mx-og-visual-hint">${esc(tr(T.optEmojiHi))}</div>
             ${choices || `<div class="mx-og-empty">${esc(tr(T.optChEm))}</div>`}
           </div>
           <button class="mx-sub-add" type="button" data-oc-add="${esc(g.id)}">${PLUS}<span>${esc(tr(T.optChAdd))}</span></button>
@@ -1104,6 +1116,8 @@
       if (gn) { const id = gn.dataset.ogName, v = gn.value; queue(() => updateOptGroup(id, { name: v })); return; }
       const cn = e.target.closest('[data-oc-name]');
       if (cn) { const [g, c] = pair(cn.dataset.ocName), v = cn.value; queue(() => updateOptChoice(g, c, { name: v })); return; }
+      const ce = e.target.closest('[data-oc-emoji]');
+      if (ce) { const [g, c] = pair(ce.dataset.ocEmoji), v = ce.value; queue(() => updateOptChoice(g, c, { emoji: v })); return; }
       const cp = e.target.closest('[data-oc-price]');
       if (cp) { const [g, c] = pair(cp.dataset.ocPrice), v = cp.value; queue(() => updateOptChoice(g, c, { price: v })); return; }
     });

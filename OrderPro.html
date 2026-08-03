@@ -4448,6 +4448,9 @@ em, i, cite, dfn, var { font-style: normal; }
     function groupLabel(optKey) {
       return t(`opt_label_${optKey}`) || OPT[optKey]?.label || optKey;
     }
+    function choiceEmoji(optKey, choiceId) {
+      return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
+    }
     function describeOptions(line) {
       const item = itemOf(line.id);
       if (!item || !item.options) return '';
@@ -4467,6 +4470,20 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       }
       return parts.join(' · ');
+    }
+    function describeOptionVisuals(line) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
+        ids.forEach(id => {
+          const emoji = choiceEmoji(opt.key, id);
+          if (emoji) out.push({ emoji, name: choiceLabel(opt.key, id) });
+        });
+      }
+      return out;
     }
 
     function totals() {
@@ -4587,7 +4604,7 @@ em, i, cite, dfn, var { font-style: normal; }
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
-                <span>${choiceLabel(opt.key, c.id)}</span>
+                <span>${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
                 ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}
               </button>
             `).join('')}
@@ -4985,6 +5002,7 @@ em, i, cite, dfn, var { font-style: normal; }
           id: l.id,
           qty: l.qty,
           options: describeOptions(l),
+          visuals: describeOptionVisuals(l),
           note: l.note || '',
         })),
       });
@@ -5576,6 +5594,24 @@ em, i, cite, dfn, var { font-style: normal; }
       const items = (Array.isArray(data.items) ? data.items : []).filter(i => i && i.avail !== false);
       if (!items.length) return false;
 
+      const groups = new Map();
+      (Array.isArray(data.opts) ? data.opts : []).forEach(g => {
+        if (!g || !g.id || !Array.isArray(g.choices) || !g.choices.length) return;
+        const key = String(g.id);
+        const mapped = {
+          key,
+          label: String(g.name || ''),
+          type: g.kind === 'many' ? 'multi' : 'single',
+          default: '',
+          required: !!g.required,
+          choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
+            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0),
+          })),
+        };
+        OPT[key] = mapped;
+        groups.set(key, mapped);
+      });
+
       MENU.length = 0;
       const names = {};
       for (const it of items) {
@@ -5590,6 +5626,7 @@ em, i, cite, dfn, var { font-style: normal; }
           video: it.video || '',
           tag: it.tag || '',
           avail: it.avail !== false,
+          options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
         });
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
       }

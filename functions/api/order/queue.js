@@ -549,6 +549,12 @@ function cleanLines(raw) {
       qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(l.qty) || 1))),
       unitPrice: Math.max(0, Math.round(Number(l.unitPrice) || 0)),
       note: String(l.note || '').slice(0, 200),
+      visuals: (Array.isArray(l.visuals) ? l.visuals.slice(0, 12) : [])
+        .map((v) => ({
+          emoji: String((v && v.emoji) || '').trim().slice(0, 16),
+          name: String((v && v.name) || '').trim().slice(0, 60),
+        }))
+        .filter((v) => v.emoji && v.name),
       station: String(l.station || '').slice(0, 40),
     });
   }

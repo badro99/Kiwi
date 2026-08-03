@@ -116,6 +116,9 @@ function sanitizeMenu(raw) {
     choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => ({
       id: str(c && c.id, 40),
       name: str(c && c.name, 60),
+      // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
+      // publiées avant cette clé continuent avec une chaîne vide.
+      emoji: str(c && c.emoji, 16),
       price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
     })).filter((c) => c.id && c.name),
   })).filter((g) => g.id && g.name);
