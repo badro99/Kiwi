@@ -1666,36 +1666,27 @@
     // Chevron rotation tied to dropdownOpen handled in toggleDropdown()
   }
 
-  /* ═══════════════ RENDER: SIDEBAR UPSELL / PLAN STATUS ═══════════════
-   * Single-venue view keeps the original "Passer à Ultra" upsell — kept
-   * for demo / pitch surfaces. Fusion view (where the merchant has
-   * already paid for Ultra) surfaces plan status instead of selling. */
-  const UPSELL_STR = {
-    fr: { active: 'Actif · renouvellement 14.06.2026', manage: 'Gérer mon abonnement →', mo: '/mois', pitch: 'Multi-pays, API enterprise, account manager dédié. Upgrade depuis Pro 399 sans engagement.', cta: 'Passer à Ultra →' },
-    en: { active: 'Active · renews 14.06.2026', manage: 'Manage my subscription →', mo: '/mo', pitch: 'Multi-country, enterprise API, dedicated account manager. Upgrade from Pro 399, no commitment.', cta: 'Upgrade to Ultra →' },
-    ar: { active: 'نشط · يتجدد 14.06.2026', manage: 'إدارة اشتراكي ←', mo: '/شهر', pitch: 'متعدد البلدان، API للمؤسسات، مدير حساب مخصص. ترقية من Pro 399 دون التزام.', cta: 'الترقية إلى Ultra ←' },
+  /* ═══════════════ RENDER: SIDEBAR APP INSTALL FALLBACK ═══════════════
+   * dashboard-pwa.js enhances this into the live browser install flow. Keeping
+   * the same install card here means a slow/cached PWA controller can never
+   * resurrect the retired Ultra promotion during a venue switch. */
+  const APP_INSTALL_STR = {
+    fr: { eye: 'APPLICATION KIWI', title: 'Kiwi, toujours à portée de main.', body: 'Installez votre tableau de bord pour un accès rapide, même avec une connexion instable.', quick: 'Accès rapide', offline: 'Prêt hors ligne', cta: 'Installer Kiwi' },
+    en: { eye: 'KIWI APP', title: 'Kiwi, always within reach.', body: 'Install your dashboard for faster access, even when your connection is unreliable.', quick: 'Quick access', offline: 'Offline ready', cta: 'Install Kiwi' },
+    ar: { eye: 'تطبيق KIWI', title: 'Kiwi في متناول يدك دائماً.', body: 'ثبّت لوحة التحكم للوصول السريع حتى عندما يكون الاتصال غير مستقر.', quick: 'وصول سريع', offline: 'يعمل دون اتصال', cta: 'تثبيت Kiwi' },
   };
   function renderUpsell() {
     const wrap = document.querySelector('[data-upsell]');
     if (!wrap) return;
-    const U = UPSELL_STR[fusionLang()] || UPSELL_STR.fr;
-    const showStatus = currentVenue === 'fusion' && currentPlan === 'ultra';
-    if (showStatus) {
-      wrap.classList.add('upsell-status');
-      wrap.innerHTML = `
-        <div class="t">✦ KIWI ULTRA</div>
-        <div class="us-line">${U.active}</div>
-        <a href="#" class="us-manage" data-action="manage-billing">${U.manage}</a>
-      `;
-    } else {
-      wrap.classList.remove('upsell-status');
-      wrap.innerHTML = `
-        <div class="t">KIWI ULTRA</div>
-        <h4>1 499 MAD${U.mo}</h4>
-        <p>${U.pitch}</p>
-        <button data-action="upgrade-pro">${U.cta}</button>
-      `;
-    }
+    const U = APP_INSTALL_STR[fusionLang()] || APP_INSTALL_STR.fr;
+    wrap.className = 'upsell kiwi-app-install-card';
+    wrap.innerHTML = `
+      <div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 3v12c0 3.3 2.7 6 6 6h10l-6-6H9V8L4 3z" fill="currentColor"/><path d="M10 15h4l6 6h-7c-1.7 0-3-1.3-3-3v-3z" fill="currentColor" opacity=".48"/></svg></span><span class="t">${U.eye}</span></div>
+      <h4>${U.title}</h4>
+      <p>${U.body}</p>
+      <div class="kiwi-install-benefits"><span><i></i>${U.quick}</span><span><i></i>${U.offline}</span></div>
+      <button type="button" data-pwa-install><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg><span>${U.cta}</span></button>
+    `;
   }
 
   /* ═══════════════ RENDER: SIDEBAR DROPDOWN ═══════════════ */
