@@ -7163,6 +7163,8 @@ const PDS_INLINE_CSS = `
      (.pds-el-wall, .pds-el-door, …) is inert — those kinds were renamed. */
 
   /* Floor + walls, driven by zone.room rather than a baked scene. */
+  /* Le creux de la pièce est posé en ligne par pdsRoomShell(), avec le mur :
+     un box-shadow ici ne pourrait jamais l'emporter sur un style en ligne. */
   .pds-floor {
     position:absolute; inset:0;
     border-radius:14px;
@@ -7178,7 +7180,11 @@ const PDS_INLINE_CSS = `
     transform-origin:50% 50%;
     transition: filter 150ms ease;
   }
-  .pds-tbl-cell:hover { filter:brightness(1.03); }
+  /* Le survol soulève la table. La propriété transform est réservée à la
+     rotation et au glisser — la toucher ici décalerait la géométrie —, donc
+     l'élévation passe par une ombre portée, qui suit la silhouette SVG et
+     non la boîte. */
+  .pds-tbl-cell:hover { filter:brightness(1.035) drop-shadow(0 5px 10px rgba(20,15,10,0.20)); }
   .pds-tbl-cell.is-selected  { z-index:6; }
   .pds-tbl-cell.is-resizing  { z-index:7; }
   .pds-tbl-cell.is-locked    { cursor:default; }

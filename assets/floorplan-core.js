@@ -352,10 +352,17 @@ function pdsRoomShell(zone) {
   const r = pdsRoom(zone);
   const pat = PDS_FLOORS[r.finish] || '';
   const size = PDS_FLOOR_SIZE[r.finish] || 'auto';
+  /* Le mur reste la première couche — c'est le réglage du commerçant, épaisseur
+     et couleur comprises. Les deux suivantes creusent la pièce : sans elles les
+     tables, qui portent désormais leur propre ombre, flottent sur un aplat. Il
+     faut que ce soit ici et non dans la feuille de style, qu'un style en ligne
+     l'emporte toujours. */
   return `<div class="pds-floor" data-pds-floor style="
     background-color:${r.floor};
     ${pat ? `background-image:${pat.replace(/\s+/g, ' ')}; background-size:${size};` : ''}
-    box-shadow: inset 0 0 0 ${r.wallW}px ${r.wall};
+    box-shadow: inset 0 0 0 ${r.wallW}px ${r.wall},
+                inset 0 26px 48px -34px rgba(20,15,10,0.62),
+                inset 0 -18px 40px -32px rgba(20,15,10,0.45);
   "></div>`;
 }
 
@@ -410,10 +417,15 @@ function pdsSeatSlots(w, h, n) {
 
 function pdsChair(x, y, deg, c) {
   const t = pdsChairTone(c);
+  /* L'assise se décolle du plateau de 1,5 unité : collée au bord, elle lisait
+   * comme une excroissance de la table plutôt que comme un siège. L'ombre de
+   * contact est portée par le dossier, pas par l'assise — c'est lui qui est le
+   * plus haut, et c'est ce décalage qui donne l'épaisseur. */
   return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})">
-    <rect x="-8" y="-16.5" width="16" height="4.2" rx="2.1" fill="${t.back}"/>
-    <rect x="-7" y="-13" width="14" height="12" rx="3.5" fill="${t.pad}"/>
-    <rect x="-7" y="-13" width="14" height="2.6" rx="1.3" fill="${t.lip}" opacity=".8"/>
+    <rect x="-8" y="-16.2" width="16" height="15.4" rx="4" fill="rgba(20,15,10,0.10)"/>
+    <rect x="-8" y="-17" width="16" height="4.2" rx="2.1" fill="${t.back}"/>
+    <rect x="-7" y="-13.5" width="14" height="12" rx="3.6" fill="${t.pad}"/>
+    <rect x="-7" y="-13.5" width="14" height="2.6" rx="1.3" fill="${t.lip}" opacity=".85"/>
   </g>`;
 }
 
@@ -466,22 +478,51 @@ const PDS_STATUS_RING = {
  *   the ring is passed in rather than looked up. The viewBox the caller
  *   supplies is in the table's OWN units, so nothing here can distort. */
 function pdsTableBody(g, c, ring) {
-  const edge = pdsShade(c, pdsLum(c) > 0.34 ? -0.22 : 0.16);
+  const light = pdsLum(c) > 0.34;
+  const edge = pdsShade(c, light ? -0.22 : 0.16);
+  const lit  = pdsShade(c, light ? 0.13 : 0.26);
+  const foot = pdsShade(c, light ? -0.08 : -0.03);
   const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+
+  /* Un dégradé par couleur, partagé par toutes les tables qui la portent : deux
+   * <defs> ne peuvent entrer en collision qu'entre définitions identiques, et
+   * objectBoundingBox laisse une seule définition habiller toutes les tailles.
+   * C'est ce qui remplace l'aplat — un plateau lit sa lumière par le haut. */
+  const key = 'pdsTop' + String(c).replace(/[^0-9a-zA-Z]/g, '');
+  const defs = `<defs><linearGradient id="${key}" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="${lit}"/><stop offset=".54" stop-color="${c}"/>` +
+    `<stop offset="1" stop-color="${foot}"/></linearGradient></defs>`;
+
+  /* Le halo dit le statut de loin, là où un trait de 2,6 px se perd. Il est
+   * dessiné SOUS le plateau, donc seul son débord se voit. `glow:false` le
+   * coupe pour un appelant qui n'en veut pas ; une bague fine (libre) n'en a
+   * pas — sinon chaque table du plan brillerait et plus rien ne ressortirait. */
+  const glow = ring.glow !== false && ring.w >= 2;
+
   if (g.shape === 'round') {
     const rx = g.w / 2, ry = g.h / 2;
-    return `
-      <ellipse cx="${rx}" cy="${ry + 2.5}" rx="${rx}" ry="${ry}" fill="rgba(20,15,10,0.15)"/>
+    return defs + `
+      ${glow ? `<ellipse cx="${rx}" cy="${ry}" rx="${rx + 4.5}" ry="${ry + 4.5}" fill="none" stroke="${ring.s}" stroke-width="7" opacity=".10"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${rx + 1.6}" ry="${ry + 1.6}" fill="none" stroke="${ring.s}" stroke-width="3.2" opacity=".17"/>` : ''}
+      <ellipse cx="${rx}" cy="${ry + 6}" rx="${rx + 1}" ry="${ry}" fill="rgba(20,15,10,0.07)"/>
+      <ellipse cx="${rx}" cy="${ry + 2.5}" rx="${rx}" ry="${ry}" fill="rgba(20,15,10,0.13)"/>
       <ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="${edge}"/>
-      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - 2)}" ry="${Math.max(1, ry - 2)}" fill="${c}"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - 2)}" ry="${Math.max(1, ry - 2)}" fill="url(#${key})"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - 3.2)}" ry="${Math.max(1, ry - 3.2)}"
+               fill="none" stroke="${light ? '#FFFFFF' : 'rgba(255,255,255,0.5)'}" stroke-width="1" opacity="${light ? '.5' : '.22'}"/>
       <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - ring.w / 2)}" ry="${Math.max(1, ry - ring.w / 2)}"
                fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
   }
   const r = Math.min(9, g.w / 6, g.h / 6);
-  return `
-    <rect x="0" y="2.5" width="${g.w}" height="${g.h}" rx="${r}" fill="rgba(20,15,10,0.15)"/>
+  return defs + `
+    ${glow ? `<rect x="-4.5" y="-4.5" width="${g.w + 9}" height="${g.h + 9}" rx="${r + 4.5}" fill="none" stroke="${ring.s}" stroke-width="7" opacity=".10"/>
+    <rect x="-1.6" y="-1.6" width="${g.w + 3.2}" height="${g.h + 3.2}" rx="${r + 1.6}" fill="none" stroke="${ring.s}" stroke-width="3.2" opacity=".17"/>` : ''}
+    <rect x="-1" y="6" width="${g.w + 2}" height="${g.h}" rx="${r + 1}" fill="rgba(20,15,10,0.07)"/>
+    <rect x="0" y="2.5" width="${g.w}" height="${g.h}" rx="${r}" fill="rgba(20,15,10,0.13)"/>
     <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${edge}"/>
-    <rect x="1.5" y="1.5" width="${Math.max(1, g.w-3)}" height="${Math.max(1, g.h-3)}" rx="${Math.max(0, r-1)}" fill="${c}"/>
+    <rect x="1.5" y="1.5" width="${Math.max(1, g.w-3)}" height="${Math.max(1, g.h-3)}" rx="${Math.max(0, r-1)}" fill="url(#${key})"/>
+    <rect x="2.6" y="2.6" width="${Math.max(1, g.w-5.2)}" height="${Math.max(1, g.h-5.2)}" rx="${Math.max(0, r-2)}"
+          fill="none" stroke="${light ? '#FFFFFF' : 'rgba(255,255,255,0.5)'}" stroke-width="1" opacity="${light ? '.5' : '.22'}"/>
     <rect x="${ring.w/2}" y="${ring.w/2}" width="${Math.max(1, g.w-ring.w)}" height="${Math.max(1, g.h-ring.w)}"
           rx="${Math.max(0, r-ring.w/2)}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
 }
