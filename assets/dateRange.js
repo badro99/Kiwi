@@ -101,10 +101,39 @@
    * the question is asked ONCE, here, and it is the assistant's question.
    * A real session shows its own data or an empty state — never a demo's.
    * Local demo: isReal() is false, so nothing about it changes. */
+  function pairedMerchant() {
+    try {
+      const P = window.KiwiCaissePairing;
+      const pv = P?.pairedVenue?.();
+      if (P?.isPaired?.() && pv?.merchant) return true;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('kiwiPaired') !== '1') return false;
+      const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return !!(pv?.merchant || localStorage.getItem('kiwiLiveMerchant'));
+    } catch (_) { return false; }
+  }
   const ownData = (id) => {
     const KV = window.KiwiVenue;
     if (KV && KV.isCustom && KV.isCustom(id)) return true;
-    return !!(window.KiwiEnv?.isReal?.());
+    return !!(window.KiwiEnv?.isReal?.() || window.KiwiMe || pairedMerchant());
+  };
+
+  /* A DIFFERENT question from ownData(), and the distinction matters enough to
+   * have its own name. ownData() asks "is this my data?" — the one ownership
+   * decision, answered above. customVenue() asks "has this merchant actually
+   * configured this venue?", which is narrower: a hosted merchant sitting on a
+   * seeded venue id owns their session but has configured nothing.
+   *
+   * Both used to be written as an inline optional-chained isCustom call at the
+   * call site, which is how the two questions got confused in the first place —
+   * cards asked "is it custom?" when they meant "is it mine?" and painted a
+   * stranger's day. tools/agent-test.js bans that inline spelling outright (it
+   * greps the source, so do not reproduce the literal form even in a comment);
+   * asking either question now means calling one of these two named helpers. */
+  const customVenue = (id) => {
+    const KV = window.KiwiVenue;
+    return !!(KV && KV.isCustom && KV.isCustom(id));
   };
 
   /* ─── Fusion-mode aggregator ───────────────────────────────────────────
@@ -157,19 +186,28 @@
     }
     return first;
   }
-  // Deep clone of a data slice with every number zeroed and every array kept
-  // at the same length — used to give a brand-new user-created venue a
-  // structurally-valid but empty dataset, so every renderer paints its real
-  // "no data yet" state instead of crashing or falling back to demo numbers.
-  function zeroClone(x) {
+  // Safe empty clone of a fixture slice. Numeric series retain their shape;
+  // merchant-facing strings and object rows are removed, so this accessor can
+  // never hand a future renderer a demo identity, IBAN, label or transaction.
+  const EMPTY_META_KEYS = new Set(['unit', 'fmt', 'color', 'chipKey', 'cls']);
+  function zeroClone(x, key) {
     if (typeof x === 'number') return 0;
-    if (Array.isArray(x)) return x.map(zeroClone);
+    /* Numeric series keep their shape so charts can render a truthful flat
+       baseline. Object/string arrays are merchant facts (feed rows, products,
+       staff, labels): keeping their length would keep the demo identities. */
+    if (Array.isArray(x)) {
+      return x.every((v) => typeof v === 'number' || v == null)
+        ? x.map((v) => v == null ? null : 0)
+        : [];
+    }
     if (x && typeof x === 'object') {
       const o = {};
-      for (const k in x) o[k] = zeroClone(x[k]);
+      for (const k in x) o[k] = zeroClone(x[k], k);
       return o;
     }
-    return x; // strings (labels), booleans, null — preserved
+    if (typeof x === 'string') return EMPTY_META_KEYS.has(key) ? x : '';
+    if (typeof x === 'boolean') return false;
+    return x;
   }
 
   // Resolve a venue-keyed table for the active venue + range, with cafeAtlas fallback.
@@ -1652,7 +1690,13 @@
     return d.getTime() + h * 3600000;
   }
   function realSalesList() {
-    try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+    try {
+      const v = getCurrentVenue();
+      /* In the documented real-but-not-custom gap, `v` can still be a demo id
+         for one render. That id is not a source for this merchant. */
+      if (ownData(v) && !customVenue(v)) return [];
+      return (window.KiwiSales?.list?.(v) || []);
+    } catch (_) { return []; }
   }
   // Window bounds [from, to) in ms for a range, relative to now.
   function rangeBounds(range) {
@@ -1810,12 +1854,12 @@
     if (isLiveDemo()) {
       const sim = getSim();
       if (sim) {
-        data = { ...data, amount: sim.cumRevenue, netAfterKiwi: Math.round(sim.cumRevenue * 0.839) };
+        data = { ...data, amount: sim.cumRevenue };
       }
     }
     // User-created venue — hero figures come from the merchant's real sales,
     // windowed to the active range so the number tracks the selected period.
-    if (ownData() && window.KiwiSales) {
+    if (ownData()) {
       const t = realSalesTotals();
       /* Les trois comparaisons du hero sortent des ventes réelles. Une période
        * de référence vide renvoie null, et le bloc entier disparaît au lieu
@@ -1827,7 +1871,6 @@
       data = {
         ...data,
         amount: t.revenue,
-        netAfterKiwi: Math.round(t.revenue * 0.839),
         deltaHier:    realDeltaPct(effRange(), rev),
         deltaSemaine: realDeltaPct(effRange(), rev, 7),
         deltaMois:    realDeltaPct(effRange(), rev, 28),
@@ -1997,14 +2040,15 @@
     }
     // User-created venue — goal comes from the merchant's setting, progress
     // from their recorded sales.
-    if (ownData() && window.KiwiSales) {
+    if (ownData()) {
       const vd = window.KiwiVenue.getCurrentVenueData?.() || {};
-      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals().revenue };
+      const ownVenue = customVenue();
+      data = { ...data, goal: ownVenue ? (+vd.goal || 0) : 0, current: realSalesTotals().revenue };
     }
 
     // Settings → "Objectif journalier" override for the default demo venue: the
     // merchant's daily target wins on the day ranges (week/month keep theirs).
-    if (!(window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom())) {
+    if (!ownData()) {
       try {
         const ov = localStorage.getItem('kiwiSet:goal');
         if (ov && (currentRange === 'aujourdhui' || currentRange === 'hier')) {
@@ -2102,10 +2146,8 @@
         hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
       }));
     }
-    const rev = HH_RAW_BY_VENUE[v]?.[rng] || HH_RAW_BY_VENUE.cafeAtlas[rng]
-      || HH_RAW_BY_VENUE.cafeAtlas.trenteJours || HH_RAW_BY_VENUE.cafeAtlas.aujourdhui;
-    const cov = HH_COVERS_BY_VENUE[v]?.[rng] || HH_COVERS_BY_VENUE.cafeAtlas[rng]
-      || HH_COVERS_BY_VENUE.cafeAtlas.trenteJours || HH_COVERS_BY_VENUE.cafeAtlas.aujourdhui;
+    const rev = vData(HH_RAW_BY_VENUE, rng) || [];
+    const cov = vData(HH_COVERS_BY_VENUE, rng) || [];
     const max = Math.max(...rev);
     return HH_HOURS.map((h, i) => ({
       hour: h, revenue: rev[i], covers: cov[i],
@@ -2373,7 +2415,7 @@
     }
     // User-created venue — tx / panier (and the revenue derived from them)
     // come from the merchant's recorded sales.
-    if (ownData() && window.KiwiSales) {
+    if (ownData()) {
       const t = realSalesTotals();
       const rng = effRange();
       const [wFrom, wTo] = closedBounds(rng);
@@ -2691,6 +2733,9 @@
     return String(v);
   }
 
+  // Guards the post-layout re-fit scheduled at the end of every chart render.
+  let revFitTimer = null;
+
   function renderRevChart() {
     const lang = getLang();
     const effective = effRange();
@@ -2702,7 +2747,7 @@
     // User-created venue — plot the merchant's REAL sales for the active range
     // (bucketed from KiwiSales), replacing the zeroed demo clone that draws a
     // flat line AND leaks the demo legend total. Matches the hero / KPI window.
-    if (ownData() && window.KiwiSales) {
+    if (ownData()) {
       data = { ...data, ...realRevSeries(effRange()) };
     }
 
@@ -2767,11 +2812,39 @@
 
     // Measure actual rendered width + height so 1 viewBox unit = 1 pixel.
     // Height is flex-driven (the chart fills its column) — measure it live.
-    const H = Math.max(150, Math.round(svg.clientHeight || 240));
-    const measured = Math.round(svg.clientWidth || svg.parentElement?.clientWidth || 820);
-    const W = Math.max(620, measured);
+    //
+    // The 620/150 numbers are a HIDDEN-LAYER guard, not a minimum size:
+    // .hero-left-chart is one of two stacked layers and measures 0 while the
+    // "today" view is in front. Applying them via Math.max() to a real
+    // measurement is what silently magnified the whole chart — a 620×174
+    // viewBox stretched into a 738×245 box scales every stroke, glyph and
+    // tooltip by 1.19 and letterboxes 19px of dead space above and below the
+    // curve. Fall back only when the element genuinely has no box.
+    // Measure the SVG's OWN box only. The old parent-clientWidth fallback fires
+    // exactly when the layer is hidden — and a hidden layer's parent reports a
+    // collapsed width (202px was observed), which is worse than a sane default.
+    // When the box is unmeasurable, render at the default and let the
+    // ResizeObserver re-render the moment the layer gains a real box.
+    const measuredW = Math.round(svg.clientWidth || 0);
+    const measuredH = Math.round(svg.clientHeight || 0);
+    const W = measuredW > 80 ? measuredW : 820;
+    const H = measuredH > 80 ? measuredH : 240;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    // Self-heal. The painted box can change AFTER this render returns — the
+    // vexel layout adapter re-grids the card, a webfont swaps, the sidebar
+    // collapses. A ResizeObserver alone loses that race (it reports the
+    // pre-adapter box and then coalesces), which is how the chart shipped with
+    // a 574-unit coordinate space inside a 738px box. Re-render once the layout
+    // settles if the two have drifted. Converges: after the corrective pass the
+    // viewBox matches the box, so the condition is false and it stops.
+    clearTimeout(revFitTimer);
+    revFitTimer = setTimeout(() => {
+      const fitW = Math.round(svg.clientWidth);
+      const fitH = Math.round(svg.clientHeight);
+      if (fitW > 80 && fitH > 80 && (Math.abs(fitW - W) > 2 || Math.abs(fitH - H) > 2)) renderRevChart();
+    }, 140);
 
     // Detect why we're re-rendering: full (range change) vs resize vs compare-toggle vs live-tick.
     const lastW = parseInt(svg.dataset.lastW || '0', 10);
@@ -2946,12 +3019,20 @@
       </g>
       <g class="rev-tip">
         <rect class="rev-tip-rect" rx="14" ry="14" fill="url(#rev-tip-gradient)" stroke="rgba(125,242,176,0.18)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
-        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7DF2B0" letter-spacing="1.6" opacity="0.88"></text>
-        <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
-        <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
+        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7DF2B0" letter-spacing="0.6" opacity="0.9"></text>
+        <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="14" fill="#FFFFFF" letter-spacing="-0.01em"></text>
+        <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="10.5" letter-spacing="0"></text>
       </g>
       <rect class="rev-hit" x="${PAD.left}" y="${PAD.top}" width="${innerW}" height="${innerH}" fill="transparent" pointer-events="all"/>
     `;
+
+    // The markup above is brand new, so the hover chrome inside it is back at
+    // its default corner position (cx=PAD.left, cy=PAD.top) with no pointer
+    // event to place it. Leaving .is-hover set from the previous render paints
+    // an orphan dot and an empty chip in the top-left of the plot — visible
+    // every time a live tick lands while the cursor is resting on the chart.
+    // Drop the hover state; the next pointermove re-establishes it.
+    svg.classList.remove('is-hover');
 
     // Pointer-driven tooltip + active dots — hover state controlled by .is-hover
     // class on the SVG; element opacity transitions in CSS handle the fade.
@@ -3130,46 +3211,7 @@
         cross.setAttribute('x2', sx.toFixed(1));
       }
 
-      // Tooltip — two heights: compact (180×54) when no compare, expanded (224×84) with compare
-      const tipW = showCmpNow ? 224 : 180;
-      const tipH = showCmpNow ? 84  : 54;
-      const ANCHOR_GAP = 16;        // gap between tooltip edge and the hovered dot
-      const rectX = -tipW / 2;
-
-      // Flip strategy — tooltip ABOVE the dot by default, but if the dot
-      // is high (small sy) the tooltip would clip the top edge AND overlap
-      // the dot itself. In that case flip BELOW the dot so the dot stays
-      // visible. This is the bug the user reported: green box covering
-      // the green hover point on high values.
-      const tipFitsAbove = sy >= PAD.top + tipH + ANCHOR_GAP + 4;
-      const tipBelow = !tipFitsAbove;
-      const rectY = tipBelow ? ANCHOR_GAP : -tipH - ANCHOR_GAP;
-
-      tipRect.setAttribute('x', rectX.toFixed(1));
-      tipRect.setAttribute('y', rectY.toFixed(1));
-      tipRect.setAttribute('width',  tipW);
-      tipRect.setAttribute('height', tipH);
-
-      // Vertical layout inside the rect: text positions are relative to
-      // rectY, so they flip automatically with the rect.
-      if (showCmpNow) {
-        tipLabel.setAttribute('y', (rectY + 22).toFixed(1));   // top row
-        tipValue.setAttribute('y', (rectY + 48).toFixed(1));   // middle
-        tipCmp  .setAttribute('y', (rectY + 70).toFixed(1));   // bottom
-      } else {
-        tipLabel.setAttribute('y', (rectY + 22).toFixed(1));
-        tipValue.setAttribute('y', (rectY + 44).toFixed(1));
-      }
-
-      // Anchor at the dot; horizontal clamping keeps it on-canvas.
-      const tipDy = sy;
-      const halfW = tipW / 2 + 8;
-      let tipDx = 0;
-      if (sx - halfW < 4)         tipDx = halfW + 8 - sx;          // push right
-      else if (sx + halfW > W - 4) tipDx = -((sx + halfW) - (W - 4)); // push left
-      tip.setAttribute('transform', `translate(${(sx + tipDx).toFixed(1)}, ${tipDy.toFixed(1)})`);
-
-      // Content — time label + interpolated value
+      // ── Content first — the geometry below is measured off the real glyphs ──
       tipLabel.textContent = timeLabel.toUpperCase();
       tipValue.textContent = `${frInt(valueAtCursor)} MAD`;
       if (showCmpNow && prevAtCursor != null) {
@@ -3183,6 +3225,67 @@
       } else {
         tipCmp.style.display = 'none';
       }
+
+      // Tooltip box — fitted to its content, not to the longest string it could
+      // ever hold. The old fixed 180×54 was sized for the compare case and then
+      // magnified by the viewBox bug, so a plain hover dropped a slab over a
+      // third of the plot. Without a comparison the time and the amount now sit
+      // on ONE row: the big hero figure above already restates the value, so
+      // this only has to say *when*.
+      const textW = (el) => { try { return el.getComputedTextLength() || 0; } catch (e) { return 0; } };
+      const TIP_PAD_X = 12;      // horizontal breathing room inside the box
+      const TIP_COL_GAP = 9;     // between the time and the amount on one row
+      const wLabel = Math.ceil(textW(tipLabel));
+      const wValue = Math.ceil(textW(tipValue));
+      const tipW = showCmpNow
+        ? Math.ceil(Math.max(wLabel, wValue, textW(tipCmp))) + TIP_PAD_X * 2
+        : wLabel + TIP_COL_GAP + wValue + TIP_PAD_X * 2;
+      const tipH = showCmpNow ? 68 : 30;
+      const ANCHOR_GAP = 12;     // gap between tooltip edge and the hovered dot
+      const rectX = -tipW / 2;
+
+      // Flip strategy — tooltip ABOVE the dot by default, but if the dot
+      // is high (small sy) the tooltip would clip the top edge AND overlap
+      // the dot itself. In that case flip BELOW the dot so the dot stays
+      // visible. This is the bug the user reported: green box covering
+      // the green hover point on high values.
+      const tipFitsAbove = sy >= PAD.top + tipH + ANCHOR_GAP + 4;
+      const tipBelow = !tipFitsAbove;
+      const rectY = tipBelow ? ANCHOR_GAP : -tipH - ANCHOR_GAP;
+
+      tipRect.setAttribute('x', rectX.toFixed(1));
+      tipRect.setAttribute('y', rectY.toFixed(1));
+      tipRect.setAttribute('width',  tipW.toFixed(1));
+      tipRect.setAttribute('height', tipH.toFixed(1));
+
+      // Text layout is relative to rectY, so it flips with the box.
+      if (showCmpNow) {
+        for (const t of [tipLabel, tipValue, tipCmp]) {
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('x', '0');
+        }
+        tipLabel.setAttribute('y', (rectY + 19).toFixed(1));   // top row
+        tipValue.setAttribute('y', (rectY + 41).toFixed(1));   // middle
+        tipCmp  .setAttribute('y', (rectY + 58).toFixed(1));   // bottom
+      } else {
+        // Single row: both runs left-aligned off the box's inner edge, so the
+        // gap between them stays constant instead of breathing with the digits.
+        const baseline = rectY + tipH / 2 + 4.5;
+        tipLabel.setAttribute('text-anchor', 'start');
+        tipLabel.setAttribute('x', (rectX + TIP_PAD_X).toFixed(1));
+        tipLabel.setAttribute('y', baseline.toFixed(1));
+        tipValue.setAttribute('text-anchor', 'start');
+        tipValue.setAttribute('x', (rectX + TIP_PAD_X + wLabel + TIP_COL_GAP).toFixed(1));
+        tipValue.setAttribute('y', baseline.toFixed(1));
+      }
+
+      // Anchor at the dot; horizontal clamping keeps it on-canvas.
+      const tipDy = sy;
+      const halfW = tipW / 2 + 8;
+      let tipDx = 0;
+      if (sx - halfW < 4)         tipDx = halfW + 8 - sx;          // push right
+      else if (sx + halfW > W - 4) tipDx = -((sx + halfW) - (W - 4)); // push left
+      tip.setAttribute('transform', `translate(${(sx + tipDx).toFixed(1)}, ${tipDy.toFixed(1)})`);
       svg.classList.add('is-hover');
       setHero(valueAtCursor, prevAtCursor, false);
     }
@@ -3288,7 +3391,7 @@
     /* Une venue réelle recompose ses tranches depuis ses ventes ; la démo garde
      * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
      * `rows`, donc les deux chemins partagent le même rendu. */
-    const custom = !!(ownData() && window.KiwiSales);
+    const custom = ownData();
     const real = custom ? realMixRows(lang, effective) : null;
     const rows = custom ? real.rows : [
       { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
@@ -3596,7 +3699,7 @@
      * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
      * direct, ni du jour. */
     const [lo, hi] = rangeBounds(effRange());
-    const sales = (window.KiwiSales?.list?.(venue) || [])
+    const sales = realSalesList()
       .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
       .slice(-8).reverse();
     const lang = getLang();
@@ -3759,11 +3862,11 @@
          * clock keeps simulating in the background, so reading its cumTx here
          * printed "98 commandes aujourd'hui" on a store that had rung 2. */
         let cumTx;
-        if (ownData() && window.KiwiSales) {
+        if (ownData()) {
           const start = new Date(); start.setHours(0, 0, 0, 0);
           const t0 = start.getTime();
           let sales = [];
-          try { sales = window.KiwiSales.list(getCurrentVenue()) || []; } catch (_) { sales = []; }
+          try { sales = realSalesList(); } catch (_) { sales = []; }
           cumTx = sales.filter((s) => (s && s.ts) >= t0).length;
         } else {
           const sim = window.KiwiDemoClock?.getSimState?.();
@@ -3788,6 +3891,27 @@
     const effective = effRange();
     const data = vData(settleByVenue, currentRange);
     if (!data) return;
+
+    /* KiwiSales contains encaissements, not bank settlement batches, fees or
+       destination IBANs. A real merchant therefore gets an explicit unknown
+       state. Reusing the demo row here used to retain Café Atlas's masked IBAN
+       even after its amount had been zeroed. */
+    if (ownData()) {
+      const empty = ({
+        fr: { lbl: 'RÈGLEMENT', sub: 'Données de règlement indisponibles pour cette période.' },
+        en: { lbl: 'SETTLEMENT', sub: 'Settlement data is unavailable for this period.' },
+        ar: { lbl: 'التسوية', sub: 'بيانات التسوية غير متاحة لهذه الفترة.' },
+      })[lang] || { lbl: 'RÈGLEMENT', sub: 'Données de règlement indisponibles pour cette période.' };
+      const lblEl = document.querySelector('[data-settle-lbl]');
+      const amtEl = document.querySelector('[data-settle-amt]');
+      const subEl = document.querySelector('[data-settle-sub]');
+      const detailEl = document.querySelector('[data-settle-detail]');
+      if (lblEl) lblEl.textContent = empty.lbl;
+      if (amtEl) amtEl.textContent = '—';
+      if (subEl) subEl.textContent = empty.sub;
+      if (detailEl) detailEl.innerHTML = '';
+      return;
+    }
 
     const lblEl = document.querySelector('[data-settle-lbl]');
     if (lblEl) lblEl.textContent = SETTLE_LBL[lang]?.[currentRange] || SETTLE_LBL.fr[currentRange];
@@ -3921,7 +4045,7 @@
     en: 'Connect your tools to sync sales and payments',
     ar: 'اربط أدواتك لمزامنة المبيعات والمدفوعات',
   };
-  const INTEG_NOTCONN = { fr: 'Non connecté', en: 'Not connected', ar: 'غير متّصل' };
+  const INTEG_NOTCONN = { fr: 'État indisponible', en: 'Status unavailable', ar: 'الحالة غير متاحة' };
   const INTEG_LIST = [
     { n: 'Glovo', logo: 'G', bg: '#F29137' },
     { n: 'Yassir Express', logo: 'Y', bg: '#2B5AA8' },
@@ -3978,8 +4102,9 @@
 
   let _healthOrig = null, _benchOrig = null, _integOrig = null;
 
-  /* Integrations — for custom venues, show the tools as available-to-connect
-   * rather than leaking Café Atlas's live sync figures. */
+  /* Integrations — for real venues, show an explicit unknown status rather
+   * than leaking Café Atlas's sync figures or asserting "not connected"
+   * without a reliable status response. */
   function renderInteg() {
     const card = document.querySelector('[data-integ-card]');
     if (!card) return;
@@ -4087,11 +4212,11 @@
      * vrais. Ce n'était pas un état vide, c'était le chiffre d'affaires de
      * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
      * propres ventes ; le tilde disparaît, ce total-là est exact. */
-    if (ownData() && window.KiwiSales) {
+    if (ownData()) {
       totalEl.textContent = `${frInt(realSalesTotals(effective).revenue)} MAD`;
       return;
     }
-    const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
+    const total = vData(timelineWeekTotalByVenue, currentRange);
     if (total) totalEl.textContent = total;
   }
 
@@ -4839,6 +4964,30 @@
       }, 140);
     });
 
+    // The window-resize listener above only catches VIEWPORT changes. It misses
+    // every layout change that leaves the window alone — a skin adapter moving
+    // the card into a new grid, the sidebar collapsing, a late webfont swap.
+    // Those re-lay-out the SVG after renderRevChart() has already measured it,
+    // and the viewBox stays pinned to the pre-layout box. Observe the element
+    // itself so the coordinate space always matches the painted box.
+    const revSvgEl = document.querySelector('[data-rev-svg]');
+    if (revSvgEl && typeof ResizeObserver === 'function') {
+      let roTimer = null;
+      let roW = 0;
+      let roH = 0;
+      const ro = new ResizeObserver(() => {
+        const w = Math.round(revSvgEl.clientWidth);
+        const h = Math.round(revSvgEl.clientHeight);
+        // Re-render only on a real size change. renderRevChart() does not
+        // resize its own SVG, so this cannot feed back into itself.
+        if (Math.abs(w - roW) < 2 && Math.abs(h - roH) < 2) return;
+        roW = w; roH = h;
+        clearTimeout(roTimer);
+        roTimer = setTimeout(renderRevChart, 90);
+      });
+      ro.observe(revSvgEl);
+    }
+
     renderSelector();
     renderHero();
     renderHeroAi();
@@ -4891,6 +5040,8 @@
 
   /* ─── Live tick API · called from polish.js when a new fake tx lands ─── */
   function tickLiveRevenue({ amount = 0, tip = 0 } = {}) {
+    // The mutation below belongs exclusively to the pitch-demo tables.
+    if (ownData()) return;
     // Demo clock owns deterministic ticking on aujourdhui — skip random ticks.
     if (window.KiwiDemoClock?.isActive?.()) return;
     // Live ticks only make sense on "today" — skip on historical ranges.
@@ -4905,8 +5056,6 @@
 
     hero.amount += amount;
     goal.current = hero.amount;
-    // Keep "Net après Kiwi" roughly proportional (~83.9 % after commission)
-    hero.netAfterKiwi = Math.round(hero.amount * 0.839);
 
     // Bump KPI counters that the live tx affects
     if (kpi.tx)     kpi.tx.value += 1;

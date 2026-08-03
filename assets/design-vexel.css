@@ -3033,6 +3033,41 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-live-dot {
   stroke-width: 2.5;
 }
 
+/* ── Hover chip ──────────────────────────────────────────────────────────────
+ * dateRange.js sizes the box to its own glyphs (~140×30); this layer only
+ * decides how it reads on paper. Three corrections to a treatment that was
+ * drawn for a 180×54 slab:
+ *   · Flat, not gradient-filled. A riad→atlas ramp across 30px never reads as
+ *     a gradient — it only makes the top and bottom edges different colours.
+ *   · No mint hairline. At this size a 1px accent border is the loudest thing
+ *     on the card, competing with the line it is annotating.
+ *   · Shadow re-cut for a chip. The old dy=10/blur=16 pair at 32 % was sized to
+ *     lift a card; under a 30px chip it reads as a smudge on the paper.
+ * Dark-on-light is deliberate: the chip belongs to the cursor, not to the card,
+ * and inverting it is what makes it legible over both the fill and the paper. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-rect {
+  fill: #07301F;
+  stroke: transparent;
+  filter: drop-shadow(0 5px 12px rgba(6, 40, 27, 0.24));
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-label {
+  fill: rgba(160, 232, 193, 0.82);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-value {
+  fill: #FFFFFF;
+}
+
+/* The live pulse marks "now"; the active dot marks "where you are pointing".
+ * Both on screen at once gave the card two competing current-value markers —
+ * in the reported screenshot the pulse sat one hour to the right of the dot and
+ * read as a stray artefact. The pulse stands down while a hover owns the read. */
+body.design-vexel .vexel-revenue-row .chart-wrap.is-hover .rev-live {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
 body.design-vexel[data-vexel-mode="light"] .vexel-revenue-rail {
   height: 430px;
   grid-template-rows: minmax(184px, auto) minmax(228px, 1fr);
