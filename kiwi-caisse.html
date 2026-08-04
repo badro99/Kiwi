@@ -8626,10 +8626,13 @@
          partiront au prochain appui. */
       const fresh = order.filter(l => !l.sent).reduce((s, l) => s + l.qty, 0);
       const sentQty = itemCount - fresh;
+      const orderProPendingQty = order.filter(l => l.orderProPending).reduce((s, l) => s + l.qty, 0);
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
       sub.textContent = order.length === 0
         ? 'Nouvelle mesa, en attente de commande'
+        : orderProPendingQty > 0
+          ? `${orderProPendingQty} OrderPro à accepter · ${fmtMAD(total)}`
         : sentQty > 0
           ? `${sentQty} en cuisine · ${fresh} à envoyer · ${fmtMAD(total)}`
           : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(total)}`;
@@ -8646,7 +8649,7 @@
             <span class="rp-sent-qty">${l.qty}×</span>
             <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
-            <span class="rp-sent-mark">${KDS_SVG.check}En cuisine</span>
+            <span class="rp-sent-mark">${KDS_SVG.check}${l.orderProPending ? 'OrderPro · à accepter' : 'En cuisine'}</span>
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
           </div>` : `
           <div class="rp-item rp-item--cart" data-order-uid="${l.uid}">
@@ -13812,11 +13815,82 @@
       return (s && s.name) || '';
     }
 
+    /* OrderPro connaît le numéro écrit par le client ("2", "T2", espaces),
+       tandis que le plan conserve le libellé exact choisi par le patron. */
+    function caisseTableId(v) {
+      const wanted = tableKey(v);
+      const numeric = wanted.replace(/^T(?=\d+$)/, '');
+      return Object.keys(tables).find(id => {
+        const candidate = tableKey(id);
+        return candidate === wanted || candidate.replace(/^T(?=\d+$)/, '') === numeric;
+      }) || '';
+    }
+
+    /* Une commande OrderPro en salle appartient aussi à l'addition de la
+       table. Jusqu'ici elle devenait un bon KDS et une pastille, mais jamais
+       une table occupée : taper la table relançait donc le choix des couverts
+       et présentait une addition vide. On rattache les lignes serveur une
+       seule fois, sans les rendre modifiables ni les renvoyer en cuisine. */
+    function attachOrderProTable(o) {
+      if (!o || o.mode !== 'table' || !o.table) return false;
+      const id = caisseTableId(o.table);
+      const t = id && tables[id];
+      if (!t) return false;
+
+      let changed = false;
+      if (o.status === 'rejected') {
+        const before = (tableOrders[id] || []).length;
+        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(String(o.id) + ':'));
+        changed = tableOrders[id].length !== before;
+        if (changed) {
+          if (selectedId === id && mode === 'salle') renderRightPanel(id);
+          try { persistShift(); } catch (_) {}
+        }
+        return changed;
+      }
+      if (t.status === 'khawya' || t.status === 'a-commander') {
+        t.status = 'ka-yaklo';
+        t.elapsed = 0;
+        changed = true;
+      }
+      if (o.server && !t.server) {
+        const serverId = Object.keys(servers).find(k => servers[k] && servers[k].name === o.server);
+        if (serverId) { t.server = serverId; changed = true; }
+      }
+
+      const lines = tableOrders[id] || (tableOrders[id] = []);
+      (o.lines || []).forEach((l, index) => {
+        const marker = String(o.id) + ':' + index;
+        const existing = lines.find(x => x.orderProLine === marker);
+        if (existing) {
+          const pending = o.status === 'pending';
+          if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
+          return;
+        }
+        const menuHit = menuItems.find(x => String(x.id) === String(l.id))
+          || menuItems.find(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
+        lines.push({
+          uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
+          name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
+          qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
+          sent: true, orderProLine: marker, orderProPending: o.status === 'pending',
+        });
+        changed = true;
+      });
+      if (changed) {
+        refreshTableNode(id);
+        if (selectedId === id && mode === 'salle') renderRightPanel(id);
+        try { persistShift(); } catch (_) {}
+      }
+      return changed;
+    }
+
     /* Une commande du serveur → un ticket d'ici. Idempotent : le sondage repasse
        toutes les six secondes sur les mêmes lignes, et il ne doit jamais en
        naître un deuxième ticket. */
     function opIngest(o) {
       if (!o || !o.id) return;
+      attachOrderProTable(o);
       /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
          rechargement (persistShift). Après un F5 en plein service, `opTickets`
          repart vide alors que `kdsOrders` contient encore les bons de la caisse
@@ -13946,6 +14020,15 @@
         (sessions || []).forEach(s => {
           if (s.mode !== 'table' || !s.table) return;
           seats.set(tableKey(s.table), { session: s.id, since: s.opened_ts });
+          /* S'asseoir depuis OrderPro réserve déjà réellement la table. Même
+             avant l'acceptation du bon, le prochain tap doit ouvrir cette
+             table et surtout pas recommencer par le nombre de couverts. */
+          const id = caisseTableId(s.table);
+          if (id && tables[id] && tables[id].status === 'khawya') {
+            tables[id].status = 'ka-yaklo';
+            tables[id].elapsed = 0;
+            touched = true;
+          }
         });
         const pend = new Map();
         (all || []).forEach(o => {
