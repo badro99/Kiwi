@@ -32,6 +32,7 @@ const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obte
 
 const caisse  = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const menuCatalogSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
 
 /* ── 1. la frontière démo / réel est posée, et sur TOUT ────────────────────── */
 
@@ -505,6 +506,8 @@ ok(/emoji: optionEmoji\(c && c\.emoji\)/.test(menuApi)
   'le repère visuel choisi survit à la publication sans accepter de texte libre');
 ok(/emoji: String\(c\.emoji \|\| ''\)/.test(caisseSrc),
   'la caisse conserve le repère visuel de chaque choix');
+ok(/\.mx-og-ch\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*48px minmax\(0, 1fr\) auto auto;/.test(menuCatalogSrc),
+  'le bouton emoji et le nom du choix gardent chacun leur colonne sans se chevaucher');
 
 /* Le bon papier : un par poste, avec SES lignes, et jamais deux jobs en même
    temps sur une thermique. */

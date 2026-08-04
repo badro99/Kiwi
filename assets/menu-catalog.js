@@ -616,7 +616,8 @@
       .mx-og-kind button.on { background: var(--mint-soft); color: var(--riad); font-weight: 600; }
       .mx-og-req { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
       .mx-og-list { display: flex; flex-direction: column; gap: 6px; }
-      .mx-og-ch { display: flex; align-items: center; gap: 8px; }
+      .mx-og-ch { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto;
+        align-items: center; gap: 8px; }
       .mx-og-emoji-wrap { position: relative; width: 48px; flex: 0 0 48px; }
       .mx-og-emoji { width: 48px; height: 34px; border: 1px solid var(--line); border-radius: 8px;
         padding: 4px; font: inherit; font-size: 20px; line-height: 1; text-align: center; cursor: pointer;
@@ -635,7 +636,7 @@
       .mx-og-emoji-clear { width: 100%; margin-top: 7px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px;
         background: var(--paper-soft); color: var(--n-600); font: inherit; font-size: 11.5px; cursor: pointer; }
       .mx-og-visual-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); margin: -3px 0 10px; }
-      .mx-og-ch > input[type="text"] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+      .mx-og-ch > input[type="text"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
         padding: 6px 9px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-soft); outline: none; }
       .mx-og-ch > input[type="text"]:focus { border-color: var(--atlas); background: var(--surface); }
       .mx-og-ch .pr { display: inline-flex; align-items: center; gap: 5px; }
