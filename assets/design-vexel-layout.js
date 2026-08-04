@@ -118,8 +118,8 @@
         '<div class="vexel-client-body">' +
           '<svg class="vexel-client-ring" width="110" height="110" viewBox="0 0 110 110" role="img">' +
             '<title data-vexel-client-chart-title></title>' +
-            '<circle class="track" cx="55" cy="55" r="46"/>' +
-            '<circle class="value" data-vexel-client-arc cx="55" cy="55" r="46" stroke-dasharray="0 289.03" transform="rotate(-90 55 55)"/>' +
+            '<circle class="track" cx="55" cy="55" r="' + CLIENT_RING_R + '"/>' +
+            '<circle class="value" data-vexel-client-arc cx="55" cy="55" r="' + CLIENT_RING_R + '" stroke-dasharray="0 ' + CLIENT_RING_C.toFixed(2) + '" transform="rotate(-90 55 55)"/>' +
             '<text x="55" y="57" data-vexel-client-pct>—</text>' +
           '</svg>' +
           '<div class="vexel-client-foot">' +
@@ -158,6 +158,13 @@
    * rapport réguliers/total prend une décision sur un chiffre qui n'existe pas.
    * Le libellé dit maintenant ce que la tuile mesure, et la légende reprend la
    * plage réellement sélectionnée. */
+  /* Rayon et circonférence de l'anneau clients — les mêmes que ceux de
+   * ringMarkup (Ventes par canal), pour que les deux pèsent pareil à l'écran.
+   * Déclarés une fois : le gabarit et le rendu les lisaient chacun de leur
+   * côté, et un rayon changé d'un seul côté fausse l'arc sans rien casser. */
+  var CLIENT_RING_R = 48;
+  var CLIENT_RING_C = 2 * Math.PI * CLIENT_RING_R;
+
   var CLIENT_STR = {
     fr: { label: 'Clients réguliers', of: 'sur {n} clients vus' },
     en: { label: 'Returning customers', of: 'of {n} customers seen' },
@@ -847,7 +854,7 @@
     var title = document.querySelector('[data-vexel-client-chart-title]');
     if (!arc) return;
 
-    var circumference = 2 * Math.PI * 46;
+    var circumference = CLIENT_RING_C;
     if (!read.known) {
       // Un anneau plein par defaut mentirait : sans carnet, rien n'est mesure.
       arc.setAttribute('stroke-dasharray', '0 ' + circumference.toFixed(2));

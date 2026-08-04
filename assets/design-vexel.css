@@ -384,7 +384,12 @@ body.design-vexel .kiwi-ring {
 body.design-vexel .kiwi-ring-track,
 body.design-vexel .kiwi-ring-value {
   fill: none;
-  stroke-width: 4.2;
+  /* Même graisse à l'écran que les quatre anneaux de Ventes par canal (8,8 px)
+   * — cet anneau-ci était le seul épais du tableau de bord, à 12,8 px. Le
+   * repère est en unités de viewBox : 8,8 px sur 128 px d'affichage pour une
+   * boîte de 42, soit 8,8 × 42 / 128. Si `--kiwi-ring-size` change un jour,
+   * c'est ce calcul qu'il faut refaire, pas ce nombre qu'il faut deviner. */
+  stroke-width: 2.89;
 }
 
 body.design-vexel .kiwi-ring-track { stroke: var(--n-200); }
@@ -881,12 +886,14 @@ body.design-vexel .vexel-client-body {
   min-width: 0;
 }
 body.design-vexel .vexel-client-ring {
-  width: 92px;
-  min-width: 92px;
-  height: 92px;
+  /* Exactement la boîte et le rayon de .vexel-ring-item : même graisse à
+   * l'écran, sans avoir à la recalculer. */
+  width: 97px;
+  min-width: 97px;
+  height: 97px;
   flex: none;
 }
-body.design-vexel .vexel-client-ring circle { fill: none; stroke-width: 9; }
+body.design-vexel .vexel-client-ring circle { fill: none; stroke-width: 10; }
 body.design-vexel .vexel-client-ring .track { stroke: var(--vx-track); }
 body.design-vexel .vexel-client-ring .value {
   stroke: var(--vx-accent);
