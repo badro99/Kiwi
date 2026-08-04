@@ -982,24 +982,24 @@
 
   const mixByVenue = {
     cafeAtlas: {
-      aujourdhui:  { visa: 48, mc: 24, tap: 18, qr: 10, centerMad: 16590,  fee: '288,50 MAD · 1,19 %' },
-      hier:        { visa: 50, mc: 23, tap: 17, qr: 10, centerMad: 14920,  fee: '264,80 MAD · 1,19 %' },
-      septJours:   { visa: 47, mc: 25, tap: 19, qr:  9, centerMad: 134700, fee: '2 230 MAD · 1,19 %' },
-      trenteJours: { visa: 46, mc: 26, tap: 19, qr:  9, centerMad: 568200, fee: '9 480 MAD · 1,19 %' },
+      aujourdhui:  { card: 48, cash: 52, centerMad: 16590,  fee: '288,50 MAD · 1,19 %' },
+      hier:        { card: 50, cash: 50, centerMad: 14920,  fee: '264,80 MAD · 1,19 %' },
+      septJours:   { card: 47, cash: 53, centerMad: 134700, fee: '2 230 MAD · 1,19 %' },
+      trenteJours: { card: 46, cash: 54, centerMad: 568200, fee: '9 480 MAD · 1,19 %' },
       personnalise: null,
     },
     maisonMansour: {
-      aujourdhui:  { visa: 52, mc: 28, tap: 12, qr: 8, centerMad: 6150,   fee: '141 MAD · 1,19 %' },
-      hier:        { visa: 51, mc: 29, tap: 12, qr: 8, centerMad: 6175,   fee: '144 MAD · 1,19 %' },
-      septJours:   { visa: 53, mc: 27, tap: 12, qr: 8, centerMad: 44944,  fee: '1 010 MAD · 1,19 %' },
-      trenteJours: { visa: 52, mc: 28, tap: 12, qr: 8, centerMad: 186264, fee: '4 260 MAD · 1,19 %' },
+      aujourdhui:  { card: 52, cash: 48, centerMad: 6150,   fee: '141 MAD · 1,19 %' },
+      hier:        { card: 51, cash: 49, centerMad: 6175,   fee: '144 MAD · 1,19 %' },
+      septJours:   { card: 53, cash: 47, centerMad: 44944,  fee: '1 010 MAD · 1,19 %' },
+      trenteJours: { card: 52, cash: 48, centerMad: 186264, fee: '4 260 MAD · 1,19 %' },
       personnalise: null,
     },
     spaBahia: {
-      aujourdhui:  { visa: 58, mc: 30, tap: 8, qr: 4, centerMad: 5191,   fee: '107 MAD · 1,19 %' },
-      hier:        { visa: 57, mc: 31, tap: 8, qr: 4, centerMad: 4777,   fee: '100 MAD · 1,19 %' },
-      septJours:   { visa: 59, mc: 29, tap: 8, qr: 4, centerMad: 37878,  fee: '764 MAD · 1,19 %' },
-      trenteJours: { visa: 58, mc: 30, tap: 8, qr: 4, centerMad: 156252, fee: '3 206 MAD · 1,19 %' },
+      aujourdhui:  { card: 58, cash: 42, centerMad: 5191,   fee: '107 MAD · 1,19 %' },
+      hier:        { card: 57, cash: 43, centerMad: 4777,   fee: '100 MAD · 1,19 %' },
+      septJours:   { card: 59, cash: 41, centerMad: 37878,  fee: '764 MAD · 1,19 %' },
+      trenteJours: { card: 58, cash: 42, centerMad: 156252, fee: '3 206 MAD · 1,19 %' },
       personnalise: null,
     },
   };
@@ -3331,33 +3331,17 @@
 
   /* ═══════════════ RENDER: PAYMENT MIX DONUT ═══════════════ */
 
-  /* Ventilation réelle des encaissements (venues créées par le marchand).
-   * La caisse enregistre un MODE DE PAIEMENT — espèces, carte, tap, QR, lien —
-   * et jamais le réseau de la carte : le partage Visa / Mastercard de la démo ne
-   * peut pas exister ici. La carte n'avait aucune branche « venue personnalisée »,
-   * donc un vrai magasin voyait un anneau vide et quatre rails figés à 0 % malgré
-   * ses ventes, et surtout AUCUNE ligne Espèces — le tender dominant d'une
-   * boutique marocaine. */
+  /* Kiwi keeps the executive payment view binary: cash versus card. Tap, QR,
+   * wallet and payment links are cashless, so they roll into the card rail. */
   const REAL_MIX = [
-    { key: 'cash', color: '#0B6E4F', fr: 'Espèces',          en: 'Cash',         ar: 'نقدًا' },
-    { key: 'card', color: '#46A878', fr: 'Carte bancaire',   en: 'Bank card',    ar: 'بطاقة بنكية' },
-    { key: 'tap',  color: '#7DF2B0', fr: 'Kiwi Tap',         en: 'Kiwi Tap',     ar: 'Kiwi Tap' },
-    { key: 'qr',   color: '#D99A2B', fr: 'QR / Wallet',      en: 'QR / Wallet',  ar: 'QR / محفظة' },
-    { key: 'link', color: '#B08CC8', fr: 'Lien de paiement', en: 'Payment link', ar: 'رابط الدفع' },
+    { key: 'card', color: '#0B6E4F', fr: 'Carte',   en: 'Card', ar: 'بطاقة' },
+    { key: 'cash', color: '#C9D2CE', fr: 'Espèces', en: 'Cash', ar: 'نقدًا' },
   ];
   const MIX_EMPTY = {
     fr: 'Aucun encaissement sur la période',
     en: 'No payments in this period',
     ar: 'لا توجد مدفوعات في هذه الفترة',
   };
-  // Rows for the active range: only tenders actually used, so a store that takes
-  // cash only is not told it has four dead card rails.
-  /* Au centre de l'anneau, la démo affiche le total CARTE — d'où « MAD carte »
-   * dans le HTML. Une venue réelle y affiche le total TOUS MODES, donc la même
-   * légende ferait lire « 1 350 MAD carte » à un commerçant qui n'a encaissé
-   * que 450 MAD par carte. Deux légendes, un seul centre. */
-  const MIX_CENTER_ALL = { fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' };
-
   function realMixRows(lang, range) {
     const [from, to] = rangeBounds(range || effRange());
     const by = {};
@@ -3367,17 +3351,16 @@
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       if (!amt) return;
-      let k = String((e && e.method) || 'card');
-      if (k === 'wallet') k = 'qr';                             // même rail côté client
-      if (!REAL_MIX.some((m) => m.key === k)) k = 'card';       // mode inconnu → carte, jamais une tranche fantôme
+      const k = String((e && e.method) || 'card') === 'cash' ? 'cash' : 'card';
       by[k] = (by[k] || 0) + amt;
       total += amt;
     });
     if (!total) return { rows: [], total: 0 };
     return {
       total,
+      cardTotal: by.card || 0,
       rows: REAL_MIX.filter((m) => by[m.key] > 0).map((m) => ({
-        color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / total) * 100,
+        key: m.key, color: m.color, label: m[lang] || m.fr, pct: (by[m.key] / total) * 100,
       })),
     };
   }
@@ -3388,32 +3371,27 @@
     if (!data) return;
     const lang = getLang();
 
-    /* Une venue réelle recompose ses tranches depuis ses ventes ; la démo garde
-     * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
-     * `rows`, donc les deux chemins partagent le même rendu. */
+    /* Both demo and real venues now expose the same two executive rails. */
     const custom = ownData();
     const real = custom ? realMixRows(lang, effective) : null;
     const rows = custom ? real.rows : [
-      { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
-      { color: '#46A878', label: 'Mastercard', pct: data.mc   },
-      { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
-      { color: '#D99A2B', label: 'QR',         pct: data.qr   },
+      { key: 'card', color: '#0B6E4F', label: REAL_MIX[0][lang] || REAL_MIX[0].fr, pct: data.card },
+      { key: 'cash', color: '#C9D2CE', label: REAL_MIX[1][lang] || REAL_MIX[1].fr, pct: data.cash },
     ];
-    const centerMad = custom ? real.total : data.centerMad;
+    const centerMad = custom ? real.cardTotal : data.centerMad;
 
     const donut = document.querySelector('[data-mix-donut]');
     if (donut) {
-      /* Kiwi's ring DNA: the arc carries one legible fact—the leading payment
-       * method's share. The complete breakdown stays in the adjacent legend. */
-      const leadingPct = rows.reduce((max, row) => Math.max(max, Number(row.pct) || 0), 0);
+      /* The arc always means card share; the remainder is cash. */
+      const cardPct = Number(rows.find((row) => row.key === 'card')?.pct) || 0;
       const ringValue = donut.querySelector('[data-mix-ring-value]');
       if (ringValue) {
-        const pct = Math.max(0, Math.min(100, leadingPct));
+        const pct = Math.max(0, Math.min(100, cardPct));
         ringValue.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
       }
 
       const centerPct = document.querySelector('[data-mix-center-pct]');
-      if (centerPct) animateNumber(centerPct, parseAmountFromEl(centerPct), leadingPct, {
+      if (centerPct) animateNumber(centerPct, parseAmountFromEl(centerPct), cardPct, {
         duration: 620,
         format: value => `${Math.round(value)} %`,
       });
@@ -3429,20 +3407,12 @@
     const center = document.querySelector('[data-mix-center-amt]');
     if (center) animateNumber(center, parseAmountFromEl(center), centerMad, { duration: 700, format: v => frInt(v) });
 
-    /* On retire data-i18n côté venue réelle, sinon i18n.js réimposerait la
-     * légende démo au prochain changement de langue ; on le remet pour la démo
-     * afin qu'un retour en arrière retrouve sa traduction. */
     const centerUnit = center && center.parentElement
       ? center.parentElement.querySelector('.slash') : null;
     if (centerUnit) {
-      if (custom) {
-        centerUnit.removeAttribute('data-i18n');
-        centerUnit.textContent = MIX_CENTER_ALL[lang] || MIX_CENTER_ALL.fr;
-      } else {
-        const T = window.KiwiI18n?.T?.[lang] || {};
-        centerUnit.setAttribute('data-i18n', 'dash.mix.center.unit');
-        centerUnit.textContent = T['dash.mix.center.unit'] || 'MAD carte';
-      }
+      const T = window.KiwiI18n?.T?.[lang] || {};
+      centerUnit.setAttribute('data-i18n', 'dash.mix.center.unit');
+      centerUnit.textContent = T['dash.mix.center.unit'] || 'MAD carte';
     }
 
     const sub = document.querySelector('[data-mix-sub]');
