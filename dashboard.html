@@ -4961,7 +4961,7 @@
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. OFF by default — KiwiDesignVexel.enable()
      or ?skin=vexel. Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2029" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2030" />
 <!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
 <link rel="stylesheet" href="assets/invoicing.css?v=4" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
@@ -5478,12 +5478,18 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
               </div>
             </div>
             <div class="donut-row">
-              <div style="position: relative; width: 150px; height: 150px;">
-                <svg width="150" height="150" viewBox="0 0 42 42" data-mix-donut>
-                  <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="4.6" pathLength="100"/>
+              <div class="kiwi-ring-stat">
+                <div class="kiwi-ring-visual">
+                <svg class="kiwi-ring" viewBox="0 0 42 42" data-mix-donut aria-hidden="true">
+                  <circle class="kiwi-ring-track" cx="21" cy="21" r="15.9155" pathLength="100"/>
+                  <circle class="kiwi-ring-value" data-mix-ring-value cx="21" cy="21" r="15.9155" pathLength="100" stroke-dasharray="0 100"/>
                 </svg>
                 <div class="ring-center">
-                  <div class="score" style="font-size: 22px;" data-mix-center-amt>16 590</div>
+                  <div class="score" data-mix-center-pct>52 %</div>
+                </div>
+                </div>
+                <div class="kiwi-ring-meta">
+                  <div class="kiwi-ring-amount" data-mix-center-amt>16 590</div>
                   <div class="slash" data-i18n="dash.mix.center.unit">MAD carte</div>
                 </div>
               </div>
@@ -5947,7 +5953,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/ux.js" defer></script>
 <script src="assets/venues.js" defer></script>
 <script src="assets/demoClock.js" defer></script>
-<script src="assets/dateRange.js" defer></script>
+<script src="assets/dateRange.js?v=2030" defer></script>
 <script src="assets/mobile-nav.js" defer></script>
 <script defer src="assets/pwa-update.js"></script>
 <script defer src="assets/dashboard-pwa.js?v=2030"></script>

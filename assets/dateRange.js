@@ -3403,75 +3403,26 @@
 
     const donut = document.querySelector('[data-mix-donut]');
     if (donut) {
-      // Segments draw clockwise from 12 o'clock. Each segment carries its FINAL
-      // dashoffset from the start; only stroke-dasharray animates from "0 100" → "P 100".
-      // Clockwise from 12 o'clock. pathLength=100 → dash/offset are exact
-      // percentages; a hairline GAP between segments keeps them legible. A
-      // light→deep green ramp + amber makes all four methods distinguishable.
-      const GAP = 1.6;
-      const SW = 4.6;
-      let acc = 0;
-      const segs = rows.map((r) => {
-        const pct = r.pct || 0;
-        const seg = { stroke: r.color, pct, dash: Math.max(0, pct - GAP), offset: 25 - acc };
-        acc += pct;
-        return seg;
-      });
-      /* The built DOM caches one <circle> per segment, addressed by index. A real
-       * store's tender set grows as it takes its first card or QR payment, so the
-       * cached ring must be discarded whenever the shape changes — otherwise the
-       * new tranche would have no element to draw into. */
-      const sig = segs.map((s) => s.stroke).join('|');
-      if (donut.dataset.sig !== sig) donut.dataset.built = '';
-      donut.dataset.sig = sig;
-      const built = donut.dataset.built === '1';
-      const STAGGER_MS = 150;
-      const FILL_MS = 850; // matches CSS transition duration
-
-      if (!built) {
-        donut['inner' + 'HTML'] = `
-          <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="${SW}" pathLength="100"/>
-          ${segs.map((s, i) => `
-            <circle class="seg" data-seg="${i}"
-              cx="21" cy="21" r="15.9155" fill="transparent"
-              stroke="${s.stroke}" stroke-width="${SW}" pathLength="100"
-              stroke-dasharray="0 100"
-              stroke-dashoffset="${s.offset}"
-              stroke-linecap="butt"/>
-          `).join('')}
-        `;
-        donut.dataset.built = '1';
-        // Initial entrance: segments wipe in clockwise, sequentially from visa → qr.
-        segs.forEach((s, i) => {
-          setTimeout(() => {
-            const el = donut.querySelector(`[data-seg="${i}"]`);
-            if (el) el.setAttribute('stroke-dasharray', `${s.dash} ${100 - s.dash}`);
-          }, 80 + i * STAGGER_MS);
-        });
-      } else {
-        // Range change: stagger the per-segment update so the user sees the donut
-        // redistribute sector by sector rather than morph all 4 at once (too subtle).
-        segs.forEach((s, i) => {
-          const el = donut.querySelector(`[data-seg="${i}"]`);
-          if (!el) return;
-          el.setAttribute('stroke', s.stroke);
-          setTimeout(() => {
-            el.setAttribute('stroke-dasharray', `${s.dash} ${100 - s.dash}`);
-            el.setAttribute('stroke-dashoffset', String(s.offset));
-          }, i * STAGGER_MS);
-        });
+      /* Kiwi's ring DNA: the arc carries one legible fact—the leading payment
+       * method's share. The complete breakdown stays in the adjacent legend. */
+      const leadingPct = rows.reduce((max, row) => Math.max(max, Number(row.pct) || 0), 0);
+      const ringValue = donut.querySelector('[data-mix-ring-value]');
+      if (ringValue) {
+        const pct = Math.max(0, Math.min(100, leadingPct));
+        ringValue.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
       }
 
-      // Center text re-fade on every render (load + range change). Force a reflow
-      // between the .in removal and re-add so the transition actually replays.
+      const centerPct = document.querySelector('[data-mix-center-pct]');
+      if (centerPct) animateNumber(centerPct, parseAmountFromEl(centerPct), leadingPct, {
+        duration: 620,
+        format: value => `${Math.round(value)} %`,
+      });
+
       const ringCenter = donut.parentElement?.querySelector('.ring-center');
       if (ringCenter) {
         ringCenter.classList.remove('in');
-        // eslint-disable-next-line no-unused-expressions
-        ringCenter.offsetWidth; // force reflow
-        const startOffset = built ? 0 : 80;
-        const totalMs = startOffset + (segs.length - 1) * STAGGER_MS + FILL_MS - 280;
-        setTimeout(() => ringCenter.classList.add('in'), totalMs);
+        ringCenter.offsetWidth;
+        ringCenter.classList.add('in');
       }
     }
 
