@@ -3354,21 +3354,26 @@ body.design-vexel[data-vexel-mode] .vexel-clients > svg {
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot {
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   min-height: 38px;
   margin-top: auto;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot > div {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 9px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   min-width: 0;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot strong {
   font-size: 29px;
+  line-height: .96;
+  letter-spacing: -.045em;
+  white-space: nowrap;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot span {
