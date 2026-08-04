@@ -917,6 +917,17 @@
    * Computed metrics
    * ═══════════════════════════════════════════════════════════════════════ */
   const currentStockFor = (it) => (stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock);
+  /* A real restaurant's recipe is the source of theoretical ingredient usage.
+   * Demo venues keep their historic fixture values; real venues never inherit
+   * those figures and only receive a number once sales + recipes exist. */
+  const theoreticalUsageFor = (it) => {
+    try {
+      const measured = window.KiwiRestaurantRecipes?.theoreticalUsage?.(it.id, currentVenueId(), 7);
+      if (stShowReal()) return Number(measured) || 0;
+      if (Number(measured) > 0) return Number(measured);
+    } catch (_) {}
+    return Number(it.theoreticalUsage) || 0;
+  };
   const statusOf = (it) => {
     const s = currentStockFor(it);
     if (s <= 0) return 'out';
@@ -929,13 +940,16 @@
     }
     return it.status || 'ok';
   };
-  const variance = (it) => (it.theoreticalUsage > 0 ? ((it.usageThisWeek - it.theoreticalUsage) / it.theoreticalUsage) * 100 : 0);
+  const variance = (it) => {
+    const theoretical = theoreticalUsageFor(it);
+    return theoretical > 0 ? ((it.usageThisWeek - theoretical) / theoretical) * 100 : 0;
+  };
   const daysOfStock = (it) => {
     const rate = it.usageThisWeek / 7;
     return rate > 0 ? currentStockFor(it) / rate : 999;
   };
   const totalValue = (items) => items.reduce((s, it) => s + (currentStockFor(it) * it.costPerUnit), 0);
-  const foodCostMonth = (items) => items.reduce((s, it) => s + (it.theoreticalUsage * it.costPerUnit * 4), 0);
+  const foodCostMonth = (items) => items.reduce((s, it) => s + (theoreticalUsageFor(it) * it.costPerUnit * 4.33), 0);
   /* Le dénominateur du ratio « coût matière / chiffre d'affaires ».
    *
    * Ces montants sont ceux des trois établissements de démonstration. Le repli
@@ -1456,7 +1470,8 @@
     const st = statusOf(it);
     const stLabel = st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut');
     const valueCell = fmtMad(cur * it.costPerUnit);
-    const varCostMad = fmtMad(Math.abs(v) / 100 * it.theoreticalUsage * it.costPerUnit);
+    const theoretical = theoreticalUsageFor(it);
+    const varCostMad = fmtMad(Math.abs(v) / 100 * theoretical * it.costPerUnit);
     return `
       <tr class="st-row-in">
         <td>
@@ -1474,7 +1489,7 @@
         </td>
         <td>
           <span class="st-cell-var ${varCls}">${svg(varIco, 12)}${esc(fmtPct(v))}
-            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(it.theoreticalUsage, it.unit), varCostMad))}</span>
+            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(theoretical, it.unit), varCostMad))}</span>
           </span>
         </td>
         <td class="r"><span class="st-cell-value">${esc(valueCell)}</span></td>
@@ -2387,7 +2402,7 @@
     const W = 320, H = 130, PAD = { l: 24, r: 8, t: 10, b: 20 };
     const innerW = W - PAD.l - PAD.r, innerH = H - PAD.t - PAD.b;
     const daily = (it.usageThisWeek / 7);
-    const theoDaily = (it.theoreticalUsage / 7);
+    const theoDaily = (theoreticalUsageFor(it) / 7);
     // Generate 14 days of mock data around the daily average
     const actual = Array.from({ length: 14 }, (_, i) => daily * (0.85 + Math.random() * 0.3));
     const theo = Array.from({ length: 14 }, () => theoDaily);
@@ -2912,6 +2927,21 @@
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
     window.KiwiI18n?.onLangChange?.(() => { if (stPageActive) render(); });
   }
+
+  /* Private bridge used by restaurant recipes. It exposes the same persisted
+   * inventory the Stock page renders, including edits and physical counts;
+   * no demo inventory is copied into a real restaurant. */
+  window.KiwiRestaurantStock = {
+    items: () => {
+      stEnsureOverlay();
+      return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it), theoreticalUsage: theoreticalUsageFor(it) }));
+    },
+    theoreticalUsage: (stockId) => {
+      stEnsureOverlay();
+      const it = getInv().find((row) => String(row.id) === String(stockId));
+      return it ? theoreticalUsageFor(it) : 0;
+    },
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerHandlers);
