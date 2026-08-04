@@ -127,7 +127,16 @@ async function routeRequest(context) {
     || path === '/en' || path.startsWith('/en/')
     || path === '/ar' || path.startsWith('/ar/')
     || path.startsWith('/_next/') || path.startsWith('/images/')
-    || path.startsWith('/model/') || path.startsWith('/draco/');
+    || path.startsWith('/model/') || path.startsWith('/draco/')
+    // La favicone du site vitrine vit a la racine, pas sous /assets : Next la
+    // demande en `/icon.svg`, et les navigateurs vont chercher `/favicon.ico`
+    // tout seuls meme quand personne ne l'a declaree. Ni l'une ni l'autre ne
+    // correspondait a un prefixe autorise, donc les deux repartaient en 401 --
+    // et un 401 sur une favicone ne se signale nulle part : la page repond 200,
+    // la console reste muette, l'onglet affiche simplement le globe gris par
+    // defaut. C'est ce qu'on voyait sur kiwi-os.com. Un fichier d'icone ne
+    // contient rien de prive.
+    || path === '/icon.svg' || path === '/favicon.ico' || path === '/apple-icon.png';
   if (isRead && isLandingPath) return next();
 
   /* Les fichiers statiques que ces pages CHARGENT. Allow-lister la page sans ses
