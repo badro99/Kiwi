@@ -175,18 +175,7 @@
     document.head.appendChild(s);
   }
 
-  function open() {
-    var Kw = K();
-    if (!Kw || !Kw.drawer) return;
-    if (!merchant()) return;
-    css();
-    var d = Kw.drawer({
-      title: 'Order Pro · tags NFC',
-      subtitle: 'Commande depuis le téléphone du client',
-      width: 560,
-      body: bodyHtml(),
-    });
-    var el = d && d.el;
+  function bindPanel(el) {
     if (!el || !el.querySelector) return;
     var msg = el.querySelector('[data-opp-msg]');
     var pubState = el.querySelector('[data-opp-pub-state]');
@@ -239,6 +228,28 @@
     });
   }
 
+  function mount(el) {
+    if (!el || !merchant()) return false;
+    css();
+    el.innerHTML = bodyHtml();
+    bindPanel(el);
+    return true;
+  }
+
+  function open() {
+    var Kw = K();
+    if (!Kw || !Kw.drawer) return;
+    if (!merchant()) return;
+    css();
+    var d = Kw.drawer({
+      title: 'Order Pro · tags NFC',
+      subtitle: 'Commande depuis le téléphone du client',
+      width: 560,
+      body: bodyHtml(),
+    });
+    bindPanel(d && d.el);
+  }
+
   /* ── register with the dashboard ─────────────────────────────────────────── */
   function register() {
     var Kw = K();
@@ -251,6 +262,7 @@
 
   window.KiwiOrderProPanel = {
     open: open,
+    mount: mount,
     enabled: enabled,
     links: function () {
       return { base: browseLink(), takeout: takeoutLink(), table: tableLink };
