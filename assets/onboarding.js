@@ -273,7 +273,6 @@
     return {
       body: `
         <div class="kob-anim">
-          <div class="kob-hero-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3C7 5 5 9 5 13a7 7 0 0 0 14 0c0-4-2-8-7-10Z" fill="#7DF2B0"/><path d="M12 6.5c-2.6 1.3-3.8 3.8-3.8 6.5" stroke="#053B2C" stroke-width="1.5" stroke-linecap="round"/></svg></div>
           <p class="kob-eyebrow">${tr({ fr: 'Bienvenue sur Kiwi', en: 'Welcome to Kiwi', ar: 'مرحباً بك في كيوي' })}</p>
           <h1 class="kob-h">${tr({ fr: 'On met tout en place <span class="k-sans">ensemble.</span>', en: "Let's set it all up <span class=\"k-sans\">together.</span>", ar: 'لنُهيّئ كل شيء <span class="k-sans">معاً.</span>' })}</h1>
           <p class="kob-sub">${tr({
