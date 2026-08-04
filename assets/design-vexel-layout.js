@@ -109,7 +109,11 @@
         '<div class="vexel-client-label" data-vexel-client-label></div>' +
         '<svg width="340" height="76" viewBox="0 0 340 76" preserveAspectRatio="none" role="img">' +
           '<title data-vexel-client-chart-title></title>' +
-          '<defs><linearGradient id="vexelClientFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ffae" stop-opacity=".28"/><stop offset="1" stop-color="#00ffae" stop-opacity="0"/></linearGradient></defs>' +
+          // Ce degrade remplissait l'aire sous une courbe : il pouvait s'effacer
+          // vers le bas sans rien coûter. Il porte maintenant une PART, dont le
+          // bord droit est le chiffre lui-meme -- s'il s'efface, la part devient
+          // illisible sur fond clair. D'ou un bas qui reste teinte.
+          '<defs><linearGradient id="vexelClientFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ffae" stop-opacity=".5"/><stop offset="1" stop-color="#00ffae" stop-opacity=".14"/></linearGradient></defs>' +
           '<path class="fill" data-vexel-client-fill d=""/>' +
           '<path class="line" data-vexel-client-line d=""/>' +
           '<circle data-vexel-client-start cx="2" cy="68" r="3" opacity=".42"/>' +
@@ -793,51 +797,67 @@
    * decorative bends that were not backed by nine observations. Plot exactly
    * the two values Kiwi knows, with a monotonic curve and a zero-based scale,
    * so the direction and amplitude agree with the number printed below it. */
-  function renderClientChart(currentText, deltaText) {
+  /* Une capsule pleine a X %, et non une courbe.
+   *
+   * Ce graphique n'a jamais eu qu'UN point reel. Il reconstituait le
+   * « precedent » en divisant la valeur affichee par (1 + delta / 100), puis
+   * tracait une spline lissee entre les deux. La courbe montante qu'on voyait
+   * n'etait donc pas un historique : c'etait le meme chiffre, dessine deux fois
+   * et relie a lui-meme. Aucune serie jour par jour n'existe pour cet
+   * indicateur, ni en demo ni en reel -- `sales` n'a pas de client rattache
+   * (schema.sql), donc personne ne peut dire combien de clients sont passes
+   * mardi dernier.
+   *
+   * Ce que la donnee dit vraiment, c'est une PART : tant de clients deja venus
+   * sur tant de clients vus. C'est donc une part qu'on dessine. Le contour
+   * (.line) porte le total, le remplissage (.fill) la portion fidele. Quand le
+   * livre client est vide, le contour reste seul : la forme est connue, le
+   * chiffre ne l'est pas. */
+  function clientCapsule(a, b, top, bottom) {
+    var r = Math.min((bottom - top) / 2, (b - a) / 2);
+    if (!(r > 0)) return '';
+    return 'M' + (a + r).toFixed(2) + ' ' + top +
+      ' L' + (b - r).toFixed(2) + ' ' + top +
+      ' A' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' + (b - r).toFixed(2) + ' ' + bottom +
+      ' L' + (a + r).toFixed(2) + ' ' + bottom +
+      ' A' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' + (a + r).toFixed(2) + ' ' + top + ' Z';
+  }
+
+  function renderClientChart(currentText) {
     var line = document.querySelector('[data-vexel-client-line]');
     var fill = document.querySelector('[data-vexel-client-fill]');
     var start = document.querySelector('[data-vexel-client-start]');
     var end = document.querySelector('[data-vexel-client-end]');
     var title = document.querySelector('[data-vexel-client-chart-title]');
-    if (!line || !fill || !start || !end) return;
+    if (!line || !fill) return;
 
-    var currentPart = String(currentText || '').split('/')[0];
-    var hasCurrent = /\d/.test(currentPart);
-    var hasDelta = /[-+]?\s*\d/.test(String(deltaText || ''));
-    var current = hasCurrent ? Math.max(0, numberFrom(currentPart)) : NaN;
-    var delta = hasDelta ? numberFrom(deltaText) : NaN;
-    var factor = 1 + delta / 100;
-    var previous = factor > 0 ? current / factor : NaN;
-    var valid = Number.isFinite(current) && Number.isFinite(previous);
+    // Les pastilles de debut / fin appartenaient a la courbe. `hidden` ne fait
+    // rien sur un noeud SVG (ce n'est pas un HTMLElement), d'ou le style.
+    if (start) start.style.display = 'none';
+    if (end) end.style.display = 'none';
 
-    if (!valid) {
-      line.setAttribute('d', '');
+    var top = 14, bottom = 62, x0 = 2, x1 = 338;
+    var parts = String(currentText || '').split('/');
+    var current = /\d/.test(parts[0] || '') ? Math.max(0, numberFrom(parts[0])) : NaN;
+    var total = parts.length > 1 && /\d/.test(parts[1]) ? Math.max(0, numberFrom(parts[1])) : NaN;
+    var known = Number.isFinite(current) && Number.isFinite(total) && total > 0;
+
+    line.setAttribute('d', clientCapsule(x0, x1, top, bottom));
+    if (!known) {
       fill.setAttribute('d', '');
-      start.hidden = true;
-      end.hidden = true;
       setText(title, '');
       return;
     }
 
-    var top = 8, bottom = 68, x0 = 2, x1 = 338;
-    var ceiling = Math.max(current, previous, 1) * 1.08;
-    var y = function (value) { return bottom - (value / ceiling) * (bottom - top); };
-    var y0 = y(previous), y1 = y(current);
-    var curve = 'M' + x0 + ' ' + y0.toFixed(2) +
-      ' C114 ' + y0.toFixed(2) + ' 226 ' + y1.toFixed(2) + ' ' + x1 + ' ' + y1.toFixed(2);
-    line.setAttribute('d', curve);
-    fill.setAttribute('d', curve + ' L' + x1 + ' 76 L' + x0 + ' 76 Z');
-    start.setAttribute('cy', y0.toFixed(2));
-    end.setAttribute('cy', y1.toFixed(2));
-    start.hidden = false;
-    end.hidden = false;
-    line.dataset.previous = String(Math.round(previous));
-    line.dataset.current = String(Math.round(current));
+    var share = Math.min(1, current / total);
+    fill.setAttribute('d', clientCapsule(x0, x0 + share * (x1 - x0), top, bottom));
+    line.dataset.share = (share * 100).toFixed(1);
 
     var l = lang();
-    var previousLabel = l === 'en' ? 'Previous period' : l === 'ar' ? 'الفترة السابقة' : 'Période précédente';
-    var currentLabel = l === 'en' ? 'Current period' : l === 'ar' ? 'الفترة الحالية' : 'Période actuelle';
-    setText(title, previousLabel + ': ' + Math.round(previous) + ' · ' + currentLabel + ': ' + Math.round(current));
+    var pct = Math.round(share * 100) + ' %';
+    setText(title, l === 'en' ? Math.round(current) + ' of ' + Math.round(total) + ' customers seen had come before · ' + pct
+      : l === 'ar' ? Math.round(current) + ' من ' + Math.round(total) + ' من العملاء سبق أن زاروا · ' + pct
+      : Math.round(current) + ' clients déjà venus sur ' + Math.round(total) + ' clients vus · ' + pct);
   }
 
   function refresh() {
@@ -885,7 +905,7 @@
     var clientDeltaText = clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '';
     setText(clientValue, String(clientText).replace(/\s*\/\s*/g, '/').trim());
     setText(clientDelta, clientDeltaText);
-    renderClientChart(clientText, clientDeltaText);
+    renderClientChart(clientText);
   }
 
   function scheduleRefresh() {

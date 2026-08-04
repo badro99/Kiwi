@@ -583,7 +583,7 @@
         marge:    { value: 71.4,   unit: '%',    fmt: 'pct1', delta: 1.8 },
         success:  { value: 99.34,  unit: '%',    fmt: 'pct2', delta: 0.2 },
         ratio:    { text: '68 / 32', unit: '%',                delta: 4 },
-        regulars: { value: 47,     unit: '/ 182',fmt: 'int',  delta: 26 },
+        regulars: { value: 47,     seen: 169, unit: '/ 169',fmt: 'int',  delta: 26 },
       },
       hier: {
         tx:       { value: 168,    unit: '',     fmt: 'int',  delta: 8.4 },
@@ -591,7 +591,7 @@
         marge:    { value: 69.6,   unit: '%',    fmt: 'pct1', delta: 0.4 },
         success:  { value: 99.18,  unit: '%',    fmt: 'pct2', delta: 0.1 },
         ratio:    { text: '64 / 36', unit: '%',                delta: 2 },
-        regulars: { value: 42,     unit: '/ 168',fmt: 'int',  delta: 25 },
+        regulars: { value: 42,     seen: 156, unit: '/ 156',fmt: 'int',  delta: 25 },
       },
       septJours: {
         tx:       { value: 1240,   unit: '',     fmt: 'int',  delta: 18 },
@@ -599,7 +599,7 @@
         marge:    { value: 70.8,   unit: '%',    fmt: 'pct1', delta: 2.1 },
         success:  { value: 99.28,  unit: '%',    fmt: 'pct2', delta: 0.3 },
         ratio:    { text: '66 / 34', unit: '%',                delta: 5 },
-        regulars: { value: 286,    unit: '/ 1240',fmt:'int',  delta: 23 },
+        regulars: { value: 286,    seen: 653, unit: '/ 653',fmt:'int',  delta: 23 },
       },
       trenteJours: {
         tx:       { value: 5320,   unit: '',     fmt: 'int',  delta: 21 },
@@ -607,7 +607,7 @@
         marge:    { value: 70.2,   unit: '%',    fmt: 'pct1', delta: 1.5 },
         success:  { value: 99.32,  unit: '%',    fmt: 'pct2', delta: 0.5 },
         ratio:    { text: '68 / 32', unit: '%',                delta: 6 },
-        regulars: { value: 1240,   unit: '/ 5320',fmt:'int',  delta: 24 },
+        regulars: { value: 1240,   seen: 1773, unit: '/ 1773',fmt:'int',  delta: 24 },
       },
       moisDernier: {
         tx:       { value: 4948,   unit: '',     fmt: 'int',  delta: 17 },
@@ -615,7 +615,7 @@
         marge:    { value: 69.4,   unit: '%',    fmt: 'pct1', delta: 0.9 },
         success:  { value: 99.26,  unit: '%',    fmt: 'pct2', delta: 0.3 },
         ratio:    { text: '67 / 33', unit: '%',                delta: 4 },
-        regulars: { value: 1153,   unit: '/ 4948',fmt:'int',  delta: 19 },
+        regulars: { value: 1153,   seen: 1649, unit: '/ 1649',fmt:'int',  delta: 19 },
       },
       trimestre: {
         tx:       { value: 15960,  unit: '',     fmt: 'int',  delta: 12 },
@@ -623,7 +623,7 @@
         marge:    { value: 70.0,   unit: '%',    fmt: 'pct1', delta: 1.2 },
         success:  { value: 99.30,  unit: '%',    fmt: 'pct2', delta: 0.4 },
         ratio:    { text: '68 / 32', unit: '%',                delta: 5 },
-        regulars: { value: 3720,   unit: '/ 15960',fmt:'int', delta: 16 },
+        regulars: { value: 3720,   seen: 4200, unit: '/ 4200',fmt:'int', delta: 16 },
       },
       annee: {
         tx:       { value: 63840,  unit: '',     fmt: 'int',  delta: 18 },
@@ -631,7 +631,7 @@
         marge:    { value: 70.6,   unit: '%',    fmt: 'pct1', delta: 2.4 },
         success:  { value: 99.35,  unit: '%',    fmt: 'pct2', delta: 0.6 },
         ratio:    { text: '69 / 31', unit: '%',                delta: 6 },
-        regulars: { value: 14880,  unit: '/ 63840',fmt:'int', delta: 21 },
+        regulars: { value: 14880,  seen: 15960, unit: '/ 15960',fmt:'int', delta: 21 },
       },
       personnalise: null,
     },
@@ -642,7 +642,7 @@
         tauxRetour: { value: 6.2,   unit: '%',    fmt: 'pct1', delta: -1.3 },
         success:    { value: 99.6,  unit: '%',    fmt: 'pct2', delta: 0.1 },
         ratio:      { text: '85 / 15', unit: '%',               delta: 3 },
-        regulars:   { value: 11,    unit: '/ 42', fmt: 'int',  delta: 18 },
+        regulars:   { value: 11,    seen: 40, unit: '/ 40', fmt: 'int',  delta: 18 },
       },
       hier: {
         tx:         { value: 43,    unit: '',     fmt: 'int',  delta: 8 },
@@ -650,7 +650,7 @@
         tauxRetour: { value: 5.8,   unit: '%',    fmt: 'pct1', delta: -1.8 },
         success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.0 },
         ratio:      { text: '83 / 17', unit: '%',               delta: 2 },
-        regulars:   { value: 12,    unit: '/ 43', fmt: 'int',  delta: 20 },
+        regulars:   { value: 12,    seen: 41, unit: '/ 41', fmt: 'int',  delta: 20 },
       },
       septJours: {
         tx:         { value: 295,   unit: '',     fmt: 'int',  delta: 14 },
@@ -658,7 +658,7 @@
         tauxRetour: { value: 6.4,   unit: '%',    fmt: 'pct1', delta: -0.8 },
         success:    { value: 99.4,  unit: '%',    fmt: 'pct2', delta: 0.2 },
         ratio:      { text: '84 / 16', unit: '%',               delta: 4 },
-        regulars:   { value: 78,    unit: '/ 295',fmt: 'int',  delta: 16 },
+        regulars:   { value: 78,    seen: 174, unit: '/ 174',fmt: 'int',  delta: 16 },
       },
       trenteJours: {
         tx:         { value: 1240,  unit: '',     fmt: 'int',  delta: 18 },
@@ -666,7 +666,7 @@
         tauxRetour: { value: 6.1,   unit: '%',    fmt: 'pct1', delta: -1.4 },
         success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.3 },
         ratio:      { text: '85 / 15', unit: '%',               delta: 5 },
-        regulars:   { value: 320,   unit: '/ 1240',fmt:'int',  delta: 21 },
+        regulars:   { value: 320,   seen: 459, unit: '/ 459',fmt:'int',  delta: 21 },
       },
       moisDernier: {
         tx:         { value: 1153,  unit: '',     fmt: 'int',  delta: 14 },
@@ -674,7 +674,7 @@
         tauxRetour: { value: 6.3,   unit: '%',    fmt: 'pct1', delta: -1.1 },
         success:    { value: 99.4,  unit: '%',    fmt: 'pct2', delta: 0.2 },
         ratio:      { text: '84 / 16', unit: '%',               delta: 4 },
-        regulars:   { value: 298,   unit: '/ 1153',fmt:'int',  delta: 17 },
+        regulars:   { value: 298,   seen: 427, unit: '/ 427',fmt:'int',  delta: 17 },
       },
       trimestre: {
         tx:         { value: 3720,  unit: '',     fmt: 'int',  delta: 11 },
@@ -682,7 +682,7 @@
         tauxRetour: { value: 5.9,   unit: '%',    fmt: 'pct1', delta: -0.9 },
         success:    { value: 99.5,  unit: '%',    fmt: 'pct2', delta: 0.3 },
         ratio:      { text: '85 / 15', unit: '%',               delta: 4 },
-        regulars:   { value: 960,   unit: '/ 3720',fmt:'int',  delta: 15 },
+        regulars:   { value: 960,   seen: 1094, unit: '/ 1094',fmt:'int',  delta: 15 },
       },
       annee: {
         tx:         { value: 14880, unit: '',     fmt: 'int',  delta: 16 },
@@ -690,7 +690,7 @@
         tauxRetour: { value: 5.7,   unit: '%',    fmt: 'pct1', delta: -1.2 },
         success:    { value: 99.6,  unit: '%',    fmt: 'pct2', delta: 0.4 },
         ratio:      { text: '86 / 14', unit: '%',               delta: 5 },
-        regulars:   { value: 3840,  unit: '/ 14880',fmt:'int', delta: 19 },
+        regulars:   { value: 3840,  seen: 4133, unit: '/ 4133',fmt:'int', delta: 19 },
       },
       personnalise: null,
     },
@@ -701,7 +701,7 @@
         marge:    { value: 78.2,  unit: '%',    fmt: 'pct1', delta: 2.1 },
         success:  { value: 92.5,  unit: '%',    fmt: 'pct1', delta: 3.2 },
         ratio:    { text: '92 / 8', unit: '%',                 delta: 2 },
-        regulars: { value: 14,    unit: '/ 20', fmt: 'int',  delta: 12 },
+        regulars: { value: 14,    seen: 19, unit: '/ 19', fmt: 'int',  delta: 12 },
       },
       hier: {
         tx:       { value: 18,    unit: '',     fmt: 'int',  delta: 5 },
@@ -709,7 +709,7 @@
         marge:    { value: 76.5,  unit: '%',    fmt: 'pct1', delta: -0.8 },
         success:  { value: 89.3,  unit: '%',    fmt: 'pct1', delta: -1.5 },
         ratio:    { text: '90 / 10', unit: '%',                 delta: -2 },
-        regulars: { value: 13,    unit: '/ 18', fmt: 'int',  delta: 14 },
+        regulars: { value: 13,    seen: 17, unit: '/ 17', fmt: 'int',  delta: 14 },
       },
       septJours: {
         tx:       { value: 142,   unit: '',     fmt: 'int',  delta: 19 },
@@ -717,7 +717,7 @@
         marge:    { value: 77.8,  unit: '%',    fmt: 'pct1', delta: 1.6 },
         success:  { value: 91.8,  unit: '%',    fmt: 'pct1', delta: 2.7 },
         ratio:    { text: '91 / 9', unit: '%',                 delta: 3 },
-        regulars: { value: 92,    unit: '/ 142',fmt: 'int',  delta: 18 },
+        regulars: { value: 92,    seen: 118, unit: '/ 118',fmt: 'int',  delta: 18 },
       },
       trenteJours: {
         tx:       { value: 580,   unit: '',     fmt: 'int',  delta: 22 },
@@ -725,7 +725,7 @@
         marge:    { value: 78.0,  unit: '%',    fmt: 'pct1', delta: 2.4 },
         success:  { value: 92.1,  unit: '%',    fmt: 'pct1', delta: 4.5 },
         ratio:    { text: '92 / 8', unit: '%',                 delta: 5 },
-        regulars: { value: 412,   unit: '/ 580',fmt: 'int',  delta: 20 },
+        regulars: { value: 412,   seen: 505, unit: '/ 505',fmt: 'int',  delta: 20 },
       },
       moisDernier: {
         tx:       { value: 539,   unit: '',     fmt: 'int',  delta: 18 },
@@ -733,7 +733,7 @@
         marge:    { value: 77.2,  unit: '%',    fmt: 'pct1', delta: 1.1 },
         success:  { value: 91.6,  unit: '%',    fmt: 'pct1', delta: 3.6 },
         ratio:    { text: '91 / 9', unit: '%',                 delta: 4 },
-        regulars: { value: 383,   unit: '/ 539',fmt: 'int',  delta: 16 },
+        regulars: { value: 383,   seen: 470, unit: '/ 470',fmt: 'int',  delta: 16 },
       },
       trimestre: {
         tx:       { value: 1740,  unit: '',     fmt: 'int',  delta: 13 },
@@ -741,7 +741,7 @@
         marge:    { value: 77.6,  unit: '%',    fmt: 'pct1', delta: 1.8 },
         success:  { value: 92.3,  unit: '%',    fmt: 'pct1', delta: 4.0 },
         ratio:    { text: '92 / 8', unit: '%',                 delta: 5 },
-        regulars: { value: 1236,  unit: '/ 1740',fmt:'int',   delta: 17 },
+        regulars: { value: 1236,  seen: 1420, unit: '/ 1420',fmt:'int',   delta: 17 },
       },
       annee: {
         tx:       { value: 6960,  unit: '',     fmt: 'int',  delta: 19 },
@@ -749,7 +749,7 @@
         marge:    { value: 78.4,  unit: '%',    fmt: 'pct1', delta: 3.0 },
         success:  { value: 92.8,  unit: '%',    fmt: 'pct1', delta: 4.8 },
         ratio:    { text: '93 / 7', unit: '%',                 delta: 6 },
-        regulars: { value: 4944,  unit: '/ 6960',fmt:'int',   delta: 21 },
+        regulars: { value: 4944,  seen: 5480, unit: '/ 5480',fmt:'int',   delta: 21 },
       },
       personnalise: null,
     },
@@ -1778,8 +1778,8 @@
   function realRegularsTile(tile, range) {
     const [from, to] = rangeBounds(range);
     const s = realRegulars(from, to);
-    if (!s) return { ...tile, text: '—', unit: '', delta: null };
-    return { ...tile, text: null, value: s.returning, unit: '/ ' + s.total, fmt: 'int', delta: null };
+    if (!s) return { ...tile, text: '—', seen: 0, unit: '', delta: null };
+    return { ...tile, text: null, value: s.returning, seen: s.total, unit: '/ ' + s.total, fmt: 'int', delta: null };
   }
   /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
    * désormais le seul endroit de l'application qui sache répondre « combien me
@@ -2388,10 +2388,17 @@
                   desc: 'Répartition carte vs espèces', derive: (d) => d.ratio || null },
     regulars:   { labels: { default: 'Clients réguliers', boutique: 'Clients fidèles', spa: 'Clients fidèles' }, i18n: 'dash.kpi.regular',
                   desc: 'Clients déjà venus sur la période', derive: (d) => d.regulars || null },
+    // Ces deux tuiles se comptent en CLIENTS, pas en ventes. Elles divisaient
+    // par `tx` -- le nombre de commandes -- ce qui ecrasait le taux de fidelite
+    // (un habitue qui passe trois fois comptait pour trois inconnus) et gonflait
+    // les « nouveaux ». Le denominateur est maintenant `regulars.seen`, le
+    // nombre de clients distincts vus sur la periode. `tx.delta` reste le proxy
+    // de croissance du volume vu ; en mode reel les deltas sont nuls de toute
+    // facon, faute d'historique client par periode.
     retention:  { labels: { default: 'Taux de fidélité' }, i18n: 'dash.kpi.retention',
-                  desc: 'Part de clients réguliers parmi les ventes', derive: (d) => { if (!d.tx || !d.regulars) return null; const pct = d.tx.value ? d.regulars.value / d.tx.value * 100 : 0; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx.delta], (a, b) => a - b) }; } },
+                  desc: 'Part de clients déjà venus parmi les clients vus', derive: (d) => { if (!d.regulars || !d.regulars.seen) return null; const pct = d.regulars.value / d.regulars.seen * 100; return { value: pct, unit: '%', fmt: 'pct1', delta: withDelta([d.regulars.delta, d.tx && d.tx.delta], (a, b) => a - b) }; } },
     newClients: { labels: { default: 'Nouveaux clients' }, i18n: 'dash.kpi.newClients',
-                  desc: 'Premières visites estimées', derive: (d) => { if (!d.tx || !d.regulars) return null; return { value: Math.max(0, d.tx.value - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
+                  desc: 'Clients vus pour la première fois', derive: (d) => { if (!d.regulars || !d.regulars.seen) return null; return { value: Math.max(0, d.regulars.seen - d.regulars.value), unit: '', fmt: 'int', delta: withDelta([d.tx && d.tx.delta, d.regulars.delta], (a, b) => a - b * 0.3) }; } },
     txPerDay:   { labels: { default: 'Ventes par jour', spa: 'RDV par jour' }, i18n: 'dash.kpi.txPerDay',
                   desc: 'Nombre de ventes moyen par jour', derive: (d, ctx) => d.tx ? { value: d.tx.value / ctx.nbDays, unit: '', fmt: 'int', delta: d.tx.delta } : null },
     occupation: { labels: { default: "Taux d'occupation" }, i18n: 'dash.kpi.occupancy',
@@ -2459,7 +2466,7 @@
           ...data,
           tx:         data.tx       ? { ...data.tx,       value: sim.cumTx } : data.tx,
           panier:     data.panier   ? { ...data.panier,   value: sim.panierMoyen || data.panier.value } : data.panier,
-          regulars:   data.regulars ? { ...data.regulars, value: sim.cumRegulars, unit: `/ ${Math.max(1, sim.cumTx)}` } : data.regulars,
+          regulars:   data.regulars ? { ...data.regulars, value: sim.cumRegulars, seen: Math.max(1, sim.cumSeen), unit: `/ ${Math.max(1, sim.cumSeen)}` } : data.regulars,
           // success / ratio / tauxRetour stay at their static daily values
         };
       }
@@ -5031,7 +5038,11 @@
     if (kpi.panier && kpi.tx?.value > 0) {
       kpi.panier.value = Math.round(hero.amount / kpi.tx.value);
     }
-    if (kpi.regulars) kpi.regulars.unit = `/ ${kpi.tx.value}`;
+    // On ne touche PAS a `regulars` : une vente n'a pas de client rattache
+    // (voir `sales` dans schema.sql), donc elle ne dit ni si un client de plus
+    // a ete vu, ni si c'etait un habitue. Cette ligne recopiait le nombre de
+    // commandes dans le denominateur, ce qui faisait afficher « 286 / 1240
+    // clients vus » a un cafe qui avait servi 1240 commandes.
 
     // Re-render the affected blocks (each respects its own animation)
     renderHero();

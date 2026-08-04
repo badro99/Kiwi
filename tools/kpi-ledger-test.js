@@ -418,6 +418,48 @@ ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
 
   ok('la tuile réelle ne réinjecte plus la constante value: 0',
     !/regulars:\s*data\.regulars\s*\?\s*\{[^}]*value:\s*0/.test(SRC));
+
+  /* ── Des clients, pas des commandes ────────────────────────────────────
+   * Le dénominateur de « Clients réguliers » était le nombre de VENTES. Un
+   * café qui servait 1 240 commandes en sept jours affichait « 286 / 1 240
+   * clients vus » : il n'a jamais vu 1 240 personnes, il a encaissé 1 240
+   * fois. Et comme un habitué qui repasse trois fois comptait pour trois
+   * inconnus, le taux de fidélité qui en dérivait était mécaniquement
+   * écrasé. Le carnet réel ne peut de toute façon compter que des clients
+   * distincts — `sales` n'a pas de client rattaché (schema.sql) — donc les
+   * deux modes ne pouvaient pas dire la même chose. */
+  {
+    const rows = [...SRC.matchAll(
+      /tx:\s*\{\s*value:\s*(\d+)[\s\S]{0,400}?regulars:\s*\{\s*value:\s*(\d+),\s*seen:\s*(\d+),\s*unit:\s*'\/ (\d+)'/g
+    )].map((m) => ({ tx: +m[1], value: +m[2], seen: +m[3], unit: +m[4] }));
+
+    ok('les 21 lignes de démo portent un nombre de clients explicite', rows.length === 21);
+    ok('le dénominateur affiché est bien le nombre de clients vus',
+      rows.every((r) => r.unit === r.seen));
+    ok('un client vu ne peut pas être plus rare qu\'un client fidèle',
+      rows.every((r) => r.seen > r.value));
+    ok('le dénominateur n\'est plus le compte de commandes',
+      rows.length > 0 && rows.every((r) => r.seen !== r.tx));
+    ok('et il reste plus de commandes que de clients : les habitués repassent',
+      rows.every((r) => r.tx > r.seen));
+
+    ok('le taux de fidélité se divise par les clients vus, pas par les ventes',
+      /retention:[\s\S]{0,400}?d\.regulars\.value\s*\/\s*d\.regulars\.seen/.test(SRC));
+    ok('les nouveaux clients se comptent sur les clients vus, pas sur les ventes',
+      /newClients:[\s\S]{0,400}?d\.regulars\.seen\s*-\s*d\.regulars\.value/.test(SRC));
+    ok('une vente en direct ne recopie plus son compteur dans le dénominateur',
+      !/kpi\.regulars\.unit\s*=/.test(SRC));
+
+    /* On teste le CODE, pas le commentaire qui raconte le bug corrigé : sans
+     * ça, expliquer l'ancienne formule dans une note suffirait à faire échouer
+     * le garde-fou (c'est exactement ce qui s'est passé en l'écrivant). */
+    const VEX = fs.readFileSync(path.join(ROOT, 'assets/design-vexel-layout.js'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    ok('le graphique clients ne reconstitue plus un passé à partir de la variation',
+      !/1\s*\+\s*delta\s*\/\s*100/.test(VEX));
+    ok('il dessine une part, bornée à 100 %',
+      /Math\.min\(1,\s*current\s*\/\s*total\)/.test(VEX));
+  }
 }
 
 console.log('');

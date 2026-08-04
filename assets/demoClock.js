@@ -28,9 +28,13 @@
   /* ═══════════════ DAILY TARGETS PER VENUE ═══════════════ */
 
   const TARGETS = {
-    cafeAtlas:    { revenue: 31500, tx: 215, tips: 2400, panierAvg: 146, ratioCard: 68, regularsRatio: 0.26, successRate: 99.34 },
-    maisonMansour:{ revenue: 14000, tx: 48,  tips: 0,    panierAvg: 292, ratioCard: 85, regularsRatio: 0.23, successRate: 99.6 },
-    spaBahia:     { revenue: 10500, tx: 22,  tips: 1500, panierAvg: 477, ratioCard: 92, regularsRatio: 0.65, successRate: 92.5 },
+    /* `regularsRatio` se compte en CLIENTS, pas en commandes : c'est la part
+     * des clients vus qui etaient deja venus. `visitsPerCustomer` fait le pont
+     * entre les deux (un habitue qui repasse dans la journee ne compte qu'une
+     * fois comme client vu). */
+    cafeAtlas:    { revenue: 31500, tx: 215, tips: 2400, panierAvg: 146, ratioCard: 68, regularsRatio: 0.28, visitsPerCustomer: 1.08, successRate: 99.34 },
+    maisonMansour:{ revenue: 14000, tx: 48,  tips: 0,    panierAvg: 292, ratioCard: 85, regularsRatio: 0.28, visitsPerCustomer: 1.05, successRate: 99.6 },
+    spaBahia:     { revenue: 10500, tx: 22,  tips: 1500, panierAvg: 477, ratioCard: 92, regularsRatio: 0.74, visitsPerCustomer: 1.05, successRate: 92.5 },
   };
 
   /* ═══════════════ HOUR-BY-HOUR WEIGHTS — each row sums to ~1.0 ═══════════════ */
@@ -133,12 +137,13 @@
 
     // Derived KPIs
     const panierMoyen = cumTx > 0 ? Math.round(cumRevenue / cumTx) : 0;
-    const cumRegulars = Math.round(cumTx * target.regularsRatio);
+    const cumSeen     = Math.round(cumTx / (target.visitsPerCustomer || 1));
+    const cumRegulars = Math.round(cumSeen * target.regularsRatio);
 
     return {
       fraction: f,
       simIdx, simWithin, simHourLabel, simMinute,
-      cumRevenue, cumTx, cumTips, cumRegulars,
+      cumRevenue, cumTx, cumTips, cumRegulars, cumSeen,
       panierMoyen,
       target, weights,
       venue,
