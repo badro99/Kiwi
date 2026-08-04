@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+<!--
+  Même cadrage que /icon.svg : la marque est plus haute que large (bornes
+  mesurées x 88,6 · y 75,1 · 902 × 1197), donc dans le carré d'un onglet le
+  viewBox d'origine 1080 × 1350 la faisait rétrécir avec du vide à gauche et à
+  droite. Le carré ci-dessous est cette boîte recentrée, marge ~8 %.
+-->
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="-157 -23 1389 1389" role="img" aria-label="Kiwi">
   <defs>
     <style>
       .cls-1 {
