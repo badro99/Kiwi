@@ -107,11 +107,13 @@
       '</section>' +
       '<section class="vexel-rail-card vexel-clients">' +
         '<div class="vexel-client-label" data-vexel-client-label></div>' +
-        '<svg width="340" height="76" viewBox="0 0 340 76" preserveAspectRatio="none" aria-hidden="true">' +
+        '<svg width="340" height="76" viewBox="0 0 340 76" preserveAspectRatio="none" role="img">' +
+          '<title data-vexel-client-chart-title></title>' +
           '<defs><linearGradient id="vexelClientFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ffae" stop-opacity=".28"/><stop offset="1" stop-color="#00ffae" stop-opacity="0"/></linearGradient></defs>' +
-          '<path class="fill" d="M0 58 C28 52 43 62 70 50 S112 38 137 45 S183 29 207 34 S250 17 278 24 S318 9 340 12 L340 76 L0 76 Z"/>' +
-          '<path class="line" d="M0 58 C28 52 43 62 70 50 S112 38 137 45 S183 29 207 34 S250 17 278 24 S318 9 340 12"/>' +
-          '<circle cx="338" cy="12" r="5"/>' +
+          '<path class="fill" data-vexel-client-fill d=""/>' +
+          '<path class="line" data-vexel-client-line d=""/>' +
+          '<circle data-vexel-client-start cx="2" cy="68" r="3" opacity=".42"/>' +
+          '<circle data-vexel-client-end cx="338" cy="68" r="5"/>' +
         '</svg>' +
         '<div class="vexel-client-foot"><div><strong data-vexel-client-value>—</strong><span data-vexel-client-caption></span></div><b data-vexel-client-delta></b></div>' +
       '</section>';
@@ -777,6 +779,58 @@
     return Number.isFinite(value) ? value : 0;
   }
 
+  /* Customer growth has two measured values: the selected period and the
+   * previous equal period encoded by its delta. The old sparkline drew nine
+   * decorative bends that were not backed by nine observations. Plot exactly
+   * the two values Kiwi knows, with a monotonic curve and a zero-based scale,
+   * so the direction and amplitude agree with the number printed below it. */
+  function renderClientChart(currentText, deltaText) {
+    var line = document.querySelector('[data-vexel-client-line]');
+    var fill = document.querySelector('[data-vexel-client-fill]');
+    var start = document.querySelector('[data-vexel-client-start]');
+    var end = document.querySelector('[data-vexel-client-end]');
+    var title = document.querySelector('[data-vexel-client-chart-title]');
+    if (!line || !fill || !start || !end) return;
+
+    var currentPart = String(currentText || '').split('/')[0];
+    var hasCurrent = /\d/.test(currentPart);
+    var hasDelta = /[-+]?\s*\d/.test(String(deltaText || ''));
+    var current = hasCurrent ? Math.max(0, numberFrom(currentPart)) : NaN;
+    var delta = hasDelta ? numberFrom(deltaText) : NaN;
+    var factor = 1 + delta / 100;
+    var previous = factor > 0 ? current / factor : NaN;
+    var valid = Number.isFinite(current) && Number.isFinite(previous);
+
+    if (!valid) {
+      line.setAttribute('d', '');
+      fill.setAttribute('d', '');
+      start.hidden = true;
+      end.hidden = true;
+      setText(title, '');
+      return;
+    }
+
+    var top = 8, bottom = 68, x0 = 2, x1 = 338;
+    var ceiling = Math.max(current, previous, 1) * 1.08;
+    var y = function (value) { return bottom - (value / ceiling) * (bottom - top); };
+    var y0 = y(previous), y1 = y(current);
+    var curve = 'M' + x0 + ' ' + y0.toFixed(2) +
+      ' C114 ' + y0.toFixed(2) + ' 226 ' + y1.toFixed(2) + ' ' + x1 + ' ' + y1.toFixed(2);
+    line.setAttribute('d', curve);
+    fill.setAttribute('d', curve + ' L' + x1 + ' 76 L' + x0 + ' 76 Z');
+    start.setAttribute('cy', y0.toFixed(2));
+    end.setAttribute('cy', y1.toFixed(2));
+    start.hidden = false;
+    end.hidden = false;
+    line.dataset.previous = String(Math.round(previous));
+    line.dataset.current = String(Math.round(current));
+
+    var l = lang();
+    var previousLabel = l === 'en' ? 'Previous period' : l === 'ar' ? 'الفترة السابقة' : 'Période précédente';
+    var currentLabel = l === 'en' ? 'Current period' : l === 'ar' ? 'الفترة الحالية' : 'Période actuelle';
+    setText(title, previousLabel + ': ' + Math.round(previous) + ' · ' + currentLabel + ': ' + Math.round(current));
+  }
+
   function refresh() {
     state.raf = 0;
     if (!state.active || !document.body.classList.contains(CLASS)) return;
@@ -819,8 +873,10 @@
     var clientValue = document.querySelector('[data-vexel-client-value]');
     var clientDelta = document.querySelector('[data-vexel-client-delta]');
     var clientText = clientCard ? (clientCard.querySelector('.v') || {}).textContent || '—' : '—';
+    var clientDeltaText = clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '';
     setText(clientValue, String(clientText).replace(/\s*\/\s*/g, '/').trim());
-    setText(clientDelta, clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '');
+    setText(clientDelta, clientDeltaText);
+    renderClientChart(clientText, clientDeltaText);
   }
 
   function scheduleRefresh() {
