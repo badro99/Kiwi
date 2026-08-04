@@ -458,7 +458,9 @@ ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
     ok('le graphique clients ne reconstitue plus un passé à partir de la variation',
       !/1\s*\+\s*delta\s*\/\s*100/.test(VEX));
     ok('il dessine une part, bornée à 100 %',
-      /Math\.min\(1,\s*current\s*\/\s*total\)/.test(VEX));
+      /Math\.min\(1,\s*read\.current\s*\/\s*read\.total\)/.test(VEX));
+    ok('l\'anneau reste vide quand rien n\'est mesuré',
+      /if\s*\(!read\.known\)[\s\S]{0,200}?stroke-dasharray',\s*'0 '/.test(VEX));
   }
 }
 

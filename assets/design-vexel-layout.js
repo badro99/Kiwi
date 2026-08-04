@@ -105,21 +105,32 @@
         '<div class="vexel-goal-track"><i data-vexel-goal-fill></i></div>' +
         '<div class="vexel-goal-foot"><span data-vexel-goal-pct>—</span><span data-vexel-goal-rest></span></div>' +
       '</section>' +
+      /* Un anneau, comme les autres parts du tableau de bord.
+       *
+       * La capsule qui precedait ressemblait a une pile, et elle repetait la
+       * barre de progression de la carte Objectif juste au-dessus. Or le
+       * tableau de bord sait deja dire « une part sur un tout » : les anneaux
+       * de Ventes par canal et du Mix de paiement. Meme rayon, meme graisse de
+       * trait, meme courbe de remplissage -- la carte parle enfin la langue du
+       * reste de la page au lieu d'inventer la sienne. */
       '<section class="vexel-rail-card vexel-clients">' +
         '<div class="vexel-client-label" data-vexel-client-label></div>' +
-        '<svg width="340" height="76" viewBox="0 0 340 76" preserveAspectRatio="none" role="img">' +
-          '<title data-vexel-client-chart-title></title>' +
-          // Ce degrade remplissait l'aire sous une courbe : il pouvait s'effacer
-          // vers le bas sans rien coûter. Il porte maintenant une PART, dont le
-          // bord droit est le chiffre lui-meme -- s'il s'efface, la part devient
-          // illisible sur fond clair. D'ou un bas qui reste teinte.
-          '<defs><linearGradient id="vexelClientFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ffae" stop-opacity=".5"/><stop offset="1" stop-color="#00ffae" stop-opacity=".14"/></linearGradient></defs>' +
-          '<path class="fill" data-vexel-client-fill d=""/>' +
-          '<path class="line" data-vexel-client-line d=""/>' +
-          '<circle data-vexel-client-start cx="2" cy="68" r="3" opacity=".42"/>' +
-          '<circle data-vexel-client-end cx="338" cy="68" r="5"/>' +
-        '</svg>' +
-        '<div class="vexel-client-foot"><div><strong data-vexel-client-value>—</strong><span data-vexel-client-caption></span></div><b data-vexel-client-delta></b></div>' +
+        '<div class="vexel-client-body">' +
+          '<svg class="vexel-client-ring" width="110" height="110" viewBox="0 0 110 110" role="img">' +
+            '<title data-vexel-client-chart-title></title>' +
+            '<circle class="track" cx="55" cy="55" r="46"/>' +
+            '<circle class="value" data-vexel-client-arc cx="55" cy="55" r="46" stroke-dasharray="0 289.03" transform="rotate(-90 55 55)"/>' +
+            '<text x="55" y="57" data-vexel-client-pct>—</text>' +
+          '</svg>' +
+          '<div class="vexel-client-foot">' +
+            '<div>' +
+              '<strong data-vexel-client-value>—</strong>' +
+              '<span data-vexel-client-caption></span>' +
+              '<small data-vexel-client-period></small>' +
+            '</div>' +
+            '<b data-vexel-client-delta></b>' +
+          '</div>' +
+        '</div>' +
       '</section>';
     return rail;
   }
@@ -148,9 +159,9 @@
    * Le libellé dit maintenant ce que la tuile mesure, et la légende reprend la
    * plage réellement sélectionnée. */
   var CLIENT_STR = {
-    fr: { label: 'Clients réguliers', caption: 'Clients vus · ' },
-    en: { label: 'Returning customers', caption: 'Customers seen · ' },
-    ar: { label: 'العملاء المنتظمون', caption: 'العملاء المسجلون · ' }
+    fr: { label: 'Clients réguliers', of: 'sur {n} clients vus' },
+    en: { label: 'Returning customers', of: 'of {n} customers seen' },
+    ar: { label: 'العملاء المنتظمون', of: 'من {n} عميل مسجل' }
   };
 
   function lang() {
@@ -590,7 +601,7 @@
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
-    setText(document.querySelector('[data-vexel-client-caption]'), clientCopy.caption + period);
+    setText(document.querySelector('[data-vexel-client-period]'), period);
     setText(card.querySelector('h2'), copy.title);
     setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.share : copy.unavailable) + ' · ' + period);
     /* Dégradé monochrome, du canal le plus fort au plus faible. L'ambre est la
@@ -813,51 +824,48 @@
    * (.line) porte le total, le remplissage (.fill) la portion fidele. Quand le
    * livre client est vide, le contour reste seul : la forme est connue, le
    * chiffre ne l'est pas. */
-  function clientCapsule(a, b, top, bottom) {
-    var r = Math.min((bottom - top) / 2, (b - a) / 2);
-    if (!(r > 0)) return '';
-    return 'M' + (a + r).toFixed(2) + ' ' + top +
-      ' L' + (b - r).toFixed(2) + ' ' + top +
-      ' A' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' + (b - r).toFixed(2) + ' ' + bottom +
-      ' L' + (a + r).toFixed(2) + ' ' + bottom +
-      ' A' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' + (a + r).toFixed(2) + ' ' + top + ' Z';
-  }
-
-  function renderClientChart(currentText) {
-    var line = document.querySelector('[data-vexel-client-line]');
-    var fill = document.querySelector('[data-vexel-client-fill]');
-    var start = document.querySelector('[data-vexel-client-start]');
-    var end = document.querySelector('[data-vexel-client-end]');
-    var title = document.querySelector('[data-vexel-client-chart-title]');
-    if (!line || !fill) return;
-
-    // Les pastilles de debut / fin appartenaient a la courbe. `hidden` ne fait
-    // rien sur un noeud SVG (ce n'est pas un HTMLElement), d'ou le style.
-    if (start) start.style.display = 'none';
-    if (end) end.style.display = 'none';
-
-    var top = 14, bottom = 62, x0 = 2, x1 = 338;
-    var parts = String(currentText || '').split('/');
+  /* La tuile du bandeau porte un RAPPORT, « 286 / 653 ». On lit les deux nombres
+   * tels qu'elle les a formates -- pas question de les reformater ici, le
+   * bandeau a deja applique la locale, et un second passage casserait les
+   * milliers en arabe. */
+  function parseClients(text) {
+    var parts = String(text || '').split('/');
     var current = /\d/.test(parts[0] || '') ? Math.max(0, numberFrom(parts[0])) : NaN;
     var total = parts.length > 1 && /\d/.test(parts[1]) ? Math.max(0, numberFrom(parts[1])) : NaN;
-    var known = Number.isFinite(current) && Number.isFinite(total) && total > 0;
+    return {
+      known: Number.isFinite(current) && Number.isFinite(total) && total > 0,
+      current: current,
+      total: total,
+      currentText: (parts[0] || '').trim(),
+      totalText: (parts[1] || '').trim()
+    };
+  }
 
-    line.setAttribute('d', clientCapsule(x0, x1, top, bottom));
-    if (!known) {
-      fill.setAttribute('d', '');
+  function renderClientRing(read) {
+    var arc = document.querySelector('[data-vexel-client-arc]');
+    var pctNode = document.querySelector('[data-vexel-client-pct]');
+    var title = document.querySelector('[data-vexel-client-chart-title]');
+    if (!arc) return;
+
+    var circumference = 2 * Math.PI * 46;
+    if (!read.known) {
+      // Un anneau plein par defaut mentirait : sans carnet, rien n'est mesure.
+      arc.setAttribute('stroke-dasharray', '0 ' + circumference.toFixed(2));
+      setText(pctNode, '—');
       setText(title, '');
       return;
     }
 
-    var share = Math.min(1, current / total);
-    fill.setAttribute('d', clientCapsule(x0, x0 + share * (x1 - x0), top, bottom));
-    line.dataset.share = (share * 100).toFixed(1);
+    var share = Math.min(1, read.current / read.total);
+    arc.setAttribute('stroke-dasharray', (share * circumference).toFixed(2) + ' ' + circumference.toFixed(2));
+    arc.dataset.share = (share * 100).toFixed(1);
 
     var l = lang();
     var pct = Math.round(share * 100) + ' %';
-    setText(title, l === 'en' ? Math.round(current) + ' of ' + Math.round(total) + ' customers seen had come before · ' + pct
-      : l === 'ar' ? Math.round(current) + ' من ' + Math.round(total) + ' من العملاء سبق أن زاروا · ' + pct
-      : Math.round(current) + ' clients déjà venus sur ' + Math.round(total) + ' clients vus · ' + pct);
+    setText(pctNode, pct);
+    setText(title, l === 'en' ? read.currentText + ' of ' + read.totalText + ' customers seen had come before · ' + pct
+      : l === 'ar' ? read.currentText + ' من ' + read.totalText + ' من العملاء سبق أن زاروا · ' + pct
+      : read.currentText + ' clients déjà venus sur ' + read.totalText + ' clients vus · ' + pct);
   }
 
   function refresh() {
@@ -903,9 +911,16 @@
     var clientDelta = document.querySelector('[data-vexel-client-delta]');
     var clientText = clientCard ? (clientCard.querySelector('.v') || {}).textContent || '—' : '—';
     var clientDeltaText = clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '';
-    setText(clientValue, String(clientText).replace(/\s*\/\s*/g, '/').trim());
+    /* Le grand chiffre ne porte plus que les fideles ; le total part dans la
+     * legende, ou il se lit comme une phrase (« sur 653 clients vus ») plutot
+     * que comme la moitie d'une fraction. */
+    var read = parseClients(clientText);
+    var clientCopy = CLIENT_STR[lang()] || CLIENT_STR.fr;
+    setText(clientValue, read.known ? read.currentText : '—');
+    setText(document.querySelector('[data-vexel-client-caption]'),
+      read.known ? clientCopy.of.replace('{n}', read.totalText) : '');
     setText(clientDelta, clientDeltaText);
-    renderClientChart(clientText);
+    renderClientRing(read);
   }
 
   function scheduleRefresh() {

@@ -870,21 +870,41 @@ body.design-vexel .vexel-goal-foot {
   font-size: 12px;
   white-space: nowrap;
 }
-body.design-vexel .vexel-clients > svg { width: 100%; height: 66px; display: block; flex: none; }
-body.design-vexel .vexel-clients svg .fill { fill: url(#vexelClientFill); }
-body.design-vexel #vexelClientFill stop:first-child { stop-color: var(--vx-accent); }
-body.design-vexel #vexelClientFill stop:last-child { stop-color: var(--vx-accent); }
-body.design-vexel .vexel-clients svg .line {
-  fill: none;
-  stroke: var(--vx-accent);
-  stroke-width: 3;
-  stroke-linecap: round;
+/* Clients réguliers · même anneau que Ventes par canal et Mix de paiement :
+ * rayon 46, trait de 9, bout arrondi, remplissage sur la même courbe. La part
+ * se lit au centre, les nombres à côté. */
+body.design-vexel .vexel-client-body {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  min-width: 0;
 }
-body.design-vexel .vexel-clients svg circle { fill: var(--vx-accent); }
+body.design-vexel .vexel-client-ring {
+  width: 92px;
+  min-width: 92px;
+  height: 92px;
+  flex: none;
+}
+body.design-vexel .vexel-client-ring circle { fill: none; stroke-width: 9; }
+body.design-vexel .vexel-client-ring .track { stroke: var(--vx-track); }
+body.design-vexel .vexel-client-ring .value {
+  stroke: var(--vx-accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray 850ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+body.design-vexel .vexel-client-ring text {
+  fill: var(--ink);
+  font: 600 21px var(--sans);
+  letter-spacing: -.02em;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
 body.design-vexel .vexel-client-foot {
   display: flex;
+  flex: 1 1 auto;
   align-items: flex-end;
-  margin-top: 12px;
+  min-width: 0;
 }
 body.design-vexel .vexel-client-foot > div { display: flex; flex-direction: column; }
 body.design-vexel .vexel-client-foot strong {
@@ -898,6 +918,12 @@ body.design-vexel .vexel-client-foot span {
   margin-top: 6px;
   color: var(--n-500);
   font-size: 14px;
+}
+body.design-vexel .vexel-client-foot small {
+  margin-top: 3px;
+  color: var(--vx-text-ghost);
+  font-size: 11px;
+  white-space: nowrap;
 }
 body.design-vexel .vexel-client-foot b {
   margin-inline-start: auto;
@@ -2222,12 +2248,12 @@ body.design-vexel[data-vexel-mode] #kw-main {
  * dashboard, and its chrome is supposed to frame the viewport, not sit inside
  * it. Both caps come off together: releasing .main alone would leave the bar
  * full-bleed with its own contents still bunched in a 1320px column. */
-body.design-vexel[data-vexel-mode="light"] .main,
-body.design-vexel[data-vexel-mode="light"] .topbar > .topbar-inner {
+body.design-vexel[data-vexel-mode] .main,
+body.design-vexel[data-vexel-mode] .topbar > .topbar-inner {
   max-width: none;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar {
+body.design-vexel[data-vexel-mode] .topbar {
   top: 0;
   margin: 0;
   padding: 0 24px 0 26px;
@@ -2276,7 +2302,7 @@ body.design-vexel[data-vexel-mode] .topbar .icon-btn[aria-label="Paramètres"] {
  * What's left is a quiet inset well — dark chrome states a field by carving
  * INTO the surface, not by drawing a frame on top of it. The stroke only
  * appears on hover, and only in mint, so the field is silent until aimed at. */
-body.design-vexel[data-vexel-mode="light"] .search-big {
+body.design-vexel[data-vexel-mode] .search-big {
   order: 1;
   width: 100%;
   height: 38px;
@@ -2294,26 +2320,26 @@ body.design-vexel[data-vexel-mode="light"] .search-big {
               box-shadow 190ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .search-big svg {
+body.design-vexel[data-vexel-mode] .search-big svg {
   opacity: 1;
   color: rgba(236, 247, 242, 0.42);
   transition: color 190ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .search-big:hover {
+body.design-vexel[data-vexel-mode] .search-big:hover {
   border-color: rgba(125, 242, 176, 0.22);
   background: rgba(255, 255, 255, 0.062);
   color: rgba(236, 247, 242, 0.86);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.18);
 }
 
-body.design-vexel[data-vexel-mode="light"] .search-big:hover svg {
+body.design-vexel[data-vexel-mode] .search-big:hover svg {
   color: rgba(141, 246, 190, 0.85);
 }
 
 /* The paper-skin focus ring (a white fill + atlas-green border) is invisible
  * against black chrome — restate it in mint. */
-body.design-vexel[data-vexel-mode="light"] .search-big:focus-visible {
+body.design-vexel[data-vexel-mode] .search-big:focus-visible {
   outline: none;
   border-color: rgba(125, 242, 176, 0.5);
   background: rgba(255, 255, 255, 0.07);
@@ -2330,7 +2356,7 @@ body.design-vexel[data-vexel-mode] .search-big .ph {
 /* Not a keycap. The glyphs alone, tracked open, at the weight of a footnote —
  * the people who use ⌘K already know it's a key, and the people who don't were
  * never going to be told by a rounded rectangle. */
-body.design-vexel[data-vexel-mode="light"] .search-big .k {
+body.design-vexel[data-vexel-mode] .search-big .k {
   display: inline-flex;
   align-items: center;
   margin-inline-start: auto;
@@ -2346,11 +2372,11 @@ body.design-vexel[data-vexel-mode="light"] .search-big .k {
   transition: color 190ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .search-big:hover .k {
+body.design-vexel[data-vexel-mode] .search-big:hover .k {
   color: rgba(236, 247, 242, 0.58);
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn {
+body.design-vexel[data-vexel-mode] .topbar .icon-btn {
   order: 3;
   width: 36px;
   height: 36px;
@@ -2362,7 +2388,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn {
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn:hover {
+body.design-vexel[data-vexel-mode] .topbar .icon-btn:hover {
   border-color: rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
@@ -2370,7 +2396,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn:hover {
 }
 
 /* Ring colour has to match the bar it punches through, not the old #0b1813. */
-body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn .badge {
+body.design-vexel[data-vexel-mode] .topbar .icon-btn .badge {
   top: -1px;
   right: -1px;
   border-color: #070D0A;
@@ -2385,7 +2411,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .icon-btn .badge {
  * gets the header's only fill, and everything else stays glass on black. This
  * is the whole mint budget for the bar; the avatar gives its mint up below so
  * there is exactly one thing here competing for the eye. */
-body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn {
+body.design-vexel[data-vexel-mode] .topbar .ai-btn {
   order: 2;
   min-height: 40px;
   gap: 9px;
@@ -2408,7 +2434,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn {
   transition: background 190ms ease, box-shadow 190ms ease, transform 190ms ease;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico {
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico {
   width: 22px;
   height: 24px;
   padding: 0;
@@ -2425,17 +2451,17 @@ body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path {
   fill: currentColor;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn-ico path + path {
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path + path {
   fill: rgba(4, 35, 26, 0.5);
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .ai-btn:hover {
+body.design-vexel[data-vexel-mode] .topbar .ai-btn:hover {
   background: linear-gradient(180deg, #9CF8C9 0%, #6EEFB0 100%) !important;
   box-shadow: 0 14px 30px -14px rgba(93, 233, 164, 0.85);
   transform: translateY(-1px);
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant {
   order: 4;
   position: relative;
   display: grid;
@@ -2452,7 +2478,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant {
 /* Hairline between the app's tools and who is signed in. The bell and the
  * merchant block used to sit 14px apart with no boundary, so the account read
  * as one more control in the row. */
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant::before {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant::before {
   content: '';
   position: absolute;
   inset-inline-start: 0;
@@ -2467,7 +2493,7 @@ body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant::befor
  * objects sat 60px apart and split the eye — and the one that won was the
  * avatar, which is the least actionable thing in the bar. It gives the fill up
  * and keeps mint only in its initials. */
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .avatar {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .avatar {
   display: grid;
   width: 34px;
   height: 34px;
@@ -2484,7 +2510,7 @@ body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-info {
   min-width: 0;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .n {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .n {
   overflow: hidden;
   color: rgba(255, 255, 255, 0.92);
   font-size: 13.5px;
@@ -2493,14 +2519,14 @@ body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .n {
   white-space: nowrap;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .r {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .r {
   margin-top: 1px;
   color: rgba(220, 238, 230, 0.46);
   font-size: 11px;
   white-space: nowrap;
 }
 
-body.design-vexel[data-vexel-mode="light"] .topbar .vexel-topbar-merchant .m-caret {
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-caret {
   color: rgba(220, 238, 230, 0.34);
 }
 
@@ -3415,19 +3441,19 @@ body.design-vexel[data-vexel-mode] .vexel-clients {
   padding-block: 17px 18px;
 }
 
-body.design-vexel[data-vexel-mode] .vexel-clients > svg {
-  flex: 1 1 88px;
-  min-height: 76px;
-  height: auto;
-  margin-top: 7px;
+body.design-vexel[data-vexel-mode] .vexel-client-body {
+  flex: 1 1 auto;
+  align-items: center;
+  margin-top: 12px;
+  min-height: 0;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  min-height: 38px;
-  margin-top: 8px;
+  align-items: center;
+  min-height: 0;
+  margin-top: 0;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot > div {
@@ -3450,6 +3476,11 @@ body.design-vexel[data-vexel-mode] .vexel-client-foot span {
   color: var(--n-500);
   font-size: 12px;
   white-space: nowrap;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot small {
+  margin: 0;
+  font-size: 11px;
 }
 
 body.design-vexel[data-vexel-mode="light"] .vexel-client-foot b {
