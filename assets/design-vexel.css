@@ -520,11 +520,22 @@ body.design-vexel .vexel-kpi-section > .kpi-band-head {
   justify-content: flex-end;
   margin: 0 0 10px;
 }
+/* The band is a grid, not a surface. design-2026 lists `.kpi-band` in its glass
+ * card set alongside `.kpi-m`, so the container got the same fill, edge and
+ * green glow as the four cards sitting on top of it — glass inside glass. The
+ * cards are opaque, so all that showed of the wrapper was a pale vertical strip
+ * in each 18px gutter and a halo around the row. Strip it back to layout. */
 body.design-vexel .vexel-kpi-section > [data-kpi-band] {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--vx-gap);
   margin: 0;
+  background: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m {
   min-width: 0;
