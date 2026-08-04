@@ -134,10 +134,19 @@
     en: { aujourdhui: 'Today', hier: 'Yesterday', septJours: 'Last 7 days', trenteJours: 'Last 30 days', moisDernier: 'Last month', trimestre: 'This quarter', annee: 'This year', personnalise: 'Custom period' },
     ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يوما', moisDernier: 'الشهر الماضي', trimestre: 'هذا الربع', annee: 'هذه السنة', personnalise: 'فترة مخصصة' }
   };
+  /* La carte lit la tuile « Clients réguliers » du bandeau, dont la valeur est
+   * un RAPPORT — réguliers sur clients vus (dateRange.js · realRegularsTile).
+   * Elle l'intitulait « Croissance clients · Clients ce mois ». Trois mots,
+   * trois erreurs : ce n'est pas une croissance, ce ne sont pas les clients du
+   * mois, et la période affichée est celle que le commerçant a choisie dans les
+   * pastilles, pas le mois. Un patron qui lit « 286 clients ce mois » sur un
+   * rapport réguliers/total prend une décision sur un chiffre qui n'existe pas.
+   * Le libellé dit maintenant ce que la tuile mesure, et la légende reprend la
+   * plage réellement sélectionnée. */
   var CLIENT_STR = {
-    fr: { label: 'Croissance clients', caption: 'Clients ce mois' },
-    en: { label: 'Customer growth', caption: 'Customers this month' },
-    ar: { label: 'نمو العملاء', caption: 'عملاء هذا الشهر' }
+    fr: { label: 'Clients réguliers', caption: 'Clients vus · ' },
+    en: { label: 'Returning customers', caption: 'Customers seen · ' },
+    ar: { label: 'العملاء المنتظمون', caption: 'العملاء المسجلون · ' }
   };
 
   function lang() {
@@ -577,7 +586,7 @@
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
-    setText(document.querySelector('[data-vexel-client-caption]'), clientCopy.caption);
+    setText(document.querySelector('[data-vexel-client-caption]'), clientCopy.caption + period);
     setText(card.querySelector('h2'), copy.title);
     setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.share : copy.unavailable) + ' · ' + period);
     /* Dégradé monochrome, du canal le plus fort au plus faible. L'ambre est la

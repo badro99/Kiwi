@@ -341,10 +341,89 @@ ok('le calcul des plages ne remet plus l\'heure à zéro à la main',
     !!agtSrc && /R\.dayBounds\(/.test(agtSrc));
 }
 
+/* ── Clients réguliers : une mesure, ou rien ────────────────────────────────
+   La tuile a porté deux mensonges successifs. Chez un commerçant de démo, une
+   constante — « 286 / 1240 », écrite en dur, une par plage et par métier. Chez
+   un VRAI commerçant, « value: 0 » : et « Clients réguliers 0 » ne se lit pas
+   « on ne sait pas », il se lit « personne ne revient ».
+
+   Ces gardes portent sur le code extrait de dateRange.js, pas sur le fichier :
+   ils exécutent realRegulars/realRegularsTile tels qu'ils sont livrés. */
+{
+  const lift = (name) => {
+    const s = SRC.indexOf('  function ' + name + '(');
+    const e = s < 0 ? -1 : SRC.indexOf('\n  }\n', s);
+    return e < 0 ? '' : SRC.slice(s, e + 4);
+  };
+  const parts = ['rangeBounds', 'realClientsList', 'realRegulars', 'realRegularsTile'].map(lift);
+  ok('le calcul des clients réguliers est extractible du module', parts.every(Boolean));
+
+  if (parts.every(Boolean)) {
+    let R = null;
+    try {
+      R = new Function('getClients', 'flags', `
+        const RANGE_DAYS = { aujourdhui: 1, hier: 1, septJours: 7, trenteJours: 30, moisDernier: 30, trimestre: 90, annee: 365, personnalise: 1 };
+        const window = { KiwiClients: { list: () => getClients() } };
+        function dayCutoffH() { return 0; }
+        function dayStartMs(t) { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); }
+        function getCurrentVenue() { return 'chez-moi'; }
+        function ownData() { return flags.own; }
+        function customVenue() { return flags.custom; }
+        ${parts.join('\n')}
+        return { realRegularsTile };
+      `);
+    } catch (e) { ok('le calcul s\'évalue isolément', false, e.message); }
+
+    if (R) {
+      let book = [], own = true, custom = true;
+      const api = R(() => book, { get own() { return own; }, get custom() { return custom; } });
+      const tile = (range) => api.realRegularsTile({ fmt: 'int' }, range);
+      const DAY = 864e5;
+      const now = Date.now();
+      const T = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+
+      book = [];
+      ok('carnet vide : un tiret, jamais un zéro', tile('aujourdhui').text === '—');
+      ok('…et surtout pas de valeur chiffrée', tile('aujourdhui').value == null);
+
+      book = [
+        { lastSeen: now - 2 * 3600e3, visits: 5 },
+        { lastSeen: now - 3 * 3600e3, visits: 1 },
+        { lastSeen: now - 4 * 3600e3, visits: 2 },
+        { lastSeen: T - 5 * DAY,      visits: 9 },
+      ];
+      const jour = tile('aujourdhui');
+      ok('régulier = plus d\'une visite, total = fiches vues sur la plage',
+        jour.value === 2 && jour.unit === '/ 3', JSON.stringify([jour.value, jour.unit]));
+      const sept = tile('septJours');
+      ok('la fenêtre s\'élargit avec la plage choisie',
+        sept.value === 3 && sept.unit === '/ 4', JSON.stringify([sept.value, sept.unit]));
+
+      ok('une fenêtre passée fermée ne se devine pas depuis lastSeen',
+        tile('hier').text === '—');
+      ok('aucune variation n\'est inventée faute d\'historique de visites',
+        jour.delta === null && sept.delta === null);
+
+      own = true; custom = false;
+      ok('le trou réel-mais-pas-custom ne laisse pas fuiter un carnet de démo',
+        tile('septJours').text === '—');
+      own = true; custom = true;
+
+      book = [{ lastSeen: now, visits: 1 }, { lastSeen: now, visits: 1 }];
+      const zero = tile('aujourdhui');
+      ok('0 sur 2 reste affiché : là, le zéro EST la mesure',
+        zero.value === 0 && zero.unit === '/ 2');
+    }
+  }
+
+  ok('la tuile réelle ne réinjecte plus la constante value: 0',
+    !/regulars:\s*data\.regulars\s*\?\s*\{[^}]*value:\s*0/.test(SRC));
+}
+
 console.log('');
 if (fails.length) {
   fails.forEach((f) => console.log('  ✗ ' + f));
   console.log(`\n✗ CA au grand livre : ${pass} ok, ${fails.length} échec(s)\n`);
   process.exit(1);
 }
-console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe, comptoir et assistant sur la même journée)\n`);
+console.log(`  ✓ CA au grand livre (${pass} contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe, comptoir et assistant sur la même journée, clients réguliers mesurés)\n`);

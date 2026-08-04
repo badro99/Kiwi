@@ -1730,6 +1730,57 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0, card, cash };
   }
+  /* ── Clients réguliers, mesurés ────────────────────────────────────────────
+   * La tuile affichait 0 chez un vrai commerçant (« value: 0 » plus bas) et
+   * 286 / 1240 chez tous les autres — une constante écrite en dur, une par
+   * plage et par métier. Le zéro était le plus coûteux des deux : « Clients
+   * réguliers 0 » ne se lit pas « on ne sait pas », il se lit « personne ne
+   * revient ». C'est le même piège que « Taux succès 0,00 % », que le
+   * commentaire d'à côté a déjà tranché en faveur du tiret.
+   *
+   * La seule source de vérité sur les clients est le carnet (KiwiClients) :
+   * une vente ne porte AUCUNE référence client (schema.sql, table `sales`),
+   * donc les encaissements ne peuvent pas dire qui est revenu. Le carnet, lui,
+   * tient `visits` et `lastSeen` par fiche.
+   *
+   *   total    = fiches vues sur la période
+   *   réguliers = celles qui comptent plus d'une visite
+   *
+   * Deux refus assumés, parce qu'inventer serait pire que se taire :
+   *
+   * · Fenêtre passée fermée (« Hier », « Mois dernier ») → tiret. `lastSeen`
+   *   ne garde que la DERNIÈRE visite : un client venu hier ET aujourd'hui a
+   *   son `lastSeen` aujourd'hui, donc compter hier avec ce champ sous-estime
+   *   silencieusement. Le carnet ne sait pas répondre, il le dit.
+   * · Aucun delta. Comparer à la période précédente demanderait un historique
+   *   de visites que `lastSeen` écrase à chaque passage. Sans delta, la
+   *   courbe de la carte Vexel se vide au lieu de tracer une pente déduite
+   *   d'un pourcentage inventé. */
+  function realClientsList() {
+    try {
+      const v = getCurrentVenue();
+      if (ownData(v) && !customVenue(v)) return [];
+      return (window.KiwiClients?.list?.() || []);
+    } catch (_) { return []; }
+  }
+  function realRegulars(from, to) {
+    if (to !== Infinity) return null;
+    const list = realClientsList();
+    if (!list.length) return null;
+    let total = 0, returning = 0;
+    list.forEach((c) => {
+      if ((+c.lastSeen || 0) < from) return;
+      total++;
+      if ((+c.visits || 0) > 1) returning++;
+    });
+    return total ? { total, returning } : null;
+  }
+  function realRegularsTile(tile, range) {
+    const [from, to] = rangeBounds(range);
+    const s = realRegulars(from, to);
+    if (!s) return { ...tile, text: '—', unit: '', delta: null };
+    return { ...tile, text: null, value: s.returning, unit: '/ ' + s.total, fmt: 'int', delta: null };
+  }
   /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
    * désormais le seul endroit de l'application qui sache répondre « combien me
    * coûte ce produit ».
@@ -2438,7 +2489,7 @@
          * rouleau de caisse (voir revOf). */
         revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
-        regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
+        regulars: data.regulars ? realRegularsTile(data.regulars, rng) : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
          * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
          * Kiwi ne compte ni les paiements refusés ni les retours. Le clone de
