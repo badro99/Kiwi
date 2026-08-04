@@ -350,7 +350,6 @@ body.design-vexel .hh-tooltip {
  * each segment. An earlier pass used `:nth-of-type(2..5)` on the circles, which
  * worked but bound the palette to DOM order — re-ordering the legend, or the
  * widget ever drawing the track last, would silently shuffle the colours. */
-body.design-vexel [data-mix-donut] circle:not(.seg),
 body.design-vexel [data-mix-donut] .track,
 body.design-vexel .ring-track { stroke: var(--n-200); }
 body.design-vexel [data-mix-donut] [data-seg="0"] { stroke: var(--vx-accent); }
