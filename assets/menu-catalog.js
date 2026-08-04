@@ -1909,6 +1909,7 @@
     /* Les groupes d'options. La caisse lit `optionGroups()` + `item.opts`
      * pour savoir quoi demander avant d'ajouter un produit à la note. */
     optionGroups: (vid) => (store.get(vid).opts || []),
+    optionEmojis: () => OPT_EMOJIS.slice(),
     addOptGroup, updateOptGroup, deleteOptGroup,
     addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
