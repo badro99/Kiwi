@@ -46,7 +46,9 @@ const PRINT_TIMEOUT_MS = 8000;
 // service, but echoing the specific Kiwi origins is tighter.
 const ALLOW_ORIGINS = [
   'https://kiwi-maroc.pages.dev',
-  'https://app.kiwi.ma',
+  'https://kiwi-os.com',
+  'https://www.kiwi-os.com',
+  'https://app.kiwi-os.com',
   'http://localhost:8000',
   'http://127.0.0.1:8000',
 ];
