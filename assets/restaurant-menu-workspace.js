@@ -6,7 +6,7 @@
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const cash=(n)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(+n||0)+' MAD';
   const venue=()=>window.KiwiVenue?.getCurrentVenueData?.()?.id||window.KiwiVenue?.getVenue?.()||null;
-  const isRestaurant=()=>{const v=window.KiwiVenue?.getCurrentVenueData?.()||{},t=String(v.type||v.subtype||window.KiwiVenue?.getVenueType?.()||'').toLowerCase();return ['restaurant','cafe','café','restauration'].includes(t);};
+  const isRestaurant=()=>{const KV=window.KiwiVenue,v=KV?.getCurrentVenueData?.()||{},t=String(KV?.getVenueType?.()||v.type||v.subtype||'').toLowerCase();return ['restaurant','cafe','café','restauration'].includes(t);};
   const S=()=>window.KiwiMenuStore;
   const D=()=>S()?.data(venue())||{cats:[],items:[],stations:[],opts:[]};
   const find=(key,id)=>(D()[key]||[]).find(x=>x.id===id);
