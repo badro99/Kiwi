@@ -32,17 +32,6 @@
         <circle cx="60" cy="46" r="5.5" stroke="var(--paper)" stroke-width="1.6" opacity="0.8"/>
         <circle cx="36" cy="68" r="5.5" stroke="var(--paper)" stroke-width="1.6" opacity="0.8"/>
       </svg>`,
-    /* Phone with a payment-link pill flying out */
-    paylink: `
-      <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
-        <rect x="30" y="10" width="48" height="80" rx="10" fill="var(--riad)"/>
-        <rect x="36" y="18" width="36" height="48" rx="6" fill="var(--atlas)" opacity="0.55"/>
-        <rect x="42" y="74" width="24" height="5" rx="2.5" fill="var(--paper)" opacity="0.5"/>
-        <rect x="58" y="34" width="50" height="18" rx="9" fill="var(--mint)"/>
-        <path d="M70 43h18M84 38l6 5-6 5" stroke="var(--riad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="26" cy="30" r="3.5" fill="var(--mint)" opacity="0.7"/>
-        <circle cx="100" cy="64" r="2.6" fill="var(--atlas)" opacity="0.5"/>
-      </svg>`,
     /* Loyalty stamps card */
     loyalty: `
       <svg viewBox="0 0 120 96" fill="none" aria-hidden="true">
@@ -96,14 +85,6 @@
            en: 'Kiwi cards for your team, a per-category limit, and every dirham going out, net of what comes in.',
            ar: 'بطاقات Kiwi لفريقك، حدّ لكل فئة، وكل درهم يخرج، مقابل ما يدخل.' },
       cta: { fr: 'Voir Dépenses', en: 'Open Spend', ar: 'فتح المصاريف' },
-    },
-    {
-      id: 'paylink', art: 'paylink', action: 'payment-link',
-      t: { fr: 'Encaissez à distance', en: 'Get paid remotely', ar: 'حصّل عن بُعد' },
-      d: { fr: 'Envoyez un lien de paiement par WhatsApp, acomptes, commandes, réservations. L\'argent arrive avant le client.',
-           en: 'Send a payment link over WhatsApp, deposits, orders, bookings. The money arrives before the customer does.',
-           ar: 'أرسل رابط دفع عبر واتساب، عربون، طلبات، حجوزات. يصل المال قبل وصول العميل.' },
-      cta: { fr: 'Créer un lien', en: 'Create a link', ar: 'إنشاء رابط' },
     },
     {
       id: 'loyalty', art: 'loyalty', action: 'loyalty', feat: 'loyalty',

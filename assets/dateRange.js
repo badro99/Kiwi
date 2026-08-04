@@ -1009,34 +1009,34 @@
     cafeAtlas: {
     aujourdhui: [
       { t: '14:37', method: 'visa', primary: 'Visa •• 4291',   sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Karim B. · T4',     amt: '240,00',  tip: '+24,00', neg: false, isNew: true },
-      { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '—',       neg: false },
+      { t: '14:32', method: 'visa', primary: 'Visa •• 3412',    sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '—',       neg: false },
       { t: '14:18', method: 'mc',   primary: 'Mastercard •• 7820', sub: 'Carte française · BNP Paribas', flag: 'fr', ctx: 'Sara L. · T2',  amt: '85,50',   tip: '+8,55',  neg: false },
-      { t: '14:03', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Nawal K. · abonnée',             flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '—',       neg: false },
+      { t: '14:03', method: 'cash', primary: 'Espèces',         sub: 'Cash · table',                    flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '—',       neg: false },
       { t: '13:57', method: 'visa', primary: 'Visa •• 0043',   sub: 'Carte espagnole · CaixaBank',    flag: 'es', ctx: 'Youssef A. · T1',  amt: '312,00',  tip: '+30,00', neg: false },
       { t: '13:41', method: 'mc',   primary: 'Mastercard •• 1209', sub: 'Remboursement · CMI',         flag: 'ma', ctx: 'Hassan J. · T3',   amt: '−155,00', tip: '—',       neg: true },
     ],
     hier: [
       { t: '22:48', method: 'visa', primary: 'Visa •• 8841',   sub: 'Carte marocaine · BMCE',         flag: 'ma', ctx: 'Imane S. · T5',    amt: '276,00',  tip: '+27,60', neg: false },
-      { t: '22:14', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3287 · contactless',     flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '—',       neg: false },
+      { t: '22:14', method: 'mc',   primary: 'Mastercard •• 3287', sub: 'Carte marocaine · BOA',        flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '—',       neg: false },
       { t: '21:52', method: 'mc',   primary: 'Mastercard •• 4509', sub: 'Carte française · LCL',      flag: 'fr', ctx: 'Pierre D. · T2',   amt: '198,50',  tip: '+19,85', neg: false },
-      { t: '21:18', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Mehdi C. · régulier',            flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '—',       neg: false },
+      { t: '21:18', method: 'cash', primary: 'Espèces',         sub: 'Cash · table',                    flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '—',       neg: false },
       { t: '20:42', method: 'visa', primary: 'Visa •• 6612',   sub: 'Carte américaine · Chase',       flag: 'us', ctx: 'Diana K. · T1',    amt: '384,00',  tip: '+38,40', neg: false },
       { t: '20:09', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Carte marocaine · CIH',      flag: 'ma', ctx: 'Anas L. · T3',     amt: '124,00',  tip: '+12,40', neg: false },
     ],
     septJours: [
       { t: 'Ven 23', method: 'visa', primary: 'Visa •• 2914',  sub: 'Top transaction de la semaine', flag: 'fr', ctx: 'Nicolas R. · T4', amt: '1 240,00', tip: '+124,00', neg: false },
-      { t: 'Jeu 22', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée d\'anniversaire',        flag: 'ma', ctx: 'Hicham B. · T8', amt: '684,00',   tip: '+50,00',  neg: false },
+      { t: 'Jeu 22', method: 'cash', primary: 'Espèces',        sub: 'Cash · soirée privée',           flag: 'ma', ctx: 'Hicham B. · T8', amt: '684,00',   tip: '+50,00',  neg: false },
       { t: 'Mer 21', method: 'mc',   primary: 'Mastercard •• 1456', sub: 'Carte espagnole · Sabadell', flag: 'es', ctx: 'Lucia G. · T2', amt: '420,00',   tip: '+42,00',  neg: false },
-      { t: 'Mar 20', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Service midi · Tap',            flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '—',       neg: false },
+      { t: 'Mar 20', method: 'visa', primary: 'Visa •• 2945',   sub: 'Carte marocaine · CIH',         flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '—',       neg: false },
       { t: 'Lun 19', method: 'visa', primary: 'Visa •• 7740',  sub: 'Carte marocaine · BMCE',        flag: 'ma', ctx: 'Salma F. · T1',  amt: '162,00',   tip: '+16,20',  neg: false },
       { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 3308', sub: 'Annulation client',         flag: 'ma', ctx: 'Khalid A. · T3', amt: '−240,00',  tip: '—',       neg: true },
     ],
     trenteJours: [
       { t: 'S22 J1', method: 'visa', primary: 'Visa •• 0921',  sub: 'Réservation groupe · 12 couverts', flag: 'ma', ctx: 'Mariage Bensouda · T1-T4', amt: '4 280,00', tip: '+428,00', neg: false },
-      { t: 'S21 J3', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée privée',                   flag: 'ma', ctx: 'Wissam · T7', amt: '1 920,00', tip: '+150,00', neg: false },
+      { t: 'S21 J3', method: 'cash', primary: 'Espèces',        sub: 'Cash · soirée privée',           flag: 'ma', ctx: 'Wissam · T7', amt: '1 920,00', tip: '+150,00', neg: false },
       { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 6612', sub: 'Carte française · BNP',     flag: 'fr', ctx: 'Sophie M. · T2', amt: '780,00', tip: '+78,00', neg: false },
       { t: 'S19 J6', method: 'visa', primary: 'Visa •• 5544',  sub: 'Carte espagnole · La Caixa',    flag: 'es', ctx: 'Manuel V. · T5', amt: '512,00', tip: '+50,00', neg: false },
-      { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '—',     neg: false },
+      { t: 'S18 J2', method: 'mc',   primary: 'Mastercard •• 1882', sub: 'Carte marocaine · BMCE',      flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '—',     neg: false },
       { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '—', neg: true },
     ],
     },
@@ -1044,14 +1044,14 @@
       aujourdhui: [
         { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false, isNew: true },
         { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
+        { t: '13:42', method: 'visa', primary: 'Visa •• 4521',      sub: 'Carte marocaine · CIH',      flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
         { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
         { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
         { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
       ],
       hier: [
         { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '—', neg: false },
-        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '—', neg: false },
+        { t: '19:18', method: 'mc',   primary: 'Mastercard •• 4488', sub: 'Carte marocaine · BOA',      flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '—', neg: false },
         { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '—', neg: false },
         { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
         { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '—', neg: false },
@@ -1062,14 +1062,14 @@
         { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false },
         { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
         { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
+        { t: 'Lun 19', method: 'visa', primary: 'Visa •• 4521',       sub: 'Carte marocaine · CIH',         flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
         { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
       ],
       trenteJours: [
         { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '—', neg: false },
         { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
         { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '—', neg: false },
-        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '—', neg: false },
+        { t: 'S18 J6', method: 'mc',   primary: 'Mastercard •• 5521', sub: 'Carte marocaine · BOA',          flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '—', neg: false },
         { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '—', neg: false },
         { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '—', neg: true },
       ],
@@ -3331,8 +3331,8 @@
 
   /* ═══════════════ RENDER: PAYMENT MIX DONUT ═══════════════ */
 
-  /* Kiwi keeps the executive payment view binary: cash versus card. Tap, QR,
-   * wallet and payment links are cashless, so they roll into the card rail. */
+  /* Kiwi currently supports only cash and card. Unsupported tender values are
+   * excluded rather than being disguised as card payments. */
   const REAL_MIX = [
     { key: 'card', color: '#0B6E4F', fr: 'Carte',   en: 'Card', ar: 'بطاقة' },
     { key: 'cash', color: '#C9D2CE', fr: 'Espèces', en: 'Cash', ar: 'نقدًا' },
@@ -3351,7 +3351,8 @@
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       if (!amt) return;
-      const k = String((e && e.method) || 'card') === 'cash' ? 'cash' : 'card';
+      const k = String((e && e.method) || '');
+      if (k !== 'cash' && k !== 'card') return;
       by[k] = (by[k] || 0) + amt;
       total += amt;
     });
@@ -3476,22 +3477,18 @@
      * realistic for a Moroccan café/restaurant. */
     const r = rnd();
     let method, primary, sub, flag;
-    if (r < 0.20) {
+    if (r < 0.35) {
       method = 'visa';
       const last4 = String(Math.floor(rnd() * 10000)).padStart(4, '0');
       primary = `Visa •• ${last4}`;
       const banks = [['ma', 'Carte marocaine · Attijariwafa'], ['ma', 'Carte marocaine · BMCE'], ['ma', 'Carte marocaine · CIH'], ['fr', 'Carte française · Société Générale'], ['es', 'Carte espagnole · CaixaBank']];
       const b = banks[Math.floor(rnd() * banks.length)]; flag = b[0]; sub = b[1];
-    } else if (r < 0.40) {
+    } else if (r < 0.70) {
       method = 'mc';
       const last4 = String(Math.floor(rnd() * 10000)).padStart(4, '0');
       primary = `Mastercard •• ${last4}`;
       const banks = [['ma', 'Carte marocaine · BOA'], ['ma', 'Carte marocaine · CIH'], ['fr', 'Carte française · BNP Paribas']];
       const b = banks[Math.floor(rnd() * banks.length)]; flag = b[0]; sub = b[1];
-    } else if (r < 0.55) {
-      method = 'tap'; primary = 'Kiwi Tap'; flag = 'ma'; sub = 'NFC · contactless';
-    } else if (r < 0.70) {
-      method = 'qr'; primary = 'Kiwi Wallet QR'; flag = 'ma'; sub = 'Client abonné';
     } else {
       method = 'cash'; primary = 'Espèces'; flag = 'ma'; sub = 'Cash · table';
     }
@@ -3622,6 +3619,7 @@
     const [lo, hi] = rangeBounds(effRange());
     const sales = realSalesList()
       .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
+      .filter((s) => s && (s.method === 'cash' || s.method === 'card'))
       .slice(-8).reverse();
     const lang = getLang();
     /* Every method the till can actually record (see live-link METHOD_LABEL).
@@ -3630,14 +3628,14 @@
      * dominant tender, the owner could not tell cash from card on their own
      * feed. */
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
-      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
+      fr: { cash: 'Espèces', card: 'Carte bancaire', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
+      en: { cash: 'Cash', card: 'Bank card', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
+      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
     };
     /* Chip art per method. The till records the TENDER, never the card network,
      * so a card sale gets the neutral card chip — printing a Visa or Mastercard
      * mark here would invent a fact the sale does not carry. */
-    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', delivery: 'qr' };
+    const ICON_FOR = { cash: 'cash', card: 'cmi', delivery: 'cmi' };
     const L = ML[lang] || ML.fr;
     return sales.map((s, i) => {
       const d = new Date(s.ts);
@@ -3670,8 +3668,6 @@
     const PAY_TR = {
       'Espèces': { en: 'Cash', ar: 'نقدًا' },
       'Cash · table': { en: 'Cash · at the table', ar: 'نقدًا · على الطاولة' },
-      'Client abonné': { en: 'Subscribed client', ar: 'عميل مشترك' },
-      'NFC · contactless': { en: 'NFC · contactless', ar: 'NFC · بدون تلامس' },
     };
     const PAY_PREFIX = [
       ['Carte marocaine', { en: 'Moroccan card', ar: 'بطاقة مغربية' }],
@@ -3698,8 +3694,10 @@
     // them in window.__kiwiFeedOrders, which the assistant reads as "les
     // dernières commandes encaissées" and puts in the model's prompt. Demo
     // covers, demo servers, demo tickets, quoted back as the merchant's own.
-    const rows = ownData(venue) ? buildCustomFeed(venue)
+    const rawRows = ownData(venue) ? buildCustomFeed(venue)
       : isLive ? buildLiveFeed(venue) : vData(FEED_BY_VENUE, currentRange);
+    const supportedMethods = new Set(['visa', 'mc', 'card', 'cmi', 'cash']);
+    const rows = rawRows && rawRows.filter((row) => row && supportedMethods.has(row.method));
     const wrap = document.querySelector('[data-feed]');
 
     if (wrap) {
@@ -3735,8 +3733,6 @@
             visa: `<img src="assets/icons/visa.svg" alt="Visa">`,
             mc:   `<img src="assets/icons/mastercard.png" alt="Mastercard">`,
             cash: `<img src="assets/icons/cash.webp" alt="Espèces">`,
-            tap:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M8.5 8a5 5 0 0 1 0 8M12 5a8 8 0 0 1 0 14M15.5 2a11 11 0 0 1 0 20"/></svg>`,
-            qr:   `<img src="assets/icons/qr-code.png" alt="QR">`,
             /* Neutral card chip — used when we know a card was tapped/inserted
              * but not which network. Never substitute a Visa/MC mark here. */
             cmi:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
