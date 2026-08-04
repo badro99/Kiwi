@@ -3349,7 +3349,9 @@ body.design-vexel[data-vexel-mode] .vexel-clients {
 }
 
 body.design-vexel[data-vexel-mode] .vexel-clients > svg {
-  height: 76px;
+  flex: 1 1 88px;
+  min-height: 76px;
+  height: auto;
   margin-top: 7px;
 }
 
@@ -3358,7 +3360,7 @@ body.design-vexel[data-vexel-mode] .vexel-client-foot {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   min-height: 38px;
-  margin-top: auto;
+  margin-top: 8px;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-client-foot > div {
