@@ -477,10 +477,14 @@ const PDS_STATUS_RING = {
  *   draws the same tables — with service statuses instead of design ones, so
  *   the ring is passed in rather than looked up. The viewBox the caller
  *   supplies is in the table's OWN units, so nothing here can distort. */
-function pdsTableBody(g, c, ring) {
+function pdsTableBody(g, c, ring, opts) {
+  /* `flat` aplanit l'éclairage du plateau : la vue nuit du dashboard veut du
+   * charbon au trait, pas du bois éclairé plein jour. Optionnel et inerte par
+   * défaut — la caisse continue d'appeler à trois arguments et ne change pas. */
+  const flat = !!(opts && opts.flat);
   const light = pdsLum(c) > 0.34;
-  const edge = pdsShade(c, light ? -0.22 : 0.16);
-  const lit  = pdsShade(c, light ? 0.13 : 0.26);
+  const edge = pdsShade(c, flat ? (light ? -0.10 : 0.11) : (light ? -0.22 : 0.16));
+  const lit  = pdsShade(c, flat ? (light ? 0.05 : 0.06) : (light ? 0.13 : 0.26));
   const foot = pdsShade(c, light ? -0.08 : -0.03);
   const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
 

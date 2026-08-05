@@ -3021,8 +3021,54 @@ function wireDismiss(m) {
 const PDS_LS_KEY = 'kiwiPlanDeSalle';
 /* Per-store floor plan: every store keeps its own layout under its own key. */
 function pdsKey() {
+  const merchant = pdsMerchantSlug();
+  /* Reuse the existing caisse/dashboard mirror key. Never read a built-in
+     venue's saved demo plan on behalf of a paired or authenticated merchant. */
+  if (merchant) return PDS_LS_KEY + ':slug:' + merchant;
+  /* A real, non-custom session without server identity is deliberately not
+     persisted: one anonymous fallback key would mix successive merchants. */
+  if (pdsNeedsMerchantSlug()) return '';
   const v = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
   return PDS_LS_KEY + ':' + v;
+}
+/* A floor can belong to a merchant even when KiwiVenue still points at one of
+ * the built-in venue ids. That is the dangerous gap: authentication (or a till
+ * pairing) is authoritative; `isCustom()` is only a venue-shape detail.
+ *
+ * Keep the pairing check tied to the paired VENUE record, not to the account
+ * logged into this browser. A till changes merchant by pairing, so an account-
+ * only check would let the demo floor reappear after a re-pair. */
+function pdsMerchantContext() {
+  try {
+    if (window.KiwiEnv?.isReal?.()) return true;
+    if (window.KiwiVenue?.isCustom?.()) return true;
+    const paired = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    return !!(paired && (paired.merchant || paired.venueId || paired.name));
+  } catch (_) { return false; }
+}
+function pdsSlug(value) {
+  return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function pdsPairedVenue() {
+  try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); }
+  catch (_) { return null; }
+}
+function pdsMerchantSlug() {
+  const paired = pdsPairedVenue();
+  if (paired && paired.merchant) return pdsSlug(paired.merchant);
+  try {
+    if (window.KiwiEnv?.isReal?.() && !window.KiwiVenue?.isCustom?.()) {
+      return pdsSlug(window.KiwiMe?.business || '');
+    }
+  } catch (_) {}
+  return '';
+}
+function pdsNeedsMerchantSlug() {
+  const paired = pdsPairedVenue();
+  if (paired && (paired.merchant || paired.venueId || paired.name)) return true;
+  try { return !!window.KiwiEnv?.isReal?.() && !window.KiwiVenue?.isCustom?.(); }
+  catch (_) { return false; }
 }
 const PDS_GRID = 16;         /* snap-to-grid unit (px) */
 const PDS_CANVAS_W = 880;
@@ -3032,6 +3078,62 @@ const PDS_CANVAS_H = 540;
    fixture drawing primitives now live in assets/floorplan-core.js, loaded
    just before this file. They are shared verbatim with the caisse so the
    till can render the owner's actual plan instead of its own guess at it. */
+
+/* ─── Vue nuit — la console de service ────────────────────────────────────
+ * Le plan que la page d'accueil promet est sombre : une salle charbon, des
+ * tables au trait, le statut porté par la lumière. La vue nuit est donc le
+ * DÉFAUT ; la vue jour reste entière derrière la bascule, car c'est elle qui
+ * montre les matières telles que la caisse les affiche. La préférence vit
+ * dans sa propre clé : l'état du plan est partagé avec la caisse, un choix
+ * d'affichage du dashboard n'a rien à faire dedans. */
+const PDS_VIEW_KEY = 'kiwiPdsView';
+function pdsNoir() {
+  try { return localStorage.getItem(PDS_VIEW_KEY) !== 'jour'; } catch (_) { return true; }
+}
+function pdsSetNoir(on) {
+  try { localStorage.setItem(PDS_VIEW_KEY, on ? 'nuit' : 'jour'); } catch (_) {}
+}
+/* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
+ * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
+ * nocturne. Encres et chaises suivent d'elles-mêmes : pdsInk/pdsChairTone
+ * raisonnent en luminance, pas en clair codé en dur. */
+function pdsNoirC(hex, keep) {
+  const k = keep == null ? 0.18 : keep;
+  const h = String(hex || '#141A16').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [13, 17, 14];   /* #0D110E — le charbon de la salle */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas) : libre reste
+ * éteint, occupé rayonne menthe, réservé braise, nettoyage en tirets froids. */
+const PDS_STATUS_RING_NOIR = {
+  free:     { s: 'rgba(242,239,230,0.22)', w: 1.3, dash: '' },
+  occupied: { s: '#7DF2B0', w: 2.2, dash: '' },
+  reserved: { s: '#D9AE54', w: 2, dash: '' },
+  cleaning: { s: '#8FA6B8', w: 1.8, dash: '5 4' },
+};
+/* Le sol la nuit : charbon teinté par le sol du commerçant, une grille fine
+ * calée sur le pas d'aimantation (3 × PDS_GRID), et un souffle de lumière
+ * depuis le haut — la même lumière que l'accueil sombre. Les finitions
+ * (terrazzo, zellige) sont dessinées à l'encre sombre et disparaîtraient
+ * ici ; la grille les remplace, la vue jour les garde. */
+function pdsRoomShellNoir(zone) {
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsNoirC(r.floor, 0.08)};
+    background-image:
+      radial-gradient(92% 72% at 50% 0%, rgba(0,255,174,0.05), transparent 64%),
+      linear-gradient(rgba(242,239,230,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(242,239,230,0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-repeat: no-repeat, repeat, repeat;
+    box-shadow: inset 0 0 0 ${r.wallW}px ${pdsNoirC(r.wall, 0.30)},
+                inset 0 0 110px rgba(0,0,0,0.5);
+  "></div>`;
+}
 
 
 /* ─── Static i18n table — every label, status, role, template name ───────── */
@@ -3110,6 +3212,8 @@ const PDS_STR = {
     addedElementToast: 'Élément ajouté',
     addedElementDesc: 'Glissez-le pour positionner · cliquez pour pivoter.',
     /* Snap */
+    viewNuit: 'Vue nuit — console de service',
+    viewJour: 'Vue jour — matières & décor',
     snapOn: 'Aimanter',
     snapOff: 'Libre',
     snapHint: 'Aimanter aligne les tables sur la grille',
@@ -3306,6 +3410,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} seats · ${z} · drag to position.`,
     addedElementToast: 'Element added',
     addedElementDesc: 'Drag to position · click to rotate.',
+    viewNuit: 'Night view — service console',
+    viewJour: 'Day view — materials & decor',
     snapOn: 'Snap',
     snapOff: 'Free',
     snapHint: 'Snap aligns tables to the grid',
@@ -3491,6 +3597,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} مقاعد · ${z} · اسحبها للموقع.`,
     addedElementToast: 'تمت إضافة العنصر',
     addedElementDesc: 'اسحب للموقع · انقر للتدوير.',
+    viewNuit: 'عرض ليلي — وحدة الخدمة',
+    viewJour: 'عرض نهاري — الخامات والديكور',
     snapOn: 'محاذاة',
     snapOff: 'حر',
     snapHint: 'المحاذاة تصفّ الطاولات على الشبكة',
@@ -3906,7 +4014,8 @@ function pdsNormalize(state) {
 
 function pdsLoad() {
   try {
-    const raw = localStorage.getItem(pdsKey());
+    const key = pdsKey();
+    const raw = key ? localStorage.getItem(key) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
@@ -3915,7 +4024,7 @@ function pdsLoad() {
   return pdsNormalize(pdsDefaultState());
 }
 function pdsWriteLocal(state) {
-  try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
+  try { const key = pdsKey(); if (key) localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
   /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
    * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
    * the same identity spine the boutique/menu already share, so a design made
@@ -3958,7 +4067,8 @@ var pdsDoc = null;
 
 function pdsRawState() {
   try {
-    var raw = localStorage.getItem(pdsKey());
+    var key = pdsKey();
+    var raw = key ? localStorage.getItem(key) : null;
     var p = raw ? JSON.parse(raw) : null;
     if (p && p.zones && p.tables) return p;
   } catch (e) {}
@@ -3996,7 +4106,7 @@ function pdsCarryForward() {
 }
 
 function pdsCloud() {
-  if (pdsDoc || !window.KiwiCloudDoc) return pdsDoc;
+  if (pdsDoc || !window.KiwiCloudDoc || !pdsKey()) return pdsDoc;
   pdsDoc = window.KiwiCloudDoc.attach({
     feature: 'floorplan',
     slug: function () { return window.KiwiCloudDoc.currentSlug(); },
@@ -4025,9 +4135,9 @@ function pdsCloud() {
   return pdsDoc;
 }
 function pdsDefaultState() {
-  /* A merchant-created store starts with an empty floor to design (one zone,
-     no tables, no staff). The pre-seeded stores keep their full layout. */
-  if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return pdsTemplate('blank');
+  /* Every merchant starts with an empty floor to design (one zone, no tables,
+     no staff). Built-in demo venues keep their full layout only in demo mode. */
+  if (pdsMerchantContext()) return pdsTemplate('blank');
   const zones = [
     { id: 'z1', name: 'Salle principale', scene: 'salle' },
     { id: 'z2', name: 'Terrasse',         scene: 'terrasse' },
@@ -4089,8 +4199,8 @@ function pdsTemplate(key) {
   const blank = {
     zones: [{ id: 'z1', name: 'Salle', scene: 'salle' }],
     activeZone: 'z1', tables: [], elements: [],
-    /* A real store fills its own roster; only pre-seeded stores get sample servers. */
-    staff: (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) ? [] : PDS_DEFAULT_STAFF.slice(),
+    /* A merchant fills its own roster; only the local pitch demo gets samples. */
+    staff: pdsMerchantContext() ? [] : PDS_DEFAULT_STAFF.slice(),
     rotation: { period: 'shift', strategy: 'zones', enabled: false },
     history: [],
     snap: true,
@@ -4673,6 +4783,7 @@ function pdsRenderStage(state, T) {
   /* Fixtures paint under tables, and within fixtures a rug must sit under a
      comptoir. z is explicit so the merchant can reorder. */
   const ordered = elsInZone.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
+  const noir = pdsNoir();
   return `
     <div class="pds-stage-grid pds-stage-${state.mode}">
       <div class="pds-rail" data-pds-rail>
@@ -4695,6 +4806,12 @@ function pdsRenderStage(state, T) {
               <button class="pds-tool" data-pds-action="redo" title="${T.redo}" aria-label="${T.redo}">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 13"/></svg>
               </button>` : ''}
+            <button class="pds-tool pds-tool-view" data-pds-action="toggle-view"
+                    title="${noir ? T.viewJour : T.viewNuit}" aria-label="${noir ? T.viewJour : T.viewNuit}">
+              ${noir
+                ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}
+            </button>
             <label class="pds-snap" title="${T.snapHint}">
               <input type="checkbox" data-pds-snap ${state.snap?'checked':''}/>
               <span>${state.snap ? T.snapOn : T.snapOff}</span>
@@ -4702,12 +4819,12 @@ function pdsRenderStage(state, T) {
           </div>
         </div>
         <div class="pds-plan-canvas" data-pds-backdrop
-             style="${pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
+             style="${!noir && pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
           <div class="pds-plan-room" data-pds-room style="max-width:${P.w}px; aspect-ratio:${P.w} / ${P.h};">
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
-              ${pdsRoomShell(zone)}
+              ${noir ? pdsRoomShellNoir(zone) : pdsRoomShell(zone)}
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
@@ -5166,16 +5283,20 @@ function pdsHandles(o, g, T) {
  *   on a long table.                                                       */
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
-  const c = pdsColor(t);
+  /* Vue nuit : la matière est rabattue vers le charbon et le statut passe à
+     l'anneau lumineux. Encre et chaises se recalculent d'elles-mêmes. */
+  const noir = pdsNoir();
+  const c = noir ? pdsNoirC(pdsColor(t), 0.12) : pdsColor(t);
   const P = PDS_PAD;
   const sel = PDS_SEL.has(t.id);
   const only = sel && PDS_SEL.size === 1;
   const sv = state.staff.find(s => s.id === t.server);
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
-  const ring = PDS_STATUS_RING[t.status] || PDS_STATUS_RING.free;
+  const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING;
+  const ring = R[t.status] || R.free;
   const ink = pdsInk(c);
   /* Shared with the caisse — see pdsTableBody in assets/floorplan-core.js. */
-  const body = pdsTableBody(g, c, ring);
+  const body = pdsTableBody(g, c, ring, noir ? { flat: true } : null);
 
   const showChairs = state.showChairs !== false;
   const chairs = showChairs ? pdsChairsFor(g, g.seats, c) : '';
@@ -5185,7 +5306,7 @@ function pdsRenderTable(t, state, T) {
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
-         data-pds-table="${t.id}"
+         data-pds-table="${t.id}" data-status="${t.status || 'free'}"
          role="button" tabindex="0"
          aria-label="Table ${pdsEsc(t.num)}, ${g.seats} ${T.seats}"
          style="left:${t.x - P}px; top:${t.y - P}px; width:${g.w + P*2}px; height:${g.h + P*2}px;
@@ -5210,7 +5331,12 @@ function pdsRenderElement(e, state, T) {
   const K = PDS_FIX[e.type];
   if (!K) return '';
   const g = pdsGeom(e);
-  const c = pdsColor(e);
+  /* Vue nuit : le bâti garde plus de sa teinte que les tables (0.30) et les
+     pièces au trait (porte, escalier…) presque toute — un arc de porte
+     rabattu au charbon disparaîtrait dans le sol. */
+  const c = pdsNoir()
+    ? pdsNoirC(pdsColor(e), K.render === 'svg' ? 0.45 : 0.16)
+    : pdsColor(e);
   const sel = PDS_SEL.has(e.id);
   const only = sel && PDS_SEL.size === 1;
   const label = (e.label != null ? e.label : (K.label || ''));
@@ -5392,6 +5518,9 @@ function pdsRenderFoot(state, T) {
 
 /* ═══ INTERACTIVITY ═════════════════════════════════════════════════ */
 function pdsAttach(root, state, T, dr) {
+  /* La vue nuit est une classe sur la racine du tiroir : tout le squelette
+     pds- en hérite, et la bascule ne re-rend que le corps. */
+  root.classList.toggle('pds-noir', pdsNoir());
   /* Re-renders body + foot in-place, then re-binds events. Used after
    * every state mutation. */
   const refresh = () => {
@@ -6022,6 +6151,12 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
   const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);
 
   switch (action) {
+    case 'toggle-view': {
+      pdsSetNoir(!pdsNoir());
+      root.classList.toggle('pds-noir', pdsNoir());
+      refresh();
+      break;
+    }
     case 'save': {
       const feedback = Kiwi.buttonFeedback?.(btn, { pending: T.saving, done: T.savedButton });
       pdsSave(state);
@@ -7482,6 +7617,206 @@ const PDS_INLINE_CSS = `
   }
   .pds-wiz-note { margin:10px 0 0; font-size:11.5px; color:var(--n-500); }
   @media (max-width: 620px) { .pds-wiz-cards { grid-template-columns:1fr; } }
+
+  /* ═══ v4 · vue nuit — la console de service ═══════════════════════════════
+     Le look promis par la page d'accueil : salle charbon, tables au trait,
+     le statut porté par la lumière. Tout vit sous .pds-noir (posée sur la
+     racine du tiroir par pdsAttach) ; la vue jour au-dessus reste le rendu
+     matières, intact. Une seule teinte d'accent — la menthe — et son halo
+     rgba(0,255,174,…), le même vert que l'accueil sombre. */
+
+  .pds-noir { color-scheme: dark; }
+
+  /* La classe est doublée dans chaque sélecteur à dessein : le skin Vexel
+     peint ce même chrome via « body.design-vexel :is(…) » — un élément plus
+     deux classes — et la vue nuit doit l'emporter par spécificité, pas par
+     ordre de source. */
+
+  /* — La coque du tiroir : le cockpit entier passe au noir — */
+  .pds-noir.pds-noir.pds-noir { background:rgba(5, 8, 6, 0.72); }
+  /* !important : le skin 2026 (empilé par défaut) pose son verre blanc sur
+     .kiwi-drawer avec !important — la spécificité seule ne suffit pas ici. */
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer { background:#090D0A !important; border-color:rgba(242,239,230,0.10) !important; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-body { background:transparent; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head :is(h1, h2, h3) { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head p { color:rgba(242,239,230,0.50); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-foot { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-inspector {
+    background:transparent; border:none; box-shadow:none;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+  }
+
+  /* — Chrome : panneaux, palette, inspecteur — */
+  .pds-noir.pds-noir.pds-noir .pds-rail-card,
+  .pds-noir.pds-noir.pds-noir .pds-tpl { background:#0F130F; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-title, .pds-noir.pds-noir.pds-noir .pds-legend-title,
+  .pds-noir.pds-noir.pds-noir .pds-mini-label, .pds-noir.pds-noir.pds-noir .pds-wiz-q,
+  .pds-noir.pds-noir.pds-noir .pds-form-row > label, .pds-noir.pds-noir.pds-noir .pds-rot-lbl { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-hint, .pds-noir.pds-noir.pds-noir .pds-mode-desc { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item,
+  .pds-noir.pds-noir.pds-noir .pds-tool, .pds-noir.pds-noir.pds-noir .pds-step-btn, .pds-noir.pds-noir.pds-noir .pds-inspect-close,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill, .pds-noir.pds-noir.pds-noir .pds-scene-pill, .pds-noir.pds-noir.pds-noir .pds-wiz-opt,
+  .pds-noir.pds-noir.pds-noir .pds-amb, .pds-noir.pds-noir.pds-noir .pds-strat-card, .pds-noir.pds-noir.pds-noir .pds-chip,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-card {
+    background:#141813; border-color:rgba(242,239,230,0.10); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-pal-label { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-shape { background:#1C221C; border-color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item:hover { border-color:rgba(125,242,176,0.55); box-shadow:0 6px 16px -10px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-tool:hover, .pds-noir.pds-noir.pds-noir .pds-step-btn:hover,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill:hover, .pds-noir.pds-noir.pds-noir .pds-scene-pill:hover,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-opt:hover, .pds-noir.pds-noir.pds-noir .pds-amb:hover,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card:hover, .pds-noir.pds-noir.pds-noir .pds-inspect-close:hover {
+    background:#1A201A; color:#EDEAE0; border-color:rgba(125,242,176,0.55);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-chip-body b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-asum-name { color:rgba(242,239,230,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-rot-meta > div, .pds-noir.pds-noir.pds-noir .pds-rot-step {
+    background:#141813; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-rot-val, .pds-noir.pds-noir.pds-noir .pds-fair-name, .pds-noir.pds-noir.pds-noir .pds-hist-name,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-strat-card em { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-fair-bar { background:rgba(242,239,230,0.10); }
+
+  /* Champs — color-scheme:dark règle les natifs, le reste suit. */
+  .pds-noir.pds-noir.pds-noir .pds-input, .pds-noir.pds-noir.pds-noir input[type="number"], .pds-noir.pds-noir.pds-noir input[type="text"],
+  .pds-noir.pds-noir.pds-noir select, .pds-noir.pds-noir.pds-noir textarea {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:#EDEAE0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-range, .pds-noir.pds-noir.pds-noir .pds-snap input { accent-color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-snap { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-unit { color:rgba(242,239,230,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-num-grid > label { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-step-btn { color:#EDEAE0; }
+
+  /* Bandeau KPI */
+  .pds-noir.pds-noir.pds-noir .p-kpi { background:#0F130F; border:1px solid rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .l { color:rgba(242,239,230,0.45); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .v { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.40); }
+
+  /* Modes + zones : rail sombre, pilule active claire — le contraste inversé
+     de la vue jour, même géométrie pour que la lentille liquide suive. */
+  .pds-noir.pds-noir.pds-noir .pds-modes, .pds-noir.pds-noir.pds-noir .pds-zone-tabs {
+    background:#0D110D; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-mode, .pds-noir.pds-noir.pds-noir .pds-zone { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-mode:hover, .pds-noir.pds-noir.pds-noir .pds-zone:hover { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-mode.active { background:#EDEAE0; color:#0B0F0C; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active { background:#1C221C; color:#EDEAE0; box-shadow:none; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active em { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add:hover { background:#1C221C; }
+
+  /* Barre du plan + légende façon accueil : cases au trait, l'occupée seule
+     rayonne. */
+  .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:#0D110D; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-legend-item { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-legend-swatch {
+    width:13px; height:13px; border-radius:4px;
+    background:transparent; box-shadow:none; border:1.5px solid rgba(242,239,230,0.28);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
+    border-color:#7DF2B0; background:rgba(0,255,174,0.10);
+    box-shadow:0 0 9px rgba(0,255,174,0.38);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-color:#D9AE54; background:rgba(217,174,84,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dashed; border-color:#8FA6B8; }
+
+  /* — La scène — */
+  .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
+    background:#0A0E0B;
+    border:1px solid rgba(242,239,230,0.07);
+    border-radius:20px;
+    padding:16px 16px 8px;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room {
+    border:1px solid rgba(242,239,230,0.14);
+    border-radius:16px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.6),
+      0 34px 70px -40px rgba(0,0,0,0.9);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room.is-terrasse {
+    border-style:dashed; border-color:rgba(125,242,176,0.30); background:transparent;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label { color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-footer { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-floor-count { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-dims { color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-empty { background:rgba(10,14,11,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
+
+  /* — Tables : le statut est une lumière — */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] { filter:drop-shadow(0 0 22px rgba(0,255,174,0.15)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] { filter:drop-shadow(0 0 18px rgba(217,174,84,0.13)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.14) drop-shadow(0 0 16px rgba(0,255,174,0.12)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.10) drop-shadow(0 0 26px rgba(0,255,174,0.22)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:.55; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
+
+  /* — Sélection : cadre menthe + tirets d'angle, le geste de l'accueil — */
+  .pds-noir.pds-noir.pds-noir .pds-hdl-layer::before {
+    border-color:#7DF2B0; border-radius:9px;
+    box-shadow:0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-hdl { background:#0D110E; border-color:#7DF2B0; box-shadow:0 0 6px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-hdl:hover { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-n, .pds-noir.pds-noir.pds-noir .pds-hdl-s { width:18px; height:5px; margin:-2.5px 0 0 -9px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-e, .pds-noir.pds-noir.pds-noir .pds-hdl-w { width:5px; height:18px; margin:-9px 0 0 -2.5px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot { background:#7DF2B0; border-color:#0D110E; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot::before { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-dim { background:#7DF2B0; color:#07100C; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-resizing .pds-dim,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-resizing .pds-dim { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-locked { background:rgba(242,239,230,0.14); color:#EDEAE0; }
+
+  /* — Bâti : arête claire fine, cuisine hachurée à l'encre claire — */
+  .pds-noir.pds-noir.pds-noir .pds-el-fill { box-shadow:inset 0 0 0 1px rgba(242,239,230,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-el-cuisine .pds-el-fill::after {
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(45deg, rgba(242,239,230,0.05) 0 6px, transparent 6px 14px);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
+    outline-color:rgba(125,242,176,0.65);
+    filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
+  }
+
+  /* Gêne de placement : le rouge reste le seul hors-marque, plus clair ici. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-blocked::after,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-blocked::after { border-color:#E4604E; background:rgba(228,96,78,0.14); }
+  .pds-noir.pds-noir.pds-noir .pds-blocker::before { border-color:#E4604E; }
+
+  /* — Statuts (légende de l'inspecteur) — */
+  .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(217,174,84,0.12); color:#D9AE54; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(143,166,184,0.12); color:#9FB4C4; }
+
+  /* Nuancier : l'anneau de l'actif passe à la menthe sur fond noir. */
+  .pds-noir.pds-noir.pds-noir .pds-sw { border-color:rgba(242,239,230,0.18); }
+  .pds-noir.pds-noir.pds-noir .pds-sw.active { box-shadow:0 0 0 2px #0F130F, 0 0 0 3.5px #7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-none {
+    background:
+      linear-gradient(45deg, transparent 45%, #E4604E 45% 55%, transparent 55%),
+      #141813;
+  }
+
+  /* Pied de page */
+  .pds-noir.pds-noir.pds-noir .pds-foot-meta { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost { background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger { color:#E4604E; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger:hover { border-color:#E4604E; }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -13392,6 +13727,14 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
  * ═════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  /* Snapshot the handlers contributed before the real-data modules reassert
+     theirs at load. An allow-list by nav name is not enough: if one of those
+     modules fails to install, the same nav name still points at this file's
+     fixture handler. Provenance is part of the data barrier. */
+  const HANDLER_BEFORE_REAL_MODULE = Object.create(null);
+  ['conformite', 'stock', 'finance', 'equipe', 'menu', 'payroll'].forEach((nav) => {
+    HANDLER_BEFORE_REAL_MODULE[nav] = window.Kiwi?.handlers?.['nav-' + nav] || null;
+  });
   const CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const SPARK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
 
@@ -13439,32 +13782,76 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                      b: ['Une fiche créée automatiquement par client', 'Historique, préférences et notes', 'Campagnes anniversaires et fidélité'] },
   };
 
-  /* Destinations that now have a REAL per-venue, persistent UI — they render
-     their functional page for custom (onboarded) venues too, NOT a starter
-     placeholder. This set grows as more pages become per-venue functional. */
-  /* 'menu' is now a real per-venue editor (assets/menu-catalog.js →
-     window.KiwiMenuStore), so it renders functionally for custom venues.
-     'practitioners' stays OUT: its handler still hardcodes demo staff (Spa
-     Bahia's PRACS), so a custom venue must get the zeroed starter, not the demo
-     roster, until it becomes genuinely per-venue. 'payroll' caught up: team.js
-     now owns it for a real store, builds it from that store's own roster, and
-     ships its own empty state ("Ajoutez votre équipe pour commencer"), so it
-     belongs in the set outright — same reasoning as conformite/stock/finance. */
-  /* 'conformite', 'stock' and 'finance' were building a correct per-venue page
-     that nobody could reach: each module already detects a real/custom venue
-     (conformite.js:877, stock.js:719, finance.js:866) and renders its own honest
-     empty register instead of Café Atlas's fixtures — but this gate intercepted
-     the nav first and swapped in the generic "Encore rien ici" starter. Their own
-     empty state is strictly better: it names the register, keeps the tabs, and
-     tells the merchant what will fill it. */
-  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'promos', 'equipe', 'menu', 'tables',
-    'conformite', 'stock', 'finance', 'payroll']);
+  /* Pages whose active handler has a genuine merchant-scoped source and an
+     honest empty state. Inventory/categories are keyed by merchant catalogue;
+     tables are keyed by venue/paired merchant; the three operational modules
+     below apply their own KiwiEnv gate. Promotions is deliberately absent: the
+     handler in this file is Maison Mansour fixture data, not a campaign store. */
+  const REAL_FOR_MERCHANT = new Set(['inventory', 'categories', 'tables']);
+
+  /* These destinations are safe only when the later operational module really
+     replaced the handler captured above. */
+  const REAL_FROM_LATER_MODULE = new Set(['conformite', 'stock', 'finance']);
+
+  /* These modules are genuinely scoped only after onboarding has produced a
+     custom venue id. Their stores still seed demo data for a built-in venue id,
+     even inside an authenticated session, so `KiwiEnv.isReal()` alone must NOT
+     let them through. */
+  const REAL_FOR_CUSTOM_VENUE = new Set(['equipe', 'menu', 'payroll']);
 
   /* Data-conditional destinations: a module that builds a real per-venue page but
      has NO empty state of its own belongs here rather than in the set above, so
      the starter still answers until there is something to show. Empty for now —
      payroll was the candidate until team.js gave it a proper empty state. */
   const REAL_WHEN = {};
+
+  function pairedMerchant() {
+    try {
+      const p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return !!(p && (p.merchant || p.venueId || p.name));
+    } catch (_) { return false; }
+  }
+
+  function merchantContext() {
+    try {
+      return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.() || pairedMerchant();
+    } catch (_) { return false; }
+  }
+
+  function salesVenue() {
+    try {
+      const paired = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (paired && paired.venueId) return paired.venueId;
+    } catch (_) {}
+    try { return window.KiwiVenue?.getVenue?.(); } catch (_) { return undefined; }
+  }
+
+  function merchantSales() {
+    if (typeof window.KiwiSales?.list !== 'function') return [];
+    try {
+      const rows = window.KiwiSales.list(salesVenue());
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+
+  function laterModuleOwns(nav, handler) {
+    if (!handler || handler === HANDLER_BEFORE_REAL_MODULE[nav]) return false;
+    if (nav === 'conformite') return !!window.KiwiConformite;
+    if (nav === 'finance') return !!window.KiwiFinance;
+    if (nav === 'menu') return !!handler.__mxOwned && !!window.KiwiMenuStore;
+    if (nav === 'payroll') return !!handler.__ktOwned && !!window.KiwiTeam;
+    if (nav === 'equipe') return !!window.KiwiTeam;
+    /* stock.js has no public namespace; replacement is the only provenance it
+       exposes, and its own renderer applies KiwiEnv before reading fixtures. */
+    return nav === 'stock';
+  }
+
+  function hasMerchantTruth(nav, handler, customVenue) {
+    return REAL_FOR_MERCHANT.has(nav)
+      || (REAL_FROM_LATER_MODULE.has(nav) && laterModuleOwns(nav, handler))
+      || (customVenue && REAL_FOR_CUSTOM_VENUE.has(nav) && laterModuleOwns(nav, handler))
+      || !!(REAL_WHEN[nav] && REAL_WHEN[nav]());
+  }
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button
@@ -13720,7 +14107,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const KV = window.KiwiVenue;
     const vd = KV?.getCurrentVenueData?.() || {};
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
-    const sales = (window.KiwiSales?.list?.() || []).slice();
+    const sales = merchantSales().slice();
     const ML = {
       fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', vente: 'Vente' },
       en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', vente: 'Sale' },
@@ -13804,7 +14191,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function renderStarter(nav, meta) {
     /* Ventes: once the merchant has real sales (rung locally OR bridged from a
      * Live-Link caisse), show the actual list, not the "nothing yet" placeholder. */
-    if (nav === 'transactions' && ((window.KiwiSales?.list && window.KiwiSales.list().length) || cancelAudit.length)) {
+    if (nav === 'transactions' && (merchantSales().length || cancelAudit.length)) {
       return renderRealTransactions(nav, meta);
     }
     /* Cette destination est celle affichée : une copie serveur qui arrive
@@ -13835,7 +14222,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * already rung two. Once there are sales, the useful next step is the sales
      * list itself. Same for the footer: stop promising a page that will build
      * "dès vos premières ventes" to someone who has made them. */
-    const hasSales = !!(window.KiwiSales?.list && window.KiwiSales.list().length);
+    const hasSales = merchantSales().length > 0;
     const saleBtn = hasSales
       ? `<button class="kb ${cfg ? 'ghost' : 'atlas'}" type="button" data-action="nav-transactions">${escS(T(UI.seeSales))}</button>`
       : `<button class="kb ${cfg ? 'ghost' : 'atlas'}" type="button" data-action="new-sale">${escS(T(UI.firstSale))}</button>`;
@@ -13883,9 +14270,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (orig && orig.__kiwiStarter) return;
       const wrapped = function () {
         if (nav === 'transactions') loadCancelAudit();
-        const realOrCustom = window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.();
-        const allowed = REAL_FOR_CUSTOM.has(nav) || (REAL_WHEN[nav] && REAL_WHEN[nav]());
-        if (realOrCustom && !allowed) return renderStarter(nav, meta);
+        const customVenue = !!window.KiwiVenue?.isCustom?.();
+        const allowed = hasMerchantTruth(nav, orig, customVenue);
+        if (merchantContext() && !allowed) return renderStarter(nav, meta);
         /* On quitte le starter pour une vraie page : sans ça, une copie serveur
          * arrivant en retard repeindrait la page starter PAR-DESSUS celle que le
          * commerçant vient d'ouvrir. */
