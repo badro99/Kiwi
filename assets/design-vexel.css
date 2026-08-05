@@ -3934,11 +3934,13 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * LAYER F · DARK HOME · EDGE LIGHTING
+ * LAYER G · HOME · EDGE LIGHTING
  *
- * Scoped to .dash-standard in dark: the homepage only. Subpages and the whole
- * light climate are untouched — every rule below is gated on both the mode
- * attribute and the homepage container.
+ * Scoped to .dash-standard: the homepage only. Subpages are untouched — every
+ * rule below is gated on both the vexel mode attribute and the homepage
+ * container. Both climates carry the effect; each in its own colour (see the
+ * two token blocks below). It was dark-only at first, which meant it never
+ * appeared on ?skin=vexel-light — the same page, the same cards, no light.
  *
  * The premise is that light should mark *importance* and *intent*, not coat the
  * page. So nothing here fires at rest: the resting dashboard is byte-for-byte
@@ -3960,11 +3962,11 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
  * one, so a pixel reach lights the little cards and leaves the big ones with a
  * bare outline and no illumination behind it.
  *
- * Colour is the mint already in the dark palette (--vx-accent, #00ffae) held as
- * an RGB triplet so alpha can vary per tier. No new hue enters the system.
+ * Colour is whatever the active climate already uses — mint (#00ffae) in dark,
+ * atlas (#0B6E4F) in light — held as an RGB triplet so alpha can vary per tier.
+ * No new hue enters the system.
  * ═══════════════════════════════════════════════════════════════════════════ */
-body.design-vexel[data-vexel-mode="dark"] .dash-standard {
-  --vx-neon: 0, 255, 174;
+body.design-vexel[data-vexel-mode] .dash-standard {
   --vx-neon-dur: 260ms;
   --vx-neon-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -3974,6 +3976,20 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard {
    * above and the light should fall down the card, not spread sideways. */
   --vx-neon-reach-x: 58%;
   --vx-neon-reach-y: 86%;
+}
+
+/* The light surface carries the same effect in the primary atlas green, not the
+ * dark palette's mint: mint is legible against black and turns to a pale wash on
+ * white. Light also keeps the hover border and shadow it already had — that half
+ * of its card DNA is correct — so only the glow is added here. Weaker, because a
+ * white card starts far closer to the glow's own value than a black one does. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard {
+  --vx-neon: 7, 112, 77;
+  --vx-neon-strength: 0.10;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard {
+  --vx-neon: 0, 255, 174;
   --vx-neon-strength: 0.13;
 
   /* The hover shadow keeps the existing four-part construction — mint top rim,
@@ -4003,7 +4019,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard {
  * this selector list already resolve to a positioned ancestor inside their own
  * card, so none of them re-anchor. The cards already carry overflow: hidden,
  * which clips the gradient to the radius for free. */
-body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
   .dash-cols .block,
@@ -4017,7 +4033,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
   isolation: isolate;
 }
 
-body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
   .dash-cols .block,
@@ -4048,7 +4064,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
   );
 }
 
-body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
   .dash-cols .block,
@@ -4065,9 +4081,15 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
  * The one place light is allowed at rest: the top rim steps from 0.22 to 0.34
  * so the eye lands here first on arrival. It is the same rim every other card
  * already has, half a step up — not a new effect. */
-body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today {
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today {
   position: relative;
   isolation: isolate;
+}
+
+/* Only the rim step is dark-only: its ambient and contact shadows are mixed for
+ * a black page and would sit on a white card as a bruise. Light already has a
+ * correct resting hero shadow in its own card DNA, so it keeps it. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today {
   box-shadow:
     inset 0 2px 0 rgba(var(--vx-neon), 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -4075,7 +4097,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .h
     0 18px 38px -26px rgba(0, 0, 0, 0.85) !important;
 }
 
-body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today::after {
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today::after {
   content: "";
   position: absolute;
   z-index: -1;
@@ -4086,7 +4108,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .h
   background: radial-gradient(120% 62% at 50% -10%, rgba(var(--vx-neon), 0.13), rgba(var(--vx-neon), 0) 68%);
 }
 
-body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today:hover::after {
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today:hover::after {
   opacity: 1;
 }
 
@@ -4104,21 +4126,27 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .h
  * mark, so the active pill is left alone — a second highlight underneath it
  * would read as a rendering fault. Only the *unselected* pills gain a hover,
  * and it is white, not mint: mint here would compete with the lens for the
- * meaning "selected". */
+ * meaning "selected". Dark-only: a 6 % white wash is invisible on a white pill,
+ * so light gets the same idea in ink. */
 body.design-vexel[data-vexel-mode="dark"] .dash-standard .dr-pill:not(.on):hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--n-700);
 }
 
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dr-pill:not(.on):hover {
+  background: rgba(10, 24, 18, 0.05);
+  color: var(--n-700);
+}
+
 /* The report button is the page's only primary action, so it is the one control
  * that answers in mint. */
-body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn {
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn {
   transition:
     box-shadow var(--vx-neon-dur) var(--vx-neon-ease),
     transform var(--vx-neon-dur) var(--vx-neon-ease);
 }
 
-body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn:hover {
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn:hover {
   transform: translateY(-1px);
   box-shadow:
     0 0 0 1px rgba(var(--vx-neon), 0.30),
@@ -4128,7 +4156,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn:hover
 /* ── Focus ───────────────────────────────────────────────────────────────────
  * Keyboard arrival gets the same emerald, at full strength and without the
  * blur: a glow can be missed, a ring cannot. */
-body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-compose [data-kpi-band] > .kpi-m,
   .oppo-band .oppo-card,
   .dash-cols .block,
@@ -4145,7 +4173,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
  * The information survives without the movement: the edge and the glow still
  * change state, they simply arrive instantly and the card stops travelling. */
 @media (prefers-reduced-motion: reduce) {
-  body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  body.design-vexel[data-vexel-mode] .dash-standard :is(
     .vexel-compose [data-kpi-band] > .kpi-m,
     .oppo-band .oppo-card,
     .dash-cols .block,
@@ -4156,7 +4184,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
     transition: none;
   }
 
-  body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  body.design-vexel[data-vexel-mode] .dash-standard :is(
     .vexel-compose [data-kpi-band] > .kpi-m,
     .oppo-band .oppo-card,
     .dash-cols .block,
@@ -4164,7 +4192,7 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
     .dash-more-clip [data-integ-card],
     .vexel-revenue-row > .hero-today
   ):hover,
-  body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn:hover {
+  body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn:hover {
     transform: none;
   }
 }

@@ -1,20 +1,20 @@
-/* KIWI · VEXEL DARK HOME — cursor position for the edge-lighting layer.
+/* KIWI · VEXEL HOME — cursor position for the edge-lighting layer.
  *
  * Writes --vx-mx/--vx-my (the pointer, in card-local percentages) onto whichever
- * interactive homepage card the pointer is over. Layer E in design-vexel.css
+ * interactive homepage card the pointer is over. Layer G in design-vexel.css
  * reads them to place its glow; everything visible — the fade, the colour, the
  * reach — lives in CSS. This file only answers "where is the cursor".
  *
  * If this never runs, the gradient falls back to 50%/0% and the cards light from
  * the top edge instead. Nothing breaks, the effect just stops following.
  *
- * Gated three ways: the vexel skin, dark mode, and the homepage container. On a
- * light dashboard or any subpage it attaches nothing at all.
+ * Gated twice: the vexel skin (either climate) and the homepage container. On a
+ * subpage it attaches nothing at all.
  */
 (function () {
   'use strict';
 
-  /* Must stay in step with the :is() list in design-vexel.css (Layer F). A card
+  /* Must stay in step with the :is() list in design-vexel.css (Layer G). A card
    * present here but absent there gets tracked and never lights; absent here but
    * present there lights from its top edge and never follows the cursor. */
   var CARDS = [
@@ -40,11 +40,11 @@
     }
   }
 
-  function isDarkHome() {
+  function isVexelHome() {
     var b = document.body;
     return !!b &&
            b.classList.contains('design-vexel') &&
-           b.getAttribute('data-vexel-mode') === 'dark' &&
+           !!b.getAttribute('data-vexel-mode') &&
            !!document.querySelector('.dash-standard');
   }
 
@@ -96,7 +96,7 @@
   }
 
   function attach() {
-    if (!isDarkHome() || !shouldTrack()) return;
+    if (!isVexelHome() || !shouldTrack()) return;
     var root = document.querySelector('.dash-standard');
     if (!root || root.dataset.vxNeon === '1') return;
     root.dataset.vxNeon = '1';
@@ -116,7 +116,7 @@
   /* The skin controller flips body.design-vexel and data-vexel-mode at runtime,
    * so binding once on load would miss every later toggle. */
   function sync() {
-    if (isDarkHome()) attach(); else detach();
+    if (isVexelHome()) attach(); else detach();
   }
 
   if (document.readyState === 'loading') {
