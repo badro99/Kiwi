@@ -1141,9 +1141,15 @@ body.design-vexel :is(
   border-color: var(--n-200);
 }
 
+/* Row separators, not card edges. --n-200 is the right weight for an edge that
+ * already has a surface change either side of it; a divider has nothing but
+ * itself, and at 7% white on this near-black canvas it lands around 1.12:1 —
+ * dense six-column tables read as one undifferentiated block of text. One step
+ * up the same ramp, so the rule keeps using the ramp rather than a bespoke
+ * alpha that would drift away from it. */
 body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) :is(th, td),
 body.design-vexel :is(.menu-row, .stock-row, .team-mem, .sh-clock-row, .sc-history-row) {
-  border-color: var(--n-200);
+  border-color: var(--n-300);
 }
 
 body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) th,
@@ -1976,6 +1982,20 @@ body.design-vexel[data-vexel-mode="dark"] {
   --atlas-700: #12a074;
   --riad: rgba(0, 0, 0, 0.42);
   --riad-deep: #000000;
+
+  /* Inverse components, dark climate. See the note in tokens.css: in light an
+   * inverse panel separates from the page by going darker, and here it cannot —
+   * the page IS black. It separates by rising instead. 0.08 white is the lowest
+   * fill that still draws the panel's own edge at a glance without turning a
+   * KDS column head into a grey box competing with the cards around it. */
+  --inverse-surface: rgba(255, 255, 255, 0.08);
+  --inverse-ink: #ffffff;
+  --inverse-line: rgba(255, 255, 255, 0.12);
+
+  /* --riad is a scrim here, so identity fills that wanted the GREEN take this
+   * instead. Lifted off the brand #053B2C, which sits at 1.4:1 on black and
+   * renders an avatar as an invisible disc; this clears 3:1 for non-text. */
+  --brand-deep: #0C6B4E;
   --success: #00ffae;
   --warning: #ffb347;
   --danger: #ff6b5f;
@@ -2076,6 +2096,13 @@ body.design-vexel[data-vexel-mode="light"] {
   --atlas-700: #095B41;
   --riad: #053B2C;
   --riad-deep: #04241A;
+  /* Restated rather than inherited, matching this block's convention: the light
+   * climate declares its whole palette so a stale dark value can never survive
+   * a mode flip. Same values as :root — in light, inverse means the deep green. */
+  --inverse-surface: #053B2C;
+  --inverse-ink: #F7F5F0;
+  --inverse-line: rgba(247, 245, 240, 0.14);
+  --brand-deep: #053B2C;
   --success: #0B6E4F;
   --warning: #B26A00;
   --danger: #C2402F;

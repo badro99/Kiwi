@@ -38,6 +38,35 @@
   --ink: #0A0F0D;
   --ink-soft: #1A201D;
 
+  /* Inverse components — a dark slab carrying light text, on any background.
+     KDS column heads, the settled-today calendar cell, the Tables alert banner.
+
+     These existed for months as `background: var(--ink); color: var(--paper)`,
+     which reads correctly ONLY while ink is dark and paper is light. The Vexel
+     dark climate flips both — --ink becomes #fff and --paper becomes #000, which
+     is right for their actual meaning (foreground / page) and catastrophic for
+     anything that borrowed them positionally. Every one of those slabs inverted
+     into a white block with black text, punching light-mode holes through the
+     dark skin; the --riad pairing went further and rendered black on black at
+     1.00:1. Same failure the --forest note above describes: one name, two
+     meanings, no error — just the wrong colour.
+
+     So inverse surfaces get their own name and stop borrowing. The rule is that
+     --inverse-surface always reads as a panel DISTINCT from the page and
+     --inverse-ink always reads legibly on it, in both climates. In light that
+     means the deep brand green; in dark, where the page is already black, an
+     inverse panel can only separate by sitting slightly above it (see LAYER B
+     in design-vexel.css). */
+  --inverse-surface: #053B2C;
+  --inverse-ink: #F7F5F0;
+  --inverse-line: rgba(247, 245, 240, 0.14);
+
+  /* The deep brand green as an identity fill — avatar variants, channel
+     swatches, chart segments. Distinct from --riad, which the dark climate
+     legitimately reassigns to a translucent scrim; anything that wanted the
+     GREEN rather than the scrim asks for it by name here. */
+  --brand-deep: #053B2C;
+
   /* Elevation — the resting depth that makes a card a physical surface, not a
    * flat form. Shadows are tinted with --atlas (green) so they read as brand
    * light, not generic grey. --elev-1 = resting, --elev-2 = hover/lift. Dark
