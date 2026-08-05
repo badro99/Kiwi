@@ -3110,11 +3110,143 @@ function pdsNoirC(hex, keep) {
 /* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas) : libre reste
  * éteint, occupé rayonne menthe, réservé braise, nettoyage en tirets froids. */
 const PDS_STATUS_RING_NOIR = {
-  free:     { s: 'rgba(242,239,230,0.22)', w: 1.3, dash: '' },
-  occupied: { s: '#7DF2B0', w: 2.2, dash: '' },
-  reserved: { s: '#D9AE54', w: 2, dash: '' },
-  cleaning: { s: '#8FA6B8', w: 1.8, dash: '5 4' },
+  free:     { s: 'rgba(236,242,238,0.30)', w: 1.2, dash: '' },
+  occupied: { s: '#7DF2B0', w: 1.6, dash: '' },
+  reserved: { s: '#D9AE54', w: 1.5, dash: '' },
+  cleaning: { s: 'rgba(143,166,184,0.65)', w: 1.3, dash: '4 4' },
 };
+
+/* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
+ * La scène de l'accueil est un dessin au trait — contours en filet, chaises
+ * en tirets, remplissage à peine au-dessus du sol, la lumière réservée à
+ * l'état. Re-teinter le rendu matières (bois éclairé, chaises en volume) n'y
+ * arrivera jamais : la nuit a son propre tracé, le jour garde le sien. */
+function pdsNoirTick(x, y, deg) {
+  return `<rect x="-5" y="-1.4" width="10" height="2.8" rx="1.4" fill="rgba(236,242,238,0.38)"
+    transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`;
+}
+function pdsNoirChairs(g, seats) {
+  if (!seats || seats < 1) return '';
+  const { w, h, shape } = g;
+  let out = '';
+  if (shape === 'round') {
+    /* Tirets tangents sur la circonférence, comme la grande ronde du mockup. */
+    const rx = w / 2 + 7, ry = h / 2 + 7, cx = w / 2, cy = h / 2;
+    for (let i = 0; i < seats; i++) {
+      const a = -90 + (360 * i) / seats;
+      const rad = a * Math.PI / 180;
+      out += pdsNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), a + 90);
+    }
+    return out;
+  }
+  const alloc = pdsSeatSlots(w, h, seats);
+  const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
+  along(alloc.top, w).forEach(px => { out += pdsNoirTick(px, -7, 0); });
+  along(alloc.bottom, w).forEach(px => { out += pdsNoirTick(px, h + 7, 0); });
+  along(alloc.left, h).forEach(py => { out += pdsNoirTick(-7, py, 90); });
+  along(alloc.right, h).forEach(py => { out += pdsNoirTick(w + 7, py, 90); });
+  return out;
+}
+/* Plateau au trait : un contour dont la couleur EST le statut, un voile de
+ * remplissage pour décoller la table du sol, et le halo réservé à l'occupée. */
+function pdsNoirTableBody(g, ring, status) {
+  const glow = status === 'occupied';
+  const fill = status === 'occupied' ? 'rgba(0,255,174,0.05)'
+             : status === 'reserved' ? 'rgba(217,174,84,0.05)'
+             : 'rgba(236,242,238,0.028)';
+  const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+  if (g.shape === 'round') {
+    const rx = g.w / 2, ry = g.h / 2;
+    return `
+      ${glow ? `<ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="none" stroke="${ring.s}" stroke-width="6" opacity=".13"/>` : ''}
+      <ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="${fill}"/>
+      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - ring.w / 2)}" ry="${Math.max(1, ry - ring.w / 2)}"
+               fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
+  }
+  const r = Math.min(12, g.w / 5, g.h / 5);
+  return `
+    ${glow ? `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="6" opacity=".13"/>` : ''}
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}"/>
+    <rect x="${ring.w / 2}" y="${ring.w / 2}" width="${Math.max(1, g.w - ring.w)}" height="${Math.max(1, g.h - ring.w)}"
+          rx="${Math.max(0, r - ring.w / 2)}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
+}
+/* Le bâti au trait. Chaque genre a son idéogramme — la caisse porte son
+ * interrupteur menthe, la cuisine ses hachures en filet, la porte son arc —
+ * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
+ * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
+function pdsNoirFixture(e, K, g) {
+  const line = 'rgba(236,242,238,0.30)';
+  const dim  = 'rgba(236,242,238,0.16)';
+  switch (e.type) {
+    case 'texte': return '';
+    case 'comptoir':
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${Math.min(g.h / 2, 16)}"
+        fill="rgba(236,242,238,0.02)" stroke="${line}" stroke-width="1.4"/>`;
+    case 'caisse': {
+      const kr = Math.min(g.h / 2, 12);
+      const th = Math.min(g.h - 16, 14), tw = Math.max(th * 1.9, Math.min(g.w * 0.34, 30));
+      const tx = g.w - tw - 9, ty = (g.h - th) / 2;
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${kr}" fill="rgba(236,242,238,0.02)" stroke="${line}" stroke-width="1.4"/>
+        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="${(th / 2).toFixed(1)}" fill="rgba(0,255,174,0.14)" stroke="#7DF2B0" stroke-width="1.1"/>
+        <circle cx="${(tx + tw - th / 2).toFixed(1)}" cy="${(ty + th / 2).toFixed(1)}" r="${Math.max(1.5, th / 2 - 2.5).toFixed(1)}" fill="#7DF2B0"/>`;
+    }
+    case 'cuisine':
+      return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>
+        <rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'porte':
+      return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${line}" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <rect x="0" y="${g.h - 3.5}" width="${g.w}" height="3.5" rx="1.75" fill="${line}"/>`;
+    case 'mur':
+      return `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${Math.min(2, g.h / 2)}" fill="${line}"/>`;
+    case 'fenetre':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${line}"/>
+        <rect x="0" y="0" width="1.5" height="${g.h}" fill="${line}"/>
+        <rect x="${g.w - 1.5}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`;
+    case 'passe':
+      return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+    case 'plante': {
+      const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(0,255,174,0.04)" stroke="rgba(125,242,176,0.35)" stroke-width="1.2"/>
+        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(125,242,176,0.28)" stroke-width="1"/>`;
+    }
+    case 'colonne':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(236,242,238,0.06)" stroke="${line}" stroke-width="1.2"/>`;
+    case 'wc':
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'escalier': {
+      const n = Math.max(3, Math.min(12, Math.round(g.h / 15))), step = g.h / n;
+      let out = `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="4" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+      for (let i = 1; i < n; i++) {
+        out += `<line x1="1.5" y1="${(step * i).toFixed(1)}" x2="${g.w - 1.5}" y2="${(step * i).toFixed(1)}" stroke="${dim}" stroke-width="1"/>`;
+      }
+      return out;
+    }
+    case 'banquette': {
+      const r = Math.min(8, g.h / 3);
+      const n = Math.max(1, Math.round(g.w / 84)), pad = 4, cw = (g.w - pad * (n + 1)) / n;
+      let out = `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${r}" fill="rgba(236,242,238,0.03)" stroke="${line}" stroke-width="1.3"/>`;
+      for (let i = 0; i < n; i++) {
+        out += `<rect x="${(pad + i * (cw + pad)).toFixed(1)}" y="${pad}" width="${cw.toFixed(1)}" height="${(g.h - pad * 2).toFixed(1)}" rx="${Math.max(2, r - 2)}" fill="none" stroke="${dim}" stroke-width="1"/>`;
+      }
+      return out;
+    }
+    case 'claustra':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 11)) }, (_, i) =>
+          `<rect x="${(i * 11 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`).join('');
+    case 'garde':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" rx="0.75" fill="${line}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 22)) }, (_, i) =>
+          `<rect x="${(i * 22 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`).join('');
+    case 'tapis':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(236,242,238,0.02)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+    case 'vitrine':
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+    default:
+      return `<rect x="0.75" y="0.75" width="${Math.max(2, g.w - 1.5)}" height="${Math.max(2, g.h - 1.5)}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+  }
+}
 /* Le sol la nuit : charbon teinté par le sol du commerçant, une grille fine
  * calée sur le pas d'aimantation (3 × PDS_GRID), et un souffle de lumière
  * depuis le haut — la même lumière que l'accueil sombre. Les finitions
@@ -5283,10 +5415,10 @@ function pdsHandles(o, g, T) {
  *   on a long table.                                                       */
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
-  /* Vue nuit : la matière est rabattue vers le charbon et le statut passe à
-     l'anneau lumineux. Encre et chaises se recalculent d'elles-mêmes. */
+  /* Vue nuit : tracé dédié (contour-statut, chaises en tirets, numéro à deux
+     chiffres). Vue jour : le rendu matières partagé avec la caisse, intact. */
   const noir = pdsNoir();
-  const c = noir ? pdsNoirC(pdsColor(t), 0.12) : pdsColor(t);
+  const c = pdsColor(t);
   const P = PDS_PAD;
   const sel = PDS_SEL.has(t.id);
   const only = sel && PDS_SEL.size === 1;
@@ -5294,12 +5426,14 @@ function pdsRenderTable(t, state, T) {
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
   const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING;
   const ring = R[t.status] || R.free;
-  const ink = pdsInk(c);
-  /* Shared with the caisse — see pdsTableBody in assets/floorplan-core.js. */
-  const body = pdsTableBody(g, c, ring, noir ? { flat: true } : null);
+  const ink = noir ? '#E9EEE9' : pdsInk(c);
+  const body = noir
+    ? pdsNoirTableBody(g, ring, t.status || 'free')
+    : pdsTableBody(g, c, ring);
 
   const showChairs = state.showChairs !== false;
-  const chairs = showChairs ? pdsChairsFor(g, g.seats, c) : '';
+  const chairs = showChairs ? (noir ? pdsNoirChairs(g, g.seats) : pdsChairsFor(g, g.seats, c)) : '';
+  const numDisp = noir && /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
   const serverBadge = sv
     ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
     : '';
@@ -5315,7 +5449,7 @@ function pdsRenderTable(t, state, T) {
         ${chairs}${body}
       </svg>
       <div class="pds-tbl-face" style="color:${ink};">
-        <span class="pds-tbl-num">${pdsEsc(t.num)}</span>
+        <span class="pds-tbl-num">${pdsEsc(numDisp)}</span>
         ${g.seats ? `<span class="pds-tbl-covers">${g.seats}p</span>` : ''}
       </div>
       ${serverBadge}
@@ -5331,19 +5465,19 @@ function pdsRenderElement(e, state, T) {
   const K = PDS_FIX[e.type];
   if (!K) return '';
   const g = pdsGeom(e);
-  /* Vue nuit : le bâti garde plus de sa teinte que les tables (0.30) et les
-     pièces au trait (porte, escalier…) presque toute — un arc de porte
-     rabattu au charbon disparaîtrait dans le sol. */
-  const c = pdsNoir()
-    ? pdsNoirC(pdsColor(e), K.render === 'svg' ? 0.45 : 0.16)
-    : pdsColor(e);
+  const noir = pdsNoir();
+  const c = pdsColor(e);
   const sel = PDS_SEL.has(e.id);
   const only = sel && PDS_SEL.size === 1;
   const label = (e.label != null ? e.label : (K.label || ''));
 
+  /* Vue nuit : idéogrammes au trait (pdsNoirFixture), les matières du
+     commerçant ne jouent que le jour. */
   let inner = '';
   let boxStyle = '';
-  if (K.render === 'svg') {
+  if (noir) {
+    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${pdsNoirFixture(e, K, g)}</svg>`;
+  } else if (K.render === 'svg') {
     inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${K.draw(e, c, g)}</svg>`;
   } else if (K.render === 'box') {
     boxStyle = pdsBoxStyle(K.draw(e, c, g) || {}, c);
@@ -5356,7 +5490,7 @@ function pdsRenderElement(e, state, T) {
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
       <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(236,242,238,0.55)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -7756,13 +7890,26 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
 
-  /* — Tables : le statut est une lumière — */
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] { filter:drop-shadow(0 0 22px rgba(0,255,174,0.15)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] { filter:drop-shadow(0 0 18px rgba(217,174,84,0.13)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.14) drop-shadow(0 0 16px rgba(0,255,174,0.12)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.10) drop-shadow(0 0 26px rgba(0,255,174,0.22)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:.55; }
+  /* — Tables : le statut est une lumière, le numéro un chuchotement — */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-num {
+    font:600 11px/1 var(--mono, monospace);
+    letter-spacing:0.09em; color:rgba(242,239,230,0.58);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:#E9F6EE; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(233,214,175,0.85); }
+  /* Le nombre de couverts n'existe qu'à l'approche — le mockup n'affiche que
+     le numéro, et c'est ce silence qui le rend cher. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:0; transition:opacity 180ms ease; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] { filter:drop-shadow(0 0 24px rgba(0,255,174,0.10)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] { filter:drop-shadow(0 0 18px rgba(217,174,84,0.08)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25) drop-shadow(0 0 14px rgba(0,255,174,0.10)); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.18) drop-shadow(0 0 28px rgba(0,255,174,0.18)); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
+  /* Les pastilles serveur appartiennent à l'Affectation ; en Aménagement
+     elles ne font que du bruit que le mockup n'a pas. */
+  .pds-noir.pds-noir.pds-noir .pds-stage-layout .pds-tbl-server { display:none; }
 
   /* — Sélection : cadre menthe + tirets d'angle, le geste de l'accueil — */
   .pds-noir.pds-noir.pds-noir .pds-hdl-layer::before {
@@ -7780,12 +7927,8 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-el.is-resizing .pds-dim { background:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-locked { background:rgba(242,239,230,0.14); color:#EDEAE0; }
 
-  /* — Bâti : arête claire fine, cuisine hachurée à l'encre claire — */
-  .pds-noir.pds-noir.pds-noir .pds-el-fill { box-shadow:inset 0 0 0 1px rgba(242,239,230,0.10); }
-  .pds-noir.pds-noir.pds-noir .pds-el-cuisine .pds-el-fill::after {
-    content:''; position:absolute; inset:0;
-    background:repeating-linear-gradient(45deg, rgba(242,239,230,0.05) 0 6px, transparent 6px 14px);
-  }
+  /* — Bâti : les idéogrammes se dessinent en SVG (pdsNoirFixture), le CSS ne
+     rajoute rien sur le fond — un liseré ici doublerait le trait. — */
   .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
     outline-color:rgba(125,242,176,0.65);
     filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
