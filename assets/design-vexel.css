@@ -4124,6 +4124,18 @@ body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-tod
   inset: 0;
   pointer-events: none;
   opacity: 0;
+
+  /* One permanent compositor layer, declared at rest rather than on :hover.
+   * The 22 grid cards cannot afford that and get `will-change` only while
+   * hovered — but they animate `transform`, which the compositor owns either
+   * way. The hero animates OPACITY on a gradient the full width of the page,
+   * and a layer created at the instant the animation starts still costs one
+   * main-thread paint. On a card this wide that paint misses the frame, Chrome
+   * updates it in tiles, and the seam between a painted and an unpainted tile
+   * reads as a hard vertical edge sliding across the card. One layer, always,
+   * for one card. */
+  will-change: opacity;
+
   transition: opacity 320ms var(--vx-neon-ease);
   background: radial-gradient(120% 78% at 50% -10%, rgba(var(--vx-neon), 0.19), rgba(var(--vx-neon), 0) 72%);
 }
