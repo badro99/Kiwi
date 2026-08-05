@@ -668,6 +668,8 @@ section('Whole-project regressions');
     'kitchen-relay-test.js',
     'order-mode-exit-test.js',
     'resto-carte-test.js',
+    'restaurant-menu-performance-test.js',
+    'restaurant-menu-peak-hours-test.js',
     'void-stock-test.js',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
