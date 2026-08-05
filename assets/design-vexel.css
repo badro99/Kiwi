@@ -1343,7 +1343,7 @@ body.design-vexel .vx-entry-logo img {
 }
 
 body.design-vexel[data-vexel-mode="dark"] .vx-entry-logo .brand-logo-dark,
-body.design-vexel[data-vexel-mode] .vx-entry-logo .brand-logo-light {
+body.design-vexel[data-vexel-mode="light"] .vx-entry-logo .brand-logo-light {
   display: block;
 }
 
