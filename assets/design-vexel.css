@@ -3973,9 +3973,14 @@ body.design-vexel[data-vexel-mode] .dash-standard {
   /* Reach of the cursor glow, as a share of the card's own box so it scales with
    * the card. Wide and weak reads as illumination; tight and strong reads as a
    * cheap flashlight. Taller than wide because the pointer usually enters from
-   * above and the light should fall down the card, not spread sideways. */
-  --vx-neon-reach-x: 58%;
-  --vx-neon-reach-y: 86%;
+   * above and the light should fall down the card, not spread sideways.
+   *
+   * At 58%/86% the lit area stopped well short of the card's edges, so the only
+   * thing reaching the perimeter was the border — which is exactly what made the
+   * card read as outlined rather than lit. The light now runs past the edge and
+   * gets clipped by the radius, so the brightest thing on the card is its middle. */
+  --vx-neon-reach-x: 78%;
+  --vx-neon-reach-y: 112%;
 }
 
 /* The light surface carries the same effect in the primary atlas green, not the
@@ -3990,22 +3995,21 @@ body.design-vexel[data-vexel-mode="light"] .dash-standard {
 
 body.design-vexel[data-vexel-mode="dark"] .dash-standard {
   --vx-neon: 0, 255, 174;
-  --vx-neon-strength: 0.13;
+  --vx-neon-strength: 0.20;
 
-  /* The hover shadow keeps the existing four-part construction — mint top rim,
-   * white hairline, contact, ambient — and inserts one contained emerald halo.
-   * Negative spread keeps the halo inside the card's own footprint so adjacent
-   * cards in the KPI band never pool light between them.
+  /* NO mint on the perimeter. Two things used to draw a line around the whole
+   * card and they compounded: a mint border, and a `0 0 30px -14px` halo whose
+   * negative spread pulled the blur back onto the edge it came from. Against
+   * black, mint at any alpha is a crisp stroke — so the card came out ringed,
+   * with an interior that stayed dark. That is a selection state, not light.
    *
-   * The border stays low (0.26). At 0.40 it traced a hard, even line around the
-   * whole perimeter, which on a large card reads as a selection outline rather
-   * than an edge catching light. The top rim carries the accent instead — it is
-   * directional, so it says "lit from above" where a full ring says "selected". */
-  --vx-card-border-hover: rgba(var(--vx-neon), 0.26);
+   * The border now goes neutral and barely moves; the accent survives only as
+   * the inset top rim, which is directional and reads as "lit from above". All
+   * the emerald is in the glow on ::after, inside the card, where light belongs. */
+  --vx-card-border-hover: rgba(255, 255, 255, 0.16);
   --vx-card-shadow-hover:
-    inset 0 2px 0 rgba(var(--vx-neon), 0.55),
+    inset 0 2px 0 rgba(var(--vx-neon), 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 0 30px -14px rgba(var(--vx-neon), 0.42),
     0 24px 46px -28px rgba(0, 0, 0, 0.92);
 }
 
@@ -4105,19 +4109,21 @@ body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-tod
   pointer-events: none;
   opacity: 0;
   transition: opacity 320ms var(--vx-neon-ease);
-  background: radial-gradient(120% 62% at 50% -10%, rgba(var(--vx-neon), 0.13), rgba(var(--vx-neon), 0) 68%);
+  background: radial-gradient(120% 78% at 50% -10%, rgba(var(--vx-neon), 0.19), rgba(var(--vx-neon), 0) 72%);
 }
 
 body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today:hover::after {
   opacity: 1;
 }
 
+/* The `0 0 0 1px` ring and the `0 0 34px -12px` edge-hugging halo are gone for
+ * the same reason as on the cards: together they drew the outline the hero was
+ * being judged by. The rim still steps up on hover — that is the whole tell — and
+ * the bloom above carries the rest. */
 body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today:hover {
   box-shadow:
-    inset 0 2px 0 rgba(var(--vx-neon), 0.62),
+    inset 0 2px 0 rgba(var(--vx-neon), 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 0 0 1px rgba(var(--vx-neon), 0.09),
-    0 0 34px -12px rgba(var(--vx-neon), 0.50),
     0 24px 46px -28px rgba(0, 0, 0, 0.92) !important;
 }
 
