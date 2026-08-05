@@ -1193,7 +1193,7 @@ handlers['terminal-catalog'] = () => {
         `).join('')}
       </div>
 
-      <div style="padding:16px 18px; background:var(--ink); color:var(--paper); border-radius:14px;">
+      <div style="padding:16px 18px; background:var(--inverse-surface); color:var(--inverse-ink); border-radius:14px;">
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <div style="flex:1; min-width:240px;">
             <div style="font-family:var(--mono); font-size:10px; letter-spacing:0.12em; color:var(--mint); margin-bottom:4px;">${T.proProgram}</div>
@@ -2020,7 +2020,7 @@ handlers['nav-equipe'] = () => {
       </div>
 
       <!-- Kiwi AI · pointage anomalies -->
-      <div style="background:linear-gradient(135deg, var(--ink) 0%, #15201A 100%); color:var(--paper); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="background:linear-gradient(135deg, var(--inverse-surface) 0%, #15201A 100%); color:var(--inverse-ink); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:10px;">
             <div style="width:24px; height:24px; border-radius:7px; background:rgba(125,242,176,0.16); display:flex; align-items:center; justify-content:center;">
@@ -2036,7 +2036,7 @@ handlers['nav-equipe'] = () => {
         ${AI_ALERTS.map(a => `
           <div style="display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center; padding:10px 0; border-top:1px solid rgba(255,255,255,0.07);">
             <div>
-              <div style="font-size:13px; font-weight:500; color:var(--paper);">${a.title}</div>
+              <div style="font-size:13px; font-weight:500; color:var(--inverse-ink);">${a.title}</div>
               <div style="font-size:11.5px; color:#a7d5b9; margin-top:3px; line-height:1.5;">${a.detail}</div>
             </div>
             <button class="kb" data-action="ai-pointage" data-arg="${a.kind}" style="background:rgba(125,242,176,0.14); color:var(--mint); padding:6px 12px; font-size:11.5px; white-space:nowrap;">${a.action} →</button>
@@ -7033,7 +7033,7 @@ const PDS_INLINE_CSS = `
   .pds-modes { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:11px; }
   .pds-mode { background:transparent; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:500; color:var(--n-600); cursor:pointer; transition:.18s letter-spacing:0.01em; }
   .pds-mode:hover { color:var(--ink); }
-  .pds-mode.active { background:var(--ink); color:var(--paper); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
+  .pds-mode.active { background:var(--inverse-surface); color:var(--inverse-ink); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
   .pds-mode-desc { flex:1; font-size:12px; color:var(--n-600); padding:0 6px; min-width:240px; }
   .pds-zone-tabs { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; }
   .pds-zone { background:transparent; border:none; padding:7px 12px; border-radius:7px; font-size:12px; font-weight:500; color:var(--n-700); cursor:pointer; display:flex; align-items:center; gap:6px; transition:.16s; }
@@ -7482,7 +7482,7 @@ const PDS_INLINE_CSS = `
   .pds-pillrow { display:flex; gap:6px; flex-wrap:wrap; }
   .pds-cfg-pill { padding:7px 12px; border:1px solid var(--n-200); background:var(--paper); border-radius:8px; font-size:12px; cursor:pointer; color:var(--n-700); transition:.18s; font-family:inherit; }
   .pds-cfg-pill:hover { border-color:var(--atlas); }
-  .pds-cfg-pill.active { background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600; }
+  .pds-cfg-pill.active { background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface); font-weight:600; }
   .pds-strat-cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   @media (max-width: 720px) { .pds-strat-cards { grid-template-columns:1fr; } }
   .pds-strat-card { background:var(--paper); border:1.5px solid var(--n-200); border-radius:10px; padding:12px; text-align:left; cursor:pointer; transition:.16s; font-family:inherit; }
@@ -7501,7 +7501,7 @@ const PDS_INLINE_CSS = `
   }
   .pds-scene-pill:hover { border-color:var(--atlas); color:var(--ink); transform: translateY(-1px); }
   .pds-scene-pill.active {
-    background:var(--ink); color:var(--paper); border-color:var(--ink);
+    background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);
     font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16);
   }
 
@@ -9899,7 +9899,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Promotions',
       subtitle: 'Maison Mansour · Gueliz · 4 campagnes en direct · 1 planifiée',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--riad), var(--atlas));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--brand-deep), var(--atlas));">
           <div class="l">UPLIFT REVENUE · CAMPAGNES ACTIVES</div>
           <div class="big">+${fmtInt(totalUplift)} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
           <div class="sub">${fmtInt(totalRedem)} échanges aujourd'hui · ${active.filter(a => a.live).length} promos en cours · Tax-free Touristes UE = top performer</div>
@@ -10217,7 +10217,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Retours & échanges',
       subtitle: 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">FENÊTRE DE RETOUR · 14 JOURS</div>
           <div class="big">${pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">en attente</span></div>
           <div class="sub">Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas</div>
@@ -10732,7 +10732,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Calendrier rendez-vous',
       subtitle: 'Spa Bahia · Hivernage · 3 praticiennes',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">SEMAINE DU 27 AVRIL · MERCREDI EN COURS</div>
           <div class="big">${todaysCount} <span style="font-size:18px; opacity:0.7;">RDV aujourd'hui</span></div>
           <div class="sub">3 praticiennes · 12 heures d'ouverture · liste d'attente : ${WAIT.length} clientes</div>
@@ -11141,7 +11141,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Services & forfaits',
       subtitle: 'Spa Bahia · catalogue complet · 17 prestations',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">CATALOGUE COMPLET</div>
           <div class="big">${SERVICES.length + PACKAGES.length + CURES.length} <span style="font-size:18px; opacity:0.7;">prestations actives</span></div>
           <div class="sub">12 services à la carte · 4 forfaits journée · 3 cures · ticket moyen 612 MAD</div>
@@ -11394,7 +11394,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-card .top { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
     .pr-blob { width: 80px; height: 80px; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: var(--paper); font-weight: 600; font-size: 26px; letter-spacing: -0.04em; position: relative; overflow: hidden; }
     .pr-blob::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 28% 20%, rgba(255,255,255,0.28), transparent 55%); border-radius: 22px; }
-    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--riad)); }
+    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); }
     .pr-blob.b { background: linear-gradient(135deg, #D99A2B, #8A6210); }
     .pr-blob.c { background: linear-gradient(135deg, var(--atlas-700, #054C36), var(--atlas)); }
     .pr-card .nm { font-weight: 600; font-size: 16px; letter-spacing: -0.015em; }
@@ -11427,12 +11427,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-cert-stat.ok { background: #E3F7EC; color: var(--atlas-700, #054C36); }
     .pr-cert-stat.warn { background: var(--warn-soft); color: var(--warn-ink); }
     .pr-cert-stat.exp { background: #FDE8E4; color: #9B2F22; }
-    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--riad)); color: var(--paper); border-radius: 14px; padding: 18px; margin-top: 14px; }
+    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-top: 14px; }
     .pr-calc-out .l { font-size: 10.5px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--mint); text-transform: uppercase; }
     .pr-calc-out .v { font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .pr-calc-out .br { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(125,242,176,0.18); font-size: 12px; }
     .pr-calc-out .br span { color: #c6ead4; font-family: var(--mono); }
-    .pr-calc-out .br b { color: var(--paper); font-family: var(--mono); font-weight: 600; }
+    .pr-calc-out .br b { color: var(--inverse-ink); font-family: var(--mono); font-weight: 600; }
     `;
     document.head.appendChild(style);
   }
@@ -11906,7 +11906,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-history-row .pr { font-family: var(--mono); font-weight: 600; text-align: right; font-feature-settings: "tnum" 1; }
     .sc-history-row .pra { font-size: 11.5px; color: var(--n-500); }
 
-    .sc-gift { background: linear-gradient(135deg, var(--ink), var(--ink-soft)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), var(--inverse-line)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
     .sc-gift::after { content: ""; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; background: radial-gradient(circle, var(--mint), transparent 60%); opacity: 0.18; pointer-events: none; }
     .sc-gift .l { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--mint); }
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
@@ -12655,7 +12655,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <h3>Groupes d'options</h3>
             <div class="sub">${OPTION_GROUPS.length} groupes · attachez-les à un produit depuis l'éditeur d'item.</div>
           </div>
-          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">
+          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
             Créer un groupe
           </button>
@@ -13331,13 +13331,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-stationbar::-webkit-scrollbar { display: none; }
       .kit-station { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--n-600); letter-spacing: -0.005em; white-space: nowrap; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-station:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-station.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-station.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-station i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
       .kit-station-ct { font-family: var(--mono); font-size: 11.5px; font-weight: 600; line-height: 1; padding: 2px 6px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-station.on .kit-station-ct { background: rgba(255,255,255,0.18); color: var(--paper); }
       .kit-history-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 11px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--n-600); white-space: nowrap; flex-shrink: 0; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-history-toggle:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-history-toggle.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-history-toggle svg { width: 16px; height: 16px; }
       .kit-htg-ct { font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1; padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: var(--paper); }

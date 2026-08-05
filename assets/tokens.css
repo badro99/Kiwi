@@ -230,6 +230,14 @@ section.loose { padding: 128px 0; }
    browsers already round the outline to the element's own radius. */
 :focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; }
 
+/* …except elements that only ever take focus from script. A route change moves
+   focus to the destination's <h1 tabindex="-1"> so assistive tech announces the
+   new page. That heading is not keyboard-reachable and is not interactive, so
+   the ring lands as a stray full-width box drawn around the page title after
+   every navigation — in Vexel dark, in neon. Keep the focus, which does real
+   work; drop only the paint. Every Tab-reachable control still rings. */
+[tabindex="-1"]:focus, [tabindex="-1"]:focus-visible { outline: none; }
+
 /* Mini tabular */
 table.tab { width: 100%; border-collapse: collapse; }
 table.tab th, table.tab td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--n-200); font-size: 14px; }
