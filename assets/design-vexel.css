@@ -1963,8 +1963,22 @@ body.design-vexel[data-vexel-mode="dark"] {
   --paper: #000000;
   --paper-soft: rgba(0, 0, 0, 0.30);
   --paper-muted: rgba(255, 255, 255, 0.04);
-  --surface: rgba(0, 0, 0, 0.30);
-  --paper-elev: rgba(0, 0, 0, 0.38);
+
+  /* A surface RISES; it does not darken. In light that is automatic — --surface
+   * is 10% more white than --paper-soft, so a card lifts off the page and a
+   * segmented thumb lifts off its track. Dark had both set to the same
+   * rgba(0,0,0,0.30), and over a #000 page darkening black is a no-op: cards
+   * landed at exactly the elevation of the thing they sat on, and every
+   * track/thumb pair collapsed into one flat rectangle. That reads as "nothing
+   * is separated from anything", which is most of why the sub-pages feel
+   * confusing next to the home page.
+   *
+   * 0.055 white is not a guess — it is the value the approved home KPI card
+   * already uses for its own lift, so sub-page cards now speak the same
+   * elevation language as the surface that was signed off. --paper-elev keeps
+   * one step above it for genuinely raised things (menus, popovers). */
+  --surface: rgba(255, 255, 255, 0.055);
+  --paper-elev: rgba(255, 255, 255, 0.08);
   --n-100: rgba(255, 255, 255, 0.045);
   --n-200: rgba(255, 255, 255, 0.07);
   --n-300: rgba(255, 255, 255, 0.12);
