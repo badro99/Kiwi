@@ -3932,3 +3932,218 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-label {
 body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
   fill: var(--ink);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER E · DARK HOME · EDGE LIGHTING
+ *
+ * Scoped to .dash-standard in dark: the homepage only. Subpages and the whole
+ * light climate are untouched — every rule below is gated on both the mode
+ * attribute and the homepage container.
+ *
+ * The premise is that light should mark *importance* and *intent*, not coat the
+ * page. So nothing here fires at rest: the resting dashboard is byte-for-byte
+ * what it was, minus one half-step on the hero's top rim (below). Illumination
+ * is the response to a pointer, which makes it wayfinding rather than decor.
+ *
+ * Three tiers, by what the card actually is:
+ *   1 · Interactive cards get a glow that follows the cursor. Tracking reads as
+ *       "this responds to you", so it is spent only where a click does something.
+ *   2 · Display cards (rail, goals, mix) get the edge and nothing else. They
+ *       must not imitate a control — see the note above tier 2.
+ *   3 · The hero is the landmark and gets the widest bloom, but anchored to its
+ *       top edge rather than the cursor: it is not clickable, and its chart runs
+ *       its own hover readout that a tracking glow would fight.
+ *
+ * Colour is the mint already in the dark palette (--vx-accent, #00ffae) held as
+ * an RGB triplet so alpha can vary per tier. No new hue enters the system.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard {
+  --vx-neon: 0, 255, 174;
+  --vx-neon-dur: 260ms;
+  --vx-neon-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Reach of the cursor glow. Wide and weak reads as illumination; tight and
+   * strong reads as a cheap flashlight. */
+  --vx-neon-reach: 260px;
+  --vx-neon-strength: 0.10;
+
+  /* The hover shadow keeps the existing four-part construction — mint top rim,
+   * white hairline, contact, ambient — and inserts one contained emerald halo.
+   * Negative spread keeps the halo inside the card's own footprint so adjacent
+   * cards in the KPI band never pool light between them. */
+  --vx-card-border-hover: rgba(var(--vx-neon), 0.40);
+  --vx-card-shadow-hover:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(var(--vx-neon), 0.07),
+    0 0 26px -12px rgba(var(--vx-neon), 0.45),
+    0 24px 46px -28px rgba(0, 0, 0, 0.92);
+}
+
+/* ── Tier 1 · interactive cards ──────────────────────────────────────────────
+ * The glow lives on ::after at z-index -1 under `isolation: isolate`: that puts
+ * it above the card's own background but below every child, so text contrast is
+ * untouched no matter where the cursor sits. isolate also traps the -1 inside
+ * the card — without it the layer would paint behind the card onto the page.
+ *
+ * position: relative is safe here: all 23 absolutely-positioned descendants in
+ * this selector list already resolve to a positioned ancestor inside their own
+ * card, so none of them re-anchor. The cards already carry overflow: hidden,
+ * which clips the gradient to the radius for free. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .dash-more-clip [data-integ-card]
+) {
+  position: relative;
+  isolation: isolate;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .dash-more-clip [data-integ-card]
+)::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--vx-neon-dur) var(--vx-neon-ease);
+  /* --vx-mx/--vx-my are written by assets/vexel-neon.js. The 50%/0% fallback
+   * keeps the card lit from its top edge if that script never runs. */
+  background: radial-gradient(
+    var(--vx-neon-reach) circle at var(--vx-mx, 50%) var(--vx-my, 0%),
+    rgba(var(--vx-neon), var(--vx-neon-strength)),
+    rgba(var(--vx-neon), 0) 60%
+  );
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .dash-more-clip [data-integ-card]
+):hover::after {
+  opacity: 1;
+}
+
+/* ── Tier 2 · display cards ──────────────────────────────────────────────────
+ * Rail, goals and mix render numbers; there is nothing to click. They inherit
+ * the shared edge and lift from the card DNA above, and deliberately stop
+ * there — no tracking glow, because a light that follows the cursor is a
+ * promise of interactivity these cards cannot keep. */
+
+/* ── Tier 3 · the hero ───────────────────────────────────────────────────────
+ * The one place light is allowed at rest: the top rim steps from 0.22 to 0.34
+ * so the eye lands here first on arrival. It is the same rim every other card
+ * already has, half a step up — not a new effect. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 18px 38px -26px rgba(0, 0, 0, 0.85) !important;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms var(--vx-neon-ease);
+  background: radial-gradient(120% 62% at 50% -10%, rgba(var(--vx-neon), 0.13), rgba(var(--vx-neon), 0) 68%);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today:hover::after {
+  opacity: 1;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today:hover {
+  box-shadow:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 1px rgba(var(--vx-neon), 0.09),
+    0 0 34px -12px rgba(var(--vx-neon), 0.50),
+    0 24px 46px -28px rgba(0, 0, 0, 0.92) !important;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────────
+ * The segmented range control already carries the liquid lens as its selection
+ * mark, so the active pill is left alone — a second highlight underneath it
+ * would read as a rendering fault. Only the *unselected* pills gain a hover,
+ * and it is white, not mint: mint here would compete with the lens for the
+ * meaning "selected". */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .dr-pill:not(.on):hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--n-700);
+}
+
+/* The report button is the page's only primary action, so it is the one control
+ * that answers in mint. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn {
+  transition:
+    box-shadow var(--vx-neon-dur) var(--vx-neon-ease),
+    transform var(--vx-neon-dur) var(--vx-neon-ease);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(var(--vx-neon), 0.30),
+    0 0 30px -8px rgba(var(--vx-neon), 0.62);
+}
+
+/* ── Focus ───────────────────────────────────────────────────────────────────
+ * Keyboard arrival gets the same emerald, at full strength and without the
+ * blur: a glow can be missed, a ring cannot. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .dash-more-clip [data-integ-card],
+  .dr-pill,
+  .vexel-report-btn
+):focus-visible {
+  outline: 2px solid rgba(var(--vx-neon), 0.85);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+ * The information survives without the movement: the edge and the glow still
+ * change state, they simply arrive instantly and the card stops travelling. */
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+    .vexel-compose [data-kpi-band] > .kpi-m,
+    .oppo-band .oppo-card,
+    .dash-cols .block,
+    .dash-cols .settle,
+    .dash-more-clip [data-integ-card],
+    .vexel-revenue-row > .hero-today
+  )::after {
+    transition: none;
+  }
+
+  body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
+    .vexel-compose [data-kpi-band] > .kpi-m,
+    .oppo-band .oppo-card,
+    .dash-cols .block,
+    .dash-cols .settle,
+    .dash-more-clip [data-integ-card],
+    .vexel-revenue-row > .hero-today
+  ):hover,
+  body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-report-btn:hover {
+    transform: none;
+  }
+}
