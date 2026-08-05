@@ -3101,7 +3101,7 @@ function pdsNoirC(hex, keep) {
   const k = keep == null ? 0.18 : keep;
   const h = String(hex || '#141A16').replace('#', '');
   const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-  const base = [13, 17, 14];   /* #0D110E — le charbon de la salle */
+  const base = [8, 11, 9];     /* #080B09 — le charbon de la salle */
   return '#' + [0, 2, 4].map((i, j) => {
     const c = parseInt(n.slice(i, i + 2), 16) || 0;
     return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
@@ -3891,6 +3891,7 @@ Object.assign(PDS_STR.fr, {
   undoNothing: 'Rien à annuler', redoNothing: 'Rien à rétablir',
   unitCm: 'cm', deletedSuffix: 'supprimé',
   roomTitle: 'La salle', roomHint: 'Sol, murs et dimensions de cette zone.',
+  roomHintNuit: 'Dimensions de cette zone.',
   roomFloor: 'Sol', roomWall: 'Murs', roomFinish: 'Finition',
   roomW: 'Larg.', roomH: 'Prof.', roomWallW: 'Mur',
   finplain: 'Uni', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3943,6 +3944,7 @@ Object.assign(PDS_STR.en, {
   undoNothing: 'Nothing to undo', redoNothing: 'Nothing to redo',
   unitCm: 'cm', deletedSuffix: 'deleted',
   roomTitle: 'The room', roomHint: 'Floor, walls and dimensions of this zone.',
+  roomHintNuit: 'Dimensions of this zone.',
   roomFloor: 'Floor', roomWall: 'Walls', roomFinish: 'Finish',
   roomW: 'Width', roomH: 'Depth', roomWallW: 'Wall',
   finplain: 'Plain', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3995,6 +3997,7 @@ Object.assign(PDS_STR.ar, {
   undoNothing: 'لا شيء للتراجع عنه', redoNothing: 'لا شيء لإعادته',
   unitCm: 'سم', deletedSuffix: 'حُذف',
   roomTitle: 'القاعة', roomHint: 'الأرضية والجدران وأبعاد هذه المنطقة.',
+  roomHintNuit: 'أبعاد هذه المنطقة.',
   roomFloor: 'الأرضية', roomWall: 'الجدران', roomFinish: 'التشطيب',
   roomW: 'العرض', roomH: 'العمق', roomWallW: 'الجدار',
   finplain: 'سادة', finterrazzo: 'تيرازو', finzellige: 'زليج',
@@ -5138,10 +5141,15 @@ function pdsRenderRoomCard(state, T) {
     <label class="pds-sw pds-sw-custom" title="${T.customColor}">
       <input type="color" data-pds-room-field="${field}" value="${pdsHexOf(val)}"/>
     </label>`;
+  /* En vue nuit le rendu aplatit toute matière vers le charbon (pdsNoirC) :
+     ambiance, sol, murs, fond et finition n'auraient aucun effet visible.
+     On ne montre que les dimensions ; la vue jour garde tout. */
+  const noir = pdsNoir();
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.roomTitle}</div>
-      <div class="pds-rail-hint">${T.roomHint}</div>
+      <div class="pds-rail-hint">${noir ? T.roomHintNuit : T.roomHint}</div>
+      ${noir ? '' : `
       <label class="pds-mini-label">${T.ambianceLabel}</label>
       <div class="pds-amb-row">
         ${Object.keys(PDS_AMBIANCE).map(k => {
@@ -5170,7 +5178,7 @@ function pdsRenderRoomCard(state, T) {
       <label class="pds-mini-label">${T.roomFinish}</label>
       <select class="kf-input pds-input" data-pds-room-field="finish">
         ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
-      </select>
+      </select>`}
       <div class="pds-num-grid">
         <label>${T.roomW}<input class="kf-input pds-input" type="number" min="240" max="2400" step="20" data-pds-room-field="w" value="${P.w}"/></label>
         <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
@@ -5327,10 +5335,11 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       </div>
 
+      ${pdsNoir() ? '' : `
       <div class="pds-form-row">
         <label>${T.inspectorMaterial}</label>
         <div class="pds-sw-row">${swatches}</div>
-      </div>
+      </div>`}
 
       ${isT ? `
         <div class="pds-form-row">
@@ -7937,7 +7946,7 @@ const PDS_INLINE_CSS = `
 
   /* — La scène — */
   .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
-    background:#050605;
+    background:#020302;
     border:1px solid rgba(255,255,255,0.06);
     border-radius:20px;
     padding:16px 16px 8px;
