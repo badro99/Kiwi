@@ -6177,6 +6177,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   let dragging = false;
   let startX, startY, origX, origY;
   let dragK = 1;
+  let moved = false;
   let blockFrame = 0, lastX = 0, lastY = 0;
   const elObj = state.elements.find(e => e.id === id);
   if (!elObj) return;
@@ -6193,6 +6194,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     }
     lastTap = now;
     dragging = true;
+    moved = false;
     startX = ev.clientX; startY = ev.clientY;
     origX = elObj.x; origY = elObj.y;
     dragK = pdsK(root);   /* screen px → logical units, see pdsK() */
@@ -6202,6 +6204,8 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   });
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
+    if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+    moved = true;
     el.style.transform = `translate(${(ev.clientX - startX)/dragK}px, ${(ev.clientY - startY)/dragK}px) rotate(${elObj.rot||0}deg)`;
     if (!blockFrame) blockFrame = requestAnimationFrame(() => {
       blockFrame = 0;
@@ -6222,6 +6226,11 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     el.classList.remove('is-dragging', 'is-blocked');
     if (blockFrame) { cancelAnimationFrame(blockFrame); blockFrame = 0; }
     root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+    /* A press that never moved is a click. Refreshing here would rebuild the
+       stage DOM before the browser dispatches the click event, so the
+       selection handler on this node would never fire — the fixture would
+       feel impossible to select, resize or delete. Leave the DOM alone. */
+    if (!moved) return;
     let nx = origX + (ev.clientX - startX) / dragK;
     let ny = origY + (ev.clientY - startY) / dragK;
     if (state.snap) {
@@ -11406,7 +11415,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-bio { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 4px 0 12px; }
     .pr-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
     .pr-chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--n-200); color: var(--n-700); font-weight: 500; }
-    html[data-theme="dark"] .pr-chip { background: var(--paper); }
+    html[data-theme="dark"] .pr-chip { background: var(--inverse-surface); }
     .pr-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 0; border-top: 1px solid var(--n-200); border-bottom: 1px solid var(--n-200); margin-bottom: 12px; }
     .pr-kpis .k { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); }
     .pr-kpis .v { font-family: var(--mono); font-weight: 600; font-size: 14px; margin-top: 3px; letter-spacing: -0.01em; font-feature-settings: "tnum" 1; }
@@ -13465,7 +13474,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-recipe-empty-t { font-size: 15px; font-weight: 600; color: var(--ink); }
       .kit-recipe-empty-b { font-size: 13px; line-height: 1.5; max-width: 280px; }
       html[data-theme="dark"] .kit-station, html[data-theme="dark"] .kit-history-toggle, html[data-theme="dark"] .kit-order, html[data-theme="dark"] .kit-hrow, html[data-theme="dark"] .kit-zoom, html[data-theme="dark"] .kit-history-head .kit-history-x { background: var(--paper-soft); }
-      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-line); color: var(--inverse-ink); }
       html[data-theme="dark"] .kit-station.on .kit-station-ct, html[data-theme="dark"] .kit-history-toggle.on .kit-htg-ct { background: var(--paper-muted); color: var(--ink); }
       html[data-theme="dark"] .kit-station-ct, html[data-theme="dark"] .kit-htg-ct, html[data-theme="dark"] .kit-q, html[data-theme="dark"] .kit-eye, html[data-theme="dark"] .kit-zoom .kit-q { background: var(--paper-muted); }
       html[data-theme="dark"] .kit-act-accept { background: var(--paper-muted); color: var(--ink); }
