@@ -3482,6 +3482,8 @@ const PDS_STR = {
     ungroupOk: 'Tables dissociées',
     bulkGroup: 'Grouper la sélection',
     bulkOkGroup: (n) => `${n} tables groupées`,
+    groupCovers: (n) => `${n} couverts`,
+    groupedWith: (nums) => `Groupée avec ${nums}`,
     /* Templates */
     templatesTitle: 'Templates de salle',
     templatesDesc: 'Démarrez avec une disposition pré-construite · vous pourrez la modifier ensuite.',
@@ -3686,6 +3688,8 @@ const PDS_STR = {
     ungroupOk: 'Tables ungrouped',
     bulkGroup: 'Group selection',
     bulkOkGroup: (n) => `${n} tables grouped`,
+    groupCovers: (n) => `${n} covers`,
+    groupedWith: (nums) => `Grouped with ${nums}`,
     templatesTitle: 'Room templates',
     templatesDesc: 'Start from a pre-built layout · you can modify it after.',
     tplBistro: 'Bistro · 30 covers',
@@ -3881,6 +3885,8 @@ const PDS_STR = {
     ungroupOk: 'تم فصل الطاولات',
     bulkGroup: 'تجميع المحدد',
     bulkOkGroup: (n) => `تم تجميع ${n} طاولات`,
+    groupCovers: (n) => `${n} مقعدًا`,
+    groupedWith: (nums) => `مجمّعة مع ${nums}`,
     templatesTitle: 'قوالب القاعة',
     templatesDesc: 'ابدأ بترتيب جاهز · يمكنك تعديله لاحقًا.',
     tplBistro: 'بيسترو · 30 مقعدًا',
@@ -5088,7 +5094,7 @@ function pdsRenderStage(state, T) {
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
-                ${pdsRenderGroups(tablesInZone, state)}
+                ${pdsRenderGroups(tablesInZone, state, T)}
                 ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
                 <div class="pds-bulk" data-pds-bulk hidden></div>
               </div>
@@ -5459,6 +5465,16 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       `}
 
+      ${isT && obj.group ? (() => {
+        /* La fusion se lit ici aussi : partenaires et capacité partagée. */
+        const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+        const peers = state.tables.filter(tt => tt.group === obj.group && tt.id !== obj.id)
+          .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }));
+        const seats = state.tables.filter(tt => tt.group === obj.group)
+          .reduce((s, tt) => s + (pdsGeom(tt).seats || 0), 0);
+        return `<div class="pds-group-info">${pdsEsc(T.groupedWith(peers.map(p => disp(p.num)).join(' + ')))} · ${pdsEsc(T.groupCovers(seats))}</div>`;
+      })() : ''}
+
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
         ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="${obj.group ? 'table-ungroup' : 'table-group'}" data-pds-id="${obj.id}">${obj.group ? T.ungroupTables : T.groupTables}</button>` : ''}
@@ -5558,7 +5574,7 @@ function pdsSweepGroups(state) {
   state.tables.forEach(t => { if (t.group && count[t.group] < 2) delete t.group; });
 }
 
-function pdsRenderGroups(tables, state) {
+function pdsRenderGroups(tables, state, T) {
   const byGroup = new Map();
   tables.forEach(t => {
     if (!t.group) return;
@@ -5566,21 +5582,23 @@ function pdsRenderGroups(tables, state) {
     byGroup.get(t.group).push(t);
   });
   let out = '';
-  byGroup.forEach(members => {
+  byGroup.forEach((members, gid) => {
     if (members.length < 2) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let seats = 0;
     members.forEach(t => {
       const g = pdsGeom(t);
       x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y);
       x1 = Math.max(x1, t.x + g.w); y1 = Math.max(y1, t.y + g.h);
+      seats += g.seats || 0;
     });
     const pad = 8;
     const nums = members.slice()
       .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
       .map(t => /^\d$/.test(String(t.num)) ? '0' + t.num : t.num);
     out += `
-      <div class="pds-group-env" style="left:${x0 - pad}px; top:${y0 - pad}px; width:${(x1 - x0) + pad * 2}px; height:${(y1 - y0) + pad * 2}px;">
-        <span class="pds-group-chip">${pdsEsc(nums.join(' + '))}</span>
+      <div class="pds-group-env" data-pds-group="${pdsEsc(gid)}" style="left:${x0 - pad}px; top:${y0 - pad}px; width:${(x1 - x0) + pad * 2}px; height:${(y1 - y0) + pad * 2}px;">
+        <span class="pds-group-chip">${pdsEsc(nums.join(' + '))}<span class="pds-group-covers"> · ${pdsEsc(T.groupCovers(seats))}</span></span>
       </div>`;
   });
   return out;
@@ -6030,6 +6048,15 @@ function pdsAttach(root, state, T, dr) {
           /* L'heure d'assise nourrit la pastille « N min » de la vue nuit. */
           if (o.status === 'occupied') { if (!o.since) o.since = Date.now(); }
           else delete o.since;
+          /* Une table groupée est UNE table pour le service : le statut
+             s'applique au groupe entier, heure d'assise partagée. */
+          if (o.group) state.tables.forEach(tt => {
+            if (tt.group === o.group && tt.id !== o.id) {
+              tt.status = o.status;
+              if (o.status === 'occupied') tt.since = o.since;
+              else delete tt.since;
+            }
+          });
           reselect();
         };
       });
@@ -6186,6 +6213,8 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let startX, startY, origX, origY, transformX, transformY;
   let dragK = 1;
   let blockFrame = 0;
+  let groupPeers = [];
+  let groupOrig = {};
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
@@ -6255,6 +6284,21 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
      * meaning a screen delta of D px must be written as D/k logical units to
      * track the cursor 1:1. */
     dragK = pdsK(root);
+    /* Les partenaires de groupe (et leur enveloppe) suivent le même
+       translate pendant le drag : la fusion se déplace d'un seul geste. */
+    groupPeers = [];
+    groupOrig = {};
+    if (t.group) {
+      state.tables.forEach(tt => {
+        if (tt.group === t.group && tt.id !== id) {
+          groupOrig[tt.id] = { x: tt.x, y: tt.y };
+          const n = root.querySelector(`[data-pds-table="${tt.id}"]`);
+          if (n) groupPeers.push({ n, rot: tt.rot || 0 });
+        }
+      });
+      const env = root.querySelector(`[data-pds-group="${t.group}"]`);
+      if (env) groupPeers.push({ n: env, rot: null });
+    }
     el.setPointerCapture(ev.pointerId);
     el.classList.add('is-dragging');
     ev.preventDefault();
@@ -6265,6 +6309,9 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     transformX = (ev.clientX - startX) / dragK;
     transformY = (ev.clientY - startY) / dragK;
     el.style.transform = `translate(${transformX}px, ${transformY}px) rotate(${t.rot||0}deg)`;
+    groupPeers.forEach(p => {
+      p.n.style.transform = `translate(${transformX}px, ${transformY}px)` + (p.rot === null ? '' : ` rotate(${p.rot}deg)`);
+    });
     /* The table always follows the cursor 1:1 — a table that refuses to move
        reads as a broken app, not as a rule. Illegality is shown, not enforced,
        until release. The collision test is coalesced to one per frame. */
@@ -6302,7 +6349,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     /* Settle. A drop on top of something lands beside it — searched outward
        from where you actually aimed, so the table still goes where you meant
        it to go rather than springing back to where it started. */
-    if (selection.size <= 1 && pdsBlockers(state, t, { x: nx, y: ny }).length) {
+    if (selection.size <= 1 && !t.group && pdsBlockers(state, t, { x: nx, y: ny }).length) {
       const spot = pdsNearestFree(state, t, nx, ny, plane);
       if (spot) { nx = spot.x; ny = spot.y; }
       else {
@@ -6321,6 +6368,23 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
           tt.y = Math.max(0, Math.min(plane.h - tg.h, tt.y + dy));
         }
       });
+    }
+    /* Une table groupée entraîne ses partenaires : la fusion est un seul
+       meuble. Même delta pour chacun, borné à la pièce. Position absolue
+       depuis l'origine capturée au pointerdown — un finish() qui rejoue
+       (écouteurs empilés par un re-câblage) reste alors sans effet. */
+    if (t.group) {
+      const dx = nx - origX;
+      const dy = ny - origY;
+      state.tables.forEach(tt => {
+        const o = groupOrig[tt.id];
+        if (o && tt.group === t.group && !(selection.size > 1 && selection.has(tt.id))) {
+          const tg = pdsGeom(tt);
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
+        }
+      });
+      groupPeers = [];
     }
     t.x = nx;
     t.y = ny;
@@ -7213,12 +7277,22 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'bulk-status': {
       const st = btn.getAttribute('data-pds-status');
       const n = selection.size;
+      const gids = new Set();
       selection.forEach(id => {
         const t = state.tables.find(tt => tt.id === id);
         if (!t) return;
         t.status = st;
         if (st === 'occupied') { if (!t.since) t.since = Date.now(); }
         else delete t.since;
+        if (t.group) gids.add(t.group);
+      });
+      /* Le statut déborde sur les partenaires de groupe hors sélection. */
+      state.tables.forEach(tt => {
+        if (tt.group && gids.has(tt.group) && !selection.has(tt.id)) {
+          tt.status = st;
+          if (st === 'occupied') { if (!tt.since) tt.since = Date.now(); }
+          else delete tt.since;
+        }
       });
       refresh();
       toast(T.bulkOkStatus(n, T['status' + st.charAt(0).toUpperCase() + st.slice(1)]), { type: 'success', duration: 1400 });
@@ -7640,6 +7714,9 @@ const PDS_INLINE_CSS = `
   .pds-group-env { position:absolute; border-radius:20px; border:1.25px solid rgba(11,110,79,0.45); background:rgba(11,110,79,0.05); pointer-events:none; z-index:0; }
   .pds-group-env::before { content:''; position:absolute; inset:-30%; border-radius:50%; background:radial-gradient(closest-side, rgba(11,110,79,0.10), rgba(11,110,79,0)); z-index:-1; }
   .pds-group-chip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); height:19px; padding:0 10px; border-radius:9.5px; background:var(--paper, #F7F5F0); border:1px solid rgba(11,110,79,0.45); color:#0B6E4F; font:500 10px/19px var(--mono, 'JetBrains Mono'); letter-spacing:0.02em; white-space:nowrap; }
+  .pds-group-covers { opacity:0.72; }
+  /* Ligne d'info du groupe dans l'inspecteur : un fait, pas un bouton. */
+  .pds-group-info { margin-top:8px; padding:7px 10px; border-radius:9px; border:1px dashed rgba(11,110,79,0.35); background:rgba(11,110,79,0.05); color:#0B6E4F; font:500 11px/1.4 var(--mono, 'JetBrains Mono'); letter-spacing:0.01em; }
 
   .pds-inspect-empty .pds-rail-hint { line-height:1.55; }
 
@@ -8312,6 +8389,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-group-env::before { background:radial-gradient(closest-side, rgba(0,255,174,0.16), rgba(0,255,174,0)); }
   .pds-noir.pds-noir.pds-noir .pds-group-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
   .pds-noir.pds-noir.pds-noir .pds-inspect-actions .kb.pds-group-arming { border-color:#00FFAE; color:#00FFAE; animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  .pds-noir.pds-noir.pds-noir .pds-group-info { border-color:rgba(0,255,174,0.35); background:rgba(0,255,174,0.07); color:#7DF2B0; }
 
   /* Nuancier : l'anneau de l'actif passe à la menthe sur fond noir. */
   .pds-noir.pds-noir.pds-noir .pds-sw { border-color:rgba(242,239,230,0.18); }
