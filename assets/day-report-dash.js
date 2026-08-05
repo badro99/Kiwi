@@ -316,10 +316,34 @@
     return idxMemo;
   }
 
-  /* Les ventes que le tableau de bord connaît, pour le repli sans instantané. */
+  /* Les ventes que le tableau de bord connaît, pour le repli sans instantané.
+     En DÉMONSTRATION le feed est vide par construction — day-report.js refuse
+     d'écrire ou de relire hors d'un vrai commerce — et la page s'ouvrait donc
+     sur 0 MAD et une frise plate pendant que les tuiles annonçaient 25 391 MAD.
+     day-report-demo.js fabrique alors un journal plausible, en mémoire, à
+     partir de la carte de démonstration. Il se tait dès que la session est
+     réelle : le repli n'est jamais consulté quand un vrai feed existe. */
   function dashSales() {
-    try { return (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || []; }
-    catch (_) { return []; }
+    var live = [];
+    try { live = (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || []; }
+    catch (_) { live = []; }
+    if (live.length) return live;
+    try {
+      var D = window.KiwiDayReportDemo;
+      if (D && D.active()) return D.sales() || [];
+    } catch (_) {}
+    return live;
+  }
+
+  /* Le tiroir de la journée en démonstration — ouverture, fond de caisse,
+     comptage. Sans lui la page afficherait « journée en cours » sur des
+     journées closes et laisserait tout le bloc espèces vide. */
+  function demoSession(day) {
+    try {
+      var D = window.KiwiDayReportDemo;
+      if (D && D.active()) return D.session(day) || {};
+    } catch (_) {}
+    return {};
   }
   function storeInfo() {
     var vd = {};
@@ -389,8 +413,9 @@
     try { snap = d.load(day); } catch (_) {}
     if (snap && !snapMissesSales(snap, day)) return snap;
     var built = null;
+    var sess = snap ? sessionOf(snap) : demoSession(day);
     try {
-      built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
+      built = d.build({ day: day, sales: dashSales(), session: sess,
                         store: storeInfo(), source: 'dashboard', categoryIndex: catIndex() });
     } catch (_) { return snap; }
     if (!built) return snap;
@@ -400,7 +425,10 @@
       built.closedCount = snap.closedCount || 0;
       built.revisions = snap.revisions || [];
     } else {
-      built.live = true;   /* aucun instantané : le tiroir est inconnu */
+      /* Aucun instantané : le tiroir est inconnu — SAUF si la session de
+         démonstration l'a fourni, auquel cas la journée est bel et bien close
+         et l'annoncer « en cours » serait faux. */
+      built.live = !(sess && sess.closedAt);
     }
     return built;
   }
