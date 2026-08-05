@@ -755,12 +755,15 @@
     let s = null;
     try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
     if (!s || typeof s !== 'object') return;
-    if (Array.isArray(s.items)) stUserItems = s.items;
+    if (Array.isArray(s.items)) stUserItems = s.items.map(normalizeStockItem);
     if (Array.isArray(s.sups)) stUserSuppliers = s.sups;
     if (Array.isArray(s.cats)) stUserCategories = s.cats;
     (s.delItems || []).forEach((id) => stDeletedItems.add(id));
     (s.delSups || []).forEach((id) => stDeletedSups.add(id));
     Object.assign(stItemOverrides, s.itemOv || {});
+    Object.keys(stItemOverrides).forEach((id) => {
+      if (stItemOverrides[id]?.unit) stItemOverrides[id].unit = stockUnit(stItemOverrides[id].unit);
+    });
     Object.assign(stSupOverrides, s.supOv || {});
     Object.assign(stStockOverrides, s.stockOv || {});
   }
@@ -835,6 +838,13 @@
     const dec = Number.isInteger(q) ? 0 : (Math.abs(q) < 10 ? 1 : 0);
     return `${fmtNum(q, dec)} ${u}`;
   };
+  const unitApi = () => window.KiwiRestaurantUnits;
+  const stockUnit = (value) => unitApi()?.normalize?.(value) || 'unité';
+  const normalizeStockItem = (item) => ({ ...(item || {}), unit: stockUnit(item?.unit) });
+  const stockUnitOptions = (value) => {
+    const selected = stockUnit(value);
+    return (unitApi()?.list?.() || []).map((unit) => `<option value="${esc(unit.id)}"${unit.id === selected ? ' selected' : ''}>${esc(unit.label)}</option>`).join('');
+  };
   const fmtPct = (n, dec = 1) => `${n > 0 ? '+' : ''}${fmtNum(n, dec)} %`;
   const fmtDateShort = (iso) => {
     const d = new Date(iso);
@@ -877,7 +887,7 @@
   }
   function getInv() {
     const V = window.KiwiVenue;
-    if (!V?.getInventory) return [...stUserItems];
+    if (!V?.getInventory) return [...stUserItems].map(normalizeStockItem);
     let base;
     if (isFusion()) {
       if (stVenueFilter && stVenueFilter !== 'all') base = V.getInventory(stVenueFilter);
@@ -889,7 +899,7 @@
     } else {
       base = V.getInventory(currentVenueId());
     }
-    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))];
+    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))].map(normalizeStockItem);
   }
   function getSup() {
     const base = window.KiwiVenue?.getSuppliers?.() || [];
@@ -2069,6 +2079,12 @@
   }
 
   function renderScanReview() {
+    const inv = getInv();
+    const rows = [
+      { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
+      { id: 'inv03', name: 'Agneau épaule', qty: 14, total: 2352 },
+      { id: 'inv04', name: 'Merguez', qty: 4, total: 312 },
+    ];
     return `
       <div class="st-mb-eyebrow">${esc(t('mScanReviewT'))}</div>
       <div class="st-mb-row three">
@@ -2077,11 +2093,12 @@
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" value="FAC-2026-1842" /></div>
       </div>
       <table class="st-inv-items">
-        <thead><tr><th>Article</th><th class="r">Qté</th><th class="r">Total</th></tr></thead>
+        <thead><tr><th>Article</th><th class="r">Qté</th><th>Unité</th><th class="r">Total</th></tr></thead>
         <tbody>
-          <tr><td>Viande hachée bœuf</td><td class="r mono">12 kg</td><td class="r mono">1 140 MAD</td></tr>
-          <tr><td>Agneau épaule</td><td class="r mono">14 kg</td><td class="r mono">2 352 MAD</td></tr>
-          <tr><td>Merguez</td><td class="r mono">4 kg</td><td class="r mono">312 MAD</td></tr>
+          ${rows.map((row) => {
+            const item = inv.find((candidate) => candidate.id === row.id), unit = stockUnit(item?.unit || 'kg');
+            return `<tr data-stock-scan-row="${esc(row.id)}"><td>${esc(item?.name || row.name)}</td><td class="r"><input class="st-pc-input mono" type="number" min="0" step="0.001" value="${row.qty}" data-stock-scan-qty /></td><td><select class="st-mb-input" data-stock-scan-unit>${stockUnitOptions(unit)}</select></td><td class="r mono">${esc(fmtMad(row.total))}</td></tr>`;
+          }).join('')}
         </tbody>
       </table>
       <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--n-600); padding:6px 0;">
@@ -2099,18 +2116,24 @@
 
   function wireScanReview() {
     document.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
-      // Apply stock overrides for matched items
       const inv = getInv();
-      const matches = {
-        'inv01': 12,   // Viande hachée bœuf — restocked by 12kg
-        'inv03': 14,   // Agneau épaule — out → 14kg now
-        'inv04': 4,    // Merguez — +4
-      };
-      Object.entries(matches).forEach(([id, q]) => {
-        const it = inv.find(x => x.id === id);
-        if (it) stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + q;
-        stSaveOverlay();
+      const received = [];
+      for (const row of document.querySelectorAll('[data-stock-scan-row]')) {
+        const id = row.dataset.stockScanRow, it = inv.find((candidate) => candidate.id === id);
+        if (!it) continue;
+        const qty = Math.max(0, parseFloat(row.querySelector('[data-stock-scan-qty]')?.value) || 0);
+        const from = row.querySelector('[data-stock-scan-unit]')?.value || it.unit;
+        const converted = unitApi()?.convert?.(qty, from, it.unit);
+        if (converted == null) {
+          window.Kiwi.toast(`Unité incompatible pour ${it.name}`, { type: 'warn', desc: `Réception en ${from}, stock suivi en ${it.unit}. Indiquez la même unité ou une unité métrique convertible.` });
+          return;
+        }
+        received.push({ id, it, qty: converted });
+      }
+      received.forEach(({ id, it, qty }) => {
+        stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + qty;
       });
+      stSaveOverlay();
       closeTopModal();
       window.Kiwi.toast(t('mScanToast'), { type: 'success', duration: 3800 });
       if (stPageActive) render();
@@ -2498,8 +2521,7 @@
     const isEdit = !!existing;
     const title = isEdit ? t('editItemTitle') : t('addItemTitle');
     const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
-    const units = ['kg','g','L','unité','boîte','paquet','botte','pot','bouteille','paire'];
-    const unitOptions = units.map(u => `<option ${existing?.unit === u ? 'selected' : ''}>${esc(u)}</option>`).join('');
+    const unitOptions = stockUnitOptions(existing?.unit || 'unité');
     const m = window.Kiwi.modal({
       title,
       width: 560,
@@ -2553,7 +2575,7 @@
         const catSel = scope.querySelector('[data-stock-add-cat]');
         let category = catSel?.value || 'legumes';
         if (category === '__new__') category = existing?.category || 'legumes';
-        const unit = scope.querySelector('[data-stock-add-unit]')?.value || 'unité';
+        const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
         const supplier = scope.querySelector('[data-stock-add-sup]')?.value || (existing?.supplier || '');
         const cur = parseFloat(scope.querySelector('[data-stock-add-current]')?.value);
         const par = parseFloat(scope.querySelector('[data-stock-add-par]')?.value);

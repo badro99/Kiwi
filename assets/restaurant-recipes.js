@@ -4,6 +4,7 @@
   if (!window.KiwiStore || window.KiwiRestaurantRecipes) return;
 
   const clean = (v) => String(v == null ? '' : v).trim();
+  const units = () => window.KiwiRestaurantUnits;
   const norm = (v) => clean(v).toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const number = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
   const round = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -20,7 +21,7 @@
       stockId: clean(v.stockId || v.invId),
       name: clean(v.name),
       qty: number(v.qty),
-      unit: clean(v.unit),
+      unit: units()?.normalize?.(v.unit, '') || clean(v.unit),
     };
   }
   function normalizeRecipe(value, itemId) {
@@ -49,7 +50,7 @@
   function inventory(id) {
     try {
       const rows = window.KiwiRestaurantStock?.items?.(venue(id));
-      return Array.isArray(rows) ? rows : [];
+      return Array.isArray(rows) ? rows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit })) : [];
     } catch (_) { return []; }
   }
   function stockFor(ingredient, id) {
@@ -60,7 +61,12 @@
   function ingredientInfo(ingredient, id) {
     const stock = stockFor(ingredient, id);
     const cost = stock && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
-    return { stock, cost, lineCost: cost == null ? null : round(cost * number(ingredient.qty)) };
+    const stockUnit = units()?.normalize?.(stock?.unit, '') || clean(stock?.unit);
+    const recipeUnit = units()?.normalize?.(ingredient.unit || stockUnit, '') || clean(ingredient.unit || stockUnit);
+    const quantityInStockUnit = units()?.convert
+      ? units().convert(number(ingredient.qty), recipeUnit, stockUnit)
+      : (recipeUnit === stockUnit ? number(ingredient.qty) : null);
+    return { stock, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : round(cost * quantityInStockUnit) };
   }
   function salesFor(itemId, itemName, id, days) {
     const since = Date.now() - Math.max(1, days || 7) * 864e5;
@@ -90,7 +96,8 @@
       const totalTheoretical = theoreticalUsage(x.stock.id, id, 7);
       if (!(totalTheoretical > 0)) return null;
       const ratio = number(x.stock.usageThisWeek) / totalTheoretical;
-      return (number(x.line.qty) / Math.max(1, r.portions)) * ratio * number(x.stock.costPerUnit);
+      if (x.quantityInStockUnit == null) return null;
+      return (x.quantityInStockUnit / Math.max(1, r.portions)) * ratio * number(x.stock.costPerUnit);
     });
     const actualCost = infos.length && sold > 0 && tracked.every((x) => x != null)
       ? round(tracked.reduce((sum, value) => sum + value, 0)) : null;
@@ -117,7 +124,9 @@
         const info = ingredientInfo(line, vid);
         const ingId = line.stockId ? `stock:${line.stockId}` : `recipe:${itemId}:${index}`;
         const pos = d.ingredients.findIndex((x) => String(x.id) === ingId);
-        const ingredient = { id: ingId, name: line.name || info.stock?.name || '', unit: line.unit || info.stock?.unit || '', useCost: info.cost, stockId: line.stockId || '', at: Date.now() };
+        const lineUnit = units()?.normalize?.(line.unit || info.stockUnit, '') || line.unit || info.stockUnit || '';
+        const useCost = info.cost == null ? null : (units()?.unitCost ? units().unitCost(info.cost, info.stockUnit, lineUnit) : (lineUnit === info.stockUnit ? info.cost : null));
+        const ingredient = { id: ingId, name: line.name || info.stock?.name || '', unit: lineUnit, useCost, stockId: line.stockId || '', at: Date.now() };
         if (pos >= 0) d.ingredients[pos] = ingredient; else d.ingredients.push(ingredient);
         if (!(line.qty > 0) || info.cost == null) complete = false;
         lines.push({ ing: ingId, qty: number(line.qty) });
@@ -148,7 +157,13 @@
     if (!stockId) return 0;
     return round(all(id).reduce((sum, recipe) => {
       const sold = salesFor(recipe.itemId, recipe.itemName, id, days || 7);
-      const perPortion = recipe.ingredients.filter((line) => line.stockId === String(stockId)).reduce((n, line) => n + number(line.qty), 0) / Math.max(1, recipe.portions);
+      const stock = inventory(id).find((row) => String(row.id) === String(stockId));
+      const perPortion = recipe.ingredients.filter((line) => line.stockId === String(stockId)).reduce((n, line) => {
+        const from = line.unit || stock?.unit, converted = units()?.convert
+          ? units().convert(number(line.qty), from, stock?.unit)
+          : (from === stock?.unit ? number(line.qty) : null);
+        return n + (converted == null ? 0 : converted);
+      }, 0) / Math.max(1, recipe.portions);
       return sum + sold * perPortion;
     }, 0));
   }

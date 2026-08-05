@@ -670,6 +670,7 @@ section('Whole-project regressions');
     'resto-carte-test.js',
     'restaurant-menu-performance-test.js',
     'restaurant-menu-peak-hours-test.js',
+    'restaurant-units-test.js',
     'void-stock-test.js',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
