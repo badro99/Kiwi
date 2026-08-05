@@ -76,25 +76,47 @@ function employeeName(member) {
 async function serviceScope(request, env, merchant) {
   const employee = await activeServiceEmployee(request, env, merchant);
   if (!employee) return null;
-  const tables = new Set();
+  const tables = new Set(), allTables = new Set(), pausedTables = new Set();
+  const pausedServers = [];
   try {
-    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'")
-      .bind(merchant).first();
+    const [row, attendanceRow] = await Promise.all([
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'").bind(merchant).first(),
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'").bind(merchant).first(),
+    ]);
     const plan = JSON.parse((row && row.data) || '{}');
+    const attendance = JSON.parse((attendanceRow && attendanceRow.data) || '{}');
     const staff = Object.create(null);
     (Array.isArray(plan.staff) ? plan.staff : []).forEach((s) => { if (s && s.id) staff[String(s.id)] = s; });
+    const pausedIds = new Set(), pausedNames = new Set();
+    (Array.isArray(attendance.entries) ? attendance.entries : []).forEach((entry) => {
+      if (!entry || entry.outTs || !entry.pauseTs) return;
+      const id = String(entry.memberId || entry.staffId || '');
+      const name = serviceNorm(entry.name);
+      if (id) pausedIds.add(id);
+      if (name) pausedNames.add(name);
+    });
     const myId = String(employee.member.id || employee.session.staffId || '');
     const myName = serviceNorm(employeeName(employee.member));
     (Array.isArray(plan.tables) ? plan.tables : []).forEach((table) => {
-      if (!table || !table.server) return;
+      if (!table) return;
+      const tableId = normTable(table.num || table.id);
+      if (!tableId) return;
+      allTables.add(tableId);
+      if (!table.server) { tables.add(tableId); return; }
       const assigned = String(table.server);
       const assignedName = serviceNorm(staff[assigned] && staff[assigned].name);
       if (assigned === myId || (assignedName && assignedName === myName)) {
-        tables.add(normTable(table.num || table.id));
+        tables.add(tableId);
+      }
+      if (pausedIds.has(assigned) || (assignedName && pausedNames.has(assignedName))) {
+        pausedTables.add(tableId);
+        if (!pausedServers.some((s) => s.id === assigned)) {
+          pausedServers.push({ id: assigned, name: (staff[assigned] && staff[assigned].name) || assignedName });
+        }
       }
     });
   } catch (_) {}
-  return { employee, tables, name: serviceNorm(employeeName(employee.member)) };
+  return { employee, tables, allTables, pausedTables, pausedServers, name: serviceNorm(employeeName(employee.member)) };
 }
 
 /* Les colonnes se sont ajoutées par vagues : `channel/ext_ref/customer` avec la
@@ -204,9 +226,7 @@ export async function onRequestGet(context) {
   if (service) {
     orders = orders.filter((order) => {
       if (order.created_ts && now - Number(order.created_ts) > 18 * 60 * 60 * 1000) return false;
-      const named = serviceNorm(order.server);
-      return (named && named === service.name)
-        || (order.mode === 'table' && service.tables.has(normTable(order.table)));
+      return order.mode === 'table' && service.allTables.has(normTable(order.table));
     });
   }
 
@@ -236,9 +256,18 @@ export async function onRequestGet(context) {
       opened_ts: s.opened_ts, seen_ts: s.seen_ts,
     }));
   } catch (_) { sessions = []; }
-  if (service) sessions = sessions.filter((session) => service.tables.has(normTable(session.table)));
+  if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
 
-  return json({ ok: true, orders, sessions, now, ordersAvailable: true });
+  return json({
+    ok: true, orders, sessions, now, ordersAvailable: true,
+    service: service ? {
+      mineTables: Array.from(service.tables),
+      allTables: Array.from(service.allTables),
+      pausedTables: Array.from(service.pausedTables),
+      pausedServers: service.pausedServers,
+      paused: !!(service.employee.attendance && service.employee.attendance.pauseTs),
+    } : undefined,
+  });
 }
 
 export async function onRequestPost(context) {
@@ -256,16 +285,17 @@ export async function onRequestPost(context) {
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
-  /* Employee cookies may only CREATE a ticket for one of that employee's
-   * assigned tables. They cannot accept/reject/bump arbitrary tickets, close a
-   * table session, or impersonate another server. Caisse/KDS/account callers
-   * continue through the existing paths below. */
+  /* Employee cookies may only CREATE a ticket for a real table in this store's
+   * owner-managed floor plan. "Toutes les tables" is intentional coverage:
+   * another on-duty server may help, while notifications continue to follow
+   * the table's owner. A paused employee cannot submit orders. */
   const employee = await activeServiceEmployee(request, env, merchant);
   if (employee) {
     const scope = await serviceScope(request, env, merchant);
     const employeeTable = b && b.create === true && b.mode !== 'takeout' ? normTable(b.table) : '';
-    if (!(b && b.create === true) || !employeeTable || !scope || !scope.tables.has(employeeTable)) {
-      return json({ error: 'assigned-table-required' }, 403);
+    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    if (!(b && b.create === true) || !employeeTable || !scope || !scope.allTables.has(employeeTable)) {
+      return json({ error: 'floor-table-required' }, 403);
     }
     b.server = employeeName(employee.member);
   }

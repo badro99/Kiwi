@@ -62,10 +62,29 @@ export async function onRequestGet({ request, env }) {
   const myId = String(employee.member.id || employee.session.staffId || '');
   const myName = norm(memberName(employee.member));
   const row = await readDoc(env, employee.merchant);
+  let pausedIds = new Set(), pausedNames = new Set();
+  try {
+    const attendanceRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
+      .bind(employee.merchant).first();
+    const attendance = JSON.parse((attendanceRow && attendanceRow.data) || '{}');
+    (Array.isArray(attendance.entries) ? attendance.entries : []).forEach((entry) => {
+      if (!entry || entry.outTs || !entry.pauseTs) return;
+      const id = String(entry.memberId || entry.staffId || '');
+      const name = norm(entry.name);
+      if (id) pausedIds.add(id);
+      if (name) pausedNames.add(name);
+    });
+  } catch (_) { pausedIds = new Set(); pausedNames = new Set(); }
   const events = (Array.isArray(row.data.events) ? row.data.events : [])
     .filter((event) => event && Number(event.ts) > since)
-    .filter((event) => (event.serverId && String(event.serverId) === myId)
-      || (event.server && norm(event.server) === myName))
+    .filter((event) => {
+      if (employee.attendance && employee.attendance.pauseTs) return false;
+      const direct = (event.serverId && String(event.serverId) === myId)
+        || (event.server && norm(event.server) === myName);
+      const coverage = (event.serverId && pausedIds.has(String(event.serverId)))
+        || (event.server && pausedNames.has(norm(event.server)));
+      return direct || coverage;
+    })
     .slice(-MAX_EVENTS);
   return json({ ok: true, events, now: Date.now() });
 }

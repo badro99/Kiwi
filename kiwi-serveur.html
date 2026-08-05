@@ -1301,6 +1301,15 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .profil-clockout:active { background: rgba(184,82,69,0.18); }
     .profil-clockout svg { width: 18px; height: 18px; }
+    .profil-pause {
+      width: 100%; height: 52px; margin-bottom: 10px;
+      border: 1px solid var(--line); border-radius: var(--r-xl);
+      color: var(--ink); background: var(--surface);
+      font-size: 14px; font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .profil-pause.is-paused { color: var(--forest); border-color: var(--mint); background: var(--mint-tint); }
+    .profil-pause svg { width: 18px; height: 18px; }
 
     /* ===========================================================
        === Gamification layer ===  (profil cards · carte du soir · rank chip)
@@ -2703,26 +2712,27 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Colleague pause alert (shown in "Mes tables" view) */
     .colleague-alert {
-      background: linear-gradient(135deg, #C77526 0%, #B85245 100%);
-      color: #fff;
-      border-radius: 14px;
-      padding: 12px 14px;
+      background: #FFF8ED;
+      color: var(--ink);
+      border: 1px solid rgba(199,117,38,0.24);
+      border-radius: 11px;
+      padding: 8px 10px;
       display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 6px 18px rgba(184,82,69,0.22);
+      box-shadow: none;
       cursor: pointer;
       transition: transform 100ms ease, filter 150ms ease;
     }
     .colleague-alert:active { transform: scale(0.99); }
     .colleague-alert-icon {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: rgba(255,255,255,0.22);
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(199,117,38,0.12); color: #9A5A1B;
       display: flex; align-items: center; justify-content: center;
-      flex: 0 0 36px;
+      flex: 0 0 28px;
     }
-    .colleague-alert-icon svg { width: 18px; height: 18px; }
+    .colleague-alert-icon svg { width: 15px; height: 15px; }
     .colleague-alert-text { flex: 1; min-width: 0; }
-    .colleague-alert-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.005em; }
-    .colleague-alert-sub { font-size: 11.5px; margin-top: 2px; opacity: 0.9; }
+    .colleague-alert-title { font-size: 12.5px; font-weight: 700; letter-spacing: -0.005em; }
+    .colleague-alert-sub { font-size: 11px; margin-top: 1px; color: var(--ink-3); }
     .colleague-alert-chev { width: 18px; height: 18px; opacity: 0.7; flex: 0 0 18px; }
 
     /* Colleague subsection header */
@@ -2926,7 +2936,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="tab tab-tables is-active" data-tab="tables">
             <div class="scope-toggle" id="scope-toggle">
               <button class="scope-btn is-active" data-scope="mine">Mes tables<span class="scope-count" id="scope-mine-count">5</span></button>
-              <button class="scope-btn" data-scope="all">Toutes<span class="scope-count" id="scope-all-count">21</span></button>
+              <button class="scope-btn" data-scope="all">Toutes les tables<span class="scope-count" id="scope-all-count">21</span></button>
             </div>
 
             <div id="tables-zones"></div>
@@ -3079,6 +3089,10 @@ em, i, cite, dfn, var { font-style: normal; }
             </div>
             <!-- === /Gamification profil cards === -->
 
+            <button class="profil-pause" id="profil-pause" type="button">
+              <i data-lucide="coffee"></i>
+              <span>Prendre une pause</span>
+            </button>
             <button class="profil-clockout" id="profil-clockout">
               <i data-lucide="log-out"></i>
               <span>Pointer le départ</span>
@@ -4244,14 +4258,18 @@ em, i, cite, dfn, var { font-style: normal; }
       });
     }
 
-    /* A clocked-in floor employee watches only the orders and service events
-       that the edge has already filtered to their own assigned tables. */
+    /* A clocked-in floor employee receives the store floor for the explicit
+       "Toutes les tables" coverage view. The edge still identifies which
+       tables are theirs and which belong to a paused colleague, so alerts are
+       targeted instead of ringing every phone for every ticket. */
     let serviceSyncTimer = null;
     let serviceOrderSince = 0;
     let serviceEventSince = 0;
     let servicePlanTick = 0;
     const serviceOrderStatus = new Map();
     const serviceEventSeen = new Set();
+    const serviceMineTables = new Set();
+    const servicePausedTables = new Set();
 
     function serviceNorm(value) {
       let s = String(value || '').trim().toLowerCase();
@@ -4274,6 +4292,10 @@ em, i, cite, dfn, var { font-style: normal; }
     function ingestServiceOrders(data) {
       if (!data || !data.ok) return;
       serviceOrderSince = data.now || serviceOrderSince;
+      serviceMineTables.clear();
+      servicePausedTables.clear();
+      ((data.service && data.service.mineTables) || []).forEach((id) => serviceMineTables.add(serviceTableId(id) || String(id)));
+      ((data.service && data.service.pausedTables) || []).forEach((id) => servicePausedTables.add(serviceTableId(id) || String(id)));
       (data.sessions || []).forEach((session) => {
         if (!session || session.mode !== 'table') return;
         const id = serviceTableId(session.table);
@@ -4284,9 +4306,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const before = serviceOrderStatus.get(order.id) || '';
         serviceOrderStatus.set(order.id, order.status);
         const table = serviceTableId(order.table) || order.table || '';
-        if (order.status === 'pending' && before !== 'pending') {
+        const shouldNotify = !isEmployeePaused() && (serviceMineTables.has(table) || servicePausedTables.has(table));
+        if (shouldNotify && order.status === 'pending' && before !== 'pending') {
           serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim());
-        } else if (order.status === 'ready' && before !== 'ready') {
+        } else if (shouldNotify && order.status === 'ready' && before !== 'ready') {
           serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim());
         }
       });
@@ -4342,6 +4365,8 @@ em, i, cite, dfn, var { font-style: normal; }
       servicePlanTick = 0;
       serviceOrderStatus.clear();
       serviceEventSeen.clear();
+      serviceMineTables.clear();
+      servicePausedTables.clear();
     }
 
     /* ===========================================================
@@ -4857,6 +4882,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function openTableDetail(id) {
       const t = tables[id];
       if (!t) return;
+      if (isEmployeePaused()) { toast('Reprenez le service pour prendre une commande'); return; }
 
       // Khawya tables → covers picker first
       if (t.status === 'khawya') {
@@ -5541,6 +5567,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Profil tab ---------- */
     function renderProfil() {
       if (!shiftStart) return;
+      renderPauseControl();
       const hh = String(shiftStart.getHours()).padStart(2,'0');
       const mm = String(shiftStart.getMinutes()).padStart(2,'0');
       $('#profil-shift-start').textContent = `${hh}:${mm}`;
@@ -5561,6 +5588,43 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       renderHours();
     }
+
+    function isEmployeePaused() {
+      const open = liveEmployeeState && liveEmployeeState.attendance && liveEmployeeState.attendance.open;
+      return !!((open && open.pauseTs) || (servers[currentUser] && servers[currentUser].status === 'on-pause'));
+    }
+    function renderPauseControl() {
+      const btn = $('#profil-pause');
+      if (!btn) return;
+      btn.hidden = !!activeRole.restricted;
+      const paused = isEmployeePaused();
+      btn.classList.toggle('is-paused', paused);
+      const label = btn.querySelector('span');
+      if (label) label.textContent = paused ? 'Reprendre le service' : 'Prendre une pause';
+      const icon = btn.querySelector('i');
+      if (icon) icon.setAttribute('data-lucide', paused ? 'play' : 'coffee');
+    }
+
+    $('#profil-pause').addEventListener('click', async () => {
+      if (activeRole.restricted) return;
+      const paused = isEmployeePaused();
+      const btn = $('#profil-pause');
+      btn.disabled = true;
+      try {
+        if (SV_DEMO) {
+          if (servers[currentUser]) servers[currentUser].status = paused ? 'on-duty' : 'on-pause';
+        } else {
+          await (paused ? KiwiEmployeeLive.resume() : KiwiEmployeeLive.pause());
+          const data = await KiwiEmployeeLive.refresh();
+          applyEmployeeLive(data);
+        }
+        renderPauseControl();
+        renderTables();
+        toast(paused ? 'Service repris' : 'Pause signalée à l’équipe');
+      } catch (_) {
+        toast('Pause non synchronisée · vérifiez la connexion');
+      } finally { btn.disabled = false; }
+    });
 
     /* ===========================================================
        SCHEDULE + HOURS — profil tab (Mon..Sun)

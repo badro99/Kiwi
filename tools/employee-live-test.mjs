@@ -94,17 +94,29 @@ const att = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-ca
 const attDoc = JSON.parse(att.data);
 attDoc.entries[0].inTs = Date.now() - 2 * 3600000;
 put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(attDoc));
+const pause = await post({ action: 'pause' }, cookie);
+ok(pause.status === 200, 'une pause est partagée avec les autres serveurs');
+const duringPause = await get(cookie); const pausedState = await duringPause.json();
+ok(pausedState.colleagues[0].status === 'on-pause', "l'équipe voit immédiatement le statut en pause");
+const pausedDoc = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance'").get().data);
+pausedDoc.entries[0].pauseTs = Date.now() - 30 * 60000;
+put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(pausedDoc));
+const resume = await post({ action: 'resume' }, cookie);
+ok(resume.status === 200, 'reprendre ferme la période de pause');
 const cout = await post({ action: 'clock-out' }, cookie);
 ok(cout.status === 200, 'le pointage de sortie ferme le service');
 const teamAfter = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
 const day = Object.values(teamAfter.hours['mem-sara'])[0];
-ok(day >= 1.99 && day <= 2.01, 'les heures pointées alimentent Paie & planning');
+ok(day >= 1.49 && day <= 1.51, 'les heures pointées excluent la pause dans Paie & planning');
 
 const anon = await get('');
 ok(anon.status === 401, 'planning, collègues et salle restent privés sans session employé');
 
 const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
 ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
+const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
+ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

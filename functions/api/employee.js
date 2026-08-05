@@ -120,12 +120,17 @@ async function payloadFor(request, env) {
   const me = safeMember(member, auth.pin);
   const members = Array.isArray(teamRow.data.members) ? teamRow.data.members : [];
   const entries = Array.isArray(attendanceRow.data.entries) ? attendanceRow.data.entries : [];
-  const openIds = new Set(entries.filter((e) => e && !e.outTs).map((e) => e.memberId || e.staffId));
+  const openEntries = new Map(entries.filter((e) => e && !e.outTs)
+    .map((e) => [String(e.memberId || e.staffId || ''), e]));
   const colleagues = members.map((m) => {
     const p = safeMember(m, { id: m.id, name: fullName(m), role: m.function || m.department || 'staff' });
-    return { ...p, status: openIds.has(m.id) ? 'on-duty' : 'off-duty' };
+    const open = openEntries.get(String(m.id || ''));
+    return { ...p, status: open ? (open.pauseTs ? 'on-pause' : 'on-duty') : 'off-duty' };
   });
-  if (!colleagues.some((c) => c.id === me.id)) colleagues.unshift({ ...me, status: attendanceView(attendanceRow.data, auth.pin.id).open ? 'on-duty' : 'off-duty' });
+  if (!colleagues.some((c) => c.id === me.id)) {
+    const open = attendanceView(attendanceRow.data, auth.pin.id).open;
+    colleagues.unshift({ ...me, status: open ? (open.pauseTs ? 'on-pause' : 'on-duty') : 'off-duty' });
+  }
   return {
     ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || '') },
     employee: me,
@@ -202,7 +207,7 @@ export async function onRequestPost({ request, env }) {
 
   const auth = await liveEmployee(request, env);
   if (!auth) return json({ error: 'employee-session-required' }, 401);
-  if (action !== 'clock-in' && action !== 'clock-out') return json({ error: 'bad-action' }, 400);
+  if (!['clock-in', 'clock-out', 'pause', 'resume'].includes(action)) return json({ error: 'bad-action' }, 400);
   const merchant = auth.session.merchant;
   const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
   const member = memberFor(teamRow.data, auth.pin);
@@ -215,7 +220,21 @@ export async function onRequestPost({ request, env }) {
     if (action === 'clock-in') {
       changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs: now, outTs: 0 };
       if (!open) entries.push(changedEntry);
-    } else if (open) {
+    } else if (action === 'pause' && open && !open.pauseTs) {
+      open.pauseTs = now;
+      open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
+      changedEntry = { ...open };
+    } else if (action === 'resume' && open && open.pauseTs) {
+      open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
+      open.breaks.push({ inTs: Number(open.pauseTs) || now, outTs: now });
+      open.pauseTs = 0;
+      changedEntry = { ...open };
+    } else if (action === 'clock-out' && open) {
+      if (open.pauseTs) {
+        open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
+        open.breaks.push({ inTs: Number(open.pauseTs) || now, outTs: now });
+        open.pauseTs = 0;
+      }
       open.outTs = Math.max(now, Number(open.inTs) || now);
       changedEntry = { ...open };
     }
@@ -223,7 +242,12 @@ export async function onRequestPost({ request, env }) {
   });
   if (!attendance) return json({ error: 'attendance-write-failed' }, 503);
   if (action === 'clock-out' && changedEntry && changedEntry.outTs > changedEntry.inTs) {
-    const hours = Math.round(((changedEntry.outTs - changedEntry.inTs) / 3600000) * 100) / 100;
+    const pauseMs = (Array.isArray(changedEntry.breaks) ? changedEntry.breaks : []).reduce((sum, pause) => {
+      const start = Number(pause && pause.inTs) || 0;
+      const end = Number(pause && pause.outTs) || 0;
+      return sum + (start && end > start ? end - start : 0);
+    }, 0);
+    const hours = Math.round((Math.max(0, changedEntry.outTs - changedEntry.inTs - pauseMs) / 3600000) * 100) / 100;
     const day = dateKey(changedEntry.inTs);
     await mutateDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }, (doc) => {
       doc.members = Array.isArray(doc.members) ? doc.members : [];
