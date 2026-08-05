@@ -3101,7 +3101,7 @@ function pdsNoirC(hex, keep) {
   const k = keep == null ? 0.18 : keep;
   const h = String(hex || '#141A16').replace('#', '');
   const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-  const base = [8, 11, 9];     /* #080B09 — le charbon de la salle */
+  const base = [4, 5, 4];      /* #040504 — le charbon de la salle, quasi noir */
   return '#' + [0, 2, 4].map((i, j) => {
     const c = parseInt(n.slice(i, i + 2), 16) || 0;
     return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
@@ -3113,10 +3113,12 @@ function pdsNoirC(hex, keep) {
  * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. Pas d'ambre :
  * le mockup n'en a pas. `fill`/`num`/`chair` suivent la même échelle. */
 const PDS_STATUS_RING_NOIR = {
-  free:     { s: 'rgba(255,255,255,0.19)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.012)', chair: 'rgba(255,255,255,0.12)' },
-  occupied: { s: '#00FFAE',                w: 1.25, dash: '',    fill: 'rgba(0,255,174,0.11)',    chair: 'rgba(0,255,174,0.55)' },
-  reserved: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.035)', chair: 'rgba(255,255,255,0.30)' },
-  cleaning: { s: 'rgba(255,255,255,0.28)', w: 1.25, dash: '3 3', fill: 'rgba(255,255,255,0.012)', chair: 'rgba(255,255,255,0.12)' },
+  /* Échelle remontée d'un cran par rapport au SVG de l'accueil : sur le sol
+   * quasi noir demandé, les valeurs du mockup (0.19/0.40) lisaient trop bas. */
+  free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)' },
+  occupied: { s: '#00FFAE',                w: 1.25, dash: '',    fill: 'rgba(0,255,174,0.14)',    chair: 'rgba(0,255,174,0.70)' },
+  reserved: { s: 'rgba(255,255,255,0.58)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.05)',  chair: 'rgba(255,255,255,0.42)' },
+  cleaning: { s: 'rgba(255,255,255,0.38)', w: 1.25, dash: '3 3', fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)' },
 };
 
 /* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
@@ -3166,10 +3168,9 @@ function pdsNoirTableBody(g, ring, status) {
   const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
   const fill = ring.fill || 'rgba(255,255,255,0.012)';
   const cx = g.w / 2, cy = g.h / 2;
-  /* L'accueil éclaire UNE table à 0.22 ; en service réel il y en a cinq ou
-   * dix — les disques s'additionnent et noient la salle. Plus serré et plus
-   * doux ici, la somme retombe sur la lueur du mockup. */
-  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.3).toFixed(0)}" fill="url(#pdsNoirCall)"/>` : '';
+  /* Le disque d'appel aux valeurs du mockup — le sol quasi noir encaisse
+   * la somme des halos sans se noyer, l'adoucissement n'est plus utile. */
+  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="url(#pdsNoirCall)"/>` : '';
   if (g.shape === 'round') {
     return `${call}
       <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>
@@ -3187,13 +3188,14 @@ function pdsNoirTableBody(g, ring, status) {
  * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
  * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
 function pdsNoirFixture(e, K, g) {
-  /* Tons du mockup : structures en blanc pur — filet 0.28, discret 0.14,
-   * pilules remplies 0.035 / cerclées 0.13 — l'accent #00FFAE réservé au
-   * vivant (interrupteur de caisse, plantes). */
-  const line = 'rgba(255,255,255,0.28)';
-  const dim  = 'rgba(255,255,255,0.14)';
-  const pillFill = 'rgba(255,255,255,0.035)';
-  const pillLine = 'rgba(255,255,255,0.13)';
+  /* Structures en blanc pur, un cran au-dessus du mockup pour tenir sur le
+   * sol quasi noir — filet 0.38, discret 0.20, pilules remplies 0.05 /
+   * cerclées 0.20 — l'accent #00FFAE réservé au vivant (interrupteur de
+   * caisse, plantes). */
+  const line = 'rgba(255,255,255,0.38)';
+  const dim  = 'rgba(255,255,255,0.20)';
+  const pillFill = 'rgba(255,255,255,0.05)';
+  const pillLine = 'rgba(255,255,255,0.20)';
   switch (e.type) {
     case 'texte': return '';
     case 'comptoir': {
@@ -3286,14 +3288,14 @@ function pdsRoomShellNoir(zone) {
    * le trait blanc 0.13 de l'accueil, pas la matière du gabarit. */
   const r = pdsRoom(zone);
   return `<div class="pds-floor" data-pds-floor style="
-    background-color:${pdsNoirC(r.floor, 0.05)};
+    background-color:${pdsNoirC(r.floor, 0.03)};
     background-image:
-      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.05), rgba(255,255,255,0.015) 60%, transparent 100%),
-      linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.04), rgba(255,255,255,0.012) 60%, transparent 100%),
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
     background-size: 100% 100%, 31px 31px, 31px 31px;
     background-repeat: no-repeat, repeat, repeat;
-    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.13);` : ''}
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.20);` : ''}
   "></div>`;
 }
 
@@ -4991,7 +4993,7 @@ function pdsRenderStage(state, T) {
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
               ${noir ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
                 <linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>
-                <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.12"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
+                <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
                 <filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>
               </defs></svg>` : ''}
               ${noir ? pdsRoomShellNoir(zone) : pdsRoomShell(zone)}
@@ -5088,6 +5090,15 @@ function pdsFixMini(kind, K) {
   const h = ar >= 1 ? Math.max(6, box / ar) : box;
   const g = { w, h };
   const c = K.color;
+  /* En vue nuit la vignette passe par le MÊME renderer au trait que la scène
+     (pdsNoirFixture) : le bouton montre ce qui sera réellement posé, pas la
+     matière du jour. Le texte n'a pas de dessin nuit — un Aa blanc suffit. */
+  if (pdsNoir()) {
+    if (K.render === 'none') {
+      return `<span style="font:600 9px/1 var(--font-mono,monospace);color:rgba(255,255,255,0.45);">Aa</span>`;
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pdsNoirFixture({ type: kind }, K, g)}</svg>`;
+  }
   if (K.render === 'svg') {
     return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${K.draw({}, c, g)}</svg>`;
   }
@@ -5544,7 +5555,7 @@ function pdsRenderElement(e, state, T) {
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
       <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.34)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.45)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -7968,18 +7979,19 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
 
-  /* — Tables : le statut est une lumière, le numéro un chuchotement.
-     Typo et encres du mockup : 500 · 0.04em, l'échelle de blanc 0.20 / 0.38,
-     la menthe 0.90 pour l'occupée. Le survol remonte l'encre — un plan
-     d'édition doit rester manipulable, l'accueil n'a pas ce souci. — */
+  /* — Tables : le statut est une lumière, le numéro se lit sans effort.
+     Typo du mockup : 500 · 0.04em ; l'échelle de blanc remontée à 0.40 / 0.55
+     pour tenir sur le sol quasi noir, la menthe 0.90 pour l'occupée. Le
+     survol remonte encore l'encre — un plan d'édition doit rester
+     manipulable, l'accueil n'a pas ce souci. — */
   .pds-noir.pds-noir.pds-noir .pds-tbl-num {
     font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
-    letter-spacing:0.04em; color:rgba(255,255,255,0.20);
+    letter-spacing:0.04em; color:rgba(255,255,255,0.40);
   }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(255,255,255,0.38); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(255,255,255,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-num,
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.75); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"].is-selected .pds-tbl-num { color:#00FFAE; }
   /* Le nombre de couverts n'existe qu'à l'approche — le mockup n'affiche que
