@@ -1,12 +1,14 @@
 /* KIWI · VEXEL HOME — cursor position for the edge-lighting layer.
  *
- * Writes --vx-mx/--vx-my (the pointer, in card-local percentages) onto whichever
+ * Writes --vx-x/--vx-y (the pointer, in card-local pixels) onto whichever
  * interactive homepage card the pointer is over. Layer G in design-vexel.css
- * reads them to place its glow; everything visible — the fade, the colour, the
- * reach — lives in CSS. This file only answers "where is the cursor".
+ * feeds them to a `transform` on the glow sprite; everything visible — the fade,
+ * the colour, the size — lives in CSS. This file only answers "where is the
+ * cursor". Pixels rather than percentages because the value drives a translate,
+ * and a percentage there would resolve against the sprite, not the card.
  *
- * If this never runs, the gradient falls back to 50%/0% and the cards light from
- * the top edge instead. Nothing breaks, the effect just stops following.
+ * If this never runs, the sprite falls back to the card's top-centre and the
+ * cards light from above instead. Nothing breaks, the light just stops following.
  *
  * Gated twice: the vexel skin (either climate) and the homepage container. On a
  * subpage it attaches nothing at all.
@@ -75,8 +77,8 @@
 
   function clear(card) {
     if (!card) return;
-    card.style.removeProperty('--vx-mx');
-    card.style.removeProperty('--vx-my');
+    card.style.removeProperty('--vx-x');
+    card.style.removeProperty('--vx-y');
   }
 
   function paint() {
@@ -91,8 +93,12 @@
     var r = current.getBoundingClientRect();
     if (!r.width || !r.height) return;
 
-    current.style.setProperty('--vx-mx', ((ev.clientX - r.left) / r.width * 100).toFixed(2) + '%');
-    current.style.setProperty('--vx-my', ((ev.clientY - r.top) / r.height * 100).toFixed(2) + '%');
+    /* Pixels, not percentages: these feed a `transform: translate3d(…)`, which
+     * the compositor applies without repainting. Percentages would have to
+     * resolve against the glow layer's own box (156 %/224 % of the card), so the
+     * same number would mean a different place on every card. */
+    current.style.setProperty('--vx-x', Math.round(ev.clientX - r.left) + 'px');
+    current.style.setProperty('--vx-y', Math.round(ev.clientY - r.top) + 'px');
   }
 
   function onMove(e) {

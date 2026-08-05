@@ -3970,17 +3970,13 @@ body.design-vexel[data-vexel-mode] .dash-standard {
   --vx-neon-dur: 260ms;
   --vx-neon-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Reach of the cursor glow, as a share of the card's own box so it scales with
-   * the card. Wide and weak reads as illumination; tight and strong reads as a
-   * cheap flashlight. Taller than wide because the pointer usually enters from
-   * above and the light should fall down the card, not spread sideways.
-   *
-   * At 58%/86% the lit area stopped well short of the card's edges, so the only
-   * thing reaching the perimeter was the border — which is exactly what made the
-   * card read as outlined rather than lit. The light now runs past the edge and
-   * gets clipped by the radius, so the brightest thing on the card is its middle. */
-  --vx-neon-reach-x: 78%;
-  --vx-neon-reach-y: 112%;
+  /* Size of the glow layer, as a share of the card so it scales with the card.
+   * These are the layer's own dimensions, not a gradient radius: the light is a
+   * fixed sprite that gets MOVED, never redrawn (see the ::after rule for why).
+   * Taller than wide because the pointer usually enters from above and the light
+   * should fall down the card rather than spread sideways. */
+  --vx-neon-size-x: 156%;
+  --vx-neon-size-y: 224%;
 }
 
 /* The light surface carries the same effect in the primary atlas green, not the
@@ -4050,22 +4046,39 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 0;
-  /* Without this the glow paints a square behind an 18px-rounded card and its
-   * corners sit proud of the border. `inherit` tracks whatever radius the card
-   * DNA is currently set to, so the two can never drift apart. */
-  border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--vx-neon-dur) var(--vx-neon-ease);
-  /* --vx-mx/--vx-my are written by assets/vexel-neon.js. The 50%/0% fallback
-   * keeps the card lit from its top edge if that script never runs. */
+
+  /* The glow is a FIXED sprite that gets moved, never a gradient that gets
+   * redrawn. The first version put the cursor position inside the gradient
+   * itself — `radial-gradient(… at var(--vx-mx) var(--vx-my) …)` — which forces
+   * Chrome to re-rasterise the whole layer on every pointer frame. On a card a
+   * few hundred pixels wide that paint does not finish inside one frame, so the
+   * card updates in tiles and you see hard-edged rectangles of stale colour
+   * sliding around under the text. It looked correct in every still screenshot
+   * and wrong the moment the mouse actually moved, which is the only state a
+   * hover effect is ever seen in.
+   *
+   * Painted once, moved on the compositor: `transform` never touches paint. */
+  left: 0;
+  top: 0;
+  width: var(--vx-neon-size-x);
+  height: var(--vx-neon-size-y);
   background: radial-gradient(
-    var(--vx-neon-reach-x) var(--vx-neon-reach-y)
-      at var(--vx-mx, 50%) var(--vx-my, 0%),
+    closest-side,
     rgba(var(--vx-neon), var(--vx-neon-strength)),
-    rgba(var(--vx-neon), 0) 72%
+    rgba(var(--vx-neon), 0) 100%
   );
+
+  /* --vx-x/--vx-y are the pointer in card-local PIXELS, written by
+   * assets/vexel-neon.js. The trailing -50%/-50% is a share of this layer's own
+   * box, so the sprite ends up centred on that point. Without the script the
+   * fallback (32 % of the layer ≈ the card's horizontal centre, y at the top
+   * edge) lights the card from above, which is the old behaviour. */
+  transform:
+    translate3d(var(--vx-x, 32%), var(--vx-y, 0px), 0)
+    translate(-50%, -50%);
+  transition: opacity var(--vx-neon-dur) var(--vx-neon-ease);
 }
 
 body.design-vexel[data-vexel-mode] .dash-standard :is(
@@ -4079,6 +4092,9 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
   .dash-more-clip [data-integ-card]
 ):hover::after {
   opacity: 1;
+  /* Promoted only while hovered. Declaring it at rest would hand all 22 cards a
+   * permanent compositor layer for an effect that is off. */
+  will-change: transform;
 }
 
 /* ── Tier 2 · the hero ───────────────────────────────────────────────────────
