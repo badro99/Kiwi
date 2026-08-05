@@ -4121,18 +4121,26 @@ body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-tod
   content: "";
   position: absolute;
   z-index: -1;
+  /* `width`/`height`, not `inset` alone. The base sheet already owns this
+   * pseudo-element: dashboard.html:445 makes it a 260 × 260 decorative orb
+   * hanging off the bottom-left corner. `inset: 0` re-anchors it to the top-left
+   * but does NOT resize it — an explicit width wins over `right`, an explicit
+   * height wins over `bottom` — so the bloom was painted into a 260 px box and
+   * guillotined at exactly 260 px from the card's left edge. That is the hard
+   * vertical seam: not a repaint artefact, a gradient with nowhere left to go.
+   * `auto` hands the sizing back to the offsets. */
   inset: 0;
+  width: auto;
+  height: auto;
+
   pointer-events: none;
   opacity: 0;
 
-  /* One permanent compositor layer, declared at rest rather than on :hover.
-   * The 22 grid cards cannot afford that and get `will-change` only while
-   * hovered — but they animate `transform`, which the compositor owns either
-   * way. The hero animates OPACITY on a gradient the full width of the page,
-   * and a layer created at the instant the animation starts still costs one
-   * main-thread paint. On a card this wide that paint misses the frame, Chrome
-   * updates it in tiles, and the seam between a painted and an unpainted tile
-   * reads as a hard vertical edge sliding across the card. One layer, always,
+  /* One permanent compositor layer, declared at rest rather than on :hover. The
+   * 22 grid cards cannot afford that and get `will-change` only while hovered —
+   * but they animate `transform`, which the compositor owns either way. This one
+   * fades a gradient the full width of the card, and a layer created at the
+   * instant the fade starts still costs a main-thread paint. One layer, always,
    * for one card. */
   will-change: opacity;
 
