@@ -14,11 +14,17 @@
 (function () {
   'use strict';
 
+  /* Must stay in step with the :is() list in design-vexel.css (Layer F). A card
+   * present here but absent there gets tracked and never lights; absent here but
+   * present there lights from its top edge and never follows the cursor. */
   var CARDS = [
     '[data-kpi-band] > .kpi-m',
     '.oppo-band .oppo-card',
     '.dash-cols .block',
     '.dash-cols .settle',
+    '.vexel-bottom-row .block',
+    '.vexel-rail-card',
+    '.vexel-goals-card',
     '.dash-more-clip [data-integ-card]'
   ].join(',');
 

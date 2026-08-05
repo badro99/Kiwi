@@ -3934,7 +3934,7 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * LAYER E · DARK HOME · EDGE LIGHTING
+ * LAYER F · DARK HOME · EDGE LIGHTING
  *
  * Scoped to .dash-standard in dark: the homepage only. Subpages and the whole
  * light climate are untouched — every rule below is gated on both the mode
@@ -3945,14 +3945,20 @@ body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
  * what it was, minus one half-step on the hero's top rim (below). Illumination
  * is the response to a pointer, which makes it wayfinding rather than decor.
  *
- * Three tiers, by what the card actually is:
- *   1 · Interactive cards get a glow that follows the cursor. Tracking reads as
- *       "this responds to you", so it is spent only where a click does something.
- *   2 · Display cards (rail, goals, mix) get the edge and nothing else. They
- *       must not imitate a control — see the note above tier 2.
- *   3 · The hero is the landmark and gets the widest bloom, but anchored to its
+ * Two tiers:
+ *   1 · Every card on the home surface gets the edge and a glow that follows the
+ *       cursor. An earlier draft withheld the glow from display-only cards so it
+ *       would read strictly as "clickable"; in use that just looked like half the
+ *       page was broken, so the effect is now uniform and carries "you are here"
+ *       rather than "you may click".
+ *   2 · The hero is the landmark and gets the widest bloom, but anchored to its
  *       top edge rather than the cursor: it is not clickable, and its chart runs
  *       its own hover readout that a tracking glow would fight.
+ *
+ * The glow is sized in PERCENTAGES of the card, never in pixels. A fixed radius
+ * covers a small KPI card several times over and all but vanishes inside a large
+ * one, so a pixel reach lights the little cards and leaves the big ones with a
+ * bare outline and no illumination behind it.
  *
  * Colour is the mint already in the dark palette (--vx-accent, #00ffae) held as
  * an RGB triplet so alpha can vary per tier. No new hue enters the system.
@@ -3962,21 +3968,28 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard {
   --vx-neon-dur: 260ms;
   --vx-neon-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Reach of the cursor glow. Wide and weak reads as illumination; tight and
-   * strong reads as a cheap flashlight. */
-  --vx-neon-reach: 260px;
-  --vx-neon-strength: 0.10;
+  /* Reach of the cursor glow, as a share of the card's own box so it scales with
+   * the card. Wide and weak reads as illumination; tight and strong reads as a
+   * cheap flashlight. Taller than wide because the pointer usually enters from
+   * above and the light should fall down the card, not spread sideways. */
+  --vx-neon-reach-x: 58%;
+  --vx-neon-reach-y: 86%;
+  --vx-neon-strength: 0.13;
 
   /* The hover shadow keeps the existing four-part construction — mint top rim,
    * white hairline, contact, ambient — and inserts one contained emerald halo.
    * Negative spread keeps the halo inside the card's own footprint so adjacent
-   * cards in the KPI band never pool light between them. */
-  --vx-card-border-hover: rgba(var(--vx-neon), 0.40);
+   * cards in the KPI band never pool light between them.
+   *
+   * The border stays low (0.26). At 0.40 it traced a hard, even line around the
+   * whole perimeter, which on a large card reads as a selection outline rather
+   * than an edge catching light. The top rim carries the accent instead — it is
+   * directional, so it says "lit from above" where a full ring says "selected". */
+  --vx-card-border-hover: rgba(var(--vx-neon), 0.26);
   --vx-card-shadow-hover:
     inset 0 2px 0 rgba(var(--vx-neon), 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 0 0 1px rgba(var(--vx-neon), 0.07),
-    0 0 26px -12px rgba(var(--vx-neon), 0.45),
+    0 0 30px -14px rgba(var(--vx-neon), 0.42),
     0 24px 46px -28px rgba(0, 0, 0, 0.92);
 }
 
@@ -3995,6 +4008,9 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
   .oppo-band .oppo-card,
   .dash-cols .block,
   .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
   .dash-more-clip [data-integ-card]
 ) {
   position: relative;
@@ -4006,21 +4022,29 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
   .oppo-band .oppo-card,
   .dash-cols .block,
   .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
   .dash-more-clip [data-integ-card]
 )::after {
   content: "";
   position: absolute;
   z-index: -1;
   inset: 0;
+  /* Without this the glow paints a square behind an 18px-rounded card and its
+   * corners sit proud of the border. `inherit` tracks whatever radius the card
+   * DNA is currently set to, so the two can never drift apart. */
+  border-radius: inherit;
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--vx-neon-dur) var(--vx-neon-ease);
   /* --vx-mx/--vx-my are written by assets/vexel-neon.js. The 50%/0% fallback
    * keeps the card lit from its top edge if that script never runs. */
   background: radial-gradient(
-    var(--vx-neon-reach) circle at var(--vx-mx, 50%) var(--vx-my, 0%),
+    var(--vx-neon-reach-x) var(--vx-neon-reach-y)
+      at var(--vx-mx, 50%) var(--vx-my, 0%),
     rgba(var(--vx-neon), var(--vx-neon-strength)),
-    rgba(var(--vx-neon), 0) 60%
+    rgba(var(--vx-neon), 0) 72%
   );
 }
 
@@ -4029,18 +4053,15 @@ body.design-vexel[data-vexel-mode="dark"] .dash-standard :is(
   .oppo-band .oppo-card,
   .dash-cols .block,
   .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
   .dash-more-clip [data-integ-card]
 ):hover::after {
   opacity: 1;
 }
 
-/* ── Tier 2 · display cards ──────────────────────────────────────────────────
- * Rail, goals and mix render numbers; there is nothing to click. They inherit
- * the shared edge and lift from the card DNA above, and deliberately stop
- * there — no tracking glow, because a light that follows the cursor is a
- * promise of interactivity these cards cannot keep. */
-
-/* ── Tier 3 · the hero ───────────────────────────────────────────────────────
+/* ── Tier 2 · the hero ───────────────────────────────────────────────────────
  * The one place light is allowed at rest: the top rim steps from 0.22 to 0.34
  * so the eye lands here first on arrival. It is the same rim every other card
  * already has, half a step up — not a new effect. */
