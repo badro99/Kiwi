@@ -3114,11 +3114,14 @@ function pdsNoirC(hex, keep) {
  * le mockup n'en a pas. `fill`/`num`/`chair` suivent la même échelle. */
 const PDS_STATUS_RING_NOIR = {
   /* Échelle remontée d'un cran par rapport au SVG de l'accueil : sur le sol
-   * quasi noir demandé, les valeurs du mockup (0.19/0.40) lisaient trop bas. */
-  free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)' },
-  occupied: { s: '#00FFAE',                w: 1.25, dash: '',    fill: 'rgba(0,255,174,0.14)',    chair: 'rgba(0,255,174,0.70)' },
-  reserved: { s: 'rgba(255,255,255,0.58)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.05)',  chair: 'rgba(255,255,255,0.42)' },
-  cleaning: { s: 'rgba(255,255,255,0.38)', w: 1.25, dash: '3 3', fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)' },
+   * quasi noir demandé, les valeurs du mockup (0.19/0.40) lisaient trop bas.
+   * Trois langages de trait pour trois états sans couleur : plein faible
+   * (libre), tiret long (réservée), pointillé (à nettoyer). La distinction
+   * survit au daltonisme et à la distance — c'est le motif qui parle. */
+  free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+  occupied: { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.14)',   chair: 'rgba(0,255,174,0.70)' },
+  reserved: { s: 'rgba(255,255,255,0.75)', w: 1.25, dash: '6 3',     fill: 'rgba(255,255,255,0.06)', chair: 'rgba(255,255,255,0.52)' },
+  cleaning: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
 };
 /* Une matière en vue jour ligne-claire : rabattue vers le papier chaud de la
  * marque en gardant `keep` de sa teinte — un lavis, pas une peinture. Le
@@ -3139,10 +3142,13 @@ function pdsJourC(hex, keep) {
  * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. La menthe
  * appartient à la nuit ; le jour vit en vert de la marque. */
 const PDS_STATUS_RING_JOUR = {
-  free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',    fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
-  occupied: { s: '#0B6E4F',             w: 1.25, dash: '',    fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
-  reserved: { s: 'rgba(10,15,13,0.55)', w: 1.25, dash: '',    fill: 'rgba(10,15,13,0.04)',  chair: 'rgba(10,15,13,0.42)' },
-  cleaning: { s: 'rgba(10,15,13,0.38)', w: 1.25, dash: '3 3', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.22)' },
+  /* Même langage de trait que la nuit : plein faible / tiret long / pointillé.
+   * La réservée s'ancre dans le riad #053B2C — encore de la marque, jamais
+   * d'ambre ni de bleu. */
+  free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
+  occupied: { s: '#0B6E4F',             w: 1.25, dash: '',        fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
+  reserved: { s: 'rgba(5,59,44,0.85)',  w: 1.25, dash: '6 3',     fill: 'rgba(5,59,44,0.05)',   chair: 'rgba(5,59,44,0.55)' },
+  cleaning: { s: 'rgba(10,15,13,0.45)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.24)' },
 };
 
 /* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
@@ -3467,6 +3473,15 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables supprimées`,
     bulkOkStatus: (n, s) => `${n} tables marquées ${s}`,
     bulkHintNone: 'Maintenez Maj et cliquez pour sélectionner plusieurs tables · au moins 2 pour aligner.',
+    /* Groupement */
+    groupTables: 'Grouper',
+    ungroupTables: 'Dissocier',
+    groupPickHint: 'Cliquez sur une autre table pour la grouper avec celle-ci.',
+    groupPickCancel: 'Groupement annulé',
+    groupOk: (a, b) => `Tables ${a} + ${b} groupées`,
+    ungroupOk: 'Tables dissociées',
+    bulkGroup: 'Grouper la sélection',
+    bulkOkGroup: (n) => `${n} tables groupées`,
     /* Templates */
     templatesTitle: 'Templates de salle',
     templatesDesc: 'Démarrez avec une disposition pré-construite · vous pourrez la modifier ensuite.',
@@ -3663,6 +3678,14 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables deleted`,
     bulkOkStatus: (n, s) => `${n} tables set to ${s}`,
     bulkHintNone: 'Hold Shift and click to select multiple tables · at least 2 to align.',
+    groupTables: 'Group',
+    ungroupTables: 'Ungroup',
+    groupPickHint: 'Click another table to group it with this one.',
+    groupPickCancel: 'Grouping cancelled',
+    groupOk: (a, b) => `Tables ${a} + ${b} grouped`,
+    ungroupOk: 'Tables ungrouped',
+    bulkGroup: 'Group selection',
+    bulkOkGroup: (n) => `${n} tables grouped`,
     templatesTitle: 'Room templates',
     templatesDesc: 'Start from a pre-built layout · you can modify it after.',
     tplBistro: 'Bistro · 30 covers',
@@ -3850,6 +3873,14 @@ const PDS_STR = {
     bulkOkDelete: (n) => `تم حذف ${n} طاولة`,
     bulkOkStatus: (n, s) => `تم تعيين ${n} طاولة على ${s}`,
     bulkHintNone: 'اضغط Shift وانقر لاختيار عدة طاولات · 2 على الأقل للمحاذاة.',
+    groupTables: 'تجميع',
+    ungroupTables: 'فصل',
+    groupPickHint: 'انقر على طاولة أخرى لتجميعها مع هذه.',
+    groupPickCancel: 'تم إلغاء التجميع',
+    groupOk: (a, b) => `تم تجميع الطاولتين ${a} + ${b}`,
+    ungroupOk: 'تم فصل الطاولات',
+    bulkGroup: 'تجميع المحدد',
+    bulkOkGroup: (n) => `تم تجميع ${n} طاولات`,
     templatesTitle: 'قوالب القاعة',
     templatesDesc: 'ابدأ بترتيب جاهز · يمكنك تعديله لاحقًا.',
     tplBistro: 'بيسترو · 30 مقعدًا',
@@ -5057,6 +5088,7 @@ function pdsRenderStage(state, T) {
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
+                ${pdsRenderGroups(tablesInZone, state)}
                 ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
                 <div class="pds-bulk" data-pds-bulk hidden></div>
               </div>
@@ -5429,6 +5461,7 @@ function pdsRenderInspector(state, T, obj) {
 
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
+        ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="${obj.group ? 'table-ungroup' : 'table-group'}" data-pds-id="${obj.id}">${obj.group ? T.ungroupTables : T.groupTables}</button>` : ''}
         <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
         <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
@@ -5462,8 +5495,9 @@ function pdsRenderBulkInspector(state, T, selectedIds) {
         <button class="kb ghost" data-pds-action="bulk-dist-v">${T.bulkDistV}</button>
       </div>
       <div class="pds-inspect-actions">
+        <button class="kb ghost" data-pds-action="bulk-group">${T.bulkGroup}</button>
         <button class="kb ghost" data-pds-action="bulk-clear">${T.bulkClear}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete">${T.bulkDelete}</button>
+        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete" style="grid-column:1 / -1;">${T.bulkDelete}</button>
       </div>
     </div>
   `;
@@ -5511,6 +5545,47 @@ function pdsHandles(o, g, T) {
  *   matter what size the merchant drags it to. Number and cover count are an
  *   HTML overlay, never SVG text — SVG text scales with the shape and smears
  *   on a long table.                                                       */
+/* ─── Tables groupées, façon accueil ─────────────────────────────────────
+ * Le mockup de l'accueil fusionne « 06 + 07 » : une enveloppe capsule qui
+ * embrasse les deux tables, un halo doux derrière, et une pastille combinée
+ * au-dessus. Ici la même grammaire, pilotée par `t.group` (id partagé,
+ * persisté dans le plan) : l'enveloppe se dessine SOUS les tables — c'est
+ * un lien, pas un couvercle — et suit les tables quand on les déplace. */
+function pdsSweepGroups(state) {
+  /* Un groupe réduit à une seule table après suppression n'existe plus. */
+  const count = {};
+  state.tables.forEach(t => { if (t.group) count[t.group] = (count[t.group] || 0) + 1; });
+  state.tables.forEach(t => { if (t.group && count[t.group] < 2) delete t.group; });
+}
+
+function pdsRenderGroups(tables, state) {
+  const byGroup = new Map();
+  tables.forEach(t => {
+    if (!t.group) return;
+    if (!byGroup.has(t.group)) byGroup.set(t.group, []);
+    byGroup.get(t.group).push(t);
+  });
+  let out = '';
+  byGroup.forEach(members => {
+    if (members.length < 2) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    members.forEach(t => {
+      const g = pdsGeom(t);
+      x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y);
+      x1 = Math.max(x1, t.x + g.w); y1 = Math.max(y1, t.y + g.h);
+    });
+    const pad = 8;
+    const nums = members.slice()
+      .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+      .map(t => /^\d$/.test(String(t.num)) ? '0' + t.num : t.num);
+    out += `
+      <div class="pds-group-env" style="left:${x0 - pad}px; top:${y0 - pad}px; width:${(x1 - x0) + pad * 2}px; height:${(y1 - y0) + pad * 2}px;">
+        <span class="pds-group-chip">${pdsEsc(nums.join(' + '))}</span>
+      </div>`;
+  });
+  return out;
+}
+
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
   /* Les deux vues passent par le MÊME tracé (chaises en tirets, corps posé
@@ -6116,6 +6191,39 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
 
   el.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
+    /* Mode « grouper » armé : le clic suivant lie les deux tables. Sur
+     * soi-même, il annule. On sort avant toute logique de sélection ou de
+     * drag — le refresh() reconstruit le DOM, donc plus rien à faire ici. */
+    if (state._groupPickFrom) {
+      ev.preventDefault();
+      const fromId = state._groupPickFrom;
+      state._groupPickFrom = null;
+      const t = state.tables.find(tt => tt.id === id);
+      if (fromId === id || !t) {
+        toast(T.groupPickCancel, { duration: 1400 });
+        refresh();
+        setTimeout(() => state._openInspector(id), 0);
+        return;
+      }
+      const from = state.tables.find(tt => tt.id === fromId);
+      if (!from) { refresh(); return; }
+      pdsPush(state);
+      if (from.group && t.group && from.group !== t.group) {
+        /* Deux groupes existants fusionnent : la cible rejoint le premier. */
+        const old = t.group;
+        state.tables.forEach(tt => { if (tt.group === old) tt.group = from.group; });
+      } else {
+        const gid = from.group || t.group || ('grp' + Date.now().toString(36));
+        from.group = gid; t.group = gid;
+      }
+      selection.clear();
+      selection.add(id);
+      refresh();
+      const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+      toast(T.groupOk(disp(from.num), disp(t.num)), { type: 'success' });
+      setTimeout(() => state._openInspector(id), 0);
+      return;
+    }
     /* Selection logic */
     if (ev.shiftKey) {
       if (selection.has(id)) {
@@ -6934,6 +7042,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       pdsPush(state);
       if (f.table) {
         const newT = { ...f.o, id: newTableId(), x: f.o.x + 24, y: f.o.y + 24, num: f.o.num + '·' };
+        delete newT.group;
         state.tables.push(newT);
         selection.clear(); selection.add(newT.id);
         refresh();
@@ -6955,6 +7064,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       pdsPush(state);
       if (f.table) {
         state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
+        pdsSweepGroups(state);
         toast(`Table ${f.o.num} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
       } else {
         state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
@@ -6962,6 +7072,27 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       }
       selection.delete(id);
       refresh();
+      break;
+    }
+    case 'table-group': {
+      /* Arme le mode « choisir la seconde table » — le pointerdown de la
+       * table cliquée ensuite fait la liaison (voir pdsAttachDrag). */
+      const id = btn.getAttribute('data-pds-id');
+      state._groupPickFrom = id;
+      toast(T.groupPickHint, { duration: 2600 });
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'table-ungroup': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f || !f.table || !f.o.group) break;
+      pdsPush(state);
+      const gid = f.o.group;
+      state.tables.forEach(tt => { if (tt.group === gid) delete tt.group; });
+      refresh();
+      toast(T.ungroupOk, { type: 'warn', duration: 1400 });
+      setTimeout(() => state._openInspector(id), 0);
       break;
     }
     case 'obj-lock': {
@@ -7056,9 +7187,21 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'bulk-delete': {
       const n = selection.size;
       state.tables = state.tables.filter(t => !selection.has(t.id));
+      pdsSweepGroups(state);
       selection.clear();
       refresh();
       toast(T.bulkOkDelete(n), { type: 'warn', duration: 1400 });
+      break;
+    }
+    case 'bulk-group': {
+      const members = state.tables.filter(t => selection.has(t.id));
+      if (members.length < 2) break;
+      pdsPush(state);
+      const gid = 'grp' + Date.now().toString(36);
+      members.forEach(t => { t.group = gid; });
+      refresh();
+      toast(T.bulkOkGroup(members.length), { type: 'success' });
+      setTimeout(() => state._openBulkInspector(), 0);
       break;
     }
     case 'bulk-clear': {
@@ -7177,13 +7320,15 @@ const PDS_INLINE_CSS = `
   .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
   .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
   .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
-  .pds-sw-reserved  { background:rgba(10,15,13,0.04); border-color:rgba(10,15,13,0.55); }
-  .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-color:rgba(10,15,13,0.38); border-style:dashed; }
-  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; }
+  .pds-sw-reserved  { background:rgba(5,59,44,0.05); border-style:dashed; border-color:rgba(5,59,44,0.85); }
+  .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-style:dotted; border-color:rgba(10,15,13,0.45); }
+  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; border:1px solid transparent; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
-  .pds-pill-reserved { background:rgba(217,154,43,0.18); color:#A85F00; }
-  .pds-pill-cleaning { background:rgba(26,143,227,0.15); color:#0F6FBF; }
+  /* Les mêmes traits que le plan : tiret riad pour réservée, pointillé encre
+     pour à nettoyer — plus d'ambre ni de bleu que le plan ne peint jamais. */
+  .pds-pill-reserved { background:rgba(5,59,44,0.05); color:#053B2C; border:1px dashed rgba(5,59,44,0.55); }
+  .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted rgba(10,15,13,0.45); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
 
@@ -7478,12 +7623,23 @@ const PDS_INLINE_CSS = `
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
   .pds-status-pill.pds-pill-occupied { background:rgba(11,110,79,0.10); color:var(--atlas); }
-  .pds-status-pill.pds-pill-reserved { background:rgba(217,154,43,0.12); color:#A85F00; }
-  .pds-status-pill.pds-pill-cleaning { background:rgba(26,143,227,0.10); color:#0F6FBF; }
+  .pds-status-pill.pds-pill-reserved { background:rgba(5,59,44,0.04); color:#053B2C; border-style:dashed; border-color:rgba(5,59,44,0.45); }
+  .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:rgba(10,15,13,0.40); }
   .pds-status-pill:hover { transform:translateY(-1px); }
   .pds-status-pill.active { border-color: currentColor; box-shadow:0 0 0 1px currentColor inset; }
   .pds-inspect-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .pds-inspect-actions .kb { padding:7px 8px; font-size:11.5px; justify-content:center; }
+  /* Bouton « Grouper » armé : il pulse doucement le temps du choix. */
+  .pds-inspect-actions .kb.pds-group-arming { border-color:var(--atlas); color:var(--atlas); animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  @keyframes pdsGroupArm { 0%,100% { box-shadow:0 0 0 0 rgba(11,110,79,0); } 50% { box-shadow:0 0 0 3px rgba(11,110,79,0.18); } }
+
+  /* ═════ TABLES GROUPÉES · l'enveloppe « 06 + 07 » du mockup d'accueil ═════
+     Un cadre rx 20 qui embrasse les tables liées, une lueur radiale douce,
+     et le cachet des numéros combinés au-dessus. Sous les tables, jamais
+     cliquable — le groupe est un fait, pas une cible. */
+  .pds-group-env { position:absolute; border-radius:20px; border:1.25px solid rgba(11,110,79,0.45); background:rgba(11,110,79,0.05); pointer-events:none; z-index:0; }
+  .pds-group-env::before { content:''; position:absolute; inset:-30%; border-radius:50%; background:radial-gradient(closest-side, rgba(11,110,79,0.10), rgba(11,110,79,0)); z-index:-1; }
+  .pds-group-chip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); height:19px; padding:0 10px; border-radius:9.5px; background:var(--paper, #F7F5F0); border:1px solid rgba(11,110,79,0.45); color:#0B6E4F; font:500 10px/19px var(--mono, 'JetBrains Mono'); letter-spacing:0.02em; white-space:nowrap; }
 
   .pds-inspect-empty .pds-rail-hint { line-height:1.55; }
 
@@ -8029,8 +8185,8 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
     border-color:#00FFAE; background:rgba(0,255,174,0.11);
   }
-  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.035); }
-  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dashed; border-color:rgba(255,255,255,0.28); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.06); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dotted; border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); }
 
   /* — La scène — */
   .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
@@ -8148,8 +8304,14 @@ const PDS_INLINE_CSS = `
   /* — Statuts (légende de l'inspecteur) — */
   .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
   .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
-  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(217,174,84,0.12); color:#D9AE54; }
-  .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(143,166,184,0.12); color:#9FB4C4; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(255,255,255,0.06); color:rgba(242,239,230,0.85); border:1px dashed rgba(255,255,255,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(255,255,255,0.02); color:rgba(242,239,230,0.60); border:1px dotted rgba(255,255,255,0.40); }
+
+  /* — Groupes : l'enveloppe passe à la menthe sur la scène noire — */
+  .pds-noir.pds-noir.pds-noir .pds-group-env { border-color:rgba(0,255,174,0.55); background:rgba(0,255,174,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-group-env::before { background:radial-gradient(closest-side, rgba(0,255,174,0.16), rgba(0,255,174,0)); }
+  .pds-noir.pds-noir.pds-noir .pds-group-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-inspect-actions .kb.pds-group-arming { border-color:#00FFAE; color:#00FFAE; animation:pdsGroupArm 1.2s ease-in-out infinite; }
 
   /* Nuancier : l'anneau de l'actif passe à la menthe sur fond noir. */
   .pds-noir.pds-noir.pds-noir .pds-sw { border-color:rgba(242,239,230,0.18); }
