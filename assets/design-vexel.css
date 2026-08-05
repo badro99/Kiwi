@@ -2959,6 +2959,241 @@ body.design-vexel[data-vexel-mode] :is(
   box-shadow: var(--vx-card-shadow-hover) !important;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+ * LAYER H · SUB-PAGE CARD DNA
+ *
+ * Layer G above draws the card system, but its selector lists name only
+ * home-page surfaces. Every sub-page panel therefore fell back to a bare
+ * `1px solid var(--n-200)` — rgba(255,255,255,0.07) — with no background,
+ * no rim, no shadow and no hover state at all. On the pure-black main
+ * column that edge is effectively invisible: the pages read as text
+ * floating on nothing, and you cannot tell where one card ends.
+ *
+ * H extends the same recipe to the sub-pages, in two tiers:
+ *   H1 · neutral panels     — full DNA (background + edge + rim + hover)
+ *   H2 · coloured surfaces  — edge + rim + hover only, background left
+ *                             alone so status colours survive
+ * Controls (pill rows, tab strips, search fields, chips, inputs) are
+ * deliberately excluded — selection UI belongs to the liquid lens, and a
+ * mint rim plus a hover lift would read as "card" where it should read
+ * as "control". Plan de salle (.pds-*) is excluded too: its noir view is
+ * a signed-off design that sets its own surfaces.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/* H1 · Neutral sub-page panels — the full card recipe. */
+body.design-vexel[data-vexel-mode] :is(
+  .p-hero, .p-card, .team-mem,
+  .eq-stat, .eq-section,
+  .pay-stat, .pay-section,
+  .cf-card, .cf-z-history,
+  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .resv-section, .resv-builder,
+  .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .cd-exp,
+  .crm-tbl, .crm-comp,
+  .ord-feed, .ord-keep,
+  .gft-stat, .gft-tbl,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .pr-card, .sc-bday-panel,
+  .mi-card, .mi-section, .mi-group-card,
+  .st-kpi, .st-section, .st-ai,
+  .fin-card
+) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* H2 · Surfaces that carry their own meaning in colour — status tickets,
+ * phase markers, approval states. They get the edge, the rim and the
+ * hover, but keep whatever background the component painted. */
+body.design-vexel[data-vexel-mode] :is(
+  .kds-ticket, .resv-card, .re-tile,
+  .dep-phase, .dep-appr, .gft-amt, .ord-ch,
+  .st-alert, .fin-price-card
+) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* H3 · One hover behaviour for both tiers — the lift the home cards have. */
+body.design-vexel[data-vexel-mode] :is(
+  .p-hero, .p-card, .team-mem,
+  .eq-stat, .eq-section,
+  .pay-stat, .pay-section,
+  .cf-card, .cf-z-history,
+  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .resv-section, .resv-builder,
+  .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .cd-exp,
+  .crm-tbl, .crm-comp,
+  .ord-feed, .ord-keep,
+  .gft-stat, .gft-tbl,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .pr-card, .sc-bday-panel,
+  .mi-card, .mi-section, .mi-group-card,
+  .st-kpi, .st-section, .st-ai,
+  .fin-card,
+  .kds-ticket, .resv-card, .re-tile,
+  .dep-phase, .dep-appr, .gft-amt, .ord-ch,
+  .st-alert, .fin-price-card
+):hover {
+  z-index: 1;
+  /* !important is load-bearing: several sub-page panels enter with a
+   * filling keyframe animation (.eq-stat starts at translateY(8px)), and a
+   * running animation outranks a normal declaration — the lift silently
+   * did nothing until this was marked. */
+  transform: translateY(-1px) !important;
+  border-color: var(--vx-card-border-hover) !important;
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* H4 · Coverage for what H1/H2 cannot name.
+ *
+ * Several sub-pages — Commandes and Terminaux most of all — build their
+ * cards from unclassed, inline-styled divs. A named list can never reach
+ * those. Raising the hairline token inside the sub-page scopes lifts
+ * every `var(--n-200)` edge at once, enumerated or not, so nothing is
+ * left drawing at 0.07 on black. Row separators read the same token and
+ * lift with it — which is correct here: they were invisible too.
+ *
+ * The scope is sub-page-only by construction: the app stamps a
+ * `page-<key>` class on <body> for every destination and stamps nothing
+ * on the home page, so `[class*=" page-"]` is an exact "not home" test.
+ * Drawers and the named panels are listed too, since a drawer can open
+ * over the home page and carries no page- class. */
+body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container,
+body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer,
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .dash-genpage, .dash-equipe,
+  .p-hero, .p-card,
+  .eq-section, .pay-section, .cf-card,
+  .resv-section, .sh-section,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .crm-tbl, .crm-comp,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .kdr-strip, .kdr-top-c, .kdr-cat
+) {
+  --n-100: 0.06;
+  --n-200: rgba(255, 255, 255, 0.10);
+  --n-300: 0.18;
+}
+
+/* H5 · Long lists need to answer the pointer, or a table of forty rows
+ * is a wall. Same not-home scope as H4. */
+body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container tbody tr:hover,
+body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover,
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .dash-genpage, .dash-equipe,
+  .cd-tblwrap, .crm-tbl, .kt-h-tablewrap,
+  .pay-section, .dep-ledger, .sh-section, .resv-section,
+  .kdr-cat, .kdr-top-c
+) tbody tr:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .rr, .pay-wk-row, .dep-row, .dep-supp, .kdr-r, .kit-hrow, .resv-wait
+):hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+/* H6 · The bare tables.
+ *
+ * Commandes and Terminaux drop a 3 900px-tall <table> into an unclassed
+ * <div>. No named selector can reach it, and the token rescope in H4 does
+ * nothing because the wrapper draws no border at all — the list simply
+ * runs off into the black with no bottom edge. Match the wrapper
+ * structurally instead: a div whose direct child is a table IS the panel.
+ * No hover lift here — a 4 000px surface that jumps under the pointer
+ * reads as a glitch; the row hover in H5 is the right feedback at this
+ * size. */
+body.design-vexel[data-vexel-mode] .dash-genpage div:not([class]):has(> table) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border);
+  border-radius: 16px;
+  background: var(--vx-card-bg);
+  box-shadow: var(--vx-card-shadow);
+  padding: 2px 12px 6px;
+  overflow-x: auto;
+}
+
+/* Row separators inside the ledger hard-code their hairline instead of
+ * reading --n-200, so H4's rescope cannot lift them. Name them. */
+body.design-vexel[data-vexel-mode="dark"] :is(.dep-row, .dep-supp) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* H7 · KDS tickets.
+ *
+ * The one card family that must NOT take --vx-card-border: on a ticket the
+ * border colour IS the state — 2px atlas for a new order, danger red for a
+ * late one (pages-pro.js:13623). Overwriting it would erase the only signal
+ * a cook reads across the pass. So the ticket takes the rim and the lift
+ * and keeps its own edge. `.is-new` carries a heavier ring of its own and
+ * out-specifies this rule, which is the intended outcome. */
+body.design-vexel[data-vexel-mode] .kit-order {
+  box-shadow: var(--vx-card-shadow);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .kit-order:hover {
+  z-index: 1;
+  transform: translateY(-1px);
+  box-shadow: var(--vx-card-shadow-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode] .kit-order:hover {
+    transform: none;
+  }
+
+  body.design-vexel[data-vexel-mode] :is(
+    .p-hero, .p-card, .team-mem,
+    .eq-stat, .eq-section,
+    .pay-stat, .pay-section,
+    .cf-card, .cf-z-history,
+    .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+    .resv-section, .resv-builder,
+    .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+    .dep-ledger, .dep-card,
+    .cd-tblwrap, .cd-exp,
+    .crm-tbl, .crm-comp,
+    .ord-feed, .ord-keep,
+    .gft-stat, .gft-tbl,
+    .kt-plan-wrap, .kt-h-tablewrap,
+    .pr-card, .sc-bday-panel,
+    .kds-ticket, .resv-card, .re-tile,
+    .dep-phase, .dep-appr, .gft-amt, .ord-ch
+  ) {
+    transition: none;
+  }
+  body.design-vexel[data-vexel-mode] :is(
+    .p-hero, .p-card, .eq-stat, .eq-section, .pay-stat, .pay-section,
+    .cf-card, .kdr-strip, .kdr-kpi, .resv-section, .sh-section,
+    .dep-ledger, .dep-card, .cd-tblwrap, .crm-tbl, .gft-stat,
+    .kt-plan-wrap, .pr-card, .kds-ticket, .resv-card
+  ):hover {
+    transform: none !important;
+  }
+}
+
 /* A common header hierarchy. */
 body.design-vexel[data-vexel-mode] .dash-standard .block-head,
 body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] .block-head {
