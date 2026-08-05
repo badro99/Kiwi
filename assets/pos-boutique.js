@@ -337,8 +337,10 @@
          celle-ci marque la vente sortie mais ne rend pas la marchandise deux fois. */
       if (sale.remote) return;
       (sale.lines || []).forEach((ln) => {
-        if (!ln || ln.returned) return;          // déjà rendue au comptoir
-        persistStock(ln.pid, ln.size, ln.color, sign * (+ln.qty || 0));
+        if (!ln) return;
+        const remaining = lineAvailableQty(ln);
+        if (!remaining) return;                  // déjà rendue au comptoir
+        persistStock(ln.pid, ln.size, ln.color, sign * remaining);
       });
     };
     SALES.forEach((sale) => {
@@ -795,8 +797,8 @@
     view: 'vente',
     rayon: 'tous',
     ticket: null,                /* { num, lines:[], client:id|'passage'|null, remiseAuth } */
-    exchange: null,              /* { saleId, idx } pendant le choix du remplacement */
-    ret: null,                   /* { saleId, picks:Set, motif } sur la vue échanges */
+    exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
+    ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
     retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     clQuery: '',
@@ -843,13 +845,17 @@
     returnCloudHandle.bind();
     return returnCloudHandle;
   }
-  function recordReturn(sale, idxs, amount, reason, kind, reference) {
+  function recordReturn(sale, idxs, amount, reason, kind, reference, quantities) {
     if (IS_DEMO || !sale) return;
-    const items = idxs.map((i) => sale.lines[i]).filter(Boolean).map((ln) => ({
-      name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
-      qty: Number(ln.qty) || 1,
-      amount: Math.round((Number(ln.unit) || 0) * (Number(ln.qty) || 1)),
-    }));
+    const items = idxs.map((i) => {
+      const ln = sale.lines[i];
+      if (!ln) return null;
+      const qty = quantities && quantities.has(i) ? Number(quantities.get(i)) || 1 : 1;
+      return {
+        name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
+        qty, amount: Math.round((Number(ln.unit) || 0) * qty),
+      };
+    }).filter(Boolean);
     const now = Date.now();
     const client = saleClient(sale);
     RETURN_LOG.unshift({
@@ -2657,6 +2663,17 @@
       if (dayB) { state.retDate = dayB.dataset.bqRetDay; state.ret = null; renderEchanges(); icons(); return; }
       const avB = e.target.closest('[data-bq-av]');
       if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.bqAv), { mode: 'view' }); return; }
+      const qtyB = e.target.closest('[data-bq-ret-qty]');
+      if (qtyB && state.ret) {
+        const [saleId, idxS, deltaS] = qtyB.dataset.bqRetQty.split(':');
+        const idx = Number(idxS), sale = findSale(saleId);
+        if (sale && state.ret.saleId === saleId && state.ret.picks.has(idx)) {
+          const current = pickedQty(state.ret, idx, sale.lines[idx]);
+          state.ret.quantities.set(idx, Math.max(1, Math.min(lineAvailableQty(sale.lines[idx]), current + Number(deltaS))));
+          renderEchanges(); icons();
+        }
+        return;
+      }
       const lnB = e.target.closest('[data-bq-pick]');
       if (lnB) { togglePick(lnB.dataset.bqPick); return; }
       const lockB = e.target.closest('[data-bq-locked]');
@@ -2673,11 +2690,31 @@
 
   const MOTIFS = ['Taille', 'Couleur', 'Défaut', 'Changement d\'avis'];
 
+  /* A ticket line can contain several identical pieces. Older tickets only
+     carried the boolean `returned`; keep understanding that format while new
+     returns remember exactly how many pieces came back. */
+  function lineReturnedQty(ln) {
+    const sold = Math.max(0, Number(ln && ln.qty) || 0);
+    if (ln && ln.returned) return sold;
+    return Math.max(0, Math.min(sold, Number(ln && ln.returnedQty) || 0));
+  }
+  function lineAvailableQty(ln) { return Math.max(0, (Number(ln && ln.qty) || 0) - lineReturnedQty(ln)); }
+  function pickedQty(ret, idx, ln) {
+    const wanted = ret && ret.quantities && ret.quantities.get(idx);
+    return Math.max(1, Math.min(lineAvailableQty(ln), Number(wanted) || 1));
+  }
+  function markLineReturned(ln, qty, note) {
+    const next = Math.min(Number(ln.qty) || 0, lineReturnedQty(ln) + Math.max(0, Number(qty) || 0));
+    ln.returnedQty = next;
+    ln.returned = next >= (Number(ln.qty) || 0);
+    ln.note = note;
+  }
+
   function saleCard(s, ret) {
     const c = saleClient(s);
     const sel = ret && ret.saleId === s.id ? ret.picks : new Set();
-    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? l.unit * l.qty : 0), 0);
-    const hasRet = s.lines.some((l) => l.returned);
+    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? l.unit * pickedQty(ret, i, l) : 0), 0);
+    const hasRet = s.lines.some((l) => lineReturnedQty(l) > 0);
     return `<div class="bq-sale">
       <div class="bq-sale-top">
         <span class="bq-sale-num">${s.id}</span>
@@ -2698,7 +2735,9 @@
              le dit franchement ; le montant payé, lui, vient de la ligne et
              reste toujours juste. */
           const p = P[l.pid] || { name: l.name || 'Article retiré du catalogue', art: '' };
-          if (l.returned) {
+          const returnedQty = lineReturnedQty(l);
+          const availableQty = lineAvailableQty(l);
+          if (!availableQty) {
             return `<button class="bq-sline is-locked" data-bq-locked="1">
               <span class="tick"></span>
               <span class="bq-line-art">${artOf(p.art)}</span>
@@ -2707,16 +2746,24 @@
               <span class="bq-pill warn">retournée</span>
             </button>`;
           }
+          const chosenQty = sel.has(i) ? pickedQty(ret, i, l) : 1;
           return `<button class="bq-sline ${sel.has(i) ? 'on' : ''}" data-bq-pick="${s.id}:${i}">
             <span class="tick"><i data-lucide="check"></i></span>
             <span class="bq-line-art">${artOf(p.art)}</span>
             <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
               <span class="bq-line-sub">
                 ${colorDot(l.color)}
-                <span class="sz">${esc(l.size)}</span> ${l.qty > 1 ? `× ${l.qty}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
+                <span class="sz">${esc(l.size)}</span> ${availableQty > 1 ? `× ${availableQty} disponibles` : ''} ${returnedQty ? `· ${returnedQty} déjà retournée${returnedQty > 1 ? 's' : ''}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
-            <span class="amt">${fmtMAD(l.unit * l.qty)}</span>
-          </button>`;
+            <span class="amt">${fmtMAD(l.unit * availableQty)}</span>
+          </button>${sel.has(i) && availableQty > 1 ? `
+            <div class="bq-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
+              <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="Retirer une pièce">−</button>
+              <b>${chosenQty}</b>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="Ajouter une pièce">+</button>
+              <strong>${fmtMAD(l.unit * chosenQty)}</strong>
+            </div>` : ''}`;
         }).join('')}
       </div>
       ${sel.size ? `
@@ -2736,9 +2783,10 @@
   function togglePick(key) {
     const [saleId, idxS] = key.split(':');
     const idx = +idxS;
-    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), motif: 'Taille' };
+    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), quantities: new Map(), motif: 'Taille' };
     const picks = state.ret.picks;
-    if (picks.has(idx)) picks.delete(idx); else picks.add(idx);
+    if (picks.has(idx)) { picks.delete(idx); state.ret.quantities.delete(idx); }
+    else { picks.add(idx); state.ret.quantities.set(idx, 1); }
     if (!picks.size) state.ret = null;
     renderEchanges(); icons();
   }
@@ -2750,8 +2798,9 @@
     const idx = ret.picks.values().next().value;
     const sale = findSale(ret.saleId);
     const ln = sale.lines[idx];
-    if (ln.qty > 1) { toast('Ligne multiple, passez par un avoir, ou retournez pièce par pièce'); return; }
-    state.exchange = { saleId: ret.saleId, idx };
+    const qty = pickedQty(ret, idx, ln);
+    if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
+    state.exchange = { saleId: ret.saleId, idx, qty: 1 };
     state.ret = null;
     switchView('vente');
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
@@ -2762,25 +2811,27 @@
     if (!ret) return;
     const sale = findSale(ret.saleId);
     const idxs = Array.from(ret.picks);
-    const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * sale.lines[i].qty, 0);
+    const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
+    const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
     if (!amount) return;
-    restoreLines(sale, idxs, `avoir (${ret.motif.toLowerCase()})`);
+    restoreLines(sale, idxs, quantities, `avoir (${ret.motif.toLowerCase()})`);
     const c = saleClient(sale);
     const av = issueAvoir(amount, c, `${ret.motif}, retour ${sale.id}`, sale.id);
-    recordReturn(sale, idxs, amount, ret.motif, 'avoir', av.code);
+    recordReturn(sale, idxs, amount, ret.motif, 'avoir', av.code, quantities);
     state.ret = null;
     refreshOps();
     openVoucher(av, { mode: 'fresh' });
   }
 
-  function restoreLines(sale, idxs, note) {
+  function restoreLines(sale, idxs, quantities, note) {
     idxs.forEach((i) => {
       const ln = sale.lines[i];
-      ln.returned = true;
-      ln.note = note;
-      stockAdd(ln.pid, ln.size, ln.qty);
+      const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
+      if (!qty) return;
+      markLineReturned(ln, qty, note);
+      stockAdd(ln.pid, ln.size, qty);
       // Returned pieces go back into the real inventory too, not just the display.
-      persistStock(ln.pid, ln.size, ln.color, ln.qty);
+      persistStock(ln.pid, ln.size, ln.color, qty);
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
@@ -2909,9 +2960,8 @@
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
       persistStock(ln.pid, ln.size, ln.color, 1);
       persistStock(newPid, newSize, newColor, -1);
-      ln.returned = true;
-      ln.note = `échangée → ${newP.name} · ${newSize}`;
-      recordReturn(sale, [ex.idx], ln.unit, 'Echange', 'echange');
+      markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
+      recordReturn(sale, [ex.idx], ln.unit, 'Echange', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -6052,7 +6102,7 @@
         else t.other += p.amount;
       });
       if (took > 0) { t.moneyIn += took; t.txns++; }
-      (s.lines || []).forEach((ln) => { if (!ln.returned) t.items += +ln.qty || 0; });
+      (s.lines || []).forEach((ln) => { t.items += lineAvailableQty(ln); });
       const d = +s.discount || 0;
       if (d > 0) { t.discounts += d; t.discountsN++; }
       /* Compté À PART des réductions. Une gérante qui voit « 4 200 MAD de
@@ -6074,10 +6124,10 @@
     const out = [];
     salesToday().forEach((s) => {
       const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
-      const lines = (s.lines || []).filter((ln) => !ln.returned).map((ln) => ({
+      const lines = (s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
-        qty: +ln.qty || 0,
-        total: Math.round((+ln.unit || 0) * (+ln.qty || 0)),
+        qty: lineAvailableQty(ln),
+        total: Math.round((+ln.unit || 0) * lineAvailableQty(ln)),
         cat: rayonOf(ln.pid) || '',
       }));
       let first = true;
