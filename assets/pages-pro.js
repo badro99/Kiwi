@@ -3293,7 +3293,7 @@ function pdsRoomShellNoir(zone) {
       linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
     background-size: 100% 100%, 31px 31px, 31px 31px;
     background-repeat: no-repeat, repeat, repeat;
-    box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.13);
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.13);` : ''}
   "></div>`;
 }
 
