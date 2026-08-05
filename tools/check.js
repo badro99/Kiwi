@@ -671,6 +671,7 @@ section('Whole-project regressions');
     'restaurant-menu-performance-test.js',
     'restaurant-menu-peak-hours-test.js',
     'restaurant-units-test.js',
+    'employee-live-test.mjs',
     'void-stock-test.js',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',

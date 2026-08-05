@@ -64,6 +64,7 @@ const FEATURES = {
   recipes:      { keys: ['items'],                                max: 600000 },
   costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
+  attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },

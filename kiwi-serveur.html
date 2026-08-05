@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>Kiwi Serveur, Démo</title>
-  <meta name="description" content="Application mobile serveur, démo Kiwi POS" />
+  <title>Kiwi · Application employé</title>
+  <meta name="description" content="Application mobile Kiwi pour le service, le planning et le pointage des employés" />
+  <meta name="theme-color" content="#053B2C" />
+  <link rel="manifest" href="serveur.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icons/kiwi-caisse-192.png" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -2849,7 +2852,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="delete"></i>
           </button>
         </div>
-        <div class="pin-foot">Démo · 0000 = plongeur · autre = serveur</div>
+        <div class="pin-foot">Votre code personnel · 4 chiffres</div>
       </section>
 
       <!-- ============ CLOCK-IN SCREEN ============ -->
@@ -3416,6 +3419,8 @@ em, i, cite, dfn, var { font-style: normal; }
   <!-- The staff-role catalogue the operator console files PINs against — it says
        which roles work the floor and which only clock in. Missing ⇒ old rule. -->
   <script src="assets/staff-roles.js" defer></script>
+  <!-- Real employee identity, planning, floor and attendance bridge. -->
+  <script src="assets/employee-live.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -3433,11 +3438,20 @@ em, i, cite, dfn, var { font-style: normal; }
        the pinned merchant slug. A real venue shows ITS name — never the demo
        "Café Atlas · Maarif". Local demo (unpaired localhost) is unchanged. */
     function svPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+    function svMerchant() {
+      try {
+        var q = new URLSearchParams(location.search).get('merchant');
+        if (q && /^[a-z0-9][a-z0-9-]{0,63}$/i.test(q)) return q.toLowerCase();
+      } catch (_) {}
+      var p = svPaired();
+      if (p && p.merchant) return String(p.merchant).toLowerCase();
+      try { return String(localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant') || '').toLowerCase(); } catch (_) { return ''; }
+    }
     function svHosted() { try { var h = (location.hostname || '').toLowerCase(); return !(h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '' || /\.local$/.test(h)); } catch (_) { return false; } }
-    function svReal()   { return !!svPaired() || svHosted(); }
+    function svReal()   { return !!svMerchant() || svHosted(); }
     function svName(demo) {
       var p = svPaired(); if (p && p.name) return p.name;
-      if (svReal()) { try { var m = localStorage.getItem('kiwiLiveMerchant'); if (m) return m.split('-').filter(Boolean).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' '); } catch (_) {} return ''; }
+      if (svReal()) { try { var m = svMerchant(); if (m) return m.split('-').filter(Boolean).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' '); } catch (_) {} return ''; }
       return demo;
     }
     function svCity(demo) { var p = svPaired(); if (p && p.location) return p.location; return svReal() ? '' : demo; }
@@ -3483,7 +3497,7 @@ em, i, cite, dfn, var { font-style: normal; }
     setInterval(tickClock, 1000);
 
     /* ---------- Servers (Yassir + 3 collègues) ---------- */
-    const currentUser = 'yassir';
+    let currentUser = 'yassir';
     const servers = {
       yassir: { name: 'Yassir K.', initials: 'YK', status: 'on-duty'  },
       mehdi:  { name: 'Mehdi A.',  initials: 'MA', status: 'on-pause' },
@@ -3529,6 +3543,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (h >= 18 && h < 23) return 'ce soir';
       return 'cette nuit';
     }
+    const isMineTable = (t) => !!t && (!t.server || t.server === currentUser);
 
     /* Pre-seeded orders for already-occupied tables (read-only mock) */
     const seedOrders = {
@@ -3956,7 +3971,20 @@ em, i, cite, dfn, var { font-style: normal; }
       });
     }
 
-    function handlePinKey(key) {
+    let liveEmployeeState = null;
+    let pinBusy = false;
+
+    function pinError(code) {
+      const msg = code === 'store-suspended' ? 'Cet établissement est suspendu'
+        : code === 'not-configured' ? 'Service momentanément indisponible'
+        : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'
+        : !svMerchant() ? 'Lien incomplet · demandez le lien de votre établissement'
+        : 'Code employé incorrect';
+      toast(msg);
+    }
+
+    async function handlePinKey(key) {
+      if (pinBusy) return;
       if (key === 'back') {
         if (pinInput.length === 0) return;
         pinInput = pinInput.slice(0, -1);
@@ -3970,6 +3998,21 @@ em, i, cite, dfn, var { font-style: normal; }
       if (pinInput.length === 4) {
         // Capture the entered code before we reset pinInput.
         const entered = pinInput;
+        pinBusy = true;
+        if (!SV_DEMO) {
+          try {
+            if (!window.KiwiEmployeeLive) throw Object.assign(new Error('not-configured'), { code: 'not-configured' });
+            liveEmployeeState = await window.KiwiEmployeeLive.login(svMerchant(), entered);
+            try { localStorage.setItem('kiwiEmployeeMerchant', liveEmployeeState.merchant || svMerchant()); } catch (_) {}
+            applyEmployeeLive(liveEmployeeState);
+          } catch (err) {
+            pinInput = '';
+            pinBusy = false;
+            $$('.pin-dot').forEach(d => d.classList.remove('is-success', 'is-filled'));
+            pinError(err && err.code);
+            return;
+          }
+        }
         // Success pop on the 4 dots, staggered left → right.
         const dots = $$('.pin-dot');
         dots.forEach((d, i) => {
@@ -3979,6 +4022,7 @@ em, i, cite, dfn, var { font-style: normal; }
         // before transitioning to the next screen, so the user sees it.
         setTimeout(() => {
           pinInput = '';
+          pinBusy = false;
           // Clear both filled + success states for next login cycle
           dots.forEach(d => d.classList.remove('is-success', 'is-filled'));
           // Resolve the role: an operator-managed PIN (if any) wins, otherwise the
@@ -4080,6 +4124,20 @@ em, i, cite, dfn, var { font-style: normal; }
        KiwiRoles.isService) so nobody loses access they have today, and the file
        failing to load falls straight back to the old rule. */
     function resolveRole(entered) {
+      if (!SV_DEMO && liveEmployeeState && liveEmployeeState.employee) {
+        const emp = liveEmployeeState.employee;
+        const raw = emp.role || '';
+        const R = window.KiwiRoles;
+        const floor = R ? R.isService(raw) : /serveur|service|salle|manager|propri/i.test(raw);
+        const base = floor ? ROLES.serveur : ROLES.plongeur;
+        return Object.assign({}, base, {
+          id: emp.id || base.id,
+          name: emp.firstName || String(emp.name || 'Employé').split(/\s+/)[0],
+          fullName: emp.name || 'Employé',
+          initials: emp.initials || 'E',
+          role: R ? R.label(raw) : (raw || 'Employé'),
+        });
+      }
       try {
         const pins = (window.KiwiConfig && window.KiwiConfig.pins) || [];
         const R = window.KiwiRoles;
@@ -4105,7 +4163,61 @@ em, i, cite, dfn, var { font-style: normal; }
           }
         }
       } catch (_) { /* fall through to the demo rule */ }
-      return (entered === '0000') ? ROLES.plongeur : ROLES.serveur;
+      return SV_DEMO ? ((entered === '0000') ? ROLES.plongeur : ROLES.serveur) : null;
+    }
+
+    function tableSeats(t) {
+      if (+t.seats > 0) return +t.seats;
+      const m = String(t.type || '').match(/(\d+)/);
+      return m ? +m[1] : 2;
+    }
+    function employeeSchedule(data) {
+      const map = (data && data.schedule) || {};
+      const monday = new Date();
+      monday.setHours(12, 0, 0, 0);
+      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        const key = d.toISOString().slice(0, 10);
+        const s = map[key];
+        week.push(s && !s.off && s.start && s.end ? { in: s.start, out: s.end } : null);
+      }
+      return { week, monthHours: '—' };
+    }
+    function applyEmployeeLive(data) {
+      if (!data || !data.employee) return;
+      liveEmployeeState = data;
+      const emp = data.employee;
+      currentUser = emp.id || 'employee';
+
+      Object.keys(servers).forEach((k) => { delete servers[k]; });
+      (data.colleagues || []).forEach((c) => {
+        servers[c.id] = { name: c.name || 'Employé', initials: c.initials || 'E', status: c.status || 'off-duty' };
+      });
+      if (!servers[currentUser]) servers[currentUser] = { name: emp.name, initials: emp.initials || 'E', status: data.attendance && data.attendance.open ? 'on-duty' : 'off-duty' };
+
+      const floor = data.floor || { zones: [], tables: [], staff: [] };
+      const zoneNames = Object.create(null), floorStaff = Object.create(null);
+      (floor.zones || []).forEach((z) => { zoneNames[z.id] = z.name || 'Salle'; });
+      (floor.staff || []).forEach((s) => { floorStaff[s.id] = s.name || ''; });
+      const colleagueByName = Object.create(null);
+      (data.colleagues || []).forEach((c) => { colleagueByName[String(c.name || '').trim().toLowerCase()] = c.id; });
+      Object.keys(tables).forEach((k) => { delete tables[k]; });
+      (floor.tables || []).forEach((t) => {
+        let assigned = t.server || '';
+        if (assigned && !servers[assigned]) assigned = colleagueByName[String(floorStaff[assigned] || '').trim().toLowerCase()] || '';
+        const id = String(t.num || t.id || '').trim() || String(t.id || 'Table');
+        tables[id] = {
+          zone: t.zone || 'salle', zoneLabel: zoneNames[t.zone] || 'Salle', server: assigned,
+          covers: tableSeats(t),
+          status: t.status === 'occupied' ? 'ka-yaklo' : 'khawya', elapsed: 0,
+        };
+      });
+      SCHEDULE_DATA[emp.id] = employeeSchedule(data);
+      const storeName = data.store && data.store.name || '';
+      document.querySelectorAll('.ci-restaurant').forEach((el) => { el.textContent = storeName; });
+      const sc = document.getElementById('kg-sc-meta'); if (sc) sc.textContent = storeName;
     }
 
     function applyRoleToClockin() {
@@ -4164,10 +4276,23 @@ em, i, cite, dfn, var { font-style: normal; }
     });
 
     /* ---------- Clock-in / Clock-out ---------- */
-    $('#ci-button').addEventListener('click', () => {
+    $('#ci-button').addEventListener('click', async () => {
       const btn = $('#ci-button');
       if (btn.classList.contains('is-loading')) return;
       btn.classList.add('is-loading');
+
+      let cloudStart = null;
+      if (!SV_DEMO) {
+        try {
+          const saved = await window.KiwiEmployeeLive.clockIn();
+          cloudStart = saved && saved.entry && saved.entry.inTs ? new Date(saved.entry.inTs) : new Date();
+          if (liveEmployeeState && liveEmployeeState.attendance) liveEmployeeState.attendance.open = saved.entry || null;
+        } catch (err) {
+          btn.classList.remove('is-loading');
+          pinError(err && err.code);
+          return;
+        }
+      }
 
       /* New flow — mirrors the dashboard intro sequence:
        *   0       button morphs into a check
@@ -4183,7 +4308,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         // 380ms later — clockin gone, swap to main (kept hidden) + show greeting
         setTimeout(() => {
-          shiftStart = new Date();
+          shiftStart = cloudStart || new Date();
           $$('.screen').forEach(s => s.classList.remove('is-active', 'is-leaving'));
           const main = $('#screen-main');
           main.classList.add('is-active', 'is-pre-hidden');
@@ -4289,7 +4414,7 @@ em, i, cite, dfn, var { font-style: normal; }
           // Non-server staff — generic welcome, no table-counting.
           subEl.textContent = `${svName('Café Atlas') || 'Service'} · ${activeRole.role.toLowerCase()} · bon service`;
         } else {
-          const myCount = Object.keys(tables).filter(id => tables[id].server === currentUser).length;
+          const myCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
           const tod = (typeof timeOfDay === 'function') ? timeOfDay() : 'ce soir';
           const paused = Object.entries(servers).filter(([id, s]) => id !== currentUser && s.status === 'on-pause');
           let sub = `${myCount} table${myCount > 1 ? 's' : ''} ${tod} · bon service`;
@@ -4345,7 +4470,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function showWelcomeBanner() {
-      const myCount = Object.keys(tables).filter(id => tables[id].server === currentUser).length;
+      const myCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
       const paused = Object.entries(servers).filter(([id, s]) => id !== currentUser && s.status === 'on-pause');
       $('#wb-line1').textContent = `Bonjour ${activeRole.name}!`;
       const tod = timeOfDay();
@@ -4363,6 +4488,11 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function clockOut() {
+      if (!SV_DEMO && window.KiwiEmployeeLive) {
+        window.KiwiEmployeeLive.clockOut()
+          .then(() => window.KiwiEmployeeLive.logout())
+          .catch(() => toast('Pointage non synchronisé · vérifiez la connexion'));
+      }
       // Reset shift state, return to PIN screen (full logout)
       shiftStart = null;
       activeTableId = null;
@@ -4495,7 +4625,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $$('.scope-btn').forEach(b => b.classList.toggle('is-active', b.dataset.scope === currentScope));
 
       // Scope counts (always reflect totals)
-      const mineCount = Object.keys(tables).filter(id => tables[id].server === currentUser).length;
+      const mineCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
       const allCount = Object.keys(tables).length;
       $('#scope-mine-count').textContent = mineCount;
       $('#scope-all-count').textContent = allCount;
@@ -4506,7 +4636,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function renderOwnTables() {
-      const myIds = Object.keys(tables).filter(id => tables[id].server === currentUser);
+      const myIds = Object.keys(tables).filter(id => isMineTable(tables[id]));
 
       // Pause-alert banner if any colleague on pause
       const paused = Object.entries(servers)
@@ -4533,11 +4663,10 @@ em, i, cite, dfn, var { font-style: normal; }
           <span class="scope-count-pill">${myIds.length}</span>
         </div>`;
 
-      const zones = [
-        { key: 'salle',    label: 'Salle principale' },
-        { key: 'terrasse', label: 'Terrasse'         },
-        { key: 'etage',    label: 'Étage'            },
-      ];
+      const zoneSeen = Object.create(null);
+      const zones = myIds
+        .map((id) => ({ key: tables[id].zone || 'salle', label: tables[id].zoneLabel || 'Salle' }))
+        .filter((z) => { if (zoneSeen[z.key]) return false; zoneSeen[z.key] = 1; return true; });
       const zonesHTML = zones.map(z => {
         const ids = myIds.filter(id => tables[id].zone === z.key);
         if (ids.length === 0) return '';
@@ -4574,7 +4703,7 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       const sectionsHTML = orderedIds.map(sid => {
-        const ids = Object.keys(tables).filter(id => tables[id].server === sid);
+        const ids = Object.keys(tables).filter(id => sid === currentUser ? isMineTable(tables[id]) : tables[id].server === sid);
         if (ids.length === 0) return '';
         const s = servers[sid];
         const isMe = sid === currentUser;
@@ -5377,7 +5506,8 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!s) return 0;
       const [h1, m1] = s.in.split(':').map(Number);
       const [h2, m2] = s.out.split(':').map(Number);
-      return (h2 * 60 + m2) - (h1 * 60 + m1);
+      const a = h1 * 60 + m1, b = h2 * 60 + m2;
+      return b > a ? b - a : b === a ? 0 : (1440 - a) + b;
     }
 
     function renderSchedule() {
@@ -5445,17 +5575,33 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       if (todayEl) todayEl.textContent = `${Math.floor(todayMin / 60)}h ${String(todayMin % 60).padStart(2, '0')}`;
 
-      // This week — real: today's elapsed only; demo: + completed earlier days.
+      // This week — cloud hours already completed + the active shift.
       const today    = new Date();
       const todayIdx = (today.getDay() + 6) % 7;
       let weekMin = todayMin;
-      if (!real && sched) { for (let i = 0; i < todayIdx; i++) weekMin += shiftMinutes(sched.week[i]); }
+      if (real && liveEmployeeState) {
+        const monday = new Date(today); monday.setHours(12, 0, 0, 0); monday.setDate(today.getDate() - todayIdx);
+        const hmap = liveEmployeeState.hours || {};
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday); d.setDate(monday.getDate() + i);
+          weekMin += Math.round((Number(hmap[d.toISOString().slice(0, 10)]) || 0) * 60);
+        }
+      } else if (sched) { for (let i = 0; i < todayIdx; i++) weekMin += shiftMinutes(sched.week[i]); }
       const weekEl = $('#kg-h-week');
       if (weekEl) weekEl.textContent = `${Math.floor(weekMin / 60)}h ${String(weekMin % 60).padStart(2, '0')}`;
 
-      // This month — demo static; a real waiter has no month history yet.
+      // This month — sum the store's real closed shifts.
       const monthEl = $('#kg-h-month');
-      if (monthEl) monthEl.textContent = real ? '—' : (sched ? sched.monthHours : '—');
+      if (monthEl) {
+        if (!real) monthEl.textContent = sched ? sched.monthHours : '—';
+        else {
+          const prefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-`;
+          const mins = Object.keys((liveEmployeeState && liveEmployeeState.hours) || {})
+            .filter((k) => k.indexOf(prefix) === 0)
+            .reduce((sum, k) => sum + Math.round((Number(liveEmployeeState.hours[k]) || 0) * 60), todayMin);
+          monthEl.textContent = `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}`;
+        }
+      }
     }
 
     /* Update topbar shift meta every minute */

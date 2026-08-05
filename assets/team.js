@@ -1212,6 +1212,8 @@
 
   /* ═══════════════ HEADER ═══════════════ */
   function renderHeader(T, venue, members) {
+    const employeeAppLabel = trLang() === 'ar' ? 'تطبيق الموظفين' : trLang() === 'en' ? 'Employee app' : 'App employés';
+    const showEmployeeApp = venue && venue.custom && (tradeKey(venue) === 'restaurant' || tradeKey(venue) === 'cafe');
     return `
       <div class="eq-head">
         <div>
@@ -1219,6 +1221,7 @@
           <div class="eq-date">${esc(T.subDate(todayLongLabel()))}</div>
         </div>
         <div class="eq-head-acts">
+          ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
           <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
           <button class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
         </div>
@@ -1971,6 +1974,13 @@
   }
 
   handlers['kt-add-member']  = () => openMemberModal(null);
+  handlers['kt-employee-app'] = () => {
+    let slug = '';
+    try { slug = window.KiwiCloudDoc?.slugFor?.(teamVenueKey()) || window.KiwiConfig?.storeSlug?.() || ''; } catch (_) {}
+    if (!slug) { toast('Enregistrez d\'abord cet établissement', { type: 'pend' }); return; }
+    const url = `${location.origin}/kiwi-serveur.html?merchant=${encodeURIComponent(slug)}`;
+    window.open(url, '_blank', 'noopener');
+  };
   handlers['kt-edit-member'] = (_el, id) => {
     if (window.__kiwiTeamProfileDrawer) {
       try { window.__kiwiTeamProfileDrawer.close(); } catch (_) {}

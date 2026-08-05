@@ -16,10 +16,11 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v239';
+var CACHE = 'kiwi-app-v240';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
+  '/kiwi-serveur.html',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais — mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -29,6 +30,7 @@ var SHELL = [
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
+  '/serveur.webmanifest',
   '/assets/tokens.css',
   '/assets/theme.css',
   '/assets/polish.css',
@@ -133,6 +135,7 @@ var SHELL = [
   '/assets/menu-catalog.js',
   '/assets/restaurant-recipes.js',
   '/assets/restaurant-units.js',
+  '/assets/employee-live.js',
   '/assets/restaurant-menu-workspace.js',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',

@@ -118,6 +118,49 @@ export async function isTillFor(request, env, merchant) {
   if (!got) return false;
   return timingSafeEqualHex(got, await tillToken(secret, merchant));
 }
+
+// ── Employee app session ─────────────────────────────────────────────────────
+// A staff PIN is checked once by /api/employee. The browser then receives a
+// short-lived, httpOnly session scoped to exactly one employee and one store.
+// Keeping the PIN out of the token means it is never replayed by page script or
+// stored in localStorage; deleting the staff_pins row still revokes the session
+// because every employee API call re-checks that row.
+export const EMPLOYEE_COOKIE = 'kiwi_employee';
+const EMPLOYEE_SESSION_MS = 12 * 60 * 60 * 1000;
+
+export async function employeeToken(authSecret, employee) {
+  const payload = {
+    merchant: String(employee && employee.merchant || '').slice(0, 64),
+    staffId: String(employee && employee.staffId || '').slice(0, 96),
+    exp: Date.now() + EMPLOYEE_SESSION_MS,
+  };
+  const body = bytesToB64url(encoder.encode(JSON.stringify(payload)));
+  return body + '.' + await hmacHex(authSecret, 'kiwi-employee-v1:' + body);
+}
+
+export async function readEmployee(request, env) {
+  const secret = env && env.AUTH_SECRET;
+  const raw = readCookie(request, EMPLOYEE_COOKIE);
+  if (!secret || !raw) return null;
+  const dot = raw.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = raw.slice(0, dot);
+  const want = await hmacHex(secret, 'kiwi-employee-v1:' + body);
+  if (!timingSafeEqualHex(raw.slice(dot + 1), want)) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body)));
+    if (!payload || !payload.merchant || !payload.staffId || Number(payload.exp) <= Date.now()) return null;
+    return payload;
+  } catch (_) { return null; }
+}
+
+export function employeeCookie(value) {
+  return `${EMPLOYEE_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(EMPLOYEE_SESSION_MS / 1000)}`;
+}
+
+export function clearEmployeeCookie() {
+  return `${EMPLOYEE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
 export async function operatorToken(authSecret) {
   return hmacHex(authSecret, 'kiwi-operator-v1');
 }

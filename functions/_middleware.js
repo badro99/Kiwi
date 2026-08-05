@@ -159,6 +159,12 @@ async function routeRequest(context) {
    * client en silence (tools/public-assets-test.js tient cette promesse). */
   if (isRead && path.startsWith('/assets/')) return next();
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
+  // Employee/service app. The page itself contains no merchant data; its single
+  // API independently validates a store PIN and then an httpOnly employee
+  // session. Exact paths only — no other private API is opened by this exception.
+  if (isRead && (path === '/kiwi-serveur.html' || path === '/kiwi-serveur'
+    || path === '/serveur.webmanifest' || path === '/api/employee')) return next();
+  if (method === 'POST' && path === '/api/employee') return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
