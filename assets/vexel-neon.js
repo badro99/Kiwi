@@ -28,6 +28,27 @@
     '.dash-more-clip [data-integ-card]'
   ].join(',');
 
+  /* The climate flag and the surface actually painted can disagree: a dark theme
+   * held from an earlier visit still paints black under ?skin=vexel-light. Mint
+   * on white and atlas on black both vanish, so the accent follows the pixels
+   * rather than the attribute that claims them. design-vexel.css carries a
+   * correct default for each mode, so with this file absent the ordinary case
+   * still reads right — this only rescues the mismatch. */
+  var MINT = '0, 255, 174';
+  var ATLAS = '7, 112, 77';
+
+  function surfaceIsDark(el) {
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);
+      if (!m) continue;
+      var p = m[1].split(',').map(parseFloat);
+      /* See-through: this element is not the surface, keep walking up. */
+      if (p.length > 3 && p[3] < 0.5) continue;
+      return (p[0] * 299 + p[1] * 587 + p[2] * 114) / 1000 < 128;
+    }
+    return true;   /* nothing opaque underneath — the home surface is the dark one */
+  }
+
   /* Coarse pointers have no hover to track, and a reduced-motion request should
    * not be answered with a light that chases the finger. CSS still handles the
    * state change in both cases. */
@@ -98,7 +119,11 @@
   function attach() {
     if (!isVexelHome() || !shouldTrack()) return;
     var root = document.querySelector('.dash-standard');
-    if (!root || root.dataset.vxNeon === '1') return;
+    if (!root) return;
+    /* Re-measured on every sync, not just the first attach: the theme can flip
+     * under a card that is already wired up. */
+    root.style.setProperty('--vx-neon', surfaceIsDark(root) ? MINT : ATLAS);
+    if (root.dataset.vxNeon === '1') return;
     root.dataset.vxNeon = '1';
     root.addEventListener('pointermove', onMove, { passive: true });
     root.addEventListener('pointerleave', onLeave, { passive: true });
@@ -108,6 +133,7 @@
     var root = document.querySelector('.dash-standard');
     if (!root || root.dataset.vxNeon !== '1') return;
     delete root.dataset.vxNeon;
+    root.style.removeProperty('--vx-neon');
     root.removeEventListener('pointermove', onMove);
     root.removeEventListener('pointerleave', onLeave);
     onLeave();
