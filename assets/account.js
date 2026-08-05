@@ -629,7 +629,7 @@
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
     handlers['account-plan-cancel'] = () => planCancelModal();
-    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => Kiwi.toast('support@kiwi.ma', { type: 'info', force: true });
+    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => Kiwi.toast('support@kiwi-os.com', { type: 'info', force: true });
     if (!handlers['account-help-phone']) handlers['account-help-phone'] = () => Kiwi.toast('+212 5 39 00 12 00', { type: 'info', force: true });
   }
 
@@ -827,7 +827,7 @@
         ar: 'يتم الإلغاء عبر مدير حسابك في كيوي, لتصدير بياناتك وتخطيط الانتقال وتجنّب أي انقطاع. تواصل معنا:' }))}</p>
         <div class="acc-contact" style="margin-bottom:0;">
           <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">WhatsApp</div><div class="d">${esc(pick({ fr: 'Réponse < 5 min', en: 'Reply < 5 min', ar: 'رد < 5 د' }))}</div></div>
-          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">Email</div><div class="d">support@kiwi.ma</div></div>
+          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">Email</div><div class="d">support@kiwi-os.com</div></div>
           <div class="acc-contact-card" data-action="account-help-phone"><div class="t">${esc(pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }))}</div><div class="d">+212 5 39 00 12 00</div></div>
         </div>`,
       foot: `<button class="kb atlas" data-callback type="button" style="width:100%;justify-content:center;padding:12px;">${esc(pick({ fr: 'Demander un rappel pour résilier', en: 'Request a call-back to cancel', ar: 'طلب اتصال للإلغاء' }))}</button>`,
@@ -926,7 +926,7 @@
       waT: pick({ fr: 'WhatsApp', en: 'WhatsApp', ar: 'واتساب' }),
       waD: pick({ fr: 'Réponse < 5 min · 7j/7', en: 'Reply < 5 min · 7 days', ar: 'رد خلال 5 دقائق · 7/7' }),
       mailT: pick({ fr: 'Email', en: 'Email', ar: 'البريد' }),
-      mailD: 'support@kiwi.ma',
+      mailD: 'support@kiwi-os.com',
       phoneT: pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }),
       phoneD: '+212 5 39 00 12 00',
       topics: pick({ fr: 'Sujets populaires', en: 'Popular topics', ar: 'مواضيع شائعة' }),
