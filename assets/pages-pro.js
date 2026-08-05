@@ -3120,6 +3120,30 @@ const PDS_STATUS_RING_NOIR = {
   reserved: { s: 'rgba(255,255,255,0.58)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.05)',  chair: 'rgba(255,255,255,0.42)' },
   cleaning: { s: 'rgba(255,255,255,0.38)', w: 1.25, dash: '3 3', fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)' },
 };
+/* Une matière en vue jour ligne-claire : rabattue vers le papier chaud de la
+ * marque en gardant `keep` de sa teinte — un lavis, pas une peinture. Le
+ * noyer devient un beige chaud, le sauge un vert pâle : la MATIÈRE choisie
+ * par le commerçant reste lisible sans casser le dessin à l'encre. */
+function pdsJourC(hex, keep) {
+  const k = keep == null ? 0.16 : keep;
+  const h = String(hex || '#B9AF9B').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [247, 245, 240];   /* #F7F5F0 — le papier de la marque */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Le miroir exact de l'échelle nuit, à l'encre sur papier : une échelle
+ * d'encre #0A0F0D — libre 0.30, réservée 0.55 — et l'atlas #0B6E4F réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. La menthe
+ * appartient à la nuit ; le jour vit en vert de la marque. */
+const PDS_STATUS_RING_JOUR = {
+  free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',    fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
+  occupied: { s: '#0B6E4F',             w: 1.25, dash: '',    fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
+  reserved: { s: 'rgba(10,15,13,0.55)', w: 1.25, dash: '',    fill: 'rgba(10,15,13,0.04)',  chair: 'rgba(10,15,13,0.42)' },
+  cleaning: { s: 'rgba(10,15,13,0.38)', w: 1.25, dash: '3 3', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.22)' },
+};
 
 /* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
  * La scène de l'accueil est un dessin au trait — contours en filet, chaises
@@ -3163,23 +3187,30 @@ function pdsNoirChairs(g, seats, ring) {
  * l'équivalent exact de .kw-plan-call sur l'accueil). Les dégradés et le
  * filtre vivent une seule fois dans les defs partagées de la scène — les SVG
  * inline résolvent url(#…) à l'échelle du document. */
-function pdsNoirTableBody(g, ring, status) {
+function pdsNoirTableBody(g, ring, status, tint) {
+  /* `tint` absent = scène nuit (corps charbon, halo menthe). Présent = vue
+   * jour ligne-claire : le corps est le lavis de la matière du commerçant
+   * (pdsJourC), l'ombre et le halo passent aux defs jour (encre, atlas). */
+  const jour = tint != null;
   const hot = status === 'occupied';
   const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
   const fill = ring.fill || 'rgba(255,255,255,0.012)';
+  const bodyFill = jour ? tint : 'url(#pdsNoirBody)';
+  const lift = jour ? 'url(#pdsJourLift)' : 'url(#pdsNoirLift)';
+  const callId = jour ? 'url(#pdsJourCall)' : 'url(#pdsNoirCall)';
   const cx = g.w / 2, cy = g.h / 2;
   /* Le disque d'appel aux valeurs du mockup — le sol quasi noir encaisse
    * la somme des halos sans se noyer, l'adoucissement n'est plus utile. */
-  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="url(#pdsNoirCall)"/>` : '';
+  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
   if (g.shape === 'round') {
     return `${call}
-      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${bodyFill}" filter="${lift}"/>
       <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
       ${hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
   }
   const r = Math.min(8, g.w / 5, g.h / 5);
   return `${call}
-    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${bodyFill}" filter="${lift}"/>
     <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
     ${hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
 }
@@ -3188,14 +3219,17 @@ function pdsNoirTableBody(g, ring, status) {
  * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
  * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
 function pdsNoirFixture(e, K, g) {
-  /* Structures en blanc pur, un cran au-dessus du mockup pour tenir sur le
-   * sol quasi noir — filet 0.38, discret 0.20, pilules remplies 0.05 /
-   * cerclées 0.20 — l'accent #00FFAE réservé au vivant (interrupteur de
-   * caisse, plantes). */
-  const line = 'rgba(255,255,255,0.38)';
-  const dim  = 'rgba(255,255,255,0.20)';
-  const pillFill = 'rgba(255,255,255,0.05)';
-  const pillLine = 'rgba(255,255,255,0.20)';
+  /* Le même trait dans les deux vues, seule l'encre change. Nuit : blanc un
+   * cran au-dessus du mockup pour tenir sur le sol quasi noir — filet 0.38,
+   * discret 0.20, pilules 0.05 / 0.20 — l'accent #00FFAE réservé au vivant
+   * (interrupteur de caisse, plantes). Jour : encre #0A0F0D sur papier —
+   * filet 0.45, discret 0.25 — et l'atlas de la marque en accent. */
+  const jour = !pdsNoir();
+  const line = jour ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.38)';
+  const dim  = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const pillFill = jour ? 'rgba(10,15,13,0.035)' : 'rgba(255,255,255,0.05)';
+  const pillLine = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const acc = jour ? '11,110,79' : '0,255,174';
   switch (e.type) {
     case 'texte': return '';
     case 'comptoir': {
@@ -3208,7 +3242,7 @@ function pdsNoirFixture(e, K, g) {
         const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
         for (let i = 0; i < n; i++) {
           const sx = (g.w * (i + 1)) / (n + 1);
-          stools += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.25"/>`;
+          stools += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="${jour ? 'rgba(10,15,13,0.28)' : 'rgba(255,255,255,0.22)'}" stroke-width="1.25"/>`;
         }
       }
       return `${stools}<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
@@ -3220,7 +3254,7 @@ function pdsNoirFixture(e, K, g) {
       const th = Math.min(14, Math.max(8, g.h - 10)), tw = th / 14 * 22;
       const tx = g.w - tw - 10, ty = (g.h - th) / 2;
       return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${kr}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>
-        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(0,255,174,0.14)" stroke="rgba(0,255,174,0.5)" stroke-width="1"/>`;
+        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(${acc},0.14)" stroke="rgba(${acc},0.5)" stroke-width="1"/>`;
     }
     case 'cuisine':
       return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
@@ -3241,11 +3275,11 @@ function pdsNoirFixture(e, K, g) {
       return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
     case 'plante': {
       const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
-      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(0,255,174,0.04)" stroke="rgba(0,255,174,0.35)" stroke-width="1.2"/>
-        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(0,255,174,0.28)" stroke-width="1"/>`;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(${acc},0.04)" stroke="rgba(${acc},0.35)" stroke-width="1.2"/>
+        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(${acc},0.28)" stroke-width="1"/>`;
     }
     case 'colonne':
-      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(255,255,255,0.06)" stroke="${line}" stroke-width="1.2"/>`;
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.05)' : 'rgba(255,255,255,0.06)'}" stroke="${line}" stroke-width="1.2"/>`;
     case 'wc':
       return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
     case 'escalier': {
@@ -3259,7 +3293,7 @@ function pdsNoirFixture(e, K, g) {
     case 'banquette':
       /* Sur l'accueil la banquette est une seule pilule pleine (0.05 / 0.13,
        * rx 6) — pas de coussins dessinés. */
-      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="rgba(255,255,255,0.05)" stroke="${pillLine}" stroke-width="1"/>`;
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
     case 'claustra':
       return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>` +
         Array.from({ length: Math.max(2, Math.round(g.w / 11)) }, (_, i) =>
@@ -3269,9 +3303,11 @@ function pdsNoirFixture(e, K, g) {
         Array.from({ length: Math.max(2, Math.round(g.w / 22)) }, (_, i) =>
           `<rect x="${(i * 22 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`).join('');
     case 'tapis':
-      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(255,255,255,0.02)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.02)' : 'rgba(255,255,255,0.02)'}" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
     case 'vitrine':
-      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+      return jour
+        ? `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(64,102,124,0.08)" stroke="rgba(64,102,124,0.45)" stroke-width="1.2"/>`
+        : `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
     default:
       return `<rect x="0.75" y="0.75" width="${Math.max(2, g.w - 1.5)}" height="${Math.max(2, g.h - 1.5)}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
   }
@@ -3296,6 +3332,25 @@ function pdsRoomShellNoir(zone) {
     background-size: 100% 100%, 31px 31px, 31px 31px;
     background-repeat: no-repeat, repeat, repeat;
     ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.20);` : ''}
+  "></div>`;
+}
+/* Le sol le jour : le même dessin, à l'encre sur papier. Le sol choisi par le
+ * commerçant devient un lavis sur le papier chaud (pdsJourC 0.30 — assez pour
+ * distinguer chêne de béton, pas assez pour casser le dessin), la grille
+ * passe à l'encre fine, la lumière entre par la même fenêtre décentrée que la
+ * nuit — en blanc franc, c'est le matin — et le mur est un trait d'encre,
+ * comme la nuit le fait en blanc : le mur du gabarit ne peint pas ici. */
+function pdsRoomShellJour(zone) {
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsJourC(r.floor, 0.30)};
+    background-image:
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.50), rgba(255,255,255,0.15) 60%, transparent 100%),
+      linear-gradient(rgba(10,15,13,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,15,13,0.055) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
+    background-repeat: no-repeat, repeat, repeat;
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(10,15,13,0.30);` : ''}
   "></div>`;
 }
 
@@ -4991,12 +5046,14 @@ function pdsRenderStage(state, T) {
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
-              ${noir ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+              <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
                 <linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>
                 <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
                 <filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>
-              </defs></svg>` : ''}
-              ${noir ? pdsRoomShellNoir(zone) : pdsRoomShell(zone)}
+                <radialGradient id="pdsJourCall"><stop offset="0%" stop-color="#0B6E4F" stop-opacity="0.16"/><stop offset="100%" stop-color="#0B6E4F" stop-opacity="0"/></radialGradient>
+                <filter id="pdsJourLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A0F0D" flood-opacity="0.20"/></filter>
+              </defs></svg>
+              ${noir ? pdsRoomShellNoir(zone) : pdsRoomShellJour(zone)}
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
@@ -5089,24 +5146,14 @@ function pdsFixMini(kind, K) {
   const w = ar >= 1 ? box : Math.max(6, box * ar);
   const h = ar >= 1 ? Math.max(6, box / ar) : box;
   const g = { w, h };
-  const c = K.color;
-  /* En vue nuit la vignette passe par le MÊME renderer au trait que la scène
-     (pdsNoirFixture) : le bouton montre ce qui sera réellement posé, pas la
-     matière du jour. Le texte n'a pas de dessin nuit — un Aa blanc suffit. */
-  if (pdsNoir()) {
-    if (K.render === 'none') {
-      return `<span style="font:600 9px/1 var(--font-mono,monospace);color:rgba(255,255,255,0.45);">Aa</span>`;
-    }
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pdsNoirFixture({ type: kind }, K, g)}</svg>`;
-  }
-  if (K.render === 'svg') {
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${K.draw({}, c, g)}</svg>`;
-  }
+  /* La vignette passe par le MÊME renderer au trait que la scène
+     (pdsNoirFixture, qui choisit son encre selon la vue) : le bouton montre
+     ce qui sera réellement posé. Le texte n'a pas de dessin — un Aa suffit. */
+  const inkAa = pdsNoir() ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)';
   if (K.render === 'none') {
-    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${c};">Aa</span>`;
+    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${inkAa};">Aa</span>`;
   }
-  return `<span style="display:block;width:${w}px;height:${h}px;
-    ${pdsBoxStyle(K.draw({}, c, g) || {}, c)}"></span>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pdsNoirFixture({ type: kind }, K, g)}</svg>`;
 }
 
 /* Thumbnail drawn from the candidate's OWN objects. The five templates
@@ -5154,7 +5201,9 @@ function pdsRenderRoomCard(state, T) {
     </label>`;
   /* En vue nuit le rendu aplatit toute matière vers le charbon (pdsNoirC) :
      ambiance, sol, murs, fond et finition n'auraient aucun effet visible.
-     On ne montre que les dimensions ; la vue jour garde tout. */
+     On ne montre que les dimensions. La vue jour trace murs et sol à l'encre
+     (pdsRoomShellJour) : seuls ambiance, teinte du sol et fond jouent encore —
+     murs et finition ont suivi le même sort que la nuit. */
   const noir = pdsNoir();
   return `
     <div class="pds-rail-card">
@@ -5177,19 +5226,13 @@ function pdsRenderRoomCard(state, T) {
       </div>
       <label class="pds-mini-label">${T.roomFloor}</label>
       <div class="pds-sw-row">${sw(r.floor, 'floor')}${custom(r.floor, 'floor')}</div>
-      <label class="pds-mini-label">${T.roomWall}</label>
-      <div class="pds-sw-row">${sw(r.wall, 'wall')}${custom(r.wall, 'wall')}</div>
       <label class="pds-mini-label">${T.roomBackdrop}</label>
       <div class="pds-sw-row">
         <button class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
                 data-pds-room-field="backdrop" data-pds-val=""
                 title="${T.backdropNone}" aria-label="${T.backdropNone}"></button>
         ${sw(r.backdrop, 'backdrop')}${custom(r.backdrop || '#F7F5F0', 'backdrop')}
-      </div>
-      <label class="pds-mini-label">${T.roomFinish}</label>
-      <select class="kf-input pds-input" data-pds-room-field="finish">
-        ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
-      </select>`}
+      </div>`}
       <div class="pds-num-grid">
         <label>${T.roomW}<input class="kf-input pds-input" type="number" min="240" max="2400" step="20" data-pds-room-field="w" value="${P.w}"/></label>
         <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
@@ -5346,11 +5389,11 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       </div>
 
-      ${pdsNoir() ? '' : `
+      ${!pdsNoir() && isT ? `
       <div class="pds-form-row">
         <label>${T.inspectorMaterial}</label>
         <div class="pds-sw-row">${swatches}</div>
-      </div>`}
+      </div>` : ''}
 
       ${isT ? `
         <div class="pds-form-row">
@@ -5470,8 +5513,12 @@ function pdsHandles(o, g, T) {
  *   on a long table.                                                       */
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
-  /* Vue nuit : tracé dédié (contour-statut, chaises en tirets, numéro à deux
-     chiffres). Vue jour : le rendu matières partagé avec la caisse, intact. */
+  /* Les deux vues passent par le MÊME tracé (chaises en tirets, corps posé
+     sur son ombre, numéro à deux chiffres) — seule l'encre change : blanc et
+     menthe la nuit, encre et atlas le jour, où le corps porte en plus le
+     lavis de la matière choisie (pdsJourC) pour que le nuancier MATIÈRE
+     reste un vrai choix. Le rendu matières de floorplan-core reste à la
+     caisse, intact. */
   const noir = pdsNoir();
   const c = pdsColor(t);
   const P = PDS_PAD;
@@ -5479,16 +5526,17 @@ function pdsRenderTable(t, state, T) {
   const only = sel && PDS_SEL.size === 1;
   const sv = state.staff.find(s => s.id === t.server);
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
-  const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING;
+  const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING_JOUR;
   const ring = R[t.status] || R.free;
-  const ink = noir ? 'rgba(255,255,255,0.5)' : pdsInk(c);
+  const ink = noir ? 'rgba(255,255,255,0.5)'
+    : (t.status === 'occupied' ? '#0B6E4F' : 'rgba(10,15,13,0.60)');
   const body = noir
     ? pdsNoirTableBody(g, ring, t.status || 'free')
-    : pdsTableBody(g, c, ring);
+    : pdsNoirTableBody(g, ring, t.status || 'free', pdsJourC(c, 0.30));
 
   const showChairs = state.showChairs !== false;
-  const chairs = showChairs ? (noir ? pdsNoirChairs(g, g.seats, ring) : pdsChairsFor(g, g.seats, c)) : '';
-  const numDisp = noir && /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
+  const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
+  const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
   const serverBadge = sv
     ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
     : '';
@@ -5496,7 +5544,7 @@ function pdsRenderTable(t, state, T) {
    * au-dessus de la table. Elle n'existe que si la table porte son heure
    * d'occupation (t.since, écrite quand le statut passe à occupée). */
   let sinceChip = '';
-  if (noir && t.status === 'occupied' && t.since > 0) {
+  if (t.status === 'occupied' && t.since > 0) {
     const min = Math.max(0, Math.round((Date.now() - t.since) / 60000));
     const disp = min >= 90 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`;
     sinceChip = `<span class="pds-tbl-since">${disp}</span>`;
@@ -5536,17 +5584,11 @@ function pdsRenderElement(e, state, T) {
   const only = sel && PDS_SEL.size === 1;
   const label = (e.label != null ? e.label : (K.label || ''));
 
-  /* Vue nuit : idéogrammes au trait (pdsNoirFixture), les matières du
-     commerçant ne jouent que le jour. */
-  let inner = '';
-  let boxStyle = '';
-  if (noir) {
-    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${pdsNoirFixture(e, K, g)}</svg>`;
-  } else if (K.render === 'svg') {
-    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${K.draw(e, c, g)}</svg>`;
-  } else if (K.render === 'box') {
-    boxStyle = pdsBoxStyle(K.draw(e, c, g) || {}, c);
-  }
+  /* Les deux vues dessinent les mêmes idéogrammes au trait (pdsNoirFixture
+     choisit son encre selon la vue) — les gabarits peints de floorplan-core
+     restent à la caisse. */
+  const inner = K.render === 'none' ? ''
+    : `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${pdsNoirFixture(e, K, g)}</svg>`;
 
   return `
     <div class="pds-el pds-el-${e.type} ${sel?'is-selected':''} ${e.locked?'is-locked':''}"
@@ -5554,8 +5596,8 @@ function pdsRenderElement(e, state, T) {
          aria-label="${pdsEsc(T['fix'+e.type] || e.type)}"
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
-      <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.45)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      <div class="pds-el-fill">${inner}</div>
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)'};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -7129,12 +7171,14 @@ const PDS_INLINE_CSS = `
   .pds-canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; flex-wrap:wrap; }
   .pds-legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
-  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--n-700); letter-spacing:0.01em; font-family:var(--sans, inherit); font-weight:500; }
-  .pds-legend-swatch { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid transparent; box-shadow:0 1px 2px rgba(10,15,13,0.12); }
-  .pds-sw-free      { background:var(--surface); border-color:#C8C5BD; }
-  .pds-sw-occupied  { background:#EBF5F0; border-color:#C5E0D3; }
-  .pds-sw-reserved  { background:#FFF1D6; border-color:#E8C88A; }
-  .pds-sw-cleaning  { background:#1F5D3C; }
+  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.55); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  /* Légende jour : les mêmes cases 17 × 13 rx 4 que la nuit, à l'encre sur
+     papier — l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
+  .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
+  .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
+  .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
+  .pds-sw-reserved  { background:rgba(10,15,13,0.04); border-color:rgba(10,15,13,0.55); }
+  .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-color:rgba(10,15,13,0.38); border-style:dashed; }
   .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
@@ -7585,21 +7629,54 @@ const PDS_INLINE_CSS = `
     pointer-events:none; text-align:center;
   }
   .pds-tbl-num    { font:600 15px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
-  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:.6; margin-top:3px; }
+  /* Comme la nuit : seul le numéro habite la table, les couverts ne se
+     montrent qu'à l'approche. */
+  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:0; transition:opacity 180ms ease; margin-top:3px; }
+  .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  /* L'anneau d'appel pulse dans les deux vues — même géométrie, seule
+     l'encre change (menthe la nuit, atlas le jour). Les @keyframes vivent
+     dans la couche nuit ; ils sont globaux au document. */
+  .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « N min » en jour : la même géométrie que la nuit, sur
+     papier — jamais de blanc pur. */
+  .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(247,245,240,0.92); border:1px solid rgba(10,15,13,0.16);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(10,15,13,0.66);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
 
   /* ── Fixtures ──────────────────────────────────────────────────────────
      The v1 rule painted .pds-el itself dark; v2 paints the .pds-el-fill
      child from the instance's own material, so the host must be cleared. */
   .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
-  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:hidden; }
-  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  /* overflow:visible, pas hidden : le clip du bâti avalait les tabourets
+     du comptoir (cy negatif) dans les deux vues — le trait ne déborde
+     nulle part ailleurs, il n'y a plus de texture à contenir. */
+  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:visible; }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti,
+     dans les deux vues. */
+  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
   .pds-el-label {
     position:absolute; inset:0; padding:2px;
     display:flex; align-items:center; justify-content:center;
-    font:600 9.5px/1.2 var(--mono, monospace);
-    letter-spacing:0.16em; text-transform:uppercase;
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em; text-transform:uppercase;
     pointer-events:none; text-align:center; overflow:hidden;
   }
+  /* Les pilules BAR / CAISSE portent leur nom à gauche, comme la nuit. */
+  .pds-el-comptoir .pds-el-label,
+  .pds-el-caisse .pds-el-label { justify-content:flex-start; padding-left:16px; text-align:left; }
   /* Le curseur « grab » annonce le glisser, pas l'édition : rien ne disait
      qu'un comptoir s'ouvre, se redimensionne et se supprime comme une table.
      Le survol le dit maintenant, avec la même élévation que les tables. */
