@@ -187,14 +187,23 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   if (matches.length !== 1) return matches.length > 1 ? { ambiguous: true } : null;
 
   const match = matches[0];
+  const memberId = String((match.member && match.member.id) || '').trim().slice(0, 96);
+  if (!memberId) return null;
   try {
-    const row = await env.DB.prepare(
-      `SELECT p.id, p.merchant, p.pin, p.name, p.role, c.status, c.type
-         FROM staff_pins p LEFT JOIN merchant_config c ON c.merchant = p.merchant
-        WHERE p.merchant = ? AND p.pin = ? LIMIT 1`
-    ).bind(match.merchant, pin).first();
-    if (!row) return null;
-    return { ...row, member: match.member };
+    const cfg = await env.DB.prepare(
+      'SELECT status, type FROM merchant_config WHERE merchant = ? LIMIT 1'
+    ).bind(match.merchant).first();
+    if (!cfg) return null;
+    return {
+      id: memberId,
+      merchant: match.merchant,
+      pin,
+      name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
+      role: String(match.member.function || match.member.department || 'staff'),
+      status: cfg.status,
+      type: cfg.type,
+      member: match.member,
+    };
   } catch (_) { return null; }
 }
 

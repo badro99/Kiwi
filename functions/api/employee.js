@@ -57,6 +57,24 @@ async function liveEmployee(request, env) {
   const session = await readEmployee(request, env);
   if (!session || !env.DB) return null;
   try {
+    // New employee sessions point directly at the Team member. Team is the
+    // owner's source of truth; the cashier PIN mirror may be missing or stale
+    // for employees created before cross-device syncing was introduced.
+    const teamRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
+      .bind(session.merchant).first();
+    const team = parse(teamRow && teamRow.data, { members: [] });
+    const member = (Array.isArray(team.members) ? team.members : [])
+      .find((m) => m && String(m.id || '') === String(session.staffId || ''));
+    if (member) {
+      return {
+        session,
+        pin: {
+          id: String(member.id), merchant: session.merchant, pin: memberPin(member),
+          name: fullName(member), role: String(member.function || member.department || 'staff'),
+        },
+      };
+    }
+    // Compatibility for sessions issued before employee IDs became canonical.
     const pin = await env.DB.prepare('SELECT id, merchant, pin, name, role FROM staff_pins WHERE id = ? AND merchant = ?')
       .bind(session.staffId, session.merchant).first();
     return pin ? { session, pin } : null;

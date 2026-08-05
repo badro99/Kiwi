@@ -29,8 +29,6 @@ put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,update
 put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,updated_ts) VALUES (?,?,?,?,?,?,?)',
   'voisin', '{}', 'pro', 'restaurant', 'active', 'Voisin', now);
 put('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)',
-  'pin-amira', 'amira-cafe', '2468', 'Sara Serveuse', 'Serveur', now);
-put('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)',
   'pin-voisin', 'voisin', '1357', 'Autre Employé', 'Serveur', now);
 const team = {
   members: [{ id: 'mem-sara', firstName: 'Sara', lastName: 'Serveuse', email: 'sara@amira.test', function: 'Serveur', department: 'Salle', pinCode: '2468' }],
@@ -82,6 +80,8 @@ ok(employeeAccess.status === 303 && employeeAccess.headers.get('location') === '
 const login = await post({ action: 'login', email: '  SARA@AMIRA.TEST ', pin: '2468' });
 const cookie = String(login.headers.get('set-cookie') || '').split(';')[0];
 ok(login.status === 200 && cookie.startsWith('kiwi_employee='), "l'email et le PIN réels ouvrent une session employé httpOnly");
+ok(!sqlite.prepare("SELECT 1 FROM staff_pins WHERE merchant='amira-cafe'").get(),
+  "la connexion ne dépend pas d'une copie du code dans la caisse");
 const stateRes = await get(cookie);
 const state = await stateRes.json();
 ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient du roster cloud du magasin');
