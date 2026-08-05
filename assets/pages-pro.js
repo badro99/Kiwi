@@ -3120,7 +3120,7 @@ const PDS_STATUS_RING_NOIR = {
    * survit au daltonisme et à la distance — c'est le motif qui parle. */
   free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
   occupied: { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.14)',   chair: 'rgba(0,255,174,0.70)' },
-  reserved: { s: 'rgba(255,255,255,0.75)', w: 1.25, dash: '6 3',     fill: 'rgba(255,255,255,0.06)', chair: 'rgba(255,255,255,0.52)' },
+  reserved: { s: '#E8C067', w: 1.25, dash: '6 3',     fill: 'rgba(232,192,103,0.08)', chair: 'rgba(232,192,103,0.50)' },
   cleaning: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
 };
 /* Une matière en vue jour ligne-claire : rabattue vers le papier chaud de la
@@ -3147,7 +3147,7 @@ const PDS_STATUS_RING_JOUR = {
    * d'ambre ni de bleu. */
   free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
   occupied: { s: '#0B6E4F',             w: 1.25, dash: '',        fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
-  reserved: { s: 'rgba(5,59,44,0.85)',  w: 1.25, dash: '6 3',     fill: 'rgba(5,59,44,0.05)',   chair: 'rgba(5,59,44,0.55)' },
+  reserved: { s: '#C89235',  w: 1.25, dash: '6 3',     fill: 'rgba(200,146,53,0.10)',   chair: 'rgba(200,146,53,0.55)' },
   cleaning: { s: 'rgba(10,15,13,0.45)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.24)' },
 };
 
@@ -7320,14 +7320,14 @@ const PDS_INLINE_CSS = `
   .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
   .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
   .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
-  .pds-sw-reserved  { background:rgba(5,59,44,0.05); border-style:dashed; border-color:rgba(5,59,44,0.85); }
+  .pds-sw-reserved  { background:rgba(200,146,53,0.10); border-style:dashed; border-color:#C89235; }
   .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-style:dotted; border-color:rgba(10,15,13,0.45); }
   .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; border:1px solid transparent; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
   /* Les mêmes traits que le plan : tiret riad pour réservée, pointillé encre
      pour à nettoyer — plus d'ambre ni de bleu que le plan ne peint jamais. */
-  .pds-pill-reserved { background:rgba(5,59,44,0.05); color:#053B2C; border:1px dashed rgba(5,59,44,0.55); }
+  .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#7D5A1A; border:1px dashed rgba(200,146,53,0.65); }
   .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted rgba(10,15,13,0.45); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
@@ -7623,7 +7623,7 @@ const PDS_INLINE_CSS = `
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
   .pds-status-pill.pds-pill-occupied { background:rgba(11,110,79,0.10); color:var(--atlas); }
-  .pds-status-pill.pds-pill-reserved { background:rgba(5,59,44,0.04); color:#053B2C; border-style:dashed; border-color:rgba(5,59,44,0.45); }
+  .pds-status-pill.pds-pill-reserved { background:rgba(232,200,138,0.14); color:#7D5A1A; border-style:dashed; border-color:rgba(200,146,53,0.55); }
   .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:rgba(10,15,13,0.40); }
   .pds-status-pill:hover { transform:translateY(-1px); }
   .pds-status-pill.active { border-color: currentColor; box-shadow:0 0 0 1px currentColor inset; }
@@ -8185,7 +8185,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
     border-color:#00FFAE; background:rgba(0,255,174,0.11);
   }
-  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.06); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:#E8C067; background:rgba(232,192,103,0.08); }
   .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dotted; border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); }
 
   /* — La scène — */
@@ -8222,7 +8222,7 @@ const PDS_INLINE_CSS = `
     letter-spacing:0.04em; color:rgba(255,255,255,0.40);
   }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(255,255,255,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(232,192,103,0.80); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-num,
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.75); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
@@ -8304,7 +8304,7 @@ const PDS_INLINE_CSS = `
   /* — Statuts (légende de l'inspecteur) — */
   .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
   .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
-  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(255,255,255,0.06); color:rgba(242,239,230,0.85); border:1px dashed rgba(255,255,255,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(232,192,103,0.10); color:#E8C067; border:1px dashed rgba(232,192,103,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(255,255,255,0.02); color:rgba(242,239,230,0.60); border:1px dotted rgba(255,255,255,0.40); }
 
   /* — Groupes : l'enveloppe passe à la menthe sur la scène noire — */
