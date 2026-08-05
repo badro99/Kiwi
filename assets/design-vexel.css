@@ -1210,13 +1210,36 @@ body.design-vexel :is(
   color: var(--ink);
 }
 
-/* Runtime inline surfaces use product tokens; pin them to the same glass. */
+/* Runtime inline surfaces use product tokens; pin them to the same glass.
+ *
+ * Two groups, deliberately — not one. --surface is the RAISED step (a card, the
+ * selected thumb of a segmented control); --paper-soft is the RECESSED step (the
+ * track that thumb sits in, a well, a row band). Collapsing both onto --surface
+ * was harmless while dark had them at the same rgba(0,0,0,0.30) — the override
+ * was a no-op. The moment --surface became a real lift, this rule dragged all
+ * 81 inline tracks up to exactly the height of their own thumbs, and the
+ * selected tab went invisible again with an !important that outranked the
+ * inline style it was pinning. A track must stay under the thing it holds.
+ *
+ * The border pin stays on both: --n-200 is what draws the track's outline. */
 body.design-vexel [style*="background:var(--surface)"],
-body.design-vexel [style*="background: var(--surface)"],
-body.design-vexel [style*="background:var(--paper-soft)"],
-body.design-vexel [style*="background: var(--paper-soft)"] {
+body.design-vexel [style*="background: var(--surface)"] {
   background: var(--surface) !important;
   border-color: var(--n-200) !important;
+}
+body.design-vexel [style*="background:var(--paper-soft)"],
+body.design-vexel [style*="background: var(--paper-soft)"] {
+  background: var(--paper-soft) !important;
+  border-color: var(--n-200) !important;
+}
+/* A recessed surface that authored no border of its own would now be black on
+ * black — the Règlements T+1 panel is one. Give those an inset hairline rather
+ * than a real border: same edge, zero layout shift. Anything that already
+ * writes `border:` inline is excluded so tracks don't draw the line twice
+ * (`border-radius:` does not contain the substring `border:`). */
+body.design-vexel [style*="background:var(--paper-soft)"]:not([style*="border:"]):not([style*="border: "]),
+body.design-vexel [style*="background: var(--paper-soft)"]:not([style*="border:"]):not([style*="border: "]) {
+  box-shadow: inset 0 0 0 1px var(--n-200);
 }
 
 /* Inline inverse panels and Riad avatars need an explicit foreground pair;
