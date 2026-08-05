@@ -3107,13 +3107,16 @@ function pdsNoirC(hex, keep) {
     return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
   }).join('');
 }
-/* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas) : libre reste
- * éteint, occupé rayonne menthe, réservé braise, nettoyage en tirets froids. */
+/* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas), mais les
+ * valeurs sont CELLES du mockup de l'accueil (SVG fp-* d'index.html) : une
+ * échelle de blanc — libre 0.19, réservé 0.40 — et l'accent #00FFAE réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. Pas d'ambre :
+ * le mockup n'en a pas. `fill`/`num`/`chair` suivent la même échelle. */
 const PDS_STATUS_RING_NOIR = {
-  free:     { s: 'rgba(236,242,238,0.30)', w: 1.2, dash: '' },
-  occupied: { s: '#7DF2B0', w: 1.6, dash: '' },
-  reserved: { s: '#D9AE54', w: 1.5, dash: '' },
-  cleaning: { s: 'rgba(143,166,184,0.65)', w: 1.3, dash: '4 4' },
+  free:     { s: 'rgba(255,255,255,0.19)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.012)', chair: 'rgba(255,255,255,0.12)' },
+  occupied: { s: '#00FFAE',                w: 1.25, dash: '',    fill: 'rgba(0,255,174,0.11)',    chair: 'rgba(0,255,174,0.55)' },
+  reserved: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '',    fill: 'rgba(255,255,255,0.035)', chair: 'rgba(255,255,255,0.30)' },
+  cleaning: { s: 'rgba(255,255,255,0.28)', w: 1.25, dash: '3 3', fill: 'rgba(255,255,255,0.012)', chair: 'rgba(255,255,255,0.12)' },
 };
 
 /* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
@@ -3121,82 +3124,98 @@ const PDS_STATUS_RING_NOIR = {
  * en tirets, remplissage à peine au-dessus du sol, la lumière réservée à
  * l'état. Re-teinter le rendu matières (bois éclairé, chaises en volume) n'y
  * arrivera jamais : la nuit a son propre tracé, le jour garde le sien. */
-function pdsNoirTick(x, y, deg) {
-  return `<rect x="-5" y="-1.4" width="10" height="2.8" rx="1.4" fill="rgba(236,242,238,0.38)"
+function pdsNoirTick(x, y, deg, fill) {
+  /* La chaise du mockup, au pixel : rect(-9,-3,18,6, rx 3), centrée à 12 px
+   * du bord de la table, la couleur suivant le statut de la table. */
+  return `<rect x="-9" y="-3" width="18" height="6" rx="3" fill="${fill}"
     transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`;
 }
-function pdsNoirChairs(g, seats) {
+function pdsNoirChairs(g, seats, ring) {
   if (!seats || seats < 1) return '';
   const { w, h, shape } = g;
+  const fill = (ring && ring.chair) || 'rgba(255,255,255,0.12)';
   let out = '';
   if (shape === 'round') {
     /* Tirets tangents sur la circonférence, comme la grande ronde du mockup. */
-    const rx = w / 2 + 7, ry = h / 2 + 7, cx = w / 2, cy = h / 2;
+    const rx = w / 2 + 12, ry = h / 2 + 12, cx = w / 2, cy = h / 2;
     for (let i = 0; i < seats; i++) {
       const a = -90 + (360 * i) / seats;
       const rad = a * Math.PI / 180;
-      out += pdsNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), a + 90);
+      out += pdsNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), a + 90, fill);
     }
     return out;
   }
   const alloc = pdsSeatSlots(w, h, seats);
   const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
-  along(alloc.top, w).forEach(px => { out += pdsNoirTick(px, -7, 0); });
-  along(alloc.bottom, w).forEach(px => { out += pdsNoirTick(px, h + 7, 0); });
-  along(alloc.left, h).forEach(py => { out += pdsNoirTick(-7, py, 90); });
-  along(alloc.right, h).forEach(py => { out += pdsNoirTick(w + 7, py, 90); });
+  along(alloc.top, w).forEach(px => { out += pdsNoirTick(px, -12, 0, fill); });
+  along(alloc.bottom, w).forEach(px => { out += pdsNoirTick(px, h + 12, 0, fill); });
+  along(alloc.left, h).forEach(py => { out += pdsNoirTick(-12, py, 90, fill); });
+  along(alloc.right, h).forEach(py => { out += pdsNoirTick(w + 12, py, 90, fill); });
   return out;
 }
-/* Plateau au trait : un contour dont la couleur EST le statut, un voile de
- * remplissage pour décoller la table du sol, et le halo réservé à l'occupée. */
+/* Plateau du mockup, couche par couche : le disque d'appel (dégradé radial
+ * menthe, occupée seulement), le corps en dégradé vertical #101312→#050605
+ * posé sur une ombre portée (fp-body + fp-lift), puis la couche de statut —
+ * remplissage + contour 1.25 sur la MÊME forme, rx 8. L'occupée reçoit en
+ * plus l'anneau d'appel qui pulse (classe .pds-noir-call, animée en CSS,
+ * l'équivalent exact de .kw-plan-call sur l'accueil). Les dégradés et le
+ * filtre vivent une seule fois dans les defs partagées de la scène — les SVG
+ * inline résolvent url(#…) à l'échelle du document. */
 function pdsNoirTableBody(g, ring, status) {
-  const glow = status === 'occupied';
-  const fill = status === 'occupied' ? 'rgba(0,255,174,0.05)'
-             : status === 'reserved' ? 'rgba(217,174,84,0.05)'
-             : 'rgba(236,242,238,0.028)';
+  const hot = status === 'occupied';
   const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+  const fill = ring.fill || 'rgba(255,255,255,0.012)';
+  const cx = g.w / 2, cy = g.h / 2;
+  /* L'accueil éclaire UNE table à 0.22 ; en service réel il y en a cinq ou
+   * dix — les disques s'additionnent et noient la salle. Plus serré et plus
+   * doux ici, la somme retombe sur la lueur du mockup. */
+  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.3).toFixed(0)}" fill="url(#pdsNoirCall)"/>` : '';
   if (g.shape === 'round') {
-    const rx = g.w / 2, ry = g.h / 2;
-    return `
-      ${glow ? `<ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="none" stroke="${ring.s}" stroke-width="6" opacity=".13"/>` : ''}
-      <ellipse cx="${rx}" cy="${ry}" rx="${rx}" ry="${ry}" fill="${fill}"/>
-      <ellipse cx="${rx}" cy="${ry}" rx="${Math.max(1, rx - ring.w / 2)}" ry="${Math.max(1, ry - ring.w / 2)}"
-               fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
+    return `${call}
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+      ${hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
   }
-  const r = Math.min(12, g.w / 5, g.h / 5);
-  return `
-    ${glow ? `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="6" opacity=".13"/>` : ''}
-    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}"/>
-    <rect x="${ring.w / 2}" y="${ring.w / 2}" width="${Math.max(1, g.w - ring.w)}" height="${Math.max(1, g.h - ring.w)}"
-          rx="${Math.max(0, r - ring.w / 2)}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`;
+  const r = Math.min(8, g.w / 5, g.h / 5);
+  return `${call}
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+    ${hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
 }
 /* Le bâti au trait. Chaque genre a son idéogramme — la caisse porte son
  * interrupteur menthe, la cuisine ses hachures en filet, la porte son arc —
  * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
  * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
 function pdsNoirFixture(e, K, g) {
-  const line = 'rgba(236,242,238,0.30)';
-  const dim  = 'rgba(236,242,238,0.16)';
+  /* Tons du mockup : structures en blanc pur — filet 0.28, discret 0.14,
+   * pilules remplies 0.035 / cerclées 0.13 — l'accent #00FFAE réservé au
+   * vivant (interrupteur de caisse, plantes). */
+  const line = 'rgba(255,255,255,0.28)';
+  const dim  = 'rgba(255,255,255,0.14)';
+  const pillFill = 'rgba(255,255,255,0.035)';
+  const pillLine = 'rgba(255,255,255,0.13)';
   switch (e.type) {
     case 'texte': return '';
     case 'comptoir':
-      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${Math.min(g.h / 2, 16)}"
-        fill="rgba(236,242,238,0.02)" stroke="${line}" stroke-width="1.4"/>`;
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
+        fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
     case 'caisse': {
-      const kr = Math.min(g.h / 2, 12);
-      const th = Math.min(g.h - 16, 14), tw = Math.max(th * 1.9, Math.min(g.w * 0.34, 30));
-      const tx = g.w - tw - 9, ty = (g.h - th) / 2;
-      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${kr}" fill="rgba(236,242,238,0.02)" stroke="${line}" stroke-width="1.4"/>
-        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="${(th / 2).toFixed(1)}" fill="rgba(0,255,174,0.14)" stroke="#7DF2B0" stroke-width="1.1"/>
-        <circle cx="${(tx + tw - th / 2).toFixed(1)}" cy="${(ty + th / 2).toFixed(1)}" r="${Math.max(1.5, th / 2 - 2.5).toFixed(1)}" fill="#7DF2B0"/>`;
+      const kr = Math.max(3, Math.min(g.h / 2 - 1, 12));
+      /* L'interrupteur du mockup : 22 × 14, rx 3, à 10 px du bord droit. */
+      const th = Math.min(14, Math.max(8, g.h - 10)), tw = th / 14 * 22;
+      const tx = g.w - tw - 10, ty = (g.h - th) / 2;
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${kr}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>
+        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(0,255,174,0.14)" stroke="rgba(0,255,174,0.5)" stroke-width="1"/>`;
     }
     case 'cuisine':
       return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
           <line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>
         <rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
     case 'porte':
-      return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${line}" stroke-width="1.3" stroke-dasharray="4 4"/>
-        <rect x="0" y="${g.h - 3.5}" width="${g.w}" height="3.5" rx="1.75" fill="${line}"/>`;
+      /* La porte de l'accueil : seuil net (0.28 · 1.5), battement en arc
+       * pointillé 3 3 (0.14 · 1). */
+      return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${dim}" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="0" y1="${g.h - 1.5}" x2="${g.w}" y2="${g.h - 1.5}" stroke="${line}" stroke-width="1.5"/>`;
     case 'mur':
       return `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${Math.min(2, g.h / 2)}" fill="${line}"/>`;
     case 'fenetre':
@@ -3207,11 +3226,11 @@ function pdsNoirFixture(e, K, g) {
       return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
     case 'plante': {
       const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
-      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(0,255,174,0.04)" stroke="rgba(125,242,176,0.35)" stroke-width="1.2"/>
-        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(125,242,176,0.28)" stroke-width="1"/>`;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(0,255,174,0.04)" stroke="rgba(0,255,174,0.35)" stroke-width="1.2"/>
+        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(0,255,174,0.28)" stroke-width="1"/>`;
     }
     case 'colonne':
-      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(236,242,238,0.06)" stroke="${line}" stroke-width="1.2"/>`;
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(255,255,255,0.06)" stroke="${line}" stroke-width="1.2"/>`;
     case 'wc':
       return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
     case 'escalier': {
@@ -3222,15 +3241,10 @@ function pdsNoirFixture(e, K, g) {
       }
       return out;
     }
-    case 'banquette': {
-      const r = Math.min(8, g.h / 3);
-      const n = Math.max(1, Math.round(g.w / 84)), pad = 4, cw = (g.w - pad * (n + 1)) / n;
-      let out = `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="${r}" fill="rgba(236,242,238,0.03)" stroke="${line}" stroke-width="1.3"/>`;
-      for (let i = 0; i < n; i++) {
-        out += `<rect x="${(pad + i * (cw + pad)).toFixed(1)}" y="${pad}" width="${cw.toFixed(1)}" height="${(g.h - pad * 2).toFixed(1)}" rx="${Math.max(2, r - 2)}" fill="none" stroke="${dim}" stroke-width="1"/>`;
-      }
-      return out;
-    }
+    case 'banquette':
+      /* Sur l'accueil la banquette est une seule pilule pleine (0.05 / 0.13,
+       * rx 6) — pas de coussins dessinés. */
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="rgba(255,255,255,0.05)" stroke="${pillLine}" stroke-width="1"/>`;
     case 'claustra':
       return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>` +
         Array.from({ length: Math.max(2, Math.round(g.w / 11)) }, (_, i) =>
@@ -3240,7 +3254,7 @@ function pdsNoirFixture(e, K, g) {
         Array.from({ length: Math.max(2, Math.round(g.w / 22)) }, (_, i) =>
           `<rect x="${(i * 22 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`).join('');
     case 'tapis':
-      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(236,242,238,0.02)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="rgba(255,255,255,0.02)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
     case 'vitrine':
       return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
     default:
@@ -3253,17 +3267,20 @@ function pdsNoirFixture(e, K, g) {
  * (terrazzo, zellige) sont dessinées à l'encre sombre et disparaîtraient
  * ici ; la grille les remplace, la vue jour les garde. */
 function pdsRoomShellNoir(zone) {
+  /* Le sol du mockup (fp-floor + fp-grid) : un souffle blanc décentré —
+   * 0.05 à 42 % / 34 %, 0.015 à 60 %, rien au bord — sur le charbon teinté
+   * par le sol du commerçant, et la grille fine de 31 px à 0.028. Le mur est
+   * le trait blanc 0.13 de l'accueil, pas la matière du gabarit. */
   const r = pdsRoom(zone);
   return `<div class="pds-floor" data-pds-floor style="
-    background-color:${pdsNoirC(r.floor, 0.08)};
+    background-color:${pdsNoirC(r.floor, 0.05)};
     background-image:
-      radial-gradient(92% 72% at 50% 0%, rgba(0,255,174,0.05), transparent 64%),
-      linear-gradient(rgba(242,239,230,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(242,239,230,0.04) 1px, transparent 1px);
-    background-size: 100% 100%, 48px 48px, 48px 48px;
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.05), rgba(255,255,255,0.015) 60%, transparent 100%),
+      linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
     background-repeat: no-repeat, repeat, repeat;
-    box-shadow: inset 0 0 0 ${r.wallW}px ${pdsNoirC(r.wall, 0.30)},
-                inset 0 0 110px rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.13);
   "></div>`;
 }
 
@@ -4956,6 +4973,11 @@ function pdsRenderStage(state, T) {
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
+              ${noir ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+                <linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>
+                <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.12"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
+                <filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>
+              </defs></svg>` : ''}
               ${noir ? pdsRoomShellNoir(zone) : pdsRoomShell(zone)}
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
@@ -5426,17 +5448,26 @@ function pdsRenderTable(t, state, T) {
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
   const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING;
   const ring = R[t.status] || R.free;
-  const ink = noir ? '#E9EEE9' : pdsInk(c);
+  const ink = noir ? 'rgba(255,255,255,0.5)' : pdsInk(c);
   const body = noir
     ? pdsNoirTableBody(g, ring, t.status || 'free')
     : pdsTableBody(g, c, ring);
 
   const showChairs = state.showChairs !== false;
-  const chairs = showChairs ? (noir ? pdsNoirChairs(g, g.seats) : pdsChairsFor(g, g.seats, c)) : '';
+  const chairs = showChairs ? (noir ? pdsNoirChairs(g, g.seats, ring) : pdsChairsFor(g, g.seats, c)) : '';
   const numDisp = noir && /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
   const serverBadge = sv
     ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
     : '';
+  /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
+   * au-dessus de la table. Elle n'existe que si la table porte son heure
+   * d'occupation (t.since, écrite quand le statut passe à occupée). */
+  let sinceChip = '';
+  if (noir && t.status === 'occupied' && t.since > 0) {
+    const min = Math.max(0, Math.round((Date.now() - t.since) / 60000));
+    const disp = min >= 90 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`;
+    sinceChip = `<span class="pds-tbl-since">${disp}</span>`;
+  }
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
@@ -5453,6 +5484,7 @@ function pdsRenderTable(t, state, T) {
         ${g.seats ? `<span class="pds-tbl-covers">${g.seats}p</span>` : ''}
       </div>
       ${serverBadge}
+      ${sinceChip}
       ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;
@@ -5490,7 +5522,7 @@ function pdsRenderElement(e, state, T) {
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
       <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(236,242,238,0.55)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.34)' : pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -5845,6 +5877,9 @@ function pdsAttach(root, state, T, dr) {
           if (!found.table) return;
           pdsPush(state);
           o.status = btn.getAttribute('data-pds-status');
+          /* L'heure d'assise nourrit la pastille « N min » de la vue nuit. */
+          if (o.status === 'occupied') { if (!o.since) o.since = Date.now(); }
+          else delete o.since;
           reselect();
         };
       });
@@ -6951,7 +6986,13 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'bulk-status': {
       const st = btn.getAttribute('data-pds-status');
       const n = selection.size;
-      selection.forEach(id => { const t = state.tables.find(tt => tt.id === id); if (t) t.status = st; });
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (!t) return;
+        t.status = st;
+        if (st === 'occupied') { if (!t.since) t.since = Date.now(); }
+        else delete t.since;
+      });
       refresh();
       toast(T.bulkOkStatus(n, T['status' + st.charAt(0).toUpperCase() + st.slice(1)]), { type: 'success', duration: 1400 });
       break;
@@ -7852,34 +7893,33 @@ const PDS_INLINE_CSS = `
   /* Barre du plan + légende façon accueil : cases au trait, l'occupée seule
      rayonne. */
   .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:#0D110D; border-color:rgba(242,239,230,0.08); }
-  .pds-noir.pds-noir.pds-noir .pds-legend-item { color:rgba(242,239,230,0.66); }
+  /* Légende : les pastilles 17 × 13 rx 4 de l'accueil, sur la même échelle
+     de blanc que les tables, la menthe pour l'occupée. */
+  .pds-noir.pds-noir.pds-noir .pds-legend-item { color:rgba(255,255,255,0.5); }
   .pds-noir.pds-noir.pds-noir .pds-legend-swatch {
-    width:13px; height:13px; border-radius:4px;
-    background:transparent; box-shadow:none; border:1.5px solid rgba(242,239,230,0.28);
+    width:17px; height:13px; border-radius:4px;
+    background:rgba(255,255,255,0.012); box-shadow:none; border:1.25px solid rgba(255,255,255,0.19);
   }
   .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
-    border-color:#7DF2B0; background:rgba(0,255,174,0.10);
-    box-shadow:0 0 9px rgba(0,255,174,0.38);
+    border-color:#00FFAE; background:rgba(0,255,174,0.11);
   }
-  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-color:#D9AE54; background:rgba(217,174,84,0.10); }
-  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dashed; border-color:#8FA6B8; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.035); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dashed; border-color:rgba(255,255,255,0.28); }
 
   /* — La scène — */
   .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
-    background:#0A0E0B;
-    border:1px solid rgba(242,239,230,0.07);
+    background:#050605;
+    border:1px solid rgba(255,255,255,0.06);
     border-radius:20px;
     padding:16px 16px 8px;
   }
   .pds-noir.pds-noir.pds-noir .pds-plan-room {
-    border:1px solid rgba(242,239,230,0.14);
-    border-radius:16px;
-    box-shadow:
-      0 0 0 1px rgba(0,0,0,0.6),
-      0 34px 70px -40px rgba(0,0,0,0.9);
+    border:1.5px solid rgba(255,255,255,0.13);
+    border-radius:18px;
+    box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
   }
   .pds-noir.pds-noir.pds-noir .pds-plan-room.is-terrasse {
-    border-style:dashed; border-color:rgba(125,242,176,0.30); background:transparent;
+    border-style:dashed; border-color:rgba(0,255,174,0.30); background:transparent;
   }
   .pds-noir.pds-noir.pds-noir .pds-plan-label { color:rgba(242,239,230,0.78); }
   .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.42); }
@@ -7890,22 +7930,51 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
 
-  /* — Tables : le statut est une lumière, le numéro un chuchotement — */
+  /* — Tables : le statut est une lumière, le numéro un chuchotement.
+     Typo et encres du mockup : 500 · 0.04em, l'échelle de blanc 0.20 / 0.38,
+     la menthe 0.90 pour l'occupée. Le survol remonte l'encre — un plan
+     d'édition doit rester manipulable, l'accueil n'a pas ce souci. — */
   .pds-noir.pds-noir.pds-noir .pds-tbl-num {
-    font:600 11px/1 var(--mono, monospace);
-    letter-spacing:0.09em; color:rgba(242,239,230,0.58);
+    font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.04em; color:rgba(255,255,255,0.20);
   }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:#E9F6EE; }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(233,214,175,0.85); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(255,255,255,0.38); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"].is-selected .pds-tbl-num { color:#00FFAE; }
   /* Le nombre de couverts n'existe qu'à l'approche — le mockup n'affiche que
      le numéro, et c'est ce silence qui le rend cher. */
   .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:0; transition:opacity 180ms ease; }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-covers,
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] { filter:drop-shadow(0 0 24px rgba(0,255,174,0.10)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] { filter:drop-shadow(0 0 18px rgba(217,174,84,0.08)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25) drop-shadow(0 0 14px rgba(0,255,174,0.10)); }
-  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.18) drop-shadow(0 0 28px rgba(0,255,174,0.18)); }
+  /* Le halo de l'occupée vit désormais DANS le SVG (disque pdsNoirCall),
+     comme sur l'accueil ; le survol garde juste un peu de lumière en plus. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.15); }
+  /* L'anneau d'appel — la copie de .kw-plan-call de l'accueil. */
+  .pds-noir.pds-noir.pds-noir .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @keyframes pdsNoirCall {
+    0%, 62% { opacity:.85; transform:scale(1); }
+    100%    { opacity:0;   transform:scale(1.5); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir.pds-noir.pds-noir .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « 6 min » : 19 px de haut, rx 9.5, encre 0.72 sur noir 0.92. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(10,10,10,0.92); border:1px solid rgba(255,255,255,0.18);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(255,255,255,0.72);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
   .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
   /* Les pastilles serveur appartiennent à l'Affectation ; en Aménagement
      elles ne font que du bruit que le mockup n'a pas. */
@@ -7932,6 +8001,16 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
     outline-color:rgba(125,242,176,0.65);
     filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
+  }
+  /* Étiquettes du bâti : la typo du mockup — 500 · 0.14em · blanc 0.34 — et
+     les pilules BAR / CAISSE portent leur nom à gauche, pas au centre. */
+  .pds-noir.pds-noir.pds-noir .pds-el-label {
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-el-comptoir .pds-el-label,
+  .pds-noir.pds-noir.pds-noir .pds-el-caisse .pds-el-label {
+    justify-content:flex-start; padding-left:16px; text-align:left;
   }
 
   /* Gêne de placement : le rouge reste le seul hors-marque, plus clair ici. */
