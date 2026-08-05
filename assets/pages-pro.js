@@ -3196,9 +3196,22 @@ function pdsNoirFixture(e, K, g) {
   const pillLine = 'rgba(255,255,255,0.13)';
   switch (e.type) {
     case 'texte': return '';
-    case 'comptoir':
-      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
+    case 'comptoir': {
+      /* Le bar du mockup porte ses tabourets : des cercles r 7 cerclés 0.22,
+       * espacés de 38, à 15 px au-dessus du long côté. Seulement quand la
+       * pilule est vraiment un comptoir (long et bas) — le SVG déborde de la
+       * boîte, .pds-el-svg est en overflow:visible la nuit pour ça. */
+      let stools = '';
+      if (g.w >= 100 && g.w > g.h * 2) {
+        const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
+        for (let i = 0; i < n; i++) {
+          const sx = (g.w * (i + 1)) / (n + 1);
+          stools += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.25"/>`;
+        }
+      }
+      return `${stools}<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
         fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+    }
     case 'caisse': {
       const kr = Math.max(3, Math.min(g.h / 2 - 1, 12));
       /* L'interrupteur du mockup : 22 × 14, rx 3, à 10 px du bord droit. */
@@ -7894,8 +7907,15 @@ const PDS_INLINE_CSS = `
      rayonne. */
   .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:#0D110D; border-color:rgba(242,239,230,0.08); }
   /* Légende : les pastilles 17 × 13 rx 4 de l'accueil, sur la même échelle
-     de blanc que les tables, la menthe pour l'occupée. */
-  .pds-noir.pds-noir.pds-noir .pds-legend-item { color:rgba(255,255,255,0.5); }
+     de blanc que les tables, la menthe pour l'occupée. Typo du mockup :
+     400 · 11 px · -0.01em, encre 0.5. */
+  .pds-noir.pds-noir.pds-noir .pds-legend-item {
+    color:rgba(255,255,255,0.5);
+    font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:-0.01em;
+  }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti. */
+  .pds-noir.pds-noir.pds-noir .pds-el-svg { overflow:visible; }
   .pds-noir.pds-noir.pds-noir .pds-legend-swatch {
     width:17px; height:13px; border-radius:4px;
     background:rgba(255,255,255,0.012); box-shadow:none; border:1.25px solid rgba(255,255,255,0.19);
