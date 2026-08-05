@@ -41,7 +41,7 @@
 //    dans la même réponse : la caisse allume ses tables sur le plan de salle
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
-import { json, entitledMerchant } from '../../auth/_lib.js';
+import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
 import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
@@ -64,6 +64,38 @@ const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const MAX_LINES = 60;              // une commande, généreusement
 const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
+
+function serviceNorm(value) {
+  let s = String(value || '').trim().toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return s.replace(/\s+/g, ' ');
+}
+function employeeName(member) {
+  return [member && member.firstName, member && member.lastName].filter(Boolean).join(' ').trim();
+}
+async function serviceScope(request, env, merchant) {
+  const employee = await activeServiceEmployee(request, env, merchant);
+  if (!employee) return null;
+  const tables = new Set();
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'")
+      .bind(merchant).first();
+    const plan = JSON.parse((row && row.data) || '{}');
+    const staff = Object.create(null);
+    (Array.isArray(plan.staff) ? plan.staff : []).forEach((s) => { if (s && s.id) staff[String(s.id)] = s; });
+    const myId = String(employee.member.id || employee.session.staffId || '');
+    const myName = serviceNorm(employeeName(employee.member));
+    (Array.isArray(plan.tables) ? plan.tables : []).forEach((table) => {
+      if (!table || !table.server) return;
+      const assigned = String(table.server);
+      const assignedName = serviceNorm(staff[assigned] && staff[assigned].name);
+      if (assigned === myId || (assignedName && assignedName === myName)) {
+        tables.add(normTable(table.num || table.id));
+      }
+    });
+  } catch (_) {}
+  return { employee, tables, name: serviceNorm(employeeName(employee.member)) };
+}
 
 /* Les colonnes se sont ajoutées par vagues : `channel/ext_ref/customer` avec la
  * livraison, `session_id/server_name/paid_ts` avec la session de table. Une base
@@ -90,7 +122,7 @@ export async function onRequestGet(context) {
    * "reached this endpoint" never meant "owns this store". Reading the slug from
    * the query let any caller pull another restaurant's live queue — items,
    * notes, totals, table numbers. Server decides now. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   // Le pointage du comptoir. Volontairement AVANT toute lecture qui peut
@@ -105,7 +137,9 @@ export async function onRequestGet(context) {
   // protection « caisse éteinte ⇒ plus personne ne commande » se serait éteinte
   // avec elle, sans que personne ne s'en aperçoive.
   const role = (url.searchParams.get('role') || '').trim().toLowerCase();
-  if (role !== 'kitchen') await deskTouch(env, merchant);
+  const service = role === 'service' ? await serviceScope(request, env, merchant) : null;
+  if (role === 'service' && !service) return json({ error: 'on-shift-service-required' }, 403);
+  if (role !== 'kitchen' && role !== 'service') await deskTouch(env, merchant);
 
   // `since` est le curseur de la caisse : elle demande ce qui a changé depuis la
   // dernière réponse, donc un long service coûte une petite réponse par tour.
@@ -148,7 +182,7 @@ export async function onRequestGet(context) {
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
   if (!rows) return json({ ok: true, orders: [], sessions: [], now, ordersAvailable: false });
 
-  const orders = (rows.results || []).map((r) => {
+  let orders = (rows.results || []).map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
     let customer = null;
@@ -167,6 +201,14 @@ export async function onRequestGet(context) {
       created_ts: r.created_ts, updated_ts: r.updated_ts,
     };
   });
+  if (service) {
+    orders = orders.filter((order) => {
+      if (order.created_ts && now - Number(order.created_ts) > 18 * 60 * 60 * 1000) return false;
+      const named = serviceNorm(order.server);
+      return (named && named === service.name)
+        || (order.mode === 'table' && service.tables.has(normTable(order.table)));
+    });
+  }
 
   /* Qui est assis en ce moment. Ce n'est pas la file : une table peut avoir un
    * téléphone posé dessus et zéro commande — c'est même l'état normal pendant
@@ -194,6 +236,7 @@ export async function onRequestGet(context) {
       opened_ts: s.opened_ts, seen_ts: s.seen_ts,
     }));
   } catch (_) { sessions = []; }
+  if (service) sessions = sessions.filter((session) => service.tables.has(normTable(session.table)));
 
   return json({ ok: true, orders, sessions, now, ordersAvailable: true });
 }
@@ -210,8 +253,22 @@ export async function onRequestPost(context) {
 
   /* Same hole on the write side: accepting or rejecting another store's tickets
    * only ever required knowing its slug. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* Employee cookies may only CREATE a ticket for one of that employee's
+   * assigned tables. They cannot accept/reject/bump arbitrary tickets, close a
+   * table session, or impersonate another server. Caisse/KDS/account callers
+   * continue through the existing paths below. */
+  const employee = await activeServiceEmployee(request, env, merchant);
+  if (employee) {
+    const scope = await serviceScope(request, env, merchant);
+    const employeeTable = b && b.create === true && b.mode !== 'takeout' ? normTable(b.table) : '';
+    if (!(b && b.create === true) || !employeeTable || !scope || !scope.tables.has(employeeTable)) {
+      return json({ error: 'assigned-table-required' }, 403);
+    }
+    b.server = employeeName(employee.member);
+  }
 
   const now = Date.now();
 

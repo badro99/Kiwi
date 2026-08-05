@@ -8490,6 +8490,23 @@
       if (idx >= 0) waitlist.splice(idx, 1);
       endSeating(true);
       toast(`${e.name} · installé·e à ${tableId}`);
+      /* This used to stop at the cashier's toast. Publish the seating fact to
+         the one waiter assigned to this table by the owner's floor plan. The
+         event is best-effort: seating never waits for the network. */
+      try {
+        const assigned = t && t.server && servers[t.server];
+        const merchant = window.KiwiKitchenRelay && KiwiKitchenRelay.merchant();
+        if (assigned && merchant) {
+          fetch('/api/service/events', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant, event: {
+              type: 'table-seated', table: tableId, serverId: t.server,
+              server: assigned.name || '', customer: e.name, covers: e.size,
+            } }),
+          }).catch(() => {});
+        }
+      } catch (_) {}
     }
 
     function removeWaitlist(id) {

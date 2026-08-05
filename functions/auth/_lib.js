@@ -548,6 +548,17 @@ export async function entitledMerchant(request, env, asked, opts) {
   if (opts && opts.allowTill && asked) {
     try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
   }
+  /* The employee app has its own short-lived, store-scoped cookie. It used to
+   * open /api/employee only, so the waiter UI could say "commande envoyée"
+   * while /api/order/queue rejected the request at the tenant boundary. Validate
+   * the employee against the live Team document on every use: removing someone
+   * from Dashboard → Équipe revokes this access immediately. */
+  if (opts && opts.allowEmployee && asked) {
+    try {
+      const employee = await activeServiceEmployee(request, env, asked);
+      if (employee) return asked;
+    } catch (_) {}
+  }
   /* God mode, BEFORE the account session — the console is opened from a browser
    * that is normally ALSO signed in as a merchant (the site gate admits real
    * accounts), and with the session first that account won every time: "Ouvrir
@@ -583,6 +594,54 @@ export async function entitledMerchant(request, env, asked, opts) {
   } catch (_) { /* fall through to operator / demo */ }
   try { if (await isOperator(request, env)) return asked; } catch (_) {}
   return DEMO_MERCHANTS[asked] ? asked : '';
+}
+
+/* A signed employee cookie is not enough on its own: the member must still be
+ * present in this store's Team document. This helper is intentionally exported
+ * so the edge gate and staff-only endpoints enforce the same revocation rule. */
+export async function activeEmployee(request, env, asked) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return null;
+  const session = await readEmployee(request, env);
+  if (!session || !session.merchant || !session.staffId) return null;
+  if (asked && String(session.merchant) !== String(asked)) return null;
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
+      .bind(session.merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const member = (Array.isArray(doc.members) ? doc.members : [])
+      .find((m) => m && String(m.id || '') === String(session.staffId));
+    return member ? { session, member, merchant: session.merchant } : null;
+  } catch (_) { return null; }
+}
+
+function normEmployeeRole(value) {
+  let s = String(value || '').trim().toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
+}
+
+/* Only an employee who works service AND currently has an open attendance
+ * entry may use the operational order/event channels. Kitchen, dishwasher and
+ * off-shift accounts remain confined to /api/employee (schedule, hours and
+ * clock-in/out). */
+export async function activeServiceEmployee(request, env, asked) {
+  const employee = await activeEmployee(request, env, asked);
+  if (!employee) return null;
+  const role = normEmployeeRole(employee.member.function || employee.member.department);
+  const service = new Set([
+    'serveur', 'chef de rang', "maitre d'hotel", 'sommelier', 'barman',
+    "hote d'accueil", 'salle', 'service', 'manager', 'proprietaire',
+  ]);
+  if (!service.has(role)) return null;
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
+      .bind(employee.merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const open = (Array.isArray(doc.entries) ? doc.entries : []).find((entry) =>
+      entry && !entry.outTs
+      && String(entry.memberId || entry.staffId || '') === String(employee.session.staffId));
+    return open ? { ...employee, attendance: open } : null;
+  } catch (_) { return null; }
 }
 
 /* ─────────────────────── ATTEMPT LIMITER (brute force) ───────────────────────

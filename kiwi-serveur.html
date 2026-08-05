@@ -3855,7 +3855,7 @@ em, i, cite, dfn, var { font-style: normal; }
         credentials: 'same-origin',
         body: JSON.stringify({
           merchant: slug, create: true, mode: 'table', table: tableId,
-          lines: delta, ref: svRefFor(tableId),
+          lines: delta, ref: svRefFor(tableId), server: activeRole.fullName || activeRole.name || '',
         }),
       })
         .then(r => r.json().catch(() => null).then(j => ({ status: r.status, j })))
@@ -4195,15 +4195,21 @@ em, i, cite, dfn, var { font-style: normal; }
       (floor.staff || []).forEach((s) => { floorStaff[s.id] = s.name || ''; });
       const colleagueByName = Object.create(null);
       (data.colleagues || []).forEach((c) => { colleagueByName[String(c.name || '').trim().toLowerCase()] = c.id; });
+      /* A refresh carries the owner's latest geometry/assignment, not the
+         live order state held by this service app. Preserve that state while
+         replacing the plan so polling cannot turn an occupied table empty. */
+      const previousTables = Object.assign({}, tables);
       Object.keys(tables).forEach((k) => { delete tables[k]; });
       (floor.tables || []).forEach((t) => {
         let assigned = t.server || '';
         if (assigned && !servers[assigned]) assigned = colleagueByName[String(floorStaff[assigned] || '').trim().toLowerCase()] || '';
         const id = String(t.num || t.id || '').trim() || String(t.id || 'Table');
+        const previous = previousTables[id] || null;
         tables[id] = {
           zone: t.zone || 'salle', zoneLabel: zoneNames[t.zone] || 'Salle', server: assigned,
           covers: tableSeats(t),
-          status: t.status === 'occupied' ? 'ka-yaklo' : 'khawya', elapsed: 0,
+          status: previous ? previous.status : (t.status === 'occupied' ? 'ka-yaklo' : 'khawya'),
+          elapsed: previous ? (previous.elapsed || 0) : 0,
         };
       });
       SCHEDULE_DATA[emp.id] = employeeSchedule(data);
@@ -4236,6 +4242,106 @@ em, i, cite, dfn, var { font-style: normal; }
       $$('.bt-btn').forEach(btn => {
         btn.hidden = !r.tabs.includes(btn.dataset.tab);
       });
+    }
+
+    /* A clocked-in floor employee watches only the orders and service events
+       that the edge has already filtered to their own assigned tables. */
+    let serviceSyncTimer = null;
+    let serviceOrderSince = 0;
+    let serviceEventSince = 0;
+    let servicePlanTick = 0;
+    const serviceOrderStatus = new Map();
+    const serviceEventSeen = new Set();
+
+    function serviceNorm(value) {
+      let s = String(value || '').trim().toLowerCase();
+      try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+      return s.replace(/\s+/g, ' ');
+    }
+    function serviceTableId(value) {
+      const wanted = serviceNorm(value).replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
+      return Object.keys(tables).find((id) => serviceNorm(id).replace(/^t(?=\d+$)/, '') === wanted) || '';
+    }
+    function serviceNotify(title, body) {
+      toast(body ? `${title} · ${body}` : title, 4200);
+      try { if (navigator.vibrate) navigator.vibrate([45, 55, 45]); } catch (_) {}
+      try {
+        if (window.Notification && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+          new Notification(title, { body: body || '', tag: 'kiwi-service-' + title + '-' + body });
+        }
+      } catch (_) {}
+    }
+    function ingestServiceOrders(data) {
+      if (!data || !data.ok) return;
+      serviceOrderSince = data.now || serviceOrderSince;
+      (data.sessions || []).forEach((session) => {
+        if (!session || session.mode !== 'table') return;
+        const id = serviceTableId(session.table);
+        if (id && tables[id] && tables[id].status === 'khawya') tables[id].status = 'ka-yaklo';
+      });
+      (data.orders || []).forEach((order) => {
+        if (!order || !order.id) return;
+        const before = serviceOrderStatus.get(order.id) || '';
+        serviceOrderStatus.set(order.id, order.status);
+        const table = serviceTableId(order.table) || order.table || '';
+        if (order.status === 'pending' && before !== 'pending') {
+          serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim());
+        } else if (order.status === 'ready' && before !== 'ready') {
+          serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim());
+        }
+      });
+      try { renderAll(); } catch (_) {}
+    }
+    function ingestServiceEvents(data) {
+      if (!data || !data.ok) return;
+      serviceEventSince = data.now || serviceEventSince;
+      (data.events || []).forEach((event) => {
+        if (!event || serviceEventSeen.has(event.id)) return;
+        serviceEventSeen.add(event.id);
+        if (event.type !== 'table-seated') return;
+        const id = serviceTableId(event.table) || event.table;
+        if (tables[id]) {
+          tables[id].status = 'a-commander';
+          tables[id].covers = event.covers || tables[id].covers;
+          tables[id].elapsed = 0;
+        }
+        serviceNotify(`Table ${id}`, `${event.customer || 'Clients'} installé${event.covers ? ` · ${event.covers} pers.` : ''} · menus à apporter`);
+      });
+      try { renderAll(); } catch (_) {}
+    }
+    function pollServiceSync() {
+      if (SV_DEMO || !shiftStart || activeRole.restricted || !liveEmployeeState) return;
+      const merchant = liveEmployeeState.merchant || svSlug();
+      if (!merchant) return;
+      fetch('/api/order/queue?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceOrderSince + '&role=service', {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => r.ok ? r.json() : null).then(ingestServiceOrders).catch(() => {});
+      fetch('/api/service/events?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceEventSince, {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => r.ok ? r.json() : null).then(ingestServiceEvents).catch(() => {});
+      servicePlanTick++;
+      if (servicePlanTick % 3 === 0 && window.KiwiEmployeeLive) {
+        KiwiEmployeeLive.refresh().then((data) => {
+          applyEmployeeLive(data);
+          activeRole = resolveRole('');
+          applyRoleToMain();
+          try { renderAll(); } catch (_) {}
+        }).catch(() => {});
+      }
+    }
+    function startServiceSync() {
+      if (serviceSyncTimer || SV_DEMO || activeRole.restricted) return;
+      pollServiceSync();
+      serviceSyncTimer = setInterval(pollServiceSync, 6000);
+    }
+    function stopServiceSync() {
+      if (serviceSyncTimer) clearInterval(serviceSyncTimer);
+      serviceSyncTimer = null;
+      serviceOrderSince = 0;
+      serviceEventSince = 0;
+      servicePlanTick = 0;
+      serviceOrderStatus.clear();
+      serviceEventSeen.clear();
     }
 
     /* ===========================================================
@@ -4272,6 +4378,9 @@ em, i, cite, dfn, var { font-style: normal; }
       const btn = $('#ci-button');
       if (btn.classList.contains('is-loading')) return;
       btn.classList.add('is-loading');
+      try {
+        if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+      } catch (_) {}
 
       let cloudStart = null;
       if (!SV_DEMO) {
@@ -4301,6 +4410,7 @@ em, i, cite, dfn, var { font-style: normal; }
         // 380ms later — clockin gone, swap to main (kept hidden) + show greeting
         setTimeout(() => {
           shiftStart = cloudStart || new Date();
+          startServiceSync();
           $$('.screen').forEach(s => s.classList.remove('is-active', 'is-leaving'));
           const main = $('#screen-main');
           main.classList.add('is-active', 'is-pre-hidden');
@@ -4480,6 +4590,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function clockOut() {
+      stopServiceSync();
       if (!SV_DEMO && window.KiwiEmployeeLive) {
         window.KiwiEmployeeLive.clockOut()
           .then(() => window.KiwiEmployeeLive.logout())

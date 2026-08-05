@@ -23,7 +23,7 @@
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
-  findEmployeeCredential, employeeToken, employeeCookie,
+  findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
@@ -165,6 +165,11 @@ async function routeRequest(context) {
   if (isRead && (path === '/kiwi-serveur.html' || path === '/kiwi-serveur'
     || path === '/serveur.webmanifest' || path === '/api/employee')) return next();
   if (method === 'POST' && path === '/api/employee') return next();
+  /* Only a clocked-in floor-service employee may cross from the private
+   * employee app into the shared operational channels. Kitchen/dishwasher and
+   * off-shift accounts remain limited to schedule, hours and pointage. */
+  if ((path === '/api/order/queue' || path === '/api/service/events')
+      && authSecret && await activeServiceEmployee(request, env)) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
