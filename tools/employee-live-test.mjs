@@ -20,6 +20,7 @@ const DB = {
 };
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
+const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
 
 function put(sql, ...args) { sqlite.prepare(sql).run(...args); }
 const now = Date.now();
@@ -32,7 +33,7 @@ put('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?
 put('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)',
   'pin-voisin', 'voisin', '1357', 'Autre Employé', 'Serveur', now);
 const team = {
-  members: [{ id: 'mem-sara', firstName: 'Sara', lastName: 'Serveuse', function: 'Serveur', department: 'Salle', pinCode: '2468' }],
+  members: [{ id: 'mem-sara', firstName: 'Sara', lastName: 'Serveuse', email: 'sara@amira.test', function: 'Serveur', department: 'Salle', pinCode: '2468' }],
   shifts: { 'mem-sara': { '2026-08-05': { start: '12:00', end: '20:00' } } },
   hours: { 'mem-sara': {} },
 };
@@ -54,14 +55,33 @@ async function get(cookie) {
   return API.onRequestGet({ env, request: new Request('https://kiwi.test/api/employee', { headers: { Cookie: cookie } }) });
 }
 
-const bad = await post({ action: 'login', merchant: 'amira-cafe', pin: '1111' });
+const bad = await post({ action: 'login', email: 'sara@amira.test', pin: '1111' });
 ok(bad.status === 401, 'un code inconnu est refusé');
-const cross = await post({ action: 'login', merchant: 'voisin', pin: '2468' });
-ok(cross.status === 401, 'un code ne traverse jamais vers un autre magasin');
+const pinOnly = await post({ action: 'login', merchant: 'amira-cafe', pin: '2468' });
+ok(pinOnly.status === 401, "un PIN sans email n'ouvre plus l'app employé");
+const cross = await post({ action: 'login', email: 'autre@voisin.test', pin: '2468' });
+ok(cross.status === 401, "l'email et le code doivent appartenir au même employé");
 
-const login = await post({ action: 'login', merchant: 'amira-cafe', pin: '2468' });
+async function gate(request) {
+  return GATE.onRequest({ request, env: { ...env, SITE_PASSWORD: 'ancien-code-partage' }, next: () => new Response('next') });
+}
+const accessPage = await gate(new Request('https://kiwi.test/dashboard'));
+const accessHtml = await accessPage.text();
+ok(accessPage.status === 401 && accessHtml.includes('name="email"') && accessHtml.includes('name="pin"'),
+  'Accès équipe demande email et code personnel');
+ok(!accessHtml.includes('name="passcode"'), "l'ancien champ de code partagé a disparu");
+const legacyForm = new URLSearchParams({ passcode: 'ancien-code-partage' });
+const legacy = await gate(new Request('https://kiwi.test/__unlock', { method: 'POST', body: legacyForm }));
+ok(legacy.status === 401 && !legacy.headers.get('set-cookie'), "l'ancien code équipe partagé ne crée plus de session");
+const employeeForm = new URLSearchParams({ email: 'sara@amira.test', pin: '2468' });
+const employeeAccess = await gate(new Request('https://kiwi.test/__unlock', { method: 'POST', body: employeeForm }));
+ok(employeeAccess.status === 303 && employeeAccess.headers.get('location') === '/kiwi-serveur'
+  && String(employeeAccess.headers.get('set-cookie') || '').includes('kiwi_employee='),
+  'Accès équipe ouvre directement une session employé');
+
+const login = await post({ action: 'login', email: '  SARA@AMIRA.TEST ', pin: '2468' });
 const cookie = String(login.headers.get('set-cookie') || '').split(';')[0];
-ok(login.status === 200 && cookie.startsWith('kiwi_employee='), 'le PIN réel ouvre une session employé httpOnly');
+ok(login.status === 200 && cookie.startsWith('kiwi_employee='), "l'email et le PIN réels ouvrent une session employé httpOnly");
 const stateRes = await get(cookie);
 const state = await stateRes.json();
 ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient du roster cloud du magasin');
@@ -82,6 +102,9 @@ ok(day >= 1.99 && day <= 2.01, 'les heures pointées alimentent Paie & planning'
 
 const anon = await get('');
 ok(anon.status === 401, 'planning, collègues et salle restent privés sans session employé');
+
+const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

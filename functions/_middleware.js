@@ -10,9 +10,8 @@
 //   1. Account session — a merchant who signed up / logged in (email + password).
 //      Handled by /auth/* (see functions/auth/*). Session = HMAC-signed cookie,
 //      verified here with AUTH_SECRET.
-//   2. Staff bypass — the shared passcode in SITE_PASSWORD, entered once via the
-//      "Accès équipe" field. Lets the owner + partner demo without an account and
-//      never get locked out. Handled here (POST /__unlock), cookie = HMAC(pass).
+//   2. Employee access — email + personal 4-digit code saved by the owner in
+//      Dashboard → Équipe. It opens only the employee app, never the dashboard.
 //
 // ── Configure (Cloudflare Pages → Settings → Variables & Secrets) ─────────────
 //   AUTH_SECRET   = <random 32-byte hex>   (secret; signs account sessions)
@@ -24,6 +23,7 @@
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
+  findEmployeeCredential, employeeToken, employeeCookie,
   limitCheck, limitFail, limitClear,
 } from './auth/_lib.js';
 
@@ -259,40 +259,29 @@ async function routeRequest(context) {
   // Not authorized. The /auth/* endpoints must still run so the screen works.
   if (path.startsWith('/auth/')) return next();
 
-  // Staff unlock attempt (shared passcode).
-  if (sitePassword && request.method === 'POST' && path === UNLOCK_PATH) {
-    /* Le même plafond que la porte d'à côté. Celle-ci n'en avait AUCUN : le code
-     * équipe est un secret partagé, court, tapé sur un téléphone — donc court par
-     * nécessité — et il ouvrait le site entier en essais illimités. Le code
-     * opérateur, quelques lignes plus bas, était compté depuis longtemps ; c'est
-     * la serrure la plus faible qui était restée sans compteur.
-     *
-     * Compteur PROPRE ('gate'), et non le 'op' de la console. Les partager
-     * paraissait plus sévère, mais couplait deux portes qui n'ont ni le même
-     * public ni le même risque : un serveur qui se trompe trois fois de code
-     * équipe pendant le coup de feu aurait fermé la console d'administration au
-     * patron, au même instant et depuis la même adresse IP. Chaque porte porte
-     * sa propre ardoise ; l'attaquant n'en tire aucun essai supplémentaire.
-     *
-     * Faillible vers le haut, comme tout le limiteur : table absente ou D1 qui
-     * tousse ⇒ on laisse passer. Un compteur en panne ne doit jamais enfermer
-     * dehors une équipe en plein service. */
-    const tooMany = await limitCheck(request, env, 'gate');
+  // Employee login. The old shared SITE_PASSWORD form opened the whole product;
+  // this route now accepts only the email + personal PIN from the private team
+  // roster and creates a store-scoped employee session.
+  if (request.method === 'POST' && path === UNLOCK_PATH) {
+    if (!authSecret || !env.DB) return htmlResponse(authPage({ staffError: true, allowStaff: false }));
+    const tooMany = await limitCheck(request, env, 'employee');
     if (tooMany) return tooMany;
     const form = await request.formData();
-    const tried = (form.get('passcode') || '').toString();
-    if (tried === sitePassword) {
-      await limitClear(request, env, 'gate');
-      const staff = await expectedToken(sitePassword);
+    const email = (form.get('email') || '').toString();
+    const pin = (form.get('pin') || '').toString().replace(/\D/g, '').slice(0, 4);
+    const employee = await findEmployeeCredential(env, email, pin);
+    if (employee && !employee.ambiguous && String(employee.status || 'active') !== 'suspended') {
+      await limitClear(request, env, 'employee');
+      const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id });
       return new Response(null, {
         status: 303,
         headers: {
-          Location: '/',
-          'Set-Cookie': `${GATE_COOKIE}=${staff}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`,
+          Location: '/kiwi-serveur',
+          'Set-Cookie': employeeCookie(token),
         },
       });
     }
-    await limitFail(request, env, 'gate');
+    await limitFail(request, env, 'employee');
     return htmlResponse(authPage({ staffError: true, allowStaff: true }));
   }
 
@@ -329,7 +318,7 @@ async function routeRequest(context) {
       return new Response(null, { status: 303, headers });
     }
     await limitFail(request, env, 'op');
-    return htmlResponse(authPage({ allowStaff: !!sitePassword, operatorError: true }));
+    return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true }));
   }
 
   // Locked → show the account screen. If we got here because a signed session
@@ -343,7 +332,7 @@ async function routeRequest(context) {
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
     });
   }
-  return new Response(authPage({ allowStaff: !!sitePassword, revoked: sessionRevoked }), {
+  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });
@@ -405,9 +394,10 @@ function authPage(opts) {
   const staffBlock = allowStaff ? `
     <button type="button" class="staff-link" id="staff-toggle">Accès équipe</button>
     <form class="staff" id="staff-form" method="POST" action="${UNLOCK_PATH}"${staffError ? '' : ' hidden'}>
-      ${staffError ? `<p class="err staff-err" role="alert">Code équipe incorrect.</p>` : ''}
+      ${staffError ? `<p class="err staff-err" role="alert">Email ou code personnel incorrect.</p>` : ''}
       <div class="staff-row">
-        <input name="passcode" type="password" inputmode="text" autocomplete="off" placeholder="Code équipe" aria-label="Code équipe" />
+        <input name="email" type="email" inputmode="email" autocomplete="username" placeholder="Email employé" aria-label="Email employé" required />
+        <input name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="current-password" placeholder="Code personnel · 4 chiffres" aria-label="Code personnel à 4 chiffres" required />
         <button type="submit">Entrer</button>
       </div>
     </form>` : '';
@@ -657,8 +647,9 @@ function authPage(opts) {
   .staff-link:hover { color: var(--riad); text-decoration-color: rgba(5,59,44,.6); }
   .op { margin-top: 14px; }
   .staff { margin: 14px 0 0; }
-  .staff-row { display: flex; gap: 8px; }
+  .staff-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .staff input { flex: 1; padding: 11px 13px; font-size: 14px; }
+  .staff input[name="email"] { flex-basis: 100%; }
   .staff button {
     border: 0;
     border-radius: 10px;

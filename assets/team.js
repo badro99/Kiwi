@@ -69,7 +69,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'Identité',
       secContact:     'Contact',
-      secAccess:      'Accès Kiwi Caisse',
+      secAccess:      'Compte employé Kiwi',
       secRole:        'Rôle & affectation',
       secContract:    'Contrat',
       secComp:        'Rémunération',
@@ -80,7 +80,7 @@
       lastName:  'Nom',
       email:     'Email',
       phone:     'Téléphone',
-      password:  'Code caisse · 4 chiffres',
+      password:  'Code personnel · 4 chiffres',
       generate:  'Générer',
       copy:      'Copier',
       function:  'Fonction',
@@ -103,10 +103,12 @@
       photoLabel:'Photo',
       uploadPhoto:'Téléverser une photo',
       placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: 'Rue 12, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '6XX XX XX XX', notes: 'Allergie crustacés · disponibilité étendue le week-end' },
-      vRequired: 'Prénom, nom et fonction requis',
+      vRequired: 'Prénom, nom, email et fonction requis',
       vInvalidEmail: 'Email invalide',
+      vDuplicateEmail: 'Cet email est déjà utilisé par un autre membre',
+      vDuplicateCode: 'Ce code est déjà utilisé par un autre membre',
       vEndAfterStart: "La date de fin doit être après la date de début",
-      vCode: "Le code caisse doit faire 4 chiffres",
+      vCode: "Le code personnel doit faire 4 chiffres",
       payTitle: 'Paie & planning',
       paySub: 'planning, heures et paie de la période',
       payEmptyH: 'Ajoutez votre équipe pour commencer',
@@ -147,7 +149,7 @@
       delDesc:  'Action irréversible. Le compte Kiwi Caisse sera désactivé immédiatement.',
       delConfirm: 'Supprimer',
       tAdded:    (n) => `${n} ajouté·e à l'équipe`,
-      tAddedDesc:(p) => `Code caisse ${p} · utilisable tout de suite sur la caisse`,
+      tAddedDesc:(p) => `Code personnel ${p} · compte employé activé`,
       tUpdated:  (n) => `${n} · profil mis à jour`,
       tDeleted:  (n) => `${n} a été retiré·e de l'équipe`,
       tPwdCopied:'Code caisse copié',
@@ -219,7 +221,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'Identity',
       secContact:     'Contact',
-      secAccess:      'Kiwi Caisse access',
+      secAccess:      'Kiwi employee account',
       secRole:        'Role & assignment',
       secContract:    'Contract',
       secComp:        'Compensation',
@@ -230,7 +232,7 @@
       lastName:  'Last name',
       email:     'Email',
       phone:     'Phone',
-      password:  'Till code · 4 digits',
+      password:  'Personal code · 4 digits',
       generate:  'Generate',
       copy:      'Copy',
       function:  'Function',
@@ -253,10 +255,12 @@
       photoLabel:'Photo',
       uploadPhoto:'Upload a photo',
       placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: '12 Rue, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '6XX XX XX XX', notes: 'Shellfish allergy · extended weekend availability' },
-      vRequired: 'First name, last name and function are required',
+      vRequired: 'First name, last name, email and function are required',
       vInvalidEmail: 'Invalid email',
+      vDuplicateEmail: 'Another member already uses this email',
+      vDuplicateCode: 'Another member already uses this code',
       vEndAfterStart: 'End date must be after the start date',
-      vCode: 'The till code must be 4 digits',
+      vCode: 'The personal code must be 4 digits',
       payTitle: 'Payroll & scheduling',
       paySub: 'schedule, hours and pay for the period',
       payEmptyH: 'Add your team to get started',
@@ -297,7 +301,7 @@
       delDesc:  'Permanent. The Kiwi Caisse account will be disabled immediately.',
       delConfirm: 'Remove',
       tAdded:    (n) => `${n} added to the team`,
-      tAddedDesc:(p) => `Till code ${p} · usable on the register right away`,
+      tAddedDesc:(p) => `Personal code ${p} · employee account enabled`,
       tUpdated:  (n) => `${n} · profile updated`,
       tDeleted:  (n) => `${n} has been removed from the team`,
       tPwdCopied:'Till code copied',
@@ -368,7 +372,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'الهوية',
       secContact:     'الاتصال',
-      secAccess:      'الوصول لـ Kiwi Caisse',
+      secAccess:      'حساب موظف Kiwi',
       secRole:        'المنصب والتكليف',
       secContract:    'العقد',
       secComp:        'الراتب',
@@ -379,7 +383,7 @@
       lastName:  'النسب',
       email:     'البريد الإلكتروني',
       phone:     'الهاتف',
-      password:  'رمز الصندوق · 4 أرقام',
+      password:  'الرمز الشخصي · 4 أرقام',
       generate:  'إنشاء',
       copy:      'نسخ',
       function:  'الوظيفة',
@@ -402,10 +406,12 @@
       photoLabel:'الصورة',
       uploadPhoto:'تحميل صورة',
       placeholder: { firstName: 'سارة', lastName: 'بلقاضي', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: 'شارع 12، المعاريف، الدار البيضاء', cin: 'BK 384721', emergencyName: 'كريم بلقاضي', emergencyPhone: '6XX XX XX XX', notes: 'حساسية من القشريات · توفر موسع نهاية الأسبوع' },
-      vRequired: 'الاسم الأول والنسب والوظيفة مطلوبة',
+      vRequired: 'الاسم والنسب والبريد الإلكتروني والوظيفة مطلوبة',
       vInvalidEmail: 'بريد إلكتروني غير صالح',
+      vDuplicateEmail: 'هذا البريد مستعمل من طرف موظف آخر',
+      vDuplicateCode: 'هذا الرمز مستعمل من طرف موظف آخر',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
-      vCode: 'رمز الصندوق يجب أن يكون 4 أرقام',
+      vCode: 'يجب أن يكون الرمز الشخصي من 4 أرقام',
       payTitle: 'الأجور والتخطيط',
       paySub: 'التخطيط والساعات وأجور الفترة',
       payEmptyH: 'أضف فريقك للبدء',
@@ -446,7 +452,7 @@
       delDesc:  'إجراء نهائي. سيتم تعطيل حساب Kiwi Caisse فورًا.',
       delConfirm: 'إزالة',
       tAdded:    (n) => `تمت إضافة ${n} إلى الفريق`,
-      tAddedDesc:(p) => `رمز الصندوق ${p} · جاهز للاستعمال فوراً`,
+      tAddedDesc:(p) => `الرمز الشخصي ${p} · حساب الموظف مفعل`,
       tUpdated:  (n) => `${n} · تم تحديث الملف`,
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
       tPwdCopied:'تم نسخ رمز الصندوق',
@@ -1886,7 +1892,7 @@
           <div class="kt-fsec">
             <div class="kt-fseclabel">${esc(T.secContact)}</div>
             <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.email)}</span><input type="email" name="email" value="${esc(m.email)}" placeholder="${esc(T.placeholder.email)}" /></label>
+              <label><span class="l">${esc(T.email)}</span><input type="email" name="email" value="${esc(m.email)}" placeholder="${esc(T.placeholder.email)}" autocomplete="email" required /></label>
               <label><span class="l">${esc(T.phone)}</span><input type="tel" name="phone" value="${esc(m.phone)}" placeholder="${esc(T.placeholder.phone)}" /></label>
             </div>
             <label><span class="l">${esc(T.address)}</span><input type="text" name="address" value="${esc(m.address)}" placeholder="${esc(T.placeholder.address)}" /></label>
@@ -2058,7 +2064,7 @@
     const form = mdl.el.querySelector('[data-kt-form]'); if (!form) return;
     const data = Object.fromEntries(new FormData(form).entries());
 
-    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.function?.trim()) {
+    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim() || !data.function?.trim()) {
       Kiwi.toast(T.vRequired, { type: 'pend' }); return;
     }
     if (data.email && !/^\S+@\S+\.\S+$/.test(data.email)) {
@@ -2075,6 +2081,14 @@
     const venueType = st.venueType;
     const members = getMembers(venueType);
     const prev = st.editing ? members.find((x) => x.id === st.memberId) : null;
+    const emailKey = String(data.email || '').trim().toLocaleLowerCase('en');
+    if (members.some((x) => x.id !== st.memberId && String(x.email || '').trim().toLocaleLowerCase('en') === emailKey)) {
+      Kiwi.toast(T.vDuplicateEmail, { type: 'pend' }); return;
+    }
+    const effectiveCode = code || (prev && (prev.pinCode || prev.password)) || '';
+    if (effectiveCode && members.some((x) => x.id !== st.memberId && String(x.pinCode || x.password || '').trim() === effectiveCode)) {
+      Kiwi.toast(T.vDuplicateCode, { type: 'pend' }); return;
+    }
     const member = {
       id: st.memberId,
       firstName: data.firstName.trim(),

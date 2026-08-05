@@ -158,6 +158,46 @@ export function employeeCookie(value) {
   return `${EMPLOYEE_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(EMPLOYEE_SESSION_MS / 1000)}`;
 }
 
+// Resolve the credentials the owner records on Dashboard → Équipe. Email is
+// read from the private team document instead of being copied to a second
+// account table: saving or deleting the profile therefore changes access too.
+export async function findEmployeeCredential(env, emailValue, pinValue) {
+  const email = String(emailValue || '').trim().toLocaleLowerCase('en').slice(0, 254);
+  const pin = String(pinValue || '').trim();
+  if (!env || !env.DB || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) return null;
+
+  let docs;
+  try {
+    docs = await env.DB.prepare("SELECT merchant, data FROM store_docs WHERE feature = 'team'").all();
+  } catch (_) { return null; }
+
+  const matches = [];
+  for (const row of ((docs && docs.results) || [])) {
+    let team = null;
+    try { team = JSON.parse(row.data || '{}'); } catch (_) { continue; }
+    const members = Array.isArray(team && team.members) ? team.members : [];
+    for (const member of members) {
+      const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
+      const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
+      if (memberEmail === email && memberPin === pin) matches.push({ merchant: String(row.merchant || ''), member });
+    }
+  }
+  // Never guess which workplace the person meant. The owner can resolve a rare
+  // duplicate by giving that employee a different PIN in one of the stores.
+  if (matches.length !== 1) return matches.length > 1 ? { ambiguous: true } : null;
+
+  const match = matches[0];
+  try {
+    const row = await env.DB.prepare(
+      `SELECT p.id, p.merchant, p.pin, p.name, p.role, c.status, c.type
+         FROM staff_pins p LEFT JOIN merchant_config c ON c.merchant = p.merchant
+        WHERE p.merchant = ? AND p.pin = ? LIMIT 1`
+    ).bind(match.merchant, pin).first();
+    if (!row) return null;
+    return { ...row, member: match.member };
+  } catch (_) { return null; }
+}
+
 export function clearEmployeeCookie() {
   return `${EMPLOYEE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }

@@ -16,8 +16,8 @@
     });
   }
   window.KiwiEmployeeLive = {
-    login: function (merchant, pin) {
-      return call('POST', { action: 'login', merchant: merchant, pin: pin }).then(function () { return call('GET'); });
+    login: function (email, pin) {
+      return call('POST', { action: 'login', email: email, pin: pin }).then(function () { return call('GET'); });
     },
     refresh: function () { return call('GET'); },
     clockIn: function () { return call('POST', { action: 'clock-in' }); },

@@ -4000,18 +4000,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const entered = pinInput;
         pinBusy = true;
         if (!SV_DEMO) {
-          try {
-            if (!window.KiwiEmployeeLive) throw Object.assign(new Error('not-configured'), { code: 'not-configured' });
-            liveEmployeeState = await window.KiwiEmployeeLive.login(svMerchant(), entered);
-            try { localStorage.setItem('kiwiEmployeeMerchant', liveEmployeeState.merchant || svMerchant()); } catch (_) {}
-            applyEmployeeLive(liveEmployeeState);
-          } catch (err) {
-            pinInput = '';
-            pinBusy = false;
-            $$('.pin-dot').forEach(d => d.classList.remove('is-success', 'is-filled'));
-            pinError(err && err.code);
-            return;
-          }
+          // Live employees authenticate once from "Accès équipe" with their
+          // email + personal PIN. A bare PIN on this page must never be enough.
+          location.replace('/dashboard?employee=1');
+          return;
         }
         // Success pop on the 4 dots, staggered left → right.
         const dots = $$('.pin-dot');
@@ -6778,6 +6770,29 @@ em, i, cite, dfn, var { font-style: normal; }
       window.shareShiftCard = shareShiftCard;
       window.kgSnapshot = kgSnapshot;
     })();
+
+    /* A successful "Accès équipe" login already placed an httpOnly employee
+       session cookie. Restore it here and go straight to clock-in; an employee
+       must never type the same PIN a second time, nor can a visitor use the old
+       PIN-only screen to guess their way in. */
+    if (!SV_DEMO) {
+      window.addEventListener('load', function () {
+        if (!window.KiwiEmployeeLive) { location.replace('/dashboard?employee=1'); return; }
+        window.KiwiEmployeeLive.refresh().then(function (data) {
+          liveEmployeeState = data;
+          try { localStorage.setItem('kiwiEmployeeMerchant', data.merchant || ''); } catch (_) {}
+          applyEmployeeLive(data);
+          activeRole = resolveRole('');
+          if (!activeRole) throw new Error('employee-role-missing');
+          applyRoleToClockin();
+          resetNfc();
+          showScreen('screen-clockin');
+          if (window.lucide) lucide.createIcons();
+        }).catch(function () {
+          location.replace('/dashboard?employee=1');
+        });
+      });
+    }
   </script>
 </body>
 </html>

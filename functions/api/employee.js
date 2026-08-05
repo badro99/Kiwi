@@ -1,6 +1,7 @@
 // /api/employee — private mobile employee/service app bridge.
 //
-// POST { action:'login', merchant, pin } validates one store-scoped staff PIN
+// POST { action:'login', email, pin } validates the employee credentials saved
+// by the owner in Dashboard → Équipe.
 // and creates a short-lived httpOnly employee session. GET returns only the
 // signed-in employee's operational view: sanitized identity, their schedule and
 // worked hours, on-shift colleagues, and the restaurant floor. POST clock-in /
@@ -9,7 +10,7 @@
 
 import {
   json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee,
-  limitCheck, limitFail, limitClear,
+  findEmployeeCredential, limitCheck, limitFail, limitClear,
 } from '../auth/_lib.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
@@ -17,10 +18,6 @@ const TEAM_FEATURE = 'team';
 const FLOOR_FEATURE = 'floorplan';
 const MAX_ATTENDANCE = 5000;
 
-function merchantSlug(value) {
-  const s = String(value || '').trim().toLowerCase();
-  return /^[a-z0-9][a-z0-9-]{0,63}$/.test(s) ? s : '';
-}
 function parse(raw, fallback) {
   try { const v = JSON.parse(raw || ''); return v && typeof v === 'object' ? v : fallback; }
   catch (_) { return fallback; }
@@ -160,22 +157,20 @@ export async function onRequestPost({ request, env }) {
   if (action === 'login') {
     const limited = await limitCheck(request, env, 'employee');
     if (limited) return limited;
-    const merchant = merchantSlug(body.merchant);
+    const email = String(body.email || '').trim();
     const pin = String(body.pin || '').replace(/\D/g, '').slice(0, 4);
-    if (!merchant || pin.length !== 4) { await limitFail(request, env, 'employee'); return json({ error: 'bad-employee-code' }, 401); }
-    let row = null;
-    try {
-      row = await env.DB.prepare(
-        `SELECT p.id, p.merchant, p.pin, p.name, p.role, c.status, c.type
-           FROM staff_pins p LEFT JOIN merchant_config c ON c.merchant = p.merchant
-          WHERE p.merchant = ? AND p.pin = ? LIMIT 1`
-      ).bind(merchant, pin).first();
-    } catch (_) { return json({ error: 'not-configured' }, 503); }
+    if (!email || pin.length !== 4) { await limitFail(request, env, 'employee'); return json({ error: 'bad-employee-code' }, 401); }
+    const row = await findEmployeeCredential(env, email, pin);
+    if (row && row.ambiguous) {
+      await limitFail(request, env, 'employee');
+      return json({ error: 'employee-access-ambiguous' }, 409);
+    }
     if (!row || String(row.status || 'active') === 'suspended') {
       await limitFail(request, env, 'employee');
       return json({ error: row && row.status === 'suspended' ? 'store-suspended' : 'bad-employee-code' }, row && row.status === 'suspended' ? 403 : 401);
     }
     await limitClear(request, env, 'employee');
+    const merchant = row.merchant;
     const res = json({ ok: true, merchant, role: row.role || 'staff', name: row.name || 'Employé' });
     res.headers.append('Set-Cookie', employeeCookie(await employeeToken(env.AUTH_SECRET, { merchant, staffId: row.id })));
     return res;
