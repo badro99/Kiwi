@@ -454,11 +454,10 @@
     }
     if (who) {
       /* A code that EXISTS is still not automatically a till code. The staff list
-       * is the whole payroll — the kitchen, the stockroom, the cleaner all carry
-       * one so they can clock in — and every one of them opened the register.
-       * assets/staff-roles.js holds the rule (a deny list: only back-of-house is
-       * refused, because refusing wrongly stops a sale). Missing file ⇒ everyone
-       * in, exactly as before. Name them in the message: the code is right, the
+       * is the whole payroll — servers and kitchen staff carry one to clock in,
+       * but only cashier/manager/owner assignments open money operations.
+       * assets/staff-roles.js holds the same allow-list as the server. Name the
+       * employee in the message: the code is right, the
        * person simply is not a cashier, and "Code incorrect" would send them
        * hunting for a typo that isn't there. */
       var R = window.KiwiRoles;

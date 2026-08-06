@@ -6,7 +6,7 @@ import { tillToken } from '../functions/auth/_lib.js';
 const secret = 'cancel-test-secret';
 const merchant = 'amira-cafe';
 
-function db(pinWorks) {
+function db(pinWorks, role = 'Caisse') {
   const batches = [];
   return {
     batches,
@@ -15,7 +15,7 @@ function db(pinWorks) {
         sql, args: [],
         bind(...args) { this.args = args; return this; },
         async first() {
-          if (sql.includes('FROM staff_pins')) return pinWorks ? { id: 'staff-7', name: 'Sara', role: 'Caisse' } : null;
+          if (sql.includes('FROM staff_pins')) return pinWorks ? { id: 'staff-7', name: 'Sara', role } : null;
           if (sql.includes('FROM sales')) return {
             id: 'sale-42', amount: 250, method: 'cash', label: 'Vente', ref: '1042',
             ts: Date.now() - 60000, lines: '[{"n":"Jean noir","q":1,"t":250}]', void_ts: null,
@@ -26,6 +26,13 @@ function db(pinWorks) {
     },
     async batch(stmts) { batches.push(stmts); return stmts.map(() => ({ success: true })); },
   };
+}
+
+{
+  const database = db(true, 'Serveur');
+  const res = await call(database, '2819');
+  assert.equal(res.status, 403, 'a waiter PIN must never authorize a till operation');
+  assert.equal(database.batches.length, 0, 'unauthorized roles must not void a sale');
 }
 
 async function call(database, pin) {
@@ -59,4 +66,4 @@ async function call(database, pin) {
   assert.equal(database.batches[0][1].args[7], 250);
 }
 
-console.log('  ✓ annulation caisse (PIN serveur, vente neutralisée, audit employé)');
+console.log('  ✓ annulation caisse (PIN caissier uniquement, vente neutralisée, audit employé)');

@@ -152,32 +152,24 @@
   }
 
   /* ── Who may open the register ──────────────────────────────────────────────
-   * Deliberately the mirror image of the floor rule: a DENY list, not an allow
-   * list. Getting the floor wrong shows someone a screen they do not need;
-   * getting the till wrong stops a sale with a customer standing there. So the
-   * only roles refused are the ones that unambiguously never handle money —
-   * the kitchen line, the stockroom, housekeeping, cleaning.
-   *
-   * Everyone else keeps it, including the ones a bigger business would separate:
-   * in a small Moroccan shop the boulanger does serve the 6am counter, the
-   * livreur does collect cash, the veilleur does take a late payment. Splitting
-   * those hairs from here would lock real people out of their own till. */
-  var NO_TILL = [
-    'plongeur', 'cuisinier', 'chef', 'commis', 'grillardin',   // kitchen line
-    'magasinier', 'reassort', 'merch',                          // stock & vitrine
-    'menage', 'gouvernante', 'bagagiste', 'entretien',          // étages & entretien
-  ];
-  var NO_TILL_SET = {};
-  NO_TILL.forEach(function (id) { NO_TILL_SET[id] = true; });
+   * Employee access and till access are deliberately different permissions.
+   * Every employee's PIN opens their schedule/clock-in app; only a cashier,
+   * manager or owner opens the caisse. An allow-list is essential here: a new
+   * job title must not silently become a financial permission. `staff` is kept
+   * solely for old onboarding rosters that predate explicit job assignments. */
+  var TILL = ['caisse', 'manager', 'proprietaire'];
+  var TILL_SET = {};
+  TILL.forEach(function (id) { TILL_SET[id] = true; });
 
   function opensTill(raw) {
+    var token = norm(raw);
+    if (token === 'staff' || token === 'owner' || token === 'admin') return true;
     var id = idOf(raw);
-    if (!id) return true;                          // unknown ⇒ keep the till
-    return !NO_TILL_SET[id];
+    return !!(id && TILL_SET[id]);
   }
 
   window.KiwiRoles = {
-    LABELS: LABELS, BY_TYPE: BY_TYPE, UNIVERSAL: UNIVERSAL, SERVICE: SERVICE, NO_TILL: NO_TILL,
+    LABELS: LABELS, BY_TYPE: BY_TYPE, UNIVERSAL: UNIVERSAL, SERVICE: SERVICE, TILL: TILL,
     forType: forType, label: label, isService: isService, opensTill: opensTill,
     idOf: idOf, norm: norm,
   };

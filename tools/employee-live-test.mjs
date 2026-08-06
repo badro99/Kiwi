@@ -21,6 +21,7 @@ const DB = {
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
 const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
+const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 
 function put(sql, ...args) { sqlite.prepare(sql).run(...args); }
 const now = Date.now();
@@ -107,6 +108,10 @@ put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='mirror-only' AND fe
   JSON.stringify({ members: [] }));
 const revoked = await get(mirrorCookie);
 ok(revoked.status === 401, "retirer l'employé du miroir révoque immédiatement sa session");
+ok(AUTH.employeeRoleOpensTill('Caissier') && AUTH.employeeRoleOpensTill('Manager'),
+  'caissier et manager gardent leur accès caisse');
+ok(!AUTH.employeeRoleOpensTill('Serveur') && !AUTH.employeeRoleOpensTill('Cuisinier'),
+  "serveur et cuisine gardent l'app employé sans ouvrir la caisse");
 
 const cin = await post({ action: 'clock-in' }, cookie);
 ok(cin.status === 200, 'le pointage d’arrivée est persisté');

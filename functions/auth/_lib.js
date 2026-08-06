@@ -636,6 +636,20 @@ function normEmployeeRole(value) {
   return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
 }
 
+/* A personal PIN identifies every employee in the employee app, but opening a
+ * cash register is a separate permission. Keep this server-side too: filtering
+ * only in caisse JavaScript would let a crafted request reuse a server's PIN on
+ * privileged till actions. `staff` is the single legacy onboarding role kept
+ * for stores created before explicit job assignments existed. */
+export function employeeRoleOpensTill(value) {
+  const role = normEmployeeRole(value);
+  return new Set([
+    'caisse', 'caissier', 'caissiere', 'cashier',
+    'manager', 'management', 'proprietaire', 'owner', 'admin', 'direction',
+    'staff',
+  ]).has(role);
+}
+
 /* Only an employee who works service AND currently has an open attendance
  * entry may use the operational order/event channels. Kitchen, dishwasher and
  * off-shift accounts remain confined to /api/employee (schedule, hours and

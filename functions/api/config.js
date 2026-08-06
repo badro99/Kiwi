@@ -8,7 +8,10 @@
 // falls back to its current hardcoded behavior — so this endpoint being missing
 // (GitHub Pages, local static) changes nothing.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor } from '../auth/_lib.js';
+import {
+  json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor,
+  employeeRoleOpensTill,
+} from '../auth/_lib.js';
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -203,7 +206,10 @@ export async function onRequestGet(context) {
       const rows = await env.DB.prepare(
         `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
       ).bind(merchant).all();
-      pins = rows.results || [];
+      // Older databases may still contain waiter/kitchen PIN rows. Never send
+      // them to a till: employee login remains available through the separate
+      // private employee-access roster.
+      pins = (rows.results || []).filter((row) => employeeRoleOpensTill(row.role));
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
@@ -382,7 +388,8 @@ export async function onRequestPost(context) {
     // created_ts preserves the submitted order.
     const base = Date.now();
     const stmts = [env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
-    clean.forEach((p, i) => {
+    const tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
+    tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
       ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
@@ -412,7 +419,8 @@ export async function onRequestPost(context) {
     ).bind(merchant, JSON.stringify(access), base));
     try { await env.DB.batch(stmts); }
     catch (_) { return json({ error: 'write-failed' }, 500); }
-    result.pins = clean.length;
+    result.pins = tillPins.length;
+    result.employees = access.members.length;
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─
