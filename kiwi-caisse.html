@@ -683,6 +683,7 @@
       flex-direction: column;
       gap: 12px;
       min-height: 0;
+      overflow-y: auto;
     }
     .plan-canvas.is-active { display: flex; }
 
@@ -699,23 +700,22 @@
       overflow: hidden;
       background: #040504;
     }
-    .plan-room-rdc   { flex: 0 0 54%; }
-    .plan-room-etage { flex: 1 1 auto; min-height: 0; }
+    /* Les salles se dimensionnent par l'aspect-ratio de leur plan logique
+       (cplan-room) — plus de flex-basis fixe, le canvas défile. */
+    .plan-room-rdc,
+    .plan-room-etage { flex: 0 0 auto; }
 
-    /* SVG architectural background — fills the room, click-transparent.
-       Peint en clair dans le markup ; le filtre l'amène en pénombre console. */
-    .plan-bg {
-      position: absolute;
-      inset: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      display: block;
-      filter: brightness(0.26) saturate(0.5);
-    }
-    /* Keep SVG strokes pixel-crisp through arbitrary scaling */
-    .plan-bg [vector-effect],
-    .plan-bg * {
-      vector-effect: non-scaling-stroke;
+    /* Le plan logique injecté (renderer noir unifié) vit DANS le cadre
+       .plan-room / .plan-zone-terrasse de la démo : on neutralise son
+       propre cadre pour ne pas doubler la bordure. */
+    .plan-room .cplan-room,
+    .plan-zone-terrasse .cplan-room {
+      max-width: none;
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
     }
 
     .plan-room-label {
@@ -743,8 +743,7 @@
     /* ---------- Terrasse (extérieur, sous la salle RDC) ---------- */
     .plan-zone-terrasse {
       position: relative;
-      flex: 1 1 auto;
-      min-height: 0;
+      flex: 0 0 auto;
       border: 1.5px dashed rgba(0,255,174,0.30);
       border-radius: 18px;
       box-shadow: 0 24px 50px -36px rgba(0,0,0,0.85);
@@ -775,6 +774,7 @@
     .table-layer {
       position: absolute;
       inset: 0;
+      z-index: 2;
       pointer-events: none;
     }
     .table-layer > * { pointer-events: auto; }
@@ -829,44 +829,8 @@
     .tbl-cell:active { filter: brightness(1.1); }
     .tbl-cell:focus-visible { outline: 2px solid rgba(0,255,174,0.55); outline-offset: 3px; border-radius: 8px; }
 
-    /* Chaises en coches plates, façon éditeur noir : un tiret lumineux par
-       place, teinté par l'état de la table — pas de bois, pas d'ombre. */
-    .tbl-chairs {
-      position: absolute;
-      display: flex; justify-content: center; gap: 5px;
-      pointer-events: none;
-    }
-    .tbl-chairs-top    { left: 6px; right: 6px; top: -9px;   height: 6px; }
-    .tbl-chairs-bottom { left: 6px; right: 6px; bottom: -9px; height: 6px; }
-    .chair {
-      flex: 0 1 16px;
-      min-width: 8px;
-      max-width: 22px;
-      height: 100%;
-      background: rgba(255,255,255,0.20);
-      border-radius: 3px;
-    }
-    /* Chairs around round tables — radial layout via inline transforms */
-    .tbl-chairs-ring {
-      position: absolute; inset: -8px;
-      pointer-events: none;
-    }
-    .chair-radial {
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 16px; height: 6px;
-      margin: -3px 0 0 -8px;
-      background: rgba(255,255,255,0.20);
-      border-radius: 3px;
-      transform-origin: center;
-    }
-    /* La coche prend la couleur de l'état de sa table. */
-    .tbl-cell:has(.tbl[data-status="ka-yaklo"]) .chair,
-    .tbl-cell:has(.tbl[data-status="ka-yaklo"]) .chair-radial { background: rgba(0,255,174,0.70); }
-    .tbl-cell:has(.tbl[data-status="a-commander"]) .chair,
-    .tbl-cell:has(.tbl[data-status="a-commander"]) .chair-radial { background: rgba(232,192,103,0.50); }
-    .tbl-cell:has(.tbl[data-status="bgha-ykhlass"]) .chair,
-    .tbl-cell:has(.tbl[data-status="bgha-ykhlass"]) .chair-radial { background: rgba(255,125,169,0.60); }
+    /* Les chaises sont désormais dessinées en SVG par le renderer noir
+       unifié (coches teintées par l'état) — plus de mobilier DOM. */
 
     /* ---------- Tabletop — matière charbon, état en lumière ---------- */
     .tbl {
@@ -904,9 +868,10 @@
 
     /* Status & elapsed text are hidden — color encodes status, badge encodes
        server. The cell shows only: table number + covers count + server avatar
-       + (if urgent) the pulsing red dot. */
+       + (if urgent) the pulsing red dot. Exception : la puce « depuis N mn »
+       du plan noir (.cplan-since), qui vient de l'éditeur du dashboard. */
     .tbl-status,
-    .tbl-elapsed { display: none !important; }
+    .tbl-elapsed:not(.cplan-since) { display: none !important; }
 
     /* The number is THE label on the floor plan. Centered, quiet, precise. */
     .tbl-head {
@@ -4355,11 +4320,11 @@
     box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
   }
   .cplan-scale { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-  /* Sol et mobilier peints en clair par floorplan-core → pénombre console. */
-  .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; filter: brightness(0.26) saturate(0.5); }
-  .pds-el { position: absolute; transform-origin: 50% 50%; filter: brightness(0.26) saturate(0.5); }
+  /* Sol et mobilier arrivent déjà en noir du renderer unifié — aucun filtre. */
+  .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; }
+  .pds-el { position: absolute; transform-origin: 50% 50%; }
   .pds-el-fill { position: absolute; inset: 0; background-repeat: repeat; overflow: hidden; }
-  .pds-el-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pds-el-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
   .pds-el-label {
     position: absolute; inset: 0; padding: 2px;
     display: flex; align-items: center; justify-content: center;
@@ -4377,11 +4342,34 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     pointer-events: none; text-align: center;
   }
-  .cplan-num { font: 500 14px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing: .04em; }
-  .cplan-cov { font: 400 10px/1 var(--mono, monospace); opacity: .6; margin-top: 3px; }
+  /* Le numéro EST l'étiquette — teinté par l'état, comme l'éditeur noir. */
+  .cplan-num { font: 500 11px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing: .04em; color: rgba(255,255,255,0.40); }
+  .cplan-tbl[data-status="a-commander"]  .cplan-num { color: rgba(232,192,103,0.80); }
+  .cplan-tbl[data-status="ka-yaklo"]     .cplan-num { color: rgba(0,255,174,0.90); }
+  .cplan-tbl[data-status="bgha-ykhlass"] .cplan-num { color: rgba(255,125,169,0.90); }
+  .cplan-tbl[data-status="khlass"]       .cplan-num { color: rgba(255,255,255,0.30); }
+  .cplan-tbl:hover .cplan-num,
+  .cplan-tbl.is-selected .cplan-num { color: rgba(255,255,255,0.75); }
+  /* Les couverts n'apparaissent qu'au survol — le plan garde le calme. */
+  .cplan-cov { font: 400 10px/1 var(--mono, monospace); opacity: 0; margin-top: 3px; transition: opacity 150ms ease; }
+  .cplan-tbl:hover .cplan-cov,
+  .cplan-tbl.is-selected .cplan-cov { opacity: 0.5; }
   .cplan-tbl { transition: filter 150ms ease; }
   .cplan-tbl:hover { filter: brightness(1.25); }
   .cplan-tbl:active { filter: brightness(1.1); }
+  /* La pulsation d'appel du dashboard — disque qui s'évase et s'éteint. */
+  .pds-noir-call { transform-box: fill-box; transform-origin: center; animation: pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite; }
+  @keyframes pdsNoirCall { 0%,62% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+  @media (prefers-reduced-motion: reduce) { .pds-noir-call { animation: none; opacity: 0; } }
+  /* La puce « depuis N mn », posée au-dessus de la table, hors du plan cliquable. */
+  .cplan-since {
+    position: absolute; top: calc(var(--pad, 0px) - 24px); left: calc(var(--pad, 0px) - 6px);
+    height: 19px; padding: 0 9px; border-radius: 9.5px;
+    display: inline-flex; align-items: center;
+    background: rgba(10,10,10,0.92); border: 1px solid rgba(255,255,255,0.18);
+    font: 500 10px/1 var(--font-ui, 'Inter Tight'), system-ui; color: rgba(255,255,255,0.72);
+    white-space: nowrap; pointer-events: none; z-index: 4;
+  }
   .cplan-urgent {
     position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
     border-radius: 50%; background: #FF7DA9;
@@ -4910,179 +4898,22 @@
           <div class="plan-room plan-room-rdc">
             <div class="plan-room-label">Café Atlas <em>· salle</em></div>
 
-            <svg class="plan-bg" viewBox="0 0 1600 800" preserveAspectRatio="none" aria-hidden="true">
-              <defs>
-                <linearGradient id="walnut" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0"   stop-color="#2A332A"/>
-                  <stop offset="0.5" stop-color="#1F2820"/>
-                  <stop offset="1"   stop-color="#151D17"/>
-                </linearGradient>
-                <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#E8C88A"/>
-                  <stop offset="1" stop-color="#B89052"/>
-                </linearGradient>
-                <pattern id="zellige-rdc" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-                  <rect width="48" height="48" fill="#F2EBD6"/>
-                  <circle cx="24" cy="24" r="2.5" fill="#BFA86A" opacity="0.32"/>
-                  <circle cx="0"  cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-                  <circle cx="48" cy="0"  r="2.5" fill="#BFA86A" opacity="0.32"/>
-                  <circle cx="0"  cy="48" r="2.5" fill="#BFA86A" opacity="0.32"/>
-                  <circle cx="48" cy="48" r="2.5" fill="#BFA86A" opacity="0.32"/>
-                </pattern>
-                <pattern id="floor-terrazzo" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-                  <rect width="60" height="60" fill="#FBF7EE"/>
-                  <circle cx="12" cy="18" r="1.2" fill="#C6BDA1" opacity="0.4"/>
-                  <circle cx="42" cy="8"  r="1"   fill="#A89770" opacity="0.35"/>
-                  <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
-                  <circle cx="22" cy="48" r="1"   fill="#8A7B5A" opacity="0.3"/>
-                  <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
-                </pattern>
-              </defs>
-
-              <!-- Floor base -->
-              <rect width="1600" height="800" fill="url(#floor-terrazzo)"/>
-
-              <!-- North wall window indicators -->
-              <g vector-effect="non-scaling-stroke">
-                <line x1="40"  y1="14" x2="1080" y2="14" stroke="#C6BDA1" stroke-width="3"/>
-                <line x1="60"  y1="20" x2="220"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="260" y1="20" x2="540"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="580" y1="20" x2="860"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="900" y1="20" x2="1060" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-              </g>
-
-              <!-- Cuisine (back-right) — zellige-hinted -->
-              <rect x="1100" y="40" width="460" height="290" rx="14" fill="url(#zellige-rdc)" stroke="#A89770" stroke-width="1.5" stroke-dasharray="6 4"/>
-              <text x="1330" y="200" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="22" font-weight="500" letter-spacing="6" fill="#7D6E45">CUISINE</text>
-              <!-- Pass-through window between cuisine and main floor -->
-              <rect x="1098" y="296" width="60" height="40" fill="#FBF7EE" stroke="#A89770" stroke-width="1.5"/>
-              <text x="1128" y="358" text-anchor="middle" font-family="Instrument Serif, serif" font-size="13" fill="#7D6E45">pass</text>
-
-              <!-- Comptoir (long bar) — walnut + brass -->
-              <rect x="220" y="350" width="800" height="80" rx="8" fill="url(#walnut)"/>
-              <!-- Brass strip on top edge -->
-              <rect x="220" y="350" width="800" height="6" rx="3" fill="url(#brass)"/>
-              <!-- Subtle inner highlight -->
-              <rect x="226" y="358" width="788" height="2" fill="#3A4439" opacity="0.5"/>
-              <!-- Espresso machine -->
-              <rect x="640" y="324" width="80" height="28" rx="3" fill="#1A211B"/>
-              <circle cx="660" cy="338" r="4" fill="#C9A876"/>
-              <circle cx="680" cy="338" r="4" fill="#C9A876"/>
-              <circle cx="700" cy="338" r="4" fill="#C9A876"/>
-              <!-- Bar label -->
-              <text x="620" y="395" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="13" font-weight="500" letter-spacing="7" fill="#E8C88A">COMPTOIR</text>
-
-              <!-- Bar stools (5 high stools facing the comptoir) -->
-              <g>
-                <circle cx="300" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="300" cy="478" r="10" fill="#5C4F3E"/>
-                <circle cx="440" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="440" cy="478" r="10" fill="#5C4F3E"/>
-                <circle cx="580" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="580" cy="478" r="10" fill="#5C4F3E"/>
-                <circle cx="720" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="720" cy="478" r="10" fill="#5C4F3E"/>
-                <circle cx="860" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="860" cy="478" r="10" fill="#5C4F3E"/>
-                <circle cx="1000" cy="478" r="18" fill="#3A332A" stroke="#1F1A14" stroke-width="2"/>
-                <circle cx="1000" cy="478" r="10" fill="#5C4F3E"/>
-              </g>
-
-              <!-- Stairs (back-right corner, below cuisine) -->
-              <g transform="translate(1240, 370)">
-                <rect width="280" height="380" rx="10" fill="#F0E8D6" stroke="#A89770" stroke-width="1.5"/>
-                <!-- Tread lines -->
-                <line x1="20" y1="44"  x2="260" y2="44"  stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="84"  x2="260" y2="84"  stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="124" x2="260" y2="124" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="164" x2="260" y2="164" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="204" x2="260" y2="204" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="244" x2="260" y2="244" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="284" x2="260" y2="284" stroke="#C4B493" stroke-width="1.5"/>
-                <!-- Up arrow -->
-                <path d="M 140 280 L 140 80 M 100 124 L 140 80 L 180 124"
-                      stroke="#7D6E45" stroke-width="4" fill="none"
-                      stroke-linecap="round" stroke-linejoin="round"/>
-                <text x="140" y="350" text-anchor="middle" font-family="Inter Tight, system-ui" font-size="12" font-weight="500" letter-spacing="5" fill="#7D6E45">ESCALIER</text>
-              </g>
-
-              <!-- Plant (corner near comptoir end) -->
-              <g transform="translate(1080, 700)">
-                <ellipse cx="0" cy="40" rx="34" ry="6" fill="#000" opacity="0.08"/>
-                <path d="M -28 4 L 28 4 L 22 44 L -22 44 Z" fill="#8B6B47"/>
-                <path d="M -28 4 L 28 4 L 26 12 L -26 12 Z" fill="#5C4730"/>
-                <path d="M 0 4 Q -36 -50 -42 -12" stroke="#3D5E48" stroke-width="4" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q -14 -64 -8 -36" stroke="#4F7560" stroke-width="4" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 14 -64 8 -36"  stroke="#3D5E48" stroke-width="4" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 36 -50 42 -12" stroke="#4F7560" stroke-width="4" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 0 -70 0 -38"   stroke="#2F4F3B" stroke-width="4" fill="none" stroke-linecap="round"/>
-              </g>
-
-              <!-- Door arc (entrée, left wall) -->
-              <g>
-                <!-- Wall gap -->
-                <rect x="0" y="500" width="6" height="120" fill="#FBF7EE"/>
-                <!-- Swing arc -->
-                <path d="M 6 620 A 110 110 0 0 1 116 510" stroke="#A89770" stroke-width="1.2" stroke-dasharray="4 4" fill="none"/>
-                <!-- Door slab -->
-                <line x1="6" y1="620" x2="116" y2="620" stroke="#3D3530" stroke-width="3"/>
-                <text x="30" y="690" font-family="Inter Tight, system-ui" font-size="11" font-weight="500" letter-spacing="5" fill="#7D6E45">ENTRÉE</text>
-              </g>
-            </svg>
-
-            <div class="table-layer" data-zone="interieur"></div>
+            <div class="cplan-room" data-plan-zone="interieur" style="aspect-ratio:800 / 400;">
+              <div class="cplan-scale" style="width:800px; height:400px; transform:scale(calc(100cqw / 800px));">
+                <div class="table-layer" data-zone="interieur"></div>
+              </div>
+            </div>
           </div>
 
           <!-- ── Terrasse — extérieur ── -->
           <div class="plan-zone-terrasse">
             <div class="plan-room-label terrasse-label">Terrasse <em>· extérieur</em></div>
 
-            <svg class="plan-bg" viewBox="0 0 1600 500" preserveAspectRatio="none" aria-hidden="true">
-              <defs>
-                <pattern id="terrasse-tiles" x="0" y="0" width="42" height="42" patternUnits="userSpaceOnUse">
-                  <rect width="42" height="42" fill="#F7F2E8"/>
-                  <line x1="0" y1="0" x2="42" y2="0" stroke="#D8CDA8" stroke-width="0.4"/>
-                  <line x1="0" y1="0" x2="0"  y2="42" stroke="#D8CDA8" stroke-width="0.4"/>
-                </pattern>
-              </defs>
-
-              <rect width="1600" height="500" fill="url(#terrasse-tiles)"/>
-
-              <!-- Planters along the boundary line (top edge against building) -->
-              <g>
-                <rect x="60" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="80" cy="32" rx="22" ry="14" fill="#4F7560"/>
-                <ellipse cx="80" cy="26" rx="14" ry="10" fill="#5C8367"/>
-
-                <rect x="220" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="240" cy="32" rx="22" ry="14" fill="#3D5E48"/>
-                <ellipse cx="240" cy="26" rx="14" ry="10" fill="#4F7560"/>
-
-                <rect x="420" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="440" cy="32" rx="22" ry="14" fill="#5C8367"/>
-                <ellipse cx="440" cy="26" rx="14" ry="10" fill="#7DA68A"/>
-
-                <rect x="620" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="640" cy="32" rx="22" ry="14" fill="#4F7560"/>
-                <ellipse cx="640" cy="26" rx="14" ry="10" fill="#5C8367"/>
-
-                <rect x="900" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="920" cy="32" rx="22" ry="14" fill="#3D5E48"/>
-                <ellipse cx="920" cy="26" rx="14" ry="10" fill="#4F7560"/>
-
-                <rect x="1340" y="14" width="40" height="62" rx="3" fill="#8B6B47"/>
-                <ellipse cx="1360" cy="32" rx="22" ry="14" fill="#5C8367"/>
-                <ellipse cx="1360" cy="26" rx="14" ry="10" fill="#7DA68A"/>
-              </g>
-
-              <!-- Subtle awning shadow along the building edge -->
-              <rect x="0" y="0" width="1600" height="8" fill="#000" opacity="0.06"/>
-
-              <!-- Street boundary (south edge - dashed planter line) -->
-              <line x1="20" y1="480" x2="1580" y2="480" stroke="#C4B493" stroke-width="2" stroke-dasharray="14 8"/>
-            </svg>
-
-            <div class="table-layer" data-zone="terrasse"></div>
+            <div class="cplan-room is-terrasse" data-plan-zone="terrasse" style="aspect-ratio:800 / 250;">
+              <div class="cplan-scale" style="width:800px; height:250px; transform:scale(calc(100cqw / 800px));">
+                <div class="table-layer" data-zone="terrasse"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -5093,169 +4924,11 @@
           <div class="plan-room plan-room-etage">
             <div class="plan-room-label">Café Atlas <em>· 1<sup>er</sup> étage</em></div>
 
-            <svg class="plan-bg" viewBox="0 0 1600 1000" preserveAspectRatio="none" aria-hidden="true">
-              <defs>
-                <linearGradient id="leather-forest" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0"   stop-color="#2F5946"/>
-                  <stop offset="0.55" stop-color="#1F4A38"/>
-                  <stop offset="1"   stop-color="#143828"/>
-                </linearGradient>
-                <linearGradient id="leather-highlight" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#E8C88A" stop-opacity="0.5"/>
-                  <stop offset="1" stop-color="#E8C88A" stop-opacity="0"/>
-                </linearGradient>
-                <linearGradient id="walnut-etage" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0"   stop-color="#2A332A"/>
-                  <stop offset="1"   stop-color="#151D17"/>
-                </linearGradient>
-                <radialGradient id="spotlight" cx="50%" cy="50%" r="50%">
-                  <stop offset="0"    stop-color="#FFE9B8" stop-opacity="0.18"/>
-                  <stop offset="0.55" stop-color="#FFE9B8" stop-opacity="0.05"/>
-                  <stop offset="1"    stop-color="#FFE9B8" stop-opacity="0"/>
-                </radialGradient>
-                <pattern id="floor-terrazzo-2" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-                  <rect width="60" height="60" fill="#FBF7EE"/>
-                  <circle cx="12" cy="18" r="1.2" fill="#C6BDA1" opacity="0.4"/>
-                  <circle cx="42" cy="8"  r="1"   fill="#A89770" opacity="0.35"/>
-                  <circle cx="50" cy="40" r="1.4" fill="#C6BDA1" opacity="0.4"/>
-                  <circle cx="22" cy="48" r="1"   fill="#8A7B5A" opacity="0.3"/>
-                  <circle cx="32" cy="28" r="1.2" fill="#A89770" opacity="0.35"/>
-                </pattern>
-              </defs>
-
-              <!-- Floor -->
-              <rect width="1600" height="1000" fill="url(#floor-terrazzo-2)"/>
-
-              <!-- Spotlight over banquette ronde -->
-              <ellipse cx="800" cy="500" rx="380" ry="320" fill="url(#spotlight)"/>
-
-              <!-- North wall window indicators -->
-              <g vector-effect="non-scaling-stroke">
-                <line x1="40"  y1="14" x2="1400" y2="14" stroke="#C6BDA1" stroke-width="3"/>
-                <line x1="80"  y1="20" x2="320"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="360" y1="20" x2="660"  y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="700" y1="20" x2="1000" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-                <line x1="1040" y1="20" x2="1380" y2="20" stroke="#A89770" stroke-width="1" stroke-dasharray="22 6"/>
-              </g>
-
-              <!-- Banquette ronde — 3/4 leather arc wrapping the round table -->
-              <g transform="translate(800, 500)">
-                <!-- Outer leather curve (open at the south, ~110°→70° going north via west,east) -->
-                <path d="M -160 90 A 220 220 0 1 1 160 90"
-                      stroke="url(#leather-forest)" stroke-width="60"
-                      stroke-linecap="round" fill="none"/>
-                <!-- Brass piping along top of cushion -->
-                <path d="M -160 90 A 220 220 0 1 1 160 90"
-                      stroke="url(#leather-highlight)" stroke-width="6"
-                      fill="none" transform="translate(0, -22)"/>
-                <!-- Cushion divisions (seating positions, ~3 segments on the arc) -->
-                <g stroke="#143828" stroke-width="1.6" stroke-linecap="round" opacity="0.5">
-                  <line x1="0"     y1="-220" x2="0"     y2="-160"/>
-                  <line x1="-156"  y1="-156" x2="-114"  y2="-114"/>
-                  <line x1="156"   y1="-156" x2="114"   y2="-114"/>
-                  <line x1="-220"  y1="0"    x2="-160"  y2="0"/>
-                  <line x1="220"   y1="0"    x2="160"   y2="0"/>
-                </g>
-                <!-- Label -->
-                <text x="0" y="170" text-anchor="middle"
-                      font-family="Instrument Serif, serif"
-                      font-size="20" fill="#1F4A38" opacity="0.7">banquette ronde</text>
-              </g>
-
-              <!-- Banquette longue (south wall) -->
-              <g transform="translate(180, 855)">
-                <rect width="980" height="56" rx="10" fill="url(#leather-forest)"/>
-                <!-- Brass piping along top -->
-                <rect width="980" height="4" rx="2" fill="url(#leather-highlight)" opacity="0.6"/>
-                <!-- Cushion divisions (4 cushions for 4 tables in front) -->
-                <line x1="245" y1="6"  x2="245" y2="50" stroke="#143828" stroke-width="1.4" opacity="0.5"/>
-                <line x1="490" y1="6"  x2="490" y2="50" stroke="#143828" stroke-width="1.4" opacity="0.5"/>
-                <line x1="735" y1="6"  x2="735" y2="50" stroke="#143828" stroke-width="1.4" opacity="0.5"/>
-                <!-- Stitch line top -->
-                <line x1="14" y1="3" x2="966" y2="3" stroke="#C9A876" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>
-              </g>
-
-              <!-- Banquette ronde d'angle (S-E corner, for T23 group table) -->
-              <g transform="translate(1290, 800)">
-                <!-- Half-circle bench against the corner -->
-                <path d="M -130 0 A 130 130 0 0 1 130 0"
-                      stroke="url(#leather-forest)" stroke-width="48"
-                      stroke-linecap="round" fill="none"/>
-                <path d="M -130 0 A 130 130 0 0 1 130 0"
-                      stroke="url(#leather-highlight)" stroke-width="4"
-                      fill="none" opacity="0.5" transform="translate(0, -18)"/>
-                <text x="0" y="35" text-anchor="middle"
-                      font-family="Instrument Serif, serif"
-                      font-size="14" fill="#1F4A38" opacity="0.65">banquette d'angle</text>
-              </g>
-
-              <!-- Bar service (west wall) -->
-              <g transform="translate(20, 380)">
-                <rect width="60" height="280" rx="6" fill="url(#walnut-etage)"/>
-                <rect width="6" height="280" rx="3" fill="url(#brass)"/>
-                <!-- Bottles silhouette -->
-                <rect x="18" y="40" width="10" height="32" rx="2" fill="#5C4730" opacity="0.6"/>
-                <rect x="34" y="36" width="10" height="36" rx="2" fill="#3D3530" opacity="0.6"/>
-                <rect x="18" y="92" width="10" height="32" rx="2" fill="#5C4730" opacity="0.6"/>
-                <rect x="34" y="96" width="10" height="28" rx="2" fill="#3D3530" opacity="0.6"/>
-                <!-- BAR label, rotated -->
-                <text transform="translate(34, 240) rotate(-90)"
-                      text-anchor="middle"
-                      font-family="Inter Tight, system-ui" font-size="11" font-weight="500" letter-spacing="6"
-                      fill="#E8C88A">SERVICE</text>
-                <!-- Bar stools facing the bar -->
-                <circle cx="106" cy="100" r="14" fill="#3A332A" stroke="#1F1A14" stroke-width="1.6"/>
-                <circle cx="106" cy="100" r="7"  fill="#5C4F3E"/>
-                <circle cx="106" cy="180" r="14" fill="#3A332A" stroke="#1F1A14" stroke-width="1.6"/>
-                <circle cx="106" cy="180" r="7"  fill="#5C4F3E"/>
-              </g>
-
-              <!-- Stairs (back-right, matching RDC corner) -->
-              <g transform="translate(1340, 320)">
-                <rect width="240" height="360" rx="10" fill="#F0E8D6" stroke="#A89770" stroke-width="1.5"/>
-                <!-- Tread lines -->
-                <line x1="20" y1="44"  x2="220" y2="44"  stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="84"  x2="220" y2="84"  stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="124" x2="220" y2="124" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="164" x2="220" y2="164" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="204" x2="220" y2="204" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="244" x2="220" y2="244" stroke="#C4B493" stroke-width="1.5"/>
-                <line x1="20" y1="284" x2="220" y2="284" stroke="#C4B493" stroke-width="1.5"/>
-                <!-- Down arrow -->
-                <path d="M 120 80 L 120 270 M 80 230 L 120 270 L 160 230"
-                      stroke="#7D6E45" stroke-width="4" fill="none"
-                      stroke-linecap="round" stroke-linejoin="round"/>
-                <text x="120" y="332" text-anchor="middle"
-                      font-family="Inter Tight, system-ui" font-size="12" font-weight="500" letter-spacing="5"
-                      fill="#7D6E45">ESCALIER</text>
-              </g>
-
-              <!-- Plants (north-east corner, near window+stairs) -->
-              <g transform="translate(1260, 200)">
-                <ellipse cx="0" cy="40" rx="28" ry="5" fill="#000" opacity="0.07"/>
-                <path d="M -22 4 L 22 4 L 18 38 L -18 38 Z" fill="#8B6B47"/>
-                <path d="M -22 4 L 22 4 L 20 11 L -20 11 Z" fill="#5C4730"/>
-                <path d="M 0 4 Q -28 -38 -32 -8"  stroke="#3D5E48" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q -10 -52 -6 -26"  stroke="#4F7560" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 10 -52 6 -26"    stroke="#3D5E48" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 28 -38 32 -8"    stroke="#4F7560" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 0 -56 0 -28"     stroke="#2F4F3B" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-              </g>
-
-              <!-- Plant (south-west corner, near bar service) -->
-              <g transform="translate(140, 720)">
-                <ellipse cx="0" cy="40" rx="28" ry="5" fill="#000" opacity="0.07"/>
-                <path d="M -22 4 L 22 4 L 18 38 L -18 38 Z" fill="#8B6B47"/>
-                <path d="M -22 4 L 22 4 L 20 11 L -20 11 Z" fill="#5C4730"/>
-                <path d="M 0 4 Q -28 -38 -32 -8"  stroke="#4F7560" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q -10 -52 -6 -26"  stroke="#3D5E48" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 10 -52 6 -26"    stroke="#4F7560" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 28 -38 32 -8"    stroke="#3D5E48" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                <path d="M 0 4 Q 0 -56 0 -28"     stroke="#2F4F3B" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-              </g>
-            </svg>
-
-            <div class="table-layer" data-zone="etage"></div>
+            <div class="cplan-room" data-plan-zone="etage" style="aspect-ratio:800 / 500;">
+              <div class="cplan-scale" style="width:800px; height:500px; transform:scale(calc(100cqw / 800px));">
+                <div class="table-layer" data-zone="etage"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -6439,66 +6112,296 @@
       return lines;
     }
 
-    /* ---------- Floor plan rendering ---------- */
-    function chairsRow(count, where) {
-      if (count <= 0) return '';
-      const chairs = '<span class="chair"></span>'.repeat(count);
-      return `<div class="tbl-chairs tbl-chairs-${where}" aria-hidden="true">${chairs}</div>`;
+    /* ═══════════════════════════════════════════════════════════════════════
+       FLOOR PLAN RENDERING — le dessin au trait noir du dashboard, à
+       l'identique. Les fonctions pdsNoir* de pages-pro.js ne sont pas
+       exportées par floorplan-core (même raison que caisseNoirC plus bas),
+       donc elles sont recopiées ici : coches de chaises, plateau fantôme,
+       mobilier au trait, sol charbon quadrillé. Une seule table, un seul
+       rendu — la démo Café Atlas et le plan du commerçant passent tous les
+       deux par caisseNoirCellHTML().
+       ═══════════════════════════════════════════════════════════════════════ */
+    /* Anneaux d'état, langue caisse. Mêmes valeurs que PDS_STATUS_RING_NOIR
+       du dashboard : khawya = free, ka-yaklo = occupied (mint, halo),
+       a-commander garde l'ambre de reserved en trait plein, khlass = cleaning.
+       bgha-ykhlass est le seul état propre à la caisse — rose, halo rose. */
+    const CAISSE_RING_NOIR = {
+      'khawya':       { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+      'a-commander':  { s: '#E8C067',                w: 1.25, dash: '',        fill: 'rgba(232,192,103,0.08)', chair: 'rgba(232,192,103,0.50)' },
+      'ka-yaklo':     { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.14)',   chair: 'rgba(0,255,174,0.70)' },
+      'bgha-ykhlass': { s: '#FF7DA9',                w: 1.25, dash: '',        fill: 'rgba(255,125,169,0.12)', chair: 'rgba(255,125,169,0.60)' },
+      'khlass':       { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+    };
+    function caisseRing(status) {
+      return CAISSE_RING_NOIR[status] || CAISSE_RING_NOIR.khawya;
     }
 
-    /* Place N chairs on an arc segment of a round tabletop.
-       startDeg, endDeg measured clockwise from the top (0°). Pass 0..360 for full ring. */
-    function chairsArc(count, startDeg, endDeg) {
-      const out = [];
-      const span = endDeg - startDeg;
-      // For a closed (full) ring, step = span/count. For an open arc, count chairs
-      // are placed evenly INSIDE the arc (with half a step of margin at each end).
-      const closed = (span >= 360 - 0.001);
-      const step = closed ? span / count : span / (count + 1);
-      for (let i = 0; i < count; i++) {
-        const deg = closed ? (startDeg + step * i) : (startDeg + step * (i + 1));
-        const rad = (deg - 90) * Math.PI / 180;
-        const left = (50 + 50 * Math.cos(rad)).toFixed(2);
-        const top  = (50 + 50 * Math.sin(rad)).toFixed(2);
-        out.push(`<div class="chair-radial" style="left:${left}%;top:${top}%;transform:translate(-50%,-50%) rotate(${deg.toFixed(1)}deg);"></div>`);
+    /* Une chaise = une coche plate, vue de dessus (pdsNoirTick). */
+    function caisseNoirTick(x, y, deg, fill) {
+      return `<rect x="-9" y="-3" width="18" height="6" rx="3" fill="${fill}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`;
+    }
+
+    /* Coches autour du plateau — anneau pour les rondes, répartition par côté
+       (C.seatSlots, la même que le dashboard) pour les rectangulaires. */
+    function caisseNoirChairs(g, seats, ring) {
+      if (!seats || seats < 1) return '';
+      const fill = (ring && ring.chair) || 'rgba(255,255,255,0.12)';
+      if (g.shape === 'round') {
+        const rx = g.w / 2 + 12, ry = g.h / 2 + 12, cx = g.w / 2, cy = g.h / 2;
+        let out = '';
+        for (let i = 0; i < seats; i++) {
+          const deg = -90 + (360 * i) / seats;
+          const rad = deg * Math.PI / 180;
+          out += caisseNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), deg + 90, fill);
+        }
+        return out;
       }
-      return `<div class="tbl-chairs-ring" aria-hidden="true">${out.join('')}</div>`;
+      const FC = window.KiwiFloorCore;
+      const a = FC ? FC.seatSlots(g.w, g.h, seats)
+                   : { top: Math.ceil(seats / 2), bottom: Math.floor(seats / 2), left: 0, right: 0 };
+      const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
+      let out = '';
+      along(a.top, g.w).forEach(px => { out += caisseNoirTick(px, -12, 0, fill); });
+      along(a.bottom, g.w).forEach(px => { out += caisseNoirTick(px, g.h + 12, 0, fill); });
+      along(a.left, g.h).forEach(py => { out += caisseNoirTick(-12, py, 90, fill); });
+      along(a.right, g.h).forEach(py => { out += caisseNoirTick(g.w + 12, py, 90, fill); });
+      return out;
     }
 
-    function chairsRound(count) { return chairsArc(count, 0, 360); }
+    /* Le plateau fantôme : charbon dégradé + contour d'état. Les tables
+       chaudes (ka-yaklo, bgha-ykhlass) portent le disque de halo sous elles
+       et l'anneau qui pulse par-dessus. */
+    function caisseNoirTableBody(g, ring, status) {
+      const hot = status === 'ka-yaklo' || status === 'bgha-ykhlass';
+      const callId = status === 'bgha-ykhlass' ? 'url(#pdsNoirCallRose)' : 'url(#pdsNoirCall)';
+      const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+      const fill = ring.fill || 'rgba(255,255,255,0.012)';
+      const cx = g.w / 2, cy = g.h / 2;
+      const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
+      if (g.shape === 'round') {
+        return call
+          + `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>`
+          + `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`
+          + (hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : '');
+      }
+      const r = Math.min(8, g.w / 5, g.h / 5);
+      return call
+        + `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>`
+        + `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`
+        + (hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : '');
+    }
 
-    /* Place chairs on each side of a square table (one chair per side, up to 4) */
-    function chairsSquare(count) {
-      const slots = [
-        { left: '50%', top: '0%',   deg: 0   },
-        { left: '100%', top: '50%', deg: 90  },
-        { left: '50%', top: '100%', deg: 180 },
-        { left: '0%', top: '50%',   deg: 270 },
-      ];
-      const used = slots.slice(0, Math.min(4, count));
-      const out = used.map(s =>
-        `<div class="chair-radial" style="left:${s.left};top:${s.top};transform:translate(-50%,-50%) rotate(${s.deg}deg);"></div>`
-      );
-      return `<div class="tbl-chairs-ring" aria-hidden="true">${out.join('')}</div>`;
+    /* Mobilier au trait — la version noir de pdsNoirFixture, sans la branche
+       jour : comptoir en pilule + tabourets, cuisine hachurée, escalier à
+       marches comptées, plante mint, porte en arc pointillé. */
+    function caisseNoirFixture(e, g) {
+      const line = 'rgba(255,255,255,0.38)', dim = 'rgba(255,255,255,0.20)';
+      const pillFill = 'rgba(255,255,255,0.05)', pillLine = 'rgba(255,255,255,0.20)';
+      const acc = '0,255,174';
+      switch (e.type) {
+        case 'texte': return '';
+        case 'comptoir': {
+          let t = '';
+          if (g.w >= 100 && g.w > g.h * 2) {
+            const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
+            for (let i = 0; i < n; i++) {
+              const sx = (g.w * (i + 1)) / (n + 1);
+              t += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.25"/>`;
+            }
+          }
+          return t + `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+        }
+        case 'caisse': {
+          const th = Math.min(14, Math.max(8, g.h - 10)), tw = th / 14 * 22;
+          const tx = g.w - tw - 10, ty = (g.h - th) / 2;
+          return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`
+            + `<rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(${acc},0.14)" stroke="rgba(${acc},0.5)" stroke-width="1"/>`;
+        }
+        case 'cuisine':
+          return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>`
+            + `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+        case 'porte':
+          return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${dim}" stroke-width="1" stroke-dasharray="3 3"/>`
+            + `<line x1="0" y1="${g.h - 1.5}" x2="${g.w}" y2="${g.h - 1.5}" stroke="${line}" stroke-width="1.5"/>`;
+        case 'mur':
+          return `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${Math.min(2, g.h / 2)}" fill="${line}"/>`;
+        case 'fenetre':
+          return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${line}"/>`
+            + `<rect x="0" y="0" width="1.5" height="${g.h}" fill="${line}"/>`
+            + `<rect x="${g.w - 1.5}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`;
+        case 'passe':
+          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+        case 'plante': {
+          const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
+          return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(${acc},0.04)" stroke="rgba(${acc},0.35)" stroke-width="1.2"/>`
+            + `<circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(${acc},0.28)" stroke-width="1"/>`;
+        }
+        case 'colonne':
+          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="3" fill="rgba(255,255,255,0.06)" stroke="${line}" stroke-width="1.2"/>`;
+        case 'wc':
+          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+        case 'escalier': {
+          const n = Math.max(3, Math.min(12, Math.round(g.h / 15))), step = g.h / n;
+          let t = `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="4" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+          for (let i = 1; i < n; i++) t += `<line x1="0" y1="${(step * i).toFixed(1)}" x2="${g.w}" y2="${(step * i).toFixed(1)}" stroke="${dim}" stroke-width="1"/>`;
+          return t;
+        }
+        case 'banquette':
+          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+        case 'claustra': {
+          let t = `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>`;
+          for (let x = 5.5; x < g.w; x += 11) t += `<rect x="${x.toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`;
+          return t;
+        }
+        case 'garde': {
+          let t = `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${line}"/>`;
+          for (let x = 11; x < g.w; x += 22) t += `<rect x="${x.toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`;
+          return t;
+        }
+        case 'tapis':
+          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="3" fill="rgba(255,255,255,0.02)" stroke="${dim}" stroke-width="1" stroke-dasharray="2 3"/>`;
+        case 'vitrine':
+          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+        default:
+          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+      }
+    }
+
+    /* Un meuble complet : wrapper positionné + SVG au trait + étiquette. */
+    function caisseNoirElHTML(e) {
+      const FC = window.KiwiFloorCore;
+      const g = FC ? FC.geom(e) : { w: Math.max(8, +e.w || 80), h: Math.max(8, +e.h || 80) };
+      const K = (FC && FC.FIX && FC.FIX[e.type]) || {};
+      const label = (e.label != null ? e.label : (K.label || ''));
+      return `<div class="pds-el pds-el-${e.type}" style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px; transform:rotate(${e.rot || 0}deg); z-index:${10 + (e.z || 0)};">
+          <div class="pds-el-fill"><svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${caisseNoirFixture(e, g)}</svg></div>
+          ${label ? `<span class="pds-el-label" style="color:rgba(255,255,255,0.45);">${escTeam(label)}</span>` : ''}
+        </div>`;
+    }
+
+    /* Sol charbon quadrillé — pdsRoomShellNoir du dashboard : la couleur du
+       sol du commerçant éteinte à 3 %, le voile de lumière et la grille 31px. */
+    function caisseRoomShellNoir(zone) {
+      const FC = window.KiwiFloorCore;
+      const r = FC ? FC.room(zone) : ((zone && zone.room) || {});
+      const floor = r.floor || '#FBF7EE';
+      const wallW = (r.wallW != null) ? +r.wallW : 2;
+      return `<div class="pds-floor" data-pds-floor style="
+        background-color:${caisseNoirC(floor, 0.03)};
+        background-image:
+          radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.04), rgba(255,255,255,0.012) 60%, transparent 100%),
+          linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+        background-size: 100% 100%, 31px 31px, 31px 31px;
+        background-repeat: no-repeat, repeat, repeat;
+        ${wallW > 2 ? `box-shadow: inset 0 0 0 ${wallW}px rgba(255,255,255,0.20);` : ''}
+      "></div>`;
+    }
+
+    /* Dégradés/filtres partagés par toutes les tables d'un plan. IDs identiques
+       au dashboard (pages-pro.js ne charge jamais ici, aucune collision) +
+       le halo rose propre à bgha-ykhlass. */
+    function caisseNoirDefs() {
+      return '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
+        + '<linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>'
+        + '<radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>'
+        + '<radialGradient id="pdsNoirCallRose"><stop offset="0%" stop-color="#FF7DA9" stop-opacity="0.20"/><stop offset="100%" stop-color="#FF7DA9" stop-opacity="0"/></radialGradient>'
+        + '<filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>'
+        + '</defs></svg>';
+    }
+
+    /* LA cellule table — démo et plan réel confondus. x/y en px du plan
+       (coin haut-gauche du plateau), la bande de chaises déborde de PAD. */
+    function caisseNoirCellHTML(o) {
+      const PAD = (window.KiwiFloorCore && window.KiwiFloorCore.PAD) || 19;
+      const ring = caisseRing(o.status);
+      const g = { w: o.w, h: o.h, seats: o.seats || 0, shape: o.shape || 'rect' };
+      const label = ({ 'khawya': 'Khawya', 'a-commander': 'À commander', 'ka-yaklo': 'Ka-yaklo', 'bgha-ykhlass': 'Addition', 'khlass': 'Khlass' })[o.status] || 'Khawya';
+      const urgent = o.status === 'bgha-ykhlass' ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
+      return `<div class="cplan-tbl" data-table="${escTeam(String(o.id))}" role="button" tabindex="0"
+             data-status="${o.status || 'khawya'}"
+             aria-label="Table ${escTeam(String(o.id))}, ${label}, ${o.covers} couverts"
+             style="left:${o.x - PAD}px; top:${o.y - PAD}px;
+                    width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
+                    --pad:${PAD}px; transform:rotate(${o.rot || 0}deg);">
+          <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
+            ${caisseNoirChairs(g, g.seats, ring)}${caisseNoirTableBody(g, ring, o.status)}
+          </svg>
+          <div class="cplan-face" style="color:rgba(255,255,255,0.5);">
+            <span class="cplan-num">${escTeam(String(o.id))}</span>
+            ${o.covers ? `<span class="cplan-cov">${o.covers}p</span>` : ''}
+          </div>${urgent}${o.serverHTML || ''}${o.phoneHTML || ''}${o.elapsedHTML || ''}
+        </div>`;
+    }
+
+    /* ── Café Atlas, redessiné au trait ──────────────────────────────────
+       Les plans démo deviennent des scènes noir identiques au dashboard :
+       un plan en px (échelle 800 ≈ largeur dashboard, tables 64–144px comme
+       les types round2..rect8), du mobilier au trait, et les tables en %
+       converties en px au rendu. */
+    const DEMO_PLANES = {
+      interieur: { w: 800, h: 400 },
+      terrasse:  { w: 800, h: 250 },
+      etage:     { w: 800, h: 500 },
+    };
+    const DEMO_FIXTURES = {
+      interieur: [
+        { type: 'fenetre',  x: 90,  y: 0,   w: 240, h: 6 },
+        { type: 'fenetre',  x: 370, y: 0,   w: 140, h: 6 },
+        { type: 'cuisine',  x: 550, y: 20,  w: 230, h: 145, label: 'CUISINE' },
+        { type: 'passe',    x: 549, y: 148, w: 30,  h: 20, label: '' },
+        { type: 'comptoir', x: 110, y: 175, w: 400, h: 40, label: 'COMPTOIR' },
+        { type: 'escalier', x: 620, y: 195, w: 140, h: 185, label: '' },
+        { type: 'plante',   x: 525, y: 330, w: 45,  h: 45 },
+        { type: 'porte',    x: 4,   y: 250, w: 55,  h: 8, rot: 90, label: '' },
+      ],
+      terrasse: [
+        { type: 'plante', x: 30,  y: 8, w: 30, h: 30 },
+        { type: 'plante', x: 110, y: 8, w: 30, h: 30 },
+        { type: 'plante', x: 210, y: 8, w: 30, h: 30 },
+        { type: 'plante', x: 310, y: 8, w: 30, h: 30 },
+        { type: 'plante', x: 450, y: 8, w: 30, h: 30 },
+        { type: 'plante', x: 670, y: 8, w: 30, h: 30 },
+      ],
+      etage: [
+        { type: 'fenetre',  x: 100, y: 0,   w: 200, h: 6 },
+        { type: 'fenetre',  x: 450, y: 0,   w: 200, h: 6 },
+        { type: 'comptoir', x: 10,  y: 190, w: 30,  h: 140, label: 'BAR' },
+        { type: 'banquette', x: 90,  y: 430, w: 490, h: 28, label: '' },
+        { type: 'banquette', x: 640, y: 350, w: 28,  h: 110, label: '' },
+        { type: 'escalier', x: 670, y: 160, w: 120, h: 180, label: '' },
+        { type: 'plante',   x: 630, y: 100, w: 40,  h: 40 },
+        { type: 'plante',   x: 70,  y: 360, w: 40,  h: 40 },
+      ],
+    };
+    /* Injecte (une fois) le sol, le mobilier et les defs dans chaque scène
+       démo. La terrasse reste sans sol — cadre mint pointillé, comme la zone
+       terrasse du dashboard. */
+    function initDemoPlanes() {
+      document.querySelectorAll('.view-salle .cplan-room[data-plan-zone]').forEach(roomEl => {
+        const zone = roomEl.getAttribute('data-plan-zone');
+        const scale = roomEl.querySelector('.cplan-scale');
+        if (!scale || scale.dataset.planeInit) return;
+        scale.dataset.planeInit = '1';
+        const fx = (DEMO_FIXTURES[zone] || []).map(e => caisseNoirElHTML(e)).join('');
+        const shell = zone === 'terrasse' ? '' : caisseRoomShellNoir({ room: { floor: '#FBF7EE', wallW: 2 } });
+        scale.insertAdjacentHTML('afterbegin', caisseNoirDefs() + shell + fx);
+      });
     }
 
     function tableHTML(id, t) {
       if (t.designed) return designedTableHTML(id, t);  // real store: grid card, not the demo canvas node
-      const sizeClass = `size-${t.size}`;
+      const P = DEMO_PLANES[t.zone] || DEMO_PLANES.interieur;
+      const PAD = (window.KiwiFloorCore && window.KiwiFloorCore.PAD) || 19;
       const shape = t.shape || 'rect';
-      const shapeClass = shape === 'round' ? 'is-round' : (shape === 'square' ? 'is-square' : 'is-rect');
-
-      const label = ({
-        'khawya':       'Khawya',
-        'a-commander':  'À commander',
-        'ka-yaklo':     'Ka-yaklo',
-        'bgha-ykhlass': 'Addition',
-        'khlass':       'Khlass',
-      })[t.status];
+      // Coordonnées démo en % du plan → px de la scène (comme le dashboard).
+      const w = ((+t.w || 9) / 100) * P.w;
+      const h = shape === 'rect' ? Math.max(40, ((+t.h || 12) / 100) * P.h) : w;
+      const x = Math.max(PAD, Math.min(P.w - w - PAD, ((+t.x || 0) / 100) * P.w));
+      const y = Math.max(PAD, Math.min(P.h - h - PAD, ((+t.y || 0) / 100) * P.h));
       const elapsed = (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander')
-        ? `<div class="tbl-elapsed">${t.elapsed} mn</div>`
+        ? `<div class="tbl-elapsed cplan-since">${t.elapsed} mn</div>`
         : '';
-      const dot = t.status === 'bgha-ykhlass' ? '<span class="urgent-dot" aria-hidden="true"></span>' : '';
       // Server avatar badge — always shown (even on empty tables) so the
       // cashier/manager always knows who's responsible for the section
       let serverBadge = '';
@@ -6515,57 +6418,12 @@
         const why = isPause ? ' (en pause)' : isOff ? ' (hors service)' : '';
         serverBadge = `<span class="tbl-server ${cls}" style="background:${s.color};" title="Section de ${s.name}${why}">${serverInitials(s)}</span>`;
       }
-
-      // Position + size on the plan canvas
-      let style = `left:${t.x}%;top:${t.y}%;width:${t.w}%;`;
-      if (shape === 'round') {
-        style += `aspect-ratio:1;`;
-      } else {
-        style += `height:${t.h}%;`;
-      }
-
-      // Chairs vary by shape AND banquette anchoring.
-      // Banquette IS the seating on the anchored side — chairs only show on the open side.
-      let chairsHTML;
-      const anchor = t.anchor;
-      if (anchor === 'banquette-south') {
-        // Bench is south of the table → chairs only on the north (top) edge.
-        const n = Math.max(1, Math.ceil(t.covers / 2));
-        chairsHTML = chairsRow(n, 'top');
-      } else if (anchor === 'banquette-north') {
-        const n = Math.max(1, Math.ceil(t.covers / 2));
-        chairsHTML = chairsRow(n, 'bottom');
-      } else if (anchor === 'banquette-ronde') {
-        // Round table inside a 3/4 C-arc opening south → chairs on the south arc only.
-        const n = Math.max(1, Math.ceil(t.covers / 2));
-        chairsHTML = chairsArc(n, 130, 230);  // ~100° arc centered on south
-      } else if (shape === 'round') {
-        chairsHTML = chairsRound(t.covers);
-      } else if (shape === 'square') {
-        chairsHTML = chairsSquare(t.covers);
-      } else {
-        // rect — chairs on long sides (top + bottom)
-        const topChairs = Math.ceil(t.covers / 2);
-        const bottomChairs = t.covers - topChairs;
-        chairsHTML = `${chairsRow(topChairs, 'top')}${chairsRow(bottomChairs, 'bottom')}`;
-      }
-
-      return `
-        <div class="tbl-cell ${shapeClass}" data-table="${id}" style="${style}" role="button" tabindex="0" aria-label="Table ${id}, ${label}, ${t.covers} couverts">
-          <div class="tbl ${sizeClass}" data-status="${t.status}">
-            ${dot}
-            <div class="tbl-head">
-              <span class="tbl-num">${id}</span>
-              <span class="tbl-covers">${t.covers}p</span>
-            </div>
-            <div class="tbl-status">${label}</div>
-            ${elapsed}
-          </div>
-          ${serverBadge}
-          ${phoneBadgeHTML(id)}
-          ${chairsHTML}
-        </div>
-      `;
+      return caisseNoirCellHTML({
+        id, status: t.status, x, y, w, h,
+        shape: shape === 'round' ? 'round' : 'rect',
+        seats: t.covers, covers: t.covers, rot: 0,
+        serverHTML: serverBadge, phoneHTML: phoneBadgeHTML(id), elapsedHTML: elapsed,
+      });
     }
 
     function renderSalle() {
@@ -6597,6 +6455,7 @@
        asks phoneBadgeHTML() for each table during this initial paint. */
     const phoneSeats = new Map();     // clé table → { session, since }
     const phonePending = new Map();   // clé table → nombre de commandes en attente
+    if (!storeIsReal()) initDemoPlanes();
     renderSalle();
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -6663,26 +6522,8 @@
         `</div>${sb}${phoneBadgeHTML(id)}</div>`;
     }
 
-    /* Service statuses are not design statuses, so the ring is mapped here
-       rather than reused from the core: the owner cares about free/reserved,
-       the floor cares about who has ordered and who wants the bill. The two
-       maps speak the dashboard's plan-de-salle language (pages-pro.js,
-       PDS_STATUS_RING_JOUR/NOIR): a quiet neutral ring for free, a full-value
-       accent for the states that demand action, the paid table receding into
-       a fine dashed outline. bgha-ykhlass keeps its caisse-only rose — the
-       dashboard has no "wants the bill" state to borrow from. */
-    const CAISSE_RING_NOIR = {
-      'khawya':       { s: 'rgba(255,255,255,0.30)', w: 1.4, dash: '' },
-      'a-commander':  { s: '#E8C067',                w: 2.6, dash: '' },
-      'ka-yaklo':     { s: '#00FFAE',                w: 2.6, dash: '' },
-      'bgha-ykhlass': { s: '#FF7DA9',                w: 3.0, dash: '' },
-      'khlass':       { s: 'rgba(255,255,255,0.40)', w: 2.4, dash: '1.5 3.5' },
-    };
-    /* La scène du plan est un noir permanent (console éditeur du dashboard) :
-       les anneaux nuit servent dans les deux thèmes de la caisse. */
-    function caisseRing(status) {
-      return CAISSE_RING_NOIR[status] || CAISSE_RING_NOIR.khawya;
-    }
+    /* CAISSE_RING_NOIR + caisseRing vivent plus haut, dans le bloc du
+       renderer noir unifié (avant le premier renderSalle()). */
     /* Nuit : les matières du plan (noyer, sable, laiton) s'éteignent vers le
        charbon en gardant 18 % de leur teinte — le même pdsNoirC que le
        dashboard (pages-pro.js), recopié ici parce que floorplan-core ne
@@ -6788,34 +6629,21 @@
     function cplanTableHTML(t) {
       const C = window.KiwiFloorCore;
       if (!C || !t) return '';
-      const PAD = C.PAD;
       const id = String(t.num || t.id);
       const live = tables[id] || {};
       const g = C.geom(t);
-      /* Scène noir permanent : les matières s'éteignent façon pdsNoirC
-         quel que soit le thème de la caisse. */
-      const c = caisseNoirC(C.color(t));
-      const ring = caisseRing(live.status);
       const covers = live.covers != null ? live.covers : g.seats;
-      const urgent = live.status === 'bgha-ykhlass'
-        ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
       const sv = live.server && servers[live.server];
       const badge = sv
         ? `<span class="tbl-server" style="background:${sv.color};">${serverInitials(sv)}</span>` : '';
-      return `<div class="cplan-tbl" data-table="${escTeam(id)}" role="button" tabindex="0"
-             data-status="${live.status || 'khawya'}"
-             aria-label="Table ${escTeam(id)}, ${covers} couverts"
-             style="left:${t.x - PAD}px; top:${t.y - PAD}px;
-                    width:${g.w + PAD * 2}px; height:${g.h + PAD * 2}px;
-                    --pad:${PAD}px; transform:rotate(${t.rot || 0}deg);">
-          <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
-            ${C.chairsFor(g, g.seats, c)}${C.tableBody(g, c, ring)}
-          </svg>
-          <div class="cplan-face" style="color:${C.ink(c)};">
-            <span class="cplan-num">${escTeam(id)}</span>
-            <span class="cplan-cov">${covers}p</span>
-          </div>${urgent}${badge}${phoneBadgeHTML(id)}
-        </div>`;
+      const hot = live.status === 'ka-yaklo' || live.status === 'bgha-ykhlass' || live.status === 'a-commander';
+      const elapsed = hot && live.elapsed != null
+        ? `<div class="tbl-elapsed cplan-since">${live.elapsed} mn</div>` : '';
+      return caisseNoirCellHTML({
+        id, status: live.status, x: +t.x || 0, y: +t.y || 0,
+        w: g.w, h: g.h, shape: g.shape, seats: g.seats, covers,
+        rot: t.rot || 0, serverHTML: badge, phoneHTML: phoneBadgeHTML(id), elapsedHTML: elapsed
+      });
     }
 
     /* Repaint from the CURRENT `tables` (live status from the order flow)
@@ -6850,8 +6678,7 @@
         return;
       }
 
-      const PAD = C.PAD;
-      let html = '';
+      let html = caisseNoirDefs();
       (plan.zones || []).forEach(z => {
         const zTables = (plan.tables || []).filter(t => (t.zone || 'z1') === z.id);
         const zEls = (plan.elements || []).filter(e => (e.zone || 'z1') === z.id)
@@ -6872,8 +6699,8 @@
             <div class="cplan-room" style="aspect-ratio:${W} / ${H};">
               <div class="cplan-scale" style="width:${W}px; height:${H}px;
                    transform:scale(calc(100cqw / ${W}px));">
-                ${C.roomShell(z)}
-                ${zEls.map(e => C.fixtureHTML(e, { cls: 'pds-el' })).join('')}
+                ${caisseRoomShellNoir(z)}
+                ${zEls.map(e => caisseNoirElHTML(e)).join('')}
                 ${items}
               </div>
             </div>
@@ -7338,10 +7165,17 @@
       }
       const spatial = document.querySelector(`.cplan-tbl[data-table="${id}"]`);
       if (!spatial) return;
-      const pt = planTableOf(id);
-      if (!pt) return;
       const was = spatial.classList.contains('is-selected');
-      spatial.outerHTML = cplanTableHTML(pt);
+      /* La démo et le plan réel émettent désormais tous deux des .cplan-tbl
+         (renderer noir unifié) — on distingue par le conteneur. */
+      if (spatial.closest('.plan-canvas')) {
+        spatial.outerHTML = tableHTML(id, t);
+        updateFloorCount(t.floor);
+      } else {
+        const pt = planTableOf(id);
+        if (!pt) return;
+        spatial.outerHTML = cplanTableHTML(pt);
+      }
       if (was) {
         const now = document.querySelector(`.cplan-tbl[data-table="${id}"]`);
         if (now) now.classList.add('is-selected');
@@ -8784,7 +8618,7 @@
         if (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander') {
           t.elapsed += 1;
           // Update DOM in place (cheaper than full re-render)
-          const node = document.querySelector(`.tbl-cell[data-table="${id}"] .tbl-elapsed`);
+          const node = document.querySelector(`[data-table="${id}"] .tbl-elapsed`);
           if (node) node.textContent = `${t.elapsed} mn`;
           // Update right panel substatus if this is the selected one
           if (id === selectedId) {
