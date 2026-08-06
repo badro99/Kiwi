@@ -364,10 +364,17 @@ export async function onRequestPost(context) {
       const code = String(p.code || p.pin || '').trim();
       if (!VALID_PIN.test(code) || seen.has(code)) continue;
       seen.add(code);
+      const email = String(p.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
       clean.push({
         code,
         name: String(p.name || '').trim().slice(0, 60),
         role: String(p.role || '').trim().slice(0, 24) || 'staff',
+        memberId: String(p.memberId || '').trim().slice(0, 96),
+        firstName: String(p.firstName || '').trim().slice(0, 60),
+        lastName: String(p.lastName || '').trim().slice(0, 60),
+        email: /^\S+@\S+\.\S+$/.test(email) ? email : '',
+        department: String(p.department || '').trim().slice(0, 40),
+        venueSlug: String(p.venueSlug || '').trim().slice(0, 96),
       });
       if (clean.length >= 20) break;
     }
@@ -380,6 +387,29 @@ export async function onRequestPost(context) {
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
       ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
     });
+    // Keep a private, exact employee-login roster beside the cashier PINs.
+    // Replacing it in the same D1 batch means a deleted employee loses access
+    // immediately and an employee can log in even when the larger Team document
+    // is still waiting to sync from the dashboard device.
+    const access = {
+      members: clean.filter((p) => p.email).map((p) => ({
+        id: p.memberId || `employee-${p.code}`,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        pinCode: p.code,
+        password: p.code,
+        function: p.role,
+        department: p.department,
+        venueSlug: merchant,
+      })),
+    };
+    stmts.push(env.DB.prepare(
+      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+       VALUES (?, 'employee-access', ?, 1, ?)
+       ON CONFLICT(merchant, feature) DO UPDATE SET
+         data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+    ).bind(merchant, JSON.stringify(access), base));
     try { await env.DB.batch(stmts); }
     catch (_) { return json({ error: 'write-failed' }, 500); }
     result.pins = clean.length;

@@ -88,6 +88,26 @@ ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient
 ok(state.floor.tables.length === 1 && state.floor.tables[0].num === '1', 'le plan de salle réel atteint l’app employé');
 ok(!JSON.stringify(state).includes('Yassir'), 'aucune donnée de démonstration ne fuit dans la réponse live');
 
+// A PIN roster can reach the cloud before the larger Team document. The small
+// access mirror must be sufficient for login, and its exact replacement must
+// revoke an existing session without accepting a stale Team fallback.
+put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,updated_ts) VALUES (?,?,?,?,?,?,?)',
+  'mirror-only', '{}', 'pro', 'restaurant', 'active', 'Mirror Only', now);
+const mirror = { members: [{
+  id: 'mem-mirror', firstName: 'Nora', lastName: 'Test', email: 'nora@mirror.test',
+  function: 'Serveur', department: 'Salle', pinCode: '8642', venueSlug: 'mirror-only',
+}] };
+put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
+  'mirror-only', 'employee-access', JSON.stringify(mirror), 1, now);
+const mirrorLogin = await post({ action: 'login', email: 'nora@mirror.test', pin: '8642' });
+const mirrorCookie = String(mirrorLogin.headers.get('set-cookie') || '').split(';')[0];
+ok(mirrorLogin.status === 200 && mirrorCookie.startsWith('kiwi_employee='),
+  "le miroir d'accès suffit même si le document Équipe attend encore sa synchro");
+put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='mirror-only' AND feature='employee-access'",
+  JSON.stringify({ members: [] }));
+const revoked = await get(mirrorCookie);
+ok(revoked.status === 401, "retirer l'employé du miroir révoque immédiatement sa session");
+
 const cin = await post({ action: 'clock-in' }, cookie);
 ok(cin.status === 200, 'le pointage d’arrivée est persisté');
 const att = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance'").get();
@@ -114,6 +134,9 @@ ok(anon.status === 401, 'planning, collègues et salle restent privés sans sess
 
 const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
 ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
+const configSource = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8');
+ok(configSource.includes("'employee-access'") && configSource.includes('memberId'),
+  'la synchronisation des PIN publie aussi les identifiants employés');
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');

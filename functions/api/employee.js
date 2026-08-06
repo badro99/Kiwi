@@ -15,6 +15,7 @@ import {
 
 const ATTENDANCE_FEATURE = 'attendance';
 const TEAM_FEATURE = 'team';
+const ACCESS_FEATURE = 'employee-access';
 const FLOOR_FEATURE = 'floorplan';
 const MAX_ATTENDANCE = 5000;
 
@@ -57,14 +58,20 @@ async function liveEmployee(request, env) {
   const session = await readEmployee(request, env);
   if (!session || !env.DB) return null;
   try {
-    // New employee sessions point directly at the Team member. Team is the
-    // owner's source of truth; the cashier PIN mirror may be missing or stale
-    // for employees created before cross-device syncing was introduced.
+    // Once the access mirror exists it is authoritative for revocation. Team
+    // still enriches the employee view with schedule, hours and profile data.
+    const accessRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+      .bind(session.merchant).first();
+    const access = parse(accessRow && accessRow.data, { members: [] });
+    const accessMember = (Array.isArray(access.members) ? access.members : [])
+      .find((m) => m && String(m.id || '') === String(session.staffId || ''));
+    if (accessRow && !accessMember) return null;
     const teamRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
       .bind(session.merchant).first();
     const team = parse(teamRow && teamRow.data, { members: [] });
-    const member = (Array.isArray(team.members) ? team.members : [])
+    const teamMember = (Array.isArray(team.members) ? team.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
+    const member = accessMember ? { ...(teamMember || {}), ...accessMember } : teamMember;
     if (member) {
       return {
         session,

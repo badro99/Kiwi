@@ -159,8 +159,8 @@ export function employeeCookie(value) {
 }
 
 // Resolve the credentials the owner records on Dashboard → Équipe. Email is
-// read from the private team document instead of being copied to a second
-// account table: saving or deleting the profile therefore changes access too.
+// read from the private access mirror written with the cashier PIN roster. Old
+// stores without that mirror still fall back to their Team document.
 export async function findEmployeeCredential(env, emailValue, pinValue) {
   const email = String(emailValue || '').trim().toLocaleLowerCase('en').slice(0, 254);
   const pin = String(pinValue || '').trim();
@@ -168,18 +168,32 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
 
   let docs;
   try {
-    docs = await env.DB.prepare("SELECT merchant, data FROM store_docs WHERE feature = 'team'").all();
+    docs = await env.DB.prepare(
+      "SELECT merchant, feature, data FROM store_docs WHERE feature IN ('employee-access', 'team')"
+    ).all();
   } catch (_) { return null; }
 
+  const rows = (docs && docs.results) || [];
+  const mirrored = new Set(rows.filter((row) => row.feature === 'employee-access')
+    .map((row) => String(row.merchant || '')));
   const matches = [];
-  for (const row of ((docs && docs.results) || [])) {
+  const seen = new Set();
+  for (const row of rows) {
+    const merchant = String(row.merchant || '');
+    if (row.feature === 'team' && mirrored.has(merchant)) continue;
     let team = null;
     try { team = JSON.parse(row.data || '{}'); } catch (_) { continue; }
     const members = Array.isArray(team && team.members) ? team.members : [];
     for (const member of members) {
       const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
       const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
-      if (memberEmail === email && memberPin === pin) matches.push({ merchant: String(row.merchant || ''), member });
+      const venue = String((member && member.venueSlug) || '').trim();
+      if (venue && venue !== merchant) continue;
+      const key = `${merchant}:${String((member && member.id) || '')}`;
+      if (memberEmail === email && memberPin === pin && !seen.has(key)) {
+        seen.add(key);
+        matches.push({ merchant, member });
+      }
     }
   }
   // Never guess which workplace the person meant. The owner can resolve a rare
@@ -605,7 +619,9 @@ export async function activeEmployee(request, env, asked) {
   if (!session || !session.merchant || !session.staffId) return null;
   if (asked && String(session.merchant) !== String(asked)) return null;
   try {
-    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
+    const access = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+      .bind(session.merchant).first();
+    const row = access || await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
       .bind(session.merchant).first();
     const doc = JSON.parse((row && row.data) || '{}');
     const member = (Array.isArray(doc.members) ? doc.members : [])

@@ -576,8 +576,8 @@
     // sa copie serveur une fois.
     function bind() {
       var slug = slugOf();
-      if (!on() || st.read[slug]) return;
-      pull(true);
+      if (!on() || st.read[slug]) return Promise.resolve(false);
+      return pull(true);
     }
 
     /* Revenir sur l'onglet est le moment où l'on veut voir ce que l'AUTRE

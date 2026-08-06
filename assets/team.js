@@ -596,7 +596,12 @@
           : (isCode(m.password) ? String(m.password).trim() : '');
         if (!code || seen[code]) return;                    // no code yet, or a duplicate
         seen[code] = 1;
-        pins.push({ code, name: memberFullName(m), role: m.function || m.department || 'staff' });
+        pins.push({
+          memberId: m.id || '', code, name: memberFullName(m),
+          firstName: m.firstName || '', lastName: m.lastName || '',
+          email: m.email || '', role: m.function || m.department || 'staff',
+          department: m.department || '', venueSlug: m.venueSlug || '',
+        });
       });
       window.KiwiConfig.syncPins(pins);
     } catch (_) {}
@@ -991,7 +996,7 @@
   }
   function teamCloudBind() {
     const c = teamCloudInit();
-    if (c) c.bind();
+    if (c) Promise.resolve(c.bind()).then(() => publishPins()).catch(() => {});
   }
   function teamCloudPush() {
     const c = teamCloudInit();
@@ -1141,7 +1146,6 @@
 
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
-
     /* Re-render when the venue or language changes. */
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
