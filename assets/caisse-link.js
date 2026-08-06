@@ -18,9 +18,11 @@
  * from functions/auth/_lib.js so the dashboard, the caisse (kiwiLiveMerchant), and
  * the D1 roster all line up on one key without a stored mapping.
  *
- * Demo-safe: only ever runs for a REAL business (a custom venue created in
- * onboarding, or a logged-in account via /api/me → window.KiwiMe). The pitch demo
- * (Café Atlas) never sees the panel or the launcher. Vanilla, self-contained.
+ * Ungated: the launcher sits in every dashboard, the pitch demo included — the
+ * demo pairs against the selected établissement (Café Atlas → cafe-atlas). What
+ * a real business (a custom venue from onboarding, or a logged-in account via
+ * /api/me → window.KiwiMe) still gets on its own is the panel opening unprompted
+ * on entry; a demo visitor has to press the button. Vanilla, self-contained.
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -49,6 +51,10 @@
 
   function venueData() { try { return window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData(); } catch (_) { return null; } }
   function isCustom() { try { return !!(window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom()); } catch (_) { return false; } }
+  /* A REAL business: a custom venue created in onboarding, or a logged-in account.
+   * The launcher is no longer gated on this — the demo gets the Caisse button too,
+   * so the pairing flow can be shown without signing in. What this still gates is
+   * the unprompted panel on entry: only a real merchant gets nagged. */
   function realMerchant() { return isCustom() || !!(window.KiwiMe && window.KiwiMe.business); }
 
   /* The real business this dashboard belongs to. A custom venue (created in
@@ -58,19 +64,23 @@
     var v = venueData();
     var custom = isCustom() && v && v.custom;
     var me = window.KiwiMe || null;
-    var name = String((custom && v.name) || (me && me.business) || ls(K.bizName) || '').trim();
+    /* Ungated fallback: with no real business behind the dashboard (the pitch demo),
+     * the selected établissement stands in, so the launcher and the pairing panel
+     * exist there too and a till can be paired to the demo store. */
+    var demo = !custom && !(me && me.business) && !ls(K.bizName) ? v : null;
+    var name = String((custom && v.name) || (me && me.business) || ls(K.bizName) || (demo && demo.name) || '').trim();
     if (!name) return null;
     return {
       /* Le slug gravé de l'établissement (venues.js › slugOf), pas son nom
        * re-slugifié. Une caisse appairée est liée à UN magasin pour de bon :
        * si le nom change et que le slug suit, la caisse continue de vendre
        * pour un magasin dont le tableau de bord n'écoute plus. */
-      merchant: (custom && v.slug) || slugMerchant(name),
-      venueId: (custom && v.id) || '',
-      type: (custom && v.type) || '',
-      subtype: (custom && v.subtype) || ls(K.bizType) || '',
+      merchant: (custom && v.slug) || (demo && demo.slug) || slugMerchant(name),
+      venueId: (custom && v.id) || (demo && demo.id) || '',
+      type: (custom && v.type) || (demo && demo.type) || '',
+      subtype: (custom && v.subtype) || ls(K.bizType) || (demo && demo.subtype) || '',
       name: name,
-      location: (custom && v.location) || ls(K.city) || '',
+      location: (custom && v.location) || ls(K.city) || (demo && demo.location) || '',
     };
   }
 
@@ -351,7 +361,6 @@
     }
   }
   function ensureChip() {
-    if (!realMerchant()) return;
     css();
     var b = document.getElementById('kcl-chip');
     if (!b) {
@@ -379,11 +388,12 @@
     return true;
   }
 
-  /* Auto-appear on entry for a real, unpaired merchant (once per session);
-   * always leave the launcher behind. */
+  /* The launcher is unconditional — every dashboard, demo included, carries the
+   * Caisse button. The unprompted panel on entry stays reserved for a real,
+   * unpaired merchant: a demo visitor shouldn't get a drawer thrown at them. */
   function maybePrompt() {
-    if (!realMerchant()) return;
     ensureChip();
+    if (!realMerchant()) return;
     if (!dashReady()) return;
     if (isPaired() || dismissed()) return;
     openPanel();
