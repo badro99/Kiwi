@@ -3450,6 +3450,9 @@ const PDS_STR = {
     inspectorStatus: 'Statut',
     inspectorNotes: 'Notes',
     inspectorServer: 'Serveur affecté',
+    reservationName: 'Nom de réservation',
+    reservationTime: 'Heure',
+    reservationNamePlaceholder: 'ex. Benali',
     inspectorRotate: 'Pivoter',
     inspectorDuplicate: 'Dupliquer',
     inspectorDelete: 'Supprimer',
@@ -3478,8 +3481,11 @@ const PDS_STR = {
     ungroupTables: 'Dissocier',
     groupPickHint: 'Cliquez sur une autre table pour la grouper avec celle-ci.',
     groupPickCancel: 'Groupement annulé',
-    groupOk: (a, b) => `Tables ${a} + ${b} groupées`,
+    groupOk: (nums, covers) => `Tables ${nums} groupées · ${covers} couverts`,
     ungroupOk: 'Tables dissociées',
+    undoAction: 'Annuler',
+    deleteUndone: 'Table restaurée',
+    ungroupUndone: 'Groupe restauré',
     bulkGroup: 'Grouper la sélection',
     bulkOkGroup: (n) => `${n} tables groupées`,
     groupCovers: (n) => `${n} couverts`,
@@ -3658,6 +3664,9 @@ const PDS_STR = {
     inspectorStatus: 'Status',
     inspectorNotes: 'Notes',
     inspectorServer: 'Assigned server',
+    reservationName: 'Reservation name',
+    reservationTime: 'Time',
+    reservationNamePlaceholder: 'e.g. Benali',
     inspectorRotate: 'Rotate',
     inspectorDuplicate: 'Duplicate',
     inspectorDelete: 'Delete',
@@ -3684,8 +3693,11 @@ const PDS_STR = {
     ungroupTables: 'Ungroup',
     groupPickHint: 'Click another table to group it with this one.',
     groupPickCancel: 'Grouping cancelled',
-    groupOk: (a, b) => `Tables ${a} + ${b} grouped`,
+    groupOk: (nums, covers) => `Tables ${nums} grouped · ${covers} covers`,
     ungroupOk: 'Tables ungrouped',
+    undoAction: 'Undo',
+    deleteUndone: 'Table restored',
+    ungroupUndone: 'Group restored',
     bulkGroup: 'Group selection',
     bulkOkGroup: (n) => `${n} tables grouped`,
     groupCovers: (n) => `${n} covers`,
@@ -3855,6 +3867,9 @@ const PDS_STR = {
     inspectorStatus: 'الحالة',
     inspectorNotes: 'ملاحظات',
     inspectorServer: 'النادل المعين',
+    reservationName: 'اسم الحجز',
+    reservationTime: 'الوقت',
+    reservationNamePlaceholder: 'مثال: بنعلي',
     inspectorRotate: 'تدوير',
     inspectorDuplicate: 'نسخ',
     inspectorDelete: 'حذف',
@@ -3881,8 +3896,11 @@ const PDS_STR = {
     ungroupTables: 'فصل',
     groupPickHint: 'انقر على طاولة أخرى لتجميعها مع هذه.',
     groupPickCancel: 'تم إلغاء التجميع',
-    groupOk: (a, b) => `تم تجميع الطاولتين ${a} + ${b}`,
+    groupOk: (nums, covers) => `تم تجميع الطاولات ${nums} · ${covers} مقعدًا`,
     ungroupOk: 'تم فصل الطاولات',
+    undoAction: 'تراجع',
+    deleteUndone: 'تمت استعادة الطاولة',
+    ungroupUndone: 'تمت استعادة المجموعة',
     bulkGroup: 'تجميع المحدد',
     bulkOkGroup: (n) => `تم تجميع ${n} طاولات`,
     groupCovers: (n) => `${n} مقعدًا`,
@@ -4585,6 +4603,9 @@ handlers['nav-tables'] = () => {
   /* Avant de lire : récupérer un dessin laissé sous un ancien identifiant. */
   try { pdsCarryForward(); } catch (_) {}
   const state = pdsLoad();
+  if (pdsExpireReservations(state)) {
+    try { pdsSave(state); } catch (_) {}
+  }
   /* L'état vivant, pour que la copie serveur qui arrive pendant qu'on dessine
    * repeigne la salle au lieu de se contenter du localStorage. */
   pdsLive = state;
@@ -5444,6 +5465,19 @@ function pdsRenderInspector(state, T, obj) {
             `).join('')}
           </div>
         </div>
+        ${obj.status === 'reserved' ? `
+        <div class="pds-resv-fields">
+          <label class="pds-resv-field">
+            <span>${T.reservationName}</span>
+            <input class="kf-input pds-input" data-pds-field="reservationName"
+                   value="${pdsEsc(obj.reservationName || '')}" placeholder="${pdsEsc(T.reservationNamePlaceholder)}"/>
+          </label>
+          <label class="pds-resv-field">
+            <span>${T.reservationTime}</span>
+            <input class="kf-input pds-input" type="time" data-pds-field="reservationTime"
+                   value="${pdsEsc(obj.reservationTime || '')}"/>
+          </label>
+        </div>` : ''}
         <div class="pds-form-row">
           <label>${T.inspectorServer}</label>
           <select class="kf-input pds-input" data-pds-field="server">
@@ -5477,7 +5511,8 @@ function pdsRenderInspector(state, T, obj) {
 
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
-        ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="${obj.group ? 'table-ungroup' : 'table-group'}" data-pds-id="${obj.id}">${obj.group ? T.ungroupTables : T.groupTables}</button>` : ''}
+        ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="table-group" data-pds-id="${obj.id}">${T.groupTables}</button>` : ''}
+        ${isT && obj.group ? `<button class="kb ghost" data-pds-action="table-ungroup" data-pds-id="${obj.id}">${T.ungroupTables}</button>` : ''}
         <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
         <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
@@ -5574,6 +5609,117 @@ function pdsSweepGroups(state) {
   state.tables.forEach(t => { if (t.group && count[t.group] < 2) delete t.group; });
 }
 
+function pdsTodayKey(now) {
+  const d = new Date(now == null ? Date.now() : now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function pdsClearReservation(t) {
+  delete t.reservationName;
+  delete t.reservationTime;
+  delete t.reservationDate;
+}
+
+/* A grouped table is one service object: status, seated time and reservation
+   details follow the anchor across every member, regardless of group size. */
+function pdsSyncGroupService(state, gid, anchor) {
+  if (!gid || !anchor) return;
+  state.tables.forEach(t => {
+    if (t.group !== gid || t.id === anchor.id) return;
+    t.status = anchor.status || 'free';
+    if (anchor.status === 'occupied' && anchor.since) t.since = anchor.since;
+    else delete t.since;
+    if (anchor.status === 'reserved') {
+      if (anchor.reservationName) t.reservationName = anchor.reservationName;
+      else delete t.reservationName;
+      if (anchor.reservationTime) t.reservationTime = anchor.reservationTime;
+      else delete t.reservationTime;
+      if (anchor.reservationDate) t.reservationDate = anchor.reservationDate;
+      else delete t.reservationDate;
+    } else {
+      pdsClearReservation(t);
+    }
+  });
+}
+
+/* Time-only reservations belong to the day on which they were entered. Once
+   that instant is over by two hours, the next render returns the whole group
+   to libre. Keeping the date internally prevents yesterday's 23:30 booking
+   from surviving until tonight when the dashboard opens after midnight. */
+function pdsExpireReservations(state, now) {
+  now = now == null ? Date.now() : now;
+  const expiredGroups = new Set();
+  const expiredIds = new Set();
+  let changed = false;
+  state.tables.forEach(t => {
+    if (t.status !== 'reserved' || !/^\d{2}:\d{2}$/.test(t.reservationTime || '')) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.reservationDate || '')) {
+      t.reservationDate = pdsTodayKey(now);
+      changed = true;
+    }
+    const day = t.reservationDate;
+    const stamp = new Date(`${day}T${t.reservationTime}:00`).getTime();
+    if (Number.isFinite(stamp) && now > stamp + 2 * 60 * 60 * 1000) {
+      if (t.group) expiredGroups.add(t.group);
+      else expiredIds.add(t.id);
+    }
+  });
+  state.tables.forEach(t => {
+    if (!expiredIds.has(t.id) && !(t.group && expiredGroups.has(t.group))) return;
+    t.status = 'free';
+    delete t.since;
+    pdsClearReservation(t);
+    changed = true;
+  });
+  return changed;
+}
+
+function pdsReservationLabel(t) {
+  const time = /^\d{2}:\d{2}$/.test(t.reservationTime || '') ? t.reservationTime.replace(':', 'h') : '';
+  const name = String(t.reservationName || '').trim();
+  return [time, name].filter(Boolean).join(' · ');
+}
+
+/* Destructive toasts restore only the table objects the action touched. This
+   avoids rewinding unrelated edits the merchant may make while the five-second
+   undo window is open. */
+function pdsTableSnapshot(state, tables) {
+  return tables.map(t => ({
+    index: state.tables.indexOf(t),
+    value: JSON.parse(JSON.stringify(t)),
+  }));
+}
+
+function pdsRestoreTableSnapshot(state, snapshot) {
+  snapshot.slice().sort((a, b) => a.index - b.index).forEach(s => {
+    const value = JSON.parse(JSON.stringify(s.value));
+    const at = state.tables.findIndex(t => t.id === value.id);
+    if (at >= 0) state.tables[at] = value;
+    else state.tables.splice(Math.max(0, Math.min(s.index, state.tables.length)), 0, value);
+  });
+}
+
+function pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, restoredTitle, selectId) {
+  let restored = false;
+  Kiwi.toast(title, {
+    type: 'warn', duration: 5200, force: true,
+    action: {
+      label: T.undoAction,
+      onClick: () => {
+        if (restored) return;
+        restored = true;
+        pdsPush(state);
+        pdsRestoreTableSnapshot(state, snapshot);
+        selection.clear();
+        if (selectId && state.tables.some(t => t.id === selectId)) selection.add(selectId);
+        refresh();
+        if (selectId) setTimeout(() => state._openInspector(selectId), 0);
+        Kiwi.toast(restoredTitle, { type: 'success', duration: 1400, force: true });
+      },
+    },
+  });
+}
+
 function pdsRenderGroups(tables, state, T) {
   const byGroup = new Map();
   tables.forEach(t => {
@@ -5642,6 +5788,10 @@ function pdsRenderTable(t, state, T) {
     const disp = min >= 90 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`;
     sinceChip = `<span class="pds-tbl-since">${disp}</span>`;
   }
+  const reservationLabel = t.status === 'reserved' ? pdsReservationLabel(t) : '';
+  const reservationChip = reservationLabel
+    ? `<span class="pds-resv-chip">${pdsEsc(reservationLabel)}</span>`
+    : '';
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
@@ -5659,6 +5809,7 @@ function pdsRenderTable(t, state, T) {
       </div>
       ${serverBadge}
       ${sinceChip}
+      ${reservationChip}
       ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;
@@ -5858,6 +6009,7 @@ function pdsAttach(root, state, T, dr) {
   /* Re-renders body + foot in-place, then re-binds events. Used after
    * every state mutation. */
   const refresh = () => {
+    pdsExpireReservations(state);
     const body = root.querySelector('.kiwi-drawer-body');
     const foot = root.querySelector('.kiwi-drawer-foot');
     if (body) body.innerHTML = pdsRenderBody(state, T);
@@ -5917,7 +6069,14 @@ function pdsAttach(root, state, T, dr) {
     if (state.mode !== 'rotate') {
       root.querySelectorAll('[data-pds-table]').forEach(el => {
         const id = el.getAttribute('data-pds-table');
-        pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        /* bind() also runs when only the inspector is redrawn, while these
+         * stage nodes survive. Wire each surviving node once: otherwise the
+         * Shift toggle and drag-finish closures replay in a stack. A full
+         * refresh creates fresh nodes without this marker and wires normally. */
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        }
         el.onclick = (ev) => {
           if (ev.detail === 0) return; /* keyboard-triggered click without coords */
         };
@@ -5927,7 +6086,10 @@ function pdsAttach(root, state, T, dr) {
          capability that did not exist while they were scene artwork. */
       root.querySelectorAll('[data-pds-el]').forEach(el => {
         const id = el.getAttribute('data-pds-el');
-        pdsAttachElDrag(el, id, state, T, root, refresh);
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachElDrag(el, id, state, T, root, refresh);
+        }
         el.onclick = (ev) => {
           ev.stopPropagation();
           if (state.mode !== 'layout') return;
@@ -5995,6 +6157,21 @@ function pdsAttach(root, state, T, dr) {
           else if (f === 'label') o.label = v;
           else if (f === 'notes') o.notes = v;
           else if (f === 'server') o.server = v || null;
+          else if (f === 'reservationName') {
+            o.reservationName = v.trim();
+            if (!o.reservationName) delete o.reservationName;
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
+          else if (f === 'reservationTime') {
+            if (/^\d{2}:\d{2}$/.test(v)) {
+              o.reservationTime = v;
+              o.reservationDate = pdsTodayKey();
+            } else {
+              delete o.reservationTime;
+              delete o.reservationDate;
+            }
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
           else if (f === 'type') {
             /* Changing the type re-seeds geometry, otherwise a 2-top turned
                into a 10-top keeps the 2-top's footprint and the seats have
@@ -6018,7 +6195,22 @@ function pdsAttach(root, state, T, dr) {
             reselect();
           }
         };
-        input.onchange = commit;
+        if (f === 'reservationName' || f === 'reservationTime') {
+          /* Text insertion APIs and some mobile keyboards can update the
+           * control without delivering change until much later. Blur is the
+           * reliable commit boundary; guard it so a normal change+blur pair
+           * still records exactly one undo snapshot. */
+          let committedValue = input.value;
+          const commitReservation = () => {
+            if (input.value === committedValue) return;
+            committedValue = input.value;
+            commit();
+          };
+          input.onchange = commitReservation;
+          input.onblur = commitReservation;
+        } else {
+          input.onchange = commit;
+        }
 
         /* The rotation dial previews as you drag it; the commit lands on
            change. Without this the dial only moved the table on release,
@@ -6046,17 +6238,20 @@ function pdsAttach(root, state, T, dr) {
           pdsPush(state);
           o.status = btn.getAttribute('data-pds-status');
           /* L'heure d'assise nourrit la pastille « N min » de la vue nuit. */
-          if (o.status === 'occupied') { if (!o.since) o.since = Date.now(); }
-          else delete o.since;
+          if (o.status === 'occupied') {
+            if (!o.since) o.since = Date.now();
+            pdsClearReservation(o);
+          } else {
+            delete o.since;
+            if (o.status === 'reserved') {
+              if (!o.reservationDate) o.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(o);
+            }
+          }
           /* Une table groupée est UNE table pour le service : le statut
              s'applique au groupe entier, heure d'assise partagée. */
-          if (o.group) state.tables.forEach(tt => {
-            if (tt.group === o.group && tt.id !== o.id) {
-              tt.status = o.status;
-              if (o.status === 'occupied') tt.since = o.since;
-              else delete tt.since;
-            }
-          });
+          if (o.group) pdsSyncGroupService(state, o.group, o);
           reselect();
         };
       });
@@ -6215,6 +6410,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let blockFrame = 0;
   let groupPeers = [];
   let groupOrig = {};
+  let selectionOrig = {};
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
@@ -6237,6 +6433,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
       const from = state.tables.find(tt => tt.id === fromId);
       if (!from) { refresh(); return; }
       pdsPush(state);
+      const serviceAnchor = from.group ? from : (t.group ? t : from);
       if (from.group && t.group && from.group !== t.group) {
         /* Deux groupes existants fusionnent : la cible rejoint le premier. */
         const old = t.group;
@@ -6245,11 +6442,17 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
         const gid = from.group || t.group || ('grp' + Date.now().toString(36));
         from.group = gid; t.group = gid;
       }
+      pdsSyncGroupService(state, from.group || t.group, serviceAnchor);
       selection.clear();
       selection.add(id);
       refresh();
       const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
-      toast(T.groupOk(disp(from.num), disp(t.num)), { type: 'success' });
+      const grouped = state.tables.filter(tt => tt.group && tt.group === (from.group || t.group));
+      const nums = grouped.slice()
+        .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+        .map(tt => disp(tt.num)).join(' + ');
+      const covers = grouped.reduce((sum, tt) => sum + (pdsGeom(tt).seats || 0), 0);
+      toast(T.groupOk(nums, covers), { type: 'success' });
       setTimeout(() => state._openInspector(id), 0);
       return;
     }
@@ -6266,14 +6469,23 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
       ev.preventDefault();
       return;
     } else {
-      /* Plain click — clear selection, pick this one */
-      if (!selection.has(id) || selection.size > 1) {
+      /* Plain click on an unselected table starts a fresh selection. A table
+       * already inside a shift-selection keeps that selection intact so the
+       * pointerdown can immediately become a multi-table drag. */
+      const wasSelected = selection.has(id);
+      if (!wasSelected) {
         selection.clear();
         root.querySelectorAll('.pds-tbl-cell.is-selected').forEach(n => n.classList.remove('is-selected'));
       }
       selection.add(id);
       el.classList.add('is-selected');
-      state._openInspector(id);
+      /* The matching inspector is already open for an existing selection.
+       * Reopening it here calls bind(), stacking a fresh drag closure during
+       * pointerdown and can steal the gesture before its first move. */
+      if (!wasSelected) {
+        if (selection.size > 1) state._openBulkInspector();
+        else state._openInspector(id);
+      }
     }
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
@@ -6288,6 +6500,12 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
        translate pendant le drag : la fusion se déplace d'un seul geste. */
     groupPeers = [];
     groupOrig = {};
+    selectionOrig = {};
+    if (selection.size > 1 && selection.has(id)) {
+      state.tables.forEach(tt => {
+        if (selection.has(tt.id)) selectionOrig[tt.id] = { x: tt.x, y: tt.y };
+      });
+    }
     if (t.group) {
       state.tables.forEach(tt => {
         if (tt.group === t.group && tt.id !== id) {
@@ -6357,15 +6575,19 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
         if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom);
       }
     }
-    /* If shift-multi-drag, move all selected by the same delta */
+    /* If shift-multi-drag, move all selected by the same delta. Positions are
+       absolute from pointerdown origins: surviving DOM nodes may carry stacked
+       finish listeners after a wire pass, and replaying one must be idempotent. */
     if (selection.size > 1 && selection.has(id)) {
       const dx = nx - origX;
       const dy = ny - origY;
       state.tables.forEach(tt => {
         if (selection.has(tt.id) && tt.id !== id) {
+          const o = selectionOrig[tt.id];
+          if (!o) return;
           const tg = pdsGeom(tt);
-          tt.x = Math.max(0, Math.min(plane.w - tg.w, tt.x + dx));
-          tt.y = Math.max(0, Math.min(plane.h - tg.h, tt.y + dy));
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
         }
       });
     }
@@ -7127,9 +7349,15 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!f) break;
       pdsPush(state);
       if (f.table) {
+        const affected = f.o.group ? state.tables.filter(t => t.group === f.o.group) : [f.o];
+        const snapshot = pdsTableSnapshot(state, affected);
+        const title = `Table ${f.o.num} · ${T.deletedSuffix}`;
         state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
         pdsSweepGroups(state);
-        toast(`Table ${f.o.num} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
+        selection.delete(id);
+        refresh();
+        pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, T.deleteUndone, id);
+        break;
       } else {
         state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
         toast(`${T['fix'+f.o.type] || f.o.type} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
@@ -7153,10 +7381,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!f || !f.table || !f.o.group) break;
       pdsPush(state);
       const gid = f.o.group;
+      const snapshot = pdsTableSnapshot(state, state.tables.filter(tt => tt.group === gid));
       state.tables.forEach(tt => { if (tt.group === gid) delete tt.group; });
       refresh();
-      toast(T.ungroupOk, { type: 'warn', duration: 1400 });
-      setTimeout(() => state._openInspector(id), 0);
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.ungroupOk, T.ungroupUndone, id);
       break;
     }
     case 'obj-lock': {
@@ -7250,19 +7478,32 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     }
     case 'bulk-delete': {
       const n = selection.size;
+      const selectedGroups = new Set();
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (t && t.group) selectedGroups.add(t.group);
+      });
+      const affected = state.tables.filter(t => selection.has(t.id) || (t.group && selectedGroups.has(t.group)));
+      const snapshot = pdsTableSnapshot(state, affected);
+      const firstId = [...selection][0] || null;
+      pdsPush(state);
       state.tables = state.tables.filter(t => !selection.has(t.id));
       pdsSweepGroups(state);
       selection.clear();
       refresh();
-      toast(T.bulkOkDelete(n), { type: 'warn', duration: 1400 });
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.bulkOkDelete(n), T.deleteUndone, firstId);
       break;
     }
     case 'bulk-group': {
-      const members = state.tables.filter(t => selection.has(t.id));
-      if (members.length < 2) break;
+      const picked = state.tables.filter(t => selection.has(t.id));
+      if (picked.length < 2) break;
       pdsPush(state);
-      const gid = 'grp' + Date.now().toString(36);
+      const touchedGroups = new Set(picked.map(t => t.group).filter(Boolean));
+      const members = state.tables.filter(t => selection.has(t.id) || (t.group && touchedGroups.has(t.group)));
+      const anchor = picked.find(t => t.group) || picked[0];
+      const gid = anchor.group || ('grp' + Date.now().toString(36));
       members.forEach(t => { t.group = gid; });
+      pdsSyncGroupService(state, gid, anchor);
       refresh();
       toast(T.bulkOkGroup(members.length), { type: 'success' });
       setTimeout(() => state._openBulkInspector(), 0);
@@ -7282,16 +7523,34 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         const t = state.tables.find(tt => tt.id === id);
         if (!t) return;
         t.status = st;
-        if (st === 'occupied') { if (!t.since) t.since = Date.now(); }
-        else delete t.since;
+        if (st === 'occupied') {
+          if (!t.since) t.since = Date.now();
+          pdsClearReservation(t);
+        } else {
+          delete t.since;
+          if (st === 'reserved') {
+            if (!t.reservationDate) t.reservationDate = pdsTodayKey();
+          } else {
+            pdsClearReservation(t);
+          }
+        }
         if (t.group) gids.add(t.group);
       });
       /* Le statut déborde sur les partenaires de groupe hors sélection. */
       state.tables.forEach(tt => {
         if (tt.group && gids.has(tt.group) && !selection.has(tt.id)) {
           tt.status = st;
-          if (st === 'occupied') { if (!tt.since) tt.since = Date.now(); }
-          else delete tt.since;
+          if (st === 'occupied') {
+            if (!tt.since) tt.since = Date.now();
+            pdsClearReservation(tt);
+          } else {
+            delete tt.since;
+            if (st === 'reserved') {
+              if (!tt.reservationDate) tt.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(tt);
+            }
+          }
         }
       });
       refresh();
@@ -7693,6 +7952,11 @@ const PDS_INLINE_CSS = `
   .pds-form-row { margin-bottom:10px; }
   .pds-form-row > label { display:block; font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-bottom:5px; font-weight:600; }
   .pds-input { width:100%; padding:7px 9px; font-size:12.5px; }
+  .pds-resv-fields { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(96px,.65fr); gap:7px; margin:-2px 0 10px; }
+  .pds-resv-field { min-width:0; }
+  .pds-resv-field > span { display:block; margin-bottom:5px; color:#0B6E4F; font:500 9.5px/1.2 var(--mono, 'JetBrains Mono'); letter-spacing:0.07em; text-transform:uppercase; }
+  .pds-resv-field .pds-input { min-width:0; height:32px; padding:6px 8px; background:#F7F5F0; border-color:rgba(11,110,79,0.34); color:#053B2C; font-size:11.5px; }
+  .pds-resv-field .pds-input:focus { border-color:#0B6E4F; box-shadow:0 0 0 2px rgba(11,110,79,0.12); outline:0; }
   .pds-status-pills { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
@@ -7887,6 +8151,15 @@ const PDS_INLINE_CSS = `
     font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
     letter-spacing:0.02em; color:rgba(10,15,13,0.66);
     white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-resv-chip {
+    position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%);
+    height:19px; max-width:calc(100% - 4px); padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    overflow:hidden; text-overflow:ellipsis;
+    background:rgba(247,245,240,0.94); border:1px solid rgba(11,110,79,0.42);
+    color:#0B6E4F; font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.01em; white-space:nowrap; pointer-events:none; z-index:4;
   }
 
   /* ── Fixtures ──────────────────────────────────────────────────────────
@@ -8334,6 +8607,17 @@ const PDS_INLINE_CSS = `
     font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
     letter-spacing:0.02em; color:rgba(255,255,255,0.72);
     white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-chip {
+    background:rgba(4,26,20,0.94); border-color:rgba(125,242,176,0.60); color:#7DF2B0;
+    box-shadow:0 0 14px rgba(125,242,176,0.12);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field > span { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input {
+    color-scheme:dark; background:#0D110E; border-color:rgba(125,242,176,0.34); color:#F7F5F0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input:focus {
+    border-color:#7DF2B0; box-shadow:0 0 0 2px rgba(125,242,176,0.14);
   }
   .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
   /* Les pastilles serveur appartiennent à l'Affectation ; en Aménagement
