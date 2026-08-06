@@ -3912,7 +3912,13 @@ em, i, cite, dfn, var { font-style: normal; }
         const opts = Array.isArray(l.opts)
           ? l.opts.map(o => o && o.label).filter(Boolean).join(', ')
           : '';
-        delta.push({ id: l.id, qty: dq, options: opts, note: (l.note || '').trim() });
+        delta.push({
+          id: l.id, qty: dq, options: opts,
+          optionChoices: Array.isArray(l.opts)
+            ? l.opts.map(o => ({ group: o.group, label: o.label }))
+            : [],
+          note: (l.note || '').trim(),
+        });
       });
       if (!delta.length) return Promise.resolve({ ok: true, nothing: true });
       const slug = svSlug();

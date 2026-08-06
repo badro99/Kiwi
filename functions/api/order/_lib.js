@@ -164,12 +164,30 @@ export async function priceOrder(env, merchant, rawLines) {
   } catch (_) { menuRow = null; }
 
   let index = null;
+  let optionIndex = new Map();
   let menuRev = null;
   if (menuRow && menuRow.data) {
     try {
       const parsed = JSON.parse(menuRow.data);
       const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
       if (items.length) {
+        for (const group of (Array.isArray(parsed && parsed.opts) ? parsed.opts : [])) {
+          if (!group || !group.id) continue;
+          const choices = new Map();
+          for (const choice of (Array.isArray(group.choices) ? group.choices : [])) {
+            if (!choice || !choice.name) continue;
+            choices.set(String(choice.name).trim().toLocaleLowerCase('fr'), {
+              name: String(choice.name).trim(),
+              price: Math.max(0, Math.round(Number(choice.price) || 0)),
+              emoji: String(choice.emoji || '').trim().slice(0, 16),
+            });
+          }
+          optionIndex.set(String(group.id), {
+            name: String(group.name || '').trim(),
+            kind: group.kind === 'many' ? 'many' : 'one',
+            choices,
+          });
+        }
         index = new Map();
         for (const it of items) {
           if (!it || !it.id) continue;
@@ -177,6 +195,7 @@ export async function priceOrder(env, merchant, rawLines) {
             name: String(it.name || ''),
             price: Math.max(0, Math.round(Number(it.price) || 0)),
             avail: it.avail !== false,
+            opts: new Set((Array.isArray(it.opts) ? it.opts : []).map(String)),
           });
         }
         menuRev = menuRow.updated_ts || null;
@@ -215,6 +234,7 @@ export async function priceOrder(env, merchant, rawLines) {
   const lines = [];
   const unknown = [];
   const unavailable = [];
+  const invalidOptions = [];
   let total = 0;
 
   /* Rien contre quoi vérifier ⇒ on ne devine pas, on le DIT. L'appelant en fait
@@ -229,7 +249,7 @@ export async function priceOrder(env, merchant, rawLines) {
   for (const l of rawLines) {
     const id = String((l && l.id) || '').slice(0, 40);
     const qty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(l && l.qty) || 1)));
-    const options = String((l && l.options) || '').slice(0, 200);
+    let options = String((l && l.options) || '').slice(0, 200);
     const note = String((l && l.note) || '').slice(0, 200);
     const visuals = (Array.isArray(l && l.visuals) ? l.visuals.slice(0, 12) : [])
       .map((v) => ({
@@ -241,8 +261,35 @@ export async function priceOrder(env, merchant, rawLines) {
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
     if (!ref.avail) { unavailable.push(ref.name || id); continue; }
-    lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note, visuals });
-    total += ref.price * qty;
+    let optionExtra = 0;
+    let canonicalVisuals = visuals;
+    const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : null;
+    if (selected) {
+      const labels = [];
+      canonicalVisuals = [];
+      const oneSeen = new Set();
+      let valid = true;
+      for (const picked of selected) {
+        const groupId = String((picked && picked.group) || '').slice(0, 40);
+        const labelKey = String((picked && picked.label) || '').trim().toLocaleLowerCase('fr');
+        const group = optionIndex.get(groupId);
+        const choice = group && group.choices.get(labelKey);
+        if (!group || !ref.opts || !ref.opts.has(groupId) || !choice
+            || (group.kind === 'one' && oneSeen.has(groupId))) {
+          valid = false;
+          break;
+        }
+        if (group.kind === 'one') oneSeen.add(groupId);
+        labels.push(`${group.name}: ${choice.name}`);
+        optionExtra += choice.price;
+        if (choice.emoji) canonicalVisuals.push({ emoji: choice.emoji, name: choice.name });
+      }
+      if (!valid) { invalidOptions.push(ref.name || id); continue; }
+      options = labels.join(' · ').slice(0, 200);
+    }
+    const unitPrice = ref.price + optionExtra;
+    lines.push({ id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals });
+    total += unitPrice * qty;
   }
 
   return {
@@ -250,6 +297,6 @@ export async function priceOrder(env, merchant, rawLines) {
     priced: true,             // on n'arrive ici qu'avec un catalogue en main
     noCatalogue: false,
     menuRev,
-    unknown, unavailable,
+    unknown, unavailable, invalidOptions,
   };
 }

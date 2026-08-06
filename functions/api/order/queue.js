@@ -358,11 +358,12 @@ export async function onRequestPost(context) {
      * tableau de bord et la salle repart — au lieu de reprendre les prix de la
      * tablette, ce qui ferait diverger le ticket cuisine du rapport du soir. */
     if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
-    if (priced.unknown.length || priced.unavailable.length) {
+    if (priced.unknown.length || priced.unavailable.length || priced.invalidOptions.length) {
       return json({
         error: 'menu-changed',
         unknown: priced.unknown,
         unavailable: priced.unavailable,
+        invalidOptions: priced.invalidOptions,
       }, 409);
     }
     if (!priced.lines.length) return json({ error: 'empty-order' }, 400);

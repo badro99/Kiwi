@@ -28,7 +28,12 @@ put('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (
 put('INSERT INTO merchant_config (merchant,features,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?)',
   merchant, '{"orderpro":true}', 'restaurant', 'active', 'Test Restaurant', 'acc-1', now);
 put('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)', merchant, 'Menu', 'restaurant', JSON.stringify({
-  cats: [{ id: 'c1', name: 'Plats', sub: [] }], items: [{ id: 'i1', name: 'Tajine', price: 80, catId: 'c1', avail: true }],
+  cats: [{ id: 'c1', name: 'Plats', sub: [] }],
+  opts: [{ id: 'sauce', name: 'Sauce', kind: 'one', choices: [
+    { id: 'nature', name: 'Nature', price: 0, emoji: '⚪' },
+    { id: 'epicee', name: 'Épicée', price: 10, emoji: '🔴' },
+  ] }],
+  items: [{ id: 'i1', name: 'Tajine', price: 80, catId: 'c1', avail: true, opts: ['sauce'] }],
 }), now);
 const team = { members: [
   { id: 'sara', firstName: 'Sara', lastName: 'Service', function: 'Serveur', department: 'Salle', pinCode: '1111' },
@@ -69,6 +74,19 @@ async function qpost(cookie, body) {
 let result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [{ id: 'i1', qty: 1 }] });
 ok(result.response.status === 200 && result.body.ok && result.body.total === 80, 'le serveur pointé envoie sa table en cuisine');
 const saraOrderId = result.body.id;
+result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [
+  { id: 'i1', qty: 2, optionChoices: [{ group: 'sauce', label: 'Épicée' }] },
+] });
+ok(result.response.status === 200 && result.body.total === 180
+  && result.body.lines[0].unitPrice === 90
+  && result.body.lines[0].options.includes('Épicée')
+  && result.body.lines[0].visuals[0].emoji === '🔴',
+  'les suppléments serveur sont validés et tarifés depuis le menu cloud');
+result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [
+  { id: 'i1', qty: 1, optionChoices: [{ group: 'sauce', label: 'Option inventée' }] },
+] });
+ok(result.response.status === 409 && result.body.error === 'menu-changed',
+  'une option inventée ou périmée par la tablette est refusée');
 result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '2', lines: [{ id: 'i1', qty: 1 }] });
 ok(result.response.status === 200, "Toutes les tables permet à un serveur de couvrir la table d'un collègue");
 result = await qpost(kitchenCookie, { merchant, create: true, mode: 'table', table: '1', lines: [{ id: 'i1', qty: 1 }] });
