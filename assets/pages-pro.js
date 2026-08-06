@@ -6699,7 +6699,7 @@ const PDS_INLINE_CSS = `
   .pds-modes { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:11px; }
   .pds-mode { background:transparent; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:500; color:var(--n-600); cursor:pointer; transition:.18s letter-spacing:0.01em; }
   .pds-mode:hover { color:var(--ink); }
-  .pds-mode.active { background:var(--ink); color:var(--paper); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
+  .pds-mode.active { background:var(--inverse-surface); color:var(--inverse-ink); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
   .pds-mode-desc { flex:1; font-size:12px; color:var(--n-600); padding:0 6px; min-width:240px; }
   .pds-zone-tabs { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; }
   .pds-zone { background:transparent; border:none; padding:7px 12px; border-radius:7px; font-size:12px; font-weight:500; color:var(--n-700); cursor:pointer; display:flex; align-items:center; gap:6px; transition:.16s; }
@@ -6710,8 +6710,22 @@ const PDS_INLINE_CSS = `
   .pds-zone-add { padding:7px 10px; color:var(--atlas); font-weight:700; font-size:14px; }
   .pds-zone-add:hover { background:var(--paper); }
 
-  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; }
+  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; align-items:start; }
   @media (max-width: 1100px) { .pds-stage-grid { grid-template-columns: 200px 1fr; } .pds-inspector { grid-column: 1 / -1; } }
+
+  /* Les colonnes latérales défilent pour elles-mêmes : sans align-items:start
+     la piste de grille s'étirait à la hauteur de la palette (~2 600px) et
+     poussait le plan hors de l'écran. */
+  .pds-rail, .pds-inspector {
+    position:sticky; top:0;
+    max-height:calc(100vh - 210px); min-height:320px;
+    overflow-y:auto; overscroll-behavior:contain;
+    padding-right:4px; scrollbar-width:thin;
+  }
+  @media (max-width: 1100px) {
+    .pds-rail { position:static; max-height:calc(100vh - 260px); }
+    .pds-inspector { position:static; max-height:none; min-height:0; overflow:visible; }
+  }
 
   .pds-rail { display:flex; flex-direction:column; gap:10px; }
   .pds-rail-card { background:var(--paper-soft); border:1px solid var(--n-200); border-radius:12px; padding:14px; }
@@ -6743,17 +6757,21 @@ const PDS_INLINE_CSS = `
   .pds-canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; flex-wrap:wrap; }
   .pds-legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
-  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--n-700); letter-spacing:0.01em; font-family:var(--sans, inherit); font-weight:500; }
-  .pds-legend-swatch { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid transparent; box-shadow:0 1px 2px rgba(10,15,13,0.12); }
-  .pds-sw-free      { background:var(--surface); border-color:#C8C5BD; }
-  .pds-sw-occupied  { background:#EBF5F0; border-color:#C5E0D3; }
-  .pds-sw-reserved  { background:#FFF1D6; border-color:#E8C88A; }
-  .pds-sw-cleaning  { background:#1F5D3C; }
+  /* La légende reprend le trait du plan : pastilles au contour, tiretés pour
+     une réservation, pointillés pour un nettoyage — comme les tables. Les
+     teintes du v2 étaient codées en clair (le mode nuit y passait par le bloc
+     .pds-noir, non porté) ; on garde donc les jetons thématiques. */
+  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:var(--n-500); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
+  .pds-sw-free      { background:transparent; border-color:var(--n-300); }
+  .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
+  .pds-sw-reserved  { background:rgba(200,146,53,0.10); border-style:dashed; border-color:#C89235; }
+  .pds-sw-cleaning  { background:transparent; border-style:dotted; border-color:var(--n-500); }
   .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
-  .pds-pill-reserved { background:rgba(217,154,43,0.18); color:#A85F00; }
-  .pds-pill-cleaning { background:rgba(26,143,227,0.15); color:#0F6FBF; }
+  .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#A85F00; border:1px dashed rgba(200,146,53,0.65); }
+  .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted var(--n-300); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
 
@@ -7048,8 +7066,8 @@ const PDS_INLINE_CSS = `
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
   .pds-status-pill.pds-pill-occupied { background:rgba(11,110,79,0.10); color:var(--atlas); }
-  .pds-status-pill.pds-pill-reserved { background:rgba(217,154,43,0.12); color:#A85F00; }
-  .pds-status-pill.pds-pill-cleaning { background:rgba(26,143,227,0.10); color:#0F6FBF; }
+  .pds-status-pill.pds-pill-reserved { background:rgba(232,200,138,0.14); color:#A85F00; border-style:dashed; border-color:rgba(200,146,53,0.55); }
+  .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:var(--n-300); }
   .pds-status-pill:hover { transform:translateY(-1px); }
   .pds-status-pill.active { border-color: currentColor; box-shadow:0 0 0 1px currentColor inset; }
   .pds-inspect-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
@@ -7125,7 +7143,7 @@ const PDS_INLINE_CSS = `
   .pds-pillrow { display:flex; gap:6px; flex-wrap:wrap; }
   .pds-cfg-pill { padding:7px 12px; border:1px solid var(--n-200); background:var(--paper); border-radius:8px; font-size:12px; cursor:pointer; color:var(--n-700); transition:.18s; font-family:inherit; }
   .pds-cfg-pill:hover { border-color:var(--atlas); }
-  .pds-cfg-pill.active { background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600; }
+  .pds-cfg-pill.active { background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface); font-weight:600; }
   .pds-strat-cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   @media (max-width: 720px) { .pds-strat-cards { grid-template-columns:1fr; } }
   .pds-strat-card { background:var(--paper); border:1.5px solid var(--n-200); border-radius:10px; padding:12px; text-align:left; cursor:pointer; transition:.16s; font-family:inherit; }
@@ -7178,7 +7196,7 @@ const PDS_INLINE_CSS = `
     transform-origin:50% 50%;
     transition: filter 150ms ease;
   }
-  .pds-tbl-cell:hover { filter:brightness(1.03); }
+  .pds-tbl-cell:hover { filter:brightness(1.035) drop-shadow(0 5px 10px rgba(20,15,10,0.20)); }
   .pds-tbl-cell.is-selected  { z-index:6; }
   .pds-tbl-cell.is-resizing  { z-index:7; }
   .pds-tbl-cell.is-locked    { cursor:default; }
@@ -7193,20 +7211,30 @@ const PDS_INLINE_CSS = `
     pointer-events:none; text-align:center;
   }
   .pds-tbl-num    { font:600 15px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
-  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:.6; margin-top:3px; }
+  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:0; transition:opacity 180ms ease; margin-top:3px; }
+  .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
 
   /* ── Fixtures ──────────────────────────────────────────────────────────
      The v1 rule painted .pds-el itself dark; v2 paints the .pds-el-fill
      child from the instance's own material, so the host must be cleared. */
   .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
-  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:hidden; }
-  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  /* overflow:visible — les tabourets du comptoir sont dessinés à cy négatif
+     par floorplan-core.js ; hidden les décapitait. */
+  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:visible; }
+  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
   .pds-el-label {
     position:absolute; inset:0; padding:2px;
     display:flex; align-items:center; justify-content:center;
-    font:600 9.5px/1.2 var(--mono, monospace);
-    letter-spacing:0.16em; text-transform:uppercase;
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em; text-transform:uppercase;
     pointer-events:none; text-align:center; overflow:hidden;
+  }
+  .pds-el-comptoir .pds-el-label,
+  .pds-el-caisse .pds-el-label { justify-content:flex-start; padding-left:16px; text-align:left; }
+  .pds-el:not(.is-locked):not(.is-dragging):hover {
+    filter: drop-shadow(0 4px 9px rgba(20,15,10,0.20));
+    outline: 1.5px solid rgba(11,110,79,0.55); outline-offset: 2px;
   }
   .pds-el.is-selected { z-index:60; }
   .pds-el.is-locked   { cursor:default; }
