@@ -6,6 +6,52 @@
   <title>Kiwi Caisse, Démo commerçant</title>
   <meta name="description" content="Écran caissier, démo Kiwi POS" />
 
+  <!-- Thème de la caisse — appliqué avant le premier rendu pour éviter tout
+       flash clair. Sombre = le même stage nuit que le dashboard 2026.
+       Persisté par appareil (localStorage) : une caisse est un terminal. -->
+  <script>
+    (function () {
+      var KEY = 'kiwiCaisseTheme';
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (e) {}
+      function apply(theme) {
+        if (theme === 'dark') document.documentElement.setAttribute('data-caisse-theme', 'dark');
+        else document.documentElement.removeAttribute('data-caisse-theme');
+      }
+      apply(stored === 'dark' ? 'dark' : 'light');
+      window.KiwiCaisseTheme = {
+        current: function () {
+          return document.documentElement.getAttribute('data-caisse-theme') === 'dark' ? 'dark' : 'light';
+        },
+        set: function (theme) {
+          apply(theme);
+          try { localStorage.setItem(KEY, theme); } catch (e) {}
+          document.dispatchEvent(new CustomEvent('kiwi:caisse-theme', { detail: { theme: theme } }));
+        },
+        toggle: function () { this.set(this.current() === 'dark' ? 'light' : 'dark'); }
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        function paint() {
+          var dark = window.KiwiCaisseTheme.current() === 'dark';
+          btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+          var sun = document.getElementById('th-ico-sun');
+          var moon = document.getElementById('th-ico-moon');
+          if (sun && moon) {
+            sun.style.display = dark ? '' : 'none';
+            moon.style.display = dark ? 'none' : '';
+          }
+          var lbl = btn.querySelector('span');
+          if (lbl) lbl.textContent = dark ? 'Mode jour' : 'Mode nuit';
+        }
+        btn.addEventListener('click', function () { window.KiwiCaisseTheme.toggle(); });
+        document.addEventListener('kiwi:caisse-theme', paint);
+        paint();
+      });
+    })();
+  </script>
+
   <!-- Fonts (already used across the project) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -95,6 +141,20 @@
 
       --danger-mute:   #B85245;
 
+      /* Washes — the two families of "légèrement teinté" surface the till uses.
+         --wash is the neutral hover/pressed film (was 15 hardcoded #ECEAE5),
+         --cream the warm attention film behind à-encaisser / addition states
+         (was six near-identical creams). One token each so dark mode is a
+         remap, not a hunt. */
+      --wash:          #ECEAE5;
+      --cream:         #FBF7EE;
+
+      /* Arêtes des cartes-table du plan de salle : la libre neutre et l'ambre
+         à-commander. Tokenisées pour que la légende cite la vraie recette et
+         que le mode sombre les remappe sans toucher aux règles. */
+      --tbl-free-edge:  #C8C5BD;
+      --tbl-amber-edge: #E3C77E;
+
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --serif: "Instrument Serif", "Times New Roman", serif;
       --mono:  Arial, Helvetica, sans-serif;
@@ -119,6 +179,58 @@
          --atlas-600 sits at the old ramp's optical midpoint, so weight and
          contrast against the white label are unchanged. */
       --gradient: var(--atlas-600);
+    }
+
+    /* ---------- Mode sombre — remap des jetons, pas des règles ----------
+       Même recette que le dashboard 2026 (design-vexel.css) : la page passe au
+       charbon, les surfaces deviennent des voiles blancs, la menthe #00FFAE
+       prend le rôle de l'atlas comme couleur d'état. La barre latérale est déjà
+       sombre en dur et traverse les deux thèmes sans y toucher. --paper-cream
+       reste clair : c'est du texte sur fond sombre, pas une surface. */
+    html[data-caisse-theme="dark"] {
+      /* --forest sert à la fois de texte d'accent et de fond sous étiquette
+         blanche : #17B98A (l'accent profond du dashboard nuit) tient les deux
+         rôles — lisible sur charbon, assez sombre sous du blanc. Le vif
+         #00FFAE est réservé aux anneaux d'état du plan de salle. */
+      --forest:        #17B98A;
+      --forest-deep:   #0E8A63;
+      --emerald:       #2ED598;
+      --mint-tint:     rgba(0,255,174,0.08);
+      --mint-edge:     rgba(0,255,174,0.28);
+
+      --paper:         #050807;
+      --paper-soft:    #0B100D;
+      --paper-mute:    #101612;
+      --ink-bg:        #0A0F0D;
+      --line:          rgba(255,255,255,0.10);
+      --line-soft:     rgba(255,255,255,0.07);
+
+      --ink:           #F2F5F3;
+      --ink-2:         rgba(242,245,243,0.78);
+      --ink-3:         rgba(242,245,243,0.55);
+      --ink-4:         rgba(242,245,243,0.35);
+
+      --danger-mute:   #E0685A;
+
+      --wash:          rgba(255,255,255,0.07);
+      --cream:         rgba(232,192,103,0.10);
+
+      --tbl-free-edge:  rgba(255,255,255,0.22);
+      --tbl-amber-edge: rgba(232,192,103,0.45);
+
+      /* tokens.css fournit les valeurs claires de ces deux-là */
+      --surface:       #070B09;
+      --paper-elev:    #0C1210;
+      --n-200:         rgba(255,255,255,0.10);
+      --elev-1: 0 0 0 1px rgba(255,255,255,0.04), 0 10px 26px -20px rgba(0,0,0,0.6);
+      --elev-2: 0 0 0 1px rgba(255,255,255,0.05), 0 0 40px -12px rgba(0,255,174,0.18);
+
+      --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 4px 10px rgba(0,0,0,.35);
+      --shadow-2: 0 8px 28px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+
+      /* --gradient reste var(--atlas-600) : #0E805C porte une étiquette
+         blanche dans les deux thèmes et se détache nettement du charbon. */
+      color-scheme: dark;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -219,44 +331,34 @@
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: padding-box; }
 
     .brand-row { display: flex; flex-direction: column; gap: 10px; }
-    /* Dashboard-style logo: paper text + separate mint dot (not a period) */
+    /* SVG wordmark. The sidebar is dark in both themes, so it always shows
+       the dark-surface variant; the long-press operator-console listener sits
+       on the container, so the img must never intercept or drag. */
     .brand-mark {
       display: inline-flex;
-      align-items: baseline;
-      gap: 4px;
-      color: var(--paper-cream);
-      font-weight: 700;
-      font-size: 26px;
-      line-height: 1;
-      letter-spacing: -0.05em;
+      align-items: center;
       margin: 0 4px;
     }
-    .brand-mark i {
-      width: 6px; height: 6px;
-      background: var(--mint);
-      border-radius: 50%;
-      display: inline-block;
+    .brand-mark img,
+    .pin-brand img,
+    .clockin-brand img,
+    .wordmark img {
+      width: auto; display: block;
+      pointer-events: none; -webkit-user-drag: none; user-select: none;
     }
-    /* Flat, not a gradient clipped to the glyphs. The empty state already
-       greys and fades this mark to 0.6 (see .rp-empty .wordmark), and a ramp
-       under a grayscale filter is two contradictory instructions about the
-       same six letters — the top of the k ended up darker than the panel it
-       sits on. One green, and the state handles the recession. */
-    .wordmark {
-      font-family: var(--sans);
-      font-weight: 700;
-      font-size: 28px;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      color: var(--atlas-600);
-      display: inline-flex;
-      align-items: baseline;
-    }
-    .wordmark .dot { color: var(--emerald); -webkit-text-fill-color: var(--emerald); }
+    .brand-mark img { height: 30px; }
+    /* Ticket empty state sits on a light panel — theme picks the variant.
+       The empty state greys and fades whichever one shows (.rp-empty .wordmark). */
+    .wordmark { display: inline-flex; align-items: center; }
+    .wordmark img { height: 34px; }
+    .wordmark .logo-dark { display: none; }
+    html[data-caisse-theme="dark"] .wordmark .logo-light { display: none; }
+    html[data-caisse-theme="dark"] .wordmark .logo-dark { display: block; }
 
     .duty-row {
       display: flex; align-items: center; gap: 8px;
-      font-size: 11px; color: #8f9591;
+      font-size: 10px; color: #8f9591;
+      letter-spacing: 0.08em; text-transform: uppercase;
       margin: 0 4px;
     }
     .duty-dot {
@@ -267,10 +369,11 @@
 
     .cashier-card {
       display: flex; flex-direction: column;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.06);
+      padding: 14px 15px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
     .cashier-name { font-size: 14px; font-weight: 600; color: var(--paper-cream); }
     .cashier-role { font-size: 11px; color: #8f9591; margin-top: 2px; }
@@ -286,13 +389,15 @@
 
     .stats-section { display: flex; flex-direction: column; gap: 8px; }
     .stat-card {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
       padding: 12px;
       display: flex; flex-direction: column; gap: 4px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    .stat-label { font-size: 10.5px; color: #8f9591; letter-spacing: 0.02em; }
-    .stat-value { font-size: 16px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
+    .stat-label { font-size: 9.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
+    .stat-value { font-size: 17px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
     .stat-delta { font-size: 11px; color: var(--mint); font-weight: 500; margin-top: 2px; }
     .stat-row {
       display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -307,9 +412,11 @@
       padding: 16px 7px;
       border-radius: 14px;
       font-size: 13px; font-weight: 600;
-      background: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #8f9591;
-      transition: background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease;
+      transition: background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
       letter-spacing: -0.01em;
       min-height: 88px;
     }
@@ -319,9 +426,15 @@
       stroke-width: 1.75;
     }
     .mode-pill span { line-height: 1.15; }
-    .mode-pill:hover { background: rgba(255,255,255,0.1); color: var(--paper-cream); }
+    .mode-pill:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--paper-cream);
+      transform: translateY(-1px);
+    }
     .mode-pill[aria-pressed="true"] {
       background: var(--gradient);
+      border-color: transparent;
       color: #fff;
       box-shadow: var(--shadow-1);
     }
@@ -332,34 +445,51 @@
     .act-pill {
       display: inline-flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 8px;
-      padding: 12px 2px;
+      padding: 12px 3px;
       border-radius: 14px;
-      font-size: 9.5px; font-weight: 600;
-      background: rgba(255,255,255,0.06);
-      color: #8f9591;
+      font-size: 10px; font-weight: 600;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      color: #9aa09b;
       text-align: center; line-height: 1.25;
-      letter-spacing: -0.01em;
-      min-height: 74px;
-      transition: background 200ms ease, color 200ms ease, transform 150ms ease;
+      min-height: 76px;
+      transition: background 200ms ease, color 200ms ease, transform 150ms ease, border-color 200ms ease;
     }
     .act-pill svg { width: 18px; height: 18px; flex: 0 0 18px; stroke-width: 1.75; }
-    .act-pill:hover { background: rgba(255,255,255,0.1); color: var(--paper-cream); }
+    .act-pill:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--paper-cream);
+      transform: translateY(-1px);
+    }
     .act-pill:active { transform: scale(0.97); }
+    /* Une 4e tuile injectée (Clients & fidélité, pont growth-crm) resterait
+       orpheline dans la grille 3 colonnes — on l'étire en rangée pleine largeur. */
+    .act-selector .act-pill:nth-child(4) {
+      grid-column: 1 / -1;
+      flex-direction: row; justify-content: flex-start; gap: 10px;
+      min-height: 0; padding: 11px 12px;
+      font-size: 12px; text-align: left;
+    }
+
+    .rail-links { display: flex; flex-direction: column; gap: 6px; }
 
     .quick-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
     .qa-btn {
       display: flex; align-items: center; gap: 10px;
       padding: 11px 12px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
       color: #b5b9b6;
       border-radius: var(--r-lg);
       font-size: 13px; font-weight: 500;
       text-align: left;
-      transition: background 150ms ease, color 150ms ease;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
     }
-    .qa-btn:hover { background: rgba(255,255,255,0.09); color: var(--paper-cream); }
-    .qa-btn.ghost { background: transparent; color: #6a6e6c; }
-    .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); color: #b5b9b6; }
+    .qa-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); color: var(--paper-cream); }
+    .qa-btn.ghost { background: transparent; border-color: transparent; color: #6a6e6c; }
+    .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: #b5b9b6; }
     .qa-btn svg { width: 15px; height: 15px; flex: 0 0 15px; }
 
     /* ---------- Main floor area ---------- */
@@ -377,11 +507,28 @@
     .main-title { font-size: 16px; font-weight: 600; color: var(--ink); }
     .main-title em { font-family: var(--serif); color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px; }
 
-    .legend { display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--ink-3); }
+    /* La légende vit sur sa propre barre noir console — le canvas de la salle
+       est toujours nuit, la légende doit rester lisible sur les deux thèmes. */
+    .legend {
+      display: flex; align-items: center; gap: 14px;
+      font: 400 11px/1 "Inter Tight", system-ui;
+      color: rgba(255,255,255,0.5);
+      background: #0D110D;
+      border: 1px solid rgba(242,239,230,0.08);
+      border-radius: 999px;
+      padding: 7px 14px;
+    }
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .legend-swatch {
-      width: 10px; height: 10px; border-radius: 3px; display: inline-block;
+      width: 17px; height: 13px; border-radius: 4px; display: inline-block;
+      background: rgba(255,255,255,0.012);
     }
+    /* La légende cite la recette noir : matière charbon + trait d'état. */
+    .legend-swatch.st-khawya { border: 1.25px solid rgba(255,255,255,0.30); }
+    .legend-swatch.st-acmd   { border: 1.25px solid #E8C067; background: rgba(232,192,103,0.08); }
+    .legend-swatch.st-yaklo  { border: 1.25px solid #00FFAE; background: rgba(0,255,174,0.14); }
+    .legend-swatch.st-bill   { border: 1.25px solid #FF7DA9; background: rgba(255,125,169,0.10); }
+    .legend-swatch.st-khlass { border: 1.25px dotted rgba(255,255,255,0.40); }
 
     .view {
       flex: 1;
@@ -467,7 +614,7 @@
       transition: background 150ms ease, color 150ms ease;
     }
     .wl-pref-chip svg { width: 14px; height: 14px; }
-    .wl-pref-chip:hover { background: #ECEAE5; }
+    .wl-pref-chip:hover { background: var(--wash); }
     .wl-pref-chip.is-active { background: var(--forest); color: #fff; }
     /* hide the addition panel in waitlist mode — the list spans full width */
     body[data-mode="waitlist"] .rightpanel { display: none; }
@@ -493,7 +640,7 @@
     .wl-seat-banner-cancel:hover { background: rgba(255,255,255,0.26); }
     /* free tables pop, occupied tables dim while choosing */
     body.is-seating .tbl-cell.wl-seat-dim { opacity: 0.32; }
-    body.is-seating .tbl-cell.wl-seat-free .tbl { box-shadow: 0 0 0 3px var(--emerald); }
+    body.is-seating .tbl-cell.wl-seat-free .tbl { box-shadow: 0 0 0 3px rgba(0,255,174,0.45); }
 
     /* ---------- Floor toggle (rez-de-chaussée / 1er étage) ---------- */
     .plan-head-left {
@@ -539,29 +686,31 @@
     }
     .plan-canvas.is-active { display: flex; }
 
-    /* ---------- Plan room (the architectural box) ---------- */
+    /* ---------- Plan room (the architectural box) ----------
+       Console noir, toujours — le canvas de la salle reprend l'éditeur
+       plan-de-salle NOIR du dashboard, quel que soit le thème de la caisse :
+       charbon #040504, arête blanche faible, tables fantômes, l'état en lumière. */
     .plan-room {
       position: relative;
       width: 100%;
-      border: 1.5px solid #2C2520;
-      border-radius: 16px;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.7) inset,
-        0 0 0 1px rgba(44,37,32,0.06),
-        0 18px 40px -32px rgba(20,15,10,0.15);
+      border: 1.5px solid rgba(255,255,255,0.13);
+      border-radius: 18px;
+      box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
       overflow: hidden;
-      background: #FBF7EE;
+      background: #040504;
     }
     .plan-room-rdc   { flex: 0 0 54%; }
     .plan-room-etage { flex: 1 1 auto; min-height: 0; }
 
-    /* SVG architectural background — fills the room, click-transparent */
+    /* SVG architectural background — fills the room, click-transparent.
+       Peint en clair dans le markup ; le filtre l'amène en pénombre console. */
     .plan-bg {
       position: absolute;
       inset: 0;
       width: 100%; height: 100%;
       pointer-events: none;
       display: block;
+      filter: brightness(0.26) saturate(0.5);
     }
     /* Keep SVG strokes pixel-crisp through arbitrary scaling */
     .plan-bg [vector-effect],
@@ -574,7 +723,7 @@
       top: 12px; left: 18px;
       font-family: var(--ui-sans, 'Inter Tight', system-ui, sans-serif);
       font-size: 11px; font-weight: 600;
-      color: var(--ink);
+      color: rgba(242,239,230,0.78);
       letter-spacing: 0.16em;
       text-transform: uppercase;
       z-index: 3;
@@ -584,7 +733,7 @@
       font-family: var(--serif, 'Instrument Serif', serif);
       font-weight: 400;
       text-transform: none;
-      color: var(--ink-4);
+      color: rgba(242,239,230,0.42);
       letter-spacing: 0;
       margin-left: 6px;
       font-size: 13px;
@@ -596,18 +745,16 @@
       position: relative;
       flex: 1 1 auto;
       min-height: 0;
-      border: 1.5px dashed #A89770;
-      border-radius: 16px;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.7) inset,
-        0 12px 24px -28px rgba(20,15,10,0.18);
+      border: 1.5px dashed rgba(0,255,174,0.30);
+      border-radius: 18px;
+      box-shadow: 0 24px 50px -36px rgba(0,0,0,0.85);
       overflow: hidden;
-      background: #F7F2E8;
+      background: #040504;
     }
     .terrasse-label {
-      color: #1F4A38;
+      color: rgba(0,255,174,0.70);
     }
-    .terrasse-label em { color: #5C5447; }
+    .terrasse-label em { color: rgba(242,239,230,0.42); }
 
     /* ---------- Footer — compteur de tables sur l'étage actif ---------- */
     .plan-footer {
@@ -633,71 +780,71 @@
     .table-layer > * { pointer-events: auto; }
 
     /* ---------- Real store: designed plan grid + empty state ---------- */
-    .plan-real { display: flex; flex-direction: column; gap: 18px; width: 100%; height: 100%; overflow: auto; padding: 6px 4px 20px; }
-    .plan-empty { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 320px; }
-    .plan-empty-card { max-width: 440px; text-align: center; padding: 44px 36px; border: 1.5px dashed #D8D2C4; border-radius: 20px; background: rgba(255,255,255,.55); }
-    .plan-empty-ico { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 15px; display: flex; align-items: center; justify-content: center; background: #EBF3EE; color: #0B6E4F; }
+    /* Le plan réel vit dans le même cadre console que la salle démo. */
+    .plan-real { display: flex; flex-direction: column; gap: 18px; width: 100%; height: 100%; overflow: auto; padding: 16px 14px 20px; background: #020302; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; }
+    .plan-empty { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 320px; background: #020302; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; }
+    .plan-empty-card { max-width: 440px; text-align: center; padding: 44px 36px; border: 1.5px dashed rgba(255,255,255,0.19); border-radius: 20px; background: rgba(255,255,255,0.02); }
+    .plan-empty-ico { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 15px; display: flex; align-items: center; justify-content: center; background: rgba(0,255,174,0.10); color: #00FFAE; }
     .plan-empty-ico svg { width: 26px; height: 26px; }
-    .plan-empty-title { font: 600 17px/1.3 "Inter Tight", system-ui; color: #16201A; margin-bottom: 9px; letter-spacing: -.01em; }
-    .plan-empty-sub { font: 400 13px/1.6 "Inter Tight", system-ui; color: #6B6E66; }
-    .plan-empty-sub b { color: #0B6E4F; font-weight: 600; }
-    .plan-real-zone-h { font: 600 11px/1 "Inter Tight", system-ui; letter-spacing: .06em; text-transform: uppercase; color: #7C7F76; margin: 0 2px 11px; }
-    .plan-real-zone-h em { font-style: normal; font-weight: 500; color: #A9ACA2; }
+    .plan-empty-title { font: 600 17px/1.3 "Inter Tight", system-ui; color: rgba(242,239,230,0.88); margin-bottom: 9px; letter-spacing: -.01em; }
+    .plan-empty-sub { font: 400 13px/1.6 "Inter Tight", system-ui; color: rgba(242,239,230,0.5); }
+    .plan-empty-sub b { color: #00FFAE; font-weight: 600; }
+    .plan-real-zone-h { font: 600 11px/1 "Inter Tight", system-ui; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin: 0 2px 11px; }
+    .plan-real-zone-h em { font-style: normal; font-weight: 500; color: rgba(255,255,255,0.3); }
     .plan-real-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
     /* Designed table = grid card (not the absolute canvas node) */
     .tbl-cell.is-designed { position: static; width: auto; height: auto; cursor: pointer; user-select: none; }
-    .tbl-cell.is-designed .tbl { position: static; inset: auto; width: 100%; height: auto; min-height: 84px; display: flex; flex-direction: column; gap: 6px; padding: 12px 13px; border-radius: 13px; border: 1px solid #E5E5E1; background: #F4F4F2; transition: transform .12s ease, box-shadow .12s ease; }
-    .tbl-cell.is-designed:hover .tbl { transform: translateY(-1px); box-shadow: 0 6px 18px -10px rgba(11,110,79,.35); }
-    .tbl-cell.is-designed.is-selected .tbl, .tbl-cell.is-designed .tbl.is-selected { outline: 2px solid #0B6E4F; outline-offset: 1px; }
-    .tbl-cell.is-designed .tbl[data-status="a-commander"]  { background: #FBF1DC; border-color: #E3C77E; }
-    .tbl-cell.is-designed .tbl[data-status="ka-yaklo"]     { background: #EBF5F0; border-color: #C5E0D3; }
-    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] { background: #1F5D3C; border-color: #1F5D3C; color: #F7F5F0; }
-    .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: #fff; border: 2px solid #3FB67A; }
+    .tbl-cell.is-designed .tbl { position: static; inset: auto; width: 100%; height: auto; min-height: 84px; display: flex; flex-direction: column; gap: 6px; padding: 12px 13px; border-radius: 13px; border: 1.25px solid rgba(255,255,255,0.13); background: #0D110D; box-shadow: none; transition: filter .12s ease, box-shadow .12s ease; }
+    .tbl-cell.is-designed:hover .tbl { filter: brightness(1.25); }
+    .tbl-cell.is-designed.is-selected .tbl, .tbl-cell.is-designed .tbl.is-selected { outline: none; border-color: #7DF2B0; box-shadow: 0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20); }
+    /* Statut en lumière aussi sur la grille-cartes : charbon + trait d'état. */
+    .tbl-cell.is-designed .tbl[data-status="a-commander"]  { background: rgba(232,192,103,0.08); border-color: #E8C067; }
+    .tbl-cell.is-designed .tbl[data-status="ka-yaklo"]     { background: rgba(0,255,174,0.10); border-color: #00FFAE; }
+    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] { background: rgba(255,125,169,0.10); border-color: #FF7DA9; }
+    .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: #0D110D; border: 1.25px dotted rgba(255,255,255,0.40); }
     .tbl-cell.is-designed .tbl-head { display: flex; align-items: baseline; justify-content: space-between; }
     .tbl-cell.is-designed .tbl-num { font: 600 16px/1 "Inter Tight", system-ui; letter-spacing: -.02em; }
-    .tbl-cell.is-designed .tbl-covers { font: 500 11px/1 "Inter Tight", system-ui; color: #8A8D84; }
-    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(247,245,240,.7); }
-    .tbl-cell.is-designed .tbl-status { font: 500 11px/1 "Inter Tight", system-ui; color: #7A7D74; }
-    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-status { color: rgba(247,245,240,.85); }
+    .tbl-cell.is-designed .tbl-covers { font: 500 11px/1 "Inter Tight", system-ui; color: rgba(255,255,255,0.35); }
+    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(255,255,255,0.35); }
+    .tbl-cell.is-designed .tbl-status { font: 500 11px/1 "Inter Tight", system-ui; color: rgba(255,255,255,0.4); }
+    .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-status { color: rgba(255,255,255,0.4); }
     .tbl-cell.is-designed .tbl-server { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 600 9px/1 "Inter Tight", system-ui; color: #fff; }
 
     /* Équipe drawer — empty roster nudge */
     .team-empty { padding: 22px 14px; text-align: center; }
-    .team-empty-t { font: 600 14px/1.3 "Inter Tight", system-ui; color: #16201A; margin-bottom: 7px; }
-    .team-empty-s { font: 400 12px/1.55 "Inter Tight", system-ui; color: #6B6E66; }
-    .team-empty-s b { color: #0B6E4F; font-weight: 600; }
+    .team-empty-t { font: 600 14px/1.3 "Inter Tight", system-ui; color: var(--ink); margin-bottom: 7px; }
+    .team-empty-s { font: 400 12px/1.55 "Inter Tight", system-ui; color: var(--ink-3); }
+    .team-empty-s b { color: var(--forest); font-weight: 600; }
 
     /* ---------- Table cell (absolute on the plan) ---------- */
     .tbl-cell {
       position: absolute;
       cursor: pointer;
       user-select: none;
-      transition: transform 150ms ease, filter 150ms ease;
+      transition: filter 150ms ease;
       z-index: 2;
     }
-    .tbl-cell:hover { transform: translateY(-1px); filter: brightness(1.02); }
-    .tbl-cell:active { transform: translateY(0); }
-    .tbl-cell:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 8px; }
+    /* Console noir : le survol est un gain de lumière, jamais un déplacement. */
+    .tbl-cell:hover { filter: brightness(1.25); }
+    .tbl-cell:active { filter: brightness(1.1); }
+    .tbl-cell:focus-visible { outline: 2px solid rgba(0,255,174,0.55); outline-offset: 3px; border-radius: 8px; }
 
-    /* Chair pills surrounding the tabletop. Top-down drawing: each chair is a
-       small rounded rectangle representing the chair-back/seat seen from above. */
+    /* Chaises en coches plates, façon éditeur noir : un tiret lumineux par
+       place, teinté par l'état de la table — pas de bois, pas d'ombre. */
     .tbl-chairs {
       position: absolute;
       display: flex; justify-content: center; gap: 5px;
       pointer-events: none;
     }
-    .tbl-chairs-top    { left: 6px; right: 6px; top: -9px;   height: 7px; }
-    .tbl-chairs-bottom { left: 6px; right: 6px; bottom: -9px; height: 7px; }
+    .tbl-chairs-top    { left: 6px; right: 6px; top: -9px;   height: 6px; }
+    .tbl-chairs-bottom { left: 6px; right: 6px; bottom: -9px; height: 6px; }
     .chair {
       flex: 0 1 16px;
       min-width: 8px;
       max-width: 22px;
       height: 100%;
-      background: linear-gradient(180deg, #8C8377 0%, #5F574C 100%);
+      background: rgba(255,255,255,0.20);
       border-radius: 3px;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.25) inset,
-        0 1px 1.5px rgba(20,15,10,0.18);
     }
     /* Chairs around round tables — radial layout via inline transforms */
     .tbl-chairs-ring {
@@ -707,31 +854,32 @@
     .chair-radial {
       position: absolute;
       top: 50%; left: 50%;
-      width: 16px; height: 7px;
-      margin: -3.5px 0 0 -8px;
-      background: linear-gradient(180deg, #8C8377 0%, #5F574C 100%);
+      width: 16px; height: 6px;
+      margin: -3px 0 0 -8px;
+      background: rgba(255,255,255,0.20);
       border-radius: 3px;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.25) inset,
-        0 1px 1.5px rgba(20,15,10,0.18);
       transform-origin: center;
     }
+    /* La coche prend la couleur de l'état de sa table. */
+    .tbl-cell:has(.tbl[data-status="ka-yaklo"]) .chair,
+    .tbl-cell:has(.tbl[data-status="ka-yaklo"]) .chair-radial { background: rgba(0,255,174,0.70); }
+    .tbl-cell:has(.tbl[data-status="a-commander"]) .chair,
+    .tbl-cell:has(.tbl[data-status="a-commander"]) .chair-radial { background: rgba(232,192,103,0.50); }
+    .tbl-cell:has(.tbl[data-status="bgha-ykhlass"]) .chair,
+    .tbl-cell:has(.tbl[data-status="bgha-ykhlass"]) .chair-radial { background: rgba(255,125,169,0.60); }
 
-    /* ---------- Tabletop ---------- */
+    /* ---------- Tabletop — matière charbon, état en lumière ---------- */
     .tbl {
       position: relative;
       width: 100%; height: 100%;
       border-radius: 7px;
       padding: 4px 6px;
       display: flex; flex-direction: column; justify-content: space-between;
-      transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+      transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
       overflow: hidden;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.6) inset,
-        0 2px 4px -1px rgba(20,15,10,0.14),
-        0 1px 2px rgba(20,15,10,0.06);
+      box-shadow: 0 14px 28px -18px rgba(0,0,0,0.85);
     }
-    /* Round table shape — wood/marble vibe */
+    /* Round table shape — même charbon, forme seule change */
     .tbl-cell.is-round .tbl {
       border-radius: 50%;
       padding: 12% 14%;
@@ -739,11 +887,6 @@
       align-items: center; justify-content: center;
       text-align: center;
       gap: 1px;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,0.7) inset,
-        0 0 0 1px rgba(44,37,32,0.04) inset,
-        0 3px 6px -1px rgba(20,15,10,0.18),
-        0 1px 2px rgba(20,15,10,0.06);
     }
     .tbl-cell.is-round .tbl-head {
       text-align: center;
@@ -765,7 +908,7 @@
     .tbl-status,
     .tbl-elapsed { display: none !important; }
 
-    /* The number is THE label on the floor plan. Centered, large, prominent. */
+    /* The number is THE label on the floor plan. Centered, quiet, precise. */
     .tbl-head {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -774,86 +917,97 @@
       font-feature-settings: "tnum" 1;
     }
     .tbl-num {
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      font-size: 13px;
       line-height: 1;
       color: inherit;
     }
+    /* Les couverts n'apparaissent qu'au survol — l'éditeur noir garde le calme. */
     .tbl-covers {
-      font-family: var(--serif, 'Instrument Serif', serif);
+      font-family: var(--ui-sans, 'Inter Tight', system-ui, sans-serif);
       font-weight: 400;
-      font-size: 12px;
+      font-size: 10.5px;
       line-height: 1;
-      opacity: 0.7;
+      opacity: 0;
+      transition: opacity 150ms ease;
     }
+    .tbl-cell:hover .tbl-covers,
+    .tbl.is-selected .tbl-covers { opacity: 0.5; }
     /* Small 2-tops — fit-to-cell */
-    .tbl-cell .tbl.size-2 .tbl-num    { font-size: 14px; }
-    .tbl-cell .tbl.size-2 .tbl-covers { font-size: 10.5px; }
+    .tbl-cell .tbl.size-2 .tbl-num    { font-size: 11px; }
+    .tbl-cell .tbl.size-2 .tbl-covers { font-size: 9.5px; }
     /* 6-tops and round centerpiece — extra presence */
     .tbl-cell.is-round.size-6 .tbl-num,
-    .tbl-cell .tbl.size-6 .tbl-num    { font-size: 20px; }
-    .tbl-cell .tbl.size-6 .tbl-covers { font-size: 13px; }
+    .tbl-cell .tbl.size-6 .tbl-num    { font-size: 15px; }
+    .tbl-cell .tbl.size-6 .tbl-covers { font-size: 11px; }
 
-    /* khawya — empty table, pops on floor with clean white + crisp border */
-    .tbl[data-status="khawya"] {
-      background: var(--surface);
-      border: 1.5px solid #C8C5BD;
-      color: #1A1F1C;
+    /* ── Statut noir console, façon dashboard (PDS_STATUS_RING_NOIR) ────
+       Trois langages de trait : plein faible (libre), plein lumineux
+       (état actif), pointillé (réglée). La matière reste charbon ; seul
+       ka-yaklo a droit au halo menthe. Mêmes valeurs que pages-pro. */
+    .tbl {
+      background: linear-gradient(180deg, #101312 0%, #050605 100%);
+      color: rgba(255,255,255,0.40);
+      border: 1.25px solid rgba(255,255,255,0.30);
     }
-    .tbl[data-status="khawya"] .tbl-num    { color: #4A453E; }
-    .tbl[data-status="khawya"] .tbl-covers { color: #968D7F; }
+    .tbl .tbl-num    { color: rgba(255,255,255,0.40); }
+    .tbl .tbl-covers { color: rgba(255,255,255,0.60); }
+    .tbl-cell:hover .tbl-num { color: rgba(255,255,255,0.75); }
 
-    /* ka-yaklo — occupied, mint tint */
-    .tbl[data-status="ka-yaklo"] {
-      background: var(--mint-tint);
-      border: 1.5px solid var(--mint-edge);
-      color: var(--forest);
-    }
-    .tbl[data-status="ka-yaklo"] .tbl-num    { color: var(--forest); }
-    .tbl[data-status="ka-yaklo"] .tbl-covers { color: #437B5C; }
+    /* khawya — libre : fantôme, plein faible (le défaut ci-dessus) */
 
-    /* à commander — seated, order not taken yet (amber = action needed) */
+    /* à commander — assise, commande pas prise : trait ambre + voile */
     .tbl[data-status="a-commander"] {
-      background: #FBF1DC;
-      border: 1.5px solid #E3C77E;
-      color: #8a6411;
+      border-color: #E8C067;
+      background: linear-gradient(180deg, rgba(232,192,103,0.10) 0%, rgba(232,192,103,0.05) 100%), linear-gradient(180deg, #101312 0%, #050605 100%);
     }
-    .tbl[data-status="a-commander"] .tbl-num    { color: #8a6411; }
-    .tbl[data-status="a-commander"] .tbl-covers { color: #B08A3E; }
+    .tbl[data-status="a-commander"] .tbl-num { color: rgba(232,192,103,0.80); }
 
-    /* bgha-ykhlass — urgent, deep forest, pulsing */
-    .tbl[data-status="bgha-ykhlass"] {
-      background: var(--forest);
-      border: 1.5px solid transparent;
-      color: #fff;
-      animation: urgent-pulse 2s ease-in-out infinite;
+    /* ka-yaklo — en train de manger : menthe, la seule qui rayonne */
+    .tbl[data-status="ka-yaklo"] {
+      border-color: #00FFAE;
+      background: linear-gradient(180deg, rgba(0,255,174,0.16) 0%, rgba(0,255,174,0.08) 100%), linear-gradient(180deg, #101312 0%, #050605 100%);
+      box-shadow: 0 0 22px rgba(0,255,174,0.18), 0 14px 28px -18px rgba(0,0,0,0.85);
     }
-    .tbl[data-status="bgha-ykhlass"] .tbl-num    { color: #fff; }
-    .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(255,255,255,.7); }
+    .tbl[data-status="ka-yaklo"] .tbl-num { color: rgba(0,255,174,0.90); }
+
+    /* bgha-ykhlass — addition demandée : rose qui appelle (état caisse) */
+    .tbl[data-status="bgha-ykhlass"] {
+      border-color: #FF7DA9;
+      background: linear-gradient(180deg, rgba(255,125,169,0.12) 0%, rgba(255,125,169,0.06) 100%), linear-gradient(180deg, #101312 0%, #050605 100%);
+      animation: noir-call 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+    }
+    .tbl[data-status="bgha-ykhlass"] .tbl-num { color: rgba(255,125,169,0.90); }
     .tbl[data-status="bgha-ykhlass"] .urgent-dot {
       position: absolute; top: 8px; right: 8px;
       width: 7px; height: 7px; border-radius: 50%;
-      background: var(--surface);
+      background: #FF7DA9;
       animation: pulse-dot 1.4s infinite;
-      box-shadow: 0 0 0 0 rgba(255,255,255,.7);
+      box-shadow: 0 0 0 0 rgba(255,125,169,.55);
     }
 
-    @keyframes urgent-pulse {
-      0%, 100% { background-color: #1F5D3C; }
-      50%      { background-color: #2A6F4A; }
+    /* L'appel vit dans un anneau de lumière qui s'évase — la matière ne bouge pas.
+       (.tbl est overflow:hidden, donc le ping s'exprime en box-shadow.) */
+    @keyframes noir-call {
+      0%, 62% { box-shadow: 0 0 0 0 rgba(255,125,169,0.35), 0 14px 28px -18px rgba(0,0,0,0.85); }
+      100%    { box-shadow: 0 0 0 12px rgba(255,125,169,0), 0 14px 28px -18px rgba(0,0,0,0.85); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tbl[data-status="bgha-ykhlass"] { animation: none; }
     }
 
-    /* khlass — paid, fading */
+    /* khlass — réglée : pointillé qui s'efface */
     .tbl[data-status="khlass"] {
-      background: var(--surface);
-      border: 2px solid var(--emerald);
+      border: 1.25px dotted rgba(255,255,255,0.40);
     }
-    .tbl[data-status="khlass"] .tbl-num    { color: var(--emerald); }
-    .tbl[data-status="khlass"] .tbl-covers { color: #5C9F7B; }
+    .tbl[data-status="khlass"] .tbl-num,
+    .tbl[data-status="khlass"] .tbl-covers { color: rgba(255,255,255,0.30); }
 
+    /* Sélection — liseré menthe clair + double halo, comme l'éditeur. */
     .tbl.is-selected {
-      box-shadow: 0 0 0 3px rgba(63,182,122,.25);
+      border-color: #7DF2B0;
+      box-shadow: 0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20);
     }
 
     /* ---------- Vente rapida (menu) view ---------- */
@@ -893,7 +1047,7 @@
       white-space: nowrap;
       transition: background 150ms ease, color 150ms ease;
     }
-    .cat-pill:hover { background: #ECEAE5; }
+    .cat-pill:hover { background: var(--wash); }
     .cat-pill.is-active {
       background: var(--ink);
       color: #fff;
@@ -931,19 +1085,19 @@
       width: 100%;
       user-select: none;
     }
-    .menu-item:hover { background: #ECEAE5; transform: translateY(-1px); }
+    .menu-item:hover { background: var(--wash); transform: translateY(-1px); }
     .menu-item:active { transform: translateY(0); }
     .menu-item:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
     .menu-item-art {
       width: 40px; height: 40px;
       border-radius: 11px;
-      background: color-mix(in srgb, var(--cat, var(--forest)) 14%, #fff);
+      background: color-mix(in srgb, var(--cat, var(--forest)) 14%, var(--surface));
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 8px;
       transition: background 150ms ease;
     }
     .menu-item-art svg { width: 28px; height: 28px; }
-    .menu-item.is-in-cart .menu-item-art { background: color-mix(in srgb, var(--cat, var(--forest)) 22%, #fff); }
+    .menu-item.is-in-cart .menu-item-art { background: color-mix(in srgb, var(--cat, var(--forest)) 22%, var(--surface)); }
     /* la carte EST visuelle — one voice with the pressing & fast-food line-art */
     .menu-art { fill: none; stroke: var(--forest); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
     .menu-art .fill { fill: var(--mint-tint); stroke: none; }
@@ -1254,7 +1408,7 @@
       font-size: 13px; font-weight: 600; color: var(--ink-2);
       transition: background 150ms ease, color 150ms ease;
     }
-    .mlibre-toggle:hover { background: #ECEAE5; }
+    .mlibre-toggle:hover { background: var(--wash); }
     .mlibre-toggle.is-open { background: var(--forest); color: #fff; }
     .mlibre-toggle svg { width: 15px; height: 15px; }
     .mlibre-pad {
@@ -1281,7 +1435,7 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 120ms ease, transform 100ms ease;
     }
-    .mlibre-keys button:hover { background: #ECEAE5; }
+    .mlibre-keys button:hover { background: var(--wash); }
     .mlibre-keys button:active { transform: scale(0.96); }
     .mlibre-keys button svg { width: 20px; height: 20px; }
     .mlibre-add {
@@ -1482,7 +1636,7 @@
       color: var(--ink-2);
       transition: background 150ms ease;
     }
-    .cash-preset:not([disabled]):hover { background: #ECEAE5; }
+    .cash-preset:not([disabled]):hover { background: var(--wash); }
     .cash-preset[disabled] { opacity: .35; cursor: not-allowed; }
 
     .cash-rendu {
@@ -1579,16 +1733,16 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 150ms, color 150ms;
     }
-    .nt-chip:hover { background: #ECEAE5; }
+    .nt-chip:hover { background: var(--wash); }
     .nt-chip.is-active { background: var(--forest); color: #fff; }
     .nt-actions { display: flex; gap: 8px; margin-top: 4px; }
 
     /* Envoyer en cuisine — secondaire depuis que « Encaisser » est le geste
        principal en prise de commande (Slice A). */
     .pay-validate { background: var(--paper-mute); color: var(--forest); height: 48px; font-size: 14px; }
-    .pay-validate:hover { background: #ECEAE5; }
+    .pay-validate:hover { background: var(--wash); }
     .pay-cancel-order { background: var(--paper-mute); color: var(--ink-2); height: 44px; font-size: 13px; font-weight: 500; }
-    .pay-cancel-order:hover { background: #ECEAE5; }
+    .pay-cancel-order:hover { background: var(--wash); }
 
     #rp-pay-normal { display: flex; flex-direction: column; gap: 8px; }
     #rp-pay-order  { display: flex; flex-direction: column; gap: 8px; }
@@ -1665,7 +1819,7 @@
       background: var(--paper-mute); color: var(--ink-2);
       transition: background 150ms, color 150ms;
     }
-    .split-chip:hover { background: #ECEAE5; }
+    .split-chip:hover { background: var(--wash); }
     .split-chip.is-active { background: var(--forest); color: #fff; }
 
     .split-tip-custom { display: none; margin-top: -8px; margin-bottom: 16px; }
@@ -1800,7 +1954,7 @@
       text-align: left;
     }
     .split-pool-item:not(.is-empty):active { transform: scale(0.99); }
-    .split-pool-item:not(.is-empty):hover { background: #ECEAE5; }
+    .split-pool-item:not(.is-empty):hover { background: var(--wash); }
     .split-pool-item.is-empty {
       opacity: 0.45;
       pointer-events: none;
@@ -1960,14 +2114,14 @@
       background: var(--paper-mute); color: var(--ink);
       font-size: 14px; font-weight: 600; transition: background 150ms;
     }
-    .split-close-btn:hover { background: #ECEAE5; }
+    .split-close-btn:hover { background: var(--wash); }
 
     /* ===========================================================
        PIN LOGIN SCREEN
        =========================================================== */
     .pin-screen {
       position: fixed; inset: 0;
-      background: linear-gradient(180deg, var(--ink) 0%, #102018 60%, #1F5D3C 100%);
+      background: linear-gradient(180deg, var(--ink-bg) 0%, #102018 60%, #1F5D3C 100%);
       z-index: 500;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column;
@@ -1987,15 +2141,10 @@
       100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
     }
     .pin-brand {
-      font-size: 32px; font-weight: 700; letter-spacing: -0.05em;
-      display: inline-flex; align-items: baseline; gap: 5px;
-      color: var(--paper-cream);
+      display: inline-flex; align-items: center;
       margin-bottom: 36px;
     }
-    .pin-brand i {
-      width: 8px; height: 8px; background: var(--mint); border-radius: 50%;
-      display: inline-block;
-    }
+    .pin-brand img { height: 40px; }
     .pin-greet {
       font-family: var(--serif);
       font-size: 22px; color: rgba(255,255,255,.78);
@@ -2157,7 +2306,7 @@
        =========================================================== */
     .clockin-screen {
       position: fixed; inset: 0;
-      background: linear-gradient(180deg, var(--ink) 0%, #102018 60%, #1F5D3C 100%);
+      background: linear-gradient(180deg, var(--ink-bg) 0%, #102018 60%, #1F5D3C 100%);
       z-index: 480;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 44px;
@@ -2181,12 +2330,8 @@
       100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
     }
     .clockin-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .clockin-brand {
-      font-size: 30px; font-weight: 700; letter-spacing: -0.05em;
-      display: inline-flex; align-items: baseline; gap: 5px;
-      color: var(--paper-cream);
-    }
-    .clockin-brand i { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; display: inline-block; }
+    .clockin-brand { display: inline-flex; align-items: center; }
+    .clockin-brand img { height: 36px; }
     .clockin-tagline { font-family: var(--serif); font-size: 15px; color: rgba(255,255,255,0.5); }
     .clockin-mid { display: flex; flex-direction: column; align-items: center; text-align: center; }
     .clockin-greet { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
@@ -2407,9 +2552,13 @@
     .stat-card--tap {
       cursor: pointer; text-align: left; width: 100%;
       position: relative;
-      transition: background 150ms;
+      transition: background 150ms, border-color 150ms, transform 150ms;
     }
-    .stat-card--tap:hover { background: rgba(255,255,255,0.09); }
+    .stat-card--tap:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.16);
+      transform: translateY(-1px);
+    }
     .stat-card-go {
       position: absolute; top: 11px; right: 11px;
       width: 13px; height: 13px; color: #8f9591;
@@ -2686,15 +2835,23 @@
     .team-trigger {
       display: flex; align-items: center; gap: 10px;
       padding: 11px 12px;
-      background: rgba(125,242,176,.10);
-      color: var(--mint);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #b5b9b6;
       border-radius: var(--r-lg);
-      font-size: 13px; font-weight: 600;
-      transition: background 150ms, color 150ms;
+      font-size: 13px; font-weight: 500;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: background 150ms, color 150ms, border-color 150ms, transform 150ms;
       text-align: left;
     }
-    .team-trigger:hover { background: rgba(125,242,176,.18); }
-    .team-trigger svg { width: 16px; height: 16px; flex: 0 0 16px; }
+    .team-trigger:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--paper-cream);
+      transform: translateY(-1px);
+    }
+    .team-trigger svg { width: 16px; height: 16px; flex: 0 0 16px; color: #8f9591; transition: color 150ms; }
+    .team-trigger:hover svg { color: var(--mint); }
     .team-trigger .count {
       margin-left: auto;
       background: var(--mint); color: var(--ink-bg);
@@ -2799,7 +2956,7 @@
       display: inline-flex; align-items: center; justify-content: center;
       transition: background 150ms, color 150ms;
     }
-    .team-btn:hover { background: #ECEAE5; color: var(--ink); }
+    .team-btn:hover { background: var(--wash); color: var(--ink); }
     .team-btn svg { width: 14px; height: 14px; }
     .team-btn.danger { background: rgba(184,82,69,.10); color: var(--danger-mute); }
     .team-btn.danger:hover { background: rgba(184,82,69,.18); }
@@ -2856,7 +3013,7 @@
       color: var(--ink-2); font-size: 12px; font-weight: 500;
       transition: background 150ms;
     }
-    .msg-quick button:hover { background: #ECEAE5; }
+    .msg-quick button:hover { background: var(--wash); }
 
     /* ===========================================================
        REASSIGN SERVER MODAL
@@ -3148,7 +3305,7 @@
       transition: background 140ms, transform 100ms;
       font-feature-settings: "tnum" 1;
     }
-    .mgr-key:hover { background: #ECEBE6; }
+    .mgr-key:hover { background: var(--cream); }
     .mgr-key:active { transform: scale(0.95); background: rgba(63,182,122,.16); }
     .mgr-key.is-spare {
       background: transparent;
@@ -3539,7 +3696,7 @@
       background: var(--paper-mute); color: var(--ink-2);
       transition: background 150ms, color 150ms;
     }
-    .pay-tip-chip:hover { background: #ECEAE5; }
+    .pay-tip-chip:hover { background: var(--wash); }
     .pay-tip-chip.is-active { background: var(--forest); color: #fff; }
     .pay-tip-custom { display: none; margin-top: 8px; }
     .pay-tip-custom.is-visible { display: block; }
@@ -3569,7 +3726,7 @@
     }
     .receipt-paper {
       width: 322px; max-width: calc(100vw - 48px);
-      background: #FBF9F2;         /* warm cream — never pure white */
+      background: var(--cream);         /* warm cream — never pure white */
       color: var(--ink);
       font-family: var(--mono);
       font-size: 12px; line-height: 1.55;
@@ -3950,7 +4107,7 @@
     .kit-type.takeaway { background: var(--mint-tint); color: var(--forest); }
     .kit-status { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
     .kit-order.is-new .kit-status { color: var(--forest); font-weight: 600; }
-    .kit-note { display: flex; gap: 7px; margin: 0 15px 13px; padding: 8px 11px; background: #FFF8E8; border: 1px solid #F0E2BE; border-radius: 9px; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+    .kit-note { display: flex; gap: 7px; margin: 0 15px 13px; padding: 8px 11px; background: var(--cream); border: 1px solid #F0E2BE; border-radius: 9px; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
     .kit-note svg { width: 13px; height: 13px; flex-shrink: 0; color: #B47A14; margin-top: 1px; }
     /* per-dish note shown under an item name on the kitchen ticket */
     .kit-inote { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; font-weight: 600; color: #B47A14; }
@@ -4151,7 +4308,7 @@
     .vrap-badge.p-unpaid { background: var(--paper-mute); color: var(--ink-3); }
     .vrap-badge.p-paid { background: rgba(63,182,122,0.16); color: var(--forest); }
     .vrap-order-items { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
-    .vrap-order-note { font-size: 11.5px; color: #8A6210; background: #FFF8E8; border-radius: 8px; padding: 5px 9px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+    .vrap-order-note { font-size: 11.5px; color: #8A6210; background: var(--cream); border-radius: 8px; padding: 5px 9px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
     .vrap-order-note svg { width: 12px; height: 12px; flex-shrink: 0; }
     .vrap-order-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
     .vrap-order-total { font-size: 15px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; }
@@ -4188,16 +4345,19 @@
      fixed logical plane scaled by CSS, so the room keeps its proportions at
      any width without a resize listener. */
   .cplan-zone { margin: 0 0 18px; }
+  /* Console noir permanent — même cadre charbon que le plan démo. */
   .cplan-room {
     position: relative;
     width: 100%; max-width: 880px; margin: 8px auto 0;
     container-type: inline-size;
-    border: 1.5px solid rgba(44,37,32,0.22); border-radius: 14px;
-    overflow: hidden; background: #FBF7EE;
+    border: 1.5px solid rgba(255,255,255,0.13); border-radius: 18px;
+    overflow: hidden; background: #040504;
+    box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
   }
   .cplan-scale { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-  .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; }
-  .pds-el { position: absolute; transform-origin: 50% 50%; }
+  /* Sol et mobilier peints en clair par floorplan-core → pénombre console. */
+  .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; filter: brightness(0.26) saturate(0.5); }
+  .pds-el { position: absolute; transform-origin: 50% 50%; filter: brightness(0.26) saturate(0.5); }
   .pds-el-fill { position: absolute; inset: 0; background-repeat: repeat; overflow: hidden; }
   .pds-el-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .pds-el-label {
@@ -4217,13 +4377,15 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     pointer-events: none; text-align: center;
   }
-  .cplan-num { font: 700 16px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing: -.01em; }
+  .cplan-num { font: 500 14px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing: .04em; }
   .cplan-cov { font: 400 10px/1 var(--mono, monospace); opacity: .6; margin-top: 3px; }
-  .cplan-tbl:active { filter: brightness(.97); }
+  .cplan-tbl { transition: filter 150ms ease; }
+  .cplan-tbl:hover { filter: brightness(1.25); }
+  .cplan-tbl:active { filter: brightness(1.1); }
   .cplan-urgent {
     position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
-    border-radius: 50%; background: #C0306E;
-    box-shadow: 0 0 0 3px rgba(192,48,110,.22);
+    border-radius: 50%; background: #FF7DA9;
+    box-shadow: 0 0 0 3px rgba(255,125,169,.22);
     animation: cplanPulse 1.4s ease-in-out infinite;
   }
   @keyframes cplanPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
@@ -4259,9 +4421,77 @@
   /* La sélection et le placement d'une file d'attente étaient stylés pour la
      seule `.tbl-cell` : sur un vrai plan, la table choisie ne se distinguait
      de rien. */
-  .cplan-tbl.is-selected { outline: 2px solid var(--forest, #1F5D3C); outline-offset: 2px; border-radius: 8px; }
+  .cplan-tbl.is-selected { outline: none; border-radius: 8px; box-shadow: 0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20); }
   body.is-seating .cplan-tbl.wl-seat-dim { opacity: .32; }
-  body.is-seating .cplan-tbl.wl-seat-free { outline: 3px solid var(--emerald, #3FB67A); outline-offset: 1px; border-radius: 8px; }
+  body.is-seating .cplan-tbl.wl-seat-free { outline: none; border-radius: 8px; box-shadow: 0 0 0 3px rgba(0,255,174,0.45); }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     * CAISSE 2026 — l'ADN cartes du dashboard (design-vexel.css, couche H).
+     * Arête 1px + levée d'1px au survol + ombre portée froide. Les contrôles
+     * (pilules, onglets, clavier) restent hors recette : la sélection y est
+     * portée par la lentille liquide, jamais par une carte. Le plan de salle
+     * garde sa propre langue (anneaux d'état) — voir la couche plan plus bas.
+     * ─────────────────────────────────────────────────────────────────────── */
+    :root {
+      --cx-card-border:        rgba(10,15,13,0.085);
+      --cx-card-border-hover:  rgba(10,15,13,0.18);
+      --cx-card-shadow:        0 18px 42px -32px rgba(10,15,13,0.34);
+      --cx-card-shadow-hover:  0 24px 54px -30px rgba(10,15,13,0.42);
+    }
+    html[data-caisse-theme="dark"] {
+      --cx-card-border:        rgba(255,255,255,0.10);
+      --cx-card-border-hover:  rgba(255,255,255,0.16);
+      --cx-card-shadow:        0 0 0 1px rgba(255,255,255,0.03), 0 18px 42px -32px rgba(0,0,0,0.8);
+      --cx-card-shadow-hover:  0 0 0 1px rgba(255,255,255,0.05), 0 0 40px -12px rgba(0,255,174,0.18);
+    }
+
+    /* Cartes de contenu : tuiles menu, cartes d'attente, stats, parts
+       d'addition, modales. L'élévation de caisse-skin.css (var(--elev-*))
+       reste maîtresse de l'ombre sur .menu-item ; l'arête vient d'ici. */
+    .menu-item, .wl-card, .split-part-card, .modal {
+      border: 1px solid var(--cx-card-border);
+    }
+    .wl-card, .split-part-card {
+      box-shadow: var(--cx-card-shadow);
+      transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 180ms ease, box-shadow 180ms ease;
+    }
+    .wl-card:hover, .split-part-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--cx-card-border-hover);
+      box-shadow: var(--cx-card-shadow-hover);
+    }
+    .menu-item:hover { border-color: var(--cx-card-border-hover); }
+
+    /* ── Nuit : corrections que le remap de jetons ne couvre pas ─────────── */
+    /* Le voile des modales s'assombrit comme sur le dashboard nuit. */
+    html[data-caisse-theme="dark"] .modal-veil { background: rgba(8,11,10,0.92); }
+    /* Le liseré lumineux « papier éclairé » de caisse-skin devient un fil
+       discret : un highlight blanc à 85 % éblouit sur charbon. */
+    html[data-caisse-theme="dark"] .menu-item-art {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    html[data-caisse-theme="dark"] .rightpanel { box-shadow: var(--elev-1); }
+    /* L'accueil plein écran garde son papier chaud en jour ; la nuit il
+       s'éteint sur charbon — l'encre remappée (claire) redevient lisible. */
+    html[data-caisse-theme="dark"] .kiwi-greet {
+      background: linear-gradient(160deg, #0C110E 0%, #0A0F0D 55%, #070B09 100%);
+    }
+    html[data-caisse-theme="dark"] .kiwi-greet h1 {
+      text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    html[data-caisse-theme="dark"] .kiwi-greet h1 em { color: var(--mint); }
+    /* Barres de défilement discrètes sur charbon. */
+    html[data-caisse-theme="dark"] ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.18);
+    }
+    html[data-caisse-theme="dark"] ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* Le plan de salle est une console noir permanent (langage éditeur du
+       dashboard) : ses styles vivent dans la couche plan de base, plus haut.
+       Aucune surcharge thème ici — la scène ne change pas avec le thème. */
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css" />
   <link rel="stylesheet" href="assets/pos-mobile.css" />
@@ -4344,7 +4574,7 @@
 <body>
   <!-- ============ PIN LOGIN SCREEN ============ -->
   <div class="pin-screen" id="pin-screen" role="dialog" aria-modal="true" aria-label="Code d'accès">
-    <div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+    <div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-logo-dark.svg" alt="" draggable="false"></div>
     <div class="pin-greet">Sba7 lkhir, <b>Othmane</b></div>
     <div class="pin-prompt">CODE D'ACCÈS · 4 CHIFFRES</div>
     <div class="pin-dots" id="pin-dots" aria-hidden="true">
@@ -4380,7 +4610,7 @@
   <!-- ============ CLOCK-IN SCREEN (post-PIN — ouverture de caisse) ============ -->
   <div class="clockin-screen" id="clockin-screen" aria-hidden="true">
     <div class="clockin-top">
-      <div class="clockin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+      <div class="clockin-brand" aria-label="Kiwi"><img src="assets/kiwi-logo-dark.svg" alt="" draggable="false"></div>
       <div class="clockin-tagline">— version commerçant</div>
     </div>
     <div class="clockin-mid">
@@ -4516,7 +4746,7 @@
     <div class="kw-scrim" data-action="toggle-nav" aria-hidden="true"></div>
     <aside class="sidebar" aria-label="Caisse">
       <div class="brand-row">
-        <div class="brand-mark" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+        <div class="brand-mark" aria-label="Kiwi"><img src="assets/kiwi-logo-dark.svg" alt="" draggable="false"></div>
         <div class="duty-row">
           <span class="duty-dot" aria-hidden="true"></span>
           <span>3la khidma</span>
@@ -4580,25 +4810,34 @@
         </div>
       </div>
 
-      <button class="team-trigger" id="open-team" aria-label="Équipe">
-        <i data-lucide="users"></i>
-        <span>Équipe</span>
-        <span class="count" id="team-count">3</span>
-      </button>
+      <div class="rail-links" aria-label="Espaces de travail">
+        <button class="team-trigger" id="open-team" aria-label="Équipe">
+          <i data-lucide="users"></i>
+          <span>Équipe</span>
+          <span class="count" id="team-count">3</span>
+        </button>
 
-      <button class="team-trigger" id="open-kds" aria-label="Écran cuisine">
-        <i data-lucide="chef-hat"></i>
-        <span>Écran cuisine</span>
-        <span class="count" id="kds-count">0</span>
-      </button>
+        <button class="team-trigger" id="open-kds" aria-label="Écran cuisine">
+          <i data-lucide="chef-hat"></i>
+          <span>Écran cuisine</span>
+          <span class="count" id="kds-count">0</span>
+        </button>
 
-      <button class="team-trigger" id="open-stock" aria-label="Stock et approvisionnement">
-        <i data-lucide="boxes"></i>
-        <span>Stock</span>
-        <span class="count" id="stock-alert-count">0</span>
-      </button>
+        <button class="team-trigger" id="open-stock" aria-label="Stock et approvisionnement">
+          <i data-lucide="boxes"></i>
+          <span>Stock</span>
+          <span class="count" id="stock-alert-count">0</span>
+        </button>
+      </div>
 
       <div class="quick-actions" aria-label="Fin de service">
+        <!-- Mode nuit — même stage charbon que le dashboard 2026. Icône et
+             libellé repeints par le script de thème dans <head>. -->
+        <button id="theme-toggle" type="button" class="qa-btn ghost" title="Basculer le mode nuit" aria-label="Basculer le mode nuit" aria-pressed="false">
+          <svg id="th-ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg id="th-ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <span>Mode nuit</span>
+        </button>
         <!-- Plein écran (kiosque) — déplacé ici depuis l'ancien bandeau haut, masqué.
              Même #fs-toggle + icônes : le script existant le pilote (init différée au
              DOM prêt puisque le bouton vit maintenant plus bas dans la page). -->
@@ -4641,11 +4880,11 @@
           </div>
         </div>
         <div class="legend" aria-label="Légende">
-          <div class="legend-item"><span class="legend-swatch" style="background:#F4F4F2; border:1px solid #E5E5E5;"></span><span>Khawya</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#FBF1DC; border:1px solid #E3C77E;"></span><span>À commander</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#EBF5F0; border:1px solid #C5E0D3;"></span><span>Ka-yaklo</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#1F5D3C;"></span><span>Addition</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:var(--surface); border:2px solid #3FB67A;"></span><span>Khlass</span></div>
+          <div class="legend-item"><span class="legend-swatch st-khawya"></span><span>Khawya</span></div>
+          <div class="legend-item"><span class="legend-swatch st-acmd"></span><span>À commander</span></div>
+          <div class="legend-item"><span class="legend-swatch st-yaklo"></span><span>Ka-yaklo</span></div>
+          <div class="legend-item"><span class="legend-swatch st-bill"></span><span>Addition</span></div>
+          <div class="legend-item"><span class="legend-swatch st-khlass"></span><span>Khlass</span></div>
         </div>
       </div>
 
@@ -5095,7 +5334,7 @@
       </button>
       <!-- empty state -->
       <div class="rp-empty" id="rp-empty">
-        <div class="wordmark" aria-hidden="true">kiwi<span class="dot">.</span></div>
+        <div class="wordmark" aria-hidden="true"><img class="logo-light" src="assets/kiwi-logo.svg" alt="" draggable="false"><img class="logo-dark" src="assets/kiwi-logo-dark.svg" alt="" draggable="false"></div>
         <p id="rp-empty-text">Ktar 3la tabla bach tshuf l'addition.</p>
       </div>
 
@@ -6426,14 +6665,41 @@
 
     /* Service statuses are not design statuses, so the ring is mapped here
        rather than reused from the core: the owner cares about free/reserved,
-       the floor cares about who has ordered and who wants the bill. */
-    const CAISSE_RING = {
-      'khawya':       { s: '#B9B2A4', w: 1.4, dash: '' },
-      'a-commander':  { s: '#C99A2B', w: 2.6, dash: '' },
-      'ka-yaklo':     { s: '#0B6E4F', w: 2.6, dash: '' },
-      'bgha-ykhlass': { s: '#C0306E', w: 3.0, dash: '' },
-      'khlass':       { s: '#6A7A88', w: 2.4, dash: '5 4' },
+       the floor cares about who has ordered and who wants the bill. The two
+       maps speak the dashboard's plan-de-salle language (pages-pro.js,
+       PDS_STATUS_RING_JOUR/NOIR): a quiet neutral ring for free, a full-value
+       accent for the states that demand action, the paid table receding into
+       a fine dashed outline. bgha-ykhlass keeps its caisse-only rose — the
+       dashboard has no "wants the bill" state to borrow from. */
+    const CAISSE_RING_NOIR = {
+      'khawya':       { s: 'rgba(255,255,255,0.30)', w: 1.4, dash: '' },
+      'a-commander':  { s: '#E8C067',                w: 2.6, dash: '' },
+      'ka-yaklo':     { s: '#00FFAE',                w: 2.6, dash: '' },
+      'bgha-ykhlass': { s: '#FF7DA9',                w: 3.0, dash: '' },
+      'khlass':       { s: 'rgba(255,255,255,0.40)', w: 2.4, dash: '1.5 3.5' },
     };
+    /* La scène du plan est un noir permanent (console éditeur du dashboard) :
+       les anneaux nuit servent dans les deux thèmes de la caisse. */
+    function caisseRing(status) {
+      return CAISSE_RING_NOIR[status] || CAISSE_RING_NOIR.khawya;
+    }
+    /* Nuit : les matières du plan (noyer, sable, laiton) s'éteignent vers le
+       charbon en gardant 18 % de leur teinte — le même pdsNoirC que le
+       dashboard (pages-pro.js), recopié ici parce que floorplan-core ne
+       l'exporte pas. L'encre et le ton des chaises suivent tout seuls :
+       pdsInk/pdsChairTone lisent la luminance de la couleur aplatie. */
+    function caisseNoirC(hex, keep) {
+      const k = keep == null ? 0.18 : keep;
+      const h = String(hex || '#FBF7EE').replace('#', '');
+      const n = h.length === 3 ? h.split('').map(ch => ch + ch).join('') : h;
+      if (!/^[0-9a-fA-F]{6}$/.test(n)) return hex;
+      const base = [4, 5, 4];
+      const out = [0, 2, 4].map((i, j) => {
+        const c = parseInt(n.slice(i, i + 2), 16);
+        return Math.round(base[j] + (c - base[j]) * k);
+      });
+      return '#' + out.map(v => v.toString(16).padStart(2, '0')).join('');
+    }
 
     /* ═══════════════════════════════════════════════════════════════════════
        LE TÉLÉPHONE DU CLIENT, SUR LE PLAN DE SALLE
@@ -6525,8 +6791,11 @@
       const PAD = C.PAD;
       const id = String(t.num || t.id);
       const live = tables[id] || {};
-      const g = C.geom(t), c = C.color(t);
-      const ring = CAISSE_RING[live.status] || CAISSE_RING.khawya;
+      const g = C.geom(t);
+      /* Scène noir permanent : les matières s'éteignent façon pdsNoirC
+         quel que soit le thème de la caisse. */
+      const c = caisseNoirC(C.color(t));
+      const ring = caisseRing(live.status);
       const covers = live.covers != null ? live.covers : g.seats;
       const urgent = live.status === 'bgha-ykhlass'
         ? '<span class="cplan-urgent" aria-hidden="true"></span>' : '';
@@ -6613,6 +6882,14 @@
       host.innerHTML = html;
       if (window.lucide) lucide.createIcons();
     }
+
+    /* Les tables du plan réel cuisent leurs couleurs (matières aplaties,
+       anneaux d'état) dans le SVG au moment du rendu — un changement de thème
+       doit donc repeindre, le remap CSS ne suffit pas. La grille démo, elle,
+       est entièrement pilotée par data-status + jetons : rien à refaire. */
+    document.addEventListener('kiwi:caisse-theme', () => {
+      if (storeIsReal()) renderRealGrid();
+    });
 
     // Read the plan, (re)build `tables` from it (status reset to empty), then paint.
     // Called on load, when pairing resolves, and when the dashboard saves a design.
