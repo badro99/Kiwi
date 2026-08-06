@@ -11319,7 +11319,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-history-row .pr { font-family: var(--mono); font-weight: 600; text-align: right; font-feature-settings: "tnum" 1; }
     .sc-history-row .pra { font-size: 11.5px; color: var(--n-500); }
 
-    .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), var(--inverse-line)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), #15201A); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
     .sc-gift::after { content: ""; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; background: radial-gradient(circle, var(--mint), transparent 60%); opacity: 0.18; pointer-events: none; }
     .sc-gift .l { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--mint); }
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
