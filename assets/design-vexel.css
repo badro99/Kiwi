@@ -1,0 +1,4630 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * KIWI · SKIN "VEXEL"
+ *
+ * Layer A contains geometry and component rules shared by both climates.
+ * Every colour in those rules is indirected through a custom property.
+ * Layers B and C, at the end of the file, are the only colour sources.
+ * The skin remains inert until the controller adds body.design-vexel.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── LAYER A · SHAPE (mode-independent; no colour literals) ─────────────── */
+body.design-vexel {
+  --r-lg: 22px;
+  --r-xl: 22px;
+  --r-2xl: 26px;
+  --vx-gap: 16px;
+
+  /* Display tracking is a constant on the marketing site, not a per-size
+   * judgement call. Held as a token so the three display tiers (range label,
+   * KPI value, block head) cannot drift apart later. Applied in Layer D.
+   *
+   * NOT --vx-track: that name is already a rail colour in Layers B and C, and
+   * those layers come later in the file — a letter-spacing reading it would be
+   * handed an rgba(), go invalid at computed-value time, and silently fall
+   * back to the inherited tracking. Which is what happened. */
+  --vx-display-track: -0.06em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 2 · THE PAGE
+ * The warm four-blob ambient system in dashboard.html's inline <style> is the
+ * light theme's signature and it is exactly wrong here — it paints cream and
+ * amber over black. Replace it wholesale with the mockup's backdrop: black,
+ * with the WebGL dome's glow rising from the bottom.
+ *
+ * !important because the rules being replaced are in an inline <style> that
+ * also uses it; this file cannot out-specify that with ordering alone.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel {
+  background-color: var(--vx-page) !important;
+  background-image:
+    radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
+    radial-gradient(60% 45% at 8% 100%, var(--vx-dome-side), var(--vx-transparent) 72%),
+    radial-gradient(55% 40% at 96% 92%, var(--vx-active-bg), var(--vx-transparent) 70%),
+    radial-gradient(70% 50% at 50% -10%, var(--vx-dome-top), var(--vx-transparent) 68%) !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  background-size: 100% 100% !important;
+  color: var(--ink) !important;
+  /* The ambient-drift keyframes animate background-position on a gradient set
+   * this file has replaced; letting it keep running slides the new dome. */
+  animation: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 3 · CARDS
+ * One rule carries most of the look. Kept as a list rather than a wildcard:
+ * a `[class*="card"]` sweep would also catch the payment-card glyphs, the
+ * loyalty stamp cards and the floor-plan tiles, which are artwork, not chrome.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .card,
+body.design-vexel .block,
+body.design-vexel .kpi-m,
+body.design-vexel .kpi-c,
+body.design-vexel .kp,
+body.design-vexel .integ-card,
+body.design-vexel .tx-big,
+body.design-vexel .feed-row,
+body.design-vexel .testi-card,
+body.design-vexel .settle,
+body.design-vexel .timeline-day,
+body.design-vexel .prod.paper {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: none;
+}
+
+/* Hover lifts with light, not with elevation — the border brightens and a low
+ * mint bloom comes up under the card. */
+body.design-vexel .card:hover,
+body.design-vexel .kpi-m:hover,
+body.design-vexel .integ-card:hover,
+body.design-vexel .feed-row:hover {
+  border-color: var(--vx-card-hover-border);
+  box-shadow: 0 0 40px -14px var(--vx-accent-22);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 4 · THE HERO CARD
+ * `.hero-today` is the deep Atlas-green slab at the top of the page. In the
+ * mockup its equivalent is the same glass as everything else — the headline
+ * number carries the emphasis, not a coloured ground.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .hero-today {
+  background: var(--vx-hero-bg);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: var(--ink);
+}
+/* Both pseudo-elements have to go, not just one. ::after is design-2026's
+ * mix-blend sheen, which over black reads as a grey wash across the headline
+ * figure. ::before is the card's own mint radial glow — sized for a deep-green
+ * slab, and on black glass it blooms straight through the figure sitting on
+ * top of it. Killing only ::after leaves the louder of the two. */
+body.design-vexel .hero-today::after,
+body.design-vexel .hero-today::before { content: none; }
+
+body.design-vexel .hero-today .g-fill,
+body.design-vexel .goal-bar .g-fill { background: var(--mint); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 5 · SIDEBAR + TOPBAR
+ * Both are their own dark slab in the product. In the mockup the sidebar is
+ * flush with the page — no seam, just a hairline — and the topbar floats.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .sidebar {
+  --ink: var(--vx-sidebar-ink);
+  --ink-soft: var(--vx-sidebar-ink);
+  --n-700: var(--vx-sidebar-ink);
+  --n-600: var(--vx-sidebar-muted);
+  --n-500: var(--vx-sidebar-muted);
+  --n-400: var(--vx-sidebar-ghost);
+  --n-300: var(--vx-sidebar-border);
+  --n-200: var(--vx-sidebar-border);
+  --n-100: var(--vx-sidebar-hover);
+  --mint: var(--vx-sidebar-accent);
+  --atlas: var(--vx-sidebar-accent-deep);
+  background: var(--vx-sidebar-bg);
+  border-right: 1px solid var(--vx-sidebar-border);
+  color: var(--vx-sidebar-ink);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+body.design-vexel .sidebar .brand { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .brand i { background: var(--vx-sidebar-accent); }
+
+/* Nav rows: the active one is a mint-tinted pill, the rest are dim until
+ * hovered. Matches NAV_MAIN's `active` treatment in the mockup. */
+body.design-vexel .sidebar a,
+body.design-vexel .sidebar .nav-item { color: var(--vx-sidebar-muted); }
+body.design-vexel .sidebar a:hover,
+body.design-vexel .sidebar .nav-item:hover {
+  color: var(--vx-sidebar-ink);
+  background: var(--vx-sidebar-hover);
+}
+body.design-vexel .sidebar a.active,
+body.design-vexel .sidebar .nav-item.active,
+body.design-vexel .sidebar a[aria-current="page"] {
+  color: var(--vx-sidebar-accent);
+  background: var(--vx-sidebar-active);
+  border-color: var(--vx-sidebar-accent-border);
+}
+body.design-vexel .sidebar .sect,
+body.design-vexel .sidebar .group-label {
+  color: var(--vx-sidebar-ghost);
+  letter-spacing: 0.14em;
+}
+
+body.design-vexel .topbar {
+  background: var(--vx-shell-bg);
+  border-bottom: 1px solid var(--n-200);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+body.design-vexel .topbar-inner { color: var(--n-500); }
+body.design-vexel .breadcrumb b { color: var(--ink); }
+
+/* The venue switcher sits in the sidebar as its own inset card. */
+body.design-vexel .loc-switch {
+  background: var(--vx-sidebar-surface);
+  border: 1px solid var(--vx-sidebar-border);
+  border-radius: 16px;
+}
+body.design-vexel .loc-switch:hover,
+body.design-vexel .loc-switch.open { background: var(--vx-sidebar-hover); }
+body.design-vexel .loc-switch .name { color: var(--vx-sidebar-ink); }
+body.design-vexel .loc-switch .meta { color: var(--vx-sidebar-muted); }
+body.design-vexel .loc-switch .badge { color: var(--vx-sidebar-accent); }
+
+/* The sidebar remains the composition's dark anchor in both modes. Its venue
+ * popover and account chrome therefore consume the panel's own foreground
+ * pair, never the page-mode paper/ink pair. */
+body.design-vexel .sidebar .venue-dropdown {
+  background: var(--vx-sidebar-popover);
+  border-color: var(--vx-sidebar-border);
+  color: var(--vx-sidebar-ink);
+}
+body.design-vexel .sidebar :is(.venue-row:hover, .venue-row.active) {
+  background: var(--vx-sidebar-hover);
+}
+body.design-vexel .sidebar .venue-row-name { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .venue-row-type { color: var(--vx-sidebar-muted); }
+body.design-vexel .sidebar .venue-action.fusion-cta {
+  background-color: var(--vx-sidebar-accent-deep);
+  color: var(--vx-sidebar-ink);
+}
+body.design-vexel .sidebar .venue-action.fusion-cta .va-title { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar .upsell {
+  background: var(--vx-sidebar-surface);
+  border-color: var(--vx-sidebar-accent-border);
+}
+body.design-vexel .sidebar .upsell .t,
+body.design-vexel .sidebar .loc-ultra { color: var(--vx-sidebar-accent); }
+body.design-vexel .sidebar .upsell h4,
+body.design-vexel .sidebar .m-info .n { color: var(--vx-sidebar-ink); }
+body.design-vexel .sidebar :is(.upsell p, .upsell .us-line, .upsell .us-manage, .m-info .r, .m-caret) {
+  color: var(--vx-sidebar-muted);
+}
+body.design-vexel .sidebar .upsell button {
+  background: var(--vx-sidebar-accent);
+  color: var(--vx-sidebar-primary-ink);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 6 · CONTROLS
+ * Pills, icon buttons, search. All the same glass, all hairline-bordered.
+ * ───────────────────────────────────────────────────────────────────────── */
+/* `.chip` is deliberately NOT blanket-styled. Status chips carry meaning in
+ * their fill — theme.css:207-209 gives .ok/.pend/.ref their green, amber and
+ * red on dark — and a flat `!important` here outranks all three, so every
+ * status collapsed to the same neutral grey. Only the plain chips are
+ * neutralised; the semantic ones keep the colour that IS their content.
+ *
+ * `.seg` is likewise excluded: it is the payment donut's segment class, not a
+ * segmented-control class, so styling it here reached into the chart. */
+body.design-vexel .pill,
+body.design-vexel .icon-btn,
+body.design-vexel .btn-slim,
+body.design-vexel .search,
+body.design-vexel .search-big,
+body.design-vexel .kf-input,
+body.design-vexel .chip:not(.ok):not(.pend):not(.ref):not(.warn):not(.danger) {
+  background: var(--paper-muted);
+  border: 1px solid var(--n-200);
+  color: var(--n-600);
+}
+body.design-vexel .pill:hover,
+body.design-vexel .icon-btn:hover,
+body.design-vexel .btn-slim:hover,
+body.design-vexel .chip:not(.ok):not(.pend):not(.ref):not(.warn):not(.danger):hover {
+  border-color: var(--vx-control-border-hover);
+  color: var(--ink);
+}
+
+/* The selected date-range pill. The liquid-lens highlight rides behind these,
+ * so the ON state is the lens fill, not a per-pill background. */
+body.design-vexel .pill.on,
+body.design-vexel .pill[aria-selected="true"],
+body.design-vexel [data-on="true"] {
+  background: var(--vx-active-bg-strong);
+  border-color: var(--vx-accent-22);
+  color: var(--ink);
+}
+body.design-vexel .kw-lens,
+body.design-vexel .lens {
+  background: var(--mint-soft);
+  border: 1px solid var(--vx-accent-22);
+}
+
+/* Primary action. The mockup's "Générer le rapport" is a mint pill that glows
+ * — the one place on the page with real light in it. */
+body.design-vexel .btn-primary,
+body.design-vexel .btn-slim.primary,
+body.design-vexel .kb.primary,
+body.design-vexel [data-action="generate-report"] {
+  background: var(--mint);
+  color: var(--vx-primary-ink);
+  border-color: var(--vx-transparent);
+  font-weight: 600;
+  box-shadow: 0 0 28px -6px var(--vx-primary-shadow-color-strong);
+}
+body.design-vexel .btn-primary:hover,
+body.design-vexel .btn-slim.primary:hover {
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 7 · DATA
+ * Charts, rings and sparklines already stroke with var(--mint) / var(--atlas),
+ * so the token block above moved most of them. These are the ones that
+ * hardcode, plus the readouts whose weight the mockup changes.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* Two nodes set `color: var(--ink)` as a literal instead of taking var(--ink),
+ * so the token flip left them black-on-black — the "47 couverts" headline was
+ * not dim, it was invisible, and the selected date-range pill's label was
+ * unreadable against the lens fill. Their child spans looked fine because
+ * dark-fixes.js had already patched those; it is the bare text nodes on the
+ * parents that had no owner. Found by walking every text-bearing element and
+ * comparing its computed colour against its first opaque ancestor, rather than
+ * by reading the page — at a glance the 47 simply looks like data that has not
+ * loaded yet. */
+body.design-vexel .big,
+body.design-vexel .dr-pill.on,
+body.design-vexel .dr-pill[aria-selected="true"] { color: var(--ink); }
+
+/* Big figures run LIGHT in the mockup, not semibold — at 32-56px a 600 weight
+ * on white over black blooms and loses its counters. */
+body.design-vexel .kpi-m .v,
+body.design-vexel .kpi-c .v,
+body.design-vexel .hero-today .big,
+body.design-vexel .big-num,
+body.design-vexel .stat-v {
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+/* Grid lines and axes: barely there. */
+body.design-vexel .grid line,
+body.design-vexel .axis line,
+body.design-vexel .axis path,
+body.design-vexel .chart-grid line { stroke: var(--n-200); }
+body.design-vexel .axis text,
+body.design-vexel .chart-axis text,
+body.design-vexel .tick text { fill: var(--n-400); }
+
+/* Revenue curve: mint stroke over a mint-to-nothing fill. */
+body.design-vexel .rev-line { stroke: var(--mint); }
+body.design-vexel .rev-cmp { stroke: var(--vx-chart-compare); }
+body.design-vexel .rev-area { fill: url(#kwVexelArea); }
+body.design-vexel .rev-line-halo { stroke: var(--vx-accent-25); }
+
+/* Tooltips are a solid dark card, not glass — they have to stay readable when
+ * they land over the brightest part of the curve. */
+body.design-vexel .tip,
+body.design-vexel .tooltip,
+body.design-vexel .chart-tip,
+body.design-vexel .hh-tooltip {
+  background: var(--vx-tooltip-bg);
+  border: 1px solid var(--vx-border-strong);
+  border-radius: 14px;
+  color: var(--ink);
+  box-shadow: 0 18px 40px -20px var(--vx-shadow-heavy);
+}
+
+/* Donut rings — the mockup's three: mint, deep, amber, on a faint track.
+ *
+ * The payment-mix donut is the one widget on the page that does NOT read from
+ * tokens: its track and four segments are hardcoded hex (var(--n-200), var(--atlas),
+ * var(--vx-accent-mid), var(--vx-mint-fill), var(--warning)), so the token block above cannot reach it. On
+ * black the cream track was the brightest ring in the card — a bezel around
+ * the data rather than a backdrop for it.
+ *
+ * Addressed through the `data-seg="0..3"` hooks dateRange.js already emits on
+ * each segment. An earlier pass used `:nth-of-type(2..5)` on the circles, which
+ * worked but bound the palette to DOM order — re-ordering the legend, or the
+ * widget ever drawing the track last, would silently shuffle the colours. */
+body.design-vexel [data-mix-donut] .track,
+body.design-vexel .ring-track { stroke: var(--n-200); }
+body.design-vexel [data-mix-donut] [data-seg="0"] { stroke: var(--vx-accent); }
+body.design-vexel [data-mix-donut] [data-seg="1"] { stroke: var(--vx-accent-deep); }
+body.design-vexel [data-mix-donut] [data-seg="2"] { stroke: var(--vx-accent-mid); }
+body.design-vexel [data-mix-donut] [data-seg="3"] { stroke: var(--warning); }
+
+/* Kiwi ring chart · one quiet progress arc, a clear percentage, and the
+ * business value grounded beneath it. Reuse these classes for compact shares,
+ * completion, health and channel cards instead of segmented doughnuts. */
+body.design-vexel .kiwi-ring-stat {
+  --kiwi-ring-size: 128px;
+  display: grid;
+  justify-items: center;
+  flex: 0 0 var(--kiwi-ring-size);
+  gap: 7px;
+}
+
+body.design-vexel .kiwi-ring-visual {
+  position: relative;
+  width: var(--kiwi-ring-size);
+  height: var(--kiwi-ring-size);
+}
+
+body.design-vexel .kiwi-ring {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+body.design-vexel .kiwi-ring-track,
+body.design-vexel .kiwi-ring-value {
+  fill: none;
+  /* Même graisse à l'écran que les quatre anneaux de Ventes par canal (8,8 px)
+   * — cet anneau-ci était le seul épais du tableau de bord, à 12,8 px. Le
+   * repère est en unités de viewBox : 8,8 px sur 128 px d'affichage pour une
+   * boîte de 42, soit 8,8 × 42 / 128. Si `--kiwi-ring-size` change un jour,
+   * c'est ce calcul qu'il faut refaire, pas ce nombre qu'il faut deviner. */
+  stroke-width: 2.89;
+}
+
+body.design-vexel .kiwi-ring-track { stroke: var(--n-200); }
+
+body.design-vexel .kiwi-ring-value {
+  stroke: var(--vx-accent-deep);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 760ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.design-vexel .kiwi-ring-visual .ring-center .score {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -.045em;
+}
+
+body.design-vexel .kiwi-ring-meta {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+body.design-vexel .kiwi-ring-amount {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -.04em;
+  white-space: nowrap;
+}
+
+body.design-vexel .kiwi-ring-meta .slash {
+  color: var(--n-500);
+  font-family: inherit;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* The light theme's amber (var(--warning)) is a print amber — on black it goes
+ * muddy brown. The mockup's is var(--warning). These are the nodes that set it as a
+ * literal rather than through --warning. */
+body.design-vexel .av.c,
+body.design-vexel .dot.warn,
+body.design-vexel [style*="D99A2B"] { background-color: var(--warning) !important; }
+
+/* The peer/benchmark bar sat at 58% white — brighter than the merchant's own
+ * bar beside it, which inverted the comparison it exists to make. */
+body.design-vexel .peer { background: var(--vx-peer); }
+
+/* Deltas. Up is mint, down is the mockup's coral — never the light theme's
+ * brick red, which goes muddy on black. */
+body.design-vexel .up, body.design-vexel .delta.up, body.design-vexel .pos { color: var(--mint); }
+body.design-vexel .down, body.design-vexel .delta.down, body.design-vexel .neg { color: var(--danger); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 8 · OVERLAYS
+ * Modals, drawers and toasts inherit theme.css's dark treatment; they only
+ * need the glass geometry and the black ground.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .kiwi-modal,
+body.design-vexel .kiwi-drawer,
+body.design-vexel .ai-drawer,
+body.design-vexel .kiwi-menu,
+body.design-vexel .venue-dropdown {
+  background: var(--vx-overlay-bg);
+  border: 1px solid var(--vx-track);
+  border-radius: 22px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+body.design-vexel .kiwi-toast {
+  background: var(--vx-toast-bg);
+  border: 1px solid var(--vx-border-strong);
+  color: var(--ink);
+}
+
+/* The Kiwi AI pill in the topbar is the mockup's one dark-on-dark control,
+ * ringed in mint rather than filled. The class is `.ai-btn` and the action is
+ * `open-assistant`; an earlier pass guessed `.ai-pill` / `open-agent` from the
+ * mockup's naming and matched nothing at all. */
+body.design-vexel .ai-btn,
+body.design-vexel [data-action="open-assistant"] {
+  background: #04241A !important;
+  border: 1px solid var(--vx-accent-28);
+  color: var(--paper);
+  box-shadow: 0 10px 24px -18px rgba(10, 15, 13, 0.72);
+}
+
+body.design-vexel .ai-btn .ai-btn-ico {
+  color: var(--vx-mint-fill);
+  background: rgba(125, 242, 176, 0.12);
+  box-shadow: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 9 · STAND-DOWNS
+ * design-2026 and design-ios27 both paint their own glass. Two glass systems
+ * stacked read as fog, so where they overlap this skin wins.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel.design-2026 .card::before,
+body.design-vexel.design-2026 .block::before,
+body.design-vexel.design-ios27 .card::before { content: none; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 10 · HOME COMPOSITION
+ * The marketing surface is a fixed 1600px canvas.  The product's useful
+ * column is about 88% of its main-canvas width at 1440px, so the measurements
+ * below are the source values scaled to 0.88 instead of copied literally.
+ * design-vexel-layout.js only gathers existing live widgets into these rows;
+ * every selector remains inert without body.design-vexel.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel #kw-main > .container {
+  padding: 28px 32px 80px;
+}
+
+body.design-vexel .vexel-compose {
+  --vx-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Header row: the range label remains the real dateRange.js render target. */
+body.design-vexel .vexel-compose > .dash-date-range {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-height: 56px;
+  margin: 0 0 25px !important;
+}
+body.design-vexel .vexel-compose .dash-date-range > div:first-child {
+  flex: none;
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(32px, 3vw, 39px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-sub { display: none; }
+body.design-vexel .vexel-report-btn {
+  margin-inline-start: 12px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 23px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-report-shadow);
+  font: 600 16px/1 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.design-vexel .vexel-report-btn svg { width: 16px; height: 16px; flex: none; }
+body.design-vexel .vexel-report-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+body.design-vexel .vexel-compose .dash-date-range .dr-control {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+body.design-vexel .vexel-compose .dash-date-range .dr-pills { flex-wrap: nowrap; }
+
+/* tokens.css:146 sets `section { padding: 96px 0 }` — landing-page rhythm on a
+ * bare element selector, so it reaches every <section> in the app. The compose
+ * children are app chrome, not marketing bands: .vexel-kpi-section was carrying
+ * 192px of dead vertical space around a 129px card, which pushed the revenue
+ * chart most of a screen down. Reset it here rather than renaming the tag, and
+ * scope it to the compose children so any <section> added later is born clean.
+ * Cards further in (.vexel-rail-card, .vexel-goals-card) set their own padding
+ * and already win on specificity — this rule deliberately does not reach them. */
+body.design-vexel .vexel-compose > section {
+  padding-block: 0;
+}
+
+/* KPI band: dateRange.js still owns and rebuilds the cards.  The adapter adds
+ * only the baseline/comparison wrappers after every rebuild. */
+body.design-vexel .vexel-kpi-section {
+  position: relative;
+  margin: 0 0 var(--vx-gap);
+}
+/* Kept in flow. It used to be absolutely positioned at top:14px, which only
+ * looked deliberate because the leaked `section` padding above left 96px of
+ * empty room to float in. With that gone the button landed on top of the last
+ * KPI card, so it now sits in its own right-aligned strip — one line of height
+ * instead of ninety-six, and it no longer overlaps anything at any width. */
+body.design-vexel .vexel-kpi-section > .kpi-band-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 0 10px;
+}
+/* The band is a grid, not a surface. design-2026 lists `.kpi-band` in its glass
+ * card set alongside `.kpi-m`, so the container got the same fill, edge and
+ * green glow as the four cards sitting on top of it — glass inside glass. The
+ * cards are opaque, so all that showed of the wrapper was a pale vertical strip
+ * in each 18px gutter and a halo around the row. Strip it back to layout. */
+body.design-vexel .vexel-kpi-section > [data-kpi-band] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--vx-gap);
+  margin: 0;
+  background: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m {
+  min-width: 0;
+  min-height: 126px;
+  padding: 19px 21px;
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+/* The mockup band contains four KPIs; configurable overflow tiles remain in
+ * the DOM and return untouched with the skin off. */
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(n+5) {
+  display: none;
+}
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
+  padding-inline-end: 120px;
+}
+body.design-vexel .vexel-compose .kpi-m > .l {
+  display: block;
+  overflow: hidden;
+  color: var(--n-500);
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+body.design-vexel .vexel-compose .kpi-m > .l .ico,
+body.design-vexel .vexel-compose .kpi-m > .sp { display: none; }
+body.design-vexel .vexel-kpi-baseline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+}
+body.design-vexel .vexel-compose .kpi-m .v {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(27px, 2.35vw, 33.5px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-compose .kpi-m .v .u {
+  margin-inline-start: 5px;
+  color: var(--n-400);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+body.design-vexel .vexel-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  margin-top: 0;
+  flex: none;
+  color: var(--vx-accent);
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+body.design-vexel .vexel-kpi-delta.down { color: var(--danger); }
+body.design-vexel .vexel-kpi-comparison {
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--vx-text-ghost);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Revenue row */
+body.design-vexel .vexel-revenue-row {
+  display: flex !important;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  height: 331px !important;
+  gap: var(--vx-gap);
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-revenue-row > .hero-today {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  margin: 0 !important;
+  padding: 21px 25px !important;
+  border: 1px solid var(--n-200) !important;
+  border-radius: 22px !important;
+  background: var(--surface) !important;
+  color: var(--ink);
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+body.design-vexel .vexel-revenue-row .hero-grid {
+  display: block !important;
+  height: 100%;
+}
+body.design-vexel .vexel-revenue-row .hero-left {
+  display: block;
+  height: 100%;
+}
+body.design-vexel .vexel-revenue-row .hero-left-today,
+body.design-vexel .vexel-revenue-row .hero-right,
+body.design-vexel .vexel-revenue-row .hero-view-toggle {
+  display: none !important;
+  visibility: hidden !important;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart > .block-head {
+  display: block;
+  margin: 0 0 11px;
+}
+body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t {
+  display: block;
+  color: var(--ink);
+  font-size: 18.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+body.design-vexel .vexel-revenue-row [data-rev-range-badge],
+body.design-vexel .vexel-revenue-row .rev-hero-val,
+body.design-vexel .vexel-revenue-row .rev-hero-delta,
+body.design-vexel .vexel-revenue-row [data-rev-sub],
+body.design-vexel .vexel-revenue-row [data-rev-compare-caption],
+body.design-vexel .vexel-revenue-row .block-head .right-actions,
+body.design-vexel .vexel-revenue-row .chart-legend { display: none !important; }
+/* inset-inline-end was 0, which butted "Comparaison" flush against the card's
+ * own overflow:hidden boundary and shaved the last glyph — it read as truncated
+ * copy even though the DOM text was complete (scrollWidth === clientWidth).
+ * The inset matches the card's internal padding rhythm. */
+body.design-vexel .vexel-revenue-legend {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  inset-inline-end: 21px;
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  color: var(--n-500);
+  font-size: 14px;
+  line-height: 1;
+}
+body.design-vexel .vexel-revenue-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-revenue-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vx-accent);
+}
+body.design-vexel .vexel-revenue-legend span:last-child i { background: var(--vx-accent-deep); }
+body.design-vexel .vexel-revenue-row .chart-wrap {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 250px;
+  overflow: visible;
+}
+/* Axis labels only. `.chart-wrap text` reads as "the chart's tick labels", but
+ * SVG has no other text primitive — the same selector also caught the three
+ * <text> nodes inside .rev-tip, whose fill="#7DF2B0"/"#FFFFFF" presentation
+ * attributes lose to any stylesheet rule. The hover tooltip was rendering
+ * ghost-grey on its own hardcoded dark-green pill: illegible in light mode,
+ * washed out in dark. Excluding the tooltip subtree restores its own fills. */
+body.design-vexel .vexel-revenue-row .chart-wrap text:not(.rev-tip text) {
+  fill: var(--vx-text-ghost);
+  font-size: 11px;
+}
+
+body.design-vexel .vexel-revenue-rail {
+  display: flex;
+  flex: none;
+  flex-basis: 300px;
+  flex-direction: column;
+  gap: var(--vx-gap);
+  width: 300px;
+  min-width: 300px;
+  height: 331px;
+}
+body.design-vexel .vexel-rail-card,
+body.design-vexel .vexel-goals-card,
+body.design-vexel .vexel-bottom-row > [data-mix-block] {
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+body.design-vexel .vexel-rail-card { padding: 19px 23px; }
+body.design-vexel .vexel-day-goal { flex: 0 0 151px; height: 151px; }
+body.design-vexel .vexel-clients { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+body.design-vexel .vexel-rail-label {
+  color: var(--n-500);
+  font-size: 16px;
+  font-weight: 500;
+}
+body.design-vexel .vexel-goal-values {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 11px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-goal-values strong {
+  color: var(--ink);
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+body.design-vexel .vexel-goal-values span {
+  overflow: hidden;
+  color: var(--n-400);
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+body.design-vexel .vexel-goal-track {
+  height: 6px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--vx-border-strong);
+}
+body.design-vexel .vexel-goal-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--vx-accent);
+  box-shadow: 0 0 16px var(--vx-accent);
+}
+body.design-vexel .vexel-goal-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  color: var(--vx-text-ghost);
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* Clients réguliers · même anneau que Ventes par canal et Mix de paiement :
+ * rayon 46, trait de 9, bout arrondi, remplissage sur la même courbe. La part
+ * se lit au centre, les nombres à côté. */
+body.design-vexel .vexel-client-body {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  min-width: 0;
+}
+body.design-vexel .vexel-client-ring {
+  /* Exactement la boîte et le rayon de .vexel-ring-item : même graisse à
+   * l'écran, sans avoir à la recalculer. */
+  width: 97px;
+  min-width: 97px;
+  height: 97px;
+  flex: none;
+}
+body.design-vexel .vexel-client-ring circle { fill: none; stroke-width: 10; }
+body.design-vexel .vexel-client-ring .track { stroke: var(--vx-track); }
+body.design-vexel .vexel-client-ring .value {
+  stroke: var(--vx-accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray 850ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+body.design-vexel .vexel-client-ring text {
+  fill: var(--ink);
+  font: 600 21px var(--sans);
+  letter-spacing: -.02em;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+body.design-vexel .vexel-client-foot {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  min-width: 0;
+}
+body.design-vexel .vexel-client-foot > div { display: flex; flex-direction: column; }
+body.design-vexel .vexel-client-foot strong {
+  color: var(--ink);
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+body.design-vexel .vexel-client-foot span {
+  margin-top: 6px;
+  color: var(--n-500);
+  font-size: 14px;
+}
+body.design-vexel .vexel-client-foot small {
+  margin-top: 3px;
+  color: var(--vx-text-ghost);
+  font-size: 11px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-client-foot b {
+  margin-inline-start: auto;
+  padding-bottom: 3px;
+  color: var(--vx-accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+body.design-vexel .vexel-client-label {
+  color: var(--n-500);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Bottom row: generated service-goal rings + the existing live payment card. */
+body.design-vexel .vexel-bottom-row {
+  display: flex;
+  min-height: 327px;
+  gap: var(--vx-gap);
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-goals-card,
+body.design-vexel .vexel-bottom-row > [data-mix-block] {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 21px 25px;
+}
+body.design-vexel .vexel-goals-card h2,
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.design-vexel .vexel-goals-card p {
+  margin: 5px 0 0;
+  color: var(--vx-text-ghost);
+  font-size: 13px;
+}
+body.design-vexel .vexel-rings {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-around;
+  height: 210px;
+  max-height: 210px;
+  overflow: hidden;
+}
+body.design-vexel .vexel-ring-item {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+body.design-vexel .vexel-ring-item svg {
+  width: 97px;
+  min-width: 97px;
+  height: 97px;
+  min-height: 97px;
+  flex: none;
+}
+body.design-vexel .vexel-ring-item circle {
+  fill: none;
+  stroke-width: 10;
+}
+body.design-vexel .vexel-ring-item .track { stroke: var(--vx-track); }
+body.design-vexel .vexel-ring-item .value {
+  stroke: var(--vx-accent);
+  stroke-linecap: round;
+  /* L'arc se remplit depuis zéro à chaque rendu — même durée que les tranches
+   * de l'anneau du mix de paiement, pour que les deux cartes bougent ensemble. */
+  transition: stroke-dasharray 850ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Une rampe verte descendante, du canal le plus fort au plus faible. Elle est
+ * portée par le conteneur pour qu'un mode n'ait qu'une déclaration à changer. */
+body.design-vexel .vexel-rings {
+  --vx-ring-1: #095B41;
+  --vx-ring-2: #0B6E4F;
+  --vx-ring-3: #46A878;
+  --vx-ring-4: #8FCBAA;
+}
+body.design-vexel[data-vexel-mode="dark"] .vexel-rings {
+  --vx-ring-1: #00FFAE;
+  --vx-ring-2: #17B98A;
+  --vx-ring-3: #0E8F6A;
+  --vx-ring-4: #0B6E52;
+}
+body.design-vexel .vexel-ring-item .value.t1 { stroke: var(--vx-ring-1); }
+body.design-vexel .vexel-ring-item .value.t2 { stroke: var(--vx-ring-2); }
+body.design-vexel .vexel-ring-item .value.t3 { stroke: var(--vx-ring-3); }
+body.design-vexel .vexel-ring-item .value.t4 { stroke: var(--vx-ring-4); }
+body.design-vexel .vexel-ring-item text {
+  fill: var(--ink);
+  font: 600 26px var(--sans);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+body.design-vexel .vexel-ring-item strong {
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-ring-item span {
+  margin-top: 5px;
+  color: var(--n-500);
+  font-size: 14px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-ring-item small {
+  margin-top: 2px;
+  color: var(--vx-text-ghost);
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head { margin-bottom: 18px; }
+body.design-vexel .vexel-bottom-row [data-mix-block] .donut-row {
+  justify-content: center;
+  gap: 30px;
+}
+body.design-vexel .vexel-bottom-row [data-mix-block] .donut-legend { max-width: 250px; }
+
+/* Remaining native actions stay available below the four mockup blocks. */
+body.design-vexel .vexel-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 var(--vx-gap);
+}
+body.design-vexel .vexel-utilities .page-head {
+  display: block;
+  margin: 0;
+}
+body.design-vexel .vexel-utilities .quick-acts { display: flex; }
+body.design-vexel .vexel-utilities .quick-acts [data-action="export"] { display: none; }
+
+/* Widgets outside the four-block composition continue as a clean two-rail
+ * stack beneath it. */
+body.design-vexel .dash-standard > .oppo-band,
+body.design-vexel .dash-standard > .dash-cols,
+body.design-vexel .dash-standard > .dash-more-wrap,
+body.design-vexel .dash-standard > .dash-more-clip {
+  position: relative;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 11 · INTERNAL SURFACES
+ * Drawers are assembled at runtime by pages.js, pages-pro.js, features.js and
+ * agent.js. Their component classes are stable, so the skin reaches them here
+ * without changing the product's default modules or their semantic artwork.
+ * Floor-plan tables, country flags and status chips are deliberately excluded.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel :is(
+  .p-card, .sh-section, .comp-score, .comp-item, .pr-card,
+  .resv-card, .resv-section, .kds-ticket, .kds-side,
+  .b-inv-card, .b-promo-card, .b-ret-row, .kw-cat-card, .kw-item,
+  .kw-st-card, .kx-pane, .kx-kpi, .kx-sku-row, .gp-starter,
+  .s-kpi, .s-detail-hero, .s-cal-shell, .s-heat-shell,
+  .pds-rail-card, .pds-inspector, .pds-wiz-card, .pds-strat-card
+) {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+body.design-vexel :is(.p-card, .sh-section, .pr-card, .resv-card, .kw-cat-card, .kx-sku-row):hover {
+  border-color: var(--vx-card-hover-border);
+  box-shadow: 0 0 40px -14px var(--vx-accent-22);
+}
+
+body.design-vexel :is(.p-hero, .zk-hero, .s-ai-banner, .menu-ai) {
+  background: var(--vx-hero-bg) !important;
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink) !important;
+  box-shadow: none;
+}
+
+body.design-vexel :is(
+  .kiwi-drawer, .kiwi-modal, .ai-drawer
+) :is(h1, h2, h3, h4, h5, h6, b, strong) {
+  color: var(--ink);
+}
+
+body.design-vexel :is(
+  .kiwi-drawer-head, .kiwi-drawer-foot, .kiwi-modal-head, .kiwi-modal-foot,
+  .sh-section-head, .p-toolbar, .kx-tree-bar, .kw-menu-toolbar,
+  .kds-toolbar, .pds-canvas-bar
+) {
+  border-color: var(--n-200);
+}
+
+/* Row separators, not card edges. --n-200 is the right weight for an edge that
+ * already has a surface change either side of it; a divider has nothing but
+ * itself, and at 7% white on this near-black canvas it lands around 1.12:1 —
+ * dense six-column tables read as one undifferentiated block of text. One step
+ * up the same ramp, so the rule keeps using the ramp rather than a bespoke
+ * alpha that would drift away from it. */
+body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) :is(th, td),
+body.design-vexel :is(.menu-row, .stock-row, .team-mem, .sh-clock-row, .sc-history-row) {
+  border-color: var(--n-300);
+}
+
+body.design-vexel :is(.p-table, .tbl, .sc-table, .bqx-vtable) th,
+body.design-vexel :is(.sh-section-head .sub, .genpage-head p, .kiwi-drawer-head p) {
+  color: var(--n-500);
+}
+
+body.design-vexel :is(
+  input, select, textarea, .p-search, .kx-ios, .pds-input, .bqx-stk input
+) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  color: var(--ink);
+}
+
+body.design-vexel :is(input, select, textarea)::placeholder { color: var(--n-400); }
+
+/* Opaque paired colours keep the shortcut legible even when the surrounding
+ * search glass is translucent and the effective background is composited. */
+body.design-vexel .search-big .k {
+  background: var(--vx-key-bg);
+  border-color: var(--vx-key-border);
+  color: var(--vx-key-ink);
+}
+
+body.design-vexel :is(.kb.ghost, .kw-menu-action, .pds-tool, .pds-mode, .pds-zone) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  color: var(--n-600);
+}
+
+body.design-vexel :is(.kb.ghost, .kw-menu-action, .pds-tool, .pds-mode, .pds-zone):hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-control-border-hover);
+  color: var(--ink);
+}
+
+body.design-vexel :is(.kb.atlas, .kb.primary) {
+  background: var(--vx-accent) !important;
+  border-color: var(--vx-transparent) !important;
+  color: var(--vx-primary-ink) !important;
+  box-shadow: var(--vx-primary-shadow);
+}
+
+/* The liquid lens owns selected fills for all registered internal groups. */
+body.design-vexel :is(
+  .dr-pills, .resv-tabs, .kds-pills, .p-tabs, .pds-modes,
+  .pds-zone-tabs, .sc-pills, .kw-menu-tabs, .kx-tabs
+) .kw-lens {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent-22);
+}
+
+body.design-vexel :is(
+  .dr-pill.on, .resv-tab.on, .kds-pill.on, .p-tab.on,
+  .pds-mode.active, .pds-zone.active, .sc-pill.on, .kw-menu-tab.on, .kx-tab.on
+) {
+  color: var(--ink);
+}
+
+/* Runtime inline surfaces use product tokens; pin them to the same glass.
+ *
+ * Two groups, deliberately — not one. --surface is the RAISED step (a card, the
+ * selected thumb of a segmented control); --paper-soft is the RECESSED step (the
+ * track that thumb sits in, a well, a row band). Collapsing both onto --surface
+ * was harmless while dark had them at the same rgba(0,0,0,0.30) — the override
+ * was a no-op. The moment --surface became a real lift, this rule dragged all
+ * 81 inline tracks up to exactly the height of their own thumbs, and the
+ * selected tab went invisible again with an !important that outranked the
+ * inline style it was pinning. A track must stay under the thing it holds.
+ *
+ * The border pin stays on both: --n-200 is what draws the track's outline. */
+body.design-vexel [style*="background:var(--surface)"],
+body.design-vexel [style*="background: var(--surface)"] {
+  background: var(--surface) !important;
+  border-color: var(--n-200) !important;
+}
+body.design-vexel [style*="background:var(--paper-soft)"],
+body.design-vexel [style*="background: var(--paper-soft)"] {
+  background: var(--paper-soft) !important;
+  border-color: var(--n-200) !important;
+}
+/* A recessed surface that authored no border of its own would now be black on
+ * black — the Règlements T+1 panel is one. Give those an inset hairline rather
+ * than a real border: same edge, zero layout shift. Anything that already
+ * writes `border:` inline is excluded so tracks don't draw the line twice
+ * (`border-radius:` does not contain the substring `border:`). */
+body.design-vexel [style*="background:var(--paper-soft)"]:not([style*="border:"]):not([style*="border: "]),
+body.design-vexel [style*="background: var(--paper-soft)"]:not([style*="border:"]):not([style*="border: "]) {
+  box-shadow: inset 0 0 0 1px var(--n-200);
+}
+
+/* Inline inverse panels and Riad avatars need an explicit foreground pair;
+ * --paper is the dark canvas in Vexel dark, not a universal on-colour token. */
+body.design-vexel [style*="linear-gradient(135deg, var(--ink)"] {
+  background: var(--vx-inverse-surface) !important;
+  color: var(--vx-inverse-ink) !important;
+}
+body.design-vexel [style*="linear-gradient(135deg, var(--ink)"] [style*="color:var(--paper)"],
+body.design-vexel [style*="background:var(--riad)"][style*="color:var(--paper)"] {
+  color: var(--vx-on-riad) !important;
+}
+body.design-vexel :is(.team-mem .av.b, .sh-tip-pool .av.b, .sh-tip-pool .av.d) {
+  color: var(--vx-on-riad);
+}
+body.design-vexel .pr-calc-out {
+  background: var(--vx-inverse-surface) !important;
+  color: var(--vx-inverse-ink) !important;
+}
+body.design-vexel .pr-calc-out .br b { color: var(--vx-inverse-ink) !important; }
+body.design-vexel .sc-tier.argent { color: var(--ink); }
+body.design-vexel .kc-card { color: var(--vx-on-riad); }
+
+/* Vexel turns the legacy Atlas settlement slab into page glass. Its inherited
+ * --paper foreground must turn with that surface; coloured time/status accents
+ * remain semantic and are deliberately left alone. */
+body.design-vexel .settle { color: var(--ink); }
+body.design-vexel .settle .sub { color: var(--n-500); }
+body.design-vexel .settle .instant { background: var(--paper-muted); }
+
+/* Payroll labour-cost SVG: the second text node in each day group is the
+ * percentage above a bar. It follows the mode; bars retain semantic green. */
+body.design-vexel .sh-lvs > svg > line { stroke: var(--n-300); }
+body.design-vexel .sh-lvs > svg > text { fill: var(--n-500); }
+body.design-vexel .sh-lvs > svg > g > rect { fill: var(--vx-chart-bar); }
+body.design-vexel .sh-lvs > svg > g:nth-of-type(6) > rect { fill: var(--atlas); }
+body.design-vexel .sh-lvs > svg > g > text:first-of-type { fill: var(--n-500); }
+body.design-vexel .sh-lvs > svg > g > text:nth-of-type(2) { fill: var(--ink); }
+body.design-vexel .sh-lvs-foot i { background: var(--n-400); }
+body.design-vexel .sh-lvs-foot label:first-child i { background: var(--atlas); }
+body.design-vexel .sh-lvs-foot label:nth-child(2) i { background: var(--vx-chart-bar); }
+
+/* The floor-plan drawing is semantic artwork. Its cream room, furniture and
+ * table-status colours stay intact; only the surrounding editor chrome moves. */
+body.design-vexel :is(.pds-rail-card, .pds-canvas-bar, .pds-inspector, .pds-wiz) {
+  background: var(--surface);
+  border-color: var(--n-200);
+  color: var(--ink);
+}
+body.design-vexel .pds-plan-room { box-shadow: var(--vx-plan-shadow); }
+
+/* CRM communication previews need explicit paired colours. The injected dark
+ * rule uses --paper as text, which is the page canvas in Vexel dark mode. */
+body.design-vexel .sc-wa-preview { background: var(--vx-whatsapp-canvas); }
+body.design-vexel .sc-wa-bubble {
+  background: var(--vx-whatsapp-bubble);
+  color: var(--vx-whatsapp-ink);
+}
+body.design-vexel .sc-gift .s { color: var(--vx-gift-muted); }
+body.design-vexel .pr-calc-out .br span { color: var(--vx-inverse-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 13 · ENTRY SURFACES
+ * The PIN lock, first-run setup and account gate use the page-mode tokens,
+ * not the sidebar's fixed-dark set. They are the beginning of the same path
+ * as the dashboard content, so the climate must not change at the hand-off.
+ * Their legacy rules remain untouched underneath this opt-in layer.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) {
+  background-color: var(--vx-page);
+  background-image:
+    radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
+    radial-gradient(60% 45% at 8% 100%, var(--vx-dome-side), var(--vx-transparent) 72%),
+    radial-gradient(55% 40% at 96% 92%, var(--vx-active-bg), var(--vx-transparent) 70%),
+    radial-gradient(70% 50% at 50% -10%, var(--vx-dome-top), var(--vx-transparent) 68%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: var(--ink);
+}
+
+body.design-vexel :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  border-radius: 22px;
+  color: var(--ink);
+  box-shadow: var(--elev-2);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+body.design-vexel .kiwi-lock-inner {
+  box-sizing: border-box;
+  width: calc(100% - 48px);
+  padding: 44px 38px 38px;
+}
+
+/* This overlay is the three-second bridge between a valid PIN and the app.
+ * Leaving its legacy cream canvas in place would be a full-screen light flash
+ * in dark mode, so it shares the entry dome as well. */
+body.design-vexel .kiwi-greet::before { background: var(--vx-transparent); }
+body.design-vexel .kiwi-greet h1 {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 500;
+  text-shadow: none;
+}
+body.design-vexel .kiwi-greet h1 em {
+  color: var(--vx-accent);
+  font-style: normal;
+}
+body.design-vexel .kiwi-greet h1 .em-clip.is-typing::after { background: var(--vx-accent); }
+body.design-vexel .kiwi-greet-sub { color: var(--n-500); }
+
+body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-legacy, .reset-brand-legacy) {
+  display: none;
+}
+
+body.design-vexel .vx-entry-logo {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+}
+
+body.design-vexel .vx-entry-logo img {
+  display: none;
+  width: auto;
+  height: 28px;
+  max-width: none;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vx-entry-logo .brand-logo-dark,
+body.design-vexel[data-vexel-mode="light"] .vx-entry-logo .brand-logo-light {
+  display: block;
+}
+
+body.design-vexel .kiwi-lock-brand {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 30px;
+  color: var(--ink);
+}
+
+body.design-vexel .kiwi-lock-title {
+  margin-bottom: 7px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+body.design-vexel .kiwi-lock-sub {
+  margin-bottom: 36px;
+  color: var(--vx-accent);
+}
+
+body.design-vexel .kiwi-lock-pin { gap: 10px; margin-bottom: 22px; }
+body.design-vexel .kiwi-pin-cell {
+  width: 62px;
+  height: 76px;
+  background: var(--paper-muted);
+  border: 1px solid var(--n-300);
+  border-radius: 22px;
+  color: var(--ink);
+  font-weight: 500;
+}
+body.design-vexel .kiwi-pin-cell.is-filled {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 4px var(--warn-soft);
+}
+body.design-vexel .kiwi-lock-help,
+body.design-vexel .kiwi-lock-help b { color: var(--n-600); }
+body.design-vexel .kiwi-lock-help b { font-weight: 500; }
+body.design-vexel .kiwi-lock-help.is-error { color: var(--danger); }
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch) { color: var(--n-500); }
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):hover {
+  background: var(--vx-hover-bg);
+  color: var(--ink);
+}
+body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):focus-visible {
+  color: var(--ink);
+  outline-color: var(--vx-accent);
+}
+
+body.design-vexel .kob-root { color: var(--ink); }
+body.design-vexel .kob-card {
+  max-width: 580px;
+  padding: 30px 32px 26px;
+}
+body.design-vexel .kob-brand { color: var(--ink); }
+body.design-vexel .kob-config-label { color: var(--n-500); }
+body.design-vexel .kob-rail b { background: var(--n-300); }
+body.design-vexel .kob-rail b.on { background: var(--vx-accent); }
+body.design-vexel .kob-rail b.done { background: var(--vx-accent-deep); }
+body.design-vexel .kob-body::-webkit-scrollbar-thumb { background: var(--n-300); }
+body.design-vexel .kob-eyebrow { color: var(--vx-accent); }
+body.design-vexel .kob-h {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+body.design-vexel .kob-h .k-sans { font-weight: 500; }
+body.design-vexel .kob-sub { color: var(--n-600); }
+body.design-vexel .kob-lbl { color: var(--n-600); }
+body.design-vexel .kob-lbl .opt { color: var(--n-500); }
+
+body.design-vexel .kob-field {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  border-radius: 14px;
+  color: var(--ink);
+}
+body.design-vexel .kob-field::placeholder { color: var(--n-500); }
+body.design-vexel .kob-field:focus {
+  background: var(--paper-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+
+body.design-vexel :is(.kob-type, .kob-chip, .kob-acc, .kob-recap) {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  border-radius: 22px;
+  color: var(--n-700);
+}
+body.design-vexel :is(.kob-type, .kob-chip):hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-control-border-hover);
+}
+body.design-vexel :is(.kob-type, .kob-chip).sel {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent);
+  color: var(--ink);
+}
+body.design-vexel :is(.kob-type, .kob-chip) svg { color: var(--n-600); }
+body.design-vexel :is(.kob-type, .kob-chip).sel svg { color: var(--vx-accent); }
+body.design-vexel :is(.kob-more, .kob-acc-add) {
+  border-color: var(--n-300);
+  color: var(--n-600);
+}
+body.design-vexel :is(.kob-more, .kob-acc-add):hover {
+  border-color: var(--vx-accent);
+  color: var(--vx-accent);
+}
+
+body.design-vexel .kob-step button {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--ink);
+}
+body.design-vexel .kob-step button:hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-accent);
+}
+body.design-vexel .kob-step .kob-num { color: var(--ink); }
+body.design-vexel .kob-step .kob-num small { color: var(--n-500); }
+body.design-vexel .kob-acc.filled {
+  background: var(--mint-soft);
+  border-color: var(--vx-accent-22);
+}
+body.design-vexel .kob-acc-ttl { color: var(--ink); }
+body.design-vexel .kob-acc-perm { color: var(--n-500); }
+body.design-vexel .kob-acc-tag {
+  background: var(--mint-soft);
+  color: var(--vx-accent);
+}
+body.design-vexel .kob-acc-tag.req {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+body.design-vexel .kob-role {
+  background-image:
+    linear-gradient(45deg, var(--vx-transparent) 50%, var(--n-600) 50%),
+    linear-gradient(135deg, var(--n-600) 50%, var(--vx-transparent) 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+}
+body.design-vexel .kob-role option { color: var(--ink); }
+body.design-vexel .kob-acc-rm { color: var(--n-500); }
+body.design-vexel .kob-acc-rm:hover {
+  background: var(--warn-soft);
+  color: var(--danger);
+}
+
+body.design-vexel .kob-btn { border-radius: 14px; font-weight: 500; }
+body.design-vexel .kob-btn.primary {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .kob-btn.primary:hover {
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
+}
+body.design-vexel .kob-btn.ghost {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--n-700);
+}
+body.design-vexel .kob-btn.ghost:hover {
+  background: var(--vx-hover-bg);
+  color: var(--ink);
+}
+body.design-vexel :is(.kob-back, .kob-skip) { color: var(--n-500); }
+body.design-vexel :is(.kob-back, .kob-skip):hover { color: var(--ink); }
+body.design-vexel .kob-err { color: var(--danger); }
+body.design-vexel .kob-recap .r + .r { border-color: var(--n-200); }
+body.design-vexel .kob-recap .r span { color: var(--n-500); }
+body.design-vexel .kob-recap .r b { color: var(--ink); font-weight: 500; }
+body.design-vexel .kob-hero-mark {
+  background: var(--mint-soft);
+  border: 1px solid var(--vx-accent-22);
+  border-radius: 18px;
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .kob-hero-mark svg [fill]:not([fill="none"]) { fill: var(--vx-accent); }
+body.design-vexel .kob-hero-mark svg { stroke: var(--vx-accent-deep); }
+body.design-vexel .kob-hero-mark svg [stroke] { stroke: var(--vx-accent-deep); }
+
+body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) :is(em, i, cite, dfn, var),
+body.design-vexel.vx-auth-page :is(em, i, cite, dfn, var) {
+  font-style: normal;
+}
+body.design-vexel :is(.kiwi-lock, .kob-root, .vx-auth-card) :focus-visible {
+  outline: 2px solid var(--vx-accent);
+  outline-offset: 3px;
+}
+
+body.design-vexel.vx-auth-page { color: var(--ink); }
+body.design-vexel .vx-auth-card {
+  max-width: 440px;
+  padding: 38px 34px 30px;
+}
+body.design-vexel .vx-auth-card .brand { color: var(--ink); }
+body.design-vexel .vx-auth-card .head { margin-top: 28px; }
+body.design-vexel .vx-auth-card h1 {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 500;
+}
+body.design-vexel .vx-auth-card h1 em { color: var(--vx-accent); }
+body.design-vexel .vx-auth-card :is(.sub, .hint, .staff-link, .foot) { color: var(--n-500); }
+body.design-vexel .vx-auth-card .tabs {
+  background: var(--paper-muted);
+  border-color: var(--n-200);
+  border-radius: 14px;
+}
+body.design-vexel .vx-auth-card .tab { color: var(--n-500); }
+body.design-vexel .vx-auth-card .tab[aria-selected="true"] { color: var(--ink); }
+body.design-vexel .vx-auth-card .pill {
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  box-shadow: var(--elev-1);
+}
+body.design-vexel .vx-auth-card label { color: var(--n-600); }
+body.design-vexel .vx-auth-card input {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--ink);
+}
+body.design-vexel .vx-auth-card input::placeholder { color: var(--n-500); }
+body.design-vexel .vx-auth-card input:hover { border-color: var(--vx-control-border-hover); }
+body.design-vexel .vx-auth-card input:focus {
+  background: var(--paper-soft);
+  border-color: var(--vx-accent);
+  box-shadow: 0 0 0 4px var(--vx-accent-18);
+}
+body.design-vexel .vx-auth-card :is(.go, .staff button) {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel .vx-auth-card :is(.go, .staff button):hover {
+  background: var(--vx-accent);
+  box-shadow: 0 0 38px -4px var(--vx-primary-shadow-color-hover);
+}
+body.design-vexel .vx-auth-card :is(.err, .staff-err) { color: var(--danger); }
+body.design-vexel .vx-auth-card .revoked {
+  background: var(--warn-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+body.design-vexel .vx-auth-card .staff-link:hover { color: var(--ink); }
+body.design-vexel .vx-auth-card .foot { border-color: var(--n-200); }
+
+body.design-vexel.vx-reset-page .vx-auth-card .mark { margin-bottom: 24px; }
+body.design-vexel.vx-reset-page .vx-auth-card h1 { margin-bottom: 7px; }
+body.design-vexel.vx-reset-page .vx-auth-card p { color: var(--n-500); }
+body.design-vexel.vx-reset-page .vx-auth-card label { color: var(--n-600); }
+body.design-vexel.vx-reset-page .vx-auth-card button {
+  background: var(--vx-accent);
+  color: var(--vx-primary-ink);
+  box-shadow: var(--vx-primary-shadow);
+}
+body.design-vexel.vx-reset-page .vx-auth-card .msg.bad { color: var(--danger); }
+body.design-vexel.vx-reset-page .vx-auth-card .msg.ok,
+body.design-vexel.vx-reset-page .vx-auth-card .back { color: var(--vx-accent); }
+
+/* Semantic status chips remain outside all neutral-control selectors. */
+body.design-vexel :is(.chip.ok, .chip.pend, .chip.ref, .chip.warn, .chip.danger) {
+  box-shadow: none;
+}
+
+/* New logo: the sidebar stays dark in both page modes, so the mark follows its
+ * support rather than data-vexel-mode. Both files are still fetched up front. */
+body.design-vexel .brand-logo { height: 24px; width: auto; flex: none; }
+body.design-vexel .brand-logo-light { display: none; }
+body.design-vexel .brand-logo-dark { display: block; }
+
+/* The sidebar consumes 260px, so a 1280px viewport leaves only ~1,000px for
+ * the compose area. Four KPI cards technically fit there, but the labels and
+ * comparison values become cramped. Treat the effective content width as the
+ * breakpoint and use a readable 2×2 band before the app collapses to mobile. */
+@media (max-width: 1340px) {
+  body.design-vexel .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
+    padding-inline-end: 0;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(2) > .l {
+    padding-inline-end: 120px;
+  }
+  body.design-vexel .vexel-revenue-row { height: auto !important; flex-direction: column; }
+  body.design-vexel .vexel-revenue-row > .hero-today { height: 331px; }
+  body.design-vexel .vexel-revenue-rail {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    flex-basis: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  body.design-vexel .vexel-bottom-row { flex-direction: column; }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel #kw-main > .container { padding-inline: 18px; }
+  body.design-vexel .vexel-compose > .dash-date-range { flex-wrap: wrap; height: auto; }
+  body.design-vexel .vexel-report-btn { padding-inline: 15px; }
+  body.design-vexel .vexel-report-btn span { display: none; }
+  body.design-vexel .vexel-kpi-section > [data-kpi-band] { grid-template-columns: 1fr !important; }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(2) > .l {
+    padding-inline-end: 0;
+  }
+  body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:first-child > .l {
+    padding-inline-end: 120px;
+  }
+  body.design-vexel .vexel-revenue-rail { grid-template-columns: 1fr; height: auto; }
+  body.design-vexel .vexel-revenue-legend { position: static; margin-top: 8px; }
+  body.design-vexel .vexel-rings {
+    height: auto;
+    max-height: none;
+    padding-top: 24px;
+    overflow: visible;
+    flex-direction: column;
+    gap: 24px;
+  }
+  body.design-vexel .vexel-bottom-row { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER F · UNIFIED CARD SYSTEM + ALIGNED DASHBOARD GRID
+ *
+ * The native dashboard used independent column stacks. Their cards had three
+ * radii, several paddings and unrelated shadows, so the two columns drifted
+ * vertically as soon as their content heights differed. Vexel-light uses one
+ * card specification and explicit grid rows instead.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode="light"] {
+  --vx-card-radius: 20px;
+  --vx-card-pad: 24px;
+  --vx-card-gap: 16px;
+  --vx-card-bg: rgba(255, 255, 255, 0.88);
+  --vx-card-border: rgba(10, 15, 13, 0.085);
+  --vx-card-shadow: 0 18px 42px -32px rgba(10, 15, 13, 0.34);
+  --vx-card-shadow-hover: 0 22px 48px -32px rgba(10, 15, 13, 0.42);
+}
+
+/* Compact command deck: no large empty middle row on wide screens. */
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-areas: "title range report";
+  gap: 22px;
+  padding: 23px 26px;
+  border-radius: var(--vx-card-radius);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(34px, 3vw, 44px);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
+  width: auto;
+}
+
+/* One outer-card recipe. Small integration tiles remain nested sub-cards. */
+body.design-vexel[data-vexel-mode] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+) {
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+):hover {
+  border-color: var(--vx-card-hover-border) !important;
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* Every KPI has equal visual weight. The previous first-card tint and rail
+ * removed similarity even though all four values belong to one metric tier. */
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  padding: 21px 22px;
+  border-color: var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  display: none;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+  transform: translateY(-2px);
+}
+
+/* Shared card interiors. */
+body.design-vexel[data-vexel-mode] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-more-clip [data-integ-card] {
+  padding: var(--vx-card-pad) !important;
+  color: var(--ink);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .block-head {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .t,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .big {
+  color: var(--ink);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .t {
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .block-head .s,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .sub {
+  color: var(--n-500);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .settle::after {
+  opacity: 0.12;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .settle .instant {
+  border: 1px solid var(--n-200);
+  background: var(--paper-muted);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .settle .instant:hover {
+  background: var(--vx-hover-bg);
+}
+
+/* Recommendation row joins the same rhythm and card proportions. */
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band {
+  margin: 0 0 var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-eyebrow {
+  margin: 0 0 10px 2px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-grid {
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card {
+  min-height: 158px;
+  padding: 21px 22px;
+}
+
+/* Main operations area: align heatmap with evening service, then orders with
+ * stock. design-vexel.js already moved payment mix into the composed top area. */
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: var(--vx-card-gap);
+  align-items: stretch;
+  margin-bottom: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col {
+  display: contents;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-hh-row]) {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .settle {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) .block:has([data-feed]) {
+  grid-column: 1 / span 2;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* Secondary analytics: health aligns with benchmark; products aligns with
+ * team performance. Both cards in each row now share a bottom edge. */
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: var(--vx-card-gap);
+  align-items: stretch;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col {
+  display: contents;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more [data-health-card] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more [data-bench-card] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .block:has([data-products-list]) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .block:has([data-staff-list]) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col > .block {
+  height: 100%;
+}
+
+/* Integration is a parent card; its four tools use a quieter nested style. */
+body.design-vexel[data-vexel-mode] .dash-more [data-integ-card] {
+  margin-top: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
+  gap: 12px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .integ-card {
+  min-height: 74px;
+  border-color: var(--n-200);
+  border-radius: 14px;
+  background: var(--paper-soft);
+  box-shadow: none;
+}
+
+@media (max-width: 1180px) {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+  }
+}
+
+@media (max-width: 900px) {
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even),
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vx-card-gap);
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col,
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col {
+    display: contents;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col > *,
+  body.design-vexel[data-vexel-mode] .dash-more .dash-cols--even > .dash-col > * {
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* ── LAYER B · DARK TOKENS ──────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="dark"] {
+  --paper: #000000;
+  --paper-soft: rgba(0, 0, 0, 0.30);
+  --paper-muted: rgba(255, 255, 255, 0.04);
+
+  /* A surface RISES; it does not darken. In light that is automatic — --surface
+   * is 10% more white than --paper-soft, so a card lifts off the page and a
+   * segmented thumb lifts off its track. Dark had both set to the same
+   * rgba(0,0,0,0.30), and over a #000 page darkening black is a no-op: cards
+   * landed at exactly the elevation of the thing they sat on, and every
+   * track/thumb pair collapsed into one flat rectangle. That reads as "nothing
+   * is separated from anything", which is most of why the sub-pages feel
+   * confusing next to the home page.
+   *
+   * 0.055 white is not a guess — it is the value the approved home KPI card
+   * already uses for its own lift, so sub-page cards now speak the same
+   * elevation language as the surface that was signed off. --paper-elev keeps
+   * one step above it for genuinely raised things (menus, popovers). */
+  --surface: rgba(255, 255, 255, 0.055);
+  --paper-elev: rgba(255, 255, 255, 0.08);
+  --n-100: rgba(255, 255, 255, 0.045);
+  --n-200: rgba(255, 255, 255, 0.07);
+  --n-300: rgba(255, 255, 255, 0.12);
+  --n-400: rgba(255, 255, 255, 0.34);
+  --n-500: rgba(255, 255, 255, 0.58);
+  --n-600: rgba(255, 255, 255, 0.72);
+  --n-700: rgba(255, 255, 255, 0.86);
+  --n-800: #ffffff;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.85);
+  --mint: #00ffae;
+  --mint-soft: rgba(0, 255, 174, 0.12);
+  --atlas: #17b98a;
+  --atlas-600: #00ffae;
+  --atlas-700: #12a074;
+  --riad: rgba(0, 0, 0, 0.42);
+  --riad-deep: #000000;
+
+  /* Inverse components, dark climate. See the note in tokens.css: in light an
+   * inverse panel separates from the page by going darker, and here it cannot —
+   * the page IS black. It separates by rising instead. 0.08 white is the lowest
+   * fill that still draws the panel's own edge at a glance without turning a
+   * KDS column head into a grey box competing with the cards around it. */
+  --inverse-surface: rgba(255, 255, 255, 0.08);
+  --inverse-ink: #ffffff;
+  --inverse-line: rgba(255, 255, 255, 0.12);
+
+  /* --riad is a scrim here, so identity fills that wanted the GREEN take this
+   * instead. Lifted off the brand #053B2C, which sits at 1.4:1 on black and
+   * renders an avatar as an invisible disc; this clears 3:1 for non-text. */
+  --brand-deep: #0C6B4E;
+  --success: #00ffae;
+  --warning: #ffb347;
+  --danger: #ff6b5f;
+  --info: #62b8f3;
+  --warn-soft: rgba(255, 179, 71, 0.12);
+  --warn-ink: #ffb347;
+  --line: rgba(255, 255, 255, 0.07);
+  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 40px -12px rgba(0, 255, 174, 0.18);
+
+  --vx-page: #000000;
+  --vx-transparent: transparent;
+  --vx-white-02: rgba(255, 255, 255, 0.02);
+  --vx-white-045: rgba(255, 255, 255, 0.045);
+  --vx-text-ghost: rgba(255, 255, 255, 0.22);
+  --vx-track: rgba(255, 255, 255, 0.09);
+  --vx-border-strong: rgba(255, 255, 255, 0.10);
+  --vx-card-hover-border: rgba(255, 255, 255, 0.14);
+  --vx-control-border-hover: rgba(255, 255, 255, 0.16);
+  --vx-peer: rgba(255, 255, 255, 0.20);
+  --vx-hover-bg: rgba(255, 255, 255, 0.05);
+  --vx-hero-bg: rgba(0, 0, 0, 0.34);
+  --vx-shell-bg: rgba(0, 0, 0, 0.42);
+  --vx-ai-bg: rgba(0, 0, 0, 0.55);
+  --vx-overlay-bg: rgba(8, 11, 10, 0.92);
+  --vx-toast-bg: rgba(8, 11, 10, 0.94);
+  --vx-tooltip-bg: rgba(10, 14, 12, 0.94);
+  --vx-shadow-heavy: rgba(0, 0, 0, 0.90);
+  --vx-dome-main: rgba(0, 255, 174, 0.16);
+  --vx-dome-side: rgba(23, 185, 138, 0.13);
+  --vx-dome-top: rgba(23, 185, 138, 0.07);
+  --vx-active-bg: rgba(0, 255, 174, 0.09);
+  --vx-active-bg-strong: rgba(0, 255, 174, 0.10);
+  --vx-accent: #00ffae;
+  --vx-accent-deep: #17b98a;
+  --vx-accent-mid: #0e8f66;
+  --vx-accent-18: rgba(0, 255, 174, 0.18);
+  --vx-accent-22: rgba(0, 255, 174, 0.22);
+  --vx-accent-25: rgba(0, 255, 174, 0.25);
+  --vx-accent-28: rgba(0, 255, 174, 0.28);
+  --vx-mint-fill: #7df2b0;
+  --vx-chart-bar: #7df2b0;
+  --vx-chart-compare: rgba(23, 185, 138, 0.75);
+  --vx-primary-ink: #04241a;
+  --vx-primary-shadow-color: rgba(0, 255, 174, 0.34);
+  --vx-primary-shadow-color-strong: rgba(0, 255, 174, 0.45);
+  --vx-primary-shadow-color-hover: rgba(0, 255, 174, 0.60);
+  --vx-primary-shadow: 0 0 28px -6px rgba(0, 255, 174, 0.45);
+  --vx-report-shadow: 0 0 44px rgba(0, 255, 174, 0.34);
+  --vx-plan-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.65);
+  --vx-whatsapp-canvas: rgba(255, 255, 255, 0.04);
+  --vx-whatsapp-bubble: rgba(125, 242, 176, 0.18);
+  --vx-whatsapp-ink: #ffffff;
+  --vx-inverse-muted: rgba(255, 255, 255, 0.72);
+  --vx-gift-muted: rgba(0, 0, 0, 0.68);
+  --vx-inverse-surface: rgba(255, 255, 255, 0.08);
+  --vx-inverse-ink: #ffffff;
+  --vx-on-riad: #ffffff;
+  --vx-key-bg: #17231F;
+  --vx-key-border: rgba(255, 255, 255, 0.14);
+  --vx-key-ink: rgba(255, 255, 255, 0.72);
+  --vx-sidebar-bg: rgba(10, 15, 13, 0.92);
+  --vx-sidebar-popover: #101713;
+  --vx-sidebar-surface: rgba(247, 245, 240, 0.05);
+  --vx-sidebar-hover: rgba(247, 245, 240, 0.08);
+  --vx-sidebar-active: rgba(0, 255, 174, 0.10);
+  --vx-sidebar-border: rgba(247, 245, 240, 0.09);
+  --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
+  --vx-sidebar-ink: #F7F5F0;
+  --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-accent: #00FFAE;
+  --vx-sidebar-accent-deep: #0B6E4F;
+  --vx-sidebar-primary-ink: #04241A;
+}
+
+/* ── LAYER C · LIGHT TOKENS ─────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="light"] {
+  --paper: #F7F5F0;
+  --paper-soft: rgba(255, 255, 255, 0.62);
+  --paper-muted: rgba(10, 15, 13, 0.04);
+  --surface: rgba(255, 255, 255, 0.72);
+  --paper-elev: rgba(255, 255, 255, 0.86);
+  --n-100: rgba(10, 15, 13, 0.04);
+  --n-200: rgba(10, 15, 13, 0.08);
+  --n-300: rgba(10, 15, 13, 0.14);
+  --n-400: rgba(10, 15, 13, 0.34);
+  --n-500: rgba(10, 15, 13, 0.58);
+  --n-600: rgba(10, 15, 13, 0.72);
+  --n-700: rgba(10, 15, 13, 0.86);
+  --n-800: #0A0F0D;
+  --ink: #0A0F0D;
+  --ink-soft: rgba(10, 15, 13, 0.85);
+  --mint: #0B6E4F;
+  --mint-soft: rgba(11, 110, 79, 0.10);
+  --atlas: #0B6E4F;
+  --atlas-600: #095B41;
+  --atlas-700: #095B41;
+  --riad: #053B2C;
+  --riad-deep: #04241A;
+  /* Restated rather than inherited, matching this block's convention: the light
+   * climate declares its whole palette so a stale dark value can never survive
+   * a mode flip. Same values as :root — in light, inverse means the deep green. */
+  --inverse-surface: #053B2C;
+  --inverse-ink: #F7F5F0;
+  --inverse-line: rgba(247, 245, 240, 0.14);
+  --brand-deep: #053B2C;
+  --success: #0B6E4F;
+  --warning: #B26A00;
+  --danger: #C2402F;
+  --info: #216A93;
+  --warn-soft: rgba(178, 106, 0, 0.12);
+  --warn-ink: #8A5100;
+  --line: rgba(10, 15, 13, 0.08);
+  --elev-1: 0 1px 2px rgba(10, 15, 13, 0.06);
+  --elev-2: 0 18px 38px -26px rgba(10, 15, 13, 0.28);
+
+  --vx-page: #FFFFFF;
+  --vx-transparent: transparent;
+  --vx-white-02: rgba(10, 15, 13, 0.02);
+  --vx-white-045: rgba(10, 15, 13, 0.045);
+  --vx-text-ghost: rgba(10, 15, 13, 0.34);
+  --vx-track: rgba(10, 15, 13, 0.10);
+  --vx-border-strong: rgba(10, 15, 13, 0.14);
+  --vx-card-hover-border: rgba(10, 15, 13, 0.18);
+  --vx-control-border-hover: rgba(10, 15, 13, 0.24);
+  --vx-peer: rgba(10, 15, 13, 0.20);
+  --vx-hover-bg: rgba(11, 110, 79, 0.07);
+  --vx-hero-bg: rgba(255, 255, 255, 0.78);
+  --vx-shell-bg: rgba(255, 255, 255, 0.62);
+  --vx-ai-bg: rgba(255, 255, 255, 0.68);
+  --vx-overlay-bg: rgba(255, 255, 255, 0.94);
+  --vx-toast-bg: rgba(255, 255, 255, 0.96);
+  --vx-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --vx-shadow-heavy: rgba(10, 15, 13, 0.28);
+  --vx-dome-main: rgba(11, 110, 79, 0.10);
+  --vx-dome-side: rgba(125, 242, 176, 0.08);
+  --vx-dome-top: rgba(11, 110, 79, 0.04);
+  --vx-active-bg: rgba(11, 110, 79, 0.08);
+  --vx-active-bg-strong: rgba(11, 110, 79, 0.10);
+  --vx-accent: #0B6E4F;
+  --vx-accent-deep: #095B41;
+  --vx-accent-mid: #0B6E4F;
+  --vx-accent-18: rgba(11, 110, 79, 0.18);
+  --vx-accent-22: rgba(11, 110, 79, 0.22);
+  --vx-accent-25: rgba(11, 110, 79, 0.25);
+  --vx-accent-28: rgba(11, 110, 79, 0.28);
+  --vx-mint-fill: #7DF2B0;
+  --vx-chart-bar: #7DF2B0;
+  --vx-chart-compare: rgba(9, 91, 65, 0.72);
+  --vx-primary-ink: #F7F5F0;
+  --vx-primary-shadow-color: rgba(10, 15, 13, 0.22);
+  --vx-primary-shadow-color-strong: rgba(10, 15, 13, 0.24);
+  --vx-primary-shadow-color-hover: rgba(10, 15, 13, 0.28);
+  --vx-primary-shadow: 0 12px 30px -16px rgba(10, 15, 13, 0.32);
+  --vx-report-shadow: 0 12px 30px -16px rgba(10, 15, 13, 0.32);
+  --vx-plan-shadow: 0 18px 40px -30px rgba(10, 15, 13, 0.24);
+  --vx-whatsapp-canvas: #ECE5DD;
+  --vx-whatsapp-bubble: #DCF8C6;
+  --vx-whatsapp-ink: #0A0F0D;
+  --vx-inverse-muted: rgba(247, 245, 240, 0.76);
+  --vx-gift-muted: rgba(247, 245, 240, 0.76);
+  --vx-inverse-surface: #053B2C;
+  --vx-inverse-ink: #F7F5F0;
+  --vx-on-riad: #F7F5F0;
+  --vx-key-bg: #E4E0D7;
+  --vx-key-border: rgba(10, 15, 13, 0.14);
+  --vx-key-ink: rgba(10, 15, 13, 0.72);
+  --vx-sidebar-bg: rgba(10, 15, 13, 0.92);
+  --vx-sidebar-popover: #101713;
+  --vx-sidebar-surface: rgba(247, 245, 240, 0.05);
+  --vx-sidebar-hover: rgba(247, 245, 240, 0.08);
+  --vx-sidebar-active: rgba(0, 255, 174, 0.10);
+  --vx-sidebar-border: rgba(247, 245, 240, 0.09);
+  --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
+  --vx-sidebar-ink: #F7F5F0;
+  --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-accent: #00FFAE;
+  --vx-sidebar-accent-deep: #0B6E4F;
+  --vx-sidebar-primary-ink: #04241A;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER D · TYPE DISCIPLINE (mode-independent; no colour literals)
+ *
+ * The marketing site's identity survives being stripped of its palette. What
+ * is left is a type system, and three of its rules were near-misses here:
+ * display tracking sat at -0.035em instead of the site's constant -0.06em,
+ * block heads were set at 1.2 rather than solid, and the KPI labels were 16px
+ * sentence-case body copy where the site's single most recognisable move is a
+ * 12/16 uppercase micro-label at +0.16em.
+ *
+ * None of this touches the mockup's composition — the four-up grid, the 16px
+ * gaps and the hidden .dr-sub are what make this skin read as the mockup, and
+ * transplanting the site's 200/750/180 section rhythm onto a data grid would
+ * be arbitrary rather than composed. Nor does it add a reveal: dashboard.html
+ * already ships an entrance choreography gated on body.cards-enter, and a
+ * second observer would double-animate the same panels.
+ *
+ * Colour is likewise untouched — Layers B and C remain the only colour
+ * sources in this file.
+ *
+ * Deliberately last. Every rule below re-states a selector Layer A already
+ * declares, at identical specificity, and wins on document order alone.
+ * Moving this block earlier silently disables it.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Solid-set display type at one tracking value. The range label and the KPI
+ * value were already set solid; only their tracking changes. Both tighten, so
+ * neither can overflow the nowrap boxes they sit in. */
+body.design-vexel .vexel-compose .dash-date-range .dr-label,
+body.design-vexel .vexel-compose .kpi-m .v {
+  letter-spacing: var(--vx-display-track);
+}
+
+/* Block heads join the same system: set solid, tracked with the rest. They
+ * were the one display tier still at letter-spacing 0. */
+body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t,
+body.design-vexel .vexel-goals-card h2,
+body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  line-height: 1;
+  letter-spacing: var(--vx-display-track);
+}
+
+/* The micro-label. 12/16, uppercase, +0.16em, weight 500 — the piece of the
+ * site's type system with no equivalent anywhere in the product. The label box
+ * loses ~3px of height doing this; the card's 126px min-height absorbs it, and
+ * uppercase at 12px is narrower than sentence-case at 16px, so the ellipsis
+ * this rule inherits has more room than before, not less. */
+body.design-vexel .vexel-compose .kpi-m > .l {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+/* Arabic neutralises tracking and uppercase in one locale-root rule, exactly
+ * as the site does: +0.16em on Arabic letterforms breaks the joins, and case
+ * is meaningless in a script that has none. */
+html[lang="ar"] body.design-vexel .vexel-compose .kpi-m > .l {
+  text-transform: none;
+  letter-spacing: 0;
+}
+html[lang="ar"] body.design-vexel .vexel-compose .dash-date-range .dr-label,
+html[lang="ar"] body.design-vexel .vexel-compose .kpi-m .v,
+html[lang="ar"] body.design-vexel .vexel-revenue-row .hero-left-chart .block-head .t,
+html[lang="ar"] body.design-vexel .vexel-goals-card h2,
+html[lang="ar"] body.design-vexel .vexel-bottom-row [data-mix-block] .block-head .t {
+  letter-spacing: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER E · VEXEL-LIGHT DASHBOARD ART DIRECTION
+ *
+ * A focused visual pass for the opt-in light dashboard. The landing page's
+ * glow, generous framing and crisp depth are translated into a warm product
+ * surface without turning the working dashboard into a marketing page.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode] #kw-main {
+  background: var(--vx-page);
+}
+
+/* Seamless application header: the landing mockup's quiet dark rail, with an
+ * unboxed search field and identity at the far edge. */
+/* ── Chrome ──────────────────────────────────────────────────────────────────
+ * The sidebar is square and pure #000. The bar beside it was a green gradient
+ * with rounded BOTTOM corners only — a shape that reads as a panel dropped from
+ * the viewport edge, except it is flush to that edge already, and it sat next
+ * to a black column it did not match. Two adjacent darks that disagree read as
+ * a seam, not as a design.
+ *
+ * So the bar stops competing: it takes the sidebar's black and its square
+ * corners, and the two become one continuous L of chrome wrapped around the
+ * paper. Everything worth looking at now floats INSIDE that black — which is
+ * the point, because the bar's own surface carries no information. */
+/* The base sheet caps .main AND .topbar-inner at 1320px and centres both with
+ * margin:auto (dashboard.html:310 / :331). .main is centred in whatever is left
+ * beside the sidebar, so past ~1580px the whole app detaches from both edges —
+ * at 1920 that is 170px of bare paper down each side, with the chrome floating
+ * in the middle of it. A centred measure is right for an article; this is a
+ * dashboard, and its chrome is supposed to frame the viewport, not sit inside
+ * it. Both caps come off together: releasing .main alone would leave the bar
+ * full-bleed with its own contents still bunched in a 1320px column. */
+body.design-vexel[data-vexel-mode] .main,
+body.design-vexel[data-vexel-mode] .topbar > .topbar-inner {
+  max-width: none;
+}
+
+body.design-vexel[data-vexel-mode] .topbar {
+  top: 0;
+  margin: 0;
+  padding: 0 24px 0 26px;
+  overflow: visible;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(125, 242, 176, 0.10) !important;
+  border-radius: 0 !important;
+  /* Not flat #000. A riad lift of a few points keeps the bar from going dead
+   * against the sidebar's true black — it separates the two regions without
+   * having to draw a line between them. */
+  background: linear-gradient(180deg, #0A1512 0%, #050A08 100%) !important;
+  /* The inset hairline along the top edge is what stops black chrome reading as
+   * a hole in the page. It is the same trick a physical bezel does with light:
+   * one lit edge is enough to say "this surface has a front". */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 18px 40px -34px rgba(2, 16, 11, 0.92) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+body.design-vexel[data-vexel-mode] .topbar > .topbar-inner {
+  min-height: 72px;
+  padding: 0;
+  gap: 12px;
+}
+
+body.design-vexel[data-vexel-mode] .topbar :is(.breadcrumb, .hours-pill),
+body.design-vexel[data-vexel-mode] .topbar .icon-btn[aria-label="Paramètres"] {
+  display: none !important;
+}
+
+/* The search was 659px of fully transparent nothing — no border, no fill, no
+ * radius — so the single widest element in the header had no affordance at all
+ * and read as a stray line of placeholder copy. It became a real object; this
+ * is the second pass on HOW that object is drawn.
+ *
+ * The stadium capsule + outlined keycap is the 2018 SaaS header search, and it
+ * was the one shape in the whole dashboard that answered to nothing else: every
+ * card, drawer and KPI here is a 12–18px squircle, so a 999px pill with a
+ * hairline stroke read as a component borrowed from another product. Three
+ * things carried the dated look and all three are gone:
+ *   · the pill radius        → 12px, the same corner as the cards behind it
+ *   · the 1px outline        → none; a recessed fill is the affordance instead
+ *   · the boxed ⌘K keycap    → bare mono glyphs, no border, no chip
+ * What's left is a quiet inset well — dark chrome states a field by carving
+ * INTO the surface, not by drawing a frame on top of it. The stroke only
+ * appears on hover, and only in mint, so the field is silent until aimed at. */
+body.design-vexel[data-vexel-mode] .search-big {
+  order: 1;
+  width: 100%;
+  height: 38px;
+  max-width: 408px;
+  margin: 0 auto 0 0;
+  padding: 0 12px 0 12px;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.038);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.22);
+  color: rgba(236, 247, 242, 0.46);
+  font-size: 13px;
+  transition: border-color 190ms ease, background 190ms ease, color 190ms ease,
+              box-shadow 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .search-big svg {
+  opacity: 1;
+  color: rgba(236, 247, 242, 0.42);
+  transition: color 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .search-big:hover {
+  border-color: rgba(125, 242, 176, 0.22);
+  background: rgba(255, 255, 255, 0.062);
+  color: rgba(236, 247, 242, 0.86);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+body.design-vexel[data-vexel-mode] .search-big:hover svg {
+  color: rgba(141, 246, 190, 0.85);
+}
+
+/* The paper-skin focus ring (a white fill + atlas-green border) is invisible
+ * against black chrome — restate it in mint. */
+body.design-vexel[data-vexel-mode] .search-big:focus-visible {
+  outline: none;
+  border-color: rgba(125, 242, 176, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(236, 247, 242, 0.92);
+  box-shadow: 0 0 0 3px rgba(125, 242, 176, 0.16);
+}
+
+body.design-vexel[data-vexel-mode] .search-big .ph {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Not a keycap. The glyphs alone, tracked open, at the weight of a footnote —
+ * the people who use ⌘K already know it's a key, and the people who don't were
+ * never going to be told by a rounded rectangle. */
+body.design-vexel[data-vexel-mode] .search-big .k {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: rgba(236, 247, 242, 0.34);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  transition: color 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .search-big:hover .k {
+  color: rgba(236, 247, 242, 0.58);
+}
+
+body.design-vexel[data-vexel-mode] .topbar .icon-btn {
+  order: 3;
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(236, 247, 242, 0.55);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .icon-btn:hover {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  transform: none;
+}
+
+/* Ring colour has to match the bar it punches through, not the old #0b1813. */
+body.design-vexel[data-vexel-mode] .topbar .icon-btn .badge {
+  top: -1px;
+  right: -1px;
+  border-color: #070D0A;
+  background: #7DF2B0;
+  color: #04231A;
+  font-weight: 700;
+}
+
+/* The one lit object in the chrome. It was dark-on-dark wearing a 9px mint
+ * spread — a halo that reads as a focus ring someone forgot to clear, not as
+ * emphasis. Inverted instead: the agent is the product's differentiator, so it
+ * gets the header's only fill, and everything else stays glass on black. This
+ * is the whole mint budget for the bar; the avatar gives its mint up below so
+ * there is exactly one thing here competing for the eye. */
+body.design-vexel[data-vexel-mode] .topbar .ai-btn {
+  order: 2;
+  min-height: 40px;
+  gap: 9px;
+  padding: 0 17px 0 12px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8DF6BE 0%, #5FE9A4 100%) !important;
+  color: #04231A;
+  /* Two shadows doing different jobs: a tight one that seats the button on the
+   * bar, and a wide diffuse bloom so the mint reads as a light source in the
+   * black rather than a flat swatch pasted onto it. Deliberately NOT the 9px
+   * hard spread this replaced — that had a visible edge, which is what made it
+   * look like a stuck focus ring. */
+  box-shadow:
+    0 10px 24px -14px rgba(93, 233, 164, 0.7),
+    0 0 32px -6px rgba(125, 242, 176, 0.26);
+  font-size: 13.5px;
+  font-weight: 640;
+  letter-spacing: 0.005em;
+  transition: background 190ms ease, box-shadow 190ms ease, transform 190ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico {
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  border-radius: 0;
+  color: #04231A;
+  background: none;
+  box-shadow: none;
+}
+
+/* The mark ships two paths: one on currentColor, one hardcoded fill="#8ff4cf".
+ * That second path was mint on a dark button; on a mint button it vanishes.
+ * Both are re-cut in ink so the two-tone reading survives the inversion. */
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path {
+  fill: currentColor;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path + path {
+  fill: rgba(4, 35, 26, 0.5);
+}
+
+body.design-vexel[data-vexel-mode] .topbar .ai-btn:hover {
+  background: linear-gradient(180deg, #9CF8C9 0%, #6EEFB0 100%) !important;
+  box-shadow: 0 14px 30px -14px rgba(93, 233, 164, 0.85);
+  transform: translateY(-1px);
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant {
+  order: 4;
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, auto) 14px;
+  align-items: center;
+  gap: 10px;
+  min-width: 178px;
+  margin-inline-start: 4px;
+  padding-inline-start: 16px;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Hairline between the app's tools and who is signed in. The bell and the
+ * merchant block used to sit 14px apart with no boundary, so the account read
+ * as one more control in the row. */
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  width: 1px;
+  height: 26px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Was a solid mint disc. With the agent button now filled mint, two mint
+ * objects sat 60px apart and split the eye — and the one that won was the
+ * avatar, which is the least actionable thing in the bar. It gives the fill up
+ * and keeps mint only in its initials. */
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8DF6BE;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-info {
+  min-width: 0;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .n {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .r {
+  margin-top: 1px;
+  color: rgba(220, 238, 230, 0.46);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .m-caret {
+  color: rgba(220, 238, 230, 0.34);
+}
+
+@media (max-width: 1100px) {
+  body.design-vexel[data-vexel-mode] .topbar {
+    margin: 0;
+    padding-inline: 16px;
+  }
+
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant {
+    min-width: 0;
+    grid-template-columns: 38px;
+  }
+
+  body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant :is(.m-info, .m-caret) {
+    display: none;
+  }
+}
+
+body.design-vexel[data-vexel-mode] #kw-main > .container {
+  padding-top: 24px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+  position: relative;
+  isolation: isolate;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title report"
+    "range range";
+  align-items: center;
+  gap: 20px 24px;
+  min-height: 0;
+  margin-bottom: 18px !important;
+  padding: 27px 28px 25px;
+  overflow: hidden;
+  border: 1px solid var(--n-200);
+  border-radius: 28px;
+  background: var(--vx-hero-bg);
+  box-shadow: var(--elev-2);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range::before {
+  content: none;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range > div:first-child {
+  grid-area: title;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(35px, 3.4vw, 48px);
+  line-height: 0.95;
+}
+
+/* The venue remains available in the sidebar; repeating it beside the page
+ * title made the command area feel like a form and squeezed the date controls. */
+body.design-vexel[data-vexel-mode] .vexel-venue {
+  display: none !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
+  grid-area: range;
+  width: 100%;
+  margin: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-pills {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--n-200);
+  border-radius: 999px;
+  background: var(--vx-white-045);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-report-btn {
+  grid-area: report;
+  margin: 0;
+  min-height: 46px;
+  padding-inline: 21px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head {
+  min-height: 34px;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head :is(
+  .kpi-customize,
+  .btn-slim[data-action="payment-link"],
+  [data-action="invoicing"]
+) {
+  min-height: 34px;
+  width: 148px;
+  min-width: 148px;
+  padding: 0 13px;
+  justify-content: center;
+  border-color: var(--n-200);
+  border-radius: 999px;
+  background: var(--paper-soft);
+  box-shadow: var(--elev-1);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head [data-action="invoicing"] {
+  color: var(--atlas);
+  border-color: color-mix(in srgb, var(--atlas) 24%, var(--n-200));
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today,
+body.design-vexel[data-vexel-mode] .vexel-rail-card,
+body.design-vexel[data-vexel-mode] .vexel-goals-card,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row > [data-mix-block] {
+  border-color: var(--n-200) !important;
+  background: var(--paper-elev) !important;
+  box-shadow: var(--elev-2) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
+  position: relative;
+  overflow: hidden;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--vx-accent);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  border-color: var(--vx-accent-18) !important;
+  background:
+    linear-gradient(135deg, var(--vx-active-bg-strong), transparent 58%),
+    var(--paper-elev) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child::before,
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover::before {
+  opacity: 1;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:hover {
+  z-index: 1;
+  transform: translateY(-2px);
+  border-color: var(--vx-card-hover-border) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today::before {
+  content: none;
+}
+
+@media (max-width: 920px) {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    padding: 24px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-pills {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+    padding: 21px 18px;
+    border-radius: 22px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
+    font-size: clamp(30px, 10vw, 39px);
+  }
+}
+
+/* Layer F is declared before the mode-token/type layers. These final rules
+ * intentionally settle the few selectors Layer E also owns. */
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-areas: "title range report";
+  gap: 22px;
+  padding: 23px 26px;
+  border: 1px solid var(--vx-card-border);
+  border-radius: var(--vx-card-radius);
+  background: var(--vx-card-bg);
+  box-shadow: var(--vx-card-shadow);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-label {
+  font-size: clamp(34px, 3vw, 44px);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-control {
+  width: auto;
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block]
+) {
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  border-color: var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title report"
+      "range range";
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+    padding: 21px 18px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER G · VEXEL-LIGHT CARD DNA
+ *
+ * One surface and one content rhythm across every dashboard card. This final
+ * layer also keeps the desktop composition intact at compact laptop widths;
+ * the previous 1340px breakpoint turned four KPIs into oversized 2×2 tiles
+ * and collapsed the revenue chart because its percentage height lost a
+ * definite parent.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+body.design-vexel[data-vexel-mode="light"] {
+  --vx-card-radius: 18px;
+  --vx-card-gap: 18px;
+  --vx-card-pad: 24px;
+  --vx-card-bg: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+  --vx-card-border: rgba(10, 24, 18, 0.12);
+  --vx-card-border-hover: rgba(7, 112, 77, 0.34);
+  --vx-card-shadow:
+    inset 0 2px 0 rgba(7, 112, 77, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 2px 5px rgba(10, 24, 18, 0.055),
+    0 18px 38px -26px rgba(10, 24, 18, 0.28);
+  --vx-card-shadow-hover:
+    inset 0 2px 0 rgba(7, 112, 77, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 4px 10px rgba(10, 24, 18, 0.075),
+    0 24px 46px -28px rgba(10, 24, 18, 0.38);
+}
+
+/* The dark half of the card DNA. These six names were declared ONLY inside
+ * light-gated blocks (layer F and the block above), so in dark mode every
+ * var(--vx-card-*) reference resolved to nothing: `background: !important`
+ * is invalid at computed-value time, the declaration is dropped, and the card
+ * falls back to the page. That is why dark had no card surfaces at all — not a
+ * missing rule, a missing token.
+ *
+ * The light card is lit from above: a 2px atlas rim on the top edge, a white
+ * highlight under it, then ambient and contact shadows. Dark keeps the same
+ * construction and swaps the light source — mint rim, a much fainter white
+ * highlight — because on black an ambient shadow does almost no work and the
+ * border plus the lit edge are what separate the card from the page. */
+body.design-vexel[data-vexel-mode="dark"] {
+  --vx-card-radius: 18px;
+  --vx-card-gap: 18px;
+  --vx-card-pad: 24px;
+  --vx-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.026) 100%);
+  --vx-card-border: rgba(255, 255, 255, 0.10);
+  --vx-card-border-hover: rgba(0, 255, 174, 0.34);
+  --vx-card-shadow:
+    inset 0 2px 0 rgba(0, 255, 174, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 18px 38px -26px rgba(0, 0, 0, 0.85);
+  --vx-card-shadow-hover:
+    inset 0 2px 0 rgba(0, 255, 174, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 4px 10px rgba(0, 0, 0, 0.55),
+    0 24px 46px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* Shared shell: opaque enough to read as a product surface, without the
+ * green haze and mismatched glass treatments that separated card families. */
+body.design-vexel[data-vexel-mode] :is(
+  .vexel-compose > .dash-date-range,
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+) {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--vx-card-border) !important;
+  border-radius: var(--vx-card-radius) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .vexel-compose > .dash-date-range,
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .vexel-revenue-row > .hero-today,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .vexel-bottom-row > [data-mix-block],
+  .dash-standard > .oppo-band .oppo-card,
+  .dash-standard .dash-cols .block,
+  .dash-standard .dash-cols .settle,
+  .dash-standard > .dash-more-clip [data-integ-card]
+):hover {
+  z-index: 1;
+  transform: translateY(-1px);
+  border-color: var(--vx-card-border-hover) !important;
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * LAYER H · SUB-PAGE CARD DNA
+ *
+ * Layer G above draws the card system, but its selector lists name only
+ * home-page surfaces. Every sub-page panel therefore fell back to a bare
+ * `1px solid var(--n-200)` — rgba(255,255,255,0.07) — with no background,
+ * no rim, no shadow and no hover state at all. On the pure-black main
+ * column that edge is effectively invisible: the pages read as text
+ * floating on nothing, and you cannot tell where one card ends.
+ *
+ * H extends the same recipe to the sub-pages, in two tiers:
+ *   H1 · neutral panels     — full DNA (background + edge + rim + hover)
+ *   H2 · coloured surfaces  — edge + rim + hover only, background left
+ *                             alone so status colours survive
+ * Controls (pill rows, tab strips, search fields, chips, inputs) are
+ * deliberately excluded — selection UI belongs to the liquid lens, and a
+ * mint rim plus a hover lift would read as "card" where it should read
+ * as "control". Plan de salle (.pds-*) is excluded too: its noir view is
+ * a signed-off design that sets its own surfaces.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/* H1 · Neutral sub-page panels — the full card recipe. */
+body.design-vexel[data-vexel-mode] :is(
+  .p-hero, .p-card, .team-mem,
+  .eq-stat, .eq-section,
+  .pay-stat, .pay-section,
+  .cf-card, .cf-z-history,
+  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .resv-section, .resv-builder,
+  .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .cd-exp,
+  .crm-tbl, .crm-comp,
+  .ord-feed, .ord-keep,
+  .gft-stat, .gft-tbl,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .pr-card, .sc-bday-panel,
+  .mi-card, .mi-section, .mi-group-card,
+  .st-kpi, .st-section, .st-ai,
+  .fin-card
+) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border) !important;
+  background: var(--vx-card-bg) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* H2 · Surfaces that carry their own meaning in colour — status tickets,
+ * phase markers, approval states. They get the edge, the rim and the
+ * hover, but keep whatever background the component painted. */
+body.design-vexel[data-vexel-mode] :is(
+  .kds-ticket, .resv-card, .re-tile,
+  .dep-phase, .dep-appr, .gft-amt, .ord-ch,
+  .st-alert, .fin-price-card
+) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border) !important;
+  box-shadow: var(--vx-card-shadow) !important;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* H3 · The hover.
+ *
+ * The first pass reused the home card's hover verbatim: −1px and a rim
+ * that goes from 0.22 to 0.45 alpha. On the home page that lands, because
+ * the cards are small, tiled and framed by their neighbours — the whole
+ * grid shifts under your eye. A sub-page is one or two wide panels on
+ * black with a table inside, and at that size −1px over 1080px is below
+ * the threshold where anyone notices. Verified as present in the DOM and
+ * still read as "nothing happens".
+ *
+ * So the sub-page hover is louder than the home one on purpose: a 2px
+ * lift, a mint border at 0.55, an outer ring, and a lit top edge. It has
+ * to survive being the only moving thing on the page. */
+body.design-vexel[data-vexel-mode] {
+  --vx-sub-hover-border: rgba(11, 110, 79, 0.42);
+  --vx-sub-hover-bg: linear-gradient(180deg, #ffffff 0%, #f4f8f6 100%);
+  --vx-sub-hover-shadow:
+    inset 0 2px 0 rgba(7, 112, 77, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 1px rgba(11, 110, 79, 0.12),
+    0 10px 22px -12px rgba(11, 110, 79, 0.28),
+    0 18px 34px -22px rgba(10, 24, 18, 0.35);
+}
+
+body.design-vexel[data-vexel-mode="dark"] {
+  --vx-sub-hover-border: rgba(0, 255, 174, 0.55);
+  --vx-sub-hover-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.085) 0%, rgba(255, 255, 255, 0.045) 100%);
+  --vx-sub-hover-shadow:
+    inset 0 2px 0 rgba(0, 255, 174, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(0, 255, 174, 0.16),
+    0 10px 24px -12px rgba(0, 255, 174, 0.22),
+    0 8px 18px rgba(0, 0, 0, 0.55),
+    0 28px 50px -28px rgba(0, 0, 0, 0.9);
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .p-hero, .p-card, .team-mem,
+  .eq-stat, .eq-section,
+  .pay-stat, .pay-section,
+  .cf-card, .cf-z-history,
+  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .resv-section, .resv-builder,
+  .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .cd-exp,
+  .crm-tbl, .crm-comp,
+  .ord-feed, .ord-keep,
+  .gft-stat, .gft-tbl,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .pr-card, .sc-bday-panel,
+  .mi-card, .mi-section, .mi-group-card,
+  .st-kpi, .st-section, .st-ai,
+  .fin-card,
+  .kds-ticket, .resv-card, .re-tile,
+  .dep-phase, .dep-appr, .gft-amt, .ord-ch,
+  .st-alert, .fin-price-card
+):hover {
+  z-index: 1;
+  /* !important is load-bearing: several sub-page panels enter with a
+   * filling keyframe animation (.eq-stat starts at translateY(8px)), and a
+   * running animation outranks a normal declaration — the lift silently
+   * did nothing until this was marked. */
+  transform: translateY(-2px) !important;
+  border-color: var(--vx-sub-hover-border) !important;
+  box-shadow: var(--vx-sub-hover-shadow) !important;
+}
+
+/* Tier 1 alone brightens its fill on hover — tier 2 keeps whatever colour
+ * it painted, which is the whole reason the tiers are split. */
+body.design-vexel[data-vexel-mode] :is(
+  .p-hero, .p-card, .team-mem,
+  .eq-stat, .eq-section,
+  .pay-stat, .pay-section,
+  .cf-card, .cf-z-history,
+  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .resv-section, .resv-builder,
+  .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .cd-exp,
+  .crm-tbl, .crm-comp,
+  .ord-feed, .ord-keep,
+  .gft-stat, .gft-tbl,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .pr-card, .sc-bday-panel,
+  .mi-card, .mi-section, .mi-group-card,
+  .st-kpi, .st-section, .st-ai,
+  .fin-card
+):hover {
+  background: var(--vx-sub-hover-bg) !important;
+}
+
+/* H4 · Coverage for what H1/H2 cannot name.
+ *
+ * Several sub-pages — Commandes and Terminaux most of all — build their
+ * cards from unclassed, inline-styled divs. A named list can never reach
+ * those. Raising the hairline token inside the sub-page scopes lifts
+ * every `var(--n-200)` edge at once, enumerated or not, so nothing is
+ * left drawing at 0.07 on black. Row separators read the same token and
+ * lift with it — which is correct here: they were invisible too.
+ *
+ * The scope is sub-page-only by construction: the app stamps a
+ * `page-<key>` class on <body> for every destination and stamps nothing
+ * on the home page, so `[class*=" page-"]` is an exact "not home" test.
+ * Drawers and the named panels are listed too, since a drawer can open
+ * over the home page and carries no page- class. */
+body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container,
+body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer,
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .dash-genpage, .dash-equipe,
+  .p-hero, .p-card,
+  .eq-section, .pay-section, .cf-card,
+  .resv-section, .sh-section,
+  .dep-ledger, .dep-card,
+  .cd-tblwrap, .crm-tbl, .crm-comp,
+  .kt-plan-wrap, .kt-h-tablewrap,
+  .kdr-strip, .kdr-top-c, .kdr-cat
+) {
+  --n-100: 0.06;
+  --n-200: rgba(255, 255, 255, 0.10);
+  --n-300: 0.18;
+}
+
+/* H5 · Long lists need to answer the pointer, or a table of forty rows
+ * is a wall. Same not-home scope as H4. */
+body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container tbody tr:hover,
+body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover,
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .dash-genpage, .dash-equipe,
+  .cd-tblwrap, .crm-tbl, .kt-h-tablewrap,
+  .pay-section, .dep-ledger, .sh-section, .resv-section,
+  .kdr-cat, .kdr-top-c
+) tbody tr:hover {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+/* The row a pointer is on gets a mint marker down its leading edge. On a
+ * forty-row ledger a wash alone is too weak to track across 1080px, and a
+ * <tr> does not reliably paint its own box-shadow under border-collapse —
+ * so the marker is drawn on the first cell, which always does. */
+body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container tbody tr:hover > *:first-child,
+body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover > *:first-child,
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .dash-genpage, .dash-equipe,
+  .cd-tblwrap, .crm-tbl, .kt-h-tablewrap,
+  .pay-section, .dep-ledger, .sh-section, .resv-section,
+  .kdr-cat, .kdr-top-c
+) tbody tr:hover > *:first-child {
+  box-shadow: inset 2px 0 0 rgba(0, 255, 174, 0.55);
+}
+
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .rr, .pay-wk-row, .dep-row, .dep-supp, .kdr-r, .kit-hrow, .resv-wait
+):hover {
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow: inset 2px 0 0 rgba(0, 255, 174, 0.55);
+}
+
+/* H6 · The bare tables.
+ *
+ * Commandes and Terminaux drop a 3 900px-tall <table> into an unclassed
+ * <div>. No named selector can reach it, and the token rescope in H4 does
+ * nothing because the wrapper draws no border at all — the list simply
+ * runs off into the black with no bottom edge. Match the wrapper
+ * structurally instead: a div whose direct child is a table IS the panel.
+ * No hover lift here — a 4 000px surface that jumps under the pointer
+ * reads as a glitch; the row hover in H5 is the right feedback at this
+ * size. */
+body.design-vexel[data-vexel-mode] .dash-genpage div:not([class]):has(> table) {
+  box-sizing: border-box;
+  border: 1px solid var(--vx-card-border);
+  border-radius: 16px;
+  background: var(--vx-card-bg);
+  box-shadow: var(--vx-card-shadow);
+  padding: 2px 12px 6px;
+  overflow-x: auto;
+}
+
+/* Row separators inside the ledger hard-code their hairline instead of
+ * reading --n-200, so H4's rescope cannot lift them. Name them. */
+body.design-vexel[data-vexel-mode="dark"] :is(.dep-row, .dep-supp) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* H7 · KDS tickets.
+ *
+ * The one card family that must NOT take --vx-card-border: on a ticket the
+ * border colour IS the state — 2px atlas for a new order, danger red for a
+ * late one (pages-pro.js:13623). Overwriting it would erase the only signal
+ * a cook reads across the pass. So the ticket takes the rim and the lift
+ * and keeps its own edge. `.is-new` carries a heavier ring of its own and
+ * out-specifies this rule, which is the intended outcome. */
+body.design-vexel[data-vexel-mode] .kit-order {
+  box-shadow: var(--vx-card-shadow);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .kit-order:hover {
+  z-index: 1;
+  transform: translateY(-1px);
+  box-shadow: var(--vx-card-shadow-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode] .kit-order:hover {
+    transform: none;
+  }
+
+  body.design-vexel[data-vexel-mode] :is(
+    .p-hero, .p-card, .team-mem,
+    .eq-stat, .eq-section,
+    .pay-stat, .pay-section,
+    .cf-card, .cf-z-history,
+    .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+    .resv-section, .resv-builder,
+    .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+    .dep-ledger, .dep-card,
+    .cd-tblwrap, .cd-exp,
+    .crm-tbl, .crm-comp,
+    .ord-feed, .ord-keep,
+    .gft-stat, .gft-tbl,
+    .kt-plan-wrap, .kt-h-tablewrap,
+    .pr-card, .sc-bday-panel,
+    .kds-ticket, .resv-card, .re-tile,
+    .dep-phase, .dep-appr, .gft-amt, .ord-ch
+  ) {
+    transition: none;
+  }
+  body.design-vexel[data-vexel-mode] :is(
+    .p-hero, .p-card, .team-mem,
+    .eq-stat, .eq-section,
+    .pay-stat, .pay-section,
+    .cf-card, .cf-z-history,
+    .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+    .resv-section, .resv-builder,
+    .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
+    .dep-ledger, .dep-card,
+    .cd-tblwrap, .cd-exp,
+    .crm-tbl, .crm-comp,
+    .ord-feed, .ord-keep,
+    .gft-stat, .gft-tbl,
+    .kt-plan-wrap, .kt-h-tablewrap,
+    .pr-card, .sc-bday-panel,
+    .mi-card, .mi-section, .mi-group-card,
+    .st-kpi, .st-section, .st-ai,
+    .fin-card,
+    .kds-ticket, .resv-card, .re-tile,
+    .dep-phase, .dep-appr, .gft-amt, .ord-ch,
+    .st-alert, .fin-price-card
+  ):hover {
+    transform: none !important;
+  }
+}
+
+/* A common header hierarchy. */
+body.design-vexel[data-vexel-mode] .dash-standard .block-head,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] .block-head {
+  min-height: 38px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .dash-standard .block-head .t,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .oppo-t
+) {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.18;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-transform: none;
+}
+
+body.design-vexel[data-vexel-mode] :is(
+  .dash-standard .block-head .s,
+  .vexel-goals-card p,
+  .oppo-d
+) {
+  color: var(--n-500);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* KPI cards stay compact and form one scan line on desktop. */
+body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m,
+body.design-vexel[data-vexel-mode="light"] .vexel-compose [data-kpi-band] > .kpi-m:first-child {
+  min-height: 126px;
+  padding: 20px 21px;
+  border-inline-start: 1px solid var(--vx-card-border) !important;
+  background: #fff !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m::before {
+  content: none !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m > .l {
+  padding-inline-end: 0 !important;
+  color: var(--n-500);
+  font-size: 11.5px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m > .l,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .dash-standard .block-head .t,
+  .oppo-t,
+  .vexel-rail-label
+)::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 9px;
+  border-radius: 2px;
+  background: #08734f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  vertical-align: 0.12em;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-compose .kpi-m .v {
+  font-size: clamp(28px, 2.15vw, 34px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-kpi-comparison {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+/* Preserve the chart + rail composition through normal laptop widths. */
+body.design-vexel[data-vexel-mode] .vexel-revenue-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+  align-items: stretch;
+  height: 348px !important;
+  min-height: 348px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
+  width: auto;
+  height: 348px !important;
+  min-height: 348px;
+  padding: var(--vx-card-pad) !important;
+}
+
+/* La carte des canaux ouvre sur un h2 + p plutôt que sur un .block-head : sans
+ * ce filet elle serait la seule des deux à ne pas séparer son titre. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .hero-left-chart .block-head,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row .block-head,
+body.design-vexel[data-vexel-mode="light"] .vexel-goals-card > p,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .block-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(10, 24, 18, 0.075);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-grid,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left,
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart {
+  height: 100% !important;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .chart-wrap {
+  height: auto !important;
+  min-height: 210px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(149px, auto) minmax(175px, 1fr);
+  width: auto;
+  min-width: 0;
+  height: 348px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-rail-card {
+  width: 100%;
+  padding: 21px 22px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-rail-card,
+body.design-vexel[data-vexel-mode="light"] .vexel-bottom-row > *,
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols > * {
+  background-color: #fff !important;
+}
+
+/* Ambient emerald light is reserved for cards that carry momentum or a
+ * decision. Repeating it everywhere would turn the page into a green wash;
+ * here it creates rhythm without competing with the data. */
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dash-cols .settle {
+  background:
+    radial-gradient(260px 205px at 96% -4%, rgba(38, 183, 128, 0.25), rgba(38, 183, 128, 0.09) 46%, transparent 73%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .oppo-band .oppo-card {
+  background:
+    radial-gradient(165px 130px at 100% 0%, rgba(38, 183, 128, 0.105), transparent 72%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+  background:
+    radial-gradient(200px 155px at 98% 0%, rgba(38, 183, 128, 0.14), rgba(38, 183, 128, 0.045) 48%, transparent 74%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) !important;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-rail-label,
+body.design-vexel[data-vexel-mode] .dash-standard .settle .lbl {
+  color: var(--n-500);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-goal-track i {
+  box-shadow: none;
+}
+
+/* Both analytic cards use the same dimensions and header baseline. */
+body.design-vexel[data-vexel-mode] .vexel-bottom-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  min-height: 327px;
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .vexel-goals-card,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row > [data-mix-block] {
+  width: auto;
+  height: 100%;
+  padding: var(--vx-card-pad);
+}
+
+/* Les deux cartes font la même hauteur ; sans cela leur contenu se tasse en
+ * haut et laisse quatre-vingts pixels de papier vide sous l'anneau. Chacune
+ * étire son graphique et pousse sa dernière ligne contre le bas. */
+body.design-vexel[data-vexel-mode] .vexel-goals-card,
+body.design-vexel[data-vexel-mode] .vexel-bottom-row > [data-mix-block] {
+  display: flex;
+  flex-direction: column;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-goals-card .vexel-rings {
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
+  align-content: center;
+  padding-top: 4px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] .donut-row {
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] > :last-child {
+  margin-top: auto;
+}
+
+/* Recommendation cards share the same spacing and keep their illustration
+ * subordinate to the message rather than behaving like a different widget. */
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-grid {
+  gap: var(--vx-card-gap);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card {
+  min-height: 192px;
+  padding: 22px;
+  isolation: isolate;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-d {
+  max-width: 76%;
+  margin-top: 1px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-art {
+  inset-inline-end: 9px;
+  bottom: 8px;
+  width: 100px;
+  height: 80px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .oppo-band .oppo-card:hover .oppo-art {
+  transform: translateY(-2px) rotate(-1deg);
+}
+
+/* Native operational cards use one inset and clip child rows to the radius. */
+body.design-vexel[data-vexel-mode] .dash-standard .dash-cols :is(.block, .settle),
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-more-clip [data-integ-card] {
+  padding: var(--vx-card-pad) !important;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .settle::after {
+  content: none;
+}
+
+/* Integrations are nested controls, not a second glowing card family. */
+body.design-vexel[data-vexel-mode] .dash-more .integ-grid {
+  gap: 12px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .integ-card {
+  min-height: 78px !important;
+  padding: 15px 17px !important;
+  transform: none !important;
+  border: 1px solid var(--n-200) !important;
+  border-radius: 14px !important;
+  background: var(--paper-soft) !important;
+  box-shadow: none !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-more .integ-card:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--vx-card-border-hover) !important;
+  box-shadow: 0 10px 22px -19px rgba(10, 24, 18, 0.42) !important;
+}
+
+/* Revenue is the dashboard's hero metric. Give it a real information
+ * hierarchy instead of leaving a small title above an oversized empty plot. */
+body.design-vexel[data-vexel-mode] .vexel-revenue-row {
+  height: 430px !important;
+  min-height: 430px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today {
+  height: 430px !important;
+  min-height: 430px;
+  padding: 27px 29px 22px !important;
+  border-color: rgba(7, 112, 77, 0.22) !important;
+  background:
+    radial-gradient(520px 270px at 88% -12%, rgba(33, 194, 137, 0.14), transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(7, 112, 77, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 4px 12px rgba(10, 24, 18, 0.06),
+    0 26px 54px -34px rgba(7, 77, 55, 0.42) !important;
+  overflow: hidden;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row > .hero-today::before {
+  position: absolute;
+  z-index: 0;
+  top: -145px;
+  right: -100px;
+  width: 440px;
+  height: 330px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(68, 219, 161, 0.13), transparent 68%);
+  content: "" !important;
+  pointer-events: none;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart > .block-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 20px;
+  min-height: 112px;
+  margin: 0;
+  padding: 0 0 15px;
+  border-bottom: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .hero-left-chart .block-head .t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--n-600);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row [data-rev-range-badge] {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px !important;
+  border: 1px solid rgba(7, 112, 77, 0.14);
+  border-radius: 999px;
+  background: rgba(31, 181, 125, 0.08);
+  color: #087451;
+  font-family: var(--mono);
+  font-size: 9.5px !important;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
+  display: block !important;
+  margin-top: 9px;
+  color: #071711;
+  font-size: clamp(38px, 3.1vw, 48px);
+  font-weight: 680;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-cur {
+  margin-inline-start: 9px;
+  color: var(--n-400);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  vertical-align: 0.24em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(7, 126, 87, 0.08);
+  color: #087451;
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-delta.down {
+  background: rgba(211, 67, 48, 0.08);
+  color: #bd3f30;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta svg {
+  width: 13px;
+  height: 13px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta .lbl {
+  color: currentColor;
+  opacity: 0.62;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row [data-rev-sub] {
+  display: block !important;
+  margin-top: 8px;
+  color: var(--n-400);
+  font-size: 11.5px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-row .block-head .right-actions {
+  display: block !important;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(10, 24, 18, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--n-500);
+  font-size: 11.5px;
+  box-shadow: 0 8px 22px -18px rgba(10, 24, 18, 0.55);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn:hover,
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .cmp-btn.on {
+  border-color: rgba(7, 112, 77, 0.24);
+  background: rgba(7, 126, 87, 0.08);
+  color: #087451;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-legend {
+  display: none;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .chart-wrap {
+  min-height: 245px;
+  border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(7, 93, 66, 0.055) 1px, transparent 1px) 0 6px / 100% 33.333%,
+    linear-gradient(180deg, rgba(231, 245, 238, 0.16), rgba(255, 255, 255, 0));
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-line {
+  stroke: #087856;
+  stroke-width: 2.8;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-line-halo {
+  stroke: #2ac58c;
+  stroke-width: 7;
+  stroke-opacity: 0.16;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row #gfill stop:first-child {
+  stop-color: #20b77f;
+  stop-opacity: 0.28;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-live-dot {
+  fill: #087856;
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+
+/* ── Hover chip ──────────────────────────────────────────────────────────────
+ * dateRange.js sizes the box to its own glyphs (~140×30); this layer only
+ * decides how it reads on paper. Three corrections to a treatment that was
+ * drawn for a 180×54 slab:
+ *   · Flat, not gradient-filled. A riad→atlas ramp across 30px never reads as
+ *     a gradient — it only makes the top and bottom edges different colours.
+ *   · No mint hairline. At this size a 1px accent border is the loudest thing
+ *     on the card, competing with the line it is annotating.
+ *   · Shadow re-cut for a chip. The old dy=10/blur=16 pair at 32 % was sized to
+ *     lift a card; under a 30px chip it reads as a smudge on the paper.
+ * Dark-on-light is deliberate: the chip belongs to the cursor, not to the card,
+ * and inverting it is what makes it legible over both the fill and the paper. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-rect {
+  fill: #07301F;
+  stroke: transparent;
+  filter: drop-shadow(0 5px 12px rgba(6, 40, 27, 0.24));
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-label {
+  fill: rgba(160, 232, 193, 0.82);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-tip-value {
+  fill: #FFFFFF;
+}
+
+/* Two hover marks were still wearing their dark-dashboard colours and had gone
+ * invisible on paper. The crosshair is drawn white at 32 % — on a white card it
+ * is not faint, it is absent, so the scrub had no vertical anchor at all. The
+ * comparison dot is bone at 55 %, which disappears the moment "Comparer" is on.
+ * Both restated against the light surface, keyed to the comparison line's own
+ * muted atlas so the pair reads as one series. */
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-cross-line {
+  stroke: rgba(7, 48, 31, 0.20);
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-active-cmp {
+  fill: #3F7A63;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+/* The live pulse marks "now"; the active dot marks "where you are pointing".
+ * Both on screen at once gave the card two competing current-value markers —
+ * in the reported screenshot the pulse sat one hour to the right of the dot and
+ * read as a stray artefact. The pulse stands down while a hover owns the read. */
+body.design-vexel .vexel-revenue-row .chart-wrap.is-hover .rev-live {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
+  height: 430px;
+  grid-template-rows: minmax(184px, auto) minmax(228px, 1fr);
+}
+
+/* Card audit · the rail rows used to reserve 184px while the goal card kept a
+ * hard 151px height. That invisible 33px hole made the customer card look
+ * detached from the revenue card. Both cards now fill the rows they own. */
+body.design-vexel[data-vexel-mode] .vexel-revenue-rail > .vexel-rail-card {
+  height: 100%;
+  min-height: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-day-goal {
+  flex: none;
+}
+
+/* Customer growth · compact chart, one coherent value line, grounded delta. */
+body.design-vexel[data-vexel-mode] .vexel-clients {
+  display: flex;
+  flex-direction: column;
+  padding-block: 17px 18px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-body {
+  flex: 1 1 auto;
+  align-items: center;
+  margin-top: 12px;
+  min-height: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 0;
+  margin-top: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot strong {
+  font-size: 29px;
+  line-height: .96;
+  letter-spacing: -.045em;
+  white-space: nowrap;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot span {
+  margin: 0;
+  color: var(--n-500);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-client-foot small {
+  margin: 0;
+  font-size: 11px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .vexel-client-foot b {
+  margin-inline-start: auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(7, 126, 87, 0.08);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Service goals · one unavailable message belongs in the subtitle, not four
+ * times under four rings. Empty channels keep their identity without colliding.
+ * auto-fit plutôt que repeat(4) : un métier peut n'avoir que deux ou trois
+ * canaux, et une quatrième colonne fixe pousserait alors les anneaux contre la
+ * gauche en laissant un quart de carte vide. Les pistes vides se replient. */
+body.design-vexel[data-vexel-mode] .vexel-rings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 8px;
+  justify-content: stretch;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-ring-item span {
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-ring-item.is-empty svg {
+  width: 90px;
+  min-width: 90px;
+  height: 90px;
+  min-height: 90px;
+}
+
+body.design-vexel[data-vexel-mode] .vexel-ring-item.is-empty span {
+  margin-top: 11px;
+}
+
+/* Main operations · the ten-order feed can be tall; the stock card should end
+ * with its final action instead of stretching into hundreds of blank pixels. */
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) {
+  align-items: start;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
+  height: auto !important;
+  align-self: start;
+}
+
+/* The generated summary cards now share the same quiet response as native
+ * cards. No bright wash, just the emerald edge and a small elevation. */
+body.design-vexel[data-vexel-mode] :is(.vexel-rail-card, .vexel-goals-card) {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-card):hover {
+  transform: translateY(-2px);
+  border-color: var(--vx-card-hover-border) !important;
+  box-shadow: 0 16px 34px -25px rgba(7, 77, 55, 0.46) !important;
+}
+
+@media (max-width: 1100px) {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row {
+    display: flex !important;
+    height: auto !important;
+    flex-direction: column;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
+    height: 410px !important;
+    min-height: 410px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+    grid-template-rows: 214px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-bottom-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band],
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-rail {
+    grid-template-rows: minmax(184px, auto) minmax(210px, auto) !important;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
+    min-height: 116px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row > .hero-today {
+    height: 390px !important;
+    min-height: 390px;
+    padding: 22px 18px 18px !important;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-val {
+    font-size: 36px;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * VEXEL LIGHT · BLACK NAVIGATION RAIL
+ * A true-black product spine with restrained emerald wayfinding. The rail is
+ * deliberately free of gradients and translucency so it stays crisp beside
+ * the warm dashboard canvas.
+ * ────────────────────────────────────────────────────────────────────────── */
+body.design-vexel[data-vexel-mode="light"] .sidebar {
+  --vx-sidebar-bg: #000;
+  --vx-sidebar-popover: #080a09;
+  --vx-sidebar-surface: #090b0a;
+  --vx-sidebar-hover: rgba(255, 255, 255, 0.055);
+  --vx-sidebar-active: rgba(25, 211, 145, 0.13);
+  --vx-sidebar-border: rgba(255, 255, 255, 0.09);
+  --vx-sidebar-accent-border: rgba(49, 225, 160, 0.32);
+  --vx-sidebar-ink: #f7faf8;
+  --vx-sidebar-muted: rgba(247, 250, 248, 0.68);
+  --vx-sidebar-ghost: rgba(247, 250, 248, 0.34);
+  --vx-sidebar-accent: #31e1a0;
+  background: #000 !important;
+  border-right-color: rgba(49, 225, 160, 0.13);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.025), 18px 0 42px -36px rgba(0, 0, 0, 0.95);
+  backdrop-filter: none;
+  scrollbar-color: rgba(49, 225, 160, 0.24) transparent;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar::-webkit-scrollbar-thumb {
+  background: rgba(49, 225, 160, 0.22);
+}
+
+body.design-vexel[data-vexel-mode] .sidebar .brand {
+  margin-block: 8px 24px;
+}
+
+body.design-vexel[data-vexel-mode] .sidebar .brand-logo {
+  filter: brightness(0) invert(1);
+  opacity: 0.96;
+}
+
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch-wrap {
+  margin-bottom: 24px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 13px;
+  background: #090b0a;
+  border-color: rgba(255, 255, 255, 0.105);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 14px 28px -24px rgba(49, 225, 160, 0.45);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch::before {
+  content: "";
+  position: absolute;
+  inset: 14px auto 14px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: #31e1a0;
+  opacity: 0.72;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch:hover,
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch.open {
+  background: #0d100e;
+  border-color: rgba(49, 225, 160, 0.3);
+}
+
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch .badge {
+  font-weight: 650;
+  letter-spacing: 0.105em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .badge i {
+  box-shadow: 0 0 0 3px rgba(49, 225, 160, 0.1), 0 0 12px rgba(49, 225, 160, 0.34);
+}
+
+body.design-vexel[data-vexel-mode] .sidebar .loc-switch .name {
+  margin-top: 9px;
+  font-weight: 580;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .loc-switch .meta {
+  margin-top: 5px;
+  color: rgba(247, 250, 248, 0.54);
+  line-height: 1.45;
+}
+
+body.design-vexel[data-vexel-mode] .sidebar nav {
+  gap: 3px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a {
+  min-height: 38px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: rgba(247, 250, 248, 0.67);
+  font-weight: 470;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a svg {
+  color: rgba(91, 226, 178, 0.74);
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover {
+  color: #f7faf8;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a:hover svg {
+  color: #72e8bd;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"] {
+  color: #eafff7;
+  background: rgba(25, 211, 145, 0.13);
+  border-color: rgba(49, 225, 160, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 25px -20px rgba(49, 225, 160, 0.9);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active::before,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"]::before {
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  background: #31e1a0;
+  box-shadow: 0 0 12px rgba(49, 225, 160, 0.65);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a.active svg,
+body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"] svg {
+  color: #31e1a0;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .sect {
+  margin: 22px 11px 9px;
+  color: rgba(247, 250, 248, 0.32);
+  font-weight: 650;
+  letter-spacing: 0.16em;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .venue-dropdown {
+  background: #080a09;
+  border-color: rgba(255, 255, 255, 0.11);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.68);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .upsell {
+  background: #080a09;
+  border-color: rgba(49, 225, 160, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .merchant {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  margin-top: 14px;
+  padding: 15px 10px 8px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .merchant:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 11px;
+}
+
+body.design-vexel[data-vexel-mode="light"] .sidebar .avatar {
+  box-shadow: 0 0 0 3px rgba(49, 225, 160, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode] .sidebar nav a:hover {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER H · VEXEL-DARK ART DIRECTION
+ *
+ * The dark counterpart to the raw-literal rules in layers E and G. Everything
+ * in those layers that resolves through a token is already mode-agnostic and
+ * needs nothing here; this block exists only where the light rule hardcodes a
+ * light value — a paper background, an ink colour, an atlas green — and dark
+ * therefore had no declaration at all.
+ *
+ * Metrics are copied from the light rule verbatim on purpose. The two modes
+ * must differ in colour and in nothing else: if a size, weight or spacing
+ * drifts here the skins stop being one design with two palettes.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Layer A hides the hero readout with `display: none !important` and expects
+ * each mode to re-show it. Light did; dark never had the rule, which is why
+ * the most important number on the dashboard was absent from the dark card. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-val {
+  display: block !important;
+  margin-top: 9px;
+  color: var(--ink);
+  font-size: clamp(38px, 3.1vw, 48px);
+  font-weight: 680;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row [data-rev-range-badge] {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px !important;
+  border: 1px solid rgba(0, 255, 174, 0.20);
+  border-radius: 999px;
+  background: rgba(0, 255, 174, 0.10);
+  /* The badge sits inside .block-head .t, which sets color on the whole head.
+   * Without the flag the chip inherits --n-600 and reads as plain grey text
+   * rather than as a live-range marker. */
+  color: var(--vx-accent) !important;
+  font-family: var(--mono);
+  font-size: 9.5px !important;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-delta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(0, 255, 174, 0.10);
+  color: var(--vx-accent);
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-hero-delta.down {
+  background: rgba(255, 107, 95, 0.12);
+  color: var(--danger);
+}
+
+/* Section-head bullet. The light rule carries the whole construction —
+ * content, box, radius — alongside its colour, so dark inherited none of it
+ * and the pseudo-element was never generated (content resolved to `none`).
+ * Restated in full rather than patched: #08734f is legible on paper and nearly
+ * invisible on black, so the dark bullet steps up to the accent and drops the
+ * white inset highlight — a top-lit bevel on a 6px square reads as a stray
+ * pixel here. */
+body.design-vexel[data-vexel-mode="dark"] :is(
+  .vexel-compose [data-kpi-band] > .kpi-m > .l,
+  .vexel-revenue-row .hero-left-chart .block-head .t,
+  .vexel-goals-card h2,
+  .vexel-bottom-row [data-mix-block] .block-head .t,
+  .dash-standard .block-head .t,
+  .oppo-t,
+  .vexel-rail-label
+)::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 9px;
+  border-radius: 2px;
+  background: var(--vx-accent-deep);
+  box-shadow: none;
+  vertical-align: 0.12em;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .hero-left-chart .block-head,
+body.design-vexel[data-vexel-mode="dark"] .vexel-bottom-row .block-head,
+body.design-vexel[data-vexel-mode="dark"] .vexel-goals-card > p,
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .block-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn {
+  border: 1px solid var(--vx-border-strong);
+  background: var(--vx-white-045);
+  color: var(--n-500);
+  box-shadow: none;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn:hover,
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .cmp-btn.on {
+  border-color: var(--vx-accent-25);
+  background: var(--vx-active-bg);
+  color: var(--vx-accent);
+}
+
+/* Plot bed: the same three unlabelled gridlines and the same top-down wash as
+ * light, inverted. Without it the curve floats on the card with no floor. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .chart-wrap {
+  border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 6px / 100% 33.333%,
+    linear-gradient(180deg, rgba(0, 255, 174, 0.035), rgba(0, 0, 0, 0));
+}
+
+body.design-vexel[data-vexel-mode="dark"] :is(.vexel-rail-card, .vexel-goals-card):hover {
+  box-shadow: var(--vx-card-shadow-hover) !important;
+}
+
+/* Hover chip. dateRange.js ships a riad→atlas gradient authored for the old
+ * dark dashboard; against the new lifted card it sits too close to the surface
+ * to separate. Flat, one step lighter, with the mint hairline dark keeps and
+ * light drops — on black the border is what defines the chip's edge. */
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-rect {
+  fill: #0E3A29;
+  stroke: rgba(0, 255, 174, 0.24);
+  filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.6));
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-label {
+  fill: rgba(0, 255, 174, 0.82);
+}
+
+body.design-vexel[data-vexel-mode="dark"] .vexel-revenue-row .rev-tip-value {
+  fill: var(--ink);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAYER G · HOME · EDGE LIGHTING
+ *
+ * Scoped to .dash-standard: the homepage only. Subpages are untouched — every
+ * rule below is gated on both the vexel mode attribute and the homepage
+ * container. Both climates carry the effect; each in its own colour (see the
+ * two token blocks below). It was dark-only at first, which meant it never
+ * appeared on ?skin=vexel-light — the same page, the same cards, no light.
+ *
+ * The premise is that light should mark *importance* and *intent*, not coat the
+ * page. So nothing here fires at rest: the resting dashboard is byte-for-byte
+ * what it was, minus one half-step on the hero's top rim (below). Illumination
+ * is the response to a pointer, which makes it wayfinding rather than decor.
+ *
+ * Two tiers:
+ *   1 · Every card on the home surface gets the edge and a glow that follows the
+ *       cursor. An earlier draft withheld the glow from display-only cards so it
+ *       would read strictly as "clickable"; in use that just looked like half the
+ *       page was broken, so the effect is now uniform and carries "you are here"
+ *       rather than "you may click".
+ *   2 · The hero is the landmark and gets the widest bloom, but anchored to its
+ *       top edge rather than the cursor: it is not clickable, and its chart runs
+ *       its own hover readout that a tracking glow would fight.
+ *
+ * The glow is sized in PERCENTAGES of the card, never in pixels. A fixed radius
+ * covers a small KPI card several times over and all but vanishes inside a large
+ * one, so a pixel reach lights the little cards and leaves the big ones with a
+ * bare outline and no illumination behind it.
+ *
+ * Colour is whatever the active climate already uses — mint (#00ffae) in dark,
+ * atlas (#0B6E4F) in light — held as an RGB triplet so alpha can vary per tier.
+ * No new hue enters the system.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+body.design-vexel[data-vexel-mode] .dash-standard {
+  --vx-neon-dur: 260ms;
+  --vx-neon-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Size of the glow layer, as a share of the card so it scales with the card.
+   * These are the layer's own dimensions, not a gradient radius: the light is a
+   * fixed sprite that gets MOVED, never redrawn (see the ::after rule for why).
+   * Taller than wide because the pointer usually enters from above and the light
+   * should fall down the card rather than spread sideways. */
+  --vx-neon-size-x: 156%;
+  --vx-neon-size-y: 224%;
+}
+
+/* The light surface carries the same effect in the primary atlas green, not the
+ * dark palette's mint: mint is legible against black and turns to a pale wash on
+ * white. Light also keeps the hover border and shadow it already had — that half
+ * of its card DNA is correct — so only the glow is added here. Weaker, because a
+ * white card starts far closer to the glow's own value than a black one does. */
+body.design-vexel[data-vexel-mode="light"] .dash-standard {
+  --vx-neon: 7, 112, 77;
+  --vx-neon-strength: 0.10;
+}
+
+body.design-vexel[data-vexel-mode="dark"] .dash-standard {
+  --vx-neon: 0, 255, 174;
+  --vx-neon-strength: 0.20;
+
+  /* NO mint on the perimeter. Two things used to draw a line around the whole
+   * card and they compounded: a mint border, and a `0 0 30px -14px` halo whose
+   * negative spread pulled the blur back onto the edge it came from. Against
+   * black, mint at any alpha is a crisp stroke — so the card came out ringed,
+   * with an interior that stayed dark. That is a selection state, not light.
+   *
+   * The border now goes neutral and barely moves; the accent survives only as
+   * the inset top rim, which is directional and reads as "lit from above". All
+   * the emerald is in the glow on ::after, inside the card, where light belongs. */
+  --vx-card-border-hover: rgba(255, 255, 255, 0.16);
+  --vx-card-shadow-hover:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 24px 46px -28px rgba(0, 0, 0, 0.92);
+}
+
+/* ── Tier 1 · interactive cards ──────────────────────────────────────────────
+ * The glow lives on ::after at z-index -1 under `isolation: isolate`: that puts
+ * it above the card's own background but below every child, so text contrast is
+ * untouched no matter where the cursor sits. isolate also traps the -1 inside
+ * the card — without it the layer would paint behind the card onto the page.
+ *
+ * position: relative is safe here: all 23 absolutely-positioned descendants in
+ * this selector list already resolve to a positioned ancestor inside their own
+ * card, so none of them re-anchor. The cards already carry overflow: hidden,
+ * which clips the gradient to the radius for free. */
+body.design-vexel[data-vexel-mode] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .dash-more-clip [data-integ-card]
+) {
+  position: relative;
+  isolation: isolate;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .dash-more-clip [data-integ-card]
+)::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+
+  /* The glow is a FIXED sprite that gets moved, never a gradient that gets
+   * redrawn. The first version put the cursor position inside the gradient
+   * itself — `radial-gradient(… at var(--vx-mx) var(--vx-my) …)` — which forces
+   * Chrome to re-rasterise the whole layer on every pointer frame. On a card a
+   * few hundred pixels wide that paint does not finish inside one frame, so the
+   * card updates in tiles and you see hard-edged rectangles of stale colour
+   * sliding around under the text. It looked correct in every still screenshot
+   * and wrong the moment the mouse actually moved, which is the only state a
+   * hover effect is ever seen in.
+   *
+   * Painted once, moved on the compositor: `transform` never touches paint. */
+  left: 0;
+  top: 0;
+  width: var(--vx-neon-size-x);
+  height: var(--vx-neon-size-y);
+  background: radial-gradient(
+    closest-side,
+    rgba(var(--vx-neon), var(--vx-neon-strength)),
+    rgba(var(--vx-neon), 0) 100%
+  );
+
+  /* --vx-x/--vx-y are the pointer in card-local PIXELS, written by
+   * assets/vexel-neon.js. The trailing -50%/-50% is a share of this layer's own
+   * box, so the sprite ends up centred on that point. Without the script the
+   * fallback (32 % of the layer ≈ the card's horizontal centre, y at the top
+   * edge) lights the card from above, which is the old behaviour. */
+  transform:
+    translate3d(var(--vx-x, 32%), var(--vx-y, 0px), 0)
+    translate(-50%, -50%);
+  transition: opacity var(--vx-neon-dur) var(--vx-neon-ease);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .vexel-bottom-row .block,
+  .vexel-rail-card,
+  .vexel-goals-card,
+  .dash-more-clip [data-integ-card]
+):hover::after {
+  opacity: 1;
+  /* Promoted only while hovered. Declaring it at rest would hand all 22 cards a
+   * permanent compositor layer for an effect that is off. */
+  will-change: transform;
+}
+
+/* ── Tier 2 · the hero ───────────────────────────────────────────────────────
+ * The one place light is allowed at rest: the top rim steps from 0.22 to 0.34
+ * so the eye lands here first on arrival. It is the same rim every other card
+ * already has, half a step up — not a new effect. */
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Only the rim step is dark-only: its ambient and contact shadows are mixed for
+ * a black page and would sit on a white card as a bruise. Light already has a
+ * correct resting hero shadow in its own card DNA, so it keeps it. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today {
+  box-shadow:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 18px 38px -26px rgba(0, 0, 0, 0.85) !important;
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  /* `width`/`height`, not `inset` alone. The base sheet already owns this
+   * pseudo-element: dashboard.html:445 makes it a 260 × 260 decorative orb
+   * hanging off the bottom-left corner. `inset: 0` re-anchors it to the top-left
+   * but does NOT resize it — an explicit width wins over `right`, an explicit
+   * height wins over `bottom` — so the bloom was painted into a 260 px box and
+   * guillotined at exactly 260 px from the card's left edge. That is the hard
+   * vertical seam: not a repaint artefact, a gradient with nowhere left to go.
+   * `auto` hands the sizing back to the offsets. */
+  inset: 0;
+  width: auto;
+  height: auto;
+
+  pointer-events: none;
+  opacity: 0;
+
+  /* One permanent compositor layer, declared at rest rather than on :hover. The
+   * 22 grid cards cannot afford that and get `will-change` only while hovered —
+   * but they animate `transform`, which the compositor owns either way. This one
+   * fades a gradient the full width of the card, and a layer created at the
+   * instant the fade starts still costs a main-thread paint. One layer, always,
+   * for one card. */
+  will-change: opacity;
+
+  transition: opacity 320ms var(--vx-neon-ease);
+  background: radial-gradient(120% 78% at 50% -10%, rgba(var(--vx-neon), 0.19), rgba(var(--vx-neon), 0) 72%);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-revenue-row > .hero-today:hover::after {
+  opacity: 1;
+}
+
+/* The `0 0 0 1px` ring and the `0 0 34px -12px` edge-hugging halo are gone for
+ * the same reason as on the cards: together they drew the outline the hero was
+ * being judged by. The rim still steps up on hover — that is the whole tell — and
+ * the bloom above carries the rest. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .vexel-revenue-row > .hero-today:hover {
+  box-shadow:
+    inset 0 2px 0 rgba(var(--vx-neon), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 24px 46px -28px rgba(0, 0, 0, 0.92) !important;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────────
+ * The segmented range control already carries the liquid lens as its selection
+ * mark, so the active pill is left alone — a second highlight underneath it
+ * would read as a rendering fault. Only the *unselected* pills gain a hover,
+ * and it is white, not mint: mint here would compete with the lens for the
+ * meaning "selected". Dark-only: a 6 % white wash is invisible on a white pill,
+ * so light gets the same idea in ink. */
+body.design-vexel[data-vexel-mode="dark"] .dash-standard .dr-pill:not(.on):hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--n-700);
+}
+
+body.design-vexel[data-vexel-mode="light"] .dash-standard .dr-pill:not(.on):hover {
+  background: rgba(10, 24, 18, 0.05);
+  color: var(--n-700);
+}
+
+/* The report button is the page's only primary action, so it is the one control
+ * that answers in mint. */
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn {
+  transition:
+    box-shadow var(--vx-neon-dur) var(--vx-neon-ease),
+    transform var(--vx-neon-dur) var(--vx-neon-ease);
+}
+
+body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(var(--vx-neon), 0.30),
+    0 0 30px -8px rgba(var(--vx-neon), 0.62);
+}
+
+/* ── Focus ───────────────────────────────────────────────────────────────────
+ * Keyboard arrival gets the same emerald, at full strength and without the
+ * blur: a glow can be missed, a ring cannot. */
+body.design-vexel[data-vexel-mode] .dash-standard :is(
+  .vexel-compose [data-kpi-band] > .kpi-m,
+  .oppo-band .oppo-card,
+  .dash-cols .block,
+  .dash-cols .settle,
+  .dash-more-clip [data-integ-card],
+  .dr-pill,
+  .vexel-report-btn
+):focus-visible {
+  outline: 2px solid rgba(var(--vx-neon), 0.85);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+ * The information survives without the movement: the edge and the glow still
+ * change state, they simply arrive instantly and the card stops travelling. */
+@media (prefers-reduced-motion: reduce) {
+  body.design-vexel[data-vexel-mode] .dash-standard :is(
+    .vexel-compose [data-kpi-band] > .kpi-m,
+    .oppo-band .oppo-card,
+    .dash-cols .block,
+    .dash-cols .settle,
+    .dash-more-clip [data-integ-card],
+    .vexel-revenue-row > .hero-today
+  )::after {
+    transition: none;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard :is(
+    .vexel-compose [data-kpi-band] > .kpi-m,
+    .oppo-band .oppo-card,
+    .dash-cols .block,
+    .dash-cols .settle,
+    .dash-more-clip [data-integ-card],
+    .vexel-revenue-row > .hero-today
+  ):hover,
+  body.design-vexel[data-vexel-mode] .dash-standard .vexel-report-btn:hover {
+    transform: none;
+  }
+}

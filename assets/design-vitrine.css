@@ -1,0 +1,260 @@
+/* KIWI · VITRINE skin — the marketing site's composition, on the product's paper.
+ *
+ * What this is NOT: a repaint of the dashboard in the site's palette. The DNA
+ * (~/.claude/skills/kiwi-dna/design.md § "Two tiers, on purpose") records that
+ * the site's #000 / #00ffae and the product's #F7F5F0 / --atlas are a decision,
+ * not drift — a till read at arm's length for nine hours needs warm paper, and
+ * the product being light is what makes dark mode an Ultra upsell rather than a
+ * default. Painting this surface black would delete that.
+ *
+ * What crosses the seam is everything the DNA lists as shared: solid-set type at
+ * -0.06em, the micro-label at +0.16em, real glass rather than grey boxes, one
+ * page-wide reveal, and the accent living in the data instead of the chrome.
+ * Those are palette-independent, which is exactly why they transfer.
+ *
+ * Scoped entirely to body.design-vitrine. Nothing here leaks to the default.
+ */
+
+body.design-vitrine {
+  /* One hairline value, on every panel — the site's single --color-line rule,
+   * inverted for light paper. */
+  --vt-line: rgba(10, 15, 13, 0.07);
+  --vt-line-strong: rgba(10, 15, 13, 0.11);
+
+  /* Glass, three depths, mirroring the site's --color-glass ladder. Light-tier
+   * glass is white-over-field, not black-over-scene. */
+  --vt-glass: rgba(255, 255, 255, 0.58);
+  --vt-glass-deep: rgba(255, 255, 255, 0.74);
+  /* Deliberately thin. The dashboard already ships two frosted skins
+   * (design-2026, design-ios27) whose panels sit near opaque white, so glass
+   * alone reads as no change at all — the field has to come through the panel
+   * for this skin to be distinguishable from what is already there. */
+  --vt-glass-soft: rgba(255, 255, 255, 0.26);
+
+  --vt-blur: saturate(1.7) blur(16px);
+
+  /* Display tracking is a constant on the site. Kept as a token so the three
+   * heading tiers can't drift apart later. */
+  --vt-track: -0.06em;
+
+  /* The site's reveal easing. --spring stays the selection gesture; this one is
+   * only ever used for arrival. */
+  --vt-settle: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── The field ──────────────────────────────────────────────────────────────
+ * The site has no background, it has a scene: a WebGL canvas at z-index -1 that
+ * scroll scrubs. The DNA's "do NOT carry over" list is explicit that the scene
+ * must not go behind an app surface — it's ~600KB and a permanent GPU context —
+ * and names the substitute: glass over a still gradient. This is that gradient.
+ * Fixed, so panels have something that stays put to refract. */
+body.design-vitrine::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 44% at 8% -6%, rgba(11, 110, 79, 0.22), transparent 66%),
+    radial-gradient(48% 40% at 96% 12%, rgba(125, 242, 176, 0.30), transparent 68%),
+    radial-gradient(74% 54% at 52% 106%, rgba(5, 59, 44, 0.14), transparent 70%),
+    var(--paper);
+}
+
+/* The shell paints its own paper; without this the field is covered and the
+ * glass has nothing behind it but flat white. */
+body.design-vitrine .app,
+body.design-vitrine #kw-main,
+body.design-vitrine #kw-main > .container {
+  background: transparent;
+}
+
+/* ── Type ───────────────────────────────────────────────────────────────────
+ * Two rules carry most of the site's look and the DNA says to copy them
+ * together or not at all: every heading set solid (line-height == font-size)
+ * and display tracking a constant -0.06em. Measured before/after on this page:
+ * the greeting was 34px/38.08px at -0.032em; the KPI value was already solid
+ * but tracked at -0.035em. Both were near-misses, not the real thing. */
+/* The visible page title is .dr-label — the date-range heading dateRange.js
+ * writes. h1.greeting is in the markup but renders at zero width on this view,
+ * so a rule aimed at it styles nothing. That was the first cut of this skin's
+ * loudest rule, and why it came out indistinguishable from the default. Both
+ * are listed because .greeting does render on other entry states. */
+body.design-vitrine .dr-label,
+body.design-vitrine h1.greeting,
+body.design-vitrine .block-head .t {
+  line-height: 1;
+  letter-spacing: var(--vt-track);
+  text-wrap: balance;
+}
+
+/* Marquee scale. The site sets h1 at 64/64; this stops at 52 because the title
+ * shares its row with the date-range pills and has to clear them. */
+body.design-vitrine .dr-label,
+body.design-vitrine h1.greeting {
+  font-size: 52px;
+  font-weight: 500;
+}
+
+/* The date under the title becomes a micro-label instead of a second line of
+ * body copy — the site never sets two sizes of running text that close. */
+body.design-vitrine .dr-sub {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  opacity: 0.55;
+  margin-top: 12px;
+}
+
+body.design-vitrine .block-head .t {
+  font-size: 19px;
+  font-weight: 500;
+}
+
+/* The lede sits under the head at the site's 20/20 → 16 down-step, lighter than
+ * the head rather than merely smaller. */
+body.design-vitrine .block-head .s {
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  opacity: 0.72;
+}
+
+/* The micro-label: 12/16, uppercase, +0.16em, weight 500. This is the single
+ * most recognisable piece of the site's type system and the dashboard had no
+ * equivalent — KPI labels were sentence-case body copy. */
+body.design-vitrine .kpi-m .l > span,
+body.design-vitrine .kpi-m .l > [data-i18n] {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  opacity: 0.62;
+}
+
+/* The value is the one number the eye should land on, so it takes the display
+ * treatment: solid-set, full display tracking, tabular so it doesn't reflow
+ * as the range changes. */
+body.design-vitrine .kpi-m .v {
+  line-height: 1;
+  letter-spacing: var(--vt-track);
+  font-feature-settings: "tnum" 1;
+}
+
+/* Arabic neutralises tracking and uppercase in one locale-root rule, exactly as
+ * the site does — +0.16em on Arabic letterforms breaks the joins. */
+html[lang="ar"] body.design-vitrine .kpi-m .l > span,
+html[lang="ar"] body.design-vitrine .kpi-m .l > [data-i18n],
+html[lang="ar"] body.design-vitrine .dr-sub {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+html[lang="ar"] body.design-vitrine .dr-label,
+html[lang="ar"] body.design-vitrine h1.greeting,
+html[lang="ar"] body.design-vitrine .block-head .t,
+html[lang="ar"] body.design-vitrine .kpi-m .v {
+  letter-spacing: 0;
+}
+
+/* ── Glass ──────────────────────────────────────────────────────────────────
+ * "Glass is real, not a grey box." The base rule is plain frosted glass so the
+ * skin degrades cleanly where backdrop-filter is unsupported; the panel keeps a
+ * legible opaque-ish fill either way. */
+body.design-vitrine .kpi-m,
+body.design-vitrine .block {
+  background: var(--vt-glass);
+  border: 1px solid var(--vt-line);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 12px 32px -20px rgba(5, 59, 44, 0.30);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  body.design-vitrine .kpi-m,
+  body.design-vitrine .block {
+    background: var(--vt-glass-soft);
+    -webkit-backdrop-filter: var(--vt-blur);
+    backdrop-filter: var(--vt-blur);
+  }
+}
+
+/* The KPI band is the page's hero object, so it sits one depth forward of the
+ * bands below it. */
+body.design-vitrine .kpi-m {
+  border-color: var(--vt-line-strong);
+}
+
+/* Cards size to content and the grid stretches them to match — the DNA's
+ * "do NOT carry over" note about justify-between with a fixed height, which is
+ * what put a third line of body copy under overflow:hidden in the template. */
+body.design-vitrine .kpi-band > .kpi-m {
+  height: auto;
+  align-self: stretch;
+}
+
+/* ── Rhythm ─────────────────────────────────────────────────────────────────
+ * The site's section padding is composed — 200/750/180/100/407/0/0/300/0/40 —
+ * and each number clears a specific object. There is no equivalent object here
+ * to clear: this is a data grid, not a scroll narrative, and transplanting
+ * varied paddings would be arbitrary rather than composed. So the honest port
+ * is the *intent* — deliberate air, and a real gap between the KPI band and the
+ * bands under it — not the numbers. */
+body.design-vitrine .kpi-band {
+  margin-top: 10px;
+  margin-bottom: 46px;
+}
+
+body.design-vitrine .block {
+  padding: 24px;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────────
+ * One reveal, page-wide: opacity 0 → 1, translateY(20px) → 0, 620ms, once.
+ * The class is added by the observer in design-vitrine.js; the un-revealed
+ * state only applies once JS has marked the document, so a failed script
+ * leaves every panel visible instead of blank. */
+body.design-vitrine[data-vitrine-reveal] .kpi-m,
+body.design-vitrine[data-vitrine-reveal] .block {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 620ms var(--vt-settle),
+    transform 620ms var(--vt-settle);
+}
+
+body.design-vitrine[data-vitrine-reveal] .kpi-m.is-in,
+body.design-vitrine[data-vitrine-reveal] .block.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Reduced motion parks the panel at its arrived frame rather than disabling the
+ * rule and leaving it at opacity 0. */
+@media (prefers-reduced-motion: reduce) {
+  body.design-vitrine[data-vitrine-reveal] .kpi-m,
+  body.design-vitrine[data-vitrine-reveal] .block {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────
+ * The site's own breakpoints are 992 and 480, inclusive — not 768/1024. Display
+ * type down-steps; the micro-label does not, because 11px uppercase is already
+ * at its floor. */
+@media (max-width: 992px) {
+  body.design-vitrine .dr-label,
+  body.design-vitrine h1.greeting { font-size: 38px; }
+  body.design-vitrine .block-head .t { font-size: 17px; }
+}
+
+@media (max-width: 480px) {
+  body.design-vitrine .dr-label,
+  body.design-vitrine h1.greeting { font-size: 30px; }
+  body.design-vitrine .kpi-band { margin-bottom: 26px; }
+  body.design-vitrine .block { padding: 18px; }
+}
