@@ -14,10 +14,17 @@
  *      renders nothing when the id is absent — so the def has to be real DOM.
  *   3. Remembers the choice in localStorage, like every other skin here.
  *
- * OFF by default, unlike design-2026. Two reasons: the product's dark mode is
- * a Kiwi Ultra hook rather than a free surface, and this has not been checked
- * against every drawer in pages-pro.js yet. Turn it on with
- * `KiwiDesignVexel.enable()`, or load any dashboard URL with `?skin=vexel`.
+ * ON by default for every merchant, like design-2026. This was an explicit
+ * product call during the v2 design migration: the skin IS the new dashboard,
+ * so it ships to everyone rather than sitting behind `?skin=vexel`. It carries
+ * `data-theme="dark"` with it, which means the dark surface is now the default
+ * dashboard rather than the Kiwi Ultra hook it used to be — that consequence is
+ * intended, not incidental. `?skin=off` (or `?skin=none`) still opts a session
+ * out and persists the choice, and `KiwiDesignVexel.disable()` does the same.
+ *
+ * Absence of a stored preference means "take the default", so init() does NOT
+ * write '1' on a plain load — only an explicit opt-in or opt-out persists.
+ * Changing the default later therefore reaches merchants who never chose.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
@@ -124,14 +131,18 @@
   }
 
   /* `?skin=off` has to run apply(false) rather than fall through, or it can
-   * only ever fail to turn the skin on for one page load — the stored '1'
-   * would still be there on the next navigation. It is the documented way out,
-   * so it has to actually clear the preference. */
+   * only ever fail to turn the skin on for one page load — the stored '0'
+   * would not be written and the default would take over again on the next
+   * navigation. It is the documented way out, so it has to actually persist.
+   *
+   * Only an explicit choice persists: a plain load passes persist=false, so a
+   * merchant who has never opted in or out keeps an empty key and follows the
+   * default. */
   function init() {
     var url = fromUrl();
     var v = url !== null ? url : stored();
-    if (v === '1') apply(true, url !== null);
-    else if (url === '0') apply(false, true);
+    if (v === '0') apply(false, url !== null);
+    else apply(true, url !== null);
   }
 
   /**
@@ -157,7 +168,7 @@
     if (!document.body) return false;
     var url = fromUrl();
     var v = url !== null ? url : stored();
-    if (v !== '1') return true;
+    if (v === '0') return true;
     var html = document.documentElement;
     if (html.getAttribute('data-theme') !== 'dark') {
       html.setAttribute('data-theme', 'dark');
