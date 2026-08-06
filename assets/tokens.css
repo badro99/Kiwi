@@ -9,6 +9,21 @@
   --mint: #7DF2B0;
   --mint-soft: #C9F6DC;
 
+  /* The functional mid-green, for success/paid states. Not new: it was
+     declared four separate times — kiwi-caisse, kiwi-serveur, kiwi-order and
+     OrderPro each carried its own identical copy — and hard-coded as a raw
+     literal in eight more files. The brand has no equivalent, because --mint
+     is too light to carry a filled state and --atlas too dark to read as
+     "done" at a glance. One declaration now; the apps keep theirs only where
+     they do not yet link this file.
+
+     Its old partner --forest (#1F5D3C) is deliberately NOT promoted here.
+     kiwi-cuisine.html declares --forest as #0B6E4F — i.e. --atlas — so the
+     same token name already means two different greens in two apps. Hoisting
+     either value would silently repaint the other. That collision needs a
+     rename to resolve, which is a decision, not a cleanup. */
+  --emerald: #3FB67A;
+
   /* Portfolio chart series — one brand green + warm neutrals */
   --fs-bahia:   #16774F;
   --fs-mansour: #BBB199;
@@ -23,12 +38,59 @@
   --ink: #0A0F0D;
   --ink-soft: #1A201D;
 
+  /* Inverse components — a dark slab carrying light text, on any background.
+     KDS column heads, the settled-today calendar cell, the Tables alert banner.
+
+     These existed for months as `background: var(--ink); color: var(--paper)`,
+     which reads correctly ONLY while ink is dark and paper is light. The Vexel
+     dark climate flips both — --ink becomes #fff and --paper becomes #000, which
+     is right for their actual meaning (foreground / page) and catastrophic for
+     anything that borrowed them positionally. Every one of those slabs inverted
+     into a white block with black text, punching light-mode holes through the
+     dark skin; the --riad pairing went further and rendered black on black at
+     1.00:1. Same failure the --forest note above describes: one name, two
+     meanings, no error — just the wrong colour.
+
+     So inverse surfaces get their own name and stop borrowing. The rule is that
+     --inverse-surface always reads as a panel DISTINCT from the page and
+     --inverse-ink always reads legibly on it, in both climates. In light that
+     means the deep brand green; in dark, where the page is already black, an
+     inverse panel can only separate by sitting slightly above it (see LAYER B
+     in design-vexel.css). */
+  --inverse-surface: #053B2C;
+  --inverse-ink: #F7F5F0;
+  --inverse-line: rgba(247, 245, 240, 0.14);
+
+  /* The deep brand green as an identity fill — avatar variants, channel
+     swatches, chart segments. Distinct from --riad, which the dark climate
+     legitimately reassigns to a translucent scrim; anything that wanted the
+     GREEN rather than the scrim asks for it by name here. */
+  --brand-deep: #053B2C;
+
   /* Elevation — the resting depth that makes a card a physical surface, not a
    * flat form. Shadows are tinted with --atlas (green) so they read as brand
    * light, not generic grey. --elev-1 = resting, --elev-2 = hover/lift. Dark
    * mode overrides these in theme.css (subtler, no green cast). */
   --elev-1: 0 1px 2px -1px rgba(11,110,79,.10), 0 10px 26px -20px rgba(11,110,79,.22), inset 0 1px 0 rgba(255,255,255,.7);
   --elev-2: 0 3px 8px -3px rgba(11,110,79,.16), 0 24px 48px -22px rgba(11,110,79,.32), inset 0 1px 0 rgba(255,255,255,.85);
+  /* The estate's actual workhorse curve, counted rather than chosen: 305 uses
+     across the HTML and CSS, against 75 for --spring. It is the flat ease-out
+     everything that is not a selection uses — drawers, sheets, fades, hovers.
+     It was never declared, so 305 sites each carried the literal and roughly
+     twenty near-misses had drifted in beside it (0.22,0.72,0,1 · 0.2,0,0,1 ·
+     0.4,0,0.2,1 …). Naming it is what makes those visible as drift rather than
+     as intent.
+
+     --spring overshoots and is for SELECTION only (the liquid lens). --glide
+     does not overshoot and is for everything else. If a new animation wants a
+     third curve, it probably wants one of these two. */
+  --glide: cubic-bezier(0.32, 0.72, 0, 1);
+  /* The third real curve — ease-out-expo, 40 uses, and the one the entrances
+     and reveals run on where --glide would arrive too flatly. It was already
+     consistent in behaviour and inconsistent only in spelling: written as
+     0.16,1,0.3,1 · 0.16,1,0.30,1 · .16,1,.30,1 across the estate, which is
+     three strings a search will not group. */
+  --expo: cubic-bezier(0.16, 1, 0.3, 1);
   /* Signature spring — la lentille liquide settle curve. Single source; the
      caisse skin and motion layer both reference var(--spring). */
   --spring: cubic-bezier(0.34, 1.45, 0.5, 1);
@@ -167,6 +229,14 @@ section.loose { padding: 128px 0; }
    No border-radius here: it would reshape the focused element, and modern
    browsers already round the outline to the element's own radius. */
 :focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; }
+
+/* …except elements that only ever take focus from script. A route change moves
+   focus to the destination's <h1 tabindex="-1"> so assistive tech announces the
+   new page. That heading is not keyboard-reachable and is not interactive, so
+   the ring lands as a stray full-width box drawn around the page title after
+   every navigation — in Vexel dark, in neon. Keep the focus, which does real
+   work; drop only the paint. Every Tab-reachable control still rings. */
+[tabindex="-1"]:focus, [tabindex="-1"]:focus-visible { outline: none; }
 
 /* Mini tabular */
 table.tab { width: 100%; border-collapse: collapse; }
