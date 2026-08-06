@@ -8,7 +8,10 @@
 // falls back to its current hardcoded behavior — so this endpoint being missing
 // (GitHub Pages, local static) changes nothing.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor } from '../auth/_lib.js';
+import {
+  json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor,
+  employeeRoleOpensTill,
+} from '../auth/_lib.js';
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -166,7 +169,7 @@ export async function onRequestGet(context) {
     ownsRequested = (await storeOwner(env, merchant)) === sessionAid;
   }
   if (sessionMerchant && !operator && !ownsRequested) merchant = sessionMerchant;
-  if (!merchant) return json({ features: {}, pins: [] });
+  if (!merchant) return json({ features: {}, pins: [], pinGateConfigured: false });
 
   // May this caller read THIS merchant's staff PINs? Its own session, another of
   // its own stores, the operator console, or a till that redeemed a pairing code
@@ -177,6 +180,7 @@ export async function onRequestGet(context) {
   let features = {};
   let pins = [];
   let type = '';
+  let pinGateConfigured = false;
   /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
@@ -203,11 +207,20 @@ export async function onRequestGet(context) {
       const rows = await env.DB.prepare(
         `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
       ).bind(merchant).all();
-      pins = rows.results || [];
+      // Older databases may still contain waiter/kitchen PIN rows. Never send
+      // them to a till: employee login remains available through the separate
+      // private employee-access roster.
+      pins = (rows.results || []).filter((row) => employeeRoleOpensTill(row.role));
+      const access = await env.DB.prepare(
+        "SELECT 1 AS configured FROM store_docs WHERE merchant = ? AND feature = 'employee-access' LIMIT 1"
+      ).bind(merchant).first();
+      // A mirror row means the owner deliberately configured an employee
+      // roster. Even if none is a cashier, do not interpret that as “no security”.
+      pinGateConfigured = !!access || pins.length > 0;
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, type, suspended });
+  return json({ features, pins, pinGateConfigured, type, suspended });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the
@@ -364,10 +377,17 @@ export async function onRequestPost(context) {
       const code = String(p.code || p.pin || '').trim();
       if (!VALID_PIN.test(code) || seen.has(code)) continue;
       seen.add(code);
+      const email = String(p.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
       clean.push({
         code,
         name: String(p.name || '').trim().slice(0, 60),
         role: String(p.role || '').trim().slice(0, 24) || 'staff',
+        memberId: String(p.memberId || '').trim().slice(0, 96),
+        firstName: String(p.firstName || '').trim().slice(0, 60),
+        lastName: String(p.lastName || '').trim().slice(0, 60),
+        email: /^\S+@\S+\.\S+$/.test(email) ? email : '',
+        department: String(p.department || '').trim().slice(0, 40),
+        venueSlug: String(p.venueSlug || '').trim().slice(0, 96),
       });
       if (clean.length >= 20) break;
     }
@@ -375,14 +395,39 @@ export async function onRequestPost(context) {
     // created_ts preserves the submitted order.
     const base = Date.now();
     const stmts = [env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
-    clean.forEach((p, i) => {
+    const tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
+    tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
       ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
     });
+    // Keep a private, exact employee-login roster beside the cashier PINs.
+    // Replacing it in the same D1 batch means a deleted employee loses access
+    // immediately and an employee can log in even when the larger Team document
+    // is still waiting to sync from the dashboard device.
+    const access = {
+      members: clean.filter((p) => p.email).map((p) => ({
+        id: p.memberId || `employee-${p.code}`,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        pinCode: p.code,
+        password: p.code,
+        function: p.role,
+        department: p.department,
+        venueSlug: merchant,
+      })),
+    };
+    stmts.push(env.DB.prepare(
+      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+       VALUES (?, 'employee-access', ?, 1, ?)
+       ON CONFLICT(merchant, feature) DO UPDATE SET
+         data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+    ).bind(merchant, JSON.stringify(access), base));
     try { await env.DB.batch(stmts); }
     catch (_) { return json({ error: 'write-failed' }, 500); }
-    result.pins = clean.length;
+    result.pins = tillPins.length;
+    result.employees = access.members.length;
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─

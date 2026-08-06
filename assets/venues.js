@@ -271,6 +271,7 @@
     categories: '<path d="M3 6h7l2 2h9v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/>',
     promos: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L3 13V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
     returns: '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
+    sold: '<path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/><path d="M2 19h22"/>',
     // spa
     appointments: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>',
     // Lucide gift — "forfaits" = packages (was a star, which read as "favourite").
@@ -311,6 +312,7 @@
         { nav: 'categories', label: 'Catégories',          i18n: 'sidebar.boutique.categories',              icon: ICONS.categories },
         { nav: 'promos',     label: 'Promotions',          i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
         { nav: 'returns',    label: 'Retours & échanges',  i18n: 'sidebar.boutique.returns',                 icon: ICONS.returns },
+        { nav: 'sold',       label: 'Vendus',              i18n: 'sidebar.boutique.sold',                    icon: ICONS.sold },
       ],
     },
     spa: {
@@ -1926,6 +1928,12 @@
           return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: b.icon || '' };
         }),
       };
+    }
+    /* Tous les sous-métiers boutique gardent la vue Vendus, même si leur
+       profil plus ancien remplace la liste de navigation de la base. */
+    if (sect && (typeOverride || v.type) === 'boutique' && !sect.items.some((x) => x.nav === 'sold')) {
+      const sold = VERTICAL_SECTIONS.boutique.items.find((x) => x.nav === 'sold');
+      sect = { ...sect, items: sect.items.concat(sold) };
     }
     if (!sect) return;
 
@@ -7500,67 +7508,14 @@
     catch (_) { return []; }
   }
 
-  /* Une vente encaissée pendant que le tableau de bord tenait encore un id
-   * transitoire — 'own', le placeholder d'une session réelle dont la venue
-   * n'est pas encore en cache — atterrissait dans kiwiSales:own. La vraie venue
-   * prenait ensuite la main, et cet argent disparaissait des livres : encaissé
-   * pour de bon, invisible partout. Ici on adopte ces ventes orphelines dans la
-   * venue réelle.
-   *
-   * Déduplication par `cursor` (le rowid du flux Live-Link, déjà persisté pour
-   * cette raison) et, pour une vente saisie à la main qui n'en a pas, par
-   * ts+montant. On efface ensuite la clé transitoire : l'adoption ne peut donc
-   * pas se rejouer et rien ne peut être compté deux fois. Ne tourne JAMAIS
-   * quand la venue courante est elle-même transitoire — ce sont alors les
-   * ventes de la session en cours, pas des orphelines. */
-  function adoptTransientSales(realId) {
-    if (!realId || TRANSIENT_IDS.indexOf(realId) >= 0) return 0;
-    let movedTotal = 0;
-    TRANSIENT_IDS.forEach((tid) => {
-      let orphans = [];
-      try { orphans = JSON.parse(localStorage.getItem(SALES_KEY(tid)) || '[]'); } catch (_) { orphans = []; }
-      if (!Array.isArray(orphans) || !orphans.length) return;
-      const target = salesList(realId);
-      const seenCursor = new Set(target.map((s) => s.cursor).filter((c) => c != null));
-      const seenStamp = new Set(target.map((s) => `${s.ts}|${s.amount}`));
-      let moved = 0;
-      orphans.forEach((o) => {
-        if (!o || !(+o.amount > 0)) return;
-        if (o.cursor != null) { if (seenCursor.has(o.cursor)) return; }
-        else if (seenStamp.has(`${o.ts}|${o.amount}`)) return;
-        target.push(o);
-        if (o.cursor != null) seenCursor.add(o.cursor);
-        seenStamp.add(`${o.ts}|${o.amount}`);
-        moved++;
-      });
-      if (moved) {
-        target.sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
-        try { localStorage.setItem(SALES_KEY(realId), JSON.stringify(target)); } catch (_) {}
-        movedTotal += moved;
-      }
-      try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
-    });
-    if (movedTotal) salesSubs.forEach((fn) => { try { fn(realId); } catch (_) {} });
-    return movedTotal;
-  }
-  /* init() a déjà arrêté currentVenue plus haut (venues.js est `defer`, donc la
-   * branche synchrone a tourné). Le hook DOMContentLoaded couvre le cas où elle
-   * a été différée. */
-  try { adoptTransientSales(currentVenue); } catch (_) {}
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      try { adoptTransientSales(currentVenue); } catch (_) {}
-    });
-  }
-  /* …et de nouveau à CHAQUE changement de venue. L'identité réelle se résout
-   * après un aller-retour serveur : une vente encaissée dans cet intervalle —
-   * le pont Live Link, le pavé « Nouvelle vente » — atterrit sous l'id
-   * transitoire, et l'adoption au chargement était déjà passée. L'argent
-   * restait donc dans kiwiSales:own jusqu'au rechargement suivant : présent
-   * sur le serveur, absent du tableau de bord ET de l'assistant, c'est-à-dire
-   * exactement la contradiction que ce lot corrige ailleurs. Idempotent
-   * (dédup par cursor, puis la clé transitoire est effacée). */
-  subscribers.add((id) => { try { adoptTransientSales(id); } catch (_) {} });
+  /* `own` and `scoped` are shared browser placeholders, not tenant ids. Moving
+   * their money into the next resolved venue leaked client A's takings into
+   * client B when one browser served both accounts. Live Link already replays a
+   * tenant-stamped server backlog after resolution, so fail closed and discard
+   * these unsafe local buckets. */
+  TRANSIENT_IDS.forEach((tid) => {
+    try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
+  });
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);
@@ -7626,6 +7581,21 @@
     const gone = list.length - kept.length;
     if (!gone) return 0;
     try { localStorage.setItem(SALES_KEY(id), JSON.stringify(kept)); } catch (_) {}
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return gone;
+  }
+  /* Repair devices contaminated before tenant isolation. After Live Link has
+   * replayed the complete authoritative feed, cursor-backed rows absent from
+   * that feed cannot belong to this store. Local/manual rows have no cursor and
+   * remain untouched. */
+  function salesRetainCursors(id, cursors) {
+    id = id || currentVenue;
+    const keep = new Set((cursors || []).map(Number).filter(Boolean));
+    const list = salesList(id);
+    const clean = list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
+    const gone = list.length - clean.length;
+    if (!gone) return 0;
+    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(clean)); } catch (_) {}
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }
@@ -7750,6 +7720,7 @@
     add: salesAdd,
     list: salesList,
     remove: salesRemove,
+    retainCursors: salesRetainCursors,
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
   };

@@ -118,6 +118,112 @@ export async function isTillFor(request, env, merchant) {
   if (!got) return false;
   return timingSafeEqualHex(got, await tillToken(secret, merchant));
 }
+
+// ── Employee app session ─────────────────────────────────────────────────────
+// A staff PIN is checked once by /api/employee. The browser then receives a
+// short-lived, httpOnly session scoped to exactly one employee and one store.
+// Keeping the PIN out of the token means it is never replayed by page script or
+// stored in localStorage; deleting the staff_pins row still revokes the session
+// because every employee API call re-checks that row.
+export const EMPLOYEE_COOKIE = 'kiwi_employee';
+const EMPLOYEE_SESSION_MS = 12 * 60 * 60 * 1000;
+
+export async function employeeToken(authSecret, employee) {
+  const payload = {
+    merchant: String(employee && employee.merchant || '').slice(0, 64),
+    staffId: String(employee && employee.staffId || '').slice(0, 96),
+    exp: Date.now() + EMPLOYEE_SESSION_MS,
+  };
+  const body = bytesToB64url(encoder.encode(JSON.stringify(payload)));
+  return body + '.' + await hmacHex(authSecret, 'kiwi-employee-v1:' + body);
+}
+
+export async function readEmployee(request, env) {
+  const secret = env && env.AUTH_SECRET;
+  const raw = readCookie(request, EMPLOYEE_COOKIE);
+  if (!secret || !raw) return null;
+  const dot = raw.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = raw.slice(0, dot);
+  const want = await hmacHex(secret, 'kiwi-employee-v1:' + body);
+  if (!timingSafeEqualHex(raw.slice(dot + 1), want)) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body)));
+    if (!payload || !payload.merchant || !payload.staffId || Number(payload.exp) <= Date.now()) return null;
+    return payload;
+  } catch (_) { return null; }
+}
+
+export function employeeCookie(value) {
+  return `${EMPLOYEE_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(EMPLOYEE_SESSION_MS / 1000)}`;
+}
+
+// Resolve the credentials the owner records on Dashboard → Équipe. Email is
+// read from the private access mirror written with the cashier PIN roster. Old
+// stores without that mirror still fall back to their Team document.
+export async function findEmployeeCredential(env, emailValue, pinValue) {
+  const email = String(emailValue || '').trim().toLocaleLowerCase('en').slice(0, 254);
+  const pin = String(pinValue || '').trim();
+  if (!env || !env.DB || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) return null;
+
+  let docs;
+  try {
+    docs = await env.DB.prepare(
+      "SELECT merchant, feature, data FROM store_docs WHERE feature IN ('employee-access', 'team')"
+    ).all();
+  } catch (_) { return null; }
+
+  const rows = (docs && docs.results) || [];
+  const mirrored = new Set(rows.filter((row) => row.feature === 'employee-access')
+    .map((row) => String(row.merchant || '')));
+  const matches = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const merchant = String(row.merchant || '');
+    if (row.feature === 'team' && mirrored.has(merchant)) continue;
+    let team = null;
+    try { team = JSON.parse(row.data || '{}'); } catch (_) { continue; }
+    const members = Array.isArray(team && team.members) ? team.members : [];
+    for (const member of members) {
+      const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
+      const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
+      const venue = String((member && member.venueSlug) || '').trim();
+      if (venue && venue !== merchant) continue;
+      const key = `${merchant}:${String((member && member.id) || '')}`;
+      if (memberEmail === email && memberPin === pin && !seen.has(key)) {
+        seen.add(key);
+        matches.push({ merchant, member });
+      }
+    }
+  }
+  // Never guess which workplace the person meant. The owner can resolve a rare
+  // duplicate by giving that employee a different PIN in one of the stores.
+  if (matches.length !== 1) return matches.length > 1 ? { ambiguous: true } : null;
+
+  const match = matches[0];
+  const memberId = String((match.member && match.member.id) || '').trim().slice(0, 96);
+  if (!memberId) return null;
+  try {
+    const cfg = await env.DB.prepare(
+      'SELECT status, type FROM merchant_config WHERE merchant = ? LIMIT 1'
+    ).bind(match.merchant).first();
+    if (!cfg) return null;
+    return {
+      id: memberId,
+      merchant: match.merchant,
+      pin,
+      name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
+      role: String(match.member.function || match.member.department || 'staff'),
+      status: cfg.status,
+      type: cfg.type,
+      member: match.member,
+    };
+  } catch (_) { return null; }
+}
+
+export function clearEmployeeCookie() {
+  return `${EMPLOYEE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
 export async function operatorToken(authSecret) {
   return hmacHex(authSecret, 'kiwi-operator-v1');
 }
@@ -456,6 +562,17 @@ export async function entitledMerchant(request, env, asked, opts) {
   if (opts && opts.allowTill && asked) {
     try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
   }
+  /* The employee app has its own short-lived, store-scoped cookie. It used to
+   * open /api/employee only, so the waiter UI could say "commande envoyée"
+   * while /api/order/queue rejected the request at the tenant boundary. Validate
+   * the employee against the live Team document on every use: removing someone
+   * from Dashboard → Équipe revokes this access immediately. */
+  if (opts && opts.allowEmployee && asked) {
+    try {
+      const employee = await activeServiceEmployee(request, env, asked);
+      if (employee) return asked;
+    } catch (_) {}
+  }
   /* God mode, BEFORE the account session — the console is opened from a browser
    * that is normally ALSO signed in as a merchant (the site gate admits real
    * accounts), and with the session first that account won every time: "Ouvrir
@@ -491,6 +608,70 @@ export async function entitledMerchant(request, env, asked, opts) {
   } catch (_) { /* fall through to operator / demo */ }
   try { if (await isOperator(request, env)) return asked; } catch (_) {}
   return DEMO_MERCHANTS[asked] ? asked : '';
+}
+
+/* A signed employee cookie is not enough on its own: the member must still be
+ * present in this store's Team document. This helper is intentionally exported
+ * so the edge gate and staff-only endpoints enforce the same revocation rule. */
+export async function activeEmployee(request, env, asked) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return null;
+  const session = await readEmployee(request, env);
+  if (!session || !session.merchant || !session.staffId) return null;
+  if (asked && String(session.merchant) !== String(asked)) return null;
+  try {
+    const access = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+      .bind(session.merchant).first();
+    const row = access || await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
+      .bind(session.merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const member = (Array.isArray(doc.members) ? doc.members : [])
+      .find((m) => m && String(m.id || '') === String(session.staffId));
+    return member ? { session, member, merchant: session.merchant } : null;
+  } catch (_) { return null; }
+}
+
+function normEmployeeRole(value) {
+  let s = String(value || '').trim().toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
+}
+
+/* A personal PIN identifies every employee in the employee app, but opening a
+ * cash register is a separate permission. Keep this server-side too: filtering
+ * only in caisse JavaScript would let a crafted request reuse a server's PIN on
+ * privileged till actions. `staff` is the single legacy onboarding role kept
+ * for stores created before explicit job assignments existed. */
+export function employeeRoleOpensTill(value) {
+  const role = normEmployeeRole(value);
+  return new Set([
+    'caisse', 'caissier', 'caissiere', 'cashier',
+    'manager', 'management', 'proprietaire', 'owner', 'admin', 'direction',
+    'staff',
+  ]).has(role);
+}
+
+/* Only an employee who works service AND currently has an open attendance
+ * entry may use the operational order/event channels. Kitchen, dishwasher and
+ * off-shift accounts remain confined to /api/employee (schedule, hours and
+ * clock-in/out). */
+export async function activeServiceEmployee(request, env, asked) {
+  const employee = await activeEmployee(request, env, asked);
+  if (!employee) return null;
+  const role = normEmployeeRole(employee.member.function || employee.member.department);
+  const service = new Set([
+    'serveur', 'chef de rang', "maitre d'hotel", 'sommelier', 'barman',
+    "hote d'accueil", 'salle', 'service', 'manager', 'proprietaire',
+  ]);
+  if (!service.has(role)) return null;
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
+      .bind(employee.merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const open = (Array.isArray(doc.entries) ? doc.entries : []).find((entry) =>
+      entry && !entry.outTs
+      && String(entry.memberId || entry.staffId || '') === String(employee.session.staffId));
+    return open ? { ...employee, attendance: open } : null;
+  } catch (_) { return null; }
 }
 
 /* ─────────────────────── ATTEMPT LIMITER (brute force) ───────────────────────

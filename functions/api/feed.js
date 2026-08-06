@@ -134,7 +134,7 @@ export async function onRequestGet({ request, env }) {
    * l'autre produirait un rapport juste onze mois sur douze. */
   const from = Number(url.searchParams.get('from')) || 0;
   const byDay = from > 0;
-  const DAY_LIMIT = 300;
+  const DAY_LIMIT = 2000;
 
   /* Compatibility for tills that still have the previous service-worker bundle
    * open during deployment. That client asks for a maximum then uses `seq + 1`;

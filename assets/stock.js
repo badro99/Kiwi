@@ -755,12 +755,15 @@
     let s = null;
     try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
     if (!s || typeof s !== 'object') return;
-    if (Array.isArray(s.items)) stUserItems = s.items;
+    if (Array.isArray(s.items)) stUserItems = s.items.map(normalizeStockItem);
     if (Array.isArray(s.sups)) stUserSuppliers = s.sups;
     if (Array.isArray(s.cats)) stUserCategories = s.cats;
     (s.delItems || []).forEach((id) => stDeletedItems.add(id));
     (s.delSups || []).forEach((id) => stDeletedSups.add(id));
     Object.assign(stItemOverrides, s.itemOv || {});
+    Object.keys(stItemOverrides).forEach((id) => {
+      if (stItemOverrides[id]?.unit) stItemOverrides[id].unit = stockUnit(stItemOverrides[id].unit);
+    });
     Object.assign(stSupOverrides, s.supOv || {});
     Object.assign(stStockOverrides, s.stockOv || {});
   }
@@ -835,6 +838,13 @@
     const dec = Number.isInteger(q) ? 0 : (Math.abs(q) < 10 ? 1 : 0);
     return `${fmtNum(q, dec)} ${u}`;
   };
+  const unitApi = () => window.KiwiRestaurantUnits;
+  const stockUnit = (value) => unitApi()?.normalize?.(value) || 'unité';
+  const normalizeStockItem = (item) => ({ ...(item || {}), unit: stockUnit(item?.unit) });
+  const stockUnitOptions = (value) => {
+    const selected = stockUnit(value);
+    return (unitApi()?.list?.() || []).map((unit) => `<option value="${esc(unit.id)}"${unit.id === selected ? ' selected' : ''}>${esc(unit.label)}</option>`).join('');
+  };
   const fmtPct = (n, dec = 1) => `${n > 0 ? '+' : ''}${fmtNum(n, dec)} %`;
   const fmtDateShort = (iso) => {
     const d = new Date(iso);
@@ -877,7 +887,7 @@
   }
   function getInv() {
     const V = window.KiwiVenue;
-    if (!V?.getInventory) return [...stUserItems];
+    if (!V?.getInventory) return [...stUserItems].map(normalizeStockItem);
     let base;
     if (isFusion()) {
       if (stVenueFilter && stVenueFilter !== 'all') base = V.getInventory(stVenueFilter);
@@ -889,7 +899,7 @@
     } else {
       base = V.getInventory(currentVenueId());
     }
-    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))];
+    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))].map(normalizeStockItem);
   }
   function getSup() {
     const base = window.KiwiVenue?.getSuppliers?.() || [];
@@ -917,6 +927,17 @@
    * Computed metrics
    * ═══════════════════════════════════════════════════════════════════════ */
   const currentStockFor = (it) => (stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock);
+  /* A real restaurant's recipe is the source of theoretical ingredient usage.
+   * Demo venues keep their historic fixture values; real venues never inherit
+   * those figures and only receive a number once sales + recipes exist. */
+  const theoreticalUsageFor = (it) => {
+    try {
+      const measured = window.KiwiRestaurantRecipes?.theoreticalUsage?.(it.id, currentVenueId(), 7);
+      if (stShowReal()) return Number(measured) || 0;
+      if (Number(measured) > 0) return Number(measured);
+    } catch (_) {}
+    return Number(it.theoreticalUsage) || 0;
+  };
   const statusOf = (it) => {
     const s = currentStockFor(it);
     if (s <= 0) return 'out';
@@ -929,13 +950,16 @@
     }
     return it.status || 'ok';
   };
-  const variance = (it) => (it.theoreticalUsage > 0 ? ((it.usageThisWeek - it.theoreticalUsage) / it.theoreticalUsage) * 100 : 0);
+  const variance = (it) => {
+    const theoretical = theoreticalUsageFor(it);
+    return theoretical > 0 ? ((it.usageThisWeek - theoretical) / theoretical) * 100 : 0;
+  };
   const daysOfStock = (it) => {
     const rate = it.usageThisWeek / 7;
     return rate > 0 ? currentStockFor(it) / rate : 999;
   };
   const totalValue = (items) => items.reduce((s, it) => s + (currentStockFor(it) * it.costPerUnit), 0);
-  const foodCostMonth = (items) => items.reduce((s, it) => s + (it.theoreticalUsage * it.costPerUnit * 4), 0);
+  const foodCostMonth = (items) => items.reduce((s, it) => s + (theoreticalUsageFor(it) * it.costPerUnit * 4.33), 0);
   /* Le dénominateur du ratio « coût matière / chiffre d'affaires ».
    *
    * Ces montants sont ceux des trois établissements de démonstration. Le repli
@@ -1456,7 +1480,8 @@
     const st = statusOf(it);
     const stLabel = st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut');
     const valueCell = fmtMad(cur * it.costPerUnit);
-    const varCostMad = fmtMad(Math.abs(v) / 100 * it.theoreticalUsage * it.costPerUnit);
+    const theoretical = theoreticalUsageFor(it);
+    const varCostMad = fmtMad(Math.abs(v) / 100 * theoretical * it.costPerUnit);
     return `
       <tr class="st-row-in">
         <td>
@@ -1474,7 +1499,7 @@
         </td>
         <td>
           <span class="st-cell-var ${varCls}">${svg(varIco, 12)}${esc(fmtPct(v))}
-            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(it.theoreticalUsage, it.unit), varCostMad))}</span>
+            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(theoretical, it.unit), varCostMad))}</span>
           </span>
         </td>
         <td class="r"><span class="st-cell-value">${esc(valueCell)}</span></td>
@@ -2054,6 +2079,12 @@
   }
 
   function renderScanReview() {
+    const inv = getInv();
+    const rows = [
+      { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
+      { id: 'inv03', name: 'Agneau épaule', qty: 14, total: 2352 },
+      { id: 'inv04', name: 'Merguez', qty: 4, total: 312 },
+    ];
     return `
       <div class="st-mb-eyebrow">${esc(t('mScanReviewT'))}</div>
       <div class="st-mb-row three">
@@ -2062,11 +2093,12 @@
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" value="FAC-2026-1842" /></div>
       </div>
       <table class="st-inv-items">
-        <thead><tr><th>Article</th><th class="r">Qté</th><th class="r">Total</th></tr></thead>
+        <thead><tr><th>Article</th><th class="r">Qté</th><th>Unité</th><th class="r">Total</th></tr></thead>
         <tbody>
-          <tr><td>Viande hachée bœuf</td><td class="r mono">12 kg</td><td class="r mono">1 140 MAD</td></tr>
-          <tr><td>Agneau épaule</td><td class="r mono">14 kg</td><td class="r mono">2 352 MAD</td></tr>
-          <tr><td>Merguez</td><td class="r mono">4 kg</td><td class="r mono">312 MAD</td></tr>
+          ${rows.map((row) => {
+            const item = inv.find((candidate) => candidate.id === row.id), unit = stockUnit(item?.unit || 'kg');
+            return `<tr data-stock-scan-row="${esc(row.id)}"><td>${esc(item?.name || row.name)}</td><td class="r"><input class="st-pc-input mono" type="number" min="0" step="0.001" value="${row.qty}" data-stock-scan-qty /></td><td><select class="st-mb-input" data-stock-scan-unit>${stockUnitOptions(unit)}</select></td><td class="r mono">${esc(fmtMad(row.total))}</td></tr>`;
+          }).join('')}
         </tbody>
       </table>
       <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--n-600); padding:6px 0;">
@@ -2084,18 +2116,24 @@
 
   function wireScanReview() {
     document.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
-      // Apply stock overrides for matched items
       const inv = getInv();
-      const matches = {
-        'inv01': 12,   // Viande hachée bœuf — restocked by 12kg
-        'inv03': 14,   // Agneau épaule — out → 14kg now
-        'inv04': 4,    // Merguez — +4
-      };
-      Object.entries(matches).forEach(([id, q]) => {
-        const it = inv.find(x => x.id === id);
-        if (it) stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + q;
-        stSaveOverlay();
+      const received = [];
+      for (const row of document.querySelectorAll('[data-stock-scan-row]')) {
+        const id = row.dataset.stockScanRow, it = inv.find((candidate) => candidate.id === id);
+        if (!it) continue;
+        const qty = Math.max(0, parseFloat(row.querySelector('[data-stock-scan-qty]')?.value) || 0);
+        const from = row.querySelector('[data-stock-scan-unit]')?.value || it.unit;
+        const converted = unitApi()?.convert?.(qty, from, it.unit);
+        if (converted == null) {
+          window.Kiwi.toast(`Unité incompatible pour ${it.name}`, { type: 'warn', desc: `Réception en ${from}, stock suivi en ${it.unit}. Indiquez la même unité ou une unité métrique convertible.` });
+          return;
+        }
+        received.push({ id, it, qty: converted });
+      }
+      received.forEach(({ id, it, qty }) => {
+        stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + qty;
       });
+      stSaveOverlay();
       closeTopModal();
       window.Kiwi.toast(t('mScanToast'), { type: 'success', duration: 3800 });
       if (stPageActive) render();
@@ -2387,7 +2425,7 @@
     const W = 320, H = 130, PAD = { l: 24, r: 8, t: 10, b: 20 };
     const innerW = W - PAD.l - PAD.r, innerH = H - PAD.t - PAD.b;
     const daily = (it.usageThisWeek / 7);
-    const theoDaily = (it.theoreticalUsage / 7);
+    const theoDaily = (theoreticalUsageFor(it) / 7);
     // Generate 14 days of mock data around the daily average
     const actual = Array.from({ length: 14 }, (_, i) => daily * (0.85 + Math.random() * 0.3));
     const theo = Array.from({ length: 14 }, () => theoDaily);
@@ -2483,8 +2521,7 @@
     const isEdit = !!existing;
     const title = isEdit ? t('editItemTitle') : t('addItemTitle');
     const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
-    const units = ['kg','g','L','unité','boîte','paquet','botte','pot','bouteille','paire'];
-    const unitOptions = units.map(u => `<option ${existing?.unit === u ? 'selected' : ''}>${esc(u)}</option>`).join('');
+    const unitOptions = stockUnitOptions(existing?.unit || 'unité');
     const m = window.Kiwi.modal({
       title,
       width: 560,
@@ -2538,7 +2575,7 @@
         const catSel = scope.querySelector('[data-stock-add-cat]');
         let category = catSel?.value || 'legumes';
         if (category === '__new__') category = existing?.category || 'legumes';
-        const unit = scope.querySelector('[data-stock-add-unit]')?.value || 'unité';
+        const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
         const supplier = scope.querySelector('[data-stock-add-sup]')?.value || (existing?.supplier || '');
         const cur = parseFloat(scope.querySelector('[data-stock-add-current]')?.value);
         const par = parseFloat(scope.querySelector('[data-stock-add-par]')?.value);
@@ -2912,6 +2949,21 @@
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
     window.KiwiI18n?.onLangChange?.(() => { if (stPageActive) render(); });
   }
+
+  /* Private bridge used by restaurant recipes. It exposes the same persisted
+   * inventory the Stock page renders, including edits and physical counts;
+   * no demo inventory is copied into a real restaurant. */
+  window.KiwiRestaurantStock = {
+    items: () => {
+      stEnsureOverlay();
+      return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it), theoreticalUsage: theoreticalUsageFor(it) }));
+    },
+    theoreticalUsage: (stockId) => {
+      stEnsureOverlay();
+      const it = getInv().find((row) => String(row.id) === String(stockId));
+      return it ? theoreticalUsageFor(it) : 0;
+    },
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerHandlers);

@@ -337,8 +337,10 @@
          celle-ci marque la vente sortie mais ne rend pas la marchandise deux fois. */
       if (sale.remote) return;
       (sale.lines || []).forEach((ln) => {
-        if (!ln || ln.returned) return;          // déjà rendue au comptoir
-        persistStock(ln.pid, ln.size, ln.color, sign * (+ln.qty || 0));
+        if (!ln) return;
+        const remaining = lineAvailableQty(ln);
+        if (!remaining) return;                  // déjà rendue au comptoir
+        persistStock(ln.pid, ln.size, ln.color, sign * remaining);
       });
     };
     SALES.forEach((sale) => {
@@ -766,6 +768,7 @@
     const merchant = merchantSlug();
     if (!merchant) return Promise.resolve(0);
     const start = new Date(); start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (RETAIN_DAYS - 1));
     return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + start.getTime(), {
       credentials: 'same-origin', headers: { Accept: 'application/json' },
     }).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -794,9 +797,10 @@
     view: 'vente',
     rayon: 'tous',
     ticket: null,                /* { num, lines:[], client:id|'passage'|null, remiseAuth } */
-    exchange: null,              /* { saleId, idx } pendant le choix du remplacement */
-    ret: null,                   /* { saleId, picks:Set, motif } sur la vue échanges */
+    exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
+    ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
+    retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     clQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
@@ -809,6 +813,62 @@
     syncStorageError: false,
     ticketStorageError: false,
   };
+
+  /* Journal partagé des retours. Avant ceci, le stock et l'avoir changeaient
+     bien à la caisse, mais le dashboard ne recevait aucun retour et continuait
+     d'afficher ses exemples. */
+  const RETURN_LOG_KEY = 'kiwi:bqReturns';
+  let RETURN_LOG = [];
+  let returnCloudHandle = null;
+  (function restoreReturnLog() {
+    if (IS_DEMO) return;
+    try {
+      const d = JSON.parse(localStorage.getItem(RETURN_LOG_KEY) || 'null');
+      if (d && (!d.m || !merchantSlug() || d.m === merchantSlug()) && Array.isArray(d.list)) RETURN_LOG = d.list;
+    } catch (_) {}
+  })();
+  function persistReturnLog() {
+    if (IS_DEMO) return;
+    try { localStorage.setItem(RETURN_LOG_KEY, JSON.stringify({ m: merchantSlug(), list: RETURN_LOG })); } catch (_) {}
+  }
+  function ensureReturnCloud() {
+    if (IS_DEMO || returnCloudHandle || !window.KiwiCloudDoc) return returnCloudHandle;
+    returnCloudHandle = window.KiwiCloudDoc.attach({
+      feature: 'returns', slug: merchantSlug,
+      read: () => ({ list: RETURN_LOG }),
+      write: (doc) => {
+        RETURN_LOG = Array.isArray(doc && doc.list) ? doc.list : [];
+        persistReturnLog();
+      },
+      isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
+    });
+    returnCloudHandle.bind();
+    return returnCloudHandle;
+  }
+  function recordReturn(sale, idxs, amount, reason, kind, reference, quantities) {
+    if (IS_DEMO || !sale) return;
+    const items = idxs.map((i) => {
+      const ln = sale.lines[i];
+      if (!ln) return null;
+      const qty = quantities && quantities.has(i) ? Number(quantities.get(i)) || 1 : 1;
+      return {
+        name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', size: ln.size || '',
+        qty, amount: Math.round((Number(ln.unit) || 0) * qty),
+      };
+    }).filter(Boolean);
+    const now = Date.now();
+    const client = saleClient(sale);
+    RETURN_LOG.unshift({
+      id: `RET-${sale.id}-${now}`, ts: now, saleRef: sale.id, kind: kind || 'avoir',
+      reason: reason || '', amount: Math.round(Number(amount) || 0), reference: reference || '',
+      actor: (STAFF.caissiere && STAFF.caissiere.name) || 'Caisse',
+      client: (client && client.name) || 'Cliente de passage', items,
+    });
+    RETURN_LOG = RETURN_LOG.slice(0, 500);
+    persistReturnLog();
+    const cloud = ensureReturnCloud();
+    if (cloud) cloud.push();
+  }
   /* ── LE NUMÉRO DE TICKET : DES CHIFFRES, ET RIEN D'AUTRE ──────────────────
    * Une référence lisible (1000, 1001…) et un identifiant technique sont deux
    * choses différentes. `syncId` est un UUID : deux ventes ne deviennent jamais
@@ -1149,6 +1209,7 @@
           <button class="bq-nav-it" data-bq-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="bq-nav-badge" id="bq-badge-scan"></b></button>
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
+          <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
         </nav>
         <div class="bq-rail-foot">
@@ -1188,6 +1249,7 @@
         <section class="bq-view" data-bq-panel="scan"></section>
         <section class="bq-view" data-bq-panel="inventaire"></section>
         <section class="bq-view" data-bq-panel="echanges"></section>
+        <section class="bq-view" data-bq-panel="vendus"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
@@ -1331,6 +1393,7 @@
 
     renderAll();
     syncReturnSales();
+    ensureReturnCloud();
 
     /* Une vraie boutique ouvre son poste comme la caisse restaurant : fond
        d'ouverture d'abord, la vente ensuite. La démo entre directement. */
@@ -1393,6 +1456,11 @@
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
+    if (view === 'vendus') {
+      const panel = $('[data-bq-panel="vendus"]', root);
+      if (window.KiwiSoldInsights) window.KiwiSoldInsights.renderTill(panel);
+      else panel.innerHTML = '<div class="bq-empty" style="margin:40px;">Analyse des ventes indisponible.</div>';
+    }
     if (view === 'clientes') renderClientes();
   }
   function renderBadges() {
@@ -2542,7 +2610,13 @@
     /* Une vente sortie des livres ne se retourne pas : elle n'a plus eu lieu, sa
        marchandise est déjà revenue en stock, et l'échanger créerait un avoir
        adossé à un encaissement que le serveur ne connaît plus. */
-    const hits = SALES.filter((s) => !s.voided && saleMatches(s, q));
+    const dateKey = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const oldest = new Date(today); oldest.setDate(oldest.getDate() - (RETAIN_DAYS - 1));
+    const todayKey = dateKey(today), yesterdayKey = dateKey(yesterday), oldestKey = dateKey(oldest);
+    if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
+    const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
       <div class="bq-ret">
@@ -2551,6 +2625,13 @@
           <div class="bq-search"><i data-lucide="search"></i>
             <input id="bq-ret-q" placeholder="N° de ticket ou téléphone…" value="${esc(q)}" /></div>
         </header>
+        <div class="bq-ret-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0;">
+          <button class="bq-pill ${state.retDate === todayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${todayKey}">Aujourd'hui</button>
+          <button class="bq-pill ${state.retDate === yesterdayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${yesterdayKey}">Hier</button>
+          <label class="bq-ret-bar-lbl" style="margin-left:4px;">Date
+            <input id="bq-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" style="margin-left:7px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);" />
+          </label>
+        </div>
         <div class="bq-ret-scroll"><div class="bq-ret-inner">
           ${activeAvoirs().length ? `
             <div class="bq-ret-bar" style="margin-top:14px;">
@@ -2572,9 +2653,27 @@
       renderEchanges(); icons();
       const i = $('#bq-ret-q', panel); i.focus(); moveCaretEnd(i);
     };
+    $('#bq-ret-date', panel).onchange = (e) => {
+      state.retDate = String(e.target.value || todayKey);
+      state.ret = null;
+      renderEchanges(); icons();
+    };
     panel.onclick = (e) => {
+      const dayB = e.target.closest('[data-bq-ret-day]');
+      if (dayB) { state.retDate = dayB.dataset.bqRetDay; state.ret = null; renderEchanges(); icons(); return; }
       const avB = e.target.closest('[data-bq-av]');
       if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.bqAv), { mode: 'view' }); return; }
+      const qtyB = e.target.closest('[data-bq-ret-qty]');
+      if (qtyB && state.ret) {
+        const [saleId, idxS, deltaS] = qtyB.dataset.bqRetQty.split(':');
+        const idx = Number(idxS), sale = findSale(saleId);
+        if (sale && state.ret.saleId === saleId && state.ret.picks.has(idx)) {
+          const current = pickedQty(state.ret, idx, sale.lines[idx]);
+          state.ret.quantities.set(idx, Math.max(1, Math.min(lineAvailableQty(sale.lines[idx]), current + Number(deltaS))));
+          renderEchanges(); icons();
+        }
+        return;
+      }
       const lnB = e.target.closest('[data-bq-pick]');
       if (lnB) { togglePick(lnB.dataset.bqPick); return; }
       const lockB = e.target.closest('[data-bq-locked]');
@@ -2591,11 +2690,31 @@
 
   const MOTIFS = ['Taille', 'Couleur', 'Défaut', 'Changement d\'avis'];
 
+  /* A ticket line can contain several identical pieces. Older tickets only
+     carried the boolean `returned`; keep understanding that format while new
+     returns remember exactly how many pieces came back. */
+  function lineReturnedQty(ln) {
+    const sold = Math.max(0, Number(ln && ln.qty) || 0);
+    if (ln && ln.returned) return sold;
+    return Math.max(0, Math.min(sold, Number(ln && ln.returnedQty) || 0));
+  }
+  function lineAvailableQty(ln) { return Math.max(0, (Number(ln && ln.qty) || 0) - lineReturnedQty(ln)); }
+  function pickedQty(ret, idx, ln) {
+    const wanted = ret && ret.quantities && ret.quantities.get(idx);
+    return Math.max(1, Math.min(lineAvailableQty(ln), Number(wanted) || 1));
+  }
+  function markLineReturned(ln, qty, note) {
+    const next = Math.min(Number(ln.qty) || 0, lineReturnedQty(ln) + Math.max(0, Number(qty) || 0));
+    ln.returnedQty = next;
+    ln.returned = next >= (Number(ln.qty) || 0);
+    ln.note = note;
+  }
+
   function saleCard(s, ret) {
     const c = saleClient(s);
     const sel = ret && ret.saleId === s.id ? ret.picks : new Set();
-    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? l.unit * l.qty : 0), 0);
-    const hasRet = s.lines.some((l) => l.returned);
+    const selVal = s.lines.reduce((t, l, i) => t + (sel.has(i) ? l.unit * pickedQty(ret, i, l) : 0), 0);
+    const hasRet = s.lines.some((l) => lineReturnedQty(l) > 0);
     return `<div class="bq-sale">
       <div class="bq-sale-top">
         <span class="bq-sale-num">${s.id}</span>
@@ -2616,7 +2735,9 @@
              le dit franchement ; le montant payé, lui, vient de la ligne et
              reste toujours juste. */
           const p = P[l.pid] || { name: l.name || 'Article retiré du catalogue', art: '' };
-          if (l.returned) {
+          const returnedQty = lineReturnedQty(l);
+          const availableQty = lineAvailableQty(l);
+          if (!availableQty) {
             return `<button class="bq-sline is-locked" data-bq-locked="1">
               <span class="tick"></span>
               <span class="bq-line-art">${artOf(p.art)}</span>
@@ -2625,16 +2746,24 @@
               <span class="bq-pill warn">retournée</span>
             </button>`;
           }
+          const chosenQty = sel.has(i) ? pickedQty(ret, i, l) : 1;
           return `<button class="bq-sline ${sel.has(i) ? 'on' : ''}" data-bq-pick="${s.id}:${i}">
             <span class="tick"><i data-lucide="check"></i></span>
             <span class="bq-line-art">${artOf(p.art)}</span>
             <span class="mid"><span class="bq-line-name">${esc(p.name)}</span>
               <span class="bq-line-sub">
                 ${colorDot(l.color)}
-                <span class="sz">${esc(l.size)}</span> ${l.qty > 1 ? `× ${l.qty}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
+                <span class="sz">${esc(l.size)}</span> ${availableQty > 1 ? `× ${availableQty} disponibles` : ''} ${returnedQty ? `· ${returnedQty} déjà retournée${returnedQty > 1 ? 's' : ''}` : ''} ${l.remise ? `· remise −${l.remise} %` : ''}
               </span></span>
-            <span class="amt">${fmtMAD(l.unit * l.qty)}</span>
-          </button>`;
+            <span class="amt">${fmtMAD(l.unit * availableQty)}</span>
+          </button>${sel.has(i) && availableQty > 1 ? `
+            <div class="bq-ret-qty" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:7px 12px 10px;">
+              <span style="font-size:12px;color:var(--ink-3);">Quantité à retourner</span>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:-1" aria-label="Retirer une pièce">−</button>
+              <b>${chosenQty}</b>
+              <button class="bq-chip" type="button" data-bq-ret-qty="${s.id}:${i}:1" aria-label="Ajouter une pièce">+</button>
+              <strong>${fmtMAD(l.unit * chosenQty)}</strong>
+            </div>` : ''}`;
         }).join('')}
       </div>
       ${sel.size ? `
@@ -2654,9 +2783,10 @@
   function togglePick(key) {
     const [saleId, idxS] = key.split(':');
     const idx = +idxS;
-    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), motif: 'Taille' };
+    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), quantities: new Map(), motif: 'Taille' };
     const picks = state.ret.picks;
-    if (picks.has(idx)) picks.delete(idx); else picks.add(idx);
+    if (picks.has(idx)) { picks.delete(idx); state.ret.quantities.delete(idx); }
+    else { picks.add(idx); state.ret.quantities.set(idx, 1); }
     if (!picks.size) state.ret = null;
     renderEchanges(); icons();
   }
@@ -2668,8 +2798,9 @@
     const idx = ret.picks.values().next().value;
     const sale = findSale(ret.saleId);
     const ln = sale.lines[idx];
-    if (ln.qty > 1) { toast('Ligne multiple, passez par un avoir, ou retournez pièce par pièce'); return; }
-    state.exchange = { saleId: ret.saleId, idx };
+    const qty = pickedQty(ret, idx, ln);
+    if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
+    state.exchange = { saleId: ret.saleId, idx, qty: 1 };
     state.ret = null;
     switchView('vente');
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
@@ -2680,24 +2811,27 @@
     if (!ret) return;
     const sale = findSale(ret.saleId);
     const idxs = Array.from(ret.picks);
-    const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * sale.lines[i].qty, 0);
+    const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
+    const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
     if (!amount) return;
-    restoreLines(sale, idxs, `avoir (${ret.motif.toLowerCase()})`);
+    restoreLines(sale, idxs, quantities, `avoir (${ret.motif.toLowerCase()})`);
     const c = saleClient(sale);
     const av = issueAvoir(amount, c, `${ret.motif}, retour ${sale.id}`, sale.id);
+    recordReturn(sale, idxs, amount, ret.motif, 'avoir', av.code, quantities);
     state.ret = null;
     refreshOps();
     openVoucher(av, { mode: 'fresh' });
   }
 
-  function restoreLines(sale, idxs, note) {
+  function restoreLines(sale, idxs, quantities, note) {
     idxs.forEach((i) => {
       const ln = sale.lines[i];
-      ln.returned = true;
-      ln.note = note;
-      stockAdd(ln.pid, ln.size, ln.qty);
+      const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
+      if (!qty) return;
+      markLineReturned(ln, qty, note);
+      stockAdd(ln.pid, ln.size, qty);
       // Returned pieces go back into the real inventory too, not just the display.
-      persistStock(ln.pid, ln.size, ln.color, ln.qty);
+      persistStock(ln.pid, ln.size, ln.color, qty);
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
@@ -2817,14 +2951,17 @@
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
 
+    let applied = false;
     const apply = () => {
+      if (applied) return;
+      applied = true;
       stockAdd(ln.pid, ln.size, 1);
       stockAdd(newPid, newSize, -1);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
       persistStock(ln.pid, ln.size, ln.color, 1);
       persistStock(newPid, newSize, newColor, -1);
-      ln.returned = true;
-      ln.note = `échangée → ${newP.name} · ${newSize}`;
+      markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
+      recordReturn(sale, [ex.idx], ln.unit, 'Echange', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -5965,7 +6102,7 @@
         else t.other += p.amount;
       });
       if (took > 0) { t.moneyIn += took; t.txns++; }
-      (s.lines || []).forEach((ln) => { if (!ln.returned) t.items += +ln.qty || 0; });
+      (s.lines || []).forEach((ln) => { t.items += lineAvailableQty(ln); });
       const d = +s.discount || 0;
       if (d > 0) { t.discounts += d; t.discountsN++; }
       /* Compté À PART des réductions. Une gérante qui voit « 4 200 MAD de
@@ -5987,10 +6124,10 @@
     const out = [];
     salesToday().forEach((s) => {
       const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime();
-      const lines = (s.lines || []).filter((ln) => !ln.returned).map((ln) => ({
+      const lines = (s.lines || []).filter((ln) => lineAvailableQty(ln) > 0).map((ln) => ({
         name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
-        qty: +ln.qty || 0,
-        total: Math.round((+ln.unit || 0) * (+ln.qty || 0)),
+        qty: lineAvailableQty(ln),
+        total: Math.round((+ln.unit || 0) * lineAvailableQty(ln)),
         cat: rayonOf(ln.pid) || '',
       }));
       let first = true;

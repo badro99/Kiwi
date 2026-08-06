@@ -10829,8 +10829,33 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
    * Retours & échanges. Width 980. Pending list, return-policy editor, fraud
    * watch, refund issuance row.
    * ─────────────────────────────────────────────────────────────────────────── */
+  let liveReturns = [];
+  let liveReturnsCloud = null;
+  let liveReturnsSlug = '';
+  function realReturnsStore() {
+    try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  }
+  function bindLiveReturns() {
+    if (!realReturnsStore() || !window.KiwiCloudDoc) return;
+    const slug = window.KiwiCloudDoc.currentSlug();
+    if (slug !== liveReturnsSlug) { liveReturnsSlug = slug; liveReturns = []; }
+    if (!liveReturnsCloud) {
+      liveReturnsCloud = window.KiwiCloudDoc.attach({
+        feature: 'returns', slug: () => window.KiwiCloudDoc.currentSlug(),
+        read: () => ({ list: liveReturns }),
+        write: (doc) => {
+          liveReturns = Array.isArray(doc && doc.list) ? doc.list : [];
+          if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+        },
+        isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
+      });
+    }
+    liveReturnsCloud.bind();
+  }
   handlers['nav-returns'] = () => {
-    const pending = [
+    const real = realReturnsStore();
+    bindLiveReturns();
+    const demoPending = [
       { id: 'R-7821', d: '24/04', name: 'Caftan brodé taille S',         amt: 2450,  reason: 'Taille',                client: 'Anna M. (DE)',     status: 'pend',  emoji: 'C' },
       { id: 'R-7822', d: '23/04', name: 'Babouches cuir caramel',         amt: 380,   reason: 'Défaut · couture',      client: 'Sophie L. (FR)',   status: 'pend',  emoji: 'B' },
       { id: 'R-7823', d: '23/04', name: 'Tapis berbère 1,2 × 1,8 m',     amt: 4200,  reason: 'Cadeau non désiré',     client: 'Karen B. (US)',    status: 'pend',  emoji: 'T' },
@@ -10838,26 +10863,37 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { id: 'R-7825', d: '22/04', name: 'Coussin tissé Kilim',            amt: 290,   reason: 'Défaut · tache',        client: 'Hassan J. (MA)',   status: 'pend',  emoji: 'CO' },
       { id: 'R-7826', d: '21/04', name: 'Bracelet argent berbère',       amt: 1200,  reason: 'Taille',                client: 'Karima O. (MA)',   status: 'neutral', emoji: 'BR' },
     ];
+    const pending = real ? liveReturns.flatMap((ret) => {
+      const items = Array.isArray(ret && ret.items) ? ret.items : [];
+      return items.map((item, i) => ({
+        id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
+        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+        name: `${Number(item.qty) || 1} × ${item.name || 'Article'}${item.size ? ' · ' + item.size : ''}`,
+        amt: Number(item.amount) || Number(ret.amount) || 0,
+        reason: ret.reason || (ret.kind === 'echange' ? 'Échange' : 'Avoir'),
+        client: ret.client || 'Cliente de passage', status: 'ok', emoji: '', actor: ret.actor || 'Caisse',
+      }));
+    }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
 
-    const flagged = [
+    const flagged = real ? [] : [
       { name: 'Diana K. (US)',  reason: '4 retours en 28 j · 2 sur articles soldés', amt: '4 280 MAD', risk: 'Élevé' },
       { name: 'Sofia A. (FR)',  reason: '3 retours en 30 j · pattern post-Instagram', amt: '2 940 MAD', risk: 'Modéré' },
     ];
 
     window.Kiwi.appPage('returns', {
       title: 'Retours & échanges',
-      subtitle: 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
+      subtitle: real ? `${pending.length} article${pending.length > 1 ? 's' : ''} retourné${pending.length > 1 ? 's' : ''}` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
-          <div class="l">FENÊTRE DE RETOUR · 14 JOURS</div>
-          <div class="big">${pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">en attente</span></div>
-          <div class="sub">Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas</div>
+        <div class="p-hero" data-live-returns style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+          <div class="l">FENÊTRE DE RETOUR · ${real ? '7' : '14'} JOURS</div>
+          <div class="big">${real ? pending.length : pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">${real ? 'articles retournés' : 'en attente'}</span></div>
+          <div class="sub">${real ? 'Retours et échanges enregistrés depuis la caisse de cette boutique.' : "Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas"}</div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
           <div>
-            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">DEMANDES EN ATTENTE</div>
-            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l'historique client complet.</div>
+            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">${real ? 'ARTICLES RETOURNÉS' : 'DEMANDES EN ATTENTE'}</div>
+            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">${real ? 'Article, montant, motif, client et employé enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l\'historique client complet.'}</div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="kb ghost" data-action="ret-export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>Exporter</button>
@@ -10867,17 +10903,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <div class="p-card" style="padding: 8px 18px 12px;">
           ${pending.map(r => `
-            <div class="b-ret-row" data-action="ret-detail" data-arg="${r.id}">
+            <div class="b-ret-row" ${real ? '' : `data-action="ret-detail" data-arg="${r.id}"`}>
               <div class="b-ret-id">${r.id}<br><span style="opacity:0.7; font-size: 10px;">${r.d}</span></div>
               <div class="b-ret-thumb">${SVG.box}</div>
               <div class="b-ret-body">
                 <div class="n">${r.name}</div>
                 <div class="reason">Raison : ${r.reason}</div>
-                <div class="who">${r.client}</div>
+                <div class="who">${r.client}${real ? ' · ' + r.actor : ''}</div>
               </div>
               <div class="b-ret-amt">${fmtMAD(r.amt, 0)} MAD</div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <span class="chip ${r.status}" style="font-size: 10.5px;">${r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
+                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.reason === 'Echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
                 ${r.status === 'pend' ? `
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-approve" data-arg="${r.id}" data-bubble="stop" title="Approuver">${SVG.check}</button>
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px; color: var(--danger);" data-action="ret-refuse" data-arg="${r.id}" data-bubble="stop" title="Refuser">${SVG.x}</button>
@@ -10886,6 +10922,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               </div>
             </div>
           `).join('')}
+          ${real && !pending.length ? '<div style="padding:24px 4px;color:var(--n-500);">Aucun retour enregistré pour cette boutique.</div>' : ''}
         </div>
 
         <div class="p-grid-2" style="margin-top: 18px;">
@@ -10898,7 +10935,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="b-ret-policy" id="retPolicy">
               <div class="field">
                 <div class="lbl">FENÊTRE DE RETOUR</div>
-                <input type="number" value="14" min="0" max="90" step="1"/>
+                <input type="number" value="${real ? 7 : 14}" min="0" max="90" step="1"/>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">jours après l'achat</div>
               </div>
               <div class="field">
@@ -14903,6 +14940,27 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function registerActions() {
     const H = window.Kiwi && window.Kiwi.handlers; if (!H) return;
     if (!H['starter-add']) H['starter-add'] = (_el, nav) => openAddModal(nav);
+    H['sales-day'] = (_el, offset) => {
+      const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
+      salesDayByMerchant[merchant] = Math.max(0, Math.min(6, Number(offset) || 0));
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
+    H['sales-method'] = (_el, method) => {
+      const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
+      const allowed = ['cash', 'card', 'delivery'];
+      const current = (salesMethodsByMerchant[merchant] || []).filter((m) => allowed.includes(m));
+      if (method === 'all' || !allowed.includes(method)) {
+        salesMethodsByMerchant[merchant] = [];
+      } else if (current.includes(method)) {
+        salesMethodsByMerchant[merchant] = current.filter((m) => m !== method);
+      } else if (current.length >= 2) {
+        /* A third simultaneous type becomes the simpler, honest "Tout" view. */
+        salesMethodsByMerchant[merchant] = [];
+      } else {
+        salesMethodsByMerchant[merchant] = current.concat(method);
+      }
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
   }
 
   function starterTitle(nav, meta) {
@@ -14931,13 +14989,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--n-200)}' +
       '.rtx-count{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}' +
       '.rtx-total{font-size:14px;color:var(--ink)}.rtx-total b{font-family:var(--mono)}' +
+      '.rtx-days{display:flex;gap:7px;overflow-x:auto;padding:0 0 16px;scrollbar-width:thin}' +
+      '.rtx-day{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;white-space:nowrap;font:600 11px var(--sans);cursor:pointer}' +
+      '.rtx-day.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}' +
+      '.rtx-methods{display:flex;gap:7px;flex-wrap:wrap;padding:0 0 16px}' +
+      '.rtx-method{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 11px var(--sans);cursor:pointer}' +
+      '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
       '.rtx-list{display:flex;flex-direction:column}' +
-      '.rtx-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:14px;padding:12px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:start;gap:14px;padding:14px 2px;border-bottom:1px solid var(--n-100)}' +
       '.rtx-row.is-new{animation:rtx-in .45s cubic-bezier(.32,.72,0,1)}' +
       '@keyframes rtx-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +
       '.rtx-t{font-family:var(--mono);font-size:12.5px;color:var(--n-500)}' +
       '.rtx-m{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);white-space:nowrap}' +
-      '.rtx-l{font-size:14px;color:var(--ink)}' +
+      '.rtx-products{display:flex;flex-direction:column;gap:5px;min-width:0}.rtx-product{display:flex;justify-content:space-between;gap:14px;font-size:14px;color:var(--ink)}' +
+      '.rtx-product-name{overflow:hidden;text-overflow:ellipsis}.rtx-product-amount{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--n-500)}' +
+      '.rtx-products-missing{font-size:13px;color:var(--n-500)}' +
       '.rtx-a{font-family:var(--mono);font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap}' +
       '.rtx-cur{font-size:10px;color:var(--n-500)}' +
       '.rtx-voids{margin-top:26px;padding-top:18px;border-top:1px solid var(--n-200)}' +
@@ -14952,6 +15018,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   let cancelAuditMerchant = '';
   let cancelAuditLoading = false;
   let cancelAuditVoidSig = '';
+  const salesDayByMerchant = Object.create(null);
+  const salesMethodsByMerchant = Object.create(null);
+  function salesMethodKey(s) {
+    const raw = String((s && s.method) || '').toLowerCase();
+    return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' })[raw] || raw;
+  }
   function auditMerchant() {
     try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
   }
@@ -14982,9 +15054,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const sales = merchantSales().slice();
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', vente: 'Vente' },
-      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', vente: 'Sale' },
-      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', vente: 'بيع' },
+      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', unknown: 'Non renseigné' },
+      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', unknown: 'Not recorded' },
+      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', delivery: 'توصيل', unknown: 'غير مسجّل' },
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
@@ -15001,31 +15073,53 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * sous l'autre. On borne donc, et quand la fenêtre couvre plus d'un jour
      * on date la ligne — sans quoi borner n'aurait fait que cacher le problème
      * au lieu de le dire. */
-    const rangeKey = (() => { try { return window.KiwiDateRange?.getDateRange?.() || ''; } catch (_) { return ''; } })();
-    const win = (() => { try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; } })();
-    const lo = (win[0] == null) ? -Infinity : win[0];
-    const hi = (win[1] == null) ? Infinity : win[1];
-    const inWindow = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
-    const RANGE_L = {
-      fr: { aujourdhui: "aujourd'hui", hier: 'hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'mois dernier', trimestre: 'trimestre', annee: 'année', personnalise: 'période choisie' },
-      en: { aujourdhui: 'today', hier: 'yesterday', septJours: 'last 7 days', trenteJours: 'last 30 days', moisDernier: 'last month', trimestre: 'quarter', annee: 'year', personnalise: 'selected period' },
-      ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يومًا', moisDernier: 'الشهر الماضي', trimestre: 'الربع', annee: 'السنة', personnalise: 'الفترة المختارة' },
-    }[lang] || {};
-    const rangeLabel = RANGE_L[rangeKey] || '';
-    // Une fenêtre d'un seul jour n'a pas besoin d'être datée ligne à ligne.
-    const oneDay = rangeKey === 'aujourdhui' || rangeKey === 'hier';
+    const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
+    const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
+    const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
+    const selectedDay = new Date();
+    selectedDay.setHours(0, 0, 0, 0);
+    selectedDay.setDate(selectedDay.getDate() - dayOffset);
+    const lo = selectedDay.getTime();
+    const hi = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate() + 1).getTime();
+    const daySales = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const inWindow = selectedMethods.length
+      ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
+      : daySales;
+    const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
+      : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
+      : selectedDay.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'long', day: 'numeric', month: 'short' });
+    const dayButtons = Array.from({ length: 7 }, (_, offset) => {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offset);
+      const label = offset === 0 ? T({ fr: "Aujourd'hui", en: 'Today', ar: 'اليوم' })
+        : offset === 1 ? T({ fr: 'Hier', en: 'Yesterday', ar: 'أمس' })
+        : d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'short', day: 'numeric', month: 'short' });
+      return `<button class="rtx-day${offset === dayOffset ? ' on' : ''}" type="button" data-action="sales-day" data-arg="${offset}" aria-pressed="${offset === dayOffset}">${escS(label)}</button>`;
+    }).join('');
+    const methodLabels = {
+      all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
+      cash: L.cash, card: L.card, delivery: L.delivery,
+    };
+    const methodButtons = ['all', 'cash', 'card', 'delivery'].map((method) => {
+      const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
+      return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
+    }).join('');
     const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
     const count = inWindow.length;
     const rows = inWindow.slice().reverse().map((s, i) => {
       const d = new Date(s.ts || Date.now());
       const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      const when = oneDay ? hh
-        : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}`;
-      const m = L[s.method] || L.vente;
+      const when = hh;
+      const m = L[salesMethodKey(s)] || L.unknown;
+      const lines = Array.isArray(s.lines) ? s.lines.filter((l) => l && l.name) : [];
+      const products = lines.length ? lines.map((l) => {
+        const qty = Math.max(1, Number(l.qty) || 1);
+        const lineAmount = Number(l.total);
+        return `<div class="rtx-product"><span class="rtx-product-name">${qty} × ${escS(l.name)}</span>${Number.isFinite(lineAmount) ? `<span class="rtx-product-amount">${fmt(lineAmount)} MAD</span>` : ''}</div>`;
+      }).join('') : `<span class="rtx-products-missing">${escS(T({ fr: 'Détail produit indisponible', en: 'Product detail unavailable', ar: 'تفاصيل المنتج غير متوفرة' }))}</span>`;
       return `<div class="rtx-row${i === 0 ? ' is-new' : ''}">` +
         `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
-        `<span class="rtx-l">${escS(L.vente)}</span>` +
+        `<span class="rtx-products">${products}</span>` +
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
         `</div>`;
     }).join('');
@@ -15046,10 +15140,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       body: `
         <div data-real-tx class="rtx">
           <div class="rtx-head">
-            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)}${rangeLabel ? ' · ' + escS(rangeLabel) : ''}</div>
+            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)} · ${escS(dayLabel)}</div>
             <div class="rtx-total">${escS(SUM.total)} · <b>${fmt(total)} MAD</b></div>
           </div>
-          <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-l">${escS(T({
+          <div class="rtx-days" role="group" aria-label="${escS(T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }))}">${dayButtons}</div>
+          <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
+          <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
             fr: 'Aucune vente sur cette période.',
             en: 'No sales in this period.',
             ar: 'لا توجد مبيعات في هذه الفترة.',

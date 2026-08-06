@@ -129,9 +129,9 @@ ok('orderInProgressCount ne compte que ce qui n’est pas encore parti',
 
 // L'empilement d'un article ne doit JAMAIS retomber sur une ligne déjà partie :
 // sinon l'addition monte et aucun bon ne part — facturé, jamais préparé.
-const addFn = (CAISSE.match(/function addToTableOrder\(tableId, itemId\)\s*\{[\s\S]{0,1800}?\n {4}\}/) || [''])[0];
+const addFn = (CAISSE.match(/function pushTableOrderLine\(tableId, item, opts\)\s*\{[\s\S]{0,2200}?\n {4}\}/) || [''])[0];
 ok("un ajout ne s'empile jamais sur une ligne déjà en cuisine",
-  /find\(l => l\.id === itemId && !l\.sent/.test(addFn));
+  /find\(l => l\.id === item\.id && !l\.sent/.test(addFn));
 
 // Et une ligne partie ne se décrémente pas depuis la caisse.
 const qtyFn = (CAISSE.match(/function changeTableOrderLineQty\(tableId, uid, delta\)\s*\{[\s\S]{0,900}?\n {4}\}/) || [''])[0];

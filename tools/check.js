@@ -465,6 +465,30 @@ section('Documents caisse appairée (tools/cloud-doc-paired-test.js)');
   }
 }
 
+section('Liquid Glass par défaut (tools/glass-default-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'glass-default-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    fail(`glass-default-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+section('Détail des ventes (tools/ventes-detail-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'ventes-detail-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(out.split('\n').find((l) => l.includes('✓')).replace(/^\s*✓\s*/, ''));
+  } else {
+    fail(`ventes-detail-test.js exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 9 · le bouton « Réimprimer » de la caisse ───────────────────────────────
  * Une réimpression qui repasse par le chemin d'une vente encaisse deux fois, et
  * un duplicata qui ne se déclare pas est une pièce qu'on ne peut plus
@@ -644,11 +668,17 @@ section('Whole-project regressions');
     'kitchen-relay-test.js',
     'order-mode-exit-test.js',
     'resto-carte-test.js',
+    'restaurant-menu-performance-test.js',
+    'restaurant-menu-peak-hours-test.js',
+    'restaurant-units-test.js',
+    'employee-live-test.mjs',
     'void-stock-test.js',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
+    'sold-insights-test.js',
+    'table-refresh-test.js',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });

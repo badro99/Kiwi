@@ -41,8 +41,8 @@
 //    dans la même réponse : la caisse allume ses tables sur le plan de salle
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
-import { json, entitledMerchant } from '../../auth/_lib.js';
-import { startOfDay, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
+import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
+import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -64,6 +64,60 @@ const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const MAX_LINES = 60;              // une commande, généreusement
 const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
+
+function serviceNorm(value) {
+  let s = String(value || '').trim().toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return s.replace(/\s+/g, ' ');
+}
+function employeeName(member) {
+  return [member && member.firstName, member && member.lastName].filter(Boolean).join(' ').trim();
+}
+async function serviceScope(request, env, merchant) {
+  const employee = await activeServiceEmployee(request, env, merchant);
+  if (!employee) return null;
+  const tables = new Set(), allTables = new Set(), pausedTables = new Set();
+  const pausedServers = [];
+  try {
+    const [row, attendanceRow] = await Promise.all([
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'").bind(merchant).first(),
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'").bind(merchant).first(),
+    ]);
+    const plan = JSON.parse((row && row.data) || '{}');
+    const attendance = JSON.parse((attendanceRow && attendanceRow.data) || '{}');
+    const staff = Object.create(null);
+    (Array.isArray(plan.staff) ? plan.staff : []).forEach((s) => { if (s && s.id) staff[String(s.id)] = s; });
+    const pausedIds = new Set(), pausedNames = new Set();
+    (Array.isArray(attendance.entries) ? attendance.entries : []).forEach((entry) => {
+      if (!entry || entry.outTs || !entry.pauseTs) return;
+      const id = String(entry.memberId || entry.staffId || '');
+      const name = serviceNorm(entry.name);
+      if (id) pausedIds.add(id);
+      if (name) pausedNames.add(name);
+    });
+    const myId = String(employee.member.id || employee.session.staffId || '');
+    const myName = serviceNorm(employeeName(employee.member));
+    (Array.isArray(plan.tables) ? plan.tables : []).forEach((table) => {
+      if (!table) return;
+      const tableId = normTable(table.num || table.id);
+      if (!tableId) return;
+      allTables.add(tableId);
+      if (!table.server) { tables.add(tableId); return; }
+      const assigned = String(table.server);
+      const assignedName = serviceNorm(staff[assigned] && staff[assigned].name);
+      if (assigned === myId || (assignedName && assignedName === myName)) {
+        tables.add(tableId);
+      }
+      if (pausedIds.has(assigned) || (assignedName && pausedNames.has(assignedName))) {
+        pausedTables.add(tableId);
+        if (!pausedServers.some((s) => s.id === assigned)) {
+          pausedServers.push({ id: assigned, name: (staff[assigned] && staff[assigned].name) || assignedName });
+        }
+      }
+    });
+  } catch (_) {}
+  return { employee, tables, allTables, pausedTables, pausedServers, name: serviceNorm(employeeName(employee.member)) };
+}
 
 /* Les colonnes se sont ajoutées par vagues : `channel/ext_ref/customer` avec la
  * livraison, `session_id/server_name/paid_ts` avec la session de table. Une base
@@ -90,7 +144,7 @@ export async function onRequestGet(context) {
    * "reached this endpoint" never meant "owns this store". Reading the slug from
    * the query let any caller pull another restaurant's live queue — items,
    * notes, totals, table numbers. Server decides now. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   // Le pointage du comptoir. Volontairement AVANT toute lecture qui peut
@@ -105,7 +159,9 @@ export async function onRequestGet(context) {
   // protection « caisse éteinte ⇒ plus personne ne commande » se serait éteinte
   // avec elle, sans que personne ne s'en aperçoive.
   const role = (url.searchParams.get('role') || '').trim().toLowerCase();
-  if (role !== 'kitchen') await deskTouch(env, merchant);
+  const service = role === 'service' ? await serviceScope(request, env, merchant) : null;
+  if (role === 'service' && !service) return json({ error: 'on-shift-service-required' }, 403);
+  if (role !== 'kitchen' && role !== 'service') await deskTouch(env, merchant);
 
   // `since` est le curseur de la caisse : elle demande ce qui a changé depuis la
   // dernière réponse, donc un long service coûte une petite réponse par tour.
@@ -148,7 +204,7 @@ export async function onRequestGet(context) {
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
   if (!rows) return json({ ok: true, orders: [], sessions: [], now, ordersAvailable: false });
 
-  const orders = (rows.results || []).map((r) => {
+  let orders = (rows.results || []).map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
     let customer = null;
@@ -167,6 +223,12 @@ export async function onRequestGet(context) {
       created_ts: r.created_ts, updated_ts: r.updated_ts,
     };
   });
+  if (service) {
+    orders = orders.filter((order) => {
+      if (order.created_ts && now - Number(order.created_ts) > 18 * 60 * 60 * 1000) return false;
+      return order.mode === 'table' && service.allTables.has(normTable(order.table));
+    });
+  }
 
   /* Qui est assis en ce moment. Ce n'est pas la file : une table peut avoir un
    * téléphone posé dessus et zéro commande — c'est même l'état normal pendant
@@ -194,8 +256,18 @@ export async function onRequestGet(context) {
       opened_ts: s.opened_ts, seen_ts: s.seen_ts,
     }));
   } catch (_) { sessions = []; }
+  if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
 
-  return json({ ok: true, orders, sessions, now, ordersAvailable: true });
+  return json({
+    ok: true, orders, sessions, now, ordersAvailable: true,
+    service: service ? {
+      mineTables: Array.from(service.tables),
+      allTables: Array.from(service.allTables),
+      pausedTables: Array.from(service.pausedTables),
+      pausedServers: service.pausedServers,
+      paused: !!(service.employee.attendance && service.employee.attendance.pauseTs),
+    } : undefined,
+  });
 }
 
 export async function onRequestPost(context) {
@@ -210,8 +282,23 @@ export async function onRequestPost(context) {
 
   /* Same hole on the write side: accepting or rejecting another store's tickets
    * only ever required knowing its slug. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* Employee cookies may only CREATE a ticket for a real table in this store's
+   * owner-managed floor plan. "Toutes les tables" is intentional coverage:
+   * another on-duty server may help, while notifications continue to follow
+   * the table's owner. A paused employee cannot submit orders. */
+  const employee = await activeServiceEmployee(request, env, merchant);
+  if (employee) {
+    const scope = await serviceScope(request, env, merchant);
+    const employeeTable = b && b.create === true && b.mode !== 'takeout' ? normTable(b.table) : '';
+    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    if (!(b && b.create === true) || !employeeTable || !scope || !scope.allTables.has(employeeTable)) {
+      return json({ error: 'floor-table-required' }, 403);
+    }
+    b.server = employeeName(employee.member);
+  }
 
   const now = Date.now();
 
@@ -284,6 +371,7 @@ export async function onRequestPost(context) {
 
     const server = String((b && b.server) || '').trim().slice(0, 40);
     const today = startOfDay(now);
+    const week = startOfWeek(now);
 
     /* Idempotence. Le double-envoi est PLUS probable en salle que sur le
      * téléphone du client : le wifi d'un café porte mal jusqu'au fond de la
@@ -321,7 +409,7 @@ export async function onRequestPost(context) {
       ).bind(
         id, merchant, mode, table, total, linesJson, now, now,
         server || null, priced.menuRev, priced.priced ? now : null, clientRef,
-        merchant, today
+        merchant, week
       ).first();
     } catch (_) {
       /* La clé a-t-elle parlé avant la migration ? Deux envois simultanés de la
@@ -346,7 +434,7 @@ export async function onRequestPost(context) {
            SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?
              FROM orders WHERE merchant = ? AND created_ts >= ?
            RETURNING number`
-        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
+        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, week).first();
       } catch (e) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
@@ -549,6 +637,12 @@ function cleanLines(raw) {
       qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(l.qty) || 1))),
       unitPrice: Math.max(0, Math.round(Number(l.unitPrice) || 0)),
       note: String(l.note || '').slice(0, 200),
+      visuals: (Array.isArray(l.visuals) ? l.visuals.slice(0, 12) : [])
+        .map((v) => ({
+          emoji: String((v && v.emoji) || '').trim().slice(0, 16),
+          name: String((v && v.name) || '').trim().slice(0, 60),
+        }))
+        .filter((v) => v.emoji && v.name),
       station: String(l.station || '').slice(0, 40),
     });
   }
@@ -567,7 +661,7 @@ async function createTicket(env, merchant, c, now) {
   const server = String(c.server || '').trim().slice(0, 40);
   const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const linesJson = JSON.stringify(lines);
-  const today = startOfDay(now);
+  const week = startOfWeek(now);
 
   /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
    * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
@@ -580,15 +674,15 @@ async function createTicket(env, merchant, c, now) {
   } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
 
   /* Même numérotation que le relais téléphone : un compteur par commerçant et
-   * par jour, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
+   * par semaine, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
    * entre « lire le max » et « écrire ». MAX() sans GROUP BY rend toujours une
-   * ligne, donc le premier bon du jour reçoit bien le numéro 1. */
+   * ligne, donc le premier bon de la semaine reçoit bien le numéro 1. */
   const NUMBER = 'COALESCE(MAX(number), 0) + 1';
-  const FROM_TODAY = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
+  const FROM_WEEK = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
   const BASE_COLS = 'id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts';
   const BASE_VALS = `?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?`;
   const head = [id, merchant, mode, table, total, linesJson, now, now];
-  const tail = [merchant, today];
+  const tail = [merchant, week];
 
   /* Les colonnes se sont ajoutées par vagues, et toutes les bases n'ont pas reçu
    * les mêmes : `server_name` est venu avec la session de table, `channel` avec
@@ -608,7 +702,7 @@ async function createTicket(env, merchant, c, now) {
   let lastErr = null;
   for (const s of SHAPES) {
     try {
-      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_TODAY}`)
+      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_WEEK}`)
         .bind(...head, ...s.mid, ...tail).first();
       lastErr = null;
       break;

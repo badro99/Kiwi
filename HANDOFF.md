@@ -3,7 +3,7 @@
 **Last updated:** 2026-05-12 · **superseded on current state by `AI_HANDOFF.md`** — read that first; this file remains the full history/context companion.
 **Location:** `/Users/badrosonair/Documents/kiwi/` (mirror at `/tmp/kiwi-preview/`) · GitHub `https://github.com/badro99/Kiwi` (auto-pushed after every edit — see `CLAUDE.md` §1)
 **Status:** Real, working product with a live backend (Cloudflare Pages Functions + D1: accounts/auth, till pairing, live sales sync, operator console) and real hardware I/O (Kiwi Printer Bridge). The "high-fidelity prototype" framing this document was written under (May 2026) is retired — see `CLAUDE.md` §2.
-**Founders:** Badr-Eddin Bakkioui (CEO) & Zakariae Attahiri (CTO · COO) · `invest@kiwi.ma` · Tanger
+**Founders:** Badr-Eddin Bakkioui (CEO) & Zakariae Attahiri (CTO · COO) · `invest@kiwi-os.com` · Tanger
 
 ---
 
@@ -425,7 +425,7 @@ git-tracked with auto-push.
 
 ## 11. Contact
 
-- **Founders:** Badr-Eddin Bakkioui (CEO) & Zakariae Attahiri (CTO · COO) · invest@kiwi.ma · Tanger, Maroc
+- **Founders:** Badr-Eddin Bakkioui (CEO) & Zakariae Attahiri (CTO · COO) · invest@kiwi-os.com · Tanger, Maroc
 - **Preview URL (local):** http://localhost:4321/index.html
 - **Source repo:** `/Users/badrosonair/Documents/kiwi/` · GitHub `github.com/badro99/Kiwi` (auto-pushed)
 - **Memory:** `/Users/badrosonair/.claude/projects/-Users-badrosonair-Documents-kiwi/memory/MEMORY.md`

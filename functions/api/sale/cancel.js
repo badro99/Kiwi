@@ -5,7 +5,7 @@
 // revenue surface drops it, while sale_audit keeps the complete trail.
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
-import { entitledMerchant, isTillFor, json } from '../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json, employeeRoleOpensTill } from '../../auth/_lib.js';
 
 function cleanLines(raw) {
   if (!raw) return [];
@@ -63,6 +63,7 @@ export async function onRequestPost({ request, env }) {
     ).bind(merchant, pin).first();
   } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
   if (!staff) return json({ error: 'bad-pin' }, 401);
+  if (!employeeRoleOpensTill(staff.role)) return json({ error: 'role-not-authorized' }, 403);
 
   let sale;
   try {

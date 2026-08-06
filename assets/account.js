@@ -80,7 +80,8 @@
       .acc-biz { border:1px solid var(--n-200); border-radius:16px; background:var(--surface); padding:18px 20px; margin-bottom:14px; transition:border-color 140ms, box-shadow 140ms; }
       .acc-biz:hover { border-color:var(--n-300); box-shadow:0 8px 26px -18px rgba(11,110,79,0.30); }
       .acc-biz-head { display:flex; align-items:flex-start; gap:13px; }
-      .acc-biz-logo { width:44px; height:44px; border-radius:13px; background:var(--mint-soft); color:var(--atlas); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex-shrink:0; }
+      .acc-biz-logo { width:44px; height:44px; border-radius:13px; background:var(--mint-soft); color:var(--atlas); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex-shrink:0; overflow:hidden; }
+      .acc-biz-logo img { width:100%; height:100%; object-fit:contain; background:#fff; }
       .acc-biz-name { font-size:15.5px; font-weight:600; letter-spacing:-0.01em; }
       .acc-biz-meta { font-size:12px; color:var(--n-500); margin-top:2px; }
       .acc-biz-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:999px; background:var(--atlas); color:#fff; letter-spacing:0.06em; }
@@ -125,6 +126,10 @@
       .acc-f:focus, .acc-sel:focus { border-color:var(--atlas); }
       .acc-lbl { display:block; font-size:11.5px; font-weight:500; color:var(--n-600); margin:13px 0 6px; }
       .acc-hint { font-size:11px; color:var(--n-500); margin:5px 0 0; line-height:1.45; }
+      .acc-logo-picker { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--n-200); border-radius:11px; }
+      .acc-logo-preview { width:54px; height:54px; border-radius:12px; display:grid; place-items:center; overflow:hidden; background:var(--mint-soft); color:var(--atlas); font-weight:700; flex-shrink:0; }
+      .acc-logo-preview img { width:100%; height:100%; object-fit:contain; background:#fff; }
+      .acc-logo-actions { display:flex; gap:8px; flex-wrap:wrap; }
       .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
       .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }`;
@@ -159,6 +164,8 @@
    *    overrides (kiwiSet:biz:<id>:<field>) + user-added extras (kiwiBizExtra). ── */
   const BIZ_FIELDS = [
     { k: 'name', label: { fr: "Nom commercial", en: 'Trading name', ar: 'الاسم التجاري' }, sec: 'id', span: true, max: 40 },
+    { k: 'logo', kind: 'logo', label: { fr: "Logo de l’établissement", en: 'Business logo', ar: 'شعار المؤسسة' }, span: true },
+    { k: 'slogan', label: { fr: 'Slogan', en: 'Slogan', ar: 'الشعار النصي' }, span: true, max: 120 },
     /* La raison sociale. Distincte du nom commercial exprès : « Amira Boutique »
      * est ce que lit le client, « SARL AMIRA DISTRIBUTION » est ce que réclame
      * une pièce comptable. Le reçu imprime la seconde SOUS la première, et
@@ -276,6 +283,7 @@
         KR().migrateBusiness(vid, b.id);
         const doc = KR().business(vid);
         if (f === 'name') return doc.name || b.name || '';
+        if (f === 'logo' || f === 'slogan') return doc[f] || b[f] || '';
         const v = doc.legal[f];
         if (v) return v;
         /* Rien dans la fiche : on retombe sur ce que porte la venue (une démo
@@ -289,8 +297,8 @@
     const vid = bizVenueId(b);
     if (vid && KR()) {
       const legal = {};
-      BIZ_FIELDS.forEach((f) => { if (f.k !== 'name' && f.k !== 'type') legal[f.k] = v[f.k] || ''; });
-      KR().saveBusiness({ name: v.name, legal }, vid);
+      BIZ_FIELDS.forEach((f) => { if (!['name', 'type', 'logo', 'slogan'].includes(f.k)) legal[f.k] = v[f.k] || ''; });
+      KR().saveBusiness({ name: v.name, logo: v.logo || '', slogan: v.slogan || '', legal }, vid);
       return true;
     }
     return false;
@@ -522,13 +530,14 @@
       return `
         <div class="acc-biz">
           <div class="acc-biz-head">
-            <div class="acc-biz-logo">${esc(initialsOf(b.name))}</div>
+            <div class="acc-biz-logo">${b.logo ? `<img src="${esc(b.logo)}" alt=""/>` : esc(initialsOf(b.name))}</div>
             <div style="flex:1; min-width:0;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span class="acc-biz-name">${esc(b.name)}</span>
                 ${b.primary ? `<span class="acc-biz-badge">${esc(T.primary)}</span>` : ''}
               </div>
               <div class="acc-biz-meta">${esc(b.type)} · ${esc(b.city)}${b.address ? ' · ' + esc(b.address) : ''}</div>
+              ${b.slogan ? `<div class="acc-biz-meta">${esc(b.slogan)}</div>` : ''}
             </div>
             <button class="acc-cta ghost" data-action="account-edit-business" data-arg="${esc(b.id)}">${esc(T.edit)}</button>
           </div>
@@ -620,7 +629,7 @@
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
     handlers['account-plan-cancel'] = () => planCancelModal();
-    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => Kiwi.toast('support@kiwi.ma', { type: 'info', force: true });
+    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => Kiwi.toast('support@kiwi-os.com', { type: 'info', force: true });
     if (!handlers['account-help-phone']) handlers['account-help-phone'] = () => Kiwi.toast('+212 5 39 00 12 00', { type: 'info', force: true });
   }
 
@@ -629,6 +638,10 @@
     const label = pick(f.label);
     const hint = f.hint ? `<p class="acc-hint">${esc(pick(f.hint))}</p>` : '';
     const wrap = (inner) => `<div${f.span ? ' style="grid-column:1/-1;"' : ''}><label class="acc-lbl" for="accf-${esc(f.k)}">${esc(label)}</label>${inner}${hint}</div>`;
+    if (f.kind === 'logo') {
+      const preview = val ? `<img src="${esc(val)}" alt=""/>` : esc(initialsOf((b && b.name) || 'K'));
+      return wrap(`<div class="acc-logo-picker"><div class="acc-logo-preview" data-logo-preview>${preview}</div><div class="acc-logo-actions"><button class="acc-cta ghost" type="button" data-logo-pick>${esc(pick({ fr: 'Choisir un logo', en: 'Choose a logo', ar: 'اختيار شعار' }))}</button><button class="acc-cta ghost" type="button" data-logo-remove${val ? '' : ' hidden'}>${esc(pick({ fr: 'Retirer', en: 'Remove', ar: 'إزالة' }))}</button></div><input type="file" accept="image/png,image/jpeg" data-logo-file hidden/><input type="hidden" class="acc-f" id="accf-logo" data-f="logo" value="${esc(val || '')}"/></div><p class="acc-hint">${esc(pick({ fr: 'PNG ou JPG, 250 Ko maximum.', en: 'PNG or JPG, 250 KB maximum.', ar: 'PNG أو JPG، بحد أقصى 250 كيلوبايت.' }))}</p>`);
+    }
     if (f.kind === 'trade') {
       const T = KT();
       /* Pas de liste de métiers chargée : on n'invente pas un menu vide, on
@@ -657,6 +670,28 @@
     });
     return out + '</div>';
   }
+  function wireLogoPicker(scope) {
+    const file = scope.querySelector('[data-logo-file]');
+    const value = scope.querySelector('[data-f="logo"]');
+    const preview = scope.querySelector('[data-logo-preview]');
+    const remove = scope.querySelector('[data-logo-remove]');
+    const pickBtn = scope.querySelector('[data-logo-pick]');
+    if (!file || !value || !preview || !remove || !pickBtn) return;
+    pickBtn.addEventListener('click', () => file.click());
+    remove.addEventListener('click', () => { value.value = ''; file.value = ''; preview.textContent = 'K'; remove.hidden = true; });
+    file.addEventListener('change', () => {
+      const chosen = file.files && file.files[0];
+      if (!chosen) return;
+      if (!/^image\/(png|jpeg)$/.test(chosen.type) || chosen.size > 250 * 1024) {
+        Kiwi.toast(pick({ fr: 'Choisissez un PNG ou JPG de 250 Ko maximum.', en: 'Choose a PNG or JPG up to 250 KB.', ar: 'اختر PNG أو JPG بحجم أقصى 250 كيلوبايت.' }), { type: 'info', force: true });
+        file.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => { value.value = String(reader.result || ''); preview.innerHTML = `<img src="${esc(value.value)}" alt=""/>`; remove.hidden = false; };
+      reader.readAsDataURL(chosen);
+    });
+  }
   function readForm(scope) {
     const v = {};
     scope.querySelectorAll('.acc-f, .acc-sel').forEach((i) => { v[i.dataset.f] = (i.value || '').trim(); });
@@ -679,6 +714,7 @@
       body: bizForm(b),
       foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: 'Enregistrer', en: 'Save', ar: 'حفظ' }))}</button>`,
     });
+    wireLogoPicker(m.el);
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
@@ -721,6 +757,7 @@
       body: bizForm(null),
       foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(pick({ fr: "Créer l'établissement", en: 'Create business', ar: 'إنشاء المؤسسة' }))}</button>`,
     });
+    wireLogoPicker(m.el);
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
@@ -744,8 +781,8 @@
          * per-établissement et mirrorée serveur, comme partout ailleurs. */
         if (KR()) {
           const legal = {};
-          BIZ_FIELDS.forEach((f) => { if (f.k !== 'name' && f.k !== 'type') legal[f.k] = v[f.k] || ''; });
-          try { KR().saveBusiness({ name: v.name, legal }, nid); } catch (_) {}
+          BIZ_FIELDS.forEach((f) => { if (!['name', 'type', 'logo', 'slogan'].includes(f.k)) legal[f.k] = v[f.k] || ''; });
+          try { KR().saveBusiness({ name: v.name, logo: v.logo || '', slogan: v.slogan || '', legal }, nid); } catch (_) {}
         }
         m.close(); setTimeout(openProfile, 80);
         Kiwi.toast(pick({ fr: 'Établissement créé', en: 'Business created', ar: 'تم إنشاء المؤسسة' }), { type: 'success', force: true,
@@ -790,7 +827,7 @@
         ar: 'يتم الإلغاء عبر مدير حسابك في كيوي, لتصدير بياناتك وتخطيط الانتقال وتجنّب أي انقطاع. تواصل معنا:' }))}</p>
         <div class="acc-contact" style="margin-bottom:0;">
           <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">WhatsApp</div><div class="d">${esc(pick({ fr: 'Réponse < 5 min', en: 'Reply < 5 min', ar: 'رد < 5 د' }))}</div></div>
-          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">Email</div><div class="d">support@kiwi.ma</div></div>
+          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">Email</div><div class="d">support@kiwi-os.com</div></div>
           <div class="acc-contact-card" data-action="account-help-phone"><div class="t">${esc(pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }))}</div><div class="d">+212 5 39 00 12 00</div></div>
         </div>`,
       foot: `<button class="kb atlas" data-callback type="button" style="width:100%;justify-content:center;padding:12px;">${esc(pick({ fr: 'Demander un rappel pour résilier', en: 'Request a call-back to cancel', ar: 'طلب اتصال للإلغاء' }))}</button>`,
@@ -889,7 +926,7 @@
       waT: pick({ fr: 'WhatsApp', en: 'WhatsApp', ar: 'واتساب' }),
       waD: pick({ fr: 'Réponse < 5 min · 7j/7', en: 'Reply < 5 min · 7 days', ar: 'رد خلال 5 دقائق · 7/7' }),
       mailT: pick({ fr: 'Email', en: 'Email', ar: 'البريد' }),
-      mailD: 'support@kiwi.ma',
+      mailD: 'support@kiwi-os.com',
       phoneT: pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }),
       phoneD: '+212 5 39 00 12 00',
       topics: pick({ fr: 'Sujets populaires', en: 'Popular topics', ar: 'مواضيع شائعة' }),

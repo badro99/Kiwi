@@ -61,7 +61,10 @@ const FEATURES = {
    * miroirs pour une même carte, c'est deux vérités qui divergent — ne câblez
    * pas `cloud` sur le menu. */
   menu:         { keys: ['cats', 'items'],                        max: 600000 },
+  recipes:      { keys: ['items'],                                max: 600000 },
+  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
+  attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
@@ -93,7 +96,7 @@ const FEATURES = {
    * qui figureront sur toute facture. Elle vivait dans `kiwiSet:biz:*`, donc
    * dans UN navigateur : le commerçant saisissait son ICE au bureau et son
    * ticket sortait sans mention légale au comptoir. */
-  business:     { keys: ['name', 'tradeName', 'legal'],            max: 20000 },
+  business:     { keys: ['name', 'tradeName', 'logo', 'slogan', 'legal'], max: 400000, maxStr: 350000 },
   /* L'apparence du reçu — logo, en-tête, messages, ce qu'on affiche, largeur
    * du rouleau. `max` généreux à cause du logo, qui est une image en data: URI
    * (bornée à 200 ko côté client, voir assets/receipt.js).

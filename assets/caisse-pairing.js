@@ -342,19 +342,23 @@
   catch (_) { window.KiwiStaff = null; }
   function keyP(n) { return '<button class="pin-key" data-cpp="' + n + '">' + n + '</button>'; }
   function pinsFor(merchant) {
-    if (!merchant) return Promise.resolve([]);
+    if (!merchant) return Promise.resolve({ pins: [], required: false });
     return fetch('/api/config?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
-      .then(function (d) { return (d && Array.isArray(d.pins)) ? d.pins : []; })
-      .catch(function () { return []; });
+      .then(function (d) { return {
+        pins: (d && Array.isArray(d.pins)) ? d.pins : [],
+        required: !!(d && d.pinGateConfigured),
+      }; })
+      .catch(function () { return { pins: [], required: false }; });
   }
   // Gate a fresh register entry behind a staff PIN, then bootVertical. The single
   // choke point every entry path (redeem, ?pair=1, resume, already-paired boot)
   // routes through so the hosted caisse always asks who is opening the till.
   function askStaff(venue, onNoPins) {
     var merchant = (venue && venue.merchant) || '';
-    pinsFor(merchant).then(function (pins) {
-      if (!pins || !pins.length) { if (onNoPins) onNoPins(); return; }
+    pinsFor(merchant).then(function (gate) {
+      var pins = (gate && gate.pins) || [];
+      if (!pins.length && !(gate && gate.required)) { if (onNoPins) onNoPins(); return; }
       pinVenue = venue; pinList = pins; pinBuf = '';
       showPinPad(venue);
     });
@@ -418,6 +422,7 @@
       document.body.appendChild(scr);
     }
     scr.style.display = '';
+    var noCashier = !pinList || !pinList.length;
     scr.innerHTML =
       '<div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>' +
       '<div class="pin-greet">' + esc((venue && venue.name) || 'Votre magasin') + '</div>' +
@@ -430,7 +435,9 @@
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>' +
         '</button>' +
       '</div>' +
-      '<div class="pin-foot">Code personnel géré depuis votre tableau de bord Kiwi</div>';
+      '<div class="pin-foot">' + (noCashier
+        ? 'Aucun caissier autorisé. Assignez un rôle Caisse, Manager ou Propriétaire depuis Équipe.'
+        : 'Code personnel géré depuis votre tableau de bord Kiwi') + '</div>';
     renderPinDots();
   }
   function feedPin(d) {
@@ -454,11 +461,10 @@
     }
     if (who) {
       /* A code that EXISTS is still not automatically a till code. The staff list
-       * is the whole payroll — the kitchen, the stockroom, the cleaner all carry
-       * one so they can clock in — and every one of them opened the register.
-       * assets/staff-roles.js holds the rule (a deny list: only back-of-house is
-       * refused, because refusing wrongly stops a sale). Missing file ⇒ everyone
-       * in, exactly as before. Name them in the message: the code is right, the
+       * is the whole payroll — servers and kitchen staff carry one to clock in,
+       * but only cashier/manager/owner assignments open money operations.
+       * assets/staff-roles.js holds the same allow-list as the server. Name the
+       * employee in the message: the code is right, the
        * person simply is not a cashier, and "Code incorrect" would send them
        * hunting for a typo that isn't there. */
       var R = window.KiwiRoles;

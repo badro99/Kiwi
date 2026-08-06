@@ -97,6 +97,8 @@
   };
   const TOTAL = 6; // counted steps (welcome + finish are bookends)
   let root = null, injected = false, opened = false;
+  // True once the ACCOUNT answered step 1 for us — see prefillFromAccount().
+  let namePrefilled = false;
 
   /* ── Styles (scoped .kob-) ───────────────────────────────────────────── */
   function inject() {
@@ -234,6 +236,9 @@
   function rail() {
     let b = '';
     for (let i = 1; i <= TOTAL; i++) {
+      // Don't leave a dot for a step nobody will see. It reappears if « Retour »
+      // walks back into the name step.
+      if (i === 1 && namePrefilled && S.step !== 1) continue;
       const cls = i < S.step ? 'done' : (i === S.step ? 'on' : '');
       b += `<b class="${cls}"></b>`;
     }
@@ -268,7 +273,6 @@
     return {
       body: `
         <div class="kob-anim">
-          <div class="kob-hero-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3C7 5 5 9 5 13a7 7 0 0 0 14 0c0-4-2-8-7-10Z" fill="#7DF2B0"/><path d="M12 6.5c-2.6 1.3-3.8 3.8-3.8 6.5" stroke="#053B2C" stroke-width="1.5" stroke-linecap="round"/></svg></div>
           <p class="kob-eyebrow">${tr({ fr: 'Bienvenue sur Kiwi', en: 'Welcome to Kiwi', ar: 'مرحباً بك في كيوي' })}</p>
           <h1 class="kob-h">${tr({ fr: 'On met tout en place <span class="k-sans">ensemble.</span>', en: "Let's set it all up <span class=\"k-sans\">together.</span>", ar: 'لنُهيّئ كل شيء <span class="k-sans">معاً.</span>' })}</h1>
           <p class="kob-sub">${tr({
@@ -490,6 +494,10 @@
     }
     S.step += (dir === 'next' ? 1 : -1);
     if (S.step < 0) S.step = 0;
+    // The name is the one question the account already answered. Skip it going
+    // FORWARD only — « Retour » still lands on it, so the name stays editable
+    // for anyone who signed up as "Sté Café Atlas SARL" and wants their own.
+    if (dir === 'next' && S.step === 1 && namePrefilled) S.step = 2;
     if (S.step >= STEPS.length) { S.step = STEPS.length - 1; return; }
     render();
   }
@@ -712,6 +720,31 @@
     ['kiwiOnboarded', 'kiwiOwnerName', 'kiwiBizName', 'kiwiBizType', 'kiwiCity', 'kiwiVenueCount', 'kiwiTeamSize', 'kiwiGoals', 'kiwiPins', 'kiwiSkipOnboard'].forEach(LS.del);
   }
 
+  /* ── L'inscription a déjà répondu à deux de ces questions ──────────────
+   * The signup form captures the owner's name and the business name
+   * (functions/auth/signup.js writes both onto the account), /api/me hands
+   * them back, and assets/identity.js publishes them on window.KiwiMe BEFORE
+   * it settles the gate this wizard awaits. Yet step 1 still asked « Comment
+   * vous appelez-vous ? » to a merchant who had typed their name one screen
+   * earlier. So seed the state from the account, and skip the name step
+   * entirely when it answers.
+   *
+   * Read KiwiMe, NOT localStorage: reset() runs first on the ?onboarding=1
+   * signup hand-off and deletes kiwiOwnerName/kiwiBizName — the very keys
+   * identity.js had just filled in. That deletion is why every prefill through
+   * localStorage came back empty.
+   *
+   * Whatever the account left blank is still asked, normally. */
+  function firstName(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
+  function prefillFromAccount() {
+    const me = window.KiwiMe || {};
+    // Step 1 wants the first name only ("juste votre prénom") — signup takes
+    // the full one, so cut it down rather than greeting « Rachid Benhima ».
+    if (!S.ownerName.trim()) S.ownerName = firstName(me.name).slice(0, 24);
+    if (!S.bizName.trim()) S.bizName = String(me.business || '').trim().slice(0, 40);
+    namePrefilled = !!S.ownerName.trim();
+  }
+
   /* ── Auto-launch decision ────────────────────────────────────────────── */
   function hasCustomVenue() {
     try {
@@ -823,7 +856,7 @@
   function initHandler() {
     try {
       if (window.Kiwi && Kiwi.handlers) {
-        Kiwi.handlers['onboard'] = () => { reset(); S.step = 0; open(); };
+        Kiwi.handlers['onboard'] = () => { reset(); prefillFromAccount(); S.step = 0; open(); };
       }
     } catch (_) {}
   }
@@ -839,7 +872,9 @@
     // decide() awaits the identity gate, so KiwiVenue (loaded earlier in the
     // document) is always present by the time we open — the old 60 ms guess is
     // gone along with the race it was papering over.
-    decide().then(function (yes) { if (yes) { S.step = 0; open(); } });
+    // decide() has awaited the identity gate, so window.KiwiMe is already there
+    // — prefill before the first render, never after.
+    decide().then(function (yes) { if (yes) { prefillFromAccount(); S.step = 0; open(); } });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

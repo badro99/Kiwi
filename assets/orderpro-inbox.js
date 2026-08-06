@@ -260,6 +260,12 @@
     return '<div class="kop-cust">' + (head ? '<div>' + head + '</div>' : '') + addr + note + '</div>';
   }
 
+  function orderRef(o) {
+    var n = String((o && o.number) || 0);
+    if (o && o.channel === 'kiwi') return (o.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+    return n;
+  }
+
   function cardHtml(o) {
     var where = o.mode === 'table' ? 'Table ' + esc(o.table || '?')
       : (o.mode === 'delivery' ? 'Livraison' : 'À emporter');
@@ -286,7 +292,7 @@
                 (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button></div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
-      '<div class="kop-top"><span class="kop-num">#' + String(o.number || 0).padStart(3, '0') + '</span>' +
+      '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +
       '<span class="kop-where">' + where + '</span>' + src +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
       lines + custHtml(o) + acts + '</div>';

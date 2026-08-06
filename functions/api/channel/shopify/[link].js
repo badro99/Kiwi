@@ -37,6 +37,7 @@
 // et attend le même geste humain qu'une commande au comptoir.
 
 import { json } from '../../../auth/_lib.js';
+import { startOfWeek } from '../../order/_lib.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -68,13 +69,6 @@ async function hmacB64(secret, raw) {
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw));
   return btoa(String.fromCharCode(...new Uint8Array(sig)));
-}
-
-function startOfDay(now) {
-  // Le Maroc est à UTC+1 toute l'année : une commande de 00h30 appartient au
-  // jour qui commence.
-  const shifted = now + 3600000;
-  return Math.floor(shifted / 86400000) * 86400000 - 3600000;
 }
 
 async function mark(env, id, ok, err) {
@@ -284,7 +278,7 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, t.mode, t.total, JSON.stringify(t.lines), now, now,
       CHANNEL, t.ref, JSON.stringify(t.customer),
-      merchant, startOfDay(now)
+      merchant, startOfWeek(now)
     ).first();
   } catch (e) {
     const detail = String((e && e.message) || e);
