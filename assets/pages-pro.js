@@ -13382,14 +13382,6 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
  * ═════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  /* Snapshot the handlers contributed before the real-data modules reassert
-     theirs at load. An allow-list by nav name is not enough: if one of those
-     modules fails to install, the same nav name still points at this file's
-     fixture handler. Provenance is part of the data barrier. */
-  const HANDLER_BEFORE_REAL_MODULE = Object.create(null);
-  ['conformite', 'stock', 'finance', 'equipe', 'menu', 'payroll'].forEach((nav) => {
-    HANDLER_BEFORE_REAL_MODULE[nav] = window.Kiwi?.handlers?.['nav-' + nav] || null;
-  });
   const CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const SPARK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
 
