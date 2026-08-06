@@ -142,6 +142,8 @@ ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans l
 const configSource = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8');
 ok(configSource.includes("'employee-access'") && configSource.includes('memberId'),
   'la synchronisation des PIN publie aussi les identifiants employés');
+ok(configSource.includes('pinGateConfigured') && configSource.includes('employeeRoleOpensTill'),
+  "un roster sans caissier reste verrouillé au lieu d'ouvrir la caisse");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');

@@ -169,7 +169,7 @@ export async function onRequestGet(context) {
     ownsRequested = (await storeOwner(env, merchant)) === sessionAid;
   }
   if (sessionMerchant && !operator && !ownsRequested) merchant = sessionMerchant;
-  if (!merchant) return json({ features: {}, pins: [] });
+  if (!merchant) return json({ features: {}, pins: [], pinGateConfigured: false });
 
   // May this caller read THIS merchant's staff PINs? Its own session, another of
   // its own stores, the operator console, or a till that redeemed a pairing code
@@ -180,6 +180,7 @@ export async function onRequestGet(context) {
   let features = {};
   let pins = [];
   let type = '';
+  let pinGateConfigured = false;
   /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
@@ -210,10 +211,16 @@ export async function onRequestGet(context) {
       // them to a till: employee login remains available through the separate
       // private employee-access roster.
       pins = (rows.results || []).filter((row) => employeeRoleOpensTill(row.role));
+      const access = await env.DB.prepare(
+        "SELECT 1 AS configured FROM store_docs WHERE merchant = ? AND feature = 'employee-access' LIMIT 1"
+      ).bind(merchant).first();
+      // A mirror row means the owner deliberately configured an employee
+      // roster. Even if none is a cashier, do not interpret that as “no security”.
+      pinGateConfigured = !!access || pins.length > 0;
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, type, suspended });
+  return json({ features, pins, pinGateConfigured, type, suspended });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the
