@@ -66,9 +66,10 @@ async function gate(request) {
 }
 const accessPage = await gate(new Request('https://kiwi.test/dashboard'));
 const accessHtml = await accessPage.text();
-ok(accessPage.status === 401 && accessHtml.includes('name="email"') && accessHtml.includes('name="pin"'),
-  'Accès équipe demande email et code personnel');
-ok(!accessHtml.includes('name="passcode"'), "l'ancien champ de code partagé a disparu");
+ok(accessPage.status === 401 && accessHtml.includes('href="/kiwi-serveur"'),
+  'Accès équipe ouvre directement le portail employé');
+ok(!accessHtml.includes('id="staff-form"') && !accessHtml.includes('name="passcode"'),
+  "la page propriétaire ne porte plus de formulaire employé ni l'ancien code partagé");
 const legacyForm = new URLSearchParams({ passcode: 'ancien-code-partage' });
 const legacy = await gate(new Request('https://kiwi.test/__unlock', { method: 'POST', body: legacyForm }));
 ok(legacy.status === 401 && !legacy.headers.get('set-cookie'), "l'ancien code équipe partagé ne crée plus de session");
@@ -147,6 +148,13 @@ ok(configSource.includes('pinGateConfigured') && configSource.includes('employee
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');
+ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
+  'le portail employé possède sa propre connexion email + PIN');
+ok(!serviceSource.includes("location.replace('/dashboard?employee=1')"),
+  "un échec de session reste dans le portail au lieu de rebondir vers le propriétaire");
+const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');
+ok(employeePwaSource.includes('beforeinstallprompt') && employeePwaSource.includes('Installer l’app'),
+  "le portail propose son installation sur l'écran d'accueil après connexion");
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

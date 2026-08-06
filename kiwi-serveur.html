@@ -288,6 +288,53 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: center;
       margin-top: 14px;
     }
+    .employee-login {
+      display: none;
+      width: 100%;
+      max-width: 330px;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .employee-login label { display: grid; gap: 6px; }
+    .employee-login label span {
+      color: rgba(247,245,240,.62);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .employee-login input {
+      width: 100%;
+      border: 1px solid rgba(247,245,240,.22);
+      border-radius: 13px;
+      padding: 14px 15px;
+      background: rgba(255,255,255,.07);
+      color: var(--paper-cream);
+      font-size: 16px;
+      outline: none;
+    }
+    .employee-login input:focus { border-color: var(--mint); background: rgba(255,255,255,.1); }
+    .employee-login button {
+      margin-top: 4px;
+      border-radius: 13px;
+      padding: 15px;
+      background: var(--mint);
+      color: var(--ink-bg);
+      font-size: 16px;
+      font-weight: 750;
+    }
+    .employee-login button:disabled { opacity: .55; cursor: wait; }
+    .employee-login-error {
+      min-height: 18px;
+      margin: 0;
+      color: #ff9b88;
+      font-size: 13px;
+      text-align: center;
+    }
+    body.live-employee-portal .pin-mid,
+    body.live-employee-portal .pin-keypad { display: none; }
+    body.live-employee-portal .employee-login { display: flex; }
+    body.live-employee-portal .screen-pin { justify-content: center; gap: 42px; }
 
     /* ===========================================================
        CLOCK-IN SCREEN
@@ -2862,7 +2909,14 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="delete"></i>
           </button>
         </div>
-        <div class="pin-foot">Votre code personnel · 4 chiffres</div>
+        <form class="employee-login" id="employee-login" novalidate>
+          <div class="pin-greeting">Connexion employé</div>
+          <p class="employee-login-error" id="employee-login-error" role="alert"></p>
+          <label><span>Email professionnel</span><input id="employee-email" type="email" inputmode="email" autocomplete="username" required /></label>
+          <label><span>Code personnel</span><input id="employee-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="current-password" required /></label>
+          <button id="employee-login-submit" type="submit">Se connecter</button>
+        </form>
+        <div class="pin-foot">Votre compte est créé par votre responsable dans Équipe</div>
       </section>
 
       <!-- ============ CLOCK-IN SCREEN ============ -->
@@ -3992,8 +4046,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const msg = code === 'store-suspended' ? 'Cet établissement est suspendu'
         : code === 'not-configured' ? 'Service momentanément indisponible'
         : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'
-        : !svMerchant() ? 'Lien incomplet · demandez le lien de votre établissement'
-        : 'Code employé incorrect';
+        : 'Email ou code personnel incorrect';
       toast(msg);
     }
 
@@ -4013,12 +4066,7 @@ em, i, cite, dfn, var { font-style: normal; }
         // Capture the entered code before we reset pinInput.
         const entered = pinInput;
         pinBusy = true;
-        if (!SV_DEMO) {
-          // Live employees authenticate once from "Accès équipe" with their
-          // email + personal PIN. A bare PIN on this page must never be enough.
-          location.replace('/dashboard?employee=1');
-          return;
-        }
+        if (!SV_DEMO) return; // live portal uses the email + PIN form below
         // Success pop on the 4 dots, staggered left → right.
         const dots = $$('.pin-dot');
         dots.forEach((d, i) => {
@@ -4050,9 +4098,51 @@ em, i, cite, dfn, var { font-style: normal; }
 
     // Physical keyboard support (desktop demo)
     document.addEventListener('keydown', (e) => {
+      if (!SV_DEMO) return;
       if (!$('#screen-pin').classList.contains('is-active')) return;
       if (e.key >= '0' && e.key <= '9') { handlePinKey(e.key); return; }
       if (e.key === 'Backspace')         { handlePinKey('back'); return; }
+    });
+
+    function openEmployeeSession(data) {
+      liveEmployeeState = data;
+      try { localStorage.setItem('kiwiEmployeeMerchant', data.merchant || ''); } catch (_) {}
+      applyEmployeeLive(data);
+      activeRole = resolveRole('');
+      if (!activeRole) throw new Error('employee-role-missing');
+      applyRoleToClockin();
+      resetNfc();
+      showScreen('screen-clockin');
+      try { document.dispatchEvent(new CustomEvent('kiwi-employee-authenticated')); } catch (_) {}
+      if (window.lucide) lucide.createIcons();
+    }
+
+    const employeeLogin = $('#employee-login');
+    if (!SV_DEMO) document.body.classList.add('live-employee-portal');
+    if (employeeLogin) employeeLogin.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (SV_DEMO || pinBusy) return;
+      const email = String($('#employee-email').value || '').trim();
+      const pin = String($('#employee-pin').value || '').replace(/\D/g, '').slice(0, 4);
+      const error = $('#employee-login-error');
+      const button = $('#employee-login-submit');
+      error.textContent = '';
+      if (!/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) {
+        error.textContent = 'Entrez votre email et votre code à 4 chiffres.';
+        return;
+      }
+      pinBusy = true; button.disabled = true;
+      try {
+        if (!window.KiwiEmployeeLive) throw new Error('not-configured');
+        openEmployeeSession(await window.KiwiEmployeeLive.login(email, pin));
+        $('#employee-pin').value = '';
+      } catch (err) {
+        error.textContent = err && err.code === 'too_many_attempts'
+          ? 'Trop d’essais. Réessayez dans quelques minutes.'
+          : 'Email ou code personnel incorrect.';
+      } finally {
+        pinBusy = false; button.disabled = false;
+      }
     });
 
     /* ===========================================================
@@ -6946,28 +7036,22 @@ em, i, cite, dfn, var { font-style: normal; }
       window.kgSnapshot = kgSnapshot;
     })();
 
-    /* A successful "Accès équipe" login already placed an httpOnly employee
-       session cookie. Restore it here and go straight to clock-in; an employee
-       must never type the same PIN a second time, nor can a visitor use the old
-       PIN-only screen to guess their way in. */
+    /* The employee portal owns its authentication. Restore an existing session;
+       otherwise stay on this page and show the email + PIN form. Never bounce
+       back to the owner login screen — that circular redirect was the reason a
+       valid employee could not get into the app. */
     if (!SV_DEMO) {
       window.addEventListener('load', function () {
-        if (!window.KiwiEmployeeLive) { location.replace('/dashboard?employee=1'); return; }
+        if (!window.KiwiEmployeeLive) { $('#employee-login-error').textContent = 'Service momentanément indisponible.'; return; }
         window.KiwiEmployeeLive.refresh().then(function (data) {
-          liveEmployeeState = data;
-          try { localStorage.setItem('kiwiEmployeeMerchant', data.merchant || ''); } catch (_) {}
-          applyEmployeeLive(data);
-          activeRole = resolveRole('');
-          if (!activeRole) throw new Error('employee-role-missing');
-          applyRoleToClockin();
-          resetNfc();
-          showScreen('screen-clockin');
-          if (window.lucide) lucide.createIcons();
+          openEmployeeSession(data);
         }).catch(function () {
-          location.replace('/dashboard?employee=1');
+          showScreen('screen-pin');
+          const email = $('#employee-email'); if (email) email.focus();
         });
       });
     }
   </script>
+  <script src="assets/employee-pwa.js" defer></script>
 </body>
 </html>
