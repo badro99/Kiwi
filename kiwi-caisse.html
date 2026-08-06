@@ -107,7 +107,18 @@
       --shadow-1: 0 1px 2px rgba(17,17,17,.04), 0 4px 10px rgba(17,17,17,.05);
       --shadow-2: 0 8px 28px rgba(17,17,17,.12), 0 2px 6px rgba(17,17,17,.06);
 
-      --gradient: linear-gradient(135deg, var(--forest) 0%, #3FB67A 100%);
+      /* The primary-action fill, on 18 controls across the till. It was a
+         135° ramp from --forest to --emerald, which is the one thing the
+         design system has no other instance of: every other filled control in
+         Kiwi — marketing, dashboard, pass — is a flat pill. On a button the
+         ramp also fights its own state, because .is-confirmed is already flat
+         --forest, so confirming a shift changed the fill AND removed a
+         gradient in the same frame and read as two events.
+
+         Kept as a token rather than inlined so this is one line to revert.
+         --atlas-600 sits at the old ramp's optical midpoint, so weight and
+         contrast against the white label are unchanged. */
+      --gradient: var(--atlas-600);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -226,17 +237,18 @@
       border-radius: 50%;
       display: inline-block;
     }
-    /* Right-panel empty-state still uses gradient wordmark */
+    /* Flat, not a gradient clipped to the glyphs. The empty state already
+       greys and fades this mark to 0.6 (see .rp-empty .wordmark), and a ramp
+       under a grayscale filter is two contradictory instructions about the
+       same six letters — the top of the k ended up darker than the panel it
+       sits on. One green, and the state handles the recession. */
     .wordmark {
       font-family: var(--sans);
       font-weight: 700;
       font-size: 28px;
       letter-spacing: -0.04em;
       line-height: 1;
-      background: linear-gradient(180deg, #1F5D3C 0%, #3FB67A 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      color: var(--atlas-600);
       display: inline-flex;
       align-items: baseline;
     }
@@ -991,7 +1003,11 @@
       line-height: 1;
       transition: background 150ms ease, color 150ms ease, transform 100ms ease;
       flex: 0 0 28px;
+      position: relative;
     }
+    /* Cible tactile 48px sans grossir le disque : la zone cliquable déborde
+       du visuel (norme till — un doigt pressé ne vise pas à 28px). */
+    .step-btn::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; }
     .step-btn:active { transform: scale(0.94); }
     .step-minus {
       background: rgba(184, 82, 69, 0.12);
@@ -1216,6 +1232,67 @@
       box-shadow: var(--shadow-1);
     }
     .pay-icon svg { width: 23px; height: 23px; }
+    /* Le « Charge $X » des vraies caisses : l'élément le plus proéminent du
+       ticket. Libellé à gauche, total vivant à droite. */
+    .pay-charge {
+      height: 62px;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: var(--gradient);
+      color: #fff;
+      box-shadow: var(--shadow-1);
+    }
+    .pay-charge:hover { filter: brightness(1.06); }
+    .pay-charge-lbl { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+    .pay-charge-total { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; font-feature-settings: "tnum" 1; }
+    /* Pavé « Montant libre » du builder — clés ≥48px, style marque. */
+    .mlibre-bar { margin: 2px 0 12px; }
+    .mlibre-toggle {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 14px; border-radius: 999px;
+      background: var(--paper-mute);
+      font-size: 13px; font-weight: 600; color: var(--ink-2);
+      transition: background 150ms ease, color 150ms ease;
+    }
+    .mlibre-toggle:hover { background: #ECEAE5; }
+    .mlibre-toggle.is-open { background: var(--forest); color: #fff; }
+    .mlibre-toggle svg { width: 15px; height: 15px; }
+    .mlibre-pad {
+      max-width: 340px;
+      margin: 0 0 16px;
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-1);
+    }
+    .mlibre-display {
+      font-size: 30px; font-weight: 800; color: var(--ink);
+      font-feature-settings: "tnum" 1; letter-spacing: -0.02em;
+      text-align: right;
+      padding: 4px 8px 12px;
+    }
+    .mlibre-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .mlibre-keys button {
+      height: 52px;
+      border-radius: var(--r-lg);
+      background: var(--paper-mute);
+      font-size: 18px; font-weight: 700; color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 120ms ease, transform 100ms ease;
+    }
+    .mlibre-keys button:hover { background: #ECEAE5; }
+    .mlibre-keys button:active { transform: scale(0.96); }
+    .mlibre-keys button svg { width: 20px; height: 20px; }
+    .mlibre-add {
+      width: 100%; margin-top: 10px; height: 48px;
+      border-radius: var(--r-lg);
+      background: var(--gradient); color: #fff;
+      font-size: 14px; font-weight: 600;
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+    .mlibre-add[disabled] { opacity: .35; cursor: not-allowed; }
+    .mlibre-add:not([disabled]):hover { transform: translateY(-1px); }
     #pay-card.pay-icon { background: var(--ink); }
     .pay-split {
       background: var(--paper-mute);
@@ -1405,7 +1482,8 @@
       color: var(--ink-2);
       transition: background 150ms ease;
     }
-    .cash-preset:hover { background: #ECEAE5; }
+    .cash-preset:not([disabled]):hover { background: #ECEAE5; }
+    .cash-preset[disabled] { opacity: .35; cursor: not-allowed; }
 
     .cash-rendu {
       padding: 14px 16px;
@@ -1414,7 +1492,7 @@
       display: flex; justify-content: space-between; align-items: baseline;
     }
     .cash-rendu .lbl { font-size: 13px; color: var(--ink-3); }
-    .cash-rendu .val { font-size: 22px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; }
+    .cash-rendu .val { font-size: 30px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; }
     .cash-rendu.is-positive .val { color: var(--emerald); }
     .cash-rendu.is-short .val { color: var(--danger-mute); font-size: 14px; font-weight: 600; }
 
@@ -1433,7 +1511,7 @@
     .cash-confirm:not([disabled]):hover { transform: translateY(-1px); }
 
     .cash-success-rendu {
-      font-size: 36px; font-weight: 800; color: var(--emerald);
+      font-size: 44px; font-weight: 800; color: var(--emerald);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.02em;
       text-align: center;
@@ -1505,9 +1583,10 @@
     .nt-chip.is-active { background: var(--forest); color: #fff; }
     .nt-actions { display: flex; gap: 8px; margin-top: 4px; }
 
-    /* Validate order button in right panel */
-    .pay-validate { background: var(--gradient); color: #fff; }
-    .pay-validate:hover { filter: brightness(1.06); }
+    /* Envoyer en cuisine — secondaire depuis que « Encaisser » est le geste
+       principal en prise de commande (Slice A). */
+    .pay-validate { background: var(--paper-mute); color: var(--forest); height: 48px; font-size: 14px; }
+    .pay-validate:hover { background: #ECEAE5; }
     .pay-cancel-order { background: var(--paper-mute); color: var(--ink-2); height: 44px; font-size: 13px; font-weight: 500; }
     .pay-cancel-order:hover { background: #ECEAE5; }
 
@@ -1856,7 +1935,7 @@
     .split-part-paid-label { font-size: 12px; font-weight: 600; color: var(--forest); margin-top: 2px; }
     .split-part-btns { display: flex; gap: 6px; flex: 0 0 auto; }
     .split-part-btn {
-      padding: 8px 12px; border-radius: 999px;
+      padding: 10px 14px; min-height: 44px; border-radius: 999px;
       font-size: 12px; font-weight: 600;
       display: flex; align-items: center; gap: 5px;
       transition: transform 100ms, opacity 150ms;
@@ -4966,6 +5045,32 @@
             <i data-lucide="arrow-left"></i><span>Commandes à emporter</span>
           </button>
           <div class="cat-pills" data-lens-demo id="cat-pills" role="tablist"></div>
+          <!-- Montant libre — le pavé numérique de vente rapide (façon SumUp) :
+               tape un prix, « Ajouter », et une ligne « Article libre » sonne
+               dans l'addition. Pour tout ce qui n'est pas au catalogue. -->
+          <div class="mlibre-bar">
+            <button class="mlibre-toggle" id="mlibre-toggle" aria-expanded="false" aria-controls="mlibre-pad">
+              <i data-lucide="calculator"></i><span>Montant libre</span>
+            </button>
+          </div>
+          <div class="mlibre-pad" id="mlibre-pad" hidden>
+            <div class="mlibre-display mono" id="mlibre-display">0</div>
+            <div class="mlibre-keys">
+              <button data-mk="7">7</button>
+              <button data-mk="8">8</button>
+              <button data-mk="9">9</button>
+              <button data-mk="4">4</button>
+              <button data-mk="5">5</button>
+              <button data-mk="6">6</button>
+              <button data-mk="1">1</button>
+              <button data-mk="2">2</button>
+              <button data-mk="3">3</button>
+              <button data-mk=".">,</button>
+              <button data-mk="0">0</button>
+              <button data-mk="back" aria-label="Effacer"><i data-lucide="delete"></i></button>
+            </div>
+            <button class="mlibre-add" id="mlibre-add" disabled>Ajouter à l'addition</button>
+          </div>
           <div class="menu-grid" id="menu-grid"></div>
         </div>
       </section>
@@ -5068,11 +5173,18 @@
           </button>
           <!-- Normal payment buttons (salle read-to-pay + vrap) -->
           <div id="rp-pay-normal">
+            <!-- Le geste principal d'une caisse : encaisser. Total affiché sur
+                 le bouton (façon « Charge 47,50 ») ; ouvre le flux espèces —
+                 la carte, le QR et le partage restent juste en dessous. -->
+            <button class="pay-btn pay-charge" id="pay-charge" title="Encaisser en espèces · F2">
+              <span class="pay-charge-lbl"><i data-lucide="banknote"></i>Encaisser</span>
+              <span class="pay-charge-total mono" id="pay-charge-total">0,00 MAD</span>
+            </button>
             <div class="pay-row">
-              <button class="pay-btn pay-icon" id="pay-card" aria-label="Payer par carte">
+              <button class="pay-btn pay-icon" id="pay-card" aria-label="Payer par carte · F3" title="Payer par carte · F3">
                 <i data-lucide="credit-card"></i>
               </button>
-              <button class="pay-btn pay-icon" id="pay-cash" aria-label="Payer en espèces">
+              <button class="pay-btn pay-icon" id="pay-cash" aria-label="Payer en espèces · F2" title="Payer en espèces · F2">
                 <i data-lucide="banknote"></i>
               </button>
               <button class="pay-btn pay-icon" id="pay-qr" aria-label="Payer par QR">
@@ -5080,7 +5192,7 @@
               </button>
             </div>
             <div class="pay-row">
-              <button class="pay-btn pay-split" id="pay-split">
+              <button class="pay-btn pay-split" id="pay-split" title="Diviser l'addition · F4">
                 <i data-lucide="divide"></i>
                 <span>Partager</span>
               </button>
@@ -5090,8 +5202,14 @@
               </button>
             </div>
           </div>
-          <!-- Order-mode buttons (new table being built) -->
+          <!-- Order-mode buttons (new table being built). « Encaisser » reste
+               disponible pendant la prise de commande : il envoie d'abord les
+               lignes non parties en cuisine, puis ouvre l'encaissement. -->
           <div id="rp-pay-order" hidden>
+            <button class="pay-btn pay-charge" id="pay-charge-order" title="Encaisser la mesa">
+              <span class="pay-charge-lbl"><i data-lucide="banknote"></i>Encaisser</span>
+              <span class="pay-charge-total mono" id="pay-charge-order-total">0,00 MAD</span>
+            </button>
             <button class="pay-btn pay-validate" id="validate-order">
               <i data-lucide="check-circle-2"></i>
               <span>Envoyer en cuisine</span>
@@ -5333,13 +5451,17 @@
       <div class="cash-grid" id="cash-step-input">
         <div class="cash-input-row">
           <label class="cash-input-label" for="cash-received">Flous reçu</label>
-          <input class="cash-input mono" id="cash-received" type="number" inputmode="numeric" min="0" step="1" value="530" />
+          <input class="cash-input mono" id="cash-received" type="number" inputmode="decimal" min="0" step="0.01" value="530" />
         </div>
-        <div class="cash-presets" aria-label="Ajout rapide">
-          <button class="cash-preset" data-add="50">+50</button>
-          <button class="cash-preset" data-add="100">+100</button>
-          <button class="cash-preset" data-add="200">+200</button>
-          <button class="cash-preset" data-add="500">+500</button>
+        <!-- Montants suggérés façon Loyverse/Square : un tap RÈGLE « Flous
+             reçu » au billet tendu (plus d'addition +50). Les billets trop
+             petits pour couvrir le dû se désactivent dans updateRendu(). -->
+        <div class="cash-presets" aria-label="Montant reçu">
+          <button class="cash-preset" data-set="exact">Exact</button>
+          <button class="cash-preset" data-set="50">50</button>
+          <button class="cash-preset" data-set="100">100</button>
+          <button class="cash-preset" data-set="200">200</button>
+          <button class="cash-preset" data-set="500">500</button>
         </div>
         <div class="cash-rendu" id="cash-rendu">
           <span class="lbl">Rendu</span>
@@ -5650,7 +5772,7 @@
         <div class="rf-picked" id="rf-picked"></div>
         <div class="cash-input-row" style="margin-bottom:6px;">
           <label class="cash-input-label" for="rf-amount">Montant à rembourser</label>
-          <input class="cash-input mono" id="rf-amount" type="number" inputmode="numeric" min="1" step="10" placeholder="0" />
+          <input class="cash-input mono" id="rf-amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0,00" />
         </div>
         <div class="rm-block" style="margin-top:14px;">
           <div class="rm-section-label">Motif</div>
@@ -5857,8 +5979,18 @@
     /* ---------- Helpers ---------- */
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-    const fmtMAD = n => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
-    const fmtMADcents = n => n.toFixed(2).replace('.', ',') + ' MAD';
+    /* Money crosses carts, discounts, split tenders, refunds and the persisted
+       ledger. Keep every boundary at two decimal places: binary floats may live
+       between keystrokes, never in a completed accounting value. */
+    const money = n => Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+    const minor = n => Math.round(((Number(n) || 0) + Number.EPSILON) * 100);
+    const major = n => n / 100;
+    const fmtMAD = n => new Intl.NumberFormat('fr-FR', {
+      useGrouping: true,
+      minimumFractionDigits: minor(n) % 100 ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(money(n)) + ' MAD';
+    const fmtMADcents = n => money(n).toFixed(2).replace('.', ',') + ' MAD';
 
     /* ---------- DAfr days ---------- */
     const dafrDays = ['Lhad', 'Ltnin', 'Tlata', 'Larb3a', 'Lkhmis', 'Ljm3a', 'Sbt'];
@@ -7296,9 +7428,9 @@
       const d = vrapDiscount;
       if (!d) return 0;
       const amt = d.kind === 'pct'
-        ? Math.round(gross * (d.value || 0) / 100)
-        : Math.round(d.value || 0);
-      return Math.max(0, Math.min(amt, Math.round(gross)));
+        ? money(gross * (d.value || 0) / 100)
+        : money(d.value || 0);
+      return money(Math.max(0, Math.min(amt, money(gross))));
     }
 
     function renderCatPills() {
@@ -7579,6 +7711,54 @@
       pushCartLine(item, []);
     }
 
+    /* Slice B — « Montant libre » : une ligne à prix ouvert ringée dans
+       l'addition (vente rapide) ou sur la table en cours (prise de commande). */
+    function addOpenLine(amount) {
+      const amt = money(amount);
+      if (!(amt > 0)) return;
+      if (mode === 'order' && selectedId) {
+        (tableOrders[selectedId] = tableOrders[selectedId] || []).push({
+          uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note: ''
+        });
+        renderOrderPanel(selectedId);
+      } else {
+        cart.push({ uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt,
+                    qty: 1, note: '', opts: [], optSig: '' });
+        renderCart();
+      }
+      toast('Article libre · ' + fmtMAD(amt));
+    }
+    (function () {
+      const mlToggle = $('#mlibre-toggle');
+      const mlPad = $('#mlibre-pad');
+      const mlDisplay = $('#mlibre-display');
+      const mlAdd = $('#mlibre-add');
+      if (!mlToggle || !mlPad) return;
+      let buf = '';
+      const val = () => parseFloat(buf.replace(',', '.')) || 0;
+      function paint() {
+        mlDisplay.textContent = buf ? buf.replace('.', ',') : '0';
+        mlAdd.disabled = !(val() > 0);
+      }
+      mlToggle.addEventListener('click', () => {
+        const open = mlPad.hidden;
+        mlPad.hidden = !open;
+        mlToggle.classList.toggle('is-open', open);
+        mlToggle.setAttribute('aria-expanded', String(open));
+      });
+      mlPad.addEventListener('click', (e) => {
+        const key = e.target.closest('[data-mk]');
+        if (!key) return;
+        const k = key.dataset.mk;
+        if (k === 'back') buf = buf.slice(0, -1);
+        else if (k === '.') { if (!buf.includes('.')) buf = (buf || '0') + '.'; }
+        else if (buf.replace('.', '').length < 6) buf += k;
+        paint();
+      });
+      mlAdd.addEventListener('click', () => { addOpenLine(val()); buf = ''; paint(); });
+      paint();
+    })();
+
 
     /* Cart panel +/- — targets one specific line by its uid. */
     function changeCartLineQty(uid, delta) {
@@ -7768,9 +7948,10 @@
       }
     });
     document.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.matches?.(TBL_SEL)) {
+      const a = document.activeElement;
+      if ((e.key === 'Enter' || e.key === ' ') && (a?.matches?.(TBL_SEL) || a?.matches?.('.menu-item'))) {
         e.preventDefault();
-        document.activeElement.click();
+        a.click();
       }
     });
 
@@ -7939,7 +8120,9 @@
       return parseFloat(payTipMode) || 0;
     }
     function payTipAmount() {
-      return Math.round(currentTotal() * payTipPct() / 100);
+      /* money(), pas Math.round : un pourboire de 5 % sur 47,50 doit rendre
+         2,38 — l'arrondi au dirham entier faussait le rendu au centime près. */
+      return money(currentTotal() * payTipPct() / 100);
     }
     /* Itemised lines for the receipt of the sale being tendered (non-split).
        Table → generateOrder; vente rapida → the cart. */
@@ -8040,8 +8223,13 @@
       }
     });
 
+    /* Le QR passe par le modal carte mais doit s'enregistrer comme 'qr' au
+       journal — sinon chaque paiement mobile compte comme une carte. */
+    let cardTenderMethod = 'card';
     function openCardModal() {
+      cardTenderMethod = 'card';
       // Reset to pulsing state
+      $('#card-modal-title').textContent = 'Payer par carte';
       reader.disc.classList.remove('is-success', 'flash');
       reader.disc.classList.add('is-pulsing');
       reader.disc.innerHTML = '<i data-lucide="credit-card"></i>';
@@ -8095,11 +8283,13 @@
       cardModal.classList.remove('is-open');
       clearTimeout(cardSuccessTimer);
       clearTimeout(cardFootTimer);
+      const tenderBase = currentTotal();
+      cashAmountOverride = null;
       if (!paid) return;
       const saleLabel = mode === 'vrap'
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
         : (selectedId || 'Table');
-      if (!splitPayCallback) recordSale(currentTotal(), 'card', saleLabel, payTipAmount(), currentSaleLines());
+      if (!splitPayCallback) recordSale(tenderBase, cardTenderMethod, saleLabel, payTipAmount(), currentSaleLines());
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
@@ -8116,6 +8306,7 @@
     $('#pay-card').addEventListener('click', openCardModal);
     $('#pay-qr').addEventListener('click', function () {
       openCardModal();
+      cardTenderMethod = 'qr';
       var title = document.getElementById('card-modal-title');
       if (title) title.textContent = 'Paiement QR';
       if (reader && reader.status) reader.status.textContent = 'Scannez le QR, paiement mobile';
@@ -8184,6 +8375,11 @@
         cashRenduVal.textContent = 'Insuffisant · manque ' + fmtMAD(total - got);
         cashConfirm.disabled = true;
       }
+      // Un billet trop petit pour couvrir le dû ne sert à rien : on le grise.
+      $$('.cash-preset').forEach(b => {
+        if (!b.dataset.set || b.dataset.set === 'exact') return;
+        b.disabled = parseFloat(b.dataset.set) < total;
+      });
     }
     function openCashModal() {
       cashStepInput.hidden = false;
@@ -8223,9 +8419,38 @@
     }
     $('#pay-cash').addEventListener('click', openCashModal);
     cashInput.addEventListener('input', updateRendu);
+    /* « Encaisser » — le geste principal (Slice A). En vente rapide il ouvre
+       le flux espèces ; en prise de commande il envoie d'abord les lignes en
+       cuisine, puis ouvre le même flux. */
+    $('#pay-charge').addEventListener('click', () => {
+      if (!(currentTotal() > 0)) { toast('Addition vide'); return; }
+      openCashModal();
+    });
+    $('#pay-charge-order').addEventListener('click', () => {
+      if (!selectedId) return;
+      if (orderInProgressCount() > 0) validateOrder(selectedId);
+      if (currentTotal() > 0) openCashModal();
+      else toast('Addition vide');
+    });
+    /* Le total vit dans #rp-total ; on le recopie sur les deux boutons
+       Encaisser (observer, pas de deuxième source de vérité). */
+    (function () {
+      const src = document.getElementById('rp-total');
+      const t1 = document.getElementById('pay-charge-total');
+      const t2 = document.getElementById('pay-charge-order-total');
+      if (!src) return;
+      const sync = () => { const v = src.textContent.trim(); if (t1) t1.textContent = v; if (t2) t2.textContent = v; };
+      new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true });
+      sync();
+    })();
+    /* Un tap RÈGLE le montant reçu (façon Loyverse) : « Exact » = le dû,
+       un billet = sa valeur. Les presets des autres modales (data-cm-add,
+       data-ho-add, data-ho-vadd) gardent leurs propres handlers. */
     $$('.cash-preset').forEach(btn => {
       btn.addEventListener('click', () => {
-        cashInput.value = (parseFloat(cashInput.value) || 0) + parseFloat(btn.dataset.add);
+        if (!btn.dataset.set || btn.disabled) return;
+        const due = currentTotal() + payTipAmount();
+        cashInput.value = btn.dataset.set === 'exact' ? money(due) : parseFloat(btn.dataset.set);
         updateRendu();
       });
     });
@@ -8239,7 +8464,9 @@
       cashStepSuccess.hidden = false;
       cashStepSuccess.style.display = 'flex';
       cashSuccessRendu.textContent = fmtMADcents(change);
-      window.CaisseFx && window.CaisseFx.confetti(document.querySelector('.reader-disc') || document.getElementById('rp-total'));
+      /* Le premier .reader-disc du DOM est celui du modal carte — viser
+         explicitement le disque du succès espèces. */
+      window.CaisseFx && window.CaisseFx.confetti(document.querySelector('#cash-step-success .reader-disc') || document.getElementById('rp-total'));
       lucide.createIcons();
     });
     cashModal.addEventListener('click', (e) => {
@@ -8257,6 +8484,20 @@
         if (cardModal.classList.contains('is-open')) closeCardModal({ paid: false });
         if (cashModal.classList.contains('is-open')) closeCashModal({ paid: false });
       }
+      if (e.key === 'Enter' && cashModal.classList.contains('is-open') && !cashStepInput.hidden) {
+        if (!cashConfirm.disabled) { e.preventDefault(); cashConfirm.click(); }
+        return;
+      }
+      if (!['F2', 'F3', 'F4'].includes(e.key) || e.repeat) return;
+      const target = e.target;
+      if (target && (target.matches?.('input,textarea,select') || target.isContentEditable)) return;
+      if (!document.body.classList.contains('is-unlocked')) return;
+      if (document.querySelector('.modal-veil.is-open, .drawer.is-open')) return;
+      if (!(currentTotal() > 0)) return;
+      e.preventDefault();
+      if (e.key === 'F2') openCashModal();
+      else if (e.key === 'F3') openCardModal();
+      else if (mode === 'vrap' || selectedId) openSplitModal(selectedId);
     });
 
     /* ---------- Live elapsed minutes ---------- */
@@ -8966,7 +9207,13 @@
         covers = t.covers || 2;
         sourceLabel = tableId;
       }
-      const total = lines.reduce((s, l) => s + l.total, 0);
+      const gross = money(lines.reduce((s, l) => s + l.total, 0));
+      /* A split settles the same NET amount shown by the ordinary payment
+         buttons. The old path rebuilt the gross from the lines and silently
+         dropped the manager-approved discount. */
+      const total = isVrap
+        ? money(gross - vrapDiscountAmount(gross))
+        : money(gross - discountAmountFor(tableId, gross));
 
       // Aggregate per unique item name: split-pool shows one card per dish
       // with remaining count, so 4× Tajine can be assigned to 4 different convives
@@ -9159,9 +9406,9 @@
 
     function updateSplitSummary() {
       const tipPct = effectiveTipPct();
-      const tipAmt = splitState.total * tipPct / 100;
-      const withTip = splitState.total + tipAmt;
-      const perPerson = withTip / splitState.numParts;
+      const tipAmt = money(splitState.total * tipPct / 100);
+      const withTip = money(splitState.total + tipAmt);
+      const perPerson = money(withTip / splitState.numParts);
 
       $('#split-total-display').textContent = fmtMADcents(splitState.total);
       const tipRow = $('#split-tip-row');
@@ -9183,31 +9430,49 @@
       ).join('');
     }
 
-    /* Le journal encaisse en dirhams entiers (recordSale arrondit). Des parts
-       laissées en flottant se perdaient donc à l'arrondi : 100 MAD en trois,
-       c'était 33 + 33 + 33 = 99 encaissés, un dirham évaporé à chaque table
-       partagée. On répartit le reste plutôt que de le jeter — les premières
-       parts prennent le dirham en plus (méthode du plus fort reste), et la
-       somme des parts fait exactement le total. */
-    function shareInteger(total, n) {
-      const cents = Math.round(total);
+    /* Allocate in centimes, including the remainder. Each returned amount has
+       at most two decimals and their sum is exactly the requested total. */
+    function shareMoney(total, n) {
+      const cents = minor(total);
       const base = Math.floor(cents / n);
       let rest = cents - base * n;
       const out = [];
-      for (let i = 0; i < n; i++) { out.push(base + (rest > 0 ? 1 : 0)); if (rest > 0) rest--; }
+      for (let i = 0; i < n; i++) {
+        out.push(major(base + (rest > 0 ? 1 : 0)));
+        if (rest > 0) rest--;
+      }
       return out;
+    }
+
+    /* Allocate a monetary total proportionally to arbitrary positive weights.
+       Largest remainders receive the leftover centimes, so a discounted
+       article split preserves both the grand total and the relative shares. */
+    function shareWeighted(total, weights) {
+      const target = minor(total);
+      const clean = weights.map(w => Math.max(0, Number(w) || 0));
+      const sum = clean.reduce((s, w) => s + w, 0);
+      if (!clean.length) return [];
+      if (!(sum > 0)) return shareMoney(total, clean.length);
+      const raw = clean.map(w => target * w / sum);
+      const cents = raw.map(Math.floor);
+      let rest = target - cents.reduce((s, n) => s + n, 0);
+      raw.map((n, i) => ({ i, frac: n - cents[i] }))
+        .sort((a, b) => b.frac - a.frac || a.i - b.i)
+        .forEach(x => { if (rest > 0) { cents[x.i]++; rest--; } });
+      return cents.map(major);
     }
 
     /* ---- launch flow ---- */
     function launchSplitFlow() {
       const parts = [];
+      const tipTotal = money(splitState.total * effectiveTipPct() / 100);
       if (splitState.splitMode === 'egal') {
         const tipPct = effectiveTipPct();
-        const withTipTotal = splitState.total * (1 + tipPct / 100);
-        const shares = shareInteger(withTipTotal, splitState.numParts);
+        const baseShares = shareMoney(splitState.total, splitState.numParts);
+        const tipShares = shareMoney(tipTotal, splitState.numParts);
         const label = tipPct > 0 ? `Part égale + pourboire ${tipPct}%` : 'Part égale';
         for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ amount: shares[i], label, paid: false, payMethod: null });
+          parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -9229,21 +9494,23 @@
             .map(([name, qty]) => qty > 1 ? `${qty}× ${name}` : name)
             .join(', ');
           parts.push({
-            amount: amt,
+            weight: amt,
             label: items || 'Part équilibrée',
+            /* Chaque part garde ses lignes pour que le ticket imprimé du
+               convive liste ses articles, pas juste un montant. */
+            lines: Object.entries(cart).map(([name, qty]) => ({
+              name, qty, total: money(qty * (splitState.itemTotals[name]?.unitPrice || 0)),
+            })),
             paid: false, payMethod: null,
           });
         }
-        /* Même arrondi, même perte : chaque part par convive était arrondie
-           dans son coin. On arrondit ici et on rend l'écart à la part la plus
-           grosse, pour que la somme des parts fasse le total de la table. */
-        const target = Math.round(splitState.total * (1 + effectiveTipPct() / 100));
-        parts.forEach((p) => { p.amount = Math.round(p.amount); });
-        const drift = target - parts.reduce((s, p) => s + p.amount, 0);
-        if (drift !== 0 && parts.length) {
-          const big = parts.reduce((a, b) => (b.amount > a.amount ? b : a), parts[0]);
-          big.amount = Math.max(0, big.amount + drift);
-        }
+        const weights = parts.map(p => p.weight);
+        const bases = shareWeighted(splitState.total, weights);
+        const tips = shareWeighted(tipTotal, weights);
+        parts.forEach((p, i) => {
+          p.base = bases[i]; p.tip = tips[i]; p.amount = money(bases[i] + tips[i]);
+          delete p.weight;
+        });
       }
 
       splitState.flow = { parts, paidCount: 0 };
@@ -9274,10 +9541,10 @@
           </div>
           <div class="split-part-btns">
             <button class="split-part-btn carte" data-pay-part="${idx}" data-pay-method="carte" aria-label="Payer par carte">
-              <i data-lucide="credit-card"></i>
+              <i data-lucide="credit-card"></i><span>Carte</span>
             </button>
             <button class="split-part-btn cash-dark" data-pay-part="${idx}" data-pay-method="cash" aria-label="Payer en espèces">
-              <i data-lucide="banknote"></i>
+              <i data-lucide="banknote"></i><span>Espèces</span>
             </button>
           </div>
         </div>`;
@@ -9294,7 +9561,10 @@
       $$('[data-bind="covers"]').forEach(el => el.textContent = splitState.sourceLabel || splitState.tableId || '');
 
       if (method === 'carte') {
-        $('#card-amount').textContent = fmtMADcents(part.amount);
+        /* openCardModal() derives both the displayed and authorized amount from
+           currentTotal(). Without this override a 40 MAD card part displayed,
+           then authorized, the full table amount. */
+        cashAmountOverride = part.amount;
         splitPayCallback = () => markSplitPartPaid(partIdx, 'carte');
         openCardModal();
       } else {
@@ -9306,7 +9576,9 @@
 
     function markSplitPartPaid(partIdx, method) {
       const p = splitState.flow.parts[partIdx];
-      recordSale(p.amount, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1));
+      const tip = money(p.tip || 0);
+      const base = money(p.base != null ? p.base : (p.amount - tip));
+      recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines);
       p.paid = true;
       p.payMethod = method;
       splitState.flow.paidCount++;
@@ -9611,18 +9883,21 @@
 
     /* Roll up the ledger — single source of truth for revenue / tenders */
     function journalTotals() {
-      let revenue = 0, card = 0, cash = 0, tips = 0, cashTips = 0, n = 0;
+      let revenueC = 0, cardC = 0, cashC = 0, tipsC = 0, cashTipsC = 0, n = 0;
       for (const e of journal) {
         if (e.voided) continue;               // sortie des livres par le support
-        n++;
-        revenue += e.amount;
-        if (e.method === 'cash') cash += e.amount; else card += e.amount;
+        /* A refund changes net revenue and the tender balance, but it is not a
+           second sale. Counting it in `txns` made one 100 MAD sale followed by
+           a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
+        if (e.amount > 0 && e.kind !== 'refund') n++;
+        revenueC += minor(e.amount);
+        if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
         const tip = e.tip || 0;
-        tips += tip;
-        if (e.method === 'cash') cashTips += tip;
+        tipsC += minor(tip);
+        if (e.method === 'cash') cashTipsC += minor(tip);
       }
-      return { revenue: revenue, card: card, cash: cash, txns: n,
-               tips: tips, cashTips: cashTips };
+      return { revenue: major(revenueC), card: major(cardC), cash: major(cashC), txns: n,
+               tips: major(tipsC), cashTips: major(cashTipsC) };
     }
 
     /* ── UNE VENTE SORTIE DES LIVRES DOIT QUITTER LE COMPTOIR AUSSI ──────────
@@ -9734,19 +10009,39 @@
     /* Record one completed tender (table payment, vente rapida, or split part).
        `amount` stays the base addition; `tip` (pourboire) is recorded alongside.
        `lines` (optional) — itemised order [{ name, qty, total }] for the receipt. */
+    function accountActiveDiscount() {
+      let d = null, cut = 0;
+      if (mode === 'vrap') {
+        d = vrapDiscount;
+        const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
+        cut = vrapDiscountAmount(gross);
+      } else if (selectedId && tables[selectedId]) {
+        d = tables[selectedId].discount;
+        const gross = generateOrder(selectedId, tables[selectedId]).reduce((s, l) => s + l.total, 0);
+        cut = discountAmountFor(selectedId, gross);
+      }
+      /* New discounts explicitly carry `accounted:false`. Legacy persisted
+         discounts have no flag and were already added at approval time. */
+      if (!d || d.accounted !== false || !(cut > 0)) return;
+      d.amount = money(cut);
+      d.accounted = true;
+      shift.discounts = money(shift.discounts + cut);
+      shift.discountsCount++;
+    }
     function recordSale(amount, method, label, tip, lines) {
-      amount = Math.round(amount || 0);
+      amount = money(amount);
       if (amount <= 0) return;
+      accountActiveDiscount();
       const entry = {
         id: 'sale-' + Date.now() + '-' + journal.length,
         time: new Date(),
         label: label || 'Vente',
         amount: amount, method: method, ref: genRef(),
-        tip: Math.round(tip) || 0,
+        tip: money(tip),
         cashier: currentCashier.name,
       };
       if (Array.isArray(lines) && lines.length) {
-        entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: l.total, cat: l.cat || '' }));
+        entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: money(l.total), cat: l.cat || '' }));
       }
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets
@@ -9755,6 +10050,10 @@
       attachReceipt(entry);
       journal.push(entry);
       lastSaleId = entry.id;
+      /* Do not leave a five-second loss window between taking money and the
+         autosave. The offline server queue is durable too, but the till's own
+         journal must survive an immediate reload on its own. */
+      try { persistShift(); } catch (_) {}
       /* Fidélité. Le carnet du commerçant vivait déjà sur ce comptoir mais rien
          ne l'appelait ici : on pouvait inscrire un client, jamais lui compter
          un passage. Une note = un passage, même réglée en quatre parts — d'où
@@ -9990,6 +10289,7 @@
         method: entry.method,
         kind: isRefund ? 'refund' : 'sale',
         of: entry.refundOf || '',
+        reason: entry.reason || '',
       };
     }
     function receiptOpts(extra) {
@@ -10456,6 +10756,10 @@
           greetEl.setAttribute('aria-hidden', 'true');
         }
         document.body.classList.add('is-unlocked');
+        /* Slice D — la caisse s'ouvre sur le registre (vente rapide) :
+           ringuer à zéro tap ; la salle reste à un tap. */
+        setMode('vrap');
+        setVrapView('builder');
         if (shellEl)  shellEl.classList.add('is-entering');
         if (topbarEl) topbarEl.classList.add('is-entering');
         setTimeout(() => {
@@ -11694,24 +11998,33 @@
        SPLIT BILL — persistence (background / resume / cancel)
        =========================================================== */
     const tableSplits = new Map(); // tableId → { mode, total, parts, paidCount }
+    let vrapSplit = null;          // same shape for the single working counter cart
 
     function saveSplitFlow() {
-      if (!splitState.tableId || !splitState.flow) return;
-      tableSplits.set(splitState.tableId, {
+      if (!splitState.flow) return;
+      const saved = {
         mode:      splitState.splitMode,
         total:     splitState.total,
         parts:     splitState.flow.parts.map(p => ({ ...p })),
         paidCount: splitState.flow.paidCount,
-      });
+      };
+      if (splitState.isVrap) vrapSplit = saved;
+      else if (splitState.tableId) tableSplits.set(splitState.tableId, saved);
+      try { persistShift(); } catch (_) {}
     }
 
     function loadSplitFlow(tableId) {
-      const saved = tableSplits.get(tableId);
+      const isVrap = mode === 'vrap';
+      const saved = isVrap ? vrapSplit : tableSplits.get(tableId);
       if (!saved) return false;
-      const t = tables[tableId];
-      const lines = generateOrder(tableId, t);
+      const t = isVrap ? null : tables[tableId];
+      const lines = isVrap
+        ? cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty }))
+        : generateOrder(tableId, t);
       Object.assign(splitState, {
-        tableId,
+        tableId: isVrap ? null : tableId,
+        isVrap,
+        sourceLabel: isVrap ? (vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter') : tableId,
         total:     saved.total,
         lines,
         splitMode: saved.mode,
@@ -11757,7 +12070,8 @@
     markSplitPartPaid = function(partIdx, method) {
       _origMarkPaid(partIdx, method);
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
-        tableSplits.delete(splitState.tableId);
+        if (splitState.isVrap) vrapSplit = null;
+        else tableSplits.delete(splitState.tableId);
       } else {
         saveSplitFlow();
         if (selectedId === splitState.tableId) renderRpSplitCard(selectedId);
@@ -11767,9 +12081,9 @@
     // Patch openSplitModal — if a saved split exists, jump directly to flow screen
     const _origOpenSplit = openSplitModal;
     openSplitModal = function(tableId) {
-      if (tableSplits.has(tableId)) {
+      if ((mode === 'vrap' && vrapSplit) || (mode !== 'vrap' && tableSplits.has(tableId))) {
         loadSplitFlow(tableId);
-        $('#split-table-label').textContent = tableId;
+        $('#split-table-label').textContent = splitState.sourceLabel || tableId;
         $('#split-setup').hidden = true;
         $('#split-flow').hidden = false;
         $('#split-all-done').hidden = splitState.flow.paidCount < splitState.flow.parts.length;
@@ -11816,9 +12130,9 @@
       const d = tables[id] && tables[id].discount;
       if (!d) return 0;
       let amt = d.kind === 'pct'
-        ? Math.round(gross * (d.value || 0) / 100)
-        : Math.round(d.value || 0);
-      return Math.max(0, Math.min(amt, Math.round(gross)));
+        ? money(gross * (d.value || 0) / 100)
+        : money(d.value || 0);
+      return money(Math.max(0, Math.min(amt, money(gross))));
     }
 
     const remiseModal = $('#remise-modal');
@@ -11827,9 +12141,9 @@
     function remiseCutPreview() {
       const g = remiseState.gross;
       let cut = remiseState.kind === 'pct'
-        ? Math.round(g * (remiseState.value || 0) / 100)
-        : Math.round(remiseState.value || 0);
-      return Math.max(0, Math.min(cut, g));
+        ? money(g * (remiseState.value || 0) / 100)
+        : money(remiseState.value || 0);
+      return money(Math.max(0, Math.min(cut, g)));
     }
     function renderRemisePreview() {
       const pv = $('#rm-preview');
@@ -11887,17 +12201,17 @@
         requireManager("Remise sur l'addition", () => {
           const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
           let amount = remiseState.kind === 'pct'
-            ? Math.round(gross * (remiseState.value || 0) / 100)
-            : Math.round(remiseState.value || 0);
-          amount = Math.max(0, Math.min(amount, Math.round(gross)));
+            ? money(gross * (remiseState.value || 0) / 100)
+            : money(remiseState.value || 0);
+          amount = money(Math.max(0, Math.min(amount, money(gross))));
           if (amount <= 0) { toast('Remise sans effet'); return; }
           vrapDiscount = {
             kind:   remiseState.kind,
             value:  remiseState.value,
             amount: amount,
             reason: remiseState.reason,
+            accounted: false,
           };
-          shift.discounts += amount; shift.discountsCount++;
           closeRemiseModal();
           renderCart();
           toast(`Remise appliquée · −${fmtMAD(amount)}`);
@@ -11915,17 +12229,17 @@
         const lines = generateOrder(id, t);
         const gross = lines.reduce((s, l) => s + l.total, 0);
         let amount = remiseState.kind === 'pct'
-          ? Math.round(gross * (remiseState.value || 0) / 100)
-          : Math.round(remiseState.value || 0);
-        amount = Math.max(0, Math.min(amount, Math.round(gross)));
+          ? money(gross * (remiseState.value || 0) / 100)
+          : money(remiseState.value || 0);
+        amount = money(Math.max(0, Math.min(amount, money(gross))));
         if (amount <= 0) { toast('Remise sans effet'); return; }
         t.discount = {
           kind:   remiseState.kind,
           value:  remiseState.value,
           amount: amount,
           reason: remiseState.reason,
+          accounted: false,
         };
-        shift.discounts += amount; shift.discountsCount++;
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
         toast(`Remise appliquée · −${fmtMAD(amount)}`);
@@ -11990,6 +12304,13 @@
     const refundModal = $('#refund-modal');
     const refundState = { search: '', orig: null, amount: 0, reason: 'Erreur de saisie' };
 
+    function refundedSoFar(entry) {
+      if (!entry) return 0;
+      if (entry.refundedAmount != null) return money(Math.max(0, entry.refundedAmount));
+      return entry.refunded ? money(entry.amount) : 0;   // legacy full-refund flag
+    }
+    function refundableLeft(entry) { return money(Math.max(0, money(entry.amount) - refundedSoFar(entry))); }
+
     function refundableJournal() {
       // Newest first — only real sales (positive, not already refunded).
       return journal.slice().reverse()
@@ -12014,7 +12335,7 @@
         const mm = String(e.time.getMinutes()).padStart(2, '0');
         const icon   = e.method === 'cash' ? 'banknote' : 'credit-card';
         const mLabel = e.method === 'cash' ? 'Espèces'  : 'Carte';
-        const done   = e.refunded === true;
+        const done   = refundableLeft(e) <= 0;
         return `<button class="rf-entry" data-rf-ref="${e.ref}"${done ? ' disabled' : ''}>`
              + `<span class="rf-entry-ic rf-entry-ic--${e.method}"><i data-lucide="${icon}"></i></span>`
              + `<span class="rf-entry-main">`
@@ -12033,7 +12354,7 @@
       const pv = $('#rf-preview');
       if (!o) return;
       const amt  = refundState.amount;
-      const left = o.amount - amt;
+      const left = money(refundableLeft(o) - amt);
       pv.innerHTML =
         `<span class="rf-pv-from mono">Vente ${fmtMAD(o.amount)}</span>`
         + `<span class="rf-pv-arrow">→</span>`
@@ -12047,7 +12368,7 @@
     }
     function openRefundConfirm(orig) {
       refundState.orig   = orig;
-      refundState.amount = orig.amount;           // default — full refund
+      refundState.amount = refundableLeft(orig);  // default — remaining refundable amount
       refundState.reason = 'Erreur de saisie';
       const hh = String(orig.time.getHours()).padStart(2, '0');
       const mm = String(orig.time.getMinutes()).padStart(2, '0');
@@ -12060,8 +12381,8 @@
         +   `<span class="rf-picked-meta">${hh}:${mm} · ${mLabel} · ${orig.ref}</span>`
         + `</span>`
         + `<span class="rf-picked-amount">${fmtMAD(orig.amount)}</span>`;
-      $('#rf-amount').value = String(orig.amount);
-      $('#rf-amount').max   = String(orig.amount);
+      $('#rf-amount').value = String(refundState.amount);
+      $('#rf-amount').max   = String(refundableLeft(orig));
       $$('#rf-reasons .rf-reason').forEach(b =>
         b.classList.toggle('is-active', b.dataset.rfReason === 'Erreur de saisie'));
       renderRefundPreview();
@@ -12083,19 +12404,19 @@
     function clampRefundAmount() {
       const o = refundState.orig;
       if (!o) return;
-      let amt = Math.round(parseFloat($('#rf-amount').value) || 0);
-      amt = Math.max(1, Math.min(amt, o.amount));  // 1 … original
-      refundState.amount = amt;
+      let amt = money(parseFloat($('#rf-amount').value) || 0);
+      amt = Math.max(0.01, Math.min(amt, refundableLeft(o)));
+      refundState.amount = money(amt);
     }
     function confirmRefund() {
       const orig = refundState.orig;
       if (!orig) { showRefundStep('pick'); return; }
-      if (orig.refunded) { toast('Transaction déjà remboursée'); return; }
+      if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
       clampRefundAmount();
       const amount = refundState.amount;
       if (amount <= 0) { toast('Saisis un montant'); return; }
       requireManager('Remboursement', () => {
-        if (orig.refunded) { toast('Transaction déjà remboursée'); return; }
+        if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
         // NEGATIVE journal entry — NOT via recordSale (it rejects amount<=0).
         const entry = {
           id: 'refund-' + Date.now() + '-' + journal.length,
@@ -12106,6 +12427,7 @@
           ref: genRef(),
           kind: 'refund',
           refundOf: orig.ref,
+          reason: refundState.reason,
           cashier: (currentCashier && currentCashier.name) || '',
           /* Le panier remboursé, quand le ticket d'origine le portait — un
              remboursement partiel n'en reprend pas les lignes (le montant seul
@@ -12117,9 +12439,11 @@
            se fige au même titre. */
         attachReceipt(entry);
         journal.push(entry);
-        orig.refunded = true;
-        shift.refunds += amount;       // positive — Clôture renders it as a row
+        orig.refundedAmount = money(refundedSoFar(orig) + amount);
+        orig.refunded = refundableLeft(orig) <= 0;
+        shift.refunds = money(shift.refunds + amount); // positive — Clôture renders it as a row
         lastSaleId = entry.id;
+        try { persistShift(); } catch (_) {}
         renderShiftStats();
         /* Un remboursement change le TOTAL, et c'est la seule écriture que le
            serveur ne verra jamais (/api/sale refuse les montants ≤ 0). Sans
@@ -12165,9 +12489,9 @@
     $('#rf-amount').addEventListener('input', () => {
       const o = refundState.orig;
       if (!o) return;
-      let amt = Math.round(parseFloat($('#rf-amount').value) || 0);
+      let amt = money(parseFloat($('#rf-amount').value) || 0);
       if (!amt) { refundState.amount = 0; }   // keep preview live while typing
-      else      { amt = Math.max(1, Math.min(amt, o.amount)); refundState.amount = amt; }
+      else      { amt = Math.max(0.01, Math.min(amt, refundableLeft(o))); refundState.amount = money(amt); }
       renderRefundPreview();
     });
     $('#rf-amount').addEventListener('blur', () => {
@@ -12484,7 +12808,15 @@
       } else if (name === 'resume-split' && selectedId) {
         openSplitModal(selectedId);
       } else if (name === 'cancel-split' && selectedId) {
-        if (!confirm('Annuler le split en cours? Les parts déjà payées seront conservées comme réglées.')) return;
+        const pending = tableSplits.get(selectedId);
+        if (pending && pending.paidCount > 0) {
+          /* Deleting the flow here kept the paid tenders in the ledger but put
+             the full bill back on screen, so the remainder could be charged a
+             second time. Once money has entered, the split must be completed. */
+          toast('Split déjà encaissé en partie · termine les parts restantes');
+          return;
+        }
+        if (!confirm('Annuler le split en cours ?')) return;
         tableSplits.delete(selectedId);
         const t = tables[selectedId];
         if (t && t.status !== 'khlass') {
@@ -14009,6 +14341,14 @@
           tables: tables,
           tableOrders: tableOrders,
           orders: orders,
+          /* Une part déjà payée est de l'argent réel. Le flux de split vivait
+             seulement dans une Map en mémoire : F5 l'oubliait et remettait la
+             note entière à encaisser. */
+          tableSplits: Array.from(tableSplits.entries()),
+          vrapSplit: vrapSplit,
+          cart: cart,
+          vrapDiscount: vrapDiscount,
+          vrapEditingNum: vrapEditingNum,
           /* Le board cuisine, chez un VRAI commerçant seulement. Les lignes
              envoyées portent un drapeau `sent` qui, lui, était déjà persisté :
              sans le board en face, un simple rechargement au comptoir effaçait
@@ -14053,6 +14393,9 @@
         if (e.kind)            entry.kind     = e.kind;      // 'refund'
         if (e.refundOf)        entry.refundOf = e.refundOf;
         if (e.refunded)        entry.refunded = true;
+        if (e.refundedAmount != null) entry.refundedAmount = money(e.refundedAmount);
+        if (e.reason)          entry.reason   = e.reason;
+        if (e.voided)          entry.voided   = true;
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
@@ -14108,6 +14451,17 @@
         Object.keys(orders).forEach(k => delete orders[k]);
         Object.assign(orders, d.orders);
       }
+      tableSplits.clear();
+      if (Array.isArray(d.tableSplits)) {
+        d.tableSplits.forEach((pair) => {
+          if (!Array.isArray(pair) || pair.length !== 2 || !pair[0] || !pair[1]) return;
+          tableSplits.set(String(pair[0]), pair[1]);
+        });
+      }
+      vrapSplit = d.vrapSplit && Array.isArray(d.vrapSplit.parts) ? d.vrapSplit : null;
+      if (Array.isArray(d.cart)) cart = d.cart;
+      vrapDiscount = d.vrapDiscount || null;
+      vrapEditingNum = d.vrapEditingNum != null ? d.vrapEditingNum : null;
       /* Le board cuisine. `sentAt` revient en texte du JSON alors que tout
          l'écran cuisine calcule un âge dessus (kdsElapsed lit .getTime()) :
          sans cette reprise en Date, la première peinture jetterait. */
@@ -14128,6 +14482,9 @@
       const greet = document.querySelector('[data-kiwi-greet]'); if (greet) greet.remove();
       document.body.classList.add('is-unlocked');
       renderSalle();
+      /* Slice D — même atterrissage qu'après l'animation : le registre. */
+      setMode('vrap');
+      setVrapView('builder');
       renderShiftStats();
       renderCashierCard();
       if (window.lucide) lucide.createIcons();
