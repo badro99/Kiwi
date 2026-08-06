@@ -134,10 +134,44 @@
     else if (url === '0') apply(false, true);
   }
 
+  /**
+   * First-paint bridge, mirroring design-vitrine.js: this file is loaded
+   * synchronously in <head>, and dashboard.html calls prime() on the line
+   * immediately after <body> so the skin is painted with the first frame
+   * instead of being swapped in a beat later. Without it the dashboard flashes
+   * a light field before init() runs at DOMContentLoaded, and a dark field is
+   * the whole premise of the skin.
+   *
+   * Deliberately NOT the full apply(). The gradient def is only referenced once
+   * a chart exists, and injecting an <svg> as body's first child at prime time
+   * would shift anything selecting `body > :first-child`; init() adds it a
+   * moment later, before any chart renders. Persistence is left to init() for
+   * the same reason — priming paints a stored choice, it does not make one.
+   *
+   * Re-entrant by construction: init()'s own apply(true) finds data-theme
+   * already "dark" and therefore does not re-stamp the ownership flag, so
+   * enabling the skin inside a fusion-mode session still leaves fusion-mode
+   * owning the attribute.
+   */
+  function primeBody() {
+    if (!document.body) return false;
+    var url = fromUrl();
+    var v = url !== null ? url : stored();
+    if (v !== '1') return true;
+    var html = document.documentElement;
+    if (html.getAttribute('data-theme') !== 'dark') {
+      html.setAttribute('data-theme', 'dark');
+      html.dataset.vexelSetTheme = '1';
+    }
+    document.body.classList.add(CLASS);
+    return true;
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
   window.KiwiDesignVexel = {
+    prime: primeBody,
     enable: function () { apply(true); },
     disable: function () { apply(false); },
     toggle: function () { apply(!document.body.classList.contains(CLASS)); },
