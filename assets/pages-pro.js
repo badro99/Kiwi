@@ -1193,7 +1193,7 @@ handlers['terminal-catalog'] = () => {
         `).join('')}
       </div>
 
-      <div style="padding:16px 18px; background:var(--ink); color:var(--paper); border-radius:14px;">
+      <div style="padding:16px 18px; background:var(--inverse-surface); color:var(--inverse-ink); border-radius:14px;">
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <div style="flex:1; min-width:240px;">
             <div style="font-family:var(--mono); font-size:10px; letter-spacing:0.12em; color:var(--mint); margin-bottom:4px;">${T.proProgram}</div>
@@ -2020,7 +2020,7 @@ handlers['nav-equipe'] = () => {
       </div>
 
       <!-- Kiwi AI · pointage anomalies -->
-      <div style="background:linear-gradient(135deg, var(--ink) 0%, #15201A 100%); color:var(--paper); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="background:linear-gradient(135deg, var(--inverse-surface) 0%, #15201A 100%); color:var(--inverse-ink); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:10px;">
             <div style="width:24px; height:24px; border-radius:7px; background:rgba(125,242,176,0.16); display:flex; align-items:center; justify-content:center;">
@@ -2036,7 +2036,7 @@ handlers['nav-equipe'] = () => {
         ${AI_ALERTS.map(a => `
           <div style="display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center; padding:10px 0; border-top:1px solid rgba(255,255,255,0.07);">
             <div>
-              <div style="font-size:13px; font-weight:500; color:var(--paper);">${a.title}</div>
+              <div style="font-size:13px; font-weight:500; color:var(--inverse-ink);">${a.title}</div>
               <div style="font-size:11.5px; color:#a7d5b9; margin-top:3px; line-height:1.5;">${a.detail}</div>
             </div>
             <button class="kb" data-action="ai-pointage" data-arg="${a.kind}" style="background:rgba(125,242,176,0.14); color:var(--mint); padding:6px 12px; font-size:11.5px; white-space:nowrap;">${a.action} →</button>
@@ -9275,7 +9275,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Promotions',
       subtitle: 'Maison Mansour · Gueliz · 4 campagnes en direct · 1 planifiée',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--riad), var(--atlas));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--brand-deep), var(--atlas));">
           <div class="l">UPLIFT REVENUE · CAMPAGNES ACTIVES</div>
           <div class="big">+${fmtInt(totalUplift)} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
           <div class="sub">${fmtInt(totalRedem)} échanges aujourd'hui · ${active.filter(a => a.live).length} promos en cours · Tax-free Touristes UE = top performer</div>
@@ -10145,7 +10145,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Calendrier rendez-vous',
       subtitle: 'Spa Bahia · Hivernage · 3 praticiennes',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">SEMAINE DU 27 AVRIL · MERCREDI EN COURS</div>
           <div class="big">${todaysCount} <span style="font-size:18px; opacity:0.7;">RDV aujourd'hui</span></div>
           <div class="sub">3 praticiennes · 12 heures d'ouverture · liste d'attente : ${WAIT.length} clientes</div>
@@ -10554,7 +10554,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Services & forfaits',
       subtitle: 'Spa Bahia · catalogue complet · 17 prestations',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">CATALOGUE COMPLET</div>
           <div class="big">${SERVICES.length + PACKAGES.length + CURES.length} <span style="font-size:18px; opacity:0.7;">prestations actives</span></div>
           <div class="sub">12 services à la carte · 4 forfaits journée · 3 cures · ticket moyen 612 MAD</div>
@@ -10807,7 +10807,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-card .top { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
     .pr-blob { width: 80px; height: 80px; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: var(--paper); font-weight: 600; font-size: 26px; letter-spacing: -0.04em; position: relative; overflow: hidden; }
     .pr-blob::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 28% 20%, rgba(255,255,255,0.28), transparent 55%); border-radius: 22px; }
-    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--riad)); }
+    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); }
     .pr-blob.b { background: linear-gradient(135deg, #D99A2B, #8A6210); }
     .pr-blob.c { background: linear-gradient(135deg, var(--atlas-700, #054C36), var(--atlas)); }
     .pr-card .nm { font-weight: 600; font-size: 16px; letter-spacing: -0.015em; }
@@ -10819,7 +10819,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-bio { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 4px 0 12px; }
     .pr-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
     .pr-chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--n-200); color: var(--n-700); font-weight: 500; }
-    html[data-theme="dark"] .pr-chip { background: var(--paper); }
+    html[data-theme="dark"] .pr-chip { background: var(--inverse-surface); }
     .pr-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 0; border-top: 1px solid var(--n-200); border-bottom: 1px solid var(--n-200); margin-bottom: 12px; }
     .pr-kpis .k { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); }
     .pr-kpis .v { font-family: var(--mono); font-weight: 600; font-size: 14px; margin-top: 3px; letter-spacing: -0.01em; font-feature-settings: "tnum" 1; }
@@ -10840,12 +10840,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-cert-stat.ok { background: #E3F7EC; color: var(--atlas-700, #054C36); }
     .pr-cert-stat.warn { background: var(--warn-soft); color: var(--warn-ink); }
     .pr-cert-stat.exp { background: #FDE8E4; color: #9B2F22; }
-    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--riad)); color: var(--paper); border-radius: 14px; padding: 18px; margin-top: 14px; }
+    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-top: 14px; }
     .pr-calc-out .l { font-size: 10.5px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--mint); text-transform: uppercase; }
     .pr-calc-out .v { font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .pr-calc-out .br { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(125,242,176,0.18); font-size: 12px; }
     .pr-calc-out .br span { color: #c6ead4; font-family: var(--mono); }
-    .pr-calc-out .br b { color: var(--paper); font-family: var(--mono); font-weight: 600; }
+    .pr-calc-out .br b { color: var(--inverse-ink); font-family: var(--mono); font-weight: 600; }
     `;
     document.head.appendChild(style);
   }
@@ -11319,7 +11319,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-history-row .pr { font-family: var(--mono); font-weight: 600; text-align: right; font-feature-settings: "tnum" 1; }
     .sc-history-row .pra { font-size: 11.5px; color: var(--n-500); }
 
-    .sc-gift { background: linear-gradient(135deg, var(--ink), var(--ink-soft)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), var(--inverse-line)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
     .sc-gift::after { content: ""; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; background: radial-gradient(circle, var(--mint), transparent 60%); opacity: 0.18; pointer-events: none; }
     .sc-gift .l { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--mint); }
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
@@ -12068,7 +12068,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <h3>Groupes d'options</h3>
             <div class="sub">${OPTION_GROUPS.length} groupes · attachez-les à un produit depuis l'éditeur d'item.</div>
           </div>
-          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">
+          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
             Créer un groupe
           </button>
@@ -12744,13 +12744,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-stationbar::-webkit-scrollbar { display: none; }
       .kit-station { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--n-600); letter-spacing: -0.005em; white-space: nowrap; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-station:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-station.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-station.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-station i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
       .kit-station-ct { font-family: var(--mono); font-size: 11.5px; font-weight: 600; line-height: 1; padding: 2px 6px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-station.on .kit-station-ct { background: rgba(255,255,255,0.18); color: var(--paper); }
       .kit-history-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 11px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--n-600); white-space: nowrap; flex-shrink: 0; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-history-toggle:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-history-toggle.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-history-toggle svg { width: 16px; height: 16px; }
       .kit-htg-ct { font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1; padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: var(--paper); }
@@ -12878,7 +12878,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-recipe-empty-t { font-size: 15px; font-weight: 600; color: var(--ink); }
       .kit-recipe-empty-b { font-size: 13px; line-height: 1.5; max-width: 280px; }
       html[data-theme="dark"] .kit-station, html[data-theme="dark"] .kit-history-toggle, html[data-theme="dark"] .kit-order, html[data-theme="dark"] .kit-hrow, html[data-theme="dark"] .kit-zoom, html[data-theme="dark"] .kit-history-head .kit-history-x { background: var(--paper-soft); }
-      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-line); color: var(--inverse-ink); }
       html[data-theme="dark"] .kit-station.on .kit-station-ct, html[data-theme="dark"] .kit-history-toggle.on .kit-htg-ct { background: var(--paper-muted); color: var(--ink); }
       html[data-theme="dark"] .kit-station-ct, html[data-theme="dark"] .kit-htg-ct, html[data-theme="dark"] .kit-q, html[data-theme="dark"] .kit-eye, html[data-theme="dark"] .kit-zoom .kit-q { background: var(--paper-muted); }
       html[data-theme="dark"] .kit-act-accept { background: var(--paper-muted); color: var(--ink); }
@@ -13382,6 +13382,14 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
  * ═════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  /* Snapshot the handlers contributed before the real-data modules reassert
+     theirs at load. An allow-list by nav name is not enough: if one of those
+     modules fails to install, the same nav name still points at this file's
+     fixture handler. Provenance is part of the data barrier. */
+  const HANDLER_BEFORE_REAL_MODULE = Object.create(null);
+  ['conformite', 'stock', 'finance', 'equipe', 'menu', 'payroll'].forEach((nav) => {
+    HANDLER_BEFORE_REAL_MODULE[nav] = window.Kiwi?.handlers?.['nav-' + nav] || null;
+  });
   const CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const SPARK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
 
