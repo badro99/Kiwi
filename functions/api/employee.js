@@ -60,18 +60,21 @@ async function liveEmployee(request, env) {
   try {
     // Once the access mirror exists it is authoritative for revocation. Team
     // still enriches the employee view with schedule, hours and profile data.
-    const accessRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+    const accessRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
       .bind(session.merchant).first();
     const access = parse(accessRow && accessRow.data, { members: [] });
     const accessMember = (Array.isArray(access.members) ? access.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
-    if (accessRow && !accessMember) return null;
-    const teamRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
+    const teamRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
       .bind(session.merchant).first();
     const team = parse(teamRow && teamRow.data, { members: [] });
     const teamMember = (Array.isArray(team.members) ? team.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId || ''));
-    const member = accessMember ? { ...(teamMember || {}), ...accessMember } : teamMember;
+    const teamIsNewer = !accessRow
+      || Number((teamRow && teamRow.updated_ts) || 0) > Number(accessRow.updated_ts || 0);
+    const member = accessMember
+      ? { ...(teamMember || {}), ...accessMember }
+      : (teamIsNewer ? teamMember : null);
     if (member) {
       return {
         session,

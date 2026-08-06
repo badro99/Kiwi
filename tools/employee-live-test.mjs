@@ -109,6 +109,30 @@ put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='mirror-only' AND fe
   JSON.stringify({ members: [] }));
 const revoked = await get(mirrorCookie);
 ok(revoked.status === 401, "retirer l'employé du miroir révoque immédiatement sa session");
+
+// Saving Équipe and its smaller access mirror are two network requests. If the
+// Team save lands last, that newer roster must admit the new hire instead of an
+// older mirror hiding them forever. A later empty mirror still revokes access.
+put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,updated_ts) VALUES (?,?,?,?,?,?,?)',
+  'lag-store', '{}', 'pro', 'restaurant', 'active', 'Lag Store', now);
+put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
+  'lag-store', 'employee-access', JSON.stringify({ members: [] }), 1, now - 1000);
+const lagTeam = { members: [{
+  id: 'mem-lin', firstName: 'Lin', lastName: 'Ilin', email: 'lin9@gmail.com',
+  function: 'Serveur', department: 'Salle', password: '3535', venueSlug: 'lag-store',
+}] };
+put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
+  'lag-store', 'team', JSON.stringify(lagTeam), 1, now);
+const lagLogin = await post({ action: 'login', email: 'lin9@gmail.com', pin: '3535' });
+const lagCookie = String(lagLogin.headers.get('set-cookie') || '').split(';')[0];
+ok(lagLogin.status === 200 && lagCookie.startsWith('kiwi_employee='),
+  "un employé du roster Équipe plus récent n'est plus masqué par un ancien miroir");
+const lagState = await get(lagCookie);
+ok(lagState.status === 200, 'la session issue du roster récent reste valide dans le portail');
+put("UPDATE store_docs SET data=?, rev=rev+1, updated_ts=? WHERE merchant='lag-store' AND feature='employee-access'",
+  JSON.stringify({ members: [] }), now + 1000);
+const lagRevoked = await get(lagCookie);
+ok(lagRevoked.status === 401, 'un miroir plus récent conserve la révocation après la réparation');
 ok(AUTH.employeeRoleOpensTill('Caissier') && AUTH.employeeRoleOpensTill('Manager'),
   'caissier et manager gardent leur accès caisse');
 ok(!AUTH.employeeRoleOpensTill('Serveur') && !AUTH.employeeRoleOpensTill('Cuisinier'),
