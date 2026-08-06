@@ -362,21 +362,40 @@
       align-items: center;
       margin: 0 4px;
     }
-    .brand-mark img,
-    .pin-brand img,
-    .clockin-brand img,
-    .wordmark img {
-      width: auto; display: block;
+    .brand-mark img {
+      height: 30px; width: auto; display: block;
       pointer-events: none; -webkit-user-drag: none; user-select: none;
     }
-    .brand-mark img { height: 30px; }
-    /* Ticket empty state sits on a light panel — theme picks the variant.
-       The empty state greys and fades whichever one shows (.rp-empty .wordmark). */
-    .wordmark { display: inline-flex; align-items: center; }
-    .wordmark img { height: 34px; }
-    .wordmark .logo-dark { display: none; }
-    html[data-caisse-theme="dark"] .wordmark .logo-light { display: none; }
-    html[data-caisse-theme="dark"] .wordmark .logo-dark { display: block; }
+    /* Seule .brand-mark porte réellement une <img> (la barre latérale).
+       Le v2 remplaçait aussi les trois autres signatures — .wordmark du ticket,
+       .pin-brand du verrouillage, .clockin-brand du pointage — par la même SVG,
+       mais ce remplacement vit dans des correctifs de balisage reportés avec la
+       couche produit. Leur balisage reste donc du texte : « kiwi » suivi d'un
+       point ou d'une pastille. Styler une <img> qui n'existe pas les aurait
+       laissées sans typographie du tout. On garde la recette de production. */
+
+    /* Ticket empty state — mot-marque en dégradé, texte et non image. */
+    .wordmark {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      background: linear-gradient(180deg, #1F5D3C 0%, #3FB67A 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .wordmark .dot { color: var(--emerald); -webkit-text-fill-color: var(--emerald); }
+    /* En mode nuit le panneau ticket descend à #0C1210 : le dégradé de production
+       (#1F5D3C → #3FB67A), déjà atténué par le grisage et l'opacité .6 de
+       l'état vide, y tomberait à ~3:1. On remonte le dégradé, le mode jour
+       garde exactement la recette de production. */
+    html[data-caisse-theme="dark"] .wordmark {
+      background: linear-gradient(180deg, #3FB67A 0%, #7DF2B0 100%);
+    }
 
     .duty-row {
       display: flex; align-items: center; gap: 8px;
@@ -2071,11 +2090,17 @@
       0%   { opacity: 1; transform: scale(1); filter: blur(0); }
       100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
     }
+    /* Mot-marque texte — le remplacement par une SVG est reporté avec son balisage. */
     .pin-brand {
-      display: inline-flex; align-items: center;
+      font-size: 32px; font-weight: 700; letter-spacing: -0.05em;
+      display: inline-flex; align-items: baseline; gap: 5px;
+      color: var(--paper-cream);
       margin-bottom: 36px;
     }
-    .pin-brand img { height: 40px; }
+    .pin-brand i {
+      width: 8px; height: 8px; background: var(--mint); border-radius: 50%;
+      display: inline-block;
+    }
     .pin-greet {
       font-family: var(--serif);
       font-size: 22px; color: rgba(255,255,255,.78);
@@ -2261,8 +2286,13 @@
       100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
     }
     .clockin-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .clockin-brand { display: inline-flex; align-items: center; }
-    .clockin-brand img { height: 36px; }
+    /* Idem pointage : texte + pastille menthe, pas d'image. */
+    .clockin-brand {
+      font-size: 30px; font-weight: 700; letter-spacing: -0.05em;
+      display: inline-flex; align-items: baseline; gap: 5px;
+      color: var(--paper-cream);
+    }
+    .clockin-brand i { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; display: inline-block; }
     .clockin-tagline { font-family: var(--serif); font-size: 15px; color: rgba(255,255,255,0.5); }
     .clockin-mid { display: flex; flex-direction: column; align-items: center; text-align: center; }
     .clockin-greet { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
