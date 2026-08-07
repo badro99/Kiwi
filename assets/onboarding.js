@@ -122,6 +122,11 @@
     .kob-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;min-height:24px;}
     .kob-brand{font-family:var(--sans);font-weight:600;font-size:19px;letter-spacing:-.03em;display:inline-flex;align-items:center;}
     .kob-brand i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:inline-block;margin-left:3px;transform:translateY(1px);}
+    /* The real wordmark only rides in under the Vexel skin, which swaps the
+       legacy text mark for it (design-vexel.css § 13). Hidden by default so the
+       pre-Vexel presentation is untouched. */
+    .kob-brand .vx-entry-logo{display:none;}
+    .kob-config-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(233,239,233,.4);}
     .kob-rail{display:flex;gap:6px;align-items:center;}
     .kob-rail b{width:20px;height:4px;border-radius:2px;background:rgba(255,255,255,.16);transition:background .3s,width .3s;display:block;}
     .kob-rail b.on{background:var(--mint);width:30px;}
@@ -233,6 +238,16 @@
   }
 
   /* ── Rail ────────────────────────────────────────────────────────────── */
+  // Same two-mark structure the lock screen and the account gate use: the
+  // legacy text wordmark, plus the real logo the Vexel skin swaps in.
+  function brandMark() {
+    return '<span class="kob-brand-legacy">kiwi<i></i></span>'
+      + '<span class="vx-entry-logo" aria-hidden="true">'
+      + '<img class="brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="" />'
+      + '<img class="brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />'
+      + '</span>';
+  }
+
   function rail() {
     let b = '';
     for (let i = 1; i <= TOTAL; i++) {
@@ -450,8 +465,8 @@
     const showRail = S.step >= 1 && S.step <= TOTAL;
     root.querySelector('.kob-card').innerHTML = `
       <div class="kob-top">
-        <span class="kob-brand">kiwi<i></i></span>
-        ${showRail ? rail() : `<span style="font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:rgba(233,239,233,.4);text-transform:uppercase;">${tr({ fr: 'Configuration', en: 'Setup', ar: 'الإعداد' })}</span>`}
+        <span class="kob-brand">${brandMark()}</span>
+        ${showRail ? rail() : `<span class="kob-config-label">${tr({ fr: 'Configuration', en: 'Setup', ar: 'الإعداد' })}</span>`}
       </div>
       <div class="kob-body">${def.body}</div>
       <div class="kob-foot">${def.foot}</div>`;
@@ -572,7 +587,7 @@
   function celebrate() {
     const name = S.ownerName.trim();
     root.querySelector('.kob-card').innerHTML = `
-      <div class="kob-top"><span class="kob-brand">kiwi<i></i></span></div>
+      <div class="kob-top"><span class="kob-brand">${brandMark()}</span></div>
       <div class="kob-body"><div class="kob-celebrate">
         <div class="kob-hero-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#7DF2B0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
         <h1 class="kob-h" style="text-align:center;">${name ? esc(name) + ', ' : ''}<span class="k-sans">${tr({ fr: 'votre espace est prêt.', en: 'your space is ready.', ar: 'مساحتك جاهزة.' })}</span></h1>

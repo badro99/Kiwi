@@ -1521,6 +1521,10 @@ body.design-vexel .kob-card {
   padding: 30px 32px 26px;
 }
 body.design-vexel .kob-brand { color: var(--ink); }
+/* The wizard's top bar is shorter than the lock screen's, so the wordmark
+   rides at 22px rather than the 28px the entry surfaces use. */
+body.design-vexel .kob-brand .vx-entry-logo { display: inline-flex; height: 22px; }
+body.design-vexel .kob-brand .vx-entry-logo img { height: 22px; }
 body.design-vexel .kob-config-label { color: var(--n-500); }
 body.design-vexel .kob-rail b { background: var(--n-300); }
 body.design-vexel .kob-rail b.on { background: var(--vx-accent); }
