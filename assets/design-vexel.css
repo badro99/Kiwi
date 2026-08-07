@@ -1642,6 +1642,7 @@ body.design-vexel .kob-btn.ghost:hover {
 }
 body.design-vexel :is(.kob-back, .kob-skip) { color: var(--n-500); }
 body.design-vexel :is(.kob-back, .kob-skip):hover { color: var(--ink); }
+body.design-vexel .kob-explore .kob-sep { color: var(--n-300); }
 body.design-vexel .kob-err { color: var(--danger); }
 body.design-vexel .kob-recap .r + .r { border-color: var(--n-200); }
 body.design-vexel .kob-recap .r span { color: var(--n-500); }

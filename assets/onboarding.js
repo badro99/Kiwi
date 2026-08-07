@@ -213,6 +213,8 @@
     .kob-skip:hover{color:rgba(233,239,233,.85);}
     .kob-err{color:#ffb3a3;font-size:12.5px;margin:9px 2px 0;min-height:1px;}
     .kob-explore{text-align:center;margin-top:16px;}
+    a.kob-skip{display:inline-block;}
+    .kob-explore .kob-sep{color:rgba(233,239,233,.28);font-size:12px;}
     .kob-recap{display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;margin:2px 0 6px;}
     .kob-recap .r{display:flex;justify-content:space-between;gap:14px;padding:12px 15px;font-size:13.5px;}
     .kob-recap .r+.r{border-top:1px solid rgba(255,255,255,.07);}
@@ -297,7 +299,10 @@
         </div>`,
       foot: `
         <button class="kob-btn primary" data-go="next">${tr({ fr: 'Commencer', en: 'Get started', ar: 'لنبدأ' })}</button>
-        ${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) ? '' : `<div class="kob-explore" style="flex-basis:100%;"><button class="kob-skip" data-explore>${tr({ fr: "Explorer la démo d'abord", en: 'Explore the demo first', ar: 'استكشاف العرض أولاً' })}</button></div>`}`,
+        <div class="kob-explore" style="flex-basis:100%;">
+          ${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) ? '' : `<button class="kob-skip" data-explore>${tr({ fr: "Explorer la démo d'abord", en: 'Explore the demo first', ar: 'استكشاف العرض أولاً' })}</button><span class="kob-sep" aria-hidden="true">·</span>`}
+          <a class="kob-skip" href="/auth/logout" data-signin>${tr({ fr: "J'ai déjà un compte", en: 'I already have an account', ar: 'لدي حساب بالفعل' })}</a>
+        </div>`,
     };
   }
 
@@ -647,6 +652,18 @@
       const goBtn = e.target.closest('[data-go]');
       if (goBtn) { go(goBtn.dataset.go); return; }
       if (e.target.closest('[data-explore]')) { exploreDemo(); return; }
+      const signin = e.target.closest('[data-signin]');
+      if (signin) {
+        // /auth/logout clears every Kiwi auth cookie, but it lands on `/` —
+        // which serves the public landing page, not the account form. So clear
+        // first, then go straight to the gate: one tap instead of three. The
+        // href stays a real link, so this still works if the fetch fails.
+        e.preventDefault();
+        fetch('/auth/logout', { redirect: 'manual', credentials: 'same-origin' })
+          .then(() => { location.href = '/dashboard'; })
+          .catch(() => { location.href = signin.getAttribute('href'); });
+        return;
+      }
       if (e.target.closest('[data-finish]')) { finish(); return; }
       if (e.target.closest('[data-enter]')) { enterApp(); return; }
       if (e.target.closest('[data-more]')) {
