@@ -118,6 +118,30 @@ body.design-vexel .goal-bar .g-fill { background: var(--mint); }
  * flush with the page — no seam, just a hairline — and the topbar floats.
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel .sidebar {
+  /* Les jetons du rail sont posés ICI, sur l'élément qui les consomme, et non
+   * dans les couches `[data-vexel-mode]` plus bas — cet attribut n'est jamais
+   * écrit, donc ces couches n'ont jamais rien peint et chaque
+   * `var(--vx-sidebar-*)` retombait sur du vide. Tant que le tableau de bord
+   * était forcé en sombre, l'oubli ne se voyait pas : `--ink` valait déjà une
+   * teinte claire et le rail restait lisible par accident. En clair, `--ink`
+   * devient presque noir et le rail — qui reste sombre par choix — affichait
+   * du texte noir sur fond noir. Les deux couches donnaient exactement les
+   * mêmes valeurs pour le rail (le rail est sombre dans les deux climats),
+   * une seule définition suffit donc.  */
+  --vx-sidebar-bg: rgba(10, 15, 13, 0.92);
+  --vx-sidebar-popover: #101713;
+  --vx-sidebar-surface: rgba(247, 245, 240, 0.05);
+  --vx-sidebar-hover: rgba(247, 245, 240, 0.08);
+  --vx-sidebar-active: rgba(0, 255, 174, 0.10);
+  --vx-sidebar-border: rgba(247, 245, 240, 0.09);
+  --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
+  --vx-sidebar-ink: #F7F5F0;
+  --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-accent: #00FFAE;
+  --vx-sidebar-accent-deep: #0B6E4F;
+  --vx-sidebar-primary-ink: #04241A;
+
   --ink: var(--vx-sidebar-ink);
   --ink-soft: var(--vx-sidebar-ink);
   --n-700: var(--vx-sidebar-ink);

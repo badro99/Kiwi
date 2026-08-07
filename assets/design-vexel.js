@@ -5,10 +5,9 @@
  * where its values come from.
  *
  * This controller does three things:
- *   1. Flips BOTH `html[data-theme="dark"]` and `body.design-vexel`. The skin
- *      is a delta on top of the existing dark theme, not a theme of its own —
- *      without the attribute, theme.css's 324 lines of per-component dark
- *      fixes never apply and the skin lands on a light dashboard.
+ *   1. Flips `body.design-vexel` — the geometry, type and layout of the v2
+ *      dashboard. The skin is climate-neutral: it paints the same on the light
+ *      and the dark surface, and it no longer touches `data-theme`.
  *   2. Injects the SVG gradient the chart area fill references. A CSS file
  *      cannot declare `<linearGradient>`, and `fill: url(#id)` silently
  *      renders nothing when the id is absent — so the def has to be real DOM.
@@ -16,20 +15,29 @@
  *
  * ON by default for every merchant, like design-2026. This was an explicit
  * product call during the v2 design migration: the skin IS the new dashboard,
- * so it ships to everyone rather than sitting behind `?skin=vexel`. It carries
- * `data-theme="dark"` with it, which means the dark surface is now the default
- * dashboard rather than the Kiwi Ultra hook it used to be — that consequence is
- * intended, not incidental. `?skin=off` (or `?skin=none`) still opts a session
- * out and persists the choice, and `KiwiDesignVexel.disable()` does the same.
+ * so it ships to everyone rather than sitting behind `?skin=vexel`.
+ * `?skin=off` (or `?skin=none`) still opts a session out and persists the
+ * choice, and `KiwiDesignVexel.disable()` does the same.
  *
  * Absence of a stored preference means "take the default", so init() does NOT
  * write '1' on a plain load — only an explicit opt-in or opt-out persists.
  * Changing the default later therefore reaches merchants who never chose.
+ *
+ * ── The surface climate is a separate preference ──
+ * The skin shipped forcing `data-theme="dark"`, which made the dark surface the
+ * default dashboard. That is reversed: the merchant lands on the light surface
+ * and switches to dark from the topbar if they want it. The choice lives in
+ * `kiwiDashTheme` and is primed here, in the head-synchronous pass, so a
+ * merchant who chose dark never sees a white flash. It is deliberately NOT the
+ * `kiwiTheme` key i18n.js writes — brand.html, pitch.html and wallet.html share
+ * that key and have no dark surface, so a dashboard choice must not follow the
+ * merchant onto them. See KiwiDashTheme at the bottom of this file.
  * ─────────────────────────────────────────────────────────────────────────── */
 (function () {
   'use strict';
 
   var KEY = 'kiwiDesignVexel';
+  var THEME_KEY = 'kiwiDashTheme';
   var CLASS = 'design-vexel';
   var GRAD_ID = 'kwVexelArea';
 
@@ -97,38 +105,72 @@
   }
 
   /**
-   * Dark mode is shared property. fusion-mode (venues.js) sets the same
-   * `data-theme="dark"` for its own reasons, so this skin may only take the
-   * attribute back off if it was the one that put it on.
-   *
-   * The ownership flag therefore has to be recorded CONDITIONALLY, at the
-   * moment of turning on, based on what the attribute already was. An earlier
-   * version stamped `vexelSetTheme = '1'` unconditionally on every enable —
-   * which meant enabling the skin inside a fusion-mode session and then
-   * disabling it stripped fusion-mode's own dark theme out from under it. The
-   * comment claiming the code avoided that was simply wrong.
+   * Turning the skin on and off no longer touches `data-theme`. It used to,
+   * and that was the bug behind "the dashboard is dark and I never asked for
+   * it": the skin owned the surface climate, so every merchant inherited the
+   * dark theme as a side effect of getting the new geometry. Climate is now
+   * the merchant's own choice (KiwiDashTheme, below) and outlives the skin —
+   * which also means fusion-mode (venues.js) is the only other writer of the
+   * attribute and no longer needs an ownership flag to protect it from us.
    */
   function apply(on, persist) {
-    var html = document.documentElement;
     document.body.classList.toggle(CLASS, on);
 
-    if (on) {
-      var alreadyDark = html.getAttribute('data-theme') === 'dark';
-      html.setAttribute('data-theme', 'dark');
-      if (!alreadyDark) html.dataset.vexelSetTheme = '1';
-      injectGradient();
-    } else {
-      if (html.dataset.vexelSetTheme === '1') {
-        html.removeAttribute('data-theme');
-        delete html.dataset.vexelSetTheme;
-      }
-      removeGradient();
-    }
+    if (on) injectGradient();
+    else removeGradient();
 
     if (persist !== false) {
       try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
     }
   }
+
+  /* ─── Surface climate ───
+   * Light is the default: absence of the key means light, and light is what
+   * theme.css paints when `data-theme` is anything other than "dark". So the
+   * only thing to do on a light session is nothing at all.
+   *
+   * Written to the DOM here rather than through KiwiI18n.setTheme, because
+   * that helper persists to the shared `kiwiTheme` key that the marketing
+   * pages also read. */
+  function storedTheme() {
+    try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; }
+    catch (e) { return 'light'; }
+  }
+
+  function applyTheme(theme, persist) {
+    var dark = theme === 'dark';
+    var html = document.documentElement;
+    if (dark) html.setAttribute('data-theme', 'dark');
+    else html.setAttribute('data-theme', 'light');
+    if (persist !== false) {
+      try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
+    }
+    syncThemeButtons(dark);
+    try {
+      window.dispatchEvent(new CustomEvent('kiwi:themechange', { detail: { theme: dark ? 'dark' : 'light' } }));
+    } catch (e) {}
+  }
+
+  /* The button carries both icons in the markup and hides one in CSS, so the
+   * icon is right on the first frame. Only the label and the pressed state
+   * need JS — a screen reader has no CSS to read. */
+  function syncThemeButtons(dark) {
+    var label = dark ? 'Passer en mode clair' : 'Passer en mode sombre';
+    document.querySelectorAll('[data-action="toggle-theme"]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+    });
+  }
+
+  /* Delegated rather than bound, because the topbar is re-rendered by several
+   * surfaces (role switch, fusion mode) and a bound listener would be lost. */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-action="toggle-theme"]');
+    if (!btn) return;
+    e.preventDefault();
+    applyTheme(storedTheme() === 'dark' ? 'light' : 'dark');
+  });
 
   /* `?skin=off` has to run apply(false) rather than fall through, or it can
    * only ever fail to turn the skin on for one page load — the stored '0'
@@ -143,6 +185,10 @@
     var v = url !== null ? url : stored();
     if (v === '0') apply(false, url !== null);
     else apply(true, url !== null);
+    /* Re-assert after i18n.js's init(), which adopts whatever is on <html>
+     * but would otherwise leave the toggle's label out of sync. persist=false
+     * — priming paints a stored choice, it does not make one. */
+    applyTheme(storedTheme(), false);
   }
 
   /**
@@ -159,21 +205,19 @@
    * moment later, before any chart renders. Persistence is left to init() for
    * the same reason — priming paints a stored choice, it does not make one.
    *
-   * Re-entrant by construction: init()'s own apply(true) finds data-theme
-   * already "dark" and therefore does not re-stamp the ownership flag, so
-   * enabling the skin inside a fusion-mode session still leaves fusion-mode
-   * owning the attribute.
+   * The climate is primed here too, and OUTSIDE the `?skin=off` early return:
+   * a merchant who opted out of the skin still keeps whichever surface they
+   * chose. It is also the reason this runs at prime time at all — a stored
+   * dark preference applied at DOMContentLoaded would flash the light field
+   * first, which is exactly the flash this bridge exists to prevent.
    */
   function primeBody() {
     if (!document.body) return false;
+    var theme = storedTheme();
+    if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     var url = fromUrl();
     var v = url !== null ? url : stored();
     if (v === '0') return true;
-    var html = document.documentElement;
-    if (html.getAttribute('data-theme') !== 'dark') {
-      html.setAttribute('data-theme', 'dark');
-      html.dataset.vexelSetTheme = '1';
-    }
     document.body.classList.add(CLASS);
     return true;
   }
@@ -187,5 +231,15 @@
     disable: function () { apply(false); },
     toggle: function () { apply(!document.body.classList.contains(CLASS)); },
     isOn: function () { return document.body.classList.contains(CLASS); },
+  };
+
+  /* Dashboard surface climate. Separate from KiwiI18n.setTheme on purpose —
+   * see the header. `get()` is the honest answer to "what did the merchant
+   * choose", not "what is <html> showing right now": fusion-mode paints dark
+   * over a light preference and that must not be read back as a choice. */
+  window.KiwiDashTheme = {
+    get: storedTheme,
+    set: function (theme) { applyTheme(theme); },
+    toggle: function () { applyTheme(storedTheme() === 'dark' ? 'light' : 'dark'); },
   };
 })();

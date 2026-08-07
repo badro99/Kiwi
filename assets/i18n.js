@@ -1302,9 +1302,15 @@
   }
 
   /* ─── setTheme ───
-   * Kept programmatic-only — Go Ultra / fusion-mode (venues.js) flips the
+   * Programmatic — Go Ultra / fusion-mode (venues.js) flips the
    * <html data-theme="dark"> attribute to layer the dark surface tokens under
-   * its brand palette. No user-facing toggle is exposed anywhere. */
+   * its brand palette.
+   *
+   * This is NOT the dashboard's merchant-facing light/dark switch. That one
+   * lives in assets/design-vexel.js and writes `kiwiDashTheme`, precisely
+   * because `kiwiTheme` below is shared with brand.html, pitch.html and
+   * wallet.html — none of which have a dark surface. A dashboard choice
+   * written here would follow the merchant onto those pages. */
   function setTheme(theme) {
     if (!['dark','light'].includes(theme)) theme = 'light';
     document.documentElement.setAttribute('data-theme', theme);
@@ -1333,16 +1339,22 @@
       });
     });
 
-    // Light-only mode: dark toggle removed per product decision
-    // (CSS vars still flip if data-theme is set programmatically)
-
-    // Apply persisted state — always light now
-    setTheme('light');
+    // Adopt whatever climate is already on <html> rather than forcing light.
+    // This used to be an unconditional setTheme('light'), which ran at
+    // DOMContentLoaded and therefore stomped the dashboard's own preference a
+    // beat after design-vexel.js had primed it.
+    //
+    // On a page that owns its own climate (the dashboard, via KiwiDashTheme)
+    // the attribute is adopted WITHOUT persisting: writing it to `kiwiTheme`
+    // would carry a dashboard dark choice onto brand.html, pitch.html and
+    // wallet.html, which all load theme.css and would go dark with it.
+    // Everywhere else there is no dark writer, so the attribute is absent and
+    // this still lands on light — exactly as the old forced call did.
+    var climate = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    if (window.KiwiDashTheme) document.documentElement.setAttribute('data-theme', climate);
+    else setTheme(climate);
     setLang(getLang());
   }
-
-  /* Light-only mode — clear any previously saved dark preference */
-  localStorage.setItem('kiwiTheme', 'light');
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
