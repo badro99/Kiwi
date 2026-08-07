@@ -408,6 +408,10 @@ function authPage(opts) {
 <title>Kiwi · Votre compte</title>
 <style>
   :root {
+    /* Déclaré explicitement : sans ça, un Mac en mode nuit fait rendre à Chrome
+       les champs et la barre de défilement en sombre par-dessus notre palette
+       claire. Le sombre est repris plus bas, sur html[data-theme="dark"]. */
+    color-scheme: light;
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
     /* --paper is the brand's cream — must stay CREAM in both themes so the
        wordmark's "on-dark" variant (paper text on dark surface) still reads.
@@ -686,56 +690,62 @@ function authPage(opts) {
     h1 { font-size: 22px; }
     .brand { font-size: 30px; }
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      /* Only --bg / --surface / structural tokens flip — --paper stays cream so
-         the wordmark's on-dark variant (paper text on dark card) still reads. */
-      --bg:#0c1310;
-      --ink:#e8efe9;
-      --surface:#141b17;
-      --line:#26302b;
-      --muted:#93a89c;
-      --field:#0e1613;
-      --field-focus:#131d18;
-    }
-    body {
-      background:
-        radial-gradient(1200px 720px at 50% -180px, rgba(125,242,176,.14), transparent 62%),
-        radial-gradient(900px 560px at 92% 108%, rgba(11,110,79,.10), transparent 56%),
-        var(--bg);
-    }
-    /* Wordmark in dark = paper cream on dark surface — matches brand.html §01
-       "Inverse" logo variant. */
-    .brand { color: var(--paper); }
-    .brand i { box-shadow: 0 0 0 4px rgba(125,242,176,.15); }
-    h1 { color: var(--paper); }
-    h1 em { color: var(--mint); }
-    .card {
-      box-shadow:
-        0 40px 80px -34px rgba(0,0,0,.55),
-        0 8px 24px -14px rgba(0,0,0,.40);
-    }
-    /* Liquid Glass — DARK MODE ONLY. Here the card floats over the dark green-tinted
-       gradient, so real refraction reads beautifully. Light mode keeps its crisp
-       white card (glass would wash out on cream). Fill stays high (70%) so the login
-       form remains a legible reading/input surface. Falls back to the opaque dark
-       card wherever url() backdrop filters aren't supported. */
-    @supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
-      .card {
-        background: color-mix(in srgb, var(--surface) 70%, transparent);
-        border-color: rgba(255,255,255,.10);
-        -webkit-backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
-                backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
-      }
-    }
-    .tab[aria-selected="true"] { color: var(--paper); }
-    .pill { background: #1c2622; box-shadow: 0 2px 10px rgba(0,0,0,.5), 0 0 0 1px rgba(125,242,176,.08); }
-    input::placeholder { color: #6a7770; }
-    .err, .staff-err { color: #ff9d8a; }
-    .revoked { background: rgba(255,157,138,.08); border-color: rgba(255,157,138,.28); color: #ff9d8a; }
-    .staff button { background: var(--atlas); }
-    .staff button:hover { background: #0e8560; }
+  /* Le sombre est un CHOIX du commerçant, pas une conséquence des réglages de son
+     Mac. La porte suivait prefers-color-scheme, donc un poste en mode nuit
+     ouvrait Kiwi sur un écran noir alors que le tableau de bord, lui, démarre en
+     clair — deux surfaces du même produit qui ne se ressemblaient pas. On s'aligne
+     donc sur data-theme, écrit par design-vexel.js depuis la clé kiwiDashTheme
+     avant le premier rendu : clair par défaut, sombre uniquement si le commerçant
+     a basculé l'interrupteur. Si le script ne charge pas, on reste en clair. */
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    /* Only --bg / --surface / structural tokens flip — --paper stays cream so
+       the wordmark's on-dark variant (paper text on dark card) still reads. */
+    --bg:#0c1310;
+    --ink:#e8efe9;
+    --surface:#141b17;
+    --line:#26302b;
+    --muted:#93a89c;
+    --field:#0e1613;
+    --field-focus:#131d18;
   }
+  html[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 720px at 50% -180px, rgba(125,242,176,.14), transparent 62%),
+      radial-gradient(900px 560px at 92% 108%, rgba(11,110,79,.10), transparent 56%),
+      var(--bg);
+  }
+  /* Wordmark in dark = paper cream on dark surface — matches brand.html §01
+     "Inverse" logo variant. */
+  html[data-theme="dark"] .brand { color: var(--paper); }
+  html[data-theme="dark"] .brand i { box-shadow: 0 0 0 4px rgba(125,242,176,.15); }
+  html[data-theme="dark"] h1 { color: var(--paper); }
+  html[data-theme="dark"] h1 em { color: var(--mint); }
+  html[data-theme="dark"] .card {
+    box-shadow:
+      0 40px 80px -34px rgba(0,0,0,.55),
+      0 8px 24px -14px rgba(0,0,0,.40);
+  }
+  /* Liquid Glass — DARK MODE ONLY. Here the card floats over the dark green-tinted
+     gradient, so real refraction reads beautifully. Light mode keeps its crisp
+     white card (glass would wash out on cream). Fill stays high (70%) so the login
+     form remains a legible reading/input surface. Falls back to the opaque dark
+     card wherever url() backdrop filters aren't supported. */
+  @supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
+    html[data-theme="dark"] .card {
+      background: color-mix(in srgb, var(--surface) 70%, transparent);
+      border-color: rgba(255,255,255,.10);
+      -webkit-backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+              backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+    }
+  }
+  html[data-theme="dark"] .tab[aria-selected="true"] { color: var(--paper); }
+  html[data-theme="dark"] .pill { background: #1c2622; box-shadow: 0 2px 10px rgba(0,0,0,.5), 0 0 0 1px rgba(125,242,176,.08); }
+  html[data-theme="dark"] input::placeholder { color: #6a7770; }
+  html[data-theme="dark"] .err, html[data-theme="dark"] .staff-err { color: #ff9d8a; }
+  html[data-theme="dark"] .revoked { background: rgba(255,157,138,.08); border-color: rgba(255,157,138,.28); color: #ff9d8a; }
+  html[data-theme="dark"] .staff button { background: var(--atlas); }
+  html[data-theme="dark"] .staff button:hover { background: #0e8560; }
 </style>
 <link rel="stylesheet" href="/assets/design-vexel.css" />
 <script src="/assets/design-vexel.js"></script>
