@@ -620,9 +620,16 @@ body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m {
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
-/* The mockup band contains four KPIs; configurable overflow tiles remain in
- * the DOM and return untouched with the skin off. */
-body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(n+5) {
+/* The mockup band contains four KPIs, but the band is merchant-configurable
+ * ("Personnaliser") and production ships six by default. Truncating by position
+ * dropped whichever cards happened to sit fifth and sixth — on the default
+ * configuration that silently swallowed "Ratio card / cash", a real figure with
+ * no counterpart anywhere else in the skin. Hide by identity instead: the only
+ * card that may go is the regulars/clients one, because the vexel-clients rail
+ * card already renders exactly those values and showing both duplicates them on
+ * screen. Every other tile stays and the band flows. */
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m[data-kpi="regulars"],
+body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m[data-kpi="clients"] {
   display: none;
 }
 body.design-vexel .vexel-compose [data-kpi-band] > .kpi-m:nth-child(4) > .l {
@@ -695,7 +702,11 @@ body.design-vexel .vexel-revenue-row {
   display: flex !important;
   flex-wrap: nowrap;
   align-items: stretch;
-  height: 331px !important;
+  /* 372 = objectif (190) + gouttière (16) + clients réguliers (166). La carte
+   * objectif porte désormais les deux comparaisons ; à 331px la carte clients
+   * perdait 36px et rognait « sur 1240 clients vus ». Le graphe suit la même
+   * hauteur pour que les deux colonnes restent alignées en bas. */
+  height: 372px !important;
   gap: var(--vx-gap);
   margin: 0 0 var(--vx-gap);
 }
@@ -811,7 +822,7 @@ body.design-vexel .vexel-revenue-rail {
   gap: var(--vx-gap);
   width: 300px;
   min-width: 300px;
-  height: 331px;
+  height: 372px;
 }
 body.design-vexel .vexel-rail-card,
 body.design-vexel .vexel-goals-card,
@@ -824,7 +835,9 @@ body.design-vexel .vexel-bottom-row > [data-mix-block] {
   backdrop-filter: blur(2px);
 }
 body.design-vexel .vexel-rail-card { padding: 19px 23px; }
-body.design-vexel .vexel-day-goal { flex: 0 0 151px; height: 151px; }
+/* La carte se dimensionne sur son contenu depuis qu'elle porte aussi les
+ * comparaisons : une hauteur figée à 151px les aurait rognées. */
+body.design-vexel .vexel-day-goal { flex: 0 0 auto; }
 body.design-vexel .vexel-clients { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 body.design-vexel .vexel-rail-label {
   color: var(--n-500);
@@ -875,6 +888,38 @@ body.design-vexel .vexel-goal-foot {
   font-size: 12px;
   white-space: nowrap;
 }
+/* Les comparaisons remontées du panneau que la peau masque : une ligne par
+ * comparaison, libellé fantôme à gauche, valeur tabulaire à droite. Mêmes
+ * couleurs que les deltas des tuiles KPI (accent en hausse, danger en
+ * baisse) pour que le même signe se lise pareil partout. */
+body.design-vexel .vexel-goal-compare {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+}
+body.design-vexel .vexel-goal-cmp {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  color: var(--vx-text-ghost);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+body.design-vexel .vexel-goal-cmp span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.design-vexel .vexel-goal-cmp b {
+  flex: none;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+body.design-vexel .vexel-goal-cmp b.up { color: var(--vx-accent); }
+body.design-vexel .vexel-goal-cmp b.down { color: var(--danger); }
 /* Clients réguliers · même anneau que Ventes par canal et Mix de paiement :
  * rayon 46, trait de 9, bout arrondi, remplissage sur la même courbe. La part
  * se lit au centre, les nombres à côté. */
@@ -1674,13 +1719,23 @@ body.design-vexel .brand-logo-dark { display: block; }
     padding-inline-end: 120px;
   }
   body.design-vexel .vexel-revenue-row { height: auto !important; flex-direction: column; }
-  body.design-vexel .vexel-revenue-row > .hero-today { height: 331px; }
+  /* `flex: 1 1 0` sizes the card across the row on wide screens. Once the row
+   * turns into a column the same declaration makes flex-basis the *height*, so
+   * the 331px below never applied and the card collapsed to its min-content
+   * height (~44px) — the revenue chart, the hourly axis and the legend all
+   * disappeared below 1340px. Opt the card out of flexing so its height wins.
+   * `min-height` rather than `height`: below 720px the chart plus its legend
+   * need 351px, and a fixed height clipped the legend by 22px. */
+  body.design-vexel .vexel-revenue-row > .hero-today { flex: none; min-height: 331px; }
   body.design-vexel .vexel-revenue-rail {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
     flex-basis: auto;
     width: 100%;
     min-width: 0;
+    /* En grille les deux cartes sont côte à côte : la hauteur de la colonne
+     * (372px) ne sert plus à rien, on revient à la hauteur d'origine. */
+    height: 331px;
   }
   body.design-vexel .vexel-bottom-row { flex-direction: column; }
 }

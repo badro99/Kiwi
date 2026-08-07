@@ -104,6 +104,11 @@
         '<div class="vexel-goal-values"><strong data-vexel-goal-current>—</strong><span data-vexel-goal-target></span></div>' +
         '<div class="vexel-goal-track"><i data-vexel-goal-fill></i></div>' +
         '<div class="vexel-goal-foot"><span data-vexel-goal-pct>—</span><span data-vexel-goal-rest></span></div>' +
+        /* Les deux comparaisons (vs période précédente, vs mois) vivaient dans
+         * le panneau que la peau masque. Elles n'ont aucun autre point de
+         * sortie : sans ce miroir, deux chiffres réels disparaissent de
+         * l'écran. Rempli dans refresh() depuis les mêmes nœuds source. */
+        '<div class="vexel-goal-compare" data-vexel-goal-compare></div>' +
       '</section>' +
       /* Un anneau, comme les autres parts du tableau de bord.
        *
@@ -911,6 +916,39 @@
     if (restTarget) {
       var remaining = Math.max(0, numberFrom(targetText) - numberFrom(amountText));
       setText(restTarget, remaining ? 'Reste ' + Math.round(remaining).toLocaleString('fr-FR') + ' MAD' : '');
+    }
+
+    /* Miroir des comparaisons du panneau masqué. On recopie le libellé et la
+     * valeur tels qu'ils sont écrits par la source — aucun calcul ici, aucune
+     * donnée inventée. La signature évite de reconstruire à chaque frame. */
+    var compareTarget = document.querySelector('[data-vexel-goal-compare]');
+    if (compareTarget) {
+      var pairs = [];
+      document.querySelectorAll('.hero-left-today .hero-breakdown [data-hero-delta]').forEach(function (block) {
+        var labelNode = block.querySelector('.l');
+        var valueNode = block.querySelector('[data-hero-delta-val]');
+        if (!labelNode || !valueNode) return;
+        var pair = { l: labelNode.textContent.trim(), v: valueNode.textContent.trim() };
+        if (!pair.l && !pair.v) return;
+        pairs.push(pair);
+      });
+      var sig = pairs.map(function (p) { return p.l + '|' + p.v; }).join('~');
+      if (compareTarget.getAttribute('data-vexel-sig') !== sig) {
+        compareTarget.setAttribute('data-vexel-sig', sig);
+        compareTarget.textContent = '';
+        pairs.forEach(function (p) {
+          var row = el('div', 'vexel-goal-cmp');
+          var label = document.createElement('span');
+          label.textContent = p.l;
+          var value = document.createElement('b');
+          value.textContent = p.v;
+          if (/^\+/.test(p.v)) value.className = 'up';
+          else if (/^[-−]/.test(p.v)) value.className = 'down';
+          row.appendChild(label);
+          row.appendChild(value);
+          compareTarget.appendChild(row);
+        });
+      }
     }
 
     var clientCard = document.querySelector('[data-kpi="regulars"], [data-kpi="clients"]');
