@@ -200,6 +200,11 @@ ok(configSource.includes("'employee-access'") && configSource.includes('memberId
   'la synchronisation des PIN publie aussi les identifiants employés');
 ok(configSource.includes('pinGateConfigured') && configSource.includes('employeeRoleOpensTill'),
   "un roster sans caissier reste verrouillé au lieu d'ouvrir la caisse");
+const configClientSource = fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8');
+ok(configClientSource.includes('scopeConfirmed = true')
+  && configClientSource.includes("v.id === 'scoped'")
+  && configClientSource.includes('v.slug === urlScope'),
+  "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');

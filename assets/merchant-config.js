@@ -37,6 +37,11 @@
    * session, elle, n'a pas bougé. */
   var urlScope = '';
   try { urlScope = new URLSearchParams(location.search).get('merchant') || ''; } catch (_) {}
+  // A query parameter is only a request. It becomes a trusted target after
+  // identity.js receives /api/me's operator-scoped response and calls
+  // confirmScope(). This distinction lets owner-side writes name the selected
+  // client without ever trusting a hand-written ?merchant= value.
+  var scopeConfirmed = false;
 
   function merchant() {
     if (urlScope) return urlScope;
@@ -49,6 +54,7 @@
     var s = String(slug || urlScope || '').trim();
     if (!s) return false;
     urlScope = s;
+    scopeConfirmed = true;
     try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {}
     return true;
   }
@@ -127,7 +133,9 @@
       var KV = window.KiwiVenue;
       if (!KV || !KV.isCustom || !KV.isCustom() || !KV.getCurrentVenueData) return '';
       var v = KV.getCurrentVenueData();
-      if (!v || !v.custom || !v.name || TRANSIENT[v.id]) return '';
+      if (!v || !v.custom || !v.name) return '';
+      if (v.id === 'scoped') return scopeConfirmed && v.slug === urlScope ? String(v.name).trim() : '';
+      if (TRANSIENT[v.id]) return '';
       return String(v.name).trim();
     } catch (_) { return ''; }
   }
@@ -140,6 +148,10 @@
   function storeSlug() {
     try {
       var KV = window.KiwiVenue;
+      var v = KV && KV.getCurrentVenueData && KV.getCurrentVenueData();
+      if (v && v.id === 'scoped') {
+        return scopeConfirmed && v.slug && v.slug === urlScope ? String(v.slug) : '';
+      }
       if (KV && KV.slugOf && storeName()) { var s = KV.slugOf(); if (s) return s; }
     } catch (_) {}
     return slugMerchant(storeName());
