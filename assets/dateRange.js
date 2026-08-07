@@ -3306,7 +3306,7 @@
       // percentages; a hairline GAP between segments keeps them legible. A
       // light→deep green ramp + amber makes all four methods distinguishable.
       const GAP = 1.6;
-      const SW = 4.6;
+      const SW = 2.89;
       let acc = 0;
       const segs = rows.map((r) => {
         const pct = r.pct || 0;
@@ -3327,7 +3327,7 @@
 
       if (!built) {
         donut['inner' + 'HTML'] = `
-          <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="${SW}" pathLength="100"/>
+          <circle class="track" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="${SW}" pathLength="100"/>
           ${segs.map((s, i) => `
             <circle class="seg" data-seg="${i}"
               cx="21" cy="21" r="15.9155" fill="transparent"

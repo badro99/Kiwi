@@ -69,6 +69,7 @@
     if (!body) return;
     if (!body.classList.contains(CLASS)) { body.removeAttribute(MODE_ATTR); return; }
     body.setAttribute(MODE_ATTR, document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+    paintGradient();
   }
 
   function stored() {
@@ -114,12 +115,13 @@
     grad.setAttribute('x2', '0');
     grad.setAttribute('y2', '1');
 
-    /* Mint at the curve, nothing at the axis. 0.28 rather than 0.5 because the
-     * fill sits over the page's own dome glow and the two add. */
+    /* Accent at the curve, nothing at the axis. 0.28 rather than 0.5 because the
+     * fill sits over the page's own dome glow and the two add. The colour is left
+     * to paintGradient() — hardcoding mint here painted a neon fill under the
+     * atlas-green line on every light session. */
     [['0%', 0.28], ['55%', 0.08], ['100%', 0]].forEach(function (s) {
       var stop = document.createElementNS(NS, 'stop');
       stop.setAttribute('offset', s[0]);
-      stop.setAttribute('stop-color', '#00ffae');
       stop.setAttribute('stop-opacity', String(s[1]));
       grad.appendChild(stop);
     });
@@ -127,6 +129,22 @@
     defs.appendChild(grad);
     svg.appendChild(defs);
     document.body.appendChild(svg);
+  }
+
+  /**
+   * The fill follows `--vx-accent`, which is mint in the dark climate and atlas
+   * green in the light one. Read after the mode attribute is applied, never
+   * before — otherwise every switch leaves the first mode's colour stuck.
+   * No-op until the def exists, so the call order in apply() is free.
+   */
+  function paintGradient() {
+    var grad = document.getElementById(GRAD_ID);
+    if (!grad) return;
+    var accent = getComputedStyle(document.body).getPropertyValue('--vx-accent').trim();
+    if (!accent) return;
+    grad.querySelectorAll('stop').forEach(function (stop) {
+      stop.setAttribute('stop-color', accent);
+    });
   }
 
   function removeGradient() {
@@ -147,7 +165,7 @@
     document.body.classList.toggle(CLASS, on);
     syncMode();
 
-    if (on) injectGradient();
+    if (on) { injectGradient(); paintGradient(); }
     else removeGradient();
 
     if (persist !== false) {

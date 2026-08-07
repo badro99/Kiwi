@@ -290,6 +290,23 @@
   .sidebar .upsell-status .us-line { font-size: 12px; color: #8a9187; margin: 8px 0 0; line-height: 1.4; }
   .sidebar .upsell-status .us-manage { display: block; margin-top: 10px; font-size: 12px; color: #8a9187; text-decoration: none; transition: color 140ms; }
   .sidebar .upsell-status .us-manage:hover { color: var(--mint); }
+  /* Install card variant of .upsell — rendered by dashboard-pwa.js, which owns the
+     real browser install flow. Keeps the .upsell container so the fusion-mode
+     overrides below still reach it. */
+  .sidebar .kiwi-app-install-card { position: relative; overflow: hidden; flex: 0 0 auto; padding: 16px; }
+  .sidebar .kiwi-app-install-card::after { content: ""; position: absolute; width: 110px; height: 110px; inset-inline-end: -56px; top: -54px; border-radius: 50%; background: rgba(49,225,160,.11); filter: blur(2px); pointer-events: none; }
+  .sidebar .kiwi-install-head { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+  .sidebar .kiwi-install-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(49,225,160,.3); border-radius: 9px; background: rgba(49,225,160,.1); color: var(--mint); }
+  .sidebar .kiwi-install-mark svg { width: 16px; height: 16px; }
+  .sidebar .kiwi-app-install-card h4 { margin: 12px 0 6px; font-size: 15px; line-height: 1.2; max-width: 180px; }
+  .sidebar .kiwi-app-install-card p { font-size: 11.5px; line-height: 1.48; }
+  .sidebar .kiwi-install-benefits { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 11px; color: rgba(247,250,248,.62); font-size: 10.5px; }
+  .sidebar .kiwi-install-benefits span { display: inline-flex; align-items: center; gap: 5px; }
+  .sidebar .kiwi-install-benefits i { width: 5px; height: 5px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 8px rgba(49,225,160,.45); }
+  .sidebar .kiwi-app-install-card button { position: relative; z-index: 1; min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .sidebar .kiwi-app-install-card button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sidebar .kiwi-app-install-card button:disabled { cursor: default; opacity: .76; }
+  .sidebar .kiwi-app-install-card.is-installed { border-color: rgba(49,225,160,.28); }
   /* ✦ Kiwi Ultra line under the venue name — only rendered when
    * fusion-mode + ultra plan (visibility controlled by renderLocSwitch) */
   .sidebar .loc-ultra { font-size: 11px; color: var(--mint); font-weight: 500; margin-top: 4px; letter-spacing: 0.02em; }
@@ -992,6 +1009,14 @@
   .donut-legend .li .n i { width: 10px; height: 10px; border-radius: 3px; }
   .donut-legend .li .v { font-family: var(--mono); font-weight: 500; font-size: 12.5px; color: var(--ink); }
   .donut-legend .li .v .d { font-size: 10.5px; color: var(--success); margin-left: 6px; font-weight: 500; }
+  /* Ring composition — the vexel skin restyles these (assets/design-vexel.css);
+     these base rules only keep the markup laid out when the skin is off. */
+  .kiwi-ring-stat { --kiwi-ring-size: 128px; display: grid; justify-items: center; flex: 0 0 var(--kiwi-ring-size); gap: 7px; }
+  .kiwi-ring-visual { position: relative; width: var(--kiwi-ring-size); height: var(--kiwi-ring-size); }
+  .kiwi-ring { display: block; width: 100%; height: 100%; overflow: visible; }
+  .kiwi-ring-meta { display: grid; justify-items: center; gap: 2px; line-height: 1; }
+  .kiwi-ring-amount { color: var(--ink); font-size: 22px; font-weight: 650; letter-spacing: -.04em; white-space: nowrap; }
+  .kiwi-ring-meta .slash { color: var(--n-500); font-family: inherit; font-size: 12px; margin: 0; }
 
   /* ─────────────── HOURLY HEATMAP (horizontal) ─────────────── */
   .hh-row { display: flex; gap: 6px; margin-top: 18px; }
@@ -4958,9 +4983,11 @@
      follows. Deferred: it is decorative, and the CSS falls back to a top-edge
      glow if this never loads. -->
 <script src="assets/vexel-neon.js?v=2046" defer></script>
+<!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
+<link rel="stylesheet" href="assets/invoicing.css?v=4" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
-<script src="assets/design-vexel.js?v=2071"></script>
+<script src="assets/design-vexel.js?v=2076"></script>
 <!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper —
      solid-set type at -0.06em, the +0.16em micro-label, real glass over a still
      field, one page-wide reveal. Not its palette: the two tiers are a decision
@@ -5158,10 +5185,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
            Analytiques). Phase 1 is POS-only. See KIWI_2.0_ROADMAP.md. -->
     </nav>
 
-    <!-- Upsell card · content is rendered by renderUpsell() in venues.js.
-         In fusion mode (and currentPlan === 'ultra') we surface plan status
-         instead of selling — single-venue view keeps the existing
-         "Passer à Ultra" upsell copy for demo / pitch purposes. -->
+    <!-- Kiwi install card. renderUpsell() in venues.js still writes its plan-status
+         fallback here first; dashboard-pwa.js subscribes to the same venue changes
+         and lands after it, so the install card — which owns the real browser
+         install flow — is what stays on screen. -->
     <div class="upsell" data-upsell></div>
 
     <div class="merchant">
@@ -5398,6 +5425,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10M4 12h7M4 18h13M16 4v4M11 10v4M19 16v4"/></svg>
           <span data-i18n="dash.kpi.customize">Personnaliser</span>
         </button>
+        <button class="kpi-customize invoice-pill" data-action="invoicing" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>
+          <span data-invoicing-label>Facturation</span>
+        </button>
       </div>
       <div class="kpi-band" data-kpi-band></div>
 
@@ -5481,12 +5512,14 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
               </div>
             </div>
             <div class="donut-row">
-              <div style="position: relative; width: 150px; height: 150px;">
-                <svg width="150" height="150" viewBox="0 0 42 42" data-mix-donut>
-                  <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="4.6" pathLength="100"/>
-                </svg>
-                <div class="ring-center">
-                  <div class="score" style="font-size: 22px;" data-mix-center-amt>16 590</div>
+              <div class="kiwi-ring-stat">
+                <div class="kiwi-ring-visual">
+                  <svg class="kiwi-ring" viewBox="0 0 42 42" data-mix-donut aria-hidden="true">
+                    <circle class="track" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="2.89" pathLength="100"/>
+                  </svg>
+                </div>
+                <div class="kiwi-ring-meta">
+                  <div class="kiwi-ring-amount" data-mix-center-amt>16 590</div>
                   <div class="slash" data-i18n="dash.mix.center.unit">MAD carte</div>
                 </div>
               </div>
@@ -5931,6 +5964,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/trades.js" defer></script>
 <script src="assets/interactive.js" defer></script>
 <script src="assets/features.js" defer></script>
+<script src="assets/invoicing.js?v=2" defer></script>
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>

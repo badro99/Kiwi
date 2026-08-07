@@ -194,7 +194,9 @@ body.design-2026.design-ios27 .topbar {
  * carry `clear` or `frosted` in localStorage. The sidebar must never inherit
  * those historical choices: it is the fixed navigation spine for every venue,
  * current and future. Keep it truly opaque black in both themes and disable
- * every blur/refraction path, including the higher-specificity url() rule above. */
+ * every blur/refraction path, including the higher-specificity url() rule above.
+ * tools/glass-default-test.js pins this exact value — the v2 preview predates the
+ * rule and still shows the translucent iOS-27 rail; that is not ported. */
 body.design-2026.design-ios27 .sidebar,
 html[data-theme="dark"] body.design-2026.design-ios27 .sidebar,
 html[data-kiwi-glass="on"] body.design-2026.design-ios27 .sidebar {

@@ -64,9 +64,27 @@
     });
   }
 
-  // Run twice: pass-2 depends on pass-1's freshly-applied backgrounds, and some
-  // surfaces render their inner content a frame late. A second rAF pass settles both.
-  function run(root) { fix(root); requestAnimationFrame(() => fix(root)); }
+  const MARKS = ['dkfix-card', 'dkfix-bd', 'dkfix-text'];
+
+  // A tag decided against a dark background is wrong once the page is light again
+  // — and wrong a second time if the surface goes back to dark while still wearing
+  // it, because the pass then reads its own repaint instead of the real colour.
+  function clear(root) {
+    if (!root || root.nodeType !== 1) return;
+    const marked = root.matches('.dkfix-card, .dkfix-bd, .dkfix-text')
+      ? [root, ...root.querySelectorAll('.dkfix-card, .dkfix-bd, .dkfix-text')]
+      : root.querySelectorAll('.dkfix-card, .dkfix-bd, .dkfix-text');
+    marked.forEach((el) => el.classList.remove(...MARKS));
+  }
+
+  // Start from untagged computed styles on every theme transition. Run the dark
+  // pass twice because inner content can render one frame after its surface.
+  function run(root) {
+    clear(root);
+    if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+    fix(root);
+    requestAnimationFrame(() => fix(root));
+  }
 
   // Re-theme each surface as it opens (overlays + the live order drawer), and the
   // whole page when dark mode is switched on with surfaces already open.
@@ -77,8 +95,10 @@
     }));
   }).observe(document.body, { childList: true });
 
+  // Unguarded on purpose: the light transition is the one that has to strip the
+  // tags, so run() decides — not the caller.
   new MutationObserver(() => {
-    if (document.documentElement.getAttribute('data-theme') === 'dark') setTimeout(() => run(document.body), 30);
+    setTimeout(() => run(document.body), 30);
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   // The fullpage destination views (Menu, Stock, KDS, Tables, Conformité, …)
