@@ -240,6 +240,45 @@ function shapeOk(feature, raw) {
   return keys.some((k) => Object.prototype.hasOwnProperty.call(raw, k));
 }
 
+/* The employee portal must never depend on a second best-effort browser
+ * request after the Team document has been saved. That split was the reason an
+ * employee could be visible in Dashboard → Équipe while /api/employee still
+ * knew nothing about them: the large Team POST succeeded, the small
+ * /api/config PIN mirror failed silently, and the UI nevertheless looked
+ * saved.
+ *
+ * Build the private login roster from the exact Team document accepted by this
+ * endpoint and write both rows in the same D1 batch. `tenantFor()` has already
+ * resolved the real store, so this also remains correctly scoped when one
+ * owner has several dashboards/stores. */
+function employeeAccessFromTeam(team, merchant) {
+  const members = Array.isArray(team && team.members) ? team.members : [];
+  const seen = new Set();
+  const access = [];
+  for (const member of members) {
+    if (!member) continue;
+    const id = String(member.id || '').trim().slice(0, 96);
+    const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
+    const pin = String(member.pinCode || member.password || '').trim();
+    if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
+    const key = `${email}:${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    access.push({
+      id,
+      firstName: String(member.firstName || '').trim().slice(0, 60),
+      lastName: String(member.lastName || '').trim().slice(0, 60),
+      email,
+      pinCode: pin,
+      password: pin,
+      function: String(member.function || '').trim().slice(0, 60),
+      department: String(member.department || '').trim().slice(0, 60),
+      venueSlug: merchant,
+    });
+  }
+  return { members: access };
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -336,12 +375,24 @@ export async function onRequestPost(context) {
 
   const rev = serverRev + 1;
   try {
-    await env.DB.prepare(
+    const writeDoc = env.DB.prepare(
       `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(merchant, feature) DO UPDATE SET
          data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
-    ).bind(merchant, feature, text, rev, now).run();
+    ).bind(merchant, feature, text, rev, now);
+    if (feature === 'team') {
+      const accessText = JSON.stringify(employeeAccessFromTeam(clean.value, merchant));
+      const writeAccess = env.DB.prepare(
+        `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+         VALUES (?, 'employee-access', ?, 1, ?)
+         ON CONFLICT(merchant, feature) DO UPDATE SET
+           data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+      ).bind(merchant, accessText, now);
+      await env.DB.batch([writeDoc, writeAccess]);
+    } else {
+      await writeDoc.run();
+    }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length });

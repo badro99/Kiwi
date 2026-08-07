@@ -17,9 +17,11 @@ const DB = {
       async run() { const r = sqlite.prepare(sql).run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
     };
   },
+  async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
 };
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
+const STORE = await import(path.join(ROOT, 'functions/api/store.js'));
 const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
 const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 
@@ -66,9 +68,10 @@ async function gate(request) {
 }
 const accessPage = await gate(new Request('https://kiwi.test/dashboard'));
 const accessHtml = await accessPage.text();
-ok(accessPage.status === 401 && accessHtml.includes('name="email"') && accessHtml.includes('name="pin"'),
-  'Accès équipe demande email et code personnel');
-ok(!accessHtml.includes('name="passcode"'), "l'ancien champ de code partagé a disparu");
+ok(accessPage.status === 401 && accessHtml.includes('href="/kiwi-serveur"'),
+  'Accès équipe ouvre directement le portail employé');
+ok(!accessHtml.includes('id="staff-form"') && !accessHtml.includes('name="passcode"'),
+  "la page propriétaire ne porte plus de formulaire employé ni l'ancien code partagé");
 const legacyForm = new URLSearchParams({ passcode: 'ancien-code-partage' });
 const legacy = await gate(new Request('https://kiwi.test/__unlock', { method: 'POST', body: legacyForm }));
 ok(legacy.status === 401 && !legacy.headers.get('set-cookie'), "l'ancien code équipe partagé ne crée plus de session");
@@ -108,6 +111,56 @@ put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='mirror-only' AND fe
   JSON.stringify({ members: [] }));
 const revoked = await get(mirrorCookie);
 ok(revoked.status === 401, "retirer l'employé du miroir révoque immédiatement sa session");
+
+// Saving Équipe and its smaller access mirror are two network requests. If the
+// Team save lands last, that newer roster must admit the new hire instead of an
+// older mirror hiding them forever. A later empty mirror still revokes access.
+put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,updated_ts) VALUES (?,?,?,?,?,?,?)',
+  'lag-store', '{}', 'pro', 'restaurant', 'active', 'Lag Store', now);
+put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
+  'lag-store', 'employee-access', JSON.stringify({ members: [] }), 1, now - 1000);
+const lagTeam = { members: [{
+  id: 'mem-lin', firstName: 'Lin', lastName: 'Ilin', email: 'lin9@gmail.com',
+  function: 'Serveur', department: 'Salle', password: '3535', venueSlug: 'lag-store',
+}] };
+put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)',
+  'lag-store', 'team', JSON.stringify(lagTeam), 1, now);
+const lagLogin = await post({ action: 'login', email: 'lin9@gmail.com', pin: '3535' });
+const lagCookie = String(lagLogin.headers.get('set-cookie') || '').split(';')[0];
+ok(lagLogin.status === 200 && lagCookie.startsWith('kiwi_employee='),
+  "un employé du roster Équipe plus récent n'est plus masqué par un ancien miroir");
+const lagState = await get(lagCookie);
+ok(lagState.status === 200, 'la session issue du roster récent reste valide dans le portail');
+put("UPDATE store_docs SET data=?, rev=rev+1, updated_ts=? WHERE merchant='lag-store' AND feature='employee-access'",
+  JSON.stringify({ members: [] }), now + 1000);
+const lagRevoked = await get(lagCookie);
+ok(lagRevoked.status === 401, 'un miroir plus récent conserve la révocation après la réparation');
+
+// The Dashboard saves Équipe through /api/store. That one accepted write must
+// create the private employee-login mirror atomically; a second fire-and-forget
+// browser request is not allowed to decide whether the visible employee can
+// actually sign in.
+put('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts,status) VALUES (?,?,?,?,?,?,?,?)',
+  'acc-sync', 'owner@sync.test', 'Owner', 'Sync Cafe', '00', '00', now, 'active');
+put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?,?)',
+  'sync-cafe', '{}', 'pro', 'restaurant', 'active', 'Sync Cafe', 'acc-sync', now);
+const syncTeam = { members: [{
+  id: 'mem-sync', firstName: 'Aya', lastName: 'Serveuse', email: 'aya@sync.test',
+  function: 'Serveur', department: 'Salle', password: '4242', venueSlug: 'sync-cafe',
+}], hours: {}, shifts: {} };
+const ownerSession = await AUTH.makeSession('acc-sync', env.AUTH_SECRET);
+const syncSave = await STORE.onRequestPost({ env, request: new Request('https://kiwi.test/api/store', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Cookie: `kiwi_sess=${ownerSession}` },
+  body: JSON.stringify({ feature: 'team', merchant: 'sync-cafe', baseRev: 0, data: syncTeam }),
+}) });
+const syncMirrorRow = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='sync-cafe' AND feature='employee-access'").get();
+const syncMirror = JSON.parse((syncMirrorRow && syncMirrorRow.data) || '{}');
+ok(syncSave.status === 200 && syncMirror.members && syncMirror.members[0].email === 'aya@sync.test',
+  "enregistrer Équipe crée le compte employé dans la même transaction cloud");
+const syncedLogin = await post({ action: 'login', email: 'aya@sync.test', pin: '4242' });
+ok(syncedLogin.status === 200,
+  "l'employé peut se connecter dès que l'enregistrement Équipe est confirmé");
 ok(AUTH.employeeRoleOpensTill('Caissier') && AUTH.employeeRoleOpensTill('Manager'),
   'caissier et manager gardent leur accès caisse');
 ok(!AUTH.employeeRoleOpensTill('Serveur') && !AUTH.employeeRoleOpensTill('Cuisinier'),
@@ -147,6 +200,13 @@ ok(configSource.includes('pinGateConfigured') && configSource.includes('employee
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');
+ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
+  'le portail employé possède sa propre connexion email + PIN');
+ok(!serviceSource.includes("location.replace('/dashboard?employee=1')"),
+  "un échec de session reste dans le portail au lieu de rebondir vers le propriétaire");
+const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');
+ok(employeePwaSource.includes('beforeinstallprompt') && employeePwaSource.includes('Installer l’app'),
+  "le portail propose son installation sur l'écran d'accueil après connexion");
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

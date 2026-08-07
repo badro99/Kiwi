@@ -397,15 +397,7 @@ function authPage(opts) {
       </div>
     </form>`;
   const staffBlock = allowStaff ? `
-    <button type="button" class="staff-link" id="staff-toggle">Accès équipe</button>
-    <form class="staff" id="staff-form" method="POST" action="${UNLOCK_PATH}"${staffError ? '' : ' hidden'}>
-      ${staffError ? `<p class="err staff-err" role="alert">Email ou code personnel incorrect.</p>` : ''}
-      <div class="staff-row">
-        <input name="email" type="email" inputmode="email" autocomplete="username" placeholder="Email employé" aria-label="Email employé" required />
-        <input name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="current-password" placeholder="Code personnel · 4 chiffres" aria-label="Code personnel à 4 chiffres" required />
-        <button type="submit">Entrer</button>
-      </div>
-    </form>` : '';
+    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">Accès équipe</a>` : '';
 
   return `<!doctype html>
 <html lang="fr">
@@ -876,15 +868,6 @@ function authPage(opts) {
     post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
          document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1');
   });
-
-  var staffToggle = document.getElementById('staff-toggle');
-  var staffForm = document.getElementById('staff-form');
-  if (staffToggle && staffForm){
-    staffToggle.addEventListener('click', function(){
-      staffForm.hidden = !staffForm.hidden;
-      if (!staffForm.hidden){ var i = staffForm.querySelector('input'); if (i) i.focus(); }
-    });
-  }
 
   // Hidden operator entry — long-press (~1.4s) the wordmark to reveal the code
   // prompt. No visible affordance; clients never stumble onto it.

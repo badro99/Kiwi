@@ -169,21 +169,35 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   let docs;
   try {
     docs = await env.DB.prepare(
-      "SELECT merchant, feature, data FROM store_docs WHERE feature IN ('employee-access', 'team')"
+      "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team')"
     ).all();
   } catch (_) { return null; }
 
   const rows = (docs && docs.results) || [];
-  const mirrored = new Set(rows.filter((row) => row.feature === 'employee-access')
-    .map((row) => String(row.merchant || '')));
+  const byMerchant = new Map();
+  rows.forEach((row) => {
+    const merchant = String(row.merchant || '');
+    if (!merchant) return;
+    const pair = byMerchant.get(merchant) || {};
+    pair[row.feature === 'employee-access' ? 'access' : 'team'] = row;
+    byMerchant.set(merchant, pair);
+  });
   const matches = [];
   const seen = new Set();
-  for (const row of rows) {
-    const merchant = String(row.merchant || '');
-    if (row.feature === 'team' && mirrored.has(merchant)) continue;
-    let team = null;
-    try { team = JSON.parse(row.data || '{}'); } catch (_) { continue; }
-    const members = Array.isArray(team && team.members) ? team.members : [];
+  for (const [merchant, pair] of byMerchant) {
+    let accessDoc = null, teamDoc = null;
+    try { accessDoc = pair.access ? JSON.parse(pair.access.data || '{}') : null; } catch (_) {}
+    try { teamDoc = pair.team ? JSON.parse(pair.team.data || '{}') : null; } catch (_) {}
+    const accessMembers = Array.isArray(accessDoc && accessDoc.members) ? accessDoc.members : [];
+    const teamMembers = Array.isArray(teamDoc && teamDoc.members) ? teamDoc.members : [];
+    const accessIdentity = accessMembers.find((member) =>
+      String((member && member.email) || '').trim().toLocaleLowerCase('en') === email);
+    // The mirror wins for an identity it knows (including a changed PIN). If it
+    // does not know the employee, a NEWER Team document is a newly saved hire,
+    // not a deleted account resurrected from stale data.
+    const teamIsNewer = !pair.access
+      || Number((pair.team && pair.team.updated_ts) || 0) > Number(pair.access.updated_ts || 0);
+    const members = accessIdentity ? [accessIdentity] : (teamIsNewer ? teamMembers : []);
     for (const member of members) {
       const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
       const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
@@ -619,13 +633,22 @@ export async function activeEmployee(request, env, asked) {
   if (!session || !session.merchant || !session.staffId) return null;
   if (asked && String(session.merchant) !== String(asked)) return null;
   try {
-    const access = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
-      .bind(session.merchant).first();
-    const row = access || await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'")
-      .bind(session.merchant).first();
-    const doc = JSON.parse((row && row.data) || '{}');
-    const member = (Array.isArray(doc.members) ? doc.members : [])
+    const [access, team] = await Promise.all([
+      env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+        .bind(session.merchant).first(),
+      env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
+        .bind(session.merchant).first(),
+    ]);
+    const accessDoc = JSON.parse((access && access.data) || '{}');
+    const teamDoc = JSON.parse((team && team.data) || '{}');
+    const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
       .find((m) => m && String(m.id || '') === String(session.staffId));
+    const accessMember = find(accessDoc);
+    const teamMember = find(teamDoc);
+    const teamIsNewer = !access || Number((team && team.updated_ts) || 0) > Number(access.updated_ts || 0);
+    const member = accessMember
+      ? { ...(teamMember || {}), ...accessMember }
+      : (teamIsNewer ? teamMember : null);
     return member ? { session, member, merchant: session.merchant } : null;
   } catch (_) { return null; }
 }
