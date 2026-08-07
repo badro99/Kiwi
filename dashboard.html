@@ -5185,10 +5185,12 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
            Analytiques). Phase 1 is POS-only. See KIWI_2.0_ROADMAP.md. -->
     </nav>
 
-    <!-- Kiwi install card. renderUpsell() in venues.js still writes its plan-status
-         fallback here first; dashboard-pwa.js subscribes to the same venue changes
-         and lands after it, so the install card — which owns the real browser
-         install flow — is what stays on screen. -->
+    <!-- Kiwi install card. Both renderUpsell() in venues.js and dashboard-pwa.js
+         write this slot, and both write the SAME install card, so whichever lands
+         last is the same card — no race can bring back the retired Ultra promo.
+         dashboard-pwa.js owns the real browser install flow (deferred prompt,
+         installed state); venues.js is the fallback that survives venue and
+         language switches. -->
     <div class="upsell" data-upsell></div>
 
     <div class="merchant">
