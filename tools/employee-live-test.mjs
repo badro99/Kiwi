@@ -17,9 +17,11 @@ const DB = {
       async run() { const r = sqlite.prepare(sql).run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
     };
   },
+  async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
 };
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
+const STORE = await import(path.join(ROOT, 'functions/api/store.js'));
 const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
 const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 
@@ -133,6 +135,32 @@ put("UPDATE store_docs SET data=?, rev=rev+1, updated_ts=? WHERE merchant='lag-s
   JSON.stringify({ members: [] }), now + 1000);
 const lagRevoked = await get(lagCookie);
 ok(lagRevoked.status === 401, 'un miroir plus récent conserve la révocation après la réparation');
+
+// The Dashboard saves Équipe through /api/store. That one accepted write must
+// create the private employee-login mirror atomically; a second fire-and-forget
+// browser request is not allowed to decide whether the visible employee can
+// actually sign in.
+put('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts,status) VALUES (?,?,?,?,?,?,?,?)',
+  'acc-sync', 'owner@sync.test', 'Owner', 'Sync Cafe', '00', '00', now, 'active');
+put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,account_id,updated_ts) VALUES (?,?,?,?,?,?,?,?)',
+  'sync-cafe', '{}', 'pro', 'restaurant', 'active', 'Sync Cafe', 'acc-sync', now);
+const syncTeam = { members: [{
+  id: 'mem-sync', firstName: 'Aya', lastName: 'Serveuse', email: 'aya@sync.test',
+  function: 'Serveur', department: 'Salle', password: '4242', venueSlug: 'sync-cafe',
+}], hours: {}, shifts: {} };
+const ownerSession = await AUTH.makeSession('acc-sync', env.AUTH_SECRET);
+const syncSave = await STORE.onRequestPost({ env, request: new Request('https://kiwi.test/api/store', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Cookie: `kiwi_sess=${ownerSession}` },
+  body: JSON.stringify({ feature: 'team', merchant: 'sync-cafe', baseRev: 0, data: syncTeam }),
+}) });
+const syncMirrorRow = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='sync-cafe' AND feature='employee-access'").get();
+const syncMirror = JSON.parse((syncMirrorRow && syncMirrorRow.data) || '{}');
+ok(syncSave.status === 200 && syncMirror.members && syncMirror.members[0].email === 'aya@sync.test',
+  "enregistrer Équipe crée le compte employé dans la même transaction cloud");
+const syncedLogin = await post({ action: 'login', email: 'aya@sync.test', pin: '4242' });
+ok(syncedLogin.status === 200,
+  "l'employé peut se connecter dès que l'enregistrement Équipe est confirmé");
 ok(AUTH.employeeRoleOpensTill('Caissier') && AUTH.employeeRoleOpensTill('Manager'),
   'caissier et manager gardent leur accès caisse');
 ok(!AUTH.employeeRoleOpensTill('Serveur') && !AUTH.employeeRoleOpensTill('Cuisinier'),
