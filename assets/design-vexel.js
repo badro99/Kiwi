@@ -5,9 +5,13 @@
  * where its values come from.
  *
  * This controller does three things:
- *   1. Flips `body.design-vexel` — the geometry, type and layout of the v2
- *      dashboard. The skin is climate-neutral: it paints the same on the light
- *      and the dark surface, and it no longer touches `data-theme`.
+ *   1. Flips `body.design-vexel` AND `body[data-vexel-mode]`. Both, always:
+ *      the class carries the geometry, type and layout, but the palette is
+ *      split into a light block and a dark block that are each guarded by the
+ *      attribute. The skin does not CHOOSE the climate — it no longer forces
+ *      `data-theme` — it follows whichever one is painted. Setting the class
+ *      without the attribute is the failure mode this file is written to
+ *      prevent; see syncMode().
  *   2. Injects the SVG gradient the chart area fill references. A CSS file
  *      cannot declare `<linearGradient>`, and `fill: url(#id)` silently
  *      renders nothing when the id is absent — so the def has to be real DOM.
@@ -39,7 +43,33 @@
   var KEY = 'kiwiDesignVexel';
   var THEME_KEY = 'kiwiDashTheme';
   var CLASS = 'design-vexel';
+  var MODE_ATTR = 'data-vexel-mode';
   var GRAD_ID = 'kwVexelArea';
+
+  /**
+   * The skin's palette lives behind `body.design-vexel[data-vexel-mode="…"]`:
+   * one guarded block per climate, ~329 rules deep. The class alone matches
+   * NONE of it. Without this attribute every `--vx-*` token resolves to the
+   * empty string, and because a declaration referencing an undefined custom
+   * property is invalid at computed-value time — it fails silently AFTER
+   * winning the cascade, so nothing lower gets a turn — the cards lose their
+   * borders, the dome gradient paints transparent and the CTA loses its fill.
+   * The page looks stripped rather than broken, which is why it reads as a
+   * design problem and not a missing attribute.
+   *
+   * Mirrors what is PAINTED (`<html data-theme>`), not what was chosen: fusion
+   * mode (venues.js) paints dark over a light preference, and the tokens have
+   * to follow the surface they are drawn on, not the merchant's stored answer.
+   *
+   * Removed with the skin — vexel-neon.js observes this attribute, and a
+   * leftover value would keep it animating over a page that is no longer Vexel.
+   */
+  function syncMode() {
+    var body = document.body;
+    if (!body) return;
+    if (!body.classList.contains(CLASS)) { body.removeAttribute(MODE_ATTR); return; }
+    body.setAttribute(MODE_ATTR, document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  }
 
   function stored() {
     try { return localStorage.getItem(KEY); } catch (e) { return null; }
@@ -115,6 +145,7 @@
    */
   function apply(on, persist) {
     document.body.classList.toggle(CLASS, on);
+    syncMode();
 
     if (on) injectGradient();
     else removeGradient();
@@ -142,6 +173,9 @@
     var html = document.documentElement;
     if (dark) html.setAttribute('data-theme', 'dark');
     else html.setAttribute('data-theme', 'light');
+    /* After the paint, never before — syncMode() reads the attribute we just
+     * wrote, so the skin's palette and the surface can never disagree. */
+    syncMode();
     if (persist !== false) {
       try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
     }
@@ -171,6 +205,16 @@
     e.preventDefault();
     applyTheme(storedTheme() === 'dark' ? 'light' : 'dark');
   });
+
+  /* applyTheme() is not the only writer of `data-theme` — fusion mode
+   * (venues.js) paints dark directly, and i18n.js adopts whatever it finds.
+   * Following the attribute instead of trusting our own call sites means the
+   * palette can never be left one climate behind the surface. */
+  try {
+    new MutationObserver(syncMode).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-theme'],
+    });
+  } catch (e) {}
 
   /* `?skin=off` has to run apply(false) rather than fall through, or it can
    * only ever fail to turn the skin on for one page load — the stored '0'
@@ -219,6 +263,10 @@
     var v = url !== null ? url : stored();
     if (v === '0') return true;
     document.body.classList.add(CLASS);
+    /* The mode has to land in the SAME synchronous pass as the class. Priming
+     * the class alone paints one frame of a skin whose entire palette is still
+     * empty — the stripped-card flash the bridge exists to prevent. */
+    syncMode();
     return true;
   }
 

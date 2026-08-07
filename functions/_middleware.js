@@ -761,11 +761,12 @@ function authPage(opts) {
   <script>
     window.KiwiDesignVexel && window.KiwiDesignVexel.prime();
     /* design-vexel.css range ses palettes claire et sombre derriere
-       body.design-vexel[data-vexel-mode="…"]. Le tableau de bord n'a pas besoin
-       d'ecrire cet attribut (il a ses propres jetons), la porte si : sans lui
-       aucune des deux couches ne s'active et les regles .vx-auth-card tombent
-       sur des var() vides. On recopie donc data-theme, et on suit ses
-       changements au cas ou le skin l'applique plus tard. */
+       body.design-vexel[data-vexel-mode="…"] : sans cet attribut aucune des
+       deux couches ne s'active et les regles .vx-auth-card tombent sur des
+       var() vides. C'est desormais syncMode() dans design-vexel.js qui le
+       pose, pour la porte comme pour le tableau de bord. On garde ce miroir
+       local en ceinture : la porte est servie par le middleware et doit rester
+       lisible meme si le skin ne se charge pas. */
     (function () {
       var root = document.documentElement;
       var mirror = function () {
