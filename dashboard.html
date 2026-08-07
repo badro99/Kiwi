@@ -5983,9 +5983,17 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/dashboard-extra.js" defer></script>
 <script src="assets/simple.js" defer></script>
 <script src="assets/ux.js" defer></script>
-<script src="assets/venues.js" defer></script>
+<!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
+     l'URL ne change jamais d'un déploiement à l'autre : le service worker sert
+     l'ancienne copie en cache au premier chargement (stratégie stale-while-
+     revalidate) et la nouvelle seulement au rechargement SUIVANT. C'est ce qui
+     ressuscitait la carte « Passer à Ultra » retirée dans la barre latérale.
+     Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
+     à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
+     dans la liste de pré-cache de kiwi-sw.js. -->
+<script src="assets/venues.js?v=2" defer></script>
 <script src="assets/demoClock.js" defer></script>
-<script src="assets/dateRange.js" defer></script>
+<script src="assets/dateRange.js?v=2" defer></script>
 <script src="assets/mobile-nav.js" defer></script>
 <script defer src="assets/pwa-update.js"></script>
 <script defer src="assets/dashboard-pwa.js"></script>

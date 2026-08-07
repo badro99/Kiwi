@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v265';
+var CACHE = 'kiwi-app-v266';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -63,9 +63,14 @@ var SHELL = [
   '/assets/trades.js',
   '/assets/interactive.js',
   '/assets/features.js',
-  '/assets/venues.js',
+  /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
+     RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
+     entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
+     page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
+     re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
+  '/assets/venues.js?v=2',
   '/assets/demoClock.js',
-  '/assets/dateRange.js',
+  '/assets/dateRange.js?v=2',
   '/assets/mobile-nav.js',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
