@@ -192,6 +192,9 @@ ok(anon.status === 401, 'planning, collègues et salle restent privés sans sess
 
 const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
 ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
+ok(teamSource.includes('`scoped:${String(venue.slug)}`')
+  && teamSource.includes('slug: () => teamSlug()'),
+  "Équipe synchronise aussi le bon magasin depuis un dashboard ouvert en God Mode");
 const configSource = fs.readFileSync(path.join(ROOT, 'functions/api/config.js'), 'utf8');
 ok(configSource.includes("'employee-access'") && configSource.includes('memberId'),
   'la synchronisation des PIN publie aussi les identifiants employés');

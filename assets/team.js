@@ -802,7 +802,20 @@
      demo seed (unchanged). A REAL (custom/onboarded) venue is keyed by its own
      id, starts EMPTY, and persists to localStorage — so a new store builds its
      own team and it survives a reload, with no demo staff leaking in. */
-  function teamKey(venue) { return (venue && venue.custom) ? venue.id : ((venue && venue.type) || 'restaurant'); }
+  function teamKey(venue) {
+    if (venue && venue.custom) {
+      /* God Mode uses one synthetic venue id (`scoped`) for every client. Using
+       * that id as the Team key made the roster transient on purpose — and also
+       * meant an employee visibly created from an operator-opened dashboard was
+       * never written to that store's cloud document. Namespace the local key
+       * with the server-confirmed slug instead: every client remains isolated,
+       * while Équipe behaves like the same dashboard regardless of who opened
+       * it. */
+      if (venue.id === 'scoped' && venue.slug) return `scoped:${String(venue.slug)}`;
+      return venue.id;
+    }
+    return (venue && venue.type) || 'restaurant';
+  }
   const DEMO_TYPE_KEYS = new Set(['restaurant', 'boutique', 'spa', 'hotel']);
   /* venues.js les déclare transitoires et « never persisted » : 'scoped' est la
    * vue opérateur sur le client de quelqu'un d'autre, 'own' un placeholder de
@@ -899,7 +912,13 @@
    * without guessing about records whose origin cannot be proved. */
   function teamSlug() {
     const k = teamVenueKey();
-    try { return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : ''; }
+    try {
+      const v = window.KiwiVenue?.getCurrentVenueData?.();
+      // `v.slug` only exists after /api/me authenticated the God Mode scope.
+      // Never derive this from the visible store name or the URL.
+      if (v && v.id === 'scoped' && v.slug) return String(v.slug);
+      return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : '';
+    }
     catch (_) { return ''; }
   }
   function memberBelongsToStore(member, slug) {
@@ -964,7 +983,7 @@
     if (teamCloud || !window.KiwiCloudDoc) return teamCloud;
     teamCloud = window.KiwiCloudDoc.attach({
       feature: 'team',
-      slug: () => window.KiwiCloudDoc.slugFor(teamVenueKey()),
+      slug: () => teamSlug(),
       read: () => {
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
@@ -1008,7 +1027,7 @@
     const key = teamKey(venue);
     if (!root.byVenue[key]) root.byVenue[key] = (venue && venue.custom) ? [] : seedFor((venue && venue.type) || 'restaurant');
     if (venue && venue.custom) {
-      const slug = (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })();
+      const slug = teamSlug();
       if (slug) {
         const before = root.byVenue[key];
         const kept = before.filter((m) => memberBelongsToStore(m, slug));
@@ -1986,7 +2005,7 @@
   handlers['kt-add-member']  = () => openMemberModal(null);
   handlers['kt-employee-app'] = () => {
     let slug = '';
-    try { slug = window.KiwiCloudDoc?.slugFor?.(teamVenueKey()) || window.KiwiConfig?.storeSlug?.() || ''; } catch (_) {}
+    try { slug = teamSlug() || window.KiwiConfig?.storeSlug?.() || ''; } catch (_) {}
     if (!slug) { toast('Enregistrez d\'abord cet établissement', { type: 'pend' }); return; }
     const url = `${location.origin}/kiwi-serveur.html?merchant=${encodeURIComponent(slug)}`;
     window.open(url, '_blank', 'noopener');
@@ -2121,7 +2140,7 @@
       notes: (data.notes || '').trim(),
       avatarTone: st.avatarTone || AVATAR_TONES[Math.floor(Math.random() * AVATAR_TONES.length)],
       venueType,
-      venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(venueType) || ''; } catch (_) { return ''; } })(),
+      venueSlug: teamSlug(),
       createdAt: st.origCreatedAt || Date.now(),
     };
 
@@ -2926,7 +2945,7 @@
         languages: [], address: '', cin: '', emergencyName: '', emergencyPhone: '', notes: '',
         avatarTone: AVATAR_TONES[list.length % AVATAR_TONES.length],
         role, venueType: key,
-        venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })(),
+        venueSlug: teamSlug(),
         createdAt: Date.now(),
       });
       hours[id] = {};
