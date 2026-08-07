@@ -406,6 +406,13 @@ function authPage(opts) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Votre compte</title>
+<!-- design-vexel.css habille la porte (33 règles .vx-auth-card) mais consomme les
+     jetons --n-*, --sans, --elev-* qui vivent dans tokens.css. Sans ce lien, ces
+     règles gagnaient la cascade puis échouaient en silence sur des var() vides,
+     et la porte s'affichait en page blanche sans carte ni bouton vert. Placé
+     AVANT le style en ligne : la palette propre à la porte reste la référence si
+     un skin optionnel ne charge pas. -->
+<link rel="stylesheet" href="/assets/tokens.css" />
 <style>
   :root {
     /* Déclaré explicitement : sans ça, un Mac en mode nuit fait rendre à Chrome
@@ -751,7 +758,23 @@ function authPage(opts) {
 <script src="/assets/design-vexel.js"></script>
 </head>
 <body class="vx-auth-page">
-  <script>window.KiwiDesignVexel && window.KiwiDesignVexel.prime();</script>
+  <script>
+    window.KiwiDesignVexel && window.KiwiDesignVexel.prime();
+    /* design-vexel.css range ses palettes claire et sombre derriere
+       body.design-vexel[data-vexel-mode="…"]. Le tableau de bord n'a pas besoin
+       d'ecrire cet attribut (il a ses propres jetons), la porte si : sans lui
+       aucune des deux couches ne s'active et les regles .vx-auth-card tombent
+       sur des var() vides. On recopie donc data-theme, et on suit ses
+       changements au cas ou le skin l'applique plus tard. */
+    (function () {
+      var root = document.documentElement;
+      var mirror = function () {
+        document.body.setAttribute('data-vexel-mode', root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+      };
+      mirror();
+      new MutationObserver(mirror).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    })();
+  </script>
   <!-- Liquid Glass displacement filter stays inline so the legacy dark fallback
        remains autonomous even if an optional skin asset fails to load. -->
   <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
