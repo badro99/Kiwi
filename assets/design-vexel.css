@@ -826,6 +826,7 @@ body.design-vexel .vexel-revenue-rail {
 }
 body.design-vexel .vexel-rail-card,
 body.design-vexel .vexel-goals-card,
+body.design-vexel .vexel-insights-row,
 body.design-vexel .vexel-bottom-row > [data-mix-block] {
   border: 1px solid var(--n-200);
   border-radius: 22px;
@@ -991,6 +992,20 @@ body.design-vexel .vexel-client-label {
   font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* Kiwi Insights : le panneau .hero-right, sorti de la rangée revenu où la peau
+ * le masquait. Il prend toute la largeur — il porte une recommandation, trois
+ * questions suggérées et le champ de saisie, tous illisibles dans une colonne
+ * de moitié. La hauteur est libre : le contenu est du texte de longueur
+ * variable, un cadre fixe le rognerait. */
+body.design-vexel .vexel-insights-row {
+  margin: 0 0 var(--vx-gap);
+  padding: 21px 25px;
+}
+body.design-vexel .vexel-insights-row > .hero-right {
+  height: auto;
+  min-height: 0;
 }
 
 /* Bottom row: generated service-goal rings + the existing live payment card. */

@@ -746,7 +746,7 @@
     rememberMove(kpis, kpiSection);
 
     root.appendChild(revenue);
-    conceal(hero.querySelector('.hero-right'));
+    var insights = hero.querySelector('.hero-right');
     rememberMove(hero, revenue);
     hero.appendChild(revenueLegend());
     revenue.appendChild(goalRail());
@@ -754,6 +754,18 @@
     root.appendChild(bottom);
     bottom.appendChild(serviceGoals());
     rememberMove(mix, bottom);
+
+    /* Kiwi Insights (recommandation du jour, questions suggérées, champ de
+     * saisie) vivait dans .hero-right, que la peau masquait : une surface
+     * entière — et la seule entrée vers l'assistant depuis l'accueil —
+     * disparaissait de l'écran. Elle reprend sa place dans sa propre rangée
+     * sous le bas de page, hors de portée du sélecteur qui la masque
+     * (.vexel-revenue-row .hero-right). */
+    if (insights) {
+      var insightsRow = el('div', 'vexel-insights-row');
+      root.appendChild(insightsRow);
+      rememberMove(insights, insightsRow);
+    }
 
     root.appendChild(utilities);
     rememberMove(pageHead, utilities);
