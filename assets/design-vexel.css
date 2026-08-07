@@ -620,10 +620,19 @@ body.design-vexel .vexel-kpi-section > .kpi-band-head {
  * card set alongside `.kpi-m`, so the container got the same fill, edge and
  * green glow as the four cards sitting on top of it — glass inside glass. The
  * cards are opaque, so all that showed of the wrapper was a pale vertical strip
- * in each 18px gutter and a halo around the row. Strip it back to layout. */
+ * in each 18px gutter and a halo around the row. Strip it back to layout.
+ *
+ * The track count follows the number of *visible* tiles rather than being
+ * pinned at four. The mockup band holds four, but the band is merchant-
+ * configurable and a boutique's default set leaves five showing — the fifth
+ * ("Ratio card / cash") stranded alone on a second row and pushed the whole
+ * column below it down. auto-fit collapses the tracks it can't fill, so four
+ * tiles still lay out as four equal columns exactly as before, while five lay
+ * out as five. The narrow breakpoints below re-pin the count with !important
+ * and are unaffected. */
 body.design-vexel .vexel-kpi-section > [data-kpi-band] {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: var(--vx-gap);
   margin: 0;
   background: none !important;
@@ -3417,9 +3426,16 @@ body.design-vexel[data-vexel-mode] :is(
   line-height: 1.45;
 }
 
-/* KPI cards stay compact and form one scan line on desktop. */
+/* KPI cards stay compact and form one scan line on desktop — and "one scan
+ * line" has to mean the whole set, not the first four of it. The band is
+ * merchant-configurable, and the default set leaves five tiles showing, so a
+ * fixed four-track grid stranded the fifth ("Ratio card / cash") alone on a
+ * second row and pushed the entire column beneath it down. auto-fit collapses
+ * the tracks it cannot fill, so four tiles still lay out as four equal columns
+ * exactly as before; five lay out as five. The ≤1100px rule further down
+ * re-pins the count for narrow screens and still wins there. */
 body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
   gap: var(--vx-card-gap);
 }
 
