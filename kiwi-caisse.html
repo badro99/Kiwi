@@ -7458,6 +7458,7 @@
           delete orders[id]; // clear order
           delete tableOrders[id]; // clear cashier-built order
           delete tables[id].discount; // clear remise — table reset
+          delete tables[id].orderNo; // next party gets its own order number
           refreshTableNode(id);
         }
       }, 3000);
@@ -8635,6 +8636,29 @@
       setTimeout(() => { reader.disc.classList.remove('flash'); }, 600);
       cardFootTimer = setTimeout(() => { reader.foot.classList.add('is-visible'); }, 1000);
     }
+
+    /* A settled row identifies the order, not the physical table. Keep the
+       first kitchen ticket attached to this bill; later sends are additions. */
+    function settledOrderLabel(tableId) {
+      const t = tableId && tables[tableId];
+      if (t && t.orderNo != null && String(t.orderNo).trim()) return String(t.orderNo);
+      /* Migration for a table already open when this fix is deployed: only a
+         ticket from the current occupancy window may be adopted. Old served
+         tickets for the same physical table stay in KDS history. */
+      const openedAfter = Date.now() - ((Math.max(0, +(t && t.elapsed) || 0) + 2) * 60000);
+      const order = kdsOrders.slice().reverse().find(o => {
+        if (!o || o.type !== 'dineIn' || String(o.table) !== String(tableId)) return false;
+        const sent = o.sentAt instanceof Date ? o.sentAt.getTime() : new Date(o.sentAt).getTime();
+        return Number.isFinite(sent) && sent >= openedAfter;
+      });
+      if (order) {
+        const label = ticketNo(order);
+        if (t) t.orderNo = label;
+        return label;
+      }
+      return tableId || 'Commande';
+    }
+
     function closeCardModal({ paid = false } = {}) {
       cardModal.classList.remove('is-open');
       clearTimeout(cardSuccessTimer);
@@ -8644,7 +8668,7 @@
       if (!paid) return;
       const saleLabel = mode === 'vrap'
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
-        : (selectedId || 'Table');
+        : settledOrderLabel(selectedId);
       if (!splitPayCallback) recordSale(tenderBase, cardTenderMethod, saleLabel, payTipAmount(), currentSaleLines());
       if (splitPayCallback) {
         const cb = splitPayCallback;
@@ -8758,7 +8782,7 @@
       if (!paid) return;
       const saleLabel = mode === 'vrap'
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
-        : (selectedId || 'Table');
+        : settledOrderLabel(selectedId);
       if (!splitPayCallback) recordSale(currentTotal(), 'cash', saleLabel, payTipAmount(), currentSaleLines());
       if (splitPayCallback) {
         const cb = splitPayCallback;
@@ -9335,6 +9359,7 @@
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
       };
       kdsOrders.push(order);
+      if (tables[tableId] && !tables[tableId].orderNo) tables[tableId].orderNo = ticketNo(order);
       lines.forEach((l) => { l.sent = true; });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -9389,6 +9414,11 @@
              caissier a sous les yeux. */
           if (r && r.ok && r.number != null) {
             order.opNum = r.number;
+            if (order.table && tables[order.table]
+                && String(tables[order.table].orderNo) === String(order.num)) {
+              tables[order.table].orderNo = ticketNo(order);
+              try { persistShift(); } catch (_) {}
+            }
             updateKdsCount();
             if (kdsEl.classList.contains('is-open')) kdsPaint();
             if (mode === 'vrap' && vrapView === 'board') renderVrapBoard();
@@ -9599,7 +9629,7 @@
         const t = tables[tableId];
         lines = generateOrder(tableId, t);
         covers = t.covers || 2;
-        sourceLabel = tableId;
+        sourceLabel = settledOrderLabel(tableId);
       }
       const gross = money(lines.reduce((s, l) => s + l.total, 0));
       /* A split settles the same NET amount shown by the ordinary payment
@@ -14621,6 +14651,10 @@
       const id = caisseTableId(o.table);
       const t = id && tables[id];
       if (!t) return false;
+
+      if (o.number != null && !t.orderNo) {
+        t.orderNo = (o.channel || 'kiwi') === 'kiwi' ? 'OP-' + String(o.number) : String(o.number);
+      }
 
       let changed = false;
       if (o.status === 'rejected') {
