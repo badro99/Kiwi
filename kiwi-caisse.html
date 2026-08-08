@@ -4417,6 +4417,103 @@
   body.is-seating .cplan-tbl.wl-seat-dim { opacity: .32; }
   body.is-seating .cplan-tbl.wl-seat-free { outline: none; border-radius: 8px; box-shadow: 0 0 0 3px rgba(0,255,174,0.45); }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+   * PLAN DE SALLE — VUE JOUR
+   * Tout ce qui précède est écrit en charbon dans les règles de base : le
+   * plan restait noir même quand la caisse était en mode jour. Le noir n'est
+   * pas retiré, il est simplement recouvert quand l'attribut de thème est
+   * absent (= mode jour). `html:not([data-caisse-theme="dark"])` pèse 0,2,1
+   * contre 0,1,0 : la surcharge gagne où qu'elle soit posée, et le chemin
+   * noir reste identique au octet près.
+   * Encre reprise du dashboard (pages-pro.js, branche jour) : papier #F7F5F0,
+   * traits rgba(10,15,13,·), l'atlas #0B6E4F à la place du mint.
+   * ─────────────────────────────────────────────────────────────────────── */
+  html:not([data-caisse-theme="dark"]) .plan-room {
+    border-color: rgba(10,15,13,0.11);
+    background: #FCFBF8;
+    box-shadow: 0 24px 52px -42px rgba(10,15,13,0.30);
+  }
+  html:not([data-caisse-theme="dark"]) .plan-room-label { color: rgba(10,15,13,0.62); }
+  html:not([data-caisse-theme="dark"]) .plan-room-label em { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .plan-zone-terrasse {
+    border-color: rgba(11,110,79,0.32);
+    background: #FCFBF8;
+    box-shadow: 0 20px 44px -38px rgba(10,15,13,0.28);
+  }
+  html:not([data-caisse-theme="dark"]) .terrasse-label { color: rgba(11,110,79,0.78); }
+  html:not([data-caisse-theme="dark"]) .terrasse-label em { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .cplan-room {
+    border-color: rgba(10,15,13,0.11);
+    background: #FCFBF8;
+    box-shadow: 0 24px 52px -42px rgba(10,15,13,0.30);
+  }
+  /* Le plan réel et son état vide. */
+  html:not([data-caisse-theme="dark"]) .plan-real,
+  html:not([data-caisse-theme="dark"]) .plan-empty {
+    background: #FAF8F3;
+    border-color: rgba(10,15,13,0.07);
+  }
+  html:not([data-caisse-theme="dark"]) .plan-empty-card {
+    border-color: rgba(10,15,13,0.16);
+    background: rgba(10,15,13,0.015);
+  }
+  html:not([data-caisse-theme="dark"]) .plan-empty-ico { background: rgba(11,110,79,0.10); color: #0B6E4F; }
+  html:not([data-caisse-theme="dark"]) .plan-empty-title { color: rgba(10,15,13,0.86); }
+  html:not([data-caisse-theme="dark"]) .plan-empty-sub { color: rgba(10,15,13,0.52); }
+  html:not([data-caisse-theme="dark"]) .plan-empty-sub b { color: #0B6E4F; }
+  html:not([data-caisse-theme="dark"]) .plan-real-zone-h { color: rgba(10,15,13,0.55); }
+  html:not([data-caisse-theme="dark"]) .plan-real-zone-h em { color: rgba(10,15,13,0.35); }
+  /* La grille-cartes du plan réel — carte papier, trait d'état en encre. */
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl {
+    border-color: rgba(10,15,13,0.12);
+    background: #FFFFFF;
+  }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed.is-selected .tbl,
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl.is-selected {
+    border-color: #0B6E4F;
+    box-shadow: 0 0 0 3px rgba(11,110,79,0.12), 0 0 22px rgba(11,110,79,0.14);
+  }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="a-commander"]  { background: rgba(200,146,53,0.10); border-color: #C89235; }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="ka-yaklo"]     { background: rgba(11,110,79,0.10); border-color: #0B6E4F; }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] { background: rgba(194,69,111,0.10); border-color: #C2456F; }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: #FFFFFF; border: 1.25px dotted rgba(10,15,13,0.35); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-covers,
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-status,
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-status { color: rgba(10,15,13,0.45); }
+  /* Le survol en jour s'assombrit — un gain de lumière sur du papier ne se
+     voit pas. */
+  html:not([data-caisse-theme="dark"]) .tbl-cell:hover,
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed:hover .tbl,
+  html:not([data-caisse-theme="dark"]) .cplan-tbl:hover { filter: brightness(0.96); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell:active,
+  html:not([data-caisse-theme="dark"]) .cplan-tbl:active { filter: brightness(0.92); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell:focus-visible { outline-color: rgba(11,110,79,0.55); }
+  html:not([data-caisse-theme="dark"]) .tbl { box-shadow: 0 12px 26px -22px rgba(10,15,13,0.35); }
+  /* Le numéro-étiquette et la puce de durée. */
+  html:not([data-caisse-theme="dark"]) .cplan-num { color: rgba(10,15,13,0.45); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="a-commander"]  .cplan-num { color: rgba(160,113,33,0.90); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="ka-yaklo"]     .cplan-num { color: rgba(11,110,79,0.95); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="bgha-ykhlass"] .cplan-num { color: rgba(194,69,111,0.95); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="khlass"]       .cplan-num { color: rgba(10,15,13,0.30); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl:hover .cplan-num,
+  html:not([data-caisse-theme="dark"]) .cplan-tbl.is-selected .cplan-num { color: rgba(10,15,13,0.80); }
+  html:not([data-caisse-theme="dark"]) .cplan-since {
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(10,15,13,0.14);
+    color: rgba(10,15,13,0.72);
+  }
+  html:not([data-caisse-theme="dark"]) .cplan-urgent {
+    background: #C2456F;
+    box-shadow: 0 0 0 3px rgba(194,69,111,.20);
+  }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl.is-selected {
+    box-shadow: 0 0 0 3px rgba(11,110,79,0.15), 0 0 22px rgba(11,110,79,0.16);
+  }
+  html:not([data-caisse-theme="dark"]) body.is-seating .cplan-tbl.wl-seat-free {
+    box-shadow: 0 0 0 3px rgba(11,110,79,0.45);
+  }
+
     /* ═══════════════════════════════════════════════════════════════════════
      * CAISSE 2026 — l'ADN cartes du dashboard (design-vexel.css, couche H).
      * Arête 1px + levée d'1px au survol + ombre portée froide. Les contrôles
@@ -6137,8 +6234,24 @@
       'bgha-ykhlass': { s: '#FF7DA9',                w: 1.25, dash: '',        fill: 'rgba(255,125,169,0.12)', chair: 'rgba(255,125,169,0.60)' },
       'khlass':       { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
     };
+    /* Mêmes états, encre du jour — PDS_STATUS_RING_JOUR du dashboard : le mint
+       redevient atlas, l'ambre son ton foncé, le rose son ton foncé. */
+    const CAISSE_RING_JOUR = {
+      'khawya':       { s: 'rgba(10,15,13,0.30)',    w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.015)',   chair: 'rgba(10,15,13,0.22)' },
+      'a-commander':  { s: '#C89235',                w: 1.25, dash: '',        fill: 'rgba(200,146,53,0.10)',  chair: 'rgba(200,146,53,0.55)' },
+      'ka-yaklo':     { s: '#0B6E4F',                w: 1.25, dash: '',        fill: 'rgba(11,110,79,0.10)',   chair: 'rgba(11,110,79,0.70)' },
+      'bgha-ykhlass': { s: '#C2456F',                w: 1.25, dash: '',        fill: 'rgba(194,69,111,0.10)',  chair: 'rgba(194,69,111,0.60)' },
+      'khlass':       { s: 'rgba(10,15,13,0.45)',    w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',    chair: 'rgba(10,15,13,0.24)' },
+    };
+    /* Le plan suit le thème de la caisse, jamais l'inverse : clair par défaut
+       (l'attribut est absent), noir quand data-caisse-theme="dark". */
+    function caisseJour() {
+      try { return document.documentElement.getAttribute('data-caisse-theme') !== 'dark'; }
+      catch (_) { return true; }
+    }
     function caisseRing(status) {
-      return CAISSE_RING_NOIR[status] || CAISSE_RING_NOIR.khawya;
+      const R = caisseJour() ? CAISSE_RING_JOUR : CAISSE_RING_NOIR;
+      return R[status] || R.khawya;
     }
 
     /* Une chaise = une coche plate, vue de dessus (pdsNoirTick). */
@@ -6150,7 +6263,7 @@
        (C.seatSlots, la même que le dashboard) pour les rectangulaires. */
     function caisseNoirChairs(g, seats, ring) {
       if (!seats || seats < 1) return '';
-      const fill = (ring && ring.chair) || 'rgba(255,255,255,0.12)';
+      const fill = (ring && ring.chair) || (caisseJour() ? 'rgba(10,15,13,0.14)' : 'rgba(255,255,255,0.12)');
       if (g.shape === 'round') {
         const rx = g.w / 2 + 12, ry = g.h / 2 + 12, cx = g.w / 2, cy = g.h / 2;
         let out = '';
@@ -6177,32 +6290,37 @@
        chaudes (ka-yaklo, bgha-ykhlass) portent le disque de halo sous elles
        et l'anneau qui pulse par-dessus. */
     function caisseNoirTableBody(g, ring, status) {
+      const jour = caisseJour();
+      const sfx = jour ? 'Jour' : 'Noir';
       const hot = status === 'ka-yaklo' || status === 'bgha-ykhlass';
-      const callId = status === 'bgha-ykhlass' ? 'url(#pdsNoirCallRose)' : 'url(#pdsNoirCall)';
+      const callId = status === 'bgha-ykhlass' ? `url(#pds${sfx}CallRose)` : `url(#pds${sfx}Call)`;
       const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
-      const fill = ring.fill || 'rgba(255,255,255,0.012)';
+      const fill = ring.fill || (jour ? 'rgba(10,15,13,0.012)' : 'rgba(255,255,255,0.012)');
       const cx = g.w / 2, cy = g.h / 2;
       const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
       if (g.shape === 'round') {
         return call
-          + `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>`
+          + `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="url(#pds${sfx}Body)" filter="url(#pds${sfx}Lift)"/>`
           + `<ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`
           + (hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : '');
       }
       const r = Math.min(8, g.w / 5, g.h / 5);
       return call
-        + `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="url(#pdsNoirBody)" filter="url(#pdsNoirLift)"/>`
+        + `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="url(#pds${sfx}Body)" filter="url(#pds${sfx}Lift)"/>`
         + `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>`
         + (hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : '');
     }
 
-    /* Mobilier au trait — la version noir de pdsNoirFixture, sans la branche
-       jour : comptoir en pilule + tabourets, cuisine hachurée, escalier à
-       marches comptées, plante mint, porte en arc pointillé. */
+    /* Mobilier au trait — pdsNoirFixture du dashboard, les deux branches :
+       comptoir en pilule + tabourets, cuisine hachurée, escalier à marches
+       comptées, plante mint (atlas de jour), porte en arc pointillé. */
     function caisseNoirFixture(e, g) {
-      const line = 'rgba(255,255,255,0.38)', dim = 'rgba(255,255,255,0.20)';
-      const pillFill = 'rgba(255,255,255,0.05)', pillLine = 'rgba(255,255,255,0.20)';
-      const acc = '0,255,174';
+      const jour = caisseJour();
+      const line = jour ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.38)';
+      const dim = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+      const pillFill = jour ? 'rgba(10,15,13,0.035)' : 'rgba(255,255,255,0.05)';
+      const pillLine = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+      const acc = jour ? '11,110,79' : '0,255,174';
       switch (e.type) {
         case 'texte': return '';
         case 'comptoir': {
@@ -6211,7 +6329,7 @@
             const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
             for (let i = 0; i < n; i++) {
               const sx = (g.w * (i + 1)) / (n + 1);
-              t += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.25"/>`;
+              t += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="${jour ? 'rgba(10,15,13,0.28)' : 'rgba(255,255,255,0.22)'}" stroke-width="1.25"/>`;
             }
           }
           return t + `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
@@ -6222,9 +6340,11 @@
           return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`
             + `<rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(${acc},0.14)" stroke="rgba(${acc},0.5)" stroke-width="1"/>`;
         }
-        case 'cuisine':
-          return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>`
-            + `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+        case 'cuisine': {
+          const hid = jour ? 'pdsJourHatch' : 'pdsNoirHatch';
+          return `<defs><pattern id="${hid}" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>`
+            + `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#${hid})" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+        }
         case 'porte':
           return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${dim}" stroke-width="1" stroke-dasharray="3 3"/>`
             + `<line x1="0" y1="${g.h - 1.5}" x2="${g.w}" y2="${g.h - 1.5}" stroke="${line}" stroke-width="1.5"/>`;
@@ -6242,7 +6362,7 @@
             + `<circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(${acc},0.28)" stroke-width="1"/>`;
         }
         case 'colonne':
-          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="3" fill="rgba(255,255,255,0.06)" stroke="${line}" stroke-width="1.2"/>`;
+          return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.05)' : 'rgba(255,255,255,0.06)'}" stroke="${line}" stroke-width="1.2"/>`;
         case 'wc':
           return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
         case 'escalier': {
@@ -6264,9 +6384,9 @@
           return t;
         }
         case 'tapis':
-          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="3" fill="rgba(255,255,255,0.02)" stroke="${dim}" stroke-width="1" stroke-dasharray="2 3"/>`;
+          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="3" fill="${jour ? 'rgba(10,15,13,0.02)' : 'rgba(255,255,255,0.02)'}" stroke="${dim}" stroke-width="1" stroke-dasharray="2 3"/>`;
         case 'vitrine':
-          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+          return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="${jour ? 'rgba(64,102,124,0.08)' : 'rgba(191,217,232,0.05)'}" stroke="${jour ? 'rgba(64,102,124,0.45)' : 'rgba(191,217,232,0.35)'}" stroke-width="1.2"/>`;
         default:
           return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
       }
@@ -6280,17 +6400,30 @@
       const label = (e.label != null ? e.label : (K.label || ''));
       return `<div class="pds-el pds-el-${e.type}" style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px; transform:rotate(${e.rot || 0}deg); z-index:${10 + (e.z || 0)};">
           <div class="pds-el-fill"><svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${caisseNoirFixture(e, g)}</svg></div>
-          ${label ? `<span class="pds-el-label" style="color:rgba(255,255,255,0.45);">${escTeam(label)}</span>` : ''}
+          ${label ? `<span class="pds-el-label" style="color:${caisseJour() ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.45)'};">${escTeam(label)}</span>` : ''}
         </div>`;
     }
 
-    /* Sol charbon quadrillé — pdsRoomShellNoir du dashboard : la couleur du
-       sol du commerçant éteinte à 3 %, le voile de lumière et la grille 31px. */
+    /* Le sol quadrillé — pdsRoomShellNoir / pdsRoomShellJour du dashboard :
+       la couleur du sol du commerçant éteinte vers le charbon (nuit) ou tirée
+       vers le papier (jour), le voile de lumière et la grille 31px. */
     function caisseRoomShellNoir(zone) {
       const FC = window.KiwiFloorCore;
       const r = FC ? FC.room(zone) : ((zone && zone.room) || {});
       const floor = r.floor || '#FBF7EE';
       const wallW = (r.wallW != null) ? +r.wallW : 2;
+      if (caisseJour()) {
+        return `<div class="pds-floor" data-pds-floor style="
+          background-color:${caisseJourC(floor, 0.30)};
+          background-image:
+            radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.50), rgba(255,255,255,0.15) 60%, transparent 100%),
+            linear-gradient(rgba(10,15,13,0.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(10,15,13,0.055) 1px, transparent 1px);
+          background-size: 100% 100%, 31px 31px, 31px 31px;
+          background-repeat: no-repeat, repeat, repeat;
+          ${wallW > 2 ? `box-shadow: inset 0 0 0 ${wallW}px rgba(10,15,13,0.30);` : ''}
+        "></div>`;
+      }
       return `<div class="pds-floor" data-pds-floor style="
         background-color:${caisseNoirC(floor, 0.03)};
         background-image:
@@ -6305,13 +6438,20 @@
 
     /* Dégradés/filtres partagés par toutes les tables d'un plan. IDs identiques
        au dashboard (pages-pro.js ne charge jamais ici, aucune collision) +
-       le halo rose propre à bgha-ykhlass. */
+       le halo rose propre à bgha-ykhlass. Les deux jeux (Jour/Noir) sont émis
+       ensemble : caisseNoirTableBody choisit le suffixe selon le thème, et un
+       changement de thème n'a alors qu'à repeindre les tables.
+       La classe pds-defs permet de retirer ce bloc au re-rendu. */
     function caisseNoirDefs() {
-      return '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
+      return '<svg class="pds-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
         + '<linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>'
         + '<radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>'
         + '<radialGradient id="pdsNoirCallRose"><stop offset="0%" stop-color="#FF7DA9" stop-opacity="0.20"/><stop offset="100%" stop-color="#FF7DA9" stop-opacity="0"/></radialGradient>'
         + '<filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>'
+        + '<linearGradient id="pdsJourBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F0EDE6"/></linearGradient>'
+        + '<radialGradient id="pdsJourCall"><stop offset="0%" stop-color="#0B6E4F" stop-opacity="0.20"/><stop offset="100%" stop-color="#0B6E4F" stop-opacity="0"/></radialGradient>'
+        + '<radialGradient id="pdsJourCallRose"><stop offset="0%" stop-color="#C2456F" stop-opacity="0.20"/><stop offset="100%" stop-color="#C2456F" stop-opacity="0"/></radialGradient>'
+        + '<filter id="pdsJourLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A0F0D" flood-opacity="0.18"/></filter>'
         + '</defs></svg>';
     }
 
@@ -6332,7 +6472,7 @@
           <svg viewBox="${-PAD} ${-PAD} ${g.w + PAD * 2} ${g.h + PAD * 2}" aria-hidden="true">
             ${caisseNoirChairs(g, g.seats, ring)}${caisseNoirTableBody(g, ring, o.status)}
           </svg>
-          <div class="cplan-face" style="color:rgba(255,255,255,0.5);">
+          <div class="cplan-face" style="color:${caisseJour() ? 'rgba(10,15,13,0.5)' : 'rgba(255,255,255,0.5)'};">
             <span class="cplan-num">${escTeam(String(o.id))}</span>
             ${o.covers ? `<span class="cplan-cov">${o.covers}p</span>` : ''}
           </div>${urgent}${o.serverHTML || ''}${o.phoneHTML || ''}${o.elapsedHTML || ''}
@@ -6547,6 +6687,21 @@
       return '#' + out.map(v => v.toString(16).padStart(2, '0')).join('');
     }
 
+    /* Jour : la même matière tirée vers le papier (#F7F5F0) au lieu du
+       charbon — pdsJourC du dashboard. */
+    function caisseJourC(hex, keep) {
+      const k = keep == null ? 0.16 : keep;
+      const h = String(hex || '#FBF7EE').replace('#', '');
+      const n = h.length === 3 ? h.split('').map(ch => ch + ch).join('') : h;
+      if (!/^[0-9a-fA-F]{6}$/.test(n)) return hex;
+      const base = [247, 245, 240];
+      const out = [0, 2, 4].map((i, j) => {
+        const c = parseInt(n.slice(i, i + 2), 16);
+        return Math.round(base[j] + (c - base[j]) * k);
+      });
+      return '#' + out.map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════
        LE TÉLÉPHONE DU CLIENT, SUR LE PLAN DE SALLE
        ---------------------------------------------------------------------
@@ -6715,12 +6870,21 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    /* Les tables du plan réel cuisent leurs couleurs (matières aplaties,
-       anneaux d'état) dans le SVG au moment du rendu — un changement de thème
-       doit donc repeindre, le remap CSS ne suffit pas. La grille démo, elle,
-       est entièrement pilotée par data-status + jetons : rien à refaire. */
+    /* Le plan cuit ses couleurs (matières aplaties, anneaux d'état, dégradés
+       de plateau) dans le SVG au moment du rendu — un changement de thème doit
+       donc repeindre, le remap CSS ne suffit pas. Plan réel : la grille se
+       redessine seule. Scène démo : le sol, le mobilier et les defs sont
+       injectés une seule fois derrière `planeInit`, il faut donc les retirer
+       avant de relancer l'injection. */
     document.addEventListener('kiwi:caisse-theme', () => {
-      if (storeIsReal()) renderRealGrid();
+      if (storeIsReal()) { renderRealGrid(); return; }
+      document.querySelectorAll('.view-salle .cplan-room[data-plan-zone] .cplan-scale').forEach(scale => {
+        scale.querySelectorAll(':scope > .pds-floor, :scope > .pds-el, :scope > .pds-defs')
+             .forEach(node => node.remove());
+        delete scale.dataset.planeInit;
+      });
+      initDemoPlanes();
+      renderSalle();
     });
 
     // Read the plan, (re)build `tables` from it (status reset to empty), then paint.
