@@ -2,6 +2,7 @@
 // not orders (today: a party seated from the cashier waitlist).
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
+import { poke } from '../_live.js';
 
 const FEATURE = 'service-events';
 const MAX_EVENTS = 200;
@@ -222,12 +223,18 @@ export async function onRequestPost({ request, env }) {
     const result = await syncTableSnapshot(env, merchant, [{
       table, status, covers: body.state.covers, lines: body.state.lines,
     }], 'employee');
-    return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'state-write-failed' }, 503);
+    if (!result.ok) return json({ error: 'state-write-failed' }, 503);
+    /* C'est LE poke qui compte : un serveur vient de marquer une table payée ou
+     * libérée, et la caisse le lisait jusqu'ici en sondant chaque seconde. */
+    await poke(env, merchant, FEATURE);
+    return json({ ok: true, events: result.events });
   }
   if (employee) return json({ error: 'employee-state-only' }, 403);
   if (body.snapshot && Array.isArray(body.snapshot.tables)) {
     const result = await syncTableSnapshot(env, merchant, body.snapshot.tables, 'caisse');
-    return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'snapshot-write-failed' }, 503);
+    if (!result.ok) return json({ error: 'snapshot-write-failed' }, 503);
+    await poke(env, merchant, FEATURE);
+    return json({ ok: true, events: result.events });
   }
   const src = body.event && typeof body.event === 'object' ? body.event : {};
   if (String(src.type || '') !== 'table-seated') return json({ error: 'bad-event-type' }, 400);
@@ -248,5 +255,8 @@ export async function onRequestPost({ request, env }) {
   }
   const state = { table: event.table, status: 'a-commander', covers: event.covers, ts: event.ts };
   if (!await append(env, merchant, event, state)) return json({ error: 'event-write-failed' }, 503);
+  /* Une table vient d'être installée depuis la caisse : le serveur concerné doit
+   * la voir apparaître, pas l'attendre six secondes. */
+  await poke(env, merchant, FEATURE);
   return json({ ok: true, event });
 }

@@ -303,7 +303,16 @@ ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
   && serviceSource.includes('Object.keys(data.states || {})'),
   "les états ouverts, réglés et libérés remontent de la caisse vers l'app employé");
-ok(caisseSource.includes('setInterval(pollEmployeeFloor, 1000)')
+/* Ce contrôle portait sur la forme exacte `setInterval(pollEmployeeFloor, 1000)`.
+   Le sondage est devenu adaptatif — la seconde reste la cadence de référence et
+   ne s'espace que TANT QU'une socket temps réel est ouverte, auquel cas le
+   changement arrive plus vite qu'avant, pas moins. On vérifie donc l'invariant
+   (une seconde par défaut, relance automatique, amorce immédiate) plutôt que
+   l'appel qui le portait. */
+ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
+  && caisseSource.includes('scheduleEmployeeFloor()')
+  && /employeeFloorTimer = setTimeout\(/.test(caisseSource)
+  && caisseSource.includes('live ? FLOOR_POLL_LIVE : FLOOR_POLL_FAST')
   && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),

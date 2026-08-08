@@ -80,6 +80,10 @@
   <script src="assets/escpos.js" defer></script>
   <script src="assets/printer-bridge.js" defer></script>
   <script src="assets/caisse-hardware.js" defer></script>
+  <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
+       déployé, la caisse relit l'état des tables à l'instant où un serveur le
+       change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
+  <script src="assets/live-socket.js" defer></script>
   <!-- Journal de vente partagé — DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
@@ -15240,8 +15244,41 @@
        Four seconds left a paid/closed table visibly open long enough for the
        cashier to reuse it or refresh the whole app. Read employee writes every
        second; publishing the full caisse snapshot can stay on its quieter
-       cadence. The in-flight guard above prevents overlapping requests. */
-    setInterval(pollEmployeeFloor, 1000);
+       cadence. The in-flight guard above prevents overlapping requests.
+
+       La seconde reste la cadence de référence — c'est elle qui tient quand il
+       n'y a pas de socket, et c'est le cas partout tant que le concentrateur
+       n'est pas déployé. Quand une socket EST ouverte, un serveur qui libère une
+       table réveille la caisse tout de suite : le sondage n'est plus la façon
+       d'apprendre le changement, seulement le filet de sécurité, et il peut
+       s'espacer. Il revient à la seconde de lui-même dès la coupure — la
+       cadence se relit à chaque tour, on n'a rien à défaire. */
+    const FLOOR_POLL_FAST = 1000;
+    const FLOOR_POLL_LIVE = 8000;
+    let employeeFloorTimer = null;
+    /* L'abonnement se retente à chaque tour, et c'est voulu : live-socket.js est
+       chargé en `defer` (donc après ce script), une caisse peut être appairée
+       bien après le premier rendu, et elle peut CHANGER de commerçant sans
+       qu'on repasse par une connexion. Un appel de plus quand tout est déjà en
+       place ne coûte rien — KiwiLive.on ressort aussitôt si la salle est la
+       bonne, et rouvre proprement si le slug a changé. */
+    function joinFloorSocket() {
+      try {
+        if (!window.KiwiLive || !storeIsReal()) return;
+        const slug = currentMerchantSlug();
+        if (slug) KiwiLive.on(slug, 'caisse', pollEmployeeFloor);
+      } catch (_) {}
+    }
+    function scheduleEmployeeFloor() {
+      if (employeeFloorTimer) clearTimeout(employeeFloorTimer);
+      const live = window.KiwiLive && KiwiLive.live();
+      employeeFloorTimer = setTimeout(() => {
+        joinFloorSocket();
+        try { pollEmployeeFloor(); } catch (_) {}
+        scheduleEmployeeFloor();
+      }, live ? FLOOR_POLL_LIVE : FLOOR_POLL_FAST);
+    }
+    scheduleEmployeeFloor();
     setTimeout(publishServiceFloor, 800);
     setTimeout(pollEmployeeFloor, 250);
 

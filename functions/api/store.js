@@ -35,6 +35,7 @@
 
 import { json } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
+import { poke } from './_live.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -394,6 +395,13 @@ export async function onRequestPost(context) {
       await writeDoc.run();
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
+
+  /* Écriture faite : on réveille les autres appareils du commerçant pour qu'ils
+   * relisent maintenant plutôt qu'au prochain tour d'horloge. Attendu plutôt que
+   * détaché — sans binding c'est un simple test de vérité, et avec binding
+   * l'aller-retour reste dans le même centre de données, à côté des requêtes D1
+   * qu'on vient déjà de faire. */
+  await poke(env, merchant, feature);
 
   return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length });
 }

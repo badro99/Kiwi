@@ -1,0 +1,39 @@
+# Kiwi · kiwi-live — le concentrateur temps réel (Durable Object).
+#
+# Rien à voir avec tools/sync-worker (kiwi-sync), qui est le cron qui aligne le
+# déploiement Cloudflare sur GitHub. Celui-ci ne touche ni au dépôt ni à la base :
+# il ne fait QUE réveiller les appareils d'un même commerçant.
+#
+# Pourquoi un Worker séparé : une Pages Function peut *utiliser* un Durable
+# Object, elle ne peut pas en *déclarer* la classe. Le code de la classe doit
+# donc vivre dans un Worker à part, déployé une fois, puis lié au projet Pages.
+#
+# Déploiement (une seule fois) :
+#   1. cd tools/live-worker && npx wrangler deploy
+#   2. Cloudflare → Workers & Pages → le projet Pages → Settings → Bindings
+#        Add binding → Durable Object
+#        Variable name .... LIVE
+#        Worker ........... kiwi-live
+#        Class ............ LiveHub
+#   3. Redéployer le projet Pages pour que le binding prenne.
+#
+# Tant que l'étape 2 n'est pas faite, `env.LIVE` est absent partout et TOUT
+# retombe sur les sondages actuels : rien ne casse, rien ne change.
+
+name = "kiwi-live"
+main = "src/index.js"
+compatibility_date = "2025-09-23"
+
+[[durable_objects.bindings]]
+name = "LIVE"
+class_name = "LiveHub"
+
+# SQLite-backed : c'est la forme courante des nouvelles classes. On n'y écrit
+# rien — le concentrateur ne stocke aucune donnée, il ne tient qu'une liste de
+# sockets ouvertes, laquelle vit dans le runtime, pas sur le disque.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveHub"]
+
+[observability]
+enabled = true

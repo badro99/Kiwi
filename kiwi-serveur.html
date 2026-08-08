@@ -3673,6 +3673,10 @@ em, i, cite, dfn, var { font-style: normal; }
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/employee-live.js" defer></script>
+  <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
+       déployé, le serveur relit dès qu'une table change en caisse, au lieu
+       d'attendre son prochain tour. Absent → sondage d'origine, inchangé. -->
+  <script src="assets/live-socket.js" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -4843,13 +4847,42 @@ em, i, cite, dfn, var { font-style: normal; }
          Eighteen seconds was long enough for a newly assigned table to look
          broken during service even though the cloud write had succeeded. */
     }
+    /* Six secondes restent la cadence de référence : c'est elle qui tient
+       partout tant que le concentrateur temps réel n'est pas déployé, et c'est
+       elle qui revient d'elle-même à la moindre coupure de socket. Quand une
+       socket EST ouverte, la caisse réveille le serveur à l'instant où une
+       table change — le sondage n'est plus la façon d'apprendre le changement,
+       seulement le filet, et il peut s'espacer. On relit la cadence à chaque
+       tour : il n'y a rien à défaire au retour. */
+    const SERVICE_SYNC_FAST = 6000;
+    const SERVICE_SYNC_LIVE = 20000;
+    /* L'abonnement se retente à chaque tour, et c'est voulu : live-socket.js
+       est chargé en `defer` (donc après ce script) et le commerçant n'est connu
+       qu'une fois l'employé pointé. Un appel de plus quand la salle est déjà la
+       bonne ne coûte rien — KiwiLive.on ressort aussitôt. */
+    function joinServiceSocket() {
+      try {
+        if (!window.KiwiLive || SV_DEMO || !liveEmployeeState) return;
+        const merchant = liveEmployeeState.merchant || svSlug();
+        if (merchant) KiwiLive.on(merchant, 'service', pollServiceSync);
+      } catch (_) {}
+    }
     function startServiceSync() {
       if (serviceSyncTimer || SV_DEMO) return;
       pollServiceSync();
-      serviceSyncTimer = setInterval(pollServiceSync, 6000);
+      const tick = () => {
+        joinServiceSocket();
+        const live = window.KiwiLive && KiwiLive.live();
+        serviceSyncTimer = setTimeout(() => {
+          try { pollServiceSync(); } catch (_) {}
+          tick();
+        }, live ? SERVICE_SYNC_LIVE : SERVICE_SYNC_FAST);
+      };
+      tick();
     }
     function stopServiceSync() {
-      if (serviceSyncTimer) clearInterval(serviceSyncTimer);
+      if (serviceSyncTimer) clearTimeout(serviceSyncTimer);
+      try { if (window.KiwiLive) KiwiLive.stop(); } catch (_) {}
       serviceSyncTimer = null;
       serviceOrderSince = 0;
       serviceEventSince = 0;
