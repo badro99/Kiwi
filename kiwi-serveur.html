@@ -178,18 +178,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-brand {
       display: inline-flex; align-items: baseline; gap: 5px;
-      color: var(--ink);
-      font-weight: 700;
-      font-size: 36px;
-      line-height: 1;
-      letter-spacing: -0.05em;
+      width: 116px;
+      line-height: 0;
     }
-    .pin-brand i {
-      width: 8px; height: 8px;
-      background: var(--mint);
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .pin-brand img { display: block; width: 100%; height: auto; }
     .pin-tagline {
       font-family: var(--serif);
       font-size: 14px;
@@ -352,19 +344,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .ci-brand {
       display: inline-flex;
       align-items: baseline;
-      gap: 6px;
-      color: var(--ink);
-      font-weight: 700;
-      font-size: 44px;
-      line-height: 1;
-      letter-spacing: -0.05em;
+      width: 138px;
+      line-height: 0;
     }
-    .ci-brand i {
-      width: 10px; height: 10px;
-      background: var(--mint);
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .ci-brand img { display: block; width: 100%; height: auto; }
     .ci-tagline {
       font-family: var(--serif);
       font-size: 18px;
@@ -2897,7 +2880,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <!-- ============ PIN LOGIN SCREEN ============ -->
       <section class="screen screen-pin is-active" id="screen-pin" aria-label="Connexion PIN">
         <div class="pin-top">
-          <div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+          <div class="pin-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
           <div class="pin-tagline">— version serveur</div>
         </div>
 
@@ -2941,7 +2924,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <!-- ============ CLOCK-IN SCREEN ============ -->
       <section class="screen screen-clockin" id="screen-clockin" aria-label="Pointer l'arrivée">
         <div class="ci-top">
-          <div class="ci-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+          <div class="ci-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
           <div class="ci-tagline">— version serveur</div>
         </div>
 
