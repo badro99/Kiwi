@@ -107,6 +107,17 @@ export const TILL_COOKIE = 'kiwi_till';
 export async function tillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
 }
+
+// Stable, store-scoped proof written to the physical attendance NFC tag. The
+// employee still needs their own authenticated session; this token only proves
+// that their phone opened the tag installed at that specific establishment.
+export async function attendanceTagToken(authSecret, merchant) {
+  return hmacHex(authSecret, 'kiwi-attendance-v1:' + String(merchant || ''));
+}
+export async function isAttendanceTagFor(token, env, merchant) {
+  if (!token || !env || !env.AUTH_SECRET || !merchant) return false;
+  return timingSafeEqualHex(String(token), await attendanceTagToken(env.AUTH_SECRET, merchant));
+}
 export function tillCookie(value) {
   return `${TILL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
 }
@@ -126,7 +137,11 @@ export async function isTillFor(request, env, merchant) {
 // stored in localStorage; deleting the staff_pins row still revokes the session
 // because every employee API call re-checks that row.
 export const EMPLOYEE_COOKIE = 'kiwi_employee';
-const EMPLOYEE_SESSION_MS = 12 * 60 * 60 * 1000;
+// An employee may reload or reopen the installed web app during a shift. The
+// live roster is revalidated on every request, so a longer cookie does not keep
+// a deleted employee active; it only prevents a browser reload from becoming
+// an accidental clock-out.
+const EMPLOYEE_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function employeeToken(authSecret, employee) {
   const payload = {

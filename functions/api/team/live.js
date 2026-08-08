@@ -75,6 +75,33 @@ function liveMembers(roster, attendance) {
     };
   });
 }
+function dateKey(ts) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ts));
+    const get = (type) => (parts.find((part) => part.type === type) || {}).value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  } catch (_) { return new Date(ts).toISOString().slice(0, 10); }
+}
+function pointedHours(attendance, now) {
+  const hours = {};
+  (Array.isArray(attendance && attendance.entries) ? attendance.entries : []).forEach((entry) => {
+    if (!entry || !entry.inTs) return;
+    const memberId = String(entry.memberId || entry.staffId || '');
+    if (!memberId) return;
+    const end = Number(entry.outTs) || now;
+    const start = Number(entry.inTs) || 0;
+    if (end <= start) return;
+    let pauseMs = (Array.isArray(entry.breaks) ? entry.breaks : []).reduce((sum, pause) => {
+      const a = Number(pause && pause.inTs) || 0, b = Number(pause && pause.outTs) || 0;
+      return sum + (a && b > a ? b - a : 0);
+    }, 0);
+    if (!entry.outTs && entry.pauseTs) pauseMs += Math.max(0, now - Number(entry.pauseTs));
+    const day = dateKey(start);
+    const row = hours[memberId] || (hours[memberId] = {});
+    row[day] = Math.round(((Number(row[day]) || 0) + Math.max(0, end - start - pauseMs) / 3600000) * 100) / 100;
+  });
+  return hours;
+}
 
 export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
@@ -91,6 +118,7 @@ export async function onRequestGet({ request, env }) {
     ok: true,
     merchant,
     members: liveMembers(rosterFor(team.data, access.data), attendance.data),
+    pointedHours: pointedHours(attendance.data, Date.now()),
     messages: (Array.isArray(messages.data.messages) ? messages.data.messages : []).slice(-MAX_MESSAGES),
     now: Date.now(),
   }, 200, { 'Cache-Control': 'no-store' });

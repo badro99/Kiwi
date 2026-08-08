@@ -6093,7 +6093,7 @@
     function startLiveTeam() {
       if (!storeIsReal()) return;
       pollLiveTeam();
-      if (!liveTeamTimer) liveTeamTimer = setInterval(pollLiveTeam, 5000);
+      if (!liveTeamTimer) liveTeamTimer = setInterval(pollLiveTeam, 1000);
     }
     function rebuildRealRoster() {
       if (!storeIsReal()) return;                      // demo keeps its seeded five

@@ -183,8 +183,14 @@ ok(AUTH.employeeRoleOpensTill('Caissier') && AUTH.employeeRoleOpensTill('Manager
 ok(!AUTH.employeeRoleOpensTill('Serveur') && !AUTH.employeeRoleOpensTill('Cuisinier'),
   "serveur et cuisine gardent l'app employé sans ouvrir la caisse");
 
-const cin = await post({ action: 'clock-in' }, cookie);
+const attendanceTag = await AUTH.attendanceTagToken(env.AUTH_SECRET, 'amira-cafe');
+const remoteClock = await post({ action: 'clock-in' }, cookie);
+ok(remoteClock.status === 403, "un pointage sans le tag NFC du magasin est refusé");
+const cin = await post({ action: 'clock-in', nfcToken: attendanceTag }, cookie);
 ok(cin.status === 200, 'le pointage d’arrivée est persisté');
+const duringShiftReload = await get(cookie); const duringShiftState = await duringShiftReload.json();
+ok(duringShiftReload.status === 200 && duringShiftState.attendance.open,
+  'recharger pendant un service conserve la session et le pointage ouvert');
 const att = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance'").get();
 const attDoc = JSON.parse(att.data);
 attDoc.entries[0].inTs = Date.now() - 2 * 3600000;
@@ -207,7 +213,7 @@ pausedDoc.entries[0].pauseTs = Date.now() - 30 * 60000;
 put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(pausedDoc));
 const resume = await teamLivePost({ action: 'manager-resume', memberId: 'mem-sara' });
 ok(resume.status === 200, 'la caisse termine la pause et ferme sa période');
-const cout = await post({ action: 'clock-out', progress: { paid: 9, revenue: 1200, turnMinutes: 270 } }, cookie);
+const cout = await post({ action: 'clock-out', nfcToken: attendanceTag, progress: { paid: 9, revenue: 1200, turnMinutes: 270 } }, cookie);
 ok(cout.status === 200, 'le pointage de sortie ferme le service');
 const teamAfter = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
 const day = Object.values(teamAfter.hours['mem-sara'])[0];
@@ -248,6 +254,12 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
+ok(serviceSource.includes("get('pointage')")
+  && serviceSource.includes("prepareAttendanceGate('clock-out')")
+  && serviceSource.includes('attendance-nfc-required'),
+  'arrivée et départ passent par le lien NFC signé du magasin');
+ok(/openEmployeeSession[\s\S]*?data\.attendance && data\.attendance\.open[\s\S]*?shiftStart = new Date/.test(serviceSource),
+  'un rechargement restaure le service ouvert au lieu de reconnecter ou repointer l’employé');
 ok(!serviceSource.includes("location.replace('/dashboard?employee=1')"),
   "un échec de session reste dans le portail au lieu de rebondir vers le propriétaire");
 ok(serviceSource.includes("localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant')")
@@ -285,6 +297,10 @@ ok(caisseSource.includes('function publishServiceFloor()')
 ok(caisseSource.includes('setInterval(pollEmployeeFloor, 1000)')
   && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
+ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
+  'la caisse reflète en direct les employés pointés, en pause et sortis');
+ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(pollLiveTeam, 1000)'),
+  'Équipe et Paie & planning reçoivent les heures de pointage du cloud sans rechargement');
 ok(serviceSource.includes('serviceStateVersion.has(id)')
   && serviceSource.includes('legacyEmployeeState')
   && serviceSource.includes("source: 'legacy-cleanup'")

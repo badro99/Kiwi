@@ -554,6 +554,16 @@ em, i, cite, dfn, var { font-style: normal; }
               <button class="add" id="pin-add">Ajouter</button>
             </div>
             <p class="err" id="pin-err"></p>
+            <div class="blk" style="margin-top:14px">
+              <p class="sub" style="margin-top:0">Équipe · tag NFC de pointage</p>
+              <div class="addrow">
+                <input class="nm" id="attendance-link" readonly
+                       aria-label="Lien NFC de pointage de cet établissement" />
+                <button class="mini" id="attendance-copy" type="button">Copier le lien</button>
+              </div>
+              <p class="hint">Écrivez ce lien sur le tag installé dans cet établissement. Le même tag autorise le pointage d’arrivée et le pointage de départ.</p>
+              <p class="err" id="attendance-err"></p>
+            </div>
           </div>
           <div>
             <p class="sub">Fonctionnalités (autorité opérateur)</p>
@@ -1136,6 +1146,10 @@ em, i, cite, dfn, var { font-style: normal; }
     async pins(merchant){
       if (LIVE) { return (await api('/pins?merchant=' + encodeURIComponent(merchant))).pins; }
       return (mock().pins[merchant] || []);
+    },
+    async attendanceLink(merchant){
+      if (LIVE) return api('/attendance-link?merchant=' + encodeURIComponent(merchant));
+      return { ok:true, merchant:merchant, link:location.origin + '/kiwi-serveur?pointage=demo-' + encodeURIComponent(merchant) };
     },
     async addPin(merchant, pin, name, role){
       if (LIVE) { return (await api('/pins', { method:'POST', body:JSON.stringify({ merchant:merchant, pin:pin, name:name, role:role }) })).pin; }
@@ -1925,7 +1939,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
-    await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
+    await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
@@ -1954,7 +1968,7 @@ em, i, cite, dfn, var { font-style: normal; }
      'acct-lock','acct-body','health-grid','aud-list'].forEach(function(id){
       var n = document.getElementById(id); if (n) clear(n);
     });
-    ['sel-name','ts-count','ts-err','pin-err','acct-sub','acct-err',
+    ['sel-name','ts-count','ts-err','pin-err','attendance-link','attendance-err','acct-sub','acct-err',
      'aud-count','health-checked','health-err'].forEach(function(id){
       var n = document.getElementById(id); if (n) n.textContent = '';
     });
@@ -2071,6 +2085,25 @@ em, i, cite, dfn, var { font-style: normal; }
           onClick:async function(){ await store.delPin(selected.merchant, p.id); renderPins(); } }, 'Supprimer')
       ));
     });
+  }
+
+  async function renderAttendanceLink(){
+    var input = document.getElementById('attendance-link');
+    var err = document.getElementById('attendance-err');
+    var copy = document.getElementById('attendance-copy');
+    if (!input || !err || !copy || !selected) return;
+    input.value = 'Chargement…'; err.textContent = ''; copy.disabled = true;
+    var merchant = selected.merchant;
+    try {
+      var data = await store.attendanceLink(merchant);
+      if (!selected || selected.merchant !== merchant) return;
+      input.value = data.link || '';
+      copy.disabled = !input.value;
+    } catch (_) {
+      if (!selected || selected.merchant !== merchant) return;
+      input.value = '';
+      err.textContent = 'Lien de pointage indisponible.';
+    }
   }
 
   // Business-type selector — sourced from the client's onboarding, overridable by
@@ -2881,6 +2914,19 @@ em, i, cite, dfn, var { font-style: normal; }
     });
   });
 
+  document.getElementById('attendance-copy').addEventListener('click', async function(){
+    var input = document.getElementById('attendance-link');
+    if (!input || !input.value) return;
+    try {
+      await navigator.clipboard.writeText(input.value);
+      notify('Lien NFC de pointage copié.');
+    } catch (_) {
+      input.select();
+      document.execCommand('copy');
+      notify('Lien NFC de pointage copié.');
+    }
+  });
+
   /* La recherche du roster. Filtrée à la frappe et localement : le roster est
      déjà en mémoire, donc une requête par caractère ne rapporterait rien.
      Échap vide le champ — et c'est pour ça que le raccourci global « Échap
@@ -2955,7 +3001,7 @@ em, i, cite, dfn, var { font-style: normal; }
        servir), donc elle ne peut pas faire tomber le démarrage. */
     await Promise.all([renderOverview(), renderClients()]);
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
+    if (selected){ await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
   }
   boot(false);
 })();

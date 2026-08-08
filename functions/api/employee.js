@@ -10,7 +10,7 @@
 
 import {
   json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee,
-  findEmployeeCredential, limitCheck, limitFail, limitClear,
+  findEmployeeCredential, limitCheck, limitFail, limitClear, isAttendanceTagFor,
 } from '../auth/_lib.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
@@ -264,6 +264,11 @@ export async function onRequestPost({ request, env }) {
   if (action === 'pause' || action === 'resume') return json({ error: 'pause-managed-by-caisse' }, 403);
   if (!['clock-in', 'clock-out'].includes(action)) return json({ error: 'bad-action' }, 400);
   const merchant = auth.session.merchant;
+  // Both ends of a shift require a fresh visit to the store's physical NFC URL.
+  // Credentials prove who; this signed tag proves where.
+  if (!(await isAttendanceTagFor(String(body.nfcToken || ''), env, merchant))) {
+    return json({ error: 'attendance-nfc-required' }, 403);
+  }
   const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
   const member = memberFor(teamRow.data, auth.pin);
   const memberId = String((member && member.id) || auth.pin.id);

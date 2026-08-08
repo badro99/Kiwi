@@ -1120,8 +1120,17 @@
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) return;
-      const signature = JSON.stringify([merchant, data.members || []]);
+      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}]);
       liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] };
+      const venueKey = teamVenueKey();
+      if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
+        const root = window.__kiwiTeamV2;
+        const venueHours = root.hoursByVenue[venueKey] || (root.hoursByVenue[venueKey] = {});
+        Object.keys(data.pointedHours).forEach((memberId) => {
+          venueHours[memberId] = Object.assign({}, venueHours[memberId] || {}, data.pointedHours[memberId] || {});
+        });
+        persistTeams();
+      }
       if (signature !== liveTeamSignature) {
         liveTeamSignature = signature;
         if (pageActive) render();
@@ -1129,7 +1138,7 @@
       }
     }).catch(() => {}).finally(() => { liveTeamBusy = false; });
   }
-  setInterval(pollLiveTeam, 6000);
+  setInterval(pollLiveTeam, 1000);
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -4232,6 +4232,20 @@ em, i, cite, dfn, var { font-style: normal; }
     let currentScope = 'mine';      // 'mine' | 'all'
     let shiftStart = null;
     let tablesPaid = 0;
+    let attendanceAction = 'clock-in';
+    let attendanceNfcToken = (() => {
+      try { return String(new URLSearchParams(location.search).get('pointage') || ''); }
+      catch (_) { return ''; }
+    })();
+
+    function consumeAttendanceNfcToken() {
+      attendanceNfcToken = '';
+      try {
+        const url = new URL(location.href);
+        url.searchParams.delete('pointage');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } catch (_) {}
+    }
 
     /* ---------- Toast ---------- */
     function toast(msg, ms = 1800) {
@@ -4270,6 +4284,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function pinError(code) {
       const msg = code === 'store-suspended' ? 'Cet établissement est suspendu'
         : code === 'not-configured' ? 'Service momentanément indisponible'
+        : code === 'attendance-nfc-required' ? 'Approchez le téléphone du tag NFC de cet établissement'
         : code === 'too_many_attempts' ? 'Trop d\'essais · réessayez plus tard'
         : 'Email ou code personnel incorrect';
       toast(msg);
@@ -4339,9 +4354,24 @@ em, i, cite, dfn, var { font-style: normal; }
       try { svRebuildCarte(); svFetchCarte(); } catch (_) {}
       activeRole = resolveRole('');
       if (!activeRole) throw new Error('employee-role-missing');
-      applyRoleToClockin();
-      resetNfc();
-      showScreen('screen-clockin');
+      const open = data.attendance && data.attendance.open;
+      if (open) {
+        shiftStart = new Date(Number(open.inTs) || Date.now());
+        startServiceSync();
+        applyRoleToMain();
+        renderSchedule();
+        renderHours();
+        setTab(activeRole.defaultTab);
+        renderAll();
+        if (attendanceNfcToken) {
+          prepareAttendanceGate('clock-out');
+        } else {
+          showScreen('screen-main');
+        }
+      } else {
+        shiftStart = null;
+        prepareAttendanceGate('clock-in');
+      }
       try { document.dispatchEvent(new CustomEvent('kiwi-employee-authenticated')); } catch (_) {}
       if (window.lucide) lucide.createIcons();
     }
@@ -4865,24 +4895,47 @@ em, i, cite, dfn, var { font-style: normal; }
        so re-login starts fresh.
        =========================================================== */
     let nfcTapped = false;
+    function prepareAttendanceGate(action) {
+      attendanceAction = action === 'clock-out' ? 'clock-out' : 'clock-in';
+      applyRoleToClockin();
+      resetNfc();
+      const button = $('#ci-button');
+      const caption = $('#nfc-caption');
+      if (button) {
+        const label = button.querySelector('span');
+        if (label) label.textContent = attendanceAction === 'clock-out' ? 'Pointer le départ' : 'Pointer l’arrivée';
+      }
+      if (caption) caption.textContent = attendanceAction === 'clock-out'
+        ? 'Approchez votre téléphone du tag NFC pour terminer le service'
+        : 'Approchez votre téléphone du tag NFC pour ouvrir le service';
+      showScreen('screen-clockin');
+      if (attendanceNfcToken) fireNfcTap();
+    }
     function resetNfc() {
       nfcTapped = false;
       const z = $('#nfc-zone'), c = $('#nfc-caption'), b = $('#ci-button');
       if (z) z.classList.remove('is-tapped');
-      if (c) c.textContent = 'Approchez votre téléphone du lecteur NFC';
+      if (c) c.textContent = attendanceAction === 'clock-out'
+        ? 'Approchez votre téléphone du tag NFC pour terminer le service'
+        : 'Approchez votre téléphone du tag NFC pour ouvrir le service';
       if (b) b.disabled = true;
     }
     function fireNfcTap() {
       if (nfcTapped) return;
+      // In production, touching the illustration is not proof of presence. Only
+      // opening the signed URL written on this store's physical tag unlocks it.
+      if (!SV_DEMO && !attendanceNfcToken) return;
       nfcTapped = true;
       const z = $('#nfc-zone'), c = $('#nfc-caption'), b = $('#ci-button');
       if (z) z.classList.add('is-tapped');
-      if (c) c.textContent = `Téléphone reconnu · ${activeRole.name}`;
+      if (c) c.textContent = attendanceAction === 'clock-out'
+        ? `Départ autorisé · ${activeRole.name}`
+        : `Arrivée autorisée · ${activeRole.name}`;
       if (b) b.disabled = false;
     }
-    $('#nfc-zone').addEventListener('click', fireNfcTap);
+    $('#nfc-zone').addEventListener('click', () => { if (SV_DEMO) fireNfcTap(); });
     $('#nfc-zone').addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fireNfcTap(); }
+      if (SV_DEMO && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); fireNfcTap(); }
     });
 
     /* ---------- Clock-in / Clock-out ---------- */
@@ -4897,9 +4950,15 @@ em, i, cite, dfn, var { font-style: normal; }
       let cloudStart = null;
       if (!SV_DEMO) {
         try {
-          const saved = await window.KiwiEmployeeLive.clockIn();
+          if (attendanceAction === 'clock-out') {
+            await finishClockOut();
+            btn.classList.remove('is-loading');
+            return;
+          }
+          const saved = await window.KiwiEmployeeLive.clockIn(attendanceNfcToken);
           cloudStart = saved && saved.entry && saved.entry.inTs ? new Date(saved.entry.inTs) : new Date();
           if (liveEmployeeState && liveEmployeeState.attendance) liveEmployeeState.attendance.open = saved.entry || null;
+          consumeAttendanceNfcToken();
         } catch (err) {
           btn.classList.remove('is-loading');
           pinError(err && err.code);
@@ -4992,17 +5051,14 @@ em, i, cite, dfn, var { font-style: normal; }
     // to clock-in screen so the employee can tap NFC + clock in for real.
     $('#offshift-clockin').addEventListener('click', () => {
       exitBrowseMode();
-      resetNfc();
-      applyRoleToClockin();
-      showScreen('screen-clockin');
+      prepareAttendanceGate('clock-in');
       lucide.createIcons();
     });
 
     // "Se déconnecter" — full logout back to PIN screen.
     $('#offshift-logout').addEventListener('click', () => {
       exitBrowseMode();
-      // Reuse the existing logout reset (clears tables/cart state too)
-      clockOut();
+      logoutEmployeeSession();
     });
 
     /* ---------- Greeting flash sequence (post clock-in) ---------- */
@@ -5101,23 +5157,44 @@ em, i, cite, dfn, var { font-style: normal; }
       lucide.createIcons();
     }
 
-    function clockOut() {
+    function resetToEmployeePortal(message) {
       stopServiceSync();
-      if (!SV_DEMO && window.KiwiEmployeeLive) {
-        window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null)
-          .then(() => window.KiwiEmployeeLive.logout())
-          .catch(() => toast('Pointage non synchronisé · vérifiez la connexion'));
-      }
-      // Reset shift state, return to PIN screen (full logout)
       shiftStart = null;
       activeTableId = null;
       menuContextId = null;
       tablesPaid = 0;
       pinInput = '';
       renderPinDots();
-      // Note: table data stays as-is (refresh = full reset)
       showScreen('screen-pin');
-      toast('À l3afya · fin de service');
+      if (message) toast(message);
+    }
+
+    function logoutEmployeeSession() {
+      if (!SV_DEMO && window.KiwiEmployeeLive) {
+        window.KiwiEmployeeLive.logout().catch(() => {});
+      }
+      resetToEmployeePortal('Session fermée');
+    }
+
+    async function finishClockOut() {
+      if (!SV_DEMO && window.KiwiEmployeeLive) {
+        await window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null, attendanceNfcToken);
+        consumeAttendanceNfcToken();
+        await window.KiwiEmployeeLive.logout();
+      }
+      resetToEmployeePortal('À l3afya · fin de service');
+    }
+
+    function clockOut() {
+      if (!SV_DEMO && !attendanceNfcToken) {
+        prepareAttendanceGate('clock-out');
+        toast('Scannez le tag NFC pour pointer le départ');
+        return;
+      }
+      finishClockOut().catch((error) => {
+        pinError(error && error.code);
+        toast('Pointage non synchronisé · vérifiez la connexion');
+      });
     }
 
     $('#profil-clockout').addEventListener('click', () => {
