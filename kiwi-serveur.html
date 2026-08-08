@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Kiwi · Application employé</title>
   <meta name="description" content="Application mobile Kiwi pour le service, le planning et le pointage des employés" />
-  <meta name="theme-color" content="#053B2C" />
+  <meta name="theme-color" content="#FFFFFF" />
   <link rel="manifest" href="serveur.webmanifest" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-caisse-192.png" />
 
@@ -55,6 +55,7 @@
       --paper-cream:   #F7F5F0;
       --paper-soft:    #F7F7F5;
       --paper-mute:    #F4F4F2;
+      --surface:       #FFFFFF;
       --mint:          #7DF2B0;
       --ink-bg:        #0A0F0D;
       --line:          #E5E5E5;
@@ -102,7 +103,7 @@ em, i, cite, dfn, var { font-style: normal; }
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
       letter-spacing: -0.005em;
-      background: #1A1917;
+      background: var(--paper-soft);
     }
     body { overflow: hidden; }
     button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
@@ -124,7 +125,7 @@ em, i, cite, dfn, var { font-style: normal; }
       max-height: calc(100vh - 48px);
       background: var(--surface);
       border-radius: 36px;
-      border: 6px solid #2A2926;
+      border: 6px solid #E3E3DF;
       box-shadow: var(--shadow-3);
       position: relative;
       overflow: hidden;
@@ -166,8 +167,8 @@ em, i, cite, dfn, var { font-style: normal; }
        PIN LOGIN SCREEN
        =========================================================== */
     .screen-pin {
-      background: var(--ink-bg);
-      color: var(--paper-cream);
+      background: var(--surface);
+      color: var(--ink);
       align-items: center;
       justify-content: space-between;
       padding: 48px 28px 36px;
@@ -177,7 +178,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-brand {
       display: inline-flex; align-items: baseline; gap: 5px;
-      color: var(--paper-cream);
+      color: var(--ink);
       font-weight: 700;
       font-size: 36px;
       line-height: 1;
@@ -192,7 +193,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .pin-tagline {
       font-family: var(--serif);
       font-size: 14px;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
     }
     .pin-mid {
       display: flex; flex-direction: column; align-items: center; gap: 16px;
@@ -204,7 +205,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-hint {
       font-size: 12px;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
@@ -223,7 +224,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      border: 1.5px solid rgba(247,245,240,0.3);
+      border: 1.5px solid var(--line);
       background: transparent;
       transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
     }
@@ -253,15 +254,15 @@ em, i, cite, dfn, var { font-style: normal; }
     .pin-key {
       aspect-ratio: 1;
       border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      color: var(--paper-cream);
+      background: var(--paper-mute);
+      color: var(--ink);
       font-size: 26px; font-weight: 500;
       display: flex; align-items: center; justify-content: center;
       transition: background 120ms ease, transform 80ms ease;
       letter-spacing: -0.01em;
     }
     .pin-key:active {
-      background: rgba(255,255,255,0.2);
+      background: var(--mint-tint);
       transform: scale(0.95);
     }
     .pin-key.pin-key-empty {
@@ -270,21 +271,21 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-key.pin-key-back {
       background: transparent;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
     }
     .pin-key.pin-key-back svg {
       width: 22px; height: 22px;
     }
     .pin-key.pin-key-back:active {
-      background: rgba(255,255,255,0.1);
-      color: var(--paper-cream);
+      background: var(--paper-mute);
+      color: var(--ink);
     }
     .pin-foot {
       font-family: var(--mono);
       font-size: 10px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: rgba(247,245,240,0.35);
+      color: var(--ink-4);
       text-align: center;
       margin-top: 14px;
     }
@@ -297,7 +298,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .employee-login label { display: grid; gap: 6px; }
     .employee-login label span {
-      color: rgba(247,245,240,.62);
+      color: var(--ink-3);
       font-size: 11px;
       font-weight: 600;
       letter-spacing: .08em;
@@ -305,21 +306,21 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .employee-login input {
       width: 100%;
-      border: 1px solid rgba(247,245,240,.22);
+      border: 1px solid var(--line);
       border-radius: 13px;
       padding: 14px 15px;
-      background: rgba(255,255,255,.07);
-      color: var(--paper-cream);
+      background: var(--paper-soft);
+      color: var(--ink);
       font-size: 16px;
       outline: none;
     }
-    .employee-login input:focus { border-color: var(--mint); background: rgba(255,255,255,.1); }
+    .employee-login input:focus { border-color: var(--forest); background: var(--mint-tint); }
     .employee-login button {
       margin-top: 4px;
       border-radius: 13px;
       padding: 15px;
-      background: var(--mint);
-      color: var(--ink-bg);
+      background: var(--forest);
+      color: #fff;
       font-size: 16px;
       font-weight: 750;
     }
@@ -327,7 +328,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .employee-login-error {
       min-height: 18px;
       margin: 0;
-      color: #ff9b88;
+      color: var(--danger-mute);
       font-size: 13px;
       text-align: center;
     }
@@ -340,8 +341,8 @@ em, i, cite, dfn, var { font-style: normal; }
        CLOCK-IN SCREEN
        =========================================================== */
     .screen-clockin {
-      background: var(--ink-bg);
-      color: var(--paper-cream);
+      background: var(--surface);
+      color: var(--ink);
       align-items: center;
       justify-content: space-between;
       padding: 56px 28px 36px;
@@ -352,7 +353,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex;
       align-items: baseline;
       gap: 6px;
-      color: var(--paper-cream);
+      color: var(--ink);
       font-weight: 700;
       font-size: 44px;
       line-height: 1;
@@ -367,7 +368,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .ci-tagline {
       font-family: var(--serif);
       font-size: 18px;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
       text-align: center;
     }
 
@@ -377,9 +378,9 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: center;
       letter-spacing: -0.02em;
     }
-    .ci-greeting em { font-family: var(--serif); font-weight: 400; color: var(--mint); }
+    .ci-greeting em { font-family: var(--serif); font-weight: 400; color: var(--forest); }
     .ci-role {
-      font-size: 13px; color: rgba(247,245,240,0.55);
+      font-size: 13px; color: var(--ink-3);
       letter-spacing: 0.08em; text-transform: uppercase;
     }
     .ci-clock-time {
@@ -390,7 +391,7 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 16px;
     }
     .ci-clock-date {
-      font-size: 13px; color: rgba(247,245,240,0.55);
+      font-size: 13px; color: var(--ink-3);
       letter-spacing: 0.02em;
       text-transform: capitalize;
     }
@@ -410,7 +411,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .ci-btn:active { transform: scale(0.98); }
     .ci-btn svg { width: 22px; height: 22px; }
     .ci-restaurant {
-      font-size: 12px; color: rgba(247,245,240,0.45);
+      font-size: 12px; color: var(--ink-4);
       letter-spacing: 0.04em;
     }
 
@@ -421,7 +422,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 0;
       font-family: inherit;
       font-size: 13px;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
       letter-spacing: 0.01em;
       padding: 6px 12px;
       margin-top: 2px;
@@ -429,8 +430,8 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: color 180ms ease;
       display: inline-flex; align-items: center; gap: 6px;
     }
-    .ci-secondary:hover { color: var(--paper-cream); }
-    .ci-secondary:active { color: var(--mint); }
+    .ci-secondary:hover { color: var(--ink); }
+    .ci-secondary:active { color: var(--forest); }
     .ci-secondary svg { width: 14px; height: 14px; }
 
     /* ===========================================================
@@ -452,9 +453,9 @@ em, i, cite, dfn, var { font-style: normal; }
       position: relative;
       width: 88px; height: 88px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.06);
+      background: var(--mint-tint);
       display: flex; align-items: center; justify-content: center;
-      color: var(--mint);
+      color: var(--forest);
       transition: background 220ms ease, box-shadow 220ms ease, transform 220ms ease;
     }
     .nfc-disc::before, .nfc-disc::after {
@@ -496,20 +497,21 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 10.5px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: rgba(247,245,240,0.55);
+      color: var(--ink-3);
       text-align: center;
       line-height: 1.4;
       max-width: 240px;
       transition: color 200ms ease;
     }
     .nfc-zone.is-tapped .nfc-caption {
-      color: var(--mint);
+      color: var(--forest);
     }
 
     /* Pointer l'arrivée — locked state until NFC tap. */
     .ci-btn:disabled, .ci-btn[disabled] {
-      opacity: 0.42;
-      background: rgba(255,255,255,0.08);
+      opacity: 0.58;
+      background: var(--paper-mute);
+      color: var(--ink-4);
       box-shadow: none;
       cursor: not-allowed;
       pointer-events: none;
@@ -582,7 +584,7 @@ em, i, cite, dfn, var { font-style: normal; }
       z-index: 40;
       pointer-events: none;
     }
-    /* Liquid glass: translucent forest tint, heavy blur, bright specular rim. */
+    /* Light navigation capsule. The app currently has one visual mode only. */
     .bt-capsule {
       pointer-events: auto;
       position: relative;
@@ -590,15 +592,13 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 2px;
       padding: 7px 9px;
       border-radius: 999px;
-      background: rgba(11,30,21,0.56);
+      background: rgba(255,255,255,0.94);
       -webkit-backdrop-filter: blur(28px) saturate(1.8);
       backdrop-filter: blur(28px) saturate(1.8);
       box-shadow:
-        0 20px 48px -16px rgba(0,0,0,0.55),
-        0 4px 12px -4px rgba(0,0,0,0.3),
-        inset 0 1px 0.5px rgba(255,255,255,0.45),
-        inset 0 -2px 3px -1px rgba(0,0,0,0.25),
-        inset 0 0 0 1px rgba(255,255,255,0.1);
+        0 14px 36px -16px rgba(10,15,13,0.28),
+        0 3px 10px -4px rgba(10,15,13,0.16),
+        inset 0 0 0 1px rgba(10,15,13,0.08);
     }
     /* the bright glass "lens" that slides + rubber-band stretches between tabs */
     .bt-pill {
@@ -607,8 +607,8 @@ em, i, cite, dfn, var { font-style: normal; }
       height: calc(100% - 14px);
       width: 0;
       border-radius: 999px;
-      background: rgba(255,255,255,0.24);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 1px rgba(255,255,255,0.06), 0 2px 6px -2px rgba(0,0,0,0.25);
+      background: var(--mint-tint);
+      box-shadow: inset 0 0 0 1px var(--mint-edge), 0 2px 6px -2px rgba(10,15,13,0.14);
       transform: translateX(0);
       transition: transform 310ms cubic-bezier(0.34, 1.45, 0.5, 1), width 310ms cubic-bezier(0.34, 1.45, 0.5, 1);
       z-index: 0; opacity: 0;
@@ -618,7 +618,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 auto;
       width: 58px; height: 46px;
       display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,0.72);
+      color: var(--ink-3);
       transition: color 175ms ease;
       -webkit-tap-highlight-color: transparent;
     }
@@ -627,7 +627,7 @@ em, i, cite, dfn, var { font-style: normal; }
       stroke-width: 1.9;
       transition: transform 200ms cubic-bezier(0.34, 1.45, 0.5, 1);
     }
-    .bt-btn[aria-pressed="true"] { color: #fff; }
+    .bt-btn[aria-pressed="true"] { color: var(--forest-deep); }
     .bt-btn[aria-pressed="true"] svg { transform: translateY(-1px) scale(1.06); }
     .bt-btn:active svg { transform: scale(0.86); }
     .bt-btn .bt-badge {
@@ -641,7 +641,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 9px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       line-height: 1;
-      box-shadow: 0 0 0 2px rgba(10,28,20,0.95);
+      box-shadow: 0 0 0 2px #fff;
       z-index: 2;
     }
 
@@ -1296,9 +1296,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .profil-head {
       display: flex; align-items: center; gap: 14px;
       padding: 18px 16px;
-      background: var(--ink-bg);
+      background: var(--mint-tint);
+      border: 1px solid var(--mint-edge);
       border-radius: var(--r-xl);
-      color: var(--paper-cream);
+      color: var(--ink);
     }
     .profil-avatar {
       width: 56px; height: 56px;
@@ -1311,7 +1312,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .profil-info { flex: 1; }
     .profil-name { font-size: 17px; font-weight: 600; }
-    .profil-role { font-size: 12px; color: rgba(247,245,240,0.55); margin-top: 2px; letter-spacing: 0.04em; }
+    .profil-role { font-size: 12px; color: var(--ink-3); margin-top: 2px; letter-spacing: 0.04em; }
 
     .shift-card {
       background: var(--paper-mute);
@@ -1719,7 +1720,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Carte du soir — shift report modal */
     .kg-sc-veil {
       position: absolute; inset: 0;
-      background: var(--ink-bg);
+      background: var(--surface);
       display: none; flex-direction: column;
       z-index: 200; overflow-y: auto;
     }
@@ -1729,7 +1730,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 1; min-height: 100%;
       display: flex; flex-direction: column;
       padding: 32px 26px 22px;
-      color: var(--paper-cream);
+      color: var(--ink);
     }
     .kg-sc-eyebrow {
       font-size: 11px; font-weight: 500; color: var(--mint);
@@ -1737,31 +1738,31 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-sc-title {
       font-family: var(--serif); font-weight: 400;
-      font-size: 42px; line-height: 1; color: #fff; margin-top: 8px;
+      font-size: 42px; line-height: 1; color: var(--ink); margin-top: 8px;
     }
     .kg-sc-meta {
-      font-size: 12px; color: rgba(247,245,240,0.5);
+      font-size: 12px; color: var(--ink-4);
       margin-top: 8px; letter-spacing: 0.02em;
     }
     .kg-sc-rows { margin-top: 22px; }
     .kg-sc-row {
       display: flex; align-items: baseline; justify-content: space-between;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(247,245,240,0.09);
+      border-bottom: 1px solid var(--line-soft);
       opacity: 0; transform: translateY(8px);
       animation: kg-sc-row-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
     }
     @keyframes kg-sc-row-in { to { opacity: 1; transform: translateY(0); } }
-    .kg-sc-row-label { font-size: 13px; color: rgba(247,245,240,0.62); }
+    .kg-sc-row-label { font-size: 13px; color: var(--ink-3); }
     .kg-sc-row-value {
-      font-size: 17px; font-weight: 700; color: #fff;
+      font-size: 17px; font-weight: 700; color: var(--ink);
       font-feature-settings: "tnum" 1; letter-spacing: -0.01em;
     }
     .kg-sc-row-value.kg-mono { font-family: var(--mono); font-weight: 500; }
     .kg-sc-highlight {
       margin-top: 22px;
-      background: linear-gradient(135deg, rgba(63,182,122,0.22), rgba(125,242,176,0.10));
-      border: 1px solid rgba(125,242,176,0.28);
+      background: var(--mint-tint);
+      border: 1px solid var(--mint-edge);
       border-radius: var(--r-xl);
       padding: 16px 16px 17px;
       display: flex; gap: 13px; align-items: flex-start;
@@ -1780,7 +1781,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-transform: uppercase; letter-spacing: 0.1em;
     }
     .kg-sc-hl-text {
-      font-size: 15px; color: #fff; margin-top: 3px;
+      font-size: 15px; color: var(--ink); margin-top: 3px;
       line-height: 1.35; font-weight: 500;
     }
     .kg-sc-hl-text em { font-family: var(--serif); font-weight: 400; }
@@ -1798,10 +1799,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-sc-btn svg { width: 17px; height: 17px; }
     .kg-sc-btn.kg-primary { background: var(--emerald); color: #06281A; }
     .kg-sc-btn.kg-secondary {
-      background: transparent; color: rgba(247,245,240,0.72);
-      border: 1px solid rgba(247,245,240,0.16);
+      background: var(--paper-mute); color: var(--ink-2);
+      border: 1px solid var(--line);
     }
-    .kg-sc-btn.kg-secondary:active { background: rgba(247,245,240,0.06); }
+    .kg-sc-btn.kg-secondary:active { background: var(--mint-tint); }
 
     /* ===========================================================
        MODALS
@@ -2873,11 +2874,9 @@ em, i, cite, dfn, var { font-style: normal; }
        means a thumb never sees the ring, so nothing changes for the ordinary
        case.
 
-       --mint rather than --emerald: the chrome here is dark, and mint is the
-       lighter of the two, so the ring clears 3:1 against both the panel and
-       the filled --forest buttons it will sometimes land on. */
+       Forest stays visible against the app's white and pale-green surfaces. */
     :is(button, a, input, select, textarea, [tabindex]):focus-visible {
-      outline: 2px solid var(--mint);
+      outline: 2px solid var(--forest);
       outline-offset: 2px;
     }
   </style>
