@@ -712,7 +712,7 @@
   }
 
   /* ───────────────── render ───────────────── */
-  function render() {
+  function renderLegacy() {
     injectCss();
     const d = store.get();
     const cats = d.cats || [];
@@ -837,6 +837,15 @@
       subtitle: `${esc(venueName())} · ${items.length} ${tr(T.products)} · ${cats.length} ${tr(T.cats)}`,
       body,
     });
+  }
+
+  /* The store keeps persistence, cloud publishing and editing modals. The
+   * visible menu itself has one owner: venues.js's current card-based screen. */
+  function render() {
+    injectCss();
+    const KV = window.KiwiVenue;
+    if (KV && typeof KV.showMenu === 'function') return KV.showMenu();
+    if (KV && typeof KV.refreshMenu === 'function') return KV.refreshMenu();
   }
 
   function renderEmpty() {
@@ -1503,22 +1512,8 @@
     m.el.querySelector('[data-c-yes]').addEventListener('click', () => { m.close(); onYes(); });
   }
 
-  /* ───────────────── nav-menu ownership (custom venues only) ───────────────── */
+  /* ───────────────── venue scope ───────────────── */
   function isCustom() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
-  let owned = false;
-  function ownNav() {
-    if (owned) return;
-    const H = window.Kiwi && window.Kiwi.handlers;
-    if (!H) return;
-    const prev = H['nav-menu'];
-    const wrapped = function () {
-      if (isCustom()) { document.body.classList.remove('page-genpage'); return render(); }
-      return prev ? prev.apply(this, arguments) : undefined;
-    };
-    wrapped.__mxOwned = true;
-    H['nav-menu'] = wrapped;
-    owned = true;
-  }
 
   /* ───────────────── publish to the customer QR page (real merchants only) ───
    * The customer self-order page (kiwi-order.html) runs on the diner's own phone
@@ -1826,15 +1821,12 @@
   /* ───────────────── boot ───────────────── */
   function boot() {
     registerHandlers();
-    // venues.js re-asserts nav-menu at 'load'; own it just after, before the
-    // starter layer wraps at load+150ms (it lets 'menu' through via REAL_FOR_CUSTOM).
-    setTimeout(ownNav, 60);
     // re-render the open menu page live when this venue's menu changes elsewhere
     // (caisse), and — for a real merchant — publish the new carte to the server so
     // the customer QR page picks it up.
     store.subscribe((vid) => {
-      if (isCustom() && document.querySelector('.dash-genpage [data-page="menu"], .kw-app [data-genpage="menu"]')) {
-        try { render(); } catch (_) {}
+      if (document.body.classList.contains('page-menu')) {
+        try { window.KiwiVenue?.refreshMenu?.(); } catch (_) {}
       }
       schedulePublish(vid);
     });
@@ -1914,6 +1906,35 @@
     addOptGroup, updateOptGroup, deleteOptGroup,
     addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
+    openItem: (id) => {
+      injectCss();
+      const it = id ? itemById(store.get(), id) : null;
+      itemModal(it || null);
+    },
+    duplicateItem: (id) => {
+      const it = itemById(store.get(), id); if (!it) return;
+      addItem({ ...it, name: `${it.name} (copie)` });
+    },
+    requestDeleteItem: (id) => {
+      const it = itemById(store.get(), id); if (!it) return;
+      injectCss();
+      confirmThen(tr(T.delItemQ), () => deleteItem(id));
+    },
+    toggleAvailable: (id) => {
+      const it = itemById(store.get(), id);
+      if (it) updateItem(id, { avail: it.avail === false });
+    },
+    promptAddCategory: () => {
+      injectCss();
+      promptText({ title: tr(T.addCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) addCategory(v); });
+    },
+    openOptions: () => { injectCss(); optsModal(); },
+    openStations: () => { injectCss(); stationsModal(); },
+    openCategoryRoute: (id) => { injectCss(); categoryStationModal(id); },
+    importMenu: () => {
+      if (!window.KiwiCatalogImport) return window.Kiwi?.toast?.('Import indisponible', { type: 'warn', desc: 'Rechargez la page.', force: true });
+      window.KiwiCatalogImport.openMenu({ onDone: () => window.KiwiVenue?.refreshMenu?.() });
+    },
     render,
     publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)
     _store: store,

@@ -150,6 +150,8 @@ function makeWorld(venues, opts) {
       getVenueData: (id) => venues.find((v) => v.id === id) || cur(),
       slugOf: () => cur().slug,
       subscribe: (fn) => subs.push(fn),
+      showMenu: () => { world.pages.push({ name: 'menu-v2', body: '' }); },
+      refreshMenu: () => { world.pages.push({ name: 'menu-v2-refresh', body: '' }); },
     },
     KiwiOrderProPanel: { enabled: () => world.orderProOn },
     Kiwi: {
@@ -286,9 +288,8 @@ const suite = [
     eq('…et vise SA fiche, pas celle du premier', posts[0] && posts[0].body && posts[0].body.merchant, 'le-second');
   })(),
 
-  /* 5 — LA PAGE CARTE VIDE garde l'entrée Order Pro. Un établissement neuf a
-   *     payé l'option et doit pouvoir écrire ses tags avant d'avoir saisi son
-   *     premier plat. */
+  /* 5 — LE STORE NE POSSÈDE PLUS UNE DEUXIÈME PAGE MENU. Vide ou remplie,
+   *     render() délègue au seul écran visuel porté par venues.js. */
   (async () => {
     const w = makeWorld([CAFE], { serverMenus: {}, orderProOn: true });
     const API = load(w);
@@ -296,42 +297,37 @@ const suite = [
     eq('un navigateur neuf ne publie jamais une carte vide au démarrage', menuPosts(w).length, 0);
     w.pages.length = 0;
     API.render();
-    const body = (w.pages[w.pages.length - 1] || {}).body || '';
-    ok('l’état vide est bien celui rendu', body.indexOf('mx-empty') !== -1);
-    ok('l’état vide offre les tags Order Pro', body.indexOf('data-action="orderpro-tags"') !== -1);
+    const page = w.pages[w.pages.length - 1] || {};
+    eq('la carte vide ouvre le menu v2', page.name, 'menu-v2');
+    ok('la carte vide ne ressuscite pas l’ancien écran', page.body.indexOf('mx-empty') === -1);
   })(),
 
-  /* 6 — …et ne les invente pas quand l'option est coupée. Order Pro est une
-   *     surface PUBLIQUE : elle ne s'affiche jamais par défaut. */
+  /* 6 — Le choix du renderer ne dépend d'aucun feature flag Order Pro. */
   (async () => {
     const w = makeWorld([CAFE], { serverMenus: {}, orderProOn: false });
     const API = load(w);
     await sleep(1500);
     w.pages.length = 0;
     API.render();
-    const body = (w.pages[w.pages.length - 1] || {}).body || '';
-    ok('option coupée : aucune entrée Order Pro dans l’état vide',
-       body.indexOf('mx-empty') !== -1 && body.indexOf('orderpro-tags') === -1);
+    eq('option coupée : le menu v2 reste le seul renderer',
+       (w.pages[w.pages.length - 1] || {}).name, 'menu-v2');
   })(),
 
-  /* 7 — La carte remplie garde son entrée, allumée comme éteinte. */
+  /* 7 — Une carte remplie suit exactement la même route unique. */
   (async () => {
     const on = makeWorld([CAFE], { serverMenus: { 'amira-cafe': CARTE('plein') }, orderProOn: true });
     const A = load(on);
     await sleep(1600);
     on.pages.length = 0; A.render();
-    const bodyOn = (on.pages[on.pages.length - 1] || {}).body || '';
 
     const off = makeWorld([CAFE], { serverMenus: { 'amira-cafe': CARTE('plein') }, orderProOn: false });
     const B = load(off);
     await sleep(1600);
     off.pages.length = 0; B.render();
-    const bodyOff = (off.pages[off.pages.length - 1] || {}).body || '';
-
-    ok('carte remplie + option allumée : l’entrée est là',
-       bodyOn.indexOf('mx-empty') === -1 && bodyOn.indexOf('data-action="orderpro-tags"') !== -1);
-    ok('carte remplie + option coupée : rien',
-       bodyOff.indexOf('mx-empty') === -1 && bodyOff.indexOf('orderpro-tags') === -1);
+    eq('carte remplie + option allumée : menu v2',
+       (on.pages[on.pages.length - 1] || {}).name, 'menu-v2');
+    eq('carte remplie + option coupée : menu v2',
+       (off.pages[off.pages.length - 1] || {}).name, 'menu-v2');
   })(),
 
   /* 8 — Une boutique n'est jamais lue comme une carte : son stock a son propre
@@ -366,7 +362,7 @@ Promise.all(suite).then(() => {
     fails.forEach((f) => console.log(`     · ${f}`));
     process.exit(1);
   }
-  console.log(`  ✓ carte par établissement (${pass} contrôles : relecture au changement, isolation des magasins, cible de publication, entrée Order Pro)`);
+  console.log(`  ✓ carte par établissement (${pass} contrôles : relecture au changement, isolation des magasins, cible de publication, route menu v2)`);
 }).catch((e) => {
   console.log(`\n  ✗ carte par établissement — ${e && e.stack}`);
   process.exit(1);

@@ -1641,6 +1641,17 @@
     if (REAL_VENUES.includes(id) || customIds.has(id)) document.body.classList.remove('fusion-mode');
     currentVenue = id;
     try { localStorage.setItem(STORAGE_KEY, id); } catch (_) {}
+    /* A venue switch is a context change, not a deep link. Always return to
+       that venue's dashboard so a restaurant never inherits the previous
+       venue's Menu (or any other full-page module). */
+    try {
+      if (typeof eqCurrentPage !== 'undefined') eqCurrentPage = 'dashboard';
+      window.Kiwi?.pageShell?.();
+      window.Kiwi?.setActivePage?.('accueil');
+      const bc = document.querySelector('.breadcrumb');
+      if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+      window.scrollTo({ top: 0 });
+    } catch (_) {}
     renderAll();
     subscribers.forEach(fn => { try { fn(id); } catch (_) {} });
   }
@@ -4537,8 +4548,39 @@
     if (isCustom(currentVenue)) return currentVenue;
     return REAL_VENUES.includes(currentVenue) ? currentVenue : 'cafeAtlas';
   }
-  function miItems(venue) { return MENU[venue || miMenuVenue()] || []; }
+  function miLiveStore(venue) {
+    const v = venue || miMenuVenue();
+    return isCustom(v) && window.KiwiMenuStore ? window.KiwiMenuStore : null;
+  }
+  function miLiveData(venue) {
+    const S = miLiveStore(venue);
+    return S ? (S.data(venue || miMenuVenue()) || { cats: [], items: [], stations: [], opts: [] }) : null;
+  }
+  function miItems(venue) {
+    const v = venue || miMenuVenue();
+    const d = miLiveData(v);
+    if (!d) return MENU[v] || [];
+    const stations = d.stations || [];
+    const kitchenId = window.KiwiMenuStore.kitchenId(v);
+    return (d.items || []).map((it) => {
+      const cat = (d.cats || []).find((c) => c.id === it.catId);
+      const stationId = (cat && cat.station) || kitchenId;
+      const station = stations.find((s) => s.id === stationId);
+      let cost = null;
+      try { cost = window.KiwiCost?.itemCost?.(it.id); } catch (_) {}
+      return {
+        id: it.id, name: it.name, desc: it.desc || '', category: it.catId,
+        price: +it.price || 0, cost: cost == null ? null : +cost,
+        unitsThisMonth: null, station: stationId,
+        stationLabel: (station && station.name) || 'Cuisine',
+        tags: [], times: {}, venue: v, avail: it.avail !== false,
+        optionCount: Array.isArray(it.opts) ? it.opts.length : 0, live: true,
+      };
+    });
+  }
   function miFindItem(id) {
+    const current = miItems(miMenuVenue()).find(x => x.id === id);
+    if (current) return current;
     for (const v of REAL_VENUES) { const it = (MENU[v] || []).find(x => x.id === id); if (it) return it; }
     return null;
   }
@@ -4546,12 +4588,18 @@
   function miMarginVal(it) { return it.price - it.cost; }
   function miMarginPct(it) { return it.price > 0 ? (it.price - it.cost) / it.price * 100 : 0; }
   function miCustomCat(id) { return miCustomCats.find(c => c.id === id); }
-  function miCatColor(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.color : 'var(--n-400)'; }
-  function miCatLabel(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.label : c; }
+  function miLiveCat(c) {
+    const d = miLiveData();
+    return d && (d.cats || []).find(x => x.id === c);
+  }
+  function miCatColor(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.color : (miLiveCat(c) ? 'var(--atlas)' : 'var(--n-400)'); }
+  function miCatLabel(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.label : ((miLiveCat(c) || {}).name || c); }
   /* Ordered category ids for a venue — base categories present in the menu,
    * then any session-created subsections. */
   function miVenueCats(venue) {
     venue = venue || miMenuVenue();
+    const d = miLiveData(venue);
+    if (d) return (d.cats || []).map(c => c.id);
     const base = MI_CAT_ORDER.filter(c => (MENU[venue] || []).some(i => i.category === c));
     const custom = miCustomCats.filter(c => c.venue === venue).map(c => c.id);
     return [...base, ...custom];
@@ -4559,8 +4607,15 @@
   /* Session-mutable station list for a venue (lazy-init from the menu). */
   function miGetStations(venue) {
     venue = venue || miMenuVenue();
+    const d = miLiveData(venue);
+    if (d) return (d.stations || []).map(s => s.id);
     if (!miStations[venue]) miStations[venue] = [...new Set((MENU[venue] || []).map(i => i.station))];
     return miStations[venue];
+  }
+  function miStationLabel(id, venue) {
+    const d = miLiveData(venue || miMenuVenue());
+    const station = d && (d.stations || []).find(s => s.id === id);
+    return (station && station.name) || id;
   }
   /* The KDS uses a different (shorter) station vocabulary than the Menu
    * page — this maps KDS IDs onto Menu IDs so a single configuration in
@@ -4705,6 +4760,8 @@
     window.scrollTo({ top: 0 });
     renderMenu();
   }
+  function miNavHandler() { miShowPage(); }
+  miNavHandler.__kiwiMenuV2 = true;
   function miShowDashboard() {
     if (!document.body.classList.contains('page-menu')) return;
     document.body.classList.remove('page-menu');
@@ -4715,7 +4772,7 @@
   function miWireHandlers() {
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) { setTimeout(miWireHandlers, 30); return; }
-    H['nav-menu'] = () => miShowPage();
+    H['nav-menu'] = miNavHandler;
     const origAccueil = H['nav-accueil'];
     H['nav-accueil'] = function () {
       try { if (origAccueil) origAccueil.apply(this, arguments); } catch (_) {}
@@ -4733,11 +4790,11 @@
     H['mi-cat-filter']   = (el) => { miCatFilter = el.dataset.cat || 'all'; miRenderTab1Body(); };
     H['mi-view']         = (el) => { miView = el.dataset.view || 'grid'; miRenderTab1Body(); };
     H['mi-period']       = (el) => { miPeriod = el.dataset.period || 'midi'; renderMenu(); };
-    H['mi-add-item']     = () => miOpenItemModal(null);
-    H['mi-edit-item']    = (_el, id) => miOpenItemModal(miFindItem(id));
-    H['mi-dup-item']     = (_el, id) => miDuplicateItem(id);
-    H['mi-del-item']     = (_el, id) => miDeleteItem(id);
-    H['mi-import']       = () => Kiwi.toast('Import lancé', { type: 'info', desc: '38 articles détectés' });
+    H['mi-add-item']     = () => miLiveStore()?.openItem ? miLiveStore().openItem() : miOpenItemModal(null);
+    H['mi-edit-item']    = (_el, id) => miLiveStore()?.openItem ? miLiveStore().openItem(id) : miOpenItemModal(miFindItem(id));
+    H['mi-dup-item']     = (_el, id) => miLiveStore()?.duplicateItem ? miLiveStore().duplicateItem(id) : miDuplicateItem(id);
+    H['mi-del-item']     = (_el, id) => miLiveStore()?.requestDeleteItem ? miLiveStore().requestDeleteItem(id) : miDeleteItem(id);
+    H['mi-import']       = () => miLiveStore()?.importMenu ? miLiveStore().importMenu() : Kiwi.toast('Import lancé', { type: 'info', desc: '38 articles détectés' });
     H['mi-export']       = () => Kiwi.toast('Menu exporté', { type: 'success', desc: 'PDF + Excel générés' });
     H['mi-sort']         = (el) => Kiwi.menu(el, [
       { head: 'Trier par' },
@@ -4747,10 +4804,10 @@
       { label: 'Nom (A→Z)', onClick: () => {} },
     ]);
     H['mi-mods-toggle']  = () => { miModsCollapsed = !miModsCollapsed; const c = document.querySelector('[data-mi-mods]'); if (c) c.classList.toggle('collapsed', miModsCollapsed); };
-    H['mi-add-group']    = () => miOpenGroupModal(null);
-    H['mi-edit-group']   = (_el, id) => miOpenGroupModal(miGroupById(id));
-    H['mi-dup-group']    = (_el, id) => miDuplicateGroup(id);
-    H['mi-del-group']    = (_el, id) => miConfirmDeleteGroup(id);
+    H['mi-add-group']    = () => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miOpenGroupModal(null);
+    H['mi-edit-group']   = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miOpenGroupModal(miGroupById(id));
+    H['mi-dup-group']    = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miDuplicateGroup(id);
+    H['mi-del-group']    = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miConfirmDeleteGroup(id);
     /* Per-item toggle handler — driven from inside the item modal. The
      * itemId is read from a data-* on the row to keep the markup uncoupled
      * from the modal's lifecycle. */
@@ -4777,13 +4834,16 @@
       if (back) back.querySelector('.kiwi-modal-close')?.click();
       miOpenGroupModal(miGroupById(gid), { attachToItemId: itemId });
     };
-    H['mi-station']      = (_el, id) => miOpenEditStationModal(id);
-    H['mi-edit-station'] = (_el, id) => miOpenEditStationModal(id);
-    H['mi-add-station']  = () => miOpenAddStationModal();
-    H['mi-remove-station'] = (_el, id) => miRemoveStation(id);
-    H['mi-reroute-item'] = (el, id) => miRerouteItem(id, el);
-    H['mi-add-sub']      = () => miOpenAddSubModal();
-    H['mi-reroute-sub']  = (el, cat) => miRerouteSub(cat, el);
+    H['mi-station']      = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenEditStationModal(id);
+    H['mi-edit-station'] = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenEditStationModal(id);
+    H['mi-add-station']  = () => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenAddStationModal();
+    H['mi-remove-station'] = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miRemoveStation(id);
+    H['mi-reroute-item'] = (el, id) => {
+      const it = miFindItem(id);
+      return miLiveStore()?.openCategoryRoute && it ? miLiveStore().openCategoryRoute(it.category) : miRerouteItem(id, el);
+    };
+    H['mi-add-sub']      = () => miLiveStore()?.promptAddCategory ? miLiveStore().promptAddCategory() : miOpenAddSubModal();
+    H['mi-reroute-sub']  = (el, cat) => miLiveStore()?.openCategoryRoute ? miLiveStore().openCategoryRoute(cat) : miRerouteSub(cat, el);
     H['mi-howto']        = () => miOpenHowtoModal();
     H['mi-matrix-dot']   = (_el, id) => miOpenItemModal(miFindItem(id));
     H['mi-quad-action']  = (el) => miQuadAction(el.dataset.quad);
@@ -4828,11 +4888,11 @@
       <div class="mi-head">
         <div>
           <div class="mi-title">Menu &amp; modificateurs</div>
-          <div class="mi-sub">${items.length} articles · ${catCount} sous-section${catCount > 1 ? 's' : ''} · ${eqEsc((VENUES[venue] || {}).name || '')}</div>
+          <div class="mi-sub">${items.length} articles · ${catCount} section${catCount > 1 ? 's' : ''} · ${eqEsc((VENUES[venue] || VENUES[currentVenue] || {}).name || '')}</div>
         </div>
         <div class="mi-head-acts">
           <button class="btn-slim" data-action="mi-import">${miSvg('upload', 13)}<span>Importer Excel</span></button>
-          <button class="btn-slim" data-action="mi-export">${miSvg('download', 13)}<span>Exporter le menu</span></button>
+          ${miLiveStore(venue) ? '' : `<button class="btn-slim" data-action="mi-export">${miSvg('download', 13)}<span>Exporter le menu</span></button>`}
         </div>
       </div>`;
   }
@@ -4845,7 +4905,7 @@
         `<button class="mi-pill${miMenuVenue() === id ? ' on' : ''}" data-action="mi-venue-filter" data-venue="${id}">${l}</button>`
       ).join('') + '</div>';
     }
-    const active86 = mi86.length;
+    const active86 = miLiveStore(miMenuVenue()) ? 0 : mi86.length;
     const tabs = [
       ['menu', 'Menu & modificateurs', 'menu'],
       ['stations', 'Stations cuisine', 'station'],
@@ -4866,6 +4926,16 @@
   }
 
   function miTabHtml() {
+    if (miLiveStore(miMenuVenue()) && !['menu', 'stations'].includes(miTab)) {
+      const labels = {
+        recettes: 'Recettes', perf: 'Performance',
+        hours: 'Heures de pointe', alerts: 'Alertes 86', compare: 'Comparaison sites',
+      };
+      return `<div class="mi-section"><div class="mi-section-head"><h3>${labels[miTab] || 'Menu'}</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune donnée réelle n’est encore disponible pour cette vue.
+        </div></div>`;
+    }
     switch (miTab) {
       case 'stations': return miStationsTabHtml();
       case 'recettes': return miRenderRecettesTab(miMenuVenue());
@@ -4882,7 +4952,10 @@
     return (tags || []).map(t => `<span class="mi-tag ${t}">${MI_TAG_LABEL[t] || t}</span>`).join('');
   }
   function miItemCard(it) {
-    const pct = miMarginPct(it);
+    const pct = it.cost == null ? null : miMarginPct(it);
+    const liveMeta = it.live
+      ? `<span class="mi-card-units">${it.avail === false ? 'Indisponible' : `${it.optionCount || 0} groupe(s) d’options`}</span>`
+      : `<span class="mi-card-units">${eqFrInt(it.unitsThisMonth)} vendus</span>`;
     return `
       <div class="mi-card" data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
         <div class="mi-card-top">
@@ -4892,11 +4965,11 @@
         <div class="mi-card-name"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</div>
         <div class="mi-card-price-row">
           <span class="mi-card-price">${eqFrInt(it.price)}</span>
-          <button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}" aria-label="Rerouter vers une station">→ ${eqEsc(it.station)}</button>
+          <button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}" aria-label="Rerouter vers une station">→ ${eqEsc(it.stationLabel || it.station)}</button>
         </div>
         <div class="mi-card-foot">
-          <span class="mi-card-units">${eqFrInt(it.unitsThisMonth)} vendus</span>
-          <span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>
+          ${liveMeta}
+          ${pct == null ? '' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}
           <span class="mi-card-acts">
             <button class="mi-ic-btn" data-action="mi-edit-item" data-arg="${it.id}" aria-label="Modifier">${miSvg('edit', 13)}</button>
             <button class="mi-ic-btn" data-action="mi-dup-item" data-arg="${it.id}" aria-label="Dupliquer">${miSvg('copy', 13)}</button>
@@ -4933,6 +5006,18 @@
     const allItems = miItems(venue);
     const cats = miVenueCats(venue);
     const list = miFilteredItems();
+    const liveGroups = miLiveStore(venue)?.optionGroups?.(venue);
+    const rawLiveItems = miLiveData(venue)?.items || [];
+    const menuGroups = liveGroups ? liveGroups.map(g => ({
+      id: g.id, name: g.name, required: !!g.required,
+      maxSel: g.kind === 'many' ? Math.max(2, (g.choices || []).length) : 1,
+      options: g.choices || [],
+      isGlobal: false, scope: { subsections: [], items: [] },
+      scopeLabel: `${allItems.filter(it => {
+        const raw = rawLiveItems.find(x => x.id === it.id);
+        return Array.isArray(raw?.opts) && raw.opts.includes(g.id);
+      }).length} article(s)`,
+    })) : MI_MOD_GROUPS;
 
     /* Subsection filter pills + the add-actions, on one bar — actions sit
      * with the subsections they create rather than up in the page header. */
@@ -4960,7 +5045,7 @@
     /* Modifier option groups — polished cards instead of a flat table.
      * Each card shows mode/required pills, options with price deltas, and
      * a scope readout so the owner can see where the group applies. */
-    const groupsHtml = MI_MOD_GROUPS.length ? MI_MOD_GROUPS.map(g => {
+    const groupsHtml = menuGroups.length ? menuGroups.map(g => {
       const reqPill = g.required
         ? '<span class="mi-group-card-pill req">Obligatoire</span>'
         : '<span class="mi-group-card-pill opt">Optionnel</span>';
@@ -4981,7 +5066,7 @@
             ${reqPill}${modePill}${globalPill}
           </div>
           <div class="mi-group-card-opts">${optsHtml || '<span style="font-size:11.5px;color:var(--n-500);">Aucune option</span>'}</div>
-          <div class="mi-group-card-scope">Appliqué à : ${eqEsc(miGroupScopeLabel(g))}</div>
+          <div class="mi-group-card-scope">Appliqué à : ${eqEsc(g.scopeLabel || miGroupScopeLabel(g))}</div>
           <div class="mi-group-card-acts">
             <button class="btn-slim" data-action="mi-edit-group" data-arg="${g.id}">${miSvg('edit', 12)}<span>Modifier</span></button>
             <button class="btn-slim" data-action="mi-dup-group" data-arg="${g.id}">${miSvg('copy', 12)}<span>Dupliquer</span></button>
@@ -4989,9 +5074,9 @@
           </div>
         </div>`;
     }).join('') : `<div style="grid-column:1/-1;text-align:center;color:var(--n-500);padding:24px;font-size:13px;">Aucun groupe d'options, créez-en un avec « Nouveau groupe d'options ».</div>`;
-    const groupsApplied = MI_MOD_GROUPS.filter(g => g.isGlobal || (g.scope.subsections || []).length || (g.scope.items || []).length).length;
-    const groupsGlobal = MI_MOD_GROUPS.filter(g => g.isGlobal).length;
-    const groupsStats = `<div class="mi-section-sub">${MI_MOD_GROUPS.length} groupe${MI_MOD_GROUPS.length > 1 ? 's' : ''} · ${groupsApplied} appliqué${groupsApplied > 1 ? 's' : ''} · ${groupsGlobal} global${groupsGlobal > 1 ? 'aux' : ''}</div>`;
+    const groupsApplied = menuGroups.filter(g => g.isGlobal || (g.scope.subsections || []).length || (g.scope.items || []).length).length;
+    const groupsGlobal = menuGroups.filter(g => g.isGlobal).length;
+    const groupsStats = `<div class="mi-section-sub">${menuGroups.length} groupe${menuGroups.length > 1 ? 's' : ''}${liveGroups ? '' : ` · ${groupsApplied} appliqué${groupsApplied > 1 ? 's' : ''} · ${groupsGlobal} global${groupsGlobal > 1 ? 'aux' : ''}`}</div>`;
 
     /* Note: Routage cuisine section moved to its own "Stations cuisine"
      * tab — miStationsTabHtml. Lives at a top-level pill so it can carry
@@ -5035,7 +5120,7 @@
    * ═════════════════════════════════════════════════════════════════════ */
   function miStationsTabHtml() {
     const venue = miMenuVenue();
-    const items = MENU[venue] || [];
+    const items = miItems(venue);
     const stationIds = miGetStations(venue);
     const connected = stationIds.filter(s => miStationState(s).dot !== 'off').length;
     const totalRouted = items.length;
@@ -5070,7 +5155,7 @@
       return `
         <div class="mi-station mi-station-card" data-action="mi-station" data-arg="${s}">
           <button type="button" class="mi-station-x" data-action="mi-remove-station" data-arg="${s}" aria-label="Retirer la station">${miSvg('plus', 11)}</button>
-          <div class="mi-station-top"><span class="mi-st-dot ${st.dot}"></span><span class="mi-station-name">${eqEsc(s)}</span></div>
+          <div class="mi-station-top"><span class="mi-st-dot ${st.dot}"></span><span class="mi-station-name">${eqEsc(miStationLabel(s, venue))}</span></div>
           <div class="mi-station-meta">${eqEsc(st.meta)}</div>
           ${syncChip}
           <div class="mi-station-routed">${routed} article${routed > 1 ? 's' : ''} routé${routed > 1 ? 's' : ''}${sample ? ` · ${sample}${routed > 3 ? '…' : ''}` : ''}</div>
@@ -5082,7 +5167,7 @@
     const syncStations = stationIds.filter(s => miStationState(s).sync);
     const fastStations = stationIds.filter(s => !miStationState(s).sync);
     const slowest = syncStations
-      .map(s => ({ name: s, t: miStationState(s).avgPrepMin }))
+      .map(s => ({ name: miStationLabel(s, venue), t: miStationState(s).avgPrepMin }))
       .sort((a, b) => b.t - a.t)[0];
 
     return `
@@ -5114,16 +5199,16 @@
   }
   function miListHtml(list) {
     const rows = list.map(it => {
-      const pct = miMarginPct(it);
+      const pct = it.cost == null ? null : miMarginPct(it);
       return `
         <tr data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
           <td><b style="font-weight:600;"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</b></td>
           <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}</td>
           <td class="mono">${eqFrInt(it.price)} MAD</td>
-          <td class="mono">${eqFrInt(it.cost)} MAD</td>
-          <td><span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span></td>
-          <td class="mono">${eqFrInt(it.unitsThisMonth)}</td>
-          <td><button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}">→ ${eqEsc(it.station)}</button></td>
+          <td class="mono">${it.cost == null ? '—' : eqFrInt(it.cost) + ' MAD'}</td>
+          <td>${pct == null ? '—' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}</td>
+          <td class="mono">${it.unitsThisMonth == null ? '—' : eqFrInt(it.unitsThisMonth)}</td>
+          <td><button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}">→ ${eqEsc(it.stationLabel || it.station)}</button></td>
           <td>${miTagPills(it.tags) || '<span style="color:var(--n-300);">—</span>'}</td>
           <td>
             <span class="mi-card-acts">
@@ -7502,7 +7587,7 @@
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) return;
     H['nav-equipe']  = () => eqShowPage();
-    H['nav-menu']    = () => miShowPage();
+    H['nav-menu']    = miNavHandler;
     H['nav-payroll'] = () => payShowPage();
     const origAccueil = H['nav-accueil'];
     H['nav-accueil'] = function () {
@@ -8466,6 +8551,10 @@
      * innerHTML reset that follows. */
     miRecSearchHook,
     miRecSortHook,
+    showMenu: miShowPage,
+    refreshMenu: () => {
+      if (document.body.classList.contains('page-menu')) renderMenu();
+    },
     getVenue,
     setVenue,
     getPlan: () => currentPlan,
