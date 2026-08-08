@@ -70,7 +70,7 @@ async function floorTargets(env, merchant) {
   } catch (_) {}
   return out;
 }
-async function syncTableSnapshot(env, merchant, rawTables) {
+async function syncTableSnapshot(env, merchant, rawTables, source) {
   const targets = await floorTargets(env, merchant);
   const incoming = Object.create(null);
   (Array.isArray(rawTables) ? rawTables : []).slice(0, 250).forEach((src) => {
@@ -88,11 +88,14 @@ async function syncTableSnapshot(env, merchant, rawTables) {
     const emitted = [];
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
-      states[table] = { ...next, ts: Date.now() };
-      if (!before || before.status === next.status) return;
+      const changed = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
+      if (!changed) return;
+      const changedAt = Date.now();
+      states[table] = { ...next, ts: changedAt, source: source || 'caisse' };
+      if (!before) return;
       const target = targets[table] || {};
       const event = {
-        id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: Date.now(),
+        id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: changedAt,
         table, status: next.status, previousStatus: String(before.status || ''), covers: next.covers,
         serverId: target.serverId || '', server: target.server || '',
       };
@@ -120,6 +123,18 @@ export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   const url = new URL(request.url);
   const asked = String(url.searchParams.get('merchant') || '').trim().toLowerCase().slice(0, 64);
+  const role = String(url.searchParams.get('role') || '').toLowerCase();
+  if (role === 'caisse') {
+    const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+    if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+    const row = await readDoc(env, merchant);
+    const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+    return json({
+      ok: true,
+      events: (Array.isArray(row.data.events) ? row.data.events : []).filter((event) => event && Number(event.ts) > since).slice(-MAX_EVENTS),
+      states: row.data.states || {}, now: Date.now(),
+    });
+  }
   const employee = await activeServiceEmployee(request, env, asked);
   if (!employee) return json({ error: 'on-shift-service-required' }, 403);
   const since = Math.max(
@@ -162,10 +177,23 @@ export async function onRequestPost({ request, env }) {
   let body = {};
   try { body = await request.json() || {}; } catch (_) { return json({ error: 'bad-json' }, 400); }
   const asked = String(body.merchant || '').trim().toLowerCase().slice(0, 64);
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  const employee = await activeServiceEmployee(request, env, asked);
+  const merchant = employee ? employee.merchant : await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  if (body.state && employee) {
+    const table = tableKey(body.state.table);
+    const status = String(body.state.status || '');
+    const targets = await floorTargets(env, merchant);
+    if (!table || !targets[table] || !TABLE_STATUSES.has(status)) return json({ error: 'floor-table-required' }, 403);
+    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    const result = await syncTableSnapshot(env, merchant, [{
+      table, status, covers: body.state.covers,
+    }], 'employee');
+    return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'state-write-failed' }, 503);
+  }
+  if (employee) return json({ error: 'employee-state-only' }, 403);
   if (body.snapshot && Array.isArray(body.snapshot.tables)) {
-    const result = await syncTableSnapshot(env, merchant, body.snapshot.tables);
+    const result = await syncTableSnapshot(env, merchant, body.snapshot.tables, 'caisse');
     return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'snapshot-write-failed' }, 503);
   }
   const src = body.event && typeof body.event === 'object' ? body.event : {};

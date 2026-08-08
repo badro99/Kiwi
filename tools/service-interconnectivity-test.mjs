@@ -7,6 +7,7 @@ import { employeeToken, employeeCookie, makeSession, sessionCookie } from '../fu
 import { onRequestGet as queueGet, onRequestPost as queuePost } from '../functions/api/order/queue.js';
 import { onRequestGet as eventsGet, onRequestPost as eventsPost } from '../functions/api/service/events.js';
 import { onRequestPost as teamLivePost } from '../functions/api/team/live.js';
+import { onRequestGet as employeeClientsGet, onRequestPost as employeeClientsPost } from '../functions/api/employee-clients.js';
 import { onRequest as gate } from '../functions/_middleware.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,6 +56,9 @@ const attendance = { entries: [
 for (const [feature, data] of [['team', team], ['floorplan', floor], ['attendance', attendance]]) {
   put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)', merchant, feature, JSON.stringify(data), 1, now);
 }
+put("INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)", merchant, 'fidelity', JSON.stringify({ model: 'amount', amount: { perMad: 2, threshold: 100 } }), 1, now);
+put(`INSERT INTO clients (merchant,id,name,phone,points,stamps,visits,spend,last_seen,updated_ts,srv_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`, merchant, 'c1', 'Amina Client', '0612345678', 10, 0, 1, 80, now, now, now);
 const saraCookie = employeeCookie(await employeeToken(SECRET, { merchant, staffId: 'sara' })).split(';')[0];
 const omarCookie = employeeCookie(await employeeToken(SECRET, { merchant, staffId: 'omar' })).split(';')[0];
 const kitchenCookie = employeeCookie(await employeeToken(SECRET, { merchant, staffId: 'karim' })).split(';')[0];
@@ -74,6 +78,24 @@ async function qpost(cookie, body) {
 let result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [{ id: 'i1', qty: 1 }] });
 ok(result.response.status === 200 && result.body.ok && result.body.total === 80, 'le serveur pointé envoie sa table en cuisine');
 const saraOrderId = result.body.id;
+let request, response;
+request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}`, { headers: { Cookie: saraCookie } });
+response = await gate({ request, env, next: () => new Response('next') });
+ok(response.status === 200 && await response.text() === 'next', 'la porte edge laisse le serveur pointé atteindre le carnet clients');
+request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}`, { headers: { Cookie: saraCookie } });
+response = await employeeClientsGet({ request, env }); let clientBook = await json(response);
+ok(response.status === 200 && clientBook.clients.length === 1 && clientBook.clients[0].name === 'Amina Client',
+  'le serveur pointé voit le carnet fidélité de ce magasin seulement');
+request = new Request('https://kiwi.test/api/employee-clients', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, clientId: 'c1', amount: 80, ref: 'employee-payment:1:test',
+}) });
+response = await employeeClientsPost({ request, env }); const loyalty = await json(response);
+ok(response.status === 200 && loyalty.points === 160, 'le paiement serveur crédite la règle fidélité du dashboard');
+request = new Request('https://kiwi.test/api/employee-clients', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, clientId: 'c1', amount: 80, ref: 'employee-payment:1:test',
+}) });
+response = await employeeClientsPost({ request, env });
+ok(response.status === 200 && (await json(response)).replayed === true, 'un retry Wi-Fi ne crédite jamais les points deux fois');
 result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [
   { id: 'i1', qty: 2, optionChoices: [{ group: 'sauce', label: 'Épicée' }] },
 ] });
@@ -95,6 +117,9 @@ ok(result.response.status === 403, "un rôle cuisine n'ouvre jamais le canal de 
 put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 'ord-orderpro-sara', merchant, 91, 'table', '1', 80,
   JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'pending', now, now, 'sess-orderpro');
+put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`, 'ord-before-shift', merchant, 90, 'table', '1', 80,
+  JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'ready', now - 5000, now - 5000);
 
 await qpost(ownerCookie, { merchant, create: true, mode: 'table', table: '2', lines: [{ id: 'i1', qty: 1 }], ref: 'omar-order' });
 let saraQueue = await qget(saraCookie);
@@ -105,6 +130,8 @@ ok(saraQueue.response.status === 200
   && saraQueue.body.service.allTables.includes('2'), 'Mes tables reste identifié, Toutes les tables reçoit le plan complet');
 ok(saraQueue.body.orders.some((order) => order.id === 'ord-orderpro-sara' && order.status === 'pending' && order.session),
   'une nouvelle commande OrderPro de sa table atteint Sara');
+ok(!saraQueue.body.orders.some((order) => order.id === 'ord-before-shift'),
+  'un ancien prêt antérieur au pointage ne rejoue pas à chaque rechargement');
 const omarQueue = await qget(omarCookie);
 ok(omarQueue.response.status === 200 && omarQueue.body.service.mineTables.includes('2'), 'Omar garde la propriété de sa table');
 
@@ -113,10 +140,10 @@ ok(result.response.status === 200 && result.body.status === 'ready', 'le KDS pub
 saraQueue = await qget(saraCookie);
 ok(saraQueue.body.orders.some((order) => order.id === saraOrderId && order.status === 'ready'), 'le serveur affecté reçoit le prêt cuisine');
 
-let request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, event: { type: 'table-seated', table: '1', server: 'Sara Service', customer: 'Famille Alaoui', covers: 4 },
 }) });
-let response = await eventsPost({ request, env });
+response = await eventsPost({ request, env });
 ok(response.status === 200, 'la caisse publie une installation depuis la file attente');
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
 response = await eventsGet({ request, env }); const saraEvents = await json(response);
@@ -136,6 +163,20 @@ ok(openedState.states['1'] && openedState.states['1'].status === 'ka-yaklo',
   "la table ouverte en caisse remplace l'état vide du téléphone serveur");
 ok(openedState.events.some((event) => event.type === 'table-state' && event.table === '1' && event.status === 'ka-yaklo'),
   'le serveur affecté garde la notification de table ouverte dans son historique');
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, state: { table: '1', status: 'khawya', covers: 0 },
+}) });
+response = await eventsPost({ request, env });
+ok(response.status === 200, 'le serveur libère la table dans le même état cloud que la caisse');
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const caisseState = await json(response);
+ok(response.status === 200 && caisseState.states['1'].status === 'khawya' && caisseState.states['1'].source === 'employee',
+  'la caisse reçoit immédiatement la fermeture faite sur le téléphone');
+put(`INSERT INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
+     VALUES (?,?,?,?,?,?,?)`, 'sess-stale-table-1', merchant, 'table', '1', 'open', now, now);
+result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });
+ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
+  'fermer côté serveur coupe aussi la session OrderPro qui rouvrait la table');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, snapshot: { tables: [{ table: '1', status: 'khlass', covers: 4 }, { table: '2', status: 'khawya', covers: 2 }] },
 }) });

@@ -3430,6 +3430,9 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="modal-handle"></div>
           <h3 class="modal-title">Encaisser <span id="pc-table-id">T2</span></h3>
           <p class="modal-subtle">Total: <span id="pc-total" class="mono">530 MAD</span></p>
+          <button class="td-btn ghost sm" id="pc-client" type="button" style="margin-bottom:10px;">
+            <i data-lucide="user-plus"></i> <span id="pc-client-label">Client &amp; fidélité</span>
+          </button>
           <div class="pay-choice">
             <div class="pay-row">
               <button class="pay-icon card" data-pay="card" aria-label="Payer par carte">
@@ -3444,6 +3447,19 @@ em, i, cite, dfn, var { font-style: normal; }
             </button>
             <button class="td-btn ghost sm" id="pc-cancel" style="margin-top:4px;">Annuler</button>
           </div>
+        </div>
+      </div>
+
+      <div class="modal-veil" id="service-client-modal" role="dialog" aria-modal="true">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <h3 class="modal-title">Client &amp; fidélité</h3>
+          <p class="modal-subtle">Attachez un client existant à cette addition.</p>
+          <input id="service-client-search" type="search" placeholder="Nom ou téléphone"
+            style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;" />
+          <div id="service-client-list" style="display:grid;gap:8px;max-height:42vh;overflow:auto;margin:12px 0;"></div>
+          <button class="td-btn ghost sm" id="service-client-none" type="button">Client de passage</button>
+          <button class="td-btn ghost sm" id="service-client-close" type="button">Fermer</button>
         </div>
       </div>
 
@@ -4137,12 +4153,12 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Generated orders for occupied tables ---------- */
     /* For tables without a seedOrder, generate a plausible order from menu (deterministic) */
     function buildInitialOrder(id, t) {
+      if (!SV_DEMO) return [];
       if (seedOrders[id]) return seedOrders[id].map(l => ({ ...l }));
       if (t.status === 'khawya') return [];
       /* Une table réelle sans commande saisie est vide. La suite invente des
          lignes à partir de la carte de démo — inoffensif en vitrine, faux chez
          un client. */
-      if (!SV_DEMO) return [];
       const seed = parseInt(id.replace('T',''), 10);
       const lines = [];
       const mains = menuItems.filter(m => ['tajines','couscous','pastillas'].includes(m.cat));
@@ -4485,6 +4501,7 @@ em, i, cite, dfn, var { font-style: normal; }
       liveEmployeeState = data;
       const emp = data.employee;
       currentUser = emp.id || 'employee';
+      loadServiceHistory();
 
       Object.keys(servers).forEach((k) => { delete servers[k]; });
       (data.colleagues || []).forEach((c) => {
@@ -4576,11 +4593,13 @@ em, i, cite, dfn, var { font-style: normal; }
     let servicePlanTick = 0;
     const serviceOrderStatus = new Map();
     const serviceEventSeen = new Set();
+    const serviceStateVersion = new Map();
     const teamMessageSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
     const serviceNotifications = [];
     let serviceUnread = 0;
+    let serviceHistoryKey = '';
 
     function serviceNorm(value) {
       let s = String(value || '').trim().toLowerCase();
@@ -4591,14 +4610,60 @@ em, i, cite, dfn, var { font-style: normal; }
       const wanted = serviceNorm(value).replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
       return Object.keys(tables).find((id) => serviceNorm(id).replace(/^t(?=\d+$)/, '') === wanted) || '';
     }
+    function serviceHistoryStorageKey() {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+      return 'kiwi-service-notifications:' + merchant + ':' + (currentUser || 'employee');
+    }
+    function loadServiceHistory() {
+      const key = serviceHistoryStorageKey();
+      if (serviceHistoryKey === key) return;
+      serviceHistoryKey = key;
+      serviceNotifications.length = 0;
+      serviceEventSeen.clear();
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || '[]');
+        (Array.isArray(saved) ? saved : []).slice(0, 100).forEach((item) => {
+          if (!item || !item.id) return;
+          item.unread = false;
+          serviceNotifications.push(item);
+          serviceEventSeen.add(item.id);
+        });
+      } catch (_) {}
+    }
+    function saveServiceHistory() {
+      if (!serviceHistoryKey) return;
+      try { localStorage.setItem(serviceHistoryKey, JSON.stringify(serviceNotifications.slice(0, 100))); } catch (_) {}
+    }
+    function publishServiceTableState(id, status, covers, closeSession) {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      if (!merchant || SV_DEMO) return Promise.resolve(false);
+      const stateWrite = fetch('/api/service/events', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant, state: { table: id, status, covers: Math.max(0, Number(covers) || 0) } }),
+      }).then((r) => r.ok).catch(() => false);
+      if (closeSession) {
+        fetch('/api/order/queue', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service' }),
+        }).catch(() => {});
+      }
+      return stateWrite;
+    }
     function serviceNotify(title, body, meta) {
+      const noticeId = (meta && meta.id) || ('notice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+      loadServiceHistory();
+      if (serviceEventSeen.has(noticeId)) return;
+      serviceEventSeen.add(noticeId);
       serviceNotifications.unshift({
-        id: (meta && meta.id) || ('notice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+        id: noticeId,
         title: String(title || 'Notification'), body: String(body || ''),
         table: String(meta && meta.table || ''), type: String(meta && meta.type || 'service'),
         ts: Number(meta && meta.ts) || Date.now(), unread: currentTab !== 'notifications',
       });
       if (serviceNotifications.length > 100) serviceNotifications.length = 100;
+      saveServiceHistory();
       if (currentTab !== 'notifications') serviceUnread++;
       try { renderNotifications(); } catch (_) {}
       updateNotificationBadge();
@@ -4620,7 +4685,10 @@ em, i, cite, dfn, var { font-style: normal; }
       (data.sessions || []).forEach((session) => {
         if (!session || session.mode !== 'table') return;
         const id = serviceTableId(session.table);
-        if (id && tables[id] && tables[id].status === 'khawya') tables[id].status = 'ka-yaklo';
+        const canonical = serviceStateVersion.get(id);
+        if (id && tables[id] && tables[id].status === 'khawya' && !(canonical && canonical.status === 'khawya')) {
+          tables[id].status = 'ka-yaklo';
+        }
       });
       (data.orders || []).forEach((order) => {
         if (!order || !order.id) return;
@@ -4643,6 +4711,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const state = data.states[key] || {};
         const id = serviceTableId(state.table || key) || String(state.table || key);
         if (!tables[id]) return;
+        serviceStateVersion.set(id, { status: state.status, ts: Number(state.ts) || 0, source: state.source || '' });
         tables[id].status = state.status || tables[id].status;
         if (state.covers) tables[id].covers = state.covers;
         if (state.status === 'khawya' || state.status === 'khlass') tables[id].elapsed = 0;
@@ -4689,12 +4758,14 @@ em, i, cite, dfn, var { font-style: normal; }
       /* Menu edits made by the owner on another device reach the service app
          on the same short live-sync cadence as orders and table events. */
       try { svFetchCarte(); } catch (_) {}
-      fetch('/api/order/queue?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceOrderSince + '&role=service', {
-        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-      }).then((r) => r.ok ? r.json() : null).then(ingestServiceOrders).catch(() => {});
       fetch('/api/service/events?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceEventSince, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-      }).then((r) => r.ok ? r.json() : null).then(ingestServiceEvents).catch(() => {});
+      }).then((r) => r.ok ? r.json() : null).then((events) => {
+        ingestServiceEvents(events);
+        return fetch('/api/order/queue?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceOrderSince + '&role=service', {
+          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+        });
+      }).then((r) => r && r.ok ? r.json() : null).then(ingestServiceOrders).catch(() => {});
       servicePlanTick++;
       /* Team, schedule and floor assignments share this six-second live loop.
          Eighteen seconds was long enough for a newly assigned table to look
@@ -4713,6 +4784,8 @@ em, i, cite, dfn, var { font-style: normal; }
       servicePlanTick = 0;
       serviceOrderStatus.clear();
       serviceEventSeen.clear();
+      serviceStateVersion.clear();
+      serviceHistoryKey = '';
       serviceMineTables.clear();
       servicePausedTables.clear();
     }
@@ -5525,6 +5598,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const t = tables[activeTableId];
         t.status = 'bgha-ykhlass';
         t.elapsed = 0;
+        publishServiceTableState(activeTableId, t.status, t.covers, false);
         renderTableDetail();
         toast(`Addition demandée pour ${activeTableId}`);
       } else if (action === 'pay') {
@@ -5538,6 +5612,7 @@ em, i, cite, dfn, var { font-style: normal; }
         delete tableOrders[id];
         dirtyOrders.delete(id);
         tableSplits.delete(id);
+        publishServiceTableState(id, 'khawya', 0, true);
         returnToFloor();
         toast(`Table ${id} fermée`);
       } else if (action === 'resume-split') {
@@ -5618,6 +5693,7 @@ em, i, cite, dfn, var { font-style: normal; }
       t.covers = newTableCovers;
       t.status = 'ka-yaklo';
       t.elapsed = 0;
+      publishServiceTableState(id, t.status, t.covers, false);
       tableOrders[id] = [];
       activeTableId = id;
       newTableId = null;
@@ -6228,10 +6304,37 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ---------- Payment Choice modal ---------- */
     let payTableId = null;
+    const tableClients = new Map();
+    let serviceClientRows = [];
+    function renderPayClient() {
+      const client = payTableId && tableClients.get(payTableId);
+      $('#pc-client-label').textContent = client ? `${client.name} · ${Number(client.points) || 0} pts` : 'Client & fidélité';
+    }
+    function renderServiceClients() {
+      const q = String($('#service-client-search').value || '').trim().toLowerCase();
+      const rows = serviceClientRows.filter((c) => !q || String(c.name || '').toLowerCase().includes(q) || String(c.phone || '').includes(q));
+      $('#service-client-list').innerHTML = rows.length ? rows.map((c) => `
+        <button class="td-btn ghost sm" type="button" data-service-client="${esc(c.id)}" style="text-align:left;justify-content:space-between;">
+          <span><strong>${esc(c.name || 'Client')}</strong><br><small>${esc(c.phone || '')}</small></span>
+          <span class="mono">${Number(c.points) || 0} pts</span>
+        </button>`).join('') : '<p class="modal-subtle">Aucun client trouvé.</p>';
+    }
+    function openServiceClients() {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      $('#service-client-modal').classList.add('is-open');
+      $('#service-client-list').innerHTML = '<p class="modal-subtle">Chargement…</p>';
+      fetch('/api/employee-clients?merchant=' + encodeURIComponent(merchant), {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => r.ok ? r.json() : null).then((data) => {
+        serviceClientRows = data && Array.isArray(data.clients) ? data.clients : [];
+        renderServiceClients();
+      }).catch(() => { $('#service-client-list').innerHTML = '<p class="modal-subtle">Carnet indisponible.</p>'; });
+    }
     function openPayChoice(tableId) {
       payTableId = tableId;
       $('#pc-table-id').textContent = tableId;
       $('#pc-total').textContent = fmtMAD(getTableTotal(tableId));
+      renderPayClient();
       $('#pay-choice-modal').classList.add('is-open');
       lucide.createIcons();
     }
@@ -6239,6 +6342,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#pay-choice-modal').classList.remove('is-open');
     }
     $('#pay-choice-modal').addEventListener('click', (e) => {
+      if (e.target.closest('#pc-client')) { openServiceClients(); return; }
       const choice = e.target.closest('[data-pay]');
       if (choice) {
         const method = choice.dataset.pay;
@@ -6250,6 +6354,24 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       if (e.target.closest('#pc-cancel') || e.target === $('#pay-choice-modal')) {
         closePayChoice();
+      }
+    });
+    $('#service-client-search').addEventListener('input', renderServiceClients);
+    $('#service-client-modal').addEventListener('click', (e) => {
+      const choice = e.target.closest('[data-service-client]');
+      if (choice && payTableId) {
+        const client = serviceClientRows.find((c) => String(c.id) === choice.dataset.serviceClient);
+        if (client) tableClients.set(payTableId, client);
+        $('#service-client-modal').classList.remove('is-open');
+        renderPayClient();
+        return;
+      }
+      if (e.target.closest('#service-client-none')) {
+        if (payTableId) tableClients.delete(payTableId);
+        $('#service-client-modal').classList.remove('is-open'); renderPayClient(); return;
+      }
+      if (e.target.closest('#service-client-close') || e.target === $('#service-client-modal')) {
+        $('#service-client-modal').classList.remove('is-open');
       }
     });
 
@@ -6453,6 +6575,8 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Mark paid ---------- */
     function markTablePaid(id, method) {
       const t = tables[id];
+      const paidAmount = getTableTotal(id);
+      const paidClient = tableClients.get(id);
       // Live Link — surface this settled table on the owner's dashboard live feed.
       // No-op unless ?live=1 (KiwiLive.postSale gates itself); mirrors the caisse.
       // Capture the amount BEFORE we flip status / clear the order below.
@@ -6464,14 +6588,28 @@ em, i, cite, dfn, var { font-style: normal; }
           ref: id,
         });
       } catch (_) {}
+      if (paidClient && !SV_DEMO) {
+        const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+        fetch('/api/employee-clients', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchant, clientId: paidClient.id, amount: paidAmount,
+            ref: 'employee-payment:' + id + ':' + Date.now() }),
+        }).then((r) => r.ok ? r.json() : null).then((data) => {
+          if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);
+        }).catch(() => {});
+      }
+      tableClients.delete(id);
       t.status = 'khlass';
       t.elapsed = 0;
+      publishServiceTableState(id, 'khlass', t.covers, true);
       tablesPaid++;
       // Auto-fade to khawya after a moment
       setTimeout(() => {
         if (tables[id]?.status === 'khlass') {
           tables[id].status = 'khawya';
           delete tableOrders[id];
+          publishServiceTableState(id, 'khawya', 0, true);
           if (currentTab === 'tables') renderTables();
         }
       }, 4000);

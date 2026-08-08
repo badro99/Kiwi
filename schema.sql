@@ -514,6 +514,18 @@ CREATE TABLE IF NOT EXISTS client_sync_sequences (
   last_ts  INTEGER NOT NULL
 );
 
+-- Idempotence for loyalty credited by an on-duty employee. A payment screen
+-- can be retried after weak Wi-Fi; the same table settlement must never award
+-- points twice.
+CREATE TABLE IF NOT EXISTS employee_loyalty_events (
+  merchant  TEXT NOT NULL,
+  ref       TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  amount    INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, ref)
+);
+
 -- ── Journal des modules (qui a activé/désactivé quoi, où, quand) ────────────
 -- Une ligne PAR MODULE CHANGÉ, écrite par functions/api/admin/config.js à chaque
 -- PUT de l'opérateur. Couper un module n'efface jamais ses données — la table

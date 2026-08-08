@@ -9056,14 +9056,14 @@
          event is best-effort: seating never waits for the network. */
       try {
         const assigned = t && t.server && servers[t.server];
-        const merchant = window.KiwiKitchenRelay && KiwiKitchenRelay.merchant();
-        if (assigned && merchant) {
+        const merchant = currentMerchantSlug();
+        if (t && t.server && merchant) {
           fetch('/api/service/events', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant, event: {
               type: 'table-seated', table: tableId, serverId: t.server,
-              server: assigned.name || '', customer: e.name, covers: e.size,
+              server: (assigned && assigned.name) || '', customer: e.name, covers: e.size,
             } }),
           }).catch(() => {});
         }
@@ -14798,17 +14798,34 @@
        resulting notification history. */
     let serviceFloorSignature = '';
     let serviceFloorPublishing = false;
+    let serviceFloorSince = 0;
+    let serviceFloorPolling = false;
+    const serviceFloorLocalVersion = Object.create(null);
+    function serviceFloorSnapshot() {
+      return Object.keys(tables).map((id) => ({
+        table: String(id), status: String(tables[id].status || 'khawya'),
+        covers: Math.max(0, Number(tables[id].covers) || 0),
+      })).sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
+    }
     function publishServiceFloor() {
       if (serviceFloorPublishing || !storeIsReal()) return;
       const merchant = currentMerchantSlug();
       if (!merchant) return;
-      const live = Object.keys(tables).map((id) => ({
-        table: String(id), status: String(tables[id].status || 'khawya'),
-        covers: Math.max(0, Number(tables[id].covers) || 0),
-      })).sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
+      const live = serviceFloorSnapshot();
       if (!live.length) return;
       const signature = JSON.stringify(live);
       if (signature === serviceFloorSignature) return;
+      let before = [];
+      try { before = JSON.parse(serviceFloorSignature || '[]'); } catch (_) { before = []; }
+      const oldByTable = Object.create(null);
+      before.forEach((state) => { oldByTable[state.table] = state; });
+      const localAt = Date.now();
+      live.forEach((state) => {
+        const old = oldByTable[state.table];
+        if (!old || old.status !== state.status || Number(old.covers || 0) !== state.covers) {
+          serviceFloorLocalVersion[state.table] = localAt;
+        }
+      });
       serviceFloorPublishing = true;
       fetch('/api/service/events', {
         method: 'POST', credentials: 'same-origin', cache: 'no-store',
@@ -14818,6 +14835,41 @@
         if (!r.ok) throw new Error('floor-sync-' + r.status);
         serviceFloorSignature = signature;
       }).catch(() => {}).finally(() => { serviceFloorPublishing = false; });
+    }
+    function pollEmployeeFloor() {
+      if (serviceFloorPolling || !storeIsReal()) return;
+      const merchant = currentMerchantSlug();
+      if (!merchant) return;
+      serviceFloorPolling = true;
+      fetch('/api/service/events?merchant=' + encodeURIComponent(merchant) + '&role=caisse&since=' + serviceFloorSince, {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => r.ok ? r.json() : null).then((data) => {
+        if (!data || !data.ok) return;
+        serviceFloorSince = Number(data.now) || serviceFloorSince;
+        let changed = false;
+        Object.keys(data.states || {}).forEach((key) => {
+          const state = data.states[key] || {};
+          if (state.source !== 'employee') return;
+          const id = caisseTableId(state.table || key);
+          if (Number(state.ts) <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
+          if (!id || !tables[id] || !state.status || tables[id].status === state.status) return;
+          tables[id].status = state.status;
+          tables[id].covers = state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0);
+          tables[id].elapsed = 0;
+          serviceFloorLocalVersion[String(id)] = Number(state.ts) || Date.now();
+          if (state.status === 'khawya' || state.status === 'khlass') {
+            delete orders[id];
+            delete tableOrders[id];
+            if (selectedId === id) closeRightPanel();
+          }
+          refreshTableNode(id);
+          changed = true;
+        });
+        if (changed) {
+          serviceFloorSignature = JSON.stringify(serviceFloorSnapshot());
+          try { persistShift(); } catch (_) {}
+        }
+      }).catch(() => {}).finally(() => { serviceFloorPolling = false; });
     }
     let shiftMerchant = currentMerchantSlug();
 
@@ -15075,7 +15127,9 @@
     window.addEventListener('beforeunload', persistShift);
     setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} }, 5000);
     setInterval(publishServiceFloor, 4000);
+    setInterval(pollEmployeeFloor, 4000);
     setTimeout(publishServiceFloor, 800);
+    setTimeout(pollEmployeeFloor, 1600);
 
     /* ---------- Lucide first paint ---------- */
     document.addEventListener('DOMContentLoaded', () => {

@@ -165,7 +165,11 @@ export async function onRequestGet(context) {
 
   // `since` est le curseur de la caisse : elle demande ce qui a changé depuis la
   // dernière réponse, donc un long service coûte une petite réponse par tour.
-  const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+  const since = Math.max(
+    0,
+    Number(url.searchParams.get('since')) || 0,
+    service ? Number(service.employee.attendance && service.employee.attendance.inTs) || 0 : 0,
+  );
   const now = Date.now();
   const today = startOfDay(now);
 
@@ -293,11 +297,14 @@ export async function onRequestPost(context) {
   if (employee) {
     const scope = await serviceScope(request, env, merchant);
     const employeeTable = b && b.create === true && b.mode !== 'takeout' ? normTable(b.table) : '';
+    const employeeCloseTable = b && b.closeTable != null ? normTable(b.closeTable) : '';
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
-    if (!(b && b.create === true) || !employeeTable || !scope || !scope.allTables.has(employeeTable)) {
+    const validCreate = b && b.create === true && employeeTable && scope && scope.allTables.has(employeeTable);
+    const validClose = employeeCloseTable && scope && scope.allTables.has(employeeCloseTable);
+    if (!validCreate && !validClose) {
       return json({ error: 'floor-table-required' }, 403);
     }
-    b.server = employeeName(employee.member);
+    if (validCreate) b.server = employeeName(employee.member);
   }
 
   const now = Date.now();
