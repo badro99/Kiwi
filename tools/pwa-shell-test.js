@@ -32,9 +32,10 @@ shell.forEach((url) => ok(`${url} exists`, fs.existsSync(path.join(ROOT, url.spl
    fichier au premier chargement après un déploiement. C'est exactement comme ça
    que la carte « Passer à Ultra » retirée est revenue dans la barre latérale
    d'un commerçant alors que le code déployé, lui, était bon. */
-const doc = read('dashboard.html');
+const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html']
+  .map(read).join('\n');
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
-  ok(`${url} carries the same ?v= stamp in dashboard.html`, doc.includes(`"assets/${url.slice(8)}"`));
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`));
 });
 
 if (failed.length) {
