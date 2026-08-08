@@ -222,6 +222,11 @@ ok(/function pollServiceSync\(\)[\s\S]*?if \(window\.KiwiEmployeeLive\)/.test(se
   "équipe, planning et plan de salle se relisent sur la boucle Wi-Fi courte");
 ok(serviceSource.includes("emoji: String(c.emoji || '')") && serviceSource.includes("v.emoji ? `${esc(v.emoji)} `"),
   "les emojis des options publiés par le dashboard restent visibles dans l'app employé");
+ok(serviceSource.includes('--app-height: 100dvh')
+  && serviceSource.includes('height: var(--app-height)')
+  && serviceSource.includes('--safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px)')
+  && serviceSource.includes('apple-mobile-web-app-capable'),
+  "la hauteur et la barre mobile suivent le vrai écran et les zones sûres du téléphone");
 const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');
 ok(employeePwaSource.includes('beforeinstallprompt') && employeePwaSource.includes('Installer l’app'),
   "le portail propose son installation sur l'écran d'accueil après connexion");
