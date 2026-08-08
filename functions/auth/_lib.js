@@ -218,8 +218,15 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   const memberId = String((match.member && match.member.id) || '').trim().slice(0, 96);
   if (!memberId) return null;
   try {
+    // `status` is an OPTIONAL column — a database that predates the per-store
+    // suspension migration simply has none. Naming it in the SELECT turns that
+    // missing ALTER into "no such column", and the catch below reports the throw
+    // as a failed credential: every employee of every store told their PIN is
+    // wrong, with the right PIN, forever. Read the row whole so an absent column
+    // arrives as undefined, and read undefined as active — the same way the rest
+    // of the schema treats a store that has never been suspended.
     const cfg = await env.DB.prepare(
-      'SELECT status, type FROM merchant_config WHERE merchant = ? LIMIT 1'
+      'SELECT * FROM merchant_config WHERE merchant = ? LIMIT 1'
     ).bind(match.merchant).first();
     if (!cfg) return null;
     return {
@@ -228,7 +235,7 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
       pin,
       name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
       role: String(match.member.function || match.member.department || 'staff'),
-      status: cfg.status,
+      status: cfg.status || 'active',
       type: cfg.type,
       member: match.member,
     };
