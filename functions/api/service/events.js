@@ -99,7 +99,11 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const status = String(src && src.status || '');
     if (!table || !TABLE_STATUSES.has(status)) return;
     const lines = cleanLines(src && src.lines);
-    incoming[table] = { table, status, covers: Math.max(0, Math.min(99, Number(src.covers) || 0)) };
+    incoming[table] = {
+      table, status,
+      covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
+      syncVersion: Math.max(0, Math.min(99, Number(src && src.syncVersion) || 0)),
+    };
     if (lines) incoming[table].lines = lines;
   });
   if (!Object.keys(incoming).length) return { ok: false, events: [] };
@@ -115,7 +119,8 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
       if (next.status === 'khawya' || next.status === 'khlass') next.lines = [];
       const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
       const linesChanged = !before || JSON.stringify(before.lines || []) !== JSON.stringify(next.lines || []);
-      const changed = stateChanged || linesChanged;
+      const versionChanged = !before || Number(before.syncVersion || 0) !== Number(next.syncVersion || 0);
+      const changed = stateChanged || linesChanged || versionChanged;
       if (!changed) return;
       const changedAt = Date.now();
       states[table] = { ...next, ts: changedAt, source: source || 'caisse' };

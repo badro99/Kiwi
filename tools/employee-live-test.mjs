@@ -285,6 +285,12 @@ ok(caisseSource.includes('function publishServiceFloor()')
 ok(caisseSource.includes('setInterval(pollEmployeeFloor, 1000)')
   && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
+ok(serviceSource.includes('serviceStateVersion.has(id)')
+  && serviceSource.includes('legacyEmployeeState')
+  && serviceSource.includes("source: 'legacy-cleanup'")
+  && serviceSource.includes('syncVersion: 2')
+  && caisseSource.includes('syncVersion: 2'),
+  'un rechargement live ne restaure ni les tables démo ni leurs anciens états employés contaminés');
 ok(serviceSource.includes("'a-commander':  'À commander'")
   && serviceSource.includes("t.status === 'a-commander' || t.status === 'ka-yaklo'")
   && /if \(action === 'take-order'\)[\s\S]*?t\.status = 'ka-yaklo'/.test(serviceSource),
