@@ -3033,6 +3033,287 @@ const PDS_CANVAS_H = 540;
    just before this file. They are shared verbatim with the caisse so the
    till can render the owner's actual plan instead of its own guess at it. */
 
+/* ─── Vue nuit — la console de service ────────────────────────────────────
+ * Le plan que la page d'accueil promet est sombre : une salle charbon, des
+ * tables au trait, le statut porté par la lumière. La vue nuit est donc le
+ * DÉFAUT ; la vue jour reste entière derrière la bascule, car c'est elle qui
+ * montre les matières telles que la caisse les affiche. La préférence vit
+ * dans sa propre clé : l'état du plan est partagé avec la caisse, un choix
+ * d'affichage du dashboard n'a rien à faire dedans. */
+const PDS_VIEW_KEY = 'kiwiPdsView';
+function pdsNoir() {
+  try { return localStorage.getItem(PDS_VIEW_KEY) !== 'jour'; } catch (_) { return true; }
+}
+function pdsSetNoir(on) {
+  try { localStorage.setItem(PDS_VIEW_KEY, on ? 'nuit' : 'jour'); } catch (_) {}
+}
+/* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
+ * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
+ * nocturne. Encres et chaises suivent d'elles-mêmes : pdsInk/pdsChairTone
+ * raisonnent en luminance, pas en clair codé en dur. */
+function pdsNoirC(hex, keep) {
+  const k = keep == null ? 0.18 : keep;
+  const h = String(hex || '#141A16').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [4, 5, 4];      /* #040504 — le charbon de la salle, quasi noir */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas), mais les
+ * valeurs sont CELLES du mockup de l'accueil (SVG fp-* d'index.html) : une
+ * échelle de blanc — libre 0.19, réservé 0.40 — et l'accent #00FFAE réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. Pas d'ambre :
+ * le mockup n'en a pas. `fill`/`num`/`chair` suivent la même échelle. */
+const PDS_STATUS_RING_NOIR = {
+  /* Échelle remontée d'un cran par rapport au SVG de l'accueil : sur le sol
+   * quasi noir demandé, les valeurs du mockup (0.19/0.40) lisaient trop bas.
+   * Trois langages de trait pour trois états sans couleur : plein faible
+   * (libre), tiret long (réservée), pointillé (à nettoyer). La distinction
+   * survit au daltonisme et à la distance — c'est le motif qui parle. */
+  free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+  occupied: { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.14)',   chair: 'rgba(0,255,174,0.70)' },
+  reserved: { s: '#E8C067', w: 1.25, dash: '6 3',     fill: 'rgba(232,192,103,0.08)', chair: 'rgba(232,192,103,0.50)' },
+  cleaning: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+};
+/* Une matière en vue jour ligne-claire : rabattue vers le papier chaud de la
+ * marque en gardant `keep` de sa teinte — un lavis, pas une peinture. Le
+ * noyer devient un beige chaud, le sauge un vert pâle : la MATIÈRE choisie
+ * par le commerçant reste lisible sans casser le dessin à l'encre. */
+function pdsJourC(hex, keep) {
+  const k = keep == null ? 0.16 : keep;
+  const h = String(hex || '#B9AF9B').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [247, 245, 240];   /* #F7F5F0 — le papier de la marque */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Le miroir exact de l'échelle nuit, à l'encre sur papier : une échelle
+ * d'encre #0A0F0D — libre 0.30, réservée 0.55 — et l'atlas #0B6E4F réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. La menthe
+ * appartient à la nuit ; le jour vit en vert de la marque. */
+const PDS_STATUS_RING_JOUR = {
+  /* Même langage de trait que la nuit : plein faible / tiret long / pointillé.
+   * La réservée s'ancre dans le riad #053B2C — encore de la marque, jamais
+   * d'ambre ni de bleu. */
+  free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
+  occupied: { s: '#0B6E4F',             w: 1.25, dash: '',        fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
+  reserved: { s: '#C89235',  w: 1.25, dash: '6 3',     fill: 'rgba(200,146,53,0.10)',   chair: 'rgba(200,146,53,0.55)' },
+  cleaning: { s: 'rgba(10,15,13,0.45)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.24)' },
+};
+
+/* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
+ * La scène de l'accueil est un dessin au trait — contours en filet, chaises
+ * en tirets, remplissage à peine au-dessus du sol, la lumière réservée à
+ * l'état. Re-teinter le rendu matières (bois éclairé, chaises en volume) n'y
+ * arrivera jamais : la nuit a son propre tracé, le jour garde le sien. */
+function pdsNoirTick(x, y, deg, fill) {
+  /* La chaise du mockup, au pixel : rect(-9,-3,18,6, rx 3), centrée à 12 px
+   * du bord de la table, la couleur suivant le statut de la table. */
+  return `<rect x="-9" y="-3" width="18" height="6" rx="3" fill="${fill}"
+    transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`;
+}
+function pdsNoirChairs(g, seats, ring) {
+  if (!seats || seats < 1) return '';
+  const { w, h, shape } = g;
+  const fill = (ring && ring.chair) || 'rgba(255,255,255,0.12)';
+  let out = '';
+  if (shape === 'round') {
+    /* Tirets tangents sur la circonférence, comme la grande ronde du mockup. */
+    const rx = w / 2 + 12, ry = h / 2 + 12, cx = w / 2, cy = h / 2;
+    for (let i = 0; i < seats; i++) {
+      const a = -90 + (360 * i) / seats;
+      const rad = a * Math.PI / 180;
+      out += pdsNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), a + 90, fill);
+    }
+    return out;
+  }
+  const alloc = pdsSeatSlots(w, h, seats);
+  const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
+  along(alloc.top, w).forEach(px => { out += pdsNoirTick(px, -12, 0, fill); });
+  along(alloc.bottom, w).forEach(px => { out += pdsNoirTick(px, h + 12, 0, fill); });
+  along(alloc.left, h).forEach(py => { out += pdsNoirTick(-12, py, 90, fill); });
+  along(alloc.right, h).forEach(py => { out += pdsNoirTick(w + 12, py, 90, fill); });
+  return out;
+}
+/* Plateau du mockup, couche par couche : le disque d'appel (dégradé radial
+ * menthe, occupée seulement), le corps en dégradé vertical #101312→#050605
+ * posé sur une ombre portée (fp-body + fp-lift), puis la couche de statut —
+ * remplissage + contour 1.25 sur la MÊME forme, rx 8. L'occupée reçoit en
+ * plus l'anneau d'appel qui pulse (classe .pds-noir-call, animée en CSS,
+ * l'équivalent exact de .kw-plan-call sur l'accueil). Les dégradés et le
+ * filtre vivent une seule fois dans les defs partagées de la scène — les SVG
+ * inline résolvent url(#…) à l'échelle du document. */
+function pdsNoirTableBody(g, ring, status, tint) {
+  /* `tint` absent = scène nuit (corps charbon, halo menthe). Présent = vue
+   * jour ligne-claire : le corps est le lavis de la matière du commerçant
+   * (pdsJourC), l'ombre et le halo passent aux defs jour (encre, atlas). */
+  const jour = tint != null;
+  const hot = status === 'occupied';
+  const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+  const fill = ring.fill || 'rgba(255,255,255,0.012)';
+  const bodyFill = jour ? tint : 'url(#pdsNoirBody)';
+  const lift = jour ? 'url(#pdsJourLift)' : 'url(#pdsNoirLift)';
+  const callId = jour ? 'url(#pdsJourCall)' : 'url(#pdsNoirCall)';
+  const cx = g.w / 2, cy = g.h / 2;
+  /* Le disque d'appel aux valeurs du mockup — le sol quasi noir encaisse
+   * la somme des halos sans se noyer, l'adoucissement n'est plus utile. */
+  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
+  if (g.shape === 'round') {
+    return `${call}
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${bodyFill}" filter="${lift}"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+      ${hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
+  }
+  const r = Math.min(8, g.w / 5, g.h / 5);
+  return `${call}
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${bodyFill}" filter="${lift}"/>
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+    ${hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
+}
+/* Le bâti au trait. Chaque genre a son idéogramme — la caisse porte son
+ * interrupteur menthe, la cuisine ses hachures en filet, la porte son arc —
+ * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
+ * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
+function pdsNoirFixture(e, K, g) {
+  /* Le même trait dans les deux vues, seule l'encre change. Nuit : blanc un
+   * cran au-dessus du mockup pour tenir sur le sol quasi noir — filet 0.38,
+   * discret 0.20, pilules 0.05 / 0.20 — l'accent #00FFAE réservé au vivant
+   * (interrupteur de caisse, plantes). Jour : encre #0A0F0D sur papier —
+   * filet 0.45, discret 0.25 — et l'atlas de la marque en accent. */
+  const jour = !pdsNoir();
+  const line = jour ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.38)';
+  const dim  = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const pillFill = jour ? 'rgba(10,15,13,0.035)' : 'rgba(255,255,255,0.05)';
+  const pillLine = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const acc = jour ? '11,110,79' : '0,255,174';
+  switch (e.type) {
+    case 'texte': return '';
+    case 'comptoir': {
+      /* Le bar du mockup porte ses tabourets : des cercles r 7 cerclés 0.22,
+       * espacés de 38, à 15 px au-dessus du long côté. Seulement quand la
+       * pilule est vraiment un comptoir (long et bas) — le SVG déborde de la
+       * boîte, .pds-el-svg est en overflow:visible la nuit pour ça. */
+      let stools = '';
+      if (g.w >= 100 && g.w > g.h * 2) {
+        const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
+        for (let i = 0; i < n; i++) {
+          const sx = (g.w * (i + 1)) / (n + 1);
+          stools += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="${jour ? 'rgba(10,15,13,0.28)' : 'rgba(255,255,255,0.22)'}" stroke-width="1.25"/>`;
+        }
+      }
+      return `${stools}<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
+        fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+    }
+    case 'caisse': {
+      const kr = Math.max(3, Math.min(g.h / 2 - 1, 12));
+      /* L'interrupteur du mockup : 22 × 14, rx 3, à 10 px du bord droit. */
+      const th = Math.min(14, Math.max(8, g.h - 10)), tw = th / 14 * 22;
+      const tx = g.w - tw - 10, ty = (g.h - th) / 2;
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${kr}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>
+        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(${acc},0.14)" stroke="rgba(${acc},0.5)" stroke-width="1"/>`;
+    }
+    case 'cuisine':
+      return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>
+        <rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'porte':
+      /* La porte de l'accueil : seuil net (0.28 · 1.5), battement en arc
+       * pointillé 3 3 (0.14 · 1). */
+      return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${dim}" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="0" y1="${g.h - 1.5}" x2="${g.w}" y2="${g.h - 1.5}" stroke="${line}" stroke-width="1.5"/>`;
+    case 'mur':
+      return `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${Math.min(2, g.h / 2)}" fill="${line}"/>`;
+    case 'fenetre':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${line}"/>
+        <rect x="0" y="0" width="1.5" height="${g.h}" fill="${line}"/>
+        <rect x="${g.w - 1.5}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`;
+    case 'passe':
+      return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+    case 'plante': {
+      const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(${acc},0.04)" stroke="rgba(${acc},0.35)" stroke-width="1.2"/>
+        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(${acc},0.28)" stroke-width="1"/>`;
+    }
+    case 'colonne':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.05)' : 'rgba(255,255,255,0.06)'}" stroke="${line}" stroke-width="1.2"/>`;
+    case 'wc':
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'escalier': {
+      const n = Math.max(3, Math.min(12, Math.round(g.h / 15))), step = g.h / n;
+      let out = `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="4" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+      for (let i = 1; i < n; i++) {
+        out += `<line x1="1.5" y1="${(step * i).toFixed(1)}" x2="${g.w - 1.5}" y2="${(step * i).toFixed(1)}" stroke="${dim}" stroke-width="1"/>`;
+      }
+      return out;
+    }
+    case 'banquette':
+      /* Sur l'accueil la banquette est une seule pilule pleine (0.05 / 0.13,
+       * rx 6) — pas de coussins dessinés. */
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+    case 'claustra':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 11)) }, (_, i) =>
+          `<rect x="${(i * 11 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`).join('');
+    case 'garde':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" rx="0.75" fill="${line}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 22)) }, (_, i) =>
+          `<rect x="${(i * 22 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`).join('');
+    case 'tapis':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.02)' : 'rgba(255,255,255,0.02)'}" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+    case 'vitrine':
+      return jour
+        ? `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(64,102,124,0.08)" stroke="rgba(64,102,124,0.45)" stroke-width="1.2"/>`
+        : `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+    default:
+      return `<rect x="0.75" y="0.75" width="${Math.max(2, g.w - 1.5)}" height="${Math.max(2, g.h - 1.5)}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+  }
+}
+/* Le sol la nuit : charbon teinté par le sol du commerçant, une grille fine
+ * calée sur le pas d'aimantation (3 × PDS_GRID), et un souffle de lumière
+ * depuis le haut — la même lumière que l'accueil sombre. Les finitions
+ * (terrazzo, zellige) sont dessinées à l'encre sombre et disparaîtraient
+ * ici ; la grille les remplace, la vue jour les garde. */
+function pdsRoomShellNoir(zone) {
+  /* Le sol du mockup (fp-floor + fp-grid) : un souffle blanc décentré —
+   * 0.05 à 42 % / 34 %, 0.015 à 60 %, rien au bord — sur le charbon teinté
+   * par le sol du commerçant, et la grille fine de 31 px à 0.028. Le mur est
+   * le trait blanc 0.13 de l'accueil, pas la matière du gabarit. */
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsNoirC(r.floor, 0.03)};
+    background-image:
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.04), rgba(255,255,255,0.012) 60%, transparent 100%),
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
+    background-repeat: no-repeat, repeat, repeat;
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.20);` : ''}
+  "></div>`;
+}
+/* Le sol le jour : le même dessin, à l'encre sur papier. Le sol choisi par le
+ * commerçant devient un lavis sur le papier chaud (pdsJourC 0.30 — assez pour
+ * distinguer chêne de béton, pas assez pour casser le dessin), la grille
+ * passe à l'encre fine, la lumière entre par la même fenêtre décentrée que la
+ * nuit — en blanc franc, c'est le matin — et le mur est un trait d'encre,
+ * comme la nuit le fait en blanc : le mur du gabarit ne peint pas ici. */
+function pdsRoomShellJour(zone) {
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsJourC(r.floor, 0.30)};
+    background-image:
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.50), rgba(255,255,255,0.15) 60%, transparent 100%),
+      linear-gradient(rgba(10,15,13,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,15,13,0.055) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
+    background-repeat: no-repeat, repeat, repeat;
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(10,15,13,0.30);` : ''}
+  "></div>`;
+}
+
 
 /* ─── Static i18n table — every label, status, role, template name ───────── */
 const PDS_STR = {
@@ -3089,6 +3370,9 @@ const PDS_STR = {
     /* Add table palette */
     paletteTitle: 'Ajouter une table',
     paletteHint: 'Cliquez pour ajouter, la table apparaît au centre de la zone.',
+    /* Une table comme un comptoir s'ouvrent de la même façon ; rien ne le
+       disait, et le comptoir passait pour un décor qu'on ne peut pas toucher. */
+    editHint: 'Cliquez un objet posé — table, comptoir, cuisine, plante — pour le redimensionner ou le supprimer.',
     structTitle: 'Éléments structurels',
     structHint: 'Murs, portes, fenêtres et plantes, purement visuels.',
     elWall: 'Mur',
@@ -3107,6 +3391,8 @@ const PDS_STR = {
     addedElementToast: 'Élément ajouté',
     addedElementDesc: 'Glissez-le pour positionner · cliquez pour pivoter.',
     /* Snap */
+    viewNuit: 'Vue nuit — console de service',
+    viewJour: 'Vue jour — matières & décor',
     snapOn: 'Aimanter',
     snapOff: 'Libre',
     snapHint: 'Aimanter aligne les tables sur la grille',
@@ -3118,6 +3404,9 @@ const PDS_STR = {
     inspectorStatus: 'Statut',
     inspectorNotes: 'Notes',
     inspectorServer: 'Serveur affecté',
+    reservationName: 'Nom de réservation',
+    reservationTime: 'Heure',
+    reservationNamePlaceholder: 'ex. Benali',
     inspectorRotate: 'Pivoter',
     inspectorDuplicate: 'Dupliquer',
     inspectorDelete: 'Supprimer',
@@ -3141,6 +3430,20 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables supprimées`,
     bulkOkStatus: (n, s) => `${n} tables marquées ${s}`,
     bulkHintNone: 'Maintenez Maj et cliquez pour sélectionner plusieurs tables · au moins 2 pour aligner.',
+    /* Groupement */
+    groupTables: 'Grouper',
+    ungroupTables: 'Dissocier',
+    groupPickHint: 'Cliquez sur une autre table pour la grouper avec celle-ci.',
+    groupPickCancel: 'Groupement annulé',
+    groupOk: (nums, covers) => `Tables ${nums} groupées · ${covers} couverts`,
+    ungroupOk: 'Tables dissociées',
+    undoAction: 'Annuler',
+    deleteUndone: 'Table restaurée',
+    ungroupUndone: 'Groupe restauré',
+    bulkGroup: 'Grouper la sélection',
+    bulkOkGroup: (n) => `${n} tables groupées`,
+    groupCovers: (n) => `${n} couverts`,
+    groupedWith: (nums) => `Groupée avec ${nums}`,
     /* Templates */
     templatesTitle: 'Templates de salle',
     templatesDesc: 'Démarrez avec une disposition pré-construite · vous pourrez la modifier ensuite.',
@@ -3285,6 +3588,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `Zone renamed to "${n}".`,
     paletteTitle: 'Add a table',
     paletteHint: 'Click to add, the table appears at the center of the zone.',
+    editHint: 'Click any placed object — table, counter, kitchen, plant — to resize or delete it.',
     structTitle: 'Structural elements',
     structHint: 'Walls, doors, windows and plants, visual only.',
     elWall: 'Wall',
@@ -3302,6 +3606,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} seats · ${z} · drag to position.`,
     addedElementToast: 'Element added',
     addedElementDesc: 'Drag to position · click to rotate.',
+    viewNuit: 'Night view — service console',
+    viewJour: 'Day view — materials & decor',
     snapOn: 'Snap',
     snapOff: 'Free',
     snapHint: 'Snap aligns tables to the grid',
@@ -3312,6 +3618,9 @@ const PDS_STR = {
     inspectorStatus: 'Status',
     inspectorNotes: 'Notes',
     inspectorServer: 'Assigned server',
+    reservationName: 'Reservation name',
+    reservationTime: 'Time',
+    reservationNamePlaceholder: 'e.g. Benali',
     inspectorRotate: 'Rotate',
     inspectorDuplicate: 'Duplicate',
     inspectorDelete: 'Delete',
@@ -3334,6 +3643,19 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables deleted`,
     bulkOkStatus: (n, s) => `${n} tables set to ${s}`,
     bulkHintNone: 'Hold Shift and click to select multiple tables · at least 2 to align.',
+    groupTables: 'Group',
+    ungroupTables: 'Ungroup',
+    groupPickHint: 'Click another table to group it with this one.',
+    groupPickCancel: 'Grouping cancelled',
+    groupOk: (nums, covers) => `Tables ${nums} grouped · ${covers} covers`,
+    ungroupOk: 'Tables ungrouped',
+    undoAction: 'Undo',
+    deleteUndone: 'Table restored',
+    ungroupUndone: 'Group restored',
+    bulkGroup: 'Group selection',
+    bulkOkGroup: (n) => `${n} tables grouped`,
+    groupCovers: (n) => `${n} covers`,
+    groupedWith: (nums) => `Grouped with ${nums}`,
     templatesTitle: 'Room templates',
     templatesDesc: 'Start from a pre-built layout · you can modify it after.',
     tplBistro: 'Bistro · 30 covers',
@@ -3469,6 +3791,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `تمت إعادة تسمية المنطقة إلى "${n}".`,
     paletteTitle: 'إضافة طاولة',
     paletteHint: 'انقر للإضافة، تظهر الطاولة في وسط المنطقة.',
+    editHint: 'انقر أي عنصر موضوع — طاولة، بار، مطبخ، نبتة — لتغيير حجمه أو حذفه.',
     structTitle: 'العناصر الهيكلية',
     structHint: 'جدران، أبواب، نوافذ ونباتات، للعرض فقط.',
     elWall: 'جدار',
@@ -3486,6 +3809,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} مقاعد · ${z} · اسحبها للموقع.`,
     addedElementToast: 'تمت إضافة العنصر',
     addedElementDesc: 'اسحب للموقع · انقر للتدوير.',
+    viewNuit: 'عرض ليلي — وحدة الخدمة',
+    viewJour: 'عرض نهاري — الخامات والديكور',
     snapOn: 'محاذاة',
     snapOff: 'حر',
     snapHint: 'المحاذاة تصفّ الطاولات على الشبكة',
@@ -3496,6 +3821,9 @@ const PDS_STR = {
     inspectorStatus: 'الحالة',
     inspectorNotes: 'ملاحظات',
     inspectorServer: 'النادل المعين',
+    reservationName: 'اسم الحجز',
+    reservationTime: 'الوقت',
+    reservationNamePlaceholder: 'مثال: بنعلي',
     inspectorRotate: 'تدوير',
     inspectorDuplicate: 'نسخ',
     inspectorDelete: 'حذف',
@@ -3518,6 +3846,19 @@ const PDS_STR = {
     bulkOkDelete: (n) => `تم حذف ${n} طاولة`,
     bulkOkStatus: (n, s) => `تم تعيين ${n} طاولة على ${s}`,
     bulkHintNone: 'اضغط Shift وانقر لاختيار عدة طاولات · 2 على الأقل للمحاذاة.',
+    groupTables: 'تجميع',
+    ungroupTables: 'فصل',
+    groupPickHint: 'انقر على طاولة أخرى لتجميعها مع هذه.',
+    groupPickCancel: 'تم إلغاء التجميع',
+    groupOk: (nums, covers) => `تم تجميع الطاولات ${nums} · ${covers} مقعدًا`,
+    ungroupOk: 'تم فصل الطاولات',
+    undoAction: 'تراجع',
+    deleteUndone: 'تمت استعادة الطاولة',
+    ungroupUndone: 'تمت استعادة المجموعة',
+    bulkGroup: 'تجميع المحدد',
+    bulkOkGroup: (n) => `تم تجميع ${n} طاولات`,
+    groupCovers: (n) => `${n} مقعدًا`,
+    groupedWith: (nums) => `مجمّعة مع ${nums}`,
     templatesTitle: 'قوالب القاعة',
     templatesDesc: 'ابدأ بترتيب جاهز · يمكنك تعديله لاحقًا.',
     tplBistro: 'بيسترو · 30 مقعدًا',
@@ -3616,6 +3957,7 @@ Object.assign(PDS_STR.fr, {
   undoNothing: 'Rien à annuler', redoNothing: 'Rien à rétablir',
   unitCm: 'cm', deletedSuffix: 'supprimé',
   roomTitle: 'La salle', roomHint: 'Sol, murs et dimensions de cette zone.',
+  roomHintNuit: 'Dimensions de cette zone.',
   roomFloor: 'Sol', roomWall: 'Murs', roomFinish: 'Finition',
   roomW: 'Larg.', roomH: 'Prof.', roomWallW: 'Mur',
   finplain: 'Uni', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3668,6 +4010,7 @@ Object.assign(PDS_STR.en, {
   undoNothing: 'Nothing to undo', redoNothing: 'Nothing to redo',
   unitCm: 'cm', deletedSuffix: 'deleted',
   roomTitle: 'The room', roomHint: 'Floor, walls and dimensions of this zone.',
+  roomHintNuit: 'Dimensions of this zone.',
   roomFloor: 'Floor', roomWall: 'Walls', roomFinish: 'Finish',
   roomW: 'Width', roomH: 'Depth', roomWallW: 'Wall',
   finplain: 'Plain', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3720,6 +4063,7 @@ Object.assign(PDS_STR.ar, {
   undoNothing: 'لا شيء للتراجع عنه', redoNothing: 'لا شيء لإعادته',
   unitCm: 'سم', deletedSuffix: 'حُذف',
   roomTitle: 'القاعة', roomHint: 'الأرضية والجدران وأبعاد هذه المنطقة.',
+  roomHintNuit: 'أبعاد هذه المنطقة.',
   roomFloor: 'الأرضية', roomWall: 'الجدران', roomFinish: 'التشطيب',
   roomW: 'العرض', roomH: 'العمق', roomWallW: 'الجدار',
   finplain: 'سادة', finterrazzo: 'تيرازو', finzellige: 'زليج',
@@ -4211,6 +4555,9 @@ handlers['nav-tables'] = () => {
   /* Avant de lire : récupérer un dessin laissé sous un ancien identifiant. */
   try { pdsCarryForward(); } catch (_) {}
   const state = pdsLoad();
+  if (pdsExpireReservations(state)) {
+    try { pdsSave(state); } catch (_) {}
+  }
   /* L'état vivant, pour que la copie serveur qui arrive pendant qu'on dessine
    * repeigne la salle au lieu de se contenter du localStorage. */
   pdsLive = state;
@@ -4668,6 +5015,7 @@ function pdsRenderStage(state, T) {
   /* Fixtures paint under tables, and within fixtures a rug must sit under a
      comptoir. z is explicit so the merchant can reorder. */
   const ordered = elsInZone.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
+  const noir = pdsNoir();
   return `
     <div class="pds-stage-grid pds-stage-${state.mode}">
       <div class="pds-rail" data-pds-rail>
@@ -4690,6 +5038,12 @@ function pdsRenderStage(state, T) {
               <button class="pds-tool" data-pds-action="redo" title="${T.redo}" aria-label="${T.redo}">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 13"/></svg>
               </button>` : ''}
+            <button class="pds-tool pds-tool-view" data-pds-action="toggle-view"
+                    title="${noir ? T.viewJour : T.viewNuit}" aria-label="${noir ? T.viewJour : T.viewNuit}">
+              ${noir
+                ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}
+            </button>
             <label class="pds-snap" title="${T.snapHint}">
               <input type="checkbox" data-pds-snap ${state.snap?'checked':''}/>
               <span>${state.snap ? T.snapOn : T.snapOff}</span>
@@ -4697,15 +5051,23 @@ function pdsRenderStage(state, T) {
           </div>
         </div>
         <div class="pds-plan-canvas" data-pds-backdrop
-             style="${pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
+             style="${!noir && pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
           <div class="pds-plan-room" data-pds-room style="max-width:${P.w}px; aspect-ratio:${P.w} / ${P.h};">
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
-              ${pdsRoomShell(zone)}
+              <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+                <linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>
+                <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
+                <filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>
+                <radialGradient id="pdsJourCall"><stop offset="0%" stop-color="#0B6E4F" stop-opacity="0.16"/><stop offset="100%" stop-color="#0B6E4F" stop-opacity="0"/></radialGradient>
+                <filter id="pdsJourLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A0F0D" flood-opacity="0.20"/></filter>
+              </defs></svg>
+              ${noir ? pdsRoomShellNoir(zone) : pdsRoomShellJour(zone)}
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
+                ${pdsRenderGroups(tablesInZone, state, T)}
                 ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
                 <div class="pds-bulk" data-pds-bulk hidden></div>
               </div>
@@ -4750,7 +5112,7 @@ function pdsRenderLayoutRail(state, T) {
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.paletteTitle}</div>
-      <div class="pds-rail-hint">${T.paletteHint}</div>
+      <div class="pds-rail-hint">${T.paletteHint} ${T.editHint}</div>
       <div class="pds-palette">
         ${types.map(k => {
           const t = PDS_TABLE_TYPES[k];
@@ -4795,15 +5157,14 @@ function pdsFixMini(kind, K) {
   const w = ar >= 1 ? box : Math.max(6, box * ar);
   const h = ar >= 1 ? Math.max(6, box / ar) : box;
   const g = { w, h };
-  const c = K.color;
-  if (K.render === 'svg') {
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${K.draw({}, c, g)}</svg>`;
-  }
+  /* La vignette passe par le MÊME renderer au trait que la scène
+     (pdsNoirFixture, qui choisit son encre selon la vue) : le bouton montre
+     ce qui sera réellement posé. Le texte n'a pas de dessin — un Aa suffit. */
+  const inkAa = pdsNoir() ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)';
   if (K.render === 'none') {
-    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${c};">Aa</span>`;
+    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${inkAa};">Aa</span>`;
   }
-  return `<span style="display:block;width:${w}px;height:${h}px;
-    ${pdsBoxStyle(K.draw({}, c, g) || {}, c)}"></span>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pdsNoirFixture({ type: kind }, K, g)}</svg>`;
 }
 
 /* Thumbnail drawn from the candidate's OWN objects. The five templates
@@ -4849,10 +5210,17 @@ function pdsRenderRoomCard(state, T) {
     <label class="pds-sw pds-sw-custom" title="${T.customColor}">
       <input type="color" data-pds-room-field="${field}" value="${pdsHexOf(val)}"/>
     </label>`;
+  /* En vue nuit le rendu aplatit toute matière vers le charbon (pdsNoirC) :
+     ambiance, sol, murs, fond et finition n'auraient aucun effet visible.
+     On ne montre que les dimensions. La vue jour trace murs et sol à l'encre
+     (pdsRoomShellJour) : seuls ambiance, teinte du sol et fond jouent encore —
+     murs et finition ont suivi le même sort que la nuit. */
+  const noir = pdsNoir();
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.roomTitle}</div>
-      <div class="pds-rail-hint">${T.roomHint}</div>
+      <div class="pds-rail-hint">${noir ? T.roomHintNuit : T.roomHint}</div>
+      ${noir ? '' : `
       <label class="pds-mini-label">${T.ambianceLabel}</label>
       <div class="pds-amb-row">
         ${Object.keys(PDS_AMBIANCE).map(k => {
@@ -4869,19 +5237,13 @@ function pdsRenderRoomCard(state, T) {
       </div>
       <label class="pds-mini-label">${T.roomFloor}</label>
       <div class="pds-sw-row">${sw(r.floor, 'floor')}${custom(r.floor, 'floor')}</div>
-      <label class="pds-mini-label">${T.roomWall}</label>
-      <div class="pds-sw-row">${sw(r.wall, 'wall')}${custom(r.wall, 'wall')}</div>
       <label class="pds-mini-label">${T.roomBackdrop}</label>
       <div class="pds-sw-row">
         <button class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
                 data-pds-room-field="backdrop" data-pds-val=""
                 title="${T.backdropNone}" aria-label="${T.backdropNone}"></button>
         ${sw(r.backdrop, 'backdrop')}${custom(r.backdrop || '#F7F5F0', 'backdrop')}
-      </div>
-      <label class="pds-mini-label">${T.roomFinish}</label>
-      <select class="kf-input pds-input" data-pds-room-field="finish">
-        ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
-      </select>
+      </div>`}
       <div class="pds-num-grid">
         <label>${T.roomW}<input class="kf-input pds-input" type="number" min="240" max="2400" step="20" data-pds-room-field="w" value="${P.w}"/></label>
         <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
@@ -5038,10 +5400,11 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       </div>
 
+      ${!pdsNoir() && isT ? `
       <div class="pds-form-row">
         <label>${T.inspectorMaterial}</label>
         <div class="pds-sw-row">${swatches}</div>
-      </div>
+      </div>` : ''}
 
       ${isT ? `
         <div class="pds-form-row">
@@ -5054,6 +5417,19 @@ function pdsRenderInspector(state, T, obj) {
             `).join('')}
           </div>
         </div>
+        ${obj.status === 'reserved' ? `
+        <div class="pds-resv-fields">
+          <label class="pds-resv-field">
+            <span>${T.reservationName}</span>
+            <input class="kf-input pds-input" data-pds-field="reservationName"
+                   value="${pdsEsc(obj.reservationName || '')}" placeholder="${pdsEsc(T.reservationNamePlaceholder)}"/>
+          </label>
+          <label class="pds-resv-field">
+            <span>${T.reservationTime}</span>
+            <input class="kf-input pds-input" type="time" data-pds-field="reservationTime"
+                   value="${pdsEsc(obj.reservationTime || '')}"/>
+          </label>
+        </div>` : ''}
         <div class="pds-form-row">
           <label>${T.inspectorServer}</label>
           <select class="kf-input pds-input" data-pds-field="server">
@@ -5075,8 +5451,20 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       `}
 
+      ${isT && obj.group ? (() => {
+        /* La fusion se lit ici aussi : partenaires et capacité partagée. */
+        const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+        const peers = state.tables.filter(tt => tt.group === obj.group && tt.id !== obj.id)
+          .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }));
+        const seats = state.tables.filter(tt => tt.group === obj.group)
+          .reduce((s, tt) => s + (pdsGeom(tt).seats || 0), 0);
+        return `<div class="pds-group-info">${pdsEsc(T.groupedWith(peers.map(p => disp(p.num)).join(' + ')))} · ${pdsEsc(T.groupCovers(seats))}</div>`;
+      })() : ''}
+
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
+        ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="table-group" data-pds-id="${obj.id}">${T.groupTables}</button>` : ''}
+        ${isT && obj.group ? `<button class="kb ghost" data-pds-action="table-ungroup" data-pds-id="${obj.id}">${T.ungroupTables}</button>` : ''}
         <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
         <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
@@ -5110,8 +5498,9 @@ function pdsRenderBulkInspector(state, T, selectedIds) {
         <button class="kb ghost" data-pds-action="bulk-dist-v">${T.bulkDistV}</button>
       </div>
       <div class="pds-inspect-actions">
+        <button class="kb ghost" data-pds-action="bulk-group">${T.bulkGroup}</button>
         <button class="kb ghost" data-pds-action="bulk-clear">${T.bulkClear}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete">${T.bulkDelete}</button>
+        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete" style="grid-column:1 / -1;">${T.bulkDelete}</button>
       </div>
     </div>
   `;
@@ -5159,28 +5548,206 @@ function pdsHandles(o, g, T) {
  *   matter what size the merchant drags it to. Number and cover count are an
  *   HTML overlay, never SVG text — SVG text scales with the shape and smears
  *   on a long table.                                                       */
+/* ─── Tables groupées, façon accueil ─────────────────────────────────────
+ * Le mockup de l'accueil fusionne « 06 + 07 » : une enveloppe capsule qui
+ * embrasse les deux tables, un halo doux derrière, et une pastille combinée
+ * au-dessus. Ici la même grammaire, pilotée par `t.group` (id partagé,
+ * persisté dans le plan) : l'enveloppe se dessine SOUS les tables — c'est
+ * un lien, pas un couvercle — et suit les tables quand on les déplace. */
+function pdsSweepGroups(state) {
+  /* Un groupe réduit à une seule table après suppression n'existe plus. */
+  const count = {};
+  state.tables.forEach(t => { if (t.group) count[t.group] = (count[t.group] || 0) + 1; });
+  state.tables.forEach(t => { if (t.group && count[t.group] < 2) delete t.group; });
+}
+
+function pdsTodayKey(now) {
+  const d = new Date(now == null ? Date.now() : now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function pdsClearReservation(t) {
+  delete t.reservationName;
+  delete t.reservationTime;
+  delete t.reservationDate;
+}
+
+/* A grouped table is one service object: status, seated time and reservation
+   details follow the anchor across every member, regardless of group size. */
+function pdsSyncGroupService(state, gid, anchor) {
+  if (!gid || !anchor) return;
+  state.tables.forEach(t => {
+    if (t.group !== gid || t.id === anchor.id) return;
+    t.status = anchor.status || 'free';
+    if (anchor.status === 'occupied' && anchor.since) t.since = anchor.since;
+    else delete t.since;
+    if (anchor.status === 'reserved') {
+      if (anchor.reservationName) t.reservationName = anchor.reservationName;
+      else delete t.reservationName;
+      if (anchor.reservationTime) t.reservationTime = anchor.reservationTime;
+      else delete t.reservationTime;
+      if (anchor.reservationDate) t.reservationDate = anchor.reservationDate;
+      else delete t.reservationDate;
+    } else {
+      pdsClearReservation(t);
+    }
+  });
+}
+
+/* Time-only reservations belong to the day on which they were entered. Once
+   that instant is over by two hours, the next render returns the whole group
+   to libre. Keeping the date internally prevents yesterday's 23:30 booking
+   from surviving until tonight when the dashboard opens after midnight. */
+function pdsExpireReservations(state, now) {
+  now = now == null ? Date.now() : now;
+  const expiredGroups = new Set();
+  const expiredIds = new Set();
+  let changed = false;
+  state.tables.forEach(t => {
+    if (t.status !== 'reserved' || !/^\d{2}:\d{2}$/.test(t.reservationTime || '')) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.reservationDate || '')) {
+      t.reservationDate = pdsTodayKey(now);
+      changed = true;
+    }
+    const day = t.reservationDate;
+    const stamp = new Date(`${day}T${t.reservationTime}:00`).getTime();
+    if (Number.isFinite(stamp) && now > stamp + 2 * 60 * 60 * 1000) {
+      if (t.group) expiredGroups.add(t.group);
+      else expiredIds.add(t.id);
+    }
+  });
+  state.tables.forEach(t => {
+    if (!expiredIds.has(t.id) && !(t.group && expiredGroups.has(t.group))) return;
+    t.status = 'free';
+    delete t.since;
+    pdsClearReservation(t);
+    changed = true;
+  });
+  return changed;
+}
+
+function pdsReservationLabel(t) {
+  const time = /^\d{2}:\d{2}$/.test(t.reservationTime || '') ? t.reservationTime.replace(':', 'h') : '';
+  const name = String(t.reservationName || '').trim();
+  return [time, name].filter(Boolean).join(' · ');
+}
+
+/* Destructive toasts restore only the table objects the action touched. This
+   avoids rewinding unrelated edits the merchant may make while the five-second
+   undo window is open. */
+function pdsTableSnapshot(state, tables) {
+  return tables.map(t => ({
+    index: state.tables.indexOf(t),
+    value: JSON.parse(JSON.stringify(t)),
+  }));
+}
+
+function pdsRestoreTableSnapshot(state, snapshot) {
+  snapshot.slice().sort((a, b) => a.index - b.index).forEach(s => {
+    const value = JSON.parse(JSON.stringify(s.value));
+    const at = state.tables.findIndex(t => t.id === value.id);
+    if (at >= 0) state.tables[at] = value;
+    else state.tables.splice(Math.max(0, Math.min(s.index, state.tables.length)), 0, value);
+  });
+}
+
+function pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, restoredTitle, selectId) {
+  let restored = false;
+  Kiwi.toast(title, {
+    type: 'warn', duration: 5200, force: true,
+    action: {
+      label: T.undoAction,
+      onClick: () => {
+        if (restored) return;
+        restored = true;
+        pdsPush(state);
+        pdsRestoreTableSnapshot(state, snapshot);
+        selection.clear();
+        if (selectId && state.tables.some(t => t.id === selectId)) selection.add(selectId);
+        refresh();
+        if (selectId) setTimeout(() => state._openInspector(selectId), 0);
+        Kiwi.toast(restoredTitle, { type: 'success', duration: 1400, force: true });
+      },
+    },
+  });
+}
+
+function pdsRenderGroups(tables, state, T) {
+  const byGroup = new Map();
+  tables.forEach(t => {
+    if (!t.group) return;
+    if (!byGroup.has(t.group)) byGroup.set(t.group, []);
+    byGroup.get(t.group).push(t);
+  });
+  let out = '';
+  byGroup.forEach((members, gid) => {
+    if (members.length < 2) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let seats = 0;
+    members.forEach(t => {
+      const g = pdsGeom(t);
+      x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y);
+      x1 = Math.max(x1, t.x + g.w); y1 = Math.max(y1, t.y + g.h);
+      seats += g.seats || 0;
+    });
+    const pad = 8;
+    const nums = members.slice()
+      .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+      .map(t => /^\d$/.test(String(t.num)) ? '0' + t.num : t.num);
+    out += `
+      <div class="pds-group-env" data-pds-group="${pdsEsc(gid)}" style="left:${x0 - pad}px; top:${y0 - pad}px; width:${(x1 - x0) + pad * 2}px; height:${(y1 - y0) + pad * 2}px;">
+        <span class="pds-group-chip">${pdsEsc(nums.join(' + '))}<span class="pds-group-covers"> · ${pdsEsc(T.groupCovers(seats))}</span></span>
+      </div>`;
+  });
+  return out;
+}
+
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
+  /* Les deux vues passent par le MÊME tracé (chaises en tirets, corps posé
+     sur son ombre, numéro à deux chiffres) — seule l'encre change : blanc et
+     menthe la nuit, encre et atlas le jour, où le corps porte en plus le
+     lavis de la matière choisie (pdsJourC) pour que le nuancier MATIÈRE
+     reste un vrai choix. Le rendu matières de floorplan-core reste à la
+     caisse, intact. */
+  const noir = pdsNoir();
   const c = pdsColor(t);
   const P = PDS_PAD;
   const sel = PDS_SEL.has(t.id);
   const only = sel && PDS_SEL.size === 1;
   const sv = state.staff.find(s => s.id === t.server);
   const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
-  const ring = PDS_STATUS_RING[t.status] || PDS_STATUS_RING.free;
-  const ink = pdsInk(c);
-  /* Shared with the caisse — see pdsTableBody in assets/floorplan-core.js. */
-  const body = pdsTableBody(g, c, ring);
+  const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING_JOUR;
+  const ring = R[t.status] || R.free;
+  const ink = noir ? 'rgba(255,255,255,0.5)'
+    : (t.status === 'occupied' ? '#0B6E4F' : 'rgba(10,15,13,0.60)');
+  const body = noir
+    ? pdsNoirTableBody(g, ring, t.status || 'free')
+    : pdsNoirTableBody(g, ring, t.status || 'free', pdsJourC(c, 0.30));
 
   const showChairs = state.showChairs !== false;
-  const chairs = showChairs ? pdsChairsFor(g, g.seats, c) : '';
+  const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
+  const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
   const serverBadge = sv
     ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
+    : '';
+  /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
+   * au-dessus de la table. Elle n'existe que si la table porte son heure
+   * d'occupation (t.since, écrite quand le statut passe à occupée). */
+  let sinceChip = '';
+  if (t.status === 'occupied' && t.since > 0) {
+    const min = Math.max(0, Math.round((Date.now() - t.since) / 60000));
+    const disp = min >= 90 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`;
+    sinceChip = `<span class="pds-tbl-since">${disp}</span>`;
+  }
+  const reservationLabel = t.status === 'reserved' ? pdsReservationLabel(t) : '';
+  const reservationChip = reservationLabel
+    ? `<span class="pds-resv-chip">${pdsEsc(reservationLabel)}</span>`
     : '';
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
-         data-pds-table="${t.id}"
+         data-pds-table="${t.id}" data-status="${t.status || 'free'}"
          role="button" tabindex="0"
          aria-label="Table ${pdsEsc(t.num)}, ${g.seats} ${T.seats}"
          style="left:${t.x - P}px; top:${t.y - P}px; width:${g.w + P*2}px; height:${g.h + P*2}px;
@@ -5189,10 +5756,12 @@ function pdsRenderTable(t, state, T) {
         ${chairs}${body}
       </svg>
       <div class="pds-tbl-face" style="color:${ink};">
-        <span class="pds-tbl-num">${pdsEsc(t.num)}</span>
+        <span class="pds-tbl-num">${pdsEsc(numDisp)}</span>
         ${g.seats ? `<span class="pds-tbl-covers">${g.seats}p</span>` : ''}
       </div>
       ${serverBadge}
+      ${sinceChip}
+      ${reservationChip}
       ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;
@@ -5205,18 +5774,17 @@ function pdsRenderElement(e, state, T) {
   const K = PDS_FIX[e.type];
   if (!K) return '';
   const g = pdsGeom(e);
+  const noir = pdsNoir();
   const c = pdsColor(e);
   const sel = PDS_SEL.has(e.id);
   const only = sel && PDS_SEL.size === 1;
   const label = (e.label != null ? e.label : (K.label || ''));
 
-  let inner = '';
-  let boxStyle = '';
-  if (K.render === 'svg') {
-    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${K.draw(e, c, g)}</svg>`;
-  } else if (K.render === 'box') {
-    boxStyle = pdsBoxStyle(K.draw(e, c, g) || {}, c);
-  }
+  /* Les deux vues dessinent les mêmes idéogrammes au trait (pdsNoirFixture
+     choisit son encre selon la vue) — les gabarits peints de floorplan-core
+     restent à la caisse. */
+  const inner = K.render === 'none' ? ''
+    : `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${pdsNoirFixture(e, K, g)}</svg>`;
 
   return `
     <div class="pds-el pds-el-${e.type} ${sel?'is-selected':''} ${e.locked?'is-locked':''}"
@@ -5224,8 +5792,8 @@ function pdsRenderElement(e, state, T) {
          aria-label="${pdsEsc(T['fix'+e.type] || e.type)}"
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
-      <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      <div class="pds-el-fill">${inner}</div>
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)'};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -5387,9 +5955,13 @@ function pdsRenderFoot(state, T) {
 
 /* ═══ INTERACTIVITY ═════════════════════════════════════════════════ */
 function pdsAttach(root, state, T, dr) {
+  /* La vue nuit est une classe sur la racine du tiroir : tout le squelette
+     pds- en hérite, et la bascule ne re-rend que le corps. */
+  root.classList.toggle('pds-noir', pdsNoir());
   /* Re-renders body + foot in-place, then re-binds events. Used after
    * every state mutation. */
   const refresh = () => {
+    pdsExpireReservations(state);
     const body = root.querySelector('.kiwi-drawer-body');
     const foot = root.querySelector('.kiwi-drawer-foot');
     if (body) body.innerHTML = pdsRenderBody(state, T);
@@ -5449,7 +6021,14 @@ function pdsAttach(root, state, T, dr) {
     if (state.mode !== 'rotate') {
       root.querySelectorAll('[data-pds-table]').forEach(el => {
         const id = el.getAttribute('data-pds-table');
-        pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        /* bind() also runs when only the inspector is redrawn, while these
+         * stage nodes survive. Wire each surviving node once: otherwise the
+         * Shift toggle and drag-finish closures replay in a stack. A full
+         * refresh creates fresh nodes without this marker and wires normally. */
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        }
         el.onclick = (ev) => {
           if (ev.detail === 0) return; /* keyboard-triggered click without coords */
         };
@@ -5459,7 +6038,10 @@ function pdsAttach(root, state, T, dr) {
          capability that did not exist while they were scene artwork. */
       root.querySelectorAll('[data-pds-el]').forEach(el => {
         const id = el.getAttribute('data-pds-el');
-        pdsAttachElDrag(el, id, state, T, root, refresh);
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachElDrag(el, id, state, T, root, refresh);
+        }
         el.onclick = (ev) => {
           ev.stopPropagation();
           if (state.mode !== 'layout') return;
@@ -5527,6 +6109,21 @@ function pdsAttach(root, state, T, dr) {
           else if (f === 'label') o.label = v;
           else if (f === 'notes') o.notes = v;
           else if (f === 'server') o.server = v || null;
+          else if (f === 'reservationName') {
+            o.reservationName = v.trim();
+            if (!o.reservationName) delete o.reservationName;
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
+          else if (f === 'reservationTime') {
+            if (/^\d{2}:\d{2}$/.test(v)) {
+              o.reservationTime = v;
+              o.reservationDate = pdsTodayKey();
+            } else {
+              delete o.reservationTime;
+              delete o.reservationDate;
+            }
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
           else if (f === 'type') {
             /* Changing the type re-seeds geometry, otherwise a 2-top turned
                into a 10-top keeps the 2-top's footprint and the seats have
@@ -5550,7 +6147,22 @@ function pdsAttach(root, state, T, dr) {
             reselect();
           }
         };
-        input.onchange = commit;
+        if (f === 'reservationName' || f === 'reservationTime') {
+          /* Text insertion APIs and some mobile keyboards can update the
+           * control without delivering change until much later. Blur is the
+           * reliable commit boundary; guard it so a normal change+blur pair
+           * still records exactly one undo snapshot. */
+          let committedValue = input.value;
+          const commitReservation = () => {
+            if (input.value === committedValue) return;
+            committedValue = input.value;
+            commit();
+          };
+          input.onchange = commitReservation;
+          input.onblur = commitReservation;
+        } else {
+          input.onchange = commit;
+        }
 
         /* The rotation dial previews as you drag it; the commit lands on
            change. Without this the dial only moved the table on release,
@@ -5577,6 +6189,21 @@ function pdsAttach(root, state, T, dr) {
           if (!found.table) return;
           pdsPush(state);
           o.status = btn.getAttribute('data-pds-status');
+          /* L'heure d'assise nourrit la pastille « N min » de la vue nuit. */
+          if (o.status === 'occupied') {
+            if (!o.since) o.since = Date.now();
+            pdsClearReservation(o);
+          } else {
+            delete o.since;
+            if (o.status === 'reserved') {
+              if (!o.reservationDate) o.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(o);
+            }
+          }
+          /* Une table groupée est UNE table pour le service : le statut
+             s'applique au groupe entier, heure d'assise partagée. */
+          if (o.group) pdsSyncGroupService(state, o.group, o);
           reselect();
         };
       });
@@ -5654,6 +6281,12 @@ function pdsAttach(root, state, T, dr) {
     if (!f) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
     inspector.innerHTML = pdsRenderInspector(state, T, f.o);
     bind();
+    /* Sous 1100px l'inspecteur passe sous le plan : sélectionner un objet
+       ouvrait alors un panneau qu'on ne voyait pas. 'nearest' ne bouge rien
+       quand il est déjà à l'écran, donc la colonne large ne saute pas.
+       Sans 'smooth' : mesuré dans ce tiroir, l'animation ne défile pas d'un
+       pixel là où le saut direct parcourt ses 561. */
+    try { inspector.scrollIntoView({ block: 'nearest' }); } catch (_) {}
   };
   /* Open bulk inspector */
   const openBulkInspector = () => {
@@ -5727,11 +6360,54 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let startX, startY, origX, origY, transformX, transformY;
   let dragK = 1;
   let blockFrame = 0;
+  let groupPeers = [];
+  let groupOrig = {};
+  let selectionOrig = {};
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
   el.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
+    /* Mode « grouper » armé : le clic suivant lie les deux tables. Sur
+     * soi-même, il annule. On sort avant toute logique de sélection ou de
+     * drag — le refresh() reconstruit le DOM, donc plus rien à faire ici. */
+    if (state._groupPickFrom) {
+      ev.preventDefault();
+      const fromId = state._groupPickFrom;
+      state._groupPickFrom = null;
+      const t = state.tables.find(tt => tt.id === id);
+      if (fromId === id || !t) {
+        toast(T.groupPickCancel, { duration: 1400 });
+        refresh();
+        setTimeout(() => state._openInspector(id), 0);
+        return;
+      }
+      const from = state.tables.find(tt => tt.id === fromId);
+      if (!from) { refresh(); return; }
+      pdsPush(state);
+      const serviceAnchor = from.group ? from : (t.group ? t : from);
+      if (from.group && t.group && from.group !== t.group) {
+        /* Deux groupes existants fusionnent : la cible rejoint le premier. */
+        const old = t.group;
+        state.tables.forEach(tt => { if (tt.group === old) tt.group = from.group; });
+      } else {
+        const gid = from.group || t.group || ('grp' + Date.now().toString(36));
+        from.group = gid; t.group = gid;
+      }
+      pdsSyncGroupService(state, from.group || t.group, serviceAnchor);
+      selection.clear();
+      selection.add(id);
+      refresh();
+      const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+      const grouped = state.tables.filter(tt => tt.group && tt.group === (from.group || t.group));
+      const nums = grouped.slice()
+        .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+        .map(tt => disp(tt.num)).join(' + ');
+      const covers = grouped.reduce((sum, tt) => sum + (pdsGeom(tt).seats || 0), 0);
+      toast(T.groupOk(nums, covers), { type: 'success' });
+      setTimeout(() => state._openInspector(id), 0);
+      return;
+    }
     /* Selection logic */
     if (ev.shiftKey) {
       if (selection.has(id)) {
@@ -5745,14 +6421,23 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
       ev.preventDefault();
       return;
     } else {
-      /* Plain click — clear selection, pick this one */
-      if (!selection.has(id) || selection.size > 1) {
+      /* Plain click on an unselected table starts a fresh selection. A table
+       * already inside a shift-selection keeps that selection intact so the
+       * pointerdown can immediately become a multi-table drag. */
+      const wasSelected = selection.has(id);
+      if (!wasSelected) {
         selection.clear();
         root.querySelectorAll('.pds-tbl-cell.is-selected').forEach(n => n.classList.remove('is-selected'));
       }
       selection.add(id);
       el.classList.add('is-selected');
-      state._openInspector(id);
+      /* The matching inspector is already open for an existing selection.
+       * Reopening it here calls bind(), stacking a fresh drag closure during
+       * pointerdown and can steal the gesture before its first move. */
+      if (!wasSelected) {
+        if (selection.size > 1) state._openBulkInspector();
+        else state._openInspector(id);
+      }
     }
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
@@ -5763,6 +6448,27 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
      * meaning a screen delta of D px must be written as D/k logical units to
      * track the cursor 1:1. */
     dragK = pdsK(root);
+    /* Les partenaires de groupe (et leur enveloppe) suivent le même
+       translate pendant le drag : la fusion se déplace d'un seul geste. */
+    groupPeers = [];
+    groupOrig = {};
+    selectionOrig = {};
+    if (selection.size > 1 && selection.has(id)) {
+      state.tables.forEach(tt => {
+        if (selection.has(tt.id)) selectionOrig[tt.id] = { x: tt.x, y: tt.y };
+      });
+    }
+    if (t.group) {
+      state.tables.forEach(tt => {
+        if (tt.group === t.group && tt.id !== id) {
+          groupOrig[tt.id] = { x: tt.x, y: tt.y };
+          const n = root.querySelector(`[data-pds-table="${tt.id}"]`);
+          if (n) groupPeers.push({ n, rot: tt.rot || 0 });
+        }
+      });
+      const env = root.querySelector(`[data-pds-group="${t.group}"]`);
+      if (env) groupPeers.push({ n: env, rot: null });
+    }
     el.setPointerCapture(ev.pointerId);
     el.classList.add('is-dragging');
     ev.preventDefault();
@@ -5773,6 +6479,9 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     transformX = (ev.clientX - startX) / dragK;
     transformY = (ev.clientY - startY) / dragK;
     el.style.transform = `translate(${transformX}px, ${transformY}px) rotate(${t.rot||0}deg)`;
+    groupPeers.forEach(p => {
+      p.n.style.transform = `translate(${transformX}px, ${transformY}px)` + (p.rot === null ? '' : ` rotate(${p.rot}deg)`);
+    });
     /* The table always follows the cursor 1:1 — a table that refuses to move
        reads as a broken app, not as a rule. Illegality is shown, not enforced,
        until release. The collision test is coalesced to one per frame. */
@@ -5810,7 +6519,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     /* Settle. A drop on top of something lands beside it — searched outward
        from where you actually aimed, so the table still goes where you meant
        it to go rather than springing back to where it started. */
-    if (selection.size <= 1 && pdsBlockers(state, t, { x: nx, y: ny }).length) {
+    if (selection.size <= 1 && !t.group && pdsBlockers(state, t, { x: nx, y: ny }).length) {
       const spot = pdsNearestFree(state, t, nx, ny, plane);
       if (spot) { nx = spot.x; ny = spot.y; }
       else {
@@ -5818,17 +6527,38 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
         if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom);
       }
     }
-    /* If shift-multi-drag, move all selected by the same delta */
+    /* If shift-multi-drag, move all selected by the same delta. Positions are
+       absolute from pointerdown origins: surviving DOM nodes may carry stacked
+       finish listeners after a wire pass, and replaying one must be idempotent. */
     if (selection.size > 1 && selection.has(id)) {
       const dx = nx - origX;
       const dy = ny - origY;
       state.tables.forEach(tt => {
         if (selection.has(tt.id) && tt.id !== id) {
+          const o = selectionOrig[tt.id];
+          if (!o) return;
           const tg = pdsGeom(tt);
-          tt.x = Math.max(0, Math.min(plane.w - tg.w, tt.x + dx));
-          tt.y = Math.max(0, Math.min(plane.h - tg.h, tt.y + dy));
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
         }
       });
+    }
+    /* Une table groupée entraîne ses partenaires : la fusion est un seul
+       meuble. Même delta pour chacun, borné à la pièce. Position absolue
+       depuis l'origine capturée au pointerdown — un finish() qui rejoue
+       (écouteurs empilés par un re-câblage) reste alors sans effet. */
+    if (t.group) {
+      const dx = nx - origX;
+      const dy = ny - origY;
+      state.tables.forEach(tt => {
+        const o = groupOrig[tt.id];
+        if (o && tt.group === t.group && !(selection.size > 1 && selection.has(tt.id))) {
+          const tg = pdsGeom(tt);
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
+        }
+      });
+      groupPeers = [];
     }
     t.x = nx;
     t.y = ny;
@@ -5855,6 +6585,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   let dragging = false;
   let startX, startY, origX, origY;
   let dragK = 1;
+  let moved = false;
   let blockFrame = 0, lastX = 0, lastY = 0;
   const elObj = state.elements.find(e => e.id === id);
   if (!elObj) return;
@@ -5871,6 +6602,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     }
     lastTap = now;
     dragging = true;
+    moved = false;
     startX = ev.clientX; startY = ev.clientY;
     origX = elObj.x; origY = elObj.y;
     dragK = pdsK(root);   /* screen px → logical units, see pdsK() */
@@ -5880,6 +6612,8 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   });
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
+    if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+    moved = true;
     el.style.transform = `translate(${(ev.clientX - startX)/dragK}px, ${(ev.clientY - startY)/dragK}px) rotate(${elObj.rot||0}deg)`;
     if (!blockFrame) blockFrame = requestAnimationFrame(() => {
       blockFrame = 0;
@@ -5900,6 +6634,11 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     el.classList.remove('is-dragging', 'is-blocked');
     if (blockFrame) { cancelAnimationFrame(blockFrame); blockFrame = 0; }
     root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+    /* A press that never moved is a click. Refreshing here would rebuild the
+       stage DOM before the browser dispatches the click event, so the
+       selection handler on this node would never fire — the fixture would
+       feel impossible to select, resize or delete. Leave the DOM alone. */
+    if (!moved) return;
     let nx = origX + (ev.clientX - startX) / dragK;
     let ny = origY + (ev.clientY - startY) / dragK;
     if (state.snap) {
@@ -6011,6 +6750,12 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
   const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);
 
   switch (action) {
+    case 'toggle-view': {
+      pdsSetNoir(!pdsNoir());
+      root.classList.toggle('pds-noir', pdsNoir());
+      refresh();
+      break;
+    }
     case 'save': {
       const feedback = Kiwi.buttonFeedback?.(btn, { pending: T.saving, done: T.savedButton });
       pdsSave(state);
@@ -6535,6 +7280,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       pdsPush(state);
       if (f.table) {
         const newT = { ...f.o, id: newTableId(), x: f.o.x + 24, y: f.o.y + 24, num: f.o.num + '·' };
+        delete newT.group;
         state.tables.push(newT);
         selection.clear(); selection.add(newT.id);
         refresh();
@@ -6555,14 +7301,42 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!f) break;
       pdsPush(state);
       if (f.table) {
+        const affected = f.o.group ? state.tables.filter(t => t.group === f.o.group) : [f.o];
+        const snapshot = pdsTableSnapshot(state, affected);
+        const title = `Table ${f.o.num} · ${T.deletedSuffix}`;
         state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
-        toast(`Table ${f.o.num} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
+        pdsSweepGroups(state);
+        selection.delete(id);
+        refresh();
+        pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, T.deleteUndone, id);
+        break;
       } else {
         state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
         toast(`${T['fix'+f.o.type] || f.o.type} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
       }
       selection.delete(id);
       refresh();
+      break;
+    }
+    case 'table-group': {
+      /* Arme le mode « choisir la seconde table » — le pointerdown de la
+       * table cliquée ensuite fait la liaison (voir pdsAttachDrag). */
+      const id = btn.getAttribute('data-pds-id');
+      state._groupPickFrom = id;
+      toast(T.groupPickHint, { duration: 2600 });
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'table-ungroup': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f || !f.table || !f.o.group) break;
+      pdsPush(state);
+      const gid = f.o.group;
+      const snapshot = pdsTableSnapshot(state, state.tables.filter(tt => tt.group === gid));
+      state.tables.forEach(tt => { if (tt.group === gid) delete tt.group; });
+      refresh();
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.ungroupOk, T.ungroupUndone, id);
       break;
     }
     case 'obj-lock': {
@@ -6656,10 +7430,35 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     }
     case 'bulk-delete': {
       const n = selection.size;
+      const selectedGroups = new Set();
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (t && t.group) selectedGroups.add(t.group);
+      });
+      const affected = state.tables.filter(t => selection.has(t.id) || (t.group && selectedGroups.has(t.group)));
+      const snapshot = pdsTableSnapshot(state, affected);
+      const firstId = [...selection][0] || null;
+      pdsPush(state);
       state.tables = state.tables.filter(t => !selection.has(t.id));
+      pdsSweepGroups(state);
       selection.clear();
       refresh();
-      toast(T.bulkOkDelete(n), { type: 'warn', duration: 1400 });
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.bulkOkDelete(n), T.deleteUndone, firstId);
+      break;
+    }
+    case 'bulk-group': {
+      const picked = state.tables.filter(t => selection.has(t.id));
+      if (picked.length < 2) break;
+      pdsPush(state);
+      const touchedGroups = new Set(picked.map(t => t.group).filter(Boolean));
+      const members = state.tables.filter(t => selection.has(t.id) || (t.group && touchedGroups.has(t.group)));
+      const anchor = picked.find(t => t.group) || picked[0];
+      const gid = anchor.group || ('grp' + Date.now().toString(36));
+      members.forEach(t => { t.group = gid; });
+      pdsSyncGroupService(state, gid, anchor);
+      refresh();
+      toast(T.bulkOkGroup(members.length), { type: 'success' });
+      setTimeout(() => state._openBulkInspector(), 0);
       break;
     }
     case 'bulk-clear': {
@@ -6671,7 +7470,41 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'bulk-status': {
       const st = btn.getAttribute('data-pds-status');
       const n = selection.size;
-      selection.forEach(id => { const t = state.tables.find(tt => tt.id === id); if (t) t.status = st; });
+      const gids = new Set();
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (!t) return;
+        t.status = st;
+        if (st === 'occupied') {
+          if (!t.since) t.since = Date.now();
+          pdsClearReservation(t);
+        } else {
+          delete t.since;
+          if (st === 'reserved') {
+            if (!t.reservationDate) t.reservationDate = pdsTodayKey();
+          } else {
+            pdsClearReservation(t);
+          }
+        }
+        if (t.group) gids.add(t.group);
+      });
+      /* Le statut déborde sur les partenaires de groupe hors sélection. */
+      state.tables.forEach(tt => {
+        if (tt.group && gids.has(tt.group) && !selection.has(tt.id)) {
+          tt.status = st;
+          if (st === 'occupied') {
+            if (!tt.since) tt.since = Date.now();
+            pdsClearReservation(tt);
+          } else {
+            delete tt.since;
+            if (st === 'reserved') {
+              if (!tt.reservationDate) tt.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(tt);
+            }
+          }
+        }
+      });
       refresh();
       toast(T.bulkOkStatus(n, T['status' + st.charAt(0).toUpperCase() + st.slice(1)]), { type: 'success', duration: 1400 });
       break;
@@ -6710,18 +7543,27 @@ const PDS_INLINE_CSS = `
   .pds-zone-add { padding:7px 10px; color:var(--atlas); font-weight:700; font-size:14px; }
   .pds-zone-add:hover { background:var(--paper); }
 
+  /* align-items:start est la moitié qui compte : une piste de grille s'étire
+     par défaut à la hauteur de la plus haute, et la palette fait deux mille
+     six cents pixels. Le plan partait donc hors de l'écran dès qu'on
+     descendait chercher une plante. Les deux colonnes latérales défilent
+     maintenant chez elles, et le plan ne bouge plus. */
   .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; align-items:start; }
   @media (max-width: 1100px) { .pds-stage-grid { grid-template-columns: 200px 1fr; } .pds-inspector { grid-column: 1 / -1; } }
 
-  /* Les colonnes latérales défilent pour elles-mêmes : sans align-items:start
-     la piste de grille s'étirait à la hauteur de la palette (~2 600px) et
-     poussait le plan hors de l'écran. */
+  /* overscroll-behavior:contain arrête la chaîne : arrivé en bas de la
+     palette, la molette ne repart pas dans le tiroir. C'est ce report-là
+     qui donnait la sensation de défilement sans fin. */
   .pds-rail, .pds-inspector {
     position:sticky; top:0;
     max-height:calc(100vh - 210px); min-height:320px;
     overflow-y:auto; overscroll-behavior:contain;
     padding-right:4px; scrollbar-width:thin;
   }
+  /* Sous 1100px l'inspecteur devient une rangée pleine largeur sous le plan :
+     le coller ou le plafonner n'a plus de sens, il suit le flux. La palette,
+     elle, garde son propre défilement — c'est elle qui fait deux mille pixels,
+     à toutes les largeurs. */
   @media (max-width: 1100px) {
     .pds-rail { position:static; max-height:calc(100vh - 260px); }
     .pds-inspector { position:static; max-height:none; min-height:0; overflow:visible; }
@@ -6757,21 +7599,21 @@ const PDS_INLINE_CSS = `
   .pds-canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; flex-wrap:wrap; }
   .pds-legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
-  /* La légende reprend le trait du plan : pastilles au contour, tiretés pour
-     une réservation, pointillés pour un nettoyage — comme les tables. Les
-     teintes du v2 étaient codées en clair (le mode nuit y passait par le bloc
-     .pds-noir, non porté) ; on garde donc les jetons thématiques. */
-  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:var(--n-500); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.55); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  /* Légende jour : les mêmes cases 17 × 13 rx 4 que la nuit, à l'encre sur
+     papier — l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
   .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
-  .pds-sw-free      { background:transparent; border-color:var(--n-300); }
+  .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
   .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
   .pds-sw-reserved  { background:rgba(200,146,53,0.10); border-style:dashed; border-color:#C89235; }
-  .pds-sw-cleaning  { background:transparent; border-style:dotted; border-color:var(--n-500); }
-  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; }
+  .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-style:dotted; border-color:rgba(10,15,13,0.45); }
+  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; border:1px solid transparent; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
-  .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#A85F00; border:1px dashed rgba(200,146,53,0.65); }
-  .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted var(--n-300); }
+  /* Les mêmes traits que le plan : tiret riad pour réservée, pointillé encre
+     pour à nettoyer — plus d'ambre ni de bleu que le plan ne peint jamais. */
+  .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#7D5A1A; border:1px dashed rgba(200,146,53,0.65); }
+  .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted rgba(10,15,13,0.45); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
 
@@ -7062,16 +7904,35 @@ const PDS_INLINE_CSS = `
   .pds-form-row { margin-bottom:10px; }
   .pds-form-row > label { display:block; font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-bottom:5px; font-weight:600; }
   .pds-input { width:100%; padding:7px 9px; font-size:12.5px; }
+  .pds-resv-fields { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(96px,.65fr); gap:7px; margin:-2px 0 10px; }
+  .pds-resv-field { min-width:0; }
+  .pds-resv-field > span { display:block; margin-bottom:5px; color:#0B6E4F; font:500 9.5px/1.2 var(--mono, 'JetBrains Mono'); letter-spacing:0.07em; text-transform:uppercase; }
+  .pds-resv-field .pds-input { min-width:0; height:32px; padding:6px 8px; background:#F7F5F0; border-color:rgba(11,110,79,0.34); color:#053B2C; font-size:11.5px; }
+  .pds-resv-field .pds-input:focus { border-color:#0B6E4F; box-shadow:0 0 0 2px rgba(11,110,79,0.12); outline:0; }
   .pds-status-pills { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
   .pds-status-pill.pds-pill-occupied { background:rgba(11,110,79,0.10); color:var(--atlas); }
-  .pds-status-pill.pds-pill-reserved { background:rgba(232,200,138,0.14); color:#A85F00; border-style:dashed; border-color:rgba(200,146,53,0.55); }
-  .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:var(--n-300); }
+  .pds-status-pill.pds-pill-reserved { background:rgba(232,200,138,0.14); color:#7D5A1A; border-style:dashed; border-color:rgba(200,146,53,0.55); }
+  .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:rgba(10,15,13,0.40); }
   .pds-status-pill:hover { transform:translateY(-1px); }
   .pds-status-pill.active { border-color: currentColor; box-shadow:0 0 0 1px currentColor inset; }
   .pds-inspect-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .pds-inspect-actions .kb { padding:7px 8px; font-size:11.5px; justify-content:center; }
+  /* Bouton « Grouper » armé : il pulse doucement le temps du choix. */
+  .pds-inspect-actions .kb.pds-group-arming { border-color:var(--atlas); color:var(--atlas); animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  @keyframes pdsGroupArm { 0%,100% { box-shadow:0 0 0 0 rgba(11,110,79,0); } 50% { box-shadow:0 0 0 3px rgba(11,110,79,0.18); } }
+
+  /* ═════ TABLES GROUPÉES · l'enveloppe « 06 + 07 » du mockup d'accueil ═════
+     Un cadre rx 20 qui embrasse les tables liées, une lueur radiale douce,
+     et le cachet des numéros combinés au-dessus. Sous les tables, jamais
+     cliquable — le groupe est un fait, pas une cible. */
+  .pds-group-env { position:absolute; border-radius:20px; border:1.25px solid rgba(11,110,79,0.45); background:rgba(11,110,79,0.05); pointer-events:none; z-index:0; }
+  .pds-group-env::before { content:''; position:absolute; inset:-30%; border-radius:50%; background:radial-gradient(closest-side, rgba(11,110,79,0.10), rgba(11,110,79,0)); z-index:-1; }
+  .pds-group-chip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); height:19px; padding:0 10px; border-radius:9.5px; background:var(--paper, #F7F5F0); border:1px solid rgba(11,110,79,0.45); color:#0B6E4F; font:500 10px/19px var(--mono, 'JetBrains Mono'); letter-spacing:0.02em; white-space:nowrap; }
+  .pds-group-covers { opacity:0.72; }
+  /* Ligne d'info du groupe dans l'inspecteur : un fait, pas un bouton. */
+  .pds-group-info { margin-top:8px; padding:7px 10px; border-radius:9px; border:1px dashed rgba(11,110,79,0.35); background:rgba(11,110,79,0.05); color:#0B6E4F; font:500 11px/1.4 var(--mono, 'JetBrains Mono'); letter-spacing:0.01em; }
 
   .pds-inspect-empty .pds-rail-hint { line-height:1.55; }
 
@@ -7162,7 +8023,7 @@ const PDS_INLINE_CSS = `
   }
   .pds-scene-pill:hover { border-color:var(--atlas); color:var(--ink); transform: translateY(-1px); }
   .pds-scene-pill.active {
-    background:var(--ink); color:var(--paper); border-color:var(--ink);
+    background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);
     font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16);
   }
 
@@ -7181,6 +8042,8 @@ const PDS_INLINE_CSS = `
      (.pds-el-wall, .pds-el-door, …) is inert — those kinds were renamed. */
 
   /* Floor + walls, driven by zone.room rather than a baked scene. */
+  /* Le creux de la pièce est posé en ligne par pdsRoomShell(), avec le mur :
+     un box-shadow ici ne pourrait jamais l'emporter sur un style en ligne. */
   .pds-floor {
     position:absolute; inset:0;
     border-radius:14px;
@@ -7196,6 +8059,10 @@ const PDS_INLINE_CSS = `
     transform-origin:50% 50%;
     transition: filter 150ms ease;
   }
+  /* Le survol soulève la table. La propriété transform est réservée à la
+     rotation et au glisser — la toucher ici décalerait la géométrie —, donc
+     l'élévation passe par une ombre portée, qui suit la silhouette SVG et
+     non la boîte. */
   .pds-tbl-cell:hover { filter:brightness(1.035) drop-shadow(0 5px 10px rgba(20,15,10,0.20)); }
   .pds-tbl-cell.is-selected  { z-index:6; }
   .pds-tbl-cell.is-resizing  { z-index:7; }
@@ -7211,17 +8078,52 @@ const PDS_INLINE_CSS = `
     pointer-events:none; text-align:center;
   }
   .pds-tbl-num    { font:600 15px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  /* Comme la nuit : seul le numéro habite la table, les couverts ne se
+     montrent qu'à l'approche. */
   .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:0; transition:opacity 180ms ease; margin-top:3px; }
   .pds-tbl-cell:hover .pds-tbl-covers,
   .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  /* L'anneau d'appel pulse dans les deux vues — même géométrie, seule
+     l'encre change (menthe la nuit, atlas le jour). Les @keyframes vivent
+     dans la couche nuit ; ils sont globaux au document. */
+  .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « N min » en jour : la même géométrie que la nuit, sur
+     papier — jamais de blanc pur. */
+  .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(247,245,240,0.92); border:1px solid rgba(10,15,13,0.16);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(10,15,13,0.66);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-resv-chip {
+    position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%);
+    height:19px; max-width:calc(100% - 4px); padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    overflow:hidden; text-overflow:ellipsis;
+    background:rgba(247,245,240,0.94); border:1px solid rgba(11,110,79,0.42);
+    color:#0B6E4F; font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.01em; white-space:nowrap; pointer-events:none; z-index:4;
+  }
 
   /* ── Fixtures ──────────────────────────────────────────────────────────
      The v1 rule painted .pds-el itself dark; v2 paints the .pds-el-fill
      child from the instance's own material, so the host must be cleared. */
   .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
-  /* overflow:visible — les tabourets du comptoir sont dessinés à cy négatif
-     par floorplan-core.js ; hidden les décapitait. */
+  /* overflow:visible, pas hidden : le clip du bâti avalait les tabourets
+     du comptoir (cy negatif) dans les deux vues — le trait ne déborde
+     nulle part ailleurs, il n'y a plus de texture à contenir. */
   .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:visible; }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti,
+     dans les deux vues. */
   .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
   .pds-el-label {
     position:absolute; inset:0; padding:2px;
@@ -7230,8 +8132,12 @@ const PDS_INLINE_CSS = `
     letter-spacing:0.14em; text-transform:uppercase;
     pointer-events:none; text-align:center; overflow:hidden;
   }
+  /* Les pilules BAR / CAISSE portent leur nom à gauche, comme la nuit. */
   .pds-el-comptoir .pds-el-label,
   .pds-el-caisse .pds-el-label { justify-content:flex-start; padding-left:16px; text-align:left; }
+  /* Le curseur « grab » annonce le glisser, pas l'édition : rien ne disait
+     qu'un comptoir s'ouvre, se redimensionne et se supprime comme une table.
+     Le survol le dit maintenant, avec la même élévation que les tables. */
   .pds-el:not(.is-locked):not(.is-dragging):hover {
     filter: drop-shadow(0 4px 9px rgba(20,15,10,0.20));
     outline: 1.5px solid rgba(11,110,79,0.55); outline-offset: 2px;
@@ -7463,6 +8369,279 @@ const PDS_INLINE_CSS = `
   }
   .pds-wiz-note { margin:10px 0 0; font-size:11.5px; color:var(--n-500); }
   @media (max-width: 620px) { .pds-wiz-cards { grid-template-columns:1fr; } }
+
+  /* ═══ v4 · vue nuit — la console de service ═══════════════════════════════
+     Le look promis par la page d'accueil : salle charbon, tables au trait,
+     le statut porté par la lumière. Tout vit sous .pds-noir (posée sur la
+     racine du tiroir par pdsAttach) ; la vue jour au-dessus reste le rendu
+     matières, intact. Une seule teinte d'accent — la menthe — et son halo
+     rgba(0,255,174,…), le même vert que l'accueil sombre. */
+
+  .pds-noir { color-scheme: dark; }
+
+  /* La classe est doublée dans chaque sélecteur à dessein : le skin Vexel
+     peint ce même chrome via « body.design-vexel :is(…) » — un élément plus
+     deux classes — et la vue nuit doit l'emporter par spécificité, pas par
+     ordre de source. */
+
+  /* — La coque du tiroir : le cockpit entier passe au noir — */
+  .pds-noir.pds-noir.pds-noir { background:rgba(5, 8, 6, 0.72); }
+  /* !important : le skin 2026 (empilé par défaut) pose son verre blanc sur
+     .kiwi-drawer avec !important — la spécificité seule ne suffit pas ici. */
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer { background:#090D0A !important; border-color:rgba(242,239,230,0.10) !important; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-body { background:transparent; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head :is(h1, h2, h3) { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head p { color:rgba(242,239,230,0.50); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-foot { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-inspector {
+    background:transparent; border:none; box-shadow:none;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+  }
+
+  /* — Chrome : panneaux, palette, inspecteur — */
+  .pds-noir.pds-noir.pds-noir .pds-rail-card,
+  .pds-noir.pds-noir.pds-noir .pds-tpl { background:#0F130F; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-title, .pds-noir.pds-noir.pds-noir .pds-legend-title,
+  .pds-noir.pds-noir.pds-noir .pds-mini-label, .pds-noir.pds-noir.pds-noir .pds-wiz-q,
+  .pds-noir.pds-noir.pds-noir .pds-form-row > label, .pds-noir.pds-noir.pds-noir .pds-rot-lbl { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-hint, .pds-noir.pds-noir.pds-noir .pds-mode-desc { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item,
+  .pds-noir.pds-noir.pds-noir .pds-tool, .pds-noir.pds-noir.pds-noir .pds-step-btn, .pds-noir.pds-noir.pds-noir .pds-inspect-close,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill, .pds-noir.pds-noir.pds-noir .pds-scene-pill, .pds-noir.pds-noir.pds-noir .pds-wiz-opt,
+  .pds-noir.pds-noir.pds-noir .pds-amb, .pds-noir.pds-noir.pds-noir .pds-strat-card, .pds-noir.pds-noir.pds-noir .pds-chip,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-card {
+    background:#141813; border-color:rgba(242,239,230,0.10); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-pal-label { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-shape { background:#1C221C; border-color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item:hover { border-color:rgba(125,242,176,0.55); box-shadow:0 6px 16px -10px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-tool:hover, .pds-noir.pds-noir.pds-noir .pds-step-btn:hover,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill:hover, .pds-noir.pds-noir.pds-noir .pds-scene-pill:hover,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-opt:hover, .pds-noir.pds-noir.pds-noir .pds-amb:hover,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card:hover, .pds-noir.pds-noir.pds-noir .pds-inspect-close:hover {
+    background:#1A201A; color:#EDEAE0; border-color:rgba(125,242,176,0.55);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-chip-body b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-asum-name { color:rgba(242,239,230,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-rot-meta > div, .pds-noir.pds-noir.pds-noir .pds-rot-step {
+    background:#141813; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-rot-val, .pds-noir.pds-noir.pds-noir .pds-fair-name, .pds-noir.pds-noir.pds-noir .pds-hist-name,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-strat-card em { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-fair-bar { background:rgba(242,239,230,0.10); }
+
+  /* Champs — color-scheme:dark règle les natifs, le reste suit. */
+  .pds-noir.pds-noir.pds-noir .pds-input, .pds-noir.pds-noir.pds-noir input[type="number"], .pds-noir.pds-noir.pds-noir input[type="text"],
+  .pds-noir.pds-noir.pds-noir select, .pds-noir.pds-noir.pds-noir textarea {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:#EDEAE0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-range, .pds-noir.pds-noir.pds-noir .pds-snap input { accent-color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-snap { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-unit { color:rgba(242,239,230,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-num-grid > label { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-step-btn { color:#EDEAE0; }
+
+  /* Bandeau KPI */
+  .pds-noir.pds-noir.pds-noir .p-kpi { background:#0F130F; border:1px solid rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .l { color:rgba(242,239,230,0.45); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .v { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.40); }
+
+  /* Modes + zones : rail sombre, pilule active claire — le contraste inversé
+     de la vue jour, même géométrie pour que la lentille liquide suive. */
+  .pds-noir.pds-noir.pds-noir .pds-modes, .pds-noir.pds-noir.pds-noir .pds-zone-tabs {
+    background:#0D110D; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-mode, .pds-noir.pds-noir.pds-noir .pds-zone { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-mode:hover, .pds-noir.pds-noir.pds-noir .pds-zone:hover { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-mode.active { background:#EDEAE0; color:#0B0F0C; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active { background:#1C221C; color:#EDEAE0; box-shadow:none; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active em { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add:hover { background:#1C221C; }
+
+  /* Barre du plan + légende façon accueil : cases au trait, l'occupée seule
+     rayonne. */
+  .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:#0D110D; border-color:rgba(242,239,230,0.08); }
+  /* Légende : les pastilles 17 × 13 rx 4 de l'accueil, sur la même échelle
+     de blanc que les tables, la menthe pour l'occupée. Typo du mockup :
+     400 · 11 px · -0.01em, encre 0.5. */
+  .pds-noir.pds-noir.pds-noir .pds-legend-item {
+    color:rgba(255,255,255,0.5);
+    font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:-0.01em;
+  }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti. */
+  .pds-noir.pds-noir.pds-noir .pds-el-svg { overflow:visible; }
+  .pds-noir.pds-noir.pds-noir .pds-legend-swatch {
+    width:17px; height:13px; border-radius:4px;
+    background:rgba(255,255,255,0.012); box-shadow:none; border:1.25px solid rgba(255,255,255,0.19);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
+    border-color:#00FFAE; background:rgba(0,255,174,0.11);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:#E8C067; background:rgba(232,192,103,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dotted; border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); }
+
+  /* — La scène — */
+  .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
+    background:#020302;
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:20px;
+    padding:16px 16px 8px;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room {
+    border:1.5px solid rgba(255,255,255,0.13);
+    border-radius:18px;
+    box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room.is-terrasse {
+    border-style:dashed; border-color:rgba(0,255,174,0.30); background:transparent;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label { color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-footer { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-floor-count { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-dims { color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-empty { background:rgba(10,14,11,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
+
+  /* — Tables : le statut est une lumière, le numéro se lit sans effort.
+     Typo du mockup : 500 · 0.04em ; l'échelle de blanc remontée à 0.40 / 0.55
+     pour tenir sur le sol quasi noir, la menthe 0.90 pour l'occupée. Le
+     survol remonte encore l'encre — un plan d'édition doit rester
+     manipulable, l'accueil n'a pas ce souci. — */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-num {
+    font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.04em; color:rgba(255,255,255,0.40);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(232,192,103,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.75); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"].is-selected .pds-tbl-num { color:#00FFAE; }
+  /* Le nombre de couverts n'existe qu'à l'approche — le mockup n'affiche que
+     le numéro, et c'est ce silence qui le rend cher. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:0; transition:opacity 180ms ease; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  /* Le halo de l'occupée vit désormais DANS le SVG (disque pdsNoirCall),
+     comme sur l'accueil ; le survol garde juste un peu de lumière en plus. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.15); }
+  /* L'anneau d'appel — la copie de .kw-plan-call de l'accueil. */
+  .pds-noir.pds-noir.pds-noir .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @keyframes pdsNoirCall {
+    0%, 62% { opacity:.85; transform:scale(1); }
+    100%    { opacity:0;   transform:scale(1.5); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir.pds-noir.pds-noir .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « 6 min » : 19 px de haut, rx 9.5, encre 0.72 sur noir 0.92. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(10,10,10,0.92); border:1px solid rgba(255,255,255,0.18);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(255,255,255,0.72);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-chip {
+    background:rgba(4,26,20,0.94); border-color:rgba(125,242,176,0.60); color:#7DF2B0;
+    box-shadow:0 0 14px rgba(125,242,176,0.12);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field > span { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input {
+    color-scheme:dark; background:#0D110E; border-color:rgba(125,242,176,0.34); color:#F7F5F0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input:focus {
+    border-color:#7DF2B0; box-shadow:0 0 0 2px rgba(125,242,176,0.14);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
+  /* Les pastilles serveur appartiennent à l'Affectation ; en Aménagement
+     elles ne font que du bruit que le mockup n'a pas. */
+  .pds-noir.pds-noir.pds-noir .pds-stage-layout .pds-tbl-server { display:none; }
+
+  /* — Sélection : cadre menthe + tirets d'angle, le geste de l'accueil — */
+  .pds-noir.pds-noir.pds-noir .pds-hdl-layer::before {
+    border-color:#7DF2B0; border-radius:9px;
+    box-shadow:0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-hdl { background:#0D110E; border-color:#7DF2B0; box-shadow:0 0 6px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-hdl:hover { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-n, .pds-noir.pds-noir.pds-noir .pds-hdl-s { width:18px; height:5px; margin:-2.5px 0 0 -9px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-e, .pds-noir.pds-noir.pds-noir .pds-hdl-w { width:5px; height:18px; margin:-9px 0 0 -2.5px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot { background:#7DF2B0; border-color:#0D110E; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot::before { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-dim { background:#7DF2B0; color:#07100C; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-resizing .pds-dim,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-resizing .pds-dim { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-locked { background:rgba(242,239,230,0.14); color:#EDEAE0; }
+
+  /* — Bâti : les idéogrammes se dessinent en SVG (pdsNoirFixture), le CSS ne
+     rajoute rien sur le fond — un liseré ici doublerait le trait. — */
+  .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
+    outline-color:rgba(125,242,176,0.65);
+    filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
+  }
+  /* Étiquettes du bâti : la typo du mockup — 500 · 0.14em · blanc 0.34 — et
+     les pilules BAR / CAISSE portent leur nom à gauche, pas au centre. */
+  .pds-noir.pds-noir.pds-noir .pds-el-label {
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-el-comptoir .pds-el-label,
+  .pds-noir.pds-noir.pds-noir .pds-el-caisse .pds-el-label {
+    justify-content:flex-start; padding-left:16px; text-align:left;
+  }
+
+  /* Gêne de placement : le rouge reste le seul hors-marque, plus clair ici. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-blocked::after,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-blocked::after { border-color:#E4604E; background:rgba(228,96,78,0.14); }
+  .pds-noir.pds-noir.pds-noir .pds-blocker::before { border-color:#E4604E; }
+
+  /* — Statuts (légende de l'inspecteur) — */
+  .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(232,192,103,0.10); color:#E8C067; border:1px dashed rgba(232,192,103,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(255,255,255,0.02); color:rgba(242,239,230,0.60); border:1px dotted rgba(255,255,255,0.40); }
+
+  /* — Groupes : l'enveloppe passe à la menthe sur la scène noire — */
+  .pds-noir.pds-noir.pds-noir .pds-group-env { border-color:rgba(0,255,174,0.55); background:rgba(0,255,174,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-group-env::before { background:radial-gradient(closest-side, rgba(0,255,174,0.16), rgba(0,255,174,0)); }
+  .pds-noir.pds-noir.pds-noir .pds-group-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-inspect-actions .kb.pds-group-arming { border-color:#00FFAE; color:#00FFAE; animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  .pds-noir.pds-noir.pds-noir .pds-group-info { border-color:rgba(0,255,174,0.35); background:rgba(0,255,174,0.07); color:#7DF2B0; }
+
+  /* Nuancier : l'anneau de l'actif passe à la menthe sur fond noir. */
+  .pds-noir.pds-noir.pds-noir .pds-sw { border-color:rgba(242,239,230,0.18); }
+  .pds-noir.pds-noir.pds-noir .pds-sw.active { box-shadow:0 0 0 2px #0F130F, 0 0 0 3.5px #7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-none {
+    background:
+      linear-gradient(45deg, transparent 45%, #E4604E 45% 55%, transparent 55%),
+      #141813;
+  }
+
+  /* Pied de page */
+  .pds-noir.pds-noir.pds-noir .pds-foot-meta { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost { background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger { color:#E4604E; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger:hover { border-color:#E4604E; }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
