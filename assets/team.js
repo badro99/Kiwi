@@ -1104,6 +1104,32 @@
   let pageMode = null;
   let unsubscribeVenue = null;
   let unsubscribeLang = null;
+  let liveTeam = { merchant: '', members: [] };
+  let liveTeamSignature = '';
+  let liveTeamBusy = false;
+
+  function liveMember(memberId) {
+    return (liveTeam.members || []).find((member) => String(member.id || '') === String(memberId || '')) || null;
+  }
+  function pollLiveTeam() {
+    if (liveTeamBusy || !isCustomVenue()) return;
+    const merchant = teamSlug();
+    if (!merchant) return;
+    liveTeamBusy = true;
+    fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+    }).then((response) => response.ok ? response.json() : null).then((data) => {
+      if (!data || !data.ok || data.merchant !== merchant) return;
+      const signature = JSON.stringify([merchant, data.members || []]);
+      liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] };
+      if (signature !== liveTeamSignature) {
+        liveTeamSignature = signature;
+        if (pageActive) render();
+        try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
+      }
+    }).catch(() => {}).finally(() => { liveTeamBusy = false; });
+  }
+  setInterval(pollLiveTeam, 6000);
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1165,12 +1191,15 @@
 
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
+    pollLiveTeam();
     /* Re-render when the venue or language changes. */
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
         if (!pageActive) return;
         const v2 = window.KiwiVenue.getCurrentVenueData();
         ensureVenueData(v2);
+        liveTeam = { merchant: '', members: [] }; liveTeamSignature = '';
+        pollLiveTeam();
         render();
       });
     }
@@ -1288,7 +1317,9 @@
      * définition de Paie (onDuty) ; la démo garde son estimation. */
     const todayKey = toISO(new Date());
     const present = isCustomVenue()
-      ? members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length
+      ? (liveTeam.merchant === teamSlug()
+        ? liveTeam.members.filter((member) => member.status === 'on-duty' || member.status === 'on-pause').length
+        : members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length)
       : Math.max(0, Math.round(totalMembers * 0.75));
     let totalHours = 0;
     members.forEach(m => {
@@ -1355,6 +1386,11 @@
         : contractTone === 'pend' ? 'kt-tag kt-tag-pend'
         : 'kt-tag kt-tag-neutral';
       const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
+      const live = liveMember(m.id);
+      const liveText = live && live.status === 'on-pause' ? 'En pause'
+        : live && live.status === 'on-duty' ? 'En service' : 'Hors service';
+      const liveColor = live && live.status === 'on-pause' ? '#B26B0F'
+        : live && live.status === 'on-duty' ? 'var(--atlas)' : 'var(--n-500)';
       return `
         <tr class="eq-row-in">
           <td>
@@ -1362,7 +1398,7 @@
               <span class="eq-av md" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(ini)}</span>
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
-                <div class="eq-member-role">${esc(m.email || '—')}</div>
+                <div class="eq-member-role">${esc(m.email || '—')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
               </div>
             </div>
           </td>
@@ -2972,7 +3008,11 @@
         name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '—',
         role: m.function || m.department || '',
         avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
-        hoursToday: +((hours[m.id] || {})[todayKey]) || 0,
+        status: (liveMember(m.id) || {}).status || 'off-duty',
+        hoursToday: liveMember(m.id)
+          && ['on-duty', 'on-pause'].includes(liveMember(m.id).status)
+          ? Math.max(0.01, +((hours[m.id] || {})[todayKey]) || 0.01)
+          : (+((hours[m.id] || {})[todayKey]) || 0),
       }));
     } catch (_) { return []; }
   }

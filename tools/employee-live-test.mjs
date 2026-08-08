@@ -21,6 +21,7 @@ const DB = {
 };
 const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
+const TEAM_LIVE = await import(path.join(ROOT, 'functions/api/team/live.js'));
 const STORE = await import(path.join(ROOT, 'functions/api/store.js'));
 const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
 const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
@@ -55,6 +56,18 @@ async function post(body, cookie = '') {
 }
 async function get(cookie) {
   return API.onRequestGet({ env, request: new Request('https://kiwi.test/api/employee', { headers: { Cookie: cookie } }) });
+}
+const tillCookie = `kiwi_till=${await AUTH.tillToken(env.AUTH_SECRET, 'amira-cafe')}`;
+async function teamLivePost(body) {
+  return TEAM_LIVE.onRequestPost({ env, request: new Request('https://kiwi.test/api/team/live', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: tillCookie },
+    body: JSON.stringify({ merchant: 'amira-cafe', ...body }),
+  }) });
+}
+async function teamLiveGet() {
+  return TEAM_LIVE.onRequestGet({ env, request: new Request('https://kiwi.test/api/team/live?merchant=amira-cafe', {
+    headers: { Cookie: tillCookie },
+  }) });
 }
 
 const bad = await post({ action: 'login', email: 'sara@amira.test', pin: '1111' });
@@ -176,15 +189,24 @@ const att = sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-ca
 const attDoc = JSON.parse(att.data);
 attDoc.entries[0].inTs = Date.now() - 2 * 3600000;
 put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(attDoc));
-const pause = await post({ action: 'pause' }, cookie);
-ok(pause.status === 200, 'une pause est partagée avec les autres serveurs');
+const selfPause = await post({ action: 'pause' }, cookie);
+ok(selfPause.status === 403, "un employé ne peut pas s'accorder sa propre pause");
+const liveBeforePause = await teamLiveGet(); const liveBeforeState = await liveBeforePause.json();
+ok(liveBeforePause.status === 200 && liveBeforeState.members[0].status === 'on-duty',
+  'la caisse lit le vrai pointage en cours, pas le roster sauvegardé');
+const pause = await teamLivePost({ action: 'manager-pause', memberId: 'mem-sara' });
+ok(pause.status === 200, 'la caisse donne la pause dans le pointage partagé');
 const duringPause = await get(cookie); const pausedState = await duringPause.json();
-ok(pausedState.colleagues[0].status === 'on-pause', "l'équipe voit immédiatement le statut en pause");
+ok(pausedState.colleagues[0].status === 'on-pause', "l'app employé reçoit immédiatement la pause décidée en caisse");
+const message = await teamLivePost({ action: 'message', target: 'mem-sara', text: 'Passe au comptoir.' });
+const afterMessage = await get(cookie); const messageState = await afterMessage.json();
+ok(message.status === 200 && messageState.messages.some((item) => item.text === 'Passe au comptoir.'),
+  "un message de la caisse arrive dans le centre de notifications de l'employé");
 const pausedDoc = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='attendance'").get().data);
 pausedDoc.entries[0].pauseTs = Date.now() - 30 * 60000;
 put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(pausedDoc));
-const resume = await post({ action: 'resume' }, cookie);
-ok(resume.status === 200, 'reprendre ferme la période de pause');
+const resume = await teamLivePost({ action: 'manager-resume', memberId: 'mem-sara' });
+ok(resume.status === 200, 'la caisse termine la pause et ferme sa période');
 const cout = await post({ action: 'clock-out' }, cookie);
 ok(cout.status === 200, 'le pointage de sortie ferme le service');
 const teamAfter = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
@@ -214,7 +236,10 @@ ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les ta
 ok(serviceSource.includes('tableServerIds(t).includes(currentUser)')
   && serviceSource.includes('tableServerIds(tables[id]).includes(sid)'),
   'chaque employé retrouve une table dès que son identifiant figure parmi les trois affectés');
-ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');
+ok(serviceSource.includes('Pause gérée depuis la caisse')
+  && !serviceSource.includes("KiwiEmployeeLive.pause()")
+  && !serviceSource.includes("KiwiEmployeeLive.resume()"),
+  "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
 ok(!serviceSource.includes("location.replace('/dashboard?employee=1')"),

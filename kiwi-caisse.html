@@ -6053,8 +6053,51 @@
       return [];
     }
     const ROSTER_PALETTE = ['#3FB67A', '#1F5D3C', '#D49F2E', '#2B5C68', '#7A5BC9', '#B26B0F', '#4F7560', '#B85245'];
+    let liveTeamMerchant = '';
+    let liveTeamBusy = false;
+    let liveTeamTimer = null;
+    function pairedTeamMerchant() {
+      try { return String((storePaired() || {}).merchant || ''); } catch (_) { return ''; }
+    }
+    function applyLiveTeam(data) {
+      if (!data || !data.ok || !Array.isArray(data.members)) return;
+      const merchant = pairedTeamMerchant();
+      if (!merchant || data.merchant !== merchant) return;
+      liveTeamMerchant = merchant;
+      Object.keys(servers).forEach((id) => { delete servers[id]; });
+      data.members.forEach((member, index) => {
+        const id = String(member.id || '');
+        if (!id) return;
+        const status = member.status === 'on-duty' ? 'on' : (member.status === 'on-pause' ? 'pause' : 'off');
+        const since = Number(member.since) ? new Date(Number(member.since)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null;
+        servers[id] = {
+          id, name: String(member.name || 'Employé'), role: String(member.role || member.department || ''),
+          color: ROSTER_PALETTE[index % ROSTER_PALETTE.length], status,
+          breakStart: Number(member.pauseTs) || null, since,
+        };
+      });
+      try { renderTeamDrawer(); } catch (_) {}
+      try { renderSalle(); } catch (_) {}
+      try { updateTeamCount(); } catch (_) {}
+    }
+    function pollLiveTeam() {
+      if (liveTeamBusy || !storeIsReal()) return;
+      const merchant = pairedTeamMerchant();
+      if (!merchant) return;
+      liveTeamBusy = true;
+      fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((response) => response.ok ? response.json() : null)
+        .then(applyLiveTeam).catch(() => {}).finally(() => { liveTeamBusy = false; });
+    }
+    function startLiveTeam() {
+      if (!storeIsReal()) return;
+      pollLiveTeam();
+      if (!liveTeamTimer) liveTeamTimer = setInterval(pollLiveTeam, 5000);
+    }
     function rebuildRealRoster() {
       if (!storeIsReal()) return;                      // demo keeps its seeded five
+      if (liveTeamMerchant && liveTeamMerchant === pairedTeamMerchant()) return;
       const roster = currentRoster();
       Object.keys(servers).forEach(k => { delete servers[k]; });
       roster.forEach((m, i) => {
@@ -6064,7 +6107,7 @@
           name: (m.name && String(m.name).trim()) || ('Membre ' + (i + 1)),
           role: (m.role && String(m.role).trim()) || '',
           color: ROSTER_PALETTE[i % ROSTER_PALETTE.length],
-          status: 'on',        // present; live clock-in/pause comes from the serveur app
+          status: 'off',       // attendance decides presence; never invent a live shift
           breakStart: null,
           since: null,         // no fabricated shift-start time
         };
@@ -10776,14 +10819,19 @@
     else applyStoreIdentity();
     // This runs at load, BEFORE anyone has entered their code — so re-run it the
     // moment the till learns who is on shift, and again when they hand over.
-    document.addEventListener('kiwi-staff', applyStoreIdentity);
+    document.addEventListener('kiwi-staff', function () { applyStoreIdentity(); startLiveTeam(); });
     // Same for WHICH store: the pairing is redeemed after this file has painted,
     // so a device handed over from a second store's dashboard kept showing the
     // first store's name everywhere until reload.
-    document.addEventListener('kiwi-paired', applyStoreIdentity);
+    document.addEventListener('kiwi-paired', function () {
+      liveTeamMerchant = '';
+      applyStoreIdentity();
+      startLiveTeam();
+    });
     // The roster arrives async (/api/config → KiwiConfig.pins → kiwi-config), after
     // this file has painted its demo servers — rebuild the floor team when it lands.
-    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); } catch (_) {} });
+    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); startLiveTeam(); } catch (_) {} });
+    setTimeout(startLiveTeam, 1000);
 
     /* Render a journal entry as a printed thermal ticket.
      * Le reçu à l'écran est LE reçu : même moteur, même mise en page, mêmes
@@ -12161,6 +12209,7 @@
     function openTeamDrawer() {
       renderTeamDrawer();
       $('#team-drawer').classList.add('is-open');
+      pollLiveTeam();
     }
     function closeTeamDrawer() {
       $('#team-drawer').classList.remove('is-open');
@@ -12175,21 +12224,25 @@
       if (card) {
         const act = card.dataset.teamAction;
         const sid = card.dataset.server;
-        if (act === 'start-pause') {
-          servers[sid].status = 'pause';
-          servers[sid].breakStart = Date.now();
-          toast(`${servers[sid].name} · pause démarrée`);
-          renderTeamDrawer();
-          renderSalle();
-          updateTeamCount();
-        } else if (act === 'end-pause') {
-          const mn = pauseElapsedMn(servers[sid]);
-          servers[sid].status = 'on';
-          servers[sid].breakStart = null;
-          toast(`${servers[sid].name} · fin de pause (${mn} mn)`);
-          renderTeamDrawer();
-          renderSalle();
-          updateTeamCount();
+        if (act === 'start-pause' || act === 'end-pause') {
+          if (card.disabled) return;
+          card.disabled = true;
+          const pausing = act === 'start-pause';
+          const member = servers[sid];
+          fetch('/api/team/live', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ merchant: pairedTeamMerchant(), action: pausing ? 'manager-pause' : 'manager-resume', memberId: sid }),
+          }).then(async (response) => {
+            let data = {}; try { data = await response.json(); } catch (_) {}
+            if (!response.ok) throw new Error(data.error || 'pause-write-failed');
+            toast(`${member.name} · ${pausing ? 'pause démarrée' : 'fin de pause'}`);
+            pollLiveTeam();
+          }).catch((error) => {
+            toast(error && error.message === 'employee-not-clocked-in'
+              ? `${member.name} n'est pas pointé en service`
+              : 'Pause non synchronisée · vérifiez la connexion');
+          }).finally(() => { card.disabled = false; });
         } else if (act === 'message') {
           openMsgModal(sid);
         }
@@ -12260,8 +12313,19 @@
       const target = msgTargetId === 'ALL'
         ? `équipe (${activeServerCount()} serveurs)`
         : servers[msgTargetId].name;
-      toast(`Message envoyé à ${target} ✓`);
-      closeMsgModal();
+      const button = $('#msg-send');
+      button.disabled = true;
+      fetch('/api/team/live', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ merchant: pairedTeamMerchant(), action: 'message', target: msgTargetId, text }),
+      }).then(async (response) => {
+        let data = {}; try { data = await response.json(); } catch (_) {}
+        if (!response.ok) throw new Error(data.error || 'message-write-failed');
+        toast(`Message envoyé à ${target} ✓`);
+        closeMsgModal();
+      }).catch(() => { toast('Message non envoyé · vérifiez la connexion'); })
+        .finally(() => { button.disabled = false; });
     });
 
     /* ===========================================================

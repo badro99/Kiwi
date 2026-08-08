@@ -109,6 +109,18 @@ tab rows, the landing audience switch, the phone capsule bar). For any NEW
 tab/pill group, register it there (or use `data-lens-demo`/`data-lens-item`) —
 never invent a different selection style.
 
+Icons — **Google Material Symbols, and nothing else.** Don't hand-draw a
+`<path>`. The bespoke set that used to live in `assets/trades.js` is exactly why
+this rule exists: inconsistent stroke weights, shapes that turned to mush at
+23 px, a florist that read as a tree. The vendored icons live in
+`assets/icons/material/` (Outlined · 400 · grade 0 · optical size 24, Apache 2.0,
+`LICENSE` in the folder). Only the files we actually use are checked in — the
+upstream repo is ~1 GB — and the folder's `README.md` has the one-line `curl`
+that adds another. Material's native form is `viewBox="0 -960 960 960"` with a
+filled path: consume it with `fill="currentColor"` and let CSS drive `color`.
+Never convert one to a stroke, and never edit a vendored `d`; if it doesn't fit,
+you want a different icon, not a modified one.
+
 ---
 
 ## 4. Architecture pointers
