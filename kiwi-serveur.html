@@ -3661,7 +3661,8 @@ em, i, cite, dfn, var { font-style: normal; }
       if (h >= 18 && h < 23) return 'ce soir';
       return 'cette nuit';
     }
-    const isMineTable = (t) => !!t && (!t.server || t.server === currentUser);
+    const tableServerIds = (t) => t && Array.isArray(t.servers) && t.servers.length ? t.servers : (t && t.server ? [t.server] : []);
+    const isMineTable = (t) => !!t && (!tableServerIds(t).length || tableServerIds(t).includes(currentUser));
 
     /* Pre-seeded orders for already-occupied tables (read-only mock) */
     const seedOrders = {
@@ -4371,12 +4372,16 @@ em, i, cite, dfn, var { font-style: normal; }
       const previousTables = Object.assign({}, tables);
       Object.keys(tables).forEach((k) => { delete tables[k]; });
       (floor.tables || []).forEach((t) => {
-        let assigned = t.server || '';
-        if (assigned && !servers[assigned]) assigned = colleagueByName[String(floorStaff[assigned] || '').trim().toLowerCase()] || '';
+        const rawAssigned = Array.isArray(t.servers) && t.servers.length ? t.servers : (t.server ? [t.server] : []);
+        const assignedIds = Array.from(new Set(rawAssigned.map((rawId) => {
+          const id = String(rawId || '');
+          return servers[id] ? id : (colleagueByName[String(floorStaff[id] || '').trim().toLowerCase()] || '');
+        }).filter(Boolean))).slice(0, 3);
+        const assigned = assignedIds[0] || '';
         const id = String(t.num || t.id || '').trim() || String(t.id || 'Table');
         const previous = previousTables[id] || null;
         tables[id] = {
-          zone: t.zone || 'salle', zoneLabel: zoneNames[t.zone] || 'Salle', server: assigned,
+          zone: t.zone || 'salle', zoneLabel: zoneNames[t.zone] || 'Salle', server: assigned, servers: assignedIds,
           covers: tableSeats(t),
           status: previous ? previous.status : (t.status === 'occupied' ? 'ka-yaklo' : 'khawya'),
           elapsed: previous ? (previous.elapsed || 0) : 0,
@@ -4968,7 +4973,7 @@ em, i, cite, dfn, var { font-style: normal; }
       let alertHTML = '';
       if (paused.length > 0) {
         alertHTML = paused.map(([id, s]) => {
-          const n = Object.keys(tables).filter(tid => tables[tid].server === id).length;
+          const n = Object.keys(tables).filter(tid => tableServerIds(tables[tid]).includes(id)).length;
           return `
             <div class="colleague-alert" data-go-all="${id}">
               <div class="colleague-alert-icon"><i data-lucide="coffee"></i></div>
@@ -5027,7 +5032,7 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       const sectionsHTML = orderedIds.map(sid => {
-        const ids = Object.keys(tables).filter(id => sid === currentUser ? isMineTable(tables[id]) : tables[id].server === sid);
+        const ids = Object.keys(tables).filter(id => sid === currentUser ? isMineTable(tables[id]) : tableServerIds(tables[id]).includes(sid));
         if (ids.length === 0) return '';
         const s = servers[sid];
         const isMe = sid === currentUser;

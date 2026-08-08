@@ -39,8 +39,9 @@ const team = {
   hours: { 'mem-sara': {} },
 };
 const floor = {
-  zones: [{ id: 'z1', name: 'Salle' }], staff: [{ id: 'fs1', name: 'Sara Serveuse' }],
-  tables: [{ id: 't1', num: '1', zone: 'z1', type: 'round4', status: 'free', server: 'fs1' }],
+  zones: [{ id: 'z1', name: 'Salle' }],
+  staff: [{ id: 'fs1', name: 'Sara Serveuse' }, { id: 'fs2', name: 'Nora Soir' }, { id: 'fs3', name: 'Aya Renfort' }],
+  tables: [{ id: 't1', num: '1', zone: 'z1', type: 'round4', status: 'free', server: 'fs1', servers: ['fs1', 'fs2', 'fs3'] }],
 };
 put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)', 'amira-cafe', 'team', JSON.stringify(team), 1, now);
 put('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)', 'amira-cafe', 'floorplan', JSON.stringify(floor), 1, now);
@@ -90,6 +91,9 @@ const stateRes = await get(cookie);
 const state = await stateRes.json();
 ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient du roster cloud du magasin');
 ok(state.floor.tables.length === 1 && state.floor.tables[0].num === '1', 'le plan de salle réel atteint l’app employé');
+ok(JSON.stringify(state.floor.tables[0].servers) === JSON.stringify(['fs1', 'fs2', 'fs3'])
+  && state.floor.tables[0].server === 'fs1',
+  'les trois affectations atteignent l’app employé et la première reste compatible avec la caisse');
 ok(!JSON.stringify(state).includes('Yassir'), 'aucune donnée de démonstration ne fuit dans la réponse live');
 
 // A PIN roster can reach the cloud before the larger Team document. The small
@@ -207,6 +211,9 @@ ok(configClientSource.includes('scopeConfirmed = true')
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
+ok(serviceSource.includes('tableServerIds(t).includes(currentUser)')
+  && serviceSource.includes('tableServerIds(tables[id]).includes(sid)'),
+  'chaque employé retrouve une table dès que son identifiant figure parmi les trois affectés');
 ok(serviceSource.includes('Prendre une pause') && serviceSource.includes('Reprendre le service'), 'le serveur contrôle sa pause depuis son profil');
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');

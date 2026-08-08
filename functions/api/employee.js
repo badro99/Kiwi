@@ -111,6 +111,8 @@ function sanitizedFloor(raw) {
       id: String(t.id || ''), num: String(t.num || t.id || ''), zone: String(t.zone || ''),
       type: String(t.type || ''), seats: Math.max(0, Number(t.seats) || 0),
       status: String(t.status || 'free'), server: t.server == null ? '' : String(t.server),
+      servers: Array.from(new Set((Array.isArray(t.servers) ? t.servers : [t.server])
+        .filter(Boolean).map((id) => String(id)))).slice(0, 3),
     })),
     staff: (Array.isArray(d.staff) ? d.staff : []).map((s) => ({ id: String(s.id || ''), name: String(s.name || '') })),
   };
