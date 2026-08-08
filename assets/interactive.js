@@ -11,6 +11,13 @@
    * generated copy (toasts, dropdown menus) that can't carry a data-i18n
    * attribute. Falls back to French if a locale is missing. */
   const tr = (o) => (o == null ? '' : (o[kiwiLang()] ?? o.fr ?? ''));
+  const isRealSession = () => {
+    try { return !!window.KiwiEnv?.isReal?.(); } catch (_) { return false; }
+  };
+  const usesOwnData = () => {
+    if (isRealSession()) return true;
+    try { return !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  };
 
   const GENERAL_STR = {
     fr: {
@@ -1286,6 +1293,10 @@ ar: {
   /* Le catalogue, quel que soit le métier : la carte pour un restaurant, les
    * articles pour une boutique. Les deux magasins peuvent être présents. */
   function kpProductEntries(cp) {
+    /* A hosted account can briefly sit on a legacy demo venue id before its own
+     * venue is hydrated. KiwiMenu then resolves the Café Atlas catalogue. Only
+     * a merchant-created/paired venue is a trustworthy catalogue key here. */
+    if (isRealSession() && !window.KiwiVenue?.isCustom?.()) return [];
     const out = [];
     kpSafe(function () { return window.KiwiMenu.items() || []; }, []).forEach(function (it) {
       if (!it || !it.name) return;
@@ -1338,6 +1349,9 @@ ar: {
   }
 
   function kpTeamEntries(cp) {
+    /* KiwiTeam seeds restaurant names for demo venue ids. A real non-custom
+     * session must stay empty until its venue-specific roster is available. */
+    if (isRealSession() && !window.KiwiVenue?.isCustom?.()) return [];
     const list = kpSafe(function () { return window.KiwiTeam.roster() || []; }, []);
     return list.map(function (m) {
       return {
@@ -1621,12 +1635,20 @@ ar: {
       back?.querySelector('.kiwi-drawer-close')?.click();
     },
 
-    'manage-billing': () => toast(
-      tr({ fr: 'Gestion de l\'abonnement', en: 'Manage subscription', ar: 'إدارة الاشتراك' }),
-      { type: 'info', desc: tr({
-        fr: 'Kiwi Pro · 399 MAD/mois · prélèvement le 1er du mois. Sans engagement.',
-        en: 'Kiwi Pro · 399 MAD/month · charged on the 1st. No commitment.',
-        ar: 'كيوي برو · 399 درهم/شهر · الخصم يوم 1. بدون التزام.' }) }),
+    'manage-billing': () => {
+      if (usesOwnData()) {
+        return toast(tr({ fr: 'Détails d’abonnement indisponibles', en: 'Subscription details unavailable', ar: 'تفاصيل الاشتراك غير متوفرة' }), {
+          type: 'info',
+          desc: tr({ fr: 'Aucune source de facturation vérifiée n’est connectée.', en: 'No verified billing source is connected.', ar: 'لا يوجد مصدر فوترة مؤكد متصل.' }),
+        });
+      }
+      return toast(
+        tr({ fr: 'Gestion de l\'abonnement', en: 'Manage subscription', ar: 'إدارة الاشتراك' }),
+        { type: 'info', desc: tr({
+          fr: 'Kiwi Pro · 399 MAD/mois · prélèvement le 1er du mois. Sans engagement.',
+          en: 'Kiwi Pro · 399 MAD/month · charged on the 1st. No commitment.',
+          ar: 'كيوي برو · 399 درهم/شهر · الخصم يوم 1. بدون التزام.' }) });
+    },
 
     'signup': () => {
       let step = 0;
@@ -1793,7 +1815,7 @@ ar: {
         ar: { head: 'لا إشعارات', tail: 'ستظهر هنا.', and: ' و',
               src: [[null, 'تنبيهات التسوية'], ['terminaux', 'تنبيهات الأجهزة'], [null, 'اقتراحات Kiwi AI']] },
       };
-      if (window.KiwiVenue?.isCustom?.()) {
+      if (usesOwnData()) {
         const b = NOTIF_EMPTY[kiwiLang()] || NOTIF_EMPTY.fr;
         const parts = b.src.filter(([k]) => !k || !featOff(k)).map(([, t]) => t);
         // Retirer un élément d'une énumération laisse une virgule là où il faut
@@ -1870,7 +1892,13 @@ ar: {
       const sec = (t) => `<div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-weight:500; font-family:var(--mono); margin-bottom:10px;">${t}</div>`;
       const KV = window.KiwiVenue;
       const cv = !!(KV && KV.isCustom && KV.isCustom());
+      const ownData = cv || isRealSession();
       const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+      /* On hosted accounts a legacy/non-custom venue id can still resolve to a
+       * demo venue object. Only a user-created venue may contribute venue data;
+       * otherwise identity comes from /api/me and missing fields stay missing. */
+      const ownVenue = cv ? vd : {};
+      const ownVenueName = ownVenue.fullDisplay || ownVenue.name || (window.KiwiMe && window.KiwiMe.business) || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' });
       const getSet = (k, def) => { try { return localStorage.getItem('kiwiSet:' + k) || def; } catch (_) { return def; } };
       /* Ce que la ligne « Heures d'ouverture » affiche. Elle lit KiwiHours et
        * RIEN d'autre : l'ancien texte libre (vd.hours, kiwiSet:hours) n'est
@@ -1879,8 +1907,9 @@ ar: {
        * un horaire est ce qui a fait inventer des heures à tout le produit. */
       const hoursRowValue = (venueData) => {
         const KH = window.KiwiHours;
-        const legacy = (venueData && venueData.hours) || getSet('hours', '');
         const unset = tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' });
+        if (isRealSession() && !cv) return unset;
+        const legacy = (venueData && venueData.hours) || (isRealSession() ? '' : getSet('hours', ''));
         if (!KH) return legacy || unset;
         if (!KH.isConfigured()) {
           return legacy ? tr({ fr: 'À convertir · ', en: 'To convert · ', ar: 'للتحويل · ' }) + legacy : unset;
@@ -1893,6 +1922,7 @@ ar: {
        * si son ticket est en règle : on annonce donc les mentions légales
        * manquantes, pas un « configuré / non configuré » qui ne dit rien. */
       const receiptRowValue = () => {
+        if (isRealSession() && !cv) return tr({ fr: 'À configurer', en: 'To configure', ar: 'بحاجة إلى إعداد' });
         const K = window.KiwiReceipt;
         if (!K) return tr({ fr: 'Ticket standard', en: 'Standard ticket', ar: 'وصل قياسي' });
         const miss = K.missing();
@@ -1908,6 +1938,12 @@ ar: {
           : tr({ fr: 'Modèle par défaut', en: 'Default template', ar: 'نموذج افتراضي' });
       };
       const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
+      /* The vexel skin owns both palettes, and its dark mode *drives*
+       * html[data-theme="dark"] (design-vexel.js enterDarkTheme). So while the
+       * skin is on, the legacy "Mode sombre" row below would be a second
+       * control reporting on the first — one appearance row, not two. */
+      const vexelOn = !!(window.KiwiDesignVexel && window.KiwiDesignVexel.isOn && window.KiwiDesignVexel.isOn());
+      const vexelModeLabel = { light: tr({ fr: 'Clair', en: 'Light', ar: 'فاتح' }), dark: tr({ fr: 'Sombre', en: 'Dark', ar: 'داكن' }) };
       return drawer({
       title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
       subtitle: tr({ fr: 'Compte · boutique · conformité', en: 'Account · store · compliance', ar: 'الحساب · المتجر · الامتثال' }),
@@ -1934,21 +1970,19 @@ ar: {
             ${settingsRow('🌍', tr({ fr: 'Langue', en: 'Language', ar: 'اللغة' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
             ${settingsRow('🔔', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
             ${settingsRow('💰', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
-            ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('🧊', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
-            ${(document.documentElement.getAttribute('data-theme') === 'dark')
-              ? settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
-              : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+            ${vexelOn ? settingsRow('🌗', tr({ fr: 'Apparence', en: 'Appearance', ar: 'المظهر' }), vexelModeLabel[window.KiwiDesignVexel.mode()] || vexelModeLabel.dark, { action: 'vexel-mode' }) : ''}
+            ${vexelOn ? '' : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { toggle: true, on: document.documentElement.getAttribute('data-theme') === 'dark', action: 'settings-dark-toggle' })}
           </div>
         </div>
         <div style="margin-bottom:20px;">
           ${sec(tr({ fr: 'BOUTIQUE', en: 'STORE', ar: 'المتجر' }))}
           <div class="kset-card">
-            ${cv ? `
-            ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
+            ${ownData ? `
+            ${settingsRow('🏪', escape(ownVenueName), escape((cv && window.KiwiVenue?.getTypeLabel?.()) || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
+            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(ownVenue)), { action: 'settings-hours' })}
             ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
-            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || tr({ fr: 'Toutes acceptées', en: 'All accepted', ar: 'الكل مقبول' })), { action: 'settings-edit-venue' })}
+            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), ownVenue.goal ? fmtN(ownVenue.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
+            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(ownVenue.methods || tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' })), { action: 'settings-edit-venue' })}
             ` : `
             ${settingsRow('🏪', escape(getSet('venueName', ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')))), escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
             ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
@@ -1969,7 +2003,7 @@ ar: {
         <div>
           ${sec(tr({ fr: 'INTÉGRATIONS', en: 'INTEGRATIONS', ar: 'التكاملات' }))}
           <div class="kset-card">
-            ${cv ? settingsRow('🔌', tr({ fr: 'Aucun canal connecté', en: 'No channel connected', ar: 'لا قناة متصلة' }), tr({ fr: 'Connectez Glovo, votre banque et votre compta', en: 'Connect Glovo, your bank and accounting', ar: 'اربط Glovo وبنكك ومحاسبتك' }), { action: 'add-integration' }) : `
+            ${ownData ? settingsRow('🔌', tr({ fr: 'Aucun canal vérifié', en: 'No verified channel', ar: 'لا توجد قناة مؤكدة' }), tr({ fr: 'Les connexions réelles apparaîtront ici', en: 'Live connections will appear here', ar: 'ستظهر الاتصالات الفعلية هنا' }), { action: 'add-integration' }) : `
             ${settingsRow('🟠', 'Glovo', tr({ fr: 'Connecté · 1 420 MAD aujourd\'hui', en: 'Connected · 1,420 MAD today', ar: 'متصل · 1 420 درهم اليوم' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
             ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
             ${settingsRow('📊', tr({ fr: 'Comptabilité', en: 'Accounting', ar: 'المحاسبة' }), tr({ fr: 'Export quotidien OCP', en: 'Daily OCP export', ar: 'تصدير يومي OCP' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
@@ -1981,70 +2015,46 @@ ar: {
     });
     },
 
-    /* iOS-27 tier · Apple's transparency control, Kiwi edition. Four presets,
-     * persisted; the drawer is itself glass so the change reads instantly. */
-    'glass-level': (el) => {
-      const D = window.KiwiDesignIOS27;
-      if (!D) return;
-      const cur = D.getGlass();
+    /* The vexel skin ships two complete token sets, but KiwiDesignVexel.setMode
+     * had zero callers anywhere in the repo — light mode was reachable only via
+     * ?skin=vexel-light or the console. This is its first UI.
+     *
+     * Deliberately NOT gated behind Ultra: the skin's DEFAULT_MODE is 'dark'
+     * (design-vexel.js), so gating dark would lock a merchant out of the state
+     * they already boot into. If dark is to become the paid hook, the default
+     * has to move to light first — the gate and the default are one decision. */
+    'vexel-mode': (el) => {
+      const V = window.KiwiDesignVexel;
+      if (!V) return;
       const L = {
-        clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }),
-        standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }),
-        frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }),
-        opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }),
+        light: tr({ fr: 'Clair', en: 'Light', ar: 'فاتح' }),
+        dark: tr({ fr: 'Sombre', en: 'Dark', ar: 'داكن' }),
       };
-      menu(el, ['clear', 'standard', 'frosted', 'opaque'].map((k) => ({
+      const cur = V.mode();
+      menu(el, ['light', 'dark'].map((k) => ({
         label: L[k], active: cur === k,
         onClick: () => {
-          D.setGlass(k);
+          V.setMode(k);
           const val = el.querySelector('.kset-val');
           if (val) val.textContent = L[k];
-          toast('Liquid Glass · ' + L[k], { type: 'success', force: true });
+          toast(tr({ fr: 'Apparence', en: 'Appearance', ar: 'المظهر' }) + ' · ' + L[k], { type: 'success', force: true });
         },
       })));
     },
 
-    /* Dark mode is a Kiwi Ultra perk. Instead of a dead lock, this hands the
-     * merchant a real live preview of the (already-built) dark surface, then
-     * routes to the upgrade flow. The *persistent* dark dashboard ships with
-     * Ultra / the consolidated fusion view — this is the single-venue hook. */
-    'settings-dark-ultra': () => {
+    /* Dark mode was a Kiwi Ultra perk (preview + upsell) until 2026-08-08 —
+     * now free for every tier. Flips the legacy data-theme surface and
+     * persists via KiwiI18n.setTheme (localStorage kiwiTheme). */
+    'settings-dark-toggle': (el) => {
       const de = document.documentElement;
-      const orig = de.getAttribute('data-theme') || 'light';
-      let reverted = false;
-      const revert = () => { if (reverted) return; reverted = true; de.setAttribute('data-theme', orig); };
-      const preview = () => {
-        // Close any open drawer so the preview shows the pure dark dashboard,
-        // not a light settings panel floating over it.
-        document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
-        de.setAttribute('data-theme', 'dark');
-        toast(tr({ fr: 'Aperçu du mode sombre · réservé à Kiwi Ultra', en: 'Dark-mode preview · Kiwi Ultra only', ar: 'معاينة الوضع الداكن · حصريًا لـ Kiwi Ultra' }), { type: 'info', force: true });
-        setTimeout(() => {
-          revert();
-          toast(tr({ fr: 'Aperçu terminé, Ultra pour le garder', en: 'Preview over, go Ultra to keep it', ar: 'انتهت المعاينة، انتقل إلى Ultra للاحتفاظ به' }), { type: 'info', force: true });
-        }, 6000);
-      };
-      const check = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--atlas)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M20 6L9 17l-5-5"/></svg>';
-      const feat = (t) => `<div style="display:flex; gap:10px; align-items:flex-start; font-size:13.5px; line-height:1.45; color:var(--ink);">${check}<span>${t}</span></div>`;
-      const m = modal({
-        tag: 'KIWI ULTRA',
-        title: tr({ fr: 'Le mode sombre fait partie de Kiwi Ultra', en: 'Dark mode is part of Kiwi Ultra', ar: 'الوضع الداكن جزء من Kiwi Ultra' }),
-        desc: tr({ fr: 'Une interface nuit pensée pour le service du soir et la vue consolidée multi-établissements.', en: 'A night interface built for evening service and the consolidated multi-site view.', ar: 'واجهة ليلية مصمّمة لخدمة المساء والعرض الموحّد متعدد الفروع.' }),
-        width: 440,
-        body: `<div style="display:flex; flex-direction:column; gap:13px; margin-top:2px;">
-          ${feat(tr({ fr: 'Confort visuel du soir, moins de fatigue en service', en: 'Easy on the eyes at night, less fatigue in service', ar: 'راحة بصرية مساءً, إرهاق أقل أثناء الخدمة' }))}
-          ${feat(tr({ fr: 'Vue Portefeuille consolidée multi-établissements', en: 'Consolidated multi-site portfolio view', ar: 'عرض محفظة موحّد متعدد الفروع' }))}
-          ${feat(tr({ fr: 'Se synchronise sur tous vos appareils Kiwi', en: 'Syncs across all your Kiwi devices', ar: 'يتزامن عبر جميع أجهزة Kiwi لديك' }))}
-        </div>`,
-        foot: `
-          <button class="kb ghost" data-dark-preview type="button">${tr({ fr: 'Aperçu 6 s', en: 'Preview 6s', ar: 'معاينة 6 ثوانٍ' })}</button>
-          <button class="kb atlas" data-dark-upgrade type="button">${tr({ fr: 'Passer à Ultra →', en: 'Go Ultra →', ar: 'الانتقال إلى Ultra ←' })}</button>
-        `,
-      });
-      const pv = m.el.querySelector('[data-dark-preview]');
-      const up = m.el.querySelector('[data-dark-upgrade]');
-      if (pv) pv.onclick = () => { m.close(); preview(); };
-      if (up) up.onclick = () => { revert(); m.close(); if (handlers['upgrade-pro']) handlers['upgrade-pro'](); };
+      const dark = de.getAttribute('data-theme') !== 'dark';
+      if (window.KiwiI18n && window.KiwiI18n.setTheme) window.KiwiI18n.setTheme(dark ? 'dark' : 'light');
+      else de.setAttribute('data-theme', dark ? 'dark' : 'light');
+      const tg = el && el.querySelector('[data-kset-toggle]');
+      if (tg) tg.classList.toggle('on', dark);
+      toast(tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }) + ' · ' + (dark
+        ? tr({ fr: 'activé', en: 'on', ar: 'مفعّل' })
+        : tr({ fr: 'désactivé', en: 'off', ar: 'معطّل' })), { type: 'success', force: true });
     },
 
     'settings-lang': (el) => {
@@ -2419,6 +2429,18 @@ ar: {
     },
 
     'export': () => {
+      if (usesOwnData()) {
+        const venue = (() => { try { return window.KiwiVenue?.getVenue?.(); } catch (_) { return undefined; } })();
+        let rows = [];
+        try { rows = window.KiwiSales?.list?.(venue) || []; } catch (_) { rows = []; }
+        toast(tr({ fr: 'Export non généré', en: 'Export not generated', ar: 'لم يتم إنشاء التصدير' }), {
+          type: 'info',
+          desc: rows.length
+            ? tr({ fr: `${rows.length} vente${rows.length > 1 ? 's' : ''} vérifiée${rows.length > 1 ? 's' : ''} · aucun fichier CSV réel n’est encore disponible.`, en: `${rows.length} verified sale${rows.length > 1 ? 's' : ''} · no real CSV file is available yet.`, ar: `${rows.length} عملية بيع مؤكدة · لا يتوفر ملف CSV فعلي بعد.` })
+            : tr({ fr: 'Aucune vente à exporter.', en: 'No sales to export.', ar: 'لا توجد مبيعات للتصدير.' }),
+        });
+        return;
+      }
       toast(tr({fr:'Préparation de l\'export…', en:'Preparing export…', ar:'جارٍ تجهيز التصدير…'}), { type: 'info', duration: 1600 });
       setTimeout(() => {
         toast(tr({fr:'Export CSV prêt', en:'CSV export ready', ar:'ملف CSV جاهز'}), { type: 'success', desc: '182 transactions · 24 avril 2026', action: { label: tr({fr:'Télécharger', en:'Download', ar:'تنزيل'}), onClick: () => toast(tr({fr:'Téléchargement démarré', en:'Download started', ar:'بدأ التنزيل'}), {type:'info'}) } });
@@ -2507,7 +2529,7 @@ ar: {
       /* Demo Pay flow (fabricated 23 091 MAD → Bank of Africa ••3291). A real
          merchant has no settlement pipeline wired yet — show a neutral state
          instead of the demo payout. Local demo keeps the full flow. */
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      if (usesOwnData()) {
         toast(tr({ fr: 'Aucun règlement instantané en attente', en: 'No instant settlement pending', ar: 'لا تسوية فورية معلّقة' }), { type: 'info', desc: tr({ fr: 'Vos virements apparaîtront ici après vos premières ventes.', en: 'Your transfers will appear here after your first sales.', ar: 'ستظهر تحويلاتك هنا بعد مبيعاتك الأولى.' }) });
         return;
       }
@@ -2546,7 +2568,7 @@ ar: {
       /* Static demo transaction (Café Atlas customer/staff/card, Bank of Africa
          ••3291 batch). No real per-transaction backend yet, so a real merchant
          gets a neutral state rather than the demo record. Local demo unchanged. */
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      if (usesOwnData()) {
         toast(tr({ fr: 'Détail de transaction indisponible', en: 'Transaction detail unavailable', ar: 'تفاصيل المعاملة غير متوفرة' }), { type: 'info' });
         return;
       }
@@ -2619,6 +2641,33 @@ ar: {
       const key = el?.dataset?.orderKey;
       const o = (window.__kiwiFeedOrders || {})[key];
       if (!o) { handlers['tx-detail'](el, 'tx1'); return; }
+
+      /* A real KiwiSales row only proves its time, tender, label and amount.
+       * The demo object also carries table, server, cart, VAT and service timing;
+       * never back-derive those fields for a merchant sale. */
+      if (usesOwnData()) {
+        const S = {
+          fr: { title: 'Vente enregistrée', amount: 'MONTANT', method: 'MÉTHODE', detail: 'DÉTAIL', missing: 'Non renseigné' },
+          en: { title: 'Recorded sale', amount: 'AMOUNT', method: 'METHOD', detail: 'DETAIL', missing: 'Not provided' },
+          ar: { title: 'بيع مسجل', amount: 'المبلغ', method: 'الطريقة', detail: 'التفاصيل', missing: 'غير متوفر' },
+        }[kiwiLang()] || { title: 'Vente enregistrée', amount: 'MONTANT', method: 'MÉTHODE', detail: 'DÉTAIL', missing: 'Non renseigné' };
+        const method = o.primary || o.sub || S.missing;
+        const detail = o.ctx || o.label || S.missing;
+        return drawer({
+          title: S.title,
+          subtitle: o.t || '',
+          width: 520,
+          body: `<div data-real-order-detail>
+            <div style="padding:22px;border-radius:14px;background:var(--atlas);color:var(--paper);margin-bottom:18px;">
+              <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--mint);">${escape(S.amount)}</div>
+              <div style="font-size:38px;font-weight:600;letter-spacing:-.03em;margin-top:5px;">${escape(o.amt || '—')} <span style="font-size:17px;opacity:.72;">MAD</span></div>
+            </div>
+            ${kpiRow(escape(S.method), escape(method))}
+            ${kpiRow(escape(S.detail), escape(detail))}
+          </div>`,
+          foot: `<button class="kb primary" data-dismiss style="width:100%;justify-content:center;">${escape((GENERAL_STR[kiwiLang()] || GENERAL_STR.fr).close)}</button>`,
+        });
+      }
 
       const lang = kiwiLang();
       const T = {
@@ -2751,8 +2800,9 @@ ar: {
       /* Four-tier model. The recommended tier is contextual to the account: a
        * multi-établissement account needs Ultra (Basic/Pro are mono-site); the
        * exact palier is confirmed in a short discovery chat (so it's not fixed). */
-      const reco = 'ultra';
-      const current = 'pro';
+      const ownData = usesOwnData();
+      const reco = ownData ? null : 'ultra';
+      const current = ownData ? null : 'pro';
       const PLANS = [
         { id: 'basic', name: 'KIWI BASIC', price: '199 MAD', unit: '/mois', tagline: `Logiciel seul · sur votre matériel`, cta: 'Choisir Basic', feats: [
           `Logiciel Kiwi complet · tous les modules`,
@@ -2828,8 +2878,8 @@ ar: {
           <div class="kup-grid">${PLANS.map(card).join('')}</div>
           <div class="kup-tip">
             <div>💡</div>
-            <div style="flex:1;">${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
-              ? `<b>Votre recommandation :</b> <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié, au-delà du mono-site de Basic et Pro. Le palier exact se précise lors d'un court échange sur vos besoins.`
+            <div style="flex:1;">${ownData
+              ? `<b>Comparer les offres :</b> Ultra ouvre les établissements illimités, le multi-pays et l'account manager dédié. Aucun palier actuel ou recommandé n’est affiché sans source de facturation vérifiée.`
               : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
           </div>
         `,
@@ -2867,7 +2917,7 @@ ar: {
       // A real / custom-venue merchant sees only their OWN establishment, never the
       // three demo "Café Atlas" locations.
       ...(((window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()))
-        ? [{ label: (() => { const vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData(); return (vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || 'Mon établissement'; })(), active: true, icon: '<div style="width:18px; height:18px; background:var(--atlas); border-radius:5px;"></div>' }]
+        ? [{ label: (() => { const custom = !!window.KiwiVenue?.isCustom?.(); const vd = custom && window.KiwiVenue?.getCurrentVenueData?.(); return (vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || 'Mon établissement'; })(), active: true, icon: '<div style="width:18px; height:18px; background:var(--atlas); border-radius:5px;"></div>' }]
         : [
           { label: 'Café Atlas · Maarif', active: true, icon: '<div style="width:18px; height:18px; background:var(--atlas); border-radius:5px;"></div>' },
           { label: 'Café Atlas · Agdal (Rabat)', icon: '<div style="width:18px; height:18px; background:var(--riad); border-radius:5px;"></div>' },
@@ -2947,7 +2997,9 @@ ar: {
       setTimeout(() => {
         typing.classList.remove('ai-msg-typing');
         typing.className = 'msg';
-        typing.innerHTML = aiResponses[txt] || `<b>${(CP_STR[kiwiLang()] || CP_STR.fr).sAi} :</b> ${txt}, ${(CP_STR[kiwiLang()] || CP_STR.fr).executed}. Consultez les détails dans l\'onglet correspondant.`;
+        typing.innerHTML = usesOwnData()
+          ? `<b>${(CP_STR[kiwiLang()] || CP_STR.fr).sAi} :</b> ${tr({ fr: 'Aucune donnée vérifiée ne permet d’exécuter ou de chiffrer cette action.', en: 'No verified data is available to run or quantify this action.', ar: 'لا تتوفر بيانات مؤكدة لتنفيذ هذا الإجراء أو تقدير قيمته.' })}`
+          : (aiResponses[txt] || `<b>${(CP_STR[kiwiLang()] || CP_STR.fr).sAi} :</b> ${txt}, ${(CP_STR[kiwiLang()] || CP_STR.fr).executed}. Consultez les détails dans l\'onglet correspondant.`);
       }, 1200);
     },
 

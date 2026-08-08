@@ -131,10 +131,21 @@
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = `assets/${entry.file}.css`;
+      /* On attend aussi la feuille du vertical avant de résoudre — sans ça,
+         le premier montage sur réseau lent flashe un chrome sans style.
+         Fail-soft : onerror ou 2,5 s débloquent quand même le montage. */
+      const cssReady = new Promise((done) => {
+        link.onload = link.onerror = () => done();
+        setTimeout(done, 2500);
+      });
       document.head.appendChild(link);
+      /* L'ADN partagé (caisse-dna.css) doit rester après la feuille du
+         vertical dans la cascade — on repousse son <link> en fin de <head>. */
+      const dna = document.getElementById('caisse-dna-css');
+      if (dna) document.head.appendChild(dna);
       const sc = document.createElement('script');
       sc.src = `assets/${entry.file}.js`;
-      sc.onload = () => (apps[entry.id] ? resolve() : reject(new Error(`${entry.file}.js loaded but never registered "${entry.id}"`)));
+      sc.onload = () => cssReady.then(() => (apps[entry.id] ? resolve() : reject(new Error(`${entry.file}.js loaded but never registered "${entry.id}"`))));
       sc.onerror = () => reject(new Error(`assets/${entry.file}.js introuvable`));
       document.head.appendChild(sc);
     });

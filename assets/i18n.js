@@ -1300,9 +1300,9 @@
   }
 
   /* ─── setTheme ───
-   * Kept programmatic-only — Go Ultra / fusion-mode (venues.js) flips the
-   * <html data-theme="dark"> attribute to layer the dark surface tokens under
-   * its brand palette. No user-facing toggle is exposed anywhere. */
+   * Flips <html data-theme> and persists it. Callers: le toggle Réglages
+   * (interactive.js, gratuit pour tous depuis le 2026-08-08) et Go Ultra /
+   * fusion-mode (venues.js) qui pose la surface sombre sous sa palette. */
   function setTheme(theme) {
     if (!['dark','light'].includes(theme)) theme = 'light';
     document.documentElement.setAttribute('data-theme', theme);
@@ -1331,16 +1331,11 @@
       });
     });
 
-    // Light-only mode: dark toggle removed per product decision
-    // (CSS vars still flip if data-theme is set programmatically)
-
-    // Apply persisted state — always light now
-    setTheme('light');
+    // Apply persisted state — dark mode is free for everyone (2026-08-08),
+    // so the saved preference is honoured again at boot.
+    setTheme(getTheme());
     setLang(getLang());
   }
-
-  /* Light-only mode — clear any previously saved dark preference */
-  localStorage.setItem('kiwiTheme', 'light');
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

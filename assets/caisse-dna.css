@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   caisse-dna.css — l'ADN partagé des quinze caisses métier.
+
+   Chaque vertical (assets/pos-*.css, assets/pressing-caisse.css) duplique le
+   même chrome de rail sous son propre préfixe (.bq-, .bl-, .gy-, …). Cette
+   feuille unique les ramène toutes au langage du dashboard et de la caisse
+   restaurant : logo SVG à la place du mot-symbole texte, carte d'identité du
+   lieu façon .cashier-card, navigation en pastille voilée + accent menthe,
+   pied de rail en boutons filaires, et bascule jour/nuit (greffée par
+   assets/caisse-dna.js).
+
+   Spécificité : `html :is(#pos-…) :is(.xx-…)` pèse (1,1,1) et bat donc les
+   règles des verticaux `#pos-… .xx-…` (1,1,0) quel que soit l'ordre de
+   chargement — pos-dispatch.js repousse quand même ce <link> en fin de <head>
+   après chaque chargement de vertical, ceinture et bretelles.
+
+   AUCUNE logique métier ici : uniquement le chrome. Les données, les vues et
+   les modales restent la propriété de chaque vertical.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Le logo — le mot-symbole texte devient le SVG de la marque ──
+   Le markup est `<div class="xx-brand">kiwi<i></i></div>` : on éteint le
+   texte et le point, on peint le logo (les rails sont tous sombres, donc la
+   variante dark dans les deux thèmes). */
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-brand, .bq-brand, .sp-brand, .ht-brand, .ff-brand, .bl-brand, .pz-brand, .tr-brand, .ft-brand, .ep-brand, .ph-brand, .lb-brand, .fl-brand, .cf-brand, .gy-brand) {
+  display: block;
+  width: 62px; height: 32px;
+  margin: 0 4px 2px;
+  font-size: 0; line-height: 0; color: transparent; letter-spacing: 0;
+  background: url("kiwi-logo-dark.svg") left center / contain no-repeat;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-brand, .bq-brand, .sp-brand, .ht-brand, .ff-brand, .bl-brand, .pz-brand, .tr-brand, .ft-brand, .ep-brand, .ph-brand, .lb-brand, .fl-brand, .cf-brand, .gy-brand) i {
+  display: none;
+}
+
+/* ── 2. La carte du lieu — l'ADN de la .cashier-card du restaurant ──
+   Un simple bloc à filet devient une carte : voile 3 %, filet 8 %, liseré
+   interne, et la sous-ligne passe en étiquette console (10px, capitales,
+   interlettrage) comme les .duty-row du dashboard. */
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-venue, .bq-venue, .sp-venue, .ht-venue, .ff-venue, .bl-venue, .pz-venue, .tr-venue, .ft-venue, .ep-venue, .ph-venue, .lb-venue, .fl-venue, .cf-venue, .gy-venue) {
+  margin: 0;
+  padding: 11px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-lg, 14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-venue-name, .bq-venue-name, .sp-venue-name, .ht-venue-name, .ff-venue-name, .bl-venue-name, .pz-venue-name, .tr-venue-name, .ft-venue-name, .ep-venue-name, .ph-venue-name, .lb-venue-name, .fl-venue-name, .cf-venue-name, .gy-venue-name) {
+  color: #fff;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-venue-sub, .bq-venue-sub, .sp-venue-sub, .ht-venue-sub, .ff-venue-sub, .bl-venue-sub, .pz-venue-sub, .tr-venue-sub, .ft-venue-sub, .ep-venue-sub, .ph-venue-sub, .lb-venue-sub, .fl-venue-sub, .cf-venue-sub, .gy-venue-sub) {
+  margin-top: 6px;
+  font-size: 10px; line-height: 1.6;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: #8f9591;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-venue-sub, .bq-venue-sub, .sp-venue-sub, .ht-venue-sub, .ff-venue-sub, .bl-venue-sub, .pz-venue-sub, .tr-venue-sub, .ft-venue-sub, .ep-venue-sub, .ph-venue-sub, .lb-venue-sub, .fl-venue-sub, .cf-venue-sub, .gy-venue-sub) b {
+  color: var(--mint, #7DF2B0);
+  font-weight: 500; letter-spacing: inherit;
+}
+
+/* ── 3. La navigation — pastille voilée, accent menthe sur l'icône ──
+   L'ancien état actif (lavis menthe plein + texte menthe) criait plus fort
+   que le dashboard. Ici : voile 7 % + filet interne, texte blanc, seule
+   l'icône prend la menthe — exactement la sidebar du restaurant. */
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-it, .bq-nav-it, .sp-nav-it, .ht-nav-it, .ff-nav-it, .bl-nav-it, .pz-nav-it, .tr-nav-it, .ft-nav-it, .ep-nav-it, .ph-nav-it, .lb-nav-it, .fl-nav-it, .cf-nav-it, .gy-nav-it) {
+  border-radius: 11px;
+  color: #b5b9b6;
+  transition: background 140ms ease, color 140ms ease;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-it, .bq-nav-it, .sp-nav-it, .ht-nav-it, .ff-nav-it, .bl-nav-it, .pz-nav-it, .tr-nav-it, .ft-nav-it, .ep-nav-it, .ph-nav-it, .lb-nav-it, .fl-nav-it, .cf-nav-it, .gy-nav-it):hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-it, .bq-nav-it, .sp-nav-it, .ht-nav-it, .ff-nav-it, .bl-nav-it, .pz-nav-it, .tr-nav-it, .ft-nav-it, .ep-nav-it, .ph-nav-it, .lb-nav-it, .fl-nav-it, .cf-nav-it, .gy-nav-it).on {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-it, .bq-nav-it, .sp-nav-it, .ht-nav-it, .ff-nav-it, .bl-nav-it, .pz-nav-it, .tr-nav-it, .ft-nav-it, .ep-nav-it, .ph-nav-it, .lb-nav-it, .fl-nav-it, .cf-nav-it, .gy-nav-it).on svg {
+  color: var(--mint, #7DF2B0);
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-badge, .bq-nav-badge, .sp-nav-badge, .ht-nav-badge, .ff-nav-badge, .bl-nav-badge, .pz-nav-badge, .tr-nav-badge, .ft-nav-badge, .ep-nav-badge, .ph-nav-badge, .lb-nav-badge, .fl-nav-badge, .cf-nav-badge, .gy-nav-badge) {
+  font-family: var(--mono, "JetBrains Mono", monospace); font-style: normal;
+  font-size: 10px; font-weight: 600;
+  background: rgba(255, 255, 255, 0.08); color: #d5d9d6;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-nav-it, .bq-nav-it, .sp-nav-it, .ht-nav-it, .ff-nav-it, .bl-nav-it, .pz-nav-it, .tr-nav-it, .ft-nav-it, .ep-nav-it, .ph-nav-it, .lb-nav-it, .fl-nav-it, .cf-nav-it, .gy-nav-it).on
+  :is(.px-nav-badge, .bq-nav-badge, .sp-nav-badge, .ht-nav-badge, .ff-nav-badge, .bl-nav-badge, .pz-nav-badge, .tr-nav-badge, .ft-nav-badge, .ep-nav-badge, .ph-nav-badge, .lb-nav-badge, .fl-nav-badge, .cf-nav-badge, .gy-nav-badge) {
+  background: rgba(125, 242, 176, 0.16);
+  color: var(--mint, #7DF2B0);
+}
+
+/* ── 4. Le pied de rail — boutons filaires, calmes ── */
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-net, .bq-net, .sp-net, .ht-net, .ff-net, .bl-net, .pz-net, .tr-net, .ft-net, .ep-net, .ph-net, .lb-net, .fl-net, .cf-net, .gy-net) {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-net, .bq-net, .sp-net, .ht-net, .ff-net, .bl-net, .pz-net, .tr-net, .ft-net, .ep-net, .ph-net, .lb-net, .fl-net, .cf-net, .gy-net):hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-lock, .bq-lock, .sp-lock, .ht-lock, .ff-lock, .bl-lock, .pz-lock, .tr-lock, .ft-lock, .ep-lock, .ph-lock, .lb-lock, .fl-lock, .cf-lock, .gy-lock) {
+  border-radius: 11px;
+}
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-lock, .bq-lock, .sp-lock, .ht-lock, .ff-lock, .bl-lock, .pz-lock, .tr-lock, .ft-lock, .ep-lock, .ph-lock, .lb-lock, .fl-lock, .cf-lock, .gy-lock):hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+/* ── 5. La bascule jour/nuit greffée par assets/caisse-dna.js ──
+   Même vocabulaire que la pastille de langue (.kcl) posée juste à côté. */
+.kdt {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 11px;
+  background: transparent;
+  color: #b5b9b6;
+  font: inherit; font-size: 12px; font-weight: 500; letter-spacing: -0.005em;
+  text-align: left; cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.kdt:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+.kdt svg { width: 15px; height: 15px; flex-shrink: 0; }
+.kdt .kdt-sun, html[data-caisse-theme="dark"] .kdt .kdt-moon { display: none; }
+.kdt .kdt-moon, html[data-caisse-theme="dark"] .kdt .kdt-sun { display: block; }
+
+/* ── 6. Ascenseurs fins sur les rails, comme la sidebar du restaurant ── */
+html :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym)
+  :is(.px-rail, .bq-rail, .sp-rail, .ht-rail, .ff-rail, .bl-rail, .pz-rail, .tr-rail, .ft-rail, .ep-rail, .ph-rail, .lb-rail, .fl-rail, .cf-rail, .gy-rail) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+/* ── 7. Mode nuit — les jetons de kiwi-caisse.html font le gros du travail
+   (les surfaces des verticaux sont à ~90 % sur var(--paper/--cream/--line)).
+   Ici : uniquement les variables locales codées en dur par vertical
+   (avertissement ambre, états ok/dû) remises sur des voiles translucides
+   qui tiennent sur fond sombre. ── */
+html[data-caisse-theme="dark"] :is(#pos-pressing, #pos-boutique, #pos-spa, #pos-hotel, #pos-fastfood, #pos-boulangerie, #pos-pizzeria, #pos-traiteur, #pos-foodtruck, #pos-epicerie, #pos-pharmacie, #pos-librairie, #pos-fleuriste, #pos-coiffure, #pos-gym) {
+  --px-warn: #E8C685; --px-warn-bg: rgba(217, 154, 43, 0.14); --px-ok-bg: rgba(23, 185, 138, 0.12);
+  --bq-warn: #E8C685; --bq-warn-bg: rgba(217, 154, 43, 0.14); --bq-ok-bg: rgba(23, 185, 138, 0.12);
+  --sp-warn: #E8C685; --sp-warn-bg: rgba(217, 154, 43, 0.14); --sp-ok-bg: rgba(23, 185, 138, 0.12); --sp-due-bg: rgba(217, 154, 43, 0.14);
+  --ht-warn: #E8C685; --ht-warn-bg: rgba(217, 154, 43, 0.14); --ht-ok-bg: rgba(23, 185, 138, 0.12); --ht-due-bg: rgba(217, 154, 43, 0.14); --ht-due-edge: rgba(217, 154, 43, 0.35);
+  --ff-warn: #E8C685; --ff-warn-bg: rgba(217, 154, 43, 0.14); --ff-ok-bg: rgba(23, 185, 138, 0.12);
+  --bl-warn: #E8C685; --bl-warn-bg: rgba(217, 154, 43, 0.14); --bl-ok-bg: rgba(23, 185, 138, 0.12);
+  --pz-warn: #E8C685; --pz-warn-bg: rgba(217, 154, 43, 0.14); --pz-ok-bg: rgba(23, 185, 138, 0.12); --pz-warn-dot: #E8C685;
+  --tr-warn: #E8C685; --tr-warn-bg: rgba(217, 154, 43, 0.14); --tr-ok-bg: rgba(23, 185, 138, 0.12); --tr-due-bg: rgba(217, 154, 43, 0.14);
+  --ft-warn: #E8C685; --ft-warn-bg: rgba(217, 154, 43, 0.14); --ft-ok-bg: rgba(23, 185, 138, 0.12);
+  --ep-warn: #E8C685; --ep-warn-bg: rgba(217, 154, 43, 0.14); --ep-ok-bg: rgba(23, 185, 138, 0.12); --ep-due-bg: rgba(217, 154, 43, 0.14); --ep-due-edge: rgba(217, 154, 43, 0.35);
+  --ph-warn: #E8C685; --ph-warn-bg: rgba(217, 154, 43, 0.14); --ph-ok-bg: rgba(23, 185, 138, 0.12); --ph-due-bg: rgba(217, 154, 43, 0.14); --ph-mut-bg: rgba(255, 255, 255, 0.06); --ph-night-bg: rgba(125, 242, 176, 0.10);
+  --lb-warn: #E8C685; --lb-warn-bg: rgba(217, 154, 43, 0.14); --lb-ok-bg: rgba(23, 185, 138, 0.12);
+  --fl-warn: #E8C685; --fl-warn-bg: rgba(217, 154, 43, 0.14); --fl-ok-bg: rgba(23, 185, 138, 0.12); --fl-bloom-bg: rgba(125, 242, 176, 0.10);
+  --cf-warn: #E8C685; --cf-warn-bg: rgba(217, 154, 43, 0.14); --cf-ok-bg: rgba(23, 185, 138, 0.12);
+  --gy-warn-bg: rgba(217, 154, 43, 0.14); --gy-ok-bg: rgba(23, 185, 138, 0.12);
+  --gy-red: #F2A6A0; --gy-red-bg: rgba(214, 69, 69, 0.16); --gy-red-edge: rgba(214, 69, 69, 0.4);
+  --gy-soon: #E8C685; --gy-soon-bg: rgba(217, 154, 43, 0.14); --gy-soon-edge: rgba(217, 154, 43, 0.35);
+  --gy-snow-bg: rgba(255, 255, 255, 0.06);
+  --ok-bg: rgba(23, 185, 138, 0.12);
+}

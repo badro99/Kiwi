@@ -100,6 +100,9 @@
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
   <script src="assets/caisse-lang.js" defer></script>
+  <!-- L'ADN des quinze caisses métier : greffe la bascule jour/nuit dans le
+       rail du vertical ouvert (le restaurant garde son #theme-toggle). -->
+  <script src="assets/caisse-dna.js?v=2" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
@@ -112,6 +115,10 @@
        the inline block does not define (--elev-1/2, --paper-elev, --spring)
        are inherited from here. -->
   <link rel="stylesheet" href="assets/tokens.css" />
+  <!-- L'ADN visuel partagé des caisses métier (rails, logo, nuit). Chargé en
+       statique avant les feuilles des verticaux ; pos-dispatch.js le repousse
+       en fin de <head> après chaque chargement pour garder la main. -->
+  <link id="caisse-dna-css" rel="stylesheet" href="assets/caisse-dna.css?v=1" />
 
   <style>
     /* ---------- Tokens (inline, file is standalone) ---------- */

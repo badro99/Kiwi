@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v220';
+var CACHE = 'kiwi-app-v281';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -76,6 +76,11 @@ var SHELL = [
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js',
   '/assets/caisse-skin.css',
+  /* L'ADN partagé des quinze caisses métier — chrome unifié + bascule nuit.
+     Dans la coquille avec caisse-skin.css : sans lui hors ligne, un vertical
+     se rouvrirait avec l'ancien wordmark et sans mode nuit. */
+  '/assets/caisse-dna.css',
+  '/assets/caisse-dna.js',
   '/assets/pos-mobile.css',
   '/assets/caisse-motion.js',
   '/assets/caisse-pwa.js',
