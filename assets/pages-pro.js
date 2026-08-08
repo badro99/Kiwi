@@ -3494,6 +3494,17 @@ const PDS_STR = {
     rosterUnassigned: 'Non affecté',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} couverts`,
+    rosterEmpty: 'Personne en service. Ajoutez un serveur ici, ou renseignez votre équipe depuis la page Équipe — elle apparaîtra automatiquement.',
+    rosterAdd: '+ Ajouter un serveur',
+    rosterAddTitle: 'Ajouter un serveur',
+    rosterAddDesc: 'Il apparaîtra dans l\'équipe en service et pourra être glissé sur une table ou une zone.',
+    rosterAddLabel: 'Nom du serveur',
+    rosterAddPlaceholder: 'ex. Karim',
+    rosterAddOk: 'Ajouter',
+    rosterAddDone: (n) => `${n} ajouté au service`,
+    rosterRemove: 'Retirer du service',
+    rosterRemoveDone: (n) => `${n} retiré du service`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} tables libérées.` : 'Aucune table n\'était affectée.',
     clearAssign: 'Effacer toutes les affectations',
     clearAssignTitle: 'Effacer toutes les affectations ?',
     clearAssignDesc: 'Aucun serveur ne sera affecté à aucune table. Les affectations seront vides jusqu\'à réassignation.',
@@ -3703,6 +3714,17 @@ const PDS_STR = {
     rosterUnassigned: 'Unassigned',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} covers`,
+    rosterEmpty: 'Nobody on shift. Add a server here, or fill in your team on the Team page — it shows up automatically.',
+    rosterAdd: '+ Add a server',
+    rosterAddTitle: 'Add a server',
+    rosterAddDesc: 'They join the team on shift and can be dragged onto a table or a zone.',
+    rosterAddLabel: 'Server name',
+    rosterAddPlaceholder: 'e.g. Karim',
+    rosterAddOk: 'Add',
+    rosterAddDone: (n) => `${n} added to the shift`,
+    rosterRemove: 'Remove from shift',
+    rosterRemoveDone: (n) => `${n} removed from the shift`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} tables freed.` : 'No table was assigned.',
     clearAssign: 'Clear all assignments',
     clearAssignTitle: 'Clear all assignments?',
     clearAssignDesc: 'No server will be assigned to any table. Assignments will be empty until reassigned.',
@@ -3906,6 +3928,17 @@ const PDS_STR = {
     rosterUnassigned: 'غير معيّن',
     rosterTables: (n) => `${n} طاولات`,
     rosterCovers: (n) => `${n} مقاعد`,
+    rosterEmpty: 'لا أحد في الخدمة. أضف نادلًا هنا، أو سجّل فريقك في صفحة الفريق — سيظهر تلقائيًا.',
+    rosterAdd: '+ إضافة نادل',
+    rosterAddTitle: 'إضافة نادل',
+    rosterAddDesc: 'سينضم إلى الفريق في الخدمة ويمكن سحبه فوق طاولة أو منطقة.',
+    rosterAddLabel: 'اسم النادل',
+    rosterAddPlaceholder: 'مثال: كريم',
+    rosterAddOk: 'إضافة',
+    rosterAddDone: (n) => `${n} أُضيف إلى الخدمة`,
+    rosterRemove: 'إزالة من الخدمة',
+    rosterRemoveDone: (n) => `${n} أُزيل من الخدمة`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} طاولات تحرّرت.` : 'لم تكن أي طاولة مسندة.',
     clearAssign: 'مسح كل الإسنادات',
     clearAssignTitle: 'مسح كل الإسنادات؟',
     clearAssignDesc: 'لن يكون أي نادل مسندًا لأي طاولة. ستبقى فارغة حتى إعادة الإسناد.',
@@ -4144,6 +4177,65 @@ const PDS_DEFAULT_STAFF = [
   { id: 'IM', name: 'Imane Lahlou',    color: '#0B8A7B' },
 ];
 
+/* ─── Le vrai personnel ─────────────────────────────────────────────────────
+ * Un magasin réel démarre sur pdsTemplate('blank') : roster VIDE, pour que
+ * « Karim Rifai » et les sept autres noms de démonstration ne s'affichent
+ * jamais chez un commerçant. Sauf qu'aucun écran ne permettait ensuite d'y
+ * ajouter qui que ce soit — l'onglet Affectation restait sans une seule
+ * pastille à glisser et les vingt-et-une tables lisaient « non affecté » à
+ * vie. La page Équipe, elle, connaît le personnel : KiwiTeam.roster() est la
+ * source, ce fichier ne fait que la refléter. */
+const PDS_STAFF_COLORS = ['#0B6E4F', '#D99A2B', '#053B2C', '#A85F00', '#1A8FE3', '#C0306E', '#5A6CDB', '#0B8A7B'];
+function pdsStaffColor(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PDS_STAFF_COLORS[h % PDS_STAFF_COLORS.length];
+}
+function pdsTeamStaff() {
+  try {
+    const roster = (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : [];
+    return (roster || []).filter(m => m && m.id).map(m => ({
+      id: 'tm-' + m.id,
+      name: (m.name && m.name !== '—') ? m.name : String(m.role || '').trim() || '—',
+      color: pdsStaffColor(m.id),
+      role: m.role || '',
+      from: 'team',
+    }));
+  } catch (e) { return []; }
+}
+/* Un vrai magasin, c'est soit une session réelle, soit un établissement créé
+ * par le commerçant : les deux doivent voir leur équipe, pas la nôtre. */
+function pdsIsRealStore() {
+  try {
+    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+    if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return true;
+  } catch (e) {}
+  return false;
+}
+/* Rapproche le roster du plan de l'équipe réelle : les fiches Équipe font
+ * autorité sur le nom, les pastilles ajoutées à la main ici (id « sv- »)
+ * survivent, et les serveurs de démonstration disparaissent dès qu'un vrai
+ * magasin est ouvert. Une table qui pointait sur un serveur disparu est
+ * libérée — sinon elle porterait une pastille sans nom ni couleur. */
+function pdsSyncStaff(state) {
+  if (!state || !Array.isArray(state.staff) || !Array.isArray(state.tables)) return state;
+  if (!pdsIsRealStore()) return state;
+  const demo = new Set(PDS_DEFAULT_STAFF.map(s => s.id));
+  const team = pdsTeamStaff();
+  const byId = new Map(team.map(s => [s.id, s]));
+  const kept = state.staff.filter(s => s && s.id && !demo.has(s.id)).map(s => {
+    const t = byId.get(s.id);
+    return t ? Object.assign({}, s, { name: t.name, role: t.role, color: s.color || t.color }) : s;
+  });
+  const have = new Set(kept.map(s => s.id));
+  team.forEach(t => { if (!have.has(t.id)) kept.push(t); });
+  const live = new Set(kept.map(s => s.id));
+  state.tables.forEach(t => { if (t.server && !live.has(t.server)) t.server = null; });
+  state.staff = kept;
+  return state;
+}
+
 /* ─── Table types — each has a default size + shape + seats ─────────────── */
 
 /* ─── Structural elements (purely visual) ──────────────────────────────── */
@@ -4259,6 +4351,7 @@ function pdsNormalize(state) {
   }).filter(Boolean);
 
   if (state.showChairs == null) state.showChairs = true;
+  pdsSyncStaff(state);
   state.v = 2;
   return state;
 }
@@ -4687,11 +4780,14 @@ function pdsPlaneOf(state) {
  *   pdsPush is called BEFORE a mutation, by the action that performs it. */
 const PDS_UNDO = { stack: [], redo: [] };
 function pdsSnap(state) {
-  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements });
+  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements, staff: state.staff });
 }
 function pdsApplySnap(state, s) {
   const d = JSON.parse(s);
   state.zones = d.zones; state.tables = d.tables; state.elements = d.elements;
+  /* Le roster fait partie de l'instantané : sans lui, annuler le retrait d'un
+     serveur rendrait ses tables à un identifiant qui n'existe plus. */
+  if (d.staff) state.staff = d.staff;
   if (!state.zones.some(z => z.id === state.activeZone)) state.activeZone = state.zones[0]?.id;
 }
 function pdsPush(state) {
@@ -5280,7 +5376,7 @@ function pdsRenderAssignRail(state, T) {
       <div class="pds-rail-title">${T.rosterTitle}</div>
       <div class="pds-rail-hint">${T.rosterHint}</div>
       <div class="pds-roster">
-        ${state.staff.map(s => {
+        ${state.staff.length ? state.staff.map(s => {
           const tbls = state.tables.filter(t => t.server === s.id);
           const seats = tbls.reduce((acc, t) => acc + pdsGeom(t).seats, 0);
           return `
@@ -5290,10 +5386,12 @@ function pdsRenderAssignRail(state, T) {
                 <b>${pdsEsc(s.name)}</b>
                 <em>${T.rosterTables(tbls.length)} · ${T.rosterCovers(seats)}</em>
               </span>
+              ${s.from === 'team' ? '' : `<button class="pds-chip-x" type="button" title="${T.rosterRemove}" aria-label="${T.rosterRemove}" data-pds-action="del-server" data-pds-sid="${s.id}">×</button>`}
             </div>
           `;
-        }).join('')}
+        }).join('') : `<div class="pds-roster-empty">${T.rosterEmpty}</div>`}
       </div>
+      <button class="kb ghost pds-rail-cta" data-pds-action="add-server">${T.rosterAdd}</button>
     </div>
     <div class="pds-rail-card">
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="clear-assign">${T.clearAssign}</button>
@@ -6692,6 +6790,9 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
   let startX, startY;
   let ghost = null;
   const create = (ev) => {
+    /* La croix de retrait vit dans la pastille : sans cette sortie, le
+       pointerdown démarrerait un glisser et avalerait le clic. */
+    if (ev.target && ev.target.closest && ev.target.closest('[data-pds-action]')) return;
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
     chip.setPointerCapture(ev.pointerId);
@@ -7176,6 +7277,52 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         refresh();
         toast(T.clearAssignDone, { type: 'success', desc: T.clearAssignDoneDesc });
       });
+      break;
+    }
+    case 'add-server': {
+      const m = modal({
+        tag: T.tagPdS,
+        title: T.rosterAddTitle,
+        desc: T.rosterAddDesc,
+        width: 460,
+        body: `
+          <div class="kf-group">
+            <label class="kf-label">${T.rosterAddLabel}</label>
+            <input class="kf-input pds-input" type="text" maxlength="40" data-pds-new-server placeholder="${T.rosterAddPlaceholder}"/>
+          </div>
+        `,
+        foot: `
+          <button class="kb ghost" data-dismiss>${T.cancel}</button>
+          <button class="kb atlas" data-pds-new-server-ok>${T.rosterAddOk}</button>
+        `,
+      });
+      wireDismiss(m);
+      const input = m?.el?.querySelector('[data-pds-new-server]');
+      try { input?.focus(); } catch (e) {}
+      const commit = () => {
+        const name = String(input?.value || '').trim();
+        if (!name) { input?.focus(); return; }
+        pdsPush(state);
+        const id = 'sv-' + Date.now().toString(36);
+        state.staff.push({ id, name, color: pdsStaffColor(id + name), from: 'local' });
+        m?.close?.();
+        refresh();
+        toast(T.rosterAddDone(name), { type: 'success', desc: T.rosterHint });
+      };
+      m?.el?.querySelector('[data-pds-new-server-ok]')?.addEventListener('click', commit);
+      input?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
+      break;
+    }
+    case 'del-server': {
+      const sid = btn.getAttribute('data-pds-sid');
+      const sv = state.staff.find(s => s.id === sid);
+      if (!sv) break;
+      pdsPush(state);
+      const freed = state.tables.filter(t => t.server === sid).length;
+      state.tables.forEach(t => { if (t.server === sid) t.server = null; });
+      state.staff = state.staff.filter(s => s.id !== sid);
+      refresh();
+      toast(T.rosterRemoveDone(sv.name), { type: 'info', desc: T.rosterRemoveDoneDesc(freed) });
       break;
     }
     case 'rotate-configure': {
@@ -7965,6 +8112,11 @@ const PDS_INLINE_CSS = `
   .pds-chip-body { display:flex; flex-direction:column; line-height:1.25; min-width:0; flex:1; }
   .pds-chip-body b { font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pds-chip-body em { font-style:normal; font-size:10.5px; color:var(--n-500); font-family:var(--mono); letter-spacing:0.02em; margin-top:1px; }
+  .pds-chip-x { flex-shrink:0; width:20px; height:20px; display:grid; place-items:center; padding:0; border:0; border-radius:6px; background:transparent; color:var(--n-500); font-size:15px; line-height:1; cursor:pointer; opacity:0; transition:.16s; }
+  .pds-chip:hover .pds-chip-x, .pds-chip-x:focus-visible { opacity:1; }
+  .pds-chip-x:hover { background:var(--n-100); color:var(--ink); }
+  .pds-chip-ghost .pds-chip-x { display:none; }
+  .pds-roster-empty { padding:10px 2px 2px; font-size:11.5px; line-height:1.5; color:var(--n-500); }
 
   .pds-assign-sum { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
   .pds-asum-row { display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; }
@@ -8447,6 +8599,9 @@ const PDS_INLINE_CSS = `
     background:#1A201A; color:#EDEAE0; border-color:rgba(125,242,176,0.55);
   }
   .pds-noir.pds-noir.pds-noir .pds-chip-body b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-roster-empty { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-chip-x { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-chip-x:hover { background:rgba(242,239,230,0.10); color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-asum-name { color:rgba(242,239,230,0.80); }
   .pds-noir.pds-noir.pds-noir .pds-rot-meta > div, .pds-noir.pds-noir.pds-noir .pds-rot-step {
     background:#141813; border-color:rgba(242,239,230,0.10);
