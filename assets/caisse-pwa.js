@@ -15,20 +15,43 @@
     showInstall();
   });
 
+  /* Les deux pastilles de ce fichier flottaient dans les coins bas et se
+     posaient sur du contenu : « Installer la caisse » (right:16/bottom:16)
+     atterrissait pile sur le chip carnet de clients (#kcb-chip, right:18/
+     bottom:18) et l'état réseau (left:12/bottom:12) recouvrait la ligne
+     « Sortir » du pied de rail. Elles vivent maintenant DANS ce pied
+     (.quick-actions) : elles prennent leur propre place au lieu de flotter
+     au-dessus de quelque chose. Repli flottant seulement si le pied n'existe
+     pas — et alors au-dessus de la pile de chips établie (18 / 82 / 146). */
+  function railFoot() { return document.querySelector('.quick-actions'); }
+
   function showInstall() {
     if (document.getElementById('kiwi-install')) return;
+    var foot = railFoot();
     var b = document.createElement('button');
     b.id = 'kiwi-install';
-    b.textContent = 'Installer la caisse';
-    b.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9998;padding:12px 18px;' +
-      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
-      'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
+    b.type = 'button';
+    b.title = 'Installer la caisse sur cet appareil';
+    if (foot) {
+      b.className = 'qa-btn ghost';
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>' +
+        '<line x1="12" y1="15" x2="12" y2="3"/></svg><span>Installer la caisse</span>';
+    } else {
+      b.textContent = 'Installer la caisse';
+      b.style.cssText = 'position:fixed;right:18px;bottom:146px;z-index:9998;padding:12px 18px;' +
+        'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
+        'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
+    }
     b.addEventListener('click', function () {
       if (!deferred) return;
       deferred.prompt();
       deferred.userChoice.finally(function () { deferred = null; b.remove(); });
     });
-    document.body.appendChild(b);
+    /* En tête du pied : c'est un réglage d'appareil, comme « Mode nuit » et
+       « Plein écran » — et jamais entre « Fin d'service » et « Sortir ». */
+    if (foot) foot.insertBefore(b, foot.firstChild); else document.body.appendChild(b);
   }
   window.addEventListener('appinstalled', function () {
     var b = document.getElementById('kiwi-install'); if (b) b.remove();
@@ -38,26 +61,53 @@
   function status() {
     var d = document.getElementById('kiwi-net') || (function () {
       var s = document.createElement('div'); s.id = 'kiwi-net';
-      s.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9998;padding:7px 10px;border-radius:999px;' +
-        'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none';
-      document.body.appendChild(s); return s;
+      var host = railFoot();
+      if (host) {
+        /* Dernière ligne du pied, sous « Sortir » : une ligne d'état, pas une
+           pastille posée par-dessus. Pastille de couleur + libellé. */
+        s.style.cssText = 'display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;' +
+          'font:600 12px/1.2 "Inter Tight",system-ui;transition:background .2s,opacity .2s';
+        s.innerHTML = '<i class="kn-dot" style="width:8px;height:8px;flex:0 0 8px;border-radius:50%"></i>' +
+          '<span class="kn-txt"></span>';
+        host.appendChild(s);
+      } else {
+        s.style.cssText = 'position:fixed;right:18px;bottom:210px;z-index:9998;padding:7px 10px;border-radius:999px;' +
+          'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none';
+        document.body.appendChild(s);
+      }
+      return s;
     })();
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
+    var tone, label;
     if (q.storageError || q.blocked) {
-      d.style.background = '#9F3028';
-      d.textContent = q.storageError ? 'Stockage ventes saturé · support requis' : q.blocked + ' vente bloquée · support requis';
+      tone = '#9F3028';
+      label = q.storageError ? 'Stockage ventes saturé · support requis' : q.blocked + ' vente bloquée · support requis';
     } else if (!navigator.onLine) {
-      d.style.background = '#B85245';
-      d.textContent = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' vente(s) en attente' : '');
+      tone = '#B85245';
+      label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' vente(s) en attente' : '');
     } else if (q.pending) {
-      d.style.background = '#A56A16';
-      d.textContent = q.pending + ' vente(s) à synchroniser';
+      tone = '#A56A16';
+      label = q.pending + ' vente(s) à synchroniser';
     } else {
-      d.style.background = '#287B55';
-      d.textContent = 'En ligne · synchronisé';
+      tone = '#287B55';
+      label = 'En ligne · synchronisé';
     }
-    d.title = d.textContent;
+    var dot = d.querySelector('.kn-dot'), txt = d.querySelector('.kn-txt');
+    if (dot && txt) {
+      /* Nominal : le pied reste calme — pastille verte, libellé discret. Les
+         trois états anormaux réclament une action, donc la ligne se peint. */
+      var nominal = tone === '#287B55';
+      dot.style.background = tone;
+      d.style.background = nominal ? 'transparent' : tone;
+      d.style.color = nominal ? '#6a6e6c' : '#F7F5F0';
+      d.style.opacity = nominal ? '.78' : '1';
+      txt.textContent = label;
+    } else {
+      d.style.background = tone;
+      d.textContent = label;
+    }
+    d.title = label;
   }
   window.addEventListener('online', status);
   window.addEventListener('offline', status);

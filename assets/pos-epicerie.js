@@ -829,7 +829,7 @@
             <button class="cash-preset" data-add="100">+100</button>
           </div>
           <div class="cash-rendu" id="ep-cash-rendu-box"><span class="lbl">Rendu</span><span class="val mono" id="ep-cash-rendu">0 MAD</span></div>
-          <button class="cash-confirm" id="ep-cash-ok">Confirmer · khlass</button>
+          <button class="cash-confirm" id="ep-cash-ok">Confirmer l’encaissement</button>
         </div>`;
       icons();
       const box = $('#ep-cash-rendu-box', el);

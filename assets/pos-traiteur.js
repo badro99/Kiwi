@@ -605,7 +605,7 @@
           <button class="tr-btn primary" id="tr-dt-confirm"><i data-lucide="check"></i>Marquer confirmé</button>` : ''}
         ${ev.status === 'confirme' || ev.status === 'acompte' ? `
           ${nt ? `<button class="tr-btn primary ${trancheState(ev, nt) !== 'next' ? 'is-urgent' : ''}" id="tr-dt-pay"><i data-lucide="banknote"></i>Encaisser ${nt.pct} % · ${fmtMAD(nt.amount)}</button>` : ''}
-          ${nt ? `<button class="tr-btn secondary" id="tr-dt-rappel"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : '<span class="tr-pill ok" style="align-self:center;">Soldé, khlass</span>'}
+          ${nt ? `<button class="tr-btn secondary" id="tr-dt-rappel"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : '<span class="tr-pill ok" style="align-self:center;">Soldé</span>'}
           <button class="tr-btn secondary" id="tr-dt-doc"><i data-lucide="file-text"></i>Devis</button>
           ${isToday(ev.date) ? `<button class="tr-btn secondary" id="tr-dt-bon"><i data-lucide="truck"></i>Bon de livraison</button>` : ''}` : ''}
         ${ev.status === 'livre' ? `
@@ -964,7 +964,7 @@
       ${nt ? `<div class="tr-payc-actions">
         <button class="tr-btn primary ${hot ? 'is-urgent' : ''}" data-tr-paytr="${ev.id}"><i data-lucide="banknote"></i>Encaisser la tranche ${nt.pct} % · ${fmtMAD(nt.amount)}</button>
         <button class="tr-btn secondary" data-tr-watr="${ev.id}"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>
-      </div>` : `<div class="tr-payc-note"><i data-lucide="check-check"></i>Soldé, l’événement est entièrement payé, khlass.</div>`}
+      </div>` : `<div class="tr-payc-note"><i data-lucide="check-check"></i>Soldé, l’événement est entièrement payé.</div>`}
     </div>`;
   }
 
@@ -1061,7 +1061,7 @@
             <i data-lucide="map-pin"></i>${esc(ev.lieu)}
             <span class="sep">·</span><i data-lucide="phone"></i>${esc(ev.client)} · ${esc(ev.phone)}
             <span class="sep">·</span><i data-lucide="users"></i>${ev.guests} invités
-            <span class="sep">·</span>${due > 0 ? `<span class="tr-pill due">solde ${fmtMAD(due)}</span>` : '<span class="tr-pill ok">réglé, khlass</span>'}
+            <span class="sep">·</span>${due > 0 ? `<span class="tr-pill due">solde ${fmtMAD(due)}</span>` : '<span class="tr-pill ok">réglé</span>'}
           </div>
         </div>
         <div class="tr-bl-headactions">
@@ -1444,7 +1444,7 @@
       queueIfOffline('Encaissement tranche');
       toast(`Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (wasConfirme) toast(`${ev.name} passe en « Acompte reçu », la date est verrouillée`);
-      if (dueTotal(ev) <= 0) toast(`${ev.name} est soldé, khlass, rien à encaisser le jour J`);
+      if (dueTotal(ev) <= 0) toast(`${ev.name} est soldé, rien à encaisser le jour J`);
       refreshAll();
       if (ctx && typeof ctx.onDone === 'function') ctx.onDone();
     };

@@ -1132,7 +1132,7 @@
   function deliver(o) {
     const due = dueOf(o);
     if (due > 0) {
-      toast(`Solde ${fmtMAD(due)} à encaisser d’abord, khlass puis remise`);
+      toast(`Solde ${fmtMAD(due)} à encaisser d’abord, puis remise`);
       openPay(o, { settle: true, onDone: () => deliver(o) });
       return;
     }
@@ -1255,7 +1255,7 @@
             </div>`).join('') : `
             <div class="ff-allclear">
               <i data-lucide="check-circle-2"></i>
-              <div>Rien à encaisser, tout est khlass.<br>Les soldes « payer au retrait » atterrissent ici.</div>
+              <div>Rien à encaisser, tout est réglé.<br>Les soldes « payer au retrait » atterrissent ici.</div>
             </div>`}
           <div class="ff-foot-note">Les commandes Glovo ne passent jamais par la caisse, le compte se fait fin de mois.</div>
         </div>

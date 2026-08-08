@@ -37,7 +37,7 @@
       }
       if (result && result.approved) {
         if (disc && disc.classList) disc.classList.add('is-success');
-        if (status) { status.textContent = 'Khlass ! Paiement confirmé sur le lecteur'; status.classList && status.classList.add('is-success'); }
+        if (status) { status.textContent = 'Paiement confirmé sur le lecteur'; status.classList && status.classList.add('is-success'); }
       } else {
         if (disc && disc.classList) disc.classList.remove('is-success');
         if (status) { status.textContent = 'Paiement non confirmé · lecteur indisponible'; status.classList && status.classList.remove('is-success'); }
