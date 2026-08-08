@@ -21,8 +21,6 @@
     },
     refresh: function () { return call('GET'); },
     clockIn: function () { return call('POST', { action: 'clock-in' }); },
-    pause: function () { return call('POST', { action: 'pause' }); },
-    resume: function () { return call('POST', { action: 'resume' }); },
     clockOut: function () { return call('POST', { action: 'clock-out' }); },
     logout: function () { return call('POST', { action: 'logout' }); },
   };

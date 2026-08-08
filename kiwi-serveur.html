@@ -1523,10 +1523,8 @@ em, i, cite, dfn, var { font-style: normal; }
     body.is-role-restricted .kg-rec,
     body.is-role-restricted .kg-defi,
     body.is-role-restricted [data-role-restricted="hide"] { display: none !important; }
-    /* When restricted, the bottom-tab bar has nothing to switch between —
-       drop it so the profil view fills the screen. */
-    body.is-role-restricted .bottom-tabs { display: none !important; }
-    body.is-role-restricted .content { padding-bottom: 0; }
+    /* Every role keeps Notifications + Profil; table/menu buttons are removed
+       from the role's tab list rather than hiding the whole navigation bar. */
 
     /* ===========================================================
        Browse mode — employee opens app from home to check schedule
@@ -3193,10 +3191,10 @@ em, i, cite, dfn, var { font-style: normal; }
             </div>
             <!-- === /Gamification profil cards === -->
 
-            <button class="profil-pause" id="profil-pause" type="button">
+            <div class="profil-pause" id="profil-pause" role="status">
               <i data-lucide="coffee"></i>
-              <span>Prendre une pause</span>
-            </button>
+              <span>Pause gérée depuis la caisse</span>
+            </div>
             <button class="profil-clockout" id="profil-clockout">
               <i data-lucide="log-out"></i>
               <span>Pointer le départ</span>
@@ -4227,7 +4225,7 @@ em, i, cite, dfn, var { font-style: normal; }
       },
       plongeur: {
         id: 'mounir',  name: 'Mounir', fullName: 'Mounir A.',  initials: 'MA',
-        role: 'Plongeur', tabs: ['profil'],
+        role: 'Plongeur', tabs: ['notifications', 'profil'],
         defaultTab: 'profil', restricted: true,
       },
     };
@@ -4349,6 +4347,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function applyEmployeeLive(data) {
       if (!data || !data.employee) return;
+      const wasPaused = isEmployeePaused();
       liveEmployeeState = data;
       const emp = data.employee;
       currentUser = emp.id || 'employee';
@@ -4358,6 +4357,21 @@ em, i, cite, dfn, var { font-style: normal; }
         servers[c.id] = { name: c.name || 'Employé', initials: c.initials || 'E', status: c.status || 'off-duty' };
       });
       if (!servers[currentUser]) servers[currentUser] = { name: emp.name, initials: emp.initials || 'E', status: data.attendance && data.attendance.open ? 'on-duty' : 'off-duty' };
+      const nowPaused = !!(data.attendance && data.attendance.open && data.attendance.open.pauseTs);
+      if (shiftStart && wasPaused !== nowPaused) {
+        serviceNotify('Gestion du service', nowPaused ? 'La caisse vous a mis en pause.' : 'La caisse a terminé votre pause.', {
+          type: 'team-message', id: 'pause-' + (nowPaused ? 'start-' : 'end-') + Date.now(), ts: Date.now(),
+        });
+      }
+      if (shiftStart) {
+        (data.messages || []).forEach((message) => {
+          if (!message || !message.id || teamMessageSeen.has(message.id)) return;
+          teamMessageSeen.add(message.id);
+          serviceNotify(message.sender || 'Caisse', message.text || '', {
+            type: 'team-message', id: message.id, ts: message.ts,
+          });
+        });
+      }
 
       const floor = data.floor || { zones: [], tables: [], staff: [] };
       const zoneNames = Object.create(null), floorStaff = Object.create(null);
@@ -4424,6 +4438,7 @@ em, i, cite, dfn, var { font-style: normal; }
     let servicePlanTick = 0;
     const serviceOrderStatus = new Map();
     const serviceEventSeen = new Set();
+    const teamMessageSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
     const serviceNotifications = [];
@@ -4519,9 +4534,20 @@ em, i, cite, dfn, var { font-style: normal; }
       try { renderAll(); } catch (_) {}
     }
     function pollServiceSync() {
-      if (SV_DEMO || !shiftStart || activeRole.restricted || !liveEmployeeState) return;
+      if (SV_DEMO || !shiftStart || !liveEmployeeState) return;
       const merchant = liveEmployeeState.merchant || svSlug();
       if (!merchant) return;
+      /* Every clocked-in role needs live attendance and manager messages. Only
+         floor-service roles continue into orders, tables and KDS events. */
+      if (window.KiwiEmployeeLive) {
+        KiwiEmployeeLive.refresh().then((data) => {
+          applyEmployeeLive(data);
+          activeRole = resolveRole('');
+          applyRoleToMain();
+          try { renderAll(); } catch (_) {}
+        }).catch(() => {});
+      }
+      if (activeRole.restricted) return;
       /* Menu edits made by the owner on another device reach the service app
          on the same short live-sync cadence as orders and table events. */
       try { svFetchCarte(); } catch (_) {}
@@ -4535,17 +4561,9 @@ em, i, cite, dfn, var { font-style: normal; }
       /* Team, schedule and floor assignments share this six-second live loop.
          Eighteen seconds was long enough for a newly assigned table to look
          broken during service even though the cloud write had succeeded. */
-      if (window.KiwiEmployeeLive) {
-        KiwiEmployeeLive.refresh().then((data) => {
-          applyEmployeeLive(data);
-          activeRole = resolveRole('');
-          applyRoleToMain();
-          try { renderAll(); } catch (_) {}
-        }).catch(() => {});
-      }
     }
     function startServiceSync() {
-      if (serviceSyncTimer || SV_DEMO || activeRole.restricted) return;
+      if (serviceSyncTimer || SV_DEMO) return;
       pollServiceSync();
       serviceSyncTimer = setInterval(pollServiceSync, 6000);
     }
@@ -5740,6 +5758,7 @@ em, i, cite, dfn, var { font-style: normal; }
       return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
     function notificationIcon(type) {
+      if (type === 'team-message') return 'message-square';
       if (type === 'orderpro') return 'smartphone';
       if (type === 'ready') return 'chef-hat';
       if (type === 'khlass') return 'circle-check';
@@ -5810,35 +5829,13 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderPauseControl() {
       const btn = $('#profil-pause');
       if (!btn) return;
-      btn.hidden = !!activeRole.restricted;
       const paused = isEmployeePaused();
       btn.classList.toggle('is-paused', paused);
       const label = btn.querySelector('span');
-      if (label) label.textContent = paused ? 'Reprendre le service' : 'Prendre une pause';
+      if (label) label.textContent = paused ? 'En pause · gérée depuis la caisse' : 'Pause gérée depuis la caisse';
       const icon = btn.querySelector('i');
-      if (icon) icon.setAttribute('data-lucide', paused ? 'play' : 'coffee');
+      if (icon) icon.setAttribute('data-lucide', 'coffee');
     }
-
-    $('#profil-pause').addEventListener('click', async () => {
-      if (activeRole.restricted) return;
-      const paused = isEmployeePaused();
-      const btn = $('#profil-pause');
-      btn.disabled = true;
-      try {
-        if (SV_DEMO) {
-          if (servers[currentUser]) servers[currentUser].status = paused ? 'on-duty' : 'on-pause';
-        } else {
-          await (paused ? KiwiEmployeeLive.resume() : KiwiEmployeeLive.pause());
-          const data = await KiwiEmployeeLive.refresh();
-          applyEmployeeLive(data);
-        }
-        renderPauseControl();
-        renderTables();
-        toast(paused ? 'Service repris' : 'Pause signalée à l’équipe');
-      } catch (_) {
-        toast('Pause non synchronisée · vérifiez la connexion');
-      } finally { btn.disabled = false; }
-    });
 
     /* ===========================================================
        SCHEDULE + HOURS — profil tab (Mon..Sun)
