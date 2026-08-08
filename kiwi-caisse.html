@@ -14805,6 +14805,12 @@
       return Object.keys(tables).map((id) => ({
         table: String(id), status: String(tables[id].status || 'khawya'),
         covers: Math.max(0, Number(tables[id].covers) || 0),
+        lines: (tableOrders[id] || []).slice(0, 80).map((line) => ({
+          key: String(line.uid || line.id || ''), id: String(line.id || ''),
+          name: String(line.name || ''), price: Math.max(0, Number(line.price) || 0),
+          qty: Math.max(1, Number(line.qty) || 1), note: String(line.note || ''),
+          opts: Array.isArray(line.opts) ? line.opts : [],
+        })),
       })).sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
     }
     function publishServiceFloor() {

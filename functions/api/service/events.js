@@ -54,6 +54,23 @@ async function append(env, merchant, event, statePatch) {
 function tableKey(value) {
   return String(value || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
 }
+function cleanLines(raw) {
+  if (!Array.isArray(raw)) return null;
+  return raw.slice(0, 80).map((line, index) => ({
+    key: String(line && (line.key || line.uid || line.id) || index).slice(0, 80),
+    id: String(line && line.id || '').slice(0, 96),
+    name: String(line && line.name || '').slice(0, 140),
+    price: Math.max(0, Math.min(200000, Number(line && line.price) || 0)),
+    qty: Math.max(1, Math.min(99, Number(line && line.qty) || 1)),
+    note: String(line && line.note || '').slice(0, 280),
+    opts: (Array.isArray(line && line.opts) ? line.opts : []).slice(0, 20).map((opt) => ({
+      group: String(opt && opt.group || '').slice(0, 80),
+      label: String(opt && (opt.label || opt.name) || '').slice(0, 100),
+      p: Math.max(0, Math.min(200000, Number(opt && (opt.p != null ? opt.p : opt.price)) || 0)),
+      emoji: String(opt && opt.emoji || '').slice(0, 16),
+    })),
+  })).filter((line) => line.name);
+}
 async function floorTargets(env, merchant) {
   const out = Object.create(null);
   try {
@@ -77,7 +94,9 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const table = tableKey(src && src.table);
     const status = String(src && src.status || '');
     if (!table || !TABLE_STATUSES.has(status)) return;
+    const lines = cleanLines(src && src.lines);
     incoming[table] = { table, status, covers: Math.max(0, Math.min(99, Number(src.covers) || 0)) };
+    if (lines) incoming[table].lines = lines;
   });
   if (!Object.keys(incoming).length) return { ok: false, events: [] };
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -88,11 +107,14 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const emitted = [];
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
-      const changed = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
+      if (before && !Object.prototype.hasOwnProperty.call(next, 'lines') && Array.isArray(before.lines)) next.lines = before.lines;
+      const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
+      const linesChanged = !before || JSON.stringify(before.lines || []) !== JSON.stringify(next.lines || []);
+      const changed = stateChanged || linesChanged;
       if (!changed) return;
       const changedAt = Date.now();
       states[table] = { ...next, ts: changedAt, source: source || 'caisse' };
-      if (!before) return;
+      if (!before || !stateChanged) return;
       const target = targets[table] || {};
       const event = {
         id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: changedAt,

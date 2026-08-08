@@ -4142,6 +4142,11 @@ em, i, cite, dfn, var { font-style: normal; }
             // Ce qui est parti est parti : on ne le renverra pas au prochain
             // « Lancer » de cette même table.
             order.forEach((l) => { l.sentQty = +l.qty || 0; });
+            const knownState = serviceStateVersion.get(tableId);
+            serviceBillAwaiting.set(tableId, {
+              after: Number(knownState && knownState.ts) || 0,
+              until: Date.now() + 30000,
+            });
             svPendingRef.delete(tableId);
             return { ok: true, number: j.number, replayed: !!j.replayed };
           }
@@ -4594,6 +4599,7 @@ em, i, cite, dfn, var { font-style: normal; }
     const serviceOrderStatus = new Map();
     const serviceEventSeen = new Set();
     const serviceStateVersion = new Map();
+    const serviceBillAwaiting = new Map();
     const teamMessageSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
@@ -4714,6 +4720,20 @@ em, i, cite, dfn, var { font-style: normal; }
         serviceStateVersion.set(id, { status: state.status, ts: Number(state.ts) || 0, source: state.source || '' });
         tables[id].status = state.status || tables[id].status;
         if (state.covers) tables[id].covers = state.covers;
+        const awaiting = serviceBillAwaiting.get(id);
+        const stateTs = Number(state.ts) || 0;
+        if (awaiting && (stateTs > awaiting.after || Date.now() > awaiting.until)) serviceBillAwaiting.delete(id);
+        if (Array.isArray(state.lines) && !dirtyOrders.has(id) && !serviceBillAwaiting.has(id)) {
+          tableOrders[id] = state.lines.map((line, index) => ({
+            uid: 'caisse-' + String(line.key || line.id || index),
+            id: line.id || '', name: line.name || 'Article',
+            price: Math.max(0, Number(line.price) || 0),
+            qty: Math.max(1, Number(line.qty) || 1),
+            sentQty: Math.max(1, Number(line.qty) || 1),
+            note: line.note || '', opts: Array.isArray(line.opts) ? line.opts : [],
+            sourceCaisse: true,
+          }));
+        }
         if (state.status === 'khawya' || state.status === 'khlass') tables[id].elapsed = 0;
       });
       (data.events || []).forEach((event) => {
@@ -4785,6 +4805,7 @@ em, i, cite, dfn, var { font-style: normal; }
       serviceOrderStatus.clear();
       serviceEventSeen.clear();
       serviceStateVersion.clear();
+      serviceBillAwaiting.clear();
       serviceHistoryKey = '';
       serviceMineTables.clear();
       servicePausedTables.clear();

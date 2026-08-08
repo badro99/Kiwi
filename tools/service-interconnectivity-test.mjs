@@ -153,7 +153,9 @@ response = await eventsGet({ request, env }); const omarEvents = await json(resp
 ok(response.status === 200 && omarEvents.events.length === 0, "le collègue non affecté ne reçoit pas l'évènement");
 
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
-  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4 }, { table: '2', status: 'khawya', covers: 2 }] },
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, lines: [
+    { uid: 'cash-line-1', id: 'i1', name: 'Tajine', price: 80, qty: 2, note: 'sans oignon', opts: [{ group: 'sauce', label: 'Épicée', p: 10, emoji: '🔴' }] },
+  ] }, { table: '2', status: 'khawya', covers: 2, lines: [] }] },
 }) });
 response = await eventsPost({ request, env });
 ok(response.status === 200, 'la caisse publie son état de salle complet vers le cloud');
@@ -161,6 +163,10 @@ request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}
 response = await eventsGet({ request, env }); const openedState = await json(response);
 ok(openedState.states['1'] && openedState.states['1'].status === 'ka-yaklo',
   "la table ouverte en caisse remplace l'état vide du téléphone serveur");
+ok(openedState.states['1'].lines.length === 1 && openedState.states['1'].lines[0].qty === 2
+  && openedState.states['1'].lines[0].note === 'sans oignon'
+  && openedState.states['1'].lines[0].opts[0].emoji === '🔴',
+  "l'addition saisie en caisse atteint le détail de table du téléphone");
 ok(openedState.events.some((event) => event.type === 'table-state' && event.table === '1' && event.status === 'ka-yaklo'),
   'le serveur affecté garde la notification de table ouverte dans son historique');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
