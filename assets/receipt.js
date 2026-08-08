@@ -1312,30 +1312,73 @@
       var c = CS(); if (c) c.get();
     } catch (_) {}
   }
-  var livePullTimer = null;
+  /* ── LA RELECTURE QUI SE CALME ──────────────────────────────────────────────
+   * /api/store n'offre pas de flux poussé : la caisse relit pour savoir que le
+   * dashboard a changé le reçu. Cette relecture tournait à cadence fixe, deux
+   * documents toutes les 1,5 s tant que l'écran était visible — 57 600 appels par
+   * appareil sur une journée de service, la moitié du trafic d'un restaurant,
+   * pour un document qu'un commerçant modifie deux fois par an.
+   *
+   * pull() sait dire si quelque chose est effectivement arrivé (il rend `true`
+   * seulement quand il a écrit la copie serveur). On garde donc la seconde et
+   * demie tant que ça bouge, et on s'espace jusqu'à trente secondes quand le
+   * serveur répète la même révision. Le retour sur l'onglet, l'appairage et le
+   * moindre changement reçu ramènent la cadence rapide : le comptoir voit encore
+   * la modification du bureau en moins de deux secondes quand elle a lieu. */
+  var PULL_MIN = 1500, PULL_MAX = 30000, PULL_DECAY = 1.6;
+  var livePullTimer = null, livePullEvery = PULL_MIN, livePullBusy = false;
   function isCaissePage() {
     try { return /\/kiwi-caisse(?:\.html)?$/.test(location.pathname || ''); } catch (_) { return false; }
   }
+  /* Rend une promesse de « oui, le serveur portait autre chose » — c'est elle qui
+   * décide de la prochaine cadence. Un échec réseau vaut « rien de neuf ». */
   function pullReceiptNow() {
-    if (!isCaissePage()) return;
-    try { if (document.visibilityState === 'hidden') return; } catch (_) {}
+    if (!isCaissePage()) return Promise.resolve(false);
+    try { if (document.visibilityState === 'hidden') return Promise.resolve(false); } catch (_) {}
+    var jobs = [];
     [BS(), CS()].forEach(function (s) {
-      try { var c = s && s.cloud && s.cloud(); if (c && c.pull) c.pull(false); } catch (_) {}
+      try {
+        var c = s && s.cloud && s.cloud();
+        if (c && c.pull) jobs.push(Promise.resolve(c.pull(false)).catch(function () { return false; }));
+      } catch (_) {}
     });
+    if (!jobs.length) return Promise.resolve(false);
+    return Promise.all(jobs).then(function (r) { return r.indexOf(true) >= 0; });
   }
-  function startLivePull() {
-    if (livePullTimer || !isCaissePage() || typeof setInterval !== 'function') return;
-    /* /api/store n'offre pas de flux poussé. Une relecture légère pendant que la
-       caisse est visible donne au comptoir le reçu enregistré au dashboard en
-       moins de deux secondes, sans recharger ni attendre un changement d'onglet. */
-    livePullTimer = setInterval(pullReceiptNow, 1500);
+  function scheduleLivePull(delay) {
+    if (livePullTimer || !isCaissePage() || typeof setTimeout !== 'function') return;
+    livePullTimer = setTimeout(function () {
+      livePullTimer = null;
+      if (livePullBusy) { scheduleLivePull(livePullEvery); return; }   // jamais deux lectures en vol
+      livePullBusy = true;
+      pullReceiptNow().then(function (changed) {
+        livePullBusy = false;
+        livePullEvery = changed ? PULL_MIN
+                                : Math.min(PULL_MAX, Math.round(livePullEvery * PULL_DECAY));
+        scheduleLivePull(livePullEvery);
+      }, function () {
+        livePullBusy = false;
+        scheduleLivePull(livePullEvery);
+      });
+    }, delay == null ? livePullEvery : delay);
+  }
+  function startLivePull() { scheduleLivePull(PULL_MIN); }
+  /* Le comptoir revient à l'écran, ou vient de s'appairer : on repart au plus
+   * court sans attendre la fin de l'espacement en cours. */
+  function quickenLivePull() {
+    livePullEvery = PULL_MIN;
+    if (livePullTimer) { clearTimeout(livePullTimer); livePullTimer = null; }
+    scheduleLivePull(0);
   }
   (function bootWarm() {
     try {
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { setTimeout(warm, 0); startLivePull(); });
       } else { setTimeout(warm, 0); startLivePull(); }
-      document.addEventListener('kiwi-paired', function () { setTimeout(warm, 0); startLivePull(); });
+      document.addEventListener('kiwi-paired', function () { setTimeout(warm, 0); quickenLivePull(); });
+      document.addEventListener('visibilitychange', function () {
+        try { if (document.visibilityState === 'visible') quickenLivePull(); } catch (_) {}
+      });
     } catch (_) {}
   })();
 
