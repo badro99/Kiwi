@@ -3761,7 +3761,11 @@ em, i, cite, dfn, var { font-style: normal; }
     let svStations = [];
     function svSlug() {
       try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
-      try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
+      /* The employee portal is not paired like a till. Its authenticated
+         restaurant is pinned by openEmployeeSession() under
+         kiwiEmployeeMerchant. Ignoring that key left a correctly signed-in
+         employee with no slug, so /api/menu was never requested at all. */
+      try { return localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
     }
     function svRebuildCarte() {
       if (SV_DEMO) return false;
@@ -3804,7 +3808,9 @@ em, i, cite, dfn, var { font-style: normal; }
           name: String(g.name),
           kind: g.kind === 'many' ? 'multi' : 'radio',
           required: !!g.required,
-          vals: g.choices.filter(c => c && c.name).map(c => ({ n: String(c.name), p: Math.max(0, +c.price || 0) })),
+          vals: g.choices.filter(c => c && c.name).map(c => ({
+            n: String(c.name), p: Math.max(0, +c.price || 0), emoji: String(c.emoji || ''),
+          })),
         };
       });
       optionGroups = lib;
@@ -3847,7 +3853,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (SV_DEMO) return;
       const slug = svSlug();
       if (!slug) return;
-      fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit' })
+      return fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit', cache: 'no-store' })
         .then(r => (r.ok ? r.json() : null))
         .then((j) => {
           const m = j && j.menu;
@@ -4116,6 +4122,10 @@ em, i, cite, dfn, var { font-style: normal; }
       liveEmployeeState = data;
       try { localStorage.setItem('kiwiEmployeeMerchant', data.merchant || ''); } catch (_) {}
       applyEmployeeLive(data);
+      /* Bootstrap ran before login and therefore had no tenant yet. Load the
+         authenticated restaurant's menu now instead of waiting for the user
+         to hide/show or reload the app. */
+      try { svRebuildCarte(); svFetchCarte(); } catch (_) {}
       activeRole = resolveRole('');
       if (!activeRole) throw new Error('employee-role-missing');
       applyRoleToClockin();
@@ -4434,6 +4444,9 @@ em, i, cite, dfn, var { font-style: normal; }
       if (SV_DEMO || !shiftStart || activeRole.restricted || !liveEmployeeState) return;
       const merchant = liveEmployeeState.merchant || svSlug();
       if (!merchant) return;
+      /* Menu edits made by the owner on another device reach the service app
+         on the same short live-sync cadence as orders and table events. */
+      try { svFetchCarte(); } catch (_) {}
       fetch('/api/order/queue?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceOrderSince + '&role=service', {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
       }).then((r) => r.ok ? r.json() : null).then(ingestServiceOrders).catch(() => {});
@@ -5514,7 +5527,7 @@ em, i, cite, dfn, var { font-style: normal; }
           const on = def.kind === 'multi' ? sel.has(v.n)
                    : def.kind === 'toggle' ? sel === true
                    : sel === v.n;
-          return `<button class="opt-pill ${on ? 'on' : ''}" data-opt-group="${g}" data-opt-val="${esc(v.n)}">${esc(v.n)}${v.p ? `<span class="opt-pr">+${v.p}</span>` : ''}</button>`;
+          return `<button class="opt-pill ${on ? 'on' : ''}" data-opt-group="${g}" data-opt-val="${esc(v.n)}">${v.emoji ? `${esc(v.emoji)} ` : ''}${esc(v.n)}${v.p ? `<span class="opt-pr">+${v.p}</span>` : ''}</button>`;
         }).join('');
         return `
           <div class="opt-group ${unmet ? 'missing' : ''}">
