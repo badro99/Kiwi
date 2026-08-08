@@ -4192,6 +4192,21 @@ function pdsStaffColor(seed) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return PDS_STAFF_COLORS[h % PDS_STAFF_COLORS.length];
 }
+const PDS_MAX_TABLE_SERVERS = 3;
+function pdsServerIds(table) {
+  if (!table) return [];
+  const ids = Array.isArray(table.servers) ? table.servers : [table.server];
+  return Array.from(new Set(ids.filter(Boolean).map(String))).slice(0, PDS_MAX_TABLE_SERVERS);
+}
+function pdsSetServerIds(table, ids) {
+  const clean = Array.from(new Set((ids || []).filter(Boolean).map(String))).slice(0, PDS_MAX_TABLE_SERVERS);
+  table.servers = clean;
+  /* Keep the historical scalar as the primary waiter so caisse and older
+     clients continue to work while multi-assignment-aware clients use servers. */
+  table.server = clean[0] || null;
+  return clean;
+}
+function pdsHasServer(table, sid) { return pdsServerIds(table).includes(String(sid || '')); }
 function pdsTeamStaff() {
   try {
     const roster = (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : [];
@@ -4231,7 +4246,7 @@ function pdsSyncStaff(state) {
   const have = new Set(kept.map(s => s.id));
   team.forEach(t => { if (!have.has(t.id)) kept.push(t); });
   const live = new Set(kept.map(s => s.id));
-  state.tables.forEach(t => { if (t.server && !live.has(t.server)) t.server = null; });
+  state.tables.forEach(t => pdsSetServerIds(t, pdsServerIds(t).filter(id => live.has(id))));
   state.staff = kept;
   return state;
 }
@@ -4333,6 +4348,7 @@ function pdsNormalize(state) {
     if (t.shape == null) t.shape = cfg.shape;
     if (t.color === undefined) t.color = null;
     if (t.locked == null) t.locked = false;
+    pdsSetServerIds(t, pdsServerIds(t));
   });
 
   state.elements = (state.elements || []).map((e, i) => {
@@ -5377,7 +5393,7 @@ function pdsRenderAssignRail(state, T) {
       <div class="pds-rail-hint">${T.rosterHint}</div>
       <div class="pds-roster">
         ${state.staff.length ? state.staff.map(s => {
-          const tbls = state.tables.filter(t => t.server === s.id);
+          const tbls = state.tables.filter(t => pdsHasServer(t, s.id));
           const seats = tbls.reduce((acc, t) => acc + pdsGeom(t).seats, 0);
           return `
             <div class="pds-chip" draggable="false" data-pds-chip="${s.id}" style="--chip:${s.color};">
@@ -5423,18 +5439,18 @@ function pdsRenderAssignSummary(state, T) {
   return `
     <div class="pds-assign-sum">
       ${state.staff.map(s => {
-        const tbls = state.tables.filter(t => t.server === s.id);
+        const tbls = state.tables.filter(t => pdsHasServer(t, s.id));
         return `<div class="pds-asum-row" style="--chip:${s.color};">
           <span class="pds-asum-dot"></span>
           <span class="pds-asum-name">${pdsEsc(s.name.split(' ')[0])}</span>
           <span class="pds-asum-n">${tbls.length}</span>
         </div>`;
       }).join('')}
-      ${state.tables.filter(t => !t.server).length > 0 ? `
+      ${state.tables.filter(t => !pdsServerIds(t).length).length > 0 ? `
         <div class="pds-asum-row pds-asum-unassigned">
           <span class="pds-asum-dot" style="--chip:#9CA3AF;"></span>
           <span class="pds-asum-name">${T.rosterUnassigned}</span>
-          <span class="pds-asum-n">${state.tables.filter(t => !t.server).length}</span>
+          <span class="pds-asum-n">${state.tables.filter(t => !pdsServerIds(t).length).length}</span>
         </div>
       ` : ''}
     </div>
@@ -5549,11 +5565,14 @@ function pdsRenderInspector(state, T, obj) {
           </label>
         </div>` : ''}
         <div class="pds-form-row">
-          <label>${T.inspectorServer}</label>
-          <select class="kf-input pds-input" data-pds-field="server">
-            <option value="">${T.inspectorUnassigned}</option>
-            ${state.staff.map(s => `<option value="${s.id}" ${s.id===obj.server?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
-          </select>
+          <label>${T.inspectorServer} · 3 max.</label>
+          ${[0,1,2].map(slot => {
+            const assigned = pdsServerIds(obj);
+            return `<select class="kf-input pds-input pds-server-slot" data-pds-server-slot="${slot}">
+              <option value="">${slot === 0 ? T.inspectorUnassigned : '—'}</option>
+              ${state.staff.map(s => `<option value="${s.id}" ${s.id===assigned[slot]?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
+            </select>`;
+          }).join('')}
         </div>
         <div class="pds-form-row">
           <label>${T.inspectorNotes}</label>
@@ -5833,8 +5852,8 @@ function pdsRenderTable(t, state, T) {
   const P = PDS_PAD;
   const sel = PDS_SEL.has(t.id);
   const only = sel && PDS_SEL.size === 1;
-  const sv = state.staff.find(s => s.id === t.server);
-  const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
+  const assignedServers = pdsServerIds(t).map(id => state.staff.find(s => s.id === id)).filter(Boolean);
+  const sv = assignedServers[0];
   const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING_JOUR;
   const ring = R[t.status] || R.free;
   const ink = noir ? 'rgba(255,255,255,0.5)'
@@ -5846,8 +5865,11 @@ function pdsRenderTable(t, state, T) {
   const showChairs = state.showChairs !== false;
   const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
   const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
-  const serverBadge = sv
-    ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
+  const serverBadge = assignedServers.length
+    ? `<span class="pds-tbl-servers">${assignedServers.map(server => {
+        const initials = server.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+        return `<span class="pds-tbl-server" style="background:${server.color};" title="${pdsEsc(server.name)}">${initials}</span>`;
+      }).join('')}</span>`
     : '';
   /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
    * au-dessus de la table. Elle n'existe que si la table porte son heure
@@ -6226,7 +6248,7 @@ function pdsAttach(root, state, T, dr) {
           if (f === 'num')        o.num = v.trim() || o.num;
           else if (f === 'label') o.label = v;
           else if (f === 'notes') o.notes = v;
-          else if (f === 'server') o.server = v || null;
+          else if (f === 'server') pdsSetServerIds(o, v ? [v] : []);
           else if (f === 'reservationName') {
             o.reservationName = v.trim();
             if (!o.reservationName) delete o.reservationName;
@@ -6298,6 +6320,21 @@ function pdsAttach(root, state, T, dr) {
             if (out) out.textContent = `${deg}°`;
           };
         }
+      });
+
+      root.querySelectorAll('[data-pds-server-slot]').forEach(input => {
+        input.onchange = () => {
+          const found = pdsFind(state, input.closest('[data-pds-inspect-id]')?.getAttribute('data-pds-inspect-id'));
+          if (!found || !found.table) return;
+          const table = found.o;
+          const slot = Math.max(0, Math.min(PDS_MAX_TABLE_SERVERS - 1, Number(input.getAttribute('data-pds-server-slot')) || 0));
+          const ids = pdsServerIds(table);
+          ids[slot] = input.value || '';
+          pdsPush(state);
+          pdsSetServerIds(table, ids);
+          refresh();
+          setTimeout(() => state._openInspector(table.id), 0);
+        };
       });
 
       /* Status pill row inside inspector */
@@ -6830,7 +6867,13 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
         const tid = tableEl.getAttribute('data-pds-table');
         const t = state.tables.find(tt => tt.id === tid);
         if (t) {
-          t.server = sid;
+          const current = pdsServerIds(t);
+          if (!current.includes(sid) && current.length >= PDS_MAX_TABLE_SERVERS) {
+            Kiwi.toast('3 serveurs maximum', { type: 'info', desc: 'Retirez un serveur de cette table avant d’en ajouter un autre.' });
+            refresh();
+            return;
+          }
+          pdsSetServerIds(t, current.concat(sid));
           const sv = state.staff.find(s => s.id === sid);
           Kiwi.toast(T.assignDone(sv?.name.split(' ')[0] || sid, t.num), { type: 'success', desc: T.assignDoneDesc });
           refresh();
@@ -6840,7 +6883,12 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
         const zid = zoneEl.getAttribute('data-pds-zone');
         /* Assign chip to every table in that zone */
         let count = 0;
-        state.tables.forEach(t => { if (t.zone === zid) { t.server = sid; count++; } });
+        state.tables.forEach(t => {
+          if (t.zone !== zid) return;
+          const current = pdsServerIds(t);
+          if (current.includes(sid)) return;
+          if (current.length < PDS_MAX_TABLE_SERVERS) { pdsSetServerIds(t, current.concat(sid)); count++; }
+        });
         const zname = state.zones.find(z => z.id === zid)?.name || '';
         const sv = state.staff.find(s => s.id === sid);
         Kiwi.toast(`${sv?.name.split(' ')[0] || sid} → ${zname}`, { type: 'success', desc: `${count} tables affectées.` });
@@ -7273,7 +7321,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       wireDismiss(m);
       const confirm = m?.el?.querySelector('[data-pds-clear-confirm]');
       confirm?.addEventListener('click', () => {
-        state.tables.forEach(t => { t.server = null; });
+        state.tables.forEach(t => { pdsSetServerIds(t, []); });
         refresh();
         toast(T.clearAssignDone, { type: 'success', desc: T.clearAssignDoneDesc });
       });
@@ -7318,8 +7366,8 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       const sv = state.staff.find(s => s.id === sid);
       if (!sv) break;
       pdsPush(state);
-      const freed = state.tables.filter(t => t.server === sid).length;
-      state.tables.forEach(t => { if (t.server === sid) t.server = null; });
+      const freed = state.tables.filter(t => pdsHasServer(t, sid)).length;
+      state.tables.forEach(t => { if (pdsHasServer(t, sid)) pdsSetServerIds(t, pdsServerIds(t).filter(id => id !== sid)); });
       state.staff = state.staff.filter(s => s.id !== sid);
       refresh();
       toast(T.rosterRemoveDone(sv.name), { type: 'info', desc: T.rosterRemoveDoneDesc(freed) });
@@ -7394,13 +7442,13 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
           Object.entries(preview).forEach(([sid, zid]) => {
             state.tables.forEach(t => {
               /* Tables in zid get this server */
-              if (t.zone === zid) t.server = sid;
+              if (t.zone === zid) pdsSetServerIds(t, [sid]);
             });
           });
         } else {
           /* Tables / pairs — round-robin shuffle of server property across tables */
           const sids = state.staff.map(s => s.id);
-          state.tables.forEach((t, i) => { t.server = sids[i % sids.length]; });
+          state.tables.forEach((t, i) => { pdsSetServerIds(t, [sids[i % sids.length]]); });
         }
         /* Append to history */
         state.history = state.history || [];
@@ -7971,6 +8019,10 @@ const PDS_INLINE_CSS = `
     top:-8px; right:auto;
     left:50%; transform:translateX(-50%);
   }
+  .pds-tbl-cell.pds-is-round .pds-tbl-servers { top:-8px; right:50%; transform:translateX(50%); }
+  .pds-tbl-cell.pds-is-round .pds-tbl-servers .pds-tbl-server {
+    top:auto; right:auto; left:auto; transform:none;
+  }
   .pds-tbl-cell.pds-is-square .pds-tbl { border-radius:4px; }
   .pds-tbl-cell.pds-is-bar    .pds-tbl { border-radius:4px; }
 
@@ -8045,6 +8097,13 @@ const PDS_INLINE_CSS = `
     pointer-events:none;
     font-family:var(--sans, "Inter Tight", system-ui, sans-serif);
   }
+  .pds-tbl-servers {
+    position:absolute; top:-10px; right:-10px; display:flex; flex-direction:row-reverse;
+    z-index:3; pointer-events:none;
+  }
+  .pds-tbl-servers .pds-tbl-server { position:relative; top:auto; right:auto; }
+  .pds-tbl-servers .pds-tbl-server + .pds-tbl-server { margin-right:-8px; }
+  .pds-server-slot + .pds-server-slot { margin-top:6px; }
 
   .pds-el { position:absolute; background: var(--n-700); border-radius:2px; cursor:grab; will-change: transform; }
   .pds-el.pds-el-wall { background:#2C2520; height:8px; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.2); }

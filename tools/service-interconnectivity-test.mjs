@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { employeeToken, employeeCookie, makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestGet as queueGet, onRequestPost as queuePost } from '../functions/api/order/queue.js';
 import { onRequestGet as eventsGet, onRequestPost as eventsPost } from '../functions/api/service/events.js';
-import { onRequestPost as employeePost } from '../functions/api/employee.js';
+import { onRequestPost as teamLivePost } from '../functions/api/team/live.js';
 import { onRequest as gate } from '../functions/_middleware.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -146,9 +146,9 @@ ok(paidState.states['1'] && paidState.states['1'].status === 'khlass'
   && paidState.events.some((event) => event.table === '1' && event.status === 'khlass'),
   "l'addition réglée en caisse atteint la table et le centre de notifications du serveur");
 
-request = new Request('https://kiwi.test/api/employee', { method: 'POST', headers: { Cookie: omarCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pause' }) });
-response = await employeePost({ request, env });
-ok(response.status === 200, 'Omar signale sa pause dans le pointage partagé');
+request = new Request('https://kiwi.test/api/team/live', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: 'manager-pause', memberId: 'omar' }) });
+response = await teamLivePost({ request, env });
+ok(response.status === 200, 'la caisse met Omar en pause dans le pointage partagé');
 saraQueue = await qget(saraCookie);
 ok(saraQueue.body.service.pausedTables.includes('2'), 'les tables du collègue en pause sont signalées à couvrir');
 result = await qpost(omarCookie, { merchant, create: true, mode: 'table', table: '2', lines: [{ id: 'i1', qty: 1 }] });
@@ -167,9 +167,9 @@ request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}
 response = await eventsGet({ request, env }); const pausedEvents = await json(response);
 ok(response.status === 200 && pausedEvents.events.length === 0, 'le serveur en pause ne reçoit pas les alertes opérationnelles');
 
-request = new Request('https://kiwi.test/api/employee', { method: 'POST', headers: { Cookie: omarCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'resume' }) });
-response = await employeePost({ request, env });
-ok(response.status === 200, 'Omar reprend son service et ferme sa période de pause');
+request = new Request('https://kiwi.test/api/team/live', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: 'manager-resume', memberId: 'omar' }) });
+response = await teamLivePost({ request, env });
+ok(response.status === 200, 'la caisse termine la pause d’Omar et ferme sa période');
 
 const attendanceOff = { entries: attendance.entries.map((entry) => entry.staffId === 'sara' ? { ...entry, outTs: now } : entry) };
 put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant=? AND feature='attendance'", JSON.stringify(attendanceOff), merchant);

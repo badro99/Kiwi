@@ -217,6 +217,13 @@ function run(opts) {
     /localStorage\.setItem\(PDS_LS_KEY \+ ':slug:' \+ slug/.test(PAGES));
   ok('le tableau de bord pousse le plan au serveur à chaque enregistrement',
     /function pdsSave\(state\)\s*\{[\s\S]{0,160}pdsCloud\(\)[\s\S]{0,60}\.push\(\)/.test(PAGES));
+  ok('une table conserve jusqu’à trois serveurs et garde le premier pour les anciens clients',
+    /const PDS_MAX_TABLE_SERVERS = 3/.test(PAGES)
+    && /table\.servers = clean;[\s\S]{0,160}table\.server = clean\[0\] \|\| null/.test(PAGES));
+  ok('l’inspecteur expose exactement trois emplacements de serveur',
+    /\$\{\[0,1,2\]\.map\(slot =>/.test(PAGES));
+  ok('glisser un serveur ajoute une affectation sans écraser les précédentes',
+    /pdsSetServerIds\(t, current\.concat\(sid\)\)/.test(PAGES));
   ok('la caisse préfère la copie serveur au miroir local',
     CAISSE.indexOf('window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)')
     < CAISSE.indexOf("localStorage.getItem('kiwiPlanDeSalle:slug:' + slug)"));

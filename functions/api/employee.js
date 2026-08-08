@@ -17,6 +17,7 @@ const ATTENDANCE_FEATURE = 'attendance';
 const TEAM_FEATURE = 'team';
 const ACCESS_FEATURE = 'employee-access';
 const FLOOR_FEATURE = 'floorplan';
+const MESSAGES_FEATURE = 'team-messages';
 const MAX_ATTENDANCE = 5000;
 
 function parse(raw, fallback) {
@@ -111,6 +112,8 @@ function sanitizedFloor(raw) {
       id: String(t.id || ''), num: String(t.num || t.id || ''), zone: String(t.zone || ''),
       type: String(t.type || ''), seats: Math.max(0, Number(t.seats) || 0),
       status: String(t.status || 'free'), server: t.server == null ? '' : String(t.server),
+      servers: Array.from(new Set((Array.isArray(t.servers) ? t.servers : [t.server])
+        .filter(Boolean).map((id) => String(id)))).slice(0, 3),
     })),
     staff: (Array.isArray(d.staff) ? d.staff : []).map((s) => ({ id: String(s.id || ''), name: String(s.name || '') })),
   };
@@ -119,10 +122,11 @@ async function payloadFor(request, env) {
   const auth = await liveEmployee(request, env);
   if (!auth) return null;
   const merchant = auth.session.merchant;
-  const [teamRow, floorRow, attendanceRow, cfg] = await Promise.all([
+  const [teamRow, floorRow, attendanceRow, messagesRow, cfg] = await Promise.all([
     readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }),
     readDoc(env, merchant, FLOOR_FEATURE, { zones: [], tables: [], staff: [] }),
     readDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }),
+    readDoc(env, merchant, MESSAGES_FEATURE, { messages: [] }),
     env.DB.prepare('SELECT name, type, status FROM merchant_config WHERE merchant = ?').bind(merchant).first().catch(() => null),
   ]);
   if (cfg && String(cfg.status || '') === 'suspended') return { suspended: true };
@@ -148,6 +152,9 @@ async function payloadFor(request, env) {
     hours: (teamRow.data.hours && teamRow.data.hours[me.id]) || {},
     attendance: attendanceView(attendanceRow.data, auth.pin.id),
     colleagues,
+    messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])
+      .filter((message) => message && (message.target === 'ALL' || String(message.target || '') === me.id))
+      .slice(-100),
     floor: sanitizedFloor(floorRow.data),
   };
 }
@@ -217,7 +224,11 @@ export async function onRequestPost({ request, env }) {
 
   const auth = await liveEmployee(request, env);
   if (!auth) return json({ error: 'employee-session-required' }, 401);
-  if (!['clock-in', 'clock-out', 'pause', 'resume'].includes(action)) return json({ error: 'bad-action' }, 400);
+  // Attendance starts/ends on the employee device. Breaks are a manager action
+  // owned by the paired caisse through /api/team/live; an employee cannot grant
+  // or end their own pause by crafting this request.
+  if (action === 'pause' || action === 'resume') return json({ error: 'pause-managed-by-caisse' }, 403);
+  if (!['clock-in', 'clock-out'].includes(action)) return json({ error: 'bad-action' }, 400);
   const merchant = auth.session.merchant;
   const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
   const member = memberFor(teamRow.data, auth.pin);
@@ -230,15 +241,6 @@ export async function onRequestPost({ request, env }) {
     if (action === 'clock-in') {
       changedEntry = open || { id: crypto.randomUUID(), staffId: auth.pin.id, memberId, name: auth.pin.name || '', role: auth.pin.role || '', inTs: now, outTs: 0 };
       if (!open) entries.push(changedEntry);
-    } else if (action === 'pause' && open && !open.pauseTs) {
-      open.pauseTs = now;
-      open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
-      changedEntry = { ...open };
-    } else if (action === 'resume' && open && open.pauseTs) {
-      open.breaks = Array.isArray(open.breaks) ? open.breaks : [];
-      open.breaks.push({ inTs: Number(open.pauseTs) || now, outTs: now });
-      open.pauseTs = 0;
-      changedEntry = { ...open };
     } else if (action === 'clock-out' && open) {
       if (open.pauseTs) {
         open.breaks = Array.isArray(open.breaks) ? open.breaks : [];

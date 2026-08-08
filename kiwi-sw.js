@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v279';
+var CACHE = 'kiwi-app-v281';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -60,8 +60,8 @@ var SHELL = [
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js',
-  '/assets/interactive.js',
+  '/assets/trades.js?v=3',
+  '/assets/interactive.js?v=2',
   '/assets/features.js',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une

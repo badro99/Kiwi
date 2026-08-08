@@ -723,7 +723,7 @@
         disc.classList.remove('is-pulsing');
         disc.classList.add('is-success');
         disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ht-caution-status', el).textContent = 'Khlass! Empreinte enregistrée';
+        $('#ht-caution-status', el).textContent = 'Empreinte enregistrée';
         $('#ht-caution-status', el).classList.add('is-success');
         icons();
         setTimeout(finishCheckin, 900);

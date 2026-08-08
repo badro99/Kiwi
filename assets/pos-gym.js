@@ -1148,7 +1148,7 @@
         postDay(total, method, `Comptoir · ${summary}`, '');
         renderCart(); renderBadges(); icons();
         if (state.view === 'pilotage') renderPilotage();
-        toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       },
     });
   }

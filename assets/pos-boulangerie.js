@@ -546,7 +546,7 @@
     state.ticket = [];
     closeVeil('#bl-pay-veil');
     queueIfOffline(`Vente ${num}`);
-    toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+    toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     refreshOps();
   }
 
