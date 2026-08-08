@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Kiwi · PRESSING MODE — laundry counter app inside kiwi-caisse.html
    ---------------------------------------------------------------------------
-   Unlocked by PIN 0000 (the kitchen display moved to 0001). One terminal,
-   two métiers: any other code opens the restaurant caisse untouched — this
-   whole file is scoped to `body.is-pressing` / `.px-*` and is inert otherwise.
+   Unlocked by PIN 0000 (the kitchen display moved to 0001) through the shared
+   dispatcher, comme les quinze autres métiers. Lazy-loaded with its module:
+   this whole file is scoped to `body.is-pos-pressing` / `.px-*` and is inert
+   otherwise.
 
    Reuses the caisse tokens (--forest, --emerald, --mint-tint, --paper-*,
    --ink-*, --line, --sans/--serif/--mono, --r-*, --shadow-*) and the caisse
@@ -12,13 +13,13 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ---------- mode switch (mirrors body.is-kitchen) ---------- */
-body.is-pressing .shell,
-body.is-pressing .topbar,
-body.is-pressing .clockin-screen,
-body.is-pressing .welcome-banner { display: none !important; }
+body.is-pos-pressing .shell,
+body.is-pos-pressing .topbar,
+body.is-pos-pressing .clockin-screen,
+body.is-pos-pressing .welcome-banner { display: none !important; }
 /* toasts (#toast-stack, z-90) sit at the same layer as .px-screen and below
    the modal kit — lift them above both while the pressing is active */
-body.is-pressing #toast-stack { z-index: 200; }
+body.is-pos-pressing #toast-stack { z-index: 200; }
 
 .px-screen {
   /* brand tokens consumed by liquid-lens.js's brand skin */
@@ -35,8 +36,8 @@ body.is-pressing #toast-stack { z-index: 200; }
   color: var(--ink);
   font-family: var(--sans);
 }
-body.is-pressing .px-screen { display: flex; }
-body.is-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+body.is-pos-pressing .px-screen { display: flex; }
+body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bezier(0.32, 0.72, 0, 1) both; }
 @keyframes px-dive {
   from { opacity: 0; transform: scale(1.04); }
   to   { opacity: 1; transform: scale(1); }

@@ -70,6 +70,52 @@
     hotel: { fr: 'Hôtel', en: 'Hotel', ar: 'فندق' },
   };
 
+  /* Les canaux de vente sont une donnée du métier, pas une décision de mise
+   * en page. Ils décrivent les voies crédibles par lesquelles CE métier vend ;
+   * ils ne portent volontairement ni montant, ni objectif. Ces mesures
+   * n'existent pas encore dans le journal KiwiSales et leur place n'est pas
+   * dans un registre de vocabulaire. */
+  var CHANNEL = {
+    dining:    { fr: 'Salle',                 en: 'Dining room',          ar: 'القاعة' },
+    terrace:   { fr: 'Terrasse',              en: 'Terrace',              ar: 'الشرفة' },
+    counter:   { fr: 'Comptoir',              en: 'Counter',              ar: 'الشباك' },
+    takeaway:  { fr: 'À emporter',            en: 'Takeaway',             ar: 'للأخذ' },
+    delivery:  { fr: 'Livraison',             en: 'Delivery',             ar: 'التوصيل' },
+    catering:  { fr: 'Événements',            en: 'Events',               ar: 'المناسبات' },
+    pickup:    { fr: 'Réservation-retrait',   en: 'Reserve and collect',  ar: 'حجز واستلام' },
+    store:     { fr: 'En boutique',           en: 'In store',             ar: 'في المتجر' },
+    cabin:     { fr: 'En cabine',             en: 'Treatment room',       ar: 'في المقصورة' },
+    home:      { fr: 'À domicile',            en: 'At home',              ar: 'في المنزل' },
+    products:  { fr: 'Produits',              en: 'Products',             ar: 'المنتجات' },
+    club:      { fr: 'Au club',               en: 'At the club',          ar: 'في النادي' },
+    remote:    { fr: 'À distance',            en: 'Remote',               ar: 'عن بُعد' },
+    direct:    { fr: 'Réservation directe',   en: 'Direct booking',       ar: 'حجز مباشر' },
+    online:    { fr: 'Réservation en ligne',  en: 'Online booking',       ar: 'حجز عبر الإنترنت' },
+    onsite:    { fr: 'Sur place',             en: 'On site',              ar: 'في المكان' },
+  };
+  var CHANNELS_BY_BASE = {
+    restaurant: ['dining', 'terrace', 'takeaway', 'delivery'],
+    boutique:   ['counter', 'pickup', 'delivery'],
+    spa:        ['cabin', 'home', 'products'],
+    hotel:      ['onsite', 'direct', 'online'],
+  };
+  var CHANNELS_BY_TRADE = {
+    cafe:       ['dining', 'terrace', 'counter', 'takeaway'],
+    fastfood:   ['counter', 'takeaway', 'delivery'],
+    bakery:     ['counter', 'pickup', 'delivery'],
+    pizzeria:   ['dining', 'takeaway', 'delivery'],
+    traiteur:   ['catering', 'pickup', 'delivery'],
+    foodtruck:  ['counter', 'takeaway', 'catering'],
+    epicerie:   ['counter', 'delivery'],
+    pharmacie:  ['counter', 'pickup', 'delivery'],
+    librairie:  ['store', 'pickup', 'delivery'],
+    fleuriste:  ['store', 'pickup', 'delivery'],
+    pressing:   ['counter', 'pickup', 'delivery'],
+    coiffure:   ['cabin', 'home', 'products'],
+    sport:      ['club', 'remote', 'products'],
+    autre:      ['onsite', 'remote'],
+  };
+
   /* Les GROUPES sont une commodité d'affichage (les optgroup d'un menu
    * déroulant), pas une notion du moteur. Un commerçant cherche son métier
    * dans « Restauration », pas dans « base=restaurant ». */
@@ -123,6 +169,14 @@
     { id: 'fleuriste', base: 'boutique', group: 'retail',
       label: { fr: 'Fleuriste', en: 'Florist', ar: 'محل أزهار' },
       icon: ic('<path d="M12 22V12"/><path d="M12 12C9 12 7 9.5 7 6c4 0 5 2.5 5 6z"/><path d="M12 12c3 0 5-2.5 5-6-4 0-5 2.5-5 6z"/><path d="M8 22h8"/>') },
+    /* Le pressing a SON comptoir (assets/pressing-caisse.js) depuis le début —
+     * dépose, étiquettes par pièce, rack, retrait. Il manquait seulement ici,
+     * donc un vrai pressing devait choisir « Autre activité », atterrissait sur
+     * la base `boutique` et ouvrait la caisse boutique. Le métier existait, le
+     * chemin pour y arriver non. */
+    { id: 'pressing', base: 'boutique', group: 'retail',
+      label: { fr: 'Pressing / Blanchisserie', en: 'Dry cleaner / Laundry', ar: 'مغسلة' },
+      icon: ic('<path d="M12 3a2 2 0 00-1 3.73L3.6 11.4A1 1 0 004 13.3h16a1 1 0 00.4-1.9L13 6.73A2 2 0 0012 3z"/><path d="M4 13.3V19a2 2 0 002 2h12a2 2 0 002-2v-5.7"/>') },
 
     /* ── Beauté & bien-être ──────────────────────────────────────────── */
     { id: 'spa', base: 'spa', group: 'care', primary: true,
@@ -181,6 +235,8 @@
   alias('sport', ['Sport & bien-être', 'Gym', 'Fitness']);
   alias('boutique', ['Magasin', 'Retail', 'Prêt-à-porter', 'Pret a porter']);
   alias('epicerie', ['Superette', 'Supérette', 'Alimentation générale']);
+  alias('pressing', ['Blanchisserie', 'Laverie', 'Teinturerie', 'Nettoyage à sec', 'Nettoyage a sec',
+    'Dry cleaning', 'Dry cleaner', 'Laundry', 'Laundromat', 'صباغة', 'تنظيف جاف']);
   alias('hotel', ['Riad', 'Maison d’hôtes', 'Maison d\'hotes', 'Hotellerie', 'Hôtellerie']);
   /* Les familles elles-mêmes : « boutique » et « restaurant » sont déjà des
    * identifiants, « spa » aussi ; seul « hotel » a besoin d'être dit. */
@@ -230,6 +286,14 @@
     return fallback == null ? '' : fallback;
   }
   function baseLabel(b) { return tr(BASE_LABEL[b]) || ''; }
+  function channels(id) {
+    var tradeId = resolve(id);
+    var ids = CHANNELS_BY_TRADE[tradeId];
+    if (!ids) ids = CHANNELS_BY_BASE[base(id)] || CHANNELS_BY_TRADE.autre;
+    return ids.map(function (channelId) {
+      return { id: channelId, label: tr(CHANNEL[channelId]) || channelId };
+    });
+  }
   function all() { return LIST.slice(); }
   function primaries() { return LIST.filter(function (t) { return t.primary; }); }
   function secondaries() { return LIST.filter(function (t) { return !t.primary; }); }
@@ -272,9 +336,9 @@
   }
 
   window.KiwiTrades = {
-    LIST: LIST, BASES: BASES, GROUPS: GROUPS,
+    LIST: LIST, BASES: BASES, GROUPS: GROUPS, CHANNELS: CHANNEL,
     all: all, primaries: primaries, secondaries: secondaries,
     get: get, base: base, label: label, baseLabel: baseLabel, resolve: resolve,
-    cards: cards, options: options,
+    channels: channels, cards: cards, options: options,
   };
 })();

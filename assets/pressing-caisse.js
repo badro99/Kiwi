@@ -6,10 +6,12 @@
  * the demo story is an owner who runs his restaurant AND his pressing on the
  * same system, one login.
  *
- * Everything lives here: the module injects its own DOM (#pressing-screen)
- * into kiwi-caisse.html, reuses the caisse's modal kit classes (.modal-veil,
- * .modal, .ma-btn, .cash-*, .reader-*) + #toast-stack, and exposes
- * window.KiwiPressing.{unlock,lock}. No restaurant code is referenced.
+ * Le pressing est un vertical ORDINAIRE du dispatcher (assets/pos-dispatch.js),
+ * comme la boutique ou la pharmacie : il se déclare via KiwiPosDispatch.register,
+ * reçoit sa racine, sa chorégraphie de déverrouillage, son « Rafraîchir » et sa
+ * réimpression sans les réécrire. Il garde son propre préfixe CSS `.px-*` et
+ * réutilise le kit modal de la caisse (.modal-veil, .modal, .ma-btn, .cash-*,
+ * .reader-*) + #toast-stack. window.KiwiPressing reste exposé en compatibilité.
  *
  * The headline differentiator: intake is a VISUAL grid of garment cards
  * (illustrations, not text lists) — tap a garment, configure service/couleur/
@@ -394,14 +396,15 @@
      même numéro, sur les pièces comme sur le rack. Démo : aucun effet. */
   try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('pressing', ticketSeq); } catch (_) {}
 
-  /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
+  /* ═══════════════════════ ROOT ═══════════════════════ */
+  /* La racine vient du dispatcher (<div class="vx-screen" id="pos-pressing">) —
+   * on y ajoute `px-screen` pour les tokens et le prefixe maison, puis on
+   * construit l'intérieur. Plus d'appendChild : la couche, l'animation
+   * d'entrée et le verrouillage appartiennent au dispatcher. */
   let root = null;
-  function injectRoot() {
-    if (root) return;
-    root = document.createElement('div');
-    root.className = 'px-screen';
-    root.id = 'pressing-screen';
-    root.setAttribute('aria-hidden', 'true');
+  function build(rootEl) {
+    root = rootEl;
+    root.classList.add('px-screen');
     root.innerHTML = `
       <aside class="px-rail">
         <div class="px-brand">kiwi<i></i></div>
@@ -451,16 +454,12 @@
       <div class="modal-veil" id="px-wa-veil"><div class="modal px-wa px-rel" id="px-wam"></div></div>
       <div class="modal-veil" id="px-photo-veil"><div class="modal px-photo" id="px-photom"></div></div>
       <div class="modal-veil" id="px-scan-veil"><div class="modal px-scan px-rel" id="px-scanm"></div></div>`;
-    document.body.appendChild(root);
 
     $('#px-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-px-view]');
       if (b) switchView(b.dataset.pxView);
     });
     $('#px-lock', root).addEventListener('click', lock);
-    // Le pressing n'passe pas par le dispatcher : il pose son « Rafraîchir »
-    // lui-même, dans le même pied de rail (assets/caisse-refresh.js).
-    try { if (window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(root); } catch (_) {}
     $('#px-net', root).addEventListener('click', toggleOffline);
     /* fermer un modal en cliquant le voile */
     $$('.modal-veil', root).forEach((v) => {
@@ -472,51 +471,25 @@
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
 
   /* ═══════════════════════ UNLOCK / LOCK ═══════════════════════ */
-  function unlock() {
-    injectRoot();
-    const pinScreen = $('#pin-screen');
-    $$('#pin-dots .pin-dot').forEach((d, i) => setTimeout(() => d.classList.add('is-success'), i * 70));
-    setTimeout(() => {
-      if (pinScreen) pinScreen.classList.add('is-leaving');
-      document.body.classList.add('is-pressing', 'is-unlocked');
-    }, 460);
-    setTimeout(() => {
-      if (pinScreen) pinScreen.style.display = 'none';
-      entryFlash();
-    }, 940);
-  }
-
-  /* Greeting flash — same ritual as the cashier entry, pressing voice. */
-  function entryFlash() {
-    const g = document.createElement('div');
-    g.className = 'kiwi-greet';
-    g.setAttribute('aria-hidden', 'true');
-    g.innerHTML = `<div class="kiwi-greet-inner">
-      <h1>Sba7 lkhir${pvReal() ? '' : ' Sanae'}, <em>marhba.</em></h1>
-      <div class="kiwi-greet-sub">${esc(pvName('Pressing Marshan'))} <em>·</em> comptoir de dépôt</div>
-    </div>`;
-    document.body.appendChild(g);
-    requestAnimationFrame(() => { g.classList.add('is-visible'); g.setAttribute('aria-hidden', 'false'); });
-    setTimeout(() => {
-      g.classList.remove('is-visible');
-      showApp();
-    }, 2150);
-    setTimeout(() => g.remove(), 3000);
-  }
-
-  function showApp() {
+  /* Le dispatcher possède la chorégraphie : points du PIN, fondu de l'écran,
+   * flash de salutation (qui sait déjà taire le prénom de démo et nommer le
+   * vrai commerce), classes body, animation d'entrée. Il ne reste ici que
+   * l'état du comptoir. */
+  function enter() {
     state.unlocked = true;
     if (!state.ticket) freshTicket();
-    root.classList.add('is-entering');
-    root.setAttribute('aria-hidden', 'false');
-    setTimeout(() => root.classList.remove('is-entering'), 700);
     renderAll();
   }
 
   function lock() {
-    document.body.classList.remove('is-pressing', 'is-unlocked');
-    root.setAttribute('aria-hidden', 'true');
-    $$('.modal-veil.is-open', root).forEach((v) => v.classList.remove('is-open'));
+    if (window.KiwiPosDispatch) { window.KiwiPosDispatch.lock(); return; }
+    /* Filet : le module peut être chargé seul (tests, page isolée). */
+    document.body.classList.remove('is-pos', 'is-pos-pressing', 'is-unlocked');
+    if (root) {
+      root.classList.remove('is-on');
+      root.setAttribute('aria-hidden', 'true');
+      $$('.modal-veil.is-open', root).forEach((v) => v.classList.remove('is-open'));
+    }
     if (typeof window.__kiwiPinReset === 'function') window.__kiwiPinReset();
     toast('Terminal verrouillé');
   }
@@ -1064,13 +1037,39 @@
     openTags(order, { fresh: true });
   }
 
+  /* En-tête du ticket. L'enseigne, l'adresse et les identifiants légaux
+   * viennent de la fiche établissement partagée (assets/receipt.js), la même
+   * que la boutique : un vrai pressing imprimait jusqu'ici « PRESSING MARSHAN,
+   * Rue Assad Ibn Al Fourat, Tanger » sur SES tickets. Les lignes de la démo
+   * ne servent plus que de repli quand aucune fiche n'existe. */
+  function receiptHead() {
+    const K = window.KiwiReceipt;
+    const b = (K && K.business) ? K.business() : null;
+    const L = (b && b.legal) || {};
+    const name = (b && (b.tradeName || b.name)) || pvName('Pressing Marshan');
+    const rows = [];
+    const addr = [L.address, L.city].filter(Boolean).join(', ');
+    if (addr) rows.push(esc(addr));
+    else if (!pvReal()) rows.push('Rue Assad Ibn Al Fourat, Tanger');
+    if (L.phone) rows.push(esc(L.phone));
+    const ids = [
+      L.ice     && 'ICE ' + L.ice,
+      L.fiscal  && 'IF ' + L.fiscal,
+      L.rc      && 'RC ' + L.rc,
+      L.patente && 'Patente ' + L.patente,
+    ].filter(Boolean).map(esc);
+    if (ids.length) rows.push(ids.join(' · '));
+    rows.push('propulsé par Kiwi');
+    return `<div class="c b lg">${esc(String(name).toUpperCase())}</div>
+      <div class="c mut">${rows.join('<br>')}</div>`;
+  }
+
   function receiptHTML(o) {
     const c = custOf(o);
     const { sub, remise, total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `<div class="px-receipt">
-      <div class="c b lg">PRESSING MARSHAN</div>
-      <div class="c mut">Rue Assad Ibn Al Fourat, Tanger<br>05 39 93 XX XX · propulsé par Kiwi</div>
+      ${receiptHead()}
       <hr>
       <div class="row"><span>Ticket</span><span class="b">${o.id}</span></div>
       <div class="row"><span>Client</span><span>${esc(c.name)}</span></div>
@@ -1108,6 +1107,78 @@
     </div>`;
   }
 
+  /* Impression réelle du ticket de dépôt et des étiquettes.
+   *
+   * Ce bouton n'imprimait rien. Il affichait « Envoyé, ticket (80 mm) +
+   * étiquettes (imprimante thermique) » qu'une imprimante existe ou non — sur
+   * un comptoir sans thermique appairée, il annonçait à chaque dépôt un ticket
+   * qui n'est jamais sorti, et la caissière ne s'en apercevait qu'en cherchant
+   * le papier. Il imprime maintenant, et quand il ne peut pas il le dit.
+   *
+   * Deux chemins, jamais les deux en même temps (deux boîtes de dialogue
+   * empilées, c'est pire que pas d'impression) :
+   *   · thermique appairée → ESC/POS, le ticket puis les étiquettes ;
+   *   · rien d'appairé     → le pilote du système, ticket ET étiquettes sur la
+   *                          même page (« Enregistrer en PDF » compris).
+   * Les étiquettes partent en code128 : un identifiant de pièce comme
+   * « K2418-3 » n'est pas un EAN-13 et ne s'encode pas comme tel. */
+  function printOrderDocs(order) {
+    const KP = window.KiwiPrinter;
+    if (!KP) { toast('Impression indisponible sur cet appareil'); return; }
+    const n = order.pieces.length;
+    const plural = n > 1 ? 's' : '';
+
+    if (!(KP.isConnected && KP.isConnected() && window.KiwiEscPos)) {
+      KP.browserPrintHTML(
+        `<div class="px-print">${receiptHTML(order)}${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>`,
+        (KP.getConfig && KP.getConfig().paper) || '80'
+      );
+      toast(`Impression système, ticket + ${n} étiquette${plural}`);
+      return;
+    }
+
+    const K = window.KiwiReceipt;
+    const b = (K && K.business) ? K.business() : null;
+    const L = (b && b.legal) || {};
+    const { total } = orderTotals(order);
+    const doc = {
+      shop: (b && (b.tradeName || b.name)) || pvName('Pressing Marshan'),
+      address: [L.address, L.city].filter(Boolean).join(', '),
+      phone: L.phone || '',
+      ref: order.id,
+      date: fmtDT(order.droppedAt),
+      lines: order.lines.map((ln) => {
+        const item = ITEMS[ln.itemId];
+        const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
+        return { qty: ln.qty, name: `${item.label}${variant ? ` (${variant})` : ''} · ${svcCodes(ln.services)}`, price: lineTotal(ln) };
+      }),
+      total: `${total} MAD`,
+      method: order.pay.mode === 'compte' ? 'Sur compte' : (order.pay.paid ? `${order.pay.paid} MAD payés` : 'Solde au retrait'),
+      footer: `PRÊT LE ${fmtDT(order.readyAt)} · ${n} pièce${plural}`,
+    };
+
+    const labels = order.pieces.map((p) => ({
+      title: order.id,
+      sub: `${custOf(order).name} · pièce ${p.n}/${p.of}`,
+      code: p.pid,
+      format: 'code128',
+    }));
+
+    toast('Impression…');
+    Promise.resolve(KP.printReceipt(doc))
+      .then((r) => {
+        if (!r || !r.ok) { toast('Ticket non imprimé, imprimante injoignable'); return null; }
+        return KP.printLabels(labels);
+      })
+      .then((r) => {
+        if (r === null) return;
+        toast(r && r.ok
+          ? `Ticket + ${n} étiquette${plural} imprimé${plural}`
+          : `Ticket imprimé, ${n} étiquette${plural} non imprimée${plural}`);
+      })
+      .catch(() => toast('Impression échouée'));
+  }
+
   function openTags(order, ctx) {
     const el = $('#px-tagsm', root);
     const fresh = ctx && ctx.fresh;
@@ -1129,7 +1200,7 @@
     openVeil('#px-tags-veil');
     icons();
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-tags-veil'); });
-    $('#px-tags-print', el).onclick = () => toast('Envoyé, ticket (80 mm) + étiquettes (imprimante thermique)');
+    $('#px-tags-print', el).onclick = () => printOrderDocs(order);
     const payBtn = $('#px-tags-pay', el);
     if (payBtn) payBtn.onclick = () => { closeVeil('#px-tags-veil'); openPay(order, { fresh: true }); };
   }
@@ -1307,17 +1378,28 @@
         </div>`;
       icons();
       $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      /* Le pressing peignait la coche verte au bout d'un timer : sur une vraie
+         caisse sans lecteur configuré, il déclarait donc « Khlass ! Paiement
+         confirmé » pour un paiement que personne n'avait autorisé, et la
+         commande partait payée. KiwiHardware.authorizeCard est l'adaptateur
+         partagé des quinze autres métiers — il ne peint la réussite qu'après
+         un approved=true, et en production sans terminal il refuse. */
       setTimeout(() => {
         const disc = $('#px-reader-disc', el);
+        const st = $('#px-reader-status', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#px-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#px-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done(amount, 'carte', mode, 0), 900);
-      }, 1900);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) {
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · lecteur indisponible';
+          return;
+        }
+        hw.authorizeCard(amount, disc, st).then((result) => {
+          icons();
+          if (!result || !result.approved) { toast('Paiement carte non confirmé'); return; }
+          setTimeout(() => done(amount, 'carte', mode, 0), 900);
+        });
+      }, 1200);
     };
 
     const done = (amount, method, mode, rendu) => {
@@ -1724,7 +1806,7 @@
         renderRetrait(); icons();
         toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
       } else {
-        toast('Aucune commande prête à scanner (démo)');
+        toast('Aucune commande prête à scanner');
       }
     }, 1500);
   }
@@ -1826,10 +1908,26 @@
     $('#px-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
   }
 
-  /* ═══════════════════════ boot ═══════════════════════ */
-  function boot() { injectRoot(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  /* ═══════════════════════ enregistrement ═══════════════════════ */
+  /* Chargé à la demande par le dispatcher au premier 0000 : plus de DOM injecté
+   * au démarrage de la caisse restaurant, plus de CSS ni de JS pressing sur le
+   * chemin critique des quinze autres métiers. */
+  if (window.KiwiPosDispatch) {
+    window.KiwiPosDispatch.register({
+      id: 'pressing',
+      greet: { line1: 'Sba7 lkhir Sanae,', em: 'marhba.',
+               sub: 'Pressing Marshan <em>·</em> comptoir de dépôt' },
+      mount(rootEl) { build(rootEl); enter(); },
+      onShow() { enter(); },
+    });
+  }
 
-  window.KiwiPressing = { unlock, lock };
+  /* Compat : d'anciens raccourcis (et les tests) appellent encore
+   * KiwiPressing.unlock() directement. */
+  window.KiwiPressing = {
+    unlock() {
+      if (window.KiwiPosDispatch) return window.KiwiPosDispatch.unlockById('pressing');
+    },
+    lock,
+  };
 })();

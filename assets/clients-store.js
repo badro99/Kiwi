@@ -36,15 +36,14 @@
   function now() { return Date.now(); }
   function daysSince(ts) { return ts ? Math.floor((now() - ts) / DAY) : Infinity; }
 
-  // the POS vertical currently unlocked on the caisse. pos-* verticals carry
-  // is-pos-<id>; the pressing carries is-pressing; the main café/resto caisse only
-  // is-unlocked. Order matters — is-pos-* also has is-unlocked.
+  // the POS vertical currently unlocked on the caisse. Every vertical, pressing
+  // included, carries is-pos-<id>; the main café/resto caisse only is-unlocked.
+  // Order matters — is-pos-* also has is-unlocked.
   function activePosId() {
     try {
       var cls = document.body.className || '';
       var m = cls.match(/is-pos-([a-z0-9]+)/);
       if (m) return m[1];
-      if (/\bis-pressing\b/.test(cls)) return 'pressing';
       if (/\bis-unlocked\b/.test(cls)) return 'restaurant';
       return '';
     } catch (_) { return ''; }

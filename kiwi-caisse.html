@@ -70,11 +70,9 @@
 
   <script src="assets/lucide.min.js" defer></script>
 
-  <!-- Pressing mode (PIN 0000 — assets/pressing-caisse.js injects its own DOM,
-       scoped to body.is-pressing; any other code = restaurant caisse untouched).
-       liquid-lens.js is the brand's segmented-control motion: its selectors
-       match nothing in the restaurant markup, only the pressing's data-lens
-       opt-ins. -->
+  <!-- liquid-lens.js is the brand's segmented-control motion: its selectors
+       match nothing in the restaurant markup, only the data-lens opt-ins of the
+       lazy-loaded métiers (dont le pressing). -->
   <script src="assets/liquid-lens.js" defer></script>
   <script src="assets/caisse-motion.js" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
@@ -86,8 +84,6 @@
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
   <script src="assets/pos-sale.js" defer></script>
-  <link rel="stylesheet" href="assets/pressing-caisse.css" />
-  <script src="assets/pressing-caisse.js" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
        Loaded here so the lazy-loaded boutique vertical (PIN 0002) and the
        dashboard read/write the SAME product catalog (localStorage). -->
@@ -105,8 +101,9 @@
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
   <script src="assets/caisse-lang.js" defer></script>
-  <!-- Multi-métier PIN dispatcher: 0002–0015 lazy-load one POS vertical each
-       (assets/pos-<id>.{js,css}). Tap the pin-foot note for the code legend.
+  <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
+       each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
+       pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
   <script src="assets/pos-dispatch.js" defer></script>
   <script src="assets/pos-mobile.js" defer></script>
@@ -4592,7 +4589,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
       </button>
     </div>
-    <div class="pin-foot">Démo · 0000 pressing · 0001 cuisine · 0002–0015 métiers, toucher ici pour la liste · autre = caissier</div>
+    <div class="pin-foot">Démo · 0001 cuisine · 0000–0015 métiers, toucher ici pour la liste · autre = caissier</div>
     <!-- Escape hatch: merchant / operator on this PIN screen who wants to sign
          in with a different account. /auth/logout clears kiwi_sess server-side
          and lands on the login page. Plain <a> so it works even if JS is dead. -->
@@ -11780,11 +11777,10 @@
       pinBuffer += v;
       renderPinDots();
       if (pinBuffer.length === 4) {
-        // Demo: 0000 → pressing · 0001 → écran cuisine · 0002–0015 → métiers (dispatcher) · autre → caissier
-        if (pinBuffer === '0000' && window.KiwiPressing) setTimeout(() => window.KiwiPressing.unlock(), 180);
-        else if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
+        // 0001 → écran cuisine · 0000 + 0002–0015 → métiers (dispatcher) · autre → caissier
+        if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
         else if (window.KiwiPosDispatch && window.KiwiPosDispatch.has(pinBuffer)) { const p = pinBuffer; setTimeout(() => window.KiwiPosDispatch.unlock(p), 180); }
-        else                           setTimeout(unlockApp, 180);
+        else                      setTimeout(unlockApp, 180);
       }
     });
     document.addEventListener('keydown', (e) => {
@@ -11793,10 +11789,9 @@
         pinBuffer += e.key;
         renderPinDots();
         if (pinBuffer.length === 4) {
-          if (pinBuffer === '0000' && window.KiwiPressing) setTimeout(() => window.KiwiPressing.unlock(), 180);
-          else if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
+          if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
           else if (window.KiwiPosDispatch && window.KiwiPosDispatch.has(pinBuffer)) { const p = pinBuffer; setTimeout(() => window.KiwiPosDispatch.unlock(p), 180); }
-          else                           setTimeout(unlockApp, 180);
+          else                      setTimeout(unlockApp, 180);
         }
       } else if (e.key === 'Backspace') {
         pinBuffer = pinBuffer.slice(0, -1);
