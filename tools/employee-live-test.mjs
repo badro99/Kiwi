@@ -207,11 +207,17 @@ pausedDoc.entries[0].pauseTs = Date.now() - 30 * 60000;
 put("UPDATE store_docs SET data=? WHERE merchant='amira-cafe' AND feature='attendance'", JSON.stringify(pausedDoc));
 const resume = await teamLivePost({ action: 'manager-resume', memberId: 'mem-sara' });
 ok(resume.status === 200, 'la caisse termine la pause et ferme sa période');
-const cout = await post({ action: 'clock-out' }, cookie);
+const cout = await post({ action: 'clock-out', progress: { paid: 9, revenue: 1200, turnMinutes: 270 } }, cookie);
 ok(cout.status === 200, 'le pointage de sortie ferme le service');
 const teamAfter = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
 const day = Object.values(teamAfter.hours['mem-sara'])[0];
 ok(day >= 1.49 && day <= 1.51, 'les heures pointées excluent la pause dans Paie & planning');
+const historyState = await get(cookie); const history = await historyState.json();
+ok(Object.values(history.pointedHours || {}).some((value) => value >= 1.49 && value <= 1.51),
+  "l'employé conserve son historique vérifiable directement depuis les pointages");
+ok(history.progress.lifetimeXP === 102 && history.progress.records.bestNight === 9
+  && history.progress.records.bestSpeed === 30 && history.progress.records.streak === 1,
+  'grade et records viennent du service réel et sont conservés dans le cloud');
 
 const anon = await get('');
 ok(anon.status === 401, 'planning, collègues et salle restent privés sans session employé');
@@ -259,6 +265,18 @@ ok(serviceSource.includes('data-tab="notifications"')
   && !serviceSource.includes('data-tab="paiement"')
   && serviceSource.includes('serviceNotifications.unshift'),
   'le troisième onglet est un centre de notifications avec historique, plus un raccourci paiement');
+ok(serviceSource.includes('id="hours-history-modal"')
+  && serviceSource.includes('liveEmployeeState.pointedHours')
+  && serviceSource.includes('Aucune heure enregistrée pour ce mois.'),
+  "l'employé peut contrôler chaque mois depuis le registre de pointage");
+const challengeBlock = serviceSource.match(/const KG_DEFIS = \[([\s\S]*?)\n\s*\];/);
+ok(challengeBlock && (challengeBlock[1].match(/metric:/g) || []).length >= 14
+  && serviceSource.includes('kgDayNumber % KG_DEFIS.length'),
+  'quatorze défis distincts tournent sans répétition pendant deux semaines');
+ok(serviceSource.includes("lifetimeXP: 0")
+  && serviceSource.includes("bestNight: 0")
+  && !serviceSource.includes("lifetimeXP: 2400"),
+  'un nouveau compte commence sans grade ni records de démonstration');
 const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
