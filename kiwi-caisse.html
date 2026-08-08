@@ -15148,9 +15148,14 @@
     window.addEventListener('beforeunload', persistShift);
     setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} }, 5000);
     setInterval(publishServiceFloor, 4000);
-    setInterval(pollEmployeeFloor, 4000);
+    /* Employee actions are interactive caisse state, not background reporting.
+       Four seconds left a paid/closed table visibly open long enough for the
+       cashier to reuse it or refresh the whole app. Read employee writes every
+       second; publishing the full caisse snapshot can stay on its quieter
+       cadence. The in-flight guard above prevents overlapping requests. */
+    setInterval(pollEmployeeFloor, 1000);
     setTimeout(publishServiceFloor, 800);
-    setTimeout(pollEmployeeFloor, 1600);
+    setTimeout(pollEmployeeFloor, 250);
 
     /* ---------- Lucide first paint ---------- */
     document.addEventListener('DOMContentLoaded', () => {

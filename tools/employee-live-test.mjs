@@ -282,6 +282,9 @@ ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
   && serviceSource.includes('Object.keys(data.states || {})'),
   "les états ouverts, réglés et libérés remontent de la caisse vers l'app employé");
+ok(caisseSource.includes('setInterval(pollEmployeeFloor, 1000)')
+  && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)'),
+  'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(serviceSource.includes("'a-commander':  'À commander'")
   && serviceSource.includes("t.status === 'a-commander' || t.status === 'ka-yaklo'")
   && /if \(action === 'take-order'\)[\s\S]*?t\.status = 'ka-yaklo'/.test(serviceSource),
