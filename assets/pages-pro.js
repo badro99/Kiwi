@@ -12532,6 +12532,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .sc-gift .s { font-size: 12px; color: #c6ead4; margin-top: 4px; }
     .sc-gift .ac { display: flex; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
+    /* Climat sombre : la carte cadeau ne peut plus « descendre » vers le noir —
+     * la page l'est déjà, et l'arrivée opaque #15201A pose un bloc mat au milieu
+     * d'un panneau translucide. Elle monte à la place, comme tous les inverses
+     * de ce climat. En clair la règle de base reste la bonne : vert profond vers
+     * presque-noir, texte bone par-dessus. */
+    html[data-theme="dark"] .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), var(--inverse-line)); }
 
     .sc-amounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
     .sc-amount { padding: 12px 8px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; text-align: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; font-family: var(--mono); font-size: 13px; font-weight: 500; }
