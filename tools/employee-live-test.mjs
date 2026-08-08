@@ -222,6 +222,16 @@ ok(/function pollServiceSync\(\)[\s\S]*?if \(window\.KiwiEmployeeLive\)/.test(se
   "équipe, planning et plan de salle se relisent sur la boucle Wi-Fi courte");
 ok(serviceSource.includes("emoji: String(c.emoji || '')") && serviceSource.includes("v.emoji ? `${esc(v.emoji)} `"),
   "les emojis des options publiés par le dashboard restent visibles dans l'app employé");
+ok(serviceSource.includes('data-tab="notifications"')
+  && serviceSource.includes('id="notification-list"')
+  && !serviceSource.includes('data-tab="paiement"')
+  && serviceSource.includes('serviceNotifications.unshift'),
+  'le troisième onglet est un centre de notifications avec historique, plus un raccourci paiement');
+const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+ok(caisseSource.includes('function publishServiceFloor()')
+  && caisseSource.includes("snapshot: { tables: live }")
+  && serviceSource.includes('Object.keys(data.states || {})'),
+  "les états ouverts, réglés et libérés remontent de la caisse vers l'app employé");
 ok(serviceSource.includes('--app-height: 100dvh')
   && serviceSource.includes('height: var(--app-height)')
   && serviceSource.includes('--safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px)')

@@ -7317,6 +7317,11 @@
     }
 
     function refreshTableNode(id) {
+      /* Every live table transition also schedules the reverse Wi-Fi bridge.
+         The snapshot signature suppresses duplicates, so callers stay simple
+         while short-lived states such as `khlass` cannot disappear before the
+         four-second heartbeat sees them. */
+      try { setTimeout(publishServiceFloor, 0); } catch (_) {}
       const t = tables[id];
       if (!t) return;
       /* Le plan SPATIAL (celui que tout vrai commerçant obtient dès qu'il a
@@ -14721,6 +14726,35 @@
     function currentMerchantSlug() {
       try { return (storePaired() || {}).merchant || ''; } catch (_) { return ''; }
     }
+    /* The caisse owns the live table state. Geometry and assignments come from
+       floorplan, but occupied / bill / paid are service facts and must travel
+       back to every employee phone. A compact snapshot makes every transition
+       observable, including paths (cash, card, split, cancel, waitlist) that do
+       not share one click handler. The server diffs snapshots and keeps the
+       resulting notification history. */
+    let serviceFloorSignature = '';
+    let serviceFloorPublishing = false;
+    function publishServiceFloor() {
+      if (serviceFloorPublishing || !storeIsReal()) return;
+      const merchant = currentMerchantSlug();
+      if (!merchant) return;
+      const live = Object.keys(tables).map((id) => ({
+        table: String(id), status: String(tables[id].status || 'khawya'),
+        covers: Math.max(0, Number(tables[id].covers) || 0),
+      })).sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
+      if (!live.length) return;
+      const signature = JSON.stringify(live);
+      if (signature === serviceFloorSignature) return;
+      serviceFloorPublishing = true;
+      fetch('/api/service/events', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant, snapshot: { tables: live } }),
+      }).then((r) => {
+        if (!r.ok) throw new Error('floor-sync-' + r.status);
+        serviceFloorSignature = signature;
+      }).catch(() => {}).finally(() => { serviceFloorPublishing = false; });
+    }
     let shiftMerchant = currentMerchantSlug();
 
     function persistShift() {
@@ -14976,6 +15010,8 @@
        toutes les cinq secondes n'apprendrait rien de plus au tableau de bord. */
     window.addEventListener('beforeunload', persistShift);
     setInterval(() => { persistShift(); try { saveProvisional(); } catch (_) {} }, 5000);
+    setInterval(publishServiceFloor, 4000);
+    setTimeout(publishServiceFloor, 800);
 
     /* ---------- Lucide first paint ---------- */
     document.addEventListener('DOMContentLoaded', () => {

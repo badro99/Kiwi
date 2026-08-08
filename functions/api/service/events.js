@@ -5,6 +5,7 @@ import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.j
 
 const FEATURE = 'service-events';
 const MAX_EVENTS = 200;
+const TABLE_STATUSES = new Set(['khawya', 'a-commander', 'ka-yaklo', 'bgha-ykhlass', 'ka-tkhdam', 'khlass']);
 
 function parse(raw) {
   try { const d = JSON.parse(raw || '{}'); return d && typeof d === 'object' ? d : {}; }
@@ -25,12 +26,14 @@ async function readDoc(env, merchant) {
     return { data: parse(row && row.data), rev: Number(row && row.rev) || 0 };
   } catch (_) { return { data: {}, rev: 0 }; }
 }
-async function append(env, merchant, event) {
+async function append(env, merchant, event, statePatch) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const row = await readDoc(env, merchant);
     const events = Array.isArray(row.data.events) ? row.data.events.slice(-MAX_EVENTS + 1) : [];
     events.push(event);
-    const text = JSON.stringify({ events });
+    const states = { ...(row.data.states && typeof row.data.states === 'object' ? row.data.states : {}) };
+    if (statePatch && statePatch.table) states[statePatch.table] = statePatch;
+    const text = JSON.stringify({ ...row.data, events, states });
     try {
       if (row.rev) {
         const res = await env.DB.prepare(
@@ -46,6 +49,71 @@ async function append(env, merchant, event) {
     } catch (_) { return false; }
   }
   return false;
+}
+
+function tableKey(value) {
+  return String(value || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
+}
+async function floorTargets(env, merchant) {
+  const out = Object.create(null);
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'")
+      .bind(merchant).first();
+    const plan = parse(row && row.data);
+    const staff = Object.create(null);
+    (Array.isArray(plan.staff) ? plan.staff : []).forEach((s) => { if (s && s.id) staff[String(s.id)] = String(s.name || ''); });
+    (Array.isArray(plan.tables) ? plan.tables : []).forEach((t) => {
+      const table = tableKey(t && (t.num || t.id));
+      if (!table) return;
+      out[table] = { serverId: String(t.server || ''), server: String(staff[t.server] || '') };
+    });
+  } catch (_) {}
+  return out;
+}
+async function syncTableSnapshot(env, merchant, rawTables) {
+  const targets = await floorTargets(env, merchant);
+  const incoming = Object.create(null);
+  (Array.isArray(rawTables) ? rawTables : []).slice(0, 250).forEach((src) => {
+    const table = tableKey(src && src.table);
+    const status = String(src && src.status || '');
+    if (!table || !TABLE_STATUSES.has(status)) return;
+    incoming[table] = { table, status, covers: Math.max(0, Math.min(99, Number(src.covers) || 0)) };
+  });
+  if (!Object.keys(incoming).length) return { ok: false, events: [] };
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await readDoc(env, merchant);
+    const previous = row.data.states && typeof row.data.states === 'object' ? row.data.states : {};
+    const states = { ...previous };
+    const events = Array.isArray(row.data.events) ? row.data.events.slice(-MAX_EVENTS) : [];
+    const emitted = [];
+    Object.keys(incoming).forEach((table) => {
+      const next = incoming[table], before = previous[table];
+      states[table] = { ...next, ts: Date.now() };
+      if (!before || before.status === next.status) return;
+      const target = targets[table] || {};
+      const event = {
+        id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: Date.now(),
+        table, status: next.status, previousStatus: String(before.status || ''), covers: next.covers,
+        serverId: target.serverId || '', server: target.server || '',
+      };
+      events.push(event); emitted.push(event);
+    });
+    const text = JSON.stringify({ ...row.data, states, events: events.slice(-MAX_EVENTS) });
+    try {
+      if (row.rev) {
+        const res = await env.DB.prepare(
+          'UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?'
+        ).bind(text, row.rev + 1, Date.now(), merchant, FEATURE, row.rev).run();
+        if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, events: emitted };
+      } else {
+        const res = await env.DB.prepare(
+          'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)'
+        ).bind(merchant, FEATURE, text, Date.now()).run();
+        if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, events: emitted };
+      }
+    } catch (_) { return { ok: false, events: [] }; }
+  }
+  return { ok: false, events: [] };
 }
 
 export async function onRequestGet({ request, env }) {
@@ -86,7 +154,7 @@ export async function onRequestGet({ request, env }) {
       return direct || coverage;
     })
     .slice(-MAX_EVENTS);
-  return json({ ok: true, events, now: Date.now() });
+  return json({ ok: true, events, states: row.data.states || {}, now: Date.now() });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -96,6 +164,10 @@ export async function onRequestPost({ request, env }) {
   const asked = String(body.merchant || '').trim().toLowerCase().slice(0, 64);
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  if (body.snapshot && Array.isArray(body.snapshot.tables)) {
+    const result = await syncTableSnapshot(env, merchant, body.snapshot.tables);
+    return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'snapshot-write-failed' }, 503);
+  }
   const src = body.event && typeof body.event === 'object' ? body.event : {};
   if (String(src.type || '') !== 'table-seated') return json({ error: 'bad-event-type' }, 400);
   const event = {
@@ -107,6 +179,7 @@ export async function onRequestPost({ request, env }) {
     covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
   };
   if (!event.table || (!event.serverId && !event.server)) return json({ error: 'event-target-required' }, 400);
-  if (!await append(env, merchant, event)) return json({ error: 'event-write-failed' }, 503);
+  const state = { table: event.table, status: 'a-commander', covers: event.covers, ts: event.ts };
+  if (!await append(env, merchant, event, state)) return json({ error: 'event-write-failed' }, 503);
   return json({ ok: true, event });
 }

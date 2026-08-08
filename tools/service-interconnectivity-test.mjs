@@ -125,6 +125,27 @@ request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}
 response = await eventsGet({ request, env }); const omarEvents = await json(response);
 ok(response.status === 200 && omarEvents.events.length === 0, "le collègue non affecté ne reçoit pas l'évènement");
 
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4 }, { table: '2', status: 'khawya', covers: 2 }] },
+}) });
+response = await eventsPost({ request, env });
+ok(response.status === 200, 'la caisse publie son état de salle complet vers le cloud');
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
+response = await eventsGet({ request, env }); const openedState = await json(response);
+ok(openedState.states['1'] && openedState.states['1'].status === 'ka-yaklo',
+  "la table ouverte en caisse remplace l'état vide du téléphone serveur");
+ok(openedState.events.some((event) => event.type === 'table-state' && event.table === '1' && event.status === 'ka-yaklo'),
+  'le serveur affecté garde la notification de table ouverte dans son historique');
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'khlass', covers: 4 }, { table: '2', status: 'khawya', covers: 2 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
+response = await eventsGet({ request, env }); const paidState = await json(response);
+ok(paidState.states['1'] && paidState.states['1'].status === 'khlass'
+  && paidState.events.some((event) => event.table === '1' && event.status === 'khlass'),
+  "l'addition réglée en caisse atteint la table et le centre de notifications du serveur");
+
 request = new Request('https://kiwi.test/api/employee', { method: 'POST', headers: { Cookie: omarCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pause' }) });
 response = await employeePost({ request, env });
 ok(response.status === 200, 'Omar signale sa pause dans le pointage partagé');

@@ -1276,9 +1276,30 @@ em, i, cite, dfn, var { font-style: normal; }
     .menu-cart-arrow svg { width: 18px; height: 18px; }
 
     /* ===========================================================
-       PAIEMENT TAB
+       NOTIFICATIONS TAB
        =========================================================== */
-    .tab-paiement { padding: 16px 16px 24px; gap: 14px; }
+    .tab-notifications { padding: 16px 16px 24px; gap: 12px; }
+    .notification-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .notification-head h2 { margin: 0; font-size: 20px; letter-spacing: -0.025em; }
+    .notification-head span { color: var(--ink-4); font-size: 11px; }
+    .notification-list { display: flex; flex-direction: column; gap: 8px; }
+    .notification-card {
+      width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left;
+      padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r-xl);
+      background: var(--surface); box-shadow: var(--shadow-1);
+    }
+    .notification-card.is-unread { border-color: var(--mint-edge); background: var(--mint-tint); }
+    .notification-icon {
+      width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; color: var(--forest);
+      background: var(--paper-mute);
+    }
+    .notification-card.is-unread .notification-icon { background: var(--surface); }
+    .notification-icon svg { width: 18px; height: 18px; }
+    .notification-copy { flex: 1; min-width: 0; }
+    .notification-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+    .notification-body { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
+    .notification-time { margin-top: 5px; font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); }
 
     .empty-state {
       padding: 50px 24px;
@@ -3029,10 +3050,13 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="menu-grid" id="menu-grid"></div>
           </div>
 
-          <!-- PAIEMENT TAB -->
-          <div class="tab tab-paiement" data-tab="paiement" hidden>
-            <div class="section-title">Tables à encaisser</div>
-            <div id="paiement-list"></div>
+          <!-- NOTIFICATIONS TAB -->
+          <div class="tab tab-notifications" data-tab="notifications" hidden>
+            <div class="notification-head">
+              <h2>Notifications</h2>
+              <span>Votre service en direct</span>
+            </div>
+            <div class="notification-list" id="notification-list"></div>
           </div>
 
           <!-- PROFIL TAB -->
@@ -3211,9 +3235,9 @@ em, i, cite, dfn, var { font-style: normal; }
             <button class="bt-btn" data-tab="menu" aria-pressed="false" aria-label="Menu">
               <i data-lucide="book-open"></i>
             </button>
-            <button class="bt-btn" data-tab="paiement" aria-pressed="false" aria-label="Paiement">
-              <i data-lucide="credit-card"></i>
-              <span class="bt-badge" id="bt-pay-badge" hidden>0</span>
+            <button class="bt-btn" data-tab="notifications" aria-pressed="false" aria-label="Notifications">
+              <i data-lucide="bell"></i>
+              <span class="bt-badge" id="bt-notification-badge" hidden>0</span>
             </button>
             <button class="bt-btn" data-tab="profil" aria-pressed="false" aria-label="Profil">
               <i data-lucide="user"></i>
@@ -4198,7 +4222,7 @@ em, i, cite, dfn, var { font-style: normal; }
     const ROLES = {
       serveur: {
         id: 'yassir',  name: 'Yassir', fullName: 'Yassir K.',  initials: 'YK',
-        role: 'Serveur',  tabs: ['tables', 'menu', 'paiement', 'profil'],
+        role: 'Serveur',  tabs: ['tables', 'menu', 'notifications', 'profil'],
         defaultTab: 'tables', restricted: false,
       },
       plongeur: {
@@ -4402,6 +4426,8 @@ em, i, cite, dfn, var { font-style: normal; }
     const serviceEventSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
+    const serviceNotifications = [];
+    let serviceUnread = 0;
 
     function serviceNorm(value) {
       let s = String(value || '').trim().toLowerCase();
@@ -4412,7 +4438,17 @@ em, i, cite, dfn, var { font-style: normal; }
       const wanted = serviceNorm(value).replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
       return Object.keys(tables).find((id) => serviceNorm(id).replace(/^t(?=\d+$)/, '') === wanted) || '';
     }
-    function serviceNotify(title, body) {
+    function serviceNotify(title, body, meta) {
+      serviceNotifications.unshift({
+        id: (meta && meta.id) || ('notice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+        title: String(title || 'Notification'), body: String(body || ''),
+        table: String(meta && meta.table || ''), type: String(meta && meta.type || 'service'),
+        ts: Number(meta && meta.ts) || Date.now(), unread: currentTab !== 'notifications',
+      });
+      if (serviceNotifications.length > 100) serviceNotifications.length = 100;
+      if (currentTab !== 'notifications') serviceUnread++;
+      try { renderNotifications(); } catch (_) {}
+      updateNotificationBadge();
       toast(body ? `${title} · ${body}` : title, 4200);
       try { if (navigator.vibrate) navigator.vibrate([45, 55, 45]); } catch (_) {}
       try {
@@ -4440,9 +4476,9 @@ em, i, cite, dfn, var { font-style: normal; }
         const table = serviceTableId(order.table) || order.table || '';
         const shouldNotify = !isEmployeePaused() && (serviceMineTables.has(table) || servicePausedTables.has(table));
         if (shouldNotify && order.status === 'pending' && before !== 'pending') {
-          serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim());
+          serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim(), { table, type: 'orderpro', id: 'order-' + order.id + '-pending', ts: order.updated_ts });
         } else if (shouldNotify && order.status === 'ready' && before !== 'ready') {
-          serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim());
+          serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim(), { table, type: 'ready', id: 'order-' + order.id + '-ready', ts: order.updated_ts });
         }
       });
       try { renderAll(); } catch (_) {}
@@ -4450,17 +4486,35 @@ em, i, cite, dfn, var { font-style: normal; }
     function ingestServiceEvents(data) {
       if (!data || !data.ok) return;
       serviceEventSince = data.now || serviceEventSince;
+      Object.keys(data.states || {}).forEach((key) => {
+        const state = data.states[key] || {};
+        const id = serviceTableId(state.table || key) || String(state.table || key);
+        if (!tables[id]) return;
+        tables[id].status = state.status || tables[id].status;
+        if (state.covers) tables[id].covers = state.covers;
+        if (state.status === 'khawya' || state.status === 'khlass') tables[id].elapsed = 0;
+      });
       (data.events || []).forEach((event) => {
         if (!event || serviceEventSeen.has(event.id)) return;
         serviceEventSeen.add(event.id);
-        if (event.type !== 'table-seated') return;
         const id = serviceTableId(event.table) || event.table;
-        if (tables[id]) {
+        if (event.type === 'table-seated' && tables[id]) {
           tables[id].status = 'a-commander';
           tables[id].covers = event.covers || tables[id].covers;
           tables[id].elapsed = 0;
+          serviceNotify(`Table ${id}`, `${event.customer || 'Clients'} installé${event.covers ? ` · ${event.covers} pers.` : ''} · menus à apporter`, { table: id, type: event.type, id: event.id, ts: event.ts });
+          return;
         }
-        serviceNotify(`Table ${id}`, `${event.customer || 'Clients'} installé${event.covers ? ` · ${event.covers} pers.` : ''} · menus à apporter`);
+        if (event.type !== 'table-state') return;
+        const messages = {
+          'a-commander': 'Clients installés · menus à apporter',
+          'ka-yaklo': 'Table ouverte · commande en cours',
+          'bgha-ykhlass': 'Addition demandée',
+          'ka-tkhdam': 'Paiement en cours',
+          'khlass': 'Addition réglée',
+          'khawya': 'Table libérée',
+        };
+        if (messages[event.status]) serviceNotify(`Table ${id}`, messages[event.status], { table: id, type: event.status, id: event.id, ts: event.ts });
       });
       try { renderAll(); } catch (_) {}
     }
@@ -4813,7 +4867,12 @@ em, i, cite, dfn, var { font-style: normal; }
       // Refresh content per tab
       if (name === 'tables')   renderTables();
       if (name === 'menu')     { renderMenuContext(); renderCatPills(); renderMenu(); }
-      if (name === 'paiement') renderPaiement();
+      if (name === 'notifications') {
+        serviceUnread = 0;
+        serviceNotifications.forEach((item) => { item.unread = false; });
+        renderNotifications();
+        updateNotificationBadge();
+      }
       if (name === 'profil')   renderProfil();
       // Always update cart bar visibility on tab switch
       renderCartBar();
@@ -4834,15 +4893,14 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     function updateFilterCounts() {
-      // Bottom-tab "Paiement" badge: count tables that demand the bill
-      const bghaCnt = Object.values(tables).filter(t => t.status === 'bgha-ykhlass').length;
-      const badge = $('#bt-pay-badge');
-      if (bghaCnt > 0) {
-        badge.textContent = bghaCnt;
-        badge.hidden = false;
-      } else {
-        badge.hidden = true;
-      }
+      updateNotificationBadge();
+    }
+
+    function updateNotificationBadge() {
+      const badge = $('#bt-notification-badge');
+      if (!badge) return;
+      badge.textContent = serviceUnread > 99 ? '99+' : String(serviceUnread);
+      badge.hidden = serviceUnread < 1;
     }
 
     function filterMatches(t) {
@@ -5676,30 +5734,48 @@ em, i, cite, dfn, var { font-style: normal; }
       lucide.createIcons();
     });
 
-    /* ---------- Paiement tab ---------- */
-    function renderPaiement() {
-      const list = $('#paiement-list');
-      // Sort: own tables first, then colleagues
-      const payable = Object.keys(tables)
-        .filter(id => tables[id].status === 'bgha-ykhlass')
-        .sort((a, b) => {
-          const aMine = tables[a].server === currentUser ? 0 : 1;
-          const bMine = tables[b].server === currentUser ? 0 : 1;
-          return aMine - bMine;
-        });
-      if (payable.length === 0) {
+    /* ---------- Notifications tab ---------- */
+    function notificationTime(ts) {
+      const d = new Date(Number(ts) || Date.now());
+      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+    function notificationIcon(type) {
+      if (type === 'orderpro') return 'smartphone';
+      if (type === 'ready') return 'chef-hat';
+      if (type === 'khlass') return 'circle-check';
+      if (type === 'bgha-ykhlass') return 'receipt-text';
+      if (type === 'khawya') return 'door-open';
+      return 'bell';
+    }
+    function renderNotifications() {
+      const list = $('#notification-list');
+      if (!list) return;
+      if (!serviceNotifications.length) {
         list.innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon"><i data-lucide="coffee"></i></div>
-            <h3>Aucune table à régler</h3>
-            <p>Les mesas qui demandent l'addition apparaîtront ici.</p>
-          </div>
-        `;
+            <div class="empty-state-icon"><i data-lucide="bell"></i></div>
+            <h3>Aucune notification</h3>
+            <p>Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.</p>
+          </div>`;
       } else {
-        // Show server badge on cards so user knows mine vs collègue
-        list.innerHTML = `<div class="table-list">${payable.map(id => tableCardHTML(id, tables[id], { showServer: true })).join('')}</div>`;
+        list.innerHTML = serviceNotifications.map((item) => `
+          <button class="notification-card${item.unread ? ' is-unread' : ''}" type="button" data-notification-table="${esc(item.table)}">
+            <span class="notification-icon"><i data-lucide="${notificationIcon(item.type)}"></i></span>
+            <span class="notification-copy">
+              <span class="notification-title">${esc(item.title)}</span>
+              <span class="notification-body">${esc(item.body)}</span>
+              <span class="notification-time">${notificationTime(item.ts)}</span>
+            </span>
+          </button>`).join('');
+        list.querySelectorAll('[data-notification-table]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const id = serviceTableId(button.dataset.notificationTable);
+            setTab('tables');
+            if (id && tables[id]) { activeTableId = id; showScreen('screen-table'); renderTableDetail(); }
+          });
+        });
       }
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     }
 
     /* ---------- Profil tab ---------- */
@@ -6188,7 +6264,7 @@ em, i, cite, dfn, var { font-style: normal; }
         returnToFloor();  // land on the floor, not a stale tab panel
       }
       if (currentTab === 'tables')   renderTables();
-      if (currentTab === 'paiement') renderPaiement();
+      if (currentTab === 'notifications') renderNotifications();
       if (currentTab === 'profil')   renderProfil();
       toast(`Mesa ${id} · khlass ✓`);
     }
@@ -6309,7 +6385,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Refresh views so list/detail reflect the new state
       if (currentTab === 'tables') renderTables();
-      if (currentTab === 'paiement') renderPaiement();
+      if (currentTab === 'notifications') renderNotifications();
       if (activeTableId && $('#screen-table').classList.contains('is-active')) {
         renderTableDetail();
       }
@@ -6643,7 +6719,7 @@ em, i, cite, dfn, var { font-style: normal; }
       renderSplitFlow();
       // Live-update the underlying table card if visible
       if (currentTab === 'tables') renderTables();
-      if (currentTab === 'paiement') renderPaiement();
+      if (currentTab === 'notifications') renderNotifications();
 
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
         $('#split-parts-list').style.opacity = '0.45';
@@ -6714,7 +6790,7 @@ em, i, cite, dfn, var { font-style: normal; }
       renderTables();
       renderCatPills();
       renderMenu();
-      renderPaiement();
+      renderNotifications();
       renderProfil();
     }
 
