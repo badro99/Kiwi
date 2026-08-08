@@ -8,6 +8,7 @@ import { json, entitledMerchant } from '../../auth/_lib.js';
 const TEAM = 'team';
 const ACCESS = 'employee-access';
 const ATTENDANCE = 'attendance';
+const ATTENDANCE_CODE = 'attendance-code';
 const MESSAGES = 'team-messages';
 const MAX_ATTENDANCE = 5000;
 const MAX_MESSAGES = 200;
@@ -119,6 +120,14 @@ export async function onRequestGet({ request, env }) {
     merchant,
     members: liveMembers(rosterFor(team.data, access.data), attendance.data),
     pointedHours: pointedHours(attendance.data, Date.now()),
+    recentAttendance: (Array.isArray(attendance.data.entries) ? attendance.data.entries : [])
+      .slice(-20).reverse().map((entry) => ({
+        id: String(entry && entry.id || ''),
+        memberId: String(entry && (entry.memberId || entry.staffId) || ''),
+        name: String(entry && entry.name || 'Employé'),
+        inTs: Number(entry && entry.inTs) || 0,
+        outTs: Number(entry && entry.outTs) || 0,
+      })),
     messages: (Array.isArray(messages.data.messages) ? messages.data.messages : []).slice(-MAX_MESSAGES),
     now: Date.now(),
   }, 200, { 'Cache-Control': 'no-store' });
@@ -133,6 +142,24 @@ export async function onRequestPost({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const action = String(body.action || '');
   const targetId = String(body.memberId || '').trim().slice(0, 96);
+
+  if (action === 'generate-attendance-code') {
+    const digits = new Uint32Array(1);
+    const previous = await readDoc(env, merchant, ATTENDANCE_CODE, {});
+    let code = '';
+    do {
+      crypto.getRandomValues(digits);
+      code = String(digits[0] % 1000000).padStart(6, '0');
+    } while (code === String(previous.data && previous.data.code || ''));
+    const createdTs = Date.now();
+    const expiresTs = createdTs + 5 * 60 * 1000;
+    const saved = await mutateDoc(env, merchant, ATTENDANCE_CODE, {}, () => ({
+      code, createdTs, expiresTs,
+    }));
+    return saved
+      ? json({ ok: true, code, createdTs, expiresTs }, 200, { 'Cache-Control': 'no-store' })
+      : json({ error: 'attendance-code-write-failed' }, 503);
+  }
 
   if (action === 'message') {
     const text = String(body.text || '').trim().slice(0, 500);

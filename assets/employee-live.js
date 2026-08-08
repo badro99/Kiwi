@@ -20,8 +20,8 @@
       return call('POST', { action: 'login', email: email, pin: pin }).then(function () { return call('GET'); });
     },
     refresh: function () { return call('GET'); },
-    clockIn: function (nfcToken) { return call('POST', { action: 'clock-in', nfcToken: nfcToken || '' }); },
-    clockOut: function (progress, nfcToken) { return call('POST', { action: 'clock-out', progress: progress || null, nfcToken: nfcToken || '' }); },
+    clockIn: function (attendanceCode) { return call('POST', { action: 'clock-in', attendanceCode: attendanceCode || '' }); },
+    clockOut: function (progress, attendanceCode) { return call('POST', { action: 'clock-out', progress: progress || null, attendanceCode: attendanceCode || '' }); },
     logout: function () { return call('POST', { action: 'logout' }); },
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

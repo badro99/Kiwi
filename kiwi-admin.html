@@ -554,16 +554,6 @@ em, i, cite, dfn, var { font-style: normal; }
               <button class="add" id="pin-add">Ajouter</button>
             </div>
             <p class="err" id="pin-err"></p>
-            <div class="blk" style="margin-top:14px">
-              <p class="sub" style="margin-top:0">Équipe · tag NFC de pointage</p>
-              <div class="addrow">
-                <input class="nm" id="attendance-link" readonly
-                       aria-label="Lien NFC de pointage de cet établissement" />
-                <button class="mini" id="attendance-copy" type="button">Copier le lien</button>
-              </div>
-              <p class="hint">Écrivez ce lien sur le tag installé dans cet établissement. Le même tag autorise le pointage d’arrivée et le pointage de départ.</p>
-              <p class="err" id="attendance-err"></p>
-            </div>
           </div>
           <div>
             <p class="sub">Fonctionnalités (autorité opérateur)</p>
@@ -2912,19 +2902,6 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById(id).addEventListener('keydown', function(e){
       if (e.key === 'Enter') saveBiz();
     });
-  });
-
-  document.getElementById('attendance-copy').addEventListener('click', async function(){
-    var input = document.getElementById('attendance-link');
-    if (!input || !input.value) return;
-    try {
-      await navigator.clipboard.writeText(input.value);
-      notify('Lien NFC de pointage copié.');
-    } catch (_) {
-      input.select();
-      document.execCommand('copy');
-      notify('Lien NFC de pointage copié.');
-    }
   });
 
   /* La recherche du roster. Filtrée à la frappe et localement : le roster est
