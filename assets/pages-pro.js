@@ -3033,19 +3033,39 @@ const PDS_CANVAS_H = 540;
    just before this file. They are shared verbatim with the caisse so the
    till can render the owner's actual plan instead of its own guess at it. */
 
-/* ─── Vue nuit — la console de service ────────────────────────────────────
+/* ─── Vue nuit / vue jour — la console de service ─────────────────────────
  * Le plan que la page d'accueil promet est sombre : une salle charbon, des
- * tables au trait, le statut porté par la lumière. La vue nuit est donc le
- * DÉFAUT ; la vue jour reste entière derrière la bascule, car c'est elle qui
- * montre les matières telles que la caisse les affiche. La préférence vit
- * dans sa propre clé : l'état du plan est partagé avec la caisse, un choix
- * d'affichage du dashboard n'a rien à faire dedans. */
+ * tables au trait, le statut porté par la lumière. Mais c'est LE CLIMAT DU
+ * DASHBOARD qui décide : ouvrir le plan depuis un dashboard clair et tomber
+ * sur une salle noire, c'est changer de produit en passant une porte. La vue
+ * nuit suit donc `data-theme` — la seule vérité de ce qui est peint, celle
+ * que design-vexel.js recopie sur `data-vexel-mode`.
+ *
+ * La bascule reste : elle permet de regarder les matières en plein jour sans
+ * quitter le climat sombre. Mais elle est mémorisée AVEC le climat où elle a
+ * été choisie (`nuit@dark`), et une préférence prise sous l'autre climat est
+ * ignorée — sinon un « jour » cliqué une fois en clair suivrait l'utilisateur
+ * jusque dans le noir. Les anciennes valeurs nues (`nuit` / `jour`) n'ont pas
+ * de climat : elles retombent sur le thème, ce qui efface d'un coup les
+ * `nuit` hérités de l'époque où la nuit était le défaut.
+ * L'état du plan lui-même reste partagé avec la caisse ; ceci n'est qu'un
+ * choix d'affichage du dashboard, d'où sa clé séparée. */
 const PDS_VIEW_KEY = 'kiwiPdsView';
+function pdsClimat() {
+  try { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+  catch (_) { return 'light'; }
+}
 function pdsNoir() {
-  try { return localStorage.getItem(PDS_VIEW_KEY) !== 'jour'; } catch (_) { return true; }
+  const climat = pdsClimat();
+  try {
+    const saved = localStorage.getItem(PDS_VIEW_KEY) || '';
+    const at = saved.indexOf('@');
+    if (at > 0 && saved.slice(at + 1) === climat) return saved.slice(0, at) === 'nuit';
+  } catch (_) {}
+  return climat === 'dark';
 }
 function pdsSetNoir(on) {
-  try { localStorage.setItem(PDS_VIEW_KEY, on ? 'nuit' : 'jour'); } catch (_) {}
+  try { localStorage.setItem(PDS_VIEW_KEY, (on ? 'nuit' : 'jour') + '@' + pdsClimat()); } catch (_) {}
 }
 /* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
  * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
