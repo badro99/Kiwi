@@ -6331,9 +6331,25 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
       if (b) { b.textContent = 'Vue équipe'; b.removeAttribute('data-i18n'); }
     }
   })();
+  /* Unlocking is a fresh entry into the app, never a continuation of the
+   * page that happened to be open underneath the lock. In particular, a
+   * restaurant menu left open before logout must not become the post-login
+   * landing page. */
+  function resetToDashboard() {
+    try {
+      if (window.Kiwi?.pageShell) window.Kiwi.pageShell();
+      else [...document.body.classList].forEach((c) => { if (c.indexOf('page-') === 0) document.body.classList.remove(c); });
+      window.Kiwi?.setActivePage?.('accueil');
+      document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
+      document.querySelector('.sidebar nav a[data-nav="accueil"]')?.classList.add('active');
+      const bc = document.querySelector('.breadcrumb');
+      if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+      window.scrollTo({ top: 0 });
+    } catch (_) {}
+  }
   window.__kiwiLock = {
-    hide() { lock.style.display = 'none'; },
-    show() { lock.style.display = ''; document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
+    hide() { resetToDashboard(); lock.style.display = 'none'; },
+    show() { resetToDashboard(); lock.style.display = ''; document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
     reveal() { skipToApp(); },
     setGreetName,
   };
@@ -6519,6 +6535,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
   function unlock() {
     if (done || unlocked) return;
     unlocked = true;
+    resetToDashboard();
     if (window.__kiwiOnboard) { unlockOnboard(); return; }
     /* A REAL onboarded merchant keeps THEIR own venue — they must never be
      * forced into the Café Atlas restaurant demo (that's the "my boutique shows
@@ -6621,6 +6638,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
   function skipToApp() {
     if (done) return;
     done = true;
+    resetToDashboard();
     document.documentElement.style.overflow = '';
     if (app)     app.classList.remove('kw-app-hidden');
     if (demoBar) demoBar.classList.remove('kw-bar-hidden');
