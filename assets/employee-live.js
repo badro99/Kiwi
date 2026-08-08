@@ -21,7 +21,7 @@
     },
     refresh: function () { return call('GET'); },
     clockIn: function () { return call('POST', { action: 'clock-in' }); },
-    clockOut: function () { return call('POST', { action: 'clock-out' }); },
+    clockOut: function (progress) { return call('POST', { action: 'clock-out', progress: progress || null }); },
     logout: function () { return call('POST', { action: 'logout' }); },
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

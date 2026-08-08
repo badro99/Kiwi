@@ -1547,6 +1547,29 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 8px;
       margin-top: 12px;
     }
+    .kg-hours-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .kg-hours-open {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px;
+      border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+      color: var(--forest-deep); font-size: 11px; font-weight: 600;
+    }
+    .kg-hours-open svg { width: 14px; height: 14px; }
+    .hours-history-summary {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 13px 14px; margin-bottom: 10px; border-radius: 12px;
+      background: var(--mint-tint); color: var(--forest-deep);
+    }
+    .hours-history-summary span { font-size: 12px; }
+    .hours-history-summary strong { font-family: var(--mono); font-size: 17px; }
+    .hours-history-list { display: flex; flex-direction: column; gap: 6px; }
+    .hours-history-day {
+      min-height: 44px; display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 10px;
+      background: var(--paper-soft);
+    }
+    .hours-history-day span { font-size: 13px; color: var(--ink-2); text-transform: capitalize; }
+    .hours-history-day strong { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+    .hours-history-empty { padding: 28px 10px; text-align: center; color: var(--ink-4); font-size: 13px; }
     .kg-hours-tile {
       padding: 12px 8px 11px;
       background: var(--surface);
@@ -3198,18 +3221,23 @@ em, i, cite, dfn, var { font-style: normal; }
 
             <!-- === Heures travaillées === -->
             <div class="kg-card kg-hours" id="kg-hours-card">
-              <div class="kg-eyebrow">Heures travaillées</div>
+              <div class="kg-hours-head">
+                <div class="kg-eyebrow">Heures travaillées</div>
+                <button class="kg-hours-open" id="kg-hours-open" type="button">
+                  <i data-lucide="history"></i><span>Historique</span>
+                </button>
+              </div>
               <div class="kg-hours-grid">
                 <div class="kg-hours-tile is-today">
                   <div class="kg-hours-num" id="kg-h-today">0h 00</div>
                   <div class="kg-hours-label">Aujourd'hui</div>
                 </div>
                 <div class="kg-hours-tile">
-                  <div class="kg-hours-num" id="kg-h-week">28h 45</div>
+                  <div class="kg-hours-num" id="kg-h-week">0h 00</div>
                   <div class="kg-hours-label">Cette semaine</div>
                 </div>
                 <div class="kg-hours-tile">
-                  <div class="kg-hours-num" id="kg-h-month">142h 30</div>
+                  <div class="kg-hours-num" id="kg-h-month">0h 00</div>
                   <div class="kg-hours-label">Ce mois</div>
                 </div>
               </div>
@@ -3220,10 +3248,10 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="kg-rank-top">
                 <div>
                   <div class="kg-eyebrow">Grade</div>
-                  <div class="kg-rank-name" id="kg-rank-name">Serveur</div>
+                  <div class="kg-rank-name" id="kg-rank-name">Aucun grade</div>
                 </div>
                 <div class="kg-rank-xp">
-                  <div class="kg-rank-xp-num" id="kg-rank-xp">2 400</div>
+                  <div class="kg-rank-xp-num" id="kg-rank-xp">0</div>
                   <div class="kg-rank-xp-label">XP totale</div>
                 </div>
               </div>
@@ -3238,16 +3266,16 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="kg-eyebrow">Records personnels</div>
               <div class="kg-rec-grid">
                 <div class="kg-rec-tile" id="kg-rec-night">
-                  <div class="kg-rec-num" id="kg-rec-night-num">28</div>
+                  <div class="kg-rec-num" id="kg-rec-night-num">—</div>
                   <div class="kg-rec-label">Meilleur soir</div>
                   <div class="kg-rec-flag">+ Nouveau record</div>
                 </div>
                 <div class="kg-rec-tile" id="kg-rec-streak">
-                  <div class="kg-rec-num" id="kg-rec-streak-num">4</div>
+                  <div class="kg-rec-num" id="kg-rec-streak-num">—</div>
                   <div class="kg-rec-label">Tables en série</div>
                 </div>
                 <div class="kg-rec-tile" id="kg-rec-speed">
-                  <div class="kg-rec-num" id="kg-rec-speed-num">24<small> mn</small></div>
+                  <div class="kg-rec-num" id="kg-rec-speed-num">—</div>
                   <div class="kg-rec-label">Vitesse moyenne</div>
                   <div class="kg-rec-flag">+ Nouveau record</div>
                 </div>
@@ -3369,6 +3397,22 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
           <div class="kg-month-grid" id="kg-month-grid"></div>
           <button class="kg-month-close" id="kg-month-close" type="button">Fermer</button>
+        </div>
+      </div>
+
+      <div class="modal-veil" id="hours-history-modal" role="dialog" aria-modal="true" aria-labelledby="hours-history-title">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <h3 class="modal-title" id="hours-history-title">Historique des heures</h3>
+          <p class="modal-subtle">Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.</p>
+          <div class="kg-month-nav">
+            <button class="kg-month-arrow" id="hours-history-prev" type="button" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
+            <div class="kg-month-title" id="hours-history-month"></div>
+            <button class="kg-month-arrow" id="hours-history-next" type="button" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="hours-history-summary"><span>Total du mois</span><strong id="hours-history-total">0h 00</strong></div>
+          <div class="hours-history-list" id="hours-history-list"></div>
+          <button class="kg-month-close" id="hours-history-close" type="button">Fermer</button>
         </div>
       </div>
 
@@ -4921,7 +4965,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function clockOut() {
       stopServiceSync();
       if (!SV_DEMO && window.KiwiEmployeeLive) {
-        window.KiwiEmployeeLive.clockOut()
+        window.KiwiEmployeeLive.clockOut(window.__kiwiShiftProgress || null)
           .then(() => window.KiwiEmployeeLive.logout())
           .catch(() => toast('Pointage non synchronisé · vérifiez la connexion'));
       }
@@ -6079,6 +6123,37 @@ em, i, cite, dfn, var { font-style: normal; }
     $('#kg-month-close').addEventListener('click', closeMonthSchedule);
     $('#month-schedule-modal').addEventListener('click', (event) => { if (event.target === $('#month-schedule-modal')) closeMonthSchedule(); });
 
+    let hoursHistoryCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    function formatWorkedMinutes(minutes) {
+      const total = Math.max(0, Math.round(Number(minutes) || 0));
+      return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}`;
+    }
+    function renderHoursHistory() {
+      const monthEl = $('#hours-history-month'), totalEl = $('#hours-history-total'), listEl = $('#hours-history-list');
+      if (!monthEl || !totalEl || !listEl) return;
+      const year = hoursHistoryCursor.getFullYear(), month = hoursHistoryCursor.getMonth();
+      const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+      const hours = (liveEmployeeState && liveEmployeeState.pointedHours) || {};
+      const rows = Object.keys(hours).filter((key) => key.indexOf(prefix) === 0 && Number(hours[key]) > 0).sort();
+      const totalMinutes = rows.reduce((sum, key) => sum + Math.round(Number(hours[key]) * 60), 0);
+      monthEl.textContent = hoursHistoryCursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      totalEl.textContent = formatWorkedMinutes(totalMinutes);
+      listEl.innerHTML = rows.length ? rows.map((key) => {
+        const parts = key.split('-').map(Number);
+        const date = new Date(parts[0], parts[1] - 1, parts[2], 12);
+        return `<div class="hours-history-day"><span>${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span><strong>${formatWorkedMinutes(Number(hours[key]) * 60)}</strong></div>`;
+      }).join('') : '<div class="hours-history-empty">Aucune heure enregistrée pour ce mois.</div>';
+    }
+    function closeHoursHistory() { $('#hours-history-modal').classList.remove('is-open'); }
+    $('#kg-hours-open').addEventListener('click', () => {
+      const now = new Date(); hoursHistoryCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+      renderHoursHistory(); $('#hours-history-modal').classList.add('is-open');
+    });
+    $('#hours-history-prev').addEventListener('click', () => { hoursHistoryCursor.setMonth(hoursHistoryCursor.getMonth() - 1); renderHoursHistory(); });
+    $('#hours-history-next').addEventListener('click', () => { hoursHistoryCursor.setMonth(hoursHistoryCursor.getMonth() + 1); renderHoursHistory(); });
+    $('#hours-history-close').addEventListener('click', closeHoursHistory);
+    $('#hours-history-modal').addEventListener('click', (event) => { if (event.target === $('#hours-history-modal')) closeHoursHistory(); });
+
     $$('[data-app-reload]').forEach((button) => {
       button.addEventListener('click', () => window.location.reload());
     });
@@ -6962,7 +7037,7 @@ em, i, cite, dfn, var { font-style: normal; }
     (function () {
       /* --- ranks (serif names in the UI) --- */
       const KG_RANKS = [
-        { name: 'Apprenti',         xp: 0    },
+        { name: 'Apprenti',         xp: 100  },
         { name: 'Garçon',           xp: 700  },
         { name: 'Serveur',          xp: 1700 },
         { name: 'Serveur Confirmé', xp: 2750 },
@@ -6970,14 +7045,26 @@ em, i, cite, dfn, var { font-style: normal; }
         { name: "Maître d'Hôtel",   xp: 6800 },
       ];
 
-      /* --- défi pool — one auto-picked per shift (deterministic by date) --- */
+      /* Fourteen distinct challenges in a fixed shuffled order. A calendar day
+         advances exactly one slot, so nothing repeats inside a two-week window. */
       const KG_DEFIS = [
-        { text: 'Réglez 12 tables ce soir',           target: 12,   metric: 'tables'  },
-        { text: 'Encaissez 3 000 MAD ce service',     target: 3000, metric: 'revenue' },
+        { text: 'Réglez 3 tables pendant ce service', target: 3,    metric: 'tables'  },
+        { text: 'Atteignez 1 000 MAD ce service',     target: 1000, metric: 'revenue' },
+        { text: 'Accompagnez 5 tables jusqu’au règlement', target: 5, metric: 'tables' },
+        { text: 'Encaissez 500 MAD ce service',       target: 500,  metric: 'revenue' },
         { text: 'Réglez 8 tables avant la fermeture', target: 8,    metric: 'tables'  },
-        { text: 'Atteignez 2 500 MAD ce service',     target: 2500, metric: 'revenue' },
+        { text: 'Atteignez 1 500 MAD ce service',     target: 1500, metric: 'revenue' },
+        { text: 'Terminez 2 tables ce service',       target: 2,    metric: 'tables'  },
+        { text: 'Encaissez 750 MAD ce service',       target: 750,  metric: 'revenue' },
+        { text: 'Réglez 6 tables pendant ce service', target: 6,    metric: 'tables'  },
+        { text: 'Atteignez 2 000 MAD ce service',     target: 2000, metric: 'revenue' },
+        { text: 'Accompagnez 4 tables jusqu’au règlement', target: 4, metric: 'tables' },
+        { text: 'Encaissez 300 MAD ce service',       target: 300,  metric: 'revenue' },
+        { text: 'Réglez 7 tables avant la fermeture', target: 7,    metric: 'tables'  },
+        { text: 'Atteignez 1 250 MAD ce service',     target: 1250, metric: 'revenue' },
       ];
-      const kgDefi = KG_DEFIS[new Date().getDate() % KG_DEFIS.length];
+      const kgDayNumber = Math.floor(new Date().setHours(12, 0, 0, 0) / 86400000);
+      const kgDefi = KG_DEFIS[((kgDayNumber % KG_DEFIS.length) + KG_DEFIS.length) % KG_DEFIS.length];
 
       /* --- persistence (keyed by server initials) --- */
       const KG_KEY = 'kiwi-serveur-progress';
@@ -6985,26 +7072,27 @@ em, i, cite, dfn, var { font-style: normal; }
       const kgFirstName = (((servers[currentUser] && servers[currentUser].name) || 'Yassir')).split(' ')[0];
 
       function kgDefaults() {
-        return { lifetimeXP: 2400, records: { bestNight: 28, streak: 4, bestSpeed: 24 } };
+        return { lifetimeXP: 0, records: { bestNight: 0, streak: 0, bestSpeed: null }, updatedTs: 0 };
       }
       function kgLoad() {
         let all = {};
         try { all = JSON.parse(localStorage.getItem(KG_KEY)) || {}; } catch (e) {}
-        const s = all[kgInitials] || kgDefaults();
+        const s = all[currentUser] || all[kgInitials] || kgDefaults();
         const r = (s && s.records) || {};
         return {
-          lifetimeXP: Number.isFinite(s.lifetimeXP) ? s.lifetimeXP : 2400,
+          lifetimeXP: Number.isFinite(s.lifetimeXP) ? s.lifetimeXP : 0,
           records: {
-            bestNight: Number.isFinite(r.bestNight) ? r.bestNight : 28,
-            streak:    Number.isFinite(r.streak)    ? r.streak    : 4,
-            bestSpeed: Number.isFinite(r.bestSpeed) ? r.bestSpeed : 24,
+            bestNight: Number.isFinite(r.bestNight) ? r.bestNight : 0,
+            streak:    Number.isFinite(r.streak)    ? r.streak    : 0,
+            bestSpeed: Number(r.bestSpeed) > 0 ? Number(r.bestSpeed) : null,
           },
+          updatedTs: Number(s.updatedTs) || 0,
         };
       }
       function kgSave() {
         let all = {};
         try { all = JSON.parse(localStorage.getItem(KG_KEY)) || {}; } catch (e) {}
-        all[kgInitials] = kgState;
+        all[currentUser || kgInitials] = kgState;
         try { localStorage.setItem(KG_KEY, JSON.stringify(all)); } catch (e) {}
       }
 
@@ -7022,9 +7110,23 @@ em, i, cite, dfn, var { font-style: normal; }
         return h > 0 ? (h + 'h ' + String(m).padStart(2, '0')) : (m + ' mn');
       }
       function kgRankIdxFor(xp) {
-        let idx = 0;
+        let idx = -1;
         for (let i = 0; i < KG_RANKS.length; i++) if (xp >= KG_RANKS[i].xp) idx = i;
         return idx;
+      }
+      function kgSyncCloud() {
+        const cloud = liveEmployeeState && liveEmployeeState.progress;
+        if (!cloud || Number(cloud.updatedTs) < Number(kgState.updatedTs || 0)) return;
+        kgState = {
+          lifetimeXP: Math.max(0, Number(cloud.lifetimeXP) || 0),
+          records: {
+            bestNight: Math.max(0, Number(cloud.records && cloud.records.bestNight) || 0),
+            streak: Math.max(0, Number(cloud.records && cloud.records.streak) || 0),
+            bestSpeed: Number(cloud.records && cloud.records.bestSpeed) > 0 ? Number(cloud.records.bestSpeed) : null,
+          },
+          updatedTs: Math.max(0, Number(cloud.updatedTs) || 0),
+        };
+        kgSave();
       }
 
       /* --- live shift snapshot (computed; never mutates app state) --- */
@@ -7038,9 +7140,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const shiftXP = Math.round(paid * 10 + kgShiftRevenue * 0.01);
         const totalXP = kgState.lifetimeXP + shiftXP;
         const rankIdx = kgRankIdxFor(totalXP);
-        const rank = KG_RANKS[rankIdx];
+        const rank = rankIdx >= 0 ? KG_RANKS[rankIdx] : null;
         const next = KG_RANKS[rankIdx + 1] || null;
-        const progress = next ? (totalXP - rank.xp) / (next.xp - rank.xp) : 1;
+        const floorXP = rank ? rank.xp : 0;
+        const progress = next ? (totalXP - floorXP) / (next.xp - floorXP) : 1;
         return {
           durMin: durMin, paid: paid, served: paid + occupied, occupied: occupied,
           speed: speed, shiftXP: shiftXP, totalXP: totalXP,
@@ -7059,7 +7162,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const tile = document.getElementById('kg-rec-' + key);
         const num  = document.getElementById('kg-rec-' + key + '-num');
         if (!tile || !num) return;
-        num.innerHTML = unit ? (value + '<small>' + unit + '</small>') : String(value);
+        num.innerHTML = value == null ? '—' : (unit ? (value + '<small>' + unit + '</small>') : String(value));
         const flagKey = key === 'night' ? 'bestNight' : (key === 'speed' ? 'bestSpeed' : null);
         if (isRecord) {
           tile.classList.add('is-record');
@@ -7073,11 +7176,12 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       }
       function kgRenderProfil() {
+        kgSyncCloud();
         const snap = kgSnapshot();
 
         /* a) Niveau / Grade */
         const nameEl = document.getElementById('kg-rank-name');
-        if (nameEl) nameEl.textContent = snap.rank.name;
+        if (nameEl) nameEl.textContent = snap.rank ? snap.rank.name : 'Aucun grade';
         const xpEl = document.getElementById('kg-rank-xp');
         if (xpEl) xpEl.textContent = kgNum(snap.totalXP);
         const fillEl = document.getElementById('kg-rank-fill');
@@ -7094,10 +7198,10 @@ em, i, cite, dfn, var { font-style: normal; }
 
         /* b) Records personnels */
         const nightBeat = snap.paid > kgState.records.bestNight;
-        const speedBeat = snap.speed != null && snap.speed > 0 && snap.speed < kgState.records.bestSpeed;
-        kgSetRecTile('night',  Math.max(kgState.records.bestNight, snap.paid), '', nightBeat);
-        kgSetRecTile('streak', kgState.records.streak, '', false);
-        kgSetRecTile('speed',  snap.speed != null ? snap.speed : 24, ' mn', speedBeat);
+        const speedBeat = snap.speed != null && snap.speed > 0 && (kgState.records.bestSpeed == null || snap.speed < kgState.records.bestSpeed);
+        kgSetRecTile('night',  Math.max(kgState.records.bestNight, snap.paid) || null, '', nightBeat);
+        kgSetRecTile('streak', kgState.records.streak || null, '', false);
+        kgSetRecTile('speed',  snap.speed != null ? snap.speed : kgState.records.bestSpeed, ' mn', speedBeat);
 
         /* c) Défi du soir */
         const dp = kgDefiProgress();
@@ -7118,13 +7222,14 @@ em, i, cite, dfn, var { font-style: normal; }
       /* --- rank chip on the card payment screen --- */
       function kgUpdateRankChip() {
         const roleEl = document.getElementById('kg-card-rank-role');
-        if (roleEl) roleEl.textContent = kgSnapshot().rank.name.toLowerCase();
+        const rank = kgSnapshot().rank;
+        if (roleEl) roleEl.textContent = rank ? rank.name.toLowerCase() : 'aucun grade';
       }
 
       /* --- Carte du soir : pick the best thing about tonight --- */
       function kgBestHighlight(snap) {
         const startIdx = kgRankIdxFor(kgState.lifetimeXP);
-        if (snap.rankIdx > startIdx) {
+        if (snap.rank && snap.rankIdx > startIdx) {
           return { label: 'Niveau débloqué', icon: 'trending-up',
                    text: 'Tu passes <em>' + snap.rank.name + '</em> ce soir.',
                    share: 'Niveau ' + snap.rank.name + ' débloqué' };
@@ -7134,7 +7239,7 @@ em, i, cite, dfn, var { font-style: normal; }
                    text: '<em>' + snap.paid + ' tables</em> réglées, ton meilleur soir.',
                    share: 'Nouveau record · ' + snap.paid + ' tables réglées' };
         }
-        if (snap.speed != null && snap.speed > 0 && snap.speed < kgState.records.bestSpeed) {
+        if (snap.speed != null && snap.speed > 0 && (kgState.records.bestSpeed == null || snap.speed < kgState.records.bestSpeed)) {
           return { label: 'Nouveau record', icon: 'zap',
                    text: '<em>' + snap.speed + ' mn</em> par table, jamais aussi rapide.',
                    share: 'Record de vitesse · ' + snap.speed + ' mn par table' };
@@ -7172,7 +7277,7 @@ em, i, cite, dfn, var { font-style: normal; }
           ['Revenu encaissé',         kgNum(snap.revenue) + ' MAD',                   true ],
           ['Ticket moyen',            kgNum(snap.ticket) + ' MAD',                    true ],
           ['Durée du service',        kgFmtDur(snap.durMin),                          false],
-          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed : 24) + ' mn', false],
+          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed + ' mn' : '—'), false],
         ];
         const rowsEl = document.getElementById('kg-sc-rows');
         if (rowsEl) rowsEl.innerHTML = rows.map(function (r, i) {
@@ -7206,13 +7311,14 @@ em, i, cite, dfn, var { font-style: normal; }
       /* --- bank the shift into lifetime progress at clock-out --- */
       function kgBankShift() {
         const snap = kgSnapshot();
+        window.__kiwiShiftProgress = { paid: snap.paid, revenue: snap.revenue, turnMinutes: kgShiftTurnMin };
         kgState.lifetimeXP += snap.shiftXP;
         if (snap.paid > kgState.records.bestNight) kgState.records.bestNight = snap.paid;
-        if (snap.speed != null && snap.speed > 0 && snap.speed < kgState.records.bestSpeed)
+        if (snap.speed != null && snap.speed > 0 && (kgState.records.bestSpeed == null || snap.speed < kgState.records.bestSpeed))
           kgState.records.bestSpeed = snap.speed;
         if (snap.paid >= 8) kgState.records.streak += 1;
         else if (snap.paid > 0) kgState.records.streak = 1;
-        kgSave();
+        kgState.updatedTs = Date.now(); kgSave();
         /* reset shift-local accumulators for the next shift */
         kgShiftRevenue = 0; kgShiftTurnMin = 0;
         kgBroke.bestNight = false; kgBroke.bestSpeed = false;

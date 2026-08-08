@@ -18,6 +18,7 @@ const TEAM_FEATURE = 'team';
 const ACCESS_FEATURE = 'employee-access';
 const FLOOR_FEATURE = 'floorplan';
 const MESSAGES_FEATURE = 'team-messages';
+const PROGRESS_FEATURE = 'employee-progress';
 const MAX_ATTENDANCE = 5000;
 
 function parse(raw, fallback) {
@@ -104,6 +105,36 @@ function attendanceView(doc, staffId) {
   const open = mine.slice().reverse().find((e) => !e.outTs) || null;
   return { open, recent: mine.slice(-31).reverse() };
 }
+function pointedHours(doc, memberId, staffId) {
+  const out = {};
+  (Array.isArray(doc && doc.entries) ? doc.entries : []).forEach((entry) => {
+    if (!entry || !entry.outTs) return;
+    if (String(entry.memberId || '') !== String(memberId || '') && String(entry.staffId || '') !== String(staffId || '')) return;
+    const start = Number(entry.inTs) || 0, end = Number(entry.outTs) || 0;
+    if (!start || end <= start) return;
+    const pauseMs = (Array.isArray(entry.breaks) ? entry.breaks : []).reduce((sum, pause) => {
+      const a = Number(pause && pause.inTs) || 0, b = Number(pause && pause.outTs) || 0;
+      return sum + (a && b > a ? b - a : 0);
+    }, 0);
+    const key = dateKey(start);
+    out[key] = Math.round(((Number(out[key]) || 0) + Math.max(0, end - start - pauseMs) / 3600000) * 100) / 100;
+  });
+  return out;
+}
+function safeProgress(raw) {
+  const value = raw && typeof raw === 'object' ? raw : {};
+  const records = value.records && typeof value.records === 'object' ? value.records : {};
+  return {
+    lifetimeXP: Math.max(0, Number(value.lifetimeXP) || 0),
+    records: {
+      bestNight: Math.max(0, Number(records.bestNight) || 0),
+      streak: Math.max(0, Number(records.streak) || 0),
+      bestSpeed: Number(records.bestSpeed) > 0 ? Number(records.bestSpeed) : null,
+    },
+    shifts: Math.max(0, Number(value.shifts) || 0),
+    updatedTs: Math.max(0, Number(value.updatedTs) || 0),
+  };
+}
 function sanitizedFloor(raw) {
   const d = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -122,11 +153,12 @@ async function payloadFor(request, env) {
   const auth = await liveEmployee(request, env);
   if (!auth) return null;
   const merchant = auth.session.merchant;
-  const [teamRow, floorRow, attendanceRow, messagesRow, cfg] = await Promise.all([
+  const [teamRow, floorRow, attendanceRow, messagesRow, progressRow, cfg] = await Promise.all([
     readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} }),
     readDoc(env, merchant, FLOOR_FEATURE, { zones: [], tables: [], staff: [] }),
     readDoc(env, merchant, ATTENDANCE_FEATURE, { entries: [] }),
     readDoc(env, merchant, MESSAGES_FEATURE, { messages: [] }),
+    readDoc(env, merchant, PROGRESS_FEATURE, { members: {} }),
     env.DB.prepare('SELECT name, type, status FROM merchant_config WHERE merchant = ?').bind(merchant).first().catch(() => null),
   ]);
   if (cfg && String(cfg.status || '') === 'suspended') return { suspended: true };
@@ -150,6 +182,8 @@ async function payloadFor(request, env) {
     employee: me,
     schedule: (teamRow.data.shifts && teamRow.data.shifts[me.id]) || {},
     hours: (teamRow.data.hours && teamRow.data.hours[me.id]) || {},
+    pointedHours: pointedHours(attendanceRow.data, me.id, auth.pin.id),
+    progress: safeProgress(progressRow.data.members && progressRow.data.members[me.id]),
     attendance: attendanceView(attendanceRow.data, auth.pin.id),
     colleagues,
     messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])
@@ -267,6 +301,28 @@ export async function onRequestPost({ request, env }) {
       doc.shifts = doc.shifts && typeof doc.shifts === 'object' ? doc.shifts : {};
       if (!doc.hours[memberId]) doc.hours[memberId] = {};
       doc.hours[memberId][day] = Math.round(((Number(doc.hours[memberId][day]) || 0) + hours) * 100) / 100;
+      return doc;
+    });
+    const rawProgress = body.progress && typeof body.progress === 'object' ? body.progress : {};
+    const paid = Math.min(200, Math.max(0, Math.floor(Number(rawProgress.paid) || 0)));
+    const revenue = Math.min(1000000, Math.max(0, Number(rawProgress.revenue) || 0));
+    const turnMinutes = Math.min(100000, Math.max(0, Number(rawProgress.turnMinutes) || 0));
+    const speed = paid > 0 && turnMinutes > 0 ? Math.round(turnMinutes / paid) : null;
+    const earnedXP = Math.round(paid * 10 + revenue * 0.01);
+    await mutateDoc(env, merchant, PROGRESS_FEATURE, { members: {} }, (doc) => {
+      doc.members = doc.members && typeof doc.members === 'object' ? doc.members : {};
+      const previous = safeProgress(doc.members[memberId]);
+      doc.members[memberId] = {
+        lifetimeXP: previous.lifetimeXP + earnedXP,
+        records: {
+          bestNight: Math.max(previous.records.bestNight, paid),
+          streak: paid >= 8 ? previous.records.streak + 1 : (paid > 0 ? 1 : previous.records.streak),
+          bestSpeed: speed == null ? previous.records.bestSpeed
+            : (previous.records.bestSpeed == null ? speed : Math.min(previous.records.bestSpeed, speed)),
+        },
+        shifts: previous.shifts + 1,
+        updatedTs: now,
+      };
       return doc;
     });
   }
