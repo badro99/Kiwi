@@ -282,6 +282,17 @@ ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
   && serviceSource.includes('Object.keys(data.states || {})'),
   "les états ouverts, réglés et libérés remontent de la caisse vers l'app employé");
+ok(serviceSource.includes("'a-commander':  'À commander'")
+  && serviceSource.includes("t.status === 'a-commander' || t.status === 'ka-yaklo'")
+  && /if \(action === 'take-order'\)[\s\S]*?t\.status = 'ka-yaklo'/.test(serviceSource),
+  "une table installée affiche son statut et garde les actions commande / fermeture");
+ok(!serviceSource.includes("const queueKey = 'order:' + order.id + ':' + index")
+  && serviceSource.includes('lines: (tableOrders[id] || []).slice(0, 80)')
+  && caisseSource.includes("state.source !== 'employee'")
+  && caisseSource.includes('tableOrders[id] = cloudLines.map'),
+  "l'addition courante circule dans les deux sens sans rejouer l'historique au rechargement");
+ok(!/serviceEventSeen\.add\(event\.id\);\s*const id = serviceTableId/.test(serviceSource),
+  "la notification de placement n'est pas marquée lue avant d'être affichée");
 ok(serviceSource.includes('--app-height: 100dvh')
   && serviceSource.includes('height: var(--app-height)')
   && serviceSource.includes('--safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px)')

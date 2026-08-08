@@ -56,20 +56,24 @@ function tableKey(value) {
 }
 function cleanLines(raw) {
   if (!Array.isArray(raw)) return null;
-  return raw.slice(0, 80).map((line, index) => ({
-    key: String(line && (line.key || line.uid || line.id) || index).slice(0, 80),
-    id: String(line && line.id || '').slice(0, 96),
-    name: String(line && line.name || '').slice(0, 140),
-    price: Math.max(0, Math.min(200000, Number(line && line.price) || 0)),
-    qty: Math.max(1, Math.min(99, Number(line && line.qty) || 1)),
-    note: String(line && line.note || '').slice(0, 280),
-    opts: (Array.isArray(line && line.opts) ? line.opts : []).slice(0, 20).map((opt) => ({
-      group: String(opt && opt.group || '').slice(0, 80),
-      label: String(opt && (opt.label || opt.name) || '').slice(0, 100),
-      p: Math.max(0, Math.min(200000, Number(opt && (opt.p != null ? opt.p : opt.price)) || 0)),
-      emoji: String(opt && opt.emoji || '').slice(0, 16),
-    })),
-  })).filter((line) => line.name);
+  return raw.slice(0, 80).map((line, index) => {
+    const qty = Math.max(1, Math.min(99, Number(line && line.qty) || 1));
+    return {
+      key: String(line && (line.key || line.uid || line.id) || index).slice(0, 80),
+      id: String(line && line.id || '').slice(0, 96),
+      name: String(line && line.name || '').slice(0, 140),
+      price: Math.max(0, Math.min(200000, Number(line && line.price) || 0)),
+      qty,
+      sentQty: Math.max(0, Math.min(qty, Number(line && line.sentQty) || 0)),
+      note: String(line && line.note || '').slice(0, 280),
+      opts: (Array.isArray(line && line.opts) ? line.opts : []).slice(0, 20).map((opt) => ({
+        group: String(opt && opt.group || '').slice(0, 80),
+        label: String(opt && (opt.label || opt.name) || '').slice(0, 100),
+        p: Math.max(0, Math.min(200000, Number(opt && (opt.p != null ? opt.p : opt.price)) || 0)),
+        emoji: String(opt && opt.emoji || '').slice(0, 16),
+      })),
+    };
+  }).filter((line) => line.name);
 }
 async function floorTargets(env, merchant) {
   const out = Object.create(null);
@@ -108,17 +112,18 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
       if (before && !Object.prototype.hasOwnProperty.call(next, 'lines') && Array.isArray(before.lines)) next.lines = before.lines;
+      if (next.status === 'khawya' || next.status === 'khlass') next.lines = [];
       const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
       const linesChanged = !before || JSON.stringify(before.lines || []) !== JSON.stringify(next.lines || []);
       const changed = stateChanged || linesChanged;
       if (!changed) return;
       const changedAt = Date.now();
       states[table] = { ...next, ts: changedAt, source: source || 'caisse' };
-      if (!before || !stateChanged) return;
+      if (!stateChanged || (!before && next.status === 'khawya')) return;
       const target = targets[table] || {};
       const event = {
         id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: changedAt,
-        table, status: next.status, previousStatus: String(before.status || ''), covers: next.covers,
+        table, status: next.status, previousStatus: String(before && before.status || ''), covers: next.covers,
         serverId: target.serverId || '', server: target.server || '',
       };
       events.push(event); emitted.push(event);
@@ -188,7 +193,8 @@ export async function onRequestGet({ request, env }) {
         || (event.server && norm(event.server) === myName);
       const coverage = (event.serverId && pausedIds.has(String(event.serverId)))
         || (event.server && pausedNames.has(norm(event.server)));
-      return direct || coverage;
+      const unassigned = !event.serverId && !event.server;
+      return direct || coverage || unassigned;
     })
     .slice(-MAX_EVENTS);
   return json({ ok: true, events, states: row.data.states || {}, now: Date.now() });
@@ -209,7 +215,7 @@ export async function onRequestPost({ request, env }) {
     if (!table || !targets[table] || !TABLE_STATUSES.has(status)) return json({ error: 'floor-table-required' }, 403);
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
     const result = await syncTableSnapshot(env, merchant, [{
-      table, status, covers: body.state.covers,
+      table, status, covers: body.state.covers, lines: body.state.lines,
     }], 'employee');
     return result.ok ? json({ ok: true, events: result.events }) : json({ error: 'state-write-failed' }, 503);
   }
@@ -228,7 +234,13 @@ export async function onRequestPost({ request, env }) {
     customer: String(src.customer || '').slice(0, 80),
     covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
   };
-  if (!event.table || (!event.serverId && !event.server)) return json({ error: 'event-target-required' }, 400);
+  if (!event.table) return json({ error: 'event-table-required' }, 400);
+  const targets = await floorTargets(env, merchant);
+  const assigned = targets[tableKey(event.table)] || {};
+  if (assigned.serverId || assigned.server) {
+    event.serverId = assigned.serverId || '';
+    event.server = assigned.server || '';
+  }
   const state = { table: event.table, status: 'a-commander', covers: event.covers, ts: event.ts };
   if (!await append(env, merchant, event, state)) return json({ error: 'event-write-failed' }, 503);
   return json({ ok: true, event });

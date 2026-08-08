@@ -47,6 +47,7 @@ const floor = {
   tables: [
     { id: 't1', num: '1', zone: 'z1', server: 'fs-sara', seats: 4 },
     { id: 't2', num: '2', zone: 'z1', server: 'fs-omar', seats: 4 },
+    { id: 't3', num: '3', zone: 'z1', server: '', seats: 2 },
   ],
 };
 const attendance = { entries: [
@@ -153,6 +154,16 @@ response = await eventsGet({ request, env }); const omarEvents = await json(resp
 ok(response.status === 200 && omarEvents.events.length === 0, "le collègue non affecté ne reçoit pas l'évènement");
 
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '3', status: 'a-commander', covers: 2, lines: [] }] },
+}) });
+response = await eventsPost({ request, env });
+ok(response.status === 200, 'une table sans serveur affecté peut être installée depuis la caisse');
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=${now}`, { headers: { Cookie: saraCookie } });
+response = await eventsGet({ request, env }); const unassignedEvents = await json(response);
+ok(unassignedEvents.events.some((event) => event.table === '3' && event.status === 'a-commander'),
+  "la première installation d'une table non affectée alerte les serveurs disponibles");
+
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, lines: [
     { uid: 'cash-line-1', id: 'i1', name: 'Tajine', price: 80, qty: 2, note: 'sans oignon', opts: [{ group: 'sauce', label: 'Épicée', p: 10, emoji: '🔴' }] },
   ] }, { table: '2', status: 'khawya', covers: 2, lines: [] }] },
@@ -170,14 +181,29 @@ ok(openedState.states['1'].lines.length === 1 && openedState.states['1'].lines[0
 ok(openedState.events.some((event) => event.type === 'table-state' && event.table === '1' && event.status === 'ka-yaklo'),
   'le serveur affecté garde la notification de table ouverte dans son historique');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, state: { table: '1', status: 'ka-yaklo', covers: 4, lines: [
+    { key: 'employee-line-1', id: 'i1', name: 'Tajine', price: 90, qty: 3, sentQty: 2, note: 'peu épicé' },
+  ] },
+}) });
+response = await eventsPost({ request, env });
+ok(response.status === 200, "l'app employé sauvegarde l'addition complète avant même un rechargement");
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const employeeBillState = await json(response);
+ok(employeeBillState.states['1'].source === 'employee'
+  && employeeBillState.states['1'].lines[0].qty === 3
+  && employeeBillState.states['1'].lines[0].sentQty === 2,
+  "la caisse reçoit l'addition et la quantité déjà envoyée par le téléphone");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, state: { table: '1', status: 'khawya', covers: 0 },
 }) });
 response = await eventsPost({ request, env });
 ok(response.status === 200, 'le serveur libère la table dans le même état cloud que la caisse');
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
 response = await eventsGet({ request, env }); const caisseState = await json(response);
-ok(response.status === 200 && caisseState.states['1'].status === 'khawya' && caisseState.states['1'].source === 'employee',
-  'la caisse reçoit immédiatement la fermeture faite sur le téléphone');
+ok(response.status === 200 && caisseState.states['1'].status === 'khawya'
+  && caisseState.states['1'].source === 'employee'
+  && Array.isArray(caisseState.states['1'].lines) && caisseState.states['1'].lines.length === 0,
+  'la caisse reçoit immédiatement la fermeture et aucune ancienne ligne ne survit');
 put(`INSERT INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
      VALUES (?,?,?,?,?,?,?)`, 'sess-stale-table-1', merchant, 'table', '1', 'open', now, now);
 result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });

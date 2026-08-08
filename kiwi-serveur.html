@@ -4184,7 +4184,17 @@ em, i, cite, dfn, var { font-style: normal; }
     const tableOrders = {};
     /* Tables with unsent changes (need "Lancer la commande" to send to terminals) */
     const dirtyOrders = new Set();
-    function markDirty(tableId) { if (tableId) dirtyOrders.add(tableId); }
+    const serviceDraftTimers = new Map();
+    function markDirty(tableId) {
+      if (!tableId) return;
+      dirtyOrders.add(tableId);
+      clearTimeout(serviceDraftTimers.get(tableId));
+      serviceDraftTimers.set(tableId, setTimeout(() => {
+        serviceDraftTimers.delete(tableId);
+        const t = tables[tableId];
+        if (t) publishServiceTableState(tableId, t.status, t.covers, false);
+      }, 300));
+    }
 
     /* Stable per-line id so the same dish can sit on two lines with
        different kitchen notes (id stays = menu id for menu / routing lookups). */
@@ -4646,7 +4656,16 @@ em, i, cite, dfn, var { font-style: normal; }
       const stateWrite = fetch('/api/service/events', {
         method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant, state: { table: id, status, covers: Math.max(0, Number(covers) || 0) } }),
+        body: JSON.stringify({ merchant, state: {
+          table: id, status, covers: Math.max(0, Number(covers) || 0),
+          lines: (tableOrders[id] || []).slice(0, 80).map((line) => ({
+            key: String(line.cloudKey || line.uid || line.id || ''), id: String(line.id || ''),
+            name: String(line.name || ''), price: Math.max(0, Number(line.price) || 0),
+            qty: Math.max(1, Number(line.qty) || 1),
+            sentQty: Math.max(0, Math.min(Number(line.qty) || 1, Number(line.sentQty) || 0)),
+            note: String(line.note || ''), opts: Array.isArray(line.opts) ? line.opts : [],
+          })),
+        } }),
       }).then((r) => r.ok).catch(() => false);
       if (closeSession) {
         fetch('/api/order/queue', {
@@ -4717,7 +4736,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const state = data.states[key] || {};
         const id = serviceTableId(state.table || key) || String(state.table || key);
         if (!tables[id]) return;
-        serviceStateVersion.set(id, { status: state.status, ts: Number(state.ts) || 0, source: state.source || '' });
+        serviceStateVersion.set(id, {
+          status: state.status, ts: Number(state.ts) || 0, source: state.source || '',
+          hasLines: Array.isArray(state.lines),
+        });
         tables[id].status = state.status || tables[id].status;
         if (state.covers) tables[id].covers = state.covers;
         const awaiting = serviceBillAwaiting.get(id);
@@ -4725,11 +4747,13 @@ em, i, cite, dfn, var { font-style: normal; }
         if (awaiting && (stateTs > awaiting.after || Date.now() > awaiting.until)) serviceBillAwaiting.delete(id);
         if (Array.isArray(state.lines) && !dirtyOrders.has(id) && !serviceBillAwaiting.has(id)) {
           tableOrders[id] = state.lines.map((line, index) => ({
-            uid: 'caisse-' + String(line.key || line.id || index),
+            uid: 'cloud-' + String(line.key || line.id || index), cloudKey: String(line.key || line.id || index),
             id: line.id || '', name: line.name || 'Article',
             price: Math.max(0, Number(line.price) || 0),
             qty: Math.max(1, Number(line.qty) || 1),
-            sentQty: Math.max(1, Number(line.qty) || 1),
+            sentQty: state.source === 'caisse'
+              ? Math.max(1, Number(line.qty) || 1)
+              : Math.max(0, Math.min(Number(line.qty) || 1, Number(line.sentQty) || 0)),
             note: line.note || '', opts: Array.isArray(line.opts) ? line.opts : [],
             sourceCaisse: true,
           }));
@@ -4738,7 +4762,6 @@ em, i, cite, dfn, var { font-style: normal; }
       });
       (data.events || []).forEach((event) => {
         if (!event || serviceEventSeen.has(event.id)) return;
-        serviceEventSeen.add(event.id);
         const id = serviceTableId(event.table) || event.table;
         if (event.type === 'table-seated' && tables[id]) {
           tables[id].status = 'a-commander';
@@ -4747,7 +4770,7 @@ em, i, cite, dfn, var { font-style: normal; }
           serviceNotify(`Table ${id}`, `${event.customer || 'Clients'} installé${event.covers ? ` · ${event.covers} pers.` : ''} · menus à apporter`, { table: id, type: event.type, id: event.id, ts: event.ts });
           return;
         }
-        if (event.type !== 'table-state') return;
+        if (event.type !== 'table-state') { serviceEventSeen.add(event.id); return; }
         const messages = {
           'a-commander': 'Clients installés · menus à apporter',
           'ka-yaklo': 'Table ouverte · commande en cours',
@@ -5136,6 +5159,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Tables tab ---------- */
     const statusLabel = {
       'khawya':       'Libre',
+      'a-commander':  'À commander',
       'ka-yaklo':     'En cours',
       'bgha-ykhlass': 'Addition demandée',
       'ka-tkhdam':    'Paiement…',
@@ -5155,7 +5179,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function filterMatches(t) {
       if (activeFilter === 'all') return true;
-      if (activeFilter === 'occupied') return ['ka-yaklo','bgha-ykhlass','ka-tkhdam'].includes(t.status);
+      if (activeFilter === 'occupied') return ['a-commander','ka-yaklo','bgha-ykhlass','ka-tkhdam'].includes(t.status);
       if (activeFilter === 'bgha') return t.status === 'bgha-ykhlass';
       if (activeFilter === 'khawya') return t.status === 'khawya';
       return true;
@@ -5378,7 +5402,7 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
         `;
       } else {
-        const isEditable = (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass');
+        const isEditable = (t.status === 'a-commander' || t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass');
         const itemsHTML = order.map(l => {
           const noteTxt = (l.note || '').trim();
           const optTxt = optsSummary(l.opts);
@@ -5436,7 +5460,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="send-horizontal"></i> Lancer la commande
         </button>` : '';
       let fHTML = '';
-      if (t.status === 'ka-yaklo') {
+      if (t.status === 'a-commander' || t.status === 'ka-yaklo') {
         if (order.length === 0) {
           fHTML = `
             <button class="td-btn primary" data-action="take-order">
@@ -5573,6 +5597,12 @@ em, i, cite, dfn, var { font-style: normal; }
       const action = btn.dataset.action;
 
       if (action === 'take-order') {
+        const t = tables[activeTableId];
+        if (t && t.status === 'a-commander') {
+          t.status = 'ka-yaklo';
+          t.elapsed = 0;
+          publishServiceTableState(activeTableId, t.status, t.covers, false);
+        }
         menuContextId = activeTableId;
         showScreen('screen-main');
         setTab('menu');
@@ -5603,6 +5633,7 @@ em, i, cite, dfn, var { font-style: normal; }
         btn.disabled = true;
         svSendOrder(sentId).then((res) => {
           if (res.ok) {
+            publishServiceTableState(sentId, tables[sentId].status, tables[sentId].covers, false);
             dirtyOrders.delete(sentId);
             returnToFloor();
             toast(res.number ? `${msg} · ticket #${res.number}` : msg);
@@ -5714,8 +5745,8 @@ em, i, cite, dfn, var { font-style: normal; }
       t.covers = newTableCovers;
       t.status = 'ka-yaklo';
       t.elapsed = 0;
-      publishServiceTableState(id, t.status, t.covers, false);
       tableOrders[id] = [];
+      publishServiceTableState(id, t.status, t.covers, false);
       activeTableId = id;
       newTableId = null;
       renderTableDetail();
