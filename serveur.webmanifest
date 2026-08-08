@@ -1,6 +1,6 @@
 {
-  "name": "Kiwi · Employé",
-  "short_name": "Kiwi Employé",
+  "name": "Kiwi · Équipe",
+  "short_name": "Kiwi Équipe",
   "description": "Service, planning, heures et pointage de l'équipe",
   "id": "/kiwi-serveur",
   "start_url": "/kiwi-serveur",
