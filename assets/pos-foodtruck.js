@@ -542,7 +542,7 @@
       method,
       onPaid: (m, rendu) => {
         const o = createOrder(m);
-        toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         toast(o.anon ? `Commande n° ${o.n}, en prépa` : `« ${o.name} » n° ${o.n}, en prépa`);
       },
     });
@@ -781,7 +781,7 @@
           o.pay = { method: m, paid: o.total };
           addRecette(o.spot, m, o.total, o.id);
           o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
-          toast(`Khlass, ${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+          toast(`${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
           serveOrder(o);
         },
       });

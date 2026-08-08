@@ -3041,7 +3041,7 @@
         closeVeil('#bq-exch-veil');
         apply();
         refreshOps();
-        toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}, khlass`);
+        toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}`);
       }
     };
   }
@@ -6248,8 +6248,8 @@
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
-    const DDAYS = ['Lhad', 'Ltnin', 'Tlata', 'Larb3a', 'Lkhmis', 'Ljm3a', 'Sbt'];
-    const DMONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const DDAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const DMONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
     const el = document.createElement('div');
     el.className = 'clockin-screen bq-clockin';
     el.id = 'bq-clockin';

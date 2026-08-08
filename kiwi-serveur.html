@@ -2995,7 +2995,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="ci-greeting">Slm <em>Yassir</em></div>
           <div class="ci-role">Serveur · Café Atlas</div>
           <div class="ci-clock-time" id="ci-time">14:32</div>
-          <div class="ci-clock-date" id="ci-date">Ljm3a 24 April</div>
+          <div class="ci-clock-date" id="ci-date">Vendredi 24 avril</div>
         </div>
 
         <div class="ci-bottom">
@@ -3116,7 +3116,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="kg-sched-shift" id="kg-sched-next">
                 <div class="kg-sched-shift-label">
                   Prochain service
-                  <b id="kg-sched-next-day">Demain · Larb3a</b>
+                  <b id="kg-sched-next-day">Demain · Mercredi</b>
                 </div>
                 <div class="kg-sched-shift-time" id="kg-sched-next-time">11:00 → 19:00</div>
               </div>
@@ -3252,9 +3252,9 @@ em, i, cite, dfn, var { font-style: normal; }
           </button>
           <div class="td-title">
             <div class="td-table-name" id="td-table-name">T2 · 2 couverts</div>
-            <div class="td-table-meta" id="td-table-meta">Ka-yaklo · 45 mn</div>
+            <div class="td-table-meta" id="td-table-meta">En cours · 45 mn</div>
           </div>
-          <div class="td-status-pill" id="td-status-pill" data-status="ka-yaklo">Ka-yaklo</div>
+          <div class="td-status-pill" id="td-status-pill" data-status="ka-yaklo">En cours</div>
         </header>
 
         <div class="td-body" id="td-body">
@@ -3319,7 +3319,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="modal">
           <div class="modal-handle"></div>
           <h3 class="modal-title">Payer par carte</h3>
-          <p class="modal-subtle">Mesa <span data-bind="table">T2</span></p>
+          <p class="modal-subtle">Table <span data-bind="table">T2</span></p>
           <div class="modal-amount" id="card-amount">530,00 MAD</div>
           <div class="reader-stage">
             <div class="reader-disc is-pulsing" id="reader-disc">
@@ -3355,7 +3355,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="modal">
           <div class="modal-handle"></div>
           <h3 class="modal-title">Payer en espèces</h3>
-          <p class="modal-subtle">Mesa <span data-bind="table">T2</span></p>
+          <p class="modal-subtle">Table <span data-bind="table">T2</span></p>
           <div class="modal-amount" id="cash-amount">530,00 MAD</div>
 
           <div class="cash-grid" id="cash-step-input">
@@ -3381,7 +3381,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="reader-disc is-success">
                 <i data-lucide="check"></i>
               </div>
-              <div class="reader-status is-success">Khlass! Espèces confirmées</div>
+              <div class="reader-status is-success">Espèces confirmées</div>
             </div>
             <div class="cash-success-label">Rendu au client</div>
             <div class="cash-success-rendu" id="cash-success-rendu">0,00 MAD</div>
@@ -3597,8 +3597,8 @@ em, i, cite, dfn, var { font-style: normal; }
     const fmtMADcents = n => n.toFixed(2).replace('.', ',') + ' MAD';
 
     /* ---------- DAfr days ---------- */
-    const dafrDays = ['Lhad', 'Ltnin', 'Tlata', 'Larb3a', 'Lkhmis', 'Ljm3a', 'Sbt'];
-    const monthsEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const dafrDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const monthsEn = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
     /* ---------- Live clock ---------- */
     function tickClock() {
@@ -4903,11 +4903,11 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ---------- Tables tab ---------- */
     const statusLabel = {
-      'khawya':       'Khawya',
-      'ka-yaklo':     'Ka-yaklo',
+      'khawya':       'Libre',
+      'ka-yaklo':     'En cours',
       'bgha-ykhlass': 'Addition demandée',
       'ka-tkhdam':    'Paiement…',
-      'khlass':       'Khlass',
+      'khlass':       'Réglée',
     };
 
     function updateFilterCounts() {
@@ -5105,7 +5105,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       // Khlass tables → just show info briefly
       if (t.status === 'khlass') {
-        toast(`Mesa ${id} déjà réglée`);
+        toast(`Table ${id} déjà réglée`);
         return;
       }
       activeTableId = id;
@@ -5252,7 +5252,7 @@ em, i, cite, dfn, var { font-style: normal; }
       } else if (t.status === 'khlass') {
         fHTML = `
           <button class="td-btn ghost" disabled>
-            <i data-lucide="check-circle-2"></i> Mesa réglée
+            <i data-lucide="check-circle-2"></i> Table réglée
           </button>
         `;
       }
@@ -5352,7 +5352,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const sentId = activeTableId;
         const order = tableOrders[sentId] || [];
         const hasNotes = order.some(l => (l.note || '').trim());
-        let msg = `Mesa ${sentId} · commande envoyée`;
+        let msg = `Table ${sentId} · commande envoyée`;
         const dests = svStationNames(order);
         if (dests)                            msg += ` · ${dests}`;
         if (hasNotes)                         msg += ` · notes transmises`;
@@ -5380,7 +5380,7 @@ em, i, cite, dfn, var { font-style: normal; }
                sur la table, voit pourquoi, et peut relancer. */
             btn.disabled = false;
             renderTableDetail();
-            toast(`Mesa ${sentId} · ${SV_SEND_MSG[res.error] || 'envoi impossible'}`, 4200);
+            toast(`Table ${sentId} · ${SV_SEND_MSG[res.error] || 'envoi impossible'}`, 4200);
           }
         });
       } else if (action === 'ask-bill') {
@@ -5401,7 +5401,7 @@ em, i, cite, dfn, var { font-style: normal; }
         dirtyOrders.delete(id);
         tableSplits.delete(id);
         returnToFloor();
-        toast(`Mesa ${id} fermée`);
+        toast(`Table ${id} fermée`);
       } else if (action === 'resume-split') {
         // Reopen the split modal directly on the flow screen
         openSplitModal(activeTableId);
@@ -5925,7 +5925,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const timeEl = $('#kg-sched-next-time');
       const wrapEl = $('#kg-sched-next');
       if (nextIdx >= 0 && dayEl && timeEl) {
-        const dafrFull = ['Ltnin', 'Tlata', 'Larb3a', 'Lkhmis', 'Ljm3a', 'Sbt', 'Lhad'];
+        const dafrFull = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
         const prefix = wrap                          ? 'Semaine prochaine'
                      : (nextIdx === todayIdx + 1)    ? 'Demain'
                      : (nextIdx === todayIdx + 2)    ? 'Après-demain'
@@ -6085,7 +6085,7 @@ em, i, cite, dfn, var { font-style: normal; }
       reader.disc.classList.add('flash', 'is-success');
       reader.disc.innerHTML = '<i data-lucide="check"></i>';
       reader.status.classList.add('is-success');
-      reader.status.textContent = 'Khlass! Carte approuvée';
+      reader.status.textContent = 'Carte approuvée';
       reader.method.style.display = 'none';
       reader.txn.textContent = 'TXN #KW-' + (28000 + Math.floor(Math.random()*999));
       reader.txn.hidden = false;
@@ -6263,7 +6263,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (currentTab === 'tables')   renderTables();
       if (currentTab === 'notifications') renderNotifications();
       if (currentTab === 'profil')   renderProfil();
-      toast(`Mesa ${id} · khlass ✓`);
+      toast(`Table ${id} · réglée ✓`);
     }
 
     /* ---------- SPLIT BILL ---------- */
