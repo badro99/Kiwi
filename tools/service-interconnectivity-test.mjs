@@ -193,6 +193,16 @@ ok(employeeBillState.states['1'].source === 'employee'
   && employeeBillState.states['1'].lines[0].qty === 3
   && employeeBillState.states['1'].lines[0].sentQty === 2,
   "la caisse reçoit l'addition et la quantité déjà envoyée par le téléphone");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, syncVersion: 3, lines: [] }] },
+}) });
+response = await eventsPost({ request, env });
+ok(response.status === 200, "le heartbeat vide et en retard de la caisse est accepté sans effacer l'addition");
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
+response = await eventsGet({ request, env }); const billAfterEmptyHeartbeat = await json(response);
+ok(billAfterEmptyHeartbeat.states['1'].lines.length === 1
+  && billAfterEmptyHeartbeat.states['1'].lines[0].qty === 3,
+  "un heartbeat caisse vide ne fait plus disparaître la commande envoyée par l'employé");
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, state: { table: '1', status: 'khawya', covers: 0 },
 }) });

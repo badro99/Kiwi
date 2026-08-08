@@ -117,6 +117,18 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
       if (before && !Object.prototype.hasOwnProperty.call(next, 'lines') && Array.isArray(before.lines)) next.lines = before.lines;
+      /* The caisse publishes its whole floor every four seconds. It can race
+       * the employee's just-sent bill with an older local view of the same
+       * open table containing zero lines. That heartbeat is not a cancellation:
+       * only a paid/free status may clear a bill. Keep the employee lines until
+       * the caisse has actually consumed and echoes them. */
+      if (source === 'caisse' && before && before.source === 'employee'
+        && next.status !== 'khawya' && next.status !== 'khlass'
+        && Array.isArray(before.lines) && before.lines.length
+        && Array.isArray(next.lines) && !next.lines.length) {
+        next.lines = before.lines;
+        next.syncVersion = Math.max(Number(next.syncVersion || 0), Number(before.syncVersion || 0));
+      }
       if (next.status === 'khawya' || next.status === 'khlass') next.lines = [];
       const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
       const linesChanged = !before || JSON.stringify(before.lines || []) !== JSON.stringify(next.lines || []);
