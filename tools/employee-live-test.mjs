@@ -212,6 +212,13 @@ ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('Kiwi
   'le portail employé possède sa propre connexion email + PIN');
 ok(!serviceSource.includes("location.replace('/dashboard?employee=1')"),
   "un échec de session reste dans le portail au lieu de rebondir vers le propriétaire");
+ok(serviceSource.includes("localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant')")
+  && /openEmployeeSession[\s\S]*?svRebuildCarte\(\); svFetchCarte\(\)/.test(serviceSource),
+  "la carte charge dès l'authentification depuis le magasin exact de l'employé");
+ok(/function pollServiceSync\(\)[\s\S]*?svFetchCarte\(\)/.test(serviceSource),
+  "les changements de carte du dashboard atteignent l'app employé pendant le service");
+ok(serviceSource.includes("emoji: String(c.emoji || '')") && serviceSource.includes("v.emoji ? `${esc(v.emoji)} `"),
+  "les emojis des options publiés par le dashboard restent visibles dans l'app employé");
 const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');
 ok(employeePwaSource.includes('beforeinstallprompt') && employeePwaSource.includes('Installer l’app'),
   "le portail propose son installation sur l'écran d'accueil après connexion");
