@@ -736,3 +736,23 @@ CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- entrent pas et ne peuvent donc pas se gêner entre elles.
 CREATE UNIQUE INDEX IF NOT EXISTS orders_client_ref
   ON orders (merchant, client_ref) WHERE client_ref IS NOT NULL;
+
+-- ── Quota journalier de l'assistant IA côté serveur ───────────────────────
+-- /api/ai/ask est le modèle de SECOURS, proposé seulement aux appareils qui ne
+-- peuvent pas faire tourner l'assistant dans le navigateur (pas de WebGPU, pas
+-- de place, pas de mémoire). Il est facturé à l'appel, donc il se compte.
+--
+-- Le plafond est un garde-fou de DÉPENSE, pas une punition : il existe pour
+-- qu'une boucle de câblage cassée ne consomme pas l'allocation du compte en une
+-- nuit. La borne qui marche toujours reste `max_tokens` côté endpoint ; cette
+-- table n'est que la seconde ligne.
+--
+-- Tant qu'elle n'est PAS passée sur la base déjà déployée, functions/api/ai/
+-- ask.js laisse passer les appels — livrer une fonctionnalité morte serait pire
+-- qu'un compteur absent. À appliquer à la main, comme les ALTER ci-dessus.
+CREATE TABLE IF NOT EXISTS ai_usage (
+  merchant TEXT    NOT NULL,     -- slugMerchant
+  day      TEXT    NOT NULL,     -- AAAA-MM-JJ, UTC
+  calls    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, day)
+);

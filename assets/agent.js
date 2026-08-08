@@ -445,6 +445,15 @@
         unfitSpace: 'Il n’y a pas assez d’espace de stockage libre dans ce navigateur pour garder le modèle (1,2 Go). Libérez de la place, ou continuez avec mes calculs, qui ne demandent rien.',
         unfitMemory: 'Cet appareil a trop peu de mémoire pour faire tourner le modèle sans bloquer votre caisse. Je ne vais pas le tenter.',
         unfitTail: 'Ce que je calcule reste entier : embauche, prix, seuil de rentabilité, prévisions, marges, charges, trésorerie, et vos ventes par article, par client et par jour.',
+        /* La route serveur. Elle n'est proposée QUE sur les appareils qui ne
+         * peuvent pas faire tourner le modèle en local, et elle dit ce qu'elle
+         * fait : le mode local ne laisse rien sortir, celui-ci si. Le
+         * commerçant tranche une fois, et son refus est gardé. */
+        cloudLead: 'Cet appareil ne peut pas faire tourner l’assistant libre en local. Kiwi peut répondre depuis ses serveurs à la place.',
+        cloudPrivacy: 'À dire franchement : dans ce mode, votre question et les chiffres de votre établissement sont envoyés à Kiwi pour être traités. Le mode local, lui, ne fait rien sortir de l’appareil.',
+        cloudActivate: 'Répondre depuis les serveurs Kiwi',
+        cloudDecline: 'Non merci, garder mes calculs seuls',
+        cloudQuota: 'L’assistant serveur a atteint sa limite du jour pour votre établissement. Il repart demain ; d’ici là mes calculs restent entiers.',
       },
       acct: {
         hub: 'Je suis aussi votre comptable, teneur de livres, fiscaliste et gestionnaire de paie, tout est réuni dans votre Comptabilité : livre, états financiers, TVA & impôts, et paie.',
@@ -625,6 +634,11 @@
         unfitSpace: 'There is not enough free storage in this browser to keep the model (1.2 GB). Free some space, or carry on with my calculations, which need none.',
         unfitMemory: 'This device has too little memory to run the model without freezing your till. I am not going to try.',
         unfitTail: 'What I calculate is untouched: hiring, pricing, break-even, forecasts, margins, costs, cash, and your sales by item, by customer and by day.',
+        cloudLead: 'This device can’t run the open-source assistant locally. Kiwi can answer from its own servers instead.',
+        cloudPrivacy: 'Plainly: in this mode your question and your business’s figures are sent to Kiwi to be processed. The local mode sends nothing off the device.',
+        cloudActivate: 'Answer from Kiwi’s servers',
+        cloudDecline: 'No thanks, keep my calculations only',
+        cloudQuota: 'The server assistant has reached today’s limit for your business. It resets tomorrow; until then my calculations are untouched.',
       },
       acct: {
         hub: 'I\'m also your accountant, bookkeeper, tax adviser and payroll manager, it\'s all together in your Accounting: ledger, financial statements, VAT & tax, and payroll.',
@@ -807,6 +821,11 @@
         unfitSpace: 'لا توجد مساحة تخزين كافية في هذا المتصفّح للاحتفاظ بالنموذج (1,2 غيغابايت). أفرغ بعض المساحة، أو تابع مع حساباتي التي لا تحتاج شيئاً.',
         unfitMemory: 'ذاكرة هذا الجهاز أقل من أن تشغّل النموذج دون تجميد صندوقك. لن أحاول.',
         unfitTail: 'ما أحسبه يبقى كاملاً: التوظيف، الأسعار، عتبة الربحية، التوقّعات، الهوامش، المصاريف، الخزينة، ومبيعاتك حسب الصنف والزبون واليوم.',
+        cloudLead: 'هذا الجهاز لا يستطيع تشغيل المساعد الحرّ محلياً. يمكن لـ Kiwi أن يجيب من خوادمه بدلاً من ذلك.',
+        cloudPrivacy: 'بصراحة: في هذا الوضع تُرسل أسئلتك وأرقام محلّك إلى Kiwi لمعالجتها. أمّا الوضع المحلي فلا يُخرج أي شيء من الجهاز.',
+        cloudActivate: 'الإجابة من خوادم Kiwi',
+        cloudDecline: 'لا، شكراً — الاكتفاء بحساباتي',
+        cloudQuota: 'بلغ المساعد على الخادم حدّه اليومي لمحلّك. يُستأنف غداً، وحساباتي تبقى كاملة حتى ذلك الحين.',
       },
       acct: {
         hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك، كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
@@ -3592,6 +3611,19 @@
     try { localStorage.setItem('kiwiAiLocal', 'off'); } catch (_) {}
   }
 
+  /* La route serveur (/api/ai/ask), pour les seuls appareils où le modèle local
+   * est impossible. Le choix du commerçant est PERSISTÉ dans les deux sens :
+   * redemander à chaque question serait du harcèlement, et un « non » qui ne
+   * tient pas n'est pas un non. Rien n'est activé par défaut — le mode local
+   * promet que rien ne sort de l'appareil, et cette promesse ne se contourne
+   * pas en silence. */
+  function cloudAccepted() {
+    try { return localStorage.getItem('kiwiAiCloud') === 'on'; } catch (_) { return false; }
+  }
+  function cloudDeclined() {
+    try { return localStorage.getItem('kiwiAiCloud') === 'off'; } catch (_) { return false; }
+  }
+
   /* Can this machine actually do it? `'gpu' in navigator` only says the API is
    * declared. Asking for an adapter, for free disk and for memory takes a few
    * milliseconds and replaces the worst outcome available here: a shop till on
@@ -4603,10 +4635,45 @@
       }));
     }
 
+    /* Jusqu'ici les quatre refus de llmCapability() finissaient sur une phrase
+     * polie et rien d'autre : pas de WebGPU, pas de carte, pas de place, pas de
+     * mémoire. Ce sont exactement les appareils qui ne peuvent pas télécharger
+     * 1,2 Go — la population pour laquelle un modèle serveur existe. On ne
+     * bascule PAS en silence : l'offre dit, dans la langue du commerçant, que
+     * la question et les chiffres quittent l'appareil, et c'est à lui
+     * d'accepter une fois ou de refuser pour de bon. */
+    function offerCloud(question, why) {
+      const m = tr().llm;
+      if (cloudDeclined()) { deterministicOnly(why); return; }
+      LLM.pending.push(question);
+      pushAgent(
+        `<div>${m.cloudLead}</div>
+         <div class="fa-note" style="font-style:normal;">${m.cloudPrivacy}</div>
+         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cloud>${m.cloudActivate}</button>`
+        + `<button type="button" class="fa-llm-btn" data-fa-cloud-no>${m.cloudDecline}</button></div>`);
+    }
+
+    async function acceptCloud() {
+      try { localStorage.setItem('kiwiAiCloud', 'on'); } catch (_) {}
+      const queued = LLM.pending.slice();
+      LLM.pending.length = 0;
+      for (const q of queued) await runLlm(q, 'cloud');
+    }
+
+    function declineCloud() {
+      try { localStorage.setItem('kiwiAiCloud', 'off'); } catch (_) {}
+      LLM.pending.length = 0;
+      deterministicOnly('noGpu');
+    }
+
     async function routeToLlm(question) {
       const m = tr().llm;
       if (LLM.status === 'ready') { runLlm(question); return; }
-      if (llmDisabled()) { deterministicOnly('noGpu'); return; }
+      /* Le serveur passe avant le contrôle local : c'est la route que le
+       * commerçant a explicitement choisie, et sur ces appareils il n'y a rien
+       * de local vers quoi retomber. */
+      if (cloudAccepted()) { runLlm(question, 'cloud'); return; }
+      if (llmDisabled()) { offerCloud(question, 'noGpu'); return; }
       if (LLM.status === 'loading') {
         /* Queue. The old line was `LLM.pending = question`, so asking a second
          * thing during a 1,2 Go download threw the first one away in silence. */
@@ -4619,7 +4686,7 @@
       const cap = await llmCapability();
       if (!cap.ok) {
         if (cap.why !== 'noGpu') disableLlm();
-        deterministicOnly(cap.why);
+        offerCloud(question, cap.why);
         return;
       }
       LLM.pending.push(question);
@@ -4725,7 +4792,89 @@
       pushAgent(replyHtml({ text: tr().llm.cancelled }));
     }
 
-    async function runLlm(question) {
+    /* Les deux moteurs ne diffèrent QUE par le transport. WebLLM rend un
+     * itérable de morceaux à la forme OpenAI ; le serveur rend du SSE sur HTTP.
+     * On les ramène tous les deux à un flux de bouts de texte, pour que tout ce
+     * qui suit — découpage par phrase terminée, redactUnsupported(), note de
+     * garde, télémétrie, boutons d'avis, historique qui ne garde que la version
+     * expurgée — soit écrit UNE fois et ne puisse pas diverger entre les
+     * routes. Chacune est `async` et ne rend son itérateur qu'une fois la
+     * connexion établie : l'indicateur de frappe reste tant que rien n'arrive. */
+    async function localDeltas(messages) {
+      const stream = await LLM.engine.chat.completions.create({
+        messages,
+        /* Deliberately below Qwen3.5's packaged default (temp 1.0 / top_p
+         * 1.0): this assistant answers with the merchant's real money, so
+         * the failure we most need to suppress is an invented MAD figure.
+         * 0.7/0.8 stays clear of the repetition that greedy decoding
+         * triggers while keeping output tight against the grounding. */
+        temperature: 0.7,
+        top_p: 0.8,
+        stream: true,
+      });
+      return (async function* () {
+        for await (const chunk of stream) yield chunk.choices?.[0]?.delta?.content || '';
+      })();
+    }
+
+    async function cloudDeltas(messages) {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      });
+      if (!res.ok || !res.body) {
+        /* L'endpoint nomme sa panne — binding absent, quota du jour, session
+         * expirée, modèle en échec. On la remonte telle quelle pour que
+         * l'appelant puisse retomber sur le message d'avant plutôt que
+         * d'afficher une erreur brute. */
+        let code = '';
+        try { const j = await res.json(); code = (j && j.error) || ''; } catch (_) {}
+        const err = new Error('cloud:' + (code || res.status));
+        err.kiwiCode = code;
+        throw err;
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      return (async function* () {
+        let buf = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          /* Une lecture réseau peut couper une ligne SSE en deux : seules les
+           * lignes complètes sortent du tampon. */
+          let i;
+          while ((i = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, i).trim();
+            buf = buf.slice(i + 1);
+            if (line.slice(0, 5) !== 'data:') continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const o = JSON.parse(payload);
+              if (o && o.response) yield String(o.response);
+            } catch (_) { /* trame partielle ou commentaire : on ignore */ }
+          }
+        }
+        /* Un flux qui se termine sans saut de ligne final laisserait sa
+         * dernière phrase dans le tampon. On la rend quand même. */
+        const tail = buf.trim();
+        if (tail.slice(0, 5) === 'data:') {
+          const payload = tail.slice(5).trim();
+          if (payload && payload !== '[DONE]') {
+            try {
+              const o = JSON.parse(payload);
+              if (o && o.response) yield String(o.response);
+            } catch (_) {}
+          }
+        }
+      })();
+    }
+
+    async function runLlm(question, via) {
+      const cloud = via === 'cloud';
       const tLlm = Date.now();
       const typing = pushTyping();
       llmHistory.push({ role: 'user', content: question });
@@ -4735,17 +4884,7 @@
       const sys = buildSystemPrompt(detectQLang(question));
       const messages = [{ role: 'system', content: sys }, ...llmHistory.slice(-8)];
       try {
-        const stream = await LLM.engine.chat.completions.create({
-          messages,
-          /* Deliberately below Qwen3.5's packaged default (temp 1.0 / top_p
-           * 1.0): this assistant answers with the merchant's real money, so
-           * the failure we most need to suppress is an invented MAD figure.
-           * 0.7/0.8 stays clear of the repetition that greedy decoding
-           * triggers while keeping output tight against the grounding. */
-          temperature: 0.7,
-          top_p: 0.8,
-          stream: true,
-        });
+        const deltas = await (cloud ? cloudDeltas(messages) : localDeltas(messages));
         typing.remove();
         LLM.cancelled = false;
         const bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
@@ -4759,9 +4898,9 @@
          * reading over the till does not get that second back. */
         const SETTLED = /[\s\S]*[.!?\n؟]/;
         let shown = 0;
-        for await (const chunk of stream) {
+        for await (const piece of deltas) {
           if (LLM.cancelled) break;
-          acc += chunk.choices?.[0]?.delta?.content || '';
+          acc += piece;
           const m = stripThink(acc).match(SETTLED);
           const settled = m ? m[0] : '';
           if (settled.length > shown) {
@@ -4792,7 +4931,7 @@
           cav.textContent = red.caveat;
           bubble.appendChild(cav);
         }
-        logAi({ route: 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
+        logAi({ route: cloud ? 'cloud' : 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
         /* The merchant's own verdict — the only signal that says whether the
          * answer was any good. Two buttons, no free text, nothing transmitted. */
         if (bubble && red.redacted !== -1) {
@@ -4810,7 +4949,18 @@
         llmHistory.push({ role: 'assistant', content: red.redacted === -1 ? '' : red.text });
       } catch (e) {
         typing.remove();
-        pushAgent(replyHtml({ text: tr().llm.runErr }));
+        /* La route serveur nomme sa panne. Binding absent, session expirée,
+         * modèle en échec : le commerçant n'a pas à lire ça — il retrouve
+         * simplement la réponse déterministe qu'il avait avant que cette route
+         * existe. Le quota, lui, se dit : c'est temporaire et il repart demain. */
+        const code = e && e.kiwiCode;
+        if (code === 'quota') {
+          pushAgent(replyHtml({ text: tr().llm.cloudQuota }));
+        } else if (code === 'unbound' || code === 'auth' || code === 'model' || code === 'messages' || code === 'body') {
+          deterministicOnly('noGpu');
+        } else {
+          pushAgent(replyHtml({ text: tr().llm.runErr }));
+        }
       }
     }
 
@@ -4870,6 +5020,8 @@
         return;
       }
       if (e.target.closest('[data-fa-activate]')) { activateLlm(); return; }
+      if (e.target.closest('[data-fa-cloud]')) { acceptCloud(); return; }
+      if (e.target.closest('[data-fa-cloud-no]')) { declineCloud(); return; }
       if (e.target.closest('[data-fa-cancel-llm]')) { cancelLlm(); return; }
       const rateBtn = e.target.closest('[data-fa-rate]');
       if (rateBtn) {
