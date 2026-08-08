@@ -10653,9 +10653,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const { toast, modal, drawer, handlers } = window.Kiwi;
 
   /* ═══════════════════ Inline SVG icon set ═══════════════════ */
+  /* Material Symbols (Outlined, 400) recopiées depuis assets/icons/material/.
+   * Forme native : viewBox 0 -960 960 960, tracé plein piloté par `color`. */
+  const msym = (d, px) =>
+    `<svg width="${px}" height="${px}" viewBox="0 -960 960 960" fill="currentColor"><path d="${d}"/></svg>`;
+  /* redeem.svg */
+  const D_REDEEM = 'M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z';
+
   const SVG = {
     discount: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
-    code:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+    /* Les trois canaux de remboursement se disaient avec deux dessins pour trois
+     * sens : le « $ » servait à la fois la carte et les espèces, et les chevrons
+     * de code servaient le bon d'achat. Un canal, une icône — Material Symbols,
+     * recopiées depuis assets/icons/material/ (nom du fichier en commentaire). */
+    voucher:  msym(D_REDEEM, 18),
+    voucherSm: msym(D_REDEEM, 13),  /* pied de modale : la rangée est en 13 */
     bundle:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
     tax:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     bell:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
@@ -10669,8 +10681,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     check:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
     x:        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
     swap:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
-    wa:       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
-    coin:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9.5c0-1.5 1.5-2 3-2s3 .5 3 2-1 1.8-3 2.5-3 1-3 2.5 1.5 2 3 2 3-.5 3-2"/></svg>',
+    /* Seul usage : la tuile « Notifier WhatsApp », à côté de card et voucher en 18.
+     * Marque tierce — elle reste au trait, elle ne peut pas venir de Material. */
+    wa:       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+    card:     '<svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M880-720v480q0 33-23.5 56.5T800-160H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720Zm-720 80h640v-80H160v80Zm0 160v240h640v-240H160Zm0 240v-480 480Z"/></svg>',  /* credit_card.svg */
+    cash:     '<svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z"/></svg>',  /* payments.svg */
     flag:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     cal:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   };
@@ -11177,14 +11192,14 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">Choisissez le canal, la commande d'origine sera automatiquement liée pour la conformité.</div>
           <div class="p-grid-3">
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-original">
-              ${SVG.coin}
+              ${SVG.card}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">Carte d'origine</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Visa / Mastercard · 1-3 jours</div>
               </div>
             </button>
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-credit">
-              ${SVG.code}
+              ${SVG.voucher}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">Crédit boutique</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Bon valable 12 mois</div>
@@ -11249,7 +11264,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       `,
       foot: `
         <button class="kb ghost" data-action="ret-refuse" data-arg="${id || ''}" data-bubble="stop" style="color: var(--danger);">${SVG.x} Refuser</button>
-        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.code} Crédit boutique</button>
+        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} Crédit boutique</button>
         <button class="kb ghost" data-action="ret-exchange" data-arg="${id || ''}" data-bubble="stop">${SVG.swap} Échanger</button>
         <button class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} Approuver remboursement</button>
       `,
@@ -11265,15 +11280,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       body: `
         <div style="display: grid; gap: 10px;">
           <div class="wiz-choice" data-channel="card">
-            <div class="wc-ic">${SVG.coin}</div>
+            <div class="wc-ic">${SVG.card}</div>
             <div><div class="wc-t">Carte d'origine · Visa ••4291</div><div class="wc-d">Crédité en 1 à 3 jours ouvrés. Aucun frais.</div></div>
           </div>
           <div class="wiz-choice" data-channel="credit">
-            <div class="wc-ic">${SVG.code}</div>
+            <div class="wc-ic">${SVG.voucher}</div>
             <div><div class="wc-t">Crédit boutique</div><div class="wc-d">Bon valable 12 mois sur tous les articles. +10 % offerts en bonus.</div></div>
           </div>
           <div class="wiz-choice" data-channel="cash">
-            <div class="wc-ic">${SVG.coin}</div>
+            <div class="wc-ic">${SVG.cash}</div>
             <div><div class="wc-t">Espèces / virement</div><div class="wc-d">Disponible immédiatement à la caisse ou sous 48 h par virement.</div></div>
           </div>
         </div>

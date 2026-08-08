@@ -1566,7 +1566,8 @@
           </div>
         </div>
         <div class="agent-action">
-          <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></div>
+          <!-- account_balance.svg — la CNSS est une institution, pas un rectangle vide -->
+          <div class="ic"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-280v-280h80v280h-80Zm240 0v-280h80v280h-80ZM80-120v-80h800v80H80Zm600-160v-280h80v280h-80ZM80-640v-80l400-200 400 200v80H80Zm178-80h444-444Zm0 0h444L480-830 258-720Z"/></svg></div>
           <div class="b">
             <div class="n">${T.cnssTitle}</div>
             <div class="d">${T.cnssDesc}</div>
