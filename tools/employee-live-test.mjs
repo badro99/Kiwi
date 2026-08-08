@@ -217,6 +217,9 @@ ok(serviceSource.includes("localStorage.getItem('kiwiEmployeeMerchant') || local
   "la carte charge dès l'authentification depuis le magasin exact de l'employé");
 ok(/function pollServiceSync\(\)[\s\S]*?svFetchCarte\(\)/.test(serviceSource),
   "les changements de carte du dashboard atteignent l'app employé pendant le service");
+ok(/function pollServiceSync\(\)[\s\S]*?if \(window\.KiwiEmployeeLive\)/.test(serviceSource)
+  && !serviceSource.includes('servicePlanTick % 3'),
+  "équipe, planning et plan de salle se relisent sur la boucle Wi-Fi courte");
 ok(serviceSource.includes("emoji: String(c.emoji || '')") && serviceSource.includes("v.emoji ? `${esc(v.emoji)} `"),
   "les emojis des options publiés par le dashboard restent visibles dans l'app employé");
 const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');

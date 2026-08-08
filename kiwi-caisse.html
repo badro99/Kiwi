@@ -7460,7 +7460,7 @@
       const slug = carteSlug();
       if (!slug) return Promise.resolve(false);
       const now = Date.now();
-      if (!force && now - _carteAt < 20000) return Promise.resolve(false);
+      if (!force && now - _carteAt < 5000) return Promise.resolve(false);
       _carteAt = now;
       return fetch('/api/menu?merchant=' + encodeURIComponent(slug), { credentials: 'omit' })
         .then(r => (r.ok ? r.json() : null))
@@ -13006,6 +13006,12 @@
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) { try { fetchCarte(false); } catch (_) {} }
     });
+    /* Keep an open till aligned with menu edits made on the owner's dashboard
+       over the local Wi-Fi. The mirror still serves the last known menu during
+       an outage; this poll only replaces it after a successful cloud read. */
+    setInterval(() => {
+      if (!document.hidden) { try { fetchCarte(false); } catch (_) {} }
+    }, 6000);
 
     /* ===========================================================
        ÉCRAN CUISINE — KDS (kitchen display, full-screen)

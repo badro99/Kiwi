@@ -4454,7 +4454,10 @@ em, i, cite, dfn, var { font-style: normal; }
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
       }).then((r) => r.ok ? r.json() : null).then(ingestServiceEvents).catch(() => {});
       servicePlanTick++;
-      if (servicePlanTick % 3 === 0 && window.KiwiEmployeeLive) {
+      /* Team, schedule and floor assignments share this six-second live loop.
+         Eighteen seconds was long enough for a newly assigned table to look
+         broken during service even though the cloud write had succeeded. */
+      if (window.KiwiEmployeeLive) {
         KiwiEmployeeLive.refresh().then((data) => {
           applyEmployeeLive(data);
           activeRole = resolveRole('');
