@@ -4626,6 +4626,7 @@ em, i, cite, dfn, var { font-style: normal; }
     const serviceEventSeen = new Set();
     const serviceStateVersion = new Map();
     const serviceBillAwaiting = new Map();
+    const SERVICE_BILL_SYNC_VERSION = 3;
     const teamMessageSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
@@ -4674,7 +4675,7 @@ em, i, cite, dfn, var { font-style: normal; }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchant, state: {
           table: id, status, covers: Math.max(0, Number(covers) || 0),
-          syncVersion: 2,
+          syncVersion: SERVICE_BILL_SYNC_VERSION,
           lines: (tableOrders[id] || []).slice(0, 80).map((line) => ({
             key: String(line.cloudKey || line.uid || line.id || ''), id: String(line.id || ''),
             name: String(line.name || ''), price: Math.max(0, Number(line.price) || 0),
@@ -4758,7 +4759,8 @@ em, i, cite, dfn, var { font-style: normal; }
            are exactly the bills that reappear after refresh. Never hydrate a
            live phone from any legacy bill payload; a current caisse snapshot
            or a new employee action replaces it normally. */
-        const legacyBillState = Array.isArray(state.lines) && Number(state.syncVersion || 0) < 2;
+        const legacyBillState = Array.isArray(state.lines)
+          && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION;
         if (legacyBillState) {
           serviceStateVersion.set(id, {
             status: 'khawya', ts: Number(state.ts) || 0,

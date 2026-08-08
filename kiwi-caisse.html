@@ -14891,13 +14891,15 @@
     let serviceFloorPublishing = false;
     let serviceFloorSince = 0;
     let serviceFloorPolling = false;
+    const SERVICE_BILL_SYNC_VERSION = 3;
+    const serviceFloorLegacyTables = new Set();
     const serviceFloorLocalVersion = Object.create(null);
     function serviceFloorSnapshot() {
       return Object.keys(tables).map((id) => ({
         table: String(id), status: String(tables[id].status || 'khawya'),
         covers: Math.max(0, Number(tables[id].covers) || 0),
-        syncVersion: 2,
-        lines: (tableOrders[id] || []).slice(0, 80).map((line) => ({
+        syncVersion: SERVICE_BILL_SYNC_VERSION,
+        lines: (tableOrders[id] || []).filter((line) => !serviceFloorLegacyTables.has(String(id)) || line.sent === true).slice(0, 80).map((line) => ({
           key: String(line.orderProLine ? ('order:' + line.orderProLine) : (line.cloudKey || line.uid || line.id || '')), id: String(line.id || ''),
           name: String(line.name || ''), price: Math.max(0, Number(line.price) || 0),
           qty: Math.max(1, Number(line.qty) || 1), note: String(line.note || ''),
@@ -14950,6 +14952,11 @@
         Object.keys(data.states || {}).forEach((key) => {
           const state = data.states[key] || {};
           if (state.source !== 'employee') return;
+          /* Older employee/caisse bills could contain the removed automatic
+             menu generator. Never ingest one here: otherwise this caisse's
+             four-second snapshot promotes the fake lines back into every
+             employee phone. */
+          if (Array.isArray(state.lines) && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION) return;
           const id = caisseTableId(state.table || key);
           if (Number(state.ts) <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           if (!id || !tables[id] || !state.status) return;
@@ -14967,6 +14974,7 @@
             delete tableOrders[id];
             if (selectedId === id) closeRightPanel();
           } else if (cloudLines) {
+            serviceFloorLegacyTables.delete(String(id));
             tableOrders[id] = cloudLines.map((line, index) => ({
               uid: 'employee-' + String(line.key || line.id || index), cloudKey: String(line.key || line.id || index),
               id: line.id || '', name: line.name || 'Article', price: Math.max(0, Number(line.price) || 0),
@@ -15009,6 +15017,7 @@
              poussés par saveProvisional toutes les 90 secondes. Une tablette
              prêtée d'un commerce à l'autre suffisait. */
           merchant: shiftMerchant,
+          serviceBillSyncVersion: SERVICE_BILL_SYNC_VERSION,
           openedAt: shiftOpenedAt.toISOString(),
           openedBy: shiftOpenedBy,
           openingFloat: openingFloat,
@@ -15228,6 +15237,9 @@
           }
         }
       } catch (_) {}
+      if (storeIsReal() && Number(saved.serviceBillSyncVersion || 0) < SERVICE_BILL_SYNC_VERSION) {
+        Object.keys(saved.tableOrders || {}).forEach((id) => serviceFloorLegacyTables.add(String(id)));
+      }
       restoreShift(saved);
       enterShellDirectly();
       setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);

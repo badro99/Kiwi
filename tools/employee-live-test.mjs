@@ -329,9 +329,13 @@ ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(
 ok(serviceSource.includes('serviceStateVersion.has(id)')
   && serviceSource.includes('legacyBillState')
   && serviceSource.includes("source: 'legacy-cleanup'")
-  && serviceSource.includes('syncVersion: 2')
+  && serviceSource.includes('SERVICE_BILL_SYNC_VERSION = 3')
+  && serviceSource.includes('syncVersion: SERVICE_BILL_SYNC_VERSION')
   && eventsSource.includes('syncVersion: body.state.syncVersion')
-  && caisseSource.includes('syncVersion: 2'),
+  && caisseSource.includes('SERVICE_BILL_SYNC_VERSION = 3')
+  && caisseSource.includes('syncVersion: SERVICE_BILL_SYNC_VERSION')
+  && caisseSource.includes('serviceFloorLegacyTables')
+  && caisseSource.includes('line.sent === true'),
   'un rechargement live ne restaure ni les tables démo ni leurs anciens états employés contaminés');
 ok(serviceSource.includes("'a-commander':  'À commander'")
   && serviceSource.includes("t.status === 'a-commander' || t.status === 'ka-yaklo'")
