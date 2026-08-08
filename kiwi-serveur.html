@@ -4756,10 +4756,10 @@ em, i, cite, dfn, var { font-style: normal; }
         /* Versions before v2 could publish the sample bill that booted with
            this single-file demo into a real restaurant. Those poisoned states
            are exactly the bills that reappear after refresh. Never hydrate a
-           live phone from that legacy employee payload; a current caisse
-           snapshot or a new employee action replaces it normally. */
-        const legacyEmployeeState = state.source === 'employee' && Number(state.syncVersion || 0) < 2;
-        if (legacyEmployeeState) {
+           live phone from any legacy bill payload; a current caisse snapshot
+           or a new employee action replaces it normally. */
+        const legacyBillState = Array.isArray(state.lines) && Number(state.syncVersion || 0) < 2;
+        if (legacyBillState) {
           serviceStateVersion.set(id, {
             status: 'khawya', ts: Number(state.ts) || 0,
             source: 'legacy-cleanup', hasLines: true,

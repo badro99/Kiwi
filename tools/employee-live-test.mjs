@@ -253,6 +253,7 @@ ok(configClientSource.includes('scopeConfirmed = true')
   && configClientSource.includes('v.slug === urlScope'),
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('tableServerIds(t).includes(currentUser)')
   && serviceSource.includes('tableServerIds(tables[id]).includes(sid)'),
@@ -326,9 +327,10 @@ ok(caisseSource.includes('id="open-attendance-code"')
 ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(pollLiveTeam, 1000)'),
   'Équipe et Paie & planning reçoivent les heures de pointage du cloud sans rechargement');
 ok(serviceSource.includes('serviceStateVersion.has(id)')
-  && serviceSource.includes('legacyEmployeeState')
+  && serviceSource.includes('legacyBillState')
   && serviceSource.includes("source: 'legacy-cleanup'")
   && serviceSource.includes('syncVersion: 2')
+  && eventsSource.includes('syncVersion: body.state.syncVersion')
   && caisseSource.includes('syncVersion: 2'),
   'un rechargement live ne restaure ni les tables démo ni leurs anciens états employés contaminés');
 ok(serviceSource.includes("'a-commander':  'À commander'")

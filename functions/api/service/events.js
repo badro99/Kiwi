@@ -222,6 +222,7 @@ export async function onRequestPost({ request, env }) {
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
     const result = await syncTableSnapshot(env, merchant, [{
       table, status, covers: body.state.covers, lines: body.state.lines,
+      syncVersion: body.state.syncVersion,
     }], 'employee');
     if (!result.ok) return json({ error: 'state-write-failed' }, 503);
     /* C'est LE poke qui compte : un serveur vient de marquer une table payée ou
