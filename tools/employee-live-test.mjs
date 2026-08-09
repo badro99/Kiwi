@@ -348,10 +348,10 @@ ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(
 ok(serviceSource.includes('serviceStateVersion.has(id)')
   && serviceSource.includes('legacyBillState')
   && serviceSource.includes("source: 'legacy-cleanup'")
-  && serviceSource.includes('SERVICE_BILL_SYNC_VERSION = 3')
+  && serviceSource.includes('SERVICE_BILL_SYNC_VERSION = 4')
   && serviceSource.includes('syncVersion: SERVICE_BILL_SYNC_VERSION')
   && eventsSource.includes('syncVersion: body.state.syncVersion')
-  && caisseSource.includes('SERVICE_BILL_SYNC_VERSION = 3')
+  && caisseSource.includes('SERVICE_BILL_SYNC_VERSION = 4')
   && caisseSource.includes('syncVersion: SERVICE_BILL_SYNC_VERSION')
   && caisseSource.includes('serviceFloorLegacyTables')
   && caisseSource.includes('line.sent === true'),
@@ -360,11 +360,20 @@ ok(serviceSource.includes("'a-commander':  'À commander'")
   && serviceSource.includes("t.status === 'a-commander' || t.status === 'ka-yaklo'")
   && /if \(action === 'take-order'\)[\s\S]*?t\.status = 'ka-yaklo'/.test(serviceSource),
   "une table installée affiche son statut et garde les actions commande / fermeture");
-ok(!serviceSource.includes("const queueKey = 'order:' + order.id + ':' + index")
-  && serviceSource.includes('lines: (tableOrders[id] || []).slice(0, 80)')
-  && caisseSource.includes("state.source !== 'employee'")
-  && caisseSource.includes('tableOrders[id] = cloudLines.map'),
-  "l'addition courante circule dans les deux sens sans rejouer l'historique au rechargement");
+ok(serviceSource.includes('function reconcileCanonicalServiceBill(table)')
+  && serviceSource.includes('serviceCanonicalOrders.set(order.id')
+  && serviceSource.includes('line.sourceLocal === true')
+  && serviceSource.includes('sourceCanonical: true')
+  && caisseSource.includes('Employee snapshots synchronize OCCUPANCY, never the bill.')
+  && !caisseSource.includes('tableOrders[id] = cloudLines.map'),
+  "la file des commandes est l'unique source des articles; les snapshots ne peuvent plus fabriquer une addition");
+ok(serviceSource.includes("uid: 'order-' + order.id + '-' + index")
+  && serviceSource.includes("cloudKey: 'order:' + order.id + ':' + index")
+  && serviceSource.includes('Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table))'),
+  "un changement prêt/servi reconstruit les mêmes lignes canoniques au lieu d'en ajouter");
+ok(caisseSource.includes("startsWith('employee-')")
+  && caisseSource.includes('saved.tableOrders[id] = (saved.tableOrders[id] || []).filter'),
+  "la migration v4 retire une fois les factures employé v3 déjà contaminées dans la caisse");
 ok(!/serviceEventSeen\.add\(event\.id\);\s*const id = serviceTableId/.test(serviceSource),
   "la notification de placement n'est pas marquée lue avant d'être affichée");
 ok(serviceSource.includes('function clearEmployeeOperationalState()')

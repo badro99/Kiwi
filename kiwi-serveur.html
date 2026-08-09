@@ -4623,10 +4623,15 @@ em, i, cite, dfn, var { font-style: normal; }
     let serviceEventSince = 0;
     let servicePlanTick = 0;
     const serviceOrderStatus = new Map();
+    /* Canonical kitchen/order rows keyed by order id. Shared table snapshots
+       are transport/cache only; once this map has answered, they may never add
+       a sent item that does not exist in /api/order/queue. */
+    const serviceCanonicalOrders = new Map();
+    let serviceCanonicalReady = false;
     const serviceEventSeen = new Set();
     const serviceStateVersion = new Map();
     const serviceBillAwaiting = new Map();
-    const SERVICE_BILL_SYNC_VERSION = 3;
+    const SERVICE_BILL_SYNC_VERSION = 4;
     const teamMessageSeen = new Set();
     const serviceMineTables = new Set();
     const servicePausedTables = new Set();
@@ -4721,6 +4726,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function ingestServiceOrders(data) {
       if (!data || !data.ok) return;
       serviceOrderSince = data.now || serviceOrderSince;
+      serviceCanonicalReady = true;
       serviceMineTables.clear();
       servicePausedTables.clear();
       ((data.service && data.service.mineTables) || []).forEach((id) => serviceMineTables.add(serviceTableId(id) || String(id)));
@@ -4738,6 +4744,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const before = serviceOrderStatus.get(order.id) || '';
         serviceOrderStatus.set(order.id, order.status);
         const table = serviceTableId(order.table) || order.table || '';
+        if (order.mode === 'table' && table) {
+          if (order.status === 'rejected' || order.paid) serviceCanonicalOrders.delete(order.id);
+          else serviceCanonicalOrders.set(order.id, { ...order, table });
+        }
         const shouldNotify = !isEmployeePaused() && (serviceMineTables.has(table) || servicePausedTables.has(table));
         if (shouldNotify && order.status === 'pending' && before !== 'pending') {
           serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim(), { table, type: 'orderpro', id: 'order-' + order.id + '-pending', ts: order.updated_ts });
@@ -4745,7 +4755,47 @@ em, i, cite, dfn, var { font-style: normal; }
           serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim(), { table, type: 'ready', id: 'order-' + order.id + '-ready', ts: order.updated_ts });
         }
       });
+      /* Rebuild the SENT part of every bill from the canonical order queue.
+         Ready/accepted notifications are status changes only; they cannot
+         append items. This also removes any old fabricated snapshot that was
+         already stored in service-events but has no KDS/order counterpart. */
+      Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table));
       try { renderAll(); } catch (_) {}
+    }
+
+    function reconcileCanonicalServiceBill(table) {
+      if (!serviceCanonicalReady || !tables[table]) return;
+      const canonical = [];
+      serviceCanonicalOrders.forEach((order) => {
+        if (String(order.table) !== String(table)) return;
+        (order.lines || []).forEach((line, index) => canonical.push({
+          uid: 'order-' + order.id + '-' + index,
+          cloudKey: 'order:' + order.id + ':' + index,
+          orderId: order.id,
+          id: line.id || '', name: line.name || 'Article',
+          price: Math.max(0, Number(line.unitPrice) || 0),
+          qty: Math.max(1, Number(line.qty) || 1),
+          sentQty: Math.max(1, Number(line.qty) || 1),
+          note: line.note || '',
+          opts: Array.isArray(line.visuals) ? line.visuals.map((visual) => ({
+            group: visual.group || '', label: visual.label || '',
+            p: Math.max(0, Number(visual.price) || 0), emoji: visual.emoji || '',
+          })) : [],
+          sourceCanonical: true,
+        }));
+      });
+      /* Keep only THIS phone's not-yet-sent draft. A line hydrated from caisse
+         is never a local draft (`sourceCaisse`), so an orphan 373 MAD snapshot
+         cannot survive merely because its quantities look sent. */
+      const localDraft = (tableOrders[table] || []).filter((line) =>
+        line.sourceLocal === true
+        && Number(line.sentQty || 0) < Number(line.qty || 0));
+      tableOrders[table] = canonical.concat(localDraft);
+      if (!canonical.length && !localDraft.length && tables[table].status === 'ka-yaklo') {
+        /* Occupancy may still be real (clients seated), only the invented bill
+           is removed. Never close the table from a missing order alone. */
+        tables[table].elapsed = Math.max(0, Number(tables[table].elapsed) || 0);
+      }
     }
     function ingestServiceEvents(data) {
       if (!data || !data.ok) return;
@@ -4794,7 +4844,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const stateTs = Number(state.ts) || 0;
         if (awaiting && (stateTs > awaiting.after || Date.now() > awaiting.until)) serviceBillAwaiting.delete(id);
         if (Array.isArray(state.lines) && !dirtyOrders.has(id) && !serviceBillAwaiting.has(id)) {
-          tableOrders[id] = state.lines.map((line, index) => ({
+          const hydrated = state.lines.map((line, index) => ({
             uid: 'cloud-' + String(line.key || line.id || index), cloudKey: String(line.key || line.id || index),
             id: line.id || '', name: line.name || 'Article',
             price: Math.max(0, Number(line.price) || 0),
@@ -4805,8 +4855,18 @@ em, i, cite, dfn, var { font-style: normal; }
             note: line.note || '', opts: Array.isArray(line.opts) ? line.opts : [],
             sourceCaisse: true,
           }));
+          /* Before the first queue answer this is a temporary display cache.
+             Afterwards the canonical order ledger owns sent items. */
+          if (!serviceCanonicalReady) tableOrders[id] = hydrated;
+          else reconcileCanonicalServiceBill(id);
         }
-        if (state.status === 'khawya' || state.status === 'khlass') tables[id].elapsed = 0;
+        if (state.status === 'khawya' || state.status === 'khlass') {
+          tables[id].elapsed = 0;
+          Array.from(serviceCanonicalOrders.entries()).forEach(([orderId, order]) => {
+            if (String(order.table) === String(id)) serviceCanonicalOrders.delete(orderId);
+          });
+          tableOrders[id] = [];
+        }
       });
       (data.events || []).forEach((event) => {
         if (!event || serviceEventSeen.has(event.id)) return;
@@ -4903,6 +4963,8 @@ em, i, cite, dfn, var { font-style: normal; }
       serviceEventSince = 0;
       servicePlanTick = 0;
       serviceOrderStatus.clear();
+      serviceCanonicalOrders.clear();
+      serviceCanonicalReady = false;
       serviceEventSeen.clear();
       serviceStateVersion.clear();
       serviceBillAwaiting.clear();
@@ -6002,9 +6064,13 @@ em, i, cite, dfn, var { font-style: normal; }
       const item = menuItems.find(m => m.id === itemId);
       if (!item) return;
       // Stack onto the un-noted line; a noted line splits off so it keeps its note.
-      const line = tableOrders[tableId].find(l => l.id === itemId && !(l.note || '').trim());
+      /* Never increase a line hydrated from caisse/the order ledger. A later
+         queue reconciliation replaces those rows, so the added quantity would
+         disappear or be re-counted. New taps live in an explicit local draft
+         until their own canonical ticket returns from /api/order/queue. */
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim());
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, note: '' });
+      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true });
       markDirty(tableId);
       const card = document.querySelector(`.menu-item[data-menu-id="${itemId}"]`);
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
@@ -6080,9 +6146,9 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
       const price = item.price + optsExtra(opts);
       const sig = optsSig(opts);
-      const line = tableOrders[tableId].find(l => l.id === item.id && !(l.note || '').trim() && (l.optsSig || '') === sig);
+      const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === item.id && !(l.note || '').trim() && (l.optsSig || '') === sig);
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, note: '', opts, optsSig: sig });
+      else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name, price, basePrice: item.price, qty: 1, sentQty: 0, note: '', opts, optsSig: sig, sourceLocal: true });
       markDirty(tableId);
       const card = Array.from(document.querySelectorAll('.menu-item'))
         .find((node) => node.dataset.menuId === String(item.id));

@@ -14993,7 +14993,7 @@
     let serviceFloorPublishing = false;
     let serviceFloorSince = 0;
     let serviceFloorPolling = false;
-    const SERVICE_BILL_SYNC_VERSION = 3;
+    const SERVICE_BILL_SYNC_VERSION = 4;
     const serviceFloorLegacyTables = new Set();
     const serviceFloorLocalVersion = Object.create(null);
     function serviceFloorSnapshot() {
@@ -15072,10 +15072,13 @@
           if (stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           if (!id || !tables[id] || !state.status) return;
           const statusChanged = tables[id].status !== state.status;
-          const cloudLines = Array.isArray(state.lines) ? state.lines : null;
-          const currentLines = serviceFloorSnapshot().find((item) => item.table === String(id));
-          const linesChanged = cloudLines && JSON.stringify(cloudLines) !== JSON.stringify(currentLines && currentLines.lines || []);
-          if (!statusChanged && !linesChanged) return;
+          /* Employee snapshots synchronize OCCUPANCY, never the bill. Every
+             sent employee line already travels through /api/order/queue, the
+             same canonical ledger as caisse/KDS/OrderPro. Importing `lines`
+             here created a second mutable copy of the bill; a later kitchen
+             ready event could merge that copy back and manufacture products.
+             Drafts stay on the employee phone until they are sent. */
+          if (!statusChanged) return;
           tables[id].status = state.status;
           tables[id].covers = state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0);
           tables[id].elapsed = 0;
@@ -15084,15 +15087,6 @@
             delete orders[id];
             delete tableOrders[id];
             if (selectedId === id) closeRightPanel();
-          } else if (cloudLines) {
-            serviceFloorLegacyTables.delete(String(id));
-            tableOrders[id] = cloudLines.map((line, index) => ({
-              uid: 'employee-' + String(line.key || line.id || index), cloudKey: String(line.key || line.id || index),
-              id: line.id || '', name: line.name || 'Article', price: Math.max(0, Number(line.price) || 0),
-              qty: Math.max(1, Number(line.qty) || 1), note: line.note || '', opts: Array.isArray(line.opts) ? line.opts : [],
-              sent: Number(line.sentQty) >= Math.max(1, Number(line.qty) || 1), sentQty: Math.max(0, Number(line.sentQty) || 0),
-            }));
-            if (selectedId === id && mode === 'salle') renderRightPanel(id);
           }
           refreshTableNode(id);
           changed = true;
@@ -15349,7 +15343,15 @@
         }
       } catch (_) {}
       if (storeIsReal() && Number(saved.serviceBillSyncVersion || 0) < SERVICE_BILL_SYNC_VERSION) {
-        Object.keys(saved.tableOrders || {}).forEach((id) => serviceFloorLegacyTables.add(String(id)));
+        Object.keys(saved.tableOrders || {}).forEach((id) => {
+          serviceFloorLegacyTables.add(String(id));
+          /* v3 imported the employee snapshot as a second bill. Those rows
+             are identifiable by their employee uid; remove them once on
+             restore while preserving genuine cashier lines and canonical
+             orderPro/employee tickets. */
+          saved.tableOrders[id] = (saved.tableOrders[id] || []).filter((line) =>
+            !String(line && line.uid || '').startsWith('employee-'));
+        });
       }
       restoreShift(saved);
       enterShellDirectly();
