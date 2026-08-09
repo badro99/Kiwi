@@ -162,6 +162,7 @@
       hExport:    'Exporter CSV',
       hImport:    'Importer CSV',
       hValidate:  'Valider la période',
+      hUnlock:    'Déverrouiller la période',
       hMember:    'Membre',
       hTotal:     'Total heures',
       hPay:       'Salaire calculé',
@@ -181,6 +182,8 @@
       tImportDesc:'Glissez votre fichier · vérification automatique des en-têtes.',
       tValidated: (start, end) => `Période verrouillée · du ${start} au ${end}`,
       tValidatedDesc: 'Heures envoyées à Paie & Planning · masse salariale recalculée.',
+      tUnlocked:  (start, end) => `Période déverrouillée · du ${start} au ${end}`,
+      tUnlockedDesc: 'Les heures et le planning peuvent à nouveau être modifiés.',
       placeholderPwd: '····',
       monthName: ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
       dayName:   ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],
@@ -313,6 +316,7 @@
       hExport:    'Export CSV',
       hImport:    'Import CSV',
       hValidate:  'Validate period',
+      hUnlock:    'Unlock period',
       hMember:    'Member',
       hTotal:     'Total hours',
       hPay:       'Computed pay',
@@ -332,6 +336,8 @@
       tImportDesc:'Drop your file · headers checked automatically.',
       tValidated: (start, end) => `Period locked · from ${start} to ${end}`,
       tValidatedDesc: 'Hours sent to Payroll & Planning · wage cost recomputed.',
+      tUnlocked:  (start, end) => `Period unlocked · from ${start} to ${end}`,
+      tUnlockedDesc: 'Hours and planning can be edited again.',
       placeholderPwd: '····',
       monthName: ['January','February','March','April','May','June','July','August','September','October','November','December'],
       dayName:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -464,6 +470,7 @@
       hExport:    'تصدير CSV',
       hImport:    'استيراد CSV',
       hValidate:  'تأكيد الفترة',
+      hUnlock:    'فتح الفترة',
       hMember:    'العضو',
       hTotal:     'إجمالي الساعات',
       hPay:       'الأجر المحتسب',
@@ -483,6 +490,8 @@
       tImportDesc:'أفلت ملفك · يتم التحقق من الرؤوس تلقائيًا.',
       tValidated: (start, end) => `الفترة مقفلة · من ${start} إلى ${end}`,
       tValidatedDesc: 'تم إرسال الساعات إلى الرواتب والتخطيط · أعيد حساب كتلة الأجور.',
+      tUnlocked:  (start, end) => `تم فتح الفترة · من ${start} إلى ${end}`,
+      tUnlockedDesc: 'يمكن تعديل الساعات والتخطيط من جديد.',
       placeholderPwd: '····',
       monthName: ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'],
       dayName:   ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
@@ -1176,6 +1185,7 @@
     upload:   '<path d="M12 21V9M5 14l7-7 7 7M5 3h14"/>',
     check:    '<path d="M5 12l5 5L20 7"/>',
     lock:     '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
+    unlock:   '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 017.5-2"/>',
     users:    '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
     userCheck:'<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11l2 2 4-4"/>',
     wallet:   '<path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-1"/><path d="M21 12h-5a2 2 0 100 4h5"/>',
@@ -1513,8 +1523,8 @@
             <button class="btn-slim" type="button" data-action="kt-quick-entry">${svgIcon(IC.plus, 13)}<span>${esc(T.hQuickEntry)}</span></button>
             <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.hExport)}</span></button>
             <button class="btn-slim" type="button" data-action="kt-import-csv">${svgIcon(IC.upload, 13)}<span>${esc(T.hImport)}</span></button>
-            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-validate-period" ${locked ? 'disabled' : ''}>
-              ${locked ? svgIcon(IC.lock, 13) : svgIcon(IC.check, 13)}<span>${esc(locked ? T.hLocked : T.hValidate)}</span>
+            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="${locked ? 'kt-unlock-period' : 'kt-validate-period'}">
+              ${locked ? svgIcon(IC.unlock, 13) : svgIcon(IC.check, 13)}<span>${esc(locked ? T.hUnlock : T.hValidate)}</span>
             </button>
           </div>
         </div>
@@ -2428,6 +2438,15 @@
     const period = buildPeriod(root.periodKind);
     if (pageActive) render();
     Kiwi.toast(T.tValidated(period.startFr, period.endFr), { type: 'success', desc: T.tValidatedDesc });
+  };
+  handlers['kt-unlock-period'] = () => {
+    const T = t();
+    const root = window.__kiwiTeamV2;
+    if (!root.periodLocked) return;
+    root.periodLocked = false;
+    const period = buildPeriod(root.periodKind);
+    if (pageActive) render();
+    Kiwi.toast(T.tUnlocked(period.startFr, period.endFr), { type: 'success', desc: T.tUnlockedDesc });
   };
 
   /* ═══════════════ PAIE & PLANNING ═══════════════
