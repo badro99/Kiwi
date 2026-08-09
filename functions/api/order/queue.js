@@ -42,7 +42,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
-import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, SESSION_ID } from './_lib.js';
+import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -72,6 +72,27 @@ function serviceNorm(value) {
 }
 function employeeName(member) {
   return [member && member.firstName, member && member.lastName].filter(Boolean).join(' ').trim();
+}
+async function ensureServiceTableSession(env, merchant, table, now) {
+  try {
+    let row = await env.DB.prepare(
+      `SELECT id, opened_ts FROM table_sessions
+        WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+        ORDER BY opened_ts DESC LIMIT 1`
+    ).bind(merchant, table).first();
+    if (row && row.id) return row;
+    const id = newSessionId();
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+       VALUES (?, ?, 'table', ?, 'open', ?, ?)`
+    ).bind(id, merchant, table, now, now).run();
+    row = await env.DB.prepare(
+      `SELECT id, opened_ts FROM table_sessions
+        WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+        ORDER BY opened_ts DESC LIMIT 1`
+    ).bind(merchant, table).first();
+    return row && row.id ? row : null;
+  } catch (_) { return null; }
 }
 async function serviceScope(request, env, merchant) {
   const employee = await activeServiceEmployee(request, env, merchant);
@@ -395,24 +416,32 @@ export async function onRequestPost(context) {
     const server = String((b && b.server) || '').trim().slice(0, 40);
     const today = startOfDay(now);
     const week = startOfWeek(now);
+    /* Resolve a retry BEFORE opening a visit. A late Wi-Fi replay after the
+       bill was paid must return its original ticket, not silently create a
+       fresh open session for the now-empty physical table. */
+    const clientRef = String((b && b.ref) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || null;
+    if (clientRef) {
+      try {
+        const dup = await env.DB.prepare(
+          `SELECT id, number, total, session_id FROM orders WHERE merchant = ? AND client_ref = ?`
+        ).bind(merchant, clientRef).first();
+        if (dup) {
+          return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
+                        session: dup.session_id || null, lines: priced.lines, replayed: true });
+        }
+      } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
+    }
+    /* A table number is reusable; a bill is not. Every employee ticket belongs
+       to the current visit/session so a later party at table 3 never inherits
+       yesterday's or the previous test's unpaid tickets. */
+    const serviceSession = mode === 'table'
+      ? await ensureServiceTableSession(env, merchant, table, now) : null;
+    if (mode === 'table' && !serviceSession) return json({ error: 'service-session-unavailable' }, 503);
 
     /* Idempotence. Le double-envoi est PLUS probable en salle que sur le
      * téléphone du client : le wifi d'un café porte mal jusqu'au fond de la
      * terrasse, et un serveur qui ne voit pas sa confirmation retape sur
      * « Lancer ». Sans clé, la cuisine sortait deux fois le même plat. */
-    const clientRef = String((b && b.ref) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || null;
-    if (clientRef) {
-      try {
-        const dup = await env.DB.prepare(
-          `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
-        ).bind(merchant, clientRef).first();
-        if (dup) {
-          return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
-                        lines: priced.lines, replayed: true });
-        }
-      } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
-    }
-
     const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
     const linesJson = JSON.stringify(priced.lines);
     const NUMBER = `COALESCE(MAX(number), 0) + 1`;
@@ -425,13 +454,13 @@ export async function onRequestPost(context) {
     try {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
-                             created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref)
-         SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?
+                             created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id)
+         SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?
            FROM orders WHERE merchant = ? AND created_ts >= ?
          RETURNING number`
       ).bind(
         id, merchant, mode, table, total, linesJson, now, now,
-        server || null, priced.menuRev, priced.priced ? now : null, clientRef,
+        server || null, priced.menuRev, priced.priced ? now : null, clientRef, serviceSession && serviceSession.id,
         merchant, week
       ).first();
     } catch (_) {
@@ -453,11 +482,12 @@ export async function onRequestPost(context) {
       try {
         row = await env.DB.prepare(
           `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
-                               created_ts, updated_ts)
-           SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?
+                               created_ts, updated_ts, session_id)
+           SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?
              FROM orders WHERE merchant = ? AND created_ts >= ?
            RETURNING number`
-        ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, week).first();
+        ).bind(id, merchant, mode, table, total, linesJson, now, now,
+          serviceSession && serviceSession.id, merchant, week).first();
       } catch (e) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
@@ -465,7 +495,7 @@ export async function onRequestPost(context) {
 
     return json({
       ok: true, id, number: (row && row.number) || 1,
-      status: 'accepted', total, lines: priced.lines,
+      status: 'accepted', total, lines: priced.lines, session: serviceSession && serviceSession.id,
     });
   }
 
