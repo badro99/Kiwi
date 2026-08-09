@@ -237,6 +237,17 @@ request = new Request('https://kiwi.test/api/service/events', { method: 'POST', 
 }) });
 response = await eventsPost({ request, env });
 ok(response.status === 200, 'le serveur libère la table dans le même état cloud que la caisse');
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, syncVersion: 3, lines: [
+    { key: 'stale-caisse-line', id: 'i1', name: 'Tajine', price: 80, qty: 1, sentQty: 1 },
+  ] }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const closeAfterStaleHeartbeat = await json(response);
+ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
+  && closeAfterStaleHeartbeat.states['1'].source === 'employee',
+  "le heartbeat encore ouvert de la caisse ne peut plus annuler le paiement employé");
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
 response = await eventsGet({ request, env }); const caisseState = await json(response);
 ok(response.status === 200 && caisseState.states['1'].status === 'khawya'
@@ -249,13 +260,13 @@ result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
   'fermer côté serveur coupe aussi la session OrderPro qui rouvrait la table');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
-  merchant, snapshot: { tables: [{ table: '1', status: 'khlass', covers: 4 }, { table: '2', status: 'khawya', covers: 2 }] },
+  merchant, snapshot: { tables: [{ table: '1', status: 'khawya', covers: 0 }, { table: '2', status: 'khlass', covers: 2 }] },
 }) });
 response = await eventsPost({ request, env });
-request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: omarCookie } });
 response = await eventsGet({ request, env }); const paidState = await json(response);
-ok(paidState.states['1'] && paidState.states['1'].status === 'khlass'
-  && paidState.events.some((event) => event.table === '1' && event.status === 'khlass'),
+ok(paidState.states['2'] && paidState.states['2'].status === 'khlass'
+  && paidState.events.some((event) => event.table === '2' && event.status === 'khlass'),
   "l'addition réglée en caisse atteint la table et le centre de notifications du serveur");
 
 request = new Request('https://kiwi.test/api/team/live', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: 'manager-pause', memberId: 'omar' }) });
