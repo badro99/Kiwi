@@ -298,6 +298,22 @@ export async function onRequestGet(context) {
   } catch (_) { sessions = []; }
   if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
 
+  if (service) {
+    /* The table number is furniture, not a bill id. Only expose orders that
+       belong to the currently open visit on that table. This remains correct
+       even on a production DB where the optional paid_ts migration is missing:
+       closing the visit alone is enough to prevent its old rows from being
+       reattached to the next clients. */
+    const openVisitByTable = new Map();
+    sessions.forEach((session) => {
+      if (session && session.table && session.id) openVisitByTable.set(normTable(session.table), String(session.id));
+    });
+    orders = orders.filter((order) => {
+      const visit = openVisitByTable.get(normTable(order.table));
+      return !!visit && !!order.session && String(order.session) === visit && !order.paid;
+    });
+  }
+
   return json({
     ok: true, orders, sessions, now, ordersAvailable: true,
     service: service ? {

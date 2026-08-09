@@ -5953,6 +5953,12 @@ em, i, cite, dfn, var { font-style: normal; }
       t.covers = newTableCovers;
       t.status = 'ka-yaklo';
       t.elapsed = 0;
+      /* A physical table is reusable; its previous visit is not. Drop any
+         canonical rows still cached on this phone before creating the next
+         bill. The new visit has no order yet, so nothing legitimate is lost. */
+      Array.from(serviceCanonicalOrders.entries()).forEach(([orderId, order]) => {
+        if (String(order.table) === String(id)) serviceCanonicalOrders.delete(orderId);
+      });
       tableOrders[id] = [];
       publishServiceTableState(id, t.status, t.covers, false);
       activeTableId = id;

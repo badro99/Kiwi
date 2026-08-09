@@ -336,6 +336,13 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   && caisseSource.includes('if (stateTs && stateTs <= lastRemoteTs) return;')
   && caisseSource.includes('if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
+ok(caisseSource.includes('terminalHadLocalBill')
+  && caisseSource.includes('if (!statusChanged && !terminalHadLocalBill) return;')
+  && caisseSource.includes("serviceFloorSignature = ''")
+  && caisseSource.includes('setTimeout(publishServiceFloor, 0)')
+  && eventsSource.includes('employeeCloseAwaitingAck')
+  && !eventsSource.includes('EMPLOYEE_CLOSE_GRACE_MS'),
+  "le paiement efface aussi une ancienne addition locale et reste terminal jusqu'à l'acquittement caisse");
 const liveSocketSource = fs.readFileSync(path.join(ROOT, 'assets/live-socket.js'), 'utf8');
 ok(liveSocketSource.includes('window.KiwiLiveSocket = {')
   && !liveSocketSource.includes('window.KiwiLive = {')
@@ -382,6 +389,8 @@ ok(serviceSource.includes('function reconcileCanonicalServiceBill(table)')
   "la file des commandes est l'unique source des articles; les snapshots ne peuvent plus fabriquer une addition");
 ok(queueSource.includes('ensureServiceTableSession')
   && queueSource.includes('client_ref, session_id')
+  && queueSource.includes('openVisitByTable')
+  && queueSource.includes('String(order.session) === visit')
   && caisseSource.includes('ORDER_BRIDGE_SYNC_VERSION = 2')
   && caisseSource.includes('orderSession: String(o.session')
   && caisseSource.includes('String(activeSeat.session) !== String(o.session)'),
@@ -390,6 +399,9 @@ ok(serviceSource.includes("uid: 'order-' + order.id + '-' + index")
   && serviceSource.includes("cloudKey: 'order:' + order.id + ':' + index")
   && serviceSource.includes('Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table))'),
   "un changement prêt/servi reconstruit les mêmes lignes canoniques au lieu d'en ajouter");
+ok(serviceSource.includes('The new visit has no order yet, so nothing legitimate is lost.')
+  && serviceSource.includes('serviceCanonicalOrders.delete(orderId)'),
+  "ouvrir une nouvelle visite vide le cache canonique de la visite précédente");
 ok(caisseSource.includes("startsWith('employee-')")
   && caisseSource.includes('saved.tableOrders[id] = (saved.tableOrders[id] || []).filter'),
   "la migration v4 retire une fois les factures employé v3 déjà contaminées dans la caisse");

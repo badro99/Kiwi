@@ -15150,6 +15150,8 @@
           if (stateTs && stateTs <= lastRemoteTs) return;
           if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           const statusChanged = tables[id].status !== state.status;
+          const terminalHadLocalBill = terminalEmployeeState
+            && (!!orders[id] || Array.isArray(tableOrders[id]) && tableOrders[id].length > 0);
           /* Remember even an already-matching free state. Otherwise opening a
              new party later would make that old close look new and close the
              freshly seated table. */
@@ -15160,7 +15162,11 @@
              here created a second mutable copy of the bill; a later kitchen
              ready event could merge that copy back and manufacture products.
              Drafts stay on the employee phone until they are sent. */
-          if (!statusChanged) return;
+          /* A terminal state also clears a stale local bill when occupancy is
+             already free. Status equality must not skip that cleanup: this was
+             the exact path that left the previous party's items in memory and
+             attached the next party's order to the old bill. */
+          if (!statusChanged && !terminalHadLocalBill) return;
           tables[id].status = state.status;
           tables[id].covers = state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0);
           tables[id].elapsed = 0;
@@ -15174,8 +15180,12 @@
           changed = true;
         });
         if (changed) {
-          serviceFloorSignature = JSON.stringify(serviceFloorSnapshot());
+          /* Force one terminal echo back to the service-event store. That echo
+             is the acknowledgement which releases the server-side settlement
+             barrier and allows a genuinely new visit to open on this table. */
+          serviceFloorSignature = '';
           try { persistShift(); } catch (_) {}
+          setTimeout(publishServiceFloor, 0);
         }
       }).catch(() => {}).finally(() => {
         serviceFloorPolling = false;

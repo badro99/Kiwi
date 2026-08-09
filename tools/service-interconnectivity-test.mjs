@@ -130,7 +130,7 @@ ok(result.response.status === 403, "un rôle cuisine n'ouvre jamais le canal de 
 
 put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 'ord-orderpro-sara', merchant, 91, 'table', '1', 80,
-  JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'pending', now, now, 'sess-orderpro');
+  JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'pending', now, now, firstSession.id);
 put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
      VALUES (?,?,?,?,?,?,?,?,?,?)`, 'ord-before-shift', merchant, 90, 'table', '1', 80,
   JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'ready', now - 5000, now - 5000);
@@ -149,6 +149,8 @@ ok(!saraQueue.body.orders.some((order) => order.id === 'ord-before-shift'),
 const omarQueue = await qget(omarCookie);
 ok(omarQueue.response.status === 200 && omarQueue.body.service.mineTables.includes('2'), 'Omar garde la propriété de sa table');
 
+put(`INSERT INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
+     VALUES (?,?,?,?,?,?,?)`, 'sess-shared', merchant, 'table', '4', 'open', now, now);
 put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 'ord-shared-orderpro', merchant, 92, 'table', '4', 80,
   JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'pending', now + 10, now + 10, 'sess-shared');
@@ -260,11 +262,31 @@ response = await eventsGet({ request, env }); const closeAfterStaleHeartbeat = a
 ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
   && closeAfterStaleHeartbeat.states['1'].source === 'employee',
   "le heartbeat encore ouvert de la caisse ne peut plus annuler le paiement employé");
+/* The close is a barrier, not a 15-second race. It remains authoritative until
+   the caisse has read it and explicitly echoed the terminal state. */
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 6 }] },
+}) });
+response = await eventsPost({ request, env });
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
-response = await eventsGet({ request, env }); const caisseState = await json(response);
-ok(response.status === 200 && caisseState.states['1'].status === 'khawya'
-  && caisseState.states['1'].source === 'employee'
-  && Array.isArray(caisseState.states['1'].lines) && caisseState.states['1'].lines.length === 0,
+response = await eventsGet({ request, env }); const closeStillWaiting = await json(response);
+ok(closeStillWaiting.states['1'].status === 'khawya' && closeStillWaiting.states['1'].source === 'employee',
+  "une ancienne table occupée ne ressuscite jamais avant l'acquittement caisse");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'khawya', covers: 0, lines: [], syncVersion: 4 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 2, lines: [], syncVersion: 4 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const nextVisit = await json(response);
+ok(nextVisit.states['1'].status === 'ka-yaklo' && nextVisit.states['1'].source === 'caisse',
+  "après acquittement, une nouvelle visite ouvre une addition vraiment neuve");
+ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
+  && closeAfterStaleHeartbeat.states['1'].source === 'employee'
+  && Array.isArray(closeAfterStaleHeartbeat.states['1'].lines) && closeAfterStaleHeartbeat.states['1'].lines.length === 0,
   'la caisse reçoit immédiatement la fermeture et aucune ancienne ligne ne survit');
 result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
