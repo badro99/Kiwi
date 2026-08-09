@@ -4754,6 +4754,11 @@ em, i, cite, dfn, var { font-style: normal; }
         const state = data.states[key] || {};
         const id = serviceTableId(state.table || key) || String(state.table || key);
         if (!tables[id]) return;
+        /* Service states are snapshots, not permanent table history. The till
+           itself expires a saved service after twelve hours; the phone must
+           use the same boundary or yesterday's occupied tables reappear on a
+           fresh clock-in merely because the page was reloaded. */
+        if (Number(state.ts) && Number(state.ts) < Date.now() - 12 * 60 * 60 * 1000) return;
         /* Versions before v2 could publish the sample bill that booted with
            this single-file demo into a real restaurant. Those poisoned states
            are exactly the bills that reappear after refresh. Never hydrate a

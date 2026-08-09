@@ -14709,7 +14709,6 @@
        naître un deuxième ticket. */
     function opIngest(o) {
       if (!o || !o.id) return;
-      attachOrderProTable(o);
       /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
          rechargement (persistShift). Après un F5 en plein service, `opTickets`
          repart vide alors que `kdsOrders` contient encore les bons de la caisse
@@ -14721,6 +14720,30 @@
       if (!known) {
         known = kdsOrders.find(t => t && t.opId === o.id);
         if (known) opTickets.set(o.id, known);
+      }
+      /* A ticket created by THIS cashier is already present in tableOrders.
+         The queue returns it so remote KDS screens can see it; feeding that
+         same ticket through the OrderPro/employee bill bridge added its lines
+         a second time to the table while KDS (correctly idempotent on opId)
+         still showed only one. `known` also protects stores whose older DB
+         cannot persist the `caisse` channel yet. */
+      if (!known && o.channel !== 'caisse') {
+        attachOrderProTable(o);
+      } else if (o.channel === 'caisse' && o.mode === 'table') {
+        /* Repair only the exact echo rows created by the old bug. A genuine
+           cashier line has no orderProLine marker; its duplicate is stamped
+           `<this cashier ticket id>:<line index>`. No other item qualifies. */
+        const id = caisseTableId(o.table);
+        const before = id && (tableOrders[id] || []).length;
+        if (id && before) {
+          tableOrders[id] = tableOrders[id].filter(line =>
+            !String(line.orderProLine || '').startsWith(String(o.id) + ':'));
+          if (tableOrders[id].length !== before) {
+            refreshTableNode(id);
+            if (selectedId === id) mode === 'order' ? renderOrderPanel(id) : renderRightPanel(id);
+            try { persistShift(); } catch (_) {}
+          }
+        }
       }
 
       /* En salle, une commande EN ATTENTE n'entre pas dans la cuisine : elle
@@ -14986,13 +15009,22 @@
         Object.keys(data.states || {}).forEach((key) => {
           const state = data.states[key] || {};
           if (state.source !== 'employee') return;
+          /* A brand-new till service must not resurrect the previous service's
+             employee tables. Keep a 30-minute handover window so an employee
+             order placed just before the till opens is still recovered. A
+             restored till keeps its original shiftOpenedAt and therefore
+             accepts every state from its own ongoing service. */
+          const stateTs = Number(state.ts) || 0;
+          const serviceCutoff = (shiftOpenedAt instanceof Date && !isNaN(shiftOpenedAt.getTime()))
+            ? shiftOpenedAt.getTime() - 30 * 60 * 1000 : Date.now() - 12 * 60 * 60 * 1000;
+          if (stateTs && stateTs < serviceCutoff) return;
           /* Older employee/caisse bills could contain the removed automatic
              menu generator. Never ingest one here: otherwise this caisse's
              four-second snapshot promotes the fake lines back into every
              employee phone. */
           if (Array.isArray(state.lines) && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION) return;
           const id = caisseTableId(state.table || key);
-          if (Number(state.ts) <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
+          if (stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           if (!id || !tables[id] || !state.status) return;
           const statusChanged = tables[id].status !== state.status;
           const cloudLines = Array.isArray(state.lines) ? state.lines : null;
