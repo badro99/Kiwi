@@ -18,12 +18,15 @@ const caisse = read('kiwi-caisse.html');
 const sw = read('kiwi-sw.js');
 const css = read('assets/pressing-dashboard.css');
 const pressingJs = read('assets/pressing-dashboard.js');
+const pairingJs = read('assets/caisse-pairing.js');
 
 ok(/pressing:\s*\{\s*base:\s*'boutique'/.test(venues), 'pressing has an exact subtype profile');
 ['pressing-orders','pressing-workshop','pressing-pickup','pressing-services','pressing-quality','pressing-delivery']
   .forEach((id) => ok(venues.includes("nav: '" + id + "'"), id + ' is in the pressing navigation'));
 ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not appended to pressing');
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
+ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
+ok(caisse.includes('assets/caisse-pairing.js?v=2') && sw.includes("'/assets/caisse-pairing.js?v=2'"), 'pressing route fix bypasses the old cached pairing router');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=3'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=1') && caisse.includes('assets/pressing-ops.js?v=1'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=4'") && sw.includes("'/assets/pressing-dashboard.js?v=3'"), 'pressing workspace is available offline');

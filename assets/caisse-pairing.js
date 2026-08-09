@@ -66,7 +66,9 @@
 
   /* ── type/subtype → caisse vertical ─────────────────────────────────────
    * The onboarding trade id (subtype) maps 1:1 to a dispatcher vertical for
-   * most trades; a couple are aliased; the four base types are the fallback.
+   * most trades; a couple are aliased. Operator and server hand-offs carry the
+   * exact trade in `type` (and often no `subtype`), so both fields must pass
+   * through the same registry lookup before the four base-type fallbacks.
    * restaurant/cafe → the main restaurant caisse (unlockApp), not a vertical. */
   var SUB_ALIAS = { bakery: 'boulangerie', sport: 'gym' };
   function registryIds() {
@@ -82,6 +84,8 @@
     sub = SUB_ALIAS[sub] || sub;
     if (sub && ids[sub]) return { kind: 'vertical', id: sub };
     var t = String(v.type || '').toLowerCase();
+    t = SUB_ALIAS[t] || t;
+    if (t && ids[t]) return { kind: 'vertical', id: t };
     if (t === 'boutique' && ids.boutique) return { kind: 'vertical', id: 'boutique' };
     if (t === 'spa' && ids.spa) return { kind: 'vertical', id: 'spa' };
     if (t === 'hotel' && ids.hotel) return { kind: 'vertical', id: 'hotel' };

@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v312';
+var CACHE = 'kiwi-app-v313';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -204,7 +204,7 @@ var SHELL = [
   '/assets/pos-gym.js',
   '/assets/pos-autre.css',
   '/assets/pos-autre.js',
-  '/assets/caisse-pairing.js',
+  '/assets/caisse-pairing.js?v=2',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
