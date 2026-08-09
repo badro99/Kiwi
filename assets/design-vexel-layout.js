@@ -445,30 +445,46 @@
     syncMoreCount();
   }
 
-  /* "Plus d'analyses" is a two-column grid. An odd number of cards leaves the
-   * short column trailing a card-sized hole — and promoting one out of the pool
-   * is exactly what flips it odd. Give the last card the full width instead. */
+  /* "Plus d'analyses" is visually a two-column grid, but its DOM still groups
+   * cards in two historical column wrappers and CSS gives each card a fixed
+   * coordinate. Once venue filtering or promotion removes cards, those old
+   * coordinates preserve the holes. Repack every survivor in semantic reading
+   * order; an odd final card spans the row instead of leaving half of it empty. */
   function balancePool() {
     var grid = document.querySelector('[data-dash-more] .dash-cols');
     if (!grid) return;
     if (getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length !== 2) return;
 
-    var cols = grid.querySelectorAll('.dash-col');
-    if (cols.length !== 2) return;
+    function cardFor(selector) {
+      var child = grid.querySelector(selector);
+      return child ? child.closest('.block') : null;
+    }
 
-    var left = [].filter.call(cols[0].children, function (n) { return !n.hidden; });
-    var right = [].filter.call(cols[1].children, function (n) { return !n.hidden; });
-    if ((left.length + right.length) % 2 === 0) return;
+    /* Preserve the dashboard's intended cross-column reading order instead of
+     * inheriting the two source wrappers' DOM order. Unknown future cards join
+     * after the known four and still participate in the compact layout. */
+    var ordered = [
+      cardFor('[data-health-card]'),
+      cardFor('[data-bench-card]'),
+      cardFor('[data-products-list]'),
+      cardFor('[data-staff-list]')
+    ].filter(function (node, index, list) {
+      return node && !node.hidden && list.indexOf(node) === index;
+    });
 
-    var longer = left.length > right.length ? left : right;
-    if (!longer.length) return;
-    var odd = longer[longer.length - 1];
+    [].forEach.call(grid.querySelectorAll('.block'), function (node) {
+      if (!node.hidden && ordered.indexOf(node) === -1) ordered.push(node);
+    });
+    if (!ordered.length) return;
 
-    /* The per-column CSS pins each card to its own track, so the odd one has to
-     * sit in the first column's flow before a full-width span reads as the last
-     * row rather than a stray third row. */
-    if (longer === right) relocate(odd, cols[0]);
-    pin(odd, 'gridColumn', '1 / -1');
+    var rowCount = Math.ceil(ordered.length / 2);
+    pin(grid, 'gridTemplateRows', 'repeat(' + rowCount + ', auto)');
+
+    ordered.forEach(function (node, index) {
+      var isOddLast = ordered.length % 2 === 1 && index === ordered.length - 1;
+      pin(node, 'gridColumn', isOddLast ? '1 / -1' : String((index % 2) + 1));
+      pin(node, 'gridRow', String(Math.floor(index / 2) + 1));
+    });
   }
 
   function realSession() {
