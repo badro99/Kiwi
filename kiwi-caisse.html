@@ -15016,10 +15016,12 @@
     let serviceFloorPublishing = false;
     let serviceFloorSince = 0;
     let serviceFloorPolling = false;
+    let serviceFloorPollQueued = false;
     const SERVICE_BILL_SYNC_VERSION = 4;
     const ORDER_BRIDGE_SYNC_VERSION = 2;
     const serviceFloorLegacyTables = new Set();
     const serviceFloorLocalVersion = Object.create(null);
+    const serviceFloorRemoteVersion = Object.create(null);
     function serviceFloorSnapshot() {
       return Object.keys(tables).map((id) => ({
         table: String(id), status: String(tables[id].status || 'khawya'),
@@ -15065,7 +15067,13 @@
       }).catch(() => {}).finally(() => { serviceFloorPublishing = false; });
     }
     function pollEmployeeFloor() {
-      if (serviceFloorPolling || !storeIsReal()) return;
+      /* A socket poke can arrive while the previous HTTP read is still in
+         flight. Dropping that poke made the caisse wait for the eight-second
+         live fallback even though the employee had already paid. Queue one
+         immediate replay instead; one bit is enough because every read returns
+         the complete latest table-state map. */
+      if (serviceFloorPolling) { serviceFloorPollQueued = true; return; }
+      if (!storeIsReal()) return;
       const merchant = currentMerchantSlug();
       if (!merchant) return;
       serviceFloorPolling = true;
@@ -15093,9 +15101,22 @@
              employee phone. */
           if (Array.isArray(state.lines) && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION) return;
           const id = caisseTableId(state.table || key);
-          if (stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           if (!id || !tables[id] || !state.status) return;
+          /* Payment is terminal. The caisse may have published its older open
+             copy a few milliseconds after the employee began settlement, so
+             its local timestamp can be newer than the cloud close. That must
+             never keep a paid table occupied. Non-terminal employee changes
+             still obey last-writer-wins; a confirmed free/paid state always
+             clears the stale local bill. */
+          const terminalEmployeeState = state.status === 'khawya' || state.status === 'khlass';
+          const lastRemoteTs = Number(serviceFloorRemoteVersion[String(id)] || 0);
+          if (stateTs && stateTs <= lastRemoteTs) return;
+          if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           const statusChanged = tables[id].status !== state.status;
+          /* Remember even an already-matching free state. Otherwise opening a
+             new party later would make that old close look new and close the
+             freshly seated table. */
+          serviceFloorRemoteVersion[String(id)] = Math.max(lastRemoteTs, stateTs);
           /* Employee snapshots synchronize OCCUPANCY, never the bill. Every
              sent employee line already travels through /api/order/queue, the
              same canonical ledger as caisse/KDS/OrderPro. Importing `lines`
@@ -15119,7 +15140,13 @@
           serviceFloorSignature = JSON.stringify(serviceFloorSnapshot());
           try { persistShift(); } catch (_) {}
         }
-      }).catch(() => {}).finally(() => { serviceFloorPolling = false; });
+      }).catch(() => {}).finally(() => {
+        serviceFloorPolling = false;
+        if (serviceFloorPollQueued) {
+          serviceFloorPollQueued = false;
+          pollEmployeeFloor();
+        }
+      });
     }
     let shiftMerchant = currentMerchantSlug();
 

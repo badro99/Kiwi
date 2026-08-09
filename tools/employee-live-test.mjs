@@ -330,7 +330,11 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   && caisseSource.includes('scheduleEmployeeFloor()')
   && /employeeFloorTimer = setTimeout\(/.test(caisseSource)
   && caisseSource.includes('live ? FLOOR_POLL_LIVE : FLOOR_POLL_FAST')
-  && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)'),
+  && caisseSource.includes('setTimeout(pollEmployeeFloor, 250)')
+  && caisseSource.includes('if (serviceFloorPolling) { serviceFloorPollQueued = true; return; }')
+  && caisseSource.includes('if (serviceFloorPollQueued)')
+  && caisseSource.includes('if (stateTs && stateTs <= lastRemoteTs) return;')
+  && caisseSource.includes('if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
