@@ -6,6 +6,7 @@ import { poke } from '../_live.js';
 
 const FEATURE = 'service-events';
 const MAX_EVENTS = 200;
+const EMPLOYEE_CLOSE_GRACE_MS = 15000;
 const TABLE_STATUSES = new Set(['khawya', 'a-commander', 'ka-yaklo', 'bgha-ykhlass', 'ka-tkhdam', 'khlass']);
 
 function parse(raw) {
@@ -132,6 +133,18 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const emitted = [];
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
+      /* A caisse heartbeat describes what the till knew before it read this
+         channel. Immediately after an employee settles a table, that stale
+         heartbeat may still say "occupied" and used to overwrite the close
+         before the till could consume it. Keep the employee's terminal state
+         for one polling window; the caisse then adopts it and its next snapshot
+         agrees. A genuinely new seating remains possible once that short
+         acknowledgement window has elapsed. */
+      const employeeJustClosed = source === 'caisse' && before && before.source === 'employee'
+        && (before.status === 'khawya' || before.status === 'khlass')
+        && next.status !== 'khawya' && next.status !== 'khlass'
+        && Date.now() - Number(before.ts || 0) < EMPLOYEE_CLOSE_GRACE_MS;
+      if (employeeJustClosed) return;
       if (before && !Object.prototype.hasOwnProperty.call(next, 'lines') && Array.isArray(before.lines)) next.lines = before.lines;
       /* The caisse publishes its whole floor every four seconds. It can race
        * the employee's just-sent bill with an older local view of the same
