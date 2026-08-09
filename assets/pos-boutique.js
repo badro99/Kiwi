@@ -1199,7 +1199,7 @@
     const _vSub = (_pv && _pv.location) ? _esc(_pv.location) : (_pv ? '' : 'Casablanca · Maarif');
     root.innerHTML = `
       <aside class="bq-rail">
-        <div class="bq-brand">kiwi<i></i></div>
+        <div class="bq-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="bq-venue">
           <div class="bq-venue-name">${_vName}</div>
           <div class="bq-venue-sub">${_vSub}${_vSub ? '<br>' : ''}Le même Kiwi, <b>un seul compte</b>.</div>
@@ -6256,7 +6256,7 @@
     el.setAttribute('aria-hidden', 'true');
     el.innerHTML = `
       <div class="clockin-top">
-        <div class="clockin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+        <div class="clockin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>
         <div class="clockin-tagline">— version commerçant</div>
       </div>
       <div class="clockin-mid">

@@ -104,19 +104,8 @@ em, i, cite, dfn, var { font-style: normal; }
     .mission {
       max-width: 460px;
     }
-    .mission-brand {
-      display: inline-flex; align-items: baseline; gap: 6px;
-      font-weight: 700; font-size: 22px;
-      letter-spacing: -0.04em;
-      color: var(--ink);
-    }
-    .mission-brand i {
-      width: 6px; height: 6px;
-      background: var(--forest);
-      border-radius: 50%;
-      display: inline-block;
-      margin-bottom: 2px;
-    }
+    .mission-brand { display: inline-flex; align-items: center; }
+    .mission-brand img { display: block; width: auto; height: 30px; }
     .mission-eyebrow {
       font-family: var(--mono);
       font-size: 10.5px;
@@ -939,7 +928,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     <!-- ============ Mission sidebar ============ -->
     <aside class="mission">
-      <div class="mission-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
+      <div class="mission-brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
       <div class="mission-eyebrow">— mission · self-order</div>
       <h1>Self-order par <em>QR code.</em></h1>
       <p>

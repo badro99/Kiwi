@@ -12,8 +12,7 @@
   "theme_color": "#FFFFFF",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "assets/icons/kiwi-employee-k-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/kiwi-employee-k-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/kiwi-employee-k-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "assets/kiwi-favicon-new.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "assets/landing/kiwi-mark-app-icon.png", "sizes": "2048x2048", "type": "image/png", "purpose": "any maskable" }
   ]
 }

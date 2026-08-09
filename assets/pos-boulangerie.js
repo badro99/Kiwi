@@ -258,7 +258,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="bl-rail">
-        <div class="bl-brand">kiwi<i></i></div>
+        <div class="bl-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="bl-venue">
           <div class="bl-venue-name">${pvName('Boulangerie Bab Kasbah') || 'Ma boulangerie'}</div>
           <div class="bl-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Kasbah'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

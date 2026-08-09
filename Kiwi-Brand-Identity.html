@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Kiwi · Identité & système de design</title>
-<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230B6E4F'/><text x='12' y='51' font-family='system-ui,sans-serif' font-weight='800' font-size='55' letter-spacing='-0.08em' fill='%23F7F5F0'>k</text></svg>" />
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <meta name="description" content="Système de design Kiwi · palette Atlas Green, typographie Inter Tight + Instrument Serif, voix, iconographie, grille 8px, motion, règles absolues." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -56,8 +56,8 @@ button { font-family: inherit; cursor: pointer; border: 0; background: none; }
 /* Nav */
 .nav { position: sticky; top: 0; z-index: 60; background: rgba(247,245,240,0.88); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(0,0,0,0.04); }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-.nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 26px; letter-spacing: -0.05em; color: var(--atlas); }
-.nav-logo .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+.nav-logo { display: inline-flex; align-items: center; }
+.nav-logo img { display: block; width: auto; height: 32px; }
 .nav-links { display: flex; gap: 30px; font-size: 14px; color: var(--n-700); }
 
 /* Hero */
@@ -88,10 +88,8 @@ section { padding: 80px 0; scroll-margin-top: 120px; }
 .logo-cell.atlas { background: var(--atlas); color: var(--paper); border-color: var(--atlas); }
 .logo-cell.mint { background: var(--mint-soft); border-color: transparent; }
 .logo-cell .lg { display: flex; align-items: center; justify-content: center; flex: 1; }
-.logo-cell .wm { font-weight: 700; letter-spacing: -0.06em; font-size: 110px; display: inline-flex; align-items: baseline; gap: 6px; line-height: 1; }
-.logo-cell .wm i { width: 12px; height: 12px; background: var(--mint); border-radius: 50%; }
-.logo-cell.dark .wm, .logo-cell.atlas .wm { color: var(--paper); }
-.logo-cell.mint .wm, .logo-cell.paper .wm { color: var(--atlas); }
+.logo-cell .wm { display: inline-flex; align-items: center; }
+.logo-cell .wm img { display: block; width: min(260px, 70%); height: auto; }
 .logo-cell .lbl { font-size: 11px; color: var(--n-500); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; position: absolute; top: 20px; left: 20px; }
 .logo-cell.dark .lbl { color: #8a8f8d; }
 .logo-cell.atlas .lbl { color: #c6ead4; }
@@ -173,7 +171,7 @@ footer a { color: var(--mint); }
 
 <nav class="nav">
   <div class="wrap nav-inner">
-    <a href="#top" class="nav-logo">kiwi<i class="dot"></i></a>
+    <a href="#top" class="nav-logo"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></a>
     <div class="nav-links">
       <a href="#logo">Logo</a>
       <a href="#couleurs">Couleurs</a>
@@ -216,28 +214,24 @@ footer a { color: var(--mint); }
     <div class="sec-head">
       <div class="num">01 · IDENTITÉ VISUELLE</div>
       <h2>Le logo.</h2>
-      <p>Un wordmark lowercase en Inter Tight Bold avec un accent mint. Pas de pictogramme. Pas de feuille de kiwi. La confiance se gagne par la retenue.</p>
+      <p>Le symbole Kiwi officiel associe sa forme-signature à un wordmark dessiné. Utiliser uniquement les fichiers maîtres, sans recomposer le logo en texte.</p>
     </div>
 
     <div class="logo-grid">
-      <div class="logo-cell paper"><div class="lbl">Primaire</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas var(--atlas)</div></div>
-      <div class="logo-cell dark"><div class="lbl">Inverse</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Ink var(--ink)</div></div>
-      <div class="logo-cell atlas"><div class="lbl">Full brand</div><div class="lg"><div class="wm">kiwi<i></i></div></div><div class="meta">Atlas var(--atlas)</div></div>
+      <div class="logo-cell paper"><div class="lbl">Primaire</div><div class="lg"><div class="wm"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div></div><div class="meta">Atlas var(--atlas)</div></div>
+      <div class="logo-cell dark"><div class="lbl">Inverse</div><div class="lg"><div class="wm"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div></div><div class="meta">Ink var(--ink)</div></div>
+      <div class="logo-cell atlas"><div class="lbl">Full brand</div><div class="lg"><div class="wm"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div></div><div class="meta">Atlas var(--atlas)</div></div>
       <div class="logo-cell">
         <div class="lbl">Mark (app icon)</div>
         <div class="lg">
-          <div style="width:120px; height:120px; background: var(--atlas); border-radius: 28px; display: flex; align-items: flex-end; justify-content: flex-start; padding: 0 22px 14px;">
-            <div style="font-weight: 700; letter-spacing: -0.08em; font-size: 110px; color: var(--paper); line-height: 1; display: flex; align-items: baseline; gap: 5px;">k<i style="width:10px; height:10px; background: var(--mint); border-radius: 50%;"></i></div>
-          </div>
+          <img src="assets/landing/kiwi-mark-app-icon.png" alt="Icône d’application Kiwi" style="width:120px; height:120px; border-radius:28px; object-fit:cover;">
         </div>
         <div class="meta">Radius 28px</div>
       </div>
       <div class="logo-cell mint">
         <div class="lbl">Favicon 64</div>
         <div class="lg">
-          <div style="width:72px; height:72px; background: var(--atlas); border-radius: 14px; display: flex; align-items: flex-end; padding: 0 10px 5px;">
-            <div style="font-weight: 700; letter-spacing: -0.08em; font-size: 62px; color: var(--paper); line-height: 1;">k</div>
-          </div>
+          <img src="assets/kiwi-favicon-new.svg" alt="Favicon Kiwi" style="width:72px; height:72px; border-radius:14px; object-fit:cover;">
         </div>
         <div class="meta">12px min size</div>
       </div>
@@ -272,7 +266,7 @@ footer a { color: var(--mint); }
         <text x="805" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
         <text x="450" y="30" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
         <text x="450" y="218" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0B6E4F">x</text>
-        <text x="140" y="160" font-family="Inter Tight" font-weight="700" font-size="110" fill="#0B6E4F" letter-spacing="-0.06em">kiwi</text>
+        <image href="assets/kiwi-newlogo.svg" x="140" y="65" width="620" height="130" preserveAspectRatio="xMidYMid meet" />
         <circle cx="735" cy="148" r="10" fill="#7DF2B0"/>
       </svg>
       <div style="margin-top: 20px; color: var(--n-600); font-size: 14px; line-height: 1.55;">Toujours préserver une zone de sécurité égale à la hauteur de la lettre « i » autour du wordmark. Ne jamais placer le logo sur un arrière-plan qui ne garantit pas un ratio de contraste ≥ 4.5:1.</div>

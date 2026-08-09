@@ -128,9 +128,9 @@
         ${c.label ? `<div class="tn">${esc(c.label)}</div>` : ''}
         <div class="q">${qrSvg(c.url, 260)}</div>
         <div class="cap">${esc(t.scanToOrder)}</div>
-        <div class="kiwi">kiwi<i></i></div>
+        <div class="kiwi"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
       </div>`).join('');
-    win.document.write(`<!doctype html><html lang="${lang()}"><head><meta charset="utf-8"><title>${esc(b.name)} · QR</title>
+    win.document.write(`<!doctype html><html lang="${lang()}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(b.name)} · QR</title>
       <style>
         @page { size: A4; margin: 12mm; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -142,8 +142,8 @@
         .q { margin: 8px auto 6px; width: 200px; height: 200px; }
         .q svg { width: 100%; height: 100%; }
         .cap { font-size: 12px; color: #4A4A4A; }
-        .kiwi { margin-top: 8px; font-weight: 700; font-size: 15px; letter-spacing: -0.05em; color: #0B6E4F; }
-        .kiwi i { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #7DF2B0; margin-left: 2px; vertical-align: 1px; }
+        .kiwi { display: flex; justify-content: center; margin-top: 8px; }
+        .kiwi img { display: block; width: auto; height: 20px; }
       </style></head>
       <body><div class="grid">${tiles}</div>
       <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>

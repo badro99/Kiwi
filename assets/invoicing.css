@@ -255,8 +255,8 @@
 
 .inv-summary-card { position: sticky; top: 0; background: var(--inv-soft); }
 .inv-summary-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--inv-line); }
-.inv-summary-logo { font-size: 19px; font-weight: 800; letter-spacing: -.05em; }
-.inv-summary-logo span { color: var(--inv-green); }
+.inv-summary-logo { display: inline-flex; align-items: center; min-height: 24px; }
+.inv-summary-logo img { display: block; width: auto; height: 24px; }
 .inv-summary-no { color: var(--inv-muted); font-size: 11px; }
 .inv-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; color: var(--inv-muted); font-size: 12px; }
 .inv-summary-row strong { color: var(--ink, #0d1512); font-variant-numeric: tabular-nums; }

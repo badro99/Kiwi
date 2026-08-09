@@ -387,7 +387,7 @@
     freshTicket();
     root.innerHTML = `
       <aside class="ff-rail">
-        <div class="ff-brand">kiwi<i></i></div>
+        <div class="ff-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ff-venue">
           <div class="ff-venue-name">${pvName('Snack Chamal') || 'Mon snack'}</div>
           <div class="ff-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Boulevard Pasteur'}<br>Le même Kiwi, <b>un seul compte.</b></div>

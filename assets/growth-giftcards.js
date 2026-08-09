@@ -58,7 +58,7 @@
   .gft-card::after { content:''; position:absolute; top:-60%; left:-20%; width:60%; height:220%; transform:rotate(18deg); background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent); }
   .gft-card > * { position:relative; }
   .gft-card .top { display:flex; align-items:center; justify-content:space-between; }
-  .gft-card .brand { font-weight:700; font-size:18px; letter-spacing:-.04em; } .gft-card .brand i { color:var(--mint); }
+  .gft-card .brand { display:inline-flex; align-items:center; } .gft-card .brand img { display:block; width:auto; height:23px; }
   .gft-card .chip { width:34px; height:26px; border-radius:6px; background:linear-gradient(135deg,#d9c47a,#b89a3e); opacity:.85; }
   .gft-card .code { font-family:var(--mono); font-size:15px; letter-spacing:.18em; }
   .gft-card .amt { font-family:var(--serif); font-size:34px; line-height:1; }
@@ -107,7 +107,7 @@
         <div>
           <div class="gft-colt">${T.issue}</div>
           <div class="gft-card">
-            <div class="top"><div class="brand">kiwi<i>.</i></div><div class="chip"></div></div>
+            <div class="top"><div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div><div class="chip"></div></div>
             <div>
               <div class="code">KIWI ···· <span data-gft-code>4821</span></div>
               <div class="amt gk-serif" data-gft-cardamt>${fmt(amt)} <span style="font-size:15px;font-family:var(--sans);">MAD</span></div>

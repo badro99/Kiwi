@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Kiwi" />
-<link rel="apple-touch-icon" href="assets/icons/kiwi-app-180.png" />
+<link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -3053,13 +3053,10 @@
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
   }
   .fo-mark {
-    display: inline-flex; align-items: baseline;
-    font-family: var(--sans); font-weight: 700;
-    font-size: clamp(48px, 6.6vw, 72px);
-    letter-spacing: -0.05em; line-height: 1;
-    color: #EAF3EE;
-    text-shadow: 0 0 40px rgba(141,166,255,0.32);
+    display: inline-flex; align-items: center;
+    filter: drop-shadow(0 0 24px rgba(141,166,255,0.32));
   }
+  .fo-mark img { display:block; width:auto; height:clamp(48px, 6.6vw, 72px); }
   /* The ✦ star — three colored layers + a white core, animated to fan apart
      briefly (prism dispersion) then converge into the brand mint glow. */
   .fo-ultra {
@@ -4968,7 +4965,7 @@
   html[data-theme="dark"] .pay-table tbody tr:hover,
   html[data-theme="dark"] .pay-cell.off { background: var(--paper-muted); }
 </style>
-<link rel="stylesheet" href="assets/mobile.css" />
+<link rel="stylesheet" href="assets/mobile.css?v=2" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <!-- Design 2026 · Liquid Glass preview — inert unless body.design-2026 (1111-gated, reversible) -->
 <link rel="stylesheet" href="assets/design-2026.css" />
@@ -4984,7 +4981,7 @@
      glow if this never loads. -->
 <script src="assets/vexel-neon.js?v=2046" defer></script>
 <!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
-<link rel="stylesheet" href="assets/invoicing.css?v=4" />
+<link rel="stylesheet" href="assets/invoicing.css?v=5" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/design-vexel.js?v=2076"></script>
@@ -5049,10 +5046,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <div class="kiwi-lock" data-kiwi-lock>
   <div class="kiwi-lock-inner">
     <div class="kiwi-lock-brand" aria-label="Kiwi">
-      <span class="kiwi-lock-brand-legacy">kiwi<i></i></span>
+      <span class="kiwi-lock-brand-legacy"><img src="assets/kiwi-newlogo-inverse.svg" alt=""></span>
       <span class="vx-entry-logo" aria-hidden="true">
-        <img class="brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="" />
-        <img class="brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />
+        <img class="brand-logo-light" src="assets/kiwi-newlogo.svg" width="886" height="486" alt="" />
+        <img class="brand-logo-dark" src="assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />
       </span>
     </div>
     <div class="kiwi-lock-title" data-i18n="dash.lock.welcome">Bienvenue</div>
@@ -5087,8 +5084,8 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
   <!-- ══════════════ SIDEBAR ══════════════ -->
   <aside class="sidebar">
     <div class="brand" data-kiwi-logo aria-label="Kiwi">
-      <img class="brand-logo brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="Kiwi" />
-      <img class="brand-logo brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" aria-hidden="true" />
+      <img class="brand-logo brand-logo-light" src="assets/kiwi-newlogo.svg" width="886" height="486" alt="Kiwi" />
+      <img class="brand-logo brand-logo-dark" src="assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" aria-hidden="true" />
     </div>
 
     <div class="loc-switch-wrap">
@@ -5965,14 +5962,14 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=3" defer></script>
 <script src="assets/interactive.js?v=3" defer></script>
-<script src="assets/features.js?v=1" defer></script>
-<script src="assets/invoicing.js?v=2" defer></script>
+<script src="assets/features.js?v=2" defer></script>
+<script src="assets/invoicing.js?v=3" defer></script>
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>
 <script src="assets/qrcode.js" defer></script>
 <script src="assets/growth-kit.js" defer></script>
-<script src="assets/order-qr.js" defer></script>
+<script src="assets/order-qr.js?v=2" defer></script>
 <!-- growth-ordering / growth-qr / growth-giftcards ne sont plus servis : chantier
      en cours, aucun point d'entrée sur le tableau de bord. growth-crm reste — le
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
@@ -5994,7 +5991,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/venues.js?v=3" defer></script>
 <script src="assets/demoClock.js" defer></script>
 <script src="assets/dateRange.js?v=2" defer></script>
-<script src="assets/mobile-nav.js" defer></script>
+<script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js"></script>
 <script defer src="assets/dashboard-pwa.js"></script>
 <script defer src="assets/dashboard-native.js"></script>

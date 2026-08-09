@@ -246,10 +246,10 @@
   // Same two-mark structure the lock screen and the account gate use: the
   // legacy text wordmark, plus the real logo the Vexel skin swaps in.
   function brandMark() {
-    return '<span class="kob-brand-legacy">kiwi<i></i></span>'
+    return '<span class="kob-brand-legacy"><img src="assets/kiwi-newlogo.svg" alt=""></span>'
       + '<span class="vx-entry-logo" aria-hidden="true">'
-      + '<img class="brand-logo-light" src="assets/kiwi-logo.svg" width="846" height="446" alt="" />'
-      + '<img class="brand-logo-dark" src="assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />'
+      + '<img class="brand-logo-light" src="assets/kiwi-newlogo.svg" width="886" height="486" alt="" />'
+      + '<img class="brand-logo-dark" src="assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />'
       + '</span>';
   }
 

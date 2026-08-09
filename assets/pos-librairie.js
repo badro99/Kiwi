@@ -341,7 +341,7 @@
     freshCart();
     root.innerHTML = `
       <aside class="lb-rail">
-        <div class="lb-brand">kiwi<i></i></div>
+        <div class="lb-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="lb-venue">
           <div class="lb-venue-name">${esc(pvName('Librairie Al Boughaz') || 'Librairie')}</div>
           <div class="lb-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Petit Socco'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

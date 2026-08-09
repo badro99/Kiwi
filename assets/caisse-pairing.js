@@ -250,7 +250,7 @@
     }
     scr.style.display = '';
     scr.innerHTML =
-      '<div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>' +
+      '<div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>' +
       '<div class="pin-greet">' + (pv ? 'Reprendre ' + esc(pv.name || 'votre magasin') : 'Connectez cette caisse') + '</div>' +
       '<div class="pin-prompt">CODE D\'APPAIRAGE · 6 CHIFFRES</div>' +
       '<div class="pin-dots" id="cp-dots" aria-hidden="true">' + dotsHtml() + '</div>' +
@@ -424,7 +424,7 @@
     scr.style.display = '';
     var noCashier = !pinList || !pinList.length;
     scr.innerHTML =
-      '<div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>' +
+      '<div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>' +
       '<div class="pin-greet">' + esc((venue && venue.name) || 'Votre magasin') + '</div>' +
       '<div class="pin-prompt">CODE PERSONNEL · 4 CHIFFRES</div>' +
       '<div class="pin-dots" id="cp-pin-dots" aria-hidden="true">' + pinDotsHtml() + '</div>' +

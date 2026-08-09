@@ -230,7 +230,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="ft-rail">
-        <div class="ft-brand">kiwi<i></i></div>
+        <div class="ft-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ft-venue">
           <div class="ft-venue-name">${pvName('Karavan') || 'Mon food truck'}</div>
           <div class="ft-venue-sub">${pvReal() ? (pvCity('') || '') : 'Food truck · Tanger'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

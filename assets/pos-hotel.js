@@ -256,7 +256,7 @@
     root.classList.add('ht-app');
     root.innerHTML = `
       <aside class="ht-rail">
-        <div class="ht-brand">kiwi<i></i></div>
+        <div class="ht-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ht-venue">
           <div class="ht-venue-name">${esc(pvName('Riad Yasmina') || 'Hôtel')}</div>
           <div class="ht-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Kasbah'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

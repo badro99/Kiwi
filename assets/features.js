@@ -44,8 +44,8 @@
   /* Kiwi Compte */
   .kc-card { background: linear-gradient(135deg, #053B2C 0%, #0A4A38 45%, #0B6E4F 100%); color: var(--paper); border-radius: 16px; padding: 28px; position: relative; overflow: hidden; aspect-ratio: 1.58; max-width: 380px; }
   .kc-card::before { content: ""; position: absolute; top: -80px; right: -60px; width: 240px; height: 240px; background: radial-gradient(circle, rgba(125,242,176,0.4), transparent 60%); }
-  .kc-card .brand { position: relative; font-weight: 700; font-size: 22px; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 4px; }
-  .kc-card .brand i { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+  .kc-card .brand { position: relative; display: inline-flex; align-items: center; }
+  .kc-card .brand img { display: block; width: auto; height: 26px; }
   .kc-card .chip-s { position: relative; width: 40px; height: 30px; border-radius: 6px; background: linear-gradient(135deg, #C9C5BC, #8A867E); margin-top: 26px; }
   .kc-card .num { position: relative; font-family: var(--mono); font-size: 18px; letter-spacing: 0.08em; margin-top: 18px; }
   .kc-card .row { position: relative; display: flex; justify-content: space-between; margin-top: 16px; font-size: 11px; }
@@ -920,7 +920,7 @@
       width: 480,
       body: `
         <div class="kc-card">
-          <div class="brand">kiwi<i></i></div>
+          <div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
           <div class="chip-s"></div>
           <div class="num">4982 •••• •••• 3291</div>
           <div class="row">

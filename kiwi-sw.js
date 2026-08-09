@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v298';
+var CACHE = 'kiwi-app-v299';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -62,7 +62,10 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=3',
   '/assets/interactive.js?v=3',
-  '/assets/features.js?v=1',
+  '/assets/features.js?v=2',
+  '/assets/invoicing.css?v=5',
+  '/assets/invoicing.js?v=3',
+  '/assets/order-qr.js?v=2',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
@@ -71,7 +74,7 @@ var SHELL = [
   '/assets/venues.js?v=3',
   '/assets/demoClock.js',
   '/assets/dateRange.js?v=2',
-  '/assets/mobile-nav.js',
+  '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
   '/assets/production-action-guard.js',
@@ -201,14 +204,11 @@ var SHELL = [
   '/assets/pressing-caisse.js',
   '/assets/pressing-caisse.css',
   '/assets/lucide.min.js',
-  '/assets/icons/kiwi-app.svg',
-  '/assets/icons/kiwi-app-192.png',
-  '/assets/icons/kiwi-app-512.png',
-  '/assets/icons/kiwi-app-180.png',
-  '/assets/icons/kiwi-caisse.svg',
+  '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
-  '/assets/icons/kiwi-caisse-192.png',
-  '/assets/icons/kiwi-caisse-180.png'
+  '/assets/kiwi-newlogo-dark.svg',
+  '/assets/kiwi-newlogo-inverse.svg',
+  '/assets/landing/kiwi-mark-app-icon.png'
 ];
 
 self.addEventListener('install', function (e) {

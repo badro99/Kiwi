@@ -407,7 +407,7 @@
     root.classList.add('px-screen');
     root.innerHTML = `
       <aside class="px-rail">
-        <div class="px-brand">kiwi<i></i></div>
+        <div class="px-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="px-venue">
           <div class="px-venue-name">${esc(pvName('Pressing Marshan'))}</div>
           <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi que <b>votre restaurant</b>, un seul compte.'}</div>

@@ -103,8 +103,8 @@
     background: none; border: 0; padding: 4px 8px; cursor: pointer;
     font-family: inherit; line-height: 1;
   }
+  .kw-topbar-brand img { display: block; width: auto; height: 22px; pointer-events: none; }
   .kw-topbar-brand:active { transform: translate(-50%, -50%) scale(0.94); }
-  .kw-topbar-brand i { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; }
 
   /* ─────────────── BOTTOM TAB BAR — floating Liquid Glass capsule ───────────────
    * Ported from the serveur app (kiwi-serveur.html `.bt-capsule`) so the whole

@@ -405,8 +405,8 @@ em, i, cite, dfn, var { font-style: normal; }
     border: 0; width: 100%; text-align: left;
   }
   .cc-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .cc-brand { font-size: 22px; font-weight: 700; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 3px; }
-  .cc-brand .d { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+  .cc-brand { display: inline-flex; align-items: center; }
+  .cc-brand img { display: block; width: auto; height: 24px; }
   .cc-tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
   .cc-bot { display: flex; justify-content: space-between; align-items: flex-end; }
   .cc-num { font-family: var(--mono); font-size: 14px; letter-spacing: 0.08em; opacity: 0.88; }
@@ -414,14 +414,12 @@ em, i, cite, dfn, var { font-style: normal; }
   .cc-visa { width: 38px; height: 24px; }
 
   .cc-standard { background: linear-gradient(135deg, #F5F2EA 0%, #E6E1D2 100%); color: var(--ink); }
-  .cc-standard .cc-brand .d { background: var(--atlas); }
   .cc-pro { background: linear-gradient(135deg, var(--atlas) 0%, var(--atlas-700) 60%, var(--riad) 100%); }
   .cc-pro::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 80% 10%, rgba(125,242,176,0.32), transparent 65%); pointer-events: none; }
   .cc-pro > * { position: relative; }
   .cc-atlas { background: linear-gradient(135deg, #1A201D 0%, #050907 50%, #2E2D29 100%); color: #E6E1D2; }
   .cc-atlas::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.02) 8px, rgba(255,255,255,0.02) 9px); pointer-events: none; }
   .cc-atlas > * { position: relative; }
-  .cc-atlas .cc-brand .d { background: #B89B5E; }
   .cc-atlas .accent { color: #B89B5E; }
   .credit-card.frozen { filter: grayscale(0.7) brightness(0.85); }
   .credit-card.frozen::after {
@@ -1622,7 +1620,7 @@ em, i, cite, dfn, var { font-style: normal; }
     $('#cardsStack').innerHTML = state.cards.map(c => `
       <button class="credit-card ${c.theme} ${c.frozen?'frozen':''}" data-card-id="${c.id}">
         <div class="cc-top">
-          <div class="cc-brand">kiwi<i class="d"></i></div>
+          <div class="cc-brand"><img src="${c.theme==='cc-standard'?'assets/kiwi-newlogo.svg':'assets/kiwi-newlogo-inverse.svg'}" alt="Kiwi"></div>
           <div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div>
         </div>
         <div class="cc-bot">
@@ -1649,7 +1647,7 @@ em, i, cite, dfn, var { font-style: normal; }
     const pct = Math.min(100, (c.monthSpend / c.limit) * 100);
     $('#cardDetailBody').innerHTML = `
       <div class="credit-card ${c.theme} ${c.frozen?'frozen':''}" style="margin-bottom:18px;">
-        <div class="cc-top"><div class="cc-brand">kiwi<i class="d"></i></div><div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div></div>
+        <div class="cc-top"><div class="cc-brand"><img src="${c.theme==='cc-standard'?'assets/kiwi-newlogo.svg':'assets/kiwi-newlogo-inverse.svg'}" alt="Kiwi"></div><div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div></div>
         <div class="cc-bot"><div><div class="cc-num">${c.num}</div><div class="cc-name">I. MOULINE</div></div></div>
       </div>
       <div class="card-quick">

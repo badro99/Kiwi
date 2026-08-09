@@ -91,6 +91,10 @@
         background: var(--paper); color: var(--ink); font-family: var(--sans);
       }
       .vx-screen.is-on { display: flex; }
+      .kiwi-pos-logo {
+        display: block; width: auto; height: 28px;
+        pointer-events: none; user-select: none; -webkit-user-drag: none;
+      }
       .vx-screen.is-entering { animation: vx-dive 640ms cubic-bezier(0.32, 0.72, 0, 1) both; }
       @keyframes vx-dive { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
       @media (prefers-reduced-motion: reduce) { .vx-screen.is-entering { animation: none !important; } }

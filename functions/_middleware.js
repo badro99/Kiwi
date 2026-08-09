@@ -474,9 +474,7 @@ function authPage(opts) {
       0 8px 24px -14px rgba(5,59,44,.20),
       0 1px 0 rgba(255,255,255,.6) inset;
   }
-  /* Real Kiwi wordmark — lowercase "kiwi" Inter Tight 700 + mint accent dot.
-     Per brand.html §01: no pictogram, no kiwi leaf. Long-press this to open
-     the operator prompt. */
+  /* Canonical Kiwi vector. Long-press this to open the operator prompt. */
   .brand {
     display: inline-flex;
     align-items: baseline;
@@ -498,6 +496,7 @@ function authPage(opts) {
     translate: 0 -1px;
     box-shadow: 0 0 0 4px rgba(125,242,176,.22);
   }
+  .auth-brand-legacy img { display:block; width:auto; height:34px; }
   .brand .vx-entry-logo { display: none; }
   .head { margin: 26px 0 24px; }
   h1 {
@@ -787,10 +786,10 @@ function authPage(opts) {
   </svg>
   <main class="card vx-auth-card">
     <div class="brand" id="brand-mark" aria-label="Kiwi">
-      <span class="auth-brand-legacy">kiwi<i aria-hidden="true"></i></span>
+      <picture class="auth-brand-legacy"><source media="(prefers-color-scheme: dark)" srcset="/assets/kiwi-newlogo-inverse.svg"><img src="/assets/kiwi-newlogo.svg" alt=""></picture>
       <span class="vx-entry-logo" aria-hidden="true">
-        <img class="brand-logo-light" src="/assets/kiwi-logo.svg" width="846" height="446" alt="" />
-        <img class="brand-logo-dark" src="/assets/kiwi-logo-dark.svg" width="846" height="446" alt="" />
+        <img class="brand-logo-light" src="/assets/kiwi-newlogo.svg" width="886" height="486" alt="" />
+        <img class="brand-logo-dark" src="/assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />
       </span>
     </div>
     <div class="head">

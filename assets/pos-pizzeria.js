@@ -405,7 +405,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="pz-rail">
-        <div class="pz-brand">kiwi<i></i></div>
+        <div class="pz-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="pz-venue">
           <div class="pz-venue-name">${esc(pvName('Pizzeria La Marsa') || 'Pizzeria')}</div>
           <div class="pz-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Marina'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

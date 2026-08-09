@@ -309,7 +309,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="ph-rail">
-        <div class="ph-brand">kiwi<i></i></div>
+        <div class="ph-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ph-venue">
           <div class="ph-venue-name">${esc(pvName('Pharmacie Ibn Batouta') || 'Pharmacie')}
             <span class="ph-venue-night"><i data-lucide="moon"></i>Garde</span>

@@ -7,7 +7,7 @@
   <meta name="description" content="Écran cuisine Kiwi — les bons de la caisse arrivent ici, sans imprimante." />
   <meta name="theme-color" content="#053B2C" />
   <link rel="manifest" href="cuisine.webmanifest" />
-  <link rel="apple-touch-icon" href="assets/icons/kiwi-caisse-180.png" />
+  <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
@@ -79,7 +79,8 @@
       align-items: center; justify-content: center; gap: 6px; padding: 30px;
     }
     #pair.on { display: flex; }
-    #pair .kw { font-family: var(--serif); font-size: 34px; letter-spacing: -0.01em; }
+    #pair .kw { display:flex; align-items:center; gap:10px; font-family: var(--serif); font-size: 34px; letter-spacing: -0.01em; }
+    #pair .kw img { display:block; width:auto; height:36px; }
     #pair .kw span { color: var(--mint, #7DF2B0); }
     #pair .sub { font-size: 14.5px; color: rgba(255,255,255,.62); margin-bottom: 22px; text-align: center; line-height: 1.55; max-width: 380px; }
     .dots { display: flex; gap: 12px; margin-bottom: 26px; }
@@ -275,7 +276,7 @@
      tableau de bord, on le tape ici, et la tablette devient l'écran cuisine de
      CE restaurant. Le code est à usage unique — une tablette, un code. -->
 <div id="pair" role="dialog" aria-label="Appairer l'écran cuisine">
-  <div class="kw">Kiwi <span>Cuisine</span></div>
+  <div class="kw"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span>Cuisine</span></div>
   <p class="sub">Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.</p>
   <div class="dots" id="pair-dots"></div>
   <div class="pad" id="pair-pad"></div>

@@ -27,7 +27,7 @@
   .nav { position: sticky; top: 0; z-index: 80; background: rgba(2,32,26,0.72); backdrop-filter: blur(22px) saturate(140%); border-bottom: 1px solid rgba(255,255,255,0.06); }
   .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; color: var(--paper); }
   .nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 24px; letter-spacing: -0.05em; color: var(--paper); }
-  .nav-logo .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+  .nav-logo img { display:block; width:auto; height:28px; }
   .nav-links { display: flex; gap: 28px; font-size: 13.5px; color: #c6ead4; }
   .nav-links a { color: inherit; transition: color .2s; }
   .nav-links a:hover { color: var(--mint); }
@@ -211,8 +211,8 @@
 
   .card-visual { aspect-ratio: 1.585; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.25); }
   .card-visual .top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .card-visual .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 3px; }
-  .card-visual .brand .d { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; }
+  .card-visual .brand { display: inline-flex; align-items: center; }
+  .card-visual .brand img { display:block; width:auto; height:22px; }
   .card-visual .tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
   .card-visual .bot { display: flex; justify-content: space-between; align-items: flex-end; }
   .card-visual .num { font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; opacity: 0.85; }
@@ -372,6 +372,7 @@
   .vs-table { background: var(--surface); border: 1px solid var(--n-200); border-radius: 24px; overflow: hidden; }
   .vs-table-h { display: grid; grid-template-columns: 1.4fr 1fr 1fr; background: var(--paper-soft); padding: 22px 28px; font-size: 13px; font-weight: 500; color: var(--n-500); letter-spacing: 0.04em; }
   .vs-table-h .kiwi { color: var(--atlas); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .vs-table-h .kiwi img { display:block; width:auto; height:20px; }
   .vs-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; padding: 20px 28px; align-items: center; border-top: 1px solid var(--n-200); font-size: 15px; }
   .vs-row .l { color: var(--n-700); font-weight: 500; }
   .vs-row .kiwi { color: var(--atlas); font-weight: 500; font-family: var(--mono); }
@@ -634,7 +635,7 @@
 <!-- ============ NAV ============ -->
 <nav class="nav">
   <div class="wrap nav-inner">
-    <a href="index.html" class="nav-logo">kiwi<i class="dot"></i></a>
+    <a href="index.html" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></a>
     <div class="nav-links">
       <a href="#compte">Compte</a>
       <a href="#carte">Carte</a>
@@ -802,7 +803,7 @@
         <p class="sub">Le compte gratuit, sans condition.</p>
         <div class="card-visual cv-standard">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
             <div class="tag">Visa Debit</div>
           </div>
           <div class="bot">
@@ -831,7 +832,7 @@
         <p class="sub">Pour ceux qui voyagent et investissent.</p>
         <div class="card-visual cv-pro">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
             <div class="tag">Visa Platinum</div>
           </div>
           <div class="bot">
@@ -860,7 +861,7 @@
         <p class="sub">L'expérience signature, en métal brossé.</p>
         <div class="card-visual cv-atlas">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
             <div class="tag accent">Visa Infinite</div>
           </div>
           <div class="bot">
@@ -1252,7 +1253,7 @@
     <div class="vs-table">
       <div class="vs-table-h">
         <div>Service</div>
-        <div class="kiwi">kiwi<i style="width:5px;height:5px;background:var(--mint);border-radius:50%;display:inline-block;"></i></div>
+        <div class="kiwi"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
         <div>Banque traditionnelle</div>
       </div>
       <div class="vs-row">
@@ -1440,7 +1441,7 @@
   <div class="wrap">
     <div class="foot-top">
       <div>
-        <a href="index.html" class="nav-logo" style="font-size:26px;">kiwi<i class="dot"></i></a>
+        <a href="index.html" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></a>
         <p style="color:#88a098;font-size:13.5px;line-height:1.6;margin:18px 0 0;max-width:340px;">La première banque en ligne pensée par et pour les Marocains. Tanger · Casablanca.</p>
       </div>
       <div>

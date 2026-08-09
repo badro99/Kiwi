@@ -340,7 +340,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="gy-rail">
-        <div class="gy-brand">kiwi<i></i></div>
+        <div class="gy-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="gy-venue">
           <div class="gy-venue-name">${pvName('Atlas Fitness') || 'Ma salle'}</div>
           <div class="gy-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Route de Rabat'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

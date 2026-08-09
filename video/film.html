@@ -76,6 +76,7 @@ body{font-family:var(--sans);color:var(--paper);-webkit-font-smoothing:antialias
 .wm{display:inline-flex;align-items:baseline;gap:.05em;font-weight:600;letter-spacing:-.055em;
     color:var(--paper);line-height:1}
 .wm .dot{width:.19em;height:.19em;border-radius:50%;background:var(--mint);display:inline-block}
+.wm img{display:block;width:auto;height:132px}
 
 /* ── cold-open receipt ───────────────────────────────────────────────── */
 #receipt{position:absolute;left:50%;top:50%;width:420px;
@@ -335,7 +336,7 @@ const tl = gsap.timeline({ paused:true });
   tl.to(cam, { scale:0.80, y:-34, duration:2.6, ease:EASE_IO }, 9.4);
 
   const wm = typeBlock(
-    '<div class="wm" style="font-size:132px">kiwi<span class="dot"></span></div>',
+    '<div class="wm"><img src="../assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>',
     { left:'50%', top:'50%', transform:'translate(-50%,-50%)', textAlign:'center' });
   tl.fromTo(wm, { opacity:0, scale:1.14, filter:'blur(14px)' },
                 { opacity:1, scale:1, filter:'blur(0px)', duration:2.2, ease:EASE }, 9.0);
@@ -681,7 +682,7 @@ const tl = gsap.timeline({ paused:true });
                  { scale:1, rotateY:0, z:0, duration:6.2, ease:EASE }, 166);
 
   const wm = typeBlock(
-    '<div class="wm" style="font-size:150px">kiwi<span class="dot"></span></div>',
+    '<div class="wm"><img src="../assets/kiwi-newlogo-inverse.svg" alt="Kiwi" style="height:150px"></div>',
     { left:'50%', top:'46%', transform:'translate(-50%,-50%)', textAlign:'center' });
   tl.fromTo(wm, { opacity:0, scale:1.1, filter:'blur(12px)' },
                 { opacity:1, scale:1, filter:'blur(0px)', duration:2.0, ease:EASE }, 170.4);

@@ -306,7 +306,7 @@
     root = rootEl;
     root.innerHTML = `
       <aside class="sp-rail">
-        <div class="sp-brand">kiwi<i></i></div>
+        <div class="sp-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="sp-venue">
           <div class="sp-venue-name">${pvName('Spa Bahia') || 'Spa'}</div>
           <div class="sp-venue-sub">${pvReal() ? (pvCity('') || '') : 'Marrakech · Hivernage'}<br>Le même Kiwi, un seul compte.</div>

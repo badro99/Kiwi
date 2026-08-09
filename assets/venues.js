@@ -2206,7 +2206,7 @@
       <div class="fo-gloss"></div>
       <div class="fo-glow-frame"></div>
       <div class="fo-label">
-        <span class="fo-mark">kiwi</span>
+        <span class="fo-mark"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></span>
         <span class="fo-ultra">
           <span class="fo-ultra-r">✦</span>
           <span class="fo-ultra-b">✦</span>

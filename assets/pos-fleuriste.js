@@ -346,7 +346,7 @@
     if (!state.bouquet) freshBouquet();
     root.innerHTML = `
       <aside class="fl-rail">
-        <div class="fl-brand">kiwi<i></i></div>
+        <div class="fl-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="fl-venue">
           <div class="fl-venue-name">${pvName('Fleurs du Détroit') || 'Ma boutique'}</div>
           <div class="fl-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Marché central'}<br>Le même Kiwi, <b>un seul compte</b>.</div>

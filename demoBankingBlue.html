@@ -312,6 +312,7 @@ em, i, cite, dfn, var { font-style: normal; }
   .ultra-head { display: flex; justify-content: space-between; align-items: center; }
   .ultra-mark { color: var(--mint); font-size: 18px; line-height: 1; }
   .ultra-wm { display: inline-flex; align-items: baseline; gap: 4px; font-size: 14px; font-weight: 700; letter-spacing: -0.04em; }
+  .ultra-wm img { display: block; width: auto; height: 17px; }
   .ultra-wm .ux { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; font-size: 15px; color: rgba(255,255,255,0.92); }
   .ultra-l { font-size: 10.5px; color: rgba(255,255,255,0.55); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 12px; }
   .ultra-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-top: 6px; font-size: 12.5px; color: rgba(255,255,255,0.88); }
@@ -440,8 +441,8 @@ em, i, cite, dfn, var { font-style: normal; }
     border: 0; width: 100%; text-align: left;
   }
   .cc-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .cc-brand { font-size: 22px; font-weight: 700; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 3px; }
-  .cc-brand .d { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; }
+  .cc-brand { display: inline-flex; align-items: center; }
+  .cc-brand img { display: block; width: auto; height: 24px; }
   .cc-tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
   .cc-bot { display: flex; justify-content: space-between; align-items: flex-end; }
   .cc-num { font-family: var(--mono); font-size: 14px; letter-spacing: 0.08em; opacity: 0.88; }
@@ -449,14 +450,12 @@ em, i, cite, dfn, var { font-style: normal; }
   .cc-visa { width: 38px; height: 24px; }
 
   .cc-standard { background: linear-gradient(135deg, #F5F2EA 0%, #E6E1D2 100%); color: var(--ink); }
-  .cc-standard .cc-brand .d { background: var(--atlas); }
   .cc-pro { background: linear-gradient(135deg, var(--atlas) 0%, var(--atlas-700) 60%, var(--riad) 100%); }
   .cc-pro::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 80% 10%, rgba(91,213,255,0.32), transparent 65%); pointer-events: none; }
   .cc-pro > * { position: relative; }
   .cc-atlas { background: linear-gradient(135deg, #1A201D 0%, #050907 50%, #2E2D29 100%); color: #E6E1D2; }
   .cc-atlas::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.02) 8px, rgba(255,255,255,0.02) 9px); pointer-events: none; }
   .cc-atlas > * { position: relative; }
-  .cc-atlas .cc-brand .d { background: #B89B5E; }
   .cc-atlas .accent { color: #B89B5E; }
   .credit-card.frozen { filter: grayscale(0.7) brightness(0.85); }
   .credit-card.frozen::after {
@@ -833,7 +832,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
       <button class="ultra-tile" data-open="ultra">
         <div class="ultra-head">
-          <span class="ultra-wm"><span class="ultra-mark">✦</span>kiwi<span class="ux">ultra</span></span>
+          <span class="ultra-wm"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span class="ux">ultra</span></span>
           <span style="font-size:11px; color:var(--mint); letter-spacing:0.08em; font-weight:600;">PALIER SIGNATURE</span>
         </div>
         <div class="ultra-l">Avantages actifs</div>
@@ -1142,7 +1141,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div style="font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:0.08em;text-transform:uppercase;">Palier signature · Majorelle</div>
           <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;">
             <span style="color:var(--mint);font-size:38px;line-height:1;">✦</span>
-            <span style="font-size:36px;font-weight:700;letter-spacing:-0.04em;line-height:1;">kiwi</span>
+            <img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" style="display:block;width:auto;height:42px;">
             <span style="font-family:var(--serif);font-weight:400;font-size:36px;letter-spacing:-0.015em;line-height:1;color:rgba(255,255,255,0.95);margin-left:4px;">ultra</span>
           </div>
           <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:14px;line-height:1.5;max-width:300px;">L'expérience la plus complète de Kiwi, pensée pour ceux qui voyagent, investissent, et vivent entre plusieurs monnaies.</div>
@@ -1733,7 +1732,7 @@ em, i, cite, dfn, var { font-style: normal; }
     $('#cardsStack').innerHTML = state.cards.map(c => `
       <button class="credit-card ${c.theme} ${c.frozen?'frozen':''}" data-card-id="${c.id}">
         <div class="cc-top">
-          <div class="cc-brand">kiwi<i class="d"></i></div>
+          <div class="cc-brand"><img src="${c.theme==='cc-standard'?'assets/kiwi-newlogo.svg':'assets/kiwi-newlogo-inverse.svg'}" alt="Kiwi"></div>
           <div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div>
         </div>
         <div class="cc-bot">
@@ -1760,7 +1759,7 @@ em, i, cite, dfn, var { font-style: normal; }
     const pct = Math.min(100, (c.monthSpend / c.limit) * 100);
     $('#cardDetailBody').innerHTML = `
       <div class="credit-card ${c.theme} ${c.frozen?'frozen':''}" style="margin-bottom:18px;">
-        <div class="cc-top"><div class="cc-brand">kiwi<i class="d"></i></div><div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div></div>
+        <div class="cc-top"><div class="cc-brand"><img src="${c.theme==='cc-standard'?'assets/kiwi-newlogo.svg':'assets/kiwi-newlogo-inverse.svg'}" alt="Kiwi"></div><div class="cc-tag ${c.theme==='cc-atlas'?'accent':''}">${c.name}</div></div>
         <div class="cc-bot"><div><div class="cc-num">${c.num}</div><div class="cc-name">I. MOULINE</div></div></div>
       </div>
       <div class="card-quick">
