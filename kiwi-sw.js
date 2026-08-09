@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v313';
+var CACHE = 'kiwi-app-v316';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -39,7 +39,7 @@ var SHELL = [
   '/assets/pages-pro.css',
   '/assets/polish-dashboard.css',
   '/assets/pressing-dashboard.css?v=4',
-  '/assets/trade-workspaces.css?v=1',
+  '/assets/trade-workspaces.css?v=3',
   '/assets/hotel.css',
   '/assets/mobile.css?v=4',
   '/assets/sold-insights.js',
@@ -74,7 +74,8 @@ var SHELL = [
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues.js?v=5',
-  '/assets/trade-workspaces.js?v=1',
+  '/assets/trade-workspace-schema.js?v=3',
+  '/assets/trade-workspaces.js?v=3',
   '/assets/pressing-ops.js?v=1',
   '/assets/pressing-dashboard.js?v=3',
   '/assets/demoClock.js',
@@ -166,8 +167,8 @@ var SHELL = [
   '/assets/pos-sale.js',
   '/assets/pos-dispatch.js',
   '/assets/pos-mobile.js',
-  '/assets/pos-workspaces.css?v=1',
-  '/assets/pos-workspaces.js?v=1',
+  '/assets/pos-workspaces.css?v=3',
+  '/assets/pos-workspaces.js?v=3',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */

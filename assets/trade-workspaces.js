@@ -80,13 +80,13 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const UI = {
     add:L('Ajouter','Add','إضافة'), edit:L('Modifier','Edit','تعديل'), remove:L('Supprimer','Delete','حذف'), advance:L('Étape suivante','Next step','المرحلة التالية'),
-    active:L('Actifs','Active','نشطة'), today:L("Prévus aujourd’hui",'Due today','مقررة اليوم'), sales:L("Ventes aujourd’hui",'Sales today','مبيعات اليوم'),
+    active:L('Actifs','Active','نشطة'), alerts:L('À surveiller','Needs attention','تحتاج متابعة'), balance:L('Solde ouvert','Open balance','الرصيد المفتوح'), sales:L("Ventes aujourd’hui",'Sales today','مبيعات اليوم'),
     emptyTitle:L('Tout est prêt pour commencer.','Everything is ready to start.','كل شيء جاهز للبدء.'),
     emptyHint:L('Ajoutez le premier élément. Kiwi le conserve pour cet établissement et le synchronise sur vos appareils.','Add the first item. Kiwi keeps it for this location and syncs it across your devices.','أضف أول عنصر. يحتفظ به Kiwi لهذا الموقع ويزامنه بين أجهزتك.'),
     name:L('Nom ou référence','Name or reference','الاسم أو المرجع'), date:L('Date ou échéance','Date or deadline','التاريخ أو الموعد'), amount:L('Montant (MAD)','Amount (MAD)','المبلغ (درهم)'), status:L('Statut','Status','الحالة'), note:L('Détails utiles','Useful details','تفاصيل مفيدة'),
     cancel:L('Annuler','Cancel','إلغاء'), save:L('Enregistrer','Save','حفظ'), saved:L('Enregistré','Saved','تم الحفظ'), deleted:L('Supprimé','Deleted','تم الحذف'),
     deleteTitle:L('Supprimer cet élément ?','Delete this item?','حذف هذا العنصر؟'), deleteHint:L('Il disparaîtra aussi des autres appareils synchronisés.','It will also disappear from synced devices.','سيختفي أيضاً من الأجهزة المتزامنة.'),
-    currency:L('MAD','MAD','درهم'), noDate:L('Sans échéance','No deadline','بدون موعد'),
+    currency:L('MAD','MAD','درهم'), noDate:L('Sans échéance','No deadline','بدون موعد'), required:L('Ce champ est obligatoire.','This field is required.','هذا الحقل إلزامي.'), invalid:L('Vérifiez cette valeur.','Check this value.','تحقق من هذه القيمة.'), unique:L('Cette référence existe déjà.','This reference already exists.','هذا المرجع موجود بالفعل.'),
   };
   const STATUS = {
     queue:[L('À prendre','To accept','للاستلام'),L('En cours','In progress','قيد التنفيذ'),L('Prêt','Ready','جاهز'),L('Terminé','Done','مكتمل')],
@@ -101,7 +101,7 @@
   let cloud = null;
   function venue() { try { return window.KiwiVenue?.getCurrentVenueData?.() || {}; } catch (_) { return {}; } }
   function venueId() { const v = venue(); return String(v.id || window.KiwiVenue?.getVenue?.() || 'venue'); }
-  function trade() { return String(venue().subtype || ''); }
+  function trade() { const v=venue(),raw=String(v.subtype || v.type || '');return ({boulangerie:'bakery',gym:'sport'}[raw]||raw); }
   function key() { return 'kiwi:workspaces:v1:' + venueId(); }
   function blank() { return { trade: trade(), records: {} }; }
   function read() {
@@ -165,45 +165,63 @@
     if (!v) return pick(UI.noDate);
     try { return new Date(v + 'T12:00:00').toLocaleDateString(lang()==='ar'?'ar-MA':lang(), { day:'numeric', month:'short', year:'numeric' }); } catch (_) { return v; }
   }
-  function statusList(cfg) { return STATUS[cfg.kind] || STATUS.queue; }
+  function schema(cfg) { return window.KiwiTradeSchema?.get?.(cfg.trade, cfg.nav) || null; }
+  function statusList(cfg) { return schema(cfg)?.stages || STATUS[cfg.kind] || STATUS.queue; }
   function statusLabel(cfg, index) { const a=statusList(cfg); return pick(a[Math.max(0,Math.min(a.length-1,+index||0))]); }
+  function allRecords() { return read().records || {}; }
+  function fieldById(sc,id){return sc?.fields?.find((f)=>f.id===id)||null;}
+  function relationLabel(sc,field,value){if(!value)return'';const opt=window.KiwiTradeSchema?.relationOptions?.(sc,allRecords(),field)?.find((x)=>x.value===value);return opt?.label||value;}
+  function displayValue(sc,id,value){
+    const f=fieldById(sc,id);if(value==null||value==='')return'';
+    if(f?.type==='checkbox')return value?pick(L('Oui','Yes','نعم')):pick(L('Non','No','لا'));
+    if(f?.type==='money'||/balance$|cost$|price$|fee$|target$/i.test(id))return money(value)+' '+pick(UI.currency);
+    if(f?.type==='date'||f?.type==='datetime-local')try{return new Date(value+(f.type==='date'?'T12:00:00':'')).toLocaleString(lang()==='ar'?'ar-MA':lang(),f.type==='date'?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}catch(_){return value;}
+    if(f?.type==='select'){const o=(f.values||[]).find((x)=>x.value===value);return o?pick(o.label):value;}
+    if(f?.type==='relation')return relationLabel(sc,f,value);
+    return String(value);
+  }
   function recordCard(cfg, r) {
-    const a=statusList(cfg), done=(+r.status||0)>=a.length-1;
-    return `<article class="tw-card" data-tw-id="${esc(r.id)}">
+    const sc=schema(cfg),rich=sc?window.KiwiTradeSchema.derived(sc,r):r,v=rich.values||rich,a=statusList(cfg),done=(+r.status||0)>=a.length-1;
+    const ids=(sc?.card||[]).filter((id)=>v[id]!==''&&v[id]!=null&&v[id]!==false),meta=ids.map((id)=>`<span><b>${esc(pick(fieldById(sc,id)?.label||({balance:L('Solde','Balance','الرصيد'),claimBalance:L('Reste','Outstanding','المتبقي'),sessionsLeft:L('Séances restantes','Sessions left','الجلسات المتبقية'),spotsLeft:L('Places restantes','Spots left','الأماكن المتبقية'),wasteQty:L('Perte','Waste','الخسارة')}[id]||L(id,id,id))))}</b>${esc(displayValue(sc,id,v[id]))}</span>`).join('');
+    return `<article class="tw-card${rich.derived?.alert?' has-alert':''}" data-tw-id="${esc(r.id)}">
       <div class="tw-card-head"><h3>${esc(r.title)}</h3><span class="tw-pill">${esc(statusLabel(cfg,r.status))}</span></div>
+      ${rich.derived?.late?`<div class="tw-alert">${esc(pick(L('Échéance dépassée','Overdue','تجاوز الموعد')))}</div>`:''}${rich.derived?.expired?`<div class="tw-alert">${esc(pick(L('Expiré','Expired','منتهي')))}</div>`:''}${rich.derived?.expiring?`<div class="tw-alert">${esc(pick(L('Expire bientôt','Expiring soon','ينتهي قريباً')))}</div>`:''}${rich.derived?.belowThreshold?`<div class="tw-alert">${esc(pick(L('Sous le seuil','Below threshold','تحت الحد')))}</div>`:''}
       ${r.note ? `<p>${esc(r.note)}</p>` : ''}
-      <div class="tw-meta">${cfg.date!==false?`<span>${esc(displayDate(r.date))}</span>`:''}${cfg.money?`<span>${money(r.amount)} ${esc(pick(UI.currency))}</span>`:''}</div>
+      <div class="tw-meta">${meta}</div>
       <div class="tw-card-actions">${done?'':`<button class="tw-action primary" type="button" data-tw-next="${esc(r.id)}">${esc(pick(UI.advance))}</button>`}<button class="tw-action" type="button" data-tw-edit="${esc(r.id)}">${esc(pick(UI.edit))}</button><button class="tw-action danger" type="button" data-tw-delete="${esc(r.id)}">${esc(pick(UI.remove))}</button></div>
     </article>`;
   }
   function render(nav) {
     const cfg=config(nav); if (!cfg || !window.Kiwi?.appPage) return false;
     openPage=cfg; bindCloud();
-    const active=rows(nav), now=todayKey(), due=active.filter((r)=>r.date===now).length;
+    const active=rows(nav),sc=schema(cfg),sum=sc?window.KiwiTradeSchema.summary(sc,active):{active:active.length,alerts:0,balance:0};
     const start=new Date(); start.setHours(0,0,0,0);
     const sales=currentSales().filter((s)=>(+s.ts||0)>=start.getTime());
     const revenue=sales.reduce((n,s)=>n+(+s.amount||0),0);
     const board=active.length ? `<div class="tw-grid">${active.map((r)=>recordCard(cfg,r)).join('')}</div>` : `<div class="tw-empty"><div class="tw-empty-inner"><div class="tw-empty-mark" aria-hidden="true">＋</div><h3>${esc(pick(UI.emptyTitle))}</h3><p>${esc(pick(UI.emptyHint))}</p><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div></div>`;
     const body=`<section class="tw-shell" data-tw-page="${esc(nav)}">
-      <div class="tw-summary"><div class="tw-stat"><span>${esc(pick(UI.active))}</span><strong>${active.length}</strong></div><div class="tw-stat"><span>${esc(pick(UI.today))}</span><strong>${due}</strong></div><div class="tw-stat"><span>${esc(pick(UI.sales))}</span><strong>${sales.length} · ${money(revenue)} ${esc(pick(UI.currency))}</strong></div></div>
+      <div class="tw-summary"><div class="tw-stat"><span>${esc(pick(UI.active))}</span><strong>${sum.active}</strong></div><div class="tw-stat"><span>${esc(pick(UI.alerts))}</span><strong>${sum.alerts}</strong></div><div class="tw-stat"><span>${sum.balance?esc(pick(UI.balance)):esc(pick(UI.sales))}</span><strong>${sum.balance?money(sum.balance)+' '+esc(pick(UI.currency)):sales.length+' · '+money(revenue)+' '+esc(pick(UI.currency))}</strong></div></div>
       <div class="tw-toolbar"><div class="tw-toolbar-copy"><strong>${esc(pick(cfg.title))}</strong><span>${esc(pick(cfg.subtitle))}</span></div><button class="tw-add" type="button" data-tw-add>${esc(pick(UI.add))} ${esc(pick(cfg.noun))}</button></div>
       <div class="tw-board">${board}</div></section>`;
     const out=window.Kiwi.appPage(nav,{title:pick(cfg.title),subtitle:(venue().name||'')+' · '+pick(cfg.subtitle),body});
     wire(out?.el || document.querySelector('[data-tw-page]'),cfg); return true;
   }
+  function fieldControl(sc,f,r){const v=r.values?.[f.id]??r[f.id]??f.default??'',id='tw-'+f.id,req=f.required?' required':'',full=f.full||f.type==='textarea'?' full':'',common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;let control='';
+    if(f.type==='textarea')control=`<textarea ${common} maxlength="${f.max||2400}">${esc(v)}</textarea>`;
+    else if(f.type==='select'||f.type==='relation'){const options=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);control=`<select ${common}><option value="">—</option>${options.map((o)=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
+    else if(f.type==='checkbox')control=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
+    else control=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='money'||f.type==='number'?` step="${f.step||'0.01'}"`:''}${f.autocomplete?` autocomplete="${esc(f.autocomplete)}"`:''}>`;
+    return `<div class="tw-field${full}"><label for="${esc(id)}">${esc(pick(f.label))}${f.required?' *':''}</label>${control}<small data-tw-error="${esc(f.id)}"></small></div>`;}
   function modalForm(cfg, existing) {
     if (!window.Kiwi?.modal) return;
-    const r=existing||{}, statuses=statusList(cfg);
+    const sc=schema(cfg),r=sc?window.KiwiTradeSchema.normalize(sc,existing||{}):(existing||{}),statuses=statusList(cfg);
     const m=window.Kiwi.modal({title:(existing?pick(UI.edit):pick(UI.add))+' '+pick(cfg.noun),width:620,body:`<form class="tw-form" data-tw-form>
-      <div class="tw-field full"><label for="tw-title">${esc(pick(UI.name))}</label><input id="tw-title" name="title" required maxlength="140" value="${esc(r.title||'')}"></div>
-      ${cfg.date===false?'':`<div class="tw-field"><label for="tw-date">${esc(pick(UI.date))}</label><input id="tw-date" name="date" type="date" value="${esc(r.date||'')}"></div>`}
-      ${cfg.money?`<div class="tw-field"><label for="tw-amount">${esc(pick(UI.amount))}</label><input id="tw-amount" name="amount" type="number" min="0" step="0.01" inputmode="decimal" value="${r.amount==null?'':esc(r.amount)}"></div>`:''}
+      ${sc?sc.fields.map((f)=>fieldControl(sc,f,r)).join(''):`<div class="tw-field full"><label for="tw-title">${esc(pick(UI.name))}</label><input id="tw-title" name="title" required maxlength="140" value="${esc(r.title||'')}"></div>`}
       <div class="tw-field${cfg.date===false&&!cfg.money?' full':''}"><label for="tw-status">${esc(pick(UI.status))}</label><select id="tw-status" name="status">${statuses.map((s,i)=>`<option value="${i}"${(+r.status||0)===i?' selected':''}>${esc(pick(s))}</option>`).join('')}</select></div>
-      <div class="tw-field full"><label for="tw-note">${esc(pick(UI.note))}</label><textarea id="tw-note" name="note" maxlength="1200">${esc(r.note||'')}</textarea></div>
       <div class="tw-field full tw-modal-actions"><button class="tw-cancel" type="button" data-tw-cancel>${esc(pick(UI.cancel))}</button><button class="tw-save" type="submit">${esc(pick(UI.save))}</button></div></form>`});
     const form=m.el.querySelector('[data-tw-form]');
     m.el.querySelector('[data-tw-cancel]').onclick=()=>m.close();
-    form.onsubmit=(e)=>{e.preventDefault();const fd=new FormData(form),now=Date.now();const title=String(fd.get('title')||'').trim();if(!title)return;saveRecord(cfg,{id:r.id||('tw-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,7)),title,date:cfg.date===false?'':String(fd.get('date')||''),amount:cfg.money?Math.max(0,+fd.get('amount')||0):0,status:+fd.get('status')||0,note:String(fd.get('note')||'').trim(),createdAt:r.createdAt||now,updatedAt:now,deletedAt:0});m.close();window.Kiwi.toast?.(pick(UI.saved),{type:'success'});};
+    form.onsubmit=(e)=>{e.preventDefault();const fd=new FormData(form),now=Date.now(),base={...r,id:r.id||('tw-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,7)),status:+fd.get('status')||0,createdAt:r.createdAt||now,updatedAt:now,deletedAt:0};let record;if(sc){const values={};sc.fields.forEach((f)=>{values[f.id]=f.type==='checkbox'?form.elements[f.id]?.checked:fd.get(f.id);});const check=window.KiwiTradeSchema.validate(sc,{...base,values},rows(cfg.nav));form.querySelectorAll('[data-tw-error]').forEach((n)=>n.textContent='');if(!check.ok){Object.entries(check.errors).forEach(([id,code])=>{const n=[...form.querySelectorAll('[data-tw-error]')].find((el)=>el.dataset.twError===id);if(n)n.textContent=pick(code==='required'?UI.required:code==='unique'?UI.unique:UI.invalid);});return;}record={...check.record,id:base.id,status:base.status,createdAt:base.createdAt,updatedAt:now,deletedAt:0};}else{record={...base,title:String(fd.get('title')||'').trim()};if(!record.title)return;}saveRecord(cfg,record);m.close();window.Kiwi.toast?.(pick(UI.saved),{type:'success'});};
   }
   function confirmDelete(cfg,r) {
     const m=window.Kiwi.modal({title:pick(UI.deleteTitle),desc:esc(pick(UI.deleteHint)),width:450,body:`<div class="tw-modal-actions"><button class="tw-cancel" type="button" data-tw-cancel>${esc(pick(UI.cancel))}</button><button class="tw-save" type="button" data-tw-confirm>${esc(pick(UI.remove))}</button></div>`});
