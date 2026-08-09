@@ -1,7 +1,6 @@
-/* Kiwi · pressing owner workspace
- * Replaces the generic boutique dashboard only when the exact trade is
- * `pressing`. All operational numbers come from KiwiPressingOps; an empty
- * pressing gets a useful launch state, never fabricated garments or deadlines.
+/* Kiwi · pressing operational subpages
+ * Keeps the shared owner dashboard intact and replaces only the navigation
+ * destinations that are specific to the exact `pressing` trade.
  */
 (function () {
   'use strict';
@@ -182,32 +181,27 @@
   }
   function activate() {
     current = isPressing();
-    document.body.classList.toggle('is-pressing', current);
-    if (!current) return;
-    ensureHost();
-    renderHome();
+    document.body.classList.remove('is-pressing');
+    if (host) host.remove();
+    host = null;
   }
 
   document.addEventListener('click', function (e) {
     var open = e.target.closest && e.target.closest('[data-pxd-open]');
-    if (open) { e.preventDefault(); openTill(open.dataset.prOpen); return; }
+    if (open) { e.preventDefault(); openTill(open.dataset.pxdOpen); return; }
     var page = e.target.closest && e.target.closest('[data-pxd-page]');
-    if (page) { e.preventDefault(); showPage(page.dataset.prPage); return; }
+    if (page) { e.preventDefault(); showPage(page.dataset.pxdPage); return; }
     var nav = e.target.closest && e.target.closest('.sidebar nav a[data-nav]');
     if (!nav || !current) return;
     if (PAGE_LABELS[nav.dataset.nav]) {
       e.preventDefault(); e.stopImmediatePropagation(); showPage(nav.dataset.nav); return;
     }
-    if (nav.dataset.nav === 'accueil') setTimeout(function () { activate(); }, 0);
   }, true);
 
   function boot() {
-    ensureHost(); activate();
+    activate();
     try { KiwiVenue.subscribe(activate); } catch (_) {}
-    try { KiwiPressingOps.subscribe(renderHome); } catch (_) {}
-    try { KiwiSales.subscribe(function () { if (current) renderHome(); }); } catch (_) {}
     window.addEventListener('kiwi:langchange', activate);
-    window.addEventListener('kiwi:pressing-ops', renderHome);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

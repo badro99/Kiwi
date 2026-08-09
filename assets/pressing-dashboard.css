@@ -1,10 +1,5 @@
-/* Kiwi · pressing owner workspace */
-.pressing-home { display: none; padding: 10px 0 56px; color: var(--ink); }
-body.is-pressing .page-head,
-body.is-pressing .dash-date-range,
-body.is-pressing .dash-standard { display: none !important; }
-body.is-pressing:not([class*="page-"]) .pressing-home { display: block; }
-body.is-pressing[class*="page-"] .pressing-home { display: none !important; }
+/* Kiwi · pressing operational subpages. The shared dashboard remains untouched. */
+.pressing-home { display: none !important; }
 
 .pxd-shell { max-width: 1520px; margin: 0 auto; }
 .pxd-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 2px 26px; }
