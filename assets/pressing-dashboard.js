@@ -78,6 +78,18 @@
     });
   }
 
+  function garmentPreview(pieces) {
+    pieces = pieces || [];
+    var shared = window.KiwiPressingGarmentIcons;
+    if (!shared || !shared.render || !pieces.length) return '<span class="pxd-garments is-empty" aria-hidden="true"></span>';
+    var labels = pieces.map(function (p) { return p.label || p.itemId || 'Article'; });
+    var icons = pieces.slice(0,3).map(function (p) {
+      return '<span class="pxd-garment">' + shared.render({ id:p.itemId, art:p.art, label:p.label, cat:p.cat }, 'pxd-garment-art') + '</span>';
+    }).join('');
+    if (pieces.length > 3) icons += '<b class="pxd-garment-more">+' + (pieces.length-3) + '</b>';
+    return '<span class="pxd-garments" aria-label="Articles : ' + esc(labels.join(', ')) + '">' + icons + '</span>';
+  }
+
   function orderRows(rows, limit) {
     rows = rows.slice(0, limit || rows.length);
     if (!rows.length) return empty('list', 'Aucune commande à afficher', 'Les nouveaux dépôts apparaîtront ici dès qu’ils seront enregistrés sur la caisse.', 'Nouveau dépôt', 'comptoir');
@@ -85,6 +97,7 @@
       var st = statusLabel(o);
       return '<div class="pxd-order">' +
         '<div><span class="pxd-order-id">' + esc(o.id) + '</span><span class="pxd-order-time">' + esc(when(o.readyAt)) + '</span></div>' +
+        garmentPreview(o.pieces) +
         '<div class="pxd-order-main"><b>' + esc((o.customer && o.customer.name) || 'Client de passage') + '</b><span>' + num((o.pieces || []).length) + ' pièce' + ((o.pieces || []).length === 1 ? '' : 's') + (o.rack ? ' · rack ' + esc(o.rack) : '') + (o.due ? ' · solde ' + num(o.due) + ' MAD' : '') + '</span></div>' +
         '<span class="pxd-status ' + st[1] + '">' + st[0] + '</span></div>';
     }).join('') + '</div>';

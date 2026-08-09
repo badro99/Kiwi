@@ -46,13 +46,21 @@
 .pxd-stage-bar i { display: block; height: 100%; min-width: 3px; border-radius: inherit; background: var(--atlas); }
 
 .pxd-order-list { padding: 3px 18px 10px; }
-.pxd-order { min-height: 66px; display: grid; grid-template-columns: 96px minmax(0,1fr) auto; gap: 14px; align-items: center; border-bottom: 1px solid var(--n-200); }
+.pxd-order { min-height: 66px; display: grid; grid-template-columns: 96px 92px minmax(0,1fr) auto; gap: 14px; align-items: center; border-bottom: 1px solid var(--n-200); }
 .pxd-order:last-child { border-bottom: 0; }
 .pxd-order-id { color: var(--ink); font-size: 12px; font-weight: 700; font-family: var(--mono); }
 .pxd-order-time { display: block; color: var(--n-500); font-size: 10px; margin-top: 3px; }
 .pxd-order-main { min-width: 0; }
 .pxd-order-main b { color: var(--ink); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .pxd-order-main span { color: var(--n-500); font-size: 11px; }
+.pxd-garments { display: flex; align-items: center; min-width: 72px; }
+.pxd-garment { width: 32px; height: 32px; display: grid; place-items: center; margin-left: -7px; border: 2px solid var(--surface); border-radius: 10px; background: var(--paper-soft); color: var(--atlas); }
+.pxd-garment:first-child { margin-left: 0; }
+.pxd-garment svg { width: 22px; height: 22px; }
+.pxd-garment .px-art { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.pxd-garment .px-art .fill { fill: color-mix(in srgb,var(--atlas) 10%,var(--surface)); stroke: none; }
+.pxd-garment .px-art .thin { stroke-width: 1.6; opacity: .76; }
+.pxd-garment-more { min-width: 24px; height: 24px; display: grid; place-items: center; margin-left: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--brand-deep); color: var(--inverse-ink); font-size: 9px; }
 .pxd-status { padding: 5px 9px; border-radius: 999px; color: var(--atlas); background: color-mix(in srgb, var(--atlas) 9%, var(--surface)); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .pxd-status.ready { color: var(--brand-deep); background: color-mix(in srgb, var(--mint) 24%, var(--surface)); }
 .pxd-status.late { background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
@@ -109,8 +117,10 @@
   .pxd-flow { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .pxd-stage + .pxd-stage::before { display: none; }
   .pxd-stack.side, .pxd-page-grid.two { grid-template-columns: 1fr; }
-  .pxd-order { grid-template-columns: 78px minmax(0,1fr); padding: 9px 0; }
-  .pxd-order .pxd-status { grid-column: 2; justify-self: start; margin-top: -8px; }
+  .pxd-order { grid-template-columns: 72px minmax(0,1fr); padding: 9px 0; }
+  .pxd-garments { grid-column: 2; grid-row: 1; justify-self: end; }
+  .pxd-order-main { grid-column: 1/-1; }
+  .pxd-order .pxd-status { grid-column: 1/-1; justify-self: start; margin-top: -8px; }
 }
 @media (max-width: 390px) {
   .pxd-hero-actions { flex-direction: column; }

@@ -45,6 +45,8 @@
   };
   const materialIcon = (name, cls) => `<svg class="${cls || ''}" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="${MI_PRESSING[name]}"></path></svg>`;
   const garmentIcon = (item, cls) => {
+    const shared = window.KiwiPressingGarmentIcons;
+    if (shared && shared.render) return shared.render(item, cls);
     const garment = ART[(item && (item.art || item.id)) || 'chemise'] || ART.chemise;
     return cls ? garment.replace('class="px-art"', `class="px-art ${cls}"`) : garment;
   };

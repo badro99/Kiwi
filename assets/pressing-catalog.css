@@ -34,6 +34,9 @@
 .pce-summary:hover { background: color-mix(in srgb,var(--atlas) 4%,transparent); }
 .pce-item-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; background: color-mix(in srgb,var(--atlas) 8%,var(--surface)); color: var(--atlas); }
 .pce-item-icon svg { width: 23px; height: 23px; }
+.pce-item-icon .px-art { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.pce-item-icon .px-art .fill { fill: color-mix(in srgb,var(--atlas) 12%,var(--surface)); stroke: none; }
+.pce-item-icon .px-art .thin { stroke-width: 1.6; opacity: .76; }
 .pce-summary-copy, .pce-summary-price { min-width: 0; display: grid; gap: 3px; }
 .pce-summary-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .pce-summary-copy small, .pce-summary-price small { color: var(--n-500); font-size: 9.5px; }
