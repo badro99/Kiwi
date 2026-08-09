@@ -7,6 +7,7 @@
 
   var host = null;
   var current = false;
+  var currentPage = '';
   var PAGE_LABELS = {
     'pressing-orders': ['Dépôts & commandes', 'Tous les bons, vêtements et échéances au même endroit'],
     'pressing-workshop': ['Atelier & flux', 'Pilotez chaque pièce du dépôt au contrôle qualité'],
@@ -152,17 +153,28 @@
   function pageBody(nav) {
     var s = summary();
     var active = sortedActive(s);
-    if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date promise','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return o.status==='livre';}),20) + '</section></div>';
+    if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return o.status==='livre';}),20) + '</section></div>';
     if (nav === 'pressing-workshop') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Retards en premier, puis promesses les plus proches','','') + orderRows(active) + '</section></div>';
     if (nav === 'pressing-pickup') return '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
-    if (nav === 'pressing-services') return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Traitements</h3><p>Une grille adaptée au vêtement, au textile et au niveau de soin.</p><div class="pxd-checks"><div class="pxd-check"><span>Nettoyage à sec</span><small>Par article</small></div><div class="pxd-check"><span>Lavage</span><small>Standard ou délicat</small></div><div class="pxd-check"><span>Repassage & finition</span><small>Plié ou sur cintre</small></div><div class="pxd-check"><span>Détachage</span><small>Réserve documentée</small></div><div class="pxd-check"><span>Textile maison</span><small>Au poids ou à la pièce</small></div></div></section><section class="pxd-page-card"><h3>Promesses intelligentes</h3><p>Le délai doit tenir compte du traitement, de l’option express et du jour de fermeture.</p><div class="pxd-checks"><div class="pxd-check"><span>Délai standard</span><small>À configurer</small></div><div class="pxd-check"><span>Option express</span><small>À configurer</small></div><div class="pxd-check"><span>Suppléments</span><small>Délicat, tache, livraison</small></div></div><button class="pxd-btn" style="margin-top:14px" data-pxd-open="comptoir">Configurer depuis la caisse</button></section></div>';
-    if (nav === 'pressing-quality') return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Contrôle à l’entrée</h3><p>Chaque anomalie reste attachée à la pièce, avec photo si nécessaire.</p><div class="pxd-checks"><div class="pxd-check"><span>État du vêtement</span><small>Usure, accroc, bouton</small></div><div class="pxd-check"><span>Taches & zones</span><small>Réserve visible</small></div><div class="pxd-check"><span>Instructions client</span><small>Amidon, pliage, allergie</small></div></div></section><section class="pxd-page-card"><h3>Contrôle avant remise</h3><p>La commande ne devient prête qu’après vérification de toutes ses pièces.</p><div class="pxd-checks"><div class="pxd-check"><span>Traitement terminé</span><small>' + num(s.ready) + ' commande' + (s.ready===1?'':'s') + ' prête' + (s.ready===1?'':'s') + '</small></div><div class="pxd-check"><span>Vigilances documentées</span><small>' + num(s.attention) + ' pièce' + (s.attention===1?'':'s') + '</small></div><div class="pxd-check"><span>Reprises ouvertes</span><small>Aucune donnée inventée</small></div></div></section></div>';
-    return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Tournées de collecte</h3><p>Regroupez les arrêts par zone, créneau et capacité du véhicule.</p>' + empty('van','Aucune tournée planifiée','Activez la collecte lorsque votre pressing est prêt à la proposer.','','') + '</section><section class="pxd-page-card"><h3>Promesse de livraison</h3><p>Le client voit un créneau réaliste, lié à la fin de traitement.</p><div class="pxd-checks"><div class="pxd-check"><span>Zone desservie</span><small>À configurer</small></div><div class="pxd-check"><span>Créneaux</span><small>À configurer</small></div><div class="pxd-check"><span>Frais minimum</span><small>À configurer</small></div></div></section></div>';
+    if (nav === 'pressing-services') {
+      var serviceLabels = { sec:'Nettoyage à sec', lavage:'Lavage', repassage:'Repassage', detachage:'Détachage', retouche:'Retouche' };
+      var serviceRows = Object.keys(serviceLabels).map(function (id) {
+        var count = num((s.services || {})[id] || 0);
+        return '<div class="pxd-check"><span>' + serviceLabels[id] + '</span><small>' + count + ' pièce' + (count === '1' ? '' : 's') + ' active' + (count === '1' ? '' : 's') + '</small></div>';
+      }).join('');
+      return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Grille du comptoir</h3><p>Les prix et combinaisons disponibles sont ceux réellement proposés au moment du dépôt.</p><div class="pxd-checks"><div class="pxd-check"><span>Date de retrait</span><small>Proposée puis modifiable au dépôt</small></div><div class="pxd-check"><span>Jour de fermeture</span><small>Reporté automatiquement</small></div><div class="pxd-check"><span>Instructions de soin</span><small>Imprimées sur chaque étiquette</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="comptoir">Ouvrir la grille de dépôt</button></section></div>';
+    }
+    if (nav === 'pressing-quality') {
+      var attention = active.filter(function (o) { return (o.pieces || []).some(function (p) { return p.notes; }); });
+      return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('alert','Vigilances actives','Commandes avec photo, tache ou instruction particulière','','') + (attention.length ? orderRows(attention) + '<div class="pxd-page-action"><button class="pxd-btn primary" data-pxd-open="commandes">Ouvrir le contrôle atelier</button></div>' : empty('check','Aucune vigilance ouverte','Une tache, une photo ou une instruction saisie au comptoir apparaîtra ici.','Nouveau dépôt','comptoir')) + '</section><section class="pxd-page-card"><h3>Contrôle avant remise</h3><p>La commande ne devient prête qu’après vérification de toutes ses pièces.</p><div class="pxd-checks"><div class="pxd-check"><span>Commandes prêtes</span><small>' + num(s.ready) + '</small></div><div class="pxd-check"><span>Pièces documentées</span><small>' + num(s.attention) + '</small></div><div class="pxd-check"><span>Clients encore à prévenir</span><small>' + num(s.unnotified) + '</small></div></div></section></div>';
+    }
+    return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Collecte & livraison</h3><p>Cette caisse ne promet pas une tournée qu’elle ne sait pas encore exécuter.</p>' + empty('van','Aucune tournée active','Les dépôts et retraits restent au comptoir tant qu’un module de tournée n’est pas activé.','Créer un dépôt comptoir','comptoir') + '</section><section class="pxd-page-card"><h3>Commandes prêtes</h3><p>Utilisez le rack et la notification client pour organiser les retraits actuels.</p>' + rackBody(s) + '</section></div>';
   }
 
   function showPage(nav) {
     if (!current || !PAGE_LABELS[nav] || !window.Kiwi || !Kiwi.appPage) return;
     var meta = PAGE_LABELS[nav];
+    currentPage = nav;
     Kiwi.appPage(nav, { title: meta[0], subtitle: meta[1], body: pageBody(nav) });
   }
   function openTill(view) {
@@ -184,9 +196,14 @@
     document.body.classList.remove('is-pressing');
     if (host) host.remove();
     host = null;
+    try { if (current && window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
   }
 
-  document.addEventListener('click', function (e) {
+  /* The shared dashboard registers its delegated sidebar listener during the
+   * venues boot, before this module. Listen at window capture level so a
+   * pressing destination is claimed before that generic handler can turn it
+   * into a boutique starter page. */
+  window.addEventListener('click', function (e) {
     var open = e.target.closest && e.target.closest('[data-pxd-open]');
     if (open) { e.preventDefault(); openTill(open.dataset.pxdOpen); return; }
     var page = e.target.closest && e.target.closest('[data-pxd-page]');
@@ -200,6 +217,8 @@
 
   function boot() {
     activate();
+    try { if (window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
+    try { if (window.KiwiPressingOps) KiwiPressingOps.subscribe(function () { if (currentPage) showPage(currentPage); }); } catch (_) {}
     try { KiwiVenue.subscribe(activate); } catch (_) {}
     window.addEventListener('kiwi:langchange', activate);
   }

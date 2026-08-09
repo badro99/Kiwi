@@ -237,6 +237,7 @@
             pid: `${orderId}-${n}`, n, lineIdx: li,
             label: plabel ? `${item.label} · ${plabel}` : item.label,
             itemId: ln.itemId, svcs: ln.services, color: ln.color,
+            notes: (ln.notes || []).slice(), freeNote: ln.freeNote || '',
             status: (statuses && statuses[n - 1]) || 'recu',
             photos: ln.photos || 0,
           });
@@ -325,7 +326,7 @@
       pay: { mode: 'now', method: 'carte', paid: 105 },
       lines: [['costume', 'repassage', 1, 'gris', [], '', 0, '2p'], ['chemise', 'repassage', 7, 'blanc']] }),
     mkOrder({ id: 'P-1031', custId: 'c5', droppedH: 76, readyH: -30, status: 'livre', collectedH: 26, notified: true,
-      pay: { mode: 'now', method: 'especes', paid: 92 },
+      pay: { mode: 'now', method: 'especes', paid: 102 },
       lines: [['jupe', 'sec', 2, 'noir'], ['babouches', 'sec', 1, 'beige']] }),
   ];
 
@@ -337,6 +338,10 @@
 
   /* ───────────────────────── state ───────────────────────── */
   let ticketSeq = 1045;
+  const PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:';
+  let pressingCloudHandle = null;
+  const persistedOrderHashes = Object.create(null);
+  const persistedCustomerHashes = Object.create(null);
   const state = {
     view: 'comptoir',
     cat: 'tous',
@@ -361,11 +366,164 @@
     if (o.custId) return CUST[o.custId];
     return o.guest || { name: 'Client de passage', phone: '' };
   }
+  function pressingScope() {
+    try { if (window.KiwiPressingOps) return KiwiPressingOps.scope(); } catch (_) {}
+    const p = pvPaired();
+    return p && (p.merchant || p.slug || p.venueId || p.name) || '';
+  }
+  function pressingStoreKey() {
+    const s = pressingScope();
+    return s ? PRESSING_STORE_PREFIX + s : '';
+  }
+  function orderPayload(o) {
+    return {
+      id: String(o.id || '').slice(0, 40), custId: o.custId || null,
+      guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
+      b2b: !!o.b2b,
+      lines: (o.lines || []).map((l) => ({
+        itemId: l.itemId, services: (l.services || []).slice(0, 8), qty: Math.max(1, Math.min(500, +l.qty || 1)),
+        color: l.color || 'blanc', notes: (l.notes || []).slice(0, 12), freeNote: String(l.freeNote || '').slice(0, 500),
+        photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
+      })),
+      pieces: (o.pieces || []).map((p) => ({
+        pid: p.pid, n: p.n, of: p.of, lineIdx: p.lineIdx, label: p.label, itemId: p.itemId,
+        svcs: (p.svcs || []).slice(0, 8), color: p.color || 'blanc', notes: (p.notes || []).slice(0, 12),
+        freeNote: String(p.freeNote || '').slice(0, 500), status: p.status, photos: Math.max(0, Math.min(20, +p.photos || 0)),
+      })),
+      droppedAt: o.droppedAt instanceof Date ? o.droppedAt.toISOString() : o.droppedAt,
+      readyAt: o.readyAt instanceof Date ? o.readyAt.toISOString() : o.readyAt,
+      pay: o.pay ? { mode: o.pay.mode || 'pickup', method: o.pay.method || null, paid: Math.max(0, +o.pay.paid || 0) } : { mode: 'pickup', method: null, paid: 0 },
+      rack: o.rack || null,
+      total: orderTotals(o).total,
+      notified: !!o.notified,
+      collectedAt: o.collectedAt instanceof Date ? o.collectedAt.toISOString() : (o.collectedAt || null),
+      updatedAt: +o.updatedAt || 0,
+    };
+  }
+  function payloadHash(value) {
+    const copy = { ...value };
+    delete copy.updatedAt;
+    return JSON.stringify(copy);
+  }
+  function pressingDocument() {
+    const now = Date.now();
+    const customers = CUSTOMERS.slice(0, 2000).map((c) => {
+      const row = { ...c, id: String(c.id || '').slice(0, 40), name: String(c.name || '').slice(0, 100), phone: String(c.phone || '').slice(0, 40), prefs: (c.prefs || []).slice(0, 20), updatedAt: +c.updatedAt || 0 };
+      const h = payloadHash(row);
+      if (persistedCustomerHashes[row.id] !== h) row.updatedAt = c.updatedAt = now;
+      persistedCustomerHashes[row.id] = h;
+      return row;
+    });
+    const ordered = ORDERS.filter((o) => orderStatus(o) !== 'livre').concat(ORDERS.filter((o) => orderStatus(o) === 'livre'));
+    const orders = ordered.slice(0, 500).map((o) => {
+      const row = orderPayload(o);
+      const h = payloadHash(row);
+      if (persistedOrderHashes[row.id] !== h) row.updatedAt = o.updatedAt = now;
+      persistedOrderHashes[row.id] = h;
+      return row;
+    });
+    return { customers, orders, seq: ticketSeq, updatedAt: now };
+  }
+  function readPressingDocument() {
+    const k = pressingStoreKey();
+    if (!k) return null;
+    try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { return null; }
+  }
+  function restorePressingDocument(doc) {
+    if (!pvReal() || !doc || !Array.isArray(doc.orders) || !Array.isArray(doc.customers)) return false;
+    CUSTOMERS.splice(0, CUSTOMERS.length);
+    Object.keys(CUST).forEach((k) => { delete CUST[k]; });
+    doc.customers.slice(0, 2000).forEach((raw) => {
+      if (!raw || !raw.id || !raw.name) return;
+      const c = { ...raw, id: String(raw.id).slice(0, 40), name: String(raw.name).slice(0, 100), phone: String(raw.phone || '').slice(0, 40), prefs: Array.isArray(raw.prefs) ? raw.prefs.slice(0, 20) : [] };
+      CUSTOMERS.push(c); CUST[c.id] = c;
+      persistedCustomerHashes[c.id] = payloadHash(c);
+    });
+    ORDERS.splice(0, ORDERS.length);
+    doc.orders.slice(0, 500).forEach((raw) => {
+      if (!raw || !raw.id || !Array.isArray(raw.lines) || !raw.lines.length) return;
+      const lines = raw.lines.filter((l) => l && ITEMS[l.itemId]).map((l) => ({
+        itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SERVICES.some((x) => x.id === s)).slice(0, 8) : [],
+        qty: Math.max(1, Math.min(500, +l.qty || 1)), color: COLOR[l.color] ? l.color : 'blanc',
+        notes: Array.isArray(l.notes) ? l.notes.map((n) => String(n).slice(0, 100)).slice(0, 12) : [],
+        freeNote: String(l.freeNote || '').slice(0, 500), photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
+      })).filter((l) => l.services.length);
+      if (!lines.length) return;
+      const o = {
+        id: String(raw.id).slice(0, 40), custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
+        guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
+        b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
+        pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
+        rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified,
+        collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null, updatedAt: +raw.updatedAt || 0,
+      };
+      if (!Number.isFinite(o.droppedAt.getTime())) o.droppedAt = new Date();
+      if (!Number.isFinite(o.readyAt.getTime())) o.readyAt = suggestReady();
+      if (!o.pay) o.pay = { mode: 'pickup', method: null, paid: 0 };
+      o.pieces = buildPieces(o.id, lines, null);
+      if (Array.isArray(raw.pieces)) o.pieces.forEach((p, i) => {
+        const saved = raw.pieces.find((x) => x && x.pid === p.pid) || raw.pieces[i];
+        if (saved && STATUS[saved.status]) p.status = saved.status;
+      });
+      ORDERS.push(o);
+      persistedOrderHashes[o.id] = payloadHash(orderPayload(o));
+    });
+    ticketSeq = Math.max(ticketSeq, +doc.seq || 0, 1);
+    Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
+    ORDERS.forEach((o) => { if (o.rack && !rackSlots[o.rack]) rackSlots[o.rack] = o.id; });
+    return true;
+  }
+  function mergePressingDocuments(mine, theirs) {
+    const mergeRows = (a, b) => {
+      const byId = Object.create(null);
+      (b || []).concat(a || []).forEach((row) => {
+        if (!row || !row.id) return;
+        const old = byId[row.id];
+        if (!old || (+row.updatedAt || 0) >= (+old.updatedAt || 0)) byId[row.id] = row;
+      });
+      return Object.values(byId);
+    };
+    return {
+      customers: mergeRows(mine && mine.customers, theirs && theirs.customers),
+      orders: mergeRows(mine && mine.orders, theirs && theirs.orders),
+      seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0),
+    };
+  }
+  function writePressingDocument(doc, refresh) {
+    const k = pressingStoreKey();
+    if (!k || !doc) return false;
+    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { return false; }
+    restorePressingDocument(doc);
+    if (refresh && root) { refreshOps(); }
+    return true;
+  }
+  function pressingCloud() {
+    if (pressingCloudHandle || !window.KiwiCloudDoc || !pvReal()) return pressingCloudHandle;
+    pressingCloudHandle = KiwiCloudDoc.attach({
+      feature: 'pressing-orders', slug: () => pressingScope(), localKey: pressingStoreKey,
+      read: () => readPressingDocument() || { customers: [], orders: [], seq: ticketSeq, updatedAt: 0 },
+      write: (doc) => writePressingDocument(doc, true), merge: mergePressingDocuments,
+      isEmpty: (doc) => !doc || (!doc.orders?.length && !doc.customers?.length),
+      onPulled: () => { if (root) { renderBadges(); refreshOps(); } },
+    });
+    return pressingCloudHandle;
+  }
+  function persistPressing() {
+    if (!pvReal()) return;
+    const doc = pressingDocument();
+    const k = pressingStoreKey();
+    if (k) { try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) {} }
+    const cloud = pressingCloud();
+    if (cloud) cloud.push();
+  }
   /* Share only a tenant-scoped operational snapshot with the owner dashboard.
      The till remains the source of truth for the detailed ticket; the bridge
      strips it to the fields the dashboard needs and never includes a PIN. */
   function syncOwnerOps() {
-    if (!pvReal() || !window.KiwiPressingOps) return;
+    if (!pvReal()) return;
+    persistPressing();
+    if (!window.KiwiPressingOps) return;
     try {
       KiwiPressingOps.replace(ORDERS, {
         customer: custOf,
@@ -422,7 +580,7 @@
         <div class="px-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="px-venue">
           <div class="px-venue-name">${esc(pvName('Pressing Marshan'))}</div>
-          <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi que <b>votre restaurant</b>, un seul compte.'}</div>
+          <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi pour <b>votre comptoir et votre atelier</b>, un seul compte.'}</div>
         </div>
         <nav class="px-nav" id="px-nav">
           <button class="px-nav-it on" data-px-view="comptoir"><i data-lucide="shirt"></i><span>Comptoir</span></button>
@@ -630,7 +788,7 @@
       <div class="px-tk-meta">
         ${customerRow(t)}
         <button class="px-tk-row ${t.ready ? 'is-set' : ''}" id="px-tk-date"><i data-lucide="calendar-clock"></i>
-          <span class="l"><b>Prêt le ${esc(fmtDT(t.ready))}</b><span>Date promise, modifiable</span></span>
+          <span class="l"><b>Prêt le ${esc(fmtDT(t.ready))}</b><span>Date de retrait, modifiable</span></span>
           <span class="edit">Modifier</span></button>
       </div>
       <div class="px-tk-lines" id="px-tk-lines">
@@ -762,14 +920,14 @@
       <div class="px-f">
         <div class="px-f-lbl">Couleur</div>
         <div class="px-colors" id="px-colors">
-          ${COLORS.map((c) => `<button class="px-color ${c.id === sheet.color ? 'on' : ''}" data-px-color="${c.id}" data-c="${c.id}" style="background:${c.hex}" title="${esc(c.label)}" aria-label="${esc(c.label)}"></button>`).join('')}
+          ${COLORS.map((c) => `<button type="button" class="px-color ${c.id === sheet.color ? 'on' : ''}" data-px-color="${c.id}" data-c="${c.id}" style="background:${c.hex}" title="${esc(c.label)}" aria-label="${esc(c.label)}" aria-pressed="${c.id === sheet.color}"></button>`).join('')}
         </div>
       </div>
 
       <div class="px-f">
         <div class="px-f-lbl">Notes usuelles <span class="opt">· optionnel</span></div>
         <div class="px-chips" id="px-notes">
-          ${NOTES.map((n) => `<button class="px-chip ${sheet.notes.includes(n) ? 'on' : ''}" data-px-note="${esc(n)}">${esc(n)}</button>`).join('')}
+          ${NOTES.map((n) => `<button type="button" class="px-chip ${sheet.notes.includes(n) ? 'on' : ''}" data-px-note="${esc(n)}" aria-pressed="${sheet.notes.includes(n)}">${esc(n)}</button>`).join('')}
         </div>
         <input class="px-note-free" id="px-note-free" placeholder="Note libre (ex. « ourlet 2 cm »)…" value="${esc(sheet.freeNote)}" />
       </div>
@@ -832,7 +990,11 @@
       const b = e.target.closest('[data-px-color]');
       if (!b) return;
       sheet.color = b.dataset.pxColor;
-      $$('[data-px-color]', el).forEach((x) => x.classList.toggle('on', x === b));
+      $$('[data-px-color]', el).forEach((x) => {
+        const on = x === b;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on);
+      });
     };
     $('#px-notes', el).onclick = (e) => {
       const b = e.target.closest('[data-px-note]');
@@ -841,6 +1003,7 @@
       const i = sheet.notes.indexOf(n);
       if (i >= 0) sheet.notes.splice(i, 1); else sheet.notes.push(n);
       b.classList.toggle('on', i < 0);
+      b.setAttribute('aria-pressed', i < 0);
     };
     $('#px-note-free', el).oninput = (e) => { sheet.freeNote = e.target.value; };
     $('#px-photo-add', el).onclick = openPhoto;
@@ -963,6 +1126,7 @@
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
         CUSTOMERS.unshift(c); CUST[id] = c;
+        persistPressing();
         state.ticket.customer = { type: 'known', id };
         closeVeil('#px-client-veil');
         toast(`Fiche créée, ${name}`);
@@ -1009,7 +1173,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Prêt pour quand ?</h3>
-      <p class="modal-subtle">La date promise s'imprime sur le ticket et sert d'alerte au tableau.</p>
+      <p class="modal-subtle">La date de retrait s'imprime sur le ticket et sert d'alerte au tableau.</p>
       <div class="px-date-chips">
         ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}"><b>${esc(o.label)}</b><span>${esc(o.sub)}</span></button>`).join('')}
       </div>
@@ -1118,10 +1282,12 @@
 
   function tagHTML(p, o) {
     const c = custOf(o);
+    const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
       <div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-client">${esc(c.name)}</div>
       <div class="px-tag-item"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
+      ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
       ${barcode(p.pid, 26)}
       <div class="px-tag-id">${p.pid}</div>
     </div>`;
@@ -1450,8 +1616,12 @@
       if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id);
       if (fresh) {
         ORDERS.unshift(order);
-        syncOwnerOps();
+        if (order.custId && CUST[order.custId]) CUST[order.custId].orders = (+CUST[order.custId].orders || 0) + 1;
+        /* Persist the NEXT available number, never the one just printed. This
+           matters most for pay-at-pickup tickets: no sale journal entry exists
+           yet to rescue nextSeq() after a reload. */
         ticketSeq++;
+        syncOwnerOps();
         freshTicket();
         renderTicket();
         renderBadges();
@@ -1550,6 +1720,7 @@
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     const st = orderStatus(o);
     const delivered = st === 'livre';
+    const carePieces = o.pieces.map((p) => ({ p, care: [...(p.notes || []), p.freeNote].filter(Boolean) })).filter((x) => x.care.length);
 
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1566,20 +1737,25 @@
           <div class="px-dt-sub" style="margin-top:5px;">Déposé ${fmtDT(o.droppedAt)} · promis ${fmtDT(o.readyAt)}${o.collectedAt ? ` · retiré ${fmtDT(o.collectedAt)}` : ''}</div>
         </div>
       </div>
+      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' — ')}</span></div></div>` : ''}
       <div class="px-dt-grid">
-        ${o.pieces.map((p, i) => `
+        ${o.pieces.map((p, i) => {
+          const care = [...(p.notes || []), p.freeNote].filter(Boolean);
+          return `
           <div class="px-piece">
             <span class="px-piece-art">${ART[p.itemId] || ''}</span>
             <span class="px-piece-mid">
-              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
+              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
               <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
+              ${care.length ? `<span class="px-piece-care"><i data-lucide="triangle-alert"></i>${care.map(esc).join(' · ')}</span>` : ''}
             </span>
             ${delivered || p.status === 'livre'
               ? '<span class="px-pill">Livré</span>'
               : `<span class="px-pstatus">
                   ${['recu', 'trait', 'pret'].map((s) => `<button class="px-pstep ${p.status === s ? 'on ' + s : ''}" data-px-piece="${i}" data-px-st="${s}">${s === 'recu' ? 'Reçu' : s === 'trait' ? 'Trait.' : 'Prêt'}</button>`).join('')}
                 </span>`}
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
       <div class="px-dt-actions">
         ${delivered ? '' : `
@@ -1663,7 +1839,7 @@
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `Sba7 lkhir ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
-      + `\nRetrait dès maintenant, jusqu'à 20h00.`
+      + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
       + `\n— envoyé via Kiwi`;
   }
@@ -1690,7 +1866,7 @@
       </button>
       <div class="px-sheet-foot">
         <button class="px-btn ghost" data-px-close>Plus tard</button>
-        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="send"></i>Envoyer sur WhatsApp</button>
+        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="external-link"></i>Ouvrir WhatsApp</button>
       </div>`;
     openVeil('#px-wa-veil');
     icons();
@@ -1710,15 +1886,30 @@
       const body = txt ? txt.value : waMessage(o);
       const num = String(c.phone || '').replace(/\D/g, '');
       if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à sa fiche`); return; }
-      o.notified = true;
-      syncOwnerOps();
-      closeVeil('#px-wa-veil');
-      queueIfOffline('Notification WhatsApp');
+      let opened = null;
       try {
-        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
-        toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+        opened = window.open('', '_blank');
+        if (opened) {
+          opened.opener = null;
+          opened.location.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent(body);
+        }
       } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
-      refreshOps();
+      if (!opened) { toast('WhatsApp n’a pas pu s’ouvrir, autorisez les fenêtres puis réessayez'); return; }
+      toast(`Brouillon WhatsApp ouvert pour ${c.name}${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+      const foot = $('.px-sheet-foot', el);
+      foot.innerHTML = `
+        <button class="px-btn ghost" data-px-close>Pas encore envoyé</button>
+        <button class="px-btn primary" id="px-wa-confirm"><i data-lucide="check"></i>J’ai envoyé le message</button>`;
+      icons();
+      $('[data-px-close]', foot).onclick = () => closeVeil('#px-wa-veil');
+      $('#px-wa-confirm', foot).onclick = () => {
+        o.notified = true;
+        syncOwnerOps();
+        queueIfOffline('Notification WhatsApp confirmée');
+        closeVeil('#px-wa-veil');
+        toast(`${c.name} marqué comme prévenu`);
+        refreshOps();
+      };
     };
   }
 
@@ -1785,7 +1976,10 @@
         <div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>
       </div>
       <div class="px-rt-pieces">
-        ${o.pieces.map((p) => `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i>${esc(p.label)} · ${svcCodes(p.svcs)}<span class="pid">${p.pid}</span></div>`).join('')}
+        ${o.pieces.map((p) => {
+          const care = [...(p.notes || []), p.freeNote].filter(Boolean);
+          return `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${p.pid}</span></div>`;
+        }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
         <span>${due > 0 ? 'Solde à encaisser' : o.pay.mode === 'compte' ? 'Sur compte B2B, facture fin de mois' : 'Déjà réglé'}</span>
@@ -1807,7 +2001,7 @@
     releaseSlot(o);
     syncOwnerOps();
     queueIfOffline('Retrait');
-    toast(`${o.id} remis à ${custOf(o).name}, merci envoyé sur WhatsApp`);
+    toast(`${o.id} remis à ${custOf(o).name}, cintre libéré`);
     refreshOps();
   }
 
@@ -1943,7 +2137,12 @@
       id: 'pressing',
       greet: { line1: 'Sba7 lkhir Sanae,', em: 'marhba.',
                sub: 'Pressing Marshan <em>·</em> comptoir de dépôt' },
-      mount(rootEl) { build(rootEl); enter(); },
+      mount(rootEl) {
+        restorePressingDocument(readPressingDocument());
+        build(rootEl); enter();
+        const cloud = pressingCloud();
+        if (cloud) cloud.bind();
+      },
       onShow() { enter(); },
     });
   }

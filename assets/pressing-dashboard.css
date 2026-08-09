@@ -90,6 +90,7 @@
 .pxd-checks { display: grid; gap: 8px; }
 .pxd-check { padding: 11px 12px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--paper-soft); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink); font-size: 12px; }
 .pxd-check small { color: var(--n-500); }
+.pxd-page-action { padding: 4px 18px 18px; display: flex; justify-content: flex-end; }
 
 @media (max-width: 1180px) {
   .pxd-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }

@@ -54,7 +54,7 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', label: 'Pressing · Pressing Marshan' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '5', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       label: 'Hôtel / Riad · Riad Yasmina' },
@@ -134,12 +134,13 @@
     if (apps[entry.id]) return Promise.resolve();
     if (loading[entry.file]) return loading[entry.file];
     loading[entry.file] = new Promise((resolve, reject) => {
+      const rev = entry.rev ? `?v=${encodeURIComponent(entry.rev)}` : '';
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = `assets/${entry.file}.css`;
+      link.href = `assets/${entry.file}.css${rev}`;
       document.head.appendChild(link);
       const sc = document.createElement('script');
-      sc.src = `assets/${entry.file}.js`;
+      sc.src = `assets/${entry.file}.js${rev}`;
       sc.onload = () => (apps[entry.id] ? resolve() : reject(new Error(`${entry.file}.js loaded but never registered "${entry.id}"`)));
       sc.onerror = () => reject(new Error(`assets/${entry.file}.js introuvable`));
       document.head.appendChild(sc);

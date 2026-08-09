@@ -12,13 +12,15 @@ let passed = 0;
 const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
-const files = [...dispatch.matchAll(/file:\s*'([^']+)'/g)].map((m) => m[1]);
-ok('the dispatcher declares POS verticals', files.length >= 10);
-files.forEach((base) => {
+const entries = [...dispatch.matchAll(/file:\s*'([^']+)'(?:,\s*rev:\s*'([^']+)')?/g)]
+  .map((m) => ({ base: m[1], rev: m[2] || '' }));
+const files = entries.map((e) => e.base);
+ok('the dispatcher declares POS verticals', entries.length >= 10);
+entries.forEach(({ base, rev }) => {
   ['js', 'css'].forEach((ext) => {
     const rel = `assets/${base}.${ext}`;
     ok(`${rel} exists`, fs.existsSync(path.join(ROOT, rel)));
-    ok(`${rel} is pre-cached`, sw.includes(`'/${rel}'`));
+    ok(`${rel} is pre-cached`, sw.includes(`'/${rel}${rev ? `?v=${rev}` : ''}'`));
   });
 });
 
@@ -35,7 +37,9 @@ shell.forEach((url) => ok(`${url} exists`, fs.existsSync(path.join(ROOT, url.spl
 const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html']
   .map(read).join('\n');
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
-  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`));
+  const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
+  const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic);
 });
 
 if (failed.length) {

@@ -9,7 +9,9 @@
   'use strict';
 
   var PREFIX = 'kiwi:pressing-ops:v1:';
+  var STORE_PREFIX = 'kiwi:pressing-store:v1:';
   var listeners = new Set();
+  var cloudHandle = null;
 
   function slug(s) {
     return String(s || '')
@@ -34,6 +36,11 @@
   function key(explicit) {
     var s = scope(explicit);
     return s ? PREFIX + s : '';
+  }
+
+  function storeKey(explicit) {
+    var s = scope(explicit);
+    return s ? STORE_PREFIX + s : '';
   }
 
   function read(explicit) {
@@ -65,7 +72,9 @@
       return {
         id: text(p.pid, 40), label: text(p.label, 100), itemId: text(p.itemId, 40),
         status: ['recu', 'trait', 'pret', 'livre'].indexOf(p.status) >= 0 ? p.status : 'recu',
-        photos: number(p.photos), notes: number(p.photos) > 0
+        services: (p.svcs || p.services || []).slice(0, 8).map(function (s) { return text(s, 24); }),
+        photos: number(p.photos),
+        notes: number(p.photos) > 0 || !!(p.freeNote && text(p.freeNote, 300)) || !!(p.notes && p.notes.length)
       };
     });
     var paid = number(o.pay && o.pay.paid);
@@ -99,7 +108,7 @@
   function summary(explicit) {
     var rows = read(explicit);
     var now = Date.now();
-    var out = { orders: rows, active: 0, received: 0, treating: 0, ready: 0, delivered: 0, late: 0, due: 0, pieces: 0, attention: 0, racks: 0, unnotified: 0 };
+    var out = { orders: rows, active: 0, received: 0, treating: 0, ready: 0, delivered: 0, late: 0, due: 0, pieces: 0, attention: 0, racks: 0, unnotified: 0, services: {} };
     rows.forEach(function (o) {
       var live = o.status !== 'livre';
       if (live) out.active++;
@@ -111,6 +120,9 @@
       if (live) out.due += number(o.due);
       if (live) out.pieces += (o.pieces || []).filter(function (p) { return p.status !== 'livre'; }).length;
       if (live) out.attention += (o.pieces || []).filter(function (p) { return p.notes; }).length;
+      if (live) (o.pieces || []).forEach(function (p) {
+        (p.services || []).forEach(function (service) { out.services[service] = number(out.services[service]) + 1; });
+      });
       if (live && o.rack) out.racks++;
       if (o.status === 'pret' && !o.notified) out.unnotified++;
     });
@@ -122,11 +134,76 @@
     return function () { listeners.delete(fn); };
   }
 
+  function mergeRows(mine, theirs) {
+    var byId = Object.create(null);
+    (theirs || []).concat(mine || []).forEach(function (row) {
+      if (!row || !row.id) return;
+      var old = byId[row.id];
+      if (!old || (+row.updatedAt || 0) >= (+old.updatedAt || 0)) byId[row.id] = row;
+    });
+    return Object.keys(byId).map(function (id) { return byId[id]; });
+  }
+
+  function mergeDocuments(mine, theirs) {
+    return {
+      customers: mergeRows(mine && mine.customers, theirs && theirs.customers),
+      orders: mergeRows(mine && mine.orders, theirs && theirs.orders),
+      seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0)
+    };
+  }
+
+  function readFull() {
+    var k = storeKey();
+    if (!k) return { customers: [], orders: [], seq: 0, updatedAt: 0 };
+    try {
+      var doc = JSON.parse(localStorage.getItem(k) || 'null');
+      return doc && Array.isArray(doc.customers) && Array.isArray(doc.orders)
+        ? doc : { customers: [], orders: [], seq: 0, updatedAt: 0 };
+    } catch (_) { return { customers: [], orders: [], seq: 0, updatedAt: 0 }; }
+  }
+
+  function projectFull(doc) {
+    if (!doc || !Array.isArray(doc.orders)) return;
+    var customers = Object.create(null);
+    (doc.customers || []).forEach(function (c) { if (c && c.id) customers[c.id] = c; });
+    replace(doc.orders, {
+      customer: function (o) { return customers[o.custId] || o.guest || {}; },
+      total: function (o) { return number(o.total); }
+    });
+  }
+
+  function writeFull(doc) {
+    var k = storeKey();
+    if (!k || !doc) return;
+    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { return; }
+    projectFull(doc);
+  }
+
+  function bindCloud() {
+    if (cloudHandle) {
+      projectFull(readFull());
+      cloudHandle.bind();
+      return cloudHandle;
+    }
+    if (!window.KiwiCloudDoc || !scope()) return cloudHandle;
+    cloudHandle = KiwiCloudDoc.attach({
+      feature: 'pressing-orders', slug: scope, localKey: storeKey,
+      read: readFull, write: writeFull, merge: mergeDocuments,
+      isEmpty: function (doc) { return !doc || (!(doc.orders || []).length && !(doc.customers || []).length); },
+      onPulled: projectFull
+    });
+    projectFull(readFull());
+    cloudHandle.bind();
+    return cloudHandle;
+  }
+
   window.addEventListener('storage', function (e) {
+    if (e.key && e.key.indexOf(STORE_PREFIX) === 0) { projectFull(readFull()); return; }
     if (!e.key || e.key.indexOf(PREFIX) !== 0) return;
     var rows = read();
     listeners.forEach(function (fn) { try { fn(rows); } catch (_) {} });
   });
 
-  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope };
+  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud };
 })();

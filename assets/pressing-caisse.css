@@ -616,6 +616,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-tag-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink-2); margin-top: 1px; padding-left: 8px; }
 .px-tag-item .dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
 .px-tag-item .svc { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+.px-tag-care { margin: 4px 0 0 8px; color: var(--px-warn); font-size: 9px; font-weight: 700; line-height: 1.25; text-transform: uppercase; }
 .px-tag svg { display: block; margin-top: 6px; width: 100%; }
 .px-tag-id { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; color: var(--ink-2); text-align: center; margin-top: 2px; }
 .px-tags-note { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
@@ -725,6 +726,10 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-dt-head h3 { margin: 0; font-family: var(--mono); font-size: 21px; font-weight: 700; }
 .px-dt-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .px-dt-sub .tel { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.px-dt-care-summary { display: flex; align-items: flex-start; gap: 9px; margin-top: 13px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--px-warn) 35%, transparent); border-radius: 11px; background: var(--px-warn-bg); color: var(--px-warn); }
+.px-dt-care-summary > svg { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 1px; }
+.px-dt-care-summary b { display: block; font-size: 11.5px; }
+.px-dt-care-summary span { display: block; margin-top: 2px; color: var(--ink-2); font-size: 10.5px; line-height: 1.35; }
 .px-dt-grid { display: flex; flex-direction: column; gap: 7px; margin: 14px 0; max-height: 42vh; overflow-y: auto; }
 .px-piece {
   display: flex; align-items: center; gap: 11px;
@@ -739,6 +744,8 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-piece-id { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 2px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 7px; }
 .px-piece-id .ph { display: inline-flex; align-items: center; gap: 3px; color: var(--forest); }
 .px-piece-id .ph svg { width: 10px; height: 10px; }
+.px-piece-care { display: flex; align-items: flex-start; gap: 5px; margin-top: 4px; color: var(--px-warn); font-size: 11px; font-weight: 650; line-height: 1.25; }
+.px-piece-care svg { width: 12px; height: 12px; flex: 0 0 12px; margin-top: 1px; }
 .px-pstatus { display: flex; gap: 4px; flex-shrink: 0; }
 .px-pstep {
   font-size: 10px; font-weight: 600;
@@ -825,6 +832,8 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-rt-pieces { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; }
 .px-rt-piece { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--ink-2); }
 .px-rt-piece svg { width: 14px; height: 14px; color: var(--emerald); flex-shrink: 0; }
+.px-rt-piece > span:first-of-type { min-width: 0; }
+.px-rt-piece small { display: block; margin-top: 2px; color: var(--px-warn); font-size: 10.5px; font-weight: 650; }
 .px-rt-piece .pid { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-4); }
 .px-rt-balance {
   display: flex; align-items: center; justify-content: space-between;

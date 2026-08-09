@@ -123,6 +123,9 @@ const FEATURES = {
    * desktop without multiplying store_docs rows. Records are bounded again in
    * the client; this server limit is the final safety rail. */
   workspaces:   { keys: ['trade', 'records'],                       max: 600000 },
+  /* Garment tickets are the pressing's operational source of truth: customer,
+   * care instructions, per-piece status, rack and outstanding balance. */
+  'pressing-orders': { keys: ['customers', 'orders', 'seq'],       max: 1500000 },
   /* Les rapports de clôture (le « Z » de fin de journée), un document par
    * magasin contenant `days['2026-07-26'] = {…}`. C'est le SEUL de cette liste
    * qui soit une pièce comptable : un commerçant le rouvre pour justifier un
