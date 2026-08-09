@@ -4645,7 +4645,7 @@
   <script src="assets/kitchen-relay.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=2" defer></script>
+  <script src="assets/orderpro-inbox.js?v=3" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
@@ -13705,9 +13705,12 @@
     function kdsNowHM() { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
     function kdsMatches(o, sid) { return sid === 'all' || o.items.some(i => i.stations.includes(sid)); }
     function kdsViewStatus(o, sid) {
-      if (sid === 'all' || o.status === 'ready') return o.status;
-      const lines = o.items.filter(i => i.stations.includes(sid));
-      return lines.length && lines.every(i => i.stationReady === true) ? 'ready' : o.status;
+      if (o.status === 'ready') return 'ready';
+      const lines = sid === 'all' ? o.items : o.items.filter(i => i.stations.includes(sid));
+      if (!lines.length) return o.status;
+      if (sid !== 'all' && lines.every(i => i.stationReady === true)) return 'ready';
+      if (lines.every(i => i.stationAccepted === true)) return 'cooking';
+      return o.status === 'cooking' && sid === 'all' ? 'cooking' : 'new';
     }
     function kdsGroup(status) {
       return kdsOrders.filter(o => kdsViewStatus(o, kdsActiveStation) === status && kdsMatches(o, kdsActiveStation))
@@ -13843,7 +13846,14 @@
 
     function kdsAccept(num) {
       const o = kdsOrders.find(x => x.num === num);
-      if (o && o.status === 'new') { o.status = 'cooking'; kdsPaint(); }
+      if (!o || kdsViewStatus(o, kdsActiveStation) !== 'new') return;
+      const station = kdsActiveStation === 'all' ? '' : kdsActiveStation;
+      o.items.forEach(i => {
+        if (!station || i.stations.includes(station)) i.stationAccepted = true;
+      });
+      if (o.items.length && o.items.every(i => i.stationAccepted === true)) o.status = 'cooking';
+      kdsPaint();
+      opPush(o, 'cooking', station ? { station } : {});
     }
     function kdsReady(num) {
       const o = kdsOrders.find(x => x.num === num);
@@ -14861,6 +14871,7 @@
             stations: [(l.station && kdsStations().some(s => s.id === l.station))
               ? l.station : kdsStationForName(l.name)],
             stationReady: l.stationReady === true,
+            stationAccepted: l.stationAccepted === true,
           })),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
@@ -14881,7 +14892,10 @@
          back into the local ticket so bar and kitchen tablets immediately see
          each other's progress without completing the entire order. */
       (o.lines || []).forEach((line, index) => {
-        if (known.items && known.items[index]) known.items[index].stationReady = line.stationReady === true;
+        if (known.items && known.items[index]) {
+          known.items[index].stationReady = line.stationReady === true;
+          known.items[index].stationAccepted = line.stationAccepted === true;
+        }
       });
 
       /* Déjà connue : on ne suit QUE ce que le serveur peut nous apprendre de

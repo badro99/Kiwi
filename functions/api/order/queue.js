@@ -567,6 +567,54 @@ export async function onRequestPost(context) {
   const status = String((b && b.status) || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-request' }, 400);
 
+  /* "Accepter" is preparation progress, not an order-state transition: the
+   * order already reached KDS as accepted. Store the progress on each line so
+   * Bar accepting its drinks does not move Kitchen, and so every KDS device
+   * sees the same result. An empty station is the deliberate "Toutes" action. */
+  const acceptedStation = String((b && b.station) || '').trim().slice(0, 40);
+  if (status === 'cooking') {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let current = null;
+      try {
+        current = await env.DB.prepare(
+          'SELECT lines, status, updated_ts, number FROM orders WHERE id = ? AND merchant = ?'
+        ).bind(id, merchant).first();
+      } catch (e) {
+        return json({ error: 'read-failed', detail: String((e && e.message) || e) }, 500);
+      }
+      if (!current) return json({ error: 'not-found' }, 404);
+      if (current.status !== 'accepted') {
+        return json({ error: 'bad-transition', status: current.status, number: current.number }, 409);
+      }
+      let lines = [];
+      try { lines = JSON.parse(current.lines) || []; } catch (_) { lines = []; }
+      let matched = false;
+      lines = lines.map((line) => {
+        if (acceptedStation && String((line && line.station) || '') !== acceptedStation) return line;
+        matched = true;
+        return { ...line, stationAccepted: true };
+      });
+      if (!matched) return json({ error: acceptedStation ? 'station-not-on-order' : 'empty-order' }, 400);
+      const previousTs = Number(current.updated_ts) || 0;
+      const nextTs = Math.max(now, previousTs + 1);
+      let changed = null;
+      try {
+        changed = await env.DB.prepare(
+          `UPDATE orders SET lines = ?, updated_ts = ?
+            WHERE id = ? AND merchant = ? AND status = 'accepted' AND updated_ts = ?
+            RETURNING id, status, number`
+        ).bind(JSON.stringify(lines), nextTs, id, merchant, previousTs).first();
+      } catch (e) {
+        return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+      }
+      if (changed) {
+        return json({ ok: true, id: changed.id, status: changed.status,
+                      number: changed.number, station: acceptedStation, lines });
+      }
+    }
+    return json({ error: 'concurrent-update', retry: true }, 409);
+  }
+
   /* A station completes only its own lines. The ready bits live inside the
    * existing lines JSON, so this works on every deployed database without a
    * schema change. Optimistic compare-and-swap prevents bar + kitchen taps at

@@ -338,11 +338,10 @@
  *
  * ── Trois états, et lequel vit où ──────────────────────────────────────────
  * Le serveur connaît `accepted` → `ready` → `served`. La cuisine, elle, a un
- * état de plus : « je l'ai vu, je m'en occupe ». Cet état-là est LOCAL et
- * assumé — il n'existe pas en base, parce qu'il n'appartient qu'à la brigade
- * qui est devant l'écran, et l'inventer côté serveur obligerait la caisse à
- * connaître l'organisation de la cuisine. Il survit à un rechargement
- * (localStorage), ce qui est tout ce qu'on lui demande.
+ * état de plus : « je l'ai vu, je m'en occupe ». Il vit sur chaque ligne du
+ * bon partagé : le bar et la cuisine peuvent donc accepter indépendamment et
+ * toutes les tablettes voient immédiatement la même progression. Le petit
+ * stockage local plus bas ne sert qu'à lire les anciens services.
  *
  *   accepted + pas encore pris  → « Nouvelles »
  *   accepted + pris ici         → « En préparation »
@@ -363,7 +362,7 @@
   var POLL_MS = 5000;
   var LATE_S = 900, WARN_S = 480;      // 15 min = en retard, 8 min = ça presse
   var STALE_MS = 18 * 60 * 60 * 1000;  // au-delà, le bon n'appartient plus à ce service
-  var COOK_KEY = 'kiwiCuisineCooking'; // l'état local « je m'en occupe »
+  var COOK_KEY = 'kiwiCuisineCookingV2'; // legacy local fallback; canonical progress now lives per line
   var MUTE_KEY = 'kiwiCuisineMute';
 
   var S = {
@@ -587,9 +586,15 @@
     var lines = (o.lines || []).filter(function (l) { return l.station === S.station; });
     return lines.length > 0 && lines.every(function (l) { return l.stationReady === true; });
   }
+  function stationIsAccepted(o) {
+    var lines = S.station === 'all'
+      ? (o.lines || [])
+      : (o.lines || []).filter(function (l) { return l.station === S.station; });
+    return lines.length > 0 && lines.every(function (l) { return l.stationAccepted === true; });
+  }
   function bucket(o) {
     if (o.status === 'ready' || stationIsReady(o)) return 'pass';
-    return S.cooking[o.id] ? 'cook' : 'new';
+    return stationIsAccepted(o) || S.cooking[o.id] ? 'cook' : 'new';
   }
   function group(name) {
     return Object.keys(S.orders).map(function (k) { return S.orders[k]; })
@@ -706,8 +711,15 @@
 
     var take = e.target.closest('[data-take]');
     if (take) {
-      S.cooking[take.dataset.take] = true;
+      var takeId = take.dataset.take, takeOrder = S.orders[takeId];
+      if (!takeOrder) return;
+      var takeStation = S.station === 'all' ? '' : S.station;
+      (takeOrder.lines || []).forEach(function (line) {
+        if (!takeStation || line.station === takeStation) line.stationAccepted = true;
+      });
+      delete S.cooking[takeId];
       saveCooking(); paint();
+      KiwiKitchenRelay.bump(takeId, 'cooking', takeStation);
       return;
     }
     var rdy = e.target.closest('[data-ready]');

@@ -155,6 +155,22 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('un DEUXIÈME bon prend le numéro suivant', second.body.number === 2, 'n°' + second.body.number);
 
   /* ═══ 3. RETOUR, PAR POSTE ═══════════════════════════════════════════════ */
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'cooking', station: 'cuisson' }, asStaff);
+  ok('accepter au poste cuisson ne lance pas le poste boissons',
+    r.status === 200 && r.body.status === 'accepted'
+      && r.body.lines[0].stationAccepted === true && r.body.lines[1].stationAccepted !== true,
+    JSON.stringify(r.body));
+  q = await get('merchant=' + SLUG + '&since=0&role=kitchen', asStaff);
+  let acceptedBack = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('la progression acceptée par poste revient sur toutes les tablettes KDS',
+    acceptedBack && acceptedBack.lines[0].stationAccepted === true
+      && acceptedBack.lines[1].stationAccepted !== true, JSON.stringify(acceptedBack));
+
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'cooking' }, asStaff);
+  ok('accepter depuis Tous lance toutes les sections du ticket',
+    r.status === 200 && r.body.lines.every((line) => line.stationAccepted === true),
+    JSON.stringify(r.body));
+
   r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready', station: 'cuisson' }, asStaff);
   ok('la cuisine peut marquer seulement son poste prêt',
     r.status === 200 && r.body.status === 'accepted' && r.body.station === 'cuisson',
@@ -284,11 +300,16 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /l\.station && kdsStations\(\)\.some/.test(CAISSE));
   ok('la tablette envoie le poste actif avec son geste prête',
     /KiwiKitchenRelay\.bump\(id, 'ready', station\)/.test(CUISINE));
+  ok('la tablette envoie aussi le poste actif avec son geste accepter',
+    /KiwiKitchenRelay\.bump\(takeId, 'cooking', takeStation\)/.test(CUISINE));
   ok('le filtre Toutes garde le geste de commande entière',
     /var station = S\.station === 'all' \? '' : S\.station/.test(CUISINE));
   ok('la caisse conserve aussi la progression prête par poste',
     /function kdsViewStatus\(o, sid\)/.test(CAISSE)
       && /stationReady: l\.stationReady === true/.test(CAISSE));
+  ok('la caisse conserve la progression accepter par poste',
+    /stationAccepted: l\.stationAccepted === true/.test(CAISSE)
+      && /opPush\(o, 'cooking', station \? \{ station \} : \{\}\)/.test(CAISSE));
 
   ok('le relais rejoue les envois perdus', /function schedule\(\)/.test(RELAY) && /RETRY_MS/.test(RELAY));
   ok('un refus de fond n’est pas rejoué indéfiniment',

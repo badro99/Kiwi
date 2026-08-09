@@ -156,11 +156,19 @@
     // Optimistic, then reconciled by the next poll: the till must feel instant.
     if (prev) {
       if (status === 'rejected') delete state.orders[id];
+      else if (status === 'cooking') {
+        (prev.lines || []).forEach(function (line) {
+          if (!(extra && extra.station) || line.station === extra.station) line.stationAccepted = true;
+        });
+      }
       else if (status === 'ready' && extra && extra.station) {
         (prev.lines || []).forEach(function (line) {
-          if (line.station === extra.station) line.stationReady = true;
+          if (line.station === extra.station) {
+            line.stationReady = true;
+          }
         });
-        if ((prev.lines || []).length && prev.lines.every(function (line) { return line.stationReady === true; })) {
+        if ((prev.lines || []).length
+            && prev.lines.every(function (line) { return line.stationReady === true; })) {
           prev.status = 'ready';
         }
       } else prev.status = status;
