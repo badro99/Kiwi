@@ -361,6 +361,18 @@
     if (o.custId) return CUST[o.custId];
     return o.guest || { name: 'Client de passage', phone: '' };
   }
+  /* Share only a tenant-scoped operational snapshot with the owner dashboard.
+     The till remains the source of truth for the detailed ticket; the bridge
+     strips it to the fields the dashboard needs and never includes a PIN. */
+  function syncOwnerOps() {
+    if (!pvReal() || !window.KiwiPressingOps) return;
+    try {
+      KiwiPressingOps.replace(ORDERS, {
+        customer: custOf,
+        total: function (o) { return orderTotals(o).total; },
+      });
+    } catch (_) {}
+  }
   function queueIfOffline(label) {
     if (!state.offline) return false;
     state.queued++;
@@ -478,6 +490,14 @@
   function enter() {
     state.unlocked = true;
     if (!state.ticket) freshTicket();
+    /* A dashboard quick action can ask the till to land directly on Retrait or
+       Rangement after the operator unlocks it. One-shot session state: it does
+       not bypass the PIN and cannot strand later visits on an old subsection. */
+    try {
+      const requested = sessionStorage.getItem('kiwiPressingStartView');
+      sessionStorage.removeItem('kiwiPressingStartView');
+      if (['comptoir', 'commandes', 'retrait', 'rangement'].includes(requested)) state.view = requested;
+    } catch (_) {}
     renderAll();
   }
 
@@ -1409,6 +1429,7 @@
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas à la prise de la commande. */
         postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id);
+        syncOwnerOps();
         closeVeil('#px-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (ctx && typeof ctx.onSettled === 'function') ctx.onSettled();
@@ -1429,6 +1450,7 @@
       if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id);
       if (fresh) {
         ORDERS.unshift(order);
+        syncOwnerOps();
         ticketSeq++;
         freshTicket();
         renderTicket();
@@ -1616,6 +1638,7 @@
 
   function afterStatusChange(o, wasPret) {
     const nowSt = orderStatus(o);
+    syncOwnerOps();
     openDetail(o.id);
     refreshOps();
     if (nowSt === 'pret' && !wasPret && !o.notified) {
@@ -1688,6 +1711,7 @@
       const num = String(c.phone || '').replace(/\D/g, '');
       if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à sa fiche`); return; }
       o.notified = true;
+      syncOwnerOps();
       closeVeil('#px-wa-veil');
       queueIfOffline('Notification WhatsApp');
       try {
@@ -1781,6 +1805,7 @@
     o.pieces.forEach((p) => { p.status = 'livre'; });
     o.collectedAt = new Date();
     releaseSlot(o);
+    syncOwnerOps();
     queueIfOffline('Retrait');
     toast(`${o.id} remis à ${custOf(o).name}, merci envoyé sur WhatsApp`);
     refreshOps();
@@ -1821,12 +1846,13 @@
 
   /* ═══════════════════════ RANGEMENT (rack) ═══════════════════════ */
   function releaseSlot(o) {
-    if (o.rack) { delete rackSlots[o.rack]; o.rack = null; }
+    if (o.rack) { delete rackSlots[o.rack]; o.rack = null; syncOwnerOps(); }
   }
   function assignSlot(o, slot) {
     releaseSlot(o);
     rackSlots[slot] = o.id;
     o.rack = slot;
+    syncOwnerOps();
   }
 
   function renderRack() {

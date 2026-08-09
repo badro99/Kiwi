@@ -633,6 +633,37 @@
         productsEmpty: { fr: { manage: 'Gérer les rayons →' }, en: { manage: 'Manage aisles →' }, ar: { manage: 'إدارة الأرفف ←' } },
         askPlaceholder: { fr: 'Posez votre question sur votre épicerie...', en: 'Ask a question about your grocery...', ar: 'اطرح سؤالاً حول بقالتك...' },
       } },
+    pressing: { base: 'boutique',
+      header: { fr: 'Pressing', en: 'Dry cleaning', ar: 'المصبنة' },
+      items: [
+        { nav: 'pressing-orders',   tag: 'LIVE', icon: ICONS.menu,       label: { fr: 'Dépôts & commandes', en: 'Drop-offs & orders', ar: 'الإيداعات والطلبات' } },
+        { nav: 'pressing-workshop', icon: ICONS.stock,                  label: { fr: 'Atelier & flux', en: 'Workshop & workflow', ar: 'الورشة وسير العمل' } },
+        { nav: 'pressing-pickup',   icon: ICONS.inventory,              label: { fr: 'Retraits & rack', en: 'Pick-up & rack', ar: 'الاستلام والتعليق' } },
+        { nav: 'pressing-services', icon: ICONS.services,               label: { fr: 'Services & tarifs', en: 'Services & pricing', ar: 'الخدمات والأسعار' } },
+        { nav: 'pressing-quality',  icon: ICONS.returns,                label: { fr: 'Qualité & incidents', en: 'Quality & issues', ar: 'الجودة والملاحظات' } },
+        { nav: 'pressing-delivery', icon: ICONS.canaux,                 label: { fr: 'Collecte & livraison', en: 'Collection & delivery', ar: 'الجمع والتوصيل' } },
+      ],
+      kpis: [
+        { key: 'tx',         label: { fr: 'Dépôts', en: 'Drop-offs', ar: 'الإيداعات' } },
+        { key: 'panier',     label: { fr: 'Bon moyen', en: 'Avg order', ar: 'متوسط الطلب' } },
+        { key: 'regulars',   label: { fr: 'Clients réguliers', en: 'Regular clients', ar: 'الزبناء الدائمون' } },
+        { key: 'success',    label: { fr: 'Remises à l’heure', en: 'On-time handovers', ar: 'التسليم في الموعد' } },
+        { key: 'ratio',      label: { fr: 'Carte / espèces', en: 'Card / cash', ar: 'بطاقة / نقد' } },
+        { key: 'tauxRetour', label: { fr: 'Reprises qualité', en: 'Quality rework', ar: 'إعادة المعالجة' } },
+      ],
+      questions: [
+        { k: 'machines', type: 'number', ph: 'Ex. 4', label: { fr: 'Machines de traitement', en: 'Treatment machines', ar: 'آلات المعالجة' } },
+        { k: 'turnaround', type: 'text', ph: 'Ex. 48 h', label: { fr: 'Délai standard', en: 'Standard turnaround', ar: 'مدة الإنجاز العادية' } },
+        { k: 'delivery', type: 'text', ph: 'Ex. Tanger centre', label: { fr: 'Zone de collecte', en: 'Collection area', ar: 'منطقة الجمع' } },
+      ],
+      vocab: {
+        navOrders: { fr: 'Encaissements', en: 'Payments', ar: 'التحصيلات' },
+        feedEmpty: { fr: { badge: 'ATELIER OUVERT', title: 'Premier dépôt à venir', sub: 'Le flux démarre avec le premier vêtement confié.' },
+                     en: { badge: 'WORKSHOP OPEN', title: 'First drop-off coming up', sub: 'The workflow starts with the first garment received.' },
+                     ar: { badge: 'الورشة مفتوحة', title: 'أول إيداع قادم', sub: 'يبدأ سير العمل مع أول قطعة مستلمة.' } },
+        feedAwait: { fr: 'Atelier ouvert · en attente du premier dépôt', en: 'Workshop open · awaiting first drop-off', ar: 'الورشة مفتوحة · في انتظار أول إيداع' },
+        askPlaceholder: { fr: 'Posez votre question sur votre pressing...', en: 'Ask a question about your dry cleaner...', ar: 'اطرح سؤالاً حول المصبنة...' },
+      } },
     pharmacie: { base: 'boutique',
       header: { fr: 'Pharmacie', en: 'Pharmacy', ar: 'الصيدلية' },
       items: [
@@ -1445,7 +1476,21 @@
     const base = SUBTYPE_BASE[subtypeOrBase] ||
       (TYPE_BASES.indexOf(subtypeOrBase) >= 0 ? subtypeOrBase : null);
     if (!base || currentVenue === 'fusion') return false;
-    if (base === getVenueType()) return false;      // already correct
+    const exactSubtype = SUBTYPE_PROFILES[subtypeOrBase] ? subtypeOrBase : '';
+    const active = VENUES[currentVenue];
+    /* The family alone is not enough for a specialist workspace. A server can
+       correctly say `pressing`, resolve it to family `boutique`, and still be
+       ignored here because the transient venue was already a boutique. That is
+       exactly how a pressing inherited retail returns/promotions forever. Keep
+       the precise trade on transient server-backed venues before the early exit. */
+    if (exactSubtype && active && (currentVenue === 'own' || currentVenue === 'scoped')) {
+      active.subtype = exactSubtype;
+    }
+    if (base === getVenueType() && (!exactSubtype || (active && active.subtype === exactSubtype))) {
+      try { renderVerticalSection({ skipFade: true }); } catch (_) {}
+      subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+      return false;
+    }
     typeOverride = base;
     // If the ACTIVE venue is a transient synthetic one (a real merchant's empty
     // "own" venue, or the operator 'scoped' venue), also correct its stored type
@@ -1455,6 +1500,7 @@
     // 'restaurant'. Transient venues only.
     if ((currentVenue === 'own' || currentVenue === 'scoped') && VENUES[currentVenue]) {
       VENUES[currentVenue].type = base;
+      if (exactSubtype) VENUES[currentVenue].subtype = exactSubtype;
     }
     try { renderVerticalSection({ skipFade: true }); } catch (_) {}
     subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
@@ -1956,13 +2002,13 @@
         i18nHeader: '',
         items: prof.items.map((pi) => {
           const b = baseItems.find((x) => x.nav === pi.nav) || {};
-          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: b.icon || '' };
+          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: pi.icon || b.icon || '' };
         }),
       };
     }
     /* Tous les sous-métiers boutique gardent la vue Vendus, même si leur
        profil plus ancien remplace la liste de navigation de la base. */
-    if (sect && (typeOverride || v.type) === 'boutique' && !sect.items.some((x) => x.nav === 'sold')) {
+    if (sect && (typeOverride || v.type) === 'boutique' && v.subtype !== 'pressing' && !sect.items.some((x) => x.nav === 'sold')) {
       const sold = VERTICAL_SECTIONS.boutique.items.find((x) => x.nav === 'sold');
       sect = { ...sect, items: sect.items.concat(sold) };
     }
