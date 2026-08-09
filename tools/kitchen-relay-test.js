@@ -246,6 +246,14 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /opTickets\.set\(id, order\)/.test(relayFn));
   ok('un rechargement en plein service ne duplique pas les bons',
     /kdsOrders\.find\(t => t && t\.opId === o\.id\)/.test(CAISSE));
+  ok('un bon revenu de cette caisse ne double jamais la ligne de la table',
+    /if \(!known && o\.channel !== 'caisse'\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE));
+  ok('une ancienne copie porteuse du même bon caisse est réparée précisément',
+    /o\.channel === 'caisse'[\s\S]{0,700}?line\.orderProLine[\s\S]{0,100}?startsWith\(String\(o\.id\) \+ ':'\)/.test(CAISSE));
+  ok('une nouvelle caisse ne recharge pas les tables du service précédent',
+    /shiftOpenedAt\.getTime\(\) - 30 \* 60 \* 1000/.test(CAISSE));
+  ok('le téléphone ne réaffiche pas un snapshot de service expiré',
+    /state\.ts[\s\S]{0,100}?Date\.now\(\) - 12 \* 60 \* 60 \* 1000/.test(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
   ok('la caisse sonde la file même sans Order Pro (sinon « prêt » ne revient jamais)',
     /!orderProOn\(\) && !hasKitchen\(\)/.test(INBOX));
   ok('…et « hasKitchen » désigne bien la caisse à écran cuisine',
