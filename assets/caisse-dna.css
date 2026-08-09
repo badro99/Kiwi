@@ -1,0 +1,327 @@
+/* Kiwi Caisse · restaurant-level visual chrome for lazy-loaded verticals.
+ * All selectors require .kiwi-dna, which is only added after a vertical has
+ * mounted successfully. No business element is hidden or reordered. */
+
+.vx-screen.kiwi-dna {
+  --kiwi-dna-rail-w: 280px;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-rail {
+  width: var(--kiwi-dna-rail-w);
+  flex: 0 0 var(--kiwi-dna-rail-w);
+  box-sizing: border-box;
+  padding: 22px 18px 18px;
+  gap: 12px;
+  background: #0A0F0D;
+  border-inline-end: 1px solid rgba(255,255,255,.08);
+  color: rgba(247,245,240,.70);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.18) transparent;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar { width: 8px; }
+.vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar-track { background: transparent; }
+.vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.14);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-brand {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0 6px;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-brand .kiwi-pos-logo { height: 30px; }
+
+.vx-screen.kiwi-dna .kiwi-dna-service {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 6px 4px;
+  color: rgba(247,245,240,.55);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-service i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #7DF2B0;
+  box-shadow: 0 0 0 0 rgba(125,242,176,.55);
+  animation: kiwi-dna-pulse 2s infinite;
+}
+
+@keyframes kiwi-dna-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(125,242,176,.45); }
+  70% { box-shadow: 0 0 0 7px rgba(125,242,176,0); }
+  100% { box-shadow: 0 0 0 0 rgba(125,242,176,0); }
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-venue {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 15px;
+  min-height: 124px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-venue > :first-child,
+.vx-screen.kiwi-dna .kiwi-dna-venue > strong {
+  color: #F7F5F0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-venue > :nth-child(2),
+.vx-screen.kiwi-dna .kiwi-dna-venue > span {
+  margin-top: 4px;
+  color: rgba(247,245,240,.55);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-clock-time {
+  color: #F7F5F0;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-clock-date {
+  max-width: 92px;
+  color: rgba(247,245,240,.55);
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: end;
+  text-transform: capitalize;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-label {
+  margin: 4px 5px 0;
+  color: rgba(247,245,240,.40);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav {
+  display: grid;
+  grid-template-columns: repeat(var(--kiwi-dna-primary-count), minmax(0, 1fr));
+  flex: 1 0 auto;
+  align-content: start;
+  gap: 8px;
+  min-height: auto;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item {
+  position: relative;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.035);
+  color: rgba(247,245,240,.62);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+  transition: background .18s ease, border-color .18s ease, color .18s ease,
+              transform .15s ease, box-shadow .18s ease;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item:hover {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.07);
+  color: #F7F5F0;
+  transform: translateY(-1px);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item.on,
+.vx-screen.kiwi-dna .kiwi-dna-nav-item[aria-pressed="true"] {
+  border-color: transparent;
+  background: #0B6E4F;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(5,59,44,.24), inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item.on svg,
+.vx-screen.kiwi-dna .kiwi-dna-nav-item[aria-pressed="true"] svg { color: currentColor; }
+
+.vx-screen.kiwi-dna .kiwi-dna-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-primary svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  stroke-width: 1.8;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-primary > span {
+  display: block;
+  width: 100%;
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.12;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-primary > b {
+  position: absolute;
+  inset: 7px 7px auto auto;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-secondary {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 11px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: start;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-secondary svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-secondary > span {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item > b {
+  margin-inline-start: auto;
+  border-radius: 999px;
+  background: rgba(255,255,255,.11);
+  color: rgba(247,245,240,.85);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-nav-item.on > b {
+  background: rgba(255,255,255,.17);
+  color: #fff;
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-foot {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.vx-screen.kiwi-dna .kiwi-dna-foot > button,
+.vx-screen.kiwi-dna .kiwi-dna-foot > [role="button"] {
+  min-height: 42px;
+  border-radius: 11px;
+}
+
+/* Boutique historically pins its rail/main with absolute offsets. Keep that
+ * layout model and only feed it the new visual width. */
+#pos-boutique.kiwi-dna > .kiwi-dna-rail { width: var(--kiwi-dna-rail-w); }
+#pos-boutique.kiwi-dna > .kiwi-dna-main { left: var(--kiwi-dna-rail-w); }
+.kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-rail { left: auto; right: 0; }
+.kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-main {
+  inset: 0 var(--kiwi-dna-rail-w) 0 0;
+  left: auto;
+}
+
+@media (min-width: 801px) {
+  #pos-autre.kiwi-dna .ot-app { grid-template-columns: var(--kiwi-dna-rail-w) minmax(0, 1fr); }
+}
+
+@media (max-width: 1180px) {
+  .vx-screen.kiwi-dna { --kiwi-dna-rail-w: 244px; }
+  .vx-screen.kiwi-dna .kiwi-dna-rail { padding-inline: 14px; }
+  .vx-screen.kiwi-dna .kiwi-dna-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* The generic fallback already has a horizontal phone rail. Preserve that
+ * model explicitly: the desktop DNA must not turn its one-column mobile grid
+ * back into a narrow two-column layout. */
+@media (max-width: 800px) {
+  .vx-screen.kiwi-dna { --kiwi-dna-rail-w: 212px; }
+  #pos-autre.kiwi-dna .ot-app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  #pos-autre.kiwi-dna .kiwi-dna-rail {
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: row;
+    padding: 10px;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  #pos-autre.kiwi-dna .kiwi-dna-brand,
+  #pos-autre.kiwi-dna .kiwi-dna-service,
+  #pos-autre.kiwi-dna .kiwi-dna-venue,
+  #pos-autre.kiwi-dna .kiwi-dna-nav-label,
+  #pos-autre.kiwi-dna .kiwi-dna-foot { display: none; }
+  #pos-autre.kiwi-dna .kiwi-dna-nav {
+    display: flex;
+    flex-direction: row;
+    flex: 0 0 auto;
+    gap: 6px;
+    overflow-x: auto;
+  }
+  #pos-autre.kiwi-dna .kiwi-dna-nav-item {
+    display: inline-flex;
+    flex-direction: row;
+    flex: 0 0 auto;
+    gap: 8px;
+    min-width: 116px;
+    min-height: 46px;
+    padding: 9px 11px;
+    border-radius: 11px;
+  }
+  #pos-autre.kiwi-dna .kiwi-dna-primary > b { position: static; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-screen.kiwi-dna .kiwi-dna-service i { animation: none; }
+  .vx-screen.kiwi-dna .kiwi-dna-nav-item { transition: none; }
+}

@@ -268,6 +268,10 @@
        the owner dashboard. The POS keeps its native service-time engine; this
        compact bridge only adds the shared operational context. */
     try { if (window.KiwiPosWorkspaces) window.KiwiPosWorkspaces.mount(root, id); } catch (e) {}
+    /* Visual-only restaurant-level chrome. Run last so the shared refresh,
+       reprint and operational-workspace controls are present before the rail
+       is classified. Their original nodes and handlers remain untouched. */
+    try { if (window.KiwiCaisseDna) window.KiwiCaisseDna.enhance(root, id); } catch (e) {}
     current = id;
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');
