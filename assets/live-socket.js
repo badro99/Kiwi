@@ -12,7 +12,7 @@
  * Binding absent, réseau coupé, proxy d'entreprise qui mange le WebSocket : la
  * caisse continue de fonctionner exactement comme aujourd'hui.
  *
- * KiwiLive.live() dit si une socket est réellement ouverte. La caisse s'en sert
+ * KiwiLiveSocket.live() dit si une socket est réellement ouverte. La caisse s'en sert
  * pour espacer son sondage d'une seconde — et seulement tant que la socket
  * tient. À la première coupure, elle revient à la seconde toute seule, sans
  * qu'on ait rien à défaire.
@@ -119,7 +119,11 @@
     ws.onerror = function () { /* onclose suit toujours */ };
   }
 
-  window.KiwiLive = {
+  /* Keep the wake-up socket separate from assets/live-link.js. That module
+   * deliberately owns `window.KiwiLive` for the durable sales ledger. Sharing
+   * the same name made whichever deferred script ran last erase the other's
+   * API; in caisse that killed the repeating table poll after its first tick. */
+  window.KiwiLiveSocket = {
     /* Abonne fn aux changements du commerçant. Le premier appel ouvre la
      * socket ; les suivants ne font qu'ajouter un abonné. Un changement de
      * commerçant (caisse ré-appairée) rouvre proprement. */

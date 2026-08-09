@@ -83,7 +83,7 @@
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
-  <script src="assets/live-socket.js" defer></script>
+  <script src="assets/live-socket.js?v=2" defer></script>
   <!-- Journal de vente partagé — DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
@@ -15472,18 +15472,18 @@
        chargé en `defer` (donc après ce script), une caisse peut être appairée
        bien après le premier rendu, et elle peut CHANGER de commerçant sans
        qu'on repasse par une connexion. Un appel de plus quand tout est déjà en
-       place ne coûte rien — KiwiLive.on ressort aussitôt si la salle est la
+       place ne coûte rien — KiwiLiveSocket.on ressort aussitôt si la salle est la
        bonne, et rouvre proprement si le slug a changé. */
     function joinFloorSocket() {
       try {
-        if (!window.KiwiLive || !storeIsReal()) return;
+        if (!window.KiwiLiveSocket || !storeIsReal()) return;
         const slug = currentMerchantSlug();
-        if (slug) KiwiLive.on(slug, 'caisse', pollEmployeeFloor);
+        if (slug) KiwiLiveSocket.on(slug, 'caisse', pollEmployeeFloor);
       } catch (_) {}
     }
     function scheduleEmployeeFloor() {
       if (employeeFloorTimer) clearTimeout(employeeFloorTimer);
-      const live = window.KiwiLive && KiwiLive.live();
+      const live = window.KiwiLiveSocket && KiwiLiveSocket.live();
       employeeFloorTimer = setTimeout(() => {
         joinFloorSocket();
         try { pollEmployeeFloor(); } catch (_) {}

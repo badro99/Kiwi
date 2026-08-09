@@ -336,6 +336,14 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   && caisseSource.includes('if (stateTs && stateTs <= lastRemoteTs) return;')
   && caisseSource.includes('if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
+const liveSocketSource = fs.readFileSync(path.join(ROOT, 'assets/live-socket.js'), 'utf8');
+ok(liveSocketSource.includes('window.KiwiLiveSocket = {')
+  && !liveSocketSource.includes('window.KiwiLive = {')
+  && caisseSource.includes("KiwiLiveSocket.on(slug, 'caisse', pollEmployeeFloor)")
+  && caisseSource.includes('window.KiwiLiveSocket && KiwiLiveSocket.live()')
+  && serviceSource.includes("KiwiLiveSocket.on(merchant, 'service', pollServiceSync)")
+  && serviceSource.includes('window.KiwiLiveSocket && KiwiLiveSocket.live()'),
+  'la socket de réveil ne remplace jamais le journal KiwiLive ni sa boucle automatique');
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
