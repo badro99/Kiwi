@@ -10505,7 +10505,14 @@
         let changed = false;
         (sales || []).forEach((sale) => {
           if (!sale || !String(sale.id || '').endsWith('-emp')) return;
-          if (Number(sale.ts || 0) < shiftOpenedAt.getTime()) return;
+          /* A caisse reload/reopen must not hide employee payments already made
+             during the same commercial day. The old shiftOpenedAt filter did:
+             a waiter paid at 17:00, the till reopened at 17:02, and the journal
+             stayed at zero forever. Use the shared business-day boundary. */
+          const saleTs = Number(sale.ts || 0);
+          const DR = window.KiwiDayReport;
+          if (DR && DR.businessDay && DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()) return;
+          if (!DR && saleTs < shiftOpenedAt.getTime() - 18 * 60 * 60 * 1000) return;
           if (journal.some((entry) => entry && String(entry.id) === String(sale.id))) return;
           const entry = {
             id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),

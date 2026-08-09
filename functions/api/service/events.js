@@ -194,6 +194,22 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
   return { ok: false, events: [] };
 }
 
+/* Payment is a core operation, not a loose UI notification. `/api/sale` calls
+ * this after the employee sale is durable so the shared floor reaches the
+ * terminal FREE state before the payment request can report success. Retrying
+ * is safe: both the sale id and this state replacement are idempotent. */
+export async function settleServiceTable(env, merchant, rawTable) {
+  const table = tableKey(rawTable);
+  const targets = await floorTargets(env, merchant);
+  if (!table || !targets[table]) return { ok: false, error: 'floor-table-required' };
+  const result = await syncTableSnapshot(env, merchant, [{
+    table, status: 'khawya', covers: 0, lines: [], syncVersion: 4,
+  }], 'employee');
+  if (!result.ok) return { ok: false, error: 'state-write-failed' };
+  await poke(env, merchant, FEATURE);
+  return { ok: true, table, events: result.events };
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   const url = new URL(request.url);

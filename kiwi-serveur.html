@@ -6856,8 +6856,10 @@ em, i, cite, dfn, var { font-style: normal; }
     });
 
     /* ---------- Mark paid ---------- */
-    function markTablePaid(id, method) {
+    const employeePaymentsInFlight = new Set();
+    async function markTablePaid(id, method) {
       const t = tables[id];
+      if (!t || employeePaymentsInFlight.has(id)) return false;
       const paidAmount = getTableTotal(id);
       const paidClient = tableClients.get(id);
       const paidLines = (tableOrders[id] || []).map((line) => {
@@ -6869,21 +6871,45 @@ em, i, cite, dfn, var { font-style: normal; }
         };
       });
       const paymentId = employeePaymentId(id);
-      // Live Link — surface this settled table on the owner's dashboard live feed.
-      // No-op unless ?live=1 (KiwiLive.postSale gates itself); mirrors the caisse.
-      // Capture the amount BEFORE we flip status / clear the order below.
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      if (!merchant || paidAmount <= 0) {
+        toast(`Table ${id} · paiement impossible`, 4200);
+        return false;
+      }
+      employeePaymentsInFlight.add(id);
+      const previousStatus = t.status;
+      t.status = 'ka-tkhdam';
+      if (currentTab === 'tables') renderTables();
+      if (activeTableId === id) renderTableDetail();
+
+      /* One server-confirmed settlement boundary. Previously postSale(), the
+         floor close and the OrderPro-session close were three fire-and-forget
+         calls; the phone showed “paid” even when D1 never received the sale.
+         `/api/sale` now returns success only after the ledger and table are in
+         agreement. Never free a table locally before that acknowledgement. */
+      let saved = null;
       try {
-        if (window.KiwiLive) window.KiwiLive.postSale({
-          id: paymentId,
-          amount: paidAmount,
-          method: method || 'card',        // card | cash | split
-          label: 'Table ' + id + ' · ' + ((activeRole && activeRole.name) || 'Équipe'),
-          ref: paymentId,
-          lines: paidLines,
+        const response = await fetch('/api/sale', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: paymentId, merchant, table: id, amount: paidAmount,
+            method: method || 'card', ts: Date.now(),
+            label: 'Table ' + id + ' · ' + ((activeRole && activeRole.name) || 'Équipe'),
+            ref: paymentId, lines: paidLines,
+          }),
         });
-      } catch (_) {}
+        saved = await response.json().catch(() => null);
+        if (!response.ok || !saved || !saved.ok) throw new Error((saved && saved.error) || ('http-' + response.status));
+      } catch (_) {
+        t.status = previousStatus === 'ka-tkhdam' ? 'bgha-ykhlass' : previousStatus;
+        employeePaymentsInFlight.delete(id);
+        if (currentTab === 'tables') renderTables();
+        if (activeTableId === id) renderTableDetail();
+        toast(`Table ${id} · paiement non enregistré, réessayez`, 5200);
+        return false;
+      }
       if (paidClient && !SV_DEMO) {
-        const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
         fetch('/api/employee-clients', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
@@ -6894,20 +6920,15 @@ em, i, cite, dfn, var { font-style: normal; }
         }).catch(() => {});
       }
       tableClients.delete(id);
-      t.status = 'khlass';
+      t.status = 'khawya';
+      t.covers = 0;
       t.elapsed = 0;
-      publishServiceTableState(id, 'khlass', t.covers, true);
+      delete tableOrders[id];
+      dirtyOrders.delete(id);
+      tableSplits.delete(id);
+      employeePaymentRefs.delete(id);
+      employeePaymentsInFlight.delete(id);
       tablesPaid++;
-      // Auto-fade to khawya after a moment
-      setTimeout(() => {
-        if (tables[id]?.status === 'khlass') {
-          tables[id].status = 'khawya';
-          delete tableOrders[id];
-          employeePaymentRefs.delete(id);
-          publishServiceTableState(id, 'khawya', 0, true);
-          if (currentTab === 'tables') renderTables();
-        }
-      }, 4000);
       // Update views
       if (activeTableId === id) {
         returnToFloor();  // land on the floor, not a stale tab panel
@@ -6916,6 +6937,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (currentTab === 'notifications') renderNotifications();
       if (currentTab === 'profil')   renderProfil();
       toast(`Table ${id} · réglée ✓`);
+      return true;
     }
 
     /* ---------- SPLIT BILL ---------- */

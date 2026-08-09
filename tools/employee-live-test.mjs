@@ -335,7 +335,7 @@ ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
   && caisseSource.includes("String(sale.id || '').endsWith('-emp')")
-  && caisseSource.includes('Number(sale.ts || 0) < shiftOpenedAt.getTime()')
+  && caisseSource.includes('DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()')
   && caisseSource.includes('journal.push(entry)')
   && caisseSource.includes('saveProvisional(true)'),
   "un paiement téléphone rejoint une seule fois le journal du service caisse avec ses lignes");
@@ -387,8 +387,11 @@ ok(serviceSource.includes("state.source === 'employee' && currentShiftStart")
   "un nouveau pointage ne ressuscite pas le brouillon employé d'un service précédent");
 ok(serviceSource.includes("+ '-emp'")
   && serviceSource.includes('id: paymentId')
-  && serviceSource.includes('lines: paidLines'),
-  "chaque addition employé possède une vente unique, détaillée et rejouable sans doublon");
+  && serviceSource.includes('lines: paidLines')
+  && serviceSource.includes("await fetch('/api/sale'")
+  && serviceSource.includes('Never free a table locally before that acknowledgement')
+  && !/function markTablePaid[\s\S]*?KiwiLive\.postSale/.test(serviceSource),
+  "chaque addition employé est confirmée par le serveur avant de libérer la table");
 ok(serviceSource.includes('--app-height: 100dvh')
   && serviceSource.includes('height: var(--app-height)')
   && serviceSource.includes('--safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px)')

@@ -7,8 +7,11 @@
 // Requires a D1 binding named DB (see wrangler.toml / LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
-import { entitledMerchant } from '../auth/_lib.js';
+import { entitledMerchant, activeServiceEmployee } from '../auth/_lib.js';
 import { storeSuspended } from './_private.js';
+import { startOfDay } from './order/_lib.js';
+import { settleServiceTable } from './service/events.js';
+import { poke } from './_live.js';
 
 const MAX_AMOUNT = 200000; // same sanity ceiling as Order Pro
 
@@ -51,6 +54,17 @@ export async function onRequestPost({ request, env }) {
    * cannot write money into the ledger. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* A waiter payment names its table. That turns this endpoint from a generic
+   * ledger append into the single settlement boundary: only an on-shift floor
+   * employee may use it, and success will also close the table/session below. */
+  const employeeTable = String((b && b.table) || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
+  let employee = null;
+  if (employeeTable) {
+    employee = await activeServiceEmployee(request, env, merchant);
+    if (!employee) return json({ error: 'on-shift-service-required' }, 403);
+    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+  }
 
   /* Un établissement suspendu n'encaisse plus. C'est le seul endroit où la
    * suspension doit vraiment mordre : tout le reste est confort, ceci est la
@@ -118,6 +132,7 @@ export async function onRequestPost({ request, env }) {
     }
   } catch (_) { lines = null; }
 
+  let linesMode = 'stored';
   try {
     await env.DB.prepare(
       'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -132,12 +147,40 @@ export async function onRequestPost({ request, env }) {
         await env.DB.prepare(
           'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).bind(id, merchant, amount, method, label, ref, ts).run();
-        return json({ ok: true, id, lines: 'unmigrated' });
+        linesMode = 'unmigrated';
       } catch (_) { /* fall through to the real error */ }
+      if (linesMode === 'unmigrated') {
+        /* Continue into table settlement; an old optional `lines` column must
+           never leave money saved while the table remains occupied. */
+      } else {
+        return json({ error: 'db', detail: String(e && e.message || e) }, 500);
+      }
+    } else {
+      return json({ error: 'db', detail: String(e && e.message || e) }, 500);
     }
-    return json({ error: 'db', detail: String(e && e.message || e) }, 500);
   }
-  return json({ ok: true, id });
+
+  if (employeeTable) {
+    /* Close every live client session for this physical table and mark its
+       current-day kitchen tickets paid. These writes are idempotent, so a Wi-Fi
+       retry with the same sale id completes any step whose response was lost. */
+    try {
+      await env.DB.prepare(
+        `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment'
+          WHERE merchant = ? AND table_no = ? AND status = 'open'`
+      ).bind(now, merchant, employeeTable).run();
+    } catch (_) {}
+    try {
+      await env.DB.prepare(
+        `UPDATE orders SET paid_ts = ?, updated_ts = ?
+          WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
+      ).bind(now, now, merchant, employeeTable, startOfDay(now)).run();
+    } catch (_) {}
+    const settled = await settleServiceTable(env, merchant, employeeTable);
+    if (!settled.ok) return json({ error: settled.error || 'table-settlement-failed', saleSaved: true, id }, 503);
+  }
+  await poke(env, merchant, 'sales');
+  return json({ ok: true, id, lines: linesMode, table: employeeTable || undefined });
 }
 
 // A stray GET shouldn't 405-noise the console — just report health.
