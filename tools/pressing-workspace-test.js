@@ -32,7 +32,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=2') && sw.includes("'/assets/caisse-pairing.js?v=2'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=7') && dispatchJs.includes("file: 'pressing-caisse', rev: '7'") && sw.includes("'/assets/pressing-caisse.js?v=7'"), 'pressing lazy assets use a deploy-stable cache revision');
+ok(caisse.includes('assets/pos-dispatch.js?v=8') && dispatchJs.includes("file: 'pressing-caisse', rev: '8'") && sw.includes("'/assets/pressing-caisse.js?v=8'"), 'pressing lazy assets use a deploy-stable cache revision');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=6'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=2') && caisse.includes('assets/pressing-ops.js?v=2'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=6'") && sw.includes("'/assets/pressing-dashboard.js?v=6'"), 'pressing workspace is available offline');
@@ -48,7 +48,8 @@ ok(storeApi.includes("'pressing-catalog': { keys: ['categories', 'services', 'it
 ok(pressingJs.includes('data-pce-host') && caisseJs.includes('data-px-view="tarifs"') && caisseJs.includes('mountEditor(host, { compact: true })'), 'names and prices are editable from both dashboard and till');
 ok(catalogJs.includes('data-pce-search') && catalogJs.includes('data-pce-filter') && catalogJs.includes('var pageSize = 8') && catalogJs.includes('class="pce-summary"'), 'the catalogue is searchable, filterable, paged and collapsed by default');
 ok(catalogCss.includes('grid-template-columns: repeat(2,minmax(0,1fr))') && catalogCss.includes('.pce-item.is-open { grid-column: 1/-1;'), 'compact rows use the available width and expand only on demand');
-ok(venues.includes('MATERIAL_PRESSING') && dashboard.includes('viewBox="0 -960 960 960"') && caisseJs.includes('const garmentIcon ='), 'pressing navigation and garment cards use official Material Symbols');
+ok(venues.includes('MATERIAL_PRESSING') && dashboard.includes('viewBox="0 -960 960 960"') && caisseJs.includes('const garmentIcon ='), 'pressing navigation uses official Material Symbols');
+ok(caisseJs.includes('const ART =') && caisseJs.includes("ART[(item && (item.art || item.id))"), 'product cards retain garment-specific silhouettes');
 ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
 ok(caisseJs.includes('J’ai envoyé le message') && caisseJs.indexOf("window.open('', '_blank')") < caisseJs.indexOf('o.notified = true'), 'WhatsApp notification is confirmed only after opening the draft');

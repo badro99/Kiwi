@@ -30,8 +30,9 @@
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
   const icons   = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
-  /* Google Material Symbols · Outlined 400. Product and primary navigation
-     artwork now shares one professional, pixel-fitted visual language. */
+  /* Google Material Symbols · Outlined 400 for primary navigation. Product
+     artwork stays garment-specific because the Google set has no complete
+     clothing catalogue (pants, skirt, caftan, linen, etc.). */
   const MI_PRESSING = {
     counter: 'M280-80v-240h-64q-40 0-68-28t-28-68q0-29 16-53.5t42-36.5l262-116v-26q-36-13-58-43.5T360-760q0-50 35-85t85-35q50 0 85 35t35 85h-80q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760q0 17 11.5 28.5T480-720t28.5 11.5Q520-697 520-680v58l262 116q26 12 42 36.5t16 53.5q0 40-28 68t-68 28h-64v240H280Zm-64-320h64v-40h400v40h64q7 0 11.5-5t4.5-13q0-5-2.5-8.5T750-432L480-552 210-432q-5 2-7.5 5.5T200-418q0 8 4.5 13t11.5 5Zm144 240h240v-200H360v200Z',
     orders: 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Z',
@@ -43,7 +44,10 @@
     shoes: 'M216-580q39 0 74 14t64 41l382 365h24q17 0 28.5-11.5T800-200q0-8-1.5-17T788-235L605-418l-71-214-74 18q-38 10-69-14t-31-63v-84l-28-14-154 206h38q39 0 74 14t64 41l266 254H566q-30 0-57-11t-50-31L134-417q-46-42-51.5-103T114-631l154-206q17-23 45.5-30.5T368-861l28 14q21 11 32.5 30t11.5 42v84l74-19q30-8 58 7.5t38 44.5l65 196 170 170q20 20 27.5 43t7.5 49q0 50-35 85t-85 35H566Z'
   };
   const materialIcon = (name, cls) => `<svg class="${cls || ''}" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="${MI_PRESSING[name]}"></path></svg>`;
-  const garmentIcon = (item, cls) => materialIcon(item && item.cat === 'linge' ? 'bed' : item && item.cat === 'chaussures' ? 'shoes' : item && item.cat === 'cuir' ? 'counter' : 'apparel', `px-material-art${cls ? ` ${cls}` : ''}`);
+  const garmentIcon = (item, cls) => {
+    const garment = ART[(item && (item.art || item.id)) || 'chemise'] || ART.chemise;
+    return cls ? garment.replace('class="px-art"', `class="px-art ${cls}"`) : garment;
+  };
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const pad2    = (n) => String(n).padStart(2, '0');
