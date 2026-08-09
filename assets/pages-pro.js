@@ -5933,7 +5933,7 @@ function pdsRenderElement(e, state, T) {
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
       <div class="pds-el-fill">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)'};">${pdsEsc(label)}</span>` : ''}
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.62)' : 'rgba(10,15,13,0.55)'};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -8639,7 +8639,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-tpl { background:#0F130F; border-color:rgba(242,239,230,0.08); }
   .pds-noir.pds-noir.pds-noir .pds-rail-title, .pds-noir.pds-noir.pds-noir .pds-legend-title,
   .pds-noir.pds-noir.pds-noir .pds-mini-label, .pds-noir.pds-noir.pds-noir .pds-wiz-q,
-  .pds-noir.pds-noir.pds-noir .pds-form-row > label, .pds-noir.pds-noir.pds-noir .pds-rot-lbl { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-form-row > label, .pds-noir.pds-noir.pds-noir .pds-rot-lbl { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .pds-rail-hint, .pds-noir.pds-noir.pds-noir .pds-mode-desc { color:rgba(242,239,230,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-pal-item,
   .pds-noir.pds-noir.pds-noir .pds-tool, .pds-noir.pds-noir.pds-noir .pds-step-btn, .pds-noir.pds-noir.pds-noir .pds-inspect-close,
@@ -8677,15 +8677,15 @@ const PDS_INLINE_CSS = `
   }
   .pds-noir.pds-noir.pds-noir .pds-range, .pds-noir.pds-noir.pds-noir .pds-snap input { accent-color:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-snap { color:rgba(242,239,230,0.66); }
-  .pds-noir.pds-noir.pds-noir .pds-unit { color:rgba(242,239,230,0.35); }
-  .pds-noir.pds-noir.pds-noir .pds-num-grid > label { color:rgba(242,239,230,0.42); }
+  .pds-noir.pds-noir.pds-noir .pds-unit { color:rgba(242,239,230,0.58); }
+  .pds-noir.pds-noir.pds-noir .pds-num-grid > label { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .pds-step-btn { color:#EDEAE0; }
 
   /* Bandeau KPI */
   .pds-noir.pds-noir.pds-noir .p-kpi { background:#0F130F; border:1px solid rgba(242,239,230,0.08); }
-  .pds-noir.pds-noir.pds-noir .p-kpi .l { color:rgba(242,239,230,0.45); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .l { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .p-kpi .v { color:#EDEAE0; }
-  .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.62); }
 
   /* Modes + zones : rail sombre, pilule active claire — le contraste inversé
      de la vue jour, même géométrie pour que la lentille liquide suive. */
@@ -8697,7 +8697,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-mode.active { background:#EDEAE0; color:#0B0F0C; }
   .pds-noir.pds-noir.pds-noir .pds-zone.active { background:#1C221C; color:#EDEAE0; box-shadow:none; }
   .pds-noir.pds-noir.pds-noir .pds-zone.active em { color:#7DF2B0; }
-  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .pds-zone-add { color:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-zone-add:hover { background:#1C221C; }
 
@@ -8740,10 +8740,10 @@ const PDS_INLINE_CSS = `
     border-style:dashed; border-color:rgba(0,255,174,0.30); background:transparent;
   }
   .pds-noir.pds-noir.pds-noir .pds-plan-label { color:rgba(242,239,230,0.78); }
-  .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.42); }
-  .pds-noir.pds-noir.pds-noir .pds-plan-footer { color:rgba(242,239,230,0.40); }
-  .pds-noir.pds-noir.pds-noir .pds-plan-floor-count { color:rgba(242,239,230,0.40); }
-  .pds-noir.pds-noir.pds-noir .pds-plan-dims { color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-footer { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-floor-count { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-dims { color:rgba(242,239,230,0.58); }
   .pds-noir.pds-noir.pds-noir .pds-empty { background:rgba(10,14,11,0.78); }
   .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
@@ -8755,7 +8755,7 @@ const PDS_INLINE_CSS = `
      manipulable, l'accueil n'a pas ce souci. — */
   .pds-noir.pds-noir.pds-noir .pds-tbl-num {
     font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
-    letter-spacing:0.04em; color:rgba(255,255,255,0.40);
+    letter-spacing:0.04em; color:rgba(255,255,255,0.62);
   }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(232,192,103,0.80); }
@@ -8871,7 +8871,7 @@ const PDS_INLINE_CSS = `
   }
 
   /* Pied de page */
-  .pds-noir.pds-noir.pds-noir .pds-foot-meta { color:rgba(242,239,230,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-foot-meta { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .kb.ghost { background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78); }
   .pds-noir.pds-noir.pds-noir .kb.ghost:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-rail-danger { color:#E4604E; }

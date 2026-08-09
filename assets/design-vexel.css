@@ -137,7 +137,7 @@ body.design-vexel .sidebar {
   --vx-sidebar-accent-border: rgba(0, 255, 174, 0.18);
   --vx-sidebar-ink: #F7F5F0;
   --vx-sidebar-muted: rgba(247, 245, 240, 0.62);
-  --vx-sidebar-ghost: rgba(247, 245, 240, 0.22);
+  --vx-sidebar-ghost: rgba(247, 245, 240, 0.58);
   --vx-sidebar-accent: #00FFAE;
   --vx-sidebar-accent-deep: #0B6E4F;
   --vx-sidebar-primary-ink: #04241A;
@@ -1258,7 +1258,10 @@ body.design-vexel :is(
   color: var(--ink);
 }
 
-body.design-vexel :is(input, select, textarea)::placeholder { color: var(--n-400); }
+body.design-vexel :is(input, select, textarea)::placeholder {
+  color: var(--n-500);
+  opacity: 1;
+}
 
 /* Opaque paired colours keep the shortcut legible even when the surrounding
  * search glass is translucent and the effective background is composited. */
@@ -2155,7 +2158,7 @@ body.design-vexel[data-vexel-mode="dark"] {
   --vx-transparent: transparent;
   --vx-white-02: rgba(255, 255, 255, 0.02);
   --vx-white-045: rgba(255, 255, 255, 0.045);
-  --vx-text-ghost: rgba(255, 255, 255, 0.22);
+  --vx-text-ghost: rgba(255, 255, 255, 0.58);
   --vx-track: rgba(255, 255, 255, 0.09);
   --vx-border-strong: rgba(255, 255, 255, 0.10);
   --vx-card-hover-border: rgba(255, 255, 255, 0.14);
@@ -2262,7 +2265,7 @@ body.design-vexel[data-vexel-mode="light"] {
   --vx-transparent: transparent;
   --vx-white-02: rgba(10, 15, 13, 0.02);
   --vx-white-045: rgba(10, 15, 13, 0.045);
-  --vx-text-ghost: rgba(10, 15, 13, 0.34);
+  --vx-text-ghost: rgba(10, 15, 13, 0.58);
   --vx-track: rgba(10, 15, 13, 0.10);
   --vx-border-strong: rgba(10, 15, 13, 0.14);
   --vx-card-hover-border: rgba(10, 15, 13, 0.18);
@@ -4254,7 +4257,7 @@ body.design-vexel[data-vexel-mode="light"] .sidebar nav a[aria-current="page"] s
 
 body.design-vexel[data-vexel-mode="light"] .sidebar .sect {
   margin: 22px 11px 9px;
-  color: rgba(247, 250, 248, 0.32);
+  color: rgba(247, 250, 248, 0.58);
   font-weight: 650;
   letter-spacing: 0.16em;
 }
@@ -4832,4 +4835,120 @@ body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] > :last-ch
   body.design-vexel[data-vexel-mode] .vexel-bottom-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 23 · CONTRAST SAFETY NET
+ * The Vexel layout moves Kiwi Insights out of its original dark hero and onto
+ * a neutral card. Its legacy colours therefore need to follow the current
+ * theme instead of assuming a dark-green parent.
+ * ───────────────────────────────────────────────────────────────────────── */
+body.design-vexel .vexel-insights-row :is(.hai-title, .hai-rec-title) {
+  color: var(--ink);
+}
+
+body.design-vexel .vexel-insights-row .hai-rec-obs {
+  color: var(--n-600);
+}
+
+body.design-vexel .vexel-insights-row .hai-chip {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+  color: var(--n-600);
+}
+
+body.design-vexel .vexel-insights-row .hai-chip:hover {
+  background: var(--vx-hover-bg);
+  border-color: var(--vx-control-border-hover);
+  color: var(--ink);
+}
+
+body.design-vexel .vexel-insights-row .hai-input {
+  background: var(--paper-muted);
+  border-color: var(--n-300);
+}
+
+body.design-vexel .vexel-insights-row .hai-input input {
+  color: var(--ink);
+}
+
+body.design-vexel .vexel-insights-row .hai-input input::placeholder {
+  color: var(--n-500);
+  opacity: 1;
+}
+
+body.design-vexel .vexel-insights-row .hai-send {
+  background: var(--mint-soft);
+  color: var(--atlas);
+}
+
+body.design-vexel :is(.vexel-kpi-comparison, .vexel-compose .kpi-m .v .u) {
+  color: var(--n-500);
+}
+
+body.design-vexel .sidebar .sect {
+  color: rgba(247, 250, 248, 0.58);
+}
+
+/* Orange partner marks need dark ink; white only reaches 2.36:1 on Glovo's
+ * orange and 3.43:1 on the legacy delivery-orange variant. */
+body.design-vexel .integ-card .logo[style*="#F29137"],
+body.design-vexel .integ-card .logo[style*="#E7611A"] {
+  color: #0A0F0D !important;
+}
+
+/* Dynamic modules still use the legacy `atlas + white` primary pair. Atlas
+ * becomes bright mint in dark mode, where white no longer has enough
+ * contrast. The Vexel paired tokens preserve the intended primary emphasis
+ * in both themes. */
+body.design-vexel :is(
+  .crm-chip.on,
+  .gft-amt.on,
+  .chl-copy,
+  .cd-exp.cd-camp,
+  .cd-segchip.on,
+  .kr-btn.on,
+  .fa-send,
+  .fa-tool.on,
+  .fa-kpgrid button.eq,
+  .fa-kp-use,
+  .fa-llm-btn,
+  .bpd-btn.primary,
+  .bpd-seg button.on,
+  .bpd-choice.on,
+  .bpd-card.active .bpd-ribbon,
+  .ac-btn.primary,
+  .rtx-method.on,
+  .mx-sub.on,
+  .mx-pane-add,
+  .ord-o-st.new,
+  .acc-cta,
+  .acc-biz-badge,
+  .oq-btn.primary
+) {
+  background: var(--vx-accent) !important;
+  border-color: var(--vx-accent) !important;
+  color: var(--vx-primary-ink) !important;
+}
+
+body.design-vexel :is(
+  .chl-copy,
+  .cd-exp.cd-camp,
+  .fa-send,
+  .fa-kp-use,
+  .fa-llm-btn,
+  .bpd-btn.primary,
+  .ac-btn.primary,
+  .mx-pane-add,
+  .acc-cta,
+  .oq-btn.primary
+):hover {
+  background: var(--vx-accent-deep) !important;
+  border-color: var(--vx-accent-deep) !important;
+  color: var(--vx-primary-ink) !important;
+}
+
+body.design-vexel .fa-kpdisplay {
+  background: var(--vx-inverse-surface) !important;
+  color: var(--vx-inverse-ink) !important;
 }
