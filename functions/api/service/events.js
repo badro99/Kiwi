@@ -79,15 +79,31 @@ function cleanLines(raw) {
 async function floorTargets(env, merchant) {
   const out = Object.create(null);
   try {
-    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'")
-      .bind(merchant).first();
+    const [row, teamRow] = await Promise.all([
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'floorplan'").bind(merchant).first(),
+      env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").bind(merchant).first(),
+    ]);
     const plan = parse(row && row.data);
+    const team = parse(teamRow && teamRow.data);
     const staff = Object.create(null);
     (Array.isArray(plan.staff) ? plan.staff : []).forEach((s) => { if (s && s.id) staff[String(s.id)] = String(s.name || ''); });
+    const members = Array.isArray(team.members) ? team.members : [];
+    const memberIds = new Set(members.map((m) => String(m && m.id || '')).filter(Boolean));
+    const memberByName = new Map(members.map((m) => [norm(memberName(m)), String(m && m.id || '')]));
+    const memberId = (value) => {
+      const raw = String(value || '');
+      if (memberIds.has(raw)) return raw;
+      const legacy = raw.startsWith('tm-') ? raw.slice(3) : '';
+      if (legacy && memberIds.has(legacy)) return legacy;
+      return memberByName.get(norm(staff[raw])) || raw;
+    };
     (Array.isArray(plan.tables) ? plan.tables : []).forEach((t) => {
       const table = tableKey(t && (t.num || t.id));
       if (!table) return;
-      out[table] = { serverId: String(t.server || ''), server: String(staff[t.server] || '') };
+      const rawIds = Array.isArray(t.servers) && t.servers.length ? t.servers : (t.server ? [t.server] : []);
+      const serverIds = Array.from(new Set(rawIds.map(memberId).filter(Boolean))).slice(0, 3);
+      const servers = Array.from(new Set(rawIds.map((id) => String(staff[String(id)] || '')).filter(Boolean))).slice(0, 3);
+      out[table] = { serverId: serverIds[0] || '', server: servers[0] || '', serverIds, servers };
     });
   } catch (_) {}
   return out;
@@ -143,6 +159,7 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
         id: 'evt-' + crypto.randomUUID(), type: 'table-state', ts: changedAt,
         table, status: next.status, previousStatus: String(before && before.status || ''), covers: next.covers,
         serverId: target.serverId || '', server: target.server || '',
+        serverIds: target.serverIds || [], servers: target.servers || [],
       };
       events.push(event); emitted.push(event);
     });
@@ -207,11 +224,14 @@ export async function onRequestGet({ request, env }) {
     .filter((event) => event && Number(event.ts) > since)
     .filter((event) => {
       if (employee.attendance && employee.attendance.pauseTs) return false;
-      const direct = (event.serverId && String(event.serverId) === myId)
-        || (event.server && norm(event.server) === myName);
-      const coverage = (event.serverId && pausedIds.has(String(event.serverId)))
-        || (event.server && pausedNames.has(norm(event.server)));
-      const unassigned = !event.serverId && !event.server;
+      const eventIds = Array.isArray(event.serverIds) && event.serverIds.length
+        ? event.serverIds.map(String) : (event.serverId ? [String(event.serverId)] : []);
+      const eventNames = Array.isArray(event.servers) && event.servers.length
+        ? event.servers.map(norm) : (event.server ? [norm(event.server)] : []);
+      const direct = eventIds.includes(myId) || eventNames.includes(myName);
+      const coverage = eventIds.some((id) => pausedIds.has(id))
+        || eventNames.some((name) => pausedNames.has(name));
+      const unassigned = !eventIds.length && !eventNames.length;
       return direct || coverage || unassigned;
     })
     .slice(-MAX_EVENTS);
@@ -256,6 +276,8 @@ export async function onRequestPost({ request, env }) {
     table: String(src.table || '').slice(0, 32),
     serverId: String(src.serverId || '').slice(0, 96),
     server: String(src.server || '').slice(0, 80),
+    serverIds: (Array.isArray(src.serverIds) ? src.serverIds : []).slice(0, 3).map((id) => String(id || '').slice(0, 96)).filter(Boolean),
+    servers: (Array.isArray(src.servers) ? src.servers : []).slice(0, 3).map((name) => String(name || '').slice(0, 80)).filter(Boolean),
     customer: String(src.customer || '').slice(0, 80),
     covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
   };
@@ -265,6 +287,8 @@ export async function onRequestPost({ request, env }) {
   if (assigned.serverId || assigned.server) {
     event.serverId = assigned.serverId || '';
     event.server = assigned.server || '';
+    event.serverIds = assigned.serverIds || [];
+    event.servers = assigned.servers || [];
   }
   const state = { table: event.table, status: 'a-commander', covers: event.covers, ts: event.ts };
   if (!await append(env, merchant, event, state)) return json({ error: 'event-write-failed' }, 503);
