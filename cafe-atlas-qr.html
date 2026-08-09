@@ -96,8 +96,31 @@ em, i, cite, dfn, var { font-style: normal; }
       .stage {
         grid-template-columns: 1fr;
         gap: 32px;
-        padding: 32px 20px;
+        padding: 32px 0;
       }
+      .mission {
+        width: calc(100% - 40px);
+        min-width: 0;
+        margin-inline: auto;
+      }
+      .mission h1,
+      .mission p,
+      .mission li,
+      .replay-hint {
+        overflow-wrap: anywhere;
+      }
+      .mission-foot { flex-wrap: wrap; }
+      .phone-stage { width: 100%; min-width: 0; overflow: hidden; }
+      .iphone {
+        width: 390px !important;
+        height: 844px !important;
+      }
+    }
+    @media (max-width: 400px) {
+      .iphone { zoom: .9; }
+    }
+    @media (max-width: 360px) {
+      .iphone { zoom: .82; }
     }
 
     /* ---------- Mission sidebar ---------- */

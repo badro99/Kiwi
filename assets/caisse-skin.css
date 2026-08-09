@@ -49,13 +49,13 @@
 .kw-scrim { display: none; }
 
 /* Mid — tablet landscape: narrow the menu, keep the ticket docked but slimmer */
-@media (max-width: 1099px) and (min-width: 768px) {
+@media (max-width: 1099px) and (min-width: 901px) {
   .rightpanel { width: min(340px, 34vw); }
   .menu-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
 }
 
 /* Portrait handheld — ticket becomes a bottom sheet, sidebar goes off-canvas */
-@media (max-width: 767px) {
+@media (max-width: 900px) {
   /* ── Sideways-scroll guard ─────────────────────────────────────────────
    * The register header is a nowrap flex row built for a 1280px desk screen;
    * its min-content width (~562px) used to force the whole page wider than

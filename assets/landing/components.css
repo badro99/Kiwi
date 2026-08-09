@@ -122,7 +122,7 @@
 }
 
 .btn-sm {
-  height: 36px;
+  height: 44px;
   padding: 0 var(--s-4);
   font-size: var(--t-meta);
 }
@@ -559,6 +559,7 @@
 .nav-logo {
   display: inline-flex;
   align-items: baseline;
+  min-height: 44px;
   font-family: "Inter Tight", var(--font-display);
   font-size: 20px;
   font-weight: 700;
@@ -678,12 +679,17 @@
   }
   .nav-links { display: none; }
   .nav-logo { font-size: 15px; padding: 0 4px; }
-  .nav .btn { height: 32px; padding: 0 12px; font-size: 12px; }
+  .nav .btn { height: 44px; padding: 0 12px; font-size: 12px; }
   .nav + .hero,
   .nav + section,
   .nav + main > section:first-of-type {
     padding-top: calc(52px + 24px + var(--s-4));
   }
+}
+
+/* Legal/status return links are primary phone navigation, not fine print. */
+.legal .legal-back {
+  min-height: 44px;
 }
 
 /* ==========================================================================

@@ -244,6 +244,16 @@
       .cols { grid-template-columns: 1fr; }
       .col--cook { display: none; }
       .brand .store { display: none; }
+      .top { gap: 8px; padding: 10px 12px; }
+      .brand b { font-size: 21px; }
+      .link span { display: none; }
+      .link { gap: 0; }
+      .clock { font-size: 17px; }
+      .tool { width: 44px; height: 44px; border-radius: 11px; }
+      .pad {
+        width: min(278px, calc(100vw - 40px));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
     }
 
     /* Focus is NOT declared here on purpose. assets/tokens.css, which this page

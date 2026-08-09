@@ -188,6 +188,11 @@ em, i, cite, dfn, var { font-style: normal; }
   @media (max-width:460px){
     .ov-grid{grid-template-columns:minmax(0,1fr)}
     .ov-v{font-size:1.6rem}
+    .top{padding:11px 12px; gap:8px; flex-wrap:wrap}
+    .top .dot{display:none}
+    .top h1{flex:1; min-width:150px; font-size:.94rem}
+    .top .spacer{display:none}
+    .top button{flex:1 1 calc(50% - 4px); min-height:44px}
   }
   .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:#eafff4; padding:11px 18px; border-radius:11px; font-size:.86rem; font-weight:560; box-shadow:0 10px 30px rgba(5,59,44,.35); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
   .op-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
@@ -381,7 +386,7 @@ em, i, cite, dfn, var { font-style: normal; }
        que les valeurs posées en dur, dont --riad, qui est un vert PROFOND :
        posé sur une surface de nuit il donnait un chiffre noir sur noir — le
        titre invisible qu'on avait déjà corrigé sur les cartes de diagnostic. */
-    .ov-v, .ov-sub b{color:#cfeeda}
+    .ov-v, .ov-sub b, .sec-head h2{color:#cfeeda}
     .ov-spark i{background:#1c2420}
     .ov-bar{background:#1c2420}
     .ov-todo{color:#f0cf8a}

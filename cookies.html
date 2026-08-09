@@ -18,7 +18,7 @@
 
 <link rel="stylesheet" href="assets/landing/tokens.css" />
 <link rel="stylesheet" href="assets/landing/base.css" />
-<link rel="stylesheet" href="assets/landing/components.css" />
+<link rel="stylesheet" href="assets/landing/components.css?v=2" />
 
 <style>
   body { background: var(--paper); }
@@ -75,6 +75,45 @@
     transition: color var(--d-quick) var(--ease-glide);
   }
   .legal-back:hover { color: var(--atlas); }
+
+  @media (max-width: 620px) {
+    .legal { padding-top: var(--s-10); }
+    .legal h1 { font-size: 36px; }
+    .legal .lede { font-size: 17px; }
+
+    /* Four desktop columns become labelled records. This keeps every cookie
+       definition readable without making the whole legal page scroll sideways. */
+    .legal table,
+    .legal tbody,
+    .legal tr,
+    .legal td { display: block; width: 100%; }
+    .legal table { max-width: 100%; overflow: hidden; }
+    .legal thead { display: none; }
+    .legal tr {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--paper-line);
+    }
+    .legal tr:last-child { border-bottom: 0; }
+    .legal td {
+      display: grid;
+      grid-template-columns: minmax(76px, 0.32fr) minmax(0, 1fr);
+      gap: 12px;
+      padding: 7px 14px;
+      border: 0;
+      overflow-wrap: anywhere;
+    }
+    .legal td::before {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--n-500);
+    }
+    .legal td:nth-child(1)::before { content: "Nom"; }
+    .legal td:nth-child(2)::before { content: "Type"; }
+    .legal td:nth-child(3)::before { content: "Durée"; }
+    .legal td:nth-child(4)::before { content: "Finalité"; }
+  }
 </style>
 </head>
 <body>

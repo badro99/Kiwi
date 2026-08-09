@@ -4147,6 +4147,10 @@ body.design-vexel[data-vexel-mode="light"] :is(.vexel-rail-card, .vexel-goals-ca
   body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-val {
     font-size: 36px;
   }
+
+  body.design-vexel[data-vexel-mode] .vexel-revenue-row .cmp-btn {
+    min-height: 44px;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
