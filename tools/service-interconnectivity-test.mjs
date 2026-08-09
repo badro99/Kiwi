@@ -45,9 +45,10 @@ const floor = {
   staff: [{ id: 'fs-sara', name: 'Sara Service' }, { id: 'fs-omar', name: 'Omar Service' }],
   zones: [{ id: 'z1', name: 'Salle' }],
   tables: [
-    { id: 't1', num: '1', zone: 'z1', server: 'fs-sara', seats: 4 },
+    { id: 't1', num: '1', zone: 'z1', server: 'tm-sara', servers: ['tm-sara'], seats: 4 },
     { id: 't2', num: '2', zone: 'z1', server: 'fs-omar', seats: 4 },
     { id: 't3', num: '3', zone: 'z1', server: '', seats: 2 },
+    { id: 't4', num: '4', zone: 'z1', server: 'tm-sara', servers: ['tm-sara', 'tm-omar'], seats: 4 },
   ],
 };
 const attendance = { entries: [
@@ -136,6 +137,21 @@ ok(!saraQueue.body.orders.some((order) => order.id === 'ord-before-shift'),
 const omarQueue = await qget(omarCookie);
 ok(omarQueue.response.status === 200 && omarQueue.body.service.mineTables.includes('2'), 'Omar garde la propriété de sa table');
 
+put(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 'ord-shared-orderpro', merchant, 92, 'table', '4', 80,
+  JSON.stringify([{ id: 'i1', name: 'Tajine', qty: 1, unitPrice: 80 }]), 'pending', now + 10, now + 10, 'sess-shared');
+let sharedSara = await qget(saraCookie), sharedOmar = await qget(omarCookie);
+ok(sharedSara.body.service.mineTables.includes('4') && sharedOmar.body.service.mineTables.includes('4')
+  && sharedSara.body.orders.some((order) => order.id === 'ord-shared-orderpro' && order.status === 'pending')
+  && sharedOmar.body.orders.some((order) => order.id === 'ord-shared-orderpro' && order.status === 'pending'),
+  'OrderPro atteint tous les serveurs affectés à une même table');
+await qpost(ownerCookie, { merchant, id: 'ord-shared-orderpro', status: 'accepted' });
+await qpost(ownerCookie, { merchant, id: 'ord-shared-orderpro', status: 'ready' });
+sharedSara = await qget(saraCookie); sharedOmar = await qget(omarCookie);
+ok(sharedSara.body.orders.some((order) => order.id === 'ord-shared-orderpro' && order.status === 'ready')
+  && sharedOmar.body.orders.some((order) => order.id === 'ord-shared-orderpro' && order.status === 'ready'),
+  'le KDS prêt atteint tous les serveurs affectés à la table');
+
 result = await qpost(ownerCookie, { merchant, id: saraOrderId, status: 'ready' });
 ok(result.response.status === 200 && result.body.status === 'ready', 'le KDS publie le statut prêt');
 saraQueue = await qget(saraCookie);
@@ -152,6 +168,19 @@ ok(response.status === 200 && saraEvents.events.length === 1, 'seule la serveuse
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: omarCookie } });
 response = await eventsGet({ request, env }); const omarEvents = await json(response);
 ok(response.status === 200 && omarEvents.events.length === 0, "le collègue non affecté ne reçoit pas l'évènement");
+ok(saraEvents.events[0].serverId === 'sara' && saraEvents.events[0].serverIds.includes('sara'),
+  "les notifications convertissent l'ancien identifiant tm- vers le compte employé réel");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, event: { type: 'table-seated', table: '4', customer: 'Famille Partagée', covers: 4 },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
+const seatedSara = await json(await eventsGet({ request, env }));
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: omarCookie } });
+const seatedOmar = await json(await eventsGet({ request, env }));
+ok(seatedSara.events.some((event) => event.table === '4' && event.type === 'table-seated')
+  && seatedOmar.events.some((event) => event.table === '4' && event.type === 'table-seated'),
+  'un client installé alerte tous les serveurs affectés à la table');
 
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, snapshot: { tables: [{ table: '3', status: 'a-commander', covers: 2, lines: [] }] },
