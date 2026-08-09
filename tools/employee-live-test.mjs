@@ -35,7 +35,10 @@ put('INSERT INTO merchant_config (merchant,features,plan,type,status,name,update
 put('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)',
   'pin-voisin', 'voisin', '1357', 'Autre Employé', 'Serveur', now);
 const team = {
-  members: [{ id: 'mem-sara', firstName: 'Sara', lastName: 'Serveuse', email: 'sara@amira.test', function: 'Serveur', department: 'Salle', pinCode: '2468' }],
+  members: [
+    { id: 'mem-sara', firstName: 'Sara', lastName: 'Serveuse', email: 'sara@amira.test', function: 'Serveur', department: 'Salle', pinCode: '2468' },
+    { id: 'mem-nora', firstName: 'Nora', lastName: 'Soir', email: 'nora@amira.test', function: 'Serveur', department: 'Salle', pinCode: '1357' },
+  ],
   shifts: { 'mem-sara': { '2026-08-05': { start: '12:00', end: '20:00' } } },
   hours: { 'mem-sara': {} },
 };
@@ -104,9 +107,19 @@ const stateRes = await get(cookie);
 const state = await stateRes.json();
 ok(stateRes.status === 200 && state.employee.id === 'mem-sara', 'le profil vient du roster cloud du magasin');
 ok(state.floor.tables.length === 1 && state.floor.tables[0].num === '1', 'le plan de salle réel atteint l’app employé');
-ok(JSON.stringify(state.floor.tables[0].servers) === JSON.stringify(['fs1', 'fs2', 'fs3'])
-  && state.floor.tables[0].server === 'fs1',
-  'les trois affectations atteignent l’app employé et la première reste compatible avec la caisse');
+ok(JSON.stringify(state.floor.tables[0].servers) === JSON.stringify(['mem-sara', 'mem-nora', 'fs3'])
+  && state.floor.tables[0].server === 'mem-sara',
+  "les identifiants propres au plan sont résolus vers les vrais comptes employés");
+const reassignedFloor = structuredClone(floor);
+reassignedFloor.tables[0].server = 'tm-mem-nora';
+reassignedFloor.tables[0].servers = ['tm-mem-nora'];
+put("UPDATE store_docs SET data=?, rev=rev+1, updated_ts=? WHERE merchant='amira-cafe' AND feature='floorplan'",
+  JSON.stringify(reassignedFloor), now + 1);
+const reassignedRes = await get(cookie); const reassignedState = await reassignedRes.json();
+ok(reassignedRes.status === 200
+  && reassignedState.floor.tables[0].server === 'mem-nora'
+  && JSON.stringify(reassignedState.floor.tables[0].servers) === JSON.stringify(['mem-nora']),
+  "une nouvelle affectation du dashboard remplace l'ancienne au prochain rafraîchissement employé");
 ok(!JSON.stringify(state).includes('Yassir'), 'aucune donnée de démonstration ne fuit dans la réponse live');
 
 // A PIN roster can reach the cloud before the larger Team document. The small

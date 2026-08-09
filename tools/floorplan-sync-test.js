@@ -220,6 +220,9 @@ function run(opts) {
   ok('une table conserve jusqu’à trois serveurs et garde le premier pour les anciens clients',
     /const PDS_MAX_TABLE_SERVERS = 3/.test(PAGES)
     && /table\.servers = clean;[\s\S]{0,160}table\.server = clean\[0\] \|\| null/.test(PAGES));
+  ok("l'API employé résout les identifiants du plan vers les vrais comptes Équipe",
+    /function normalizedFloorStaff\(raw, members\)/.test(
+      fs.readFileSync(path.join(ROOT, 'functions', 'api', 'employee.js'), 'utf8')));
   ok('l’inspecteur expose exactement trois emplacements de serveur',
     /\$\{\[0,1,2\]\.map\(slot =>/.test(PAGES));
   ok('glisser un serveur ajoute une affectation sans écraser les précédentes',

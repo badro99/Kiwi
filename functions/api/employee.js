@@ -136,18 +136,35 @@ function safeProgress(raw) {
     updatedTs: Math.max(0, Number(value.updatedTs) || 0),
   };
 }
-function sanitizedFloor(raw) {
+function normalizedFloorStaff(raw, members) {
+  const staff = Array.isArray(raw && raw.staff) ? raw.staff : [];
+  const team = Array.isArray(members) ? members : [];
+  const teamIds = new Set(team.map((m) => String(m && m.id || '')).filter(Boolean));
+  const teamByName = new Map(team.map((m) => [fullName(m).toLocaleLowerCase('fr'), String(m && m.id || '')]));
+  const floorNames = new Map(staff.map((s) => [String(s && s.id || ''), String(s && s.name || '')]));
+  function memberId(value) {
+    const rawId = String(value || '');
+    if (!rawId) return '';
+    if (teamIds.has(rawId)) return rawId;
+    const legacyId = rawId.startsWith('tm-') ? rawId.slice(3) : '';
+    if (legacyId && teamIds.has(legacyId)) return legacyId;
+    return teamByName.get(String(floorNames.get(rawId) || '').trim().toLocaleLowerCase('fr')) || rawId;
+  }
+  return { staff, memberId };
+}
+function sanitizedFloor(raw, members) {
   const d = raw && typeof raw === 'object' ? raw : {};
+  const normalized = normalizedFloorStaff(d, members);
   return {
     zones: (Array.isArray(d.zones) ? d.zones : []).map((z) => ({ id: String(z.id || ''), name: String(z.name || 'Salle') })),
     tables: (Array.isArray(d.tables) ? d.tables : []).map((t) => ({
       id: String(t.id || ''), num: String(t.num || t.id || ''), zone: String(t.zone || ''),
       type: String(t.type || ''), seats: Math.max(0, Number(t.seats) || 0),
-      status: String(t.status || 'free'), server: t.server == null ? '' : String(t.server),
+      status: String(t.status || 'free'), server: normalized.memberId(t.server),
       servers: Array.from(new Set((Array.isArray(t.servers) ? t.servers : [t.server])
-        .filter(Boolean).map((id) => String(id)))).slice(0, 3),
+        .filter(Boolean).map(normalized.memberId).filter(Boolean))).slice(0, 3),
     })),
-    staff: (Array.isArray(d.staff) ? d.staff : []).map((s) => ({ id: String(s.id || ''), name: String(s.name || '') })),
+    staff: normalized.staff.map((s) => ({ id: normalized.memberId(s.id), name: String(s.name || '') })),
   };
 }
 async function payloadFor(request, env) {
@@ -190,7 +207,7 @@ async function payloadFor(request, env) {
     messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])
       .filter((message) => message && (message.target === 'ALL' || String(message.target || '') === me.id))
       .slice(-100),
-    floor: sanitizedFloor(floorRow.data),
+    floor: sanitizedFloor(floorRow.data, members),
   };
 }
 
