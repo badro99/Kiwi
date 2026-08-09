@@ -168,7 +168,8 @@ async function routeRequest(context) {
   /* Only a clocked-in floor-service employee may cross from the private
    * employee app into the shared operational channels. Kitchen/dishwasher and
    * off-shift accounts remain limited to schedule, hours and pointage. */
-  if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients')
+  if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients'
+      || path === '/api/sale')
       && authSecret && await activeServiceEmployee(request, env)) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui

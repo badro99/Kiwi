@@ -295,6 +295,13 @@ const employeePayment = {
 };
 put(`INSERT OR REPLACE INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
      VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now, now);
+request = new Request('https://kiwi.test/api/sale', {
+  method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ merchant, ...employeePayment }),
+});
+response = await gate({ request, env, next: () => new Response('next') });
+ok(response.status === 200 && await response.text() === 'next',
+  "la porte edge laisse le serveur pointé atteindre l'encaissement");
 let paid = await employeeSale(saraCookie, employeePayment);
 ok(paid.response.status === 200 && paid.body.ok,
   "un serveur pointé inscrit le paiement dans le même journal cloud que la caisse");
