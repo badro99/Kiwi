@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v294';
+var CACHE = 'kiwi-app-v295';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -208,7 +208,11 @@ var SHELL = [
   '/assets/icons/kiwi-caisse.svg',
   '/assets/kiwi-newlogo.svg',
   '/assets/icons/kiwi-caisse-192.png',
-  '/assets/icons/kiwi-caisse-180.png'
+  '/assets/icons/kiwi-caisse-180.png',
+  '/assets/icons/kiwi-new-k.svg',
+  '/assets/icons/kiwi-employee-k-192.png',
+  '/assets/icons/kiwi-employee-k-512.png',
+  '/assets/icons/kiwi-employee-k-180.png'
 ];
 
 self.addEventListener('install', function (e) {
