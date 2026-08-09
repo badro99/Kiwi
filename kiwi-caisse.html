@@ -14703,6 +14703,14 @@
       const id = caisseTableId(o.table);
       const t = id && tables[id];
       if (!t) return false;
+      const activeSeat = phoneSeats.get(tableKey(o.table));
+      /* A table is reused hundreds of times. Only tickets from its CURRENT
+         session belong to this bill. Legacy employee rows have a server but no
+         session; importing them is precisely how one new item became eight in
+         caisse while KDS correctly showed only the new ticket. */
+      if (o.session && (!activeSeat || String(activeSeat.session) !== String(o.session))) return false;
+      if (!o.session && o.server) return false;
+      if (!o.session && activeSeat && Number(o.created_ts || 0) < Number(activeSeat.since || 0)) return false;
 
       if (o.number != null && !t.orderNo) {
         t.orderNo = (o.channel || 'kiwi') === 'kiwi' ? 'OP-' + String(o.number) : String(o.number);
@@ -14744,7 +14752,8 @@
           uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
-          sent: true, orderProLine: marker, orderProPending: o.status === 'pending',
+          sent: true, orderProLine: marker, orderSession: String(o.session || ''),
+          orderProPending: o.status === 'pending',
         });
         changed = true;
       });
@@ -14777,9 +14786,12 @@
          The queue returns it so remote KDS screens can see it; feeding that
          same ticket through the OrderPro/employee bill bridge added its lines
          a second time to the table while KDS (correctly idempotent on opId)
-         still showed only one. `known` also protects stores whose older DB
-         cannot persist the `caisse` channel yet. */
-      if (!known && o.channel !== 'caisse') {
+         still showed only one. */
+      /* Bill attachment has its own idempotent line markers. Run it even when
+         the KDS ticket is already known: after the one-time browser cleanup,
+         the current session must be able to rebuild its legitimate bill from
+         the canonical queue without manufacturing another KDS ticket. */
+      if (o.channel !== 'caisse') {
         attachOrderProTable(o);
       } else if (o.channel === 'caisse' && o.mode === 'table') {
         /* Repair only the exact echo rows created by the old bug. A genuine
@@ -14903,8 +14915,6 @@
          complet et se relisent telles quelles. */
       ingest(delta, all, sessions) {
         let touched = false;
-        (delta || []).forEach(o => { opIngest(o); touched = true; });
-
         /* Qui est assis, et où une commande attend. Les deux viennent de la
            même réponse, donc le plan de salle ne se contredit jamais avec la
            file. On reconstruit les deux cartes à neuf plutôt que d'y ajouter :
@@ -14924,6 +14934,12 @@
             touched = true;
           }
         });
+        /* Install the current visit map BEFORE ingesting its changed orders.
+           attachOrderProTable can then reject a stale order from an earlier
+           visit to the same physical table. */
+        const seatsChanged = !sameMap(seats, phoneSeats, (a, b) => a.session === b.session);
+        phoneSeats.clear(); seats.forEach((v, k) => phoneSeats.set(k, v));
+        (delta || []).forEach(o => { opIngest(o); touched = true; });
         const pend = new Map();
         (all || []).forEach(o => {
           if (o.mode !== 'table' || o.status !== 'pending' || !o.table) return;
@@ -14931,9 +14947,7 @@
           pend.set(k, (pend.get(k) || 0) + 1);
         });
 
-        const changed = !sameMap(seats, phoneSeats, (a, b) => a.session === b.session)
-                     || !sameMap(pend, phonePending, (a, b) => a === b);
-        phoneSeats.clear(); seats.forEach((v, k) => phoneSeats.set(k, v));
+        const changed = seatsChanged || !sameMap(pend, phonePending, (a, b) => a === b);
         phonePending.clear(); pend.forEach((v, k) => phonePending.set(k, v));
 
         if (changed) { storeIsReal() ? renderRealGrid() : renderSalle(); }
@@ -15001,6 +15015,7 @@
     let serviceFloorSince = 0;
     let serviceFloorPolling = false;
     const SERVICE_BILL_SYNC_VERSION = 4;
+    const ORDER_BRIDGE_SYNC_VERSION = 2;
     const serviceFloorLegacyTables = new Set();
     const serviceFloorLocalVersion = Object.create(null);
     function serviceFloorSnapshot() {
@@ -15130,6 +15145,7 @@
              prêtée d'un commerce à l'autre suffisait. */
           merchant: shiftMerchant,
           serviceBillSyncVersion: SERVICE_BILL_SYNC_VERSION,
+          orderBridgeSyncVersion: ORDER_BRIDGE_SYNC_VERSION,
           openedAt: shiftOpenedAt.toISOString(),
           openedBy: shiftOpenedBy,
           openingFloat: openingFloat,
@@ -15359,6 +15375,18 @@
           saved.tableOrders[id] = (saved.tableOrders[id] || []).filter((line) =>
             !String(line && line.uid || '').startsWith('employee-'));
         });
+      }
+      if (storeIsReal() && Number(saved.orderBridgeSyncVersion || 0) < ORDER_BRIDGE_SYNC_VERSION) {
+        /* Earlier bridge versions persisted every employee/OrderPro row under
+           the physical table number, without the visit/session that owned it.
+           Drop bridge rows once; the queue immediately reattaches only rows
+           belonging to the currently open table session. Cashier-authored
+           lines have no orderProLine marker and are deliberately preserved. */
+        Object.keys(saved.tableOrders || {}).forEach((id) => {
+          saved.tableOrders[id] = (saved.tableOrders[id] || []).filter((line) =>
+            !String(line && line.orderProLine || ''));
+        });
+        saved.orderBridgeSyncVersion = ORDER_BRIDGE_SYNC_VERSION;
       }
       restoreShift(saved);
       enterShellDirectly();

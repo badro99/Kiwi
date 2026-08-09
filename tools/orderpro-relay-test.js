@@ -633,6 +633,15 @@ async function get(fn, qs, headers = {}) {
     JSON.stringify(again.body));
   ok('…et la cuisine n\'a qu\'un ticket',
     DB._db.prepare("SELECT COUNT(*) n FROM orders WHERE merchant=? AND table_no='T10'").get(SALLE).n === 1);
+  await post(queuePost, { merchant: SALLE, closeTable: 'T10', closedBy: 'service' }, asSalle);
+  const lateReplay = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
+    lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('un retry Wi-Fi après paiement ne rouvre pas une nouvelle visite',
+    lateReplay.body.replayed === true
+      && DB._db.prepare("SELECT COUNT(*) n FROM table_sessions WHERE merchant=? AND table_no='T10' AND status='open'").get(SALLE).n === 0,
+    JSON.stringify(lateReplay.body));
 
   /* Tenancy. `entitledMerchant` ne REFUSE pas un slug étranger réclamé par un
    * commerçant connecté : il le ramène à SON établissement (voir le commentaire

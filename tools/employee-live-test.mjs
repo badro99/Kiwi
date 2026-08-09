@@ -267,6 +267,7 @@ ok(configClientSource.includes('scopeConfirmed = true')
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
+const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
 ok(serviceSource.includes('tableServerIds(t).includes(currentUser)')
   && serviceSource.includes('tableServerIds(tables[id]).includes(sid)'),
@@ -367,6 +368,12 @@ ok(serviceSource.includes('function reconcileCanonicalServiceBill(table)')
   && caisseSource.includes('Employee snapshots synchronize OCCUPANCY, never the bill.')
   && !caisseSource.includes('tableOrders[id] = cloudLines.map'),
   "la file des commandes est l'unique source des articles; les snapshots ne peuvent plus fabriquer une addition");
+ok(queueSource.includes('ensureServiceTableSession')
+  && queueSource.includes('client_ref, session_id')
+  && caisseSource.includes('ORDER_BRIDGE_SYNC_VERSION = 2')
+  && caisseSource.includes('orderSession: String(o.session')
+  && caisseSource.includes('String(activeSeat.session) !== String(o.session)'),
+  "chaque commande employé appartient à une visite de table unique; une ancienne addition ne peut pas rejoindre la suivante");
 ok(serviceSource.includes("uid: 'order-' + order.id + '-' + index")
   && serviceSource.includes("cloudKey: 'order:' + order.id + ':' + index")
   && serviceSource.includes('Object.keys(tables).forEach((table) => reconcileCanonicalServiceBill(table))'),

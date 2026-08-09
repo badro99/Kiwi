@@ -87,6 +87,10 @@ async function employeeSale(cookie, body) {
 
 let result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [{ id: 'i1', qty: 1 }] });
 ok(result.response.status === 200 && result.body.ok && result.body.total === 80, 'le serveur pointé envoie sa table en cuisine');
+const firstSession = db.prepare("SELECT id FROM table_sessions WHERE merchant=? AND table_no='1' AND status='open'").get(merchant);
+ok(/^tsx-[A-Za-z0-9]{22}$/.test(String(result.body.session || ''))
+  && firstSession && firstSession.id === result.body.session,
+  'le bon employé est rattaché à une visite de table unique');
 const saraOrderId = result.body.id;
 let request, response;
 request = new Request(`https://kiwi.test/api/employee-clients?merchant=${merchant}`, { headers: { Cookie: saraCookie } });
@@ -262,8 +266,6 @@ ok(response.status === 200 && caisseState.states['1'].status === 'khawya'
   && caisseState.states['1'].source === 'employee'
   && Array.isArray(caisseState.states['1'].lines) && caisseState.states['1'].lines.length === 0,
   'la caisse reçoit immédiatement la fermeture et aucune ancienne ligne ne survit');
-put(`INSERT INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
-     VALUES (?,?,?,?,?,?,?)`, 'sess-stale-table-1', merchant, 'table', '1', 'open', now, now);
 result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
   'fermer côté serveur coupe aussi la session OrderPro qui rouvrait la table');

@@ -247,7 +247,14 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('un rechargement en plein service ne duplique pas les bons',
     /kdsOrders\.find\(t => t && t\.opId === o\.id\)/.test(CAISSE));
   ok('un bon revenu de cette caisse ne double jamais la ligne de la table',
-    /if \(!known && o\.channel !== 'caisse'\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE));
+    /if \(o\.channel !== 'caisse'\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE));
+  ok('une addition employé ne reçoit que la visite actuellement ouverte',
+    /o\.session[\s\S]{0,180}?activeSeat\.session/.test(CAISSE)
+      && /!o\.session && o\.server/.test(CAISSE)
+      && /orderSession: String\(o\.session/.test(CAISSE));
+  ok('les anciennes lignes sans visite sont nettoyées une fois puis reconstruites depuis la file',
+    /ORDER_BRIDGE_SYNC_VERSION = 2/.test(CAISSE)
+      && /saved\.orderBridgeSyncVersion[\s\S]{0,700}?line\.orderProLine/.test(CAISSE));
   ok('une ancienne copie porteuse du même bon caisse est réparée précisément',
     /o\.channel === 'caisse'[\s\S]{0,700}?line\.orderProLine[\s\S]{0,100}?startsWith\(String\(o\.id\) \+ ':'\)/.test(CAISSE));
   ok('une nouvelle caisse ne recharge pas les tables du service précédent',
