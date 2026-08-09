@@ -10490,6 +10490,51 @@
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
     }
 
+    /* Payments completed on a waiter phone already exist in the SAME cloud
+       sales ledger as till payments. Mirror only those employee-tagged rows
+       into this open till's local day journal: the cashier then sees the sale,
+       its products and tender without recording the money a second time.
+       Backfill is intentional after a caisse reload, but never crosses the
+       current shift boundary. */
+    let employeeSaleFeedStarted = false;
+    function startEmployeeSaleJournalSync() {
+      if (employeeSaleFeedStarted || !window.KiwiLive || !KiwiLive.watchFeed) return;
+      employeeSaleFeedStarted = true;
+      KiwiLive.watchFeed((sales) => {
+        if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return;
+        let changed = false;
+        (sales || []).forEach((sale) => {
+          if (!sale || !String(sale.id || '').endsWith('-emp')) return;
+          if (Number(sale.ts || 0) < shiftOpenedAt.getTime()) return;
+          if (journal.some((entry) => entry && String(entry.id) === String(sale.id))) return;
+          const entry = {
+            id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),
+            label: String(sale.label || 'Paiement équipe'), amount: money(sale.amount),
+            method: String(sale.method || 'cash'), ref: String(sale.ref || sale.id),
+            tip: 0, cashier: String(sale.label || '').split(' · ').slice(1).join(' · ') || 'Équipe',
+          };
+          if (Array.isArray(sale.lines) && sale.lines.length) {
+            entry.lines = sale.lines.map((line) => ({
+              name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
+              total: money(line.total), cat: String(line.cat || ''),
+            }));
+          }
+          attachReceipt(entry);
+          journal.push(entry);
+          shift.tablesPaid++;
+          changed = true;
+        });
+        if (!changed) return;
+        try { persistShift(); } catch (_) {}
+        try { saveProvisional(true); } catch (_) {}
+        renderShiftStats();
+        if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startEmployeeSaleJournalSync, { once: true });
+    } else startEmployeeSaleJournalSync();
+
     /* ═══════════ CLIENT & FIDÉLITÉ SUR LA NOTE ══════════════════════════════
      * assets/clients-store.js (le carnet) et assets/clients-book.js (l'écran)
      * étaient chargés sur ce comptoir depuis le début, et RIEN dans cette page

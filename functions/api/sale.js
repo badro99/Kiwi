@@ -45,7 +45,11 @@ export async function onRequestPost({ request, env }) {
    * path to undo it. The rule is feed.js's, now shared (auth/_lib.js). A paired
    * till writes to the store it was bound to; a signed-in merchant to its own,
    * whatever the body claimed. */
-  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
+  /* A clocked-in service employee may settle a table from the employee app.
+   * `allowEmployee` is deliberately backed by activeServiceEmployee(): the
+   * signed employee cookie alone is not enough, and an off-shift waiter still
+   * cannot write money into the ledger. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
 
   /* Un établissement suspendu n'encaisse plus. C'est le seul endroit où la

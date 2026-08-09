@@ -333,6 +333,12 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
+ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
+  && caisseSource.includes("String(sale.id || '').endsWith('-emp')")
+  && caisseSource.includes('Number(sale.ts || 0) < shiftOpenedAt.getTime()')
+  && caisseSource.includes('journal.push(entry)')
+  && caisseSource.includes('saveProvisional(true)'),
+  "un paiement téléphone rejoint une seule fois le journal du service caisse avec ses lignes");
 ok(caisseSource.includes('id="open-attendance-code"')
   && caisseSource.includes("action: 'generate-attendance-code'")
   && caisseSource.includes('Valide encore'),
@@ -361,6 +367,19 @@ ok(!serviceSource.includes("const queueKey = 'order:' + order.id + ':' + index")
   "l'addition courante circule dans les deux sens sans rejouer l'historique au rechargement");
 ok(!/serviceEventSeen\.add\(event\.id\);\s*const id = serviceTableId/.test(serviceSource),
   "la notification de placement n'est pas marquée lue avant d'être affichée");
+ok(serviceSource.includes('function clearEmployeeOperationalState()')
+  && serviceSource.includes('serviceDraftTimers.forEach((timer) => clearTimeout(timer))')
+  && serviceSource.includes('Object.keys(tableOrders).forEach((id) => delete tableOrders[id])')
+  && /function resetToEmployeePortal[\s\S]*?clearEmployeeOperationalState\(\)/.test(serviceSource)
+  && /function logoutEmployeeSession[\s\S]*?clearEmployeeOperationalState\(\)/.test(serviceSource),
+  "changer de compte annule les uploads différés et efface l'addition mémoire de l'employé précédent");
+ok(serviceSource.includes("state.source === 'employee' && currentShiftStart")
+  && serviceSource.includes('Number(state.ts || 0) < currentShiftStart'),
+  "un nouveau pointage ne ressuscite pas le brouillon employé d'un service précédent");
+ok(serviceSource.includes("+ '-emp'")
+  && serviceSource.includes('id: paymentId')
+  && serviceSource.includes('lines: paidLines'),
+  "chaque addition employé possède une vente unique, détaillée et rejouable sans doublon");
 ok(serviceSource.includes('--app-height: 100dvh')
   && serviceSource.includes('height: var(--app-height)')
   && serviceSource.includes('--safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px)')
@@ -369,6 +388,10 @@ ok(serviceSource.includes('--app-height: 100dvh')
 const employeePwaSource = fs.readFileSync(path.join(ROOT, 'assets/employee-pwa.js'), 'utf8');
 ok(employeePwaSource.includes('beforeinstallprompt') && employeePwaSource.includes('Installer l’app'),
   "le portail propose son installation sur l'écran d'accueil après connexion");
+const liveLinkSource = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+ok(liveLinkSource.includes("localStorage.getItem('kiwiEmployeeMerchant')")
+  && liveLinkSource.includes('if (employeeMerchant) return employeeMerchant'),
+  "le paiement employé route vers son magasin avant la validation serveur du pointage");
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');
