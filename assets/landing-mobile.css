@@ -74,11 +74,94 @@
   }
 
   #kw-mobile-menu {
+    display: flex !important;
+    max-height: calc(100svh - 84px);
+    gap: 12px !important;
+    padding: 16px !important;
+    overflow-y: auto;
     background: rgba(0, 8, 6, 0.97) !important;
     border-color: rgba(125, 242, 176, 0.2) !important;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
     -webkit-backdrop-filter: blur(22px) saturate(120%);
     backdrop-filter: blur(22px) saturate(120%);
+  }
+
+  #kw-mobile-menu > a {
+    min-height: 40px;
+  }
+
+  #kw-mobile-menu > a:last-child {
+    height: 44px !important;
+  }
+
+  /* Phone sections should flow from their content. The exported desktop page
+   * uses theatrical vertical staging; on a narrow screen that reads as blank
+   * pages between each message. Keep the storytelling, remove the dead air. */
+  main > section:not(#top) {
+    padding-inline: 20px !important;
+  }
+
+  main > section:not(#top) h2 {
+    font-size: clamp(28px, 8vw, 34px) !important;
+    line-height: 1.08 !important;
+    text-wrap: balance;
+  }
+
+  main > section:not(#top) p {
+    text-wrap: pretty;
+  }
+
+  #features {
+    padding-top: 150px !important;
+    padding-bottom: 48px !important;
+  }
+
+  #features > div,
+  #security > div {
+    gap: 40px !important;
+  }
+
+  main > section:nth-child(4) {
+    padding-top: 24px !important;
+  }
+
+  main > section:nth-child(4) > div {
+    gap: 8px;
+  }
+
+  main > section:nth-child(4) [data-reveal] {
+    gap: 24px !important;
+    padding-block: 32px !important;
+  }
+
+  main > section:nth-child(4) [data-reveal] a {
+    margin-top: 10px !important;
+  }
+
+  #security {
+    padding-top: 56px !important;
+  }
+
+  #market {
+    padding-block: 56px !important;
+  }
+
+  #testimonials,
+  #stats {
+    padding-block: 52px !important;
+  }
+
+  #pricing {
+    gap: 32px !important;
+    padding-bottom: 64px !important;
+  }
+
+  #pricing > div:nth-child(3) {
+    gap: 16px !important;
+  }
+
+  #cta {
+    min-height: 440px !important;
   }
 }
 
@@ -96,6 +179,123 @@
   #top h1 + p {
     font-size: 14px !important;
     line-height: 1.45 !important;
+  }
+}
+
+/* Width-only breakpoints turn a phone sideways into a desktop. In landscape,
+ * use the short axis as the signal and compose a compact two-column hero. */
+@media (orientation: landscape) and (min-width: 600px) and (max-width: 950px) and (max-height: 520px) {
+  header {
+    height: 76px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  header > div {
+    padding: 12px 20px !important;
+  }
+
+  header > div > nav,
+  header > div > [role="group"] {
+    display: none !important;
+  }
+
+  header > div > button[aria-controls="kw-mobile-menu"] {
+    display: flex !important;
+  }
+
+  #kw-mobile-menu {
+    display: flex !important;
+    max-height: calc(100svh - 84px);
+    gap: 12px !important;
+    padding: 16px !important;
+    overflow-y: auto;
+    background: rgba(0, 8, 6, 0.97) !important;
+    border-color: rgba(125, 242, 176, 0.2) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
+    backdrop-filter: blur(22px) saturate(120%);
+  }
+
+  #kw-mobile-menu > a {
+    min-height: 40px;
+  }
+
+  #kw-mobile-menu > a:last-child {
+    height: 44px !important;
+  }
+
+  #top {
+    height: auto !important;
+    min-height: 520px !important;
+    padding: 96px 24px 30px !important;
+  }
+
+  #top > .sticky {
+    position: relative !important;
+    bottom: auto !important;
+    width: 54%;
+    margin: 0;
+    align-items: flex-start;
+    gap: 10px !important;
+  }
+
+  #top > .sticky > div:first-child {
+    width: fit-content;
+    max-width: 100%;
+    height: auto !important;
+    min-height: 30px;
+    padding: 6px 12px !important;
+    text-align: start;
+  }
+
+  #top > .sticky > div:first-child span {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  #top > .sticky > div:nth-child(2) {
+    align-items: flex-start;
+  }
+
+  #top h1 {
+    max-width: 460px;
+    font-size: clamp(30px, 4.4vw, 38px) !important;
+    line-height: 1 !important;
+    text-align: start !important;
+    text-wrap: balance;
+  }
+
+  #top h1 br {
+    display: none;
+  }
+
+  #top h1 + p {
+    max-width: 440px;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    text-align: start !important;
+  }
+
+  #top h1 + p + div {
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding-block: 6px !important;
+  }
+
+  #top h1 + p + div > a {
+    height: 44px !important;
+    min-height: 44px;
+    padding-inline-start: 16px !important;
+    font-size: 14px !important;
+  }
+
+  #top > div:last-child {
+    left: auto !important;
+    right: 24px;
+    bottom: 34px !important;
+    width: 40% !important;
+    height: auto !important;
+    margin-left: 0 !important;
   }
 }
 
