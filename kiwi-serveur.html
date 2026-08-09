@@ -4759,6 +4759,14 @@ em, i, cite, dfn, var { font-style: normal; }
            use the same boundary or yesterday's occupied tables reappear on a
            fresh clock-in merely because the page was reloaded. */
         if (Number(state.ts) && Number(state.ts) < Date.now() - 12 * 60 * 60 * 1000) return;
+        /* Employee drafts from a PREVIOUS attendance period do not belong to a
+           newly clocked-in phone. A real open bill is continuously owned and
+           echoed by the caisse (`source: caisse`), so it still crosses shift
+           changes; an orphan employee-only snapshot does not get resurrected
+           merely because another account signs in on the same device. */
+        const currentShiftStart = shiftStart instanceof Date ? shiftStart.getTime() : 0;
+        if (state.source === 'employee' && currentShiftStart
+          && Number(state.ts || 0) < currentShiftStart) return;
         /* Versions before v2 could publish the sample bill that booted with
            this single-file demo into a real restaurant. Those poisoned states
            are exactly the bills that reappear after refresh. Never hydrate a
@@ -4901,6 +4909,25 @@ em, i, cite, dfn, var { font-style: normal; }
       serviceHistoryKey = '';
       serviceMineTables.clear();
       servicePausedTables.clear();
+    }
+
+    /* A service login is an identity boundary, not just a different name in
+       the header. Table drafts live in memory so they survive navigation inside
+       one shift, but they must NEVER survive logout / clock-out and become the
+       next employee's bill. In particular, cancel every delayed state upload
+       before clearing the lines: otherwise a 300 ms timer created by employee A
+       fires after employee B logs in and republishes A's bill with B's session. */
+    function clearEmployeeOperationalState() {
+      serviceDraftTimers.forEach((timer) => clearTimeout(timer));
+      serviceDraftTimers.clear();
+      dirtyOrders.clear();
+      svPendingRef.clear();
+      Object.keys(tableOrders).forEach((id) => delete tableOrders[id]);
+      tableClients.clear();
+      employeePaymentRefs.clear();
+      serviceBillAwaiting.clear();
+      activeTableId = null;
+      menuContextId = null;
     }
 
     /* ===========================================================
@@ -5175,9 +5202,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function resetToEmployeePortal(message) {
       stopServiceSync();
+      clearEmployeeOperationalState();
       shiftStart = null;
-      activeTableId = null;
-      menuContextId = null;
       tablesPaid = 0;
       pinInput = '';
       renderPinDots();
@@ -5186,6 +5212,11 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function logoutEmployeeSession() {
+      /* Clear synchronously, before the asynchronous cookie logout. A fast
+         second login must not have even one event-loop turn in which the former
+         employee's draft can publish under the new identity. */
+      stopServiceSync();
+      clearEmployeeOperationalState();
       if (!SV_DEMO && window.KiwiEmployeeLive) {
         window.KiwiEmployeeLive.logout().catch(() => {});
       }
@@ -6472,6 +6503,25 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Payment Choice modal ---------- */
     let payTableId = null;
     const tableClients = new Map();
+    /* One id per physical BILL, never per physical table. Reusing `ref: 3` as
+       the sale id meant every later settlement of table 3 looked like a retry
+       of the first one and INSERT OR IGNORE silently dropped it. The id remains
+       stable while a payment is being retried, then a newly opened bill gets a
+       new id. */
+    const employeePaymentRefs = new Map();
+    function employeePaymentId(tableId) {
+      let id = employeePaymentRefs.get(tableId);
+      if (!id) {
+        const random = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        /* The -emp suffix survives Live Link's bounded stable-id encoding and
+           lets the caisse import employee settlements without replaying its own
+           sales back into its local journal. */
+        id = 'employee-' + String(random).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24) + '-emp';
+        employeePaymentRefs.set(tableId, id);
+      }
+      return id;
+    }
     let serviceClientRows = [];
     function renderPayClient() {
       const client = payTableId && tableClients.get(payTableId);
@@ -6744,15 +6794,26 @@ em, i, cite, dfn, var { font-style: normal; }
       const t = tables[id];
       const paidAmount = getTableTotal(id);
       const paidClient = tableClients.get(id);
+      const paidLines = (tableOrders[id] || []).map((line) => {
+        const item = menuItems.find((candidate) => String(candidate.id) === String(line.id));
+        return {
+          name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
+          total: Math.max(0, Number(line.price) || 0) * Math.max(1, Number(line.qty) || 1),
+          cat: item && item.cat ? String(catLabels[item.cat] || item.cat) : '',
+        };
+      });
+      const paymentId = employeePaymentId(id);
       // Live Link — surface this settled table on the owner's dashboard live feed.
       // No-op unless ?live=1 (KiwiLive.postSale gates itself); mirrors the caisse.
       // Capture the amount BEFORE we flip status / clear the order below.
       try {
         if (window.KiwiLive) window.KiwiLive.postSale({
-          amount: getTableTotal(id),
+          id: paymentId,
+          amount: paidAmount,
           method: method || 'card',        // card | cash | split
-          label: 'Table ' + id,
-          ref: id,
+          label: 'Table ' + id + ' · ' + ((activeRole && activeRole.name) || 'Équipe'),
+          ref: paymentId,
+          lines: paidLines,
         });
       } catch (_) {}
       if (paidClient && !SV_DEMO) {
@@ -6776,6 +6837,7 @@ em, i, cite, dfn, var { font-style: normal; }
         if (tables[id]?.status === 'khlass') {
           tables[id].status = 'khawya';
           delete tableOrders[id];
+          employeePaymentRefs.delete(id);
           publishServiceTableState(id, 'khawya', 0, true);
           if (currentTab === 'tables') renderTables();
         }

@@ -147,6 +147,15 @@
         var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (pv && pv.merchant) return pv.merchant;
       } catch (_) {}
+      /* The employee portal has neither KiwiMe (owner identity) nor a paired
+       * till. Its authenticated login pins the exact store here. This value is
+       * only routing metadata: /api/sale independently verifies the signed
+       * employee cookie, live Team membership, service role and open shift, so
+       * changing localStorage cannot grant access to another merchant. */
+      try {
+        var employeeMerchant = String(localStorage.getItem('kiwiEmployeeMerchant') || '').trim();
+        if (employeeMerchant) return employeeMerchant;
+      } catch (_) {}
       var real = false;
       try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
       // A real session whose identity has NOT resolved yet polls NOTHING. The old

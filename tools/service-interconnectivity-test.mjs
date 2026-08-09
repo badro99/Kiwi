@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { employeeToken, employeeCookie, makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestGet as queueGet, onRequestPost as queuePost } from '../functions/api/order/queue.js';
 import { onRequestGet as eventsGet, onRequestPost as eventsPost } from '../functions/api/service/events.js';
+import { onRequestPost as salePost } from '../functions/api/sale.js';
 import { onRequestPost as teamLivePost } from '../functions/api/team/live.js';
 import { onRequestGet as employeeClientsGet, onRequestPost as employeeClientsPost } from '../functions/api/employee-clients.js';
 import { onRequest as gate } from '../functions/_middleware.js';
@@ -75,6 +76,13 @@ async function qget(cookie, since = 0) {
 async function qpost(cookie, body) {
   const request = new Request('https://kiwi.test/api/order/queue', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const response = await queuePost({ request, env }); return { response, body: await json(response) };
+}
+async function employeeSale(cookie, body) {
+  const request = new Request('https://kiwi.test/api/sale', {
+    method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant, ...body }),
+  });
+  const response = await salePost({ request, env }); return { response, body: await json(response) };
 }
 
 let result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '1', lines: [{ id: 'i1', qty: 1 }] });
@@ -279,6 +287,20 @@ ok(result.response.status === 403 && result.body.error === 'employee-on-pause', 
 result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table: '2', lines: [{ id: 'i1', qty: 1 }] });
 ok(result.response.status === 200, 'un collègue pointé couvre la table pendant la pause');
 
+const employeePayment = {
+  id: 'employee-sale-bill-1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
+  lines: [{ name: 'Tajine', qty: 2, total: 180, cat: 'Plats' }],
+};
+let paid = await employeeSale(saraCookie, employeePayment);
+ok(paid.response.status === 200 && paid.body.ok,
+  "un serveur pointé inscrit le paiement dans le même journal cloud que la caisse");
+paid = await employeeSale(saraCookie, employeePayment);
+const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id LIKE 'employee-sale-%'").all(merchant);
+const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
+ok(paid.response.status === 200 && savedPayments.length === 1 && savedPayments[0].amount === 180
+  && savedLines[0].n === 'Tajine' && savedLines[0].q === 2,
+  "un retry Wi-Fi du paiement reste unique et conserve les articles pour l'historique");
+
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, event: { type: 'table-seated', table: '2', server: 'Omar Service', customer: 'Famille Bennis', covers: 3 },
 }) });
@@ -298,6 +320,9 @@ const attendanceOff = { entries: attendance.entries.map((entry) => entry.staffId
 put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant=? AND feature='attendance'", JSON.stringify(attendanceOff), merchant);
 saraQueue = await qget(saraCookie);
 ok(saraQueue.response.status === 403, 'hors service, la commande et les notifications sont fermées');
+paid = await employeeSale(saraCookie, { ...employeePayment, id: 'employee-sale-off-shift' });
+ok(paid.response.status === 403,
+  "hors service, le même compte ne peut pas inscrire un encaissement");
 request = new Request(`https://kiwi.test/api/order/queue?merchant=${merchant}&role=service`, { headers: { Cookie: saraCookie } });
 response = await gate({ request, env, next: () => new Response('next') });
 ok(response.status === 401, 'la porte edge refuse aussi le canal après pointage de sortie');
