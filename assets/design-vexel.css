@@ -3460,7 +3460,7 @@ body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m > .l 
   font-size: 11.5px;
   line-height: 1.2;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -4048,6 +4048,39 @@ body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--e
 body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) [data-stock-card] {
   height: auto !important;
   align-self: start;
+}
+
+/* Venue filtering and the adaptive backfill can put shorter cards beside a
+ * tall heatmap. Flattening both source columns into shared grid rows then
+ * reserves the tall card's height under the short one. Keep the same 2:1
+ * desktop rails but let each rail stack independently, so every promoted card
+ * sits directly below its actual neighbour. */
+@media (min-width: 901px) {
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+    align-items: start;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--vx-card-gap);
+    min-width: 0;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col:first-child {
+    grid-column: 1 / span 2;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col:last-child {
+    grid-column: 3;
+  }
+
+  body.design-vexel[data-vexel-mode] .dash-standard > .dash-cols:not(.dash-cols--even) > .dash-col > * {
+    width: 100%;
+    height: auto !important;
+  }
 }
 
 /* The generated summary cards now share the same quiet response as native
@@ -4886,8 +4919,59 @@ body.design-vexel :is(.vexel-kpi-comparison, .vexel-compose .kpi-m .v .u) {
   color: var(--n-500);
 }
 
+/* Secondary copy remains secondary, but never drops to the decorative n-400
+ * token. These are live figures and chart legends, not disabled controls. */
+body.design-vexel :is(
+  .vexel-goal-values span,
+  .vexel-revenue-row .rev-hero-cur,
+  .vexel-revenue-row [data-rev-sub],
+  .hh-legend
+) {
+  color: var(--n-500);
+}
+
 body.design-vexel .sidebar .sect {
   color: rgba(247, 250, 248, 0.58);
+}
+
+/* Real venues often begin with no cohort, products or staff data. Their empty
+ * messages should be a compact status, not demo-sized canvases. This rule is
+ * intentionally late so it also wins after the layout adapter re-packs cards. */
+body.design-vexel[data-vexel-mode] .dash-more .block.is-empty-state {
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: start;
+  padding-block: 18px !important;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .block.is-empty-state .block-head {
+  margin-bottom: 4px;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .block.is-empty-state > :last-child {
+  padding-block: 14px 6px !important;
+}
+
+body.design-vexel[data-vexel-mode] .dash-more .block.is-empty-state > :last-child > :only-child {
+  padding-block: 14px 6px !important;
+}
+
+/* Mobile.css loads before this skin, so the skin's compact desktop controls
+ * otherwise shrink the phone targets back below 44px. Keep the phone header
+ * in three clear zones and move the redundant merchant chip out at the one
+ * width where it cannot coexist with a centred wordmark. Merchant identity
+ * remains visible in the off-canvas sidebar. */
+@media (max-width: 860px) {
+  body.design-vexel .topbar > .topbar-inner { gap: 8px !important; }
+  body.design-vexel .topbar .icon-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  body.design-vexel .kpi-customize { min-height: 44px !important; }
+}
+
+@media (max-width: 420px) {
+  body.design-vexel .topbar .vexel-topbar-merchant { display: none !important; }
 }
 
 /* Orange partner marks need dark ink; white only reaches 2.36:1 on Glovo's

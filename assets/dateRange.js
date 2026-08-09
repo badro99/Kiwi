@@ -4021,8 +4021,8 @@
       el['inner' + 'HTML'] =
         `<div class="lbl">${t.lbl}</div>` +
         `<div style="padding:28px 4px 8px;text-align:center;">` +
-        `<div style="font-size:14px;font-weight:600;color:var(--paper);">${t.head}</div>` +
-        `<div style="font-size:12px;color:#A8B0C8;margin-top:6px;line-height:1.5;">${t.msg}</div>` +
+        `<div style="font-size:14px;font-weight:600;color:var(--ink);">${t.head}</div>` +
+        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${t.msg}</div>` +
         `</div>`;
     } else if (el['inner' + 'HTML'] !== _eveningOrig) {
       el['inner' + 'HTML'] = _eveningOrig;
@@ -4104,14 +4104,16 @@
     if (ownData()) {
       if (card) {
         const t = HEALTH_EMPTY[lang] || HEALTH_EMPTY.fr;
+        card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
           emptyBlockBody(t.head, t.msg);
       }
       return;
     }
-    if (card && _healthOrig != null && card['inner' + 'HTML'] !== _healthOrig) {
-      card['inner' + 'HTML'] = _healthOrig;
+    if (card) {
+      card.classList.remove('is-empty-state');
+      if (_healthOrig != null && card['inner' + 'HTML'] !== _healthOrig) card['inner' + 'HTML'] = _healthOrig;
     }
     const effective = effRange();
     const data = vData(healthByVenue, currentRange);
@@ -4146,14 +4148,16 @@
     if (ownData() || window.KiwiEnv?.isReal?.()) {
       if (card) {
         const t = BENCH_EMPTY[lang] || BENCH_EMPTY.fr;
+        card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
           emptyBlockBody(t.head, t.msg);
       }
       return;
     }
-    if (card && _benchOrig != null && card['inner' + 'HTML'] !== _benchOrig) {
-      card['inner' + 'HTML'] = _benchOrig;
+    if (card) {
+      card.classList.remove('is-empty-state');
+      if (_benchOrig != null && card['inner' + 'HTML'] !== _benchOrig) card['inner' + 'HTML'] = _benchOrig;
     }
     const effective = effRange();
     const data = vData(benchByVenue, currentRange);
@@ -4212,6 +4216,7 @@
     const manageEl = document.querySelector('[data-products-manage]');
     if (manageEl) manageEl.textContent = (isCustom && pe.manage) || PRODUCTS_MANAGE[lang] || PRODUCTS_MANAGE.fr;
     const list = document.querySelector('[data-products-list]');
+    const card = list?.closest('.block');
     const low = lowEarly;
     if (list && low && low.rows.length) {
       /* Le rang est le degré d'urgence : rupture d'abord, puis le stock le plus
@@ -4248,6 +4253,7 @@
       `).join('');
       growBars(list);
     }
+    if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.prod-row'));
     const sub = document.querySelector('[data-products-sub]');
     if (sub) sub.textContent = (low && low.rows.length)
       ? (STOCK_SUB_STR[lang] || STOCK_SUB_STR.fr)(low.rows.length)
@@ -4267,6 +4273,7 @@
     const titleEl = document.querySelector('[data-staff-title]');
     if (titleEl) titleEl.textContent = (isCustom && se.title) || STAFF_TITLE[lang] || STAFF_TITLE.fr;
     const list = document.querySelector('[data-staff-list]');
+    const card = list?.closest('.block');
     /* Une équipe existe dès qu'un membre est saisi côté Équipe — la carte ne peut
      * plus prétendre le contraire. Les heures viennent de la grille de Paie, donc
      * « en service » veut dire ici exactement ce qu'il veut dire là-bas.
@@ -4302,6 +4309,7 @@
         </div>
       `).join('');
     }
+    if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.staff-row'));
     const sub = document.querySelector('[data-staff-sub]');
     if (sub) sub.textContent = (roster && roster.length)
       ? (STAFF_ONDUTY_STR[lang] || STAFF_ONDUTY_STR.fr)(roster.filter((s) => s.hoursToday > 0).length, roster.length)

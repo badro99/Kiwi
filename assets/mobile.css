@@ -79,13 +79,15 @@
   .topbar .search-big,
   .topbar .ai-btn { display: none !important; }
   .topbar .icon-btn[aria-label="Paramètres"] { display: none; }
-  /* Hamburger stays left, the alert bell is pushed to the right edge —
-   * the wordmark is absolutely centred between them. */
-  .topbar .icon-btn { margin-inline-start: auto; }
+  /* Hamburger stays left, the controls form one right-hand cluster, and the
+   * wordmark remains centred. Giving every icon an auto margin distributed
+   * three growing gaps and pushed the theme control underneath the logo. */
+  .topbar .icon-btn { margin-inline-start: 0; }
+  .topbar .theme-toggle { margin-inline-start: auto; }
 
   .kw-hamburger {
     display: flex; align-items: center; justify-content: center;
-    width: 42px; height: 42px; flex-shrink: 0;
+    width: 44px; height: 44px; flex-shrink: 0;
     border: 1px solid var(--n-200); border-radius: 11px;
     background: var(--surface); color: var(--ink); cursor: pointer;
     transition: background 140ms;
@@ -458,9 +460,10 @@
 
   /* ── Buttons & pills — finger-sized ── */
   .btn-slim, .kb { min-height: 44px; border-radius: 13px; }
-  .dr-pill { min-height: 38px; display: inline-flex; align-items: center; }
-  .kpi-customize { min-height: 38px; }
-  .icon-btn { width: 40px; height: 40px; }
+  .dr-pill { min-height: 44px; display: inline-flex; align-items: center; }
+  .kpi-customize { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .sidebar nav a { min-height: 44px; }
 
   /* ── Hero — premium elevated card ── */
   .hero-today { box-shadow: 0 24px 48px -28px rgba(5, 48, 31, 0.7) !important; }

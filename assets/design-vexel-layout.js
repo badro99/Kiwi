@@ -320,7 +320,10 @@
     var pool = document.querySelector('[data-dash-more]');
     var chip = document.querySelector('[data-dmt-count]');
     if (!pool || !chip) return;
-    var left = [].filter.call(pool.querySelectorAll('.block'), function (b) { return !b.hidden; }).length;
+    /* The integrations panel lives in the same disclosure container, but it is
+     * a utility, not an analysis. Counting it made the chip promise one more
+     * analysis than the merchant could actually open. */
+    var left = [].filter.call(pool.querySelectorAll('.block:not([data-integ-card])'), function (b) { return !b.hidden; }).length;
     chip.textContent = String(left);
     chip.hidden = left === 0;
   }

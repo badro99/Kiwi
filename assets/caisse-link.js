@@ -194,8 +194,9 @@
       '.kcl-status.kcl-warn .kcl-d{background:#D99A2B;box-shadow:none;}' +
       '.kcl-pulse{animation:kcl-pulse 1.6s ease-in-out infinite;}' +
       '@keyframes kcl-pulse{0%,100%{opacity:1}50%{opacity:.35}}' +
-      '.kcl-open{width:100%;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;cursor:pointer;transition:filter .15s;}' +
+      '.kcl-open{width:100%;background:var(--inverse-surface,#053B2C);color:var(--inverse-ink,#F7F5F0);border:1px solid var(--inverse-line,rgba(255,255,255,.18));border-radius:12px;padding:13px;font:inherit;font-weight:700;cursor:pointer;transition:filter .15s;}' +
       '.kcl-open:hover{filter:brightness(1.06);}' +
+      '.kcl-open:focus-visible{outline:3px solid var(--mint,#7DF2B0);outline-offset:3px;}' +
       '.kcl-hint{margin:14px 0 0;font-size:.8rem;line-height:1.5;color:var(--ink,#0A0F0D);opacity:.6;}' +
       /* corner launcher */
       '#kcl-chip{position:fixed;left:20px;bottom:20px;z-index:900;display:inline-flex;align-items:center;gap:9px;' +
@@ -205,7 +206,14 @@
       '#kcl-chip:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(5,59,44,.22);}' +
       '#kcl-chip .kcl-dot{width:9px;height:9px;border-radius:50%;background:#D99A2B;box-shadow:0 0 0 4px rgba(217,154,43,.16);flex:none;}' +
       '#kcl-chip[data-state="on"] .kcl-dot{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.18);}' +
-      '@media (max-width:640px){#kcl-chip{left:14px;bottom:78px;}}' +
+      '#kcl-chip .kcl-mobile-ico{display:none;}' +
+      '@media (max-width:640px){' +
+      '#kcl-chip{left:14px;bottom:calc(88px + env(safe-area-inset-bottom,0px));width:48px;height:48px;padding:0;justify-content:center;}' +
+      '#kcl-chip .kcl-t{display:none;}' +
+      '#kcl-chip .kcl-mobile-ico{display:grid;place-items:center;}' +
+      '#kcl-chip .kcl-mobile-ico svg{width:21px;height:21px;display:block;}' +
+      '#kcl-chip .kcl-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;box-shadow:0 0 0 2px var(--paper,#F7F5F0);}' +
+      '}' +
       /* Docked variant: the chip lives in the sidebar brand row, in the empty
        * strip beside the wordmark. Floating bottom-left, it sat on top of the
        * Ultra upsell card. The sidebar is --ink, so the paper pill and the
@@ -228,7 +236,7 @@
    * kiwiPairedVenue from a code, and removing the backend would unbind them. */
   function panelBody(biz) {
     return '' +
-      '<p class="kcl-lead">La caisse est la ou vos ventes entrent. Reliez votre terminal a ce commerce, chaque encaissement remontera aussitot sur ce tableau de bord.</p>' +
+      '<p class="kcl-lead">La caisse est là où vos ventes entrent. Reliez votre terminal à ce commerce : chaque encaissement remontera aussitôt sur ce tableau de bord.</p>' +
       '<div class="kcl-status" id="kcl-status"><span class="kcl-d kcl-pulse"></span><span id="kcl-status-t">En attente de la caisse…</span></div>' +
       '<button class="kcl-open" type="button" id="kcl-open">Ouvrir la caisse sur cet appareil</button>' +
       '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
@@ -357,7 +365,9 @@
     if (!b) {
       b = document.createElement('button');
       b.id = 'kcl-chip'; b.type = 'button';
-      b.innerHTML = '<span class="kcl-dot"></span><span class="kcl-t">Connecter la caisse</span>';
+      b.innerHTML = '<span class="kcl-dot"></span>' +
+        '<span class="kcl-mobile-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 11h8M9 16h.01M12 16h.01M15 16h.01"/></svg></span>' +
+        '<span class="kcl-t">Connecter la caisse</span>';
       b.addEventListener('click', openPanel);
     }
     placeChip(b);
@@ -368,6 +378,7 @@
     var on = isPaired();
     b.setAttribute('data-state', on ? 'on' : 'off');
     var t = b.querySelector('.kcl-t'); if (t) t.textContent = on ? 'Caisse connectée' : 'Connecter la caisse';
+    b.setAttribute('aria-label', on ? 'Caisse connectée' : 'Connecter la caisse');
   }
 
   function dismissed() { try { return sessionStorage.getItem(SS_DISMISS) === '1'; } catch (_) { return false; } }

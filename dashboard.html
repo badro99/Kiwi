@@ -83,7 +83,10 @@
 
   /* App shell */
   .app { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: calc(100vh - 37px); }
-  @media (max-width: 1100px) { .app { grid-template-columns: 1fr; } }
+  /* The sidebar becomes off-canvas in mobile.css at exactly 860px. Switching
+     this grid any earlier stacked a full-height sidebar above the dashboard
+     throughout the 861–1100px tablet range. Keep both breakpoints aligned. */
+  @media (max-width: 860px) { .app { grid-template-columns: 1fr; } }
 
   /* ─────────────── SIDEBAR ─────────────── */
   .sidebar { background: var(--ink); color: #b5b9b6; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
@@ -4965,7 +4968,7 @@
   html[data-theme="dark"] .pay-table tbody tr:hover,
   html[data-theme="dark"] .pay-cell.off { background: var(--paper-muted); }
 </style>
-<link rel="stylesheet" href="assets/mobile.css?v=2" />
+<link rel="stylesheet" href="assets/mobile.css?v=3" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <!-- Design 2026 · Liquid Glass preview — inert unless body.design-2026 (1111-gated, reversible) -->
 <link rel="stylesheet" href="assets/design-2026.css" />
@@ -4975,7 +4978,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2077" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2079" />
 <!-- Home edge lighting · writes the cursor position that Layer G's glow
      follows. Deferred: it is decorative, and the CSS falls back to a top-edge
      glow if this never loads. -->
@@ -5990,7 +5993,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      dans la liste de pré-cache de kiwi-sw.js. -->
 <script src="assets/venues.js?v=3" defer></script>
 <script src="assets/demoClock.js" defer></script>
-<script src="assets/dateRange.js?v=2" defer></script>
+<script src="assets/dateRange.js?v=3" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js"></script>
 <script defer src="assets/dashboard-pwa.js"></script>
@@ -6014,7 +6017,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
-<script src="assets/caisse-link.js" defer></script>
+<script src="assets/caisse-link.js?v=4" defer></script>
 <!-- Below: user-triggered surfaces — not needed for first paint. -->
 <script src="assets/ai-telemetry.js" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js" defer fetchpriority="low"></script>
@@ -6108,7 +6111,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/account.js" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel-layout.js?v=2069" defer fetchpriority="low"></script>
+<script src="assets/design-vexel-layout.js?v=2070" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) — powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
