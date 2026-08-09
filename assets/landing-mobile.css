@@ -1,0 +1,111 @@
+/* Kiwi landing · phone polish
+ * The exported landing page intentionally stays build-free. Keep the phone
+ * overrides here so every locale receives the same responsive behaviour. */
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: 76px;
+  }
+
+  /* A short phone cannot fit the full hero copy, two CTAs and the product
+   * preview inside 100vh. Let the content establish the height and reserve a
+   * predictable lower stage for the preview instead of letting it cover CTAs. */
+  #top {
+    height: auto !important;
+    min-height: max(100svh, 760px);
+    padding: 112px 20px 0 !important;
+  }
+
+  #top > .sticky {
+    position: relative !important;
+    bottom: auto !important;
+    gap: 12px !important;
+  }
+
+  #top > .sticky > div:first-child {
+    width: auto;
+    max-width: 100%;
+    height: auto !important;
+    min-height: 32px;
+    padding: 7px 14px !important;
+    text-align: center;
+  }
+
+  #top > .sticky > div:first-child span {
+    line-height: 1.25 !important;
+  }
+
+  #top h1 {
+    max-width: 640px;
+    font-size: clamp(34px, 10.25vw, 40px) !important;
+    line-height: 1 !important;
+    letter-spacing: -0.055em !important;
+    text-wrap: balance;
+  }
+
+  #top h1 + p {
+    max-width: 360px;
+    font-size: 15px !important;
+    line-height: 1.48 !important;
+    text-wrap: pretty;
+  }
+
+  #top h1 + p + div {
+    gap: 10px !important;
+    padding-block: 8px !important;
+  }
+
+  #top h1 + p + div > a {
+    min-height: 48px;
+  }
+
+  #top > div:last-child {
+    left: 20px !important;
+    bottom: -70px !important;
+    width: calc(100% - 40px) !important;
+    height: auto !important;
+    margin-left: 0 !important;
+  }
+
+  /* The menu is the phone's primary navigation: links should read as rows,
+   * not as desktop text links squeezed into an overlay. */
+  #kw-mobile-menu a {
+    min-height: 46px;
+  }
+
+  #kw-mobile-menu {
+    background: rgba(0, 8, 6, 0.97) !important;
+    border-color: rgba(125, 242, 176, 0.2) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
+    backdrop-filter: blur(22px) saturate(120%);
+  }
+}
+
+@media (max-width: 360px) {
+  #top {
+    min-height: max(100svh, 740px);
+    padding-top: 104px !important;
+  }
+
+  #top h1 {
+    font-size: 34px !important;
+    line-height: 0.98 !important;
+  }
+
+  #top h1 + p {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #top *,
+  #features *,
+  #security *,
+  #pricing * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -4174,6 +4174,103 @@ body.design-vexel[data-vexel-mode="light"] .sidebar {
   scrollbar-color: rgba(49, 225, 160, 0.24) transparent;
 }
 
+/* Phone dashboard · keep the decision layer above the fold.
+ * Two compact KPI cards fit comfortably from 341px upward, while the three
+ * utility actions form one intentional row instead of wrapping 2 + 1. */
+@media (max-width: 720px) {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head :is(
+    .kpi-customize,
+    .btn-slim[data-action="payment-link"],
+    [data-action="invoicing"]
+  ) {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px;
+    padding-inline: 7px;
+    gap: 5px;
+    overflow: hidden;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head :is(
+    .kpi-customize,
+    .btn-slim[data-action="payment-link"],
+    [data-action="invoicing"]
+  ) svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m {
+    min-height: 108px;
+    padding: 15px 14px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m > .l {
+    padding-inline-end: 0 !important;
+    font-size: 10.5px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] .vexel-kpi-baseline {
+    gap: 6px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] .v {
+    font-size: 25px;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] .d {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* Some verticals expose five primary metrics. Let the final useful card
+   * occupy the remaining row when the optional regulars/clients card is
+   * suppressed, instead of leaving a conspicuous empty grid cell. */
+  body.design-vexel[data-vexel-mode] .vexel-compose [data-kpi-band] > .kpi-m:nth-last-child(2):nth-child(odd):has(
+    + .kpi-m:is([data-kpi="regulars"], [data-kpi="clients"])
+  ) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 340px) {
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > [data-kpi-band] {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.design-vexel[data-vexel-mode] .vexel-kpi-section > .kpi-band-head :is(
+    .kpi-customize,
+    .btn-slim[data-action="payment-link"],
+    [data-action="invoicing"]
+  ) {
+    padding-inline: 5px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  /* Keep the four common presets visible without requiring a blind sideways
+   * swipe; the longer custom-range option remains available just beyond them. */
+  body.design-vexel[data-vexel-mode] .vexel-compose .dash-date-range .dr-pill {
+    padding-inline: 7px !important;
+    font-size: 12px;
+  }
+}
+
 body.design-vexel[data-vexel-mode="light"] .sidebar::-webkit-scrollbar-thumb {
   background: rgba(49, 225, 160, 0.22);
 }
