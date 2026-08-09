@@ -4642,10 +4642,10 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js" defer></script>
+  <script src="assets/kitchen-relay.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js" defer></script>
+  <script src="assets/orderpro-inbox.js?v=2" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
@@ -13704,8 +13704,13 @@
     function kdsFmt(s) { return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
     function kdsNowHM() { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
     function kdsMatches(o, sid) { return sid === 'all' || o.items.some(i => i.stations.includes(sid)); }
+    function kdsViewStatus(o, sid) {
+      if (sid === 'all' || o.status === 'ready') return o.status;
+      const lines = o.items.filter(i => i.stations.includes(sid));
+      return lines.length && lines.every(i => i.stationReady === true) ? 'ready' : o.status;
+    }
     function kdsGroup(status) {
-      return kdsOrders.filter(o => o.status === status && kdsMatches(o, kdsActiveStation))
+      return kdsOrders.filter(o => kdsViewStatus(o, kdsActiveStation) === status && kdsMatches(o, kdsActiveStation))
         .slice().sort((a, b) => kdsElapsed(b) - kdsElapsed(a));
     }
 
@@ -13734,7 +13739,8 @@
 
     function kdsOrderInner(o, withEye) {
       const el = kdsElapsed(o), u = kdsUrgency(el);
-      const isNew = o.status === 'new', isReady = o.status === 'ready';
+      const viewStatus = kdsViewStatus(o, kdsActiveStation);
+      const isNew = viewStatus === 'new', isReady = viewStatus === 'ready';
       const items = o.items.map(i => {
         const off = kdsActiveStation !== 'all' && !i.stations.includes(kdsActiveStation);
         const note = (i.note || '').trim();
@@ -13765,7 +13771,7 @@
 
     function kdsOrderCard(o) {
       const u = kdsUrgency(kdsElapsed(o));
-      return `<div class="kit-order ${o.status === 'new' ? 'is-new' : 'is-cooking'}${u === 'over' ? ' is-late' : ''}" data-kit-num="${o.num}">${kdsOrderInner(o, true)}</div>`;
+      return `<div class="kit-order ${kdsViewStatus(o, kdsActiveStation) === 'new' ? 'is-new' : 'is-cooking'}${u === 'over' ? ' is-late' : ''}" data-kit-num="${o.num}">${kdsOrderInner(o, true)}</div>`;
     }
 
     function kdsHistoryRow(o) {
@@ -13778,7 +13784,7 @@
       return `<button class="kit-hrow" data-kit-eye="${o.num}" aria-label="Agrandir ${ticketNo(o)}">
         <span class="kit-hrow-num">${ticketNo(o)}</span>
         ${kdsTypeChip(o)}
-        <span class="kit-hrow-time">${KDS_SVG.check}Servie ${kdsEsc(o.readyAt || '')}</span>
+        <span class="kit-hrow-time">${KDS_SVG.check}Prête ${kdsEsc(o.readyAt || '')}</span>
         <span class="kit-hrow-eye">${KDS_SVG.eye}</span>
       </button>`;
     }
@@ -13789,7 +13795,7 @@
 
     function kdsStationBar() {
       const btn = (id, dot, label) => {
-        const count = kdsOrders.filter(o => o.status !== 'ready' && kdsMatches(o, id)).length;
+        const count = kdsOrders.filter(o => kdsViewStatus(o, id) !== 'ready' && kdsMatches(o, id)).length;
         return `<button class="kit-station ${kdsActiveStation === id ? 'on' : ''}" data-kit-st="${id}"><i style="background:${dot};"></i><span>${kdsEsc(label)}</span><span class="kit-station-ct">${count}</span></button>`;
       };
       const list = kdsStations();
@@ -13841,15 +13847,24 @@
     }
     function kdsReady(num) {
       const o = kdsOrders.find(x => x.num === num);
-      if (!o || o.status === 'ready') return;
-      o.status = 'ready';
-      o.readyAt = kdsNowHM();
+      if (!o || kdsViewStatus(o, kdsActiveStation) === 'ready') return;
+      const station = kdsActiveStation === 'all' ? '' : kdsActiveStation;
+      if (station) {
+        o.items.forEach(i => { if (i.stations.includes(station)) i.stationReady = true; });
+        if (o.items.length && o.items.every(i => i.stationReady === true)) o.status = 'ready';
+      } else {
+        o.items.forEach(i => { i.stationReady = true; });
+        o.status = 'ready';
+      }
+      if (o.status === 'ready') o.readyAt = kdsNowHM();
       kdsPaint();
-      if (o.type === 'takeaway') renderVrapBoard();
+      if (o.status === 'ready' && o.type === 'takeaway') renderVrapBoard();
       // Le client apprend que c'est prêt sur son propre téléphone, sans avoir
       // rien à rafraîchir : c'est tout l'intérêt d'avoir posé la commande là.
-      opPush(o, 'ready');
-      toast(`Commande ${ticketNo(o)} prête`);
+      opPush(o, 'ready', station ? { station } : {});
+      toast(station && o.status !== 'ready'
+        ? `${kdsStations().find(s => s.id === station)?.name || 'Poste'} · ${ticketNo(o)} prêt`
+        : `Commande ${ticketNo(o)} prête`);
     }
 
     function kdsOpenZoom(o) {
@@ -14845,6 +14860,7 @@
                commandes du téléphone, qui n'ont jamais porté de poste. */
             stations: [(l.station && kdsStations().some(s => s.id === l.station))
               ? l.station : kdsStationForName(l.name)],
+            stationReady: l.stationReady === true,
           })),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
@@ -14860,6 +14876,13 @@
            exact sans recréer le ticket. */
         known.opChannel = o.channel || known.opChannel || 'kiwi';
       }
+
+      /* Partial KDS readiness is stored on the canonical order lines. Pull it
+         back into the local ticket so bar and kitchen tablets immediately see
+         each other's progress without completing the entire order. */
+      (o.lines || []).forEach((line, index) => {
+        if (known.items && known.items[index]) known.items[index].stationReady = line.stationReady === true;
+      });
 
       /* Déjà connue : on ne suit QUE ce que le serveur peut nous apprendre de
          neuf (une autre caisse, ou le téléphone du client). L'état local de la

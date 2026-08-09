@@ -72,7 +72,8 @@ const env = { DB, AUTH_SECRET: SECRET };
 
 /* ── amorçage ─────────────────────────────────────────────────────────────── */
 const CARTE = {
-  cats: [{ id: 'c1', name: 'Plats', sub: [] }],
+  cats: [{ id: 'c1', name: 'Plats', station: 'cuisson', sub: [] }],
+  stations: [{ id: 'cuisson', name: 'Cuisine' }],
   items: [
     { id: 'i1', name: 'Tajine poulet', price: 90, catId: 'c1', avail: true },
     { id: 'i2', name: 'Thé à la menthe', price: 15, catId: 'c1', avail: true },
@@ -150,6 +151,8 @@ async function get(fn, qs, headers = {}) {
   ok('une commande passe', r.status === 200 && r.body.ok, JSON.stringify(r.body));
   ok('le prix vient de la carte, pas du téléphone', r.body.total === 90, 'total=' + r.body.total);
   ok('le nom aussi', r.body.lines[0].name === 'Tajine poulet', r.body.lines[0].name);
+  ok('le poste de la catégorie voyage avec la ligne tarifée',
+    r.body.lines[0].station === 'cuisson', JSON.stringify(r.body.lines[0]));
   ok('le repère visuel de l’option arrive avec la ligne',
     r.body.lines[0].visuals[0].emoji === '🍅' && r.body.lines[0].visuals[0].name === 'Tomate',
     JSON.stringify(r.body.lines[0].visuals));

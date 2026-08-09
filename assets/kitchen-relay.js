@@ -170,13 +170,13 @@
   }
 
   /* Faire avancer un bon (prête, servie). Même route, même garde. */
-  function bump(id, status) {
+  function bump(id, status, station) {
     var m = merchant();
     if (!m || !id) return Promise.resolve(null);
     return fetch('/api/order/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: m, id: id, status: status }),
+      body: JSON.stringify({ merchant: m, id: id, status: status, station: station || '' }),
       cache: 'no-store',
     }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
   }

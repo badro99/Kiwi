@@ -154,13 +154,28 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   }, asStaff);
   ok('un DEUXIÈME bon prend le numéro suivant', second.body.number === 2, 'n°' + second.body.number);
 
-  /* ═══ 3. RETOUR ══════════════════════════════════════════════════════════ */
-  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready' }, asStaff);
-  ok('la cuisine peut marquer « prête »', r.status === 200 && r.body.status === 'ready',
+  /* ═══ 3. RETOUR, PAR POSTE ═══════════════════════════════════════════════ */
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready', station: 'cuisson' }, asStaff);
+  ok('la cuisine peut marquer seulement son poste prêt',
+    r.status === 200 && r.body.status === 'accepted' && r.body.station === 'cuisson',
     JSON.stringify(r.body));
   q = await get('merchant=' + SLUG + '&since=0', asStaff);
-  const back = q.body.orders.find((o) => o.id === TICKET.id);
-  ok('le comptoir apprend que c’est prêt', back && back.status === 'ready');
+  let back = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('le poste cuisson est prêt sans terminer le bar ni toute la commande',
+    back && back.status === 'accepted'
+      && back.lines[0].stationReady === true && back.lines[1].stationReady !== true,
+    JSON.stringify(back));
+
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready', station: 'boissons' }, asStaff);
+  ok('le dernier poste prêt termine alors la commande entière',
+    r.status === 200 && r.body.status === 'ready', JSON.stringify(r.body));
+  q = await get('merchant=' + SLUG + '&since=0', asStaff);
+  back = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('le comptoir apprend que toute la commande est prête', back && back.status === 'ready');
+
+  r = await post({ merchant: SLUG, id: 'ord-bench-cafe-02', status: 'ready' }, asStaff);
+  ok('depuis l’onglet Tous, le geste termine directement toute la commande',
+    r.status === 200 && r.body.status === 'ready', JSON.stringify(r.body));
 
   r = await post({ merchant: SLUG, id: TICKET.id, status: 'served' }, asStaff);
   ok('puis « servie »', r.status === 200 && r.body.status === 'served');
@@ -267,6 +282,13 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /function hasKitchen\(\) \{ return !!window\.KiwiCaisseKitchen; \}/.test(INBOX));
   ok('le poste porté par la ligne prime sur une re-déduction par le nom',
     /l\.station && kdsStations\(\)\.some/.test(CAISSE));
+  ok('la tablette envoie le poste actif avec son geste prête',
+    /KiwiKitchenRelay\.bump\(id, 'ready', station\)/.test(CUISINE));
+  ok('le filtre Toutes garde le geste de commande entière',
+    /var station = S\.station === 'all' \? '' : S\.station/.test(CUISINE));
+  ok('la caisse conserve aussi la progression prête par poste',
+    /function kdsViewStatus\(o, sid\)/.test(CAISSE)
+      && /stationReady: l\.stationReady === true/.test(CAISSE));
 
   ok('le relais rejoue les envois perdus', /function schedule\(\)/.test(RELAY) && /RETRY_MS/.test(RELAY));
   ok('un refus de fond n’est pas rejoué indéfiniment',

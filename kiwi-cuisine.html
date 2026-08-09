@@ -325,7 +325,7 @@
 
 <!-- Le transport, partagé avec la caisse : même route, même garde, même
      protocole. La cuisine LIT et fait avancer ; la caisse ÉCRIT. -->
-<script src="assets/kitchen-relay.js" defer></script>
+<script src="assets/kitchen-relay.js?v=2" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
  * KIWI CUISINE — l'écran du passe
@@ -582,8 +582,13 @@
     if (S.station === 'all') return true;
     return (o.lines || []).some(function (l) { return l.station === S.station; });
   }
+  function stationIsReady(o) {
+    if (S.station === 'all') return o.status === 'ready';
+    var lines = (o.lines || []).filter(function (l) { return l.station === S.station; });
+    return lines.length > 0 && lines.every(function (l) { return l.stationReady === true; });
+  }
   function bucket(o) {
-    if (o.status === 'ready') return 'pass';
+    if (o.status === 'ready' || stationIsReady(o)) return 'pass';
     return S.cooking[o.id] ? 'cook' : 'new';
   }
   function group(name) {
@@ -623,7 +628,9 @@
       ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + 'Je prends</button>'
       : kind === 'cook'
         ? '<button class="tk-act act-ready" data-ready="' + esc(o.id) + '">' + SVG.check + 'Prête</button>'
-        : '<button class="tk-act act-served" data-served="' + esc(o.id) + '">Remise au serveur</button>';
+        : (o.status === 'ready'
+          ? '<button class="tk-act act-served" data-served="' + esc(o.id) + '">Remise au serveur</button>'
+          : '<button class="tk-act act-served" disabled>Poste prêt</button>');
     var right = kind === 'pass'
       ? '<span class="tk-timer ok">' + SVG.check + hm(o.updated_ts) + '</span>'
       : '<span class="tk-timer ' + u + '">' + SVG.clock + '<span>' + mmss(el) + '</span></span>';
@@ -645,8 +652,9 @@
     var count = function (id) {
       return Object.keys(S.orders).filter(function (k) {
         var o = S.orders[k];
-        return o.status !== 'ready'
-          && (id === 'all' || (o.lines || []).some(function (l) { return l.station === id; }));
+        if (id === 'all') return o.status !== 'ready';
+        var lines = (o.lines || []).filter(function (l) { return l.station === id; });
+        return lines.length > 0 && !lines.every(function (l) { return l.stationReady === true; });
       }).length;
     };
     var btn = function (id, color, label) {
@@ -709,10 +717,23 @@
       /* Optimiste : la brigade ne doit jamais attendre le réseau, elle a les
          mains dans une poêle. Le prochain sondage tranchera avec la vérité du
          serveur si l'appel a échoué. */
-      o.status = 'ready'; o.updated_ts = Date.now();
-      delete S.cooking[id];
+      var station = S.station === 'all' ? '' : S.station;
+      if (station) {
+        (o.lines || []).forEach(function (line) {
+          if (line.station === station) line.stationReady = true;
+        });
+        if ((o.lines || []).length && o.lines.every(function (line) { return line.stationReady === true; })) {
+          o.status = 'ready';
+          delete S.cooking[id];
+        }
+      } else {
+        (o.lines || []).forEach(function (line) { line.stationReady = true; });
+        o.status = 'ready';
+        delete S.cooking[id];
+      }
+      o.updated_ts = Date.now();
       saveCooking(); paint();
-      KiwiKitchenRelay.bump(id, 'ready');
+      KiwiKitchenRelay.bump(id, 'ready', station);
       return;
     }
     var srv = e.target.closest('[data-served]');

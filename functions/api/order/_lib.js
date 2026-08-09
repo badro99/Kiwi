@@ -171,6 +171,20 @@ export async function priceOrder(env, merchant, rawLines) {
       const parsed = JSON.parse(menuRow.data);
       const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
       if (items.length) {
+        /* Preparation routing belongs to the category, not the item. Keep it
+         * on the canonical priced line so every source (OrderPro, employee
+         * app and caisse) reaches KDS with the same frozen station decision. */
+        const stationIds = (Array.isArray(parsed && parsed.stations) ? parsed.stations : [])
+          .map((station) => String((station && station.id) || '')).filter(Boolean);
+        const configuredKitchen = String((parsed && parsed.kitchenId) || '');
+        const fallbackStation = stationIds.includes(configuredKitchen)
+          ? configuredKitchen : (stationIds[0] || '');
+        const categoryStations = new Map();
+        for (const category of (Array.isArray(parsed && parsed.cats) ? parsed.cats : [])) {
+          if (!category || !category.id) continue;
+          const wanted = String(category.station || '').slice(0, 40);
+          categoryStations.set(String(category.id), stationIds.includes(wanted) ? wanted : fallbackStation);
+        }
         for (const group of (Array.isArray(parsed && parsed.opts) ? parsed.opts : [])) {
           if (!group || !group.id) continue;
           const choices = new Map();
@@ -196,6 +210,7 @@ export async function priceOrder(env, merchant, rawLines) {
             price: Math.max(0, Math.round(Number(it.price) || 0)),
             avail: it.avail !== false,
             opts: new Set((Array.isArray(it.opts) ? it.opts : []).map(String)),
+            station: categoryStations.get(String(it.catId || '')) || fallbackStation,
           });
         }
         menuRev = menuRow.updated_ts || null;
@@ -288,7 +303,8 @@ export async function priceOrder(env, merchant, rawLines) {
       options = labels.join(' · ').slice(0, 200);
     }
     const unitPrice = ref.price + optionExtra;
-    lines.push({ id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals });
+    lines.push({ id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
+                 station: ref.station || '' });
     total += unitPrice * qty;
   }
 

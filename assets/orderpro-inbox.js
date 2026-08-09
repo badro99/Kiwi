@@ -156,7 +156,14 @@
     // Optimistic, then reconciled by the next poll: the till must feel instant.
     if (prev) {
       if (status === 'rejected') delete state.orders[id];
-      else prev.status = status;
+      else if (status === 'ready' && extra && extra.station) {
+        (prev.lines || []).forEach(function (line) {
+          if (line.station === extra.station) line.stationReady = true;
+        });
+        if ((prev.lines || []).length && prev.lines.every(function (line) { return line.stationReady === true; })) {
+          prev.status = 'ready';
+        }
+      } else prev.status = status;
       paint();
     }
     var body = { merchant: m, id: id, status: status };
@@ -165,12 +172,18 @@
     // détient à cet instant, et qui doivent voyager avec la transition.
     if (extra && extra.server) body.server = extra.server;
     if (extra && extra.paid) body.paid = true;
+    if (extra && extra.station) body.station = extra.station;
     return fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (j && j.ok) { bridge([]); return j; }
+        if (j && j.ok) {
+          if (prev && j.status) prev.status = j.status;
+          if (prev && Array.isArray(j.lines)) prev.lines = j.lines;
+          bridge([]);
+          return j;
+        }
         /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :
          * c'est une autre caisse qui a fait le geste avant nous. Remettre
          * l'état d'avant serait alors faux dans l'autre sens — le prochain
