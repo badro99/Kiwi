@@ -299,6 +299,17 @@
     intel: '<path d="M9.9 15.5A2 2 0 008.5 14.1l-6.1-1.6a.5.5 0 010-1L8.5 9.9A2 2 0 009.9 8.5l1.6-6.1a.5.5 0 011 0L14.1 8.5A2 2 0 0015.5 9.9l6.1 1.6a.5.5 0 010 1L15.5 14.1a2 2 0 00-1.4 1.4l-1.6 6.1a.5.5 0 01-1 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>',
   };
 
+  /* Pressing navigation uses Google's current Material Symbols, not the old
+   * hand-drawn stroke approximations. Outlined 400 · 24px optical grid. */
+  const MATERIAL_PRESSING = {
+    orders: '<path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Z"/>',
+    workshop: '<path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640H240v640Zm381.5-98.5Q680-317 680-400t-58.5-141.5Q563-600 480-600t-141.5 58.5Q280-483 280-400t58.5 141.5Q397-200 480-200t141.5-58.5ZM480-268q-26 0-50.5-9.5T386-306l188-188q19 19 28.5 43.5T612-400q0 55-38.5 93.5T480-268ZM320-680q17 0 28.5-11.5T360-720q0-17-11.5-28.5T320-760q-17 0-28.5 11.5T280-720q0 17 11.5 28.5T320-680Zm120 0q17 0 28.5-11.5T480-720q0-17-11.5-28.5T440-760q-17 0-28.5 11.5T400-720q0 17 11.5 28.5T440-680Z"/>',
+    pickup: '<path d="M120-160q-17 0-28.5-11.5T80-200q0-10 4-18.5T96-232l344-258v-70q0-17 12-28.5t29-11.5q25 0 42-18t17-43q0-25-17.5-42T480-720q-25 0-42.5 17.5T420-660h-80q0-58 41-99t99-41q58 0 99 40.5t41 98.5q0 47-27.5 84T520-526v36l344 258q8 5 12 13.5t4 18.5q0 17-11.5 28.5T840-160H120Zm120-80h480L480-420 240-240Z"/>',
+    services: '<path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Z"/>',
+    quality: '<path d="m344-60-76-128-144-32 14-148-98-112 98-112-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 112-98 112 14 148-144 32-76 128-136-58-136 58Zm34-102 102-44 104 44 56-96 110-26-10-112 74-84-74-86 10-112-110-24-58-96-102 44-104-44-56 96-110 24 10 112-74 86 74 84-10 114 110 24 58 96Zm60-176 226-226-56-58-170 170-86-84-56 56 142 142Z"/>',
+    delivery: '<path d="M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm85-45q17 0 28.5-11.5T280-280q0-17-11.5-28.5T240-320q-17 0-28.5 11.5T200-280q0 17 11.5 28.5T240-240ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm600 120q17 0 28.5-11.5T760-280q0-17-11.5-28.5T720-320q-17 0-28.5 11.5T680-280q0 17 11.5 28.5T720-240Zm-40-200h170l-90-120h-80v120Z"/>'
+  };
+
   const VERTICAL_SECTIONS = {
     restaurant: {
       header: 'Restauration',
@@ -673,12 +684,12 @@
     pressing: { base: 'boutique',
       header: { fr: 'Pressing', en: 'Dry cleaning', ar: 'المصبنة' },
       items: [
-        { nav: 'pressing-orders',   tag: 'LIVE', icon: ICONS.menu,       label: { fr: 'Dépôts & commandes', en: 'Drop-offs & orders', ar: 'الإيداعات والطلبات' } },
-        { nav: 'pressing-workshop', icon: ICONS.stock,                  label: { fr: 'Atelier & flux', en: 'Workshop & workflow', ar: 'الورشة وسير العمل' } },
-        { nav: 'pressing-pickup',   icon: ICONS.inventory,              label: { fr: 'Retraits & rack', en: 'Pick-up & rack', ar: 'الاستلام والتعليق' } },
-        { nav: 'pressing-services', icon: ICONS.services,               label: { fr: 'Services & tarifs', en: 'Services & pricing', ar: 'الخدمات والأسعار' } },
-        { nav: 'pressing-quality',  icon: ICONS.returns,                label: { fr: 'Qualité & incidents', en: 'Quality & issues', ar: 'الجودة والملاحظات' } },
-        { nav: 'pressing-delivery', icon: ICONS.canaux,                 label: { fr: 'Collecte & livraison', en: 'Collection & delivery', ar: 'الجمع والتوصيل' } },
+        { nav: 'pressing-orders',   tag: 'LIVE', icon: MATERIAL_PRESSING.orders,   material: true, label: { fr: 'Dépôts & commandes', en: 'Drop-offs & orders', ar: 'الإيداعات والطلبات' } },
+        { nav: 'pressing-workshop', icon: MATERIAL_PRESSING.workshop,               material: true, label: { fr: 'Atelier & flux', en: 'Workshop & workflow', ar: 'الورشة وسير العمل' } },
+        { nav: 'pressing-pickup',   icon: MATERIAL_PRESSING.pickup,                 material: true, label: { fr: 'Retraits & rack', en: 'Pick-up & rack', ar: 'الاستلام والتعليق' } },
+        { nav: 'pressing-services', icon: MATERIAL_PRESSING.services,               material: true, label: { fr: 'Services & tarifs', en: 'Services & pricing', ar: 'الخدمات والأسعار' } },
+        { nav: 'pressing-quality',  icon: MATERIAL_PRESSING.quality,                material: true, label: { fr: 'Qualité & incidents', en: 'Quality & issues', ar: 'الجودة والملاحظات' } },
+        { nav: 'pressing-delivery', icon: MATERIAL_PRESSING.delivery,               material: true, label: { fr: 'Collecte & livraison', en: 'Collection & delivery', ar: 'الجمع والتوصيل' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Dépôts', en: 'Drop-offs', ar: 'الإيداعات' } },
@@ -2052,7 +2063,7 @@
         i18nHeader: '',
         items: prof.items.map((pi) => {
           const b = baseItems.find((x) => x.nav === pi.nav) || {};
-          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: pi.icon || b.icon || '' };
+          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: pi.icon || b.icon || '', material: !!pi.material };
         }),
       };
     }
@@ -2081,7 +2092,7 @@
         const lbl = (it.i18n && T[it.i18n]) || it.label;
         return `
           <a href="#" data-nav="${it.nav}" data-feature="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${it.icon}</svg>
+            <svg viewBox="${it.material ? '0 -960 960 960' : '0 0 24 24'}" fill="${it.material ? 'currentColor' : 'none'}"${it.material ? '' : ' stroke="currentColor" stroke-width="2"'} aria-hidden="true">${it.icon}</svg>
             <span${it.i18n ? ` data-i18n="${it.i18n}"` : ''}>${lbl}</span>
             ${it.tag ? `<span class="tag">${it.tag}</span>` : ''}
           </a>

@@ -3,15 +3,48 @@
 .pce-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px; border: 1px solid var(--n-200); border-radius: 18px; background: var(--surface); }
 .pce-toolbar h3 { margin: 0; color: var(--ink); font-size: 17px; }
 .pce-toolbar p { margin: 5px 0 0; max-width: 720px; color: var(--n-500); font-size: 12px; line-height: 1.45; }
+.pce-navigator { display: grid; gap: 10px; padding: 13px; border: 1px solid var(--n-200); border-radius: 17px; background: var(--surface); }
+.pce-search { position: relative; display: block; }
+.pce-search > svg { position: absolute; left: 13px; top: 50%; width: 19px; height: 19px; transform: translateY(-50%); color: var(--n-500); pointer-events: none; }
+.pce-search > input { min-height: 46px; padding-left: 42px; border-color: var(--n-200); background: var(--paper-soft); }
+.pce-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 1px; scrollbar-width: none; }
+.pce-filters::-webkit-scrollbar { display: none; }
+.pce-filter { flex: 0 0 auto; min-height: 34px; padding: 0 11px; border: 1px solid var(--n-200); border-radius: 999px; background: var(--surface); color: var(--n-500); font-size: 11px; font-weight: 650; cursor: pointer; }
+.pce-filter b { margin-left: 4px; color: inherit; font-size: 9px; font-variant-numeric: tabular-nums; }
+.pce-filter:hover { border-color: var(--atlas); color: var(--atlas); }
+.pce-filter.on { border-color: var(--brand-deep); background: var(--brand-deep); color: var(--inverse-ink); }
 .pce-new { padding: 18px; border: 1px solid var(--atlas); border-radius: 18px; background: color-mix(in srgb, var(--atlas) 5%, var(--surface)); }
 .pce-new[hidden] { display: none; }
 .pce-new > label, .pce-item-main > label { display: grid; gap: 6px; color: var(--n-500); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .pce-new > label { display: inline-grid; width: min(320px,100%); margin: 0 10px 14px 0; }
 .pce-editor input, .pce-editor select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--n-300); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; outline: none; }
 .pce-editor input:focus, .pce-editor select:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 13%, transparent); }
-.pce-list { display: grid; gap: 10px; }
-.pce-item { padding: 16px; border: 1px solid var(--n-200); border-radius: 17px; background: var(--surface); box-shadow: var(--elev-1); }
-.pce-item.is-hidden { opacity: .66; background: var(--paper-soft); }
+.pce-resultbar { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; color: var(--n-500); font-size: 11px; }
+.pce-pages { display: flex; align-items: center; gap: 8px; }
+.pce-pages b { min-width: 72px; color: var(--ink-soft); text-align: center; font-size: 10px; font-weight: 650; }
+.pce-pages button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--n-200); border-radius: 9px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.pce-pages button:hover:not(:disabled) { border-color: var(--atlas); color: var(--atlas); }
+.pce-pages button:disabled { opacity: .35; cursor: default; }
+.pce-pages svg { width: 18px; height: 18px; }
+.pce-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.pce-item { min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--n-200); border-radius: 15px; background: var(--surface); box-shadow: var(--elev-1); }
+.pce-item.is-open { grid-column: 1/-1; border-color: color-mix(in srgb,var(--atlas) 38%,var(--n-200)); }
+.pce-item.is-hidden { background: var(--paper-soft); }
+.pce-summary { width: 100%; min-height: 74px; display: grid; grid-template-columns: 42px minmax(120px,1fr) auto auto 22px; align-items: center; gap: 11px; padding: 10px 13px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.pce-summary:hover { background: color-mix(in srgb,var(--atlas) 4%,transparent); }
+.pce-item-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; background: color-mix(in srgb,var(--atlas) 8%,var(--surface)); color: var(--atlas); }
+.pce-item-icon svg { width: 23px; height: 23px; }
+.pce-summary-copy, .pce-summary-price { min-width: 0; display: grid; gap: 3px; }
+.pce-summary-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.pce-summary-copy small, .pce-summary-price small { color: var(--n-500); font-size: 9.5px; }
+.pce-summary-price { min-width: 90px; text-align: right; }
+.pce-summary-price b { color: var(--atlas); font-size: 11px; font-variant-numeric: tabular-nums; }
+.pce-status { padding: 5px 8px; border-radius: 999px; background: var(--paper-soft); color: var(--n-500); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.pce-status.is-live { background: color-mix(in srgb,var(--atlas) 9%,var(--surface)); color: var(--atlas); }
+.pce-chevron { width: 20px; height: 20px; color: var(--n-500); transition: transform 160ms; }
+.pce-item.is-open .pce-chevron { transform: rotate(180deg); }
+.pce-item-body { padding: 15px; border-top: 1px solid var(--n-200); }
+.pce-empty { grid-column: 1/-1; padding: 36px 18px; border: 1px dashed var(--n-300); border-radius: 15px; color: var(--n-500); text-align: center; font-size: 12px; }
 .pce-item-main { display: grid; grid-template-columns: minmax(180px,1.2fr) minmax(150px,.8fr) auto; gap: 12px; align-items: end; margin-bottom: 14px; }
 .pce-visible { min-height: 42px; display: flex !important; align-items: center; gap: 8px !important; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 10px; color: var(--ink) !important; font-size: 11px !important; letter-spacing: 0 !important; text-transform: none !important; }
 .pce-visible input { width: 16px; min-height: 16px; padding: 0; accent-color: var(--atlas); }
@@ -33,6 +66,7 @@
 .px-tarifs-panel .pce-editor { max-width: 1260px; margin: 0 auto; }
 .px-tarifs-panel .pce-toolbar { position: sticky; top: -22px; z-index: 4; border-radius: 0 0 18px 18px; box-shadow: var(--elev-1); }
 @media (max-width: 900px) {
+  .pce-list { grid-template-columns: 1fr; }
   .pce-prices { grid-template-columns: repeat(3,minmax(95px,1fr)); }
   .pce-item-main { grid-template-columns: 1fr 1fr; }
   .pce-visible { grid-column: 1/-1; }
@@ -41,6 +75,10 @@
   .pce-toolbar { align-items: stretch; flex-direction: column; }
   .pce-toolbar .pxd-btn { width: 100%; }
   .pce-item-main, .pce-prices { grid-template-columns: 1fr 1fr; }
+  .pce-summary { grid-template-columns: 38px minmax(100px,1fr) auto 20px; gap: 9px; padding: 9px 10px; }
+  .pce-summary-price { min-width: 74px; }
+  .pce-status { display: none; }
+  .pce-resultbar { align-items: flex-start; }
   .pce-item-foot { align-items: stretch; flex-direction: column; }
   .pce-item-foot > span { margin-right: 0; }
   .pce-item-foot .pxd-btn { width: 100%; }

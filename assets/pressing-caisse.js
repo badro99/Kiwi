@@ -30,6 +30,20 @@
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
   const icons   = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
+  /* Google Material Symbols · Outlined 400. Product and primary navigation
+     artwork now shares one professional, pixel-fitted visual language. */
+  const MI_PRESSING = {
+    counter: 'M280-80v-240h-64q-40 0-68-28t-28-68q0-29 16-53.5t42-36.5l262-116v-26q-36-13-58-43.5T360-760q0-50 35-85t85-35q50 0 85 35t35 85h-80q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760q0 17 11.5 28.5T480-720t28.5 11.5Q520-697 520-680v58l262 116q26 12 42 36.5t16 53.5q0 40-28 68t-68 28h-64v240H280Zm-64-320h64v-40h400v40h64q7 0 11.5-5t4.5-13q0-5-2.5-8.5T750-432L480-552 210-432q-5 2-7.5 5.5T200-418q0 8 4.5 13t11.5 5Zm144 240h240v-200H360v200Z',
+    orders: 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Z',
+    pickup: 'M120-160q-17 0-28.5-11.5T80-200q0-10 4-18.5T96-232l344-258v-70q0-17 12-28.5t29-11.5q25 0 42-18t17-43q0-25-17.5-42T480-720q-25 0-42.5 17.5T420-660h-80q0-58 41-99t99-41q58 0 99 40.5t41 98.5q0 47-27.5 84T520-526v36l344 258q8 5 12 13.5t4 18.5q0 17-11.5 28.5T840-160H120Zm120-80h480L480-420 240-240Z',
+    rack: 'M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Z',
+    prices: 'M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Z',
+    apparel: 'm240-522-40 22q-14 8-30 4t-24-18L66-654q-8-14-4-30t18-24l230-132h70q9 0 14.5 5.5T400-820v20q0 33 23.5 56.5T480-720q33 0 56.5-23.5T560-800v-20q0-9 5.5-14.5T580-840h70l230 132q14 8 18 24t-4 30l-80 140q-8 14-23.5 17.5T760-501l-40-20v361q0 17-11.5 28.5T680-120H280q-17 0-28.5-11.5T240-160v-362Zm80-134v456h320v-456l124 68 42-70-172-100q-15 51-56.5 84.5T480-640q-56 0-97.5-33.5T326-758L154-658l42 70 124-68Z',
+    bed: 'M80-200v-240q0-27 11-49t29-39v-112q0-50 35-85t85-35h160q23 0 43 8.5t37 23.5q17-15 37-23.5t43-8.5h160q50 0 85 35t35 85v112q18 17 29 39t11 49v240h-80v-80H160v80H80Zm440-360h240v-80q0-17-11.5-28.5T720-680H560q-17 0-28.5 11.5T520-640v80Zm-320 0h240v-80q0-17-11.5-28.5T400-680H240q-17 0-28.5 11.5T200-640v80Zm-40 200h640v-80q0-17-11.5-28.5T760-480H200q-17 0-28.5 11.5T160-440v80Z',
+    shoes: 'M216-580q39 0 74 14t64 41l382 365h24q17 0 28.5-11.5T800-200q0-8-1.5-17T788-235L605-418l-71-214-74 18q-38 10-69-14t-31-63v-84l-28-14-154 206h38q39 0 74 14t64 41l266 254H566q-30 0-57-11t-50-31L134-417q-46-42-51.5-103T114-631l154-206q17-23 45.5-30.5T368-861l28 14q21 11 32.5 30t11.5 42v84l74-19q30-8 58 7.5t38 44.5l65 196 170 170q20 20 27.5 43t7.5 49q0 50-35 85t-85 35H566Z'
+  };
+  const materialIcon = (name, cls) => `<svg class="${cls || ''}" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="${MI_PRESSING[name]}"></path></svg>`;
+  const garmentIcon = (item, cls) => materialIcon(item && item.cat === 'linge' ? 'bed' : item && item.cat === 'chaussures' ? 'shoes' : item && item.cat === 'cuir' ? 'counter' : 'apparel', `px-material-art${cls ? ` ${cls}` : ''}`);
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const pad2    = (n) => String(n).padStart(2, '0');
@@ -551,11 +565,11 @@
           <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi pour <b>votre comptoir et votre atelier</b>, un seul compte.'}</div>
         </div>
         <nav class="px-nav" id="px-nav">
-          <button class="px-nav-it on" data-px-view="comptoir"><i data-lucide="shirt"></i><span>Comptoir</span></button>
-          <button class="px-nav-it" data-px-view="commandes"><i data-lucide="clipboard-list"></i><span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
-          <button class="px-nav-it" data-px-view="retrait"><i data-lucide="shopping-bag"></i><span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
-          <button class="px-nav-it" data-px-view="rangement"><i data-lucide="archive"></i><span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
-          <button class="px-nav-it" data-px-view="tarifs"><i data-lucide="badge-dollar-sign"></i><span>Services &amp; tarifs</span></button>
+          <button class="px-nav-it on" data-px-view="comptoir">${materialIcon('counter')}<span>Comptoir</span></button>
+          <button class="px-nav-it" data-px-view="commandes">${materialIcon('orders')}<span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
+          <button class="px-nav-it" data-px-view="retrait">${materialIcon('pickup')}<span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
+          <button class="px-nav-it" data-px-view="rangement">${materialIcon('rack')}<span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
+          <button class="px-nav-it" data-px-view="tarifs">${materialIcon('prices')}<span>Services &amp; tarifs</span></button>
         </nav>
         <div class="px-rail-foot">
           <button class="px-net" id="px-net" title="Simuler une coupure réseau">
@@ -714,7 +728,7 @@
       <div class="px-cat-head">${esc(c.label)}</div>
       <div class="px-grid">${c.items.map((it) => `
         <button class="px-card" data-px-item="${it.id}" style="--i:${i++}">
-          <span class="px-card-art">${ART[it.art || it.id] || ART.chemise}</span>
+          <span class="px-card-art">${garmentIcon(it)}</span>
           <span class="px-card-name">${esc(it.label)}</span>
           <span class="px-card-price">dès ${minPrice(it)} MAD${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
@@ -816,7 +830,7 @@
     const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]) : null;
     const notesCt = ln.notes.length + (ln.freeNote ? 1 : 0);
     return `<div class="px-line">
-        <span class="px-line-art">${ART[item.art || ln.itemId] || ART.chemise}</span>
+        <span class="px-line-art">${garmentIcon(item)}</span>
       <span class="px-line-mid">
         <span class="px-line-name">${esc(ln.label || item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
         <span class="px-line-sub">
@@ -873,7 +887,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-sheet-head">
-        <span class="px-sheet-art">${ART[item.art || item.id] || ART.chemise}</span>
+        <span class="px-sheet-art">${garmentIcon(item)}</span>
         <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
         <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${unit} MAD × ${sheet.qty}</span></span>
       </div>
@@ -920,7 +934,7 @@
       <div class="px-f">
         <div class="px-f-lbl">État à la dépose <span class="opt">· la photo protège le client et vous</span></div>
         <div class="px-photos" id="px-photos">
-          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${ART[item.art || item.id] || ART.chemise}<b>${k + 1}</b></span>`).join('')}
+          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${garmentIcon(item)}<b>${k + 1}</b></span>`).join('')}
           <button class="px-photo-add" id="px-photo-add"><i data-lucide="camera"></i>Photo état</button>
         </div>
       </div>
@@ -1015,7 +1029,7 @@
     el.innerHTML = `
       <div class="px-vf">
         <div class="px-vf-hint">Cadrez la zone (tache, accroc, bouton)…</div>
-        ${(ART[item.art || item.id] || ART.chemise).replace('class="px-art"', 'class="px-art art"')}
+        ${garmentIcon(item,'art')}
         <span class="px-vf-corner tl"></span><span class="px-vf-corner tr"></span>
         <span class="px-vf-corner bl"></span><span class="px-vf-corner br"></span>
         <div class="px-vf-flash" id="px-vf-flash"></div>
@@ -1728,7 +1742,7 @@
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
           return `
           <div class="px-piece">
-            <span class="px-piece-art">${ART[(ITEMS[p.itemId] || {}).art || p.itemId] || ART.chemise}</span>
+            <span class="px-piece-art">${garmentIcon(ITEMS[p.itemId] || {})}</span>
             <span class="px-piece-mid">
               <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
               <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
@@ -1845,7 +1859,7 @@
         </div>
       </div>
       <button class="px-wa-photo" id="px-wa-photo">
-        <span class="th">${ART[(ITEMS[photoPiece.itemId] || {}).art || photoPiece.itemId] || ART.chemise}</span>
+        <span class="th">${garmentIcon(ITEMS[photoPiece.itemId] || {})}</span>
         <span class="l">Joindre une photo du vêtement fini, le client voit son linge avant de se déplacer</span>
         <span class="tick"><i data-lucide="check"></i></span>
       </button>
