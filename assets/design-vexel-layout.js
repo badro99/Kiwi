@@ -643,22 +643,13 @@
       }, 60 + index * 110);
     });
 
-    /* Every ring empty means the card is 342px of paper showing three dashes —
-     * on a boutique that is exactly the dead real estate this pass is removing.
-     * Reserve the space only when there is something to put in it. */
-    var allEmpty = !channels.length || rings.every(function (markup) {
-      return markup.indexOf('is-empty') >= 0;
-    });
-    card.hidden = allEmpty;
-    if (allEmpty) {
-      card.setAttribute('aria-hidden', 'true');
-      /* Tell the dead-cell pass this seat was vacated, not merely absent — it
-       * only re-grids rows that lost something. */
-      card.setAttribute('data-vexel-vacated', '');
-    } else {
-      card.removeAttribute('aria-hidden');
-      card.removeAttribute('data-vexel-vacated');
-    }
+    /* An empty channel split is still useful context: the subtitle says that
+     * the breakdown is unavailable and the rings name the channels that will
+     * populate. Keep the card in the compact analytics pair instead of making
+     * the payment card jump between half and full width as sales arrive. */
+    card.hidden = false;
+    card.removeAttribute('aria-hidden');
+    card.removeAttribute('data-vexel-vacated');
     scheduleBackfill(true);
   }
 
