@@ -117,6 +117,12 @@ const FEATURES = {
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },
+  /* Exact-trade operational boards (pre-orders, production, prescriptions,
+   * memberships, deliveries, etc.). One tenant-scoped document deliberately
+   * holds every board so a status change made on the phone is visible on the
+   * desktop without multiplying store_docs rows. Records are bounded again in
+   * the client; this server limit is the final safety rail. */
+  workspaces:   { keys: ['trade', 'records'],                       max: 600000 },
   /* Les rapports de clôture (le « Z » de fin de journée), un document par
    * magasin contenant `days['2026-07-26'] = {…}`. C'est le SEUL de cette liste
    * qui soit une pièce comptable : un commerçant le rouvre pour justifier un

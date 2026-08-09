@@ -278,6 +278,13 @@
     services: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 000-5C13 3 12 8 12 8"/>',
     practitioners: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M16 11l2 2 4-4"/>',
     clients: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14h6M9 18h6M9 10h2"/>',
+    operations: '<path d="M9 3h6l1 3h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h3z"/><path d="M8 12h8M8 16h5"/>',
+    route: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 003-3V9a3 3 0 013-3"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5z"/><path d="M4 5.5v14"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    alert: '<path d="M10.3 3.6L1.9 18a2 2 0 001.7 3h16.8a2 2 0 001.7-3L13.7 3.6a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    truck: '<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+    usercheck: '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/>',
     // hotel — onboarding vertical, reached only through the 0000 wizard
     // (no demo hotel venue ships)
     reception: '<path d="M4 19h16"/><path d="M5 19v-4a7 7 0 0114 0v4"/><path d="M12 8V6"/><path d="M10 6h4"/>',
@@ -369,11 +376,33 @@
        * de vrais sélecteurs — et de là tout le produit les lit. */
       { k: 'surface2', type: 'number', ph: 'Ex. 2',            label: { fr: 'Nombre de vendeurs', en: 'Sales staff', ar: 'عدد البائعين' } },
     ] },
-    spa: { base: 'spa', questions: [
+    spa: { base: 'spa',
+      header: { fr: 'Spa & bien-être', en: 'Spa & wellness', ar: 'السبا والعناية' },
+      items: [
+        { nav: 'appointments', tag: 'LIVE', label: { fr: 'Agenda & cabines', en: 'Diary & rooms', ar: 'المواعيد والغرف' } },
+        { nav: 'services', label: { fr: 'Soins & rituels', en: 'Treatments & rituals', ar: 'العلاجات والطقوس' } },
+        { nav: 'practitioners', label: { fr: 'Praticien·ne·s', en: 'Practitioners', ar: 'الممارسون' } },
+        { nav: 'clients', label: { fr: 'Parcours clients', en: 'Guest journeys', ar: 'مسار العملاء' } },
+        { nav: 'packages', icon: ICONS.card, label: { fr: 'Cures & cartes cadeaux', en: 'Packages & gift cards', ar: 'الباقات وبطاقات الهدايا' } },
+      ],
+      questions: [
       { k: 'cabins',  type: 'number', ph: 'Ex. 4',             label: { fr: 'Cabines de soin', en: 'Treatment rooms', ar: 'غرف العناية' } },
       { k: 'staff',   type: 'number', ph: 'Ex. 6',             label: { fr: 'Praticien·ne·s', en: 'Practitioners', ar: 'الممارسون' } },
       { k: 'signature', type: 'text', ph: 'Ex. Hammam + argan', label: { fr: 'Soins signature', en: 'Signature treatments', ar: 'علاجات مميزة' } },
     ] },
+    autre: { base: 'boutique',
+      header: { fr: 'Mon activité', en: 'My business', ar: 'نشاطي' },
+      items: [
+        { nav: 'inventory', tag: 'LIVE', label: { fr: 'Catalogue & inventaire', en: 'Catalogue & inventory', ar: 'الكتالوج والمخزون' } },
+        { nav: 'categories', label: { fr: 'Catégories', en: 'Categories', ar: 'الفئات' } },
+        { nav: 'promos', label: { fr: 'Offres', en: 'Offers', ar: 'العروض' } },
+        { nav: 'workflows', icon: ICONS.operations, label: { fr: 'Suivi d’activité', en: 'Work tracking', ar: 'تتبع النشاط' } },
+        { nav: 'returns', label: { fr: 'Retours & incidents', en: 'Returns & incidents', ar: 'المرتجعات والحوادث' } },
+      ],
+      questions: [
+        { k: 'activity', type: 'text', ph: 'Ex. Atelier, service, commerce', label: { fr: 'Votre activité', en: 'Your activity', ar: 'نوع نشاطك' } },
+        { k: 'workflow', type: 'text', ph: 'Ex. Commande → préparation → remise', label: { fr: 'Étapes principales', en: 'Main workflow', ar: 'المراحل الرئيسية' } },
+      ] },
     /* 4th primary trade — native sections (VERTICAL_SECTIONS.hotel) +
      * native KPI band (KPI_BY_TYPE.hotel); like the 3 base primaries it
      * only defines its step-2 questions. `rooms` sizes the starter room
@@ -424,6 +453,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Comptoir & bornes', en: 'Counter & kiosks', ar: 'الكاونتر والأكشاك' } },
         { nav: 'menu',    label: { fr: 'Menu & combos', en: 'Menu & combos', ar: 'القائمة والكومبو' } },
         { nav: 'kds',     label: { fr: 'Écran cuisine (KDS)', en: 'Kitchen display (KDS)', ar: 'شاشة المطبخ' } },
+        { nav: 'channels', icon: ICONS.route, label: { fr: 'Livraison & canaux', en: 'Delivery & channels', ar: 'التوصيل والقنوات' } },
         { nav: 'stock',   label: { fr: 'Stock & surgelés', en: 'Stock & frozen', ar: 'المخزون والمجمدات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -459,6 +489,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Comptoir & précommandes', en: 'Counter & pre-orders', ar: 'الكاونتر والطلبات المسبقة' } },
         { nav: 'menu',    label: { fr: 'Catalogue & fournées', en: 'Catalogue & batches', ar: 'الكتالوج والدفعات' } },
         { nav: 'kds',     label: { fr: 'Écran fournil', en: 'Bakehouse screen', ar: 'شاشة المخبز' } },
+        { nav: 'waste',   icon: ICONS.alert, label: { fr: 'Invendus & dons', en: 'Unsold & donations', ar: 'غير المباع والتبرعات' } },
         { nav: 'stock',   label: { fr: 'Farines & matières', en: 'Flour & ingredients', ar: 'الدقيق والمواد' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -498,6 +529,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Salle & livraison', en: 'Room & delivery', ar: 'القاعة والتوصيل' } },
         { nav: 'menu',    label: { fr: 'Carte & tailles', en: 'Menu & sizes', ar: 'القائمة والأحجام' } },
         { nav: 'kds',     label: { fr: 'Écran four', en: 'Oven screen', ar: 'شاشة الفرن' } },
+        { nav: 'delivery', icon: ICONS.route, label: { fr: 'Livraisons', en: 'Deliveries', ar: 'التوصيلات' } },
         { nav: 'stock',   label: { fr: 'Pâte & ingrédients', en: 'Dough & toppings', ar: 'العجين والمكونات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -533,6 +565,8 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Événements & planning', en: 'Events & schedule', ar: 'الفعاليات والتخطيط' } },
         { nav: 'menu',    label: { fr: 'Menus & formules', en: 'Menus & packages', ar: 'القوائم والعروض' } },
         { nav: 'kds',     label: { fr: 'Production cuisine', en: 'Kitchen production', ar: 'إنتاج المطبخ' } },
+        { nav: 'quotes',   icon: ICONS.operations, label: { fr: 'Devis & événements', en: 'Quotes & events', ar: 'العروض والفعاليات' } },
+        { nav: 'deposits', icon: ICONS.card, label: { fr: 'Acomptes & soldes', en: 'Deposits & balances', ar: 'التسبيقات والأرصدة' } },
         { nav: 'stock',   label: { fr: 'Stock & commandes', en: 'Stock & purchasing', ar: 'المخزون والمشتريات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -571,6 +605,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Emplacements & tournées', en: 'Spots & rounds', ar: 'المواقع والجولات' } },
         { nav: 'menu',    label: { fr: 'Carte du jour', en: 'Daily menu', ar: 'قائمة اليوم' } },
         { nav: 'kds',     label: { fr: 'Écran cuisine', en: 'Kitchen screen', ar: 'شاشة المطبخ' } },
+        { nav: 'vehicle',  icon: ICONS.truck, label: { fr: 'Camion & tournée', en: 'Truck & route', ar: 'الشاحنة والجولة' } },
         { nav: 'stock',   label: { fr: 'Stock embarqué', en: 'Onboard stock', ar: 'المخزون المحمول' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -610,6 +645,8 @@
         { nav: 'categories', label: { fr: 'Rayons & familles', en: 'Aisles & families', ar: 'الأرفف والعائلات' } },
         { nav: 'promos',     label: { fr: 'Promotions & paniers', en: 'Promos & bundles', ar: 'العروض والسلال' } },
         { nav: 'returns',    label: { fr: 'Retours & casse', en: 'Returns & breakage', ar: 'المرتجعات والتالف' } },
+        { nav: 'credit',      icon: ICONS.card, label: { fr: 'Carnet de crédit', en: 'Credit ledger', ar: 'دفتر الديون' } },
+        { nav: 'suppliers',   icon: ICONS.truck, label: { fr: 'Fournisseurs', en: 'Suppliers', ar: 'الموردون' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -671,6 +708,10 @@
         { nav: 'categories', label: { fr: 'Familles & ordonnances', en: 'Families & prescriptions', ar: 'العائلات والوصفات' } },
         { nav: 'promos',     label: { fr: 'Parapharmacie & offres', en: 'Parapharmacy & offers', ar: 'الباراصيدلية والعروض' } },
         { nav: 'returns',    label: { fr: 'Retours laboratoires', en: 'Lab returns', ar: 'مرتجعات المختبرات' } },
+        { nav: 'prescriptions', icon: ICONS.operations, label: { fr: 'Ordonnances', en: 'Prescriptions', ar: 'الوصفات الطبية' } },
+        { nav: 'insurers',      icon: ICONS.card, label: { fr: 'Tiers payant', en: 'Third-party payer', ar: 'الدفع من طرف ثالث' } },
+        { nav: 'expiries',      icon: ICONS.alert, label: { fr: 'Lots à surveiller', en: 'Expiry watch', ar: 'مراقبة الصلاحية' } },
+        { nav: 'duty',          icon: ICONS.operations, label: { fr: 'Gardes & relève', en: 'Duty & handover', ar: 'الحراسة والتسليم' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -706,6 +747,8 @@
         { nav: 'categories', label: { fr: 'Rayons & collections', en: 'Sections & collections', ar: 'الأقسام والمجموعات' } },
         { nav: 'promos',     label: { fr: 'Rentrée & sélections', en: 'Back-to-school & picks', ar: 'الدخول المدرسي والمختارات' } },
         { nav: 'returns',    label: { fr: 'Retours éditeurs', en: 'Publisher returns', ar: 'مرتجعات الناشرين' } },
+        { nav: 'bookorders',  icon: ICONS.book, label: { fr: 'Commandes spéciales', en: 'Special orders', ar: 'الطلبات الخاصة' } },
+        { nav: 'schoollists', icon: ICONS.operations, label: { fr: 'Listes scolaires', en: 'School lists', ar: 'اللوائح المدرسية' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -738,6 +781,9 @@
         { nav: 'categories', label: { fr: 'Compositions & gammes', en: 'Arrangements & ranges', ar: 'التنسيقات والفئات' } },
         { nav: 'promos',     label: { fr: 'Occasions & fêtes', en: 'Occasions & holidays', ar: 'المناسبات والأعياد' } },
         { nav: 'returns',    label: { fr: 'Pertes & invendus', en: 'Waste & unsold', ar: 'الفاقد وغير المباع' } },
+        { nav: 'flowerorders', icon: ICONS.operations, label: { fr: 'Commandes & occasions', en: 'Orders & occasions', ar: 'الطلبات والمناسبات' } },
+        { nav: 'delivery',     icon: ICONS.route, label: { fr: 'Tournée livraisons', en: 'Delivery route', ar: 'جولة التوصيل' } },
+        { nav: 'freshness',    icon: ICONS.alert, label: { fr: 'Fraîcheur & pertes', en: 'Freshness & waste', ar: 'الطزاجة والفاقد' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -775,6 +821,8 @@
         { nav: 'services',      label: { fr: 'Prestations & forfaits', en: 'Services & packages', ar: 'الخدمات والباقات' } },
         { nav: 'practitioners', label: { fr: 'Coiffeur·euse·s', en: 'Stylists', ar: 'المصففون' } },
         { nav: 'clients',       label: { fr: 'Fiches clients', en: 'Client records', ar: 'ملفات العملاء' } },
+        { nav: 'formulas',      icon: ICONS.book, label: { fr: 'Formules couleur', en: 'Colour formulas', ar: 'تركيبات الصبغة' } },
+        { nav: 'chairs',        icon: ICONS.operations, label: { fr: 'Fauteuils & flux', en: 'Chairs & flow', ar: 'الكراسي والتدفق' } },
       ],
       kpis: [
         { key: 'tx',        label: { fr: 'Rendez-vous', en: 'Appointments', ar: 'المواعيد' } },
@@ -809,6 +857,8 @@
         { nav: 'services',      label: { fr: 'Abonnements & cours', en: 'Memberships & classes', ar: 'الاشتراكات والحصص' } },
         { nav: 'practitioners', label: { fr: 'Coachs', en: 'Coaches', ar: 'المدربون' } },
         { nav: 'clients',       label: { fr: 'Adhérents', en: 'Members', ar: 'الأعضاء' } },
+        { nav: 'checkins',      icon: ICONS.usercheck, label: { fr: 'Contrôle d’accès', en: 'Access control', ar: 'مراقبة الدخول' } },
+        { nav: 'renewals',      icon: ICONS.card, label: { fr: 'Renouvellements', en: 'Renewals', ar: 'التجديدات' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Passages', en: 'Check-ins', ar: 'الدخول' } },

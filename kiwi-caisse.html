@@ -4590,6 +4590,7 @@
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css?v=2" />
   <link rel="stylesheet" href="assets/pos-mobile.css" />
+  <link rel="stylesheet" href="assets/pos-workspaces.css?v=1" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -4612,6 +4613,9 @@
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
   <script src="assets/cloud-doc.js" defer></script>
+  <!-- Shared trade boards: reads the same tenant document as the owner
+       dashboard and grafts a compact operational entry into each exact POS. -->
+  <script src="assets/pos-workspaces.js?v=1" defer></script>
   <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur — c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
@@ -4692,7 +4696,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
       </button>
     </div>
-    <div class="pin-foot">Démo · 0001 cuisine · 0000–0015 métiers, toucher ici pour la liste · autre = caissier</div>
+    <div class="pin-foot">Démo · 0001 cuisine · 0000–0016 métiers, toucher ici pour la liste · autre = caissier</div>
     <!-- Escape hatch: merchant / operator on this PIN screen who wants to sign
          in with a different account. /auth/logout clears kiwi_sess server-side
          and lands on the login page. Plain <a> so it works even if JS is dead. -->

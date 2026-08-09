@@ -19,6 +19,7 @@
  *   0013  fleuriste           Fleurs du Détroit
  *   0014  coiffure            Salon Yasmine
  *   0015  salle de sport      Atlas Fitness
+ *   0016  autre activité      Caisse polyvalente
  *   autre → caisse restaurant (Café Atlas) — the main demo, untouched.
  *
  * Each vertical lives in its own pair assets/pos-<id>.{js,css}, lazy-loaded
@@ -68,6 +69,7 @@
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         label: 'Salle de sport · Atlas Fitness' },
+    '0016': { id: 'autre',       file: 'pos-autre',       label: 'Autre activité · caisse polyvalente' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -261,6 +263,10 @@
      * métier ouvert — c'est ce qui lui dit quel journal lire
      * (assets/pos-reprint.js). Absent sur la démo, qui n'encaisse rien. */
     try { if (window.KiwiPosReprint) window.KiwiPosReprint.mount(root, id); } catch (e) {}
+    /* The trade's planning/follow-up boards are the SAME tenant document as
+       the owner dashboard. The POS keeps its native service-time engine; this
+       compact bridge only adds the shared operational context. */
+    try { if (window.KiwiPosWorkspaces) window.KiwiPosWorkspaces.mount(root, id); } catch (e) {}
     current = id;
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');

@@ -39,6 +39,7 @@ var SHELL = [
   '/assets/pages-pro.css',
   '/assets/polish-dashboard.css',
   '/assets/pressing-dashboard.css?v=4',
+  '/assets/trade-workspaces.css?v=1',
   '/assets/hotel.css',
   '/assets/mobile.css?v=4',
   '/assets/sold-insights.js',
@@ -72,7 +73,8 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=4',
+  '/assets/venues.js?v=5',
+  '/assets/trade-workspaces.js?v=1',
   '/assets/pressing-ops.js?v=1',
   '/assets/pressing-dashboard.js?v=3',
   '/assets/demoClock.js',
@@ -164,6 +166,8 @@ var SHELL = [
   '/assets/pos-sale.js',
   '/assets/pos-dispatch.js',
   '/assets/pos-mobile.js',
+  '/assets/pos-workspaces.css?v=1',
+  '/assets/pos-workspaces.js?v=1',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
@@ -198,6 +202,8 @@ var SHELL = [
   '/assets/pos-coiffure.js',
   '/assets/pos-gym.css',
   '/assets/pos-gym.js',
+  '/assets/pos-autre.css',
+  '/assets/pos-autre.js',
   '/assets/caisse-pairing.js',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
