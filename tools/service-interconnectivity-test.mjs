@@ -288,12 +288,21 @@ result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table:
 ok(result.response.status === 200, 'un collègue pointé couvre la table pendant la pause');
 
 const employeePayment = {
-  id: 'employee-sale-bill-1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
+  id: 'employee-sale-bill-1-emp', table: '1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
   lines: [{ name: 'Tajine', qty: 2, total: 180, cat: 'Plats' }],
 };
+put(`INSERT OR REPLACE INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
+     VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now, now);
 let paid = await employeeSale(saraCookie, employeePayment);
 ok(paid.response.status === 200 && paid.body.ok,
   "un serveur pointé inscrit le paiement dans le même journal cloud que la caisse");
+const settledSession = db.prepare("SELECT status FROM table_sessions WHERE id='sess-payment-table-1'").get();
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const settledFloor = await json(response);
+ok(settledSession.status === 'closed'
+  && settledFloor.states['1'].status === 'khawya'
+  && db.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant=? AND table_no='1' AND paid_ts IS NULL").get(merchant).n === 0,
+  "le même acquittement libère la table, ferme OrderPro et solde ses tickets avant de répondre");
 paid = await employeeSale(saraCookie, employeePayment);
 const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id LIKE 'employee-sale-%'").all(merchant);
 const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
