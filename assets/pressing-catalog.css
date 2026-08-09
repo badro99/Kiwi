@@ -1,0 +1,49 @@
+/* Shared pressing catalogue editor: dashboard and paired caisse. */
+.pce-editor { display: grid; gap: 14px; color: var(--ink); }
+.pce-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px; border: 1px solid var(--n-200); border-radius: 18px; background: var(--surface); }
+.pce-toolbar h3 { margin: 0; color: var(--ink); font-size: 17px; }
+.pce-toolbar p { margin: 5px 0 0; max-width: 720px; color: var(--n-500); font-size: 12px; line-height: 1.45; }
+.pce-new { padding: 18px; border: 1px solid var(--atlas); border-radius: 18px; background: color-mix(in srgb, var(--atlas) 5%, var(--surface)); }
+.pce-new[hidden] { display: none; }
+.pce-new > label, .pce-item-main > label { display: grid; gap: 6px; color: var(--n-500); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.pce-new > label { display: inline-grid; width: min(320px,100%); margin: 0 10px 14px 0; }
+.pce-editor input, .pce-editor select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--n-300); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; outline: none; }
+.pce-editor input:focus, .pce-editor select:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 13%, transparent); }
+.pce-list { display: grid; gap: 10px; }
+.pce-item { padding: 16px; border: 1px solid var(--n-200); border-radius: 17px; background: var(--surface); box-shadow: var(--elev-1); }
+.pce-item.is-hidden { opacity: .66; background: var(--paper-soft); }
+.pce-item-main { display: grid; grid-template-columns: minmax(180px,1.2fr) minmax(150px,.8fr) auto; gap: 12px; align-items: end; margin-bottom: 14px; }
+.pce-visible { min-height: 42px; display: flex !important; align-items: center; gap: 8px !important; padding: 0 10px; border: 1px solid var(--n-200); border-radius: 10px; color: var(--ink) !important; font-size: 11px !important; letter-spacing: 0 !important; text-transform: none !important; }
+.pce-visible input { width: 16px; min-height: 16px; padding: 0; accent-color: var(--atlas); }
+.pce-prices { display: grid; grid-template-columns: repeat(5,minmax(95px,1fr)); gap: 8px; }
+.pce-price { min-width: 0; color: var(--n-500); font-size: 10px; font-weight: 650; }
+.pce-price > span:first-child { display: block; margin: 0 0 5px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pce-money { position: relative; display: block; }
+.pce-money input { padding-right: 38px; font-variant-numeric: tabular-nums; }
+.pce-money b { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--n-500); font-size: 9px; pointer-events: none; }
+.pce-variants { display: grid; gap: 9px; }
+.pce-variant { padding: 11px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--paper-soft); }
+.pce-variant > b { display: block; margin-bottom: 9px; font-size: 11px; }
+.pce-item-foot, .pce-new-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 13px; }
+.pce-item-foot > span, .pce-new-actions > span { margin-right: auto; color: var(--n-500); font-size: 10px; }
+.pce-editor .pxd-btn { min-height: 42px; padding: 0 15px; border: 1px solid var(--n-300); border-radius: 11px; background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.pce-editor .pxd-btn.primary { border-color: var(--brand-deep); background: var(--brand-deep); color: var(--inverse-ink); }
+.pce-editor .pxd-btn:hover { border-color: var(--atlas); }
+.px-tarifs-panel { height: 100%; overflow: auto; padding: 22px; }
+.px-tarifs-panel .pce-editor { max-width: 1260px; margin: 0 auto; }
+.px-tarifs-panel .pce-toolbar { position: sticky; top: -22px; z-index: 4; border-radius: 0 0 18px 18px; box-shadow: var(--elev-1); }
+@media (max-width: 900px) {
+  .pce-prices { grid-template-columns: repeat(3,minmax(95px,1fr)); }
+  .pce-item-main { grid-template-columns: 1fr 1fr; }
+  .pce-visible { grid-column: 1/-1; }
+}
+@media (max-width: 600px) {
+  .pce-toolbar { align-items: stretch; flex-direction: column; }
+  .pce-toolbar .pxd-btn { width: 100%; }
+  .pce-item-main, .pce-prices { grid-template-columns: 1fr 1fr; }
+  .pce-item-foot { align-items: stretch; flex-direction: column; }
+  .pce-item-foot > span { margin-right: 0; }
+  .pce-item-foot .pxd-btn { width: 100%; }
+  .px-tarifs-panel { padding: 12px; }
+  .px-tarifs-panel .pce-toolbar { top: -12px; }
+}

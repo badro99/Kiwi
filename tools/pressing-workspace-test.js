@@ -22,6 +22,8 @@ const caisseJs = read('assets/pressing-caisse.js');
 const pairingJs = read('assets/caisse-pairing.js');
 const dispatchJs = read('assets/pos-dispatch.js');
 const storeApi = read('functions/api/store.js');
+const catalogJs = read('assets/pressing-catalog.js');
+const catalogCss = read('assets/pressing-catalog.css');
 
 ok(/pressing:\s*\{\s*base:\s*'boutique'/.test(venues), 'pressing has an exact subtype profile');
 ['pressing-orders','pressing-workshop','pressing-pickup','pressing-services','pressing-quality','pressing-delivery']
@@ -30,17 +32,21 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=2') && sw.includes("'/assets/caisse-pairing.js?v=2'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=5') && dispatchJs.includes("file: 'pressing-caisse', rev: '5'") && sw.includes("'/assets/pressing-caisse.js?v=5'"), 'pressing lazy assets use a deploy-stable cache revision');
-ok(dashboard.includes('assets/pressing-dashboard.js?v=5'), 'dashboard loads the pressing subpages');
+ok(caisse.includes('assets/pos-dispatch.js?v=6') && dispatchJs.includes("file: 'pressing-caisse', rev: '6'") && sw.includes("'/assets/pressing-caisse.js?v=6'"), 'pressing lazy assets use a deploy-stable cache revision');
+ok(dashboard.includes('assets/pressing-dashboard.js?v=6'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=2') && caisse.includes('assets/pressing-ops.js?v=2'), 'dashboard and till share the same operations bridge');
-ok(sw.includes("'/assets/pressing-dashboard.css?v=5'") && sw.includes("'/assets/pressing-dashboard.js?v=5'"), 'pressing workspace is available offline');
+ok(sw.includes("'/assets/pressing-dashboard.css?v=6'") && sw.includes("'/assets/pressing-dashboard.js?v=6'"), 'pressing workspace is available offline');
+ok(dashboard.includes('assets/pressing-catalog.js?v=1') && caisse.includes('assets/pressing-catalog.js?v=1') && sw.includes("'/assets/pressing-catalog.js?v=1'"), 'dashboard and till load the same offline pressing catalogue');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');
 ok(pressingJs.includes("window.addEventListener('click'") && pressingJs.includes('open.dataset.pxdOpen') && pressingJs.includes('page.dataset.pxdPage'), 'pressing subpage actions claim sidebar routing before the generic dashboard');
 ok(css.includes('@media (max-width: 390px)') && css.includes('@media (max-width: 760px)'), 'phone breakpoints cover narrow screens');
-ok(!/font-style\s*:\s*italic/.test(css), 'pressing workspace uses roman type only');
+ok(!/font-style\s*:\s*italic/.test(css + catalogCss), 'pressing workspace uses roman type only');
 ok(caisseJs.includes("PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:'") && caisseJs.includes("feature: 'pressing-orders'"), 'full garment tickets persist locally and through the tenant cloud document');
 ok(caisseJs.indexOf('ticketSeq++;\n        syncOwnerOps();') > 0, 'the next ticket number is persisted before a pay-at-pickup reload');
 ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"), 'the store API accepts the bounded pressing ticket document');
+ok(storeApi.includes("'pressing-catalog': { keys: ['categories', 'services', 'items']"), 'the store API accepts the bounded pressing catalogue document');
+ok(pressingJs.includes('data-pce-host') && caisseJs.includes('data-px-view="tarifs"') && caisseJs.includes('mountEditor(host, { compact: true })'), 'names and prices are editable from both dashboard and till');
+ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
 ok(caisseJs.includes('J’ai envoyé le message') && caisseJs.indexOf("window.open('', '_blank')") < caisseJs.indexOf('o.notified = true'), 'WhatsApp notification is confirmed only after opening the draft');
 ok(!caisseJs.includes("jusqu'à 20h00") && !caisseJs.includes('merci envoyé sur WhatsApp'), 'customer messages and handover confirmations make no false claims');
@@ -70,6 +76,7 @@ const context = {
 };
 context.window = context;
 vm.runInNewContext(read('assets/pressing-ops.js'), context, { filename: 'pressing-ops.js' });
+vm.runInNewContext(catalogJs, context, { filename: 'pressing-catalog.js' });
 
 const now = Date.now();
 const orders = [
@@ -89,5 +96,24 @@ ok(s.attention === 1 && s.services.sec === 1, 'dashboard derives care and treatm
 const snapshotText = [...store.values()].join('');
 ok(!snapshotText.includes('"pin"') && !snapshotText.includes('"code"'), 'operations snapshot contains no credential fields');
 ok(!snapshotText.includes('Tache col'), 'dashboard snapshot records a vigilance without leaking the customer instruction');
+
+const initialCatalog = context.KiwiPressingCatalog.read();
+const chemise = initialCatalog.items.find((x) => x.id === 'chemise');
+ok(chemise && chemise.label === 'Chemise' && chemise.prices.repassage === 10, 'pressing catalogue starts with the operational default grid');
+ok(context.KiwiPressingCatalog.updateItem('chemise', { label:'Chemise premium', prices:{sec:27,repassage:12}, active:true }), 'an owner can save a garment name and prices');
+const editedChemise = context.KiwiPressingCatalog.read().items.find((x) => x.id === 'chemise');
+ok(editedChemise.label === 'Chemise premium' && editedChemise.prices.sec === 27 && !editedChemise.prices.lavage, 'saved prices replace the offered treatment matrix instead of leaving stale values');
+const added = context.KiwiPressingCatalog.addItem({ label:'Gilet', cat:'hauts', prices:{sec:30,repassage:14} });
+ok(added && context.KiwiPressingCatalog.read().items.some((x) => x.id === added.id && x.label === 'Gilet'), 'a new garment becomes part of the shared catalogue');
+ok(context.KiwiPressingCatalog.updateItem(added.id, { active:false }), 'a garment can be hidden without deletion');
+ok(context.KiwiPressingCatalog.read().items.find((x) => x.id === added.id).active === false, 'hidden garments remain available to historical tickets');
+
+const older = context.KiwiPressingCatalog._defaults();
+const newer = context.KiwiPressingCatalog._defaults();
+older.items.find((x) => x.id === 'chemise').label = 'Ancien nom';
+older.items.find((x) => x.id === 'chemise').updatedAt = 10;
+newer.items.find((x) => x.id === 'chemise').label = 'Nom récent';
+newer.items.find((x) => x.id === 'chemise').updatedAt = 20;
+ok(context.KiwiPressingCatalog._merge(older,newer).items.find((x) => x.id === 'chemise').label === 'Nom récent', 'cross-device catalogue merge keeps the latest row');
 
 console.log('\n✓ pressing workspace gate green (' + n + ' checks)');

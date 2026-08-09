@@ -101,68 +101,24 @@
      classic ask) — prices add up. Two real-world exclusions: le nettoyage
      à sec est un procédé complet (il inclut le repassage) et ne se cumule
      jamais avec le lavage à l'eau. Détachage / retouche stack with anything. */
-  const SERVICES = [
-    { id: 'sec',       label: 'Nettoyage à sec', short: 'À sec',     code: 'SEC' },
-    { id: 'lavage',    label: 'Lavage',          short: 'Lavage',    code: 'LAV' },
-    { id: 'repassage', label: 'Repassage',       short: 'Repassage', code: 'REP' },
-    { id: 'detachage', label: 'Détachage',       short: 'Détachage', code: 'DET' },
-    { id: 'retouche',  label: 'Retouche',        short: 'Retouche',  code: 'RET' },
-  ];
-  const SVC = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
+  let SERVICES = [];
+  let SVC = {};
   const SVC_CONFLICTS = { sec: ['lavage', 'repassage'], lavage: ['sec'], repassage: ['sec'] };
-  const svcCodes  = (svcs) => svcs.map((s) => SVC[s].code).join('+');
-  const svcShorts = (svcs) => svcs.map((s) => SVC[s].short).join(' + ');
+  const svcCodes  = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].code : s).join('+');
+  const svcShorts = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].short : s).join(' + ');
 
-  const CATALOG = [
-    { id: 'hauts', label: 'Hauts', items: [
-      { id: 'chemise',  label: 'Chemise',  prices: { sec: 25, lavage: 18, repassage: 10, detachage: 30, retouche: 35 } },
-      { id: 'tshirt',   label: 'T-shirt',  prices: { lavage: 14, repassage: 8, detachage: 22, sec: 20 } },
-      { id: 'pull',     label: 'Pull',     prices: { sec: 30, lavage: 22, repassage: 12, detachage: 35, retouche: 40 } },
-      { id: 'veste',    label: 'Veste',    prices: { sec: 45, repassage: 20, detachage: 50, retouche: 60 } },
-      { id: 'costume',  label: 'Costume', flag: 'multi-pièces',
-        variants: [
-          { id: '2p', label: '2 pièces', pieces: ['Veste', 'Pantalon'],          prices: { sec: 70, repassage: 35, detachage: 80, retouche: 80 } },
-          { id: '3p', label: '3 pièces', pieces: ['Veste', 'Pantalon', 'Gilet'], prices: { sec: 90, repassage: 45, detachage: 100, retouche: 90 } },
-        ] },
-      { id: 'manteau',  label: 'Manteau',  prices: { sec: 60, repassage: 25, detachage: 65, retouche: 70 } },
-    ] },
-    { id: 'bas', label: 'Bas', items: [
-      { id: 'pantalon', label: 'Pantalon', prices: { sec: 28, lavage: 18, repassage: 12, detachage: 32, retouche: 30 } },
-      { id: 'jean',     label: 'Jean',     prices: { lavage: 20, repassage: 12, sec: 30, detachage: 35, retouche: 30 } },
-      { id: 'jupe',     label: 'Jupe',     prices: { sec: 26, lavage: 18, repassage: 12, detachage: 30, retouche: 35 } },
-      { id: 'short',    label: 'Short',    prices: { lavage: 12, repassage: 8, sec: 18, detachage: 20, retouche: 25 } },
-    ] },
-    { id: 'robes', label: 'Robes & tenues', items: [
-      { id: 'robe',        label: 'Robe',           prices: { sec: 40, lavage: 30, repassage: 18, detachage: 45, retouche: 50 } },
-      { id: 'robe_soiree', label: 'Robe de soirée', flag: 'délicat', prices: { sec: 90, repassage: 40, detachage: 100, retouche: 80 } },
-      { id: 'caftan',      label: 'Caftan · takchita', flag: 'main', prices: { sec: 120, repassage: 60, detachage: 130, retouche: 100 } },
-    ] },
-    { id: 'linge', label: 'Linge de maison', items: [
-      { id: 'drap',       label: 'Drap',             def: 'lavage', prices: { lavage: 15, repassage: 10, sec: 25 } },
-      { id: 'housse',     label: 'Housse de couette', def: 'lavage', prices: { lavage: 25, repassage: 15, sec: 35 } },
-      { id: 'couverture', label: 'Couverture',        def: 'lavage', prices: { lavage: 45, sec: 60 } },
-      { id: 'nappe',      label: 'Nappe',             def: 'lavage', prices: { lavage: 20, repassage: 12, sec: 30, detachage: 28 } },
-      { id: 'rideaux',    label: 'Rideaux', sub: 'par panneau', def: 'sec', prices: { sec: 50, lavage: 35, repassage: 20 } },
-      { id: 'tapis',      label: 'Tapis', flag: 'au m²', def: 'lavage',
-        variants: [
-          { id: 's', label: 'Petit · < 2 m²',  prices: { lavage: 80 } },
-          { id: 'm', label: 'Moyen · 2–4 m²',  prices: { lavage: 140 } },
-          { id: 'l', label: 'Grand · > 4 m²',  prices: { lavage: 220 } },
-        ] },
-    ] },
-    { id: 'cuir', label: 'Cuir & spécial', items: [
-      { id: 'veste_cuir', label: 'Veste cuir', flag: '72 h', prices: { sec: 180, detachage: 200, retouche: 90 } },
-      { id: 'daim',       label: 'Daim',       flag: '72 h', prices: { sec: 200, detachage: 220 } },
-      { id: 'doudoune',   label: 'Doudoune',   prices: { lavage: 70, sec: 90, retouche: 60 } },
-    ] },
-    { id: 'chaussures', label: 'Chaussures', items: [
-      { id: 'chaussures', label: 'Chaussures cuir', sub: 'la paire', def: 'sec', prices: { sec: 80 } },
-      { id: 'baskets',    label: 'Baskets', sub: 'la paire',         def: 'lavage', prices: { lavage: 70 } },
-      { id: 'babouches',  label: 'Babouches', sub: 'la paire',       def: 'sec', prices: { sec: 50 } },
-    ] },
-  ];
-  const ITEMS = {};
-  CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS[it.id] = it; }));
+  let CATALOG = [];
+  let ITEMS = {};
+  function loadCatalog() {
+    const api = window.KiwiPressingCatalog;
+    const doc = api && api.read ? api.read() : { services: [], categories: [], items: [] };
+    SERVICES = (doc.services || []).slice();
+    SVC = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
+    ITEMS = {};
+    (doc.items || []).forEach((it) => { ITEMS[it.id] = it; });
+    CATALOG = (doc.categories || []).map((c) => ({ ...c, items: (doc.items || []).filter((it) => it.cat === c.id) }));
+  }
+  loadCatalog();
 
   function priceTable(item, variantId) {
     if (item.variants) {
@@ -173,7 +129,8 @@
   }
   function minPrice(item) {
     const tables = item.variants ? item.variants.map((v) => v.prices) : [item.prices];
-    return Math.min(...tables.flatMap((t) => Object.values(t)));
+    const values = tables.flatMap((t) => Object.values(t || {})).filter((n) => Number(n) > 0);
+    return values.length ? Math.min(...values) : 0;
   }
   function availServices(item, variantId) {
     const t = priceTable(item, variantId);
@@ -235,7 +192,7 @@
           n++;
           pieces.push({
             pid: `${orderId}-${n}`, n, lineIdx: li,
-            label: plabel ? `${item.label} · ${plabel}` : item.label,
+            label: plabel ? `${ln.label || item.label} · ${plabel}` : (ln.label || item.label),
             itemId: ln.itemId, svcs: ln.services, color: ln.color,
             notes: (ln.notes || []).slice(), freeNote: ln.freeNote || '',
             status: (statuses && statuses[n - 1]) || 'recu',
@@ -247,9 +204,13 @@
     pieces.forEach((p) => { p.of = pieces.length; });
     return pieces;
   }
-  function lineTotal(ln) {
+  function lineUnit(ln) {
+    if (Number.isFinite(+ln.unitPrice) && +ln.unitPrice >= 0) return +ln.unitPrice;
     const t = priceTable(ITEMS[ln.itemId], ln.variantId);
-    return ln.services.reduce((s, sv) => s + (t[sv] || 0), 0) * ln.qty;
+    return ln.services.reduce((s, sv) => s + (t[sv] || 0), 0);
+  }
+  function lineTotal(ln) {
+    return lineUnit(ln) * ln.qty;
   }
   function orderTotals(o) {
     const sub = o.lines.reduce((s, ln) => s + lineTotal(ln), 0);
@@ -281,6 +242,7 @@
       notified: !!cfg.notified,
       collectedAt: cfg.collectedH != null ? new Date(NOW - cfg.collectedH * H) : null,
     };
+    o.lines.forEach((l) => { l.label = ITEMS[l.itemId].label; l.unitPrice = lineUnit(l); });
     o.pieces = buildPieces(o.id, o.lines, null);
     if (cfg.status) o.pieces.forEach((p) => { p.status = cfg.status; });
     if (cfg.statuses) o.pieces.forEach((p, i) => { p.status = cfg.statuses[Math.min(i, cfg.statuses.length - 1)]; });
@@ -381,7 +343,8 @@
       guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
       b2b: !!o.b2b,
       lines: (o.lines || []).map((l) => ({
-        itemId: l.itemId, services: (l.services || []).slice(0, 8), qty: Math.max(1, Math.min(500, +l.qty || 1)),
+        itemId: l.itemId, label: String(l.label || (ITEMS[l.itemId] && ITEMS[l.itemId].label) || 'Article').slice(0, 100),
+        unitPrice: Math.max(0, Math.min(100000, +l.unitPrice || 0)), services: (l.services || []).slice(0, 8), qty: Math.max(1, Math.min(500, +l.qty || 1)),
         color: l.color || 'blanc', notes: (l.notes || []).slice(0, 12), freeNote: String(l.freeNote || '').slice(0, 500),
         photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
       })),
@@ -442,12 +405,17 @@
     ORDERS.splice(0, ORDERS.length);
     doc.orders.slice(0, 500).forEach((raw) => {
       if (!raw || !raw.id || !Array.isArray(raw.lines) || !raw.lines.length) return;
-      const lines = raw.lines.filter((l) => l && ITEMS[l.itemId]).map((l) => ({
-        itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SERVICES.some((x) => x.id === s)).slice(0, 8) : [],
-        qty: Math.max(1, Math.min(500, +l.qty || 1)), color: COLOR[l.color] ? l.color : 'blanc',
-        notes: Array.isArray(l.notes) ? l.notes.map((n) => String(n).slice(0, 100)).slice(0, 12) : [],
-        freeNote: String(l.freeNote || '').slice(0, 500), photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
-      })).filter((l) => l.services.length);
+      const lines = raw.lines.filter((l) => l && ITEMS[l.itemId]).map((l) => {
+        const row = {
+          itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SERVICES.some((x) => x.id === s)).slice(0, 8) : [],
+          qty: Math.max(1, Math.min(500, +l.qty || 1)), color: COLOR[l.color] ? l.color : 'blanc',
+          notes: Array.isArray(l.notes) ? l.notes.map((n) => String(n).slice(0, 100)).slice(0, 12) : [],
+          freeNote: String(l.freeNote || '').slice(0, 500), photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
+          label: String(l.label || ITEMS[l.itemId].label).slice(0, 100),
+        };
+        row.unitPrice = Number.isFinite(+l.unitPrice) && +l.unitPrice >= 0 ? +l.unitPrice : lineUnit(row);
+        return row;
+      }).filter((l) => l.services.length);
       if (!lines.length) return;
       const o = {
         id: String(raw.id).slice(0, 40), custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
@@ -541,7 +509,7 @@
   const tkLabel = (o) => {
     const l = o.lines[0];
     if (!l) return 'Pressing';
-    const nm = ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing';
+    const nm = l.label || (ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing');
     const n = o.lines.reduce((s, x) => s + x.qty, 0);
     return o.lines.length > 1 ? `${nm} +${n - l.qty} pièces` : nm;
   };
@@ -587,6 +555,7 @@
           <button class="px-nav-it" data-px-view="commandes"><i data-lucide="clipboard-list"></i><span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
           <button class="px-nav-it" data-px-view="retrait"><i data-lucide="shopping-bag"></i><span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
           <button class="px-nav-it" data-px-view="rangement"><i data-lucide="archive"></i><span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
+          <button class="px-nav-it" data-px-view="tarifs"><i data-lucide="badge-dollar-sign"></i><span>Services &amp; tarifs</span></button>
         </nav>
         <div class="px-rail-foot">
           <button class="px-net" id="px-net" title="Simuler une coupure réseau">
@@ -614,6 +583,7 @@
         <section class="px-view" data-px-panel="commandes"></section>
         <section class="px-view" data-px-panel="retrait"></section>
         <section class="px-view" data-px-panel="rangement"></section>
+        <section class="px-view" data-px-panel="tarifs"><div class="px-tarifs-panel" id="px-tarifs"></div></section>
       </main>
       <div class="modal-veil" id="px-sheet-veil"><div class="modal px-sheet px-rel" id="px-sheet"></div></div>
       <div class="modal-veil" id="px-client-veil"><div class="modal px-client px-rel" id="px-clientm"></div></div>
@@ -654,7 +624,7 @@
     try {
       const requested = sessionStorage.getItem('kiwiPressingStartView');
       sessionStorage.removeItem('kiwiPressingStartView');
-      if (['comptoir', 'commandes', 'retrait', 'rangement'].includes(requested)) state.view = requested;
+      if (['comptoir', 'commandes', 'retrait', 'rangement', 'tarifs'].includes(requested)) state.view = requested;
     } catch (_) {}
     renderAll();
   }
@@ -680,7 +650,17 @@
     if (view === 'commandes') renderBoard();
     if (view === 'retrait') renderRetrait();
     if (view === 'rangement') renderRack();
+    if (view === 'tarifs') renderTarifs();
     icons();
+  }
+  function renderTarifs() {
+    const host = $('#px-tarifs', root);
+    if (!host) return;
+    if (!window.KiwiPressingCatalog || !KiwiPressingCatalog.mountEditor) {
+      host.innerHTML = '<div class="px-bempty">Catalogue indisponible. Rafraîchissez la caisse.</div>';
+      return;
+    }
+    KiwiPressingCatalog.mountEditor(host, { compact: true });
   }
   function renderBadges() {
     const active = ORDERS.filter((o) => orderStatus(o) !== 'livre').length;
@@ -706,12 +686,16 @@
   }
 
   /* ═══════════════════════ COMPTOIR — the visual intake grid ═══════════════════════ */
+  function counterCatalog() {
+    return CATALOG.map((c) => ({ ...c, items: c.items.filter((it) => it.active !== false) })).filter((c) => c.items.length);
+  }
   function renderCats() {
-    const counts = Object.fromEntries(CATALOG.map((c) => [c.id, c.items.length]));
-    const all = CATALOG.reduce((s, c) => s + c.items.length, 0);
+    const visible = counterCatalog();
+    const counts = Object.fromEntries(visible.map((c) => [c.id, c.items.length]));
+    const all = visible.reduce((s, c) => s + c.items.length, 0);
     $('#px-cats', root).innerHTML =
       `<button class="px-cat ${state.cat === 'tous' ? 'on' : ''}" data-px-cat="tous">Tous <span class="px-cat-ct">${all}</span></button>` +
-      CATALOG.map((c) =>
+      visible.map((c) =>
         `<button class="px-cat ${state.cat === c.id ? 'on' : ''}" data-px-cat="${c.id}">${esc(c.label)} <span class="px-cat-ct">${counts[c.id]}</span></button>`
       ).join('');
     $('#px-cats', root).onclick = (e) => {
@@ -723,13 +707,14 @@
   }
 
   function renderGrid() {
-    const cats = state.cat === 'tous' ? CATALOG : CATALOG.filter((c) => c.id === state.cat);
+    const visible = counterCatalog();
+    const cats = state.cat === 'tous' ? visible : visible.filter((c) => c.id === state.cat);
     let i = 0;
     $('#px-gridwrap', root).innerHTML = cats.map((c) => `
       <div class="px-cat-head">${esc(c.label)}</div>
       <div class="px-grid">${c.items.map((it) => `
         <button class="px-card" data-px-item="${it.id}" style="--i:${i++}">
-          <span class="px-card-art">${ART[it.id] || ''}</span>
+          <span class="px-card-art">${ART[it.art || it.id] || ART.chemise}</span>
           <span class="px-card-name">${esc(it.label)}</span>
           <span class="px-card-price">dès ${minPrice(it)} MAD${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
@@ -831,9 +816,9 @@
     const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]) : null;
     const notesCt = ln.notes.length + (ln.freeNote ? 1 : 0);
     return `<div class="px-line">
-      <span class="px-line-art">${ART[ln.itemId] || ''}</span>
+        <span class="px-line-art">${ART[item.art || ln.itemId] || ART.chemise}</span>
       <span class="px-line-mid">
-        <span class="px-line-name">${esc(item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
+        <span class="px-line-name">${esc(ln.label || item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
         <span class="px-line-sub">
           <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
           <span class="svc">${svcCodes(ln.services)}</span> ${esc(svcShorts(ln.services))}
@@ -888,7 +873,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-sheet-head">
-        <span class="px-sheet-art">${ART[item.id] || ''}</span>
+        <span class="px-sheet-art">${ART[item.art || item.id] || ART.chemise}</span>
         <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
         <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${unit} MAD × ${sheet.qty}</span></span>
       </div>
@@ -935,7 +920,7 @@
       <div class="px-f">
         <div class="px-f-lbl">État à la dépose <span class="opt">· la photo protège le client et vous</span></div>
         <div class="px-photos" id="px-photos">
-          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${ART[item.id] || ''}<b>${k + 1}</b></span>`).join('')}
+          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${ART[item.art || item.id] || ART.chemise}<b>${k + 1}</b></span>`).join('')}
           <button class="px-photo-add" id="px-photo-add"><i data-lucide="camera"></i>Photo état</button>
         </div>
       </div>
@@ -1030,7 +1015,7 @@
     el.innerHTML = `
       <div class="px-vf">
         <div class="px-vf-hint">Cadrez la zone (tache, accroc, bouton)…</div>
-        ${(ART[item.id] || '').replace('class="px-art"', 'class="px-art art"')}
+        ${(ART[item.art || item.id] || ART.chemise).replace('class="px-art"', 'class="px-art art"')}
         <span class="px-vf-corner tl"></span><span class="px-vf-corner tr"></span>
         <span class="px-vf-corner bl"></span><span class="px-vf-corner br"></span>
         <div class="px-vf-flash" id="px-vf-flash"></div>
@@ -1212,7 +1197,7 @@
       custId: t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer.type === 'guest' ? { name: 'Client de passage', phone: '' } : null,
       b2b: ticketTotals(t).b2b,
-      lines: t.lines.map((l) => ({ ...l, notes: l.notes.slice() })),
+      lines: t.lines.map((l) => ({ ...l, label: ITEMS[l.itemId].label, unitPrice: lineUnit(l), notes: l.notes.slice() })),
       droppedAt: new Date(), readyAt: t.ready,
       pay: { mode: null, method: null, paid: 0 },
       rack: null, notified: false, collectedAt: null,
@@ -1264,7 +1249,7 @@
       ${o.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
         const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
-        return `<div class="row"><span class="nm">${ln.qty} × ${esc(item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
+        return `<div class="row"><span class="nm">${ln.qty} × ${esc(ln.label || item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
       }).join('')}
       <hr>
       <div class="row"><span>Sous-total</span><span>${sub} MAD</span></div>
@@ -1336,7 +1321,7 @@
       lines: order.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
         const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
-        return { qty: ln.qty, name: `${item.label}${variant ? ` (${variant})` : ''} · ${svcCodes(ln.services)}`, price: lineTotal(ln) };
+        return { qty: ln.qty, name: `${ln.label || item.label}${variant ? ` (${variant})` : ''} · ${svcCodes(ln.services)}`, price: lineTotal(ln) };
       }),
       total: `${total} MAD`,
       method: order.pay.mode === 'compte' ? 'Sur compte' : (order.pay.paid ? `${order.pay.paid} MAD payés` : 'Solde au retrait'),
@@ -1743,7 +1728,7 @@
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
           return `
           <div class="px-piece">
-            <span class="px-piece-art">${ART[p.itemId] || ''}</span>
+            <span class="px-piece-art">${ART[(ITEMS[p.itemId] || {}).art || p.itemId] || ART.chemise}</span>
             <span class="px-piece-mid">
               <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
               <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
@@ -1860,7 +1845,7 @@
         </div>
       </div>
       <button class="px-wa-photo" id="px-wa-photo">
-        <span class="th">${ART[photoPiece.itemId] || ''}</span>
+        <span class="th">${ART[(ITEMS[photoPiece.itemId] || {}).art || photoPiece.itemId] || ART.chemise}</span>
         <span class="l">Joindre une photo du vêtement fini, le client voit son linge avant de se déplacer</span>
         <span class="tick"><i data-lucide="check"></i></span>
       </button>
@@ -2140,10 +2125,26 @@
       mount(rootEl) {
         restorePressingDocument(readPressingDocument());
         build(rootEl); enter();
-        const cloud = pressingCloud();
-        if (cloud) cloud.bind();
+        const catalog = window.KiwiPressingCatalog;
+        if (catalog) {
+          catalog.subscribe(() => {
+            loadCatalog();
+            if (state.cat !== 'tous' && !counterCatalog().some((c) => c.id === state.cat)) state.cat = 'tous';
+            if (root && state.unlocked) renderAll();
+          });
+          Promise.resolve(catalog.bind()).then(() => {
+            loadCatalog();
+            restorePressingDocument(readPressingDocument());
+            if (root && state.unlocked) renderAll();
+            const orderCloud = pressingCloud();
+            if (orderCloud) orderCloud.bind();
+          });
+        } else {
+          const orderCloud = pressingCloud();
+          if (orderCloud) orderCloud.bind();
+        }
       },
-      onShow() { enter(); },
+      onShow() { loadCatalog(); enter(); },
     });
   }
 

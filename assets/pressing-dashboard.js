@@ -162,7 +162,7 @@
         var count = num((s.services || {})[id] || 0);
         return '<div class="pxd-check"><span>' + serviceLabels[id] + '</span><small>' + count + ' pièce' + (count === '1' ? '' : 's') + ' active' + (count === '1' ? '' : 's') + '</small></div>';
       }).join('');
-      return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Grille du comptoir</h3><p>Les prix et combinaisons disponibles sont ceux réellement proposés au moment du dépôt.</p><div class="pxd-checks"><div class="pxd-check"><span>Date de retrait</span><small>Proposée puis modifiable au dépôt</small></div><div class="pxd-check"><span>Jour de fermeture</span><small>Reporté automatiquement</small></div><div class="pxd-check"><span>Instructions de soin</span><small>Imprimées sur chaque étiquette</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="comptoir">Ouvrir la grille de dépôt</button></section></div>';
+      return '<div class="pxd-page-grid"><div data-pce-host></div><div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Application des tarifs</h3><p>Une modification s’applique aux prochains dépôts. Les anciens tickets gardent le nom et le prix convenus avec le client.</p><div class="pxd-checks"><div class="pxd-check"><span>Caisse appairée</span><small>Synchronisée par établissement</small></div><div class="pxd-check"><span>Article masqué</span><small>Conservé dans l’historique</small></div><div class="pxd-check"><span>Prix vide</span><small>Service non proposé</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="tarifs">Ouvrir les tarifs sur la caisse</button></section></div></div>';
     }
     if (nav === 'pressing-quality') {
       var attention = active.filter(function (o) { return (o.pieces || []).some(function (p) { return p.notes; }); });
@@ -176,6 +176,10 @@
     var meta = PAGE_LABELS[nav];
     currentPage = nav;
     Kiwi.appPage(nav, { title: meta[0], subtitle: meta[1], body: pageBody(nav) });
+    if (nav === 'pressing-services') requestAnimationFrame(function () {
+      var editor = document.querySelector('[data-pce-host]');
+      if (editor && window.KiwiPressingCatalog) KiwiPressingCatalog.mountEditor(editor);
+    });
   }
   function openTill(view) {
     try { sessionStorage.setItem('kiwiPressingStartView', view || 'comptoir'); } catch (_) {}
@@ -197,6 +201,7 @@
     if (host) host.remove();
     host = null;
     try { if (current && window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
+    try { if (current && window.KiwiPressingCatalog && KiwiPressingCatalog.bind) KiwiPressingCatalog.bind(); } catch (_) {}
   }
 
   /* The shared dashboard registers its delegated sidebar listener during the
@@ -219,6 +224,7 @@
     activate();
     try { if (window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
     try { if (window.KiwiPressingOps) KiwiPressingOps.subscribe(function () { if (currentPage) showPage(currentPage); }); } catch (_) {}
+    try { if (window.KiwiPressingCatalog) KiwiPressingCatalog.subscribe(function () { if (currentPage === 'pressing-services') showPage(currentPage); }); } catch (_) {}
     try { KiwiVenue.subscribe(activate); } catch (_) {}
     window.addEventListener('kiwi:langchange', activate);
   }
