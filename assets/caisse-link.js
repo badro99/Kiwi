@@ -186,18 +186,47 @@
       '.kcl-meta button{background:none;border:0;color:var(--mint,#7DF2B0);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;}' +
       '.kcl-copy{margin-top:14px;width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:10px;padding:9px;font:inherit;font-weight:600;cursor:pointer;transition:background .15s;}' +
       '.kcl-copy:hover{background:rgba(255,255,255,.2);}' +
-      '.kcl-status{display:flex;align-items:center;gap:9px;margin:16px 0;padding:11px 14px;border-radius:11px;background:var(--paper,#F7F5F0);border:1px solid rgba(0,0,0,.06);font-size:.86rem;font-weight:600;}' +
-      '.kcl-status .kcl-d{width:9px;height:9px;border-radius:50%;background:#D99A2B;box-shadow:0 0 0 4px rgba(217,154,43,.16);flex:none;}' +
-      '.kcl-status.on .kcl-d{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.18);}' +
-      '.kcl-status.on{color:var(--atlas,#0B6E4F);}' +
-      '.kcl-status.kcl-warn{color:#8a5a00;background:rgba(217,154,43,.10);border-color:rgba(217,154,43,.30);line-height:1.4;}' +
-      '.kcl-status.kcl-warn .kcl-d{background:#D99A2B;box-shadow:none;}' +
+      /* Pairing confirmation stays inside the drawer. A short terminal-to-dashboard
+       * trace replaces the old full-viewport confetti burst: connection is an
+       * infrastructure state, not a game reward. Every fill/foreground pairing
+       * uses semantic surface tokens so this remains legible in both climates. */
+      '.kcl-status{margin:16px 0;padding:16px;border-radius:16px;background:var(--surface,#FFFDFA);border:1px solid var(--n-200,#E8E6E0);box-shadow:0 14px 34px -30px rgba(5,59,44,.45);color:var(--ink,#0A0F0D);overflow:hidden;}' +
+      '.kcl-route{display:grid;grid-template-columns:auto minmax(54px,1fr) auto;align-items:center;gap:11px;padding:3px 2px 15px;border-bottom:1px solid var(--n-200,#E8E6E0);}' +
+      '.kcl-node{display:grid;justify-items:center;gap:6px;min-width:62px;color:var(--n-500,#6F6C65);font-size:.68rem;font-weight:650;line-height:1;}' +
+      '.kcl-node-ico{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--paper-soft,#EFECE3);border:1px solid var(--n-200,#E8E6E0);color:var(--n-500,#6F6C65);transition:color .35s var(--glide,ease),border-color .35s var(--glide,ease),background .35s var(--glide,ease),transform .55s var(--spring,ease);}' +
+      '.kcl-node-ico svg{width:19px;height:19px;display:block;}' +
+      '.kcl-track{height:2px;position:relative;border-radius:99px;background:var(--n-200,#E8E6E0);overflow:visible;}' +
+      '.kcl-track::before{content:"";position:absolute;inset:0;right:100%;border-radius:inherit;background:var(--atlas,#0B6E4F);}' +
+      '.kcl-track-dot{position:absolute;z-index:1;left:0;top:50%;width:8px;height:8px;border-radius:50%;background:var(--atlas,#0B6E4F);box-shadow:0 0 0 5px color-mix(in srgb,var(--atlas,#0B6E4F) 14%,transparent);transform:translate(-50%,-50%);}' +
+      '.kcl-state{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding-top:13px;}' +
+      '.kcl-status .kcl-d{width:8px;height:8px;border-radius:50%;background:var(--warning,#D99A2B);box-shadow:0 0 0 4px color-mix(in srgb,var(--warning,#D99A2B) 16%,transparent);flex:none;}' +
+      '.kcl-state-copy{min-width:0;}' +
+      '.kcl-state-copy strong{display:block;font-size:.86rem;font-weight:700;line-height:1.25;color:var(--ink,#0A0F0D);}' +
+      '.kcl-state-copy small{display:block;margin-top:3px;font-size:.73rem;font-weight:500;line-height:1.35;color:var(--n-500,#6F6C65);}' +
+      '.kcl-check{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--paper-soft,#EFECE3);color:var(--n-400,#A8A49A);transform:scale(.86);opacity:.45;transition:opacity .25s var(--glide,ease),transform .55s var(--spring,ease),background .25s var(--glide,ease),color .25s var(--glide,ease);}' +
+      '.kcl-check svg{width:15px;height:15px;}' +
+      '.kcl-status.on{border-color:color-mix(in srgb,var(--atlas,#0B6E4F) 30%,var(--n-200,#E8E6E0));}' +
+      '.kcl-status.on .kcl-d{background:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px color-mix(in srgb,var(--atlas,#0B6E4F) 16%,transparent);}' +
+      '.kcl-status.on .kcl-node{color:var(--atlas,#0B6E4F);}' +
+      '.kcl-status.on .kcl-node-ico{color:var(--atlas,#0B6E4F);border-color:color-mix(in srgb,var(--atlas,#0B6E4F) 26%,var(--n-200,#E8E6E0));background:color-mix(in srgb,var(--atlas,#0B6E4F) 8%,var(--surface,#FFFDFA));}' +
+      '.kcl-status.on .kcl-check{opacity:1;transform:scale(1);background:var(--atlas,#0B6E4F);color:var(--inverse-ink,#F7F5F0);}' +
+      '.kcl-status.kcl-arrive .kcl-track::before{animation:kcl-route-fill .8s var(--expo,ease-out) both;}' +
+      '.kcl-status.kcl-arrive .kcl-track-dot{animation:kcl-route-travel .8s var(--expo,ease-out) both;}' +
+      '.kcl-status.kcl-arrive .kcl-node:last-child .kcl-node-ico{animation:kcl-node-arrive .55s .68s var(--spring,ease) both;}' +
+      '.kcl-status.kcl-warn{border-color:color-mix(in srgb,var(--warning,#D99A2B) 35%,var(--n-200,#E8E6E0));line-height:1.4;}' +
+      '.kcl-status.kcl-warn .kcl-route{display:none;}' +
+      '.kcl-status.kcl-warn .kcl-state{padding-top:0;}' +
+      '.kcl-status.kcl-warn .kcl-d{background:var(--warning,#D99A2B);box-shadow:none;}' +
       '.kcl-pulse{animation:kcl-pulse 1.6s ease-in-out infinite;}' +
       '@keyframes kcl-pulse{0%,100%{opacity:1}50%{opacity:.35}}' +
+      '@keyframes kcl-route-fill{to{right:0}}' +
+      '@keyframes kcl-route-travel{0%{left:0}100%{left:100%}}' +
+      '@keyframes kcl-node-arrive{0%{transform:scale(.88)}100%{transform:scale(1)}}' +
       '.kcl-open{width:100%;background:var(--inverse-surface,#053B2C);color:var(--inverse-ink,#F7F5F0);border:1px solid var(--inverse-line,rgba(255,255,255,.18));border-radius:12px;padding:13px;font:inherit;font-weight:700;cursor:pointer;transition:filter .15s;}' +
       '.kcl-open:hover{filter:brightness(1.06);}' +
       '.kcl-open:focus-visible{outline:3px solid var(--mint,#7DF2B0);outline-offset:3px;}' +
       '.kcl-hint{margin:14px 0 0;font-size:.8rem;line-height:1.5;color:var(--ink,#0A0F0D);opacity:.6;}' +
+      '.kcl-under-operator .kiwi-drawer{top:var(--kcl-drawer-top,34px);}' +
       /* corner launcher */
       '#kcl-chip{position:fixed;left:20px;bottom:20px;z-index:900;display:inline-flex;align-items:center;gap:9px;' +
       'background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:1px solid rgba(0,0,0,.1);border-radius:999px;' +
@@ -225,7 +254,9 @@
       'background:rgba(255,255,255,.06);color:var(--paper,#F7F5F0);border-color:rgba(255,255,255,.12);box-shadow:none;}' +
       '#kcl-chip[data-docked]:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.10);}' +
       '#kcl-chip[data-docked] .kcl-dot{width:7px;height:7px;box-shadow:0 0 0 3px rgba(217,154,43,.16);}' +
-      '#kcl-chip[data-docked][data-state="on"] .kcl-dot{background:var(--mint,#7DF2B0);box-shadow:0 0 0 3px rgba(125,242,176,.18);}';
+      '#kcl-chip[data-docked][data-state="on"] .kcl-dot{background:var(--mint,#7DF2B0);box-shadow:0 0 0 3px rgba(125,242,176,.18);}' +
+      '@media (max-width:420px){.kcl-status{padding:13px}.kcl-route{gap:7px}.kcl-node{min-width:50px;font-size:.62rem}.kcl-node-ico{width:34px;height:34px}.kcl-track{min-width:28px}.kcl-state{gap:8px}}' +
+      '@media (prefers-reduced-motion:reduce){.kcl-status.kcl-arrive .kcl-track::before{animation:none;right:0}.kcl-status.kcl-arrive .kcl-track-dot{animation:none;left:100%}.kcl-status.kcl-arrive .kcl-node:last-child .kcl-node-ico{animation:none}.kcl-pulse{animation:none}}';
     document.head.appendChild(s);
   }
 
@@ -237,7 +268,14 @@
   function panelBody(biz) {
     return '' +
       '<p class="kcl-lead">La caisse est là où vos ventes entrent. Reliez votre terminal à ce commerce : chaque encaissement remontera aussitôt sur ce tableau de bord.</p>' +
-      '<div class="kcl-status" id="kcl-status"><span class="kcl-d kcl-pulse"></span><span id="kcl-status-t">En attente de la caisse…</span></div>' +
+      '<section class="kcl-status" id="kcl-status" role="status" aria-live="polite">' +
+        '<div class="kcl-route" aria-hidden="true">' +
+          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.75" width="14" height="18.5" rx="2.5"/><path d="M9 6.75h6M9 17.25h6"/></svg></span><span>Caisse</span></span>' +
+          '<span class="kcl-track"><span class="kcl-track-dot"></span></span>' +
+          '<span class="kcl-node"><span class="kcl-node-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2.5"/><path d="M3 9h18M8 9v10"/></svg></span><span>Tableau de bord</span></span>' +
+        '</div>' +
+        '<div class="kcl-state"><span class="kcl-d kcl-pulse"></span><span class="kcl-state-copy"><strong id="kcl-status-t">Connexion en attente</strong><small id="kcl-status-detail">Ouvrez Kiwi Caisse sur votre terminal</small></span><span class="kcl-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg></span></div>' +
+      '</section>' +
       '<button class="kcl-open" type="button" id="kcl-open">Ouvrir la caisse sur cet appareil</button>' +
       '<p class="kcl-hint">Sur un autre appareil (tablette, terminal), ouvrez la caisse avec ce même compte Kiwi. Le terminal deviendra <strong>' + esc(biz.name) + '</strong>.</p>';
   }
@@ -273,7 +311,15 @@
     var code = connected || '';
 
     var d = Kiwi.drawer({ title: 'Connectez votre caisse', subtitle: biz.name, body: panelBody(biz), width: 440 });
-    var el = d.el, cur = code, tick = null;
+    var el = d.el, cur = code, tick = null, connectedPainted = false;
+    // Operator support has a fixed ownership banner above every client page.
+    // Keep this drawer immediately below its measured height so the confirmation
+    // title is never hidden; normal merchant sessions do not receive the class.
+    var operatorBanner = document.getElementById('kiwi-op-banner');
+    if (operatorBanner) {
+      el.classList.add('kcl-under-operator');
+      el.style.setProperty('--kcl-drawer-top', Math.ceil(operatorBanner.getBoundingClientRect().height) + 'px');
+    }
 
     function $(sel) { return el.querySelector(sel); }
     function setCode(next) {
@@ -281,27 +327,36 @@
       var c = $('#kcl-code'); if (c) c.textContent = next;
     }
     function markConnected() {
-      var st = $('#kcl-status'); if (st) { st.classList.add('on'); st.classList.remove('kcl-warn'); }
+      var st = $('#kcl-status');
+      if (st) {
+        st.classList.add('on'); st.classList.remove('kcl-warn');
+        // refresh() polls every second. Run the route handoff once per drawer,
+        // then leave a still, truthful connected state instead of replaying it.
+        if (!connectedPainted) { st.classList.add('kcl-arrive'); connectedPainted = true; }
+      }
       var dot = st && st.querySelector('.kcl-d'); if (dot) dot.classList.remove('kcl-pulse');
-      var t = $('#kcl-status-t'); if (t) t.textContent = 'Caisse connectée';
+      var t = $('#kcl-status-t'); if (t) t.textContent = 'Liaison établie';
+      var detail = $('#kcl-status-detail'); if (detail) detail.textContent = biz.name + ' · flux de ventes actif';
+      var heading = $('.kiwi-drawer-head h3'); if (heading) heading.textContent = 'Votre caisse est reliée';
       updateChip();
-      try { if (window.Kiwi && Kiwi.confetti) Kiwi.confetti(); } catch (_) {}
     }
     // Reflect whether a cross-device pair is actually possible from here. Only the
     // 'reject' case changes anything — 'ok'/'absent'/null keep the default waiting
     // state (both cross-device and the same-browser demo path work in those cases).
     function setRemote(state) {
       if (connectedCodeFor(biz.merchant)) return;         // a live connection wins over any hint
-      var st = $('#kcl-status'), t = $('#kcl-status-t'), hint = $('.kcl-hint'), dot = st && st.querySelector('.kcl-d');
+      var st = $('#kcl-status'), t = $('#kcl-status-t'), detail = $('#kcl-status-detail'), hint = $('.kcl-hint'), dot = st && st.querySelector('.kcl-d');
       if (state === 'reject') {
         if (st) st.classList.add('kcl-warn');
         if (dot) dot.classList.remove('kcl-pulse');
-        if (t) t.textContent = 'Appairage à distance indisponible ici — utilisez « Ouvrir la caisse sur cet appareil » ci-dessous.';
+        if (t) t.textContent = 'Connexion locale uniquement';
+        if (detail) detail.textContent = 'Utilisez « Ouvrir la caisse sur cet appareil » ci-dessous.';
         if (hint) hint.style.display = 'none';            // the "type this code on another device" path won't work
       } else {
         if (st) st.classList.remove('kcl-warn');
         if (dot) dot.classList.add('kcl-pulse');
-        if (t) t.textContent = 'En attente de la caisse…';
+        if (t) t.textContent = 'Connexion en attente';
+        if (detail) detail.textContent = 'Ouvrez Kiwi Caisse sur votre terminal';
         if (hint) hint.style.display = '';
       }
     }
