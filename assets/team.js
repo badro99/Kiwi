@@ -788,6 +788,12 @@
     const h = Math.floor(mins / 60), m = mins % 60;
     return m ? `${h} h ${pad(m)}` : `${h} h`;
   }
+  /* Attendance is stored as decimal hours for exact payroll arithmetic, but a
+   * value such as 0.61 means 37 minutes — displaying it as "0,61" makes the
+   * fractional part look like impossible clock minutes. */
+  function fmtHours(value) {
+    return fmtDur(Math.max(0, Math.round((Number(value) || 0) * 60)));
+  }
   /* new Date('2026-07-20') = minuit UTC : au Maroc ça retombe la veille selon
    * la saison. Une date de planning se lit en local, chiffre par chiffre. */
   function fromISO(d) {
@@ -1356,7 +1362,7 @@
         ${tile(T.statTotal,   String(totalMembers),                   T.statTotalSub(totalMembers, venue.name))}
         ${tile(T.statPresent, String(present),                        T.statPresentSub)}
         ${tile(T.statPayroll, fmtMad(monthlyPayroll),                 T.statPayrollSub)}
-        ${tile(T.statHours,   totalHours.toFixed(1).replace('.', ',') + ' h', T.statHoursSub)}
+        ${tile(T.statHours,   fmtHours(totalHours), T.statHoursSub)}
       </div>
     `;
 
@@ -1485,7 +1491,7 @@
         total += v;
         const isToday = (d === toISO(new Date()));
         return `<td class="kt-day-cell${isToday ? ' today' : ''}${locked ? ' locked' : ''}">
-          <input type="number" step="0.25" min="0" max="24" value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
+          <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
         </td>`;
       }).join('');
       const pay = total * (m.hourlyRate || 0);
@@ -1502,7 +1508,7 @@
             </div>
           </td>
           ${cells}
-          <td class="kt-h-total mono"><b>${total.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+          <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
           <td class="kt-h-pay mono"><b>${pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
         </tr>
       `;
@@ -1544,7 +1550,7 @@
               <tr>
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
-                <td class="kt-h-foot-tot mono"><b>${grandHours.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+                <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
                 <td class="kt-h-foot-tot mono"><b>${grandPay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
               </tr>
             </tfoot>
@@ -1813,12 +1819,12 @@
       const tr = rows[idx];
       if (!tr) return;
       const tb = tr.querySelector('.kt-h-total b');
-      if (tb) tb.textContent = h.toFixed(2).replace('.', ',');
+      if (tb) tb.textContent = fmtHours(h);
       const pb = tr.querySelector('.kt-h-pay b');
       if (pb) pb.textContent = cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
     });
     const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
-    if (foot[0]) foot[0].textContent = grandH.toFixed(2).replace('.', ',');
+    if (foot[0]) foot[0].textContent = fmtHours(grandH);
     if (foot[1]) foot[1].textContent = grandC.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   }
 
@@ -1842,10 +1848,24 @@
     const vt = teamKey(venue || { type: 'restaurant' });
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
-    const val = Math.max(0, Math.min(24, parseFloat(t2.value) || 0));
+    const val = Math.max(0, Math.min(24, parseFloat(String(t2.value).replace(',', '.')) || 0));
+    t2.dataset.hoursValue = String(val);
     hours[mid][day] = val;
     updateHourTotals();
     saveCustomTeams();          // an hour typed is payroll data — persist it
+  });
+
+  document.addEventListener('focusin', (e) => {
+    const input = e.target;
+    if (!input.matches || !input.matches('[data-kt-hour]')) return;
+    input.value = String(Number(input.dataset.hoursValue) || 0);
+    input.select();
+  });
+
+  document.addEventListener('focusout', (e) => {
+    const input = e.target;
+    if (!input.matches || !input.matches('[data-kt-hour]')) return;
+    input.value = fmtHours(input.dataset.hoursValue);
   });
 
   function updateHourTotals() {
@@ -1870,12 +1890,12 @@
       if (tr) {
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
-        if (totalCell) totalCell.textContent = tot.toFixed(2).replace('.', ',');
+        if (totalCell) totalCell.textContent = fmtHours(tot);
         if (payCell)   payCell.textContent   = pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
-    if (footTot[0]) footTot[0].textContent = grandH.toFixed(2).replace('.', ',');
+    if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
     if (footTot[1]) footTot[1].textContent = grandP.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
 
     // On Paie & planning the band above the grid is the headline the owner reads
@@ -1885,7 +1905,7 @@
       const baseMass = members.reduce((a, m) => a + (+m.baseSalary || 0), 0);
       const vals = root.querySelectorAll('.eq-stats .eq-stat-v');
       if (vals[0]) vals[0].textContent = fmtMad(baseMass + grandP);
-      if (vals[1]) vals[1].textContent = grandH.toFixed(1).replace('.', ',') + ' h';
+      if (vals[1]) vals[1].textContent = fmtHours(grandH);
       if (vals[2]) vals[2].textContent = fmtMad(grandP);
       if (vals[3]) vals[3].textContent = fmtMad(baseMass);
     }
@@ -2580,7 +2600,7 @@
             </div>
           </td>
           ${cells}
-          <td class="kt-h-total mono"><b>${h.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+          <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
           <td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
         </tr>`;
     }).join('');
@@ -2626,7 +2646,7 @@
               <tr>
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
-                <td class="kt-h-foot-tot mono"><b>${grandH.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+                <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
                 <td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
               </tr>
             </tfoot>
@@ -2659,7 +2679,7 @@
       <div class="dash-equipe">
         <div class="eq-stats">
           ${tile(T.payStatDue,   fmtMad(f.baseMass + f.variablePay), T.payStatDueSub(period.startFr, period.endFr))}
-          ${tile(T.payStatHours, f.totalHours.toFixed(1).replace('.', ',') + ' h', T.payStatHoursSub)}
+          ${tile(T.payStatHours, fmtHours(f.totalHours), T.payStatHoursSub)}
           ${tile(T.payStatVar,   fmtMad(f.variablePay),              T.payStatVarSub)}
           ${tile(T.payStatBase,  fmtMad(f.baseMass),                 T.payStatBaseSub(f.onDuty, members.length))}
         </div>
