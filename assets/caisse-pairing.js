@@ -347,6 +347,7 @@
    * for the code anyway. The code itself is never stored — only the identity it
    * proved. */
   var STAFF_KEY = 'kiwiTillStaff';
+  var lastManager = null;   // { name, role } du dernier code responsable validé
   function firstNameOf(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
   function setStaff(p) {
     var s = null;
@@ -623,12 +624,22 @@
     authorizeManager: function (code) {
       code = String(code || '');
       if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;
-      return pinList.some(function (p) {
+      var hit = null;
+      pinList.some(function (p) {
         var same = String((p && (p.pin || p.code)) || '') === code;
         var role = String((p && p.role) || '').toLowerCase();
-        return same && /owner|propri|manager|g[eé]rant|responsable|admin/.test(role);
+        if (same && /owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) { hit = p; return true; }
+        return false;
       });
+      /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où on
+       * la relit : le code prouve une personne, on garde donc son nom (jamais le
+       * code) pour que la surface qui a demandé l'accord puisse l'écrire dans sa
+       * vente. Le code lui-même ne quitte pas cette fonction. */
+      if (hit) lastManager = { name: String(hit.name || '').trim() || 'Responsable', role: String(hit.role || '').trim() };
+      return !!hit;
     },
+    // Le dernier responsable ayant validé un code, pour l'écrire dans un journal.
+    lastManager: function () { return lastManager; },
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

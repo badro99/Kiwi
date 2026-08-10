@@ -1162,7 +1162,7 @@
         <p class="modal-subtle">${t.num}${split.mut ? ' · part patient' : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ph-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ph-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ph-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${Math.round(due)}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1577,7 +1577,7 @@
   /* ═══════════════════════ register ═══════════════════════ */
   window.KiwiPosDispatch.register({
     id: 'pharmacie',
-    greet: { line1: 'Sba7 lkhir Dr Wafae,', em: 'marhba.', sub: 'Pharmacie Ibn Batouta <em>·</em> tiers payant prêt' },
+    greet: { line1: 'Bonjour Dr Wafae,', em: 'bienvenue.', sub: 'Pharmacie Ibn Batouta <em>·</em> tiers payant prêt' },
     mount(rootEl) { build(rootEl); },
     onShow() {
       if (!root) return;

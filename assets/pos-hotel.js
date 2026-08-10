@@ -772,7 +772,7 @@
         { itemId: `chambre-${ROOMS[a.room].type}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
       ]);
       queueIfOffline(`Check-in Ch. ${a.room}`);
-      toast(`Check-in Ch. ${a.room}, ${a.guest} · marhba`);
+      toast(`Check-in Ch. ${a.room}, ${a.guest} · bienvenue`);
       if (ci.caution === 'especes') toast(`Caution ${fmtMAD(ci.cautionAmount)} espèces enregistrée au coffre`);
       st.serviceRequests = st.serviceRequests || [];
       st.serviceRequests.push({ id:`welcome-${st.room}-${Date.now()}`, label:'Thé à la menthe de bienvenue', status:'pending', createdAt:new Date() });
@@ -1076,7 +1076,7 @@
         <p class="modal-subtle">Ch. ${n} · ${esc(st.guest)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ht-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ht-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ht-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${t.due}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1258,8 +1258,8 @@
   window.KiwiPosDispatch.register({
     id: 'hotel',
     greet: {
-      line1: 'Sba7 lkhir Hamza,',
-      em: 'marhba.',
+      line1: 'Bonjour Hamza,',
+      em: 'bienvenue.',
       sub: 'Riad Yasmina <em>·</em> 3 arrivées cet après-midi, un départ à encaisser',
     },
     mount,

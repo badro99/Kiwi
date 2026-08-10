@@ -648,7 +648,7 @@
         <div class="modal-amount size-md">${fmtMAD(cfg.amount)}</div>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ft-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ft-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ft-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${cfg.amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1122,8 +1122,8 @@
   window.KiwiPosDispatch.register({
     id: 'foodtruck',
     greet: {
-      line1: 'Sba7 lkhir Mika,',
-      em: 'marhba.',
+      line1: 'Bonjour Mika,',
+      em: 'bienvenue.',
       sub: 'Karavan <em>·</em> service de midi, Marina Bay',
     },
     mount(rootEl) { mount(rootEl); },

@@ -657,7 +657,23 @@
     ar: ' (تجريبي · يُعاد عند التحديث)',
   }[lang()] || ' (démo · réinitialisé au refresh)'));
 
-  const stOverlayKey = () => 'kiwi:stockOverlay:' + currentVenueId();
+  /* `currentVenueId()` peut valoir la constante 'scoped' — ce n'est pas un
+     établissement, c'est « celui que la console opérateur regarde ». Deux
+     commerçants ouverts l'un après l'autre depuis la console partageaient donc
+     la même clé `kiwi:stockOverlay:scoped`, et le cache stOverlayLoadedFor, qui
+     compare ce même identifiant, ne rechargeait même pas entre les deux : le
+     stock du premier restait à l'écran sous le nom du second. Dès que
+     l'identifiant est transitoire, on range par slug résolu. */
+  const stOverlayScope = () => {
+    const vid = currentVenueId();
+    if (vid !== 'scoped') return vid;
+    try {
+      const s = window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor('scoped');
+      if (s) return 'scoped:' + s;
+    } catch (_) {}
+    return vid;
+  };
+  const stOverlayKey = () => 'kiwi:stockOverlay:' + stOverlayScope();
   let stOverlayLoadedFor = null;
 
   function stSaveOverlay() {
@@ -743,7 +759,7 @@
   /* Recharge la surcouche du commerce courant. Les Set/objet sont `const` :
      on les vide et les re-remplit sur place plutôt que de les réaffecter. */
   function stEnsureOverlay() {
-    const venue = currentVenueId();
+    const venue = stOverlayScope();
     if (stOverlayLoadedFor === venue) return;
     stOverlayLoadedFor = venue;
     stUserItems = []; stUserSuppliers = []; stUserCategories = [];

@@ -832,7 +832,7 @@
         <div class="ep-pay-opts">
           <button class="ep-pay-opt is-usual" data-ep-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
-            <span class="l"><b>Espèces</b><span>Flous, rendu calculé</span></span>
+            <span class="l"><b>Espèces</b><span>Espèces, rendu calculé</span></span>
             <span class="amt">${fmtMAD2(total)}</span>
           </button>
           <button class="ep-pay-opt" data-ep-m="carte">
@@ -864,7 +864,7 @@
         <p class="modal-subtle">${t.num}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ep-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ep-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ep-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${received}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1296,7 +1296,7 @@
           </div>` : `<div class="modal-amount size-md" id="ep-settle-show">${fmtMAD(pay)}</div>`}
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ep-settle-in">Flous reçu</label>
+            <label class="cash-input-label" for="ep-settle-in">Espèces reçues</label>
             <input class="cash-input mono" id="ep-settle-in" type="number" inputmode="numeric" min="0" step="1" value="${received}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1364,7 +1364,7 @@
   function waMessage(c) {
     const bal = balanceOf(c);
     const first = politeName(c.name);
-    return `Sba7 lkhir ${first}, j'espère que vous allez bien.`
+    return `Bonjour ${first}, j'espère que vous allez bien.`
       + `\nPetit rappel tout doux de ${pvName("l'Épicerie Si Brahim") || "l'épicerie"} : il reste ${bal} MAD sur le carnet, quand ça vous arrange, aucune urgence.`
       + `\nBaraka Allah o fik, et bonne journée.`;
   }
@@ -1650,7 +1650,7 @@
   /* ═══════════════════════ REGISTER ═══════════════════════ */
   window.KiwiPosDispatch.register({
     id: 'epicerie',
-    greet: { line1: 'Sba7 lkhir Si Brahim,', em: 'marhba.', sub: 'Épicerie Si Brahim <em>·</em> caisse du hanout' },
+    greet: { line1: 'Bonjour Si Brahim,', em: 'bienvenue.', sub: 'Épicerie Si Brahim <em>·</em> caisse du hanout' },
     mount,
     onShow,
   });

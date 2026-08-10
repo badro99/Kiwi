@@ -252,12 +252,20 @@
     /* L'argent. */
     if (!itemsOnly) {
       b.line(row('Transactions', String(r.txns || 0), paper));
-      b.bold(true).line(row('TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
+      /* Le titre suit ce que le chiffre contient : une créance dedans (livraison
+         en compte, crédit) et « ENCAISSÉ » ment. On annonce FACTURÉ, on
+         retranche, on redonne le net. Sans créance, sortie inchangée. */
+      var recv = +r.receivable || 0;
+      b.bold(true).line(row(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
       var M = o.methodLabels || {};
       Object.keys(r.methods || {}).forEach(function (k) {
         if (!r.methods[k]) return;
         b.line(row('  ' + (M[k] || k), money(r.methods[k]), paper));
       });
+      if (recv > 0) {
+        b.line(row('dont à recevoir', '- ' + money(recv), paper));
+        b.bold(true).line(row('NET ENCAISSÉ', money(r.gross - recv), paper)).bold(false);
+      }
       if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
       if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
       if (r.discounts && r.discounts.amount) {
@@ -265,6 +273,14 @@
       }
       if (r.refunds && r.refunds.count) {
         b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
+      }
+      /* Hors du total encaissé, et imprimés quand même : un avoir sort de la
+         marchandise sans faire sonner le tiroir. */
+      if (r.avoirs && r.avoirs.used) {
+        b.line(row('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used), paper));
+      }
+      if (r.avoirs && r.avoirs.issued) {
+        b.line(row('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued), paper));
       }
       if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
     }

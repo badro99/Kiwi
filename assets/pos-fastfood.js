@@ -921,7 +921,7 @@
         <div class="ff-pay-opts">
           <button class="ff-pay-opt" data-ff-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
-            <span class="l"><b>Espèces</b><span>Flous direct, billets rapides, rendu calculé</span></span>
+            <span class="l"><b>Espèces</b><span>Espèces en main, billets rapides, rendu calculé</span></span>
           </button>
           <button class="ff-pay-opt" data-ff-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
@@ -954,7 +954,7 @@
         <p class="modal-subtle">${settle ? `#${order.num} · ${esc(who)}` : `Commande nº ${order.num}`}, touchez le billet reçu, le rendu suit</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ff-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ff-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ff-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Billets rapides">
@@ -1448,8 +1448,8 @@
   window.KiwiPosDispatch.register({
     id: 'fastfood',
     greet: {
-      line1: pvReal() ? 'Sba7 lkhir,' : 'Sba7 lkhir Bilal,',
-      em: 'marhba.',
+      line1: pvReal() ? 'Bonjour,' : 'Bonjour Bilal,',
+      em: 'bienvenue.',
       sub: 'Snack Chamal <em>·</em> coup de feu de midi, 5 commandes en file',
     },
     mount(rootEl) { mount(rootEl); },

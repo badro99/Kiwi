@@ -23,13 +23,26 @@
     var api = window.KiwiBoutiqueCatalog;
     var cats = {}, products = [];
     if (!api) return { cats: cats, products: products };
+    var byId = {};
     try { (api.listCategories() || []).forEach(function (c) { cats[String(c.id)] = String(c.name || 'Sans catégorie'); }); } catch (_) {}
     try { products = api.listProducts({}) || []; } catch (_) { try { products = api.listProducts() || []; } catch (__) {} }
     products.forEach(function (p) {
       try { p._soldStock = (api.listVariants(p.id) || []).reduce(function(n,v){return n + Math.max(0,Number(v.stock)||0);},0); }
       catch (_) { p._soldStock = null; }
+      byId[String(p.id)] = p;
     });
-    return { cats: cats, products: products };
+    return { cats: cats, products: products, byId: byId };
+  }
+  /* Une ligne de vente boutique est rangée par IDENTIFIANT (`pid`), pas par
+     libellé : `kiwi:bqDay` enregistre {pid,size,color,qty,unit,…} et n'écrit
+     aucun `name`. Chercher d'abord par nom ne trouvait donc jamais rien, et
+     l'écran « Vendus » affichait chaque article de la boutique comme
+     « Article · Sans catégorie », sans stock ni rayon. On résout par id quand
+     on en a un, et on garde la recherche par nom pour les ventes qui viennent
+     de la caisse principale (elles, portent un libellé). */
+  function productById(id, cat) {
+    var k = String(id == null ? '' : id);
+    return (k && cat.byId && cat.byId[k]) || null;
   }
   function productFor(name, cat) {
     var low = String(name || '').toLocaleLowerCase('fr');
@@ -41,7 +54,7 @@
   function normalize(raw, cat) {
     var ts = Number(raw && (raw.ts || raw.at)) || new Date(raw && raw.at || 0).getTime() || 0;
     var lines = Array.isArray(raw && raw.lines) ? raw.lines.map(function (l) {
-      var p = productFor(l && l.name, cat);
+      var p = productById(l && (l.pid || l.ref), cat) || productFor(l && l.name, cat);
       var qty = Math.max(1, Math.round(Number(l && l.qty) || 1));
       var total = Number(l && l.total);
       if (!Number.isFinite(total)) total = (Number(l && (l.unit || l.unitPrice)) || 0) * qty;

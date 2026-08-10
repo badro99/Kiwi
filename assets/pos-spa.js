@@ -1134,7 +1134,7 @@
         <p class="modal-subtle">${esc(who)}${tip ? ` · dont ${tip} MAD de pourboire` : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="sp-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="sp-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="sp-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1726,8 +1726,8 @@
   window.KiwiPosDispatch.register({
     id: 'spa',
     greet: {
-      line1: 'Sba7 lkhir Imane,',
-      em: 'marhba.',
+      line1: 'Bonjour Imane,',
+      em: 'bienvenue.',
       sub: 'Spa Bahia <em>·</em> planning du jour',
     },
     mount,

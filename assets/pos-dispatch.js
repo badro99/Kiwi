@@ -28,7 +28,7 @@
  *
  *   window.KiwiPosDispatch.register({
  *     id: 'boutique',                       // EXACTLY the registry id
- *     greet: { line1: 'Sba7 lkhir Salma,', em: 'marhba.',
+ *     greet: { line1: 'Bonjour Salma,', em: 'bienvenue.',
  *              sub: 'Maison Mansour · ouverture boutique' },
  *     mount(rootEl) { ... },                // called ONCE, build the app here
  *     onShow() { ... },                     // optional — every re-unlock
@@ -54,7 +54,7 @@
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '10', label: 'Pressing · Pressing Marshan' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '11', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       label: 'Hôtel / Riad · Riad Yasmina' },
@@ -240,7 +240,7 @@
     g.setAttribute('aria-hidden', 'true');
     const greet = spec.greet || {};
     /* Real / paired store → the 2s unlock flash must not name a demo employee
-       ("Sba7 lkhir Salma / Reda") or a demo venue ("Maison Mansour · …"). Show
+       ("Bonjour Salma / Reda") or a demo venue ("Maison Mansour · …"). Show
        a neutral greeting, subtitled with the real store name when we have it.
        Local demo (unpaired localhost) keeps the full flavoured greeting.
 
@@ -252,11 +252,11 @@
     const real = !!p || (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
     const me = window.KiwiStaff || null;
     const who = me && (me.first || me.name);
-    const line1 = who ? ('Sba7 lkhir ' + escGreet(who) + ',')
-      : (real ? 'Sba7 lkhir,' : (greet.line1 || 'Sba7 lkhir,'));
+    const line1 = who ? ('Bonjour ' + escGreet(who) + ',')
+      : (real ? 'Bonjour,' : (greet.line1 || 'Bonjour,'));
     const sub   = real ? (p && p.name ? escGreet(p.name) : '') : (greet.sub || '');
     g.innerHTML = `<div class="kiwi-greet-inner">
-      <h1>${line1} <em>${greet.em || 'marhba.'}</em></h1>
+      <h1>${line1} <em>${greet.em || 'bienvenue.'}</em></h1>
       <div class="kiwi-greet-sub">${sub}</div>
     </div>`;
     document.body.appendChild(g);

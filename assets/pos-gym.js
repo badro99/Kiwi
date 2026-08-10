@@ -2,7 +2,7 @@
  * Kiwi · SALLE DE SPORT — Atlas Fitness (PIN 0015), via assets/pos-dispatch.js
  * ---------------------------------------------------------------------------
  * Le comptoir d'une salle de sport tient sur un geste : le check-in. Un membre
- * présente son code, l'écran flashe VERT (« Marhba Omar — abonnement jusqu'au
+ * présente son code, l'écran flashe VERT (« Bienvenue Omar — abonnement jusqu'au
  * 28 août ») ou ROUGE (« Expiré depuis 12 jours ») avec, en un tap, le
  * renouvellement qui ouvre le kit d'encaissement. Autour : la vente/renouvelle-
  * ment d'abonnements (mensuel, trimestriel, annuel, étudiant –20 %, gel
@@ -838,7 +838,7 @@
         <div class="gy-ci-card">
           <div class="gy-ci-photo">${esc(initials(m.name))}</div>
           <div class="gy-ci-card-l">
-            <div class="gy-ci-verdict"><i data-lucide="check-circle-2"></i> Marhba ${esc(firstName(m.name))}</div>
+            <div class="gy-ci-verdict"><i data-lucide="check-circle-2"></i> Bienvenue ${esc(firstName(m.name))}</div>
             <div class="gy-ci-name">${esc(m.name)}</div>
             <div class="gy-ci-meta">Abonnement ${esc(PLAN[m.plan].label.toLowerCase())} ${esc(until)} · ${m.coach !== 'Sans coach' ? esc(m.coach) : 'sans coach'}</div>
             ${warn}
@@ -854,7 +854,7 @@
         </div>`;
       icons();
       renderCounter(); renderBadges();
-      toast(`Marhba ${firstName(m.name)}, entrée pointée`);
+      toast(`Bienvenue ${firstName(m.name)}, entrée pointée`);
       restoreCiInput();
       return;
     }
@@ -1265,7 +1265,7 @@
         <div class="modal-amount size-md">${fmtMAD(cfg.amount)}</div>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="gy-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="gy-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="gy-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${cfg.amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -2112,8 +2112,8 @@
   window.KiwiPosDispatch.register({
     id: 'gym',
     greet: {
-      line1: 'Sba7 lkhir Coach Amine,',
-      em: 'marhba.',
+      line1: 'Bonjour Coach Amine,',
+      em: 'bienvenue.',
       sub: 'Atlas Fitness <em>·</em> comptoir, check-in du jour',
     },
     mount(rootEl) { mount(rootEl); },

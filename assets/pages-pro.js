@@ -11072,6 +11072,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         name: `${Number(item.qty) || 1} × ${item.name || 'Article'}${item.size ? ' · ' + item.size : ''}`,
         amt: Number(item.amount) || Number(ret.amount) || 0,
         reason: ret.reason || (ret.kind === 'echange' ? 'Échange' : 'Avoir'),
+        /* Le type de retour est une donnée, pas une chaîne d'affichage. La
+           pastille se lisait sur le motif : un échange dont le motif n'était pas
+           littéralement « Echange » s'affichait « Retourné ». On garde le kind. */
+        kind: ret.kind || 'avoir',
         client: ret.client || 'Cliente de passage', status: 'ok', emoji: '', actor: ret.actor || 'Caisse',
       }));
     }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
@@ -11114,7 +11118,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               </div>
               <div class="b-ret-amt">${fmtMAD(r.amt, 0)} MAD</div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.reason === 'Echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
+                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.kind === 'echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
                 ${r.status === 'pend' ? `
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-approve" data-arg="${r.id}" data-bubble="stop" title="Approuver">${SVG.check}</button>
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px; color: var(--danger);" data-action="ret-refuse" data-arg="${r.id}" data-bubble="stop" title="Refuser">${SVG.x}</button>

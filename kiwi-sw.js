@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v340';
+var CACHE = 'kiwi-app-v341';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -93,13 +93,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=340',
+  '/assets/dashboard-pwa.js?v=341',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=340',
+  '/assets/caisse-pwa.js?v=341',
   '/assets/live-link.js',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -169,7 +169,7 @@ var SHELL = [
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
   '/assets/kitchen-relay.js',
   '/assets/pos-sale.js',
-  '/assets/pos-dispatch.js?v=13',
+  '/assets/pos-dispatch.js?v=14',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',
@@ -214,14 +214,14 @@ var SHELL = [
   '/assets/pos-gym.js',
   '/assets/pos-autre.css',
   '/assets/pos-autre.js',
-  '/assets/caisse-pairing.js?v=2',
+  '/assets/caisse-pairing.js?v=3',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=10',
-  '/assets/pressing-caisse.css?v=10',
+  '/assets/pressing-caisse.js?v=11',
+  '/assets/pressing-caisse.css?v=11',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

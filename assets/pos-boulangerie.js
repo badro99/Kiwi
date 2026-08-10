@@ -578,7 +578,7 @@
       <p class="modal-subtle">${o.sub}</p>
       <div class="cash-grid">
         <div class="cash-input-row">
-          <label class="cash-input-label" for="bl-cash-in">Flous reçu, tapez ou comptez avec les pièces</label>
+          <label class="cash-input-label" for="bl-cash-in">Espèces reçues, tapez ou comptez avec les pièces</label>
           <input class="cash-input mono" id="bl-cash-in" type="number" inputmode="decimal" min="0" step="0.5" value="${o.amount}" />
         </div>
         <div class="cash-presets" aria-label="Compter billets et pièces">
@@ -1208,7 +1208,7 @@
   /* ---------- WhatsApp « votre gâteau est prêt » ---------- */
   function waMessage(c) {
     const due = cakeDue(c);
-    return `Sba7 lkhir ${firstName(c.name)}, votre gâteau « ${c.inscription || OCC[c.occasion]} » est prêt chez ${pvName('Boulangerie Bab Kasbah') || 'la boulangerie'}.`
+    return `Bonjour ${firstName(c.name)}, votre gâteau « ${c.inscription || OCC[c.occasion]} » est prêt chez ${pvName('Boulangerie Bab Kasbah') || 'la boulangerie'}.`
       + `\nRetrait ${fmtWhen(c.retrait)}, on vous le garde au frais.`
       + (due > 0 ? `\nSolde à régler au retrait : ${fmtN(due)} MAD.` : '')
       + '\n— envoyé via Kiwi';
@@ -1435,8 +1435,8 @@
   window.KiwiPosDispatch.register({
     id: 'boulangerie',
     greet: {
-      line1: pvReal() ? 'Sba7 lkhir,' : 'Sba7 lkhir Abdelkader,',
-      em: 'marhba.',
+      line1: pvReal() ? 'Bonjour,' : 'Bonjour Abdelkader,',
+      em: 'bienvenue.',
       sub: 'Boulangerie Bab Kasbah <em>·</em> fournée du matin sortie, le msemen est au four',
     },
     mount(rootEl) { mount(rootEl); },

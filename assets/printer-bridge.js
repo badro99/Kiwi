@@ -527,15 +527,32 @@
 
     if (!itemsOnly) {
     R('Transactions', String(r.txns || 0));
-    R('TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
+    /* Le titre suit ce que le chiffre contient. Dès qu'une créance pèse dedans
+       — une livraison partie en compte, un règlement à crédit —, « ENCAISSÉ »
+       est faux : l'écran de clôture les exclut déjà de son propre total, et le
+       Z imprimait un nombre plus grand sous le même intitulé. Deux documents du
+       même service, deux totaux. On annonce donc FACTURÉ, on retranche la
+       créance, on redonne l'encaissé réel. Sans créance, pas un octet ne change
+       — les autres métiers impriment à l'identique. */
+    var recv = +r.receivable || 0;
+    R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
     var M = o.methodLabels || {};
     Object.keys(r.methods || {}).forEach(function (k) {
       if (!r.methods[k]) return;
       R('  ' + (M[k] || k), money(r.methods[k]));
     });
+    if (recv > 0) {
+      R('dont à recevoir', '- ' + money(recv));
+      R('NET ENCAISSÉ', money(r.gross - recv), 'kpr-b');
+    }
     if (r.basket) R('Ticket moyen', money(r.basket));
     if (r.tips) R('Pourboires', money(r.tips));
     if (r.discounts && r.discounts.amount) R('Remises accordées', '- ' + money(r.discounts.amount));
+    /* Ni l'un ni l'autre n'entre dans le total encaissé — ils sont imprimés
+       parce qu'un avoir fait sortir de la marchandise sans faire sonner le
+       tiroir, et qu'un Z muet là-dessus ne se relit pas. */
+    if (r.avoirs && r.avoirs.used) R('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used));
+    if (r.avoirs && r.avoirs.issued) R('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued));
     if (r.refunds && r.refunds.count) R('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount));
     if (r.cancels) R('Annulations', String(r.cancels));
     }

@@ -936,7 +936,7 @@
         <p class="modal-subtle">${c.num} · rendu calculé automatiquement</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="lb-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="lb-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="lb-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${total}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1338,7 +1338,7 @@
     const cu = cmdCust(c);
     const first = cu.school ? cu.name : cu.name.split(' ')[0];
     const due = cmdDue(c);
-    return `Sba7 lkhir ${first}, bonne nouvelle, votre commande « ${c.title} » est arrivée à ${pvName('la Librairie Al Boughaz') || 'la librairie'}.`
+    return `Bonjour ${first}, bonne nouvelle, votre commande « ${c.title} » est arrivée à ${pvName('la Librairie Al Boughaz') || 'la librairie'}.`
       + `\nJe vous la garde au comptoir. Passez quand vous voulez, du lundi au samedi jusqu'à 20h00.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : (c.acompte ? `\nDéjà réglée, il ne reste rien à payer.` : ''))
       + `\n— envoyé via Kiwi`;
@@ -1698,8 +1698,8 @@
   window.KiwiPosDispatch.register({
     id: 'librairie',
     greet: {
-      line1: 'Sba7 lkhir Hassan,',
-      em: 'marhba.',
+      line1: 'Bonjour Hassan,',
+      em: 'bienvenue.',
       sub: 'Librairie Al Boughaz <em>·</em> matinée de rentrée, Petit Socco',
     },
     mount(rootEl) { mount(rootEl); },

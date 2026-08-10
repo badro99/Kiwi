@@ -13,14 +13,24 @@
     catch (_) { return !!paired(); }
   }
   function paired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  /* QUEL MAGASIN ÉCRIT CE MOUVEMENT DE STOCK ?
+   * L'appairage (`kiwiPairedVenue`) est l'identité du COMPTE derrière ce
+   * comptoir, pas de l'établissement qu'on regarde. Un commerçant qui tient un
+   * pressing, un restaurant et une boutique le voyait donc empiler trois stocks
+   * dans un seul registre : une réception de tissu au pressing atterrissait sur
+   * la même clé que le réassort du café.
+   * `KiwiCloudDoc.currentSlug()` est la chaîne canonique (cloud-doc.js) :
+   * établissement à l'écran d'abord, appairage ensuite, flux Live en dernier.
+   * On la suit ; l'appairage ne reste qu'un filet quand cloud-doc n'a pas
+   * encore répondu (ou n'est pas chargé sur cette page). */
   function merchant() {
-    var p = paired();
-    if (p && p.merchant) return String(p.merchant).slice(0, 64);
     try {
-      if (window.KiwiStore && window.KiwiStore.slugFor) {
-        var s = window.KiwiStore.slugFor(); if (s) return String(s).slice(0, 64);
+      if (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug) {
+        var cur = window.KiwiCloudDoc.currentSlug(); if (cur) return String(cur).slice(0, 64);
       }
     } catch (_) {}
+    var p = paired();
+    if (p && p.merchant) return String(p.merchant).slice(0, 64);
     try {
       if (window.KiwiLive && window.KiwiLive.merchant) {
         var m = window.KiwiLive.merchant(); if (m) return String(m).slice(0, 64);

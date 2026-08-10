@@ -117,7 +117,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=13" defer></script>
+  <script src="assets/pos-dispatch.js?v=14" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=2" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -3588,6 +3588,14 @@
       transition: border-color 140ms, background 140ms;
     }
     .ho-cashier:hover { background: var(--paper-mute); }
+    /* Une équipe d'un seul poste laissait la liste des repreneurs vide, sans un
+       mot : le caissier restait devant un cadre blanc à chercher quoi cliquer. */
+    .ho-empty {
+      padding: 14px 12px;
+      border: 1px dashed var(--line);
+      border-radius: var(--r-lg);
+      font-size: 12.5px; line-height: 1.5; color: var(--ink-4);
+    }
     .ho-cashier.is-active {
       border-color: var(--forest);
       background: rgba(63,182,122,0.07);
@@ -4634,7 +4642,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js" defer></script>
-  <script src="assets/caisse-pwa.js?v=340" defer></script>
+  <script src="assets/caisse-pwa.js?v=341" defer></script>
   <script src="assets/live-link.js" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -4644,7 +4652,7 @@
        serrure chargée après la porte ne ferme rien. -->
   <script src="assets/tenant-purge.js" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=2" defer></script>
+  <script src="assets/caisse-pairing.js?v=3" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -4720,7 +4728,7 @@
   <!-- ============ PIN LOGIN SCREEN ============ -->
   <div class="pin-screen" id="pin-screen" role="dialog" aria-modal="true" aria-label="Code d'accès">
     <div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-dark.svg" alt="" draggable="false"></div>
-    <div class="pin-greet">Sba7 lkhir, <b>Othmane</b></div>
+    <div class="pin-greet">Bonjour, <b>Othmane</b></div>
     <div class="pin-prompt">CODE D'ACCÈS · 4 CHIFFRES</div>
     <div class="pin-dots" id="pin-dots" aria-hidden="true">
       <span class="pin-dot"></span><span class="pin-dot"></span>
@@ -4759,7 +4767,7 @@
       <div class="clockin-tagline">— version commerçant</div>
     </div>
     <div class="clockin-mid">
-      <div class="clockin-greet">Sba7 lkhir <em>Othmane</em></div>
+      <div class="clockin-greet">Bonjour <em>Othmane</em></div>
       <div class="clockin-role">Caissier · Café Atlas</div>
       <div class="clockin-clock" id="ci-time">14:32</div>
       <div class="clockin-date" id="ci-date">Vendredi 24 avril</div>
@@ -4795,7 +4803,7 @@
   <!-- ============ GREETING FLASH (post-PIN, pre-shell) ============ -->
   <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
     <div class="kiwi-greet-inner">
-      <h1><span id="greet-line1">Sba7 lkhir Othmane,</span> <em id="greet-em">marhba.</em></h1>
+      <h1><span id="greet-line1">Bonjour Othmane,</span> <em id="greet-em">bienvenue.</em></h1>
       <div class="kiwi-greet-sub" id="greet-sub">Café Atlas · service ouvert</div>
     </div>
   </div>
@@ -4804,7 +4812,7 @@
   <div class="welcome-banner" id="welcome-banner" role="status" aria-live="polite" hidden>
     <span class="welcome-banner-icon"><i data-lucide="sparkles"></i></span>
     <div class="welcome-banner-text">
-      <div class="wb-line1" id="wb-line1">Sba7 lkhir Othmane</div>
+      <div class="wb-line1" id="wb-line1">Bonjour Othmane</div>
       <div class="wb-line2" id="wb-line2">3 serveurs en service · 11 tables en cours</div>
     </div>
   </div>
@@ -5524,10 +5532,10 @@
 
       <div class="cash-grid" id="cash-step-input">
         <div class="cash-input-row">
-          <label class="cash-input-label" for="cash-received">Flous reçu</label>
+          <label class="cash-input-label" for="cash-received">Espèces reçues</label>
           <input class="cash-input mono" id="cash-received" type="number" inputmode="decimal" min="0" step="0.01" value="530" />
         </div>
-        <!-- Montants suggérés façon Loyverse/Square : un tap RÈGLE « Flous
+        <!-- Montants suggérés façon Loyverse/Square : un tap RÈGLE « Espèces
              reçu » au billet tendu (plus d'addition +50). Les billets trop
              petits pour couvrir le dû se désactivent dans updateRendu(). -->
         <div class="cash-presets" aria-label="Montant reçu">
@@ -5963,7 +5971,7 @@
       </div>
       <textarea class="msg-input" id="msg-input" placeholder="Écris ton message en darija/français…"></textarea>
       <div class="msg-quick">
-        <button data-msg="Table prête, viens ramasser 3afak.">Table prête</button>
+        <button data-msg="Table prête, merci de venir la débarrasser.">Table prête</button>
         <button data-msg="Khalik blati svp · client attend.">Client attend</button>
         <button data-msg="Reviens à la caisse stp.">Caisse</button>
         <button data-msg="Pause finie, 3awd l'service.">Fin pause</button>
@@ -6055,7 +6063,7 @@
   <div class="narrow-guard" aria-hidden="true">
     <i data-lucide="rotate-cw"></i>
     <h2>Pivoter l'écran</h2>
-    <p>Ouvre en landscape sur tablet 3afak, Kiwi Caisse a besoin d'au moins 1180px d'largeur.</p>
+    <p>Passez la tablette en mode paysage : Kiwi Caisse a besoin d'au moins 1180 px de largeur.</p>
   </div>
 
   <script>
@@ -8729,6 +8737,14 @@
       clearTimeout(cardSuccessTimer);
       clearTimeout(cardFootTimer);
       cashAmountOverride = null;
+      /* Le modal de paiement s'ouvre PAR-DESSUS le modal de partage : l'abandonner
+         laissait `splitPayCallback` armé. Or `finalizeTender()` ne comptabilise une
+         vente que si ce callback est vide — l'encaissement suivant, sans rapport,
+         était donc absorbé par la part abandonnée : montant de l'ancienne part
+         enregistré, vente réelle jamais écrite. On désarme à la fermeture ; sur le
+         chemin nominal `finalizeTender()` l'a déjà mis à null avant d'arriver ici. */
+      splitPayCallback = null;
+      restorePayBindings();
     }
     $('#pay-card').addEventListener('click', openCardModal);
     $('#pay-qr').addEventListener('click', function () {
@@ -8835,6 +8851,9 @@
     }
     function closeCashModal() {
       cashAmountOverride = null;
+      // Même désarmement qu'en carte — voir closeCardModal().
+      splitPayCallback = null;
+      restorePayBindings();
       cashModal.classList.remove('is-open');
     }
     $('#pay-cash').addEventListener('click', openCashModal);
@@ -9636,6 +9655,30 @@
 
     let splitPayCallback = null;
 
+    /* Le sous-titre des modals de paiement est global : « Part 2 » écrit ici
+       restait affiché sur l'encaissement suivant, sans le moindre rapport avec
+       la note partagée — « Table Part 2 · T7 » sur une commande à emporter.
+       On mémorise donc l'étiquette d'origine pour la remettre dès que le flux
+       de partage se termine, qu'il aboutisse ou qu'il soit abandonné. */
+    let payBindingsBackup = null;
+    function setPayBindings(table, covers) {
+      if (!payBindingsBackup) {
+        payBindingsBackup = {
+          table: document.querySelector('[data-bind="table"]')?.textContent || '',
+          covers: document.querySelector('[data-bind="covers"]')?.textContent || '',
+        };
+      }
+      $$('[data-bind="table"]').forEach(el => el.textContent = table);
+      $$('[data-bind="covers"]').forEach(el => el.textContent = covers);
+    }
+    function restorePayBindings() {
+      if (!payBindingsBackup) return;
+      const b = payBindingsBackup;
+      payBindingsBackup = null;
+      $$('[data-bind="table"]').forEach(el => el.textContent = b.table);
+      $$('[data-bind="covers"]').forEach(el => el.textContent = b.covers);
+    }
+
     const splitState = {
       tableId: null,
       isVrap: false,       // true when splitting an À emporter cart (no table)
@@ -9747,6 +9790,7 @@
       $('#split-modal').classList.remove('is-open');
       splitPayCallback = null;
       cashAmountOverride = null;
+      restorePayBindings();
     }
 
     /* ---- setup screen ---- */
@@ -9936,8 +9980,19 @@
         const baseShares = shareMoney(splitState.total, splitState.numParts);
         const tipShares = shareMoney(tipTotal, splitState.numParts);
         const label = tipPct > 0 ? `Part égale + pourboire ${tipPct}%` : 'Part égale';
+        /* Une part égale ne portait aucune ligne : la vente entrait au journal
+           comme un montant nu, donc invisible dans la ventilation par famille du
+           rapport Z — une addition partagée en trois disparaissait entièrement des
+           catégories tout en restant dans le total. On donne à chaque part sa
+           fraction de la note, article par article, famille comprise. */
+        const shareLines = Object.entries(splitState.itemTotals).map(([name, info]) => ({
+          name: `${name} · 1/${splitState.numParts}`,
+          qty: info.totalQty,
+          total: money(info.totalQty * info.unitPrice / splitState.numParts),
+          cat: lineCat(null, name),
+        }));
         for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, paid: false, payMethod: null });
+          parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, lines: shareLines.map(l => ({ ...l })), paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -9965,6 +10020,9 @@
                convive liste ses articles, pas juste un montant. */
             lines: Object.entries(cart).map(([name, qty]) => ({
               name, qty, total: money(qty * (splitState.itemTotals[name]?.unitPrice || 0)),
+              /* Sans famille, la ligne compte dans le total du Z mais dans aucune
+                 catégorie — le même trou que les parts égales. */
+              cat: lineCat(null, name),
             })),
             paid: false, payMethod: null,
           });
@@ -10022,8 +10080,7 @@
       if (!part || part.paid) return;
 
       // Bind modal subtitle to the split context
-      $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1}`);
-      $$('[data-bind="covers"]').forEach(el => el.textContent = splitState.sourceLabel || splitState.tableId || '');
+      setPayBindings(`Part ${partIdx + 1}`, splitState.sourceLabel || splitState.tableId || '');
 
       if (method === 'carte') {
         /* openCardModal() derives both the displayed and authorized amount from
@@ -10930,13 +10987,21 @@
       if (Array.isArray(CASHIER_ROSTER)) {
         CASHIER_ROSTER.length = 0;
         (staff || []).forEach((s, i) => CASHIER_ROSTER.push({ id: 'staff' + i, name: s.name || 'Caissier', role: s.role || 'Caissier' }));
+        /* La passation exclut le caissier sortant par son IDENTIFIANT. Sur un vrai
+           magasin, le roster est reconstruit en 'staff0..N' alors que le caissier
+           en poste garde l'id fictif 'me' : il se retrouvait donc proposé comme
+           caissier ENTRANT de sa propre passation, et on pouvait se passer la
+           caisse à soi-même jusqu'au Rapport Z. On l'aligne sur sa ligne du
+           roster (le code d'accès nous a donné son nom). */
+        const mine = CASHIER_ROSTER.find((c) => c.name === cashName);
+        if (mine) currentCashier.id = mine.id;
       }
       const first = String(cashName).trim().split(/\s+/)[0] || 'Caissier';
-      const g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Sba7 lkhir ' + first + ',';
-      const wb = document.getElementById('wb-line1');    if (wb) wb.textContent = 'Sba7 lkhir ' + first;
+      const g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Bonjour ' + first + ',';
+      const wb = document.getElementById('wb-line1');    if (wb) wb.textContent = 'Bonjour ' + first;
       const cn = document.querySelector('.cashier-name'); if (cn) cn.textContent = cashName;
       const setGreet = (sel, tag) => document.querySelectorAll(sel).forEach((el) => {
-        el.textContent = 'Sba7 lkhir' + (tag ? ' ' : ', ');
+        el.textContent = 'Bonjour' + (tag ? ' ' : ', ');
         const m = document.createElement(tag || 'b'); m.textContent = first; el.appendChild(m);
       });
       setGreet('.pin-greet', ''); setGreet('.clockin-greet', 'em');
@@ -11237,7 +11302,7 @@
         t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass'
       ).length;
       const hour = new Date().getHours();
-      const greetWord = hour < 11 ? 'Sba7 lkhir' : (hour < 17 ? 'Salam' : 'Msa lkhir');
+      const greetWord = hour < 17 ? 'Bonjour' : 'Bonsoir';
       const line1El = document.getElementById('greet-line1');
       const subEl   = document.getElementById('greet-sub');
       if (line1El) line1El.textContent = `${greetWord} ${String(currentCashier.name || '').trim().split(/\s+/)[0] || 'Caissier'},`;
@@ -12004,7 +12069,11 @@
     }
     function closeCashMove() { $('#cash-move-modal').classList.remove('is-open'); }
     function confirmCashMove() {
-      const amount = Math.round(parseFloat($('#cm-amount').value) || 0);
+      /* `money()` arrondit au centime ; `Math.round()` arrondissait au dirham.
+         Un apport de 12,50 entrait à 13 et une sortie de 12,50 sortait à 13 :
+         le fond de caisse dérivait d'un demi-dirham par mouvement, en silence,
+         et l'écart de passation en fin de service accusait le compteur. */
+      const amount = money(parseFloat($('#cm-amount').value) || 0);
       if (amount <= 0) { toast('Saisis un montant'); return; }
       cashMovements.push({
         id: 'cm-' + Date.now(), time: new Date(),
@@ -13252,7 +13321,11 @@
       box.classList.remove('is-ok', 'is-off');
       const raw = inp ? inp.value : '';
       if (raw === '' || raw == null) { out.textContent = '—'; return; }
-      handoverState.counted = Math.round(parseFloat(raw) || 0);
+      /* Le comptage physique se fait à la pièce : il y a des 5 et des 10
+         centimes dans le tiroir. Arrondir au dirham fabriquait jusqu'à 0,50 MAD
+         d'écart sur un tiroir pourtant juste — et le caissier repartait chercher
+         une erreur qui n'existait pas. On garde le centime. */
+      handoverState.counted = money(parseFloat(raw) || 0);
       const ecart = handoverState.counted - handoverState.expected;
       out.textContent = fmtEcart(ecart);
       box.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
@@ -13261,7 +13334,9 @@
     /* Step 2 — incoming cashier picker + verification recount. */
     function renderHandoverVerify() {
       const list = CASHIER_ROSTER.filter(c => c.id !== currentCashier.id);
-      $('#ho-cashiers').innerHTML = list.map(c =>
+      /* Sans repreneur enregistré, la passation ne peut aboutir : on le dit et on
+         indique où ajouter un poste, plutôt que de laisser une liste vide. */
+      $('#ho-cashiers').innerHTML = list.length ? list.map(c =>
         `<button class="ho-cashier" data-ho-cashier="${c.id}">`
         + `<span class="ho-cashier-av">${cashierInitials(c.name)}</span>`
         + `<span class="ho-cashier-main">`
@@ -13270,7 +13345,7 @@
         + `</span>`
         + `<span class="ho-cashier-tick"><i data-lucide="check-circle-2"></i></span>`
         + `</button>`
-      ).join('');
+      ).join('') : '<div class="ho-empty">Aucun autre poste enregistré sur cette caisse. Ajoutez un caissier depuis le tableau de bord (Équipe) avant de passer la main.</div>';
       if (handoverState.incoming) {
         const card = $(`#ho-cashiers [data-ho-cashier="${handoverState.incoming.id}"]`);
         if (card) card.classList.add('is-active');
@@ -14733,6 +14808,12 @@
          comptoir, il n'y a pas d'addition à encaisser plus tard qui viendrait
          fermer la session à sa place. */
       opPush(o, 'served');
+      /* La remise est un état persisté (`kdsOrders` part dans le blob de
+         service) : sans écriture ici, un F5 dans les secondes qui suivent
+         ressuscitait une commande déjà donnée au client, prête à être remise
+         une seconde fois. L'autosave l'aurait rattrapée — dans cinq secondes.
+         Tous les autres points finaux écrivent tout de suite ; celui-ci aussi. */
+      try { persistShift(); } catch (_) {}
       toast(`Commande ${ticketNo(o)} remise au client`);
     }
 
@@ -15314,7 +15395,19 @@
          file de synchronisation, estampillées de LEUR commerçant au moment de
          la vente (live-link.js postSale), et le serveur refuse déjà de les
          classer ailleurs. */
-      if (shiftMerchant !== currentMerchantSlug()) return;
+      if (shiftMerchant !== currentMerchantSlug()) {
+        /* Le refus est volontaire, mais il était muet : à partir de cet instant
+           TOUTES les écritures de service échouent en silence, cinq secondes
+           après l'autre, et rien à l'écran ne dit que la caisse a cessé de
+           sauvegarder. Une ligne dans la console, une seule fois — pas un toast
+           qui reviendrait toutes les cinq secondes — pour que le diagnostic soit
+           possible au lieu d'être deviné. */
+        if (!persistShift._warned) {
+          persistShift._warned = true;
+          try { console.warn('[kiwi] service ouvert chez « ' + shiftMerchant + ' », caisse appairée chez « ' + currentMerchantSlug() + ' » : sauvegarde du service suspendue.'); } catch (_) {}
+        }
+        return;
+      }
       try {
         localStorage.setItem(KC_STORE, JSON.stringify({
           v: 1,

@@ -1102,7 +1102,7 @@
         <p class="modal-subtle">${settle ? order.id : ctx.b.num} · ${esc(cust.name)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="fl-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="fl-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="fl-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1426,7 +1426,7 @@
       return `Bonjour, une composition de la part de ${buyerLabel(d)} sera remise aujourd'hui (${SLOT[d.slot].hours}) à l'adresse indiquée.`
         + `\nAvec nos sincères pensées, ${shopNm}.`;
     }
-    return `Sba7 lkhir ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
+    return `Bonjour ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
       + `\nLivraison prévue aujourd'hui, créneau ${SLOT[d.slot].hours}.`
       + `\n— ${shopNm}, via Kiwi`;
   }
@@ -1683,8 +1683,8 @@
   window.KiwiPosDispatch.register({
     id: 'fleuriste',
     greet: {
-      line1: 'Sba7 lkhir Rim,',
-      em: 'marhba.',
+      line1: 'Bonjour Rim,',
+      em: 'bienvenue.',
       sub: 'Fleurs du Détroit <em>·</em> l\'arrivage du matin est en boutique',
     },
     mount(rootEl) { mount(rootEl); },

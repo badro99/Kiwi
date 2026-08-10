@@ -29,6 +29,11 @@
   const pad2   = (n) => String(n).padStart(2, '0');
   const fmtDT  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const fmtDay = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  /* Un avoir vit six mois : son échéance tombe presque toujours l'année suivante.
+     Sans millésime, « sam. 14 févr. » sur un bon papier ne dit pas si c'est celui
+     de cette année ou du suivant — et c'est le seul chiffre qui décide si la
+     cliente est remboursée ou renvoyée. Les dates d'avoir portent l'année. */
+  const fmtDayY = (d) => `${fmtDay(d)} ${d.getFullYear()}`;
   const fmtHM  = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const MIN = 60 * 1000;
 
@@ -276,16 +281,24 @@
       // sinon une vente de bleu se déduirait d'une variante bleue déjà vide
       // pendant que la variante marine, elle, est pleine — le magasin perdrait la
       // sortie de son stock. Sur un RETOUR, l'identifiant exact suffit.
-      const v = (delta < 0 && sameSize.find((x) => x.colorId === color && covers(x)))
+      const matched = (delta < 0 && sameSize.find((x) => x.colorId === color && covers(x)))
              || (delta < 0 && sameSize.find((x) => fam(x) === color && covers(x)))
              || sameSize.find((x) => x.colorId === color)
-             || sameSize.find((x) => fam(x) === color)
-             || sameSize[0];
+             || sameSize.find((x) => fam(x) === color);
+      /* Dernier recours : la couleur vendue n'existe pas du tout dans cette
+         taille. Ne rien bouger fausserait le total du magasin — la pièce est
+         bien sortie. Mais imputer en silence sur `sameSize[0]` écrivait « vente
+         de marine » sur un article que personne n'a pris, et creusait au hasard
+         une variante peut-être déjà vide pendant qu'une autre était pleine. On
+         retient donc d'abord une variante qui a réellement du stock, et on DIT
+         dans le motif que la couleur n'a pas été appariée : l'approximation
+         reste lisible dans le journal au lieu d'être maquillée en certitude. */
+      const v = matched || sameSize.find((x) => covers(x)) || sameSize[0];
       /* Le MOTIF suit le mouvement. Le stock est désormais un journal
          (assets/boutique-catalog.js) : « vente » et « retour » distinguent une
          sortie au comptoir d'une reprise, ce qui rend le journal lisible le jour
          où quelqu'un demande où sont passées douze pièces. */
-      if (v) cat.adjustStock(v.id, delta, delta < 0 ? 'vente' : 'retour');
+      if (v) cat.adjustStock(v.id, delta, (delta < 0 ? 'vente' : 'retour') + (matched ? '' : ' · couleur non appariée'));
     } catch (_) {}
   }
   /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════
@@ -1014,16 +1027,25 @@
   function assignTicketNumber(ticket) {
     if (!ticket || ticket.num) return Promise.resolve(ticket && ticket.num);
     ticket.numbering = true;
+    ticket.numError = false;
     return claimTicketNumber().then((n) => {
       /* The ticket object, not merely state.ticket, is captured. A reset while
          the request is in flight cannot put the old response on the new cart. */
       ticket.num = n;
       ticket.period = ticketPeriod();
       ticket.numbering = false;
+      ticket.numError = false;
       if (state.ticket === ticket && root) { renderTicket(); icons(); }
       return n;
     }).catch((e) => {
       ticket.numbering = false;
+      /* L'ÉCHEC DOIT SE VOIR TOUT DE SUITE, PAS AU MOMENT DE PAYER.
+         Sans marque d'erreur, un ticket sans numéro reste bloqué sur
+         « attribution… » : la vendeuse scanne tout le panier, la cliente sort sa
+         carte, et c'est seulement là qu'on découvre que la caisse n'a jamais pu
+         réserver de série. On distingue donc « en cours » de « échoué », pour
+         que la tête du ticket le dise et propose de réessayer. */
+      ticket.numError = true;
       if (state.ticket === ticket && root) { renderTicket(); icons(); }
       throw e;
     });
@@ -1039,10 +1061,15 @@
       num: IS_DEMO ? String(saleSeq) : '',
       period: ticketPeriod(),
       syncId: newSaleId(),
-      lines: [], client: null, remiseAuth: false,
+      lines: [], client: null, remiseAuth: false, numbering: false, numError: false,
     };
     state.ticket = ticket;
-    if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {});
+    if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {
+      if (state.ticket !== ticket) return;
+      toast('Numéro de ticket indisponible', state.ticketStorageError
+        ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
+        : 'Reconnectez cette caisse pour réserver sa prochaine série.');
+    });
   }
   function ticketClient() {
     const t = state.ticket;
@@ -1647,7 +1674,8 @@
     const el = $('#bq-ticket', root);
     el.innerHTML = `
       <div class="bq-tk-head">
-        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num">· ${t.num || 'attribution…'} · par ${esc(STAFF.caissiere.name)}</span></div>
+        <div><span class="bq-tk-title">Ticket</span> <span class="bq-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : 'attribution…')} · par ${esc(STAFF.caissiere.name)}</span></div>
+        ${!t.num && t.numError ? '<button class="bq-tk-retry" id="bq-tk-retry">Réessayer</button>' : ''}
         ${t.lines.length ? '<button class="bq-tk-reset" id="bq-tk-reset">Vider</button>' : ''}
       </div>
       <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
@@ -1667,9 +1695,19 @@
         </div>
         <div class="bq-tk-total"><span class="lbl">Total</span><span class="val">${fmtMAD(total)}</span></div>
         <button class="bq-validate" id="bq-validate" ${t.lines.length && t.num ? '' : 'disabled'}>
-          <i data-lucide="banknote"></i> ${t.num ? `Encaisser · ${fmtMAD(total)}` : 'Attribution du numéro…'}
+          <i data-lucide="banknote"></i> ${t.num ? `Encaisser · ${fmtMAD(total)}` : t.numError ? 'Numéro de ticket indisponible' : 'Attribution du numéro…'}
         </button>
       </div>`;
+    const retry = $('#bq-tk-retry', el);
+    if (retry) retry.onclick = () => {
+      retry.disabled = true;
+      assignTicketNumber(t).then(
+        () => toast('Numéro attribué · ticket ' + t.num),
+        () => toast('Numéro de ticket toujours indisponible', state.ticketStorageError
+          ? 'Le stockage sécurisé de cette tablette est indisponible. Contactez le support.'
+          : 'Reconnectez cette caisse pour réserver sa prochaine série.')
+      );
+    };
     const reset = $('#bq-tk-reset', el);
     if (reset) reset.onclick = () => {
       t.lines.forEach((ln) => stockAdd(ln.pid, ln.size, ln.qty));
@@ -1914,7 +1952,31 @@
   }
 
   /* ---------- approbation gérante (remise) ---------- */
+  /* Ce que l'accord laisse derrière lui. Le pied du modal promet « tracé dans le
+     journal » — et seul un booléen partait dans la vente : impossible, trois jours
+     plus tard, de dire qui avait accordé les 20 % ni combien avaient été lâchés.
+     On garde le nom (jamais le code), l'heure et le pourcentage demandé. */
+  function markRemiseAuth(pct, by, role) {
+    state.ticket.remiseAuth = { pct, by: by || '', role: role || '', at: new Date().toISOString() };
+  }
+
+  /* Sur une boutique RÉELLE, la remise passe par le vrai code responsable — le
+     même portier que le remboursement et la fermeture de caisse, validé contre la
+     liste du serveur. La liste d'équipe est neutralisée sur un vrai magasin
+     (« Vendeur 1 »), donc la rangée « Aicha approuve » n'y était plus qu'un
+     décor : un appui suffisait, sans code, sans nom. La démo locale garde sa
+     distribution nommée — elle n'a pas de portier à interroger. */
   function openApprove(pct, onOk) {
+    if (pvReal() && typeof window.requireManager === 'function') {
+      window.requireManager(`Remise −${pct} % sur le ticket ${state.ticket.num}`, () => {
+        let mgr = null;
+        try { mgr = window.KiwiCaissePairing?.lastManager?.() || null; } catch (_) {}
+        markRemiseAuth(pct, mgr && mgr.name, mgr && mgr.role);
+        toast(mgr && mgr.name ? `Remise −${pct} %, accord ${mgr.name}` : `Remise −${pct} % autorisée`);
+        onOk();
+      });
+      return;
+    }
     const el = $('#bq-approvem', root);
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1935,7 +1997,7 @@
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-approve-veil'); });
     $('#bq-app-ok', el).onclick = () => {
-      state.ticket.remiseAuth = true;
+      markRemiseAuth(pct, STAFF.gerante.name, STAFF.gerante.role);
       closeVeil('#bq-approve-veil');
       toast(`Remise −${pct} %, accord ${STAFF.gerante.name}`);
       onOk();
@@ -2783,7 +2845,12 @@
   function togglePick(key) {
     const [saleId, idxS] = key.split(':');
     const idx = +idxS;
-    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), quantities: new Map(), motif: 'Taille' };
+    /* Pas de motif par défaut. Le champ démarrait sur « Taille » : une vendeuse
+       qui ne touchait aucune puce classait quand même le retour en problème de
+       taille — et c'est exactement la statistique que la patronne lit dans le
+       registre des retours pour décider quoi racheter. Tant que personne n'a
+       choisi, le registre dit « Non précisé ». */
+    if (!state.ret || state.ret.saleId !== saleId) state.ret = { saleId, picks: new Set(), quantities: new Map(), motif: null };
     const picks = state.ret.picks;
     if (picks.has(idx)) { picks.delete(idx); state.ret.quantities.delete(idx); }
     else { picks.add(idx); state.ret.quantities.set(idx, 1); }
@@ -2800,7 +2867,11 @@
     const ln = sale.lines[idx];
     const qty = pickedQty(ret, idx, ln);
     if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
-    state.exchange = { saleId: ret.saleId, idx, qty: 1 };
+    /* Le motif choisi sur la fiche de retour suit l'échange jusqu'au registre :
+       sans lui, tout échange y était classé « Echange », c'est-à-dire rien —
+       la colonne motif répétait la colonne type et le registre ne disait plus
+       pourquoi la pièce était revenue. */
+    state.exchange = { saleId: ret.saleId, idx, qty: 1, motif: ret.motif || '' };
     state.ret = null;
     switchView('vente');
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
@@ -2814,10 +2885,13 @@
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
     const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
     if (!amount) return;
-    restoreLines(sale, idxs, quantities, `avoir (${ret.motif.toLowerCase()})`);
+    /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
+       quel plutôt que d'inventer un motif que personne n'a donné. */
+    const motif = ret.motif || 'Non précisé';
+    restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
     const c = saleClient(sale);
-    const av = issueAvoir(amount, c, `${ret.motif}, retour ${sale.id}`, sale.id);
-    recordReturn(sale, idxs, amount, ret.motif, 'avoir', av.code, quantities);
+    const av = issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.id);
+    recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);
     state.ret = null;
     refreshOps();
     openVoucher(av, { mode: 'fresh' });
@@ -2876,8 +2950,8 @@
       <div class="row"><span>Cliente</span><span>${esc(av.holderName)}</span></div>
       <div class="row"><span>Motif</span><span>${esc(av.motif)}</span></div>
       ${av.from ? `<div class="row"><span>Vente d'origine</span><span>${esc(av.from)}</span></div>` : ''}
-      <div class="row"><span>Émis le</span><span>${fmtDay(av.at)}</span></div>
-      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtDay(av.until)}</span></div>
+      <div class="row"><span>Émis le</span><span>${fmtDayY(av.at)}</span></div>
+      <div class="row b"><span>VALABLE JUSQU'AU</span><span>${fmtDayY(av.until)}</span></div>
       <hr>
       <div class="c">${barcode(av.code + '-MM', 26)}</div>
       <div class="bq-avoir-code">${av.code} · ${esc((bqName('Maison Mansour') || 'Boutique').toUpperCase())}</div>
@@ -2908,7 +2982,7 @@
       P.printText({ title:`Avoir ${av.code}`, paper:'80', lines:[
         { label:'Cliente', value:av.holderName }, { label:'Montant', value:fmtMAD(av.amount || av.balance) },
         { label:'Solde disponible', value:fmtMAD(av.balance) }, { label:'Motif', value:av.motif },
-        { label:'Valable jusqu’au', value:fmtDay(av.until) },
+        { label:'Valable jusqu’au', value:fmtDayY(av.until) },
       ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
     };
   }
@@ -2969,7 +3043,7 @@
       persistStock(ln.pid, ln.size, ln.color, 1);
       persistStock(newPid, newSize, newColor, -1);
       markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
-      recordReturn(sale, [ex.idx], ln.unit, 'Echange', 'echange', '', new Map([[ex.idx, 1]]));
+      recordReturn(sale, [ex.idx], ln.unit, ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -3224,6 +3298,12 @@
              espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
           discount: Math.round(tot.remise + tot.reward),
+          /* L'accord responsable suit la vente, pas seulement l'écran : qui a
+             autorisé, quand, quel pourcentage, et ce que la remise a coûté au
+             magasin. C'est la seule chose relisible le jour d'un contrôle. */
+          remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object')
+            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: Math.round(tot.remise) }
+            : null,
           promoOff: Math.round(tot.promo),        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
              `unit` (le prix réellement payé), mais un échange ou une réclamation
@@ -3411,7 +3491,7 @@
           <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
             <span class="l"><b>Avoir</b><span>${avs.length === 1 ? `${avs[0].code} · ${fmtMAD(avs[0].balance)}, ${esc(avs[0].holderName)}` : `${avs.length} avoirs actifs, scanner ou choisir`}</span></span>
-            <span class="amt">−${fmtMAD(Math.min(avs[0].balance, due()))}</span>
+            <span class="amt">−${fmtMAD(Math.min(avs[0].balance, portion()))}</span>
           </button>` : `
           <button class="bq-pay-opt is-mute" data-bq-m="avoir-none">
             <span class="ic"><i data-lucide="ticket"></i></span>
@@ -3446,11 +3526,17 @@
             note.hidden = !(portion() < due());
             note.textContent = `Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}`;
           }
-          /* L'avoir ne se partage pas : il se DÉDUIT du total, pour ce qu'il
-             porte. Sa ligne garde donc son propre montant (et son signe). */
+          /* L'avoir se déduit du total, mais jamais plus que la part choisie :
+             sa ligne suit donc la saisie comme les autres, en gardant son signe
+             et son plafond propre (le solde du bon). */
           $$('[data-bq-m]', el).forEach((b) => {
-            if (/^avoir/.test(b.dataset.bqM)) return;
-            const a = $('.amt', b); if (a) a.textContent = fmtMAD(portion());
+            const a = $('.amt', b); if (!a) return;
+            if (/^avoir/.test(b.dataset.bqM)) {
+              const bal = (activeAvoirs()[0] || {}).balance;
+              if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
+              return;
+            }
+            a.textContent = fmtMAD(portion());
           });
         };
       }
@@ -3486,8 +3572,8 @@
           ${avs.map((a) => `
             <button class="bq-pay-opt" data-bq-av-use="${a.code}">
               <span class="ic"><i data-lucide="scan-line"></i></span>
-              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtDay(a.until)}</span></span>
-              <span class="amt">−${fmtMAD(Math.min(a.balance, due()))}</span>
+              <span class="l"><b>${a.code} · ${fmtMAD(a.balance)}</b><span>${esc(a.holderName)} · ${esc(a.motif)} · valable jusqu'au ${fmtDayY(a.until)}</span></span>
+              <span class="amt">−${fmtMAD(Math.min(a.balance, portion()))}</span>
             </button>`).join('')}
         </div>
         <div class="bq-sheet-foot"><button class="bq-btn secondary" id="bq-av-back" style="flex:1;">Retour</button></div>`;
@@ -3496,8 +3582,14 @@
       $$('[data-bq-av-use]', el).forEach((b) => {
         b.onclick = () => {
           const av = AVOIRS.find((a) => a.code === b.dataset.bqAvUse);
-          const applied = Math.min(av.balance, due());
+          /* `portion()`, pas `due()`. Sans part choisie les deux sont égaux et
+             le bon se déduit entièrement, comme avant. Mais quand la caissière
+             a explicitement demandé la moitié, le bon prenait quand même tout :
+             une cliente qui voulait garder du solde sur son avoir en sortait
+             avec un bon vidé, et il n'y avait pas de retour en arrière. */
+          const applied = Math.min(av.balance, portion());
           avoirPart = { m: 'avoir', amount: applied, code: av.code };
+          share = 1; custom = 0;   /* la part est consommée, comme dans settle() */
           if (due() <= 0.009) commit();
           else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
         };
@@ -3515,7 +3607,7 @@
         ${appliedBanner()}
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="bq-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="bq-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="bq-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -4945,7 +5037,7 @@
       el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
-      el.querySelectorAll('[data-vdel]').forEach((b) => b.addEventListener('click', () => { cat2.deleteVariant(b.dataset.vdel); openInvProduct(pid); }));
+      el.querySelectorAll('[data-vdel]').forEach((b) => b.addEventListener('click', () => confirmDeleteVariant(b.dataset.vdel, pid)));
       el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
     });
   }
@@ -5164,6 +5256,29 @@
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
       $('#bqi-del-ok', el).addEventListener('click', () => { cat.deleteProduct(pid); toast('Produit supprimé'); closeVeil('#bq-inv-veil'); renderInventaire(); });
+    });
+  }
+
+  /* Supprimer une DÉCLINAISON demande la même confirmation que supprimer le
+     produit. La corbeille de la ligne partait sur un seul appui, sans retour
+     possible : le stock compté, le code-barres imprimé sur les étiquettes du
+     rayon et l'historique de mouvements de cette déclinaison disparaissaient
+     ensemble, et la ligne d'à côté est le bouton « −1 ». On nomme ce qui part. */
+  function confirmDeleteVariant(vid, pid) {
+    const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
+    const v = d.variants.find((x) => x.id === vid); if (!v) return;
+    const codes = (v.barcodes || []).length;
+    const perte = [
+      v.stock > 0 ? `${v.stock} en stock` : 'aucun stock',
+      codes ? `${codes} code${codes > 1 ? 's' : ''}-barres` : 'aucun code-barres',
+    ].join(' · ');
+    const html = `
+      <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="bqi-modh"><div><h3>Supprimer ${esc(colorLabel(v.colorFamily || v.colorId))} · ${esc(v.size)} ?</h3><span>${esc(d.product.name)} — ${perte}. La suppression est définitive.</span></div></div>
+      <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Annuler</button><button class="bq-btn danger" id="bqi-vdel-ok"><i data-lucide="trash-2"></i>Supprimer la variante</button></div>`;
+    invSetModal(html, (el) => {
+      $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
+      $('#bqi-vdel-ok', el).addEventListener('click', () => { cat.deleteVariant(vid); toast('Variante supprimée'); openInvProduct(pid); });
     });
   }
 
@@ -5822,6 +5937,11 @@
         const n = parseInt(qty.value, 10) || 0;
         const res = cat.receiveStock(v.id, n);
         if (!res.ok) { toast(res.reason === 'quantite' ? 'Indiquez une quantité d\'au moins 1' : 'Réception impossible'); return; }
+        /* Un réassort compte comme un article repris : sans ce `count++`, une
+           session passée entièrement à remettre du stock sur des tailles déjà
+           connues affichait « 0 article · 12 pièces » — un compteur qui se
+           contredit lui-même et fait douter la vendeuse de tout l'écran. */
+        intake.count++;
         intake.pieces += res.added;
         intakeNote('recu', `${d.product.name} · ${v.size} — ${res.added} reçue${res.added > 1 ? 's' : ''} (${res.before} → ${res.stock})`);
         toast(`${d.product.name} · ${v.size} : ${res.before} → ${res.stock}`);
@@ -6103,9 +6223,17 @@
   const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'livraison': 'delivery' };
 
   function bqDayTotals() {
-    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0 };
+    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0 };
     salesToday().forEach((s) => {
       let took = 0;
+      /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
+         raison, ce n'est pas de l'argent qui rentre — mais l'écarter du total
+         ne dispense pas de le dire : la marchandise, elle, est bien sortie du
+         magasin. Sans cette ligne, un Z pouvait laisser partir 1 200 MAD de
+         stock contre un avoir sans qu'aucun chiffre de la clôture ne bouge. */
+      let onAvoir = 0;
+      if (Array.isArray(s.parts)) s.parts.forEach((p) => { if (p && p.m === 'avoir') onAvoir += +p.amount || 0; });
+      if (onAvoir > 0) { t.avoirUsed += onAvoir; t.avoirUsedN++; }
       bqMoneyParts(s).forEach((p) => {
         if (p.m !== 'livraison') took += p.amount;
         if (p.m === 'espèces') t.cash += p.amount;
@@ -6113,7 +6241,15 @@
         else if (p.m === 'livraison') t.delivery += p.amount;
         else t.other += p.amount;
       });
-      if (took > 0) { t.moneyIn += took; t.txns++; }
+      if (took > 0) { t.moneyIn += took; t.paidTxns++; }
+      /* DEUX compteurs, parce qu'il y a deux questions. `paidTxns` ne retient
+         que les tickets qui ont fait entrer de l'argent — c'est le diviseur du
+         ticket moyen. `txns` compte TOUS les tickets du jour, y compris celui
+         réglé entièrement par avoir ou parti en livraison : sans lui, la
+         clôture affichait « Transactions 6 · Articles vendus 6 » alors que les
+         articles, eux, étaient comptés sur sept tickets. Deux lignes voisines
+         qui ne parlaient pas de la même journée. */
+      t.txns++;
       (s.lines || []).forEach((ln) => { t.items += lineAvailableQty(ln); });
       const d = +s.discount || 0;
       if (d > 0) { t.discounts += d; t.discountsN++; }
@@ -6122,7 +6258,16 @@
          qu'elle a elle-même lancée croit que son équipe brade le magasin. */
       t.promoOff += +s.promoOff || 0;
     });
-    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts', 'promoOff'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
+    /* Les deux sens de l'avoir sur la même journée : ce qui a été ÉMIS (une
+       dette que le magasin vient de contracter) et ce qui a été CONSOMMÉ (une
+       dette qu'il vient d'éteindre en marchandise). Les additionner serait un
+       contresens ; les taire l'était aussi. */
+    AVOIRS.forEach((a) => {
+      if (!a || !a.at || !isToday(a.at)) return;
+      const v = +a.amount || 0;
+      if (v > 0) { t.avoirIssued += v; t.avoirIssuedN++; }
+    });
+    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
 
@@ -6169,6 +6314,9 @@
       openingFloat: bqShift ? bqShift.float : 0,
       cashMovements: [], handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0,
+      /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
+         clôture et disparaît du Z imprimé — le seul document qui reste. */
+      avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
       countedCash: counted,
     };
   }
@@ -6272,7 +6420,7 @@
         <div class="clockin-tagline">— version commerçant</div>
       </div>
       <div class="clockin-mid">
-        <div class="clockin-greet">Sba7 lkhir <em>${esc(who)}</em></div>
+        <div class="clockin-greet">Bonjour <em>${esc(who)}</em></div>
         <div class="clockin-role">${esc(role)} · ${esc(pv.name || 'Boutique')}</div>
         <div class="clockin-clock" id="bqci-time">--:--</div>
         <div class="clockin-date" id="bqci-date"></div>
@@ -6412,13 +6560,19 @@
       ['dont Carte', fmtMAD(t.card), true, 'sub'],
       ['dont Espèces', fmtMAD(t.cash), true, 'sub'],
     ];
-    if (t.delivery > 0) rows.push(['dont Livraison · à recevoir', fmtMAD(t.delivery), true, 'sub']);
     if (t.other > 0) rows.push(['dont Autres', fmtMAD(t.other), true, 'sub']);
-    rows.push(['Ticket moyen', fmtMAD(t.txns > 0 ? t.moneyIn / t.txns : 0), true, '']);
+    /* HORS du bloc « dont » : une livraison n'est pas encaissée, elle est à
+       recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
+       composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */
+    if (t.delivery > 0) rows.push(['Livraisons · à recevoir', fmtMAD(t.delivery), true, '']);
+    if (t.paidTxns > 0) rows.push(['Ticket moyen', fmtMAD(t.moneyIn / t.paidTxns), true, '']);
     if (t.promoOff > 0) rows.push(['Promotions du magasin', fmtMAD(t.promoOff), true, '']);
     rows.push(['Réductions accordées', fmtMAD(t.discounts), true, '']);
-    const avToday = AVOIRS.filter((a) => a && a.at && isToday(a.at)).reduce((s, a) => s + (+a.amount || 0), 0);
-    if (avToday > 0) rows.push(['Avoirs émis', fmtMAD(avToday), true, '']);
+    if (t.avoirIssued > 0) rows.push(['Avoirs émis', fmtMAD(t.avoirIssued), true, '']);
+    /* Réglé en avoir : la contrepartie du « Total encaissé ». Ces tickets ont
+       vidé des rayons sans faire sonner le tiroir — les compter nulle part
+       revenait à imprimer un Z où la marchandise partie ne figure pas. */
+    if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']);
 
     /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
        caisse — les lignes qui n'existent pas ne s'affichent pas. */
@@ -6431,7 +6585,14 @@
 
     const nCats = (() => {
       const seen = {};
-      salesToday().forEach((s) => (s.lines || []).forEach((ln) => { const r = rayonOf(ln.pid); if (r) seen[r] = 1; }));
+      /* Une ligne intégralement reprise n'a rien vendu : compter son rayon
+         faisait dire « 3 rayons » à une clôture où deux seulement ont laissé de
+         la marchandise chez le client — la phrase contredisait le nombre de
+         pièces affiché juste à côté, qui, lui, est net des retours. */
+      salesToday().forEach((s) => (s.lines || []).forEach((ln) => {
+        if (lineAvailableQty(ln) <= 0) return;
+        const r = rayonOf(ln.pid); if (r) seen[r] = 1;
+      }));
       return Object.keys(seen).length;
     })();
     const hlText = t.txns
@@ -6608,8 +6769,8 @@
   window.KiwiPosDispatch.register({
     id: 'boutique',
     greet: {
-      line1: 'Sba7 lkhir Salma,',
-      em: 'marhba.',
+      line1: 'Bonjour Salma,',
+      em: 'bienvenue.',
       sub: 'Maison Mansour <em>·</em> boutique ouverte 10h–20h',
     },
     mount,

@@ -72,6 +72,17 @@
     return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
   }
   const phoneDigits = (value) => (normalizeMoroccanPhone(value) || String(value || '')).replace(/\D/g, '');
+  /* Comme phoneDigits, mais tolérant aux numéros INCOMPLETS : au retrait, la
+     cliente dicte son numéro et la caissière tape au fur et à mesure. « +212 6 »
+     doit déjà filtrer comme « 06 », alors que normalizeMoroccanPhone refuse
+     (à juste titre) un numéro trop court. On coupe donc l'indicatif à la main. */
+  function searchDigits(value) {
+    let d = String(value == null ? '' : value).replace(/\D/g, '');
+    if (d.startsWith('00212')) d = '0' + d.slice(5);
+    else if (d.startsWith('212')) d = '0' + d.slice(3);
+    else if (/^[5-7]/.test(d) && d.length >= 9) d = '0' + d;
+    return d;
+  }
   const whatsappPhone = (value) => {
     const local = normalizeMoroccanPhone(value);
     return local ? '212' + local.replace(/\D/g, '').slice(1) : '';
@@ -243,7 +254,12 @@
     const pieces = []; let n = 0;
     lines.forEach((ln, li) => {
       const item = ITEMS[ln.itemId];
-      const labels = (item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).pieces) || null;
+      /* `variants: []` est vrai au sens JS mais n'a pas d'élément 0 : lire
+         `.pieces` dessus jetait un TypeError et la fiche entière ne s'affichait
+         plus. Une famille sans variante retombe sur une pièce anonyme, comme
+         partout ailleurs. */
+      const variant = item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]);
+      const labels = (variant && variant.pieces) || null;
       for (let q = 0; q < clampQty(ln.qty); q++) {
         (labels || [null]).forEach((plabel) => {
           n++;
@@ -848,7 +864,13 @@
   function ticketCount(t) {
     return t.lines.reduce((s, ln) => {
       const item = ITEMS[ln.itemId];
-      const per = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).pieces.length : 1;
+      /* Une variante n'a pas forcément de pièces nommées : les paliers de
+         taille d'un tapis (petit / moyen / grand) sont des variantes de PRIX,
+         pas de découpe. Sans ce garde-fou, ajouter un tapis au ticket plantait
+         le comptoir — même règle qu'à buildPieces(), qui retombe déjà sur une
+         seule étiquette quand `pieces` manque. */
+      const variant = item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]);
+      const per = (variant && Array.isArray(variant.pieces) && variant.pieces.length) || 1;
       return s + ln.qty * per;
     }, 0);
   }
@@ -1618,6 +1640,7 @@
           <label class="cash-input-label" for="px-ac-input">Montant</label>
           <input class="cash-input mono" id="px-ac-input" type="number" inputmode="numeric" min="10" max="${total}" step="5" value="${acompte}" />
         </div>
+        <p class="modal-subtle" id="px-ac-why" aria-live="polite"></p>
         <div class="px-sheet-foot">
           <button class="px-btn secondary" id="px-ac-back">Retour</button>
           <button class="px-btn primary" id="px-ac-ok">Encaisser l'acompte</button>
@@ -1626,7 +1649,15 @@
       const refresh = (writeInput) => {
         $('#px-ac-val', el).textContent = Number.isFinite(acompte) ? fmtMAD(acompte) : '—';
         if (writeInput) $('#px-ac-input', el).value = acompte;
-        $('#px-ac-ok', el).disabled = !validDeposit(acompte, total);
+        const good = validDeposit(acompte, total);
+        $('#px-ac-ok', el).disabled = !good;
+        /* Un bouton grisé sans explication, c'est une caissière qui re-tape le
+           même montant trois fois. On dit POURQUOI il est grisé, pendant qu'elle
+           tape — pas au moment où elle appuie. */
+        $('#px-ac-why', el).textContent = good ? ''
+          : !Number.isFinite(acompte) ? 'Entrez un montant.'
+            : acompte < 10 ? `Acompte minimum 10 MAD — il manque ${fmtMAD(10 - acompte)}.`
+              : `Un acompte ne peut pas dépasser le total de ${fmtMAD(total)}.`;
       };
       $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-px-ac]', el).forEach((b) => {
@@ -1675,7 +1706,7 @@
         <p class="modal-subtle">${order.id} · ${esc(cust.name)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="px-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="px-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="px-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1823,10 +1854,14 @@
   function matchesQuery(o, q) {
     if (!q) return true;
     const c = custOf(o);
-    const digits = q.replace(/\D/g, '');
+    /* Le client dicte son numéro comme il l'a en tête : « zéro six… » ou
+       « plus deux cent douze six… ». Les deux doivent trouver la même commande,
+       donc on ramène la RECHERCHE au même format local que la fiche avant de
+       comparer — sinon +212 6… ne retrouvait jamais un 06… enregistré. */
+    const digits = searchDigits(q);
     return o.id.toLowerCase().includes(q.toLowerCase()) ||
       c.name.toLowerCase().includes(q.toLowerCase()) ||
-      (digits.length >= 2 && (c.phone || '').replace(/\D/g, '').includes(digits));
+      (digits.length >= 2 && searchDigits(c.phone || '').includes(digits));
   }
 
   function orderCard(o) {
@@ -1886,6 +1921,10 @@
   function openDetail(orderId) {
     const o = findOrder(orderId);
     if (!o) return;
+    /* On retient la commande affichée pour que refreshOps() puisse la
+       repeindre : sans ça, une remise au client ou une libération de cintre
+       déclenchée ailleurs laissait la fiche ouverte sur un état périmé. */
+    state.detailId = o.id;
     const el = $('#px-detailm', root);
     const c = custOf(o);
     const { total } = orderTotals(o);
@@ -1996,7 +2035,8 @@
   function afterStatusChange(o, wasPret) {
     const nowSt = orderStatus(o);
     syncOwnerOps();
-    openDetail(o.id);
+    /* refreshOps() repeint désormais la fiche ouverte : plus besoin de la
+       rouvrir ici, et surtout plus de rendu en double. */
     refreshOps();
     if (nowSt === 'pret' && !wasPret && !o.notified) {
       toast(`${o.id} est prêt, prévenez ${custOf(o).name.split(' ')[0]} ?`);
@@ -2010,6 +2050,12 @@
     if (state.view === 'commandes') renderBoard();
     if (state.view === 'retrait') renderRetrait();
     if (state.view === 'rangement') renderRack();
+    /* La fiche ouverte fait partie de « ce qu'il y a à repeindre ». Elle était
+       la seule surface oubliée : après une remise au client ou une libération
+       de cintre, elle continuait d'annoncer « Prêt », d'afficher le cintre
+       rendu et de proposer « Tout prêt » sur une commande déjà partie. On ne
+       la rouvre jamais — seulement si elle est déjà à l'écran. */
+    if (state.detailId && $('#px-detail-veil', root).classList.contains('is-open')) openDetail(state.detailId);
     icons();
   }
 
@@ -2019,7 +2065,7 @@
     const first = c.b2b ? c.name : c.name.split(' ')[0];
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
-    return `Sba7 lkhir ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
+    return `Bonjour ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
       + `\n— envoyé via Kiwi`;
@@ -2408,7 +2454,7 @@
   if (window.KiwiPosDispatch) {
     window.KiwiPosDispatch.register({
       id: 'pressing',
-      greet: { line1: 'Sba7 lkhir Sanae,', em: 'marhba.',
+      greet: { line1: 'Bonjour Sanae,', em: 'bienvenue.',
                sub: 'Pressing Marshan <em>·</em> comptoir de dépôt' },
       mount(rootEl) {
         restorePressingDocument(readPressingDocument());

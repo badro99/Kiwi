@@ -1151,7 +1151,7 @@
         <p class="modal-subtle">${subtle}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="pz-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="pz-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="pz-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1612,8 +1612,8 @@
   window.KiwiPosDispatch.register({
     id: 'pizzeria',
     greet: {
-      line1: 'Sba7 lkhir Reda,',
-      em: 'marhba.',
+      line1: 'Bonjour Reda,',
+      em: 'bienvenue.',
       sub: 'Pizzeria La Marsa <em>·</em> service du soir, le four est chaud',
     },
     mount(rootEl) { mount(rootEl); },

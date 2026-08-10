@@ -496,8 +496,32 @@
     var discounts = round2(sess.discounts);
     var discountsN = num(sess.discountsCount) || 0;
     var cancels = num(sess.cancels) || 0;
+    /* Les avoirs, quand la caisse en tient. Émis = dette contractée aujourd'hui,
+       consommé = marchandise sortie contre une dette ancienne : aucun des deux
+       n'est de l'argent encaissé, et aucun des deux ne doit disparaître du Z.
+       Le bloc reste absent si la caisse ne renseigne rien — un rapport de
+       restaurant ne doit pas se mettre à imprimer des zéros. */
+    var avoirs = null;
+    if (sess.avoirs) {
+      var avIss = round2(num(sess.avoirs.issued)), avUsed = round2(num(sess.avoirs.used));
+      if (avIss || avUsed) {
+        avoirs = {
+          issued: avIss, issuedCount: num(sess.avoirs.issuedCount) || 0,
+          used: avUsed, usedCount: num(sess.avoirs.usedCount) || 0,
+        };
+      }
+    }
 
     var net = round2(gross - refundAmt);
+    /* Ce qui est FACTURÉ mais pas ENCAISSÉ. Une livraison partie en compte et
+       un règlement à crédit gonflent `gross` sans qu'un dirham soit entré :
+       l'écran de clôture de la boutique les exclut déjà de son « Total
+       encaissé », le Z imprimé, lui, les additionnait sous ce même intitulé.
+       Deux documents du même service, deux totaux. On ne touche pas à `gross`
+       — il sert de base au détail par rayon et au tableau de bord — on expose
+       la créance pour que le ticket puisse dire les deux chiffres. */
+    var receivable = round2(num(methods.delivery) + num(methods.credit));
+    if (receivable < 0) receivable = 0;
 
     return {
       v: VER,
@@ -523,10 +547,12 @@
       closedBy: String(sess.closedBy || ''),
       txns: txns,
       gross: round2(gross),
+      receivable: receivable,
       net: net,
       basket: txns ? round2(gross / txns) : 0,
       refunds: { count: refundN, amount: round2(refundAmt) },
       discounts: { count: discountsN, amount: discounts },
+      avoirs: avoirs,
       cancels: cancels,
       methods: methods,
       tips: round2(tips),
@@ -645,7 +671,13 @@
       gross: report.gross,
       txns: report.txns,
       ecart: report.cash ? report.cash.ecart : null,
-      note: String(meta.note || (prev ? 'réouverture' : 'clôture')),
+      /* « Réouverture » veut dire : on rouvre une journée DÉJÀ CLÔTURÉE. Pas
+         « il existait un document ». Les autosauvegardes de mi-service en
+         écrivent un dès l'ouverture du poste, si bien que la vraie première
+         clôture de la journée arrivait toujours avec un `prev` et se retrouvait
+         classée « réouverture » au journal — le contraire de ce qui s'est
+         passé. Ce qui compte, c'est `prev.closed`. */
+      note: String(meta.note || (prev && prev.closed ? 'réouverture' : 'clôture')),
     });
     if (prev && prev.openedAt && !report.openedAt) report.openedAt = prev.openedAt;
     if (prev && prev.openedBy && !report.openedBy) report.openedBy = prev.openedBy;

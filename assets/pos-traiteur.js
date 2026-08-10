@@ -1142,7 +1142,7 @@
     const { pp, total } = evTotals(ev);
     const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
     if (kind === 'devis') {
-      return `Sba7 lkhir ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
+      return `Bonjour ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
         + `\n${TYPES[ev.type].label} · ${ev.guests} invités · ${fmtDay(ev.date)} · ${ev.lieu}`
         + `\nMenu ${pp} MAD / personne : ${ev.menu.map((id) => DISH[id].label.toLowerCase()).join(', ')}.`
         + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
@@ -1151,21 +1151,21 @@
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'relance') {
-      return `Sba7 lkhir ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
+      return `Bonjour ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
         + ` (${TYPES[ev.type].label.toLowerCase()} · ${ev.guests} invités · ${fmtDay(ev.date)}) est toujours réservé.`
         + `\nLa date du ${fmtDay(ev.date)} part vite en saison, répondez OUI pour la bloquer définitivement.`
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'route') {
       const arr = new Date(ev.date.getTime() - 45 * 60000);
-      return `Sba7 lkhir ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
+      return `Bonjour ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
         + `\nArrivée prévue vers ${timeOf(arr)}, installation puis service à ${timeOf(ev.date)}.`
         + `\nTout est chargé et contrôlé. À tout de suite !`
         + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     /* rappel d'échéance */
     const t = nextTranche(ev);
-    return `Sba7 lkhir ${first}, rappel de ${pvName('Dar Zellij') || 'le traiteur'} pour ${ev.name} du ${fmtDay(ev.date)} :`
+    return `Bonjour ${first}, rappel de ${pvName('Dar Zellij') || 'le traiteur'} pour ${ev.name} du ${fmtDay(ev.date)} :`
       + `\nla tranche « ${t ? t.label : 'solde'} » de ${t ? fmtMAD(t.amount) : ''} arrive à échéance.`
       + `\nVous pouvez régler en espèces au labo, par carte ou par virement.`
       + `\nChoukran, l’lah ikhellik.`
@@ -1394,7 +1394,7 @@
         <p class="modal-subtle">${esc(ev.name)} · tranche ${t.pct} %</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="tr-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="tr-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="tr-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1516,8 +1516,8 @@
   window.KiwiPosDispatch.register({
     id: 'traiteur',
     greet: {
-      line1: 'Sba7 lkhir Naima,',
-      em: 'marhba.',
+      line1: 'Bonjour Naima,',
+      em: 'bienvenue.',
       sub: 'Traiteur Dar Zellij <em>·</em> iftar 120 pers ce soir · une échéance à encaisser',
     },
     mount(rootEl) { mount(rootEl); },

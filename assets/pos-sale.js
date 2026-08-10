@@ -341,6 +341,7 @@
     var hit = matcher(refs);
     if (!hit) return 0;
     var gone = 0;
+    var dropped = [];
     var keys = [];
     try {
       for (var i = 0; i < localStorage.length; i++) {
@@ -352,10 +353,22 @@
       var rows = null;
       try { rows = JSON.parse(localStorage.getItem(k) || '[]'); } catch (_) { return; }
       if (!Array.isArray(rows) || !rows.length) return;
-      var kept = rows.filter(function (s) { return !(s && hit(s.ref)); });
+      var kept = rows.filter(function (s) {
+        var out = !!(s && hit(s.ref));
+        if (out) dropped.push(s);
+        return !out;
+      });
       if (kept.length === rows.length) return;
       gone += rows.length - kept.length;
       try { localStorage.setItem(k, JSON.stringify(kept)); } catch (_) {}
+    });
+    /* La vente a consommé du stock en entrant (record() plus haut écrit les
+       mouvements). La sortir des livres sans rendre ces articles laissait
+       l'inventaire plus bas que le réel — définitivement, puisque rien d'autre
+       ne repasse par là. Le contre-mouvement porte un identifiant dérivé du
+       mouvement d'origine : rejouer l'annulation ne le rend pas deux fois. */
+    dropped.forEach(function (s) {
+      try { window.KiwiInventoryConsumption?.reverse?.(s.ref, 'Vente sortie des livres'); } catch (_) {}
     });
     /* Les modules métier reconstruisent leurs compteurs depuis today()/totals()
        au montage. Un signal leur dit de recompter sans qu'on ait à connaître

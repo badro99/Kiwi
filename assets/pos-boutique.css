@@ -257,6 +257,13 @@
 .bq-tk-num { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
 .bq-tk-reset { font-size: 11.5px; color: var(--ink-3); padding: 4px 6px; border-radius: 7px; }
 .bq-tk-reset:hover { color: var(--danger-mute); background: var(--paper-mute); }
+/* Une série de tickets non réservée n'est pas un détail cosmétique : la vente
+   ne peut pas se conclure. La tête du ticket le dit en rouge, et le bouton
+   « Réessayer » évite d'avoir à vider le panier pour relancer la demande. */
+.bq-tk-num.err { color: var(--danger-mute); }
+.bq-tk-retry { font-size: 11.5px; font-weight: 600; color: var(--danger-mute); padding: 4px 8px; border-radius: 7px; border: 1px solid var(--line-soft); }
+.bq-tk-retry:hover:not(:disabled) { background: var(--paper-mute); }
+.bq-tk-retry:disabled { opacity: 0.5; }
 
 .bq-tk-meta { display: flex; flex-direction: column; gap: 7px; padding: 10px 14px 12px; border-bottom: 1px solid var(--line-soft); }
 .bq-tk-row {

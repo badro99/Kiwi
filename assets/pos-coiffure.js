@@ -1319,7 +1319,7 @@
         <p class="modal-subtle">${esc(passCustName(p))}${tipTotal() ? ` · dont ${fmtMAD(tipTotal())} de pourboire` : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="cf-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="cf-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="cf-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1539,8 +1539,8 @@
   window.KiwiPosDispatch.register({
     id: 'coiffure',
     greet: {
-      line1: 'Sba7 lkhir Yasmine,',
-      em: 'marhba.',
+      line1: 'Bonjour Yasmine,',
+      em: 'bienvenue.',
       sub: 'Salon Yasmine <em>·</em> deux fauteuils occupés, la file tourne',
     },
     mount(rootEl) { mount(rootEl); },
