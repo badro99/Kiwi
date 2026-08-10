@@ -21,7 +21,11 @@
 /* Injected controls never show on the desk layout. */
 .vx-burger, .vx-scrim, .vx-peek { display: none; }
 
-@media (max-width: 860px) {
+/* A width-only breakpoint misses Plus/Max iPhones in landscape (up to 932 CSS
+ * pixels wide). A short viewport is still a handheld register even when its
+ * long edge clears 860px, so keep the phone shell through 1024×600 landscape. */
+@media (max-width: 860px),
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
 
   /* ── Shell ─────────────────────────────────────────────────────────────── */
   .vx-root {
@@ -53,8 +57,14 @@
     transform: translateX(-100%);
     transition: transform .28s cubic-bezier(0.32, 0.72, 0, 1);
     overflow-y: auto; overscroll-behavior: contain;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+  }
+  [dir="rtl"] .vx-root .vx-rail {
+    padding-left: 14px;
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
   }
   [dir="rtl"] .vx-root .vx-rail { transform: translateX(100%); }
   .vx-root.vx-nav-open .vx-rail {
@@ -66,13 +76,17 @@
     display: grid; place-items: center;
     position: absolute; z-index: 62;
     top: calc(10px + env(safe-area-inset-top, 0px));
-    inset-inline-start: 12px;
+    left: calc(12px + env(safe-area-inset-left, 0px));
     width: 44px; height: 44px;
     border: 0; border-radius: 12px;
     background: var(--riad, #053B2C); color: #EAFFF4;
     cursor: pointer;
     box-shadow: 0 8px 24px -10px rgba(10, 15, 13, .5);
     transition: opacity .2s ease;
+  }
+  [dir="rtl"] .vx-root .vx-burger {
+    left: auto;
+    right: calc(12px + env(safe-area-inset-right, 0px));
   }
   /* The trigger sits above the drawer, so it would land on the rail's own
    * wordmark while the drawer is out. The scrim is the way back. */
@@ -118,7 +132,10 @@
     position: sticky; top: 0; z-index: 2;
     width: 100%;
     min-height: var(--vx-peek-h);
-    padding: 0 18px env(safe-area-inset-bottom, 0px);
+    padding:
+      0 calc(18px + env(safe-area-inset-right, 0px))
+      env(safe-area-inset-bottom, 0px)
+      calc(18px + env(safe-area-inset-left, 0px));
     border: 0; border-bottom: 1px solid rgba(10, 15, 13, .08);
     background: inherit;
     font-family: inherit; font-size: 14px; font-weight: 600;
@@ -174,7 +191,14 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .vx-root .modal-veil { padding: 12px; box-sizing: border-box; }
+  .vx-root .modal-veil {
+    padding:
+      max(12px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      max(12px, env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+  }
 
   /* Safari zooms the entire register when a focused control is below 16px.
    * Keeping phone inputs at the platform's readable minimum also makes tills
@@ -184,11 +208,26 @@
   .vx-root textarea { font-size: 16px !important; }
 }
 
+/* Landscape phones have room for three product targets while remaining far
+ * too short for the desktop rail + docked ticket. This avoids wasting half of
+ * the long edge without shrinking the 44px navigation controls. */
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  .vx-view [class*="-grid"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .vx-root .vx-ticket { max-height: 92dvh; }
+  .vx-root .modal {
+    max-height: calc(100dvh - 16px);
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}
+
 @media (max-width: 480px) {
   .vx-view [class*="-grid"] { gap: 8px !important; }
   .vx-root .modal {
     width: calc(100vw - 16px);
     max-width: calc(100vw - 16px);
-    max-height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 }

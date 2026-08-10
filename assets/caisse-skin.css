@@ -55,7 +55,9 @@
 }
 
 /* Portrait handheld — ticket becomes a bottom sheet, sidebar goes off-canvas */
-@media (max-width: 900px) {
+/* Include short landscape phones: a 932px-wide iPhone is not a desktop till. */
+@media (max-width: 900px),
+       (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
   /* ── Sideways-scroll guard ─────────────────────────────────────────────
    * The register header is a nowrap flex row built for a 1280px desk screen;
    * its min-content width (~562px) used to force the whole page wider than
@@ -68,8 +70,17 @@
 
   .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40;
              width: 280px; max-width: 86vw;
+             padding-left: calc(18px + env(safe-area-inset-left, 0px));
+             padding-top: calc(22px + env(safe-area-inset-top, 0px));
+             padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+             box-sizing: border-box;
              transform: translateX(-100%); transition: transform .28s var(--spring); }
-  [dir="rtl"] .sidebar { inset: 0 0 0 auto; transform: translateX(100%); }
+  [dir="rtl"] .sidebar {
+    inset: 0 0 0 auto;
+    padding-left: 18px;
+    padding-right: calc(18px + env(safe-area-inset-right, 0px));
+    transform: translateX(100%);
+  }
   body.nav-open .sidebar { transform: translateX(0); }
   /* Clear the docked ticket peek + the home indicator */
   .main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
@@ -124,10 +135,14 @@
     display: grid; place-items: center;
     position: fixed; z-index: 46;
     top: calc(12px + env(safe-area-inset-top, 0px));
-    inset-inline-start: 12px;
+    left: calc(12px + env(safe-area-inset-left, 0px));
     width: 44px; height: 44px; border: 0; border-radius: 12px;
     background: var(--ink-bg); color: #EAFFF4; cursor: pointer;
     box-shadow: var(--elev-2);
+  }
+  [dir="rtl"] .kw-hamburger {
+    left: auto;
+    right: calc(12px + env(safe-area-inset-right, 0px));
   }
   /* The trigger sits above the drawer, so while the drawer is out it lands on
    * the kiwi wordmark. Fade it with the drawer — the scrim is the way back,
@@ -156,6 +171,71 @@
   .rp-peek {
     display: flex;
     min-height: var(--rp-peek-h);
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+    padding:
+      14px calc(20px + env(safe-area-inset-right, 0px))
+      calc(14px + env(safe-area-inset-bottom, 0px))
+      calc(20px + env(safe-area-inset-left, 0px));
   }
+
+  /* Centred desktop dialogs otherwise disappear under the iOS keyboard. Keep
+   * every payment/client/manager surface within the live visual viewport and
+   * make the content itself the scroll container. */
+  .modal-veil {
+    box-sizing: border-box;
+    padding:
+      max(12px, env(safe-area-inset-top, 0px))
+      12px
+      max(12px, env(safe-area-inset-bottom, 0px));
+  }
+  .modal {
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 22px 20px 20px;
+  }
+  .modal input, .modal select, .modal textarea { font-size: 16px; }
+
+  /* Full-screen operational surfaces share the same safe-area discipline. */
+  .kds-head {
+    padding:
+      calc(10px + env(safe-area-inset-top, 0px))
+      14px 10px;
+    gap: 10px;
+  }
+  .kds-head-l { min-width: 0; }
+  .kds-head-l .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kds-close { min-width: 44px; min-height: 44px; justify-content: center; padding: 8px 12px; }
+  .kds-body {
+    min-height: 0;
+    padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+  .sk-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+  .sk-tabs::-webkit-scrollbar { display: none; }
+  .sk-tab { flex: 0 0 auto; min-height: 42px; }
+  .sk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sk-alert { grid-template-columns: auto minmax(0, 1fr); }
+  .sk-alert > :last-child { grid-column: 2; }
+}
+
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  .main { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rightpanel { max-height: 92dvh; }
+  .main-head {
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    padding-bottom: 8px;
+    gap: 6px;
+  }
+  .modal { max-width: 720px; padding-top: 16px; padding-bottom: 16px; }
+  .kds-close span { display: none; }
 }

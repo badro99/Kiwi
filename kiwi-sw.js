@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v339';
+var CACHE = 'kiwi-app-v340';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -93,13 +93,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js',
+  '/assets/dashboard-pwa.js?v=340',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js',
-  '/assets/caisse-skin.css',
-  '/assets/pos-mobile.css?v=2',
+  '/assets/caisse-skin.css?v=3',
+  '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js',
+  '/assets/caisse-pwa.js?v=340',
   '/assets/live-link.js',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -170,12 +170,12 @@ var SHELL = [
   '/assets/kitchen-relay.js',
   '/assets/pos-sale.js',
   '/assets/pos-dispatch.js?v=13',
-  '/assets/retail-scan.css?v=5',
+  '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',
   '/assets/caisse-dna.css?v=2',
   '/assets/caisse-dna.js?v=2',
-  '/assets/pos-mobile.js?v=2',
+  '/assets/pos-mobile.js?v=3',
   '/assets/pos-workspaces.css?v=3',
   '/assets/pos-workspaces.js?v=3',
   /* La boutique est chargée après le code employé. La garder dans la coquille

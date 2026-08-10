@@ -208,6 +208,85 @@
   .krs-cart-foot { padding-top: 8px; }
 }
 
+/* A phone turned sideways needs a landscape composition, not the desktop
+   scanner squeezed into 430px of height and not the portrait stack stretched
+   across 932px. Camera/result stay on the left; the live cart remains visible
+   on the right with its checkout anchored above the home indicator. */
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  .krs-launch {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    min-height: 48px;
+  }
+  .vx-root .krs-launch { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .krs-overlay.is-open { display: block; }
+  .krs-shell {
+    width: 100vw; height: 100vh; height: 100dvh;
+    border: 0; border-radius: 0;
+  }
+  .krs-head {
+    min-height: 54px;
+    padding:
+      6px calc(10px + env(safe-area-inset-right, 0px))
+      6px calc(10px + env(safe-area-inset-left, 0px));
+  }
+  .krs-head-copy span { display: none; }
+  .krs-net { font-size: 0; margin-left: auto; }
+  .krs-close { width: 42px; height: 42px; }
+  .krs-main {
+    height: 100%; min-height: 0;
+    grid-template-columns: minmax(0, 1.35fr) minmax(270px, .75fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .krs-work {
+    min-height: 0;
+    grid-template-rows: minmax(170px, .6fr) minmax(110px, .4fr);
+    border-right: 1px solid #DADDD9;
+    border-bottom: 0;
+  }
+  .krs-manual { left: 10px; top: 8px; width: calc(100% - 20px); }
+  .krs-frame { inset: 62px 10px 54px; border-radius: 16px; }
+  .krs-camera-bar { left: 10px; right: 10px; bottom: 7px; }
+  .krs-camera-status { padding: 8px 10px; }
+  .krs-result { min-height: 0; padding: 9px 11px; overflow: auto; }
+  .krs-empty { min-height: 72px; height: 100%; }
+  .krs-card { padding: 11px; }
+  .krs-product-name { font-size: 19px; }
+  .krs-price-now { font-size: 22px; }
+  .krs-cart-head { padding: 8px 11px 7px; }
+  .krs-lines { padding: 3px 9px; }
+  .krs-line { padding: 8px 3px; }
+  .krs-cart-foot {
+    padding: 8px calc(11px + env(safe-area-inset-right, 0px))
+      calc(8px + env(safe-area-inset-bottom, 0px)) 11px;
+  }
+  .krs-total b { font-size: 22px; }
+  .krs-checkout { min-height: 46px; margin-top: 6px; }
+
+  /* Unknown-product creation uses both halves for the form and preserves a
+     live camera target instead of forcing a long vertical form scroll. */
+  .krs-overlay.is-creating .krs-main { grid-template-columns: 1fr; }
+  .krs-overlay.is-creating .krs-work {
+    grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr);
+    grid-template-rows: minmax(0, 1fr);
+    border-right: 0;
+  }
+  .krs-overlay.is-creating .krs-result { overflow: auto; }
+  .krs-overlay.is-creating .krs-cart { display: none; }
+  .krs-overlay.is-creating .krs-form { grid-template-columns: minmax(0, 1.5fr) minmax(110px, .6fr) minmax(100px, .5fr); }
+  .krs-overlay.is-creating .krs-form .krs-field:first-child { grid-column: auto; }
+  .krs-overlay.is-creating .krs-create-actions {
+    position: sticky; bottom: -9px; padding: 9px 0;
+    background: #F7F5F0;
+  }
+  .krs-pay { padding: 8px max(8px, env(safe-area-inset-right, 0px)) 8px max(8px, env(safe-area-inset-left, 0px)); }
+  .krs-pay-card { max-height: calc(100dvh - 16px); padding: 16px; }
+  .krs-pay-card h2 { font-size: 20px; }
+  .krs-due { padding: 10px 13px; }
+  .krs-method { min-height: 56px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .krs-frame::after { animation: none; }
   .krs-launch { transition: none; }

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const root = new URL('../', import.meta.url);
 const read = (file) => fs.readFileSync(new URL(file, root), 'utf8');
 const css = read('assets/pos-mobile.css');
+const skin = read('assets/caisse-skin.css');
 const js = read('assets/pos-mobile.js');
 const scan = read('assets/retail-scan.css');
 const html = read('kiwi-caisse.html');
@@ -12,7 +13,7 @@ const sw = read('kiwi-sw.js');
 let controls = 0;
 function ok(value, message) { assert.ok(value, message); controls++; }
 
-ok(css.includes('@media (max-width: 860px)'), 'phone shell is breakpoint-gated');
+ok(css.includes('@media (max-width: 860px)') && css.includes('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)'), 'phone shell covers portrait and large-iPhone landscape');
 ok(css.includes('.vx-root > .vx-main') && css.includes('inset: 0 !important'), 'desktop rail offsets are cleared on phones');
 ok(css.includes('height: 100dvh') && css.includes('max-height: 100dvh'), 'shell follows the visible phone viewport');
 ok(css.includes('.vx-root .vx-ticket') && css.includes('position: fixed'), 'ticket becomes a bottom sheet');
@@ -22,6 +23,12 @@ ok(css.includes('min-width: 36px; min-height: 36px'), 'ticket quantity controls 
 ok(css.includes('font-size: 16px !important'), 'form controls avoid iOS focus zoom');
 ok(css.includes('max-height: calc(100dvh - 24px)'), 'modals remain inside the visible viewport');
 ok(css.includes('grid-template-columns: repeat(2'), 'product grids use two phone columns');
+ok(css.includes('grid-template-columns: repeat(3') && css.includes('max-height: 92dvh'), 'landscape phones use three product columns and a short-screen ticket');
+ok(css.includes('safe-area-inset-left') && css.includes('safe-area-inset-right'), 'specialist controls clear landscape notches');
+ok(css.includes('calc(20px + env(safe-area-inset-top') && css.includes('calc(14px + env(safe-area-inset-left'), 'specialist rail preserves its normal padding around safe areas');
+ok(skin.includes('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)'), 'restaurant shell covers large-iPhone landscape');
+ok(skin.includes('max-height: calc(100dvh - 24px') && skin.includes('.modal input, .modal select, .modal textarea { font-size: 16px; }'), 'restaurant dialogs survive the iOS keyboard without zoom');
+ok(skin.includes('.sk-tabs') && skin.includes('overflow-x: auto'), 'restaurant stock tabs stay reachable on phones');
 
 ok(js.includes("peek.setAttribute('aria-controls'"), 'ticket trigger exposes its controlled sheet');
 ok(js.includes("peek.setAttribute('aria-expanded'"), 'ticket trigger exposes open state');
@@ -36,8 +43,8 @@ ok(scan.includes('margin: 0; padding: 0; display: grid'), 'global landing-page s
 ok(scan.includes('grid-template-rows: clamp(210px,32dvh,260px) auto'), 'phone scanner camera is compact instead of consuming the viewport');
 ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses to a useful status strip');
 ok(html.includes('@media (max-width: 600px)') && html.includes('white-space: normal'), 'unlock greeting wraps on narrow phones');
-ok(html.includes('assets/pos-mobile.css?v=2') && html.includes('assets/pos-mobile.js?v=2'), 'phone layer is cache-busted');
-ok(html.includes('assets/retail-scan.css?v=5'), 'scanner iPhone layout is cache-busted');
-ok(sw.includes("'kiwi-app-v339'") && sw.includes("'/assets/pos-mobile.css?v=2'"), 'offline shell ships the phone fix');
+ok(html.includes('assets/caisse-skin.css?v=3') && html.includes('assets/pos-mobile.css?v=3') && html.includes('assets/pos-mobile.js?v=3'), 'phone layers are cache-busted');
+ok(html.includes('assets/retail-scan.css?v=6'), 'scanner iPhone layout is cache-busted');
+ok(sw.includes("'kiwi-app-v340'") && sw.includes("'/assets/caisse-skin.css?v=3'") && sw.includes("'/assets/pos-mobile.css?v=3'") && sw.includes("'/assets/retail-scan.css?v=6'"), 'offline shell ships the phone and landscape fixes');
 
 console.log(`pos-mobile-test: ${controls} controls`);
