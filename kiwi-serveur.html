@@ -1397,6 +1397,45 @@ em, i, cite, dfn, var { font-style: normal; }
     .profil-pause.is-paused { color: var(--forest); border-color: var(--mint); background: var(--mint-tint); }
     .profil-pause svg { width: 18px; height: 18px; }
 
+    .profil-language {
+      background: var(--paper-mute);
+      border-radius: var(--r-xl);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .profil-language-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .profil-language-head svg { width: 17px; height: 17px; color: var(--forest); }
+    .profil-language-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .profil-language-option {
+      min-width: 0;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink-2);
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+    .profil-language-option.is-active {
+      border-color: var(--forest);
+      background: var(--forest);
+      color: #fff;
+    }
+
     /* ===========================================================
        === Gamification layer ===  (profil cards · carte du soir · rank chip)
        =========================================================== */
@@ -3169,7 +3208,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
             <div class="shift-card">
               <div class="shift-row">
-                <span class="shift-label">Début d'service</span>
+                <span class="shift-label">Début de service</span>
                 <span class="shift-value mono" id="profil-shift-start">14:32</span>
               </div>
               <div class="shift-row">
@@ -3284,6 +3323,19 @@ em, i, cite, dfn, var { font-style: normal; }
               <i data-lucide="coffee"></i>
               <span>Pause gérée depuis la caisse</span>
             </div>
+
+            <section class="profil-language" aria-labelledby="profil-language-title">
+              <div class="profil-language-head" id="profil-language-title">
+                <i data-lucide="languages"></i>
+                <span>Langue de l'application</span>
+              </div>
+              <div class="profil-language-options" role="group" aria-label="Langue de l'application">
+                <button class="profil-language-option" type="button" data-employee-language="fr">Français</button>
+                <button class="profil-language-option" type="button" data-employee-language="en">English</button>
+                <button class="profil-language-option" type="button" data-employee-language="ary" lang="ary" dir="rtl">الدارجة</button>
+              </div>
+            </section>
+
             <button class="profil-clockout" id="profil-clockout">
               <i data-lucide="log-out"></i>
               <span>Pointer le départ</span>
@@ -3736,6 +3788,250 @@ em, i, cite, dfn, var { font-style: normal; }
     const fmtMAD = n => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
     const fmtMADcents = n => n.toFixed(2).replace('.', ',') + ' MAD';
 
+    /* ---------- Employee language ----------
+       The preference lives on the device, scoped to the current venue. It is
+       deliberately independent from clock-in state so a reload, logout or a
+       new shift never sends the employee back to French. */
+    const EMPLOYEE_LANGUAGE_KEY = 'kiwi-employee-language:' + (svMerchant() || 'demo');
+    const EMPLOYEE_TRANSLATIONS = {
+      en: {
+        'Notifications': 'Notifications',
+        'Votre service en direct': 'Your shift live',
+        "Vous n'êtes pas en service": 'You are not on shift',
+        'Consultation seulement · pointez votre arrivée pour commencer.': 'View only · clock in to start.',
+        'Pointer mon arrivée': 'Clock in',
+        'Se déconnecter': 'Log out',
+        'Début de service': 'Shift started',
+        'Durée actuelle': 'Current duration',
+        'Tables actives': 'Active tables',
+        'Tables réglées': 'Paid tables',
+        'Cette semaine': 'This week',
+        'Voir le mois': 'View month',
+        'Prochain service': 'Next shift',
+        'Heures travaillées': 'Hours worked',
+        'Historique': 'History',
+        "Aujourd'hui": 'Today',
+        'Ce mois': 'This month',
+        'Grade': 'Rank',
+        'Aucun grade': 'No rank yet',
+        'XP totale': 'Total XP',
+        'Records personnels': 'Personal records',
+        'Meilleur soir': 'Best evening',
+        'Tables en série': 'Tables in a row',
+        'Vitesse moyenne': 'Average speed',
+        '+ Nouveau record': '+ New record',
+        'Défi du soir': "Tonight's challenge",
+        'Pause gérée depuis la caisse': 'Break managed from the register',
+        'En pause · gérée depuis la caisse': 'On break · managed from the register',
+        'Pointer le départ': 'Clock out',
+        "Langue de l'application": 'App language',
+        'Mes tables': 'My tables',
+        'Toutes les tables': 'All tables',
+        'Vos tables ce matin': 'Your tables this morning',
+        'Vos tables ce midi': 'Your tables at lunch',
+        'Vos tables cet après-midi': 'Your tables this afternoon',
+        'Vos tables ce soir': 'Your tables tonight',
+        'Vos tables cette nuit': 'Your tables tonight',
+        'Disponible': 'Available',
+        'Libre': 'Available',
+        'À commander': 'To order',
+        'En cours': 'In progress',
+        'Addition demandée': 'Bill requested',
+        'Paiement…': 'Payment…',
+        'Réglée': 'Paid',
+        'Menu': 'Menu',
+        'Profil': 'Profile',
+        'Planning du mois': 'Monthly schedule',
+        'Vos services planifiés par votre responsable.': 'Your shifts scheduled by your manager.',
+        'Mois précédent': 'Previous month',
+        'Mois suivant': 'Next month',
+        'Fermer': 'Close',
+        'Historique des heures': 'Hours history',
+        'Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.': 'Hours from your Kiwi time clock, saved separately and shared with the dashboard.',
+        'Total du mois': 'Monthly total',
+        'Aucune heure enregistrée pour ce mois.': 'No hours recorded this month.',
+        'Aucune notification': 'No notifications',
+        'Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.': 'Seated tables, OrderPro orders, ready dishes and bills will appear here.',
+        'Ajouter articles': 'Add items',
+        'Prendre la commande': 'Take order',
+        'Addition': 'Bill',
+        'Encaisser': 'Take payment',
+        'Annuler': 'Cancel',
+        'Ouvrir': 'Open',
+        'Combien de couverts?': 'How many guests?',
+        'Client & fidélité': 'Customer & loyalty',
+        'Client de passage': 'Walk-in customer',
+        'Payer par carte': 'Pay by card',
+        'Payer en espèces': 'Pay cash',
+        "Partager l'addition": 'Split bill',
+        'Confirmer': 'Confirm',
+        'Rendu': 'Change',
+        'Rendu au client': 'Change due',
+        'Espèces confirmées': 'Cash confirmed',
+        'Nom ou téléphone': 'Name or phone',
+        'Retour': 'Back',
+        'Repos': 'Off'
+      },
+      ary: {
+        'Notifications': 'الإشعارات',
+        'Votre service en direct': 'الخدمة ديالك مباشرة',
+        "Vous n'êtes pas en service": 'ما نتا/نتي فالشيفت دابا',
+        'Consultation seulement · pointez votre arrivée pour commencer.': 'غير للمشاهدة · سجل الدخول باش تبدا.',
+        'Pointer mon arrivée': 'نسجل الدخول',
+        'Se déconnecter': 'نخرج من الحساب',
+        'Début de service': 'بداية الخدمة',
+        'Durée actuelle': 'المدة دابا',
+        'Tables actives': 'الطاولات الخدامين',
+        'Tables réglées': 'الطاولات المخلصين',
+        'Cette semaine': 'هاد السيمانة',
+        'Voir le mois': 'نشوف الشهر',
+        'Prochain service': 'الشيفت الجاي',
+        'Heures travaillées': 'سوايع الخدمة',
+        'Historique': 'السجل',
+        "Aujourd'hui": 'اليوم',
+        'Ce mois': 'هاد الشهر',
+        'Grade': 'الرتبة',
+        'Aucun grade': 'ما كايناش رتبة دابا',
+        'XP totale': 'مجموع XP',
+        'Records personnels': 'الأرقام الشخصية',
+        'Meilleur soir': 'أحسن ليلة',
+        'Tables en série': 'طاولات مور بعضياتهم',
+        'Vitesse moyenne': 'معدل السرعة',
+        '+ Nouveau record': '+ رقم جديد',
+        'Défi du soir': 'تحدي الليلة',
+        'Pause gérée depuis la caisse': 'البوز كاتسيرها الكاسة',
+        'En pause · gérée depuis la caisse': 'فالبوز · كاتسيرها الكاسة',
+        'Pointer le départ': 'نسجل الخروج',
+        "Langue de l'application": 'لغة التطبيق',
+        'Mes tables': 'طاولاتي',
+        'Toutes les tables': 'كاع الطاولات',
+        'Vos tables ce matin': 'طاولاتك هاد الصباح',
+        'Vos tables ce midi': 'طاولاتك فالظهر',
+        'Vos tables cet après-midi': 'طاولاتك من بعد الظهر',
+        'Vos tables ce soir': 'طاولاتك هاد الليلة',
+        'Vos tables cette nuit': 'طاولاتك هاد الليلة',
+        'Disponible': 'خاوية',
+        'Libre': 'خاوية',
+        'À commander': 'خاصها تطلب',
+        'En cours': 'خدامة',
+        'Addition demandée': 'طلبو الحساب',
+        'Paiement…': 'كيخلص…',
+        'Réglée': 'مخلصة',
+        'Menu': 'المينيو',
+        'Profil': 'الحساب',
+        'Planning du mois': 'برنامج الشهر',
+        'Vos services planifiés par votre responsable.': 'الشيفتات ديالك لي برمج المسؤول.',
+        'Mois précédent': 'الشهر لي فات',
+        'Mois suivant': 'الشهر الجاي',
+        'Fermer': 'نسد',
+        'Historique des heures': 'سجل السوايع',
+        'Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.': 'السوايع ديال البوانطاج فـ Kiwi محفوظين وكيتشاركو مع الداشبورد.',
+        'Total du mois': 'مجموع الشهر',
+        'Aucune heure enregistrée pour ce mois.': 'ما تسجلات حتى ساعة فهاد الشهر.',
+        'Aucune notification': 'ما كاين حتى إشعار',
+        'Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.': 'الطاولات، طلبات OrderPro، الماكلة الواجدة والحسابات غيبانو هنا.',
+        'Ajouter articles': 'نزيد الطلبات',
+        'Prendre la commande': 'ناخد الطلب',
+        'Addition': 'الحساب',
+        'Encaisser': 'نخلص',
+        'Annuler': 'نلغي',
+        'Ouvrir': 'نحل',
+        'Combien de couverts?': 'شحال ديال الناس؟',
+        'Client & fidélité': 'الزبون والوفاء',
+        'Client de passage': 'زبون عابر',
+        'Payer par carte': 'يخلص بالكارط',
+        'Payer en espèces': 'يخلص بالكاش',
+        "Partager l'addition": 'نقسم الحساب',
+        'Confirmer': 'نأكد',
+        'Rendu': 'الصرف',
+        'Rendu au client': 'الصرف للزبون',
+        'Espèces confirmées': 'تأكد الخلاص بالكاش',
+        'Nom ou téléphone': 'السمية ولا التلفون',
+        'Retour': 'نرجع',
+        'Repos': 'راحة'
+      }
+    };
+    let employeeLanguage = (() => {
+      try {
+        const saved = localStorage.getItem(EMPLOYEE_LANGUAGE_KEY);
+        return saved === 'en' || saved === 'ary' ? saved : 'fr';
+      } catch (_) { return 'fr'; }
+    })();
+    const employeeI18nOriginal = new WeakMap();
+    const employeeI18nLast = new WeakMap();
+    const employeeI18nAttrs = new WeakMap();
+    function employeeTranslation(value) {
+      if (employeeLanguage === 'fr') return value;
+      return (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value] || value;
+    }
+    function employeeLocale() {
+      return employeeLanguage === 'en' ? 'en-GB' : employeeLanguage === 'ary' ? 'ar-MA' : 'fr-FR';
+    }
+    function translateEmployeeTextNode(node) {
+      if (!node || !node.parentElement || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(node.parentElement.tagName)) return;
+      const current = node.nodeValue || '';
+      const last = employeeI18nLast.get(node);
+      if (!employeeI18nOriginal.has(node) || (last !== undefined && current !== last)) employeeI18nOriginal.set(node, current);
+      const original = employeeI18nOriginal.get(node) || '';
+      const trimmed = original.trim();
+      const translated = trimmed ? employeeTranslation(trimmed) : trimmed;
+      const next = trimmed ? original.replace(trimmed, translated) : original;
+      employeeI18nLast.set(node, next);
+      if (current !== next) node.nodeValue = next;
+    }
+    function translateEmployeeElement(root) {
+      if (!root) return;
+      if (root.nodeType === Node.TEXT_NODE) { translateEmployeeTextNode(root); return; }
+      if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let textNode;
+      while ((textNode = walker.nextNode())) translateEmployeeTextNode(textNode);
+      const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll('[placeholder],[aria-label]')] : [...root.querySelectorAll('[placeholder],[aria-label]')];
+      elements.forEach((el) => {
+        let originals = employeeI18nAttrs.get(el);
+        if (!originals) { originals = {}; employeeI18nAttrs.set(el, originals); }
+        ['placeholder', 'aria-label'].forEach((attr) => {
+          if (!el.hasAttribute(attr)) return;
+          const current = el.getAttribute(attr) || '';
+          const marker = attr + ':last';
+          if (!(attr in originals) || (originals[marker] !== undefined && current !== originals[marker])) originals[attr] = current;
+          const next = employeeTranslation(originals[attr]);
+          originals[marker] = next;
+          if (current !== next) el.setAttribute(attr, next);
+        });
+      });
+    }
+    function renderEmployeeLanguage() {
+      document.documentElement.lang = employeeLanguage === 'ary' ? 'ary' : employeeLanguage;
+      document.documentElement.dir = 'ltr';
+      $$('.profil-language-option').forEach((button) => {
+        const active = button.dataset.employeeLanguage === employeeLanguage;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      translateEmployeeElement(document.body);
+    }
+    function setEmployeeLanguage(language) {
+      if (!['fr', 'en', 'ary'].includes(language)) return;
+      employeeLanguage = language;
+      try { localStorage.setItem(EMPLOYEE_LANGUAGE_KEY, language); } catch (_) {}
+      renderEmployeeLanguage();
+      if (currentTab === 'tables') renderTables();
+      if (currentTab === 'notifications') renderNotifications();
+      if (currentTab === 'profil') renderProfil();
+      translateEmployeeElement(document.body);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      $$('.profil-language-option').forEach((button) => button.addEventListener('click', () => setEmployeeLanguage(button.dataset.employeeLanguage)));
+      renderEmployeeLanguage();
+      if (window.MutationObserver) {
+        new MutationObserver((mutations) => mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach(translateEmployeeElement);
+          if (mutation.type === 'characterData') translateEmployeeTextNode(mutation.target);
+        })).observe(document.body, { childList: true, characterData: true, subtree: true });
+      }
+    });
+
     /* ---------- DAfr days ---------- */
     const dafrDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const monthsEn = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -3747,7 +4043,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const mm = String(now.getMinutes()).padStart(2, '0');
       const t = `${hh}:${mm}`;
       const ciTime = $('#ci-time'); if (ciTime) ciTime.textContent = t;
-      const ciDate = $('#ci-date'); if (ciDate) ciDate.textContent = `${dafrDays[now.getDay()]} ${now.getDate()} ${monthsEn[now.getMonth()]}`;
+      const ciDate = $('#ci-date');
+      if (ciDate) ciDate.textContent = now.toLocaleDateString(employeeLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
     }
     tickClock();
     setInterval(tickClock, 1000);
@@ -6283,7 +6580,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Notifications tab ---------- */
     function notificationTime(ts) {
       const d = new Date(Number(ts) || Date.now());
-      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString(employeeLocale(), { hour: '2-digit', minute: '2-digit' });
     }
     function notificationIcon(type) {
       if (type === 'team-message') return 'message-square';
@@ -6425,7 +6722,11 @@ em, i, cite, dfn, var { font-style: normal; }
       const todayIdx = (today.getDay() + 6) % 7;
       const monday   = new Date(today);
       monday.setDate(today.getDate() - todayIdx);
-      const short = ['Ltn', 'Tlt', 'Lrb', 'Lkh', 'Ljm', 'Sbt', 'Lhd'];
+      const short = employeeLanguage === 'en'
+        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        : employeeLanguage === 'ary'
+          ? ['تن', 'تلا', 'رب', 'خم', 'جم', 'سب', 'حد']
+          : ['Ltn', 'Tlt', 'Lrb', 'Lkh', 'Ljm', 'Sbt', 'Lhd'];
 
       week.innerHTML = sched.week.map((s, i) => {
         const d = new Date(monday);
@@ -6453,10 +6754,13 @@ em, i, cite, dfn, var { font-style: normal; }
       const timeEl = $('#kg-sched-next-time');
       const wrapEl = $('#kg-sched-next');
       if (nextIdx >= 0 && dayEl && timeEl) {
-        const dafrFull = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-        const prefix = wrap                          ? 'Semaine prochaine'
-                     : (nextIdx === todayIdx + 1)    ? 'Demain'
-                     : (nextIdx === todayIdx + 2)    ? 'Après-demain'
+        const dafrFull = Array.from({ length: 7 }, (_, i) => {
+          const day = new Date(2026, 7, 3 + i, 12);
+          return day.toLocaleDateString(employeeLocale(), { weekday: 'long' });
+        });
+        const prefix = wrap                          ? (employeeLanguage === 'en' ? 'Next week' : employeeLanguage === 'ary' ? 'السيمانة الجاية' : 'Semaine prochaine')
+                     : (nextIdx === todayIdx + 1)    ? (employeeLanguage === 'en' ? 'Tomorrow' : employeeLanguage === 'ary' ? 'غدا' : 'Demain')
+                     : (nextIdx === todayIdx + 2)    ? (employeeLanguage === 'en' ? 'The day after tomorrow' : employeeLanguage === 'ary' ? 'من بعد غدا' : 'Après-demain')
                      :                                  dafrFull[nextIdx];
         dayEl.textContent = `${prefix} · ${dafrFull[nextIdx]}`;
         const s = sched.week[nextIdx];
@@ -6485,8 +6789,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const grid = $('#kg-month-grid'), title = $('#kg-month-title');
       if (!grid || !title) return;
       const year = scheduleMonthCursor.getFullYear(), month = scheduleMonthCursor.getMonth();
-      title.textContent = scheduleMonthCursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      title.textContent = scheduleMonthCursor.toLocaleDateString(employeeLocale(), { month: 'long', year: 'numeric' });
+      const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2026, 7, 3 + i, 12).toLocaleDateString(employeeLocale(), { weekday: 'short' }));
       const blanks = (new Date(year, month, 1).getDay() + 6) % 7;
       const days = new Date(year, month + 1, 0).getDate();
       const now = new Date();
@@ -6526,12 +6830,12 @@ em, i, cite, dfn, var { font-style: normal; }
       const hours = (liveEmployeeState && liveEmployeeState.pointedHours) || {};
       const rows = Object.keys(hours).filter((key) => key.indexOf(prefix) === 0 && Number(hours[key]) > 0).sort();
       const totalMinutes = rows.reduce((sum, key) => sum + Math.round(Number(hours[key]) * 60), 0);
-      monthEl.textContent = hoursHistoryCursor.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      monthEl.textContent = hoursHistoryCursor.toLocaleDateString(employeeLocale(), { month: 'long', year: 'numeric' });
       totalEl.textContent = formatWorkedMinutes(totalMinutes);
       listEl.innerHTML = rows.length ? rows.map((key) => {
         const parts = key.split('-').map(Number);
         const date = new Date(parts[0], parts[1] - 1, parts[2], 12);
-        return `<div class="hours-history-day"><span>${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span><strong>${formatWorkedMinutes(Number(hours[key]) * 60)}</strong></div>`;
+        return `<div class="hours-history-day"><span>${date.toLocaleDateString(employeeLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</span><strong>${formatWorkedMinutes(Number(hours[key]) * 60)}</strong></div>`;
       }).join('') : '<div class="hours-history-empty">Aucune heure enregistrée pour ce mois.</div>';
     }
     function closeHoursHistory() { $('#hours-history-modal').classList.remove('is-open'); }
