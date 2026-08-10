@@ -62,6 +62,7 @@ const FROM = {
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
+const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_LINES = 60;              // une commande, généreusement
 const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
 
@@ -208,6 +209,7 @@ export async function onRequestGet(context) {
   );
   const now = Date.now();
   const today = startOfDay(now);
+  const kitchenCutoff = now - KITCHEN_TTL_MS;
 
   /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
    * abandoned carts and customers who walked away used to return after every
@@ -219,15 +221,17 @@ export async function onRequestGet(context) {
     ).bind(now, merchant, now - PENDING_TTL_MS).run();
   } catch (_) { /* older schema / unavailable table: the read below stays fail-soft */ }
 
-  /* `served` entre dans la file pour que le comptoir puisse ranger la commande
-   * dans son historique — mais seulement celles DU JOUR. Sans cette borne, un
-   * premier chargement (since=0) trierait par ancienneté et remplirait ses cent
-   * lignes avec les commandes servies des semaines passées, en repoussant hors
-   * de la réponse les commandes en attente d'aujourd'hui : la file aurait
-   * paru vide un jour de coup de feu. */
+  /* La file est un tableau de SERVICE, pas l'archive des commandes. Un bon
+   * accepté mais jamais marqué prêt restait auparavant lisible sans aucune
+   * borne : au premier login du lendemain, la cuisine le reconstruisait avec
+   * son horodatage d'origine et affichait un timer de quinze heures. Six heures
+   * gardent un service tardif à travers minuit, mais empêchent qu'un bon oublié
+   * ou un ancien état `ready` ne revienne les jours suivants. Les `pending`
+   * ont leur règle plus stricte de trente minutes juste au-dessus. */
   const WHERE = `FROM orders
         WHERE merchant = ? AND updated_ts > ?
           AND status IN ('pending','accepted','ready','served')
+          AND (status = 'pending' OR created_ts >= ?)
           AND (status <> 'served' OR created_ts >= ?)
         ORDER BY created_ts
         LIMIT ?`;
@@ -236,7 +240,7 @@ export async function onRequestGet(context) {
   for (const cols of COL_SETS) {
     try {
       rows = await env.DB.prepare(`SELECT ${cols} ${WHERE}`)
-        .bind(merchant, since, today, MAX_ROWS).all();
+        .bind(merchant, since, kitchenCutoff, today, MAX_ROWS).all();
       break;
     } catch (_) { rows = null; }
   }

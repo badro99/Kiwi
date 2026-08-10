@@ -361,7 +361,7 @@
 
   var POLL_MS = 5000;
   var LATE_S = 900, WARN_S = 480;      // 15 min = en retard, 8 min = ça presse
-  var STALE_MS = 18 * 60 * 60 * 1000;  // au-delà, le bon n'appartient plus à ce service
+  var STALE_MS = 6 * 60 * 60 * 1000;  // au-delà, le bon n'appartient plus à ce service
   var COOK_KEY = 'kiwiCuisineCookingV2'; // legacy local fallback; canonical progress now lives per line
   var MUTE_KEY = 'kiwiCuisineMute';
 
@@ -501,18 +501,22 @@
       var firstPass = S.since === 0;
       S.since = j.now || S.since;
       var fresh = 0;
+      /* Le serveur ne renvoie plus les bons du service précédent. Une tablette
+         restée ouverte les a toutefois déjà en mémoire : retire-les même
+         lorsqu'aucune nouvelle ligne ne revient pour eux. */
+      Object.keys(S.orders).forEach(function (id) {
+        var old = S.orders[id];
+        if (old && old.created_ts && (Date.now() - old.created_ts) > STALE_MS) {
+          delete S.orders[id]; delete S.cooking[id];
+        }
+      });
       (j.orders || []).forEach(function (o) {
         if (!o || !o.id) return;
         /* Un bon `pending` appartient encore au comptoir : la cuisine ne doit
            pas lancer un plat que le caissier va peut-être refuser. */
         if (o.status === 'pending' || o.status === 'rejected') { delete S.orders[o.id]; return; }
         if (o.status === 'served') { delete S.orders[o.id]; delete S.cooking[o.id]; return; }
-        /* Un bon accepté que PERSONNE n'a jamais bumpé reste ouvert en base
-           indéfiniment — la file ne borne dans le temps que les commandes
-           servies. Sans ce filtre, un ticket oublié d'avant-hier s'installerait
-           en tête de « Nouvelles » au premier chargement du matin, et la
-           brigade referait un plat que plus personne n'attend. Dix-huit heures
-           couvrent un service qui finit tard et rouvre le lendemain midi. */
+        /* Défense locale complémentaire à la borne de la file serveur. */
         if (o.created_ts && (Date.now() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
         if (!S.seen[o.id] && o.status === 'accepted') { if (!firstPass) fresh++; S.seen[o.id] = 1; }
         S.orders[o.id] = o;
