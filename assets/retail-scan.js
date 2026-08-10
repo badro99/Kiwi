@@ -223,7 +223,7 @@
   function fallbackDecoderAvailable() { return !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader); }
   function cameraErrorCopy(err) {
     var name = err && err.name;
-    if (name === 'NotAllowedError' || name === 'SecurityError') return '<b>Caméra bloquée</b> · Safari : aA → Réglages du site → Caméra → Autoriser';
+    if (name === 'NotAllowedError' || name === 'SecurityError') return '<b>Caméra bloquée</b> · Safari : menu de la page → Réglages du site → Caméra → Autoriser';
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return '<b>Aucune caméra détectée</b> · la saisie manuelle reste disponible';
     if (name === 'NotReadableError' || name === 'TrackStartError') return '<b>Caméra déjà utilisée</b> · fermez l’autre app puis touchez Relancer';
     if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') return '<b>Caméra incompatible</b> · touchez Relancer pour réessayer';

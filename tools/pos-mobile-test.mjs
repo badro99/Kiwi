@@ -38,6 +38,6 @@ ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses 
 ok(html.includes('@media (max-width: 600px)') && html.includes('white-space: normal'), 'unlock greeting wraps on narrow phones');
 ok(html.includes('assets/pos-mobile.css?v=2') && html.includes('assets/pos-mobile.js?v=2'), 'phone layer is cache-busted');
 ok(html.includes('assets/retail-scan.css?v=5'), 'scanner iPhone layout is cache-busted');
-ok(sw.includes("'kiwi-app-v338'") && sw.includes("'/assets/pos-mobile.css?v=2'"), 'offline shell ships the phone fix');
+ok(sw.includes("'kiwi-app-v339'") && sw.includes("'/assets/pos-mobile.css?v=2'"), 'offline shell ships the phone fix');
 
 console.log(`pos-mobile-test: ${controls} controls`);

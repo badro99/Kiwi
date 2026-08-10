@@ -86,9 +86,9 @@ ok(!/Math\.random\(\).*approved|approved.*Math\.random\(/s.test(source), 'does n
 ok(zxing.length > 400000 && zxing.includes('ZXingBrowser'), 'offline Safari decoder is vendored, not CDN-dependent');
 ok(zxingBrowserLicense.includes('MIT License') && zxingLibraryLicense.includes('Apache License'), 'vendored decoder retains both upstream licenses');
 ok(browserFixture.includes("Object.defineProperty(window, 'BarcodeDetector'") && browserFixture.includes('fallback='), 'browser fixture forces and exposes the Safari decoder path');
-ok(html.includes('assets/retail-scan.css?v=5') && html.includes('assets/vendor/zxing-browser.min.js?v=1') && html.includes('assets/retail-scan.js?v=4'), 'caisse loads decoder before retail scan assets');
+ok(html.includes('assets/retail-scan.css?v=5') && html.includes('assets/vendor/zxing-browser.min.js?v=1') && html.includes('assets/retail-scan.js?v=5'), 'caisse loads decoder before retail scan assets');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
-ok(sw.includes("'kiwi-app-v338'") && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes("'/assets/retail-scan.js?v=4'"), 'offline shell caches the iPhone scanner');
+ok(sw.includes("'kiwi-app-v339'") && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes("'/assets/retail-scan.js?v=5'"), 'offline shell caches the iPhone scanner');
 ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoint authorizes the credit document shape');
 ok(sale.includes("split: 'split'") && sale.includes("credit: 'credit'"), 'sales ledger preserves split and credit methods');
 ok(sale.includes('entry.parts = sale.parts'), 'sales journal retains sanitized payment parts');
