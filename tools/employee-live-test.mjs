@@ -251,6 +251,12 @@ const anon = await get('');
 ok(anon.status === 401, 'planning, collègues et salle restent privés sans session employé');
 
 const teamSource = fs.readFileSync(path.join(ROOT, 'assets/team.js'), 'utf8');
+ok(teamSource.includes('function fmtHours(value)')
+  && teamSource.includes('Math.round((Number(value) || 0) * 60)')
+  && teamSource.includes('value="${esc(fmtHours(v))}"')
+  && teamSource.includes('input.value = fmtHours(input.dataset.hoursValue)')
+  && !teamSource.includes("total.toFixed(2).replace('.', ',')"),
+  'Paie affiche les heures pointées en heures et minutes, sans décimales ambiguës comme 0,61 h');
 ok(/name="email"[^>]*required/.test(teamSource), "l'email est obligatoire dans la fiche employé");
 ok(teamSource.includes('`scoped:${String(venue.slug)}`')
   && teamSource.includes('slug: () => teamSlug()'),
