@@ -619,11 +619,26 @@
       '#kpr-print-root{display:none;}' +
       '@media print{' +
         '@page{size:' + w + 'mm auto;margin:0;}' +
-        'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
+        'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
         /* Tout le reste de la caisse disparaît : sans ça la boîte d'impression
          * sort la page entière (grille produits, panneaux) au lieu du reçu. */
         'body>*:not(#kpr-print-root){display:none!important;}' +
-        '#kpr-print-root{display:block!important;position:static!important;}' +
+        '#kpr-print-root{display:block!important;position:static!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
+        /* Some verticals build their browser fallback from their on-screen
+         * preview markup. Those components normally inherit the caisse theme;
+         * printing must sever that inheritance at the last possible layer so
+         * a stale or missing skin stylesheet can never produce a black ticket. */
+        '#kpr-print-root .px-print,#kpr-print-root .px-receipt,#kpr-print-root .px-tag,' +
+        '#kpr-print-root .ff-receipt,#kpr-print-root .ht-facture,#kpr-print-root .lb-receipt,' +
+        '#kpr-print-root .ph-receipt,#kpr-print-root .fl-receipt,#kpr-print-root .fl-card-preview,' +
+        '#kpr-print-root .bq-avoir,#kpr-print-root .ho-slip{' +
+          'background:#fff!important;color:#000!important;color-scheme:light!important;box-shadow:none!important;' +
+          '--paper:#fff;--paper-elev:#fff;--paper-soft:#fff;--paper-mute:#f4f6f4;--cream:#fff;--surface:#fff;' +
+          '--ink:#000;--ink-2:#202020;--ink-3:#404040;--ink-4:#606060;--line:#aaa;--line-soft:#ddd;' +
+        '}' +
+        '#kpr-print-root .px-receipt *,#kpr-print-root .px-tag *{color:#000!important;opacity:1!important;}' +
+        '#kpr-print-root .px-receipt hr{border-color:#000!important;}' +
+        '#kpr-print-root .px-tag::before,#kpr-print-root .bq-avoir::before{background:#fff!important;border-color:#000!important;}' +
         '.kpr-ticket{width:' + (w - 6) + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
           'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
         '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;}' +

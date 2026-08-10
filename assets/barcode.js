@@ -385,16 +385,16 @@
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
-        html, body { background: var(--surface) !important; margin: 0 !important; padding: 0 !important; }
+        html, body { background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; margin: 0 !important; padding: 0 !important; }
         body > *:not(#kbl-print-root) { display: none !important; }
-        #kbl-print-root { display: block !important; position: static; margin: 0; padding: 0; }
+        #kbl-print-root { display: block !important; position: static; margin: 0; padding: 0; background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; }
         .kbl-sheet { display: block; margin: 0; padding: 0; }
         .kbl {
           width: ${L.w}mm; height: calc(${L.h}mm - 0.2mm); box-sizing: border-box; overflow: hidden;
           padding: ${short ? '0.45mm 0.35mm 0.35mm' : '2mm 2.5mm 1.5mm'};
           display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
           page-break-inside: avoid; break-inside: avoid-page; text-align: center;
-          font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D;
+          font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D; background: #fff;
         }
         .kbl + .kbl { page-break-before: always; break-before: page; }
         .kbl-head { width: 100%; }

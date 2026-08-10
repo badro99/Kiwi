@@ -36,7 +36,7 @@
     var doc = frame.contentDocument;
     doc.open();
     doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(options.title || 'Document Kiwi') + '</title><style>' +
-      '@page{margin:8mm}*{box-sizing:border-box}body{margin:0;color:#0A0F0D;font:13px/1.45 Arial,sans-serif}.doc{width:' + width + ';max-width:100%;margin:0 auto;page-break-after:always}.doc:last-child{page-break-after:auto}header{padding-bottom:12px;border-bottom:2px solid #0B6E4F;margin-bottom:12px}header strong{display:block;font-size:20px}header small{display:block;margin-top:3px;color:#66706b}.row{display:flex;justify-content:space-between;gap:18px;padding:7px 0;border-bottom:1px solid #ddd}.row b{text-align:right}p{white-space:pre-wrap;margin:7px 0}footer{margin-top:18px;color:#66706b;font-size:11px}' +
+      '@page{margin:8mm}*{box-sizing:border-box}html,body{color-scheme:light;background:#fff;color:#0A0F0D}body{margin:0;font:13px/1.45 Arial,sans-serif}.doc{width:' + width + ';max-width:100%;margin:0 auto;page-break-after:always;background:#fff;color:#0A0F0D}.doc:last-child{page-break-after:auto}header{padding-bottom:12px;border-bottom:2px solid #0B6E4F;margin-bottom:12px}header strong{display:block;font-size:20px}header small{display:block;margin-top:3px;color:#66706b}.row{display:flex;justify-content:space-between;gap:18px;padding:7px 0;border-bottom:1px solid #ddd}.row b{text-align:right}p{white-space:pre-wrap;margin:7px 0}footer{margin-top:18px;color:#66706b;font-size:11px}' +
       '</style></head><body>' + pages.join('') + '</body></html>');
     doc.close();
     return new Promise(function (resolve) {

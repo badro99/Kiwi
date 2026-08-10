@@ -280,6 +280,10 @@
     const inv = invoices.find(x => Number(x.id) === Number(currentId)); if (!inv) return;
     const win = window.open('', '_blank'); if (!win) { toast(T().printBlocked); return; }
     win.document.open(); win.document.write(printable(inv)); win.document.close();
+    /* A document is physical paper, not an extension of the dashboard theme.
+       Pin both the page and its margins to light even when the opener is dark. */
+    win.document.documentElement.style.cssText += ';color-scheme:light;background:#fff;color:#102019';
+    if (win.document.body) win.document.body.style.cssText += ';background:#fff;color:#102019';
   }
 
   function exportCsv() {

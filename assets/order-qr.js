@@ -134,9 +134,10 @@
       <style>
         @page { size: A4; margin: 12mm; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        body { margin: 0; font-family: -apple-system, "Inter Tight", "Segoe UI", system-ui, sans-serif; color: #0A0F0D; }
+        html, body { color-scheme: light; background: #fff; color: #0A0F0D; }
+        body { margin: 0; font-family: -apple-system, "Inter Tight", "Segoe UI", system-ui, sans-serif; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10mm; }
-        .tent { border: 1.5px dashed #cbd3cd; border-radius: 14px; padding: 10mm 6mm; text-align: center; page-break-inside: avoid; }
+        .tent { border: 1.5px dashed #cbd3cd; border-radius: 14px; padding: 10mm 6mm; text-align: center; page-break-inside: avoid; background: #fff; color: #0A0F0D; }
         .v { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
         .tn { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 13px; color: #0B6E4F; margin-top: 3px; }
         .q { margin: 8px auto 6px; width: 200px; height: 200px; }

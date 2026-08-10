@@ -1,0 +1,81 @@
+/* Kiwi physical-paper contract.
+ *
+ * Dark mode belongs to the application chrome, never to a document that is
+ * handed to a customer or sent to a printer. Printable previews therefore
+ * carry their own light palette instead of inheriting theme tokens. */
+:where(
+  .receipt-paper,
+  .kr-ticket,
+  .px-receipt,
+  .px-tag,
+  .ff-receipt,
+  .ht-facture,
+  .lb-receipt,
+  .ph-receipt,
+  .fl-receipt,
+  .fl-card-preview,
+  .bq-avoir,
+  .ho-slip
+) {
+  --paper: #fff;
+  --paper-elev: #fff;
+  --paper-soft: #fff;
+  --paper-mute: #f4f6f4;
+  --cream: #fff;
+  --surface: #fff;
+  --ink: #0a0f0d;
+  --ink-2: #303733;
+  --ink-3: #59615d;
+  --ink-4: #7a827e;
+  --line: #d7dcd9;
+  --line-soft: #e7ebe8;
+  --forest: #0b6e4f;
+  --danger-mute: #b42318;
+  --px-warn: #76520b;
+  color-scheme: light !important;
+  background: #fff !important;
+  color: #0a0f0d !important;
+}
+
+/* Paper holes and decorative cut-outs reveal paper, not the dark app. */
+.px-tag::before,
+.bq-avoir::before { background: #fff !important; }
+
+/* Generated print roots can contain any vertical's markup. Keep their page
+ * margins white too, while preserving intentional ink colours inside. */
+@media print {
+  html,
+  body {
+    color-scheme: light !important;
+    background: #fff !important;
+    color: #0a0f0d !important;
+  }
+
+  :where(#kpr-print-root, #kr-print-root, #kbl-print-root) {
+    color-scheme: light !important;
+    background: #fff !important;
+    color: #0a0f0d !important;
+  }
+
+  :where(
+    .receipt-paper,
+    .kr-ticket,
+    .px-receipt,
+    .px-tag,
+    .ff-receipt,
+    .ht-facture,
+    .lb-receipt,
+    .ph-receipt,
+    .fl-receipt,
+    .fl-card-preview,
+    .bq-avoir,
+    .ho-slip
+  ) {
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #kpr-print-root .px-receipt { position: static; }
+  #kpr-print-root .px-tag { break-inside: avoid; page-break-inside: avoid; }
+}

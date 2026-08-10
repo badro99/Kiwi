@@ -1183,9 +1183,9 @@
     st.textContent =
       '#kr-print-root{display:none;}' +
       '@media print{@page{size:' + mm + 'mm auto;margin:0;}' +
-      'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
+      'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
       'body>*:not(#kr-print-root):not(#kpr-print-root){display:none!important;}' +
-      '#kr-print-root{display:block!important;position:static!important;}' +
+      '#kr-print-root{display:block!important;position:static!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
       '#kr-print-root .kr-ticket,#kpr-print-root .kr-ticket{--kr-w:' + (mm - 6) + 'mm;box-shadow:none;}' +
       /* ── UN GRIS N'EST PAS UNE NUANCE, C'EST UNE BOUILLIE ────────────────────
        * L'aperçu à l'écran atténue les mentions secondaires (opacity .85, .75,

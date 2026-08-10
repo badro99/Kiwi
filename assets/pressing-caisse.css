@@ -583,8 +583,11 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .modal.px-tags { width: 880px; max-width: calc(100vw - 40px); padding: 24px; }
 .px-tags-grid { display: grid; grid-template-columns: 264px 1fr; gap: 18px; align-items: start; margin-top: 14px; max-height: 56vh; overflow-y: auto; }
 .px-receipt {
-  background: var(--paper-elev);
-  border: 1px solid var(--line);
+  /* A customer document is physical paper, independent from caisse dark mode. */
+  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #7a827e;
+  --line: #d7dcd9; --paper: #fff; --paper-elev: #fff;
+  background: #fff;
+  border: 1px solid #d7dcd9;
   border-radius: 4px;
   box-shadow: var(--shadow-1);
   padding: 16px 14px;
@@ -604,9 +607,13 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 
 .px-tags-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(218px, 1fr)); gap: 10px; }
 .px-tag {
-  border: 1.5px solid var(--ink);
+  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #7a827e;
+  --line: #d7dcd9; --paper: #fff; --paper-elev: #fff;
+  color-scheme: light;
+  color: #0a0f0d;
+  border: 1.5px solid #0a0f0d;
   border-radius: 9px;
-  background: var(--paper-elev);
+  background: #fff;
   padding: 9px 11px 8px;
   position: relative;
   overflow: hidden;
@@ -615,7 +622,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   /* punched hole of the waterproof tag */
   content: ""; position: absolute; top: 50%; left: -7px; transform: translateY(-50%);
   width: 13px; height: 13px; border-radius: 50%;
-  background: var(--paper); border: 1.5px solid var(--ink);
+  background: #fff; border: 1.5px solid #0a0f0d;
 }
 .px-tag-top { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); }
 .px-tag-num { font-size: 12.5px; font-weight: 700; }
