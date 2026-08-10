@@ -289,6 +289,9 @@
        the owner dashboard. The POS keeps its native service-time engine; this
        compact bridge only adds the shared operational context. */
     try { if (window.KiwiPosWorkspaces) window.KiwiPosWorkspaces.mount(root, id); } catch (e) {}
+    /* Product-led métiers keep their specialist checkout, and gain an additive
+       continuous-scan lane backed by the same catalog/stock/sales truth. */
+    try { if (window.KiwiRetailScan && window.KiwiRetailScan.eligible(id)) window.KiwiRetailScan.mount(root, id); } catch (e) {}
     /* Visual-only restaurant-level chrome. Run last so the shared refresh,
        reprint and operational-workspace controls are present before the rail
        is classified. Their original nodes and handlers remain untouched. */

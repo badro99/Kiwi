@@ -79,6 +79,7 @@ const FEATURES = {
   reservations: { keys: ['list', 'bookings', 'slots'],             max: 600000 },
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
   promotions:   { keys: ['list', 'rules'],                         max: 200000 },
+  retailcredit: { keys: ['entries', 'seq'],                        max: 600000 },
   returns:      { keys: ['list'],                                  max: 400000 },
   rooms:        { keys: ['list', 'rooms'],                         max: 400000 },
   kds:          { keys: ['stations', 'list'],                      max: 200000 },

@@ -157,6 +157,8 @@
     virement: 'wallet', transfer: 'wallet', wallet: 'wallet',
     glovo: 'wallet', online: 'wallet', enligne: 'wallet',
     cheque: 'wallet', qr: 'qr', tap: 'tap',
+    split: 'split', mixed: 'split', partage: 'split',
+    credit: 'credit', ardoise: 'credit', acompte: 'credit',
   };
   function normMethod(m) {
     /* NFD d'abord. Sans ça « chèque » se réduisait à « chque », introuvable
@@ -240,6 +242,16 @@
     };
     if (Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(cleanLine);
+    }
+    if (Array.isArray(sale.parts) && sale.parts.length) {
+      entry.parts = sale.parts.slice(0, 8).map(function (p) {
+        return {
+          method: normMethod(p && p.method),
+          amount: Math.round(Math.max(0, Math.min(100000000, +(p && p.amount) || 0)) * 100) / 100,
+          clientId: String((p && p.clientId) || '').slice(0, 80),
+          authorization: String((p && p.authorization) || '').slice(0, 80),
+        };
+      }).filter(function (p) { return p.amount > 0; });
     }
 
     var rows = read(vertical);
