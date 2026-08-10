@@ -78,9 +78,15 @@
     scrim.className = 'vx-scrim';
 
     var setNav = function (on) {
+      if (on) {
+        screen.classList.remove('vx-ticket-open');
+        var ticketPeek = screen.querySelector('.vx-peek');
+        if (ticketPeek) ticketPeek.setAttribute('aria-expanded', 'false');
+      }
       screen.classList.toggle('vx-nav-open', on);
       burger.setAttribute('aria-expanded', on ? 'true' : 'false');
     };
+    burger.setAttribute('aria-expanded', 'false');
     burger.addEventListener('click', function () {
       setNav(!screen.classList.contains('vx-nav-open'));
     });
@@ -102,27 +108,36 @@
     var peek = document.createElement('button');
     peek.className = 'vx-peek';
     peek.type = 'button';
+    if (!ticket.id) ticket.id = 'vx-ticket-' + Math.random().toString(36).slice(2, 9);
+    peek.setAttribute('aria-controls', ticket.id);
+    peek.setAttribute('aria-expanded', 'false');
+    peek.setAttribute('aria-label', 'Afficher le ticket');
     peek.innerHTML = '<span class="vx-peek-l">Ticket</span><span class="vx-peek-r"></span>';
     var amount = peek.querySelector('.vx-peek-r');
 
-    var totalNode = findTotalNode(ticket);
     var sync = function () {
+      var totalNode = findTotalNode(ticket);
       var next = totalNode ? (totalNode.textContent || '').trim() : '';
       /* Write only on change. The peek lives inside the ticket, so an
        * unconditional write would re-enter the observer forever. */
       if (amount.textContent !== next) amount.textContent = next;
     };
     sync();
-    if (totalNode) {
-      /* Observe the total itself, not the whole ticket - keeps the peek out
-       * of the observed subtree entirely. */
-      new MutationObserver(sync).observe(totalNode, {
-        subtree: true, childList: true, characterData: true
-      });
-    }
+    /* Some verticals replace the complete ticket after each tap, including
+     * the total node. Observe the sheet and rediscover the value instead of
+     * holding a stale node from the empty-ticket render. */
+    new MutationObserver(sync).observe(ticket, {
+      subtree: true, childList: true, characterData: true
+    });
 
     peek.addEventListener('click', function () {
-      screen.classList.toggle('vx-ticket-open');
+      var open = !screen.classList.contains('vx-ticket-open');
+      screen.classList.toggle('vx-ticket-open', open);
+      screen.classList.remove('vx-nav-open');
+      var burger = screen.querySelector('.vx-burger');
+      if (burger) burger.setAttribute('aria-expanded', 'false');
+      peek.setAttribute('aria-expanded', open ? 'true' : 'false');
+      peek.setAttribute('aria-label', open ? 'Réduire le ticket' : 'Afficher le ticket');
     });
     /* First child, not last: the sheet rests translated down by exactly the
      * peek's height, so the peek has to be the strip left on screen. */
@@ -190,6 +205,17 @@
      * childList observer never sees it — and a newly shown view still needs
      * measuring. A click on the register covers nav and tab changes. */
     screen.addEventListener('click', schedule, true);
+    screen.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      screen.classList.remove('vx-nav-open', 'vx-ticket-open');
+      var burger = screen.querySelector('.vx-burger');
+      var peek = screen.querySelector('.vx-peek');
+      if (burger) burger.setAttribute('aria-expanded', 'false');
+      if (peek) {
+        peek.setAttribute('aria-expanded', 'false');
+        peek.setAttribute('aria-label', 'Afficher le ticket');
+      }
+    });
     window.addEventListener('resize', schedule);
     window.addEventListener('orientationchange', schedule);
   }

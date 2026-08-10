@@ -134,6 +134,12 @@
 
 @media (max-width: 850px) {
   .krs-launch { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); min-height: 50px; border-radius: 16px; }
+  /* Specialist caisses keep their ticket as a 60px resting bottom sheet.
+     Lift Scan above it instead of covering the ticket total and checkout. */
+  .vx-root .krs-launch { bottom: calc(74px + env(safe-area-inset-bottom)); }
+  .vx-root.vx-ticket-open .krs-launch {
+    opacity: 0; pointer-events: none; transform: translateY(12px);
+  }
   .krs-shell { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
   .krs-head { min-height: 62px; padding: 9px 11px 9px 14px; }
   .krs-head-copy span { display: none; }

@@ -70,9 +70,9 @@ ok(source.includes('parts: state.parts') && source.includes('if (d && Array.isAr
 ok(source.includes("if (state.parts.length && state.cart.length)"), 'reload reopens the outstanding payment balance');
 ok(!/Math\.random\(\).*approved|approved.*Math\.random\(/s.test(source), 'does not invent card approval');
 
-ok(html.includes('assets/retail-scan.css?v=3') && html.includes('assets/retail-scan.js?v=3'), 'caisse loads retail scan assets');
+ok(html.includes('assets/retail-scan.css?v=4') && html.includes('assets/retail-scan.js?v=3'), 'caisse loads retail scan assets');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
-ok(sw.includes("'kiwi-app-v336'") && sw.includes("'/assets/retail-scan.js?v=3'"), 'offline shell caches the feature');
+ok(sw.includes("'kiwi-app-v337'") && sw.includes("'/assets/retail-scan.js?v=3'"), 'offline shell caches the feature');
 ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoint authorizes the credit document shape');
 ok(sale.includes("split: 'split'") && sale.includes("credit: 'credit'"), 'sales ledger preserves split and credit methods');
 ok(sale.includes('entry.parts = sale.parts'), 'sales journal retains sanitized payment parts');

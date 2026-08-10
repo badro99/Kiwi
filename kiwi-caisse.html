@@ -107,7 +107,7 @@
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
   <script src="assets/promos.js" defer></script>
-  <link rel="stylesheet" href="assets/retail-scan.css?v=3" />
+  <link rel="stylesheet" href="assets/retail-scan.css?v=4" />
   <script src="assets/retail-scan.js?v=3" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
@@ -120,7 +120,7 @@
   <link rel="stylesheet" href="assets/caisse-dna.css?v=2" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
-  <script src="assets/pos-mobile.js" defer></script>
+  <script src="assets/pos-mobile.js?v=2" defer></script>
 
   <!-- Shared material tokens (elevation, paper, spring). Linked BEFORE the
        inline <style> so the caisse's own palette still wins; only the tokens
@@ -3231,6 +3231,30 @@
     @media (max-width: 900px) {
       .kiwi-greet h1 { font-size: 44px; }
     }
+    @media (max-width: 600px) {
+      .kiwi-greet-inner {
+        width: 100%; max-width: 100%; box-sizing: border-box;
+        padding: 0 20px;
+      }
+      .kiwi-greet h1 {
+        font-size: clamp(30px, 9.5vw, 38px);
+        line-height: 1.08;
+        white-space: normal;
+        text-wrap: balance;
+        overflow-wrap: anywhere;
+      }
+      .kiwi-greet h1 .em-clip {
+        max-width: 100% !important;
+        white-space: normal;
+        overflow: visible;
+      }
+      .kiwi-greet-sub {
+        margin-top: 16px;
+        font-size: 10px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       .kiwi-greet, .kiwi-greet-inner { transition: opacity 200ms ease !important; }
       .kiwi-greet h1 .em-clip { transition: none !important; }
@@ -4600,7 +4624,7 @@
        Aucune surcharge thème ici — la scène ne change pas avec le thème. */
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css?v=2" />
-  <link rel="stylesheet" href="assets/pos-mobile.css" />
+  <link rel="stylesheet" href="assets/pos-mobile.css?v=2" />
   <link rel="stylesheet" href="assets/pos-workspaces.css?v=3" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />

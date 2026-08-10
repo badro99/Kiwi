@@ -24,8 +24,22 @@
 @media (max-width: 860px) {
 
   /* ── Shell ─────────────────────────────────────────────────────────────── */
-  .vx-root { overflow: hidden; }
-  .vx-root .vx-main { min-width: 0; max-width: 100%; flex: 1 1 auto; }
+  .vx-root {
+    width: 100vw; height: 100dvh;
+    max-width: 100vw; max-height: 100dvh;
+    overflow: hidden;
+  }
+  .vx-root .vx-main { min-width: 0; max-width: 100%; flex: 1 1 auto; overflow-x: hidden; }
+  /* Boutique's desktop shell pins its main column to left:212px. Moving the
+   * rail off-canvas is not enough: without resetting that inset, only the
+   * rightmost strip of the register remains visible on a phone. This direct-
+   * child rule also gives every métier one predictable viewport canvas. */
+  .vx-root > .vx-main {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important; height: 100% !important;
+    max-width: 100vw !important; max-height: 100dvh !important;
+  }
   /* The view is a flex ROW on the desk (grid | ticket). On a phone the ticket
    * leaves the flow entirely, so the row just needs to stop reserving for it. */
   .vx-root .vx-view { min-width: 0; }
@@ -80,6 +94,8 @@
    * squeezing the hint text into a four-word-tall column. */
   .vx-root .vx-view [class*="-head"] { flex-wrap: wrap; }
 
+  .vx-root button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
   /* ── Ticket → bottom sheet ─────────────────────────────────────────────── */
   .vx-root .vx-ticket {
     --vx-peek-h: calc(60px + env(safe-area-inset-bottom, 0px));
@@ -95,6 +111,7 @@
     overflow-y: auto; overscroll-behavior: contain;
   }
   .vx-root.vx-ticket-open .vx-ticket { transform: translateY(0); }
+  .vx-root.vx-ticket-open .vx-burger { opacity: 0; pointer-events: none; }
 
   .vx-root .vx-peek {
     display: flex; align-items: center; justify-content: space-between;
@@ -114,6 +131,7 @@
   .vx-view [class*="-grid-scroll"],
   .vx-view [class*="-list-scroll"] {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── Nested two-panel rows ─────────────────────────────────────────────
@@ -140,6 +158,37 @@
   /* ── Product grids: two comfortable columns instead of six cramped ones ── */
   .vx-view [class*="-grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
+  /* Quantity steppers were 21px desktop controls in several tickets. A till
+   * on a phone needs targets that remain hittable with a thumb during a rush. */
+  .vx-root [class*="-line-qty"] button,
+  .vx-root [class*="-qty-step"] button {
+    min-width: 36px; min-height: 36px;
+  }
+
   /* Modals ship as centred desk cards; give them the viewport on a phone. */
-  .vx-root .modal { max-width: calc(100vw - 24px); max-height: 88dvh; overflow-y: auto; }
+  .vx-root .modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .vx-root .modal-veil { padding: 12px; box-sizing: border-box; }
+
+  /* Safari zooms the entire register when a focused control is below 16px.
+   * Keeping phone inputs at the platform's readable minimum also makes tills
+   * usable with one hand and an on-screen keyboard. */
+  .vx-root input,
+  .vx-root select,
+  .vx-root textarea { font-size: 16px !important; }
+}
+
+@media (max-width: 480px) {
+  .vx-view [class*="-grid"] { gap: 8px !important; }
+  .vx-root .modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
 }
