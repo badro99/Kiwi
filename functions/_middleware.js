@@ -372,6 +372,11 @@ async function routeRequest(context) {
  * would either break the product or require unsafe-inline everywhere. */
 function secureResponse(response) {
   if (!response) return response;
+  /* Une réponse 101 porte la socket sur `response.webSocket` : la reconstruire
+   * perd cette propriété (et 101 n'est pas un statut constructible), donc le
+   * navigateur ne voit jamais la poignée de main et ferme en 1006. Le Live Link
+   * passe par là — on la laisse intacte. */
+  if (response.status === 101 || response.webSocket) return response;
   const headers = new Headers(response.headers);
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('X-Frame-Options', 'SAMEORIGIN');
