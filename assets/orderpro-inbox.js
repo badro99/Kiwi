@@ -281,9 +281,19 @@
     return '<div class="kop-cust">' + (head ? '<div>' + head + '</div>' : '') + addr + note + '</div>';
   }
 
+  function serverInitials(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+  }
+
   function orderRef(o) {
     var n = String((o && o.number) || 0);
-    if (o && o.channel === 'kiwi') return (o.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+    if (o && o.channel === 'kiwi') {
+      var employeePrefix = serverInitials(o.server);
+      if (employeePrefix) return employeePrefix + '-' + n;
+      return (o.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+    }
     return n;
   }
 

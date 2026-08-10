@@ -154,6 +154,18 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   }, asStaff);
   ok('un DEUXIÈME bon prend le numéro suivant', second.body.number === 2, 'n°' + second.body.number);
 
+  /* Un geste `Accepter` oublié ne doit pas reconstruire le ticket au login du
+     lendemain. C'était le chemin exact du timer à 920 minutes observé en KDS. */
+  await post({ merchant: SLUG, create: {
+    id: 'ord-bench-hier-03', mode: 'table', table: 'T1',
+    lines: [{ name: 'Ancien tajine', qty: 1, unitPrice: 80, station: 'cuisson' }],
+  } }, asStaff);
+  DB._db.prepare('UPDATE orders SET created_ts=?, updated_ts=? WHERE id=?')
+    .run(now - 7 * 60 * 60 * 1000, now - 7 * 60 * 60 * 1000, 'ord-bench-hier-03');
+  q = await get('merchant=' + SLUG + '&since=0&role=kitchen', asStaff);
+  ok('un bon accepté oublié ne revient pas dans le KDS du service suivant',
+    !q.body.orders.some((o) => o.id === 'ord-bench-hier-03'));
+
   /* ═══ 3. RETOUR, PAR POSTE ═══════════════════════════════════════════════ */
   r = await post({ merchant: SLUG, id: TICKET.id, status: 'cooking', station: 'cuisson' }, asStaff);
   ok('accepter au poste cuisson ne lance pas le poste boissons',
@@ -331,6 +343,8 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /pull\(S\.since, 'kitchen'\)/.test(CUISINE));
   ok('un bon oublié d’avant-hier ne rouvre pas le tableau du matin',
     /STALE_MS/.test(CUISINE));
+  ok('une tablette restée ouverte purge aussi les anciens bons déjà en mémoire',
+    /Object\.keys\(S\.orders\)[\s\S]{0,350}?delete S\.orders\[id\]/.test(CUISINE));
   ok('le rechargement ne fait pas carillonner la tablette', /firstPass/.test(CUISINE));
   ok('l’écran ne s’éteint pas en plein service', /wakeLock/.test(CUISINE));
   ok('le romain, même ici', /em, i, cite \{ font-style: normal; \}/.test(CUISINE));

@@ -123,7 +123,9 @@ async function get(fn, qs, headers = {}) {
   ok('OrderPro affiche OPD sur le retrait',
     /orderNumber\s*=\s*'OPD-'\s*\+\s*String\(res\.number/.test(orderProPage));
   ok('la caisse distingue OP et OPD selon le mode OrderPro',
-    /o\.opChannel\s*===\s*'kiwi'[\s\S]{0,120}'OPD-'\s*:\s*'OP-'/.test(caissePage));
+    /o\.opChannel\s*===\s*'kiwi'[\s\S]{0,320}'OPD-'\s*:\s*'OP-'/.test(caissePage));
+  ok('la caisse donne aux commandes employé les initiales du serveur, pas OP',
+    /const employeePrefix = orderServerInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(caissePage));
   ok('une session OrderPro occupe la table dans la caisse sans redemander les couverts',
     /function caisseTableId\(v\)/.test(caissePage)
       && /const id = caisseTableId\(s\.table\);[\s\S]{0,180}tables\[id\]\.status = 'ka-yaklo'/.test(caissePage));
@@ -132,7 +134,12 @@ async function get(fn, qs, headers = {}) {
       && /orderProLine: marker/.test(caissePage)
       && /attachOrderProTable\(o\);/.test(caissePage));
   ok('l\'\u00e9cran cuisine distingue OP et OPD selon le mode OrderPro',
-    /o\.channel\s*===\s*'kiwi'[\s\S]{0,120}'OPD-'\s*:\s*'OP-'/.test(kitchenPage));
+    /o\.channel\s*===\s*'kiwi'[\s\S]{0,320}'OPD-'\s*:\s*'OP-'/.test(kitchenPage));
+  ok('l\'écran cuisine affiche les initiales sur un ticket employé',
+    /var employeePrefix = serverInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(kitchenPage));
+  ok('le paiement employé envoie la référence commande au journal de caisse',
+    /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
+      fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
 
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));

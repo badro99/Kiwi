@@ -4098,6 +4098,31 @@ em, i, cite, dfn, var { font-style: normal; }
       'no-merchant':        'aucun commerce appairé — commande NON envoyée',
       'offline':            'hors ligne — commande NON envoyée, réessayez',
     };
+    function serviceOrderInitials(name) {
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '';
+      return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+    }
+    function serviceOrderRef(order) {
+      if (!order || order.number == null) return '';
+      const n = String(order.number);
+      if ((order.channel || 'kiwi') === 'kiwi') {
+        const employeePrefix = serviceOrderInitials(order.server);
+        if (employeePrefix) return employeePrefix + '-' + n;
+        return (order.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+      }
+      return n;
+    }
+    function serviceTableOrderRef(tableId) {
+      const table = tables[tableId];
+      if (table && table.orderNo) return String(table.orderNo);
+      const orders = Array.from(serviceCanonicalOrders.values())
+        .filter((order) => order && !order.paid && String(order.table) === String(tableId))
+        .sort((a, b) => Number(a.created_ts || 0) - Number(b.created_ts || 0));
+      const ref = orders.length ? serviceOrderRef(orders[0]) : '';
+      if (ref && table) table.orderNo = ref;
+      return ref || 'Commande';
+    }
     function svSendOrder(tableId) {
       const order = tableOrders[tableId] || [];
       const delta = [];
@@ -4138,8 +4163,21 @@ em, i, cite, dfn, var { font-style: normal; }
               after: Number(knownState && knownState.ts) || 0,
               until: Date.now() + 30000,
             });
+            if (tables[tableId] && !tables[tableId].orderNo && j.number != null) {
+              tables[tableId].orderNo = serviceOrderRef({
+                number: j.number, mode: 'table', channel: 'kiwi',
+                server: activeRole.fullName || activeRole.name || '',
+              });
+            }
             svPendingRef.delete(tableId);
-            return { ok: true, number: j.number, replayed: !!j.replayed };
+            return {
+              ok: true, number: j.number,
+              reference: serviceOrderRef({
+                number: j.number, mode: 'table', channel: 'kiwi',
+                server: activeRole.fullName || activeRole.name || '',
+              }),
+              replayed: !!j.replayed,
+            };
           }
           return { ok: false, error: (j && j.error) || ('http-' + status) };
         })
@@ -4746,13 +4784,16 @@ em, i, cite, dfn, var { font-style: normal; }
         const table = serviceTableId(order.table) || order.table || '';
         if (order.mode === 'table' && table) {
           if (order.status === 'rejected' || order.paid) serviceCanonicalOrders.delete(order.id);
-          else serviceCanonicalOrders.set(order.id, { ...order, table });
+          else {
+            serviceCanonicalOrders.set(order.id, { ...order, table });
+            if (tables[table] && !tables[table].orderNo) tables[table].orderNo = serviceOrderRef(order);
+          }
         }
         const shouldNotify = !isEmployeePaused() && (serviceMineTables.has(table) || servicePausedTables.has(table));
         if (shouldNotify && order.status === 'pending' && before !== 'pending') {
-          serviceNotify(`Table ${table}`, `nouvelle commande OrderPro #${order.number || ''}`.trim(), { table, type: 'orderpro', id: 'order-' + order.id + '-pending', ts: order.updated_ts });
+          serviceNotify(`Table ${table}`, `nouvelle commande ${serviceOrderRef(order)}`.trim(), { table, type: 'orderpro', id: 'order-' + order.id + '-pending', ts: order.updated_ts });
         } else if (shouldNotify && order.status === 'ready' && before !== 'ready') {
-          serviceNotify(`Table ${table}`, `${order.session ? 'OrderPro' : 'commande'} #${order.number || ''} prête`.trim(), { table, type: 'ready', id: 'order-' + order.id + '-ready', ts: order.updated_ts });
+          serviceNotify(`Table ${table}`, `commande ${serviceOrderRef(order)} prête`.trim(), { table, type: 'ready', id: 'order-' + order.id + '-ready', ts: order.updated_ts });
         }
       });
       /* Rebuild the SENT part of every bill from the canonical order queue.
@@ -4831,6 +4872,7 @@ em, i, cite, dfn, var { font-style: normal; }
           });
           tables[id].status = 'khawya';
           tables[id].elapsed = 0;
+          delete tables[id].orderNo;
           tableOrders[id] = [];
           return;
         }
@@ -4862,6 +4904,7 @@ em, i, cite, dfn, var { font-style: normal; }
         }
         if (state.status === 'khawya' || state.status === 'khlass') {
           tables[id].elapsed = 0;
+          delete tables[id].orderNo;
           Array.from(serviceCanonicalOrders.entries()).forEach(([orderId, order]) => {
             if (String(order.table) === String(id)) serviceCanonicalOrders.delete(orderId);
           });
@@ -5844,7 +5887,7 @@ em, i, cite, dfn, var { font-style: normal; }
             publishServiceTableState(sentId, tables[sentId].status, tables[sentId].covers, false);
             dirtyOrders.delete(sentId);
             returnToFloor();
-            toast(res.number ? `${msg} · ticket #${res.number}` : msg);
+            toast(res.reference ? `${msg} · ticket ${res.reference}` : msg);
           } else {
             /* On NE nettoie pas le drapeau : la table doit rester marquée « non
                envoyée », c'est tout l'objet de ce changement. Le serveur reste
@@ -5870,6 +5913,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tables[id].status = 'khawya';
         tables[id].elapsed = 0;
         delete tableOrders[id];
+        delete tables[id].orderNo;
         dirtyOrders.delete(id);
         tableSplits.delete(id);
         publishServiceTableState(id, 'khawya', 0, true);
@@ -6877,6 +6921,7 @@ em, i, cite, dfn, var { font-style: normal; }
         };
       });
       const paymentId = employeePaymentId(id);
+      const orderRef = serviceTableOrderRef(id);
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       if (!merchant || paidAmount <= 0) {
         toast(`Table ${id} · paiement impossible`, 4200);
@@ -6901,8 +6946,8 @@ em, i, cite, dfn, var { font-style: normal; }
           body: JSON.stringify({
             id: paymentId, merchant, table: id, amount: paidAmount,
             method: method || 'card', ts: Date.now(),
-            label: 'Table ' + id + ' · ' + ((activeRole && activeRole.name) || 'Équipe'),
-            ref: paymentId, lines: paidLines,
+            label: orderRef,
+            ref: orderRef, lines: paidLines,
           }),
         });
         saved = await response.json().catch(() => null);
@@ -6929,6 +6974,7 @@ em, i, cite, dfn, var { font-style: normal; }
       t.status = 'khawya';
       t.covers = 0;
       t.elapsed = 0;
+      delete t.orderNo;
       delete tableOrders[id];
       dirtyOrders.delete(id);
       tableSplits.delete(id);

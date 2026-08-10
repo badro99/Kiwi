@@ -596,8 +596,10 @@ ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTick
   'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');
 ok(/if \(!o \|\| staleQueuedServerTicket\(o\)\) return;/.test(caisse),
   'un ancien ticket C-xxx en attente ne ressuscite pas au rechargement');
-ok(/o\.opNum == null.*o\.status !== 'new'.*o\.status !== 'held'/.test(caisse),
-  'la purge vise les tickets serveur en attente, pas une préparation active');
+ok(/o\.status === 'cooking'.*age > 6 \* 60 \* 60 \* 1000/.test(caisse),
+  'une préparation serveur oubliée expire après six heures au lieu de revenir le lendemain');
+ok(/function kdsPaint\(\)[\s\S]{0,350}?staleQueuedServerTicket\(kdsOrders\[i\]\)/.test(caisse),
+  'une caisse laissée ouverte purge aussi le ticket déjà présent en mémoire');
 ok(/let\s+kdsOrderSeq = IS_DEMO \? 52 : 0;/.test(caisse),
   'un vrai commerçant commence sa numérotation à 1, pas à 53');
 
