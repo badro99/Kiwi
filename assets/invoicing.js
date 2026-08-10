@@ -285,7 +285,14 @@
   function exportCsv() {
     const t = T();
     const cells = [[t.no,t.customer,t.issued,t.due,t.status,t.amount], ...invoices.map(inv => ['#'+inv.id,inv.customer,inv.issueDate,inv.dueDate,effectiveStatus(inv),invoiceTotal(inv).total.toFixed(2)])];
-    const csv = '\ufeff' + cells.map(row => row.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';')).join('\n');
+    /* Quoting is not enough: spreadsheets still execute a quoted cell whose
+       first character is = + - or @. Client names are untrusted merchant data. */
+    const csvCell = (v) => {
+      let s = String(v == null ? '' : v);
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g,'""') + '"';
+    };
+    const csv = '\ufeff' + cells.map(row => row.map(csvCell).join(';')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
     const a = document.createElement('a'); a.href=url; a.download='kiwi-factures-' + today() + '.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast(t.exported);
   }

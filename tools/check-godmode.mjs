@@ -686,7 +686,7 @@ G('10 · Mot de passe — envoyer, renvoyer, une seule fois, expirer');
 G('11 · Le retrait atteint tous les appareils');
 {
   await call(R.sales, 'POST', '/api/admin/sales',
-    { body: { merchant: 'amira-boutique', ids: ['s-plain'], action: 'void', reason: 'installation' } });
+    { body: { merchant: 'amira-boutique', ids: ['s-plain'], action: 'void', reason: 'installation', force: true } });
 
   const dash = await feedFor('amira-boutique');
   ok(!dash.sales.some((s) => s.id === 's-plain'), 'tableau de bord : la vente a disparu du flux');

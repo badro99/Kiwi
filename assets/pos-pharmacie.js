@@ -244,6 +244,7 @@
   /* ───────────────────────── état ───────────────────────── */
   let saleSeq = 2480;
   let queuedSales = [];        /* ventes de garde déjà enregistrées ce soir */
+  let insurerReceivables = []; /* tiers payant réellement dû, jamais confondu avec la recette encaissée */
   const state = {
     view: 'vente',
     mode: 'libre',             /* libre | ordonnance */
@@ -268,7 +269,47 @@
   function freshTicket() {
     state.ticket = { num: posRef(`V-${saleSeq}`), lines: [], patient: null, medecin: null };
   }
+
+  const pharmacieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'pharmacie',
+    snapshot() {
+      return {
+        stock: STOCK,
+        lots: LOTS,
+        medecins: MEDECINS,
+        patients: PATIENTS,
+        saleSeq,
+        queuedSales,
+        insurerReceivables,
+        gross: state.gross,
+        night: state.night,
+        ticket: state.ticket,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (saved.stock && typeof saved.stock === 'object') {
+        Object.keys(STOCK).forEach((id) => delete STOCK[id]);
+        Object.assign(STOCK, saved.stock);
+      }
+      if (Array.isArray(saved.lots)) LOTS.splice(0, LOTS.length, ...saved.lots);
+      LOTS.forEach((lot) => { if (lot.exp) lot.exp = new Date(lot.exp); });
+      if (Array.isArray(saved.medecins)) MEDECINS.splice(0, MEDECINS.length, ...saved.medecins);
+      Object.keys(MED).forEach((id) => delete MED[id]);
+      MEDECINS.forEach((doctor) => { MED[doctor.id] = doctor; });
+      if (Array.isArray(saved.patients)) PATIENTS.splice(0, PATIENTS.length, ...saved.patients);
+      Object.keys(PAT).forEach((id) => delete PAT[id]);
+      PATIENTS.forEach((patient) => { PAT[patient.id] = patient; });
+      if (Number.isFinite(saved.saleSeq)) saleSeq = saved.saleSeq;
+      if (Array.isArray(saved.queuedSales)) queuedSales = saved.queuedSales;
+      if (Array.isArray(saved.insurerReceivables)) insurerReceivables = saved.insurerReceivables;
+      if (saved.gross && typeof saved.gross === 'object') state.gross = saved.gross;
+      if (typeof saved.night === 'boolean') state.night = saved.night;
+      if (saved.ticket) state.ticket = saved.ticket;
+    },
+  });
   function queueIfOffline(label) {
+    if (pharmacieOps) pharmacieOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -292,9 +333,21 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(t) {
+    return t.lines.map((ln) => {
+      const it = ITEMS[ln.itemId];
+      const split = lineSplit(ln);
+      const lot = LOTS.find((x) => x.id === ln.itemId);
+      return {
+        itemId: it.id, variantId: lot ? lot.lot : '', name: it.label,
+        category: it.cat, qty: ln.qty, unit: it.unit || 'piece', kind: 'product',
+        total: split.pat,
+      };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pharmacie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pharmacie', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -306,6 +359,7 @@
   let root = null;
 
   function build(rootEl) {
+    if (pharmacieOps) pharmacieOps.hydrate();
     root = rootEl;
     root.innerHTML = `
       <aside class="ph-rail">
@@ -942,7 +996,10 @@
     /* allergie croisée simple : si un antibiotique pénicilline + allergie connue */
     if (t.patient && (t.patient.allergies || []).some((a) => /pénicilline|penicilline/i.test(a))) {
       const pen = t.lines.find((l) => /amoxicilline|augmentin|clamoxyl/i.test(ITEMS[l.itemId].dci + ITEMS[l.itemId].label));
-      if (pen) toast(`Attention, ${t.patient.name} : allergie Pénicilline notée au dossier`, 3200);
+      if (pen) {
+        toast(`Vente bloquée, ${t.patient.name} a une allergie Pénicilline au dossier`, 4200);
+        return;
+      }
     }
     openReceipt(t);
   }
@@ -1000,7 +1057,22 @@
     openVeil('#ph-receipt-veil');
     icons();
     $$('[data-ph-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ph-receipt-veil'); });
-    $('#ph-rc-print', el).onclick = () => toast('Ticket envoyé à l’imprimante thermique (80 mm)');
+    $('#ph-rc-print', el).onclick = () => {
+      const K = window.KiwiReceipt;
+      if (!K || !K.build || !K.print) { toast('Impression indisponible sur cet appareil'); return; }
+      const gross = ticketSplit().gross;
+      const doc = K.build({
+        ref: t.num,
+        ts: Date.now(),
+        lines: t.lines.map((ln) => ({ qty: ln.qty, name: ITEMS[ln.itemId].label, total: ITEMS[ln.itemId].price * ln.qty })),
+        subtotal: gross,
+        total: gross,
+        customer: t.patient ? { name: t.patient.name, phone: t.patient.phone } : null,
+        pay: [],
+      });
+      toast('Impression du reçu…');
+      Promise.resolve(K.print(doc)).then((result) => toast(result && result.ok ? 'Reçu imprimé' : 'Impression non confirmée'), () => toast('Impression échouée'));
+    };
     $('#ph-rc-pay', el).onclick = () => { closeVeil('#ph-receipt-veil'); openPay(t); };
   }
 
@@ -1015,6 +1087,16 @@
       /* décrémenter le stock, consigner, repartir sur un ticket vierge */
       t.lines.forEach((ln) => { if (STOCK[ln.itemId] != null) STOCK[ln.itemId] = Math.max(0, STOCK[ln.itemId] - ln.qty); });
       if (split.mut && t.patient) {
+        insurerReceivables.unshift({
+          id: `${t.num}-${t.patient.id}`,
+          ticket: t.num,
+          patientId: t.patient.id,
+          insurer: t.patient.mut,
+          affiliation: t.patient.aff || '',
+          amount: split.mut,
+          status: 'a-facturer',
+          createdAt: Date.now(),
+        });
         toast(`Part mutuelle ${fmtMAD(split.mut)} · à facturer ${m.label}`, 2600);
       }
       if (state.night) {
@@ -1023,7 +1105,7 @@
       /* Seule la part patient rentre au comptoir. La part mutuelle est facturée
          au tiers payant plus tard : la journaliser ici gonflerait la recette du
          jour d'un encaissement qui n'a pas eu lieu. */
-      postDay(due, method, tkLabel(t), t.num);
+      postDay(due, method, tkLabel(t), t.num, saleLines(t));
       saleSeq++;
       const wasNum = t.num;
       freshTicket();
@@ -1398,7 +1480,7 @@
               </div>`;
             }).join('')}
             <button class="ph-gross-send" id="ph-gross-send" ${grossCount ? '' : 'disabled'}>
-              <i data-lucide="send"></i>Envoyer la commande${grossCount ? ` · ${grossCount} réf.` : ''}
+              <i data-lucide="file-plus-2"></i>Préparer le bon${grossCount ? ` · ${grossCount} réf.` : ''}
             </button>
           </div>
         </div>
@@ -1418,9 +1500,23 @@
       const refs = Object.entries(state.gross).filter(([, q]) => q > 0);
       if (!refs.length) return;
       const units = refs.reduce((s, [, q]) => s + q, 0);
-      refs.forEach(([id]) => { state.gross[id] = 0; });
-      queueIfOffline('Commande grossiste');
-      toast(`Commande envoyée à CoopharMa, ${refs.length} réf. · ${units} unités · livraison J+1`, 2800);
+      const lines = refs.map(([id, qty]) => ({ itemId: id, name: ITEMS[id].label, qty, unit: ITEMS[id].unit || 'boîte', unitCost: 0 }));
+      const P = window.KiwiProcurement;
+      let message = ['Bonjour,', 'Demande de disponibilité pharmacie', ...lines.map((line) => `• ${line.name} — ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
+      let order = null;
+      if (P) {
+        let supplier = P.doc().suppliers.find((row) => row.name === 'CoopharMa');
+        if (!supplier) supplier = P.addSupplier({ name: 'CoopharMa', leadDays: 1 });
+        if (P.isUltra() && supplier) {
+          order = P.createOrder({ supplierId: supplier.id, lines, note: 'Commande pharmacie à confirmer au grossiste' });
+          if (order && !order.error) message = P.message(order.id) || message;
+        }
+      }
+      navigator.clipboard?.writeText?.(message).catch(() => {});
+      queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste grossiste');
+      toast(order && !order.error
+        ? `${order.number} créé en brouillon, texte copié · ${refs.length} réf. · ${units} unités`
+        : `Liste grossiste copiée, ${refs.length} réf. · ${units} unités`, 3200);
       renderStock(); renderBadges(); icons();
     };
     icons();

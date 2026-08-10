@@ -33,7 +33,40 @@
   /* A real session is the hosted app or any signed-in merchant (window.KiwiMe).
      In a real session we never surface the demo cast (Rachid · Café Atlas ·
      Mehdi Alami), the demo revenue, or the demo Kiwi-account balance. */
-  const isReal = () => !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+  const pairedVenue = () => {
+    try {
+      const P = window.KiwiCaissePairing;
+      const pv = P?.pairedVenue?.();
+      if (P?.isPaired?.() && pv?.merchant) return pv;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('kiwiPaired') !== '1') return null;
+      const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return pv?.merchant ? pv : null;
+    } catch (_) { return null; }
+  };
+  const isReal = () => !!(window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.() || pairedVenue());
+  const hasOwnVenue = (venue) => {
+    try { return !!window.KiwiVenue?.isCustom?.(venue); } catch (_) { return false; }
+  };
+  const ownTotals = (venue, range) => {
+    /* A built-in id during the identity/pairing gap still points at the demo
+       tenant. Reading it would be worse than displaying zero. */
+    if (!isReal() || !hasOwnVenue(venue) || !window.KiwiSales?.totals) return null;
+    let bounds = null;
+    try { bounds = window.KiwiDateRange?.bounds?.(range); } catch (_) {}
+    try { return window.KiwiSales.totals(venue, bounds?.[0], bounds?.[1]) || null; } catch (_) { return null; }
+  };
+  const ownSales = (venue, range) => {
+    if (!isReal() || !hasOwnVenue(venue) || !window.KiwiSales?.list) return [];
+    let bounds = [-Infinity, Infinity];
+    try { bounds = window.KiwiDateRange?.bounds?.(range) || bounds; } catch (_) {}
+    try {
+      return (window.KiwiSales.list(venue) || [])
+        .filter((s) => (+s?.ts || 0) >= bounds[0] && (+s?.ts || 0) < bounds[1])
+        .sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
+    } catch (_) { return []; }
+  };
   const meAvatar = () => {
     const nm = ((window.KiwiMe || {}).name || '').trim();
     if (nm) return ((nm.split(/\s+/)[0] || '')[0] + ((nm.split(/\s+/)[1] || '')[0] || '')).toUpperCase();
@@ -47,17 +80,21 @@
        Figures come from the merchant's own sales when we have them, else zero.
        Local demo (no real session) keeps the full pitch screen. */
     const me = window.KiwiMe || {};
-    const real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+    const real = isReal();
     const nm = (me.name || '').trim();
     const first = nm ? nm.split(/\s+/)[0] : (real ? '' : 'Rachid');
     const av = nm ? ((nm.split(/\s+/)[0] || '')[0] + ((nm.split(/\s+/)[1] || '')[0] || '')).toUpperCase() : (real ? '·' : 'RB');
-    const shop = me.business || (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (real ? '' : 'Café Atlas · Maarif');
+    const pv = pairedVenue();
+    const venueShop = window.KiwiVenue?.isCustom?.()
+      ? ((window.KiwiVenue.getCurrentVenueData?.() || {}).fullDisplay || '') : '';
+    const shop = me.business || venueShop || (pv && pv.name) || (real ? 'Votre établissement' : 'Café Atlas · Maarif');
     const vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
-    const tot = real && window.KiwiSales && window.KiwiSales.totals ? (window.KiwiSales.totals(vid) || {}) : null;
-    const heroAmt = real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/,/g, ' ') : '24 380';
+    const tot = ownTotals(vid, 'aujourdhui');
+    const recent = real ? ownSales(vid, 'aujourdhui').slice(-5).reverse() : [];
+    const heroAmt = real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/[  ]/g, ' ') : '24 380';
     const heroCount = real ? Number(tot && tot.count || 0) : 182;
-    const payoutMeta = real ? 'Après tes premières ventes' : '23 091 MAD sur Bank of Africa •• 3291';
-    const payoutWhen = real ? 'À venir' : 'Demain matin, 9h';
+    const payoutMeta = real ? 'Aucune source de règlement disponible' : '23 091 MAD sur Bank of Africa •• 3291';
+    const payoutWhen = real ? '—' : 'Demain matin, 9h';
     return `
     <div class="simple-screen">
       <div class="simple-top">
@@ -121,7 +158,16 @@
           <div class="h">Derniers paiements</div>
           <button class="link-atlas" data-simple-tab="flousi">Tout voir</button>
         </div>
-        ${real ? `<div class="simple-tx-empty" style="color:var(--n-500); font-size:13.5px; padding:14px 4px;">Aucun paiement pour le moment.</div>` : [
+        ${real ? (recent.length ? recent.map((s) => {
+          const method = ({ cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', link: 'Lien de paiement' })[String(s.method || '')] || 'Paiement';
+          const when = new Date(+s.ts || 0).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const amount = Math.max(0, +s.amount || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+          return `<div class="simple-tx">
+            <div class="av">P</div>
+            <div class="body"><div class="name">Paiement</div><div class="meta">${method} · ${when}</div></div>
+            <div class="amt">+${amount} MAD</div>
+          </div>`;
+        }).join('') : `<div class="simple-tx-empty" style="color:var(--n-500); font-size:13.5px; padding:14px 4px;">Aucun paiement pour le moment.</div>`) : [
           ['Karim B.', 240, 'Visa · il y a 5 min', '+24 pourboire'],
           ['Sara L.', 85.5, 'Mastercard · 22 min', ''],
           ['Youssef A.', 312, 'Visa · 40 min', '+30 pourboire'],
@@ -145,15 +191,27 @@
   /* ═══ FLOUSI (My money) ═══ */
   SIMPLE_PAGES.flousi = () => {
     /* Real session → never surface the demo week (24 380…), the demo Kiwi-account
-       balance (47 281,90) or the demo "RB" avatar. The weekly total comes from the
-       merchant's own sales when we have them, else zero; the day-by-day history
-       needs a real per-day feed we don't have yet, so it shows an empty state.
-       Local demo (no real session) keeps the full pitch screen, byte-identical. */
+       balance (47 281,90) or the demo "RB" avatar. Both the weekly total and its
+       day rows come from the merchant's own KiwiSales feed. */
     const real = isReal();
     const av = meAvatar();
     const vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
-    const tot = real && window.KiwiSales && window.KiwiSales.totals ? (window.KiwiSales.totals(vid) || {}) : null;
-    const days = real ? [] : [
+    const tot = ownTotals(vid, 'septJours');
+    const realSales = real ? ownSales(vid, 'septJours') : [];
+    const days = real ? Array.from({ length: 7 }, (_, offset) => {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offset);
+      const next = new Date(d); next.setDate(next.getDate() + 1);
+      const amount = realSales.reduce((sum, s) => {
+        const ts = +s.ts || 0;
+        return sum + (ts >= d.getTime() && ts < next.getTime() ? Math.max(0, +s.amount || 0) : 0);
+      }, 0);
+      return {
+        date: offset === 0 ? "Aujourd'hui" : offset === 1 ? 'Hier' : d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+        sub: d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
+        amt: amount.toLocaleString('fr-FR', { maximumFractionDigits: 2 }),
+        pending: offset === 0,
+      };
+    }) : [
       { date: "Aujourd'hui", sub: 'Vendredi 24 avril', amt: '24 380', pending: true },
       { date: 'Hier', sub: 'Jeudi 23 avril', amt: '19 824' },
       { date: 'Mercredi', sub: '22 avril', amt: '17 290' },
@@ -177,13 +235,13 @@
 
         <div class="lyoum-hero">
           <div class="eyebrow">TOTAL CETTE SEMAINE</div>
-          <div class="amount" style="font-size: 60px;">${total.toLocaleString('fr-FR').replace(/,/g,' ')}<span class="unit">MAD</span></div>
+          <div class="amount" style="font-size: 60px;">${total.toLocaleString('fr-FR').replace(/[  ]/g,' ')}<span class="unit">MAD</span></div>
           ${real ? '' : '<div class="count">+18 % vs semaine dernière</div>'}
         </div>
 
         <div class="compte-simple">
           <div class="compte-label">Solde de mon compte Kiwi</div>
-          <div class="compte-amt">${real ? '0,00' : '47 281,90'} <span>MAD</span></div>
+          <div class="compte-amt">${real ? '—' : '47 281,90'} <span>MAD</span></div>
           <div class="compte-actions">
             <button class="chip-btn" data-simple-action="compte">Voir détails</button>
             <button class="chip-btn" data-simple-action="transfer">Virer</button>
@@ -192,7 +250,7 @@
 
         <div class="simple-section">
           <div class="h">Jour par jour</div>
-          ${real ? `<div class="simple-tx-empty" style="color:var(--n-500); font-size:13.5px; padding:14px 4px;">Pas encore d'historique. Tes ventes s'afficheront ici jour par jour.</div>` : `<div class="flousi-week">
+          ${real && !realSales.length ? `<div class="simple-tx-empty" style="color:var(--n-500); font-size:13.5px; padding:14px 4px;">Pas encore d'historique. Tes ventes s'afficheront ici jour par jour.</div>` : `<div class="flousi-week">
             ${days.map(d => `
               <div class="flousi-day">
                 <div class="date">${d.date}<span class="sub">${d.sub}${d.pending ? ' · en cours' : ' · reçu'}</span></div>

@@ -38,6 +38,17 @@
   function isPaired() { return ls('kiwiPaired') === '1'; }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
+  /* Tenant data leaves with the pairing; hardware identity stays with the
+     physical till. KiwiTenantPurge quite correctly removes every `kiwi:` key,
+     so preserve the POS device suffix explicitly around that shared purge. */
+  function purgeTenantData() {
+    var deviceTag = ls('kiwi:posDevice');
+    try {
+      if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
+    } catch (_) {}
+    if (deviceTag) set('kiwi:posDevice', deviceTag);
+  }
+
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
   // browser, having named the store in kiwiPairHandoff (caisse-link.js handOff).
   function wantsPair() { try { return /[?&]pair=1\b/.test(location.search || ''); } catch (_) { return false; } }
@@ -153,9 +164,7 @@
            Purge AVANT d'écrire kiwiLiveMerchant : la règle balaye tout ce qui
            commence par « kiwi: », et l'ordre inverse effacerait l'appairage
            qu'on vient de poser. */
-        try {
-          if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
-        } catch (_) {}
+        purgeTenantData();
       }
     } catch (_) {}
     set('kiwiLiveMerchant', venue.merchant);
@@ -205,7 +214,10 @@
   }
 
   function unpair() {
-    ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'].forEach(del);
+    /* Unpairing used to delete only four binding keys. Pairing a different
+       merchant afterwards then saw no `was` venue and skipped the cross-tenant
+       purge, exposing the previous sales/menu/customers on the new till. */
+    purgeTenantData();
     window.__kiwiPairedBoutiqueVenue = null;
     setStaff(null);                     // this device is nobody's till any more
     try { if (window.KiwiPosDispatch && window.KiwiPosDispatch.lock) window.KiwiPosDispatch.lock(); } catch (_) {}
@@ -214,6 +226,7 @@
 
   /* ── the 6-digit pairing pad (reuses .pin-screen / .pin-pad CSS) ────────── */
   var buf = '';
+  var pairSubmitting = false;
   function hideNativePin() { var n = document.getElementById('pin-screen'); if (n) n.style.display = 'none'; }
   function dotsHtml() {
     var out = '';
@@ -273,6 +286,7 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
   function feed(d) {
+    if (pairSubmitting) return;
     if (d === 'clear') { buf = ''; }
     else if (d === 'back') { buf = buf.slice(0, -1); }
     else if (/^[0-9]$/.test(d) && buf.length < 6) { buf += d; }
@@ -280,9 +294,11 @@
     if (buf.length === 6) submit();
   }
   function submit() {
+    if (pairSubmitting) return;
+    pairSubmitting = true;
     var code = buf;
     redeem(code).then(function (res) {
-      if (res && res.ok) { hidePad(); bootWithPin(res.venue); return; }
+      if (res && res.ok) { pairSubmitting = false; hidePad(); bootWithPin(res.venue); return; }
       var scr = document.getElementById('cp-screen');
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
       /* "too_many_attempts" is the server's brute-force cap (429). Say so
@@ -293,6 +309,11 @@
           : res && res.error === 'expired' ? 'Code expiré, régénérez-en un.'
           : 'Code invalide.');
       buf = ''; renderDots();
+      pairSubmitting = false;
+    }).catch(function () {
+      pairSubmitting = false;
+      buf = ''; renderDots();
+      toast('Connexion impossible. Réessayez.');
     });
   }
   function toast(msg) {
@@ -306,9 +327,9 @@
    * Pairing binds the DEVICE to a store; it must not also authenticate the
    * PERSON. Before the register becomes usable, require one of the store's staff
    * PINs — the same PINs the dashboard lock validates, served by
-   * /api/config?merchant=slug. Fail-soft: a store with no PINs configured, or an
-   * unreachable endpoint (offline / local, no backend), boots straight through so
-   * a real merchant can never be locked out of their own till. */
+   * /api/config?merchant=slug. An explicitly empty list may open without a PIN,
+   * but an unreachable or malformed response is UNKNOWN, not "no PINs": the till
+   * stays locked and offers a retry. */
   var pinBuf = '';
   var pinVenue = null;
   var pinList = null;   // [{pin,name,role}] once fetched
@@ -346,14 +367,16 @@
   catch (_) { window.KiwiStaff = null; }
   function keyP(n) { return '<button class="pin-key" data-cpp="' + n + '">' + n + '</button>'; }
   function pinsFor(merchant) {
-    if (!merchant) return Promise.resolve({ pins: [], required: false });
+    if (!merchant) return Promise.reject(new Error('merchant-missing'));
     return fetch('/api/config?merchant=' + encodeURIComponent(merchant), { headers: { Accept: 'application/json' } })
-      .then(function (r) { return (r && r.ok) ? r.json() : null; })
-      .then(function (d) { return {
-        pins: (d && Array.isArray(d.pins)) ? d.pins : [],
-        required: !!(d && d.pinGateConfigured),
-      }; })
-      .catch(function () { return { pins: [], required: false }; });
+      .then(function (r) {
+        if (!r || !r.ok) throw new Error('pin-config-unavailable');
+        return r.json();
+      })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.pins)) throw new Error('pin-config-invalid');
+        return { pins: d.pins, required: !!d.pinGateConfigured };
+      });
   }
   // Gate a fresh register entry behind a staff PIN, then bootVertical. The single
   // choke point every entry path (redeem, ?pair=1, resume, already-paired boot)
@@ -365,6 +388,9 @@
       if (!pins.length && !(gate && gate.required)) { if (onNoPins) onNoPins(); return; }
       pinVenue = venue; pinList = pins; pinBuf = '';
       showPinPad(venue);
+    }).catch(function () {
+      pinVenue = venue; pinList = null; pinBuf = '';
+      showPinLoadError(venue);
     });
   }
   function bootWithPin(venue) {
@@ -444,6 +470,26 @@
         : 'Code personnel géré depuis votre tableau de bord Kiwi') + '</div>';
     renderPinDots();
   }
+  function showPinLoadError(venue) {
+    injectCss(); hidePad(); hideNativePin();
+    var scr = document.getElementById('cp-pin-screen');
+    if (!scr) {
+      scr = document.createElement('div');
+      scr.className = 'pin-screen';
+      scr.id = 'cp-pin-screen';
+      scr.setAttribute('role', 'alertdialog');
+      scr.setAttribute('aria-modal', 'true');
+      document.body.appendChild(scr);
+    }
+    scr.style.display = '';
+    scr.innerHTML =
+      '<div class="pin-brand" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>' +
+      '<div class="pin-greet">' + esc((venue && venue.name) || 'Votre magasin') + '</div>' +
+      '<div class="pin-prompt">VÉRIFICATION INDISPONIBLE</div>' +
+      '<p style="max-width:360px;text-align:center;color:rgba(247,245,240,.72);line-height:1.55;margin:0 auto 18px">Impossible de vérifier les codes de l’équipe. La caisse reste verrouillée pour protéger votre établissement.</p>' +
+      '<button class="pin-key" id="cp-pin-retry" style="width:auto;padding:0 24px">Réessayer</button>' +
+      '<div class="pin-foot">Vérifiez la connexion, puis réessayez.</div>';
+  }
   function feedPin(d) {
     if (d === 'clear') { pinBuf = ''; }
     else if (d === 'back') { pinBuf = pinBuf.slice(0, -1); }
@@ -486,6 +532,7 @@
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
   document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'cp-pin-retry') { askStaff(pinVenue || pairedVenue(), null); return; }
     var k = e.target.closest && e.target.closest('#cp-pad [data-cp]');
     if (k) { feed(k.getAttribute('data-cp')); return; }
     var kp = e.target.closest && e.target.closest('#cp-pin-pad [data-cpp]');
@@ -573,6 +620,15 @@
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
+    authorizeManager: function (code) {
+      code = String(code || '');
+      if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;
+      return pinList.some(function (p) {
+        var same = String((p && (p.pin || p.code)) || '') === code;
+        var role = String((p && p.role) || '').toLowerCase();
+        return same && /owner|propri|manager|g[eé]rant|responsable|admin/.test(role);
+      });
+    },
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

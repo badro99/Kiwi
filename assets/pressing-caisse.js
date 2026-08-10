@@ -56,6 +56,30 @@
   const fmtDT   = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const fmtDay  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
   const H = 3600 * 1000;
+  const MAX_QTY = 99;
+
+  /* Morocco accepts local 05/06/07 numbers and the same numbers written with
+   * +212, 00212 or a bare 212.  A named customer must have a reachable number;
+   * the explicit guest path remains the correct choice when there is none. */
+  function normalizeMoroccanPhone(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw || /[A-Za-z]/.test(raw)) return '';
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('00212')) digits = '0' + digits.slice(5);
+    else if (digits.startsWith('212')) digits = '0' + digits.slice(3);
+    else if (/^[5-7]\d{8}$/.test(digits)) digits = '0' + digits;
+    if (!/^0[5-7]\d{8}$/.test(digits)) return '';
+    return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+  }
+  const phoneDigits = (value) => (normalizeMoroccanPhone(value) || String(value || '')).replace(/\D/g, '');
+  const whatsappPhone = (value) => {
+    const local = normalizeMoroccanPhone(value);
+    return local ? '212' + local.replace(/\D/g, '').slice(1) : '';
+  };
+  const clampQty = (value) => Math.max(1, Math.min(MAX_QTY, Math.floor(Number(value) || 1)));
+  const validDeposit = (value, total) => Number.isFinite(+value) && +value >= 10 && +value <= +total;
+  const validReady = (value, now) => !!value && typeof value.getTime === 'function'
+    && Number.isFinite(value.getTime()) && value.getTime() > +(now || Date.now());
 
   function toast(msg, ms) {
     const stack = $('#toast-stack');
@@ -68,17 +92,30 @@
     setTimeout(() => el.remove(), (ms || 2200) + 280);
   }
 
-  /* Deterministic pseudo-barcode (Code-39 lookalike) from a tag id. */
+  /* Real Code 39: the printed garment id can be read by an inexpensive USB or
+   * Bluetooth scanner instead of merely looking like a barcode. */
+  const CODE39 = {
+    '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw',
+    '5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+    A:'wnnnnwnnw',B:'nnwnnwnnw',C:'wnwnnwnnn',D:'nnnnwwnnw',E:'wnnnwwnnn',F:'nnwnwwnnn',
+    G:'nnnnnwwnw',H:'wnnnnwwnn',I:'nnwnnwwnn',J:'nnnnwwwnn',K:'wnnnnnnww',L:'nnwnnnnww',
+    M:'wnwnnnnwn',N:'nnnnwnnww',O:'wnnnwnnwn',P:'nnwnwnnwn',Q:'nnnnnnwww',R:'wnnnnnwwn',
+    S:'nnwnnnwwn',T:'nnnnwnwwn',U:'wwnnnnnnw',V:'nwwnnnnnw',W:'wwwnnnnnn',X:'nwnnwnnnw',
+    Y:'wwnnwnnnn',Z:'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','*':'nwnnwnwnn',
+  };
   function barcode(seed, h) {
     h = h || 30;
-    let bars = '', x = 0, s = 7;
-    const len = Math.max(seed.length * 4, 26);
-    for (let i = 0; i < len; i++) {
-      s = (s * 31 + seed.charCodeAt(i % seed.length) + i * 11) % 97;
-      const w = 1 + (s % 3);
-      bars += `<rect x="${x}" y="0" width="${w}" height="${h}"></rect>`;
-      x += w + 1 + ((s >> 3) % 2);
-    }
+    const text = String(seed || '').toUpperCase().replace(/[^0-9A-Z. -]/g, '-');
+    let bars = '', x = 0;
+    (`*${text}*`).split('').forEach((ch) => {
+      const pattern = CODE39[ch] || CODE39['-'];
+      pattern.split('').forEach((width, i) => {
+        const w = width === 'w' ? 3 : 1;
+        if (i % 2 === 0) bars += `<rect x="${x}" y="0" width="${w}" height="${h}"></rect>`;
+        x += w;
+      });
+      x += 1; /* narrow inter-character gap */
+    });
     return `<svg viewBox="0 0 ${x} ${h}" preserveAspectRatio="none" style="height:${h}px" fill="currentColor" aria-hidden="true">${bars}</svg>`;
   }
 
@@ -207,7 +244,7 @@
     lines.forEach((ln, li) => {
       const item = ITEMS[ln.itemId];
       const labels = (item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).pieces) || null;
-      for (let q = 0; q < ln.qty; q++) {
+      for (let q = 0; q < clampQty(ln.qty); q++) {
         (labels || [null]).forEach((plabel) => {
           n++;
           pieces.push({
@@ -217,6 +254,7 @@
             notes: (ln.notes || []).slice(), freeNote: ln.freeNote || '',
             status: (statuses && statuses[n - 1]) || 'recu',
             photos: ln.photos || 0,
+            photoData: Array.isArray(ln.photoData) ? ln.photoData : [],
           });
         });
       }
@@ -237,6 +275,35 @@
     const remise = o.b2b ? Math.round(sub * B2B_REMISE) : 0;
     return { sub, remise, total: sub - remise };
   }
+  /* Snapshot the operational truth that already exists on the pressing ticket.
+   * Payments can be deposits or balances, so line totals are allocated pro-rata
+   * to the money received in THIS sale event; recording the full garment value
+   * at both deposit and pickup would double product revenue. */
+  function saleLines(o, received) {
+    if (!o || !Array.isArray(o.lines)) return [];
+    const full = orderTotals(o).total;
+    const factor = full > 0 ? Math.max(0, +received || 0) / full : 0;
+    let allocated = 0;
+    return o.lines.map((ln, idx) => {
+      const item = ITEMS[ln.itemId] || { label: 'Article', cat: '' };
+      const raw = lineTotal(ln) * (o.b2b ? (1 - B2B_REMISE) : 1) * factor;
+      const total = idx === o.lines.length - 1
+        ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
+        : Math.max(0, Math.round(raw * 100) / 100);
+      allocated += total;
+      return {
+        itemId: ln.itemId,
+        variantId: ln.variantId || '',
+        name: item.label,
+        cat: item.cat || '',
+        kind: 'service',
+        unit: 'piece',
+        qty: ln.qty,
+        total,
+        options: (ln.services || []).map((id) => ({ id, qty: ln.qty })),
+      };
+    });
+  }
   function orderStatus(o) {
     const st = o.pieces.map((p) => p.status);
     if (st.every((s) => s === 'livre')) return 'livre';
@@ -254,7 +321,7 @@
     const o = {
       id: cfg.id, custId: cfg.custId || null, guest: cfg.guest || null,
       b2b: !!(cfg.custId && CUST[cfg.custId] && CUST[cfg.custId].b2b),
-      lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: l[2], color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
+      lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: clampQty(l[2]), color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
       droppedAt: new Date(NOW - cfg.droppedH * H),
       readyAt:   new Date(NOW + cfg.readyH * H),
       pay: cfg.pay,           /* {mode:'now'|'acompte'|'pickup'|'compte', method, paid} */
@@ -334,6 +401,29 @@
     offline: false, queued: 0,
     unlocked: false,
   };
+  /* Operational state survives reloads and follows the paired pressing. UI
+     filters/modals stay local; only customers, orders, rack allocation, the
+     open intake ticket and numbering are mirrored. */
+  const pressingOps = window.KiwiVerticalState?.open?.('pressing', {
+    schema: 1,
+    snapshot: () => ({ customers: CUSTOMERS, orders: ORDERS, rackSlots, ticketSeq, ticket: state.ticket }),
+    restore: (d) => {
+      CUSTOMERS.splice(0, CUSTOMERS.length, ...((d.customers || []).map((c) => c)));
+      Object.keys(CUST).forEach((k) => delete CUST[k]); CUSTOMERS.forEach((c) => { if (c?.id) CUST[c.id] = c; });
+      const orders = (d.orders || []).map((o) => {
+        (o.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
+        o.droppedAt = new Date(o.droppedAt); o.readyAt = new Date(o.readyAt);
+        o.collectedAt = o.collectedAt ? new Date(o.collectedAt) : null; return o;
+      });
+      ORDERS.splice(0, ORDERS.length, ...orders);
+      Object.keys(rackSlots).forEach((k) => delete rackSlots[k]);
+      Object.assign(rackSlots, d.rackSlots || {});
+      ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0);
+      state.ticket = d.ticket || null;
+      if (state.ticket?.ready) state.ticket.ready = new Date(state.ticket.ready);
+      (state.ticket?.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
+    },
+  });
   function freshTicket() {
     state.ticket = { num: posRef(`P-${ticketSeq}`), lines: [], customer: null, ready: suggestReady() };
   }
@@ -520,6 +610,8 @@
     } catch (_) {}
   }
   function queueIfOffline(label) {
+    pressingOps?.save?.(label || 'operation');
+    state.offline = browserOffline();
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -544,9 +636,9 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -561,6 +653,7 @@
    * d'entrée et le verrouillage appartiennent au dispatcher. */
   let root = null;
   function build(rootEl) {
+    pressingOps?.hydrate?.();
     root = rootEl;
     root.classList.add('px-screen');
     root.innerHTML = `
@@ -578,7 +671,7 @@
           <button class="px-nav-it" data-px-view="tarifs">${materialIcon('prices')}<span>Services &amp; tarifs</span></button>
         </nav>
         <div class="px-rail-foot">
-          <button class="px-net" id="px-net" title="Simuler une coupure réseau">
+          <button class="px-net" id="px-net" title="État réseau détecté par cet appareil">
             <i class="px-net-dot"></i><span class="px-net-label">En ligne</span>
           </button>
           <button class="px-lock" id="px-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
@@ -586,7 +679,7 @@
       </aside>
       <main class="px-main">
         <div class="px-offline-note" id="px-offline-note" hidden>
-          Hors-ligne, les actions sont enregistrées sur la tablette et synchronisées au retour du réseau.
+          Hors-ligne, les changements restent sur cette tablette et seront reproposés au retour du réseau.
           <b id="px-queue-count"></b>
         </div>
         <section class="px-view is-on" data-px-panel="comptoir">
@@ -623,7 +716,11 @@
     $('#px-net', root).addEventListener('click', toggleOffline);
     /* fermer un modal en cliquant le voile */
     $$('.modal-veil', root).forEach((v) => {
-      v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
+      v.addEventListener('click', (e) => {
+        if (e.target !== v) return;
+        if (v.id === 'px-scan-veil') stopScanner();
+        closeVeil(v);
+      });
     });
   }
 
@@ -637,6 +734,7 @@
    * l'état du comptoir. */
   function enter() {
     state.unlocked = true;
+    state.offline = browserOffline();
     if (!state.ticket) freshTicket();
     /* A dashboard quick action can ask the till to land directly on Retrait or
        Rangement after the operator unlocks it. One-shot session state: it does
@@ -824,7 +922,10 @@
       const idx = minus ? +minus.dataset.pxMinus : plus ? +plus.dataset.pxPlus : -1;
       if (idx < 0) return;
       const ln = t.lines[idx];
-      if (plus) ln.qty++;
+      if (plus) {
+        if (ln.qty >= MAX_QTY) { toast(`Maximum ${MAX_QTY} pièces par ligne`); return; }
+        ln.qty++;
+      }
       else { ln.qty--; if (ln.qty <= 0) t.lines.splice(idx, 1); }
       renderTicket(); icons();
     };
@@ -856,7 +957,7 @@
   }
 
   /* ═══════════════════════ CONFIG SHEET ═══════════════════════ */
-  const sheet = { itemId: null, services: [], variantId: null, qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0 };
+  const sheet = { itemId: null, services: [], variantId: null, qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0, photoData: [] };
 
   function defaultService(item, variantId) {
     const avail = availServices(item, variantId);
@@ -868,7 +969,7 @@
     Object.assign(sheet, {
       itemId,
       variantId: item.variants ? item.variants[0].id : null,
-      services: [], qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0,
+      services: [], qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0, photoData: [],
     });
     sheet.services = [defaultService(item, sheet.variantId)];
     renderSheet();
@@ -940,7 +1041,7 @@
       <div class="px-f">
         <div class="px-f-lbl">État à la dépose <span class="opt">· la photo protège le client et vous</span></div>
         <div class="px-photos" id="px-photos">
-          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${garmentIcon(item)}<b>${k + 1}</b></span>`).join('')}
+          ${(sheet.photoData || []).map((photo, k) => `<span class="px-photo-thumb"><img src="${photo.dataUrl}" alt="État ${k + 1}"><b>${k + 1}</b></span>`).join('')}
           <button class="px-photo-add" id="px-photo-add"><i data-lucide="camera"></i>Photo état</button>
         </div>
       </div>
@@ -990,7 +1091,10 @@
       if (window.KiwiLens) KiwiLens.rescan();
     };
     $('#px-qty-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
-    $('#px-qty-plus', el).onclick = () => { sheet.qty++; refreshPrice(); };
+    $('#px-qty-plus', el).onclick = () => {
+      if (sheet.qty >= MAX_QTY) { toast(`Maximum ${MAX_QTY} pièces par ligne`); return; }
+      sheet.qty++; refreshPrice();
+    };
     $('#px-colors', el).onclick = (e) => {
       const b = e.target.closest('[data-px-color]');
       if (!b) return;
@@ -1019,8 +1123,9 @@
   function addSheetToTicket() {
     state.ticket.lines.push({
       itemId: sheet.itemId, variantId: sheet.variantId, services: sheet.services.slice(),
-      qty: sheet.qty, color: sheet.color, notes: sheet.notes.slice(), freeNote: sheet.freeNote.trim(),
-      photos: sheet.photos,
+      qty: clampQty(sheet.qty), color: sheet.color, notes: sheet.notes.slice(), freeNote: sheet.freeNote.trim(),
+      photos: (sheet.photoData || []).length,
+      photoData: (sheet.photoData || []).slice(),
     });
     closeVeil('#px-sheet-veil');
     const item = ITEMS[sheet.itemId];
@@ -1028,7 +1133,7 @@
     renderTicket(); icons();
   }
 
-  /* condition photo — mock capture */
+  /* Condition photo — native camera/file picker, then a compact local proof. */
   function openPhoto() {
     const item = ITEMS[sheet.itemId];
     const el = $('#px-photom', root);
@@ -1045,17 +1150,23 @@
         <button class="px-vf-close" id="px-vf-close">Fermer</button>
       </div>`;
     openVeil('#px-photo-veil');
-    $('#px-shutter', el).onclick = () => {
-      $('#px-vf-flash', el).classList.remove('go');
-      void $('#px-vf-flash', el).offsetWidth;
-      $('#px-vf-flash', el).classList.add('go');
-      sheet.photos++;
-      setTimeout(() => {
-        closeVeil('#px-photo-veil');
-        renderSheet(); icons();
-        if (window.KiwiLens) KiwiLens.rescan();
-        toast(`Photo état ${sheet.photos} enregistrée, jointe à la pièce`);
-      }, 420);
+    $('#px-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 640, quality: 0.58 });
+        if (!photo) return;
+        const flash = $('#px-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        sheet.photoData = sheet.photoData || [];
+        sheet.photoData.push(photo);
+        sheet.photos = sheet.photoData.length;
+        setTimeout(() => {
+          closeVeil('#px-photo-veil');
+          renderSheet(); icons();
+          if (window.KiwiLens) KiwiLens.rescan();
+          toast(`Photo état ${sheet.photos} enregistrée, jointe à la pièce`);
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#px-vf-close', el).onclick = () => closeVeil('#px-photo-veil');
   }
@@ -1065,10 +1176,10 @@
     const el = $('#px-clientm', root);
     let mode = 'search';
     const render = (q) => {
-      const digits = (q || '').replace(/\D/g, '');
+      const digits = phoneDigits(q);
       const ql = (q || '').toLowerCase();
       const hits = !q ? CUSTOMERS : CUSTOMERS.filter((c) =>
-        (digits && c.phone.replace(/\D/g, '').includes(digits)) ||
+        (digits && phoneDigits(c.phone).includes(digits)) ||
         (!digits && c.name.toLowerCase().includes(ql)));
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1096,7 +1207,7 @@
           </div>` : `
           <div class="px-cl-form">
             <input class="px-in" id="px-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="px-in" id="px-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="px-in" id="px-cl-tel" inputmode="tel" placeholder="Téléphone marocain · 06…, 07…, 05… ou +212" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
             <div class="px-sheet-foot" style="margin-top:4px;">
               <button class="px-btn secondary" id="px-cl-back">Retour</button>
               <button class="px-btn primary" id="px-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -1126,13 +1237,17 @@
       const create = $('#px-cl-create', el);
       if (create) create.onclick = () => {
         const name = $('#px-cl-name', el).value.trim();
-        const tel = $('#px-cl-tel', el).value.trim();
+        const tel = normalizeMoroccanPhone($('#px-cl-tel', el).value);
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
+        if (!tel) { toast('Téléphone marocain valide requis · utilisez « passage » si le client n’en a pas'); return; }
+        const existing = CUSTOMERS.find((c) => phoneDigits(c.phone) === phoneDigits(tel));
+        if (existing) { toast(`Ce numéro appartient déjà à ${existing.name}`); return; }
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
         CUSTOMERS.unshift(c); CUST[id] = c;
         persistPressing();
         state.ticket.customer = { type: 'known', id };
+        pressingOps?.save?.('customer-created');
         closeVeil('#px-client-veil');
         toast(`Fiche créée, ${name}`);
         renderTicket(); icons();
@@ -1180,10 +1295,10 @@
       <h3 class="modal-title">Prêt pour quand ?</h3>
       <p class="modal-subtle">La date de retrait s'imprime sur le ticket et sert d'alerte au tableau.</p>
       <div class="px-date-chips">
-        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}"><b>${esc(o.label)}</b><span>${esc(o.sub)}</span></button>`).join('')}
+        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" ${validReady(o.d) ? '' : 'disabled'}><b>${esc(o.label)}</b><span>${esc(validReady(o.d) ? o.sub : 'horaire dépassé')}</span></button>`).join('')}
       </div>
       <div class="px-date-custom">
-        <input class="px-in" id="px-date-input" type="datetime-local" value="${localDT(state.ticket.ready)}" />
+        <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
         <button class="px-btn primary" id="px-date-ok" style="flex:0 0 auto;">OK</button>
       </div>`;
     openVeil('#px-date-veil');
@@ -1191,14 +1306,18 @@
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-date-veil'); });
     $$('[data-px-d]', el).forEach((b) => {
       b.onclick = () => {
-        state.ticket.ready = opts[+b.dataset.pxD].d;
+        const ready = opts[+b.dataset.pxD].d;
+        if (!validReady(ready)) { toast('Choisissez une date de retrait dans le futur'); return; }
+        state.ticket.ready = ready;
         closeVeil('#px-date-veil');
         renderTicket(); icons();
       };
     });
     $('#px-date-ok', el).onclick = () => {
       const v = $('#px-date-input', el).value;
-      if (v) state.ticket.ready = new Date(v);
+      const ready = v ? new Date(v) : null;
+      if (!validReady(ready)) { toast('La date promise doit être dans le futur'); return; }
+      state.ticket.ready = ready;
       closeVeil('#px-date-veil');
       renderTicket(); icons();
     };
@@ -1212,6 +1331,7 @@
     const t = state.ticket;
     if (!t.lines.length) return;
     if (!t.customer) { openClient(); toast("Attachez d'abord le client (ou « passage »)"); return; }
+    if (!validReady(t.ready)) { openDate(); toast('Choisissez une date de retrait dans le futur'); return; }
     const order = {
       id: t.num,
       custId: t.customer.type === 'known' ? t.customer.id : null,
@@ -1397,6 +1517,7 @@
   }
 
   /* ═══════════════════════ PAYMENT — now / acompte / pickup / compte ═══════════════════════ */
+  const paymentCommits = new Set();
   function openPay(order, ctx) {
     const el = $('#px-paym', root);
     const { total } = orderTotals(order);
@@ -1405,6 +1526,19 @@
     const fresh = ctx && ctx.fresh;
     const settle = ctx && ctx.settle;          /* encaisser un solde existant */
     const amountBase = settle ? due : total;
+    const commitKey = settle ? `settle:${order.id}:${order.pay.paid}` : `fresh:${order.id}`;
+    let committed = false;
+    let authorizationPending = false;
+    const closePay = () => {
+      if (authorizationPending) { toast('Paiement carte en cours · attendez la réponse du lecteur'); return; }
+      closeVeil('#px-pay-veil');
+    };
+    const beginCommit = () => {
+      if (committed || paymentCommits.has(commitKey)) return false;
+      committed = true;
+      paymentCommits.add(commitKey);
+      return true;
+    };
 
     const step1 = () => {
       el.innerHTML = `
@@ -1419,9 +1553,9 @@
             <span class="l"><b>Payer maintenant</b><span>Espèces ou carte à la dépose</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
-          <button class="px-pay-opt" data-px-paymode="acompte">
+          <button class="px-pay-opt" data-px-paymode="acompte" ${total < 10 ? 'disabled' : ''}>
             <span class="ic"><i data-lucide="coins"></i></span>
-            <span class="l"><b>Acompte à la dépose</b><span>Le reste au retrait</span></span>
+            <span class="l"><b>Acompte à la dépose</b><span>${total < 10 ? 'Minimum 10 MAD · indisponible pour ce ticket' : 'Le reste au retrait'}</span></span>
           </button>
           <button class="px-pay-opt is-usual" data-px-paymode="pickup">
             <span class="ic"><i data-lucide="hand-coins"></i></span>
@@ -1444,7 +1578,7 @@
           </button>` : ''}
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-px-paymode]', el).forEach((b) => {
         b.onclick = () => {
           const mode = b.dataset.pxPaymode;
@@ -1455,6 +1589,7 @@
             order.pay = { mode: 'compte', method: 'compte', paid: 0 };
             finishFresh('Sur compte B2B, ajouté à la facture du mois');
           } else if (mode === 'acompte') {
+            if (total < 10) { toast('Un acompte doit être d’au moins 10 MAD'); return; }
             stepAcompte();
           } else {
             stepMethod(total, 'now');
@@ -1467,16 +1602,16 @@
     };
 
     const stepAcompte = () => {
-      let acompte = Math.max(10, Math.round(total / 2 / 10) * 10);
+      let acompte = Math.min(total, Math.max(10, Math.round(total / 2 / 10) * 10));
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Acompte</h3>
         <p class="modal-subtle">${order.id} · total ${fmtMAD(total)}</p>
         <div class="modal-amount size-md" id="px-ac-val">${fmtMAD(acompte)}</div>
         <div class="px-acompte-row">
-          <button class="cash-preset" data-px-ac="20">20</button>
-          <button class="cash-preset" data-px-ac="50">50</button>
-          <button class="cash-preset" data-px-ac="100">100</button>
+          <button class="cash-preset" data-px-ac="20" ${total < 20 ? 'disabled' : ''}>20</button>
+          <button class="cash-preset" data-px-ac="50" ${total < 50 ? 'disabled' : ''}>50</button>
+          <button class="cash-preset" data-px-ac="100" ${total < 100 ? 'disabled' : ''}>100</button>
           <button class="cash-preset" data-px-ac="half">50 %</button>
         </div>
         <div class="cash-input-row" style="margin:10px 0 14px;">
@@ -1488,17 +1623,26 @@
           <button class="px-btn primary" id="px-ac-ok">Encaisser l'acompte</button>
         </div>`;
       icons();
-      const refresh = () => { $('#px-ac-val', el).textContent = fmtMAD(acompte); $('#px-ac-input', el).value = acompte; };
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      const refresh = (writeInput) => {
+        $('#px-ac-val', el).textContent = Number.isFinite(acompte) ? fmtMAD(acompte) : '—';
+        if (writeInput) $('#px-ac-input', el).value = acompte;
+        $('#px-ac-ok', el).disabled = !validDeposit(acompte, total);
+      };
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-px-ac]', el).forEach((b) => {
         b.onclick = () => {
-          acompte = b.dataset.pxAc === 'half' ? Math.round(total / 2 / 5) * 5 : Math.min(total, +b.dataset.pxAc);
-          refresh();
+          acompte = b.dataset.pxAc === 'half' ? Math.max(10, Math.round(total / 2 / 5) * 5) : +b.dataset.pxAc;
+          acompte = Math.min(total, acompte);
+          refresh(true);
         };
       });
-      $('#px-ac-input', el).oninput = (e) => { acompte = Math.max(0, Math.min(total, +e.target.value || 0)); $('#px-ac-val', el).textContent = fmtMAD(acompte); };
+      $('#px-ac-input', el).oninput = (e) => { acompte = Number(e.target.value); refresh(false); };
       $('#px-ac-back', el).onclick = step1;
-      $('#px-ac-ok', el).onclick = () => stepMethod(acompte, 'acompte');
+      $('#px-ac-ok', el).onclick = () => {
+        if (!validDeposit(acompte, total)) { toast(`Acompte requis entre 10 et ${fmtMAD(total)}`); return; }
+        stepMethod(acompte, 'acompte');
+      };
+      refresh(false);
     };
 
     const stepMethod = (amount, mode) => {
@@ -1517,7 +1661,7 @@
           </button>
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-m]', el).forEach((b) => {
         b.onclick = () => (b.dataset.m === 'especes' ? stepCash(amount, mode) : stepCard(amount, mode));
       });
@@ -1548,7 +1692,7 @@
         $('#px-cash-rendu', el).textContent = fmtMAD(Math.max(0, received - amount));
         $('#px-cash-ok', el).disabled = received < amount;
       };
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $('#px-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
       $$('[data-add]', el).forEach((b) => {
         b.onclick = () => { received += +b.dataset.add; $('#px-cash-in', el).value = received; refresh(); };
@@ -1568,7 +1712,7 @@
           <div class="reader-method">Lecteur CMI partenaire · V1 sans encaissement Kiwi</div>
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       /* Le pressing peignait la coche verte au bout d'un timer : sur une vraie
          caisse sans lecteur configuré, il déclarait donc « Khlass ! Paiement
          confirmé » pour un paiement que personne n'avait autorisé, et la
@@ -1585,21 +1729,42 @@
           st.textContent = 'Paiement non confirmé · lecteur indisponible';
           return;
         }
-        hw.authorizeCard(amount, disc, st).then((result) => {
+        authorizationPending = true;
+        let authorization;
+        try {
+          authorization = hw.authorizeCard(amount, disc, st);
+        } catch (_) {
+          authorizationPending = false;
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · erreur lecteur';
+          return;
+        }
+        Promise.resolve(authorization).then((result) => {
+          authorizationPending = false;
           icons();
           if (!result || !result.approved) { toast('Paiement carte non confirmé'); return; }
           setTimeout(() => done(amount, 'carte', mode, 0), 900);
+        }).catch(() => {
+          authorizationPending = false;
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · erreur lecteur';
         });
       }, 1200);
     };
 
     const done = (amount, method, mode, rendu) => {
+      if (!(Number.isFinite(+amount) && +amount > 0)) { toast('Montant de paiement invalide'); return; }
+      if (mode === 'acompte' && !validDeposit(amount, total)) { toast(`Acompte requis entre 10 et ${fmtMAD(total)}`); return; }
       if (settle) {
+        const remaining = Math.max(0, total - order.pay.paid);
+        if (!(remaining > 0) || +amount > remaining + 0.009) { toast('Ce solde est déjà encaissé'); return; }
+        if (!beginCommit()) return;
         order.pay.paid += amount;
         order.pay.method = method;
+        pressingOps?.save?.('balance-paid');
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas à la prise de la commande. */
-        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id, saleLines(order, amount));
         syncOwnerOps();
         closeVeil('#px-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1607,18 +1772,20 @@
         return;
       }
       order.pay = { mode, method, paid: amount };
+      pressingOps?.save?.('payment-recorded');
       finishFresh(mode === 'acompte'
         ? `Acompte ${fmtMAD(amount)} encaissé, solde ${fmtMAD(total - amount)} au retrait`
         : `Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     };
 
     const finishFresh = (msg) => {
+      if (!beginCommit()) return;
       closeVeil('#px-pay-veil');
       /* `pickup` et `compte` passent aussi par ici avec paid: 0 : ils ne
          prennent rien au comptoir. Seul l'argent réellement encaissé (paiement
          complet ou acompte) est une recette, le solde sera journalisé par la
          branche `settle` au retrait. */
-      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id);
+      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id, saleLines(order, order.pay.paid));
       if (fresh) {
         ORDERS.unshift(order);
         if (order.custId && CUST[order.custId]) CUST[order.custId].orders = (+CUST[order.custId].orders || 0) + 1;
@@ -1769,6 +1936,7 @@
         <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
         ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${due} MAD</button>` : ''}
         ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
+        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
       </div>`;
@@ -1803,6 +1971,14 @@
     };
     const waB = $('#px-dt-wa', el);
     if (waB) waB.onclick = () => openWa(o);
+    const waConfirm = $('#px-dt-wa-confirm', el);
+    if (waConfirm) waConfirm.onclick = () => {
+      o.notified = true;
+      o.notifiedAt = new Date();
+      queueIfOffline('Notification client confirmée');
+      toast(`${o.id}, notification confirmée`);
+      openDetail(o.id); refreshOps();
+    };
     const rackB = $('#px-dt-rack', el);
     if (rackB) rackB.onclick = () => {
       closeVeil('#px-detail-veil');
@@ -1889,8 +2065,11 @@
     $('#px-wa-send', el).onclick = () => {
       const txt = $('#px-wa-text', el);
       const body = txt ? txt.value : waMessage(o);
-      const num = String(c.phone || '').replace(/\D/g, '');
+      const num = whatsappPhone(c.phone);
       if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à sa fiche`); return; }
+      o.draftOpenedAt = new Date();
+      closeVeil('#px-wa-veil');
+      queueIfOffline('Brouillon WhatsApp');
       let opened = null;
       try {
         opened = window.open('', '_blank');
@@ -1968,6 +2147,15 @@
     $$('[data-px-rt-wa]', panel).forEach((b) => {
       b.onclick = () => openWa(findOrder(b.dataset.pxRtWa));
     });
+    $$('[data-px-rt-wa-confirm]', panel).forEach((b) => {
+      b.onclick = () => {
+        const o = findOrder(b.dataset.pxRtWaConfirm);
+        if (!o) return;
+        o.notified = true; o.notifiedAt = new Date();
+        queueIfOffline('Notification client confirmée');
+        renderRetrait(); toast(`${o.id}, notification confirmée`);
+      };
+    });
     icons();
   }
 
@@ -1993,7 +2181,8 @@
       <div class="px-rt-actions">
         ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
         <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-lucide="check"></i>Remettre au client</button>
-        ${!o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}"><i data-lucide="message-circle"></i></button>` : ''}
+        ${!o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
+        ${o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Confirmer envoi</button>` : ''}
       </div>
     </div>`;
   }
@@ -2010,29 +2199,87 @@
     refreshOps();
   }
 
+  let scannerStop = null;
+  function stopScanner() {
+    if (!scannerStop) return;
+    const stop = scannerStop; scannerStop = null;
+    try { stop(); } catch (_) {}
+  }
+  function findScannedOrder(raw) {
+    const code = String(raw || '').trim().toUpperCase().replace(/^\*|\*$/g, '');
+    if (!code) return null;
+    return ORDERS.find((o) => String(o.id).toUpperCase() === code
+      || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code)) || null;
+  }
+  function acceptScan(raw) {
+    const target = findScannedOrder(raw);
+    if (!target) { toast('Code inconnu · vérifiez le ticket ou l’étiquette'); return false; }
+    if (orderStatus(target) === 'livre') { toast(`${target.id} a déjà été remis au client`); return false; }
+    stopScanner();
+    closeVeil('#px-scan-veil');
+    state.rtQuery = target.id;
+    renderRetrait(); icons();
+    toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
+    return true;
+  }
+  async function startCameraScan(el) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.BarcodeDetector) {
+      toast('Caméra-scanner indisponible · utilisez la douchette ou saisissez le code');
+      return;
+    }
+    stopScanner();
+    try {
+      const supported = window.BarcodeDetector.getSupportedFormats
+        ? await window.BarcodeDetector.getSupportedFormats() : ['code_39', 'code_128', 'qr_code'];
+      const formats = ['code_39', 'code_128', 'qr_code'].filter((f) => supported.includes(f));
+      if (!formats.length) throw new Error('format');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      if (!$('#px-scan-veil', root).classList.contains('is-open')) { stream.getTracks().forEach((t) => t.stop()); return; }
+      const stage = $('#px-scan-stage', el);
+      stage.innerHTML = '<video id="px-scan-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video><div class="px-scan-laser"></div>';
+      const video = $('#px-scan-video', el);
+      video.srcObject = stream;
+      await video.play();
+      const detector = new window.BarcodeDetector({ formats });
+      let live = true;
+      scannerStop = () => { live = false; stream.getTracks().forEach((t) => t.stop()); };
+      const frame = async () => {
+        if (!live) return;
+        try {
+          const hits = await detector.detect(video);
+          if (hits && hits[0] && acceptScan(hits[0].rawValue)) return;
+        } catch (_) {}
+        if (live) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    } catch (_) {
+      stopScanner();
+      toast('Caméra non ouverte · autorisez-la ou utilisez la douchette');
+    }
+  }
   function openScan() {
-    const target = ORDERS.find((o) => orderStatus(o) === 'pret' && o.rack) || ORDERS.find((o) => orderStatus(o) === 'pret');
+    stopScanner();
     const el = $('#px-scanm', root);
-    const p = target ? target.pieces[0] : null;
     el.innerHTML = `
-      <h3 class="modal-title">Scan en cours…</h3>
-      <p class="modal-subtle">Présentez le ticket ou n'importe quelle étiquette de la commande.</p>
-      <div class="px-scan-stage">
-        ${p ? `<div class="px-tag px-scan-tag">${tagInner(p, target)}</div>` : ''}
-        <div class="px-scan-laser"></div>
+      <button class="px-modal-x" id="px-scan-close" aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">Scanner ticket ou étiquette</h3>
+      <p class="modal-subtle">La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.</p>
+      <div class="px-scan-stage" id="px-scan-stage"><i data-lucide="scan-line" style="width:58px;height:58px;color:var(--mint)"></i></div>
+      <div class="cash-input-row"><label class="cash-input-label" for="px-scan-input">N° commande ou étiquette</label>
+        <input class="cash-input mono" id="px-scan-input" autocomplete="off" autocapitalize="characters" placeholder="P-1045 ou P-1045-1" />
+      </div>
+      <div class="px-sheet-foot" style="margin-top:12px">
+        <button class="px-btn secondary" id="px-scan-camera"><i data-lucide="camera"></i>Caméra</button>
+        <button class="px-btn primary" id="px-scan-accept"><i data-lucide="scan-line"></i>Lire le code</button>
       </div>`;
     openVeil('#px-scan-veil');
     icons();
-    setTimeout(() => {
-      closeVeil('#px-scan-veil');
-      if (target) {
-        state.rtQuery = target.id;
-        renderRetrait(); icons();
-        toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
-      } else {
-        toast('Aucune commande prête à scanner');
-      }
-    }, 1500);
+    const input = $('#px-scan-input', el);
+    $('#px-scan-close', el).onclick = () => { stopScanner(); closeVeil('#px-scan-veil'); };
+    $('#px-scan-accept', el).onclick = () => acceptScan(input.value);
+    $('#px-scan-camera', el).onclick = () => startCameraScan(el);
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); acceptScan(input.value); } };
+    setTimeout(() => input.focus(), 50);
   }
   function tagInner(p, o) {
     const c = custOf(o);
@@ -2108,29 +2355,50 @@
     icons();
   }
 
-  /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════════════ */
+  /* ═══════════════════════ OFFLINE — browser/network truth ═══════════════════════ */
+  function browserOffline() { return typeof navigator !== 'undefined' && navigator.onLine === false; }
   function toggleOffline() {
-    state.offline = !state.offline;
+    state.offline = browserOffline();
     if (!state.offline && state.queued) {
-      toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
-      state.queued = 0;
-    } else if (state.offline) {
-      toast('Mode hors-ligne, la caisse continue, tout est mis en file');
+      try { pressingOps?.store?.cloud?.()?.flush?.(); } catch (_) {}
+    }
+    toast(state.offline
+      ? 'Connexion absente · les changements restent sur cette tablette'
+      : (state.queued ? `${state.queued} changement${state.queued > 1 ? 's' : ''} local${state.queued > 1 ? 'aux' : ''} · envoi serveur relancé` : 'Connexion réseau disponible'));
+    renderNet();
+  }
+  function networkChanged(online) {
+    state.offline = !online;
+    if (!online) {
+      toast('Connexion perdue · la caisse continue et conserve les changements localement');
+    } else if (state.queued) {
+      try { pressingOps?.store?.cloud?.()?.flush?.(); } catch (_) {}
+      toast(`${state.queued} changement${state.queued > 1 ? 's' : ''} conservé${state.queued > 1 ? 's' : ''} · envoi serveur relancé`);
+    } else {
+      toast('Connexion rétablie');
     }
     renderNet();
   }
+  window.addEventListener('offline', () => networkChanged(false));
+  window.addEventListener('online', () => networkChanged(true));
   function renderNet() {
+    if (!root) return;
     const net = $('#px-net', root);
+    if (!net) return;
     net.classList.toggle('is-off', state.offline);
-    $('.px-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.title = 'État réseau détecté par cet appareil';
+    $('.px-net-label', net).textContent = state.offline ? 'Hors-ligne' : (state.queued ? 'Envoi en attente' : 'En ligne');
     let q = $('.px-net-queue', net);
-    if (state.offline && state.queued) {
+    if (state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'px-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#px-offline-note', root);
-    note.hidden = !state.offline;
-    $('#px-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    note.hidden = !state.offline && !state.queued;
+    note.firstChild.textContent = state.offline
+      ? 'Hors-ligne, les changements restent sur cette tablette et seront reproposés au retour du réseau. '
+      : 'Connexion rétablie, envoi serveur relancé. La copie locale reste conservée. ';
+    $('#px-queue-count', root).textContent = state.queued ? `${state.queued} changement${state.queued > 1 ? 's' : ''} local${state.queued > 1 ? 'aux' : ''}` : '';
   }
 
   /* ═══════════════════════ enregistrement ═══════════════════════ */
@@ -2175,5 +2443,15 @@
       if (window.KiwiPosDispatch) return window.KiwiPosDispatch.unlockById('pressing');
     },
     lock,
+    rules: Object.freeze({
+      normalizeMoroccanPhone,
+      whatsappPhone,
+      clampQty,
+      validDeposit,
+      validReady,
+      findScannedOrder,
+      barcode,
+      maxQty: MAX_QTY,
+    }),
   };
 })();

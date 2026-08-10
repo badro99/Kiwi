@@ -135,7 +135,18 @@
   `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
-  const ordReal = () => { try { return !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.()); } catch (_) { return false; } };
+  const ordReal = () => {
+    try {
+      if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return true;
+      const P = window.KiwiCaissePairing;
+      if (P?.isPaired?.() && P?.pairedVenue?.()?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        return !!(pv?.merchant || localStorage.getItem('kiwiLiveMerchant'));
+      }
+    } catch (_) {}
+    return false;
+  };
   const ordBiz = () => {
     try {
       // Store before account: ordSlug() feeds the customer-facing link, and one
@@ -154,19 +165,23 @@
     const items = (window.KiwiVenue?.getMenuItems?.() || []).filter(i => i.price > 0);
     const pick = (i) => (items[i % items.length] || {}).name || (T.st ? '' : '');
     const KIT = window.KiwiKit;
+    const real = ordReal();
+    const base = real ? null : BASE;
 
     const bar = (rate, label) => {
-      const keepPct = (1 - rate) * 100, lostPct = rate * 100, lostMad = Math.round(BASE * rate);
+      const keepPct = base == null ? 0 : (1 - rate) * 100;
+      const lostPct = base == null ? 0 : rate * 100;
+      const lostMad = base == null ? null : Math.round(base * rate);
       return `<div class="ord-bar-row">
         <div class="ord-bar-lbl">${label}<span class="r">${rate === 0 ? '0 %' : '−' + Math.round(rate * 100) + ' %'}</span></div>
         <div class="ord-bar"><span class="keep" style="width:${keepPct}%"></span>${lostPct ? `<span class="lost" style="width:${lostPct}%"></span>` : ''}</div>
-        <div class="ord-bar-val ${rate === 0 ? 'good' : 'bad'}">${rate === 0 ? fmt(BASE) + ' net' : '−' + fmt(lostMad)}</div>
+        <div class="ord-bar-val ${rate === 0 ? 'good' : 'bad'}">${base == null ? '—' : rate === 0 ? fmt(base) + ' net' : '−' + fmt(lostMad)}</div>
       </div>`;
     };
 
     // No demo orders / demo customer names for a real merchant — their live feed
     // starts empty and fills from real online orders.
-    const orders = ordReal() ? [] : [
+    const orders = real ? [] : [
       { ch: 'kiwi', who: 'Nawal K.', it: [0, 8], amt: 176, st: 'new' },
       { ch: 'glovo', who: 'Karim B.', it: [6], amt: 95, st: 'prep' },
       { ch: 'kiwi', who: 'Salma F.', it: [2, 9], amt: 142, st: 'prep' },
@@ -175,7 +190,7 @@
       { ch: 'kiwi', who: 'Youssef A.', it: [0], amt: 180, st: 'ready' },
     ];
     const chColor = { kiwi: 'background:var(--riad);color:var(--mint)', glovo: 'background:#FFE9D6;color:#B5651D', yassir: 'background:#E6F0FF;color:#2B5AA8', cc: 'background:var(--paper-soft);color:var(--n-600)', liv: 'background:var(--paper-soft);color:var(--n-600)' };
-    const chState = (s) => s === 'connect' ? `<button class="ord-connect" data-ord-connect>${T.connect}</button>`
+    const chState = (s) => (real ? 'connect' : s) === 'connect' ? `<button class="ord-connect" data-ord-connect>${T.connect}</button>`
       : `<span class="ord-pill">${s === 'on' ? T.on : T.linked}</span><button class="gk-tg on" data-ord-tg></button>`;
 
     const body = `<div class="gk-reveal-root">
@@ -186,15 +201,15 @@
             <div class="ord-name gk-serif">${ordBiz()}</div>
             <div class="ord-tag">${T.tagline}</div>
             <div class="ord-link"><span class="u">kiwi.shop/${ordSlug()}</span><button class="cp" data-ord-copy>${T.copy}</button></div>
-            <div class="ord-statusrow"><span class="ord-status"><span class="dot"></span>${T.online}</span><button class="gk-tg on" data-ord-tg></button></div>
+            <div class="ord-statusrow"><span class="ord-status"><span class="dot"></span>${real ? (lang() === 'en' ? 'Not configured' : lang() === 'ar' ? 'غير مُعدّ' : 'Non configuré') : T.online}</span><button class="gk-tg${real ? '' : ' on'}" data-ord-tg></button></div>
           </div>
           <div class="ord-hero-r">${KIT ? KIT.qr(116) : ''}<div class="ord-scan">${T.scan}</div></div>
         </div>
 
         <div class="ord-keep">
-          <div class="ord-keep-top"><span class="ord-keep-eyebrow">${T.keepEyebrow}</span><span class="ord-keep-base">${T.onBase(BASE)}</span></div>
-          <div class="ord-keep-big gk-serif">+${fmt(BASE * 0.30)}<span class="un">${T.keepUnit}</span></div>
-          <div class="ord-keep-note">${T.keepNote()}</div>
+          <div class="ord-keep-top"><span class="ord-keep-eyebrow">${T.keepEyebrow}</span><span class="ord-keep-base">${real ? (lang() === 'en' ? 'Online revenue not provided' : lang() === 'ar' ? 'لم يتم إدخال المداخيل عبر الإنترنت' : 'CA en ligne non renseigné') : T.onBase(BASE)}</span></div>
+          <div class="ord-keep-big gk-serif">${real ? '—' : '+' + fmt(BASE * 0.30)}<span class="un">${real ? '' : T.keepUnit}</span></div>
+          <div class="ord-keep-note">${real ? (lang() === 'en' ? 'No source currently identifies this merchant’s online revenue.' : lang() === 'ar' ? 'لا يوجد مصدر يحدّد حالياً مداخيل هذا التاجر عبر الإنترنت.' : 'Aucune source ne distingue encore le chiffre d’affaires en ligne de ce commerçant.') : T.keepNote()}</div>
           <div class="ord-bars">${bar(0, 'Kiwi Direct')}${bar(0.30, 'Glovo')}${bar(0.28, 'Yassir Express')}</div>
         </div>
       </div>
@@ -205,7 +220,9 @@
         <div class="ord-ch-b"><div class="ord-ch-n">${c.label}</div><div class="ord-ch-s">${c.sub[lang()] || c.sub.fr}</div></div>
         ${chState(c.state)}</div>`).join('')}</div>
 
-      <div class="ord-sec"><span class="ord-sec-t">${T.inbox}</span><span class="ord-sec-h">${T.inboxHint(orders.length)}</span></div>
+      <div class="ord-sec"><span class="ord-sec-t">${T.inbox}</span><span class="ord-sec-h">${real
+        ? (lang() === 'en' ? 'Data source not connected' : lang() === 'ar' ? 'مصدر البيانات غير متصل' : 'Source de données non connectée')
+        : T.inboxHint(orders.length)}</span></div>
       <div class="ord-feed">${orders.map(o => `<div class="ord-o" data-ord-order>
         <div class="ord-o-ch ${o.ch}">${o.ch === 'kiwi' ? 'Kiwi' : o.ch === 'glovo' ? 'Glovo' : 'Yassir'}</div>
         <div class="ord-o-m"><div class="ord-o-who">${o.who}</div><div class="ord-o-it">${o.it.map(pick).join(' · ')}</div></div>
@@ -241,7 +258,10 @@
         });
       }
       else if (e.target.closest('[data-ord-order]')) { toast(T.sent, { type: 'info' }); }
-      else if (e.target.closest('[data-ord-cta]')) { confetti && confetti(); toast(T.toastT, { type: 'success', desc: T.toastD.replace('cafe-atlas', ordSlug()) }); }
+      else if (e.target.closest('[data-ord-cta]')) {
+        if (real) toast(T.toastT, { type: 'info', desc: lang() === 'en' ? 'Activation status is not connected to a server source.' : lang() === 'ar' ? 'حالة التفعيل غير مرتبطة بمصدر على الخادم.' : 'L’état d’activation n’est relié à aucune source serveur.' });
+        else { confetti && confetti(); toast(T.toastT, { type: 'success', desc: T.toastD.replace('cafe-atlas', ordSlug()) }); }
+      }
     });
   };
 })();

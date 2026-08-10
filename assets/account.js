@@ -143,10 +143,26 @@
   // legal registration must NEVER appear — the account shows itself, with legal
   // fields blank ("à compléter") because the client hasn't entered them.
   const meVal = (k) => { try { return (window.KiwiMe && window.KiwiMe[k]) || ''; } catch (_) { return ''; } };
-  const isReal = () => !!(window.KiwiMe) || !!(window.KiwiEnv && window.KiwiEnv.demosAllowed === false);
-  const ownerName = () => meVal('name') || getSet('ownerName', OWNER.name);
-  const ownerEmail = () => meVal('email') || getSet('ownerEmail', OWNER.email);
-  const ownerPhone = () => getSet('ownerPhone', isReal() ? '' : OWNER.phone);
+  const pairedVenue = () => {
+    try {
+      const P = window.KiwiCaissePairing;
+      const pv = P?.pairedVenue?.();
+      if (P?.isPaired?.() && pv?.merchant) return pv;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('kiwiPaired') !== '1') return null;
+      const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return pv?.merchant ? pv : null;
+    } catch (_) { return null; }
+  };
+  const isReal = () => !!(window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.() || pairedVenue());
+  const ownSetting = (k, demo) => {
+    const v = getSet(k, '');
+    return isReal() && v === demo ? '' : v;
+  };
+  const ownerName = () => meVal('name') || ownSetting('ownerName', OWNER.name) || (isReal() ? '' : OWNER.name);
+  const ownerEmail = () => meVal('email') || ownSetting('ownerEmail', OWNER.email) || (isReal() ? '' : OWNER.email);
+  const ownerPhone = () => ownSetting('ownerPhone', OWNER.phone) || (isReal() ? '' : OWNER.phone);
   const ownerLang = () => pick({ fr: 'Français', en: 'English', ar: 'العربية' });
   const fmtMAD = (n) => Number(n).toLocaleString('fr-FR').replace(/[  ,]/g, ' ');
 
@@ -339,7 +355,7 @@
   // BLANK legal fields (the client hasn't entered ICE/RC/etc). Never the demo's.
   const primaryRealBiz = () => ({
     id: 'primary', primary: true,
-    name: (meVal('business') || getSet('bizName', '') || '').trim() || pick({ fr: 'Mon établissement', en: 'My business', ar: 'مؤسستي' }),
+    name: (meVal('business') || getSet('bizName', '') || (pairedVenue() && pairedVenue().name) || '').trim() || pick({ fr: 'Mon établissement', en: 'My business', ar: 'مؤسستي' }),
     trade: meVal('type') || '', type: bizTypeLabel(meVal('type')), city: '', address: '',
     ice: '', fiscal: '', rc: '', patente: '', cnss: '', phone: '', hours: '',
     /* no revenue/orders/team → the stat row is omitted (no fabricated numbers). */
@@ -557,6 +573,23 @@
         </div>`;
     };
     const biz = allBiz();
+    const subscriptionBlock = isReal()
+      ? `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.subscription)}</div><div class="acc-row"><span>${esc(T.curPlanLabel)}</span><b>—</b></div><div style="font-size:12.5px;color:var(--n-500);margin-top:8px;">${esc(pick({ fr: 'Données d’abonnement indisponibles.', en: 'Subscription data is unavailable.', ar: 'بيانات الاشتراك غير متاحة.' }))}</div></div>`
+      : `<div class="acc-plan">
+          <div>
+            <div class="acc-plan-name">${esc(T.curPlanLabel)}</div>
+            <div class="acc-plan-price">${esc(plan.name)} · ${esc(planPrice)}${curPlan() !== 'ultimate' ? `<small>${esc(T.perMo)}</small>` : ''}</div>
+            <div class="acc-plan-meta">${esc(T.planMeta)}</div>
+          </div>
+          <div class="acc-plan-acts">
+            <button class="acc-cta light" data-action="upgrade-pro">${esc(T.upgrade)}</button>
+            <button class="acc-cta ghost" style="color:#fff; border-color:rgba(255,255,255,0.4);" data-action="account-billing">${esc(T.billing)}</button>
+          </div>
+        </div>
+        <div class="acc-plan-btns">
+          ${!isBasic ? `<button class="acc-cta ghost" data-action="account-plan-downgrade">${esc(T.downgrade)}</button>` : ''}
+          <button class="acc-danger" data-action="account-plan-cancel">${esc(T.cancel)}</button>
+        </div>`;
     Kiwi.appPage('account-profile', {
       title: T.title, subtitle: T.sub,
       body: `
@@ -586,21 +619,7 @@
         ${biz.map(bizCard).join('')}
         <button class="acc-add-biz" data-action="account-add-business">${esc(T.addBiz)}</button>
         <div class="acc-section-head"><h3>${esc(T.subscription)}</h3></div>
-        <div class="acc-plan">
-          <div>
-            <div class="acc-plan-name">${esc(T.curPlanLabel)}</div>
-            <div class="acc-plan-price">${esc(plan.name)} · ${esc(planPrice)}${curPlan() !== 'ultimate' ? `<small>${esc(T.perMo)}</small>` : ''}</div>
-            <div class="acc-plan-meta">${esc(T.planMeta)}</div>
-          </div>
-          <div class="acc-plan-acts">
-            <button class="acc-cta light" data-action="upgrade-pro">${esc(T.upgrade)}</button>
-            <button class="acc-cta ghost" style="color:#fff; border-color:rgba(255,255,255,0.4);" data-action="account-billing">${esc(T.billing)}</button>
-          </div>
-        </div>
-        <div class="acc-plan-btns">
-          ${!isBasic ? `<button class="acc-cta ghost" data-action="account-plan-downgrade">${esc(T.downgrade)}</button>` : ''}
-          <button class="acc-danger" data-action="account-plan-cancel">${esc(T.cancel)}</button>
-        </div>`,
+        ${subscriptionBlock}`,
     });
     handlers['account-change-pw'] = () => Kiwi.toast(T.pwToast, { type: 'success', force: true });
     handlers['account-edit-business'] = (el, arg) => editBusinessModal(arg || (el && el.dataset.arg));
@@ -866,6 +885,17 @@
       dlToast: pick({ fr: 'Facture téléchargée (PDF)', en: 'Invoice downloaded (PDF)', ar: 'تم تنزيل الفاتورة (PDF)' }),
       payToast: pick({ fr: 'Pour des raisons de sécurité, mettez à jour votre carte depuis l\'app bancaire.', en: 'For security, update your card from your banking app.', ar: 'لأسباب أمنية، حدّث بطاقتك من تطبيق البنك.' }),
     };
+    if (isReal()) {
+      const venueBiz = window.KiwiVenue?.isCustom?.()
+        ? ((window.KiwiVenue.getCurrentVenueData?.() || {}).fullDisplay || '') : '';
+      const biz = venueBiz || meVal('business') || (pairedVenue() && pairedVenue().name) || '';
+      Kiwi.appPage('account-billing', {
+        title: T.title,
+        subtitle: [pick({ fr: 'Abonnement & factures', en: 'Subscription & invoices', ar: 'الاشتراك والفواتير' }), biz].filter(Boolean).join(' · '),
+        body: `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.history)}</div><div style="padding:28px 8px;text-align:center;"><div style="font-size:15px;font-weight:600;">${esc(pick({ fr: 'Données de facturation indisponibles', en: 'Billing data is unavailable', ar: 'بيانات الفوترة غير متاحة' }))}</div><div style="font-size:12.5px;color:var(--n-500);margin-top:7px;">${esc(pick({ fr: 'Aucune source serveur ne fournit encore la formule, la carte, les échéances ou les factures.', en: 'No server source currently provides the plan, card, charges or invoices.', ar: 'لا يوفّر الخادم حالياً الباقة أو البطاقة أو الاستحقاقات أو الفواتير.' }))}</div></div></div>`,
+      });
+      return;
+    }
     const incl = pick({
       fr: ['Caisse complète multi-vertical', '1 caisse Kiwi offerte', 'Règlement T+1 garanti', "Jusqu'à 8 membres d'équipe", 'Maintenance & remplacement matériel', 'Support WhatsApp 7j/7'],
       en: ['Full multi-vertical register', '1 free Kiwi cashier', 'Guaranteed T+1 settlement', 'Up to 8 team members', 'Hardware maintenance & replacement', '7-day WhatsApp support'],

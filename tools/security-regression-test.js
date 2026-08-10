@@ -32,11 +32,41 @@ for (const header of ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Pol
   ok(`middleware applies ${header}`, middleware.includes(`headers.set('${header}'`));
 }
 
-for (const rel of [
-  'assets/clients-directory.js', 'assets/growth-crm.js',
-  'assets/day-report-dash.js', 'assets/boutique-catalog.js', 'assets/dashboard-extra.js',
-]) {
-  ok(`${rel} neutralises spreadsheet formulas`, /\[=\+\\-@\]/.test(read(rel)));
+/* Every module that BUILDS a CSV must neutralise spreadsheet formulas. The list
+ * used to be hardcoded, and that hid two things at once: when the dashboard
+ * report moved to assets/report.js the check kept passing against a file that no
+ * longer produced CSVs, while the margins export inside dashboard-extra.js had
+ * never been guarded at all — the file-level grep was satisfied by an unrelated
+ * export sitting next to it. Derive the list from the code instead, so a new CSV
+ * producer is covered the day it is written rather than the day someone
+ * remembers to add it here. */
+/* Files that hand the rows to a guarded builder elsewhere instead of quoting
+ * them inline. Keep this list SHORT and justified — each entry is a promise that
+ * the real escaping happens in the named module, which is itself checked below. */
+const DELEGATES = {
+  'assets/pages-pro.js': 'assets/boutique-catalog.js', // bqx-export → CAT().exportCsv()
+};
+
+/* Producers whose CSV contains NO merchant data, so there is nothing to escape.
+ * Justify every entry — "it looked fine" is not a reason. */
+const STATIC_ONLY = new Set([
+  // downloadTemplate() serves a hardcoded blank example for the merchant to
+  // fill in (TEMPLATES, assets/catalog-import.js:570). No dynamic value reaches it.
+  'assets/catalog-import.js',
+]);
+
+const csvProducers = fs.readdirSync(path.join(ROOT, 'assets'))
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => 'assets/' + f)
+  .filter((rel) => /type:\s*['"]text\/csv/.test(read(rel)));
+
+ok('CSV producers discovered by scan', csvProducers.length >= 4);
+for (const rel of csvProducers.filter((r) => !STATIC_ONLY.has(r))) {
+  const target = DELEGATES[rel] || rel;
+  const label = target === rel
+    ? `${rel} neutralises spreadsheet formulas`
+    : `${rel} delegates CSV escaping to ${target}`;
+  ok(label, /\[=\+\\-@\]/.test(read(target)));
 }
 
 if (failed.length) {

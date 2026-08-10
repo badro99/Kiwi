@@ -25,7 +25,7 @@
   const tr = (o) => (o == null ? '' : (o[LANG()] != null ? o[LANG()] : o.fr));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const T = {
-    title:      { fr: 'Menu', en: 'Menu', ar: 'القائمة' },
+    title:      { fr: 'Menu & modificateurs', en: 'Menu & modifiers', ar: 'القائمة والإضافات' },
     emptyH:     { fr: 'Votre carte est vide, et c\'est normal', en: 'Your menu is empty, and that\'s fine', ar: 'قائمتك فارغة، وهذا طبيعي' },
     emptyP:     { fr: 'Ajoutez vos catégories et vos produits. Tout est enregistré pour votre établissement et servira directement sur la caisse.', en: 'Add your categories and products. Everything is saved to your business and rings up straight on the register.', ar: 'أضف فئاتك ومنتجاتك. كل شيء محفوظ لنشاطك ويظهر مباشرة على الصندوق.' },
     addCat:     { fr: 'Ajouter une catégorie', en: 'Add a category', ar: 'إضافة فئة' },
@@ -679,6 +679,54 @@
       .mx-st-act button:disabled { opacity: 0.32; cursor: default; }
       .mx-st-act button.del:hover { color: var(--danger); border-color: var(--danger); }
       .mx-st-empty { padding: 22px 4px 26px; text-align: center; color: var(--n-500); font-size: 13px; line-height: 1.55; }
+      /* Merchant menu, 2026 shell. The catalogue/store above remains the only
+         source of truth; these rules only replace the legacy split-pane skin. */
+      .mx-menu-tabs { display: flex; align-items: center; gap: 5px; overflow-x: auto; padding: 5px; margin: 0 0 18px; border: 1px solid var(--mx-line); border-radius: 999px; background: var(--surface); scrollbar-width: none; }
+      .mx-menu-tabs::-webkit-scrollbar { display: none; }
+      .mx-menu-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; min-height: 36px; padding: 8px 15px; border: 0; border-radius: 999px; background: transparent; color: var(--n-500); font: 500 12.5px/1 var(--sans); cursor: pointer; transition: background-color 150ms, color 150ms, box-shadow 150ms, transform 150ms; }
+      .mx-menu-tab:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-menu-tab.on { color: var(--inverse-ink); background: var(--inverse-surface); box-shadow: 0 6px 14px color-mix(in srgb, var(--inverse-surface) 18%, transparent); }
+      .mx-catalog { padding: 24px; border: 2px solid color-mix(in srgb, var(--atlas) 34%, var(--n-200)); border-radius: 18px; background: var(--surface); box-shadow: 0 14px 34px color-mix(in srgb, var(--ink) 8%, transparent); }
+      .mx-catalog-tools { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+      .mx-filter-row { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .mx-filter-row::-webkit-scrollbar { display: none; }
+      .mx-filter-pair { display: inline-flex; flex: 0 0 auto; align-items: stretch; border: 1px solid var(--mx-line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+      .mx-filter-pill { min-height: 38px; padding: 8px 16px; border: 0; background: transparent; color: var(--n-600); font: 500 13px/1 var(--sans); cursor: pointer; white-space: nowrap; }
+      .mx-filter-pill:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-filter-pair.on { border-color: var(--atlas); background: var(--atlas); }
+      .mx-filter-pair.on .mx-filter-pill { color: var(--inverse-ink); }
+      .mx-filter-pair.on .mx-filter-pill:hover { background: transparent; }
+      .mx-filter-edit { display: inline-flex; align-items: center; justify-content: center; width: 34px; border: 0; border-inline-start: 1px solid var(--mx-line); background: transparent; color: var(--n-400); cursor: pointer; }
+      .mx-filter-edit:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-filter-pair.on .mx-filter-edit { color: var(--inverse-ink); border-inline-start-color: color-mix(in srgb, var(--inverse-ink) 24%, transparent); }
+      .mx-filter-count { margin-inline-start: 6px; font-family: var(--mono); font-size: 10px; opacity: .66; }
+      .mx-subfilters { display: flex; align-items: center; gap: 7px; margin: -6px 0 18px; overflow-x: auto; scrollbar-width: none; }
+      .mx-subfilters::-webkit-scrollbar { display: none; }
+      .mx-subfilter { flex: 0 0 auto; padding: 7px 12px; border: 1px solid var(--mx-line); border-radius: 999px; background: var(--surface); color: var(--n-500); font: 500 11.5px/1 var(--sans); cursor: pointer; }
+      .mx-subfilter:hover, .mx-subfilter.on { border-color: var(--atlas); color: var(--atlas); background: var(--mint-soft); }
+      .mx-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+      .mx-product-card { display: flex; flex-direction: column; min-width: 0; min-height: 176px; padding: 18px 18px 14px; border: 1px solid var(--mx-line); border-top: 3px solid color-mix(in srgb, var(--atlas) 30%, var(--n-200)); border-radius: 16px; background: var(--surface); box-shadow: 0 8px 18px color-mix(in srgb, var(--ink) 7%, transparent); transition: transform 150ms, box-shadow 150ms, border-color 150ms; }
+      .mx-product-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--atlas) 46%, var(--n-200)); box-shadow: 0 13px 26px color-mix(in srgb, var(--ink) 11%, transparent); }
+      .mx-product-card.off { opacity: .55; }
+      .mx-product-card .cat { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--n-500); }
+      .mx-product-card .name { margin-top: 14px; color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
+      .mx-product-card .desc { min-height: 18px; margin-top: 4px; color: var(--n-500); font-size: 11.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-product-card .price { margin-top: 10px; color: var(--atlas); font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -.035em; }
+      .mx-product-card .price .mg { display: inline; margin-inline-start: 7px; color: var(--n-400); font-size: 10px; font-style: normal; font-weight: 500; letter-spacing: 0; }
+      .mx-product-card .price .mg.bad { color: var(--danger); }
+      .mx-product-card .foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--mx-line); color: var(--n-500); font-size: 11.5px; }
+      .mx-product-card .foot .meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-product-card .act { display: inline-flex; gap: 5px; }
+      .mx-product-card .act button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--mx-line); border-radius: 9px; background: var(--surface); color: var(--n-500); cursor: pointer; }
+      .mx-product-card .act button:hover { border-color: var(--n-400); color: var(--ink); }
+      .mx-product-card .act button.del:hover { border-color: var(--danger); color: var(--danger); }
+      .mx-product-card .sw { width: 32px; height: 19px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; flex: 0 0 auto; }
+      .mx-product-card .sw.on { background: var(--atlas); }
+      .mx-product-card .sw::after { content: ''; position: absolute; inset: 2px auto auto 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--surface); transition: transform 150ms; }
+      .mx-product-card .sw.on::after { transform: translateX(13px); }
+      @media (max-width: 1280px) { .mx-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      @media (max-width: 980px) { .mx-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mx-catalog-tools { align-items: flex-start; flex-direction: column; } }
+      @media (max-width: 640px) { .mx-catalog { padding: 14px; } .mx-card-grid { grid-template-columns: 1fr; } }
     `;
     document.head.appendChild(s);
   }
@@ -689,13 +737,14 @@
   const DOWNLOAD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
   const TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
   const SPARK = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
+  const LIST = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
   /* Une cloche de passe — l'objet qu'on tape quand le plat sort du poste. */
   const BELL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M20 15a8 8 0 1 0-16 0"/><path d="M12 4V2"/></svg>';
   const ARR_UP = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
   const ARR_DN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
   /* ───────────────── UI state ───────────────── */
-  let activeCat = null;
+  let activeCat = 'all';
   let activeSub = null; // null = all subs of the active category
 
   const fmt = (n) => Number(n || 0).toLocaleString(LANG() === 'ar' ? 'ar-MA' : 'fr-FR');
@@ -720,44 +769,29 @@
 
     if (!cats.length && !items.length) return renderEmpty();
 
-    // keep active selection valid
-    if (!activeCat || !catById(d, activeCat)) { activeCat = cats[0] ? cats[0].id : null; activeSub = null; }
-    const cat = catById(d, activeCat);
+    // Keep the visual filter valid. "all" is a view state only; stored
+    // category ids and item relationships are untouched.
+    if (!activeCat || (activeCat !== 'all' && !catById(d, activeCat))) { activeCat = 'all'; activeSub = null; }
+    const cat = activeCat === 'all' ? null : catById(d, activeCat);
     if (activeSub && cat && !(cat.sub || []).some((s) => s.id === activeSub)) activeSub = null;
 
-    const rail = cats.map((c) => {
+    const filters = cats.map((c) => {
       const isOn = c.id === activeCat;
       const count = itemsIn(d, c.id).length;
-      const subs = (c.sub || []).map((s) => `
-        <div class="mx-sub ${isOn && activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${c.id}::${s.id}">
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.name)}</span>
-          <span style="font-family:var(--mono);font-size:10px;opacity:.6;">${itemsIn(d, c.id, s.id).length}</span>
-        </div>`).join('');
-      /* La pastille ne s'affiche QUE pour une catégorie détournée. Un point sur
-       * chaque ligne serait du bruit — c'est l'exception qu'on veut voir sauter
-       * aux yeux, et « pas de pastille » se lit alors « ça part en cuisine ». */
-      const cSt = c.station ? stationById(d, c.station) : null;
-      const cDot = cSt ? `<i class="mx-stdot" style="background:${esc(cSt.color || STATION_COLORS[0])}" title="${esc(cSt.name)}"></i>` : '';
       return `
-        <div class="mx-cat ${isOn ? 'on' : ''}">
-          <div class="mx-cat-head" data-action="mx-cat-pick" data-arg="${c.id}">
-            <span class="nm">${esc(c.name)}</span>
-            ${cDot}
-            <span class="ct">${count}</span>
-            <span class="ed" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}">${EDIT}</span>
-          </div>
-          ${isOn ? `<div class="mx-subs">
-            <div class="mx-sub ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${c.id}::">
-              <span style="flex:1;">${esc(tr(T.allItems))}</span><span style="font-family:var(--mono);font-size:10px;opacity:.6;">${count}</span>
-            </div>
-            ${subs}
-            <button class="mx-sub-add" data-action="mx-sub-add" data-arg="${c.id}">${PLUS}<span>${esc(tr(T.addSub))}</span></button>
-          </div>` : ''}
+        <div class="mx-filter-pair ${isOn ? 'on' : ''}">
+          <button class="mx-filter-pill" data-action="mx-cat-pick" data-arg="${c.id}">${esc(c.name)}<span class="mx-filter-count">${count}</span></button>
+          <button class="mx-filter-edit" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}" aria-label="${esc(tr(T.rename))} · ${esc(c.name)}">${EDIT}</button>
         </div>`;
     }).join('');
 
-    const shown = cat ? itemsIn(d, cat.id, activeSub) : [];
-    const subName = activeSub && cat ? (cat.sub || []).find((s) => s.id === activeSub) : null;
+    const shown = cat ? itemsIn(d, cat.id, activeSub) : items.slice();
+    const subfilters = cat ? `
+      <div class="mx-subfilters">
+        <button class="mx-subfilter ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::">${esc(tr(T.allItems))}</button>
+        ${(cat.sub || []).map((s) => `<button class="mx-subfilter ${activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::${s.id}">${esc(s.name)} · ${itemsIn(d, cat.id, s.id).length}</button>`).join('')}
+        <button class="mx-subfilter" data-action="mx-sub-add" data-arg="${cat.id}">${PLUS} ${esc(tr(T.addSub))}</button>
+      </div>` : '';
 
     /* Le carnet des coûts et la base TVA sont lus UNE FOIS pour toute la liste.
      * Cette page se repeint à chaque frappe (voir bindCatStation), et
@@ -776,7 +810,8 @@
     };
 
     const itemRows = shown.length ? shown.map((it) => {
-      const sub = (cat.sub || []).find((s) => s.id === it.subId);
+      const itemCat = catById(d, it.catId);
+      const sub = itemCat && (itemCat.sub || []).find((s) => s.id === it.subId);
       /* Plus de pastille de poste par plat : tous les plats affichés ici
        * partagent la catégorie ouverte, donc son poste. Le répéter sur chaque
        * ligne laisserait croire qu'il se règle ligne par ligne. Il se lit une
@@ -786,47 +821,50 @@
        * produit fera parler le comptoir avant d'entrer dans la note se lit d'un
        * coup d'œil, sans ouvrir la fiche. */
       const nOpt = (Array.isArray(it.opts) ? it.opts : []).filter((x) => !!optById(d, x)).length;
-      const stTag = nOpt ? `<span class="otag">${esc(tr(T.optCount).replace('{n}', nOpt))}</span>` : '';
+      const station = itemCat && stationById(d, itemCat.station || kitchenIdOf(d));
+      const footer = [sub && sub.name, station && station.name, nOpt ? tr(T.optCount).replace('{n}', nOpt) : ''].filter(Boolean).join(' · ');
       return `
-        <div class="mx-item ${it.avail === false ? 'off' : ''}">
-          <div style="display:flex;align-items:center;gap:11px;min-width:0;">
-            ${it.video ? `<video class="th" src="${esc(it.video)}" muted playsinline preload="metadata"></video>`
-              : (it.photo ? `<img class="th" src="${esc(it.photo)}" alt="" loading="lazy" />` : '')}
-            <div style="min-width:0;">
-              <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}${stTag}</div>
-              ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
+        <div class="mx-product-card ${it.avail === false ? 'off' : ''}">
+          <div class="cat">${esc(itemCat ? itemCat.name : tr(T.title))}</div>
+          <div class="name">${esc(it.name)}</div>
+          <div class="desc">${esc(it.desc || '')}</div>
+          <div class="price">${fmt(it.price)} MAD${mgHtml(it)}</div>
+          <div class="foot">
+            <span class="meta">${esc(footer || tr(it.avail === false ? T.unavail : T.avail))}</span>
+            <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
+            <div class="act">
+              <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
+              <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
             </div>
-          </div>
-          <div class="pr">${fmt(it.price)} MAD${mgHtml(it)}</div>
-          <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
-          <div class="act">
-            <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
-            <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
           </div>
         </div>`;
     }).join('') : `<div class="mx-empty-items">${esc(tr(T.noItems))}</div>`;
 
     const body = `
       <div class="mx-wrap">
-        <div class="mx-grid">
-          <div class="mx-rail">
-            <button class="mx-cat-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
-            ${rail}
-          </div>
-          <div class="mx-pane">
-            <div class="mx-pane-head">
-              <div>
-                <h3>${cat ? esc(cat.name) : esc(tr(T.title))}${subName ? ' · ' + esc(subName.name) : ''}</h3>
-                <div class="sub">${shown.length} ${esc(tr(shown.length === 1 ? T.product : T.products))}</div>
+        <div class="mx-menu-tabs">
+          <button class="mx-menu-tab on" type="button">${LIST}<span>${esc(tr(T.title))}</span></button>
+          <button class="mx-menu-tab" type="button" data-action="mx-stations-manage">${BELL}<span>${esc(tr(T.stations))}</span></button>
+          <button class="mx-menu-tab" type="button" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
+          ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+        </div>
+        <div class="mx-catalog">
+          <div class="mx-catalog-tools">
+            <div class="mx-filter-row">
+              <div class="mx-filter-pair ${activeCat === 'all' ? 'on' : ''}">
+                <button class="mx-filter-pill" data-action="mx-cat-pick" data-arg="all">${esc(tr(T.allItems))}<span class="mx-filter-count">${items.length}</span></button>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations" data-arg="${cat ? esc(cat.id) : ''}">${BELL}<span>${esc(tr(T.stations))}</span></button>
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
-                <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
-              </div>
+              ${filters}
             </div>
+            <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
+              ${cat ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.catStationL))}</span></button>` : ''}
+              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
+              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
+              <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
+            </div>
+          </div>
+          ${subfilters}
+          <div class="mx-card-grid">
             ${itemRows}
           </div>
         </div>
@@ -834,7 +872,7 @@
 
     window.Kiwi.appPage('menu', {
       title: tr(T.title),
-      subtitle: `${esc(venueName())} · ${items.length} ${tr(T.products)} · ${cats.length} ${tr(T.cats)}`,
+      subtitle: `${items.length} ${tr(T.products)} · ${cats.length} ${tr(T.cats)} · ${esc(venueName())}`,
       body,
     });
   }
@@ -1247,7 +1285,8 @@
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
+    const selectedCat = catById(d, activeCat) ? activeCat : cats[0].id;
+    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
     /* Le coût ne vient pas de l'article : il se lit dans le carnet des coûts,
        par identifiant. Un article neuf n'en a pas encore — il sera écrit après
        addItem(), quand l'identifiant existe. */
@@ -1483,6 +1522,7 @@
     // Do not fall back to the station-management screen: the merchant only
     // needs to choose or create the single destination for this category.
     H['mx-stations'] = () => { if (activeCat) categoryStationModal(activeCat); };
+    H['mx-stations-manage'] = () => stationsModal();
     H['mx-opts'] = () => optsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };

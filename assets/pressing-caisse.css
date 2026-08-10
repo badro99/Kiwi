@@ -420,6 +420,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 
 /* condition photos */
 .px-photos { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.px-photo-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .px-photo-thumb {
   width: 44px; height: 44px; border-radius: 10px;
   background: var(--paper-soft);

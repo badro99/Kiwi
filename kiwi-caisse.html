@@ -4630,6 +4630,10 @@
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js" defer></script>
+  <script src="assets/vertical-state.js" defer></script>
+  <script src="assets/image-proof.js" defer></script>
+  <script src="assets/operational-print.js" defer></script>
+  <script src="assets/inventory-ledger.js" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -4644,6 +4648,11 @@
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
   <script src="assets/receipt.js" defer></script>
+  <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
+       produit en sorties d'ingrédients sans exposer les prix d'achat. -->
+  <script src="assets/cost.js" defer></script>
+  <script src="assets/inventory-consumption.js" defer></script>
+  <script src="assets/procurement.js" defer></script>
   <script src="assets/clients-store.js" defer></script>
   <script src="assets/clients-book.js" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
@@ -5916,7 +5925,7 @@
   <div class="modal-veil" id="msg-modal" role="dialog" aria-modal="true" aria-labelledby="msg-title">
     <div class="modal modal-msg">
       <div class="split-badge">Message</div>
-      <h3 class="modal-title" id="msg-title">Envoyer un message</h3>
+      <h3 class="modal-title" id="msg-title">Préparer un message</h3>
       <div class="msg-target" id="msg-target">
         <span class="team-avatar" id="msg-target-avatar" style="background:#3FB67A;">YA</span>
         <span><b id="msg-target-name">Yassir A.</b> <span style="color:var(--ink-4);" id="msg-target-status">· En service</span></span>
@@ -5931,7 +5940,7 @@
       <div class="nt-actions">
         <button class="ma-btn secondary" id="msg-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="msg-send" style="flex:2;">
-          <i data-lucide="send"></i> Envoyer
+          <i data-lucide="copy"></i> Copier le message
         </button>
       </div>
     </div>
@@ -8475,6 +8484,9 @@
     };
     let cardSuccessTimer = null;
     let cardFootTimer = null;
+    let cardAttemptSeq = 0;
+    let cardPaymentCommitted = false;
+    let cashPaymentCommitted = false;
 
     /* ---------- Pourboire (tip) on regular card / cash payments ----------
        Split parts keep their own tip (splitState) — this is only applied
@@ -8485,7 +8497,7 @@
 
     function payTipPct() {
       if (splitPayCallback) return 0;       // split has its own tip
-      if (payTipMode === 'autre') return Math.max(0, payTipCustom || 0);
+      if (payTipMode === 'autre') return Math.max(0, Math.min(100, Number.isFinite(payTipCustom) ? payTipCustom : 0));
       return parseFloat(payTipMode) || 0;
     }
     function payTipAmount() {
@@ -8587,7 +8599,9 @@
     // Custom tip % input (both modals share one delegated listener).
     document.addEventListener('input', (e) => {
       if (e.target.id === 'card-tip-input' || e.target.id === 'cash-tip-input') {
-        payTipCustom = parseFloat(e.target.value) || 0;
+        const raw = parseFloat(e.target.value);
+        payTipCustom = Math.max(0, Math.min(100, Number.isFinite(raw) ? raw : 0));
+        if (String(e.target.value) !== '' && +e.target.value !== payTipCustom) e.target.value = payTipCustom;
         applyPayTipChange();
       }
     });
@@ -8596,6 +8610,8 @@
        journal — sinon chaque paiement mobile compte comme une carte. */
     let cardTenderMethod = 'card';
     function openCardModal() {
+      const attempt = ++cardAttemptSeq;
+      cardPaymentCommitted = false;
       cardTenderMethod = 'card';
       // Reset to pulsing state
       $('#card-modal-title').textContent = 'Payer par carte';
@@ -8626,12 +8642,17 @@
         }
         Promise.resolve(hw.authorizeCard(currentTotal() + payTipAmount(), reader.disc, reader.status))
           .then((result) => {
-            if (result && result.approved) triggerCardSuccess();
+            if (attempt !== cardAttemptSeq || !cardModal.classList.contains('is-open')) return;
+            if (result && result.approved) triggerCardSuccess(result);
             else { reader.method.style.display = 'none'; reader.foot.classList.add('is-visible'); lucide.createIcons(); }
           });
       }, 2000);
     }
-    function triggerCardSuccess() {
+    function triggerCardSuccess(result) {
+      if (cardPaymentCommitted) return;
+      const settled = finalizeTender(cardTenderMethod);
+      cardPaymentCommitted = true;
+      if (settled === 'split') { closeCardModal(); return; }
       reader.disc.classList.remove('is-pulsing');
       reader.disc.classList.add('flash', 'is-success');
       reader.disc.innerHTML = '<i data-lucide="check"></i>';
@@ -8640,7 +8661,8 @@
       reader.status.textContent = ((document.getElementById('card-modal-title') || {}).textContent === 'Paiement QR')
         ? 'Paiement QR confirmé' : 'Carte approuvée';
       reader.method.style.display = 'none';
-      const txn = 'TXN #KW-' + (28000 + Math.floor(Math.random() * 999));
+      const truthRef = result && (result.transactionId || result.txn || result.ref || result.id);
+      const txn = truthRef ? ('TXN ' + String(truthRef)) : 'Transaction confirmée';
       reader.txn.textContent = txn;
       reader.txn.hidden = false;
       reader.actions.classList.add('is-visible');
@@ -8648,7 +8670,6 @@
       setTimeout(() => { reader.disc.classList.remove('flash'); }, 600);
       cardFootTimer = setTimeout(() => { reader.foot.classList.add('is-visible'); }, 1000);
     }
-
     /* A settled row identifies the order, not the physical table. Keep the
        first kitchen ticket attached to this bill; later sends are additions. */
     function settledOrderLabel(tableId) {
@@ -8671,44 +8692,18 @@
       return tableId || 'Commande';
     }
 
-    function closeCardModal({ paid = false } = {}) {
+    function closeCardModal() {
       cardModal.classList.remove('is-open');
+      cardAttemptSeq++;
       clearTimeout(cardSuccessTimer);
       clearTimeout(cardFootTimer);
-      const tenderBase = currentTotal();
       cashAmountOverride = null;
-      if (!paid) return;
-      const saleLabel = mode === 'vrap'
-        ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
-        : settledOrderLabel(selectedId);
-      if (!splitPayCallback) recordSale(tenderBase, cardTenderMethod, saleLabel, payTipAmount(), currentSaleLines());
-      if (splitPayCallback) {
-        const cb = splitPayCallback;
-        splitPayCallback = null;
-        cb();
-        return;
-      }
-      if (mode === 'vrap') {
-        settleVrapPayment();
-      } else if (selectedId) {
-        markPaid(selectedId);
-        closeRightPanel();
-      }
     }
     $('#pay-card').addEventListener('click', openCardModal);
     $('#pay-qr').addEventListener('click', function () {
-      openCardModal();
-      cardTenderMethod = 'qr';
-      var title = document.getElementById('card-modal-title');
-      if (title) title.textContent = 'Paiement QR';
-      if (reader && reader.status) reader.status.textContent = 'Scannez le QR, paiement mobile';
-      if (reader && reader.disc) {
-        reader.disc.replaceChildren();
-        var ic = document.createElement('i');
-        ic.setAttribute('data-lucide', 'qr-code');
-        reader.disc.appendChild(ic);
-        if (window.lucide) lucide.createIcons();
-      }
+      /* No QR provider/intent exists in the hardware bridge yet. Reusing the card
+         authorizer painted a QR icon but charged the card path — a false success. */
+      toast('Paiement QR indisponible · configurez un fournisseur QR');
     });
     cardModal.addEventListener('click', (e) => {
       /* Toucher le fond validait l'encaissement. Le modal carte s'ouvre AVANT
@@ -8717,14 +8712,11 @@
        * sans qu'un centime soit entré. Le modal espèces se garde déjà de ça
        * (`!cashStepInput.hidden`) ; on applique la même règle : payé seulement
        * si l'approbation est passée, ce que dit `reader.actions`. */
-      if (e.target === cardModal) closeCardModal({ paid: reader.actions.classList.contains('is-visible') });
+      if (e.target === cardModal) closeCardModal();
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
-      if (action === 'close') closeCardModal({ paid: reader.actions.classList.contains('is-visible') });
-      /* On ferme d'ABORD : recordSale() tourne à la fermeture du modal, donc
-         c'est elle qui pose lastSaleId. Imprimer avant, c'est imprimer la vente
-         précédente. */
-      if (action === 'print') { closeCardModal({ paid: true }); printSaleTicket(lastSaleEntry()); }
-      if (action === 'send')  { closeCardModal({ paid: true }); sendSaleTicket(lastSaleEntry()); }
+      if (action === 'close') closeCardModal();
+      if (action === 'print') { closeCardModal(); printSaleTicket(lastSaleEntry()); }
+      if (action === 'send')  { closeCardModal(); sendSaleTicket(lastSaleEntry()); }
     });
 
     /* ---------- CASH modal ---------- */
@@ -8752,6 +8744,27 @@
       // Net of any manager-approved remise on this table.
       return Math.max(0, gross - discountAmountFor(selectedId, gross));
     }
+    /* Commit at the payment truth boundary, not when a decorative success modal
+       is later dismissed. A reload/Escape after cash was accepted or the reader
+       approved must never leave the order due and invite a second charge. */
+    function finalizeTender(method) {
+      const tenderBase = currentTotal();
+      const tenderTip = payTipAmount();
+      const saleLabel = mode === 'vrap'
+        ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
+        : settledOrderLabel(selectedId);
+      const lines = currentSaleLines();
+      if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines);
+      if (splitPayCallback) {
+        const cb = splitPayCallback;
+        splitPayCallback = null;
+        cb();
+        return 'split';
+      }
+      if (mode === 'vrap') settleVrapPayment();
+      else if (selectedId) { markPaid(selectedId); closeRightPanel(); }
+      return 'complete';
+    }
     function updateRendu() {
       // The customer pays base + pourboire; rendu is computed off that.
       const total = currentTotal() + payTipAmount();
@@ -8774,6 +8787,7 @@
       });
     }
     function openCashModal() {
+      cashPaymentCommitted = false;
       cashStepInput.hidden = false;
       cashStepInput.style.display = '';
       cashStepSuccess.hidden = true;
@@ -8788,26 +8802,9 @@
       updateRendu();
       setTimeout(() => cashInput.focus(), 60);
     }
-    function closeCashModal({ paid = false } = {}) {
+    function closeCashModal() {
       cashAmountOverride = null;
       cashModal.classList.remove('is-open');
-      if (!paid) return;
-      const saleLabel = mode === 'vrap'
-        ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
-        : settledOrderLabel(selectedId);
-      if (!splitPayCallback) recordSale(currentTotal(), 'cash', saleLabel, payTipAmount(), currentSaleLines());
-      if (splitPayCallback) {
-        const cb = splitPayCallback;
-        splitPayCallback = null;
-        cb();
-        return;
-      }
-      if (mode === 'vrap') {
-        settleVrapPayment();
-      } else if (selectedId) {
-        markPaid(selectedId);
-        closeRightPanel();
-      }
     }
     $('#pay-cash').addEventListener('click', openCashModal);
     cashInput.addEventListener('input', updateRendu);
@@ -8850,7 +8847,11 @@
       // Customer owes base + pourboire; rendu is the change off that.
       const total = currentTotal() + payTipAmount();
       const got = parseFloat(cashInput.value) || 0;
+      if (cashPaymentCommitted || got < total) return;
       const change = got - total;
+      const settled = finalizeTender('cash');
+      cashPaymentCommitted = true;
+      if (settled === 'split') { closeCashModal(); return; }
       cashStepInput.hidden = true;
       cashStepInput.style.display = 'none';
       cashStepSuccess.hidden = false;
@@ -8862,19 +8863,16 @@
       lucide.createIcons();
     });
     cashModal.addEventListener('click', (e) => {
-      if (e.target === cashModal) closeCashModal({ paid: !cashStepInput.hidden ? false : true });
+      if (e.target === cashModal) closeCashModal();
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
-      if (action === 'close') closeCashModal({ paid: true });
-      /* Même ordre qu'au modal carte : fermer enregistre la vente, donc imprimer
-         ensuite. Et le tiroir s'ouvre — KiwiHardware.openDrawer() existait,
-         entièrement écrit, et n'était appelé nulle part. */
-      if (action === 'print') { closeCashModal({ paid: true }); openCashDrawer(); printSaleTicket(lastSaleEntry()); }
-      if (action === 'send')  { closeCashModal({ paid: true }); sendSaleTicket(lastSaleEntry()); }
+      if (action === 'close') closeCashModal();
+      if (action === 'print') { closeCashModal(); openCashDrawer(); printSaleTicket(lastSaleEntry()); }
+      if (action === 'send')  { closeCashModal(); sendSaleTicket(lastSaleEntry()); }
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (cardModal.classList.contains('is-open')) closeCardModal({ paid: false });
-        if (cashModal.classList.contains('is-open')) closeCashModal({ paid: false });
+        if (cardModal.classList.contains('is-open')) closeCardModal();
+        if (cashModal.classList.contains('is-open')) closeCashModal();
       }
       if (e.key === 'Enter' && cashModal.classList.contains('is-open') && !cashStepInput.hidden) {
         if (!cashConfirm.disabled) { e.preventDefault(); cashConfirm.click(); }
@@ -12095,6 +12093,37 @@
     /* Clôture cash-count écart */
     $('#clo-count').addEventListener('input', updateEcart);
 
+    const verticalDemoPins = new Set(['0000','0002','0003','0004','0005','0006','0007','0008','0009','0010','0011','0012','0013','0014','0015']);
+    let pinRoutePending = false;
+    function routeAccessPin(code) {
+      if (pinRoutePending) return;
+      pinRoutePending = true;
+      if (code === '0001') { setTimeout(() => { pinRoutePending = false; unlockKitchenScreen(); }, 180); return; }
+      const tryVertical = (remaining) => {
+        if (window.KiwiPosDispatch && window.KiwiPosDispatch.has(code)) {
+          pinRoutePending = false;
+          window.KiwiPosDispatch.unlock(code);
+          return;
+        }
+        /* Deferred scripts may not have evaluated yet on a cold/slow first
+           load. A reserved specialist PIN must never fall through into the
+           restaurant register merely because its dispatcher is 200 ms late. */
+        if (verticalDemoPins.has(code) && remaining > 0) {
+          setTimeout(() => tryVertical(remaining - 1), 100);
+          return;
+        }
+        pinRoutePending = false;
+        if (verticalDemoPins.has(code)) {
+          toast('Module métier indisponible · rechargez la caisse');
+          pinBuffer = '';
+          renderPinDots();
+          return;
+        }
+        unlockApp();
+      };
+      setTimeout(() => tryVertical(30), 180);
+    }
+
     $('#pin-pad').addEventListener('click', (e) => {
       const key = e.target.closest('.pin-key');
       if (!key) return;
@@ -12111,23 +12140,14 @@
       if (pinBuffer.length >= 4) return;
       pinBuffer += v;
       renderPinDots();
-      if (pinBuffer.length === 4) {
-        // 0001 → écran cuisine · 0000 + 0002–0015 → métiers (dispatcher) · autre → caissier
-        if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
-        else if (window.KiwiPosDispatch && window.KiwiPosDispatch.has(pinBuffer)) { const p = pinBuffer; setTimeout(() => window.KiwiPosDispatch.unlock(p), 180); }
-        else                      setTimeout(unlockApp, 180);
-      }
+      if (pinBuffer.length === 4) routeAccessPin(pinBuffer);
     });
     document.addEventListener('keydown', (e) => {
       if (pinScreen.style.display === 'none') return;
       if (/^[0-9]$/.test(e.key) && pinBuffer.length < 4) {
         pinBuffer += e.key;
         renderPinDots();
-        if (pinBuffer.length === 4) {
-          if (pinBuffer === '0001') setTimeout(unlockKitchenScreen, 180);
-          else if (window.KiwiPosDispatch && window.KiwiPosDispatch.has(pinBuffer)) { const p = pinBuffer; setTimeout(() => window.KiwiPosDispatch.unlock(p), 180); }
-          else                      setTimeout(unlockApp, 180);
-        }
+        if (pinBuffer.length === 4) routeAccessPin(pinBuffer);
       } else if (e.key === 'Backspace') {
         pinBuffer = pinBuffer.slice(0, -1);
         renderPinDots();
@@ -12141,8 +12161,9 @@
          · actionLabel — string shown in the modal subtitle
                           (e.g. "Remise sur l'addition").
          · onApprove   — callback fired ONLY after a valid 4-digit
-                          manager code is entered. Demo: any 4 digits
-                          are accepted.
+                                manager code is entered. Only the unpaired local
+                          demo accepts any 4 digits; a paired/hosted till validates
+                          a manager-level code from its server-backed roster.
        Cancel / veil-click closes the modal WITHOUT calling onApprove.
        Every approval is logged to the `authorizations` array below.
        Exposed as window.requireManager so later features can gate
@@ -12175,7 +12196,20 @@
       $('#manager-modal-sub').textContent = actionLabel || 'Action à autoriser';
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
       mgrModal.classList.add('is-open');
+      const hint = mgrModal.querySelector('.mgr-hint');
+      if (hint) {
+        let demo = true;
+        try { demo = !(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
+        hint.textContent = demo ? 'Démo locale · n’importe quel code' : 'Code manager ou propriétaire requis';
+      }
       if (window.lucide) lucide.createIcons();
+    }
+
+    function managerCodeValid(code) {
+      let protectedTill = false;
+      try { protectedTill = !!(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
+      if (!protectedTill) return true;
+      try { return window.KiwiCaissePairing?.authorizeManager?.(code) === true; } catch (_) { return false; }
     }
 
     function mgrPushDigit(v) {
@@ -12183,7 +12217,16 @@
       mgrBuffer += v;
       renderMgrDots();
       if (mgrBuffer.length === 4) {
-        // Demo: any 4-digit code is accepted.
+        if (!managerCodeValid(mgrBuffer)) {
+          mgrBusy = true;
+          mgrModal.classList.add('is-error');
+          toast('Code manager incorrect ou impossible à vérifier');
+          setTimeout(() => {
+            mgrModal.classList.remove('is-error');
+            mgrBuffer = ''; mgrBusy = false; renderMgrDots();
+          }, 520);
+          return;
+        }
         mgrBusy = true;
         const action  = $('#manager-modal-sub').textContent;
         const approve = mgrOnApprove;
@@ -12315,7 +12358,7 @@
           ? `En service depuis ${s.since} · ${myTables} table${myTables !== 1 ? 's' : ''} actives`
           : (s.role ? escTeam(s.role) : 'Sur le service');
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message">
             <i data-lucide="message-square"></i>
           </button>
           <button class="team-btn danger" data-team-action="start-pause" data-server="${s.id}" title="Donner une pause">
@@ -12326,7 +12369,7 @@
         const mn = pauseElapsedMn(s);
         meta = `<span class="pause-tick">En pause · ${mn} mn</span>`;
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message">
             <i data-lucide="message-square"></i>
           </button>
           <button class="team-btn primary" data-team-action="end-pause" data-server="${s.id}" title="Fin de pause">
@@ -12336,7 +12379,7 @@
       } else {
         meta = 'Pas en service · fin de shift';
         actions = `
-          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Envoyer un message" disabled style="opacity:.35;">
+          <button class="team-btn" data-team-action="message" data-server="${s.id}" title="Préparer un message" disabled style="opacity:.35;">
             <i data-lucide="message-square"></i>
           </button>
         `;
@@ -12492,7 +12535,7 @@
         $('#msg-input').focus();
       }
     });
-    $('#msg-send').addEventListener('click', () => {
+    $('#msg-send').addEventListener('click', async () => {
       const text = $('#msg-input').value.trim();
       if (!text) { toast('Écris un message d\'abord'); return; }
       const target = msgTargetId === 'ALL'
@@ -14247,14 +14290,15 @@
       renderStock(); toast(changed ? `Inventaire validé · ${changed} article${changed>1?'s':''} ajusté${changed>1?'s':''}` : 'Inventaire validé · aucun écart');
     }
 
-    /* ---- Réception — enter stock by photo (mock scan) or manual entry ---- */
+    /* ---- Réception — real photo reference or manual entry ---- */
     let skReceptMode = 'photo';  // 'photo' | 'manual'
     let skReceptState = 'idle';  // 'idle' | 'scanning' | 'done'
     let skReceptLines = [];      // [{ name, qty }]
-    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; openSkModal(renderReceptModal()); }
+    let skReceptPhoto = null;
+    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; skReceptPhoto = null; openSkModal(renderReceptModal()); }
     function renderReceptModal(){
       return `<div class="split-badge">Réception</div><h3 class="modal-title" style="margin-bottom:4px;">Entrer du stock</h3>
-        <p class="modal-subtle" style="margin:0 0 14px;">Scanne le bon de livraison / reçu, ou saisis à la main.</p>
+        <p class="modal-subtle" style="margin:0 0 14px;">Photographie le bon comme référence, puis vérifie chaque ligne avant d’entrer le stock.</p>
         <div class="sk-recept-modes">
           <button class="sk-rmode ${skReceptMode==='photo'?'on':''}" data-sk-rmode="photo"><i data-lucide="scan-line"></i>Photo du bon</button>
           <button class="sk-rmode ${skReceptMode==='manual'?'on':''}" data-sk-rmode="manual"><i data-lucide="keyboard"></i>Saisie manuelle</button>
@@ -14264,10 +14308,10 @@
     function skReceptBodyHTML(){
       if (skReceptMode === 'photo'){
         if (skReceptState === 'idle')
-          return `<div class="sk-dropzone"><i data-lucide="receipt-text"></i><div class="sk-dz-t">Photo du bon de livraison</div><div class="sk-dz-s">ou importe une image du reçu, les articles sont détectés automatiquement</div><button class="ma-btn primary sk-mini" data-sk-scan style="margin-top:6px"><i data-lucide="camera"></i>Scanner</button></div>`;
+          return `<div class="sk-dropzone"><i data-lucide="receipt-text"></i><div class="sk-dz-t">Photo du bon de livraison</div><div class="sk-dz-s">Prends une photo ou importe le reçu ; elle restera la référence de cette réception.</div><button class="ma-btn primary sk-mini" data-sk-scan style="margin-top:6px"><i data-lucide="camera"></i>Prendre / importer</button></div>`;
         if (skReceptState === 'scanning')
           return `<div class="sk-scanning"><div class="sk-spinner"></div>Analyse du bon…</div>`;
-        return `<div class="sk-recept-note"><i data-lucide="sparkles"></i>${skReceptLines.length} articles détectés, vérifie les quantités.</div>${skReceptLinesHTML()}${skReceptFootHTML()}`;
+        return `<div class="sk-recept-note"><i data-lucide="check-circle-2"></i>Bon joint comme référence. Saisis les articles et vérifie les quantités.</div>${skReceptPhoto ? `<img src="${skReceptPhoto.dataUrl}" alt="Bon de livraison" style="display:block;width:100%;max-height:150px;object-fit:contain;border:1px solid var(--line);border-radius:12px;margin:10px 0;">` : ''}${skReceptLinesHTML()}${skReceptFootHTML()}`;
       }
       return skReceptLinesHTML() + `<div class="sk-rline-add" data-sk-rline-add><i data-lucide="plus"></i>Ajouter une ligne</div>` + skReceptFootHTML();
     }
@@ -14284,12 +14328,15 @@
     }
     function refreshReceptModal(){ $('#sk-modal-box').innerHTML = renderReceptModal(); if (window.lucide) lucide.createIcons(); }
     function rerenderReceptBody(){ const b = $('#sk-recept-body'); if (b){ b.innerHTML = skReceptBodyHTML(); if (window.lucide) lucide.createIcons(); } }
-    function skScan(){
-      skReceptState = 'scanning'; rerenderReceptBody();
-      setTimeout(()=>{
-        skReceptLines = [ {name:'Tomates fraîches',qty:15}, {name:'Oignons',qty:10}, {name:'Lait',qty:12}, {name:'Œufs',qty:8} ];
+    async function skScan(){
+      if (!window.KiwiImageProof){ toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 960, quality: 0.72 });
+        if (!photo) return;
+        skReceptPhoto = photo;
+        skReceptLines = [{ name:'', qty:'' }];
         skReceptState = 'done'; rerenderReceptBody();
-      }, 900);
+      } catch (_){ toast('Photo non jointe · vérifie l’accès à l’appareil'); }
     }
     function commitRecept(){
       $$('#sk-recept-body .sk-rline').forEach((row,idx)=>{

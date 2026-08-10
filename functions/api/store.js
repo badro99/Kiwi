@@ -69,6 +69,13 @@ const FEATURES = {
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
+  /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
+   * ingredients, recipes and fixed charges out of the public menu document.
+   * The browser has always declared this cloud document; omitting it here made
+   * every real cross-device save fail with unknown-feature while the local UI
+   * looked healthy.  This is the compatibility bridge until transactional
+   * supplier prices and recipe versions move to normalized ledger tables. */
+  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges'], max: 600000 },
   reservations: { keys: ['list', 'bookings', 'slots'],             max: 600000 },
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
   promotions:   { keys: ['list', 'rules'],                         max: 200000 },
@@ -77,6 +84,12 @@ const FEATURES = {
   kds:          { keys: ['stations', 'list'],                      max: 200000 },
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },
   suppliers:    { keys: ['list'],                                  max: 200000 },
+  procurement:  { keys: ['suppliers', 'orders', 'receipts', 'invoices', 'seq'], max: 900000 },
+  /* Operational state can contain a compact condition photo (pressing damage
+   * proof). Keep the document cap authoritative while allowing one bounded
+   * image string; the generic 4 kB string ceiling is appropriate for notes,
+   * not for a deliberately compressed data URL. */
+  verticalops:   { keys: ['verticals', 'commands', 'seq'],             max: 1500000, maxStr: 350000 },
   expenses:     { keys: ['list'],                                  max: 400000 },
   /* Les trois destinations « starter » qui n'avaient pas encore de case ici.
    * Le starter (pages-pro.js) range une simple LISTE de lignes saisies à la

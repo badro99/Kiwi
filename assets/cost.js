@@ -84,10 +84,8 @@
   const blank = () => ({ items: {}, ingredients: [], recipes: {}, charges: [], targets: {}, seq: 0 });
 
   const store = window.KiwiStore.define('costs', {
-    /* Le miroir serveur. Tant que functions/api/store.js n'a pas `costs` dans sa
-     * liste blanche, le serveur refuse le document et il reste purement local —
-     * c'est le fail-soft documenté dans venue-store.js, et c'est la raison pour
-     * laquelle cette phase peut partir sans attendre un déploiement. */
+    /* Private cross-device mirror.  The public menu never receives costs; the
+     * authenticated /api/store contract now explicitly accepts this document. */
     cloud: 'costs',
     blank,
     isEmpty: (d) => !d || (!Object.keys(d.items || {}).length
@@ -313,6 +311,12 @@
         if (!qty || !tot) return;
         revenueDetailed += tot;
 
+        /* Sale-line v2 revient du serveur sous `itemId`; `id` reste le nom
+         * historique du champ local. Ne jamais retomber par libellé lorsque
+         * l'identité stable existe : deux produits peuvent porter le même nom,
+         * et un renommage ne doit pas réécrire la marge passée. */
+        const itemId = l.itemId || l.id || '';
+
         /* Le coût GELÉ sur la ligne au moment de la vente gagne toujours sur le
          * résolveur : c'est ce qui empêche une correction de prix d'achat de
          * réécrire le bénéfice de mars. Absent (toutes les ventes d'avant la
@@ -320,11 +324,11 @@
         const frozen = num(l.unitCost);
         const hit = frozen != null && frozen > 0
           ? { mad: frozen, src: 'frozen' }
-          : of({ kind: l.kind || '', id: l.id || '', name: l.name || '' }, ctx);
+          : of({ kind: l.kind || '', id: itemId, variantId: l.variantId || '', name: l.name || '' }, ctx);
 
         if (hit.mad == null) {
           const key = norm(l.name) || '?';
-          const m = missing.get(key) || { name: l.name || '', revenue: 0, units: 0, id: l.id || '' };
+          const m = missing.get(key) || { name: l.name || '', revenue: 0, units: 0, id: itemId };
           m.revenue += tot; m.units += qty;
           missing.set(key, m);
           return;

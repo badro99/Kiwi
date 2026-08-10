@@ -113,13 +113,49 @@ export async function onRequestPost({ request, env }) {
        * catégorie connue » de « catégorie Divers », et ne prétend pas classer
        * l'historique écrit avant cette ligne. */
       const clean = raw.slice(0, 40).map((l) => {
+        const qty = Math.round(Math.max(0, Math.min(1000000,
+          Number(l && (l.q ?? l.qty ?? l.quantity)) || 0)) * 1000) / 1000;
         const o = {
           n: String((l && (l.n ?? l.name)) || 'Article').slice(0, 60),
-          q: Math.max(0, Math.round(Number(l && (l.q ?? l.qty)) || 0)),
-          t: Math.max(0, Math.round(Number(l && (l.t ?? l.total)) || 0)),
+          q: qty,
+          t: Math.round(Math.max(0, Math.min(100000000,
+            Number(l && (l.t ?? l.total)) || 0)) * 100) / 100,
         };
         const c = String((l && (l.c ?? l.cat ?? l.category)) || '').slice(0, 40);
         if (c) o.c = c;
+        /* Sale-line v2.  Names remain snapshots for receipts and old reports;
+         * these stable identifiers are what stock, recipe and margin engines
+         * need in order to avoid guessing against today's catalogue. */
+        const itemId = String((l && (l.i ?? l.itemId ?? l.item_id ?? l.id)) || '').slice(0, 80);
+        const variantId = String((l && (l.v ?? l.variantId ?? l.variant_id)) || '').slice(0, 80);
+        const unit = String((l && (l.u ?? l.unit)) || '').slice(0, 24);
+        const kind = String((l && (l.kd ?? l.kind)) || '').slice(0, 24);
+        const recipeVersion = String((l && (l.r ?? l.recipeVersionId ?? l.recipe_version_id)) || '').slice(0, 80);
+        if (itemId) o.i = itemId;
+        if (variantId) o.v = variantId;
+        if (unit) o.u = unit;
+        if (kind) o.kd = kind;
+        if (recipeVersion) o.r = recipeVersion;
+
+        const rawCost = Number(l && (l.k ?? l.unitCost ?? l.unit_cost));
+        if (Number.isFinite(rawCost) && rawCost >= 0 && rawCost <= 10000000) {
+          o.k = Math.round(rawCost * 100) / 100;
+        }
+
+        /* Options are deliberately a small list of stable id + quantity
+         * deltas.  Free-form notes and photos do not belong in the financial
+         * sale row and would make the offline queue unbounded. */
+        const rawOptions = l && (l.o ?? l.options ?? l.optionDeltas ?? l.option_deltas);
+        if (Array.isArray(rawOptions)) {
+          const options = rawOptions.slice(0, 16).map((x) => {
+            if (typeof x === 'string') return { i: x.slice(0, 80), q: 1 };
+            const id = String((x && (x.i ?? x.id ?? x.itemId)) || '').slice(0, 80);
+            const oq = Math.round(Math.max(-1000000, Math.min(1000000,
+              Number(x && (x.q ?? x.qty ?? x.quantity)) || 0)) * 1000) / 1000;
+            return id ? { i: id, q: oq || 1 } : null;
+          }).filter(Boolean);
+          if (options.length) o.o = options;
+        }
         return o;
       }).filter((l) => l.q > 0);
       if (clean.length) {
@@ -127,7 +163,7 @@ export async function onRequestPost({ request, env }) {
         /* Le plafond monte avec la catégorie : 40 lignes × ~40 caractères de
          * plus, sinon un gros panier catégorisé perdrait TOUT son détail au
          * profit d'un `lines = null`. La colonne est un TEXT, elle s'en moque. */
-        if (s.length <= 6000) lines = s;
+        if (s.length <= 24000) lines = s;
       }
     }
   } catch (_) { lines = null; }

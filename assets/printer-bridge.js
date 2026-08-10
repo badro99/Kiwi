@@ -416,15 +416,21 @@
   // the network bridge. Callers fail soft when this resolves { ok:false }.
   function printBytes(bytes) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
-    if (btConnected()) {
-      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
-        function (e) { return { ok: false, reason: 'bt-' + ((e && e.message) || 'write-failed') }; });
+    function viaBridge() { return bridgePrintBytes(bytes); }
+    function viaUsb() {
+      if (!usbConnected()) return viaBridge();
+      return usbWrite(bytes).then(
+        function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
+        /* A stale WebUSB grant must not prevent the configured network/OS
+           printer from receiving the same job. */
+        viaBridge);
     }
-    if (usbConnected()) {
-      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
-        function (e) { return { ok: false, reason: 'usb-' + ((e && e.message) || 'write-failed') }; });
-    }
-    return bridgePrintBytes(bytes);
+    if (!btConnected()) return viaUsb();
+    return btWrite(bytes).then(
+      function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
+      /* Bluetooth can disconnect between isConnected() and the first chunk.
+         Continue down the declared transport order instead of failing early. */
+      viaUsb);
   }
 
   // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up.

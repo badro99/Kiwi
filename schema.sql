@@ -457,6 +457,40 @@ CREATE TABLE IF NOT EXISTS store_docs (
   PRIMARY KEY (merchant, feature)
 );
 
+-- ── STOCK RÉEL · REGISTRE DE MOUVEMENTS ──────────────────────────────────
+-- Une quantité de stock n'est jamais écrasée : elle est la somme de ce journal
+-- append-only. L'identifiant vient du client et rend le rejeu hors-ligne
+-- idempotent. `qty_milli` stocke l'unité de référence × 1 000 (g, ml, pièce),
+-- donc 1,250 kg ou 0,5 pièce traversent SQLite sans flottant cumulatif.
+CREATE TABLE IF NOT EXISTS inventory_movements (
+  id              TEXT PRIMARY KEY,
+  merchant        TEXT NOT NULL,
+  item_id         TEXT NOT NULL,
+  variant_id      TEXT NOT NULL DEFAULT '',
+  location_id     TEXT NOT NULL DEFAULT 'principal',
+  qty_milli       INTEGER NOT NULL,              -- signé : entrée +, sortie −
+  reason          TEXT NOT NULL,                 -- opening|receipt|sale|count|loss|transfer-*|production-*|return
+  unit_cost_cents INTEGER,                       -- coût d'entrée gelé ; NULL si inconnu
+  currency        TEXT NOT NULL DEFAULT 'MAD',
+  ref_type        TEXT NOT NULL DEFAULT '',       -- sale|receipt|count|transfer|production|manual
+  ref_id          TEXT NOT NULL DEFAULT '',
+  note            TEXT NOT NULL DEFAULT '',
+  actor           TEXT NOT NULL DEFAULT '',
+  occurred_ts     INTEGER NOT NULL,
+  srv_ts          INTEGER NOT NULL,              -- curseur serveur monotone par magasin
+  reversal_of     TEXT NOT NULL DEFAULT '',       -- correction append-only, jamais DELETE
+  meta            TEXT,
+  created_ts      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor
+  ON inventory_movements (merchant, srv_ts);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item
+  ON inventory_movements (merchant, item_id, occurred_ts);
+CREATE TABLE IF NOT EXISTS inventory_sync_sequences (
+  merchant TEXT PRIMARY KEY,
+  last_ts   INTEGER NOT NULL
+);
+
 -- ── CARNET CLIENTS · fidélité ───────────────────────────────────────────────
 -- assets/clients-store.js appelle /api/clients depuis la livraison de la
 -- fidélité. L'endpoint n'existait pas : les trois appels tombaient sur un 404

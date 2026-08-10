@@ -107,12 +107,23 @@
    * ticket — it just prints as standard 80 mm. */
   var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '110': 66, '112': 64 };
   function cols(paper) { return COLS[String(paper)] || 48; }
+  function cell(v) {
+    return String(v == null ? '' : v).replace(/[\r\n\t\x00-\x1F\x7F]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
+  function fit(v, paper, widthMultiplier) {
+    var cap = Math.max(1, Math.floor(cols(paper) / Math.max(1, widthMultiplier || 1)));
+    return cell(v).slice(0, cap);
+  }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
     var w = cols(paper);
-    left = String(left == null ? '' : left);
-    right = String(right == null ? '' : right);
-    if (left.length + right.length + 1 > w) left = left.slice(0, w - right.length - 1);
+    left = cell(left);
+    right = cell(right);
+    /* Never let a merchant-entered label or an unexpectedly long amount push a
+       fixed-width row past the configured roll. The right column is kept first
+       because it carries the accounting value. */
+    if (right.length >= w) right = right.slice(0, w - 1);
+    if (left.length + right.length + 1 > w) left = left.slice(0, Math.max(0, w - right.length - 1));
     var gap = Math.max(1, w - left.length - right.length);
     return left + new Array(gap + 1).join(' ') + right;
   }
@@ -127,10 +138,10 @@
   function receipt(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
-    b.align('center').bold(true).size(2, 2).line(o.shop || 'Kiwi').size(1, 1).bold(false);
-    if (o.address) b.line(o.address);
-    if (o.phone) b.line(o.phone);
-    if (o.ref || o.date) b.line([o.ref, o.date].filter(Boolean).join('  '));
+    b.align('center').bold(true).size(2, 2).line(fit(o.shop || 'Kiwi', paper, 2)).size(1, 1).bold(false);
+    if (o.address) b.line(fit(o.address, paper));
+    if (o.phone) b.line(fit(o.phone, paper));
+    if (o.ref || o.date) b.line(fit([o.ref, o.date].filter(Boolean).join('  '), paper));
     b.align('left').line(rule(paper));
     (o.lines || []).forEach(function (l) {
       var name = (l.qty ? l.qty + '× ' : '') + (l.name || '');
@@ -139,7 +150,7 @@
     b.line(rule(paper));
     b.bold(true).size(1, 2).line(row('TOTAL', (o.total != null ? o.total : '') + '', paper)).size(1, 1).bold(false);
     if (o.method) b.line(row('Paiement', o.method, paper));
-    if (o.footer) b.feed(1).align('center').line(o.footer);
+    if (o.footer) b.feed(1).align('center').line(fit(o.footer, paper));
     b.align('center').feed(1).line('Merci · Kiwi');
     b.cut();
     if (o.openDrawer) b.drawer();
@@ -149,13 +160,13 @@
   function kitchenTicket(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
-    b.align('center').bold(true).size(2, 2).line(o.title || 'CUISINE').size(1, 1).bold(false);
-    if (o.table || o.order) b.line([o.table, o.order].filter(Boolean).join('  ·  '));
-    if (o.time) b.line(o.time);
+    b.align('center').bold(true).size(2, 2).line(fit(o.title || 'CUISINE', paper, 2)).size(1, 1).bold(false);
+    if (o.table || o.order) b.line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper));
+    if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
-      b.bold(true).size(1, 2).line((it.qty ? it.qty + '× ' : '') + (it.name || '')).size(1, 1).bold(false);
-      if (it.note) b.line('   > ' + it.note);
+      b.bold(true).size(1, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper)).size(1, 1).bold(false);
+      if (it.note) b.line(fit('   > ' + it.note, paper));
     });
     b.line(rule(paper)).cut();
     return b.bytes();
@@ -170,15 +181,15 @@
     // receipt-style three-line cutter feed used to make this path much taller
     // than the selected stock, so compact labels cut after a few printer dots.
     if (compact) {
-      if (o.title) b.bold(true).line(o.title).bold(false);
-      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(String(o.price) + ' MAD').size(1, 1).bold(false);
+      if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
+      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' MAD', paper, 2)).size(1, 1).bold(false);
       b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
       b.feedDots(4).cutNow();
       return b.bytes();
     }
-    if (o.title) b.bold(true).line(o.title).bold(false);
-    if (o.sub) b.line(o.sub);
-    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(String(o.price) + ' MAD').size(1, 1).bold(false);
+    if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
+    if (o.sub) b.line(fit(o.sub, paper));
+    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(fit(String(o.price) + ' MAD', paper)).size(1, 1).bold(false);
     b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
     b.feed(1).cut();
     return b.bytes();
@@ -214,10 +225,10 @@
     var b = new Builder().init();
 
     /* En-tête — l'identité du commerce et la journée décrite. */
-    b.align('center').bold(true).size(2, 2).line(o.shop || (r.store && r.store.name) || 'Kiwi').size(1, 1);
-    b.line(o.title || 'RAPPORT JOURNALIER').bold(false);
-    if (o.address || (r.store && r.store.location)) b.line(o.address || r.store.location);
-    if (o.dateLabel) b.line(o.dateLabel);
+    b.align('center').bold(true).size(2, 2).line(fit(o.shop || (r.store && r.store.name) || 'Kiwi', paper, 2)).size(1, 1);
+    b.line(fit(o.title || 'RAPPORT JOURNALIER', paper)).bold(false);
+    if (o.address || (r.store && r.store.location)) b.line(fit(o.address || r.store.location, paper));
+    if (o.dateLabel) b.line(fit(o.dateLabel, paper));
     /* Une réimpression doit se voir : deux exemplaires du même Z qui circulent
        sans le dire, c'est une pièce comptable qu'on ne peut plus rapprocher. */
     if (o.copy) b.bold(true).line('— ' + o.copy + ' —').bold(false);

@@ -300,7 +300,37 @@
   };
   function freshCart() { state.cart = { num: posRef(`V-${saleSeq}`), lines: [], client: null }; }
 
+  const librairieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'librairie',
+    snapshot() {
+      return { catalog: CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      Object.keys(ITEM).forEach((id) => delete ITEM[id]);
+      Object.keys(RAYON).forEach((id) => delete RAYON[id]);
+      CATALOG.forEach((rayon) => {
+        RAYON[rayon.id] = rayon;
+        rayon.items.forEach((item) => { item.rayon = rayon.id; ITEM[item.id] = item; });
+      });
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.commands)) CMDS.splice(0, CMDS.length, ...saved.commands);
+      CMDS.forEach((command) => {
+        ['orderedAt', 'arrivedAt', 'pickedAt'].forEach((key) => {
+          if (command[key]) command[key] = new Date(command[key]);
+        });
+      });
+      if (Number.isFinite(saved.cmdSeq)) cmdSeq = saved.cmdSeq;
+      if (Number.isFinite(saved.saleSeq)) saleSeq = saved.saleSeq;
+      if (saved.cart) state.cart = saved.cart;
+    },
+  });
+
   function queueIfOffline(label) {
+    if (librairieOps) librairieOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -324,9 +354,22 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(c, received) {
+    const bases = c.lines.map((l) => ITEM[l.key].price * l.qty);
+    const baseTotal = bases.reduce((s, n) => s + n, 0);
+    let allocated = 0;
+    return c.lines.map((l, i) => {
+      const it = ITEM[l.key];
+      const total = i === c.lines.length - 1
+        ? Math.max(0, received - allocated)
+        : Math.round((received * bases[i] / Math.max(1, baseTotal)) * 100) / 100;
+      allocated += total;
+      return { itemId: it.id, name: it.title, category: it.rayon, qty: l.qty, unit: 'piece', kind: 'product', total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -337,8 +380,9 @@
   /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
   let root = null;
   function mount(rootEl) {
+    if (librairieOps) librairieOps.hydrate();
     root = rootEl;
-    freshCart();
+    if (!state.cart) freshCart();
     root.innerHTML = `
       <aside class="lb-rail">
         <div class="lb-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -841,7 +885,15 @@
     openVeil('#lb-rec-veil');
     icons();
     $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-rec-veil'); });
-    $('#lb-rec-print', el).onclick = () => toast('Envoyé, ticket 80 mm (imprimante thermique)');
+    $('#lb-rec-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.lb-receipt .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:`Ticket ${c.num}`, paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
     $('#lb-rec-pay', el).onclick = () => { closeVeil('#lb-rec-veil'); openPay(); };
   }
 
@@ -944,7 +996,7 @@
         cu.visits += 1;
         earnMsg = ` · +${total} pts fidélité`;
       }
-      postDay(total, method, cartLabel(c), c.num);
+      postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
       freshCart();
@@ -1072,7 +1124,8 @@
       </div>
       <div class="lb-dt-actions">
         ${c.status === 'commande' ? '<button class="lb-btn primary" data-lb-advance="arrivee"><i data-lucide="package-check"></i>Marquer arrivé</button>' : ''}
-        ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'WhatsApp « il est arrivé »'}</button>` : ''}
+        ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'Ouvrir le brouillon WhatsApp'}</button>` : ''}
+        ${c.status === 'arrivee' && c.draftOpenedAt && !c.notified ? '<button class="lb-btn primary" id="lb-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer le message envoyé</button>' : ''}
         ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-lucide="check"></i>Remettre au client${due > 0 ? ` · ${due} MAD` : ''}</button>` : ''}
         ${c.status !== 'retiree' ? '<button class="lb-btn ghost" id="lb-dt-cancel">Annuler la commande</button>' : ''}
       </div>`;
@@ -1091,8 +1144,21 @@
     });
     const wa = $('#lb-dt-wa', el);
     if (wa) wa.onclick = () => openWa(c);
+    const waConfirm = $('#lb-dt-wa-confirm', el);
+    if (waConfirm) waConfirm.onclick = () => {
+      c.notified = true;
+      c.notifiedAt = new Date();
+      queueIfOffline('WhatsApp confirmé envoyé');
+      closeVeil('#lb-detail-veil');
+      renderCmd(); renderBadges(); icons();
+      toast(`${c.id}, message marqué envoyé`);
+    };
     const cancel = $('#lb-dt-cancel', el);
     if (cancel) cancel.onclick = () => {
+      if (c.acompte > 0) {
+        toast(`Annulation bloquée, remboursez d'abord l'acompte de ${c.acompte} MAD depuis les encaissements`, 4200);
+        return;
+      }
       const i = CMDS.indexOf(c);
       if (i >= 0) CMDS.splice(i, 1);
       closeVeil('#lb-detail-veil');
@@ -1319,9 +1385,9 @@
       const body = txt ? txt.value : waMessage(c);
       const num = String(cu.phone || '').replace(/\D/g, '');
       if (!num) { toast(`Pas de numéro pour ${cu.name}, ajoutez-le à sa fiche`); return; }
-      c.notified = true;
+      c.draftOpenedAt = new Date();
       closeVeil('#lb-wa-veil');
-      queueIfOffline('Notification WhatsApp');
+      queueIfOffline('Brouillon WhatsApp ouvert');
       try {
         window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
         toast(`WhatsApp ouvert pour ${cu.name}, appuyez sur envoyer${withCover ? ' · joignez la couverture dans WhatsApp' : ''}`);

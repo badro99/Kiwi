@@ -329,13 +329,39 @@
     try {
       if (Array.isArray(entry.lines) && entry.lines.length) {
         lines = entry.lines.slice(0, 40).map(function (l) {
-          var o = { n: String((l && l.name) || 'Article').slice(0, 60), q: +(l && l.qty) || 1, t: Math.round((l && +l.total) || 0) };
+          l = l || {};
+          var o = {
+            n: String(l.name || 'Article').slice(0, 60),
+            q: Math.round(Math.max(0, +(l.qty ?? l.quantity) || 0) * 1000) / 1000 || 1,
+            t: Math.round(Math.max(0, +l.total || 0) * 100) / 100,
+          };
           /* `c` — la catégorie du produit telle qu'elle était au moment de la
            * vente. Elle n'est ajoutée que si la caisse la connaît : une clé
            * vide sur chacune des 40 lignes d'un panier alourdirait la file
            * hors-ligne pour ne rien dire de plus. */
-          var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
+          var c = String(l.cat || l.category || '').slice(0, 40);
           if (c) o.c = c;
+          var i = String(l.itemId || l.item_id || '').slice(0, 80);
+          var v = String(l.variantId || l.variant_id || '').slice(0, 80);
+          var u = String(l.unit || '').slice(0, 24);
+          var kd = String(l.kind || '').slice(0, 24);
+          var r = String(l.recipeVersionId || l.recipe_version_id || '').slice(0, 80);
+          if (i) o.i = i;
+          if (v) o.v = v;
+          if (u) o.u = u;
+          if (kd) o.kd = kd;
+          if (r) o.r = r;
+          var cost = +(l.unitCost ?? l.unit_cost);
+          if (Number.isFinite(cost) && cost >= 0) o.k = Math.round(cost * 100) / 100;
+          if (Array.isArray(l.options)) {
+            var opts = l.options.slice(0, 16).map(function (x) {
+              if (typeof x === 'string') return { i: x.slice(0, 80), q: 1 };
+              var id = String((x && (x.id || x.i || x.itemId)) || '').slice(0, 80);
+              var qty = Math.round((+(x && (x.qty ?? x.q)) || 1) * 1000) / 1000;
+              return id ? { i: id, q: qty } : null;
+            }).filter(Boolean);
+            if (opts.length) o.o = opts;
+          }
           return o;
         });
       }

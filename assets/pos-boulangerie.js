@@ -212,6 +212,16 @@
     don: null,                        /* {assoc, note, pieces, at} */
     offline: false, queued: 0,
   };
+  const bakeryOps = window.KiwiVerticalState?.open?.('boulangerie', {
+    schema: 1,
+    snapshot: () => ({ catalog: CATALOG, batches: FOURNEES, cakes: CAKES, fourSeq, cakeSeq, ticket: state.ticket, seq: state.seq, day: state.day, lastHour: state.lastHour, invAdjust: state.invAdjust, donForm: state.donForm, don: state.don }),
+    restore: (d) => {
+      CATALOG.splice(0, CATALOG.length, ...(d.catalog || [])); Object.keys(PROD).forEach(k => delete PROD[k]); CATALOG.forEach(c => (c.items || []).forEach(p => { p.cat = c.id; PROD[p.id] = p; }));
+      FOURNEES.splice(0, FOURNEES.length, ...(d.batches || [])); CAKES.splice(0, CAKES.length, ...((d.cakes || []).map(c => { c.retrait = new Date(c.retrait); return c; })));
+      fourSeq = Math.max(fourSeq, +d.fourSeq || 0); cakeSeq = Math.max(cakeSeq, +d.cakeSeq || 0); state.seq = Math.max(state.seq, +d.seq || 0);
+      state.ticket = d.ticket || []; state.day = d.day || state.day; state.lastHour = !!d.lastHour; state.invAdjust = d.invAdjust || {}; state.donForm = d.donForm || { assoc: null, note: '' }; state.don = d.don || null;
+    },
+  });
   const tNum = () => `T-${pad2(state.seq).padStart(3, '0')}`;
   const effPrice = (p) => state.lastHour ? Math.round(p.price * 50) / 100 : p.price;
   const tkCount  = () => state.ticket.reduce((s, l) => s + l.qty, 0);
@@ -226,9 +236,9 @@
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le comptoir vendait toute la matinée dans state.day et rien d'autre : la
      patronne voyait 0 MAD et un refresh effaçait la recette. Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('boulangerie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('boulangerie', { total, method, label, ref, lines });
     } catch (_) {}
   }
   (function restoreDay() {
@@ -244,6 +254,7 @@
   })();
 
   function queueIfOffline(label) {
+    bakeryOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -255,6 +266,7 @@
   let root = null;
 
   function mount(rootEl) {
+    bakeryOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="bl-rail">
@@ -534,6 +546,11 @@
   function finalizeSale(method, rendu) {
     const total = tkTotal();
     const num = tNum();
+    const lines = state.ticket.map((l) => ({
+      itemId: l.prodId, name: PROD[l.prodId].label, cat: PROD[l.prodId].cat,
+      qty: l.qty, unit: 'piece', kind: 'product',
+      total: Math.round(effPrice(PROD[l.prodId]) * l.qty * 100) / 100,
+    }));
     state.ticket.forEach((l) => {
       const p = PROD[l.prodId];
       p.stock = Math.max(0, p.stock - l.qty);
@@ -541,7 +558,7 @@
     });
     state.day[method === 'carte' ? 'carte' : 'especes'] += total;
     state.day.tickets++;
-    postDay(total, method, tkLabel(), num);
+    postDay(total, method, tkLabel(), num, lines);
     state.seq++;
     state.ticket = [];
     closeVeil('#bl-pay-veil');
@@ -821,6 +838,7 @@
       <div class="bl-cc-actions">
         <button class="bl-btn secondary" data-bl-cake="${c.id}"><i data-lucide="search"></i>Détail</button>
         ${c.status === 'pret' ? `<button class="bl-btn secondary" data-bl-wa="${c.id}"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'WhatsApp « prêt »'}</button>` : ''}
+        ${c.status === 'pret' && c.draftOpenedAt && !c.notified ? `<button class="bl-btn primary" data-bl-confirm-wa="${c.id}"><i data-lucide="check-check"></i>Confirmer l’envoi</button>` : ''}
         ${primary}
       </div>
     </div>`;
@@ -853,6 +871,12 @@
       if (pr) { markCakePret(pr.dataset.blPret); return; }
       const wa = e.target.closest('[data-bl-wa]');
       if (wa) { openWa(findCake(wa.dataset.blWa)); return; }
+      const cw = e.target.closest('[data-bl-confirm-wa]');
+      if (cw) {
+        const cake = findCake(cw.dataset.blConfirmWa);
+        if (cake) { cake.notified = true; cake.notifiedAt = new Date(); queueIfOffline(`Notification ${cake.id} confirmée`); refreshOps(); toast(`${cake.id}, notification confirmée`); }
+        return;
+      }
       const so = e.target.closest('[data-bl-solde]');
       if (so) { settleCake(findCake(so.dataset.blSolde)); return; }
       const re = e.target.closest('[data-bl-remettre]');
@@ -882,7 +906,8 @@
         c.paid += due;
         state.day[method === 'carte' ? 'carte' : 'especes'] += due;
         state.day.gateaux += due;
-        postDay(due, method, `Solde gâteau · ${c.name}`, c.id);
+        postDay(due, method, `Solde gâteau · ${c.name}`, c.id,
+          [{ itemId: 'gateau-commande', name: 'Gâteau sur commande', kind: 'service', unit: 'order', qty: 1, total: due }]);
         closeVeil('#bl-pay-veil');
         queueIfOffline(`Solde ${c.id}`);
         toast(`Solde encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -936,17 +961,36 @@
         <button class="bl-btn ghost" id="bl-dt-print" style="flex:1 1 auto;"><i data-lucide="printer"></i>Bon de commande</button>
         ${c.status === 'encours' ? '<button class="bl-btn primary" id="bl-dt-pret" style="flex:1 1 auto;"><i data-lucide="check"></i>Gâteau prêt</button>' : ''}
         ${c.status === 'pret' ? `<button class="bl-btn secondary" id="bl-dt-wa" style="flex:1 1 auto;"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'WhatsApp « prêt »'}</button>` : ''}
+        ${c.status === 'pret' && c.draftOpenedAt && !c.notified ? '<button class="bl-btn primary" id="bl-dt-wa-confirm" style="flex:1 1 auto;"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
         ${c.status === 'pret' && due > 0 ? `<button class="bl-btn primary" id="bl-dt-solde" style="flex:1 1 auto;"><i data-lucide="banknote"></i>Solde · ${fmtN(due)} MAD</button>` : ''}
         ${c.status === 'pret' && due <= 0 ? '<button class="bl-btn primary" id="bl-dt-remettre" style="flex:1 1 auto;"><i data-lucide="gift"></i>Remettre au client</button>' : ''}
       </div>`;
     openVeil('#bl-detail-veil');
     icons();
     $$('[data-bl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bl-detail-veil'); });
-    $('#bl-dt-print', el).onclick = () => toast(`Bon de commande ${c.id} envoyé à l'imprimante (80 mm)`);
+    $('#bl-dt-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      P.printText({ title:`Bon de commande ${c.id}`, paper:'80', lines:[
+        { label:'Client', value:`${c.name} · ${c.phone}` },
+        { label:'Retrait', value:fmtWhen(c.retrait) },
+        { label:'Gâteau', value:`${PART[c.parts].label} · ${c.parfum}` },
+        { label:'Inscription', value:c.inscription || '—' },
+        { label:'Prix', value:fmtMAD(c.price) },
+        { label:'Acompte', value:fmtMAD(c.paid) },
+        { label:'Solde', value:fmtMAD(due) },
+      ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
     const pret = $('#bl-dt-pret', el);
     if (pret) pret.onclick = () => { closeVeil('#bl-detail-veil'); markCakePret(c.id); };
     const wa = $('#bl-dt-wa', el);
     if (wa) wa.onclick = () => openWa(c);
+    const waConfirm = $('#bl-dt-wa-confirm', el);
+    if (waConfirm) waConfirm.onclick = () => {
+      c.notified = true; c.notifiedAt = new Date();
+      queueIfOffline(`Notification ${c.id} confirmée`);
+      toast(`${c.id}, notification confirmée`); openCakeDetail(c.id); refreshOps();
+    };
     const solde = $('#bl-dt-solde', el);
     if (solde) solde.onclick = () => {
       closeVeil('#bl-detail-veil');
@@ -1140,7 +1184,8 @@
       cake.paid += acompte;
       state.day[method === 'carte' ? 'carte' : 'especes'] += acompte;
       state.day.gateaux += acompte;
-      postDay(acompte, method, `Acompte gâteau · ${cake.name}`, cake.id);
+      postDay(acompte, method, `Acompte gâteau · ${cake.name}`, cake.id,
+        [{ itemId: 'gateau-commande', name: 'Gâteau sur commande', kind: 'service', unit: 'order', qty: 1, total: acompte }]);
       closeVeil('#bl-pay-veil');
       queueIfOffline(`Acompte ${cake.id}`);
       toast(`Acompte ${fmtMAD(acompte)} encaissé, solde ${fmtMAD(cakeDue(cake))} au retrait${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1210,9 +1255,9 @@
       const body = txt ? txt.value : waMessage(c);
       const num = String(c.phone || '').replace(/\D/g, '');
       if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à la commande`); return; }
-      c.notified = true;
+      c.draftOpenedAt = new Date();
       closeVeil('#bl-wa-veil');
-      queueIfOffline(`WhatsApp ${c.id}`);
+      queueIfOffline(`Brouillon WhatsApp ${c.id}`);
       try {
         window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
         toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo du gâteau dans WhatsApp' : ''}`);

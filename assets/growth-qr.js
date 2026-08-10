@@ -89,6 +89,18 @@
   `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
+  const realTenant = () => {
+    try {
+      if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return true;
+      const P = window.KiwiCaissePairing;
+      if (P?.isPaired?.() && P?.pairedVenue?.()?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        return !!(pv?.merchant || localStorage.getItem('kiwiLiveMerchant'));
+      }
+    } catch (_) {}
+    return false;
+  };
   const bizLabel = () => {
     try {
       // Label the STORE on screen, not the account — two shops on one account
@@ -97,7 +109,7 @@
       const b = (window.KiwiMe && window.KiwiMe.business || '').trim();
       if (b) return b;
     } catch (_) {}
-    return (window.KiwiEnv?.isReal?.() ? 'Votre établissement' : 'Café Atlas · Maarif');
+    return realTenant() ? 'Votre établissement' : 'Café Atlas · Maarif';
   };
 
   window.Kiwi.handlers['growth-qr'] = () => {

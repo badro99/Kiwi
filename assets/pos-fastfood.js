@@ -187,6 +187,27 @@
   const lineTotal = (ln) => unitPrice(ln) * ln.qty;
   const orderTotal = (o) => o.lines.reduce((s, ln) => s + lineTotal(ln), 0);
   const dueOf = (o) => Math.max(0, orderTotal(o) - o.pay.paid);
+  function saleLines(o, received) {
+    const full = orderTotal(o);
+    const factor = full > 0 ? Math.max(0, +received || 0) / full : 0;
+    let allocated = 0;
+    return o.lines.map((ln, idx) => {
+      const it = ITEM[ln.itemId];
+      const raw = lineTotal(ln) * factor;
+      const total = idx === o.lines.length - 1
+        ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
+        : Math.max(0, Math.round(raw * 100) / 100);
+      allocated += total;
+      const options = [];
+      if (ln.combo) options.push({ id: 'menu', qty: ln.qty }, { id: `boisson:${ln.drink || 'coca'}`, qty: ln.qty });
+      (ln.sauces || []).forEach((s) => options.push({ id: `sauce:${s}`, qty: ln.qty }));
+      return {
+        itemId: ln.itemId, variantId: [ln.variantId || '', ln.sizeId || ''].join(':'),
+        name: it.label, cat: it.cat || '', kind: 'product', unit: 'piece',
+        qty: ln.qty, total, options,
+      };
+    });
+  }
 
   function lineName(ln) {
     const item = ITEM[ln.itemId];
@@ -333,11 +354,21 @@
     offline: false,
     queued: 0,
   };
+  const fastfoodOps = window.KiwiVerticalState?.open?.('fastfood', {
+    schema: 1,
+    snapshot: () => ({ orders: ORDERS, tally, seq: state.seq, ticket: state.ticket, lastCalled: state.lastCalled }),
+    restore: (d) => {
+      ORDERS.splice(0, ORDERS.length, ...((d.orders || []).map(o => { o.placedAt = new Date(o.placedAt); o.remisAt = o.remisAt ? new Date(o.remisAt) : null; return o; })));
+      Object.keys(tally).forEach(k => delete tally[k]); Object.assign(tally, d.tally || {});
+      state.seq = Math.max(state.seq, +d.seq || 0); state.ticket = d.ticket || null; state.lastCalled = +d.lastCalled || 0;
+    },
+  });
   function freshTicket() {
     state.ticket = { lines: [], channel: 'surplace', glovoRef: null };
   }
   const findOrder = (num) => ORDERS.find((o) => o.num === Number(num));
   function queueIfOffline(label) {
+    fastfoodOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -358,9 +389,9 @@
      Le comptoir encaissait tout le service dans `tally` et rien d'autre : la
      patronne voyait 0 MAD et un refresh effaçait la recette du midi.
      Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('fastfood', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Reprise du service en cours : un rechargement (mise à jour PWA, onglet tué,
@@ -383,8 +414,9 @@
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
+    fastfoodOps?.hydrate?.();
     root = rootEl;
-    freshTicket();
+    if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="ff-rail">
         <div class="ff-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -794,7 +826,50 @@
     renderTicket();
     renderBadges();
     queueIfOffline(`Commande #${order.num}`);
+    relayKitchen(order, false);
     icons(); lens();
+  }
+
+  function relayKitchen(order, announce) {
+    const relay = window.KiwiKitchenRelay;
+    if (!relay || !relay.merchant || !relay.merchant()) {
+      if (announce) toast('Relais cuisine non configuré · commande conservée sur cette caisse');
+      return Promise.resolve({ ok: false, skipped: true });
+    }
+    if (!order.kitchenId) order.kitchenId = relay.newId();
+    const lines = order.lines.map((ln) => ({
+      name: lineName(ln), qty: ln.qty,
+      note: (ln.sauces || []).length ? `Sauces : ${ln.sauces.join(', ')}` : '',
+    }));
+    return Promise.resolve(relay.send({
+      id: order.kitchenId,
+      mode: order.channel === 'surplace' ? 'table' : 'takeout',
+      table: order.channel === 'surplace' ? `Comptoir #${order.num}` : '',
+      server: 'Fast-food', lines,
+    })).then((result) => {
+      if (announce) toast(result && (result.ok || result.queued) ? `#${order.num} renvoyé au relais cuisine` : `#${order.num} conservé localement · relais cuisine indisponible`);
+      return result;
+    });
+  }
+
+  function printReceipt(order, received, change) {
+    const K = window.KiwiReceipt;
+    if (!K || !K.build || !K.print) { toast('Impression indisponible'); return; }
+    const total = orderTotal(order);
+    const doc = K.build({
+      ref: `#${order.num}`,
+      ts: order.placedAt,
+      lines: saleLines(order, total),
+      total,
+      method: order.pay && order.pay.method,
+      received: received == null ? undefined : received,
+      change: change == null ? undefined : change,
+      customer: order.name ? { name: order.name } : null,
+    });
+    Promise.resolve(K.print(doc)).then(
+      (result) => toast(result && result.ok ? (result.via === 'browser' ? 'Ticket ouvert dans l’impression système' : 'Ticket imprimé') : 'Impression non confirmée'),
+      () => toast('Impression échouée')
+    );
   }
 
   function receiptHTML(o, rendu, received) {
@@ -958,7 +1033,7 @@
         tally[method === 'carte' ? 'carte' : 'especes'] += amount;
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas au moment de la commande. */
-        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`);
+        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`, saleLines(order, amount));
         closeVeil('#ff-pay-veil');
         queueIfOffline('Encaissement');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -970,7 +1045,7 @@
       if (method === 'especes') tally.especes += amount;
       else if (method === 'carte') tally.carte += amount;
       else if (method === 'glovo') tally.glovo += amount;
-      postDay(amount, method, ordLabel(order), `#${order.num}`);
+      postDay(amount, method, ordLabel(order), `#${order.num}`, saleLines(order, amount));
       postOrder(order);
       success(order, rendu, received, null);
     };
@@ -991,7 +1066,7 @@
       icons();
       closeBtns();
       toast(`#${o.num} en préparation${rendu ? `, rendu ${fmtMAD(rendu)}` : ''}`);
-      $('#ff-print', el).onclick = () => toast('Ticket parti, imprimante 80 mm du comptoir');
+      $('#ff-print', el).onclick = () => printReceipt(o, received, rendu);
       $('#ff-next', el).onclick = () => closeVeil('#ff-pay-veil');
     };
 
@@ -1206,7 +1281,7 @@
       deliver(o);
       openDetail(o.num);
     };
-    $('#ff-dt-kds', el).onclick = () => toast(`#${o.num} renvoyé en cuisine, imprimante 80 mm`);
+    $('#ff-dt-kds', el).onclick = () => relayKitchen(o, true);
   }
 
   /* ═══════════════════════ ENCAISSEMENT (vue) ═══════════════════════ */

@@ -92,7 +92,18 @@
   `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
-  const gcReal = () => { try { return !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.()); } catch (_) { return false; } };
+  const gcReal = () => {
+    try {
+      if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return true;
+      const P = window.KiwiCaissePairing;
+      if (P?.isPaired?.() && P?.pairedVenue?.()?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        return !!(pv?.merchant || localStorage.getItem('kiwiLiveMerchant'));
+      }
+    } catch (_) {}
+    return false;
+  };
 
   window.Kiwi.handlers['growth-giftcards'] = () => {
     const T = STR[lang()] || STR.fr;
@@ -100,7 +111,7 @@
     // A real merchant hasn't issued any cards yet — empty table + zeroed stats,
     // never the demo cardholders (Yasmine Benali, Karim Tazi…).
     const cards = gcReal() ? [] : CARDS;
-    const stEm = gcReal() ? '0' : '38', stCirc = gcReal() ? '0' : '7 250', stUse = gcReal() ? '—' : '71 %';
+    const stEm = gcReal() ? '—' : '38', stCirc = gcReal() ? '—' : '7 250', stUse = gcReal() ? '—' : '71 %';
 
     const body = `<div class="gk-reveal-root">
       <div class="gft-grid">
@@ -109,7 +120,7 @@
           <div class="gft-card">
             <div class="top"><div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div><div class="chip"></div></div>
             <div>
-              <div class="code">KIWI ···· <span data-gft-code>4821</span></div>
+              <div class="code">KIWI ···· <span data-gft-code>${gcReal() ? '————' : '4821'}</span></div>
               <div class="amt gk-serif" data-gft-cardamt>${fmt(amt)} <span style="font-size:15px;font-family:var(--sans);">MAD</span></div>
             </div>
           </div>
@@ -130,10 +141,10 @@
           </div>
           <div class="gft-colt" style="margin-top:20px;">${T.active}</div>
           <table class="gft-tbl"><thead><tr><th>${T.th.code}</th><th>${T.th.to}</th><th>${T.th.bal}</th><th>${T.th.exp}</th><th>${T.th.st}</th></tr></thead>
-          <tbody>${cards.map(c => `<tr>
+          <tbody>${cards.length ? cards.map(c => `<tr>
             <td class="mono">···· ${c.code}</td><td style="font-weight:500">${c.to}</td>
             <td><div class="gft-bal"><span class="track"><span class="fill" style="width:${Math.round(c.bal / c.tot * 100)}%"></span></span><span class="mono" style="font-size:11.5px">${fmt(c.bal)}/${fmt(c.tot)}</span></div></td>
-            <td class="mono" style="color:var(--n-500)">${c.exp}</td><td><span class="gft-stt ${c.st}">${T.stL[c.st]}</span></td></tr>`).join('')}</tbody></table>
+            <td class="mono" style="color:var(--n-500)">${c.exp}</td><td><span class="gft-stt ${c.st}">${T.stL[c.st]}</span></td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--n-500);padding:28px 14px">${lang() === 'en' ? 'No gift cards recorded.' : lang() === 'ar' ? 'لا توجد بطاقات هدايا مسجلة.' : 'Aucune carte cadeau enregistrée.'}</td></tr>`}</tbody></table>
           <div class="gft-redeem"><input class="gft-in" placeholder="${T.redeemPh}" data-gft-redeem /><button class="kb ghost" data-gft-check>${T.check}</button></div>
         </div>
       </div>
@@ -149,9 +160,19 @@
         root.querySelectorAll('[data-gft-amt]').forEach(x => x.classList.toggle('on', x === a));
         if (a.dataset.gftAmt !== 'free') { amt = +a.dataset.gftAmt; root.querySelector('[data-gft-cardamt]').innerHTML = `${fmt(amt)} <span style="font-size:15px;font-family:var(--sans);">MAD</span>`; }
       } else if (e.target.closest('[data-gft-send]')) {
-        confetti && confetti(); toast(T.sent, { type: 'success', desc: T.sentD(amt) });
+        if (gcReal()) {
+          toast(T.issue, { type: 'info', desc: lang() === 'en'
+            ? 'Issuing is unavailable — no gift-card service is connected.'
+            : lang() === 'ar'
+              ? 'الإصدار غير متاح — لا توجد خدمة بطاقات هدايا متصلة.'
+              : 'Émission indisponible — aucun service de cartes cadeaux n’est connecté.' });
+        } else {
+          confetti && confetti(); toast(T.sent, { type: 'success', desc: T.sentD(amt) });
+        }
       } else if (e.target.closest('[data-gft-check]')) {
-        toast(T.redeem, { type: 'info', desc: T.bal(200) });
+        toast(T.redeem, { type: 'info', desc: gcReal()
+          ? (lang() === 'en' ? 'No card found — no balance source is connected.' : lang() === 'ar' ? 'لم يتم العثور على بطاقة — لا يوجد مصدر رصيد متصل.' : 'Aucune carte trouvée — aucune source de solde n’est connectée.')
+          : T.bal(200) });
       }
     });
   };

@@ -261,10 +261,21 @@
     clQuery: '',
     offline: false, queued: 0,
   };
+  const spaOps = window.KiwiVerticalState?.open?.('spa', {
+    schema: 1,
+    snapshot: () => ({ products: PRODUCTS, clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket }),
+    restore: (d) => {
+      PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || [])); Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
+      CLIENTES.splice(0, CLIENTES.length, ...(d.clients || [])); Object.keys(CL).forEach(k => delete CL[k]); CLIENTES.forEach(c => { if (c?.id) CL[c.id] = c; });
+      CURES.splice(0, CURES.length, ...(d.cures || [])); APPTS.splice(0, APPTS.length, ...(d.appointments || []));
+      cureSeq = Math.max(cureSeq, +d.cureSeq || 0); apptSeq = Math.max(apptSeq, +d.apptSeq || 0); ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0); state.ticket = d.ticket || null;
+    },
+  });
   function freshTicket() {
     state.ticket = { num: posRef(`S-${ticketSeq}`), lines: [], clientId: null, guest: false, apptId: null };
   }
   function queueIfOffline(label) {
+    spaOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -282,9 +293,22 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(t, tip) {
+    const lines = t.lines.map((l) => {
+      const isService = l.type === 'svc';
+      const item = isService ? PRESTA[l.refId] : PROD[l.refId];
+      return {
+        itemId: item.id, variantId: isService ? l.prId : '', name: item.name,
+        category: isService ? item.cat : 'boutique', qty: l.qty, unit: isService ? 'seance' : 'piece',
+        kind: isService ? 'service' : 'product', total: l.price * l.qty,
+      };
+    });
+    if (tip > 0) lines.push({ itemId: 'pourboire', name: 'Pourboire', category: 'pourboire', qty: 1, unit: 'service', kind: 'tip', total: tip });
+    return lines;
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de ticket repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -303,6 +327,7 @@
 
   /* ═══════════════════════ MOUNT (appelé par le dispatcher) ═══════════════ */
   function mount(rootEl) {
+    spaOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="sp-rail">
@@ -364,7 +389,7 @@
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
 
-    freshTicket();
+    if (!state.ticket) freshTicket();
     renderAll();
   }
 
@@ -1175,7 +1200,9 @@
         CURES.unshift(cu);
         /* Le forfait est encaissé en entier le jour de la vente : c'est une
            recette du jour, même si les séances seront consommées plus tard. */
-        postDay(ctx.price, method, `Forfait ${ctx.name}${CL[ctx.clientId] ? ` · ${CL[ctx.clientId].name}` : ''}`, cu.id);
+        postDay(ctx.price, method, `Forfait ${ctx.name}${CL[ctx.clientId] ? ` · ${CL[ctx.clientId].name}` : ''}`, cu.id, [
+          { itemId: ctx.familyId, variantId: String(ctx.size), name: ctx.name, category: 'forfait', qty: 1, unit: 'forfait', kind: 'service', total: ctx.price },
+        ]);
         queueIfOffline('Vente forfait');
         toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} séances pour ${CL[ctx.clientId].name}`);
         toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
@@ -1194,7 +1221,7 @@
       const parts = tipSplit(tip, t.lines);
       /* Prestations ET pourboire : c'est le montant que la cliente a réellement
          laissé au comptoir, le même que celui annoncé dans le toast. */
-      postDay(base + tip, method, tkLabel(t), t.num);
+      postDay(base + tip, method, tkLabel(t), t.num, saleLines(t, tip));
       queueIfOffline('Encaissement');
       toast(`${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (tip > 0) toast(`Pourboire ${fmtMAD(tip)} réparti, ${parts.map((p) => `${PR[p.id].short} ${p.amount}`).join(' · ')}`, 2800);

@@ -3270,7 +3270,7 @@
       by[k] = (by[k] || 0) + amt;
       total += amt;
     });
-    if (!total) return { rows: [], total: 0 };
+    if (!total) return { rows: [], total: 0, cardTotal: 0 };
     return {
       total,
       rows: REAL_MIX.filter((m) => by[m.key] > 0).map((m) => ({
@@ -3296,7 +3296,8 @@
       { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
       { color: '#D99A2B', label: 'QR',         pct: data.qr   },
     ];
-    const centerMad = custom ? real.total : data.centerMad;
+    const rawCenterMad = custom ? real.total : data.centerMad;
+    const centerMad = Number.isFinite(Number(rawCenterMad)) ? Number(rawCenterMad) : 0;
 
     const donut = document.querySelector('[data-mix-donut]');
     if (donut) {

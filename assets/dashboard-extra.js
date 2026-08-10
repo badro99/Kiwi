@@ -395,11 +395,26 @@
       return;
     }
     const str = MARGINS_STR[trLang()] || MARGINS_STR.fr;
-    const header = `${str.product},${str.price},${str.cost},${str.marginHeader},${str.marginPctHeader},${str.sold}\n`;
+    /* Same cell treatment as every other CSV producer in the app. Two distinct
+     * hazards, both previously unhandled here:
+     *   1. A cell starting with = + - @ is executed as a formula by Excel and
+     *      Numbers. Prefixing an apostrophe neutralises it.
+     *   2. A product name containing a comma, quote or newline silently shifts
+     *      every following column. Quoting fixes it.
+     * The margins export predates the guard used elsewhere and never got it —
+     * the security test only checked that the *file* mentioned the pattern, and
+     * a different export in this same file happened to satisfy that. */
+    const cell = (c) => {
+      let s = String(c == null ? '' : c);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const row = (arr) => arr.map(cell).join(',');
+    const header = row([str.product, str.price, str.cost, str.marginHeader, str.marginPctHeader, str.sold]) + '\n';
     const lines = PRODUCTS.map((p) => {
       const m = (p.price - p.cost).toFixed(2);
       const pct = Math.round(((p.price - p.cost) / p.price) * 100);
-      return `${p.name},${p.price},${p.cost},${m},${pct},${p.sold}`;
+      return row([p.name, p.price, p.cost, m, pct, p.sold]);
     }).join('\n');
     const blob = new Blob([header + lines], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -972,42 +987,46 @@
     }
   };
 
-
-  /* Export — download a real CSV summary of the dashboard's current period. */
-  handlers['export'] = () => {
-    const lang = trLang();
-    /* MARGINS_STR lives in the first IIFE — referencing it here threw a
-     * ReferenceError that silently killed the Export button. */
-    const miscStr = MISC_STR[lang] || MISC_STR.fr;
-
-    const txt = (sel) => ((document.querySelector(sel) || {}).textContent || '').replace(/\s+/g, ' ').trim();
-    // Derive the business name from the real session / venue (never the Café Atlas
-    // demo literal) so a real merchant's export isn't titled with the demo.
-    const bizName = ((window.KiwiMe && window.KiwiMe.business) || txt('[data-loc-name]') || '').trim();
-    const rows = [
-      [bizName ? `Kiwi, Tableau de bord · ${bizName}` : 'Kiwi, Tableau de bord'],
-      ['Période', txt('[data-dr-label]') || "Aujourd'hui"],
-      ['Encaissé', txt('[data-hero-amount]')],
-      ['Net après Kiwi', txt('.hero-breakdown .v') || txt('[data-hero-net]')],
-      [],
-      ['Indicateur', 'Valeur'],
-    ];
-    document.querySelectorAll('.kpi-m, .kpi-c').forEach((k) => {
-      const l = ((k.querySelector('.l') || {}).textContent || '').replace(/\s+/g, ' ').trim();
-      const v = ((k.querySelector('.v') || {}).textContent || '').replace(/\s+/g, ' ').trim();
-      if (l && v) rows.push([l, v]);
+  /* Le rapport est un module autonome chargé à l'exécution : dashboard.html
+   * reste intact et le coût du document imprimable ne bloque pas le premier
+   * rendu. On amorce tout de suite le chargement ; au clic, une fenêtre est
+   * néanmoins ouverte synchroniquement pour ne pas tomber sous le bloqueur de
+   * popups si le réseau local n'a pas encore livré le script. */
+  let reportReady = null;
+  const ensureReport = () => {
+    if (window.KiwiReport) return Promise.resolve(window.KiwiReport);
+    if (reportReady) return reportReady;
+    reportReady = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = new URL('assets/report.js', document.baseURI).href;
+      script.async = true;
+      script.dataset.kiwiReport = '1';
+      script.onload = () => window.KiwiReport ? resolve(window.KiwiReport) : reject(new Error('KiwiReport unavailable'));
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
-    const csv = rows.map((r) => r.map((c) => {
-      let s = String(c == null ? '' : c);
-      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
-      return `"${s.replace(/"/g, '""')}"`;
-    }).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = miscStr.exportToastD;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    if (toast) toast(miscStr.exportToast, { type: 'success', desc: miscStr.exportToastD });
+    return reportReady;
+  };
+  ensureReport().catch(() => {});
+
+  handlers['export'] = (trigger) => {
+    /* pages.js utilise la même action dans le tiroir Transactions. Il
+     * garde donc son sens propre : CSV des ventes datées, pas rapport général. */
+    const transactionExport = !!(trigger && trigger.closest && trigger.closest('.kiwi-drawer') && trigger.closest('.kiwi-drawer').querySelector('.p-table'));
+    if (transactionExport) {
+      ensureReport().then((report) => report.downloadTransactions()).catch(() => {
+        const str = MISC_STR[trLang()] || MISC_STR.fr;
+        toast && toast(str.exportToast, { type: 'warn', desc: str.exportToastD });
+      });
+      return;
+    }
+
+    const popup = window.open('', '_blank');
+    ensureReport().then((report) => report.open(popup)).catch(() => {
+      try { if (popup) popup.close(); } catch (_) {}
+      const str = MISC_STR[trLang()] || MISC_STR.fr;
+      toast && toast(str.exportToast, { type: 'warn', desc: str.exportToastD });
+    });
   };
 
   /* Live-feed "Filtrer" + "Tout voir" → open the full Commandes drawer, which

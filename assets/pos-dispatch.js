@@ -76,6 +76,27 @@
   const mounted = {};    /* id → true once mount() ran */
   const loading = {};    /* file → Promise */
   let current = null;    /* id of the open vertical */
+  const pairingKey = (pairing) => String((pairing && (pairing.merchant || pairing.venueId || pairing.id)) || '');
+  let pairedMerchant = (() => {
+    try { return pairingKey(JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')); }
+    catch (_) { return ''; }
+  })();
+
+  /* A loaded vertical is a long-lived closure: boutique SALES, pressing ORDERS
+   * and several catalog maps survive removing their DOM.  Storage is purged by
+   * caisse-pairing before this event, but remounting the same script would still
+   * expose the previous shop's in-memory objects and its next autosave could put
+   * them back.  A merchant change is rare and security-sensitive, so restart the
+   * document at that boundary.  A first pairing, or a refresh for the same
+   * merchant, stays in place. */
+  document.addEventListener('kiwi-paired', (event) => {
+    const next = pairingKey(event && event.detail);
+    if (pairedMerchant && next && pairedMerchant !== next) {
+      try { window.location.reload(); } catch (_) {}
+      return;
+    }
+    if (next) pairedMerchant = next;
+  });
 
   /* ---------- base CSS (the shared screen shell only) ---------- */
   function injectBaseCss() {

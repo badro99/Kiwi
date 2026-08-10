@@ -805,6 +805,7 @@
     trendingUp: '<path d="M22 7l-8 8-4-4-8 8"/><path d="M16 7h6v6"/>',
     trendingDown: '<path d="M22 17l-8-8-4 4-8-8"/><path d="M16 17h6v-6"/>',
     minus: '<path d="M5 12h14"/>',
+    swap: '<path d="M7 7h11l-3-3M18 7l-3 3M17 17H6l3 3M6 17l3-3"/>',
     eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     edit: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
@@ -926,7 +927,39 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * Computed metrics
    * ═══════════════════════════════════════════════════════════════════════ */
-  const currentStockFor = (it) => (stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock);
+  function ledgerOpeningFor(it) {
+    const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
+    try {
+      const L = window.KiwiInventory;
+      if (stShowReal() && L && L.isReal && L.isReal()) {
+        L.ensureOpening(it.id, +legacy || 0, { unitCost: +it.costPerUnit || null });
+        return L.balance(it.id);
+      }
+    } catch (_) {}
+    return legacy;
+  }
+  const currentStockFor = (it) => ledgerOpeningFor(it);
+
+  function moveStock(it, qty, reason, refType, refId, note, unitCost) {
+    if (!it || !qty) return null;
+    try {
+      const L = window.KiwiInventory;
+      if (stShowReal() && L && L.isReal && L.isReal()) {
+        return L.add({
+          itemId: it.id, qty, reason, refType: refType || 'manual', refId: refId || '',
+          note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
+        });
+      }
+    } catch (_) {}
+    stStockOverrides[it.id] = currentStockFor(it) + qty;
+    return null;
+  }
+
+  function countStock(it, counted, refId) {
+    const diff = Math.round((counted - currentStockFor(it)) * 1000) / 1000;
+    if (diff) moveStock(it, diff, 'count', 'count', refId || ('count-' + Date.now()), 'Ajustement issu du comptage');
+    return diff;
+  }
   /* A real restaurant's recipe is the source of theoretical ingredient usage.
    * Demo venues keep their historic fixture values; real venues never inherit
    * those figures and only receive a number once sales + recipes exist. */
@@ -2063,6 +2096,11 @@
       el.addEventListener('click', () => {
         const stage = document.querySelector('[data-stock-scan-stage]');
         if (!stage) return;
+        if (stShowReal()) {
+          stage.innerHTML = renderScanReview();
+          wireScanReview();
+          return;
+        }
         stage.innerHTML = `
           <div class="st-scanning">
             <div class="st-scanning-spinner"></div>
@@ -2079,6 +2117,7 @@
   }
 
   function renderScanReview() {
+    if (stShowReal()) return renderRealReceiptReview();
     const inv = getInv();
     const rows = [
       { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
@@ -2114,7 +2153,101 @@
     `;
   }
 
+  function renderRealReceiptReview() {
+    const items = getInv();
+    const today = new Date().toISOString().slice(0, 10);
+    const optionHtml = `<option value="">Choisir un article</option>${items.map(it =>
+      `<option value="${esc(it.id)}">${esc(it.name)} · ${esc(it.unit || 'unité')}</option>`
+    ).join('')}`;
+    const row = () => `
+      <tr data-stock-receive-row>
+        <td><select class="st-mb-input" data-stock-receive-item>${optionHtml}</select></td>
+        <td class="r"><input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" /></td>
+        <td class="r"><input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0,00" /></td>
+        <td class="r"><button class="st-btn" type="button" data-stock-receive-remove aria-label="Retirer">×</button></td>
+      </tr>`;
+    return `
+      <div class="st-mb-eyebrow">Réception fournisseur</div>
+      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : aucune ligne ni aucun montant n’est inventé automatiquement.</div></div>
+      <div class="st-mb-row three">
+        <div class="st-mb-field"><label class="st-mb-label">Fournisseur</label><input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">Date de réception</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${today}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">Référence</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" /></div>
+      </div>
+      <table class="st-inv-items">
+        <thead><tr><th>Article reçu</th><th class="r">Quantité</th><th class="r">Coût unitaire MAD</th><th></th></tr></thead>
+        <tbody data-stock-receive-rows>${row()}${row()}${row()}</tbody>
+      </table>
+      <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
+      <div class="st-inv-foot"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
+        <button class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
+      </div>`;
+  }
+
   function wireScanReview() {
+    if (stShowReal()) {
+      const scope = topBackdrop() || document;
+      const tbody = scope.querySelector('[data-stock-receive-rows]');
+      const firstRow = tbody?.querySelector('[data-stock-receive-row]')?.outerHTML || '';
+      const recompute = () => {
+        let total = 0;
+        scope.querySelectorAll('[data-stock-receive-row]').forEach(row => {
+          total += Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0))
+            * Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0));
+        });
+        const out = scope.querySelector('[data-stock-receive-total]');
+        if (out) out.textContent = fmtMad(total);
+      };
+      const wireRows = () => {
+        scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach(el => { el.oninput = recompute; });
+        scope.querySelectorAll('[data-stock-receive-remove]').forEach(el => {
+          el.onclick = () => { if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) el.closest('tr')?.remove(); recompute(); };
+        });
+      };
+      scope.querySelector('[data-stock-receive-add]')?.addEventListener('click', () => {
+        tbody?.insertAdjacentHTML('beforeend', firstRow); wireRows();
+      });
+      wireRows();
+      scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
+        const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
+        const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
+        const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
+        const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map(row => ({
+          itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
+          qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
+          cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
+        })).filter(line => line.itemId && line.qty > 0);
+        if (!supplier || !lines.length) {
+          window.Kiwi.toast('Indiquez le fournisseur et au moins une ligne reçue.', { type: 'warning' });
+          return;
+        }
+        const receiptRef = 'receipt-' + Date.now().toString(36);
+        const inv = getInv();
+        const receivingLines = lines.map(line => {
+          const it = inv.find(x => x.id === line.itemId);
+          return { itemId: line.itemId, name: it?.name || line.itemId, qty: line.qty, unit: it?.unit || 'unité', unitCost: line.cost };
+        });
+        if (window.KiwiProcurement?.receiveDirect) {
+          let known = window.KiwiProcurement.doc()?.suppliers?.find(s => String(s.name || '').toLowerCase() === supplier.toLowerCase());
+          if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
+          const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
+          window.KiwiProcurement.receiveDirect({ supplierId: known?.id || supplier, externalRef, receivedAt, lines: receivingLines });
+        } else {
+          lines.forEach(line => {
+            const it = inv.find(x => x.id === line.itemId); if (!it) return;
+            moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
+              [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null);
+            if (line.cost > 0 && window.KiwiCost?.setItemCost) window.KiwiCost.setItemCost(it.id, line.cost, supplier);
+          });
+        }
+        stSaveOverlay(); closeTopModal();
+        window.Kiwi.toast(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
+        if (stPageActive) render();
+      });
+      return;
+    }
     document.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
       const inv = getInv();
       const received = [];
@@ -2130,8 +2263,9 @@
         }
         received.push({ id, it, qty: converted });
       }
-      received.forEach(({ id, it, qty }) => {
-        stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + qty;
+      const receiptRef = 'receipt-' + Date.now().toString(36);
+      received.forEach(({ it, qty }) => {
+        moveStock(it, qty, 'receipt', 'receipt', receiptRef, 'Réception fournisseur', +it.costPerUnit || null);
       });
       stSaveOverlay();
       closeTopModal();
@@ -2232,12 +2366,13 @@
     };
     document.querySelectorAll('[data-pc-real]').forEach(inp => inp.addEventListener('input', recomputeProgress));
     document.querySelector('[data-stock-pc-validate]')?.addEventListener('click', () => {
-      // Apply counted values as stock overrides
+      const countRef = 'count-' + Date.now().toString(36);
       document.querySelectorAll('[data-pc-real]').forEach(inp => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) stStockOverrides[inp.dataset.pcReal] = v;
+        const it = items.find((x) => x.id === inp.dataset.pcReal);
+        if (!isNaN(v) && it) countStock(it, v, countRef);
       });
-      stSaveOverlay();     // un inventaire physique se compte une fois, pas à chaque rechargement
+      stSaveOverlay();
       closeTopModal();
       window.Kiwi.toast(t('mCountToast', fmtMad(totalCostVar)), { type: 'success', duration: 4200 });
       if (stPageActive) render();
@@ -2334,6 +2469,100 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Item detail
    * ═══════════════════════════════════════════════════════════════════════ */
+  function movementLabel(reason) {
+    return ({
+      opening: 'Solde initial', receipt: 'Réception', 'supplier-return': 'Retour fournisseur',
+      sale: 'Vente', 'sale-reversal': 'Annulation de vente', 'production-input': 'Matière consommée',
+      'production-output': 'Production', 'transfer-out': 'Transfert sortant', 'transfer-in': 'Transfert entrant',
+      loss: 'Perte', expiry: 'Périmé', gift: 'Offert', 'staff-meal': 'Consommation équipe',
+      count: 'Écart de comptage', return: 'Retour client', manual: 'Ajustement manuel',
+    })[reason] || reason || 'Mouvement';
+  }
+  function itemHistory(it) {
+    try { return window.KiwiInventory?.history?.(it.id) || []; } catch (_) { return []; }
+  }
+  function renderRealItemMovementSummary(it) {
+    const rows = itemHistory(it);
+    const received = rows.filter(r => r.reason === 'receipt').reduce((n, r) => n + Math.max(0, +r.qty || 0), 0);
+    const consumed = rows.filter(r => (+r.qty || 0) < 0).reduce((n, r) => n + Math.abs(+r.qty || 0), 0);
+    return `
+      <div class="st-md-col-t">Activité enregistrée</div>
+      <div class="st-md-pair"><span class="l">Entrées fournisseur</span><span class="v">${esc(fmtUnit(received, it.unit))}</span></div>
+      <div class="st-md-pair"><span class="l">Sorties enregistrées</span><span class="v">${esc(fmtUnit(consumed, it.unit))}</span></div>
+      <div class="st-md-pair"><span class="l">Mouvements</span><span class="v">${rows.length}</span></div>
+      <div class="st-notice ${rows.length ? 'ok' : 'warn'}" style="margin-top:12px;">
+        ${svg(rows.length ? 'checkCircle' : 'alertTriangle', 14)}
+        <div>${rows.length ? 'Le stock affiché est reconstruit depuis le registre de mouvements.' : 'Aucun mouvement n’a encore été enregistré pour cet article.'}</div>
+      </div>`;
+  }
+  function renderRealItemHistory(it) {
+    const rows = itemHistory(it).slice(0, 12);
+    return `
+      <div class="st-md-section">
+        <div class="st-md-section-t">Historique des mouvements</div>
+        <div class="st-md-list">
+          ${rows.length ? rows.map(r => `
+            <div class="st-md-list-row">
+              <div><span class="n">${esc(movementLabel(r.reason))}</span><span class="d" style="margin-left:6px;">${esc(r.note || r.refId || '')}</span></div>
+              <div class="v" style="color:${(+r.qty || 0) >= 0 ? 'var(--atlas)' : 'var(--danger)'};">${(+r.qty || 0) > 0 ? '+' : ''}${esc(fmtUnit(+r.qty || 0, it.unit))}</div>
+              <div class="d">${esc(new Date(r.occurredTs || Date.now()).toLocaleDateString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA'))}</div>
+            </div>`).join('') : `<div style="padding:12px 4px; font-size:12.5px; color:var(--n-500);">Aucun mouvement enregistré.</div>`}
+        </div>
+      </div>`;
+  }
+  function openItemMovement(itemId) {
+    const it = getInv().find(x => x.id === itemId); if (!it) return;
+    const m = window.Kiwi.modal({
+      title: `Mouvement · ${it.name}`,
+      desc: `Stock actuel : ${fmtUnit(currentStockFor(it), it.unit)}`,
+      width: 560,
+      body: `
+        <div class="st-mb-row two">
+          <div class="st-mb-field"><label class="st-mb-label">Motif</label>
+            <select class="st-mb-input" data-stock-move-reason>
+              <option value="receipt">Réception fournisseur</option>
+              <option value="return">Retour client</option>
+              <option value="loss">Perte / casse</option>
+              <option value="expiry">Périmé</option>
+              <option value="gift">Offert</option>
+              <option value="staff-meal">Consommation équipe</option>
+              <option value="count">Comptage physique</option>
+              <option value="manual">Correction manuelle</option>
+            </select>
+          </div>
+          <div class="st-mb-field"><label class="st-mb-label" data-stock-move-qty-label>Quantité</label><input class="st-mb-input mono" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
+        </div>
+        <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
+        <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
+    });
+    const scope = m?.el || topBackdrop();
+    const reason = scope?.querySelector('[data-stock-move-reason]');
+    const label = scope?.querySelector('[data-stock-move-qty-label]');
+    const help = scope?.querySelector('[data-stock-move-help] div');
+    const updateHelp = () => {
+      const isCount = reason?.value === 'count';
+      if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;
+      if (help) help.textContent = isCount
+        ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'
+        : ['receipt', 'return'].includes(reason?.value) ? 'Cette entrée augmente le stock et reste traçable.' : 'Cette sortie diminue le stock et reste traçable.';
+    };
+    reason?.addEventListener('change', updateHelp); updateHelp();
+    scope?.querySelector('[data-stock-move-save]')?.addEventListener('click', () => {
+      const value = Math.max(0, +(scope.querySelector('[data-stock-move-qty]')?.value || 0));
+      const why = reason?.value || 'manual';
+      const note = scope.querySelector('[data-stock-move-note]')?.value.trim() || '';
+      if (!(value >= 0) || (why !== 'count' && value <= 0)) {
+        window.Kiwi.toast('Indiquez une quantité valide.', { type: 'warning' }); return;
+      }
+      const ref = `manual-${Date.now().toString(36)}`;
+      if (why === 'count') countStock(it, value, ref);
+      else moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note);
+      closeTopModal(); window.Kiwi.toast('Mouvement de stock enregistré.', { type: 'success' });
+      if (stPageActive) render();
+    });
+    wireDismiss(scope);
+  }
   function openItemDetail(itemId) {
     const it = getInv().find(x => x.id === itemId);
     if (!it) return;
@@ -2360,15 +2589,16 @@
             <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '—' : Math.round(days) + ' j'}</span></div>
           </div>
           <div>
-            <div class="st-md-col-t">${esc(t('mItUsageT'))}</div>
-            ${renderItemUsageChart(it)}
-            <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-500);">
-              <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--atlas);"></span>${esc(t('mItUsageL'))}</span>
-              <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--n-400); border-top:1.5px dashed var(--n-400);"></span>${esc(t('mItUsageTheo'))}</span>
-            </div>
+            ${stShowReal() ? renderRealItemMovementSummary(it) : `
+              <div class="st-md-col-t">${esc(t('mItUsageT'))}</div>
+              ${renderItemUsageChart(it)}
+              <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-500);">
+                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--atlas);"></span>${esc(t('mItUsageL'))}</span>
+                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--n-400); border-top:1.5px dashed var(--n-400);"></span>${esc(t('mItUsageTheo'))}</span>
+              </div>`}
           </div>
         </div>
-        <div class="st-md-section">
+        ${stShowReal() ? renderRealItemHistory(it) : `<div class="st-md-section">
           <div class="st-md-section-t">${esc(t('mItPricesT'))}</div>
           <div class="st-md-list">
             ${[0.92, 0.95, 0.97, 1.0, 1.02].map((m, i) => `
@@ -2391,10 +2621,11 @@
               </div>
             `).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">Aucun fournisseur alternatif identifié dans cette catégorie.</div>`}
           </div>
-        </div>
+        </div>`}
       `,
       foot: `
         <button class="st-btn" data-stock-mark-86 data-item-name="${esc(it.name)}">${esc(t('mItMark'))}</button>
+        ${stShowReal() ? `<button class="st-btn" data-stock-detail-move data-item-id="${esc(it.id)}">${svg('swap', 12)}<span>Mouvement</span></button>` : ''}
         <button class="st-btn" data-stock-detail-edit data-item-id="${esc(it.id)}">${svg('edit', 12)}<span>${esc(t('mItEdit'))}</span></button>
         <button class="st-btn" data-stock-detail-delete data-item-id="${esc(it.id)}" style="color:#9a1f1f; border-color:rgba(154,31,31,0.35);">${esc(t('mItDelete'))}</button>
         <button class="st-btn" data-dismiss-modal>${esc(t('mItClose'))}</button>
@@ -2413,6 +2644,10 @@
       const id = e.currentTarget.dataset.itemId;
       closeTopModal();
       openEditItem(id);
+    });
+    scope?.querySelector('[data-stock-detail-move]')?.addEventListener('click', (e) => {
+      const id = e.currentTarget.dataset.itemId;
+      closeTopModal(); openItemMovement(id);
     });
     scope?.querySelector('[data-stock-detail-delete]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;
@@ -2587,6 +2822,7 @@
         const currentStock = isNaN(cur) ? (existing ? currentStockFor(existing) : parLevel) : cur;
 
         if (isEdit) {
+          const before = currentStockFor(existing);
           // Edit path: update overlay (or user item directly)
           if (existing.id.startsWith('usr-')) {
             const i = stUserItems.findIndex(x => x.id === existing.id);
@@ -2607,6 +2843,9 @@
             // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
             stStockOverrides[existing.id] = currentStock;
             stSaveOverlay();
+          }
+          if (Math.abs(currentStock - before) > 0.0005) {
+            countStock(existing, currentStock, 'manual-count-' + Date.now().toString(36));
           }
           closeTopModal();
           window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
@@ -2630,6 +2869,11 @@
           status,
         };
         stUserItems.push(item);
+        try {
+          if (window.KiwiInventory && stShowReal()) {
+            window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: costPerUnit });
+          }
+        } catch (_) {}
         stSaveOverlay();
         closeTopModal();
         window.Kiwi.toast(t('addItemToast', name) + stDemoNote(), { type: 'success' });

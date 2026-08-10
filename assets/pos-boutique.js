@@ -2902,7 +2902,15 @@
     openVeil('#bq-avoir-veil');
     icons();
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-avoir-veil'); });
-    $('#bq-av-print', el).onclick = () => toast(`${av.code} envoyé, imprimante 80 mm`);
+    $('#bq-av-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      P.printText({ title:`Avoir ${av.code}`, paper:'80', lines:[
+        { label:'Cliente', value:av.holderName }, { label:'Montant', value:fmtMAD(av.amount || av.balance) },
+        { label:'Solde disponible', value:fmtMAD(av.balance) }, { label:'Motif', value:av.motif },
+        { label:'Valable jusqu’au', value:fmtDay(av.until) },
+      ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
   }
 
   /* ---------- exchange summary ---------- */
@@ -3240,9 +3248,9 @@
         // wrapped so a mirror failure can never break the sale.
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
-            const pm = (parts || []).map((x) => x.m);
-            const isDelivery = pm.indexOf('livraison') >= 0;
-            const method = isDelivery ? 'delivery' : (pm.indexOf('carte') >= 0 ? 'card' : (pm.indexOf('espèces') >= 0 ? 'cash' : 'wallet'));
+            const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
+            const receivedMethods = received.map((x) => x.m);
+            const method = receivedMethods.indexOf('carte') >= 0 ? 'card' : (receivedMethods.indexOf('espèces') >= 0 ? 'cash' : 'wallet');
             const first = t.lines[0];
             const pieces = t.lines.reduce((n, ln) => n + ln.qty, 0);
             const name = (first && P[first.pid]) ? P[first.pid].name : 'Vente';
@@ -3255,7 +3263,7 @@
                entièrement en avoir, il ne reste rien à remonter et postSale
                (montant ≤ 0) passe son tour, ce qui est le bon comptage.
                sale.total garde la valeur du ticket : c'est la vente, pas la caisse. */
-            const cashIn = isDelivery ? total : (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
+            const cashIn = received.reduce((s, x) => s + (+x.amount || 0), 0);
             /* LE PANIER, qui ne partait pas. On ne remontait que {montant,
                moyen, libellé}, et le libellé est un RÉSUMÉ de ticket
                (« Caftan +3 art. ») : le tableau de bord ne pouvait donc pas dire
@@ -3265,10 +3273,14 @@
                rapport de fin de journée même si le rayon est renommé plus tard.
                Bornes identiques à celles de /api/sale : 40 lignes, 60 signes. */
             const basket = t.lines.slice(0, 40).map((ln) => ({
+              itemId: ln.pid,
+              variantId: [ln.pid, ln.size || '', ln.color || ''].join(':'),
               name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
               qty: ln.qty,
               total: Math.round(lineUnit(ln) * ln.qty),
               cat: rayonOf(ln.pid) || '',
+              unit: 'piece',
+              kind: 'product',
             }));
             window.KiwiLive.postSale({ id: sale.syncId, amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at, lines: basket });
           }
@@ -6095,7 +6107,7 @@
     salesToday().forEach((s) => {
       let took = 0;
       bqMoneyParts(s).forEach((p) => {
-        took += p.amount;
+        if (p.m !== 'livraison') took += p.amount;
         if (p.m === 'espèces') t.cash += p.amount;
         else if (p.m === 'carte') t.card += p.amount;
         else if (p.m === 'livraison') t.delivery += p.amount;

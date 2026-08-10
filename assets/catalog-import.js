@@ -312,7 +312,7 @@
         issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») — compté 0' });
       }
 
-      const vk = colorId + ' ' + keyName(size);
+      const vk = colorId + '\u0000' + keyName(size);
       let v = g.variants.find((x) => x.key === vk);
       if (!v) {
         v = { key: vk, colorId, colorLabel: hit ? hit.label : colorLabel, size, stock, stockGiven, barcodes: [], line };
@@ -461,7 +461,7 @@
     const cats = MS.categories() || [];
     const catByName = new Map(cats.map((c) => [keyName(c.name), c]));
     const items = MS.items() || [];
-    const itemKey = (name, catName) => keyName(name) + ' ' + keyName(catName);
+    const itemKey = (name, catName) => keyName(name) + '\u0000' + keyName(catName);
     const itemIndex = new Map();
     items.forEach((it) => {
       const c = cats.find((x) => x.id === it.catId);
@@ -491,7 +491,7 @@
       if (catName && subName) {
         const c = catByName.get(keyName(catName));
         const has = c && (c.sub || []).some((s) => keyName(s.name) === keyName(subName));
-        const key = keyName(catName) + ' ' + keyName(subName);
+        const key = keyName(catName) + '\u0000' + keyName(subName);
         if (!has && !newSubs.some((s) => s.key === key)) newSubs.push({ key, catName, subName });
       }
 

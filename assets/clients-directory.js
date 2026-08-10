@@ -61,13 +61,26 @@
 
   function isRealTenant() {
     try { if (window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()) return true; } catch (_) {} // hosted / signed-in → always real
-    try { if (localStorage.getItem('kiwiPaired') === '1' && localStorage.getItem('kiwiLiveMerchant')) return true; } catch (_) {}
+    try { if (window.KiwiMe) return true; } catch (_) {}
+    try {
+      var P = window.KiwiCaissePairing;
+      if (P && P.isPaired && P.isPaired() && P.pairedVenue && (P.pairedVenue() || {}).merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if ((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant')) return true;
+      }
+    } catch (_) {}
     try { if (window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom()) return true; } catch (_) {}
     return false;
   }
   // Returns { rows:[…], real:bool }. Rows carry a uniform shape for the table.
   function load() {
     var KCl = window.KiwiClients;
+    /* A real tenant with no book is an empty address book, not permission to
+       fall through to Salma/Nawal and their phone numbers. */
+    if (isRealTenant() && (!KCl || !KCl.hasBook || !KCl.hasBook())) {
+      return { rows: [], real: true };
+    }
     if (KCl && KCl.hasBook && KCl.hasBook() && (KCl.count() > 0 || isRealTenant())) {
       var rows = KCl.list().map(function (c) {
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,

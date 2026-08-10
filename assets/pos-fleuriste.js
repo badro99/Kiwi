@@ -313,6 +313,7 @@
   function moveCaretEnd(input) { const v = input.value; input.value = ''; input.value = v; }
 
   function queueIfOffline(label) {
+    if (fleuristeOps) fleuristeOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -330,9 +331,28 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function allocateLines(rows, received) {
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      return { itemId: r.id, name: r.name, category: r.category, qty: r.qty, unit: r.unit, kind: 'product', total };
+    });
+  }
+  function bouquetSaleLines(b, received) {
+    const rows = [];
+    Object.keys(b.stems).forEach((id) => rows.push({ id, name: STEM[id].label, category: 'tiges', qty: b.stems[id], unit: 'tige', base: unitPrice(id) * b.stems[id] }));
+    b.presets.forEach((p) => rows.push({ id: p.id, name: PRESET[p.id].label, category: 'bouquets-signature', qty: 1, unit: 'bouquet', base: PRESET[p.id].price }));
+    if (WRAP[b.wrap].price) rows.push({ id: `emballage-${b.wrap}`, name: WRAP[b.wrap].label, category: 'emballage', qty: 1, unit: 'service', base: WRAP[b.wrap].price });
+    return allocateLines(rows, received);
+  }
+  function deliverySaleLines(order, received) {
+    return allocateLines(order.items.map((it, i) => ({ id: it.id || `composition-${i + 1}`, name: it.label, category: it.kind || 'bouquet', qty: 1, unit: 'bouquet', base: it.total })), received);
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -340,8 +360,43 @@
      même numéro. Démo : journal vide, aucun effet. */
   try { if (window.KiwiPosSale) bouquetSeq = window.KiwiPosSale.nextSeq('fleuriste', bouquetSeq); } catch (_) {}
 
+  const fleuristeOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'fleuriste',
+    snapshot() {
+      return {
+        customers: CUSTOMERS,
+        deliveries: DELIVERIES,
+        arrivals: ARRIVALS,
+        saleState,
+        deliverySeq,
+        bouquetSeq,
+        bouquet: state.bouquet,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.deliveries)) DELIVERIES.splice(0, DELIVERIES.length, ...saved.deliveries);
+      DELIVERIES.forEach((delivery) => {
+        if (delivery.createdAt) delivery.createdAt = new Date(delivery.createdAt);
+        if (delivery.doneAt) delivery.doneAt = new Date(delivery.doneAt);
+      });
+      if (Array.isArray(saved.arrivals)) ARRIVALS.splice(0, ARRIVALS.length, ...saved.arrivals);
+      if (saved.saleState && typeof saved.saleState === 'object') {
+        Object.keys(saleState).forEach((id) => delete saleState[id]);
+        Object.assign(saleState, saved.saleState);
+      }
+      if (Number.isFinite(saved.deliverySeq)) deliverySeq = saved.deliverySeq;
+      if (Number.isFinite(saved.bouquetSeq)) bouquetSeq = saved.bouquetSeq;
+      if (saved.bouquet) state.bouquet = saved.bouquet;
+    },
+  });
+
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
+    if (fleuristeOps) fleuristeOps.hydrate();
     root = rootEl;
     if (!state.bouquet) freshBouquet();
     root.innerHTML = `
@@ -786,8 +841,10 @@
       </div>`;
     $('#fl-cp-print', host).onclick = () => {
       if (!has) { toast('Écrivez d\'abord le message de la carte'); return; }
-      queueIfOffline('Carte');
-      toast('Carte envoyée à l\'imprimante, jointe au bouquet');
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      P.printText({ title:occ.deuil ? 'Avec nos condoléances' : occ.label, paper:'A4', lines:[b.message, signer ? `— ${signer}` : '', pvName('Fleurs du Détroit')] })
+        .then((r) => { if (r && r.ok) queueIfOffline('Carte imprimée'); toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'); });
     };
     icons();
   }
@@ -893,7 +950,15 @@
         delivSlot = o.dataset.flSlot === 'none' ? null : o.dataset.flSlot;
         render();
       };
-      $('#fl-recap-print', el).onclick = () => toast('Envoyé, ticket (80 mm) + étiquette bouquet' + (b.message ? ' + carte' : ''));
+      $('#fl-recap-print', el).onclick = () => {
+        const P = window.KiwiOperationalPrint;
+        if (!P) { toast('Impression indisponible'); return; }
+        P.printText({ title:`Bouquet ${b.num}`, paper:'80', lines:[
+          { label:'Client', value:cust.name }, { label:'Occasion', value:occ.label },
+          { label:'Composition', value:`${count} tige${count > 1 ? 's' : ''} · ${WRAP[b.wrap].label}` },
+          b.message ? { label:'Carte', value:b.message } : { label:'Carte', value:'Sans message' },
+        ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte · ticket et étiquette' : 'Impression impossible'));
+      };
       $('#fl-recap-pay', el).onclick = () => { closeVeil('#fl-recap-veil'); openPay({ b, delivSlot }); };
       icons();
     };
@@ -1094,7 +1159,7 @@
         order.pay.method = method;
         /* Le solde d'une livraison est encaissé ici, pas à la prise de commande :
            c'est le seul moment où l'argent rentre vraiment. */
-        postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id, deliverySaleLines(order, amount));
         closeVeil('#fl-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (typeof ctx.onSettled === 'function') ctx.onSettled();
@@ -1112,7 +1177,7 @@
       /* `pickup` et `compte` ne prennent rien au comptoir : seul l'argent
          réellement encaissé (paiement complet ou acompte) est une recette,
          le solde sera journalisé au passage par la branche `settle`. */
-      if (paid > 0) postDay(paid, method, `Bouquet · ${OCC[b.occ] ? OCC[b.occ].label : 'Composition'}`, b.num);
+      if (paid > 0) postDay(paid, method, `Bouquet · ${OCC[b.occ] ? OCC[b.occ].label : 'Composition'}`, b.num, bouquetSaleLines(b, paid));
       const cId = b.customer && b.customer.type === 'known' ? b.customer.id : null;
       if (ctx.delivSlot) {
         const created = mkDelivery({
@@ -1310,7 +1375,7 @@
     else if (d.doneAt) d.doneAt = null;
     queueIfOffline('Statut livraison');
     if (s === 'route') toast(`${d.id}, en route vers ${recipFirst(d)}`);
-    else if (s === 'done') toast(`${d.id} livré à ${esc(d.recipient.name)}, merci envoyé`);
+    else if (s === 'done') toast(`${d.id} marqué livré à ${esc(d.recipient.name)}`);
     openDelivDetail(d.id);
     refreshOps();
   }
@@ -1331,17 +1396,23 @@
         <button class="fl-vf-close" id="fl-vf-close">Fermer</button>
       </div>`;
     openVeil('#fl-photo-veil');
-    $('#fl-shutter', el).onclick = () => {
-      const flash = $('#fl-vf-flash', el);
-      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-      d.photo = true;
-      setTimeout(() => {
-        closeVeil('#fl-photo-veil');
-        queueIfOffline('Photo bouquet');
-        toast(`Photo de ${d.id} enregistrée, jointe au bon de livraison`);
-        if ($('#fl-dt-veil', root).classList.contains('is-open')) openDelivDetail(d.id);
-        refreshOps();
-      }, 420);
+    $('#fl-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 720, quality: 0.68 });
+        if (!photo) return;
+        const flash = $('#fl-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        d.photo = true;
+        d.photoProof = photo;
+        setTimeout(() => {
+          closeVeil('#fl-photo-veil');
+          queueIfOffline('Photo bouquet');
+          toast(`Photo de ${d.id} enregistrée, jointe au bon de livraison`);
+          if ($('#fl-dt-veil', root).classList.contains('is-open')) openDelivDetail(d.id);
+          refreshOps();
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#fl-vf-close', el).onclick = () => closeVeil('#fl-photo-veil');
   }

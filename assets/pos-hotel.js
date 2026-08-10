@@ -150,6 +150,7 @@
       nights: cfg.nights, day: cfg.day,
       inAt, outAt,
       caution: cfg.caution || 'carte',
+      cautionAmount: Math.max(0, +cfg.cautionAmount || 0),
       prefs: cfg.prefs || '',
       charges: (cfg.charges || []).map((c, i) => ({ uid: `${room}-${i}`, cid: c[0], qty: c[1], at: c[2], note: c[3] || '' })),
       payments: (cfg.payments || []).map((p) => ({ method: p[0], amount: p[1], label: p[2] })),
@@ -229,7 +230,20 @@
   };
   let root = null;
 
+  const hotelOps = window.KiwiVerticalState?.open?.('hotel', {
+    schema: 1,
+    snapshot: () => ({ rooms: ROOMS, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid }),
+    restore: (d) => {
+      Object.keys(ROOMS).forEach(k => delete ROOMS[k]); Object.assign(ROOMS, d.rooms || {});
+      Object.keys(STAYS).forEach(k => delete STAYS[k]);
+      Object.entries(d.stays || {}).forEach(([k, st]) => { st.inAt = new Date(st.inAt); st.outAt = new Date(st.outAt); STAYS[k] = st; });
+      ARRIVALS.splice(0, ARRIVALS.length, ...(d.arrivals || [])); DEPARTURES.splice(0, DEPARTURES.length, ...(d.departures || []));
+      factureSeq = Math.max(factureSeq, +d.factureSeq || 0); policeSeq = Math.max(policeSeq, +d.policeSeq || 0); chargeUid = Math.max(chargeUid, +d.chargeUid || 0);
+    },
+  });
+
   function queueIfOffline(label) {
+    hotelOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -240,9 +254,24 @@
      La maison d'hôtes encaissait dans le folio du séjour, et le folio meurt
      avec le check-out : la recette n'existait nulle part une fois la chambre
      passée en ménage. Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function staySaleLines(st, received) {
+    const rows = [
+      { itemId: `chambre-${ROOMS[st.room].type}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: roomRate(st.room) * st.nights },
+      { itemId: 'taxe-sejour', name: 'Taxe de séjour', category: 'taxes', qty: st.adults * st.nights, unit: 'nuit-personne', kind: 'tax', base: TPT * st.adults * st.nights },
+      ...st.charges.map((c) => ({ itemId: c.cid, variantId: c.uid, name: CHARGE[c.cid].label, category: 'extras', qty: c.qty, unit: CHARGE[c.cid].per, kind: 'service', base: chargeAmt(c) })),
+    ].filter((r) => r.base > 0);
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      const { base, ...line } = r;
+      return { ...line, total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('hotel', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('hotel', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de facture repart AU-DELÀ de la dernière émise aujourd'hui :
@@ -252,6 +281,7 @@
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
+    hotelOps?.hydrate?.();
     root = rootEl;
     root.classList.add('ht-app');
     root.innerHTML = `
@@ -600,7 +630,7 @@
     }
 
     const el = $('#ht-checkinm', root);
-    const ci = { scanned: false, police: null, caution: 'carte' };
+    const ci = { scanned: false, police: null, caution: 'carte', cautionAmount: 0 };
 
     const guestCard = () => `
       <div class="ht-ci-guest">
@@ -631,10 +661,11 @@
             ${ART.passeport.replace('class="ht-art"', 'class="ht-art doc"')}
             <span class="ht-scan-corner tl"></span><span class="ht-scan-corner tr"></span>
             <span class="ht-scan-corner bl"></span><span class="ht-scan-corner br"></span>
-            <div class="ht-scan-hint" id="ht-scan-hint">Posez la pièce sous la caméra…</div>
+            <div class="ht-scan-hint" id="ht-scan-hint">Joignez une photo lisible de la pièce</div>
           </div>
           <div id="ht-scan-result">
-            <button class="ht-scan-cta" id="ht-scan-go"><i data-lucide="scan-line"></i>Scanner la pièce</button>
+            <label class="ht-scan-cta" for="ht-id-file"><i data-lucide="camera"></i>Prendre ou choisir une photo</label>
+            <input id="ht-id-file" type="file" accept="image/*" capture="environment" hidden />
           </div>
         </div>
         <div class="ht-ci-foot">
@@ -644,25 +675,12 @@
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkin-veil'); });
       const refreshNext = () => { $('#ht-ci-next', el).disabled = !ci.scanned; };
-      $('#ht-scan-go', el).onclick = () => {
-        const stage = $('#ht-scan-stage', el);
-        if ($('.ht-scan-laser', stage)) return;
-        const laser = document.createElement('div');
-        laser.className = 'ht-scan-laser';
-        stage.appendChild(laser);
-        $('#ht-scan-hint', el).textContent = 'Lecture MRZ en cours…';
-        setTimeout(() => {
-          if (!el.closest('.modal-veil').classList.contains('is-open')) return;
-          laser.remove();
-          ci.scanned = true;
-          ci.police = `FP-2026-${policeSeq++}`;
-          $('#ht-scan-hint', el).textContent = 'Pièce lue';
-          $('#ht-scan-result', el).innerHTML = `
-            <div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Fiche de police pré-remplie, n° ${ci.police}<span>envoyée à la DGSN ce soir</span></div>`;
-          icons();
-          refreshNext();
-          toast(`Pièce lue, fiche de police ${ci.police} pré-remplie`);
-        }, 1600);
+      $('#ht-id-file', el).onchange = (e) => {
+        const file = e.target.files && e.target.files[0]; if (!file) return;
+        ci.scanned = true; ci.police = `FP-${new Date().getFullYear()}-${policeSeq++}`;
+        $('#ht-scan-hint', el).textContent = 'Photo sélectionnée · vérifiez la pièce';
+        $('#ht-scan-result', el).innerHTML = `<div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Vérification locale · fiche ${ci.police}<span>Kiwi ne conserve pas la photo et n’effectue aucun envoi DGSN.</span></div>`;
+        hotelOps?.save?.('identity-document-checked'); icons(); refreshNext();
       };
       $('#ht-ci-next', el).onclick = () => { if (ci.scanned) step2(); };
       refreshNext();
@@ -678,10 +696,12 @@
         <div class="ht-ci-f">
           <div class="ht-ci-lbl">Caution <span class="opt">· libérée au check-out</span></div>
           <div class="ht-seg" data-lens-demo id="ht-caution-seg">
-            <button class="ht-seg-it ${ci.caution === 'carte' ? 'on' : ''}" data-lens-item data-ht-caution="carte">Empreinte carte<small>1 000 MAD</small></button>
-            <button class="ht-seg-it ${ci.caution === 'especes' ? 'on' : ''}" data-lens-item data-ht-caution="especes">Espèces<small>1 000 MAD au coffre</small></button>
+            <button class="ht-seg-it ${ci.caution === 'carte' ? 'on' : ''}" data-lens-item data-ht-caution="carte">Empreinte carte<small>via lecteur connecté</small></button>
+            <button class="ht-seg-it ${ci.caution === 'especes' ? 'on' : ''}" data-lens-item data-ht-caution="especes">Espèces<small>à enregistrer au coffre</small></button>
             <button class="ht-seg-it ${ci.caution === 'sans' ? 'on' : ''}" data-lens-item data-ht-caution="sans">Sans<small>client fidèle</small></button>
           </div>
+          <label class="ht-ci-lbl" style="margin-top:12px;">Montant de caution (MAD)</label>
+          <input class="ht-in" id="ht-caution-amount" type="number" min="0" step="1" placeholder="À définir" value="${ci.cautionAmount || ''}" />
         </div>
         <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil Yasmina</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
         <div class="ht-ci-foot">
@@ -699,6 +719,8 @@
       };
       $('#ht-ci-back', el).onclick = step1;
       $('#ht-ci-done', el).onclick = () => {
+        ci.cautionAmount = Math.max(0, +($('#ht-caution-amount', el)?.value || 0));
+        if (ci.caution !== 'sans' && !(ci.cautionAmount > 0)) { toast('Indiquez le montant de la caution'); return; }
         if (ci.caution === 'carte') stepCautionReader();
         else finishCheckin();
       };
@@ -708,7 +730,7 @@
     const stepCautionReader = () => {
       el.innerHTML = `
         <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Empreinte carte · ${fmtMAD(1000)}</h3>
+        <h3 class="modal-title">Empreinte carte · ${fmtMAD(ci.cautionAmount)}</h3>
         <p class="modal-subtle">Caution, pré-autorisation, rien n'est débité</p>
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ht-caution-disc"><i data-lucide="credit-card"></i></div>
@@ -720,14 +742,13 @@
       setTimeout(() => {
         const disc = $('#ht-caution-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ht-caution-status', el).textContent = 'Empreinte enregistrée';
-        $('#ht-caution-status', el).classList.add('is-success');
-        icons();
-        setTimeout(finishCheckin, 900);
-      }, 1900);
+        const hw = window.KiwiHardware;
+        if (!hw?.authorizeCard) { disc.classList.remove('is-pulsing'); $('#ht-caution-status', el).textContent = 'Pré-autorisation non confirmée · lecteur indisponible'; return; }
+        hw.authorizeCard(ci.cautionAmount, disc, $('#ht-caution-status', el), { capture: false, purpose: 'deposit' }).then((result) => {
+          icons(); if (!result?.approved) { toast('Empreinte carte non confirmée'); return; }
+          hotelOps?.save?.('card-deposit-authorized'); setTimeout(finishCheckin, 700);
+        });
+      }, 300);
     };
 
     const finishCheckin = () => {
@@ -738,6 +759,7 @@
       const st = mkStay(a.room, {
         guest: a.guest, src: a.src, pax: a.pax, adults: a.adults, nights: a.nights, day: 1,
         caution: ci.caution,
+        cautionAmount: ci.cautionAmount,
         prefs: a.note || '',
         charges: [], payments: a.acompte ? [['carte', a.acompte, 'Acompte à la réservation']] : [],
       });
@@ -746,11 +768,16 @@
          journalise que le SOLDE, donc sans cette ligne cet argent n'arrivait
          jamais au tableau de bord. La caution, elle, n'est pas une recette :
          elle est rendue au départ, on ne la journalise pas. */
-      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`);
+      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`, [
+        { itemId: `chambre-${ROOMS[a.room].type}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
+      ]);
       queueIfOffline(`Check-in Ch. ${a.room}`);
       toast(`Check-in Ch. ${a.room}, ${a.guest} · marhba`);
-      if (ci.caution === 'especes') toast('Caution 1 000 MAD espèces, au coffre, reçu remis');
-      setTimeout(() => toast('Thé à la menthe envoyé au salon, accueil Yasmina'), 700);
+      if (ci.caution === 'especes') toast(`Caution ${fmtMAD(ci.cautionAmount)} espèces enregistrée au coffre`);
+      st.serviceRequests = st.serviceRequests || [];
+      st.serviceRequests.push({ id:`welcome-${st.room}-${Date.now()}`, label:'Thé à la menthe de bienvenue', status:'pending', createdAt:new Date() });
+      hotelOps?.save?.('welcome-service-request');
+      setTimeout(() => toast('Tâche accueil créée · thé de bienvenue à servir'), 700);
       refreshOps();
     };
 
@@ -1027,7 +1054,7 @@
               <span class="l"><b>Folio soldé, confirmer le départ</b><span>Facture imprimée, chambre en ménage</span></span>
             </button>
           </div>`}
-        <div class="ht-foot-note">${st.caution === 'carte' ? 'Empreinte carte 1 000 MAD libérée au départ.' : st.caution === 'especes' ? 'Caution espèces 1 000 MAD rendue au départ.' : 'Sans caution sur ce séjour.'}</div>`;
+        <div class="ht-foot-note">${st.caution === 'carte' ? `Empreinte carte ${fmtMAD(st.cautionAmount)} à libérer sur le lecteur au départ.` : st.caution === 'especes' ? `Caution espèces ${fmtMAD(st.cautionAmount)} à rendre au départ.` : 'Sans caution sur ce séjour.'}</div>`;
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkout-veil'); });
       $$('[data-ht-pm]', el).forEach((b) => {
@@ -1111,7 +1138,7 @@
       /* Le folio déjà soldé passe par done(null, 0, 0) : rien n'est pris au
          comptoir ce jour-là, ce n'est donc pas une recette du jour — l'argent
          a été journalisé au moment où il est réellement rentré. */
-      if (amount > 0) postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`);
+      if (amount > 0) postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`, staySaleLines(st, amount));
       closeVeil('#ht-checkout-veil');
 
       /* clôture du séjour */
@@ -1128,8 +1155,8 @@
       else if (method === 'carte') toast(`Encaissé, ${fmtMAD(amount)} en carte`);
       else if (method === 'online') toast(`Solde marqué réglé via ${online}, versement OTA`);
       else toast('Départ confirmé, folio déjà soldé');
-      if (closed.caution === 'carte') setTimeout(() => toast('Empreinte carte libérée, pré-autorisation annulée'), 650);
-      else if (closed.caution === 'especes') setTimeout(() => toast('Caution espèces rendue, 1 000 MAD'), 650);
+      if (closed.caution === 'carte') setTimeout(() => toast(`Libérez l’empreinte ${fmtMAD(closed.cautionAmount)} sur le lecteur puis conservez son justificatif`), 650);
+      else if (closed.caution === 'especes') setTimeout(() => toast(`Caution espèces ${fmtMAD(closed.cautionAmount)} marquée rendue`), 650);
       setTimeout(() => toast(`Ch. ${n} → ménage${arr ? `, ${arr.guest} arrive ${arr.t}` : ''}`), 1250);
 
       refreshOps();
@@ -1187,7 +1214,16 @@
     openVeil('#ht-facture-veil');
     icons();
     $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-facture-veil'); });
-    $('#ht-fact-print', el).onclick = () => toast('Facture envoyée à l’imprimante, 80 mm');
+    $('#ht-fact-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.ht-facture .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:provisional ? `Note provisoire · chambre ${st.room}` : `Facture · chambre ${st.room}`, paper:'80', lines })
+        .then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
   }
 
   /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */

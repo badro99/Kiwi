@@ -90,15 +90,17 @@
    * ne retient que les siennes ; il n'y a plus rien à déduire de la clé. */
   var TENANTS_KEY = 'kiwi:posTenants';
   function tenant() {
+    /* A till changes owner by PAIRING. The dashboard/session live target may be
+       stale for a tick during re-pairing, so the device binding must win. */
+    try {
+      var pv = paired();
+      if (pv && pv.merchant) return String(pv.merchant).slice(0, 64);
+    } catch (_) {}
     try {
       if (window.KiwiLive && window.KiwiLive.merchant) {
         var m = window.KiwiLive.merchant();
         if (m) return String(m).slice(0, 64);
       }
-    } catch (_) {}
-    try {
-      var pv = paired();
-      if (pv && pv.merchant) return String(pv.merchant).slice(0, 64);
     } catch (_) {}
     return '';
   }
@@ -128,8 +130,18 @@
     var raw = null;
     try { raw = JSON.parse(localStorage.getItem(key(vertical)) || '[]'); } catch (_) { return []; }
     if (!Array.isArray(raw)) return [];
-    /* Le journal d'hier n'est pas le compteur d'aujourd'hui. */
-    return raw.filter(function (s) { return s && +s.total > 0 && isToday(s.ts); });
+    /* Le journal d'hier n'est pas le compteur d'aujourd'hui. Defence in depth:
+       the pairing purge is the primary boundary, but a damaged/legacy browser
+       must still never total a row explicitly owned by another merchant. */
+    var who = tenant(), seen = [];
+    try { seen = JSON.parse(localStorage.getItem(TENANTS_KEY) || '[]'); if (!Array.isArray(seen)) seen = []; } catch (_) { seen = []; }
+    return raw.filter(function (s) {
+      if (!(s && +s.total > 0 && isToday(s.ts))) return false;
+      if (s.m) return !!who && s.m === who;
+      /* Pre-tenant rows are safe only while this browser has known at most this
+         one tenant. Once it has seen two, guessing would be a data leak. */
+      return !!who && (seen.length === 0 || (seen.length === 1 && seen[0] === who));
+    });
   }
   function write(vertical, rows) {
     try { localStorage.setItem(key(vertical), JSON.stringify(rows.slice(-MAX_ROWS))); } catch (_) {}
@@ -158,6 +170,45 @@
     return METHOD_MAP[k] || 'cash';
   }
 
+  /* The canonical browser-side sale line.  Long property names keep vertical
+   * modules readable; live-link compacts them for its offline queue and the API
+   * stores the equivalent short-key wire form.  Legacy callers that only know
+   * name/qty/total continue to produce the exact same useful subset. */
+  function cleanLine(l) {
+    l = l || {};
+    var qty = Math.round(Math.max(0, Math.min(1000000, +(l.qty ?? l.q ?? l.quantity) || 0)) * 1000) / 1000;
+    var o = {
+      name: String(l.name ?? l.n ?? 'Article').slice(0, 60),
+      qty: qty || 1,
+      total: Math.round(Math.max(0, Math.min(100000000, +(l.total ?? l.t) || 0)) * 100) / 100,
+    };
+    var cat = String(l.cat ?? l.category ?? l.c ?? '').slice(0, 40);
+    var itemId = String(l.itemId ?? l.item_id ?? l.i ?? l.id ?? '').slice(0, 80);
+    var variantId = String(l.variantId ?? l.variant_id ?? l.v ?? '').slice(0, 80);
+    var unit = String(l.unit ?? l.u ?? '').slice(0, 24);
+    var kind = String(l.kind ?? l.kd ?? '').slice(0, 24);
+    var recipe = String(l.recipeVersionId ?? l.recipe_version_id ?? l.r ?? '').slice(0, 80);
+    if (cat) o.cat = cat;
+    if (itemId) o.itemId = itemId;
+    if (variantId) o.variantId = variantId;
+    if (unit) o.unit = unit;
+    if (kind) o.kind = kind;
+    if (recipe) o.recipeVersionId = recipe;
+    var cost = +(l.unitCost ?? l.unit_cost ?? l.k);
+    if (Number.isFinite(cost) && cost >= 0 && cost <= 10000000) o.unitCost = Math.round(cost * 100) / 100;
+    var rawOptions = l.options ?? l.optionDeltas ?? l.option_deltas ?? l.o;
+    if (Array.isArray(rawOptions)) {
+      var options = rawOptions.slice(0, 16).map(function (x) {
+        if (typeof x === 'string') return { id: x.slice(0, 80), qty: 1 };
+        var id = String((x && (x.id ?? x.i ?? x.itemId)) || '').slice(0, 80);
+        var q = Math.round(Math.max(-1000000, Math.min(1000000, +(x && (x.qty ?? x.q ?? x.quantity)) || 0)) * 1000) / 1000;
+        return id ? { id: id, qty: q || 1 } : null;
+      }).filter(Boolean);
+      if (options.length) o.options = options;
+    }
+    return o;
+  }
+
   /* ─────────────────────────── l'API ─────────────────────────── */
 
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
@@ -173,6 +224,7 @@
 
     var at = sale.at instanceof Date ? sale.at : new Date();
     var who = tenant();
+    if (!who) return null;                       /* never create an ownerless taking */
     noteTenant(who);
     var entry = {
       ts: at.getTime(),
@@ -181,19 +233,13 @@
       method: normMethod(sale.method),
       raw: sale.method == null ? '' : String(sale.method),   /* le mot du métier, pour le journal local */
       label: String(sale.label || 'Vente').slice(0, 80),
-      ref: String(sale.ref || '').slice(0, 32),
+      /* Central stamping covers every métier, including older modules that
+         forgot to call stamp() themselves. This is idempotent for the newer
+         ones and prevents two tills' ticket #42 sharing one server id. */
+      ref: stamp(String(sale.ref || '').slice(0, 32)),
     };
     if (Array.isArray(sale.lines) && sale.lines.length) {
-      entry.lines = sale.lines.slice(0, 40).map(function (l) {
-        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: +(l && l.qty) || 1, total: Math.round(((l && +l.total) || 0) * 100) / 100 };
-        /* La catégorie suit la ligne jusqu'au rapport de fin de journée. Les
-           quinze métiers la connaissent au moment de l'encaissement (c'est leur
-           propre onglet de catalogue) ; sans elle, le rapport la redevine dans
-           le catalogue ACTUEL et se trompe dès qu'un rayon est renommé. */
-        var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
-        if (c) o.cat = c;
-        return o;
-      });
+      entry.lines = sale.lines.slice(0, 40).map(cleanLine);
     }
 
     var rows = read(vertical);
@@ -218,6 +264,11 @@
         });
       }
     } catch (_) {}
+
+    /* Stock truth is written from the same immutable sale-line payload. The
+       movement IDs derive from the ticket reference, so a reload/replay can
+       never consume the same item twice. Services are ignored by the engine. */
+    try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
 
     return entry;
   }
@@ -377,6 +428,6 @@
   window.KiwiPosSale = {
     record: record, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
-    refMatcher: matcher,
+    refMatcher: matcher, cleanLine: cleanLine,
   };
 })();

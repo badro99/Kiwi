@@ -317,7 +317,15 @@
    * never the Riad Yasmina demo data. State is per-venue, session-local. */
   const isCustomHotel = () => {
     const KV = window.KiwiVenue;
-    return !!(KV && KV.isCustom && KV.isCustom() && KV.getVenueType && KV.getVenueType() === 'hotel');
+    let paired = null;
+    let pairedReal = false;
+    try { paired = window.KiwiCaissePairing?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+    try { pairedReal = !!(paired && paired.merchant && localStorage.getItem('kiwiPaired') === '1'); } catch (_) {}
+    const own = !!(KV?.isCustom?.() || window.KiwiEnv?.isReal?.() || window.KiwiMe
+      || pairedReal);
+    const type = KV?.getVenueType?.() || (window.KiwiMe && window.KiwiMe.type)
+      || (paired && (paired.subtype || paired.type));
+    return own && type === 'hotel';
   };
   const CUSTOM_HX = {}; // venueId → { rooms, folios, baseRate, count, sold }
   function cuState() {
@@ -325,10 +333,14 @@
     const id = KV.getVenue();
     if (!CUSTOM_HX[id]) {
       const vd = KV.getCurrentVenueData() || {};
-      const count = Math.min(120, Math.max(1, parseInt(vd.profileInfo && vd.profileInfo.rooms, 10) || 12));
+      const configuredRooms = parseInt(vd.profileInfo && vd.profileInfo.rooms, 10);
+      const count = Number.isFinite(configuredRooms) && configuredRooms > 0
+        ? Math.min(120, configuredRooms) : 0;
       const rooms = {};
       for (let n = 1; n <= count; n++) rooms[n] = { n, type: 'std', status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre' };
-      CUSTOM_HX[id] = { rooms, folios: {}, baseRate: 900, count, sold: 0 };
+      /* No server/config source currently provides the nightly rate. `null`
+         renders as unknown and blocks a walk-in until the owner sets it. */
+      CUSTOM_HX[id] = { rooms, folios: {}, baseRate: null, count, sold: 0 };
     }
     return CUSTOM_HX[id];
   }
@@ -985,7 +997,7 @@
       <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / ${total}</div><div class="d">${pct} % · se met à jour à chaque vente</div></div>
       <div class="hx-kpi"><div class="l">Libres · propres</div><div class="v">${free}</div><div class="d">prêtes à vendre</div></div>
       <div class="hx-kpi"><div class="l">À remettre à blanc</div><div class="v">${c.toClean}</div><div class="d">${c.toClean ? 'voir Ménage' : 'tout est propre ✓'}</div></div>
-      <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${fmt(cuState().baseRate)} <small>MAD</small></div><div class="d">réglable dans Tarifs</div></div>
+      <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${cuState().baseRate == null ? '—' : fmt(cuState().baseRate) + ' <small>MAD</small>'}</div><div class="d">réglable dans Tarifs</div></div>
     </div>`;
   }
   function cuReceptionBody() {
@@ -1066,7 +1078,7 @@
       <div class="hx-h"><span class="t">Tarif de base</span><span class="s">appliqué aux walk-ins et nouvelles réservations · ajustez-le à votre marché</span></div>
       <div class="block" style="padding:22px 14px;display:flex;align-items:center;justify-content:center;gap:20px;">
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="-50">−50</button>
-        <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">MAD / nuit</span></div>
+        <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '—' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">MAD / nuit</span></div>
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="50">+50</button>
       </div>
       <div class="block" style="padding:8px 14px;margin-top:14px;">
@@ -1137,8 +1149,8 @@
       </div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">100 <small>%</small></div><div class="d up">0 MAD de commission versée</div></div>
-        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">0</div><div class="d">walk-in et direct actifs</div></div>
+        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">—</div><div class="d">source de réservations non connectée</div></div>
+        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">—</div><div class="d">source de canaux non connectée</div></div>
       </div>
       <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi affiche la commission de chaque canal, réservation par réservation</span></div>
       <div class="block" style="padding:8px 14px;"><div class="hx-list">${rows}</div></div>
@@ -1362,7 +1374,7 @@
     handlers['hx-cb-rate-step'] = (el, arg) => {
       if (!isCustomHotel()) return;
       const st = cuState();
-      st.baseRate = Math.max(150, st.baseRate + parseInt(arg, 10));
+      st.baseRate = Math.max(150, (st.baseRate || 0) + parseInt(arg, 10));
       rerender();
     };
     handlers['hx-cb-connect'] = (el, arg) => {
@@ -1431,12 +1443,16 @@
     };
     handlers['hx-checkout'] = (el, arg) => openFolio(parseInt(arg, 10));
     handlers['hx-walkin'] = () => {
+      if (isCustomHotel() && cuState().baseRate == null) {
+        toast('Tarif non configuré', { type: 'info', desc: 'Définissez d’abord votre tarif de base dans Tarifs.' });
+        return;
+      }
       const free = Object.values(R()).filter((r) => r.status === 'libre');
       const m = K().modal({
         tag: 'WALK-IN', title: 'Vendre une chambre ce soir', desc: free.length + ' chambres libres et propres', width: 460,
         body: free.map((r) => `<div class="hx-fol-line" style="cursor:pointer;" data-action="hx-walkin-room" data-arg="${r.n}">
             <span><b style="font-family:var(--mono);">Ch. ${r.n}</b> · ${roomTypeOf(r.n).name}</span><span class="qt">1 nuit</span><span class="am">${MAD(roomTypeOf(r.n).base)}</span>
-          </div>`).join('') || '<div style="padding:14px;font-size:13px;color:var(--n-500);">Complet ce soir, aucune chambre libre.</div>',
+          </div>`).join('') || `<div style="padding:14px;font-size:13px;color:var(--n-500);">${isCustomHotel() && totalRooms() === 0 ? 'Aucune chambre configurée.' : 'Complet ce soir, aucune chambre libre.'}</div>`,
       });
       openModal = { el: m.el, close: m.close };
     };
@@ -1444,7 +1460,8 @@
       const n = parseInt(arg, 10);
       const r = R()[n];
       const cu = isCustomHotel();
-      const guest = cu ? 'Walk-in · client comptoir' : 'Walk-in · M. Idrissi';
+      if (cu && cuState().baseRate == null) return;
+      const guest = cu ? 'Client sans nom' : 'Walk-in · M. Idrissi';
       const rate = roomTypeOf(n).base;
       r.status = 'occ'; r.guest = guest; r.meta = 'Walk-in · 1 nuit · réglé d\'avance';
       F()[n] = { room: n, guest, src: 'walkin', pax: 1, nights: 1, lines: [

@@ -115,7 +115,15 @@
   // venue. Demo venues (Café Atlas & co.) are NOT real → they keep the sample book.
   function isRealTenant() {
     try { if (window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()) return true; } catch (_) {} // hosted / signed-in → always real
-    try { if (localStorage.getItem('kiwiPaired') === '1' && localStorage.getItem('kiwiLiveMerchant')) return true; } catch (_) {}
+    try { if (window.KiwiMe) return true; } catch (_) {}
+    try {
+      const P = window.KiwiCaissePairing;
+      if (P?.isPaired?.() && P?.pairedVenue?.()?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if (pv?.merchant || localStorage.getItem('kiwiLiveMerchant')) return true;
+      }
+    } catch (_) {}
     try { if (window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom()) return true; } catch (_) {}
     return false;
   }
@@ -136,7 +144,13 @@
   }
   function realData() {
     const KCl = window.KiwiClients;
-    if (!KCl || !KCl.hasBook || !KCl.hasBook()) return null; // no book at all → demo
+    if (!KCl || !KCl.hasBook || !KCl.hasBook()) {
+      if (!isRealTenant()) return null;
+      return {
+        SEG: ['reg', 'vip', 'new', 'win'].map((id) => ({ id, n: 0, c: SEG_COLORS[id], reach: 0, lift: 0, sub: '—' })),
+        GUESTS: [],
+      };
+    }
     const clients = KCl.list();
     // Keep the pitch demo intact: a demo venue with no captured clients shows the
     // sample book. A real/paired store shows its own data — even when still empty.
@@ -147,7 +161,11 @@
       const arr = bySeg[id] || [];
       // est. revenue if each targeted client returns once, at their own avg basket.
       const lift = arr.reduce((t, c) => t + Math.round((c.spend || 0) / Math.max(c.visits || 1, 1)), 0);
-      return { id, n: arr.length, c: SEG_COLORS[id], reach: arr.length, lift };
+      const visits = arr.reduce((t, c) => t + (+c.visits || 0), 0);
+      const spend = arr.reduce((t, c) => t + (+c.spend || 0), 0);
+      const basket = visits ? Math.round(spend / visits) : null;
+      const sub = basket == null ? '—' : (lang() === 'en' ? `Avg basket ${fmt(basket)} MAD` : lang() === 'ar' ? `متوسط السلة ${fmt(basket)} درهم` : `Panier moy. ${fmt(basket)} MAD`);
+      return { id, n: arr.length, c: SEG_COLORS[id], reach: arr.length, lift, sub };
     });
     const GUESTSr = clients.slice().sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 12).map((c) => ({
       nm: c.name || c.phone || 'Client', v: c.visits || 0, sp: c.spend || 0,
@@ -169,7 +187,7 @@
     const body = `<div class="gk-reveal-root">
       <div class="crm-segs">${SEG_.map(s => `<div class="crm-seg ${s.id === sel ? 'sel' : ''}" data-crm-seg="${s.id}">
         <span class="dot" style="background:${s.c}"></span>
-        <div class="n">${fmt(s.n)}</div><div class="l">${T.segLabel[s.id]}</div><div class="s">${T.segSub[s.id]}</div></div>`).join('')}</div>
+        <div class="n">${fmt(s.n)}</div><div class="l">${T.segLabel[s.id]}</div><div class="s">${RD ? s.sub : T.segSub[s.id]}</div></div>`).join('')}</div>
 
       <div class="crm-grid">
         <div>
@@ -220,11 +238,18 @@
       } else if (ch) {
         root.querySelectorAll('[data-crm-chan]').forEach(x => x.classList.toggle('on', x === ch));
       } else if (e.target.closest('[data-crm-send]')) {
-        confetti && confetti();
-        if (RD && segData(sel).reach > 0) {
-          const n = exportAudience(sel);
-          toast(T.toastT, { type: 'success', desc: `${fmt(n)} ${lang() === 'en' ? 'contacts · WhatsApp list exported (CSV).' : lang() === 'ar' ? 'جهة اتصال · تم تصدير القائمة (CSV).' : 'contacts · liste WhatsApp exportée (CSV).'}` });
+        if (RD) {
+          const n = segData(sel).reach > 0 ? exportAudience(sel) : 0;
+          toast(n
+            ? (lang() === 'en' ? 'List prepared' : lang() === 'ar' ? 'تم إعداد القائمة' : 'Liste préparée')
+            : (lang() === 'en' ? 'No eligible customers' : lang() === 'ar' ? 'لا يوجد عملاء مؤهلون' : 'Aucun client éligible'), {
+            type: n ? 'success' : 'info',
+            desc: n
+              ? `${fmt(n)} ${lang() === 'en' ? 'contacts · WhatsApp list exported (CSV).' : lang() === 'ar' ? 'جهة اتصال · تم تصدير القائمة (CSV).' : 'contacts · liste WhatsApp exportée (CSV).'}`
+              : (lang() === 'en' ? 'Nothing was scheduled.' : lang() === 'ar' ? 'لم تتم جدولة أي إرسال.' : 'Aucun envoi n’a été programmé.'),
+          });
         } else {
+          confetti && confetti();
           toast(T.toastT, { type: 'success', desc: T.toastD(fmt(segData(sel).reach)) });
         }
       }

@@ -291,7 +291,49 @@
     passSeq++;
     state.ticket = { num: posRef(`S-${passSeq}`), customer: null, lines: [] };
   }
+
+  const coiffureOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'coiffure',
+    snapshot() {
+      return {
+        staff: STAFF,
+        catalog: CATALOG,
+        customers: CUSTOMERS,
+        passages: PASSAGES,
+        appointments: RDV,
+        doneToday: DONE_TODAY,
+        tips: TIP_LEDGER,
+        passSeq,
+        ticket: state.ticket,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.staff)) STAFF.splice(0, STAFF.length, ...saved.staff);
+      Object.keys(SF).forEach((id) => delete SF[id]);
+      STAFF.forEach((person) => { SF[person.id] = person; });
+      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+      CATALOG.forEach((category) => category.items.forEach((item) => { item.cat = category.id; ITEMS[item.id] = item; }));
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      CUSTOMERS.forEach((customer) => {
+        if (customer.last) customer.last = new Date(customer.last);
+        (customer.hist || []).forEach((entry) => { if (entry.when) entry.when = new Date(entry.when); });
+      });
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.passages)) PASSAGES.splice(0, PASSAGES.length, ...saved.passages);
+      PASSAGES.forEach((passage) => { if (passage.arrivedAt) passage.arrivedAt = new Date(passage.arrivedAt); });
+      if (Array.isArray(saved.appointments)) RDV.splice(0, RDV.length, ...saved.appointments);
+      RDV.forEach((appointment) => { if (appointment.time) appointment.time = new Date(appointment.time); });
+      if (Array.isArray(saved.doneToday)) DONE_TODAY.splice(0, DONE_TODAY.length, ...saved.doneToday);
+      if (Array.isArray(saved.tips)) TIP_LEDGER.splice(0, TIP_LEDGER.length, ...saved.tips);
+      if (Number.isFinite(saved.passSeq)) passSeq = saved.passSeq;
+      if (saved.ticket) state.ticket = saved.ticket;
+    },
+  });
   function queueIfOffline(label) {
+    if (coiffureOps) coiffureOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -309,9 +351,9 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref, lines });
     } catch (_) {}
   }
 
@@ -319,8 +361,9 @@
   let root = null;
 
   function mount(rootEl) {
+    if (coiffureOps) coiffureOps.hydrate();
     root = rootEl;
-    freshTicket();
+    if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="cf-rail">
         <div class="cf-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -1033,10 +1076,13 @@
     if (!c) return;
     const el = $('#cf-fichem', root);
     const colorArt = ART.couleur;
+    const referenceVisual = c.referencePhoto && c.referencePhoto.dataUrl
+      ? `<img src="${c.referencePhoto.dataUrl}" alt="Photo référence de ${esc(c.name)}">`
+      : colorArt;
     el.innerHTML = `
       <div class="cf-fiche-hero">
         <button class="cf-fiche-x" data-cf-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <span class="cf-fiche-photo">${colorArt}<span class="ref">réf. photo</span></span>
+        <span class="cf-fiche-photo">${referenceVisual}<span class="ref">réf. photo</span></span>
         <span class="cf-fiche-who">
           <h3>${esc(c.name)}</h3>
           <div class="cf-fiche-tel">${esc(c.phone || 'sans téléphone')}</div>
@@ -1111,7 +1157,7 @@
     };
   }
 
-  /* photo référence — mock capture */
+  /* Photo référence — native camera/file picker, persisted on the client file. */
   function openPhoto(c) {
     const el = $('#cf-photom', root);
     el.innerHTML = `
@@ -1128,13 +1174,21 @@
       </div>`;
     openVeil('#cf-photo-veil');
     icons();
-    $('#cf-shutter', el).onclick = () => {
-      const flash = $('#cf-vf-flash', el);
-      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-      setTimeout(() => {
-        closeVeil('#cf-photo-veil');
-        toast(`Photo référence enregistrée, fiche ${c.name.split(' ')[0]}`);
-      }, 420);
+    $('#cf-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 720, quality: 0.68 });
+        if (!photo) return;
+        const flash = $('#cf-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        c.referencePhoto = photo;
+        queueIfOffline('Photo référence client');
+        setTimeout(() => {
+          closeVeil('#cf-photo-veil');
+          toast(`Photo référence enregistrée, fiche ${c.name.split(' ')[0]}`);
+          if ($('#cf-fiche-veil', root).classList.contains('is-open')) openFiche(c.id);
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#cf-vf-close', el).onclick = () => closeVeil('#cf-photo-veil');
   }
@@ -1352,7 +1406,17 @@
       /* Journal partagé : prestations ET pourboire, c'est ce que la cliente a
          réellement payé au comptoir. Sans ça la recette du salon vivait dans
          DONE_TODAY et disparaissait au premier rechargement. */
-      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`);
+      const saleLines = p.lines.map((ln) => {
+        const item = ITEMS[ln.itemId];
+        const amount = priceOf(item, ln.variantId) + (ln.addons || []).reduce((s, a) => s + ADDON[a].price, 0);
+        return {
+          itemId: ln.itemId, variantId: ln.variantId || '', name: item.label,
+          cat: item.cat || '', kind: 'service', unit: 'service', qty: 1, total: amount,
+          options: (ln.addons || []).map((id) => ({ id, qty: 1 })),
+        };
+      });
+      if (tt > 0) saleLines.push({ itemId: 'pourboire', name: 'Pourboire', kind: 'tip', unit: 'payment', qty: 1, total: tt });
+      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`, saleLines);
       closeVeil('#cf-pay-veil');
       queueIfOffline('Encaissement');
       toast(`${passCustName(p)}, ${fmtMAD(total + tt)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${tt ? ` · pourboire ${fmtMAD(tt)}` : ''}`);
@@ -1421,7 +1485,16 @@
         </div>
       </div>`;
     icons();
-    $('#cf-day-print', root).onclick = () => toast('Clôture envoyée, récap CA + commissions (imprimante thermique)');
+    $('#cf-day-print', root).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = [
+        { label:'Passages', value:totalPass }, { label:'CA du jour', value:fmtMAD(totalCA) },
+        { label:'Pourboires', value:fmtMAD(totalTip) }, { label:'Commissions', value:fmtMAD(totalCom) },
+      ];
+      STAFF.forEach((s) => { const b = byStaff[s.id]; lines.push({ label:s.name, value:`${b.passages} passages · ${fmtMAD(b.ca)} · commission ${fmtMAD(Math.round(b.ca * COMMISSION))}` }); });
+      P.printText({ title:'Clôture salon', subtitle:fmtDay(new Date()), paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
     $('#cf-day-close', root).onclick = () => {
       if (PASSAGES.some((p) => p.state !== 'fini')) {
         toast(`${PASSAGES.filter((p) => p.state !== 'fini').length} passage(s) encore en cours, terminez d'abord la file`);

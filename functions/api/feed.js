@@ -230,7 +230,16 @@ export async function onRequestGet({ request, env }) {
        * repêche alors dans le catalogue actuel — jamais 'Divers' par défaut
        * ici, ce qui reviendrait à affirmer une classification qu'on n'a pas. */
       r.lines = Array.isArray(arr)
-        ? arr.map((l) => ({ name: l && l.n, qty: l && l.q, total: l && l.t, cat: (l && l.c) || '' }))
+        ? arr.map((l) => ({
+            name: l && l.n, qty: l && l.q, total: l && l.t,
+            cat: (l && l.c) || '', itemId: (l && l.i) || '',
+            variantId: (l && l.v) || '', unit: (l && l.u) || '',
+            kind: (l && l.kd) || '', unitCost: (l && l.k),
+            recipeVersionId: (l && l.r) || '',
+            options: Array.isArray(l && l.o)
+              ? l.o.map((x) => ({ id: (x && x.i) || '', qty: x && x.q })).filter((x) => x.id)
+              : [],
+          }))
         : null;
     } catch (_) { r.lines = null; }
     return r;

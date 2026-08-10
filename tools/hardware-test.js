@@ -95,8 +95,9 @@ function ok(condition, label) {
   const main = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
   ok(main.includes('hw.authorizeCard(currentTotal() + payTipAmount()'),
     'restaurant checkout is hardware-gated');
-  ok(main.includes("action === 'close') closeCardModal({ paid: reader.actions.classList.contains('is-visible') })"),
-    'closing a rejected card modal cannot mark it paid');
+  ok(main.includes('const settled = finalizeTender(cardTenderMethod)') &&
+     main.includes("if (action === 'close') closeCardModal();"),
+    'card approval commits immediately; closing a rejected modal cannot mark it paid');
   const boutique = fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8');
   ok(boutique.includes("ok.onclick = () => settle({ m: 'carte', amount })"),
     'boutique external-reader flow requires explicit cashier confirmation');

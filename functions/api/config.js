@@ -181,6 +181,11 @@ export async function onRequestGet(context) {
   let pins = [];
   let type = '';
   let pinGateConfigured = false;
+  /* The subscription is an entitlement, so it comes from D1 with the rest of
+   * the store identity.  A UI-side constant can decorate a demo; it must never
+   * unlock a paid operation for a real merchant.  Empty means "not resolved"
+   * (not Ultra), while an existing legacy row with no explicit plan is Basic. */
+  let plan = '';
   /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
@@ -189,18 +194,24 @@ export async function onRequestGet(context) {
     let cfg;
     try {
       cfg = await env.DB.prepare(
-        `SELECT features, type, status FROM merchant_config WHERE merchant = ?`
+        `SELECT features, plan, type, status FROM merchant_config WHERE merchant = ?`
       ).bind(merchant).first();
     } catch (_) {
       // `status` was added after feature flags. Until that migration reaches a
       // database, keep returning the flags instead of silently turning every
       // module back on for the merchant.
       cfg = await env.DB.prepare(
-        `SELECT features, type FROM merchant_config WHERE merchant = ?`
+        `SELECT features, plan, type FROM merchant_config WHERE merchant = ?`
       ).bind(merchant).first();
     }
     if (cfg && cfg.features) { try { features = JSON.parse(cfg.features) || {}; } catch (_) {} }
     if (cfg && cfg.type) type = cfg.type;
+    if (cfg) {
+      const rawPlan = String(cfg.plan || '').trim().toLowerCase();
+      plan = ['basic', 'pro', 'ultra', 'ultimate'].includes(rawPlan)
+        ? rawPlan
+        : 'basic';
+    }
     if (cfg && String(cfg.status || '') === 'suspended') suspended = true;
 
     if (mayReadPins) {
@@ -220,7 +231,7 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, pinGateConfigured, type, suspended });
+  return json({ features, pins, pinGateConfigured, type, plan, suspended });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the

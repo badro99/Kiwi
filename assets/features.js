@@ -13,6 +13,42 @@
   if (!window.Kiwi) { console.warn('features.js loaded before interactive.js'); return; }
   const { toast, modal, drawer, handlers, confetti } = window.Kiwi;
   const trLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
+  const isRealSession = () => {
+    try { return !!window.KiwiEnv?.isReal?.(); } catch (_) { return false; }
+  };
+  const usesOwnData = () => {
+    if (isRealSession()) return true;
+    try { return !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  };
+  const FEATURE_EMPTY = {
+    sadaqa: {
+      fr: ['Sadaqa Round-Up arrive bientôt', 'Aucune règle d’arrondi n’est active. Les bénéficiaires et montants apparaîtront ici quand le service réel sera disponible.'],
+      en: ['Sadaqa Round-Up is coming soon', 'No round-up rule is active. Recipients and amounts will appear here once the live service is available.'],
+      ar: ['خدمة صدقة قريبًا', 'لا توجد قاعدة تقريب مفعّلة. سيظهر المستفيدون والمبالغ هنا عند توفر الخدمة الفعلية.'],
+    },
+    diaspora: {
+      fr: ['Transfert Diaspora arrive bientôt', 'Aucun taux ni transfert réel n’est disponible ici pour le moment.'],
+      en: ['Diaspora transfers are coming soon', 'No live rate or real transfer is available here yet.'],
+      ar: ['تحويلات الجالية قريبًا', 'لا يتوفر هنا حاليًا سعر صرف مباشر أو تحويل فعلي.'],
+    },
+    agent: {
+      fr: ['Aucune action vérifiée à proposer', 'Le mode agent affichera uniquement des actions calculées depuis vos données réelles.'],
+      en: ['No verified actions to suggest', 'Agent mode will only show actions calculated from your live data.'],
+      ar: ['لا توجد إجراءات مؤكدة للاقتراح', 'سيعرض وضع الوكيل فقط إجراءات محسوبة من بياناتك الفعلية.'],
+    },
+  };
+  function realFeatureEmpty(kind, title, subtitle) {
+    const c = FEATURE_EMPTY[kind]?.[trLang()] || FEATURE_EMPTY[kind]?.fr || ['', ''];
+    return drawer({
+      title: title || c[0],
+      subtitle: subtitle || '',
+      width: 500,
+      body: `<div data-real-feature-empty="${kind}" style="padding:44px 16px;text-align:center;">
+        <div style="font-size:15px;font-weight:600;color:var(--ink);">${c[0]}</div>
+        <div style="font-size:12.5px;color:var(--n-500);line-height:1.55;max-width:390px;margin:7px auto 0;">${c[1]}</div>
+      </div>`,
+    });
+  }
 
   /* ─── Injected styles for feature-specific UI ─── */
   const CSS = `
@@ -358,7 +394,7 @@
      * dashboard header for EVERY merchant, so a real client would send a paying
      * customer a URL that 404s. Honest "coming soon" until there is a rail
      * behind it; the pitch demo keeps the full flow. */
-    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+    if (usesOwnData()) {
       const _T = PL_STR[trLang()] || PL_STR.fr;
       const c = ({
         fr: { h: 'Les liens de paiement arrivent bientôt', p: 'Encaisser à distance par lien WhatsApp, email ou SMS sera disponible ici. Nous vous préviendrons dès l’ouverture — en attendant, encaissez sur la caisse.' },
@@ -378,7 +414,7 @@
     let _plBiz = '';
     try { const _plVd = window.KiwiVenue?.isCustom?.() && window.KiwiVenue.getCurrentVenueData?.(); if (_plVd) _plBiz = String(_plVd.name || '').trim(); } catch (_) {}
     if (!_plBiz) _plBiz = (window.KiwiMe && window.KiwiMe.business || '').trim();
-    let data = { amount: '', desc: _plBiz ? `Commande ${_plBiz}` : (window.KiwiEnv?.isReal?.() ? 'Nouvelle commande' : 'Commande Café Atlas'), expiry: '7j', method: 'all' };
+    let data = { amount: '', desc: _plBiz ? `Commande ${_plBiz}` : (usesOwnData() ? 'Nouvelle commande' : 'Commande Café Atlas'), expiry: '7j', method: 'all' };
     const T = PL_STR[trLang()] || PL_STR.fr;
 
     const m = modal({
@@ -501,7 +537,7 @@
      * no money moved. For a real merchant, keep the calculator and replace the
      * recipient picker + payout button with an honest note. Demo unchanged. */
     let zkReal = false;
-    try { zkReal = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+    try { zkReal = usesOwnData(); } catch (_) {}
 
     const m = modal({
       tag: T.tag,
@@ -668,6 +704,7 @@
   };
 
   handlers['sadaqa'] = () => {
+    if (usesOwnData()) return realFeatureEmpty('sadaqa');
     let enabled = true;
     let roundTo = 5;
     let cap = 100;
@@ -892,7 +929,7 @@
     // Kiwi Compte (banking) is a Phase 2 surface — the card, IBAN, balance and
     // transactions here are all demo. A real merchant must never see a fabricated
     // account; show an honest "coming soon" instead.
-    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+    if (usesOwnData()) {
       const c = ({
         fr: { h: 'Kiwi Compte arrive bientôt', p: 'Votre compte professionnel Kiwi, votre carte et vos virements seront disponibles ici. Nous vous préviendrons dès l’ouverture.' },
         en: { h: 'Kiwi Compte is coming soon', p: 'Your Kiwi business account, card and transfers will live here. We\'ll let you know the moment it opens.' },
@@ -1035,7 +1072,7 @@
      * compliance claims. A real merchant must never be shown that. Show an
      * honest "coming soon" instead, exactly as the Kiwi Compte handler does.
      * The pitch demo (isReal() false) keeps the full flow, byte-identical. */
-    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+    if (usesOwnData()) {
       const c = ({
         fr: { h: 'Kiwi Capital arrive bientôt', p: 'L’avance sur vos ventes n’est pas encore ouverte. Dès qu’elle le sera, votre éligibilité sera calculée sur vos encaissements réels et nous vous préviendrons.' },
         en: { h: 'Kiwi Capital is coming soon', p: 'Advances on your sales aren\'t open yet. When they are, your eligibility will be based on your real takings and we\'ll let you know.' },
@@ -1175,6 +1212,7 @@
     }
   };
   handlers['diaspora'] = () => {
+    if (usesOwnData()) return realFeatureEmpty('diaspora');
     let from = 100;
     const rate = 10.812; // live-ish interbank
     const kiwiRate = rate * (1 - 0.005); // 0.5% markup
@@ -1340,6 +1378,7 @@
   };
   handlers['loyalty'] = () => {
     const T = LOYALTY_STR[trLang()] || LOYALTY_STR.fr;
+    const loyaltyReal = usesOwnData();
     // The preview card names the demo venue ("· CAFÉ ATLAS"). For a real merchant,
     // swap in their own business name so the illustration is theirs, not the demo's.
     // Per STORE: a loyalty programme belongs to the shop, not to the account.
@@ -1347,7 +1386,7 @@
     try { const _lVd = window.KiwiVenue?.isCustom?.() && window.KiwiVenue.getCurrentVenueData?.(); if (_lVd) _biz = String(_lVd.name || '').trim(); } catch (_) {}
     if (!_biz) _biz = (window.KiwiMe && window.KiwiMe.business || '').trim();
     const _prog = _biz ? T.previewProgram.replace(/·.*$/, '· ' + _biz.toUpperCase())
-      : (window.KiwiEnv?.isReal?.() ? T.previewProgram.replace(/·.*$/, '').trim() : T.previewProgram);
+      : (usesOwnData() ? T.previewProgram.replace(/·.*$/, '').trim() : T.previewProgram);
     const C = T.cfg || {};
     const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     // Pre-fill from the store's live programme (clients-store.js) — a merchant who
@@ -1372,10 +1411,11 @@
         <div class="loy-preview">
           <div style="font-size:11px; letter-spacing:0.1em; font-family:var(--mono); color:var(--mint);">${_prog}</div>
           <div data-loy-preview style="font-size:22px; font-weight:600; margin-top:6px; letter-spacing:-0.02em;">${escAttr(lineFor(cfg))}</div>
+          ${loyaltyReal ? '' : `
           <div class="loy-dots">
             <i class="active">✓</i><i class="active">✓</i><i class="active">✓</i><i class="active">✓</i><i class="current">5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>🎁</i>
           </div>
-          <div style="margin-top:14px; font-size:12.5px; color:#d0eed9;">${T.previewStats}</div>
+          <div style="margin-top:14px; font-size:12.5px; color:#d0eed9;">${T.previewStats}</div>`}
         </div>
         <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-family:var(--mono); margin-top:18px; margin-bottom:10px;">${T.modelTitle}</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
@@ -1551,6 +1591,7 @@
   };
   handlers['agent-mode'] = () => {
     const T = AGENT_STR[trLang()] || AGENT_STR.fr;
+    if (usesOwnData()) return realFeatureEmpty('agent', T.title, T.subtitle);
     drawer({
       title: T.title,
       subtitle: T.subtitle,

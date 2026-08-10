@@ -162,6 +162,16 @@
     painWarned: false,
     offline: false, queued: 0,
   };
+  const truckOps = window.KiwiVerticalState?.open?.('foodtruck', {
+    schema: 1,
+    snapshot: () => ({ queue: QUEUE, served: SERVED, recette, sold, seq, ticket: state.ticket, spot: state.spot, vitals: state.vitals, waits: state.waits, painWarned: state.painWarned }),
+    restore: (d) => {
+      const revive = o => { o.at = new Date(o.at); o.readyAt = o.readyAt ? new Date(o.readyAt) : null; o.servedAt = o.servedAt ? new Date(o.servedAt) : null; return o; };
+      QUEUE.splice(0, QUEUE.length, ...((d.queue || []).map(revive))); SERVED.splice(0, SERVED.length, ...((d.served || []).map(revive)));
+      Object.keys(recette).forEach(k => delete recette[k]); Object.assign(recette, d.recette || {}); Object.keys(sold).forEach(k => delete sold[k]); Object.assign(sold, d.sold || {});
+      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || { lines: [], name: '' }; state.spot = d.spot || 'marina'; state.vitals = d.vitals || state.vitals; state.waits = d.waits || []; state.painWarned = !!d.painWarned;
+    },
+  });
 
   const GAZ = {
     ok:         { label: 'OK',           cls: '',     next: 'surveiller' },
@@ -182,19 +192,25 @@
 
   /* Point de passage unique de la recette : la vente éclair et l'encaissement
      au retrait finissent tous les deux ici, donc le journal partagé aussi. */
-  function addRecette(spotId, method, amount, ref) {
+  function orderLines(lines) {
+    return lines.map((l) => {
+      const it = ITEM[l.id];
+      return { itemId: it.id, name: it.label, category: it.cat || 'carte', qty: l.qty, unit: 'piece', kind: 'product', total: it.price * l.qty };
+    });
+  }
+  function addRecette(spotId, method, amount, ref, lines) {
     const r = recette[spotId] || recette.marina;
     r.orders++;
     if (method === 'carte') r.carte += amount;
     else r.especes += amount;
-    postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref);
+    postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref, orderLines(lines || []));
   }
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le camion encaissait dans `recette` et rien d'autre : la recette du service
      disparaissait au premier refresh et le patron voyait 0 MAD. Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('foodtruck', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('foodtruck', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Reprise du service en cours. Le journal ne retient pas l'emplacement, donc
@@ -216,6 +232,7 @@
   })();
 
   function queueIfOffline(label) {
+    truckOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -227,6 +244,7 @@
   let root = null;
 
   function mount(rootEl) {
+    truckOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="ft-rail">
@@ -562,7 +580,7 @@
     };
     seq++;
     QUEUE.push(o);
-    addRecette(o.spot, method, total, o.id);
+    addRecette(o.spot, method, total, o.id, o.lines);
     o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
     consumeBread(o.lines);
     state.ticket = { lines: [], name: '' };
@@ -779,7 +797,7 @@
         method: null,
         onPaid: (m, rendu) => {
           o.pay = { method: m, paid: o.total };
-          addRecette(o.spot, m, o.total, o.id);
+          addRecette(o.spot, m, o.total, o.id, o.lines);
           o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
           toast(`${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
           serveOrder(o);

@@ -68,7 +68,7 @@
    * shop happens to be selected: once the staff list went per-store, an owner
    * whose code was filed under their first shop could no longer open the
    * dashboard from their second, while that second shop's cashier could. */
-  var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
+  var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', loaded: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
     newStore: registerNewStore, off: featureOff,
     /* Le slug serveur du magasin à l'écran. menu-catalog.js le demandait déjà
@@ -435,6 +435,11 @@
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
         cfg.type = data.type || '';
+        /* Server-authoritative entitlement. Empty means unresolved/offline and
+           must never be interpreted as a paid tier. */
+        cfg.plan = /^(basic|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
+          ? String(data.plan).toLowerCase()
+          : '';
         cfg.loaded = true;
         applyFeatures();
         // Make the server-stored business type authoritative for the dashboard's

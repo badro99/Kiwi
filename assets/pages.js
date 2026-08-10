@@ -10,6 +10,112 @@
   const { toast, modal, drawer, handlers, confetti } = window.Kiwi;
 
   const trLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
+  const isRealSession = () => {
+    try { return !!window.KiwiEnv?.isReal?.(); } catch (_) { return false; }
+  };
+  const usesOwnData = () => {
+    if (isRealSession()) return true;
+    try { return !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  };
+  const pageEsc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const EMPTY_COPY = {
+    fr: {
+      terminals: ['Aucun terminal vérifié', 'Les terminaux apparaîtront ici quand une source Kiwi les aura associés à cet établissement.'],
+      settlements: ['Aucun règlement vérifié', 'Aucun flux de règlement réel n’est disponible pour cet établissement.'],
+      compliance: ['Aucune donnée de conformité vérifiée', 'Les contrôles et audits apparaîtront ici quand leur source sera connectée.'],
+      team: ['Aucune donnée d’équipe vérifiée', 'Ajoutez ou synchronisez votre équipe pour afficher ses membres et son activité.'],
+      tables: ['Aucune donnée de salle vérifiée', 'Configurez votre plan de salle pour afficher vos tables et additions.'],
+      menu: ['Aucune donnée de menu vérifiée', 'Ajoutez ou synchronisez votre catalogue pour afficher vos articles.'],
+      kds: ['Aucune commande cuisine vérifiée', 'Les commandes apparaîtront ici quand elles seront envoyées au KDS.'],
+      stock: ['Aucune donnée de stock vérifiée', 'Ajoutez ou synchronisez votre inventaire pour afficher les niveaux réels.'],
+      reservations: ['Aucune réservation vérifiée', 'Les réservations apparaîtront ici quand une source réelle sera connectée.'],
+      payroll: ['Aucune donnée de paie vérifiée', 'Les heures, effectifs et montants apparaîtront ici quand la paie sera configurée.'],
+    },
+    en: {
+      terminals: ['No verified terminals', 'Terminals will appear here once a Kiwi source links them to this venue.'],
+      settlements: ['No verified settlements', 'No live settlement feed is available for this venue.'],
+      compliance: ['No verified compliance data', 'Checks and audits will appear here once their source is connected.'],
+      team: ['No verified team data', 'Add or sync your team to show its members and activity.'],
+      tables: ['No verified floor data', 'Configure your floor plan to show your tables and bills.'],
+      menu: ['No verified menu data', 'Add or sync your catalogue to show your items.'],
+      kds: ['No verified kitchen orders', 'Orders will appear here once they are sent to the KDS.'],
+      stock: ['No verified stock data', 'Add or sync your inventory to show actual levels.'],
+      reservations: ['No verified reservations', 'Reservations will appear here once a live source is connected.'],
+      payroll: ['No verified payroll data', 'Hours, staff and amounts will appear here once payroll is configured.'],
+    },
+    ar: {
+      terminals: ['لا توجد أجهزة مؤكدة', 'ستظهر الأجهزة هنا بعد ربطها بهذا الفرع من مصدر Kiwi.'],
+      settlements: ['لا توجد تسويات مؤكدة', 'لا يتوفر تدفق تسويات فعلي لهذا الفرع.'],
+      compliance: ['لا توجد بيانات امتثال مؤكدة', 'ستظهر الفحوصات والتدقيقات بعد ربط مصدرها.'],
+      team: ['لا توجد بيانات فريق مؤكدة', 'أضف فريقك أو زامنه لعرض أعضائه ونشاطه.'],
+      tables: ['لا توجد بيانات قاعة مؤكدة', 'اضبط مخطط القاعة لعرض الطاولات والفواتير.'],
+      menu: ['لا توجد بيانات قائمة مؤكدة', 'أضف الكتالوج أو زامنه لعرض العناصر.'],
+      kds: ['لا توجد طلبات مطبخ مؤكدة', 'ستظهر الطلبات هنا بعد إرسالها إلى شاشة المطبخ.'],
+      stock: ['لا توجد بيانات مخزون مؤكدة', 'أضف المخزون أو زامنه لعرض المستويات الفعلية.'],
+      reservations: ['لا توجد حجوزات مؤكدة', 'ستظهر الحجوزات هنا بعد ربط مصدر فعلي.'],
+      payroll: ['لا توجد بيانات أجور مؤكدة', 'ستظهر الساعات والموظفون والمبالغ بعد إعداد الأجور.'],
+    },
+  };
+  function realEmptyDrawer(title, kind, width = 680) {
+    const L = EMPTY_COPY[trLang()] || EMPTY_COPY.fr;
+    const c = L[kind] || L.transactions;
+    return drawer({
+      title,
+      subtitle: '',
+      width,
+      body: `<div data-real-empty="${pageEsc(kind)}" style="padding:48px 18px;text-align:center;">
+        <div style="font-size:15px;font-weight:600;color:var(--ink);">${pageEsc(c[0])}</div>
+        <div style="font-size:12.5px;color:var(--n-500);line-height:1.55;max-width:430px;margin:7px auto 0;">${pageEsc(c[1])}</div>
+      </div>`,
+    });
+  }
+  function renderRealTransactions(T) {
+    const lang = trLang();
+    const L = {
+      fr: { empty: 'Aucune vente aujourd’hui.', unavailable: 'La source de ventes de cet établissement n’est pas disponible.', detail: 'DÉTAIL', sale: 'Vente', status: 'Enregistrée', methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison' } },
+      en: { empty: 'No sales today.', unavailable: 'This venue’s sales source is unavailable.', detail: 'DETAIL', sale: 'Sale', status: 'Recorded', methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery' } },
+      ar: { empty: 'لا توجد مبيعات اليوم.', unavailable: 'مصدر مبيعات هذا الفرع غير متوفر.', detail: 'التفاصيل', sale: 'بيع', status: 'مسجلة', methods: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط دفع', delivery: 'توصيل' } },
+    }[lang] || null;
+    const venue = (() => { try { return window.KiwiVenue?.getVenue?.(); } catch (_) { return undefined; } })();
+    const hasSource = typeof window.KiwiSales?.list === 'function';
+    let sales = [];
+    if (hasSource) {
+      try { sales = window.KiwiSales.list(venue) || []; } catch (_) { sales = []; }
+    }
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = start.getTime() + 86400000;
+    const rows = sales.filter((s) => {
+      const ts = +(s && s.ts) || 0;
+      return ts >= start.getTime() && ts < end && Number(s.amount) >= 0;
+    }).slice().reverse();
+    const total = rows.reduce((sum, s) => sum + (+s.amount || 0), 0);
+    const avg = rows.length ? Math.round(total / rows.length) : 0;
+    const fmt = (n, digits = 0) => Number(n || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    const empty = hasSource ? L.empty : L.unavailable;
+    const r = drawer({
+      title: T.transactionsTitle,
+      subtitle: rows.length ? T.transactionsSubtitle(rows.length, fmt(total)) : empty,
+      width: 920,
+      body: rows.length ? `
+        <div class="p-hero">
+          <div class="l">${pageEsc(T.transactionsHeroLabel)}</div>
+          <div class="big">${pageEsc(fmt(total))} <span style="font-size:18px;opacity:.7;">MAD</span></div>
+          <div class="sub">${pageEsc(T.transactionsHeroSub(rows.length, avg))}</div>
+        </div>
+        <table class="p-table" data-real-transactions>
+          <thead><tr><th>${pageEsc(T.transactionsThTime)}</th><th>${pageEsc(T.transactionsThMethod)}</th><th>${pageEsc(L.detail)}</th><th class="right">${pageEsc(T.transactionsThAmount)}</th><th>${pageEsc(T.transactionsThStatus)}</th></tr></thead>
+          <tbody>${rows.map((s) => {
+            const d = new Date(+s.ts || 0);
+            const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            const method = L.methods[String(s.method || '')] || L.sale;
+            return `<tr><td class="mono">${pageEsc(time)}</td><td><b>${pageEsc(method)}</b></td><td style="color:var(--n-600);">${pageEsc(s.label || L.sale)}</td><td class="mono right">${pageEsc(fmt(s.amount, 2))}</td><td><span class="chip ok">${pageEsc(L.status)}</span></td></tr>`;
+          }).join('')}</tbody>
+        </table>` : `<div data-real-empty="transactions" style="padding:48px 18px;text-align:center;font-size:14px;font-weight:600;color:var(--ink);">${pageEsc(empty)}</div>`,
+    });
+    r.el.querySelector('.kiwi-drawer').classList.add('page-xl');
+    return r;
+  }
 
   const pageTranslations = {
     fr: {
@@ -757,8 +863,8 @@
 
   /* Data table */
   .p-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  .p-table thead th { text-align: left; padding: 9px 12px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--n-500); text-transform: uppercase; background: var(--paper-soft); border-bottom: 1px solid var(--n-200); font-weight: 500; }
-  .p-table tbody td { padding: 11px 12px; border-bottom: 1px solid var(--n-200); }
+  .p-table thead th { text-align: left; padding: 9px 12px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--n-500); text-transform: uppercase; background: var(--paper-soft); border-bottom: 1px solid var(--n-300); font-weight: 500; }
+  .p-table tbody td { padding: 11px 12px; border-bottom: 1px solid var(--n-300); }
   .p-table tbody tr { transition: background 160ms cubic-bezier(0.32, 0.72, 0, 1); }
   .p-table tbody tr:hover { background: color-mix(in srgb, var(--atlas) 5%, var(--surface)); cursor: pointer; }
   .p-table tbody td:first-child { border-start-start-radius: 10px; border-end-start-radius: 10px; }
@@ -774,9 +880,9 @@
   html[data-theme="dark"] .p-card { background: var(--paper-muted); }
 
   /* Terminal card */
-  .term { display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--n-200); }
+  .term { display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--n-300); }
   .term:last-child { border-bottom: 0; }
-  .term .icn { width: 48px; height: 72px; border-radius: 10px; background: var(--ink); color: var(--mint); display: flex; align-items: flex-end; justify-content: center; padding: 6px; position: relative; }
+  .term .icn { width: 48px; height: 72px; border-radius: 10px; background: var(--inverse-surface); border: 1px solid var(--inverse-line); color: var(--mint); display: flex; align-items: flex-end; justify-content: center; padding: 6px; position: relative; }
   .term .icn.off { background: var(--n-300); color: var(--n-500); }
   .term .icn::after { content: ""; width: 20px; height: 3px; background: currentColor; border-radius: 2px; }
   .term .info .n { font-weight: 600; font-size: 14.5px; }
@@ -795,11 +901,14 @@
   html[data-theme="dark"] .team-mem { background: var(--paper-muted); }
   .team-mem .top { display: flex; align-items: center; gap: 12px; }
   .team-mem .av { width: 48px; height: 48px; border-radius: 50%; background: var(--atlas); color: var(--paper); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex-shrink: 0; letter-spacing: -0.02em; position: relative; }
-  .team-mem .av.b { background: var(--riad); }
+  /* Light lettering, not --paper: the dark climate resolves --paper to #000, and
+     black initials on the deep green sit at 3.2:1. The default .av keeps --paper
+     because its --atlas fill is a mid-tone that black actually reads on (8.3:1). */
+  .team-mem .av.b { background: var(--brand-deep); color: var(--inverse-ink); }
   .team-mem .av.c { background: #D99A2B; }
   .team-mem .av.d { background: var(--atlas-700); }
   .team-mem .av::after { content: ""; position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--success); border-radius: 50%; border: 2px solid var(--paper-soft); }
-  .team-mem .av.offline::after { background: var(--n-300); }
+  .team-mem .av.offline::after { background: var(--n-500); }
   .team-mem .n { font-weight: 600; font-size: 14.5px; }
   .team-mem .role { font-size: 11.5px; color: var(--n-500); letter-spacing: 0.05em; margin-top: 2px; }
   .team-mem .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--n-200); }
@@ -820,7 +929,10 @@
   .tbl.occupied .tbl-amt { color: var(--atlas); }
   .tbl.pay-pending { border-color: var(--warning); background: rgba(217,154,43,0.08); }
   .tbl.pay-pending .tbl-amt { color: var(--warning); }
-  .tbl.paid { border-color: var(--success); opacity: 0.65; }
+  /* Completion reads through the edge and a recessed fill, not a blanket opacity:
+     .65 over the whole tile dragged the 10.5px state text down to 3.3:1 and faded
+     the amount along with it. */
+  .tbl.paid { border-color: var(--success); background: var(--n-100); }
   .tbl::after { content: ""; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
   .tbl.occupied::after { background: var(--atlas); }
   .tbl.pay-pending::after { background: var(--warning); animation: live-pulse 2s infinite; }
@@ -830,7 +942,7 @@
   .menu-cat-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 2px solid var(--ink); margin-bottom: 4px; }
   .menu-cat-head h4 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.015em; }
   .menu-cat-head .count { font-size: 11px; font-family: var(--mono); color: var(--n-500); letter-spacing: 0.08em; }
-  .menu-item { display: grid; grid-template-columns: 1fr 80px 80px 30px; gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--n-200); font-size: 13.5px; }
+  .menu-item { display: grid; grid-template-columns: 1fr 80px 80px 30px; gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--n-300); font-size: 13.5px; }
   .menu-item:last-child { border-bottom: 0; }
   .menu-item .name { font-weight: 500; }
   .menu-item .name .desc { color: var(--n-500); font-weight: 400; font-size: 11.5px; margin-top: 2px; }
@@ -839,12 +951,12 @@
   .menu-item .avail.ok { color: var(--success); }
   .menu-item .avail.low { color: var(--warning); }
   .menu-item .avail.out { color: var(--danger); }
-  .menu-item .more { color: var(--n-400); text-align: right; cursor: pointer; }
+  .menu-item .more { color: var(--n-600); text-align: right; cursor: pointer; }
 
   /* KDS */
   .kds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   @media (max-width: 720px) { .kds-grid { grid-template-columns: 1fr; } }
-  .kds-col-head { font-size: 13px; font-weight: 600; padding: 12px 14px; background: var(--ink); color: var(--paper); border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; }
+  .kds-col-head { font-size: 13px; font-weight: 600; padding: 12px 14px; background: var(--inverse-surface); color: var(--inverse-ink); border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; }
   .kds-col-head .count { font-family: var(--mono); color: var(--mint); }
   .kds-col-body { background: var(--paper-soft); border: 1px solid var(--n-200); border-top: 0; border-radius: 0 0 10px 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 280px; }
   html[data-theme="dark"] .kds-col-body { background: var(--paper-muted); }
@@ -852,7 +964,7 @@
   html[data-theme="dark"] .kds-ticket { background: var(--paper-soft); }
   .kds-ticket.glovo { border-left-color: #F29137; }
   .kds-ticket.yassir { border-left-color: #2B5AA8; }
-  .kds-ticket:hover { transform: translateX(2px); }
+  .kds-ticket:hover { border-color: var(--n-400); background: var(--paper-elev); }
   .kds-ticket .thead { display: flex; justify-content: space-between; font-size: 11px; color: var(--n-500); font-family: var(--mono); margin-bottom: 6px; letter-spacing: 0.05em; }
   .kds-ticket .thead .timer { color: var(--atlas); font-weight: 600; }
   .kds-ticket .thead .timer.warn { color: var(--warning); }
@@ -862,12 +974,12 @@
   .kds-ticket .items li::before { content: "•"; position: absolute; left: 3px; color: var(--atlas); }
 
   /* Stock */
-  .stock-row { display: grid; grid-template-columns: 36px 2fr 1fr 1fr 70px; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--n-200); font-size: 13.5px; }
+  .stock-row { display: grid; grid-template-columns: 36px 2fr 1fr 1fr 70px; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--n-300); font-size: 13.5px; }
   .stock-row .icn { width: 36px; height: 36px; background: var(--paper-soft); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   html[data-theme="dark"] .stock-row .icn { background: var(--paper-muted); }
   .stock-row .name { font-weight: 500; }
   .stock-row .sup { font-size: 11px; color: var(--n-500); margin-top: 2px; }
-  .stock-row .bar { height: 6px; background: var(--n-100); border-radius: 3px; overflow: hidden; position: relative; }
+  .stock-row .bar { height: 6px; background: var(--n-300); border-radius: 3px; overflow: hidden; position: relative; }
   .stock-row .bar > div { height: 100%; background: var(--atlas); border-radius: 3px; transition: width 400ms; }
   .stock-row .bar.low > div { background: var(--warning); }
   .stock-row .bar.out > div { background: var(--danger); }
@@ -881,7 +993,7 @@
   .comp-score .t { font-size: 11px; letter-spacing: 0.1em; color: var(--mint); font-family: var(--mono); }
   .comp-score .v { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 2px; }
   .comp-score .d { font-size: 13px; color: #c6ead4; margin-top: 6px; }
-  .comp-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--n-200); align-items: center; }
+  .comp-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--n-300); align-items: center; }
   .comp-item .icn { width: 40px; height: 40px; border-radius: 10px; background: var(--mint-soft); color: var(--atlas); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   html[data-theme="dark"] .comp-item .icn { background: rgba(125,242,176,0.1); color: var(--mint); }
   .comp-item .body { flex: 1; }
@@ -899,7 +1011,7 @@
   html[data-theme="dark"] .settle-cell { background: var(--paper-muted); }
   .settle-cell:hover { border-color: var(--atlas); }
   .settle-cell.pad { opacity: 0.3; pointer-events: none; }
-  .settle-cell.today { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .settle-cell.today { border-color: var(--inverse-line); background: var(--inverse-surface); color: var(--inverse-ink); }
   .settle-cell.settled { border-color: var(--success); }
   .settle-cell.settled .amt { color: var(--success); font-weight: 600; }
   .settle-cell .d { font-weight: 600; font-size: 13px; }
@@ -993,10 +1105,13 @@
   .sh-clock-row { display: grid; grid-template-columns: 38px 150px 1fr 80px auto; gap: 12px; align-items: center; padding: 11px 0; border-top: 1px solid var(--n-200); font-size: 13px; }
   .sh-section-head + .sh-clock-row { border-top: 0; }
   .sh-clock-row .av { width: 34px; height: 34px; border-radius: 50%; background: var(--atlas); color: var(--paper); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; position: relative; letter-spacing: -0.02em; }
-  .sh-clock-row .av.b { background: var(--riad); }
+  .sh-clock-row .av.b { background: var(--brand-deep); color: var(--inverse-ink); }
   .sh-clock-row .av.c { background: #D99A2B; }
   .sh-clock-row .av.d { background: var(--atlas-700); }
-  .sh-clock-row .av.off { background: var(--n-400); }
+  /* n-300 fill with n-700 lettering rather than n-400 with --paper: both ends of
+     the neutral ramp keep their meaning across climates (subtle fill / strong
+     text), where --paper flips to black and left 12px initials at 2.9:1. */
+  .sh-clock-row .av.off { background: var(--n-300); color: var(--n-700); }
   .sh-clock-row .av::after { content: ""; position: absolute; bottom: 0; right: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--success); border: 2px solid var(--paper-soft); }
   .sh-clock-row .av.off::after { background: var(--n-300); }
   .sh-clock-row .who .n { font-weight: 500; font-size: 13.5px; letter-spacing: -0.005em; }
@@ -1018,7 +1133,7 @@
   .sh-week .cell { padding: 8px 4px; border-radius: 8px; background: var(--surface); border: 1px solid var(--n-200); text-align: center; min-height: 56px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; }
   html[data-theme="dark"] .sh-week .cell { background: var(--paper); }
   .sh-week .cell:hover { border-color: var(--atlas); transform: translateY(-1px); }
-  .sh-week .cell.morning { background: var(--mint-soft); border-color: rgba(11,110,79,0.18); color: var(--riad); }
+  .sh-week .cell.morning { background: var(--mint-soft); border-color: rgba(11,110,79,0.18); color: var(--ink); }
   .sh-week .cell.evening { background: rgba(11,110,79,0.12); border-color: rgba(11,110,79,0.22); color: var(--atlas); }
   .sh-week .cell.day { background: rgba(217,154,43,0.16); border-color: rgba(217,154,43,0.3); color: var(--warn-ink); }
   .sh-week .cell.off { background: var(--n-100); color: var(--n-400); border-color: transparent; }
@@ -1034,7 +1149,7 @@
   .sh-tip-cfg + .sh-tip-pool { border-top: 0; }
   .sh-tip-pool .av { width: 30px; height: 30px; border-radius: 50%; color: var(--paper); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; letter-spacing: -0.02em; }
   .sh-tip-pool .av.a { background: var(--atlas); }
-  .sh-tip-pool .av.b { background: var(--riad); }
+  .sh-tip-pool .av.b { background: var(--brand-deep); color: var(--inverse-ink); }
   .sh-tip-pool .av.c { background: #D99A2B; }
   .sh-tip-pool .av.d { background: var(--n-400); }
   .sh-tip-pool .pct { font-family: var(--mono); font-size: 11px; color: var(--n-500); text-align: right; }
@@ -1066,6 +1181,7 @@
   handlers['nav-transactions'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return renderRealTransactions(T);
     const methods = [
       { m: 'visa', n: 'Visa', mask: '4291' },
       { m: 'mc', n: 'Mastercard', mask: '7820' },
@@ -1131,6 +1247,7 @@
   handlers['nav-terminaux'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.terminalsTitle, 'terminals');
     drawer({
       title: T.terminalsTitle,
       subtitle: T.terminalsSubtitle(3, 2),
@@ -1210,6 +1327,7 @@
   handlers['nav-reglements'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.settlementsTitle, 'settlements');
     const cal = [];
     const dow = T.settlementsDow;
     for (let i = 0; i < 2; i++) cal.push({ pad: true });
@@ -1259,7 +1377,7 @@
             [lang === 'ar' ? '19 أبريل (عطلة نهاية الأسبوع)' : '19 avril (week-end)', '24 102 MAD', T.settlementsInstant, 'ok'],
             [lang === 'ar' ? '18 أبريل (عطلة نهاية الأسبوع)' : '18 avril (week-end)', '22 850 MAD', T.settlementsInstant, 'ok']
           ].map(([d, a, s, st]) => `
-            <div style="display: grid; grid-template-columns: 140px 1fr 140px auto; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--n-200); align-items: center; font-size: 13px;">
+            <div style="display: grid; grid-template-columns: 140px 1fr 140px auto; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--n-300); align-items: center; font-size: 13px;">
               <div><b>${d}</b></div>
               <div class="mono" style="font-family: var(--mono); font-weight: 500;">${a}</div>
               <div style="color: var(--n-500); font-size: 12px;">${s}</div>
@@ -1282,6 +1400,7 @@
   handlers['nav-conformite'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.complianceTitle, 'compliance');
     drawer({
       title: T.complianceTitle,
       subtitle: T.complianceSubtitle,
@@ -1333,6 +1452,7 @@
   handlers['nav-equipe'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.teamTitle, 'team', 920);
     drawer({
       title: T.teamTitle,
       subtitle: T.teamSubtitle(8, 4),
@@ -1381,6 +1501,7 @@
   handlers['nav-tables'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.tablesModalTitle, 'tables', 920);
     modal({
       tag: T.tablesModalTag,
       title: T.tablesModalTitle,
@@ -1439,7 +1560,7 @@
           </div>
         </div>
 
-        <div style="padding: 14px 16px; background: var(--ink); color: var(--paper); border-radius: 12px; margin-top: 20px; display: flex; gap: 12px; align-items: center;">
+        <div style="padding: 14px 16px; background: var(--inverse-surface); color: var(--inverse-ink); border: 1px solid var(--inverse-line); border-radius: 12px; margin-top: 20px; display: flex; gap: 12px; align-items: center;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="2"><path d="M12 2l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="currentColor"/></svg>
           <div style="flex: 1; font-size: 13.5px; line-height: 1.4;">${T.tablesAlert('T4', 4)}</div>
           <button class="kb" style="background: var(--mint); color: var(--riad);">${T.tablesAlertButton}</button>
@@ -1456,6 +1577,7 @@
   handlers['nav-menu'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.menuTitle, 'menu', 920);
     drawer({
       title: T.menuTitle,
       subtitle: T.menuSubtitle(48, 4, 12),
@@ -1533,6 +1655,7 @@
   handlers['nav-kds'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.kdsTitle, 'kds', 920);
     modal({
       tag: T.kdsTag,
       title: T.kdsTitle,
@@ -1603,6 +1726,7 @@
   handlers['nav-stock'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.stockTitle, 'stock', 920);
     drawer({
       title: T.stockTitle,
       subtitle: T.stockSubtitle,
@@ -1694,6 +1818,7 @@
   handlers['nav-reservations'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.reservationsTitle, 'reservations', 920);
     const r = drawer({
       title: T.reservationsTitle,
       subtitle: T.reservationsSubtitle,
@@ -1972,6 +2097,7 @@
   handlers['nav-payroll'] = () => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
+    if (usesOwnData()) return realEmptyDrawer(T.payrollTitle, 'payroll', 920);
     const r = drawer({
       title: T.payrollTitle,
       subtitle: T.payrollSubtitle,
@@ -2164,7 +2290,7 @@
               </div>
             </div>
             <div style="margin-top:12px; padding:11px 14px; background: var(--atlas); color: var(--paper); border-radius:10px; font-size:12.5px; line-height:1.45;">
-              <b style="color:var(--mint);">Insight :</b> ${T.payrollInsight}
+              <b>Insight :</b> ${T.payrollInsight}
             </div>
           </div>
         </div>
@@ -2186,8 +2312,14 @@
   };
   handlers['edit-shifts'] = () => toast(tr({fr:'Éditeur de planning', en:'Schedule editor', ar:'محرر الجداول الزمنية'}), { type: 'info', desc: tr({fr:'Glissez les blocs ou cliquez une cellule pour ouvrir le détail.', en:'Drag blocks or click a cell to open the detail.', ar:'اسحب المربعات أو انقر على خلية لفتح التفاصيل.'}) });
   handlers['edit-tip-rule'] = () => toast(tr({fr:'Règle de partage des pourboires', en:'Tip sharing rule', ar:'قاعدة توزيع البقشيش'}), { type: 'info', desc: tr({fr:'Modifiez les pourcentages par poste ou la base de calcul.', en:'Edit the percentages per role or the calculation base.', ar:'عدّل النسب حسب المنصب أو أساس الحساب.'}) });
-  handlers['distribute-tips'] = () => toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Répartition enregistrée. Prévenez l’équipe : la notification automatique arrive bientôt.', en:'Split recorded. Tell the team — automatic notification coming soon.', ar:'تم تسجيل التوزيع. أخبر الفريق — الإشعار التلقائي قريبًا.'}) });
-  handlers['export-payroll'] = () => toast(tr({fr:'Export de paie · avril 2026', en:'Payroll export · April 2026', ar:'تصدير الرواتب · أبريل 2026'}), { type: 'info', desc: tr({fr:'PDF + CSV générés et envoyés à votre comptable.', en:'PDF + CSV generated and sent to your accountant.', ar:'تم إنشاء PDF + CSV وإرسالهما إلى محاسبك.'}) });
+  handlers['distribute-tips'] = () => {
+    if (usesOwnData()) return toast(tr({ fr: 'Aucun pourboire vérifié à distribuer', en: 'No verified tips to distribute', ar: 'لا توجد إكراميات مؤكدة للتوزيع' }), { type: 'info' });
+    return toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Répartition enregistrée. Prévenez l’équipe : la notification automatique arrive bientôt.', en:'Split recorded. Tell the team — automatic notification coming soon.', ar:'تم تسجيل التوزيع. أخبر الفريق — الإشعار التلقائي قريبًا.'}) });
+  };
+  handlers['export-payroll'] = () => {
+    if (usesOwnData()) return toast(tr({ fr: 'Export de paie non généré', en: 'Payroll export not generated', ar: 'لم يتم إنشاء تصدير الأجور' }), { type: 'info', desc: tr({ fr: 'Aucune source de paie vérifiée n’est disponible.', en: 'No verified payroll source is available.', ar: 'لا يتوفر مصدر أجور مؤكد.' }) });
+    return toast(tr({fr:'Export de paie · avril 2026', en:'Payroll export · April 2026', ar:'تصدير الرواتب · أبريل 2026'}), { type: 'info', desc: tr({fr:'PDF + CSV générés et envoyés à votre comptable.', en:'PDF + CSV generated and sent to your accountant.', ar:'تم إنشاء PDF + CSV وإرسالهما إلى محاسبك.'}) });
+  };
 
   /* ═══════════════════ Sidebar nav router ═══════════════════
    * Single source of truth for the highlight is Kiwi.activePage. On nav

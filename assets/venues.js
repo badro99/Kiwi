@@ -1477,8 +1477,20 @@
   /* ═══════════════ STATE ═══════════════ */
 
   const getVenue = () => currentVenue;
-  const getVenueData = id => VENUES[id] || VENUES[currentVenue];
-  const getCurrentVenueData = () => VENUES[currentVenue];
+  /* Public venue metadata is also a data boundary. During the short identity /
+     pairing gap, currentVenue may still name Café Atlas; no consumer should be
+     able to obtain that demo identity simply because reconciliation has not
+     painted yet. */
+  const safeVenueData = (id) => {
+    const key = id || currentVenue;
+    if (isRealMerchant() && !isCustom(key)) {
+      if (!VENUES.own) ensureOwnEmptyVenue();
+      return VENUES.own;
+    }
+    return VENUES[key] || VENUES[currentVenue];
+  };
+  const getVenueData = id => safeVenueData(id);
+  const getCurrentVenueData = () => safeVenueData(currentVenue);
   // typeOverride: the authoritative business type for the ACTIVE venue, pushed in
   // from the server (merchant_config.type) via applyServerType. Transient — never
   // persisted — so it fixes what the operator sees when scoped into a client
@@ -1504,7 +1516,7 @@
   let scopedSiblings = [];
   const getVenueType = id => ((!id || id === currentVenue) && typeOverride)
     ? typeOverride
-    : (VENUES[id] || VENUES[currentVenue])?.type;
+    : safeVenueData(id)?.type;
 
   // Map an onboarding subtype (or a base) to its base vertical.
   const TYPE_BASES = ['restaurant', 'boutique', 'spa', 'hotel'];
@@ -1664,9 +1676,12 @@
    * onboarding overwrite it once the store is set up. Returns the venue id. */
   function ensureOwnEmptyVenue() {
     const me = window.KiwiMe || {};
-    const name = String(me.business || me.name || '').trim() || 'Mon établissement';
-    const base = SUBTYPE_BASE[me.type] ||
-      (TYPE_BASES.indexOf(me.type) >= 0 ? me.type : 'restaurant');
+    let paired = null;
+    try { paired = window.KiwiCaissePairing?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+    const ownType = me.type || (paired && (paired.subtype || paired.type)) || '';
+    const name = String(me.business || me.name || (paired && paired.name) || '').trim() || 'Mon établissement';
+    const base = SUBTYPE_BASE[ownType] ||
+      (TYPE_BASES.indexOf(ownType) >= 0 ? ownType : 'restaurant');
     VENUES.own = {
       id: 'own', name, location: '',
       fullDisplay: name,
@@ -1771,12 +1786,14 @@
   /* ═══════════════ RENDER: SIDEBAR LOC-SWITCH (top of sidebar) ═══════════════ */
 
   function renderLocSwitch() {
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     const nameEl = document.querySelector('[data-loc-name]');
     const metaEl = document.querySelector('[data-loc-meta]');
     if (nameEl) nameEl.textContent = v.fullDisplay;
     const slang = window.KiwiI18n?.getLang?.() || 'fr';
-    if (metaEl) metaEl.textContent = SIBLINGS[slang]?.[currentVenue] || SIBLINGS.fr[currentVenue] || v.siblings;
+    if (metaEl) metaEl.textContent = (isRealMerchant() && !isCustom(currentVenue))
+      ? (v.siblings || '')
+      : (SIBLINGS[slang]?.[currentVenue] || SIBLINGS.fr[currentVenue] || v.siblings || '');
     // ✦ Kiwi Ultra · only visible when fusion + ultra plan
     const ultraEl = document.querySelector('[data-loc-ultra]');
     if (ultraEl) {
@@ -1863,7 +1880,7 @@
      * session flag alone isn't enough. */
     let persistedClient = false;
     try { persistedClient = localStorage.getItem('kiwiOnboarded') === '1'; } catch (_) {}
-    const onboard = !!window.__kiwiOnboard || persistedClient || !!(window.KiwiEnv && window.KiwiEnv.demosAllowed === false);
+    const onboard = !!window.__kiwiOnboard || persistedClient || isRealMerchant();
     // Operator-scoped (God mode): show ONLY the scoped client, never the
     // operator's own local venues (those are this browser's test cache). Les
     // autres établissements DU CLIENT s'ajoutent en dessous (scopeRows).
@@ -2002,7 +2019,7 @@
    * Returns the section resolved for the current language: an object for
    * card dicts ({title, head, msg…}), a string for one-liners. */
   function getVocab(section) {
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     if (!v || !v.custom) return null;
     const prof = v.subtype && SUBTYPE_PROFILES[v.subtype];
     const fromProf = prof && prof.vocab && prof.vocab[section];
@@ -2036,6 +2053,7 @@
     // In fusion mode: replace the per-vertical menu with the aggregated
     // portfolio KPI block. Same fade-in/out as the regular swap.
     if (currentVenue === 'fusion') {
+      if (isRealMerchant()) { wrap.innerHTML = ''; return; }
       const html = fusionSidebarHtml();
       if (opts.skipFade) { wrap.innerHTML = html; return; }
       wrap.classList.add('vert-fading');
@@ -2046,7 +2064,7 @@
       }, 150);
       return;
     }
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     let sect = VERTICAL_SECTIONS[typeOverride || v.type];
     /* Subtype profile override — a custom venue created as e.g. a pharmacy
      * gets ITS trade's section labels (nav keys stay on the base family's
@@ -2128,8 +2146,9 @@
   function renderHeaderSub() {
     const sub = document.querySelector('[data-header-sub]');
     if (!sub) return;
+    if (isRealMerchant() || isCustom(currentVenue)) { sub.textContent = ''; return; }
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
-    sub.textContent = HEADER_SUB[lang]?.[currentVenue] || HEADER_SUB.fr[currentVenue];
+    sub.textContent = HEADER_SUB[lang]?.[currentVenue] || HEADER_SUB.fr[currentVenue] || '';
   }
 
   /* ═══════════════ RENDER: DEMO BAR + FOOTER ═══════════════ */
@@ -2138,10 +2157,14 @@
     const line = document.querySelector('[data-demo-line]');
     if (!line) {
       const el = document.querySelector('[data-demo-account]');
-      if (el) el.textContent = VENUES[currentVenue].name;
+      if (el) el.textContent = (isRealMerchant() && !isCustom(currentVenue))
+        ? String(safeVenueData(currentVenue).name || 'Mon établissement')
+        : VENUES[currentVenue].name;
       return;
     }
-    const name = VENUES[currentVenue].name;
+    const name = (isRealMerchant() && !isCustom(currentVenue))
+      ? String(safeVenueData(currentVenue).name || 'Mon établissement')
+      : VENUES[currentVenue].name;
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const L = ({
       fr: { custom: 'Votre tableau de bord · ', prefix: 'Démo live · compte ', suffix: ' · données de démonstration mises à jour en temps réel' },
@@ -2152,7 +2175,7 @@
     const b = document.createElement('b');
     b.style.color = 'var(--paper)';
     b.textContent = name;
-    if (isCustom(currentVenue)) {
+    if (isCustom(currentVenue) || isRealMerchant()) {
       // A user-created venue isn't the synthetic demo account.
       line.appendChild(document.createTextNode(L.custom));
       line.appendChild(b);
@@ -2174,7 +2197,7 @@
     // legal / system info so the two bars don't echo each other.
     // No acquiring-sponsorship line: Kiwi holds no Bank Al-Maghrib licence,
     // and a demo footer is still a public claim. See mentions-legales.html.
-    const legal = isCustom(currentVenue) ? '' : `ICE ${v.ice} · `;
+    const legal = (isCustom(currentVenue) || isRealMerchant()) ? '' : `ICE ${v.ice} · `;
     el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">${help}</a>`;
   }
 
@@ -2188,7 +2211,7 @@
       // (initial paint before the simulator's first tick), fall back to the
       // venue's end-of-day target so the badge isn't empty.
       // User-created venue → count its recorded sales; demo venue → demo clock.
-      const ownV = isCustom(currentVenue) || !!(window.KiwiEnv?.isReal?.());
+      const ownV = isCustom(currentVenue) || isRealMerchant();
       /* La MÊME fenêtre que la tuile « Commandes ». Cette pastille additionnait
        * tout l'historique du navigateur : au troisième jour elle affichait 47
        * en face d'une tuile qui affichait 6, sous le même mot. Deux compteurs
@@ -2198,12 +2221,12 @@
         try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; }
       })();
       const live = ownV
-        ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue, win[0], win[1]).count) || 0)
+        ? (isCustom(currentVenue) ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue, win[0], win[1]).count) || 0) : 0)
         : window.KiwiDemoClock?.getSimState?.()?.cumTx;
       txCountEl.textContent = String(live != null ? live : (VENUES[currentVenue].txCount || 0));
     }
     // Terminals + compliance badges — a brand-new venue has neither yet.
-    const cv = isCustom(currentVenue);
+    const cv = isCustom(currentVenue) || isRealMerchant();
     const termEl = document.querySelector('a[data-nav="terminaux"] .count');
     if (termEl) termEl.textContent = cv ? '0' : '4';
     const confEl = document.querySelector('a[data-nav="conformite"] .tag');
@@ -2211,7 +2234,7 @@
     const staffCountEl = document.querySelector('a[data-nav="equipe"] .count');
     // Sidebar "Équipe" badge → number of staff currently clocked in (present),
     // scoped to the active venue (all 3 venues in fusion). See STAFF below.
-    if (staffCountEl) staffCountEl.textContent = String(eqPresentCount());
+    if (staffCountEl) staffCountEl.textContent = String(isRealMerchant() && !isCustom(currentVenue) ? 0 : eqPresentCount());
   }
 
   /* Keep the sidebar count in sync with each demo-clock tick (every 3 s). */
@@ -2888,6 +2911,13 @@
    * Reads:      VENUES.fusion.{snapshot,venueBreakdown,kpis,intelligence,
    *             portfolioTrend,alerts} + clock state if range=aujourdhui. */
   function renderFusionView() {
+    /* Fusion is a three-demo-venue portfolio, not a real multi-site source.
+       If identity or pairing resolves while it is open, leave it immediately
+       before reading a single snapshot. */
+    if (isRealMerchant()) {
+      if (currentVenue === 'fusion') pickOwnVenue();
+      return;
+    }
     const root = document.querySelector('[data-fusion-root]');
     if (!root) return;
     if (currentVenue !== 'fusion') {
@@ -3181,6 +3211,7 @@
    * Updates hero amount, NET, progress, top site, KPI cards, venue
    * rows, spark-lines, share bars, and intraday chart in place. */
   function renderFusionLiveUpdate(state, isReset) {
+    if (isRealMerchant()) return;
     const root = document.querySelector('[data-fusion-root]');
     if (!root) return;
     if (currentVenue !== 'fusion') return;
@@ -3330,8 +3361,16 @@
      venues (Café Atlas / Maison Mansour / Spa Bahia). */
   function isRealMerchant() {
     try {
-      if (window.KiwiEnv && window.KiwiEnv.demosAllowed === false) return true;
+      if (window.KiwiEnv?.isReal?.()) return true;
+      if (window.KiwiMe) return true;
       if (localStorage.getItem('kiwiOnboarded') === '1') return true;
+      const P = window.KiwiCaissePairing;
+      const pv = P?.pairedVenue?.();
+      if (P?.isPaired?.() && pv?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const saved = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if (saved?.merchant || localStorage.getItem('kiwiLiveMerchant')) return true;
+      }
     } catch (_) {}
     return false;
   }
@@ -3566,6 +3605,7 @@
   function eqFindStaff(id) { return eqAllStaff().find(s => s.id === id) || null; }
   /* Staff in the active venue scope — fusion shows all three venues. */
   function eqScopedStaff() {
+    if (isRealMerchant() && !isCustom(currentVenue)) return [];
     return currentVenue === 'fusion' ? eqAllStaff() : (STAFF[currentVenue] || []).slice();
   }
   /* Scoped staff after the venue + department filters. */
@@ -3671,11 +3711,14 @@
   }
 
   function eqHeaderHtml() {
+    const serviceDate = isRealMerchant()
+      ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : 'jeudi 15 mai 2026';
     return `
       <div class="eq-head">
         <div>
           <div class="eq-title">Équipe</div>
-          <div class="eq-date">Service du jeudi 15 mai 2026</div>
+          <div class="eq-date">Service du ${serviceDate}</div>
         </div>
         <div class="eq-head-acts">
           <button class="btn-slim" data-action="eq-add-member">${eqSvg('plus', 13)}<span>Ajouter un membre</span></button>
@@ -3725,7 +3768,7 @@
 
     const tiles =
       tile('userCheck', 'En service', present, '', 'membres pointés aujourd\'hui',
-        '<div class="eq-stat-d">+2 vs hier</div>') +
+        isRealMerchant() ? '' : '<div class="eq-stat-d">+2 vs hier</div>') +
       tile('clock', 'En retard', late, late > 0 ? 'warn' : 'ok', 'shift commencé sans pointage') +
       tile('coffee', 'En congé / repos', off, '', 'jour de repos prévu') +
       tile('timer', 'Heures cumulées', eqHours(hours), '', 'heures travaillées ce mois',
@@ -3844,9 +3887,9 @@
     /* Footer summary — every value computed from STAFF. */
     const all = eqScopedStaff();
     const payroll = eqPayroll(all);
-    const ratio = payroll / EQ_PORTFOLIO_REV_30D * 100;
+    const ratio = isRealMerchant() ? null : payroll / EQ_PORTFOLIO_REV_30D * 100;
     const ratioCls = ratio < 30 ? 'ok' : ratio <= 38 ? 'warn' : 'bad';
-    const ratioStr = ratio.toFixed(1).replace('.', ',');
+    const ratioStr = ratio == null ? '—' : ratio.toFixed(1).replace('.', ',');
     const presentAll = all.filter(s => s.status === 'present').length;
 
     return `
@@ -3867,7 +3910,7 @@
           <span>Masse salariale estimée ce mois : <b>${eqMad(payroll)}</b></span><span class="sep">·</span>
           <span>Ratio coût main d'œuvre :
             <span class="eq-ratio ${ratioCls}">${ratioStr}&nbsp;%
-              <span class="eq-tip">Dans la restauration F&amp;B au Maroc, une fourchette de 28–35&nbsp;% est considérée comme saine. En dessous = marge confortable.</span>
+              ${ratio == null ? '' : '<span class="eq-tip">Dans la restauration F&amp;B au Maroc, une fourchette de 28–35&nbsp;% est considérée comme saine. En dessous = marge confortable.</span>'}
             </span>
           </span>
         </div>
@@ -3936,9 +3979,12 @@
         <td class="r">${gross > 0 ? (r.salary / gross * 100).toFixed(1).replace('.', ',') : '0'} %</td>
       </tr>`).join('');
 
+    const monthLabel = isRealMerchant()
+      ? new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+      : 'Mai 2026';
     return `
       <div class="eq-section">
-        <div class="eq-section-head"><h3>Récapitulatif paie · Mai 2026</h3></div>
+        <div class="eq-section-head"><h3>Récapitulatif paie · ${monthLabel}</h3></div>
         <div class="eq-payroll-grid">
           <div>
             <div class="eq-payroll-stats">
@@ -3979,6 +4025,10 @@
 
   /* ── Section 4 · Performance ranking ──────────────────────────────────── */
   function eqRankingSectionHtml() {
+    if (isRealMerchant()) {
+      return `<div class="eq-section"><div class="eq-section-head"><h3>Classement performance · Salle &amp; Service</h3></div>
+        <div class="eq-clockempty">Aucune source ne relie encore le chiffre d’affaires et les pourboires à chaque membre de l’équipe.</div></div>`;
+    }
     const ranked = eqScopedStaff()
       .filter(s => EQ_REVENUE_DEPTS.includes(s.department))
       .slice()
@@ -4649,6 +4699,9 @@
 
   /* ── Helpers ──────────────────────────────────────────────────────────── */
   function miMenuVenue() {
+    // Identity/pairing can prove a real merchant one tick before pickOwnVenue()
+    // replaces the stale demo id. During that tick the safe menu is empty.
+    if (isRealMerchant() && !isCustom(currentVenue)) return 'own';
     if (currentVenue === 'fusion') return (miVenueFilter && miVenueFilter !== 'all') ? miVenueFilter : 'cafeAtlas';
     // A custom / operator-scoped venue keeps its OWN (empty) carte — never the
     // Café Atlas demo menu. Only a genuine demo venue falls back to cafeAtlas.
@@ -5333,6 +5386,12 @@
 
   /* ── TAB 2 · Performance matrix ───────────────────────────────────────── */
   function miTab2Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Performance des articles</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source ne relie encore les ventes réelles aux performances par article.
+        </div></div>`;
+    }
     const venue = miMenuVenue();
     const items = miItems(venue);
     const totalRev = items.reduce((a, i) => a + miRevenue(i), 0);
@@ -5444,6 +5503,12 @@
 
   /* ── TAB 3 · Peak hours ───────────────────────────────────────────────── */
   function miTab3Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Performance par moment de la journée</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source ne fournit encore les ventes par article et par heure.
+        </div></div>`;
+    }
     const venue = miMenuVenue();
     const items = miItems(venue);
     const p = miPeriod;
@@ -5505,6 +5570,12 @@
 
   /* ── TAB 4 · 86 alerts ────────────────────────────────────────────────── */
   function miTab4Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Alertes 86 · Articles indisponibles</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source d’alertes d’indisponibilité n’est connectée pour cet établissement.
+        </div></div>`;
+    }
     const rows = mi86.map(a => {
       const it = miFindItem(a.id);
       const cat = it ? it.category : 'boissons';
@@ -7346,8 +7417,8 @@
      employees the merchant added on the Équipe page (team.js), so it starts
      EMPTY and never falls back to Café Atlas's demo staff. */
   function payStaff() {
+    if (isRealMerchant()) return isCustom(currentVenue) ? customPayStaff() : [];
     if (currentVenue === 'fusion') return payStaffAll();
-    if (isCustom(currentVenue)) return customPayStaff();
     return (STAFF[currentVenue] || STAFF.cafeAtlas).slice();
   }
   function customPayStaff() {
@@ -7446,6 +7517,21 @@
   function renderPayroll() {
     const root = document.querySelector('[data-payroll-root]');
     if (!root) return;
+    /* This legacy payroll surface has its own in-memory schedule model and no
+       stable public payroll API. Seeding that model for a real team invented
+       shifts, hours and salary totals. Keep the demo useful; refuse to compute
+       a merchant payroll from guesses. */
+    if (isRealMerchant()) {
+      const venueName = String((VENUES[currentVenue] && VENUES[currentVenue].name)
+        || (window.KiwiMe && (window.KiwiMe.business || window.KiwiMe.name))
+        || 'Mon établissement');
+      root.innerHTML = `<div class="pay-head"><div><div class="pay-title">Paie &amp; Planning</div>
+        <div class="pay-sub">${payEsc(venueName)}</div></div></div>
+        <div class="pay-section"><div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Données de paie indisponibles : cette vue n’est reliée à aucune source de paie fiable.
+        </div></div>`;
+      return;
+    }
     const staff = payStaff();
     root.innerHTML =
       payHeadHtml(staff) +
@@ -7573,6 +7659,12 @@
   }
 
   function payPlanningHtml(staff) {
+    if (isRealMerchant()) {
+      return `<div class="pay-section"><div class="pay-section-head"><h3>Planning de la semaine</h3></div>
+        <div style="padding:30px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Ce module n’a pas de source de planning fiable. Utilisez la page Équipe pour saisir les services réels.
+        </div></div>`;
+    }
     const sched = payEnsureSched(staff);
     const cover = PAY_DOW.map(() => 0);
     const body = staff.map(s => {
@@ -7709,6 +7801,23 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
+  /* On localhost the page can begin as the sales demo, then /api/me proves a
+     real signed-in merchant a moment later. Reconcile after that proof: a real
+     account with no cached/custom venue must move to the transient empty venue,
+     never remain on Café Atlas. This closes the real-but-not-custom gap without
+     making the public localhost demo disappear before identity is known. */
+  function reconcileRealVenue() {
+    if (!isRealMerchant() || isCustom(currentVenue)) return;
+    pickOwnVenue();
+    subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+  }
+  const wireIdentity = () => {
+    try { window.KiwiIdentity?.ready?.then?.(reconcileRealVenue); } catch (_) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireIdentity, { once: true });
+  else wireIdentity();
+  document.addEventListener('kiwi-paired', reconcileRealVenue);
+
   /* ═══════════════ SALES STORE (user-created venues) ═══════════════
    * A custom venue starts empty; the merchant rings up real sales via the
    * "Nouvelle vente" keypad. Each sale is persisted per-venue and the
@@ -7747,13 +7856,28 @@
        prétendant classer des produits. Absent ⇒ inconnu, jamais « panier vide ». */
     if (sale && Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(function (l) {
-        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: Math.max(0, Math.round(+(l && l.qty) || 0)), total: Math.max(0, Math.round(+(l && l.total) || 0)) };
+        var qty = Math.round(Math.max(0, +(l && (l.qty ?? l.quantity)) || 0) * 1000) / 1000;
+        var total = Math.round(Math.max(0, +(l && l.total) || 0) * 100) / 100;
+        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: qty, total: total };
         /* La catégorie, telle que la caisse la connaissait AU MOMENT de la vente.
            Sans elle, le rapport journalier d'une journée pas encore clôturée
            reclasse les ventes d'après le catalogue actuel — et se trompe dès
            qu'un rayon a été renommé depuis. Absente ⇒ inconnue, jamais inventée. */
         var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
         if (c) o.cat = c;
+        var itemId = String((l && (l.itemId || l.id)) || '').slice(0, 80);
+        var variantId = String((l && l.variantId) || '').slice(0, 80);
+        var unit = String((l && l.unit) || '').slice(0, 24);
+        var kind = String((l && l.kind) || '').slice(0, 24);
+        var recipeVersionId = String((l && l.recipeVersionId) || '').slice(0, 80);
+        if (itemId) o.itemId = itemId;
+        if (variantId) o.variantId = variantId;
+        if (unit) o.unit = unit;
+        if (kind) o.kind = kind;
+        if (recipeVersionId) o.recipeVersionId = recipeVersionId;
+        var unitCost = +(l && l.unitCost);
+        if (Number.isFinite(unitCost) && unitCost >= 0) o.unitCost = Math.round(unitCost * 100) / 100;
+        if (Array.isArray(l && l.options)) o.options = l.options.slice(0, 16);
         return o;
       }).filter(function (l) { return l.qty > 0; });
       if (!entry.lines.length) delete entry.lines;
@@ -8664,7 +8788,9 @@
     },
     getVenue,
     setVenue,
-    getPlan: () => currentPlan,
+    /* Demo fixtures keep their Ultra showcase. Real stores use the plan D1
+     * returned through KiwiConfig; an unresolved/offline config is not Ultra. */
+    getPlan: () => isRealMerchant() ? (window.KiwiConfig?.plan || '') : currentPlan,
     subscribe,
     getVenueData,
     getCurrentVenueData,
@@ -8691,8 +8817,8 @@
     getSubtypeProfile: sid => SUBTYPE_PROFILES[sid] || null,
     getVocab,
     /* Stock & approvisionnement page data — see assets/stock.js */
-    getInventory: id => INVENTORY[id || currentVenue] || [],
-    getSuppliers: () => isCustom(currentVenue) ? [] : SUPPLIERS,
+    getInventory: id => (isRealMerchant() && !isCustom(id || currentVenue)) ? [] : (INVENTORY[id || currentVenue] || []),
+    getSuppliers: () => (isCustom(currentVenue) || isRealMerchant()) ? [] : SUPPLIERS,
     /* Kitchen station state — used by the KDS to compute fire schedules
      * so multi-station tickets finish together (avgPrepMin + sync flag,
      * configured from Menu › Stations cuisine). */
@@ -8733,7 +8859,7 @@
        * compute anything, and handing them a stranger's recommendation is the
        * worst possible answer to that. Say nothing instead — renderHeroAi()
        * blanks the card. */
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
+      if (isRealMerchant()) return null;
       const L = HERO_AI_REC[fusionLang()] || HERO_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     getHeatmapAiRec: id => {
@@ -8757,13 +8883,13 @@
       }
       // Same rule as getHeroAiRec: the canned copy is Café Atlas's, so a real
       // session gets nothing rather than somebody else's peak hours.
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
+      if (isRealMerchant()) return null;
       const L = HEATMAP_AI_REC[fusionLang()] || HEATMAP_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     // Custom / scoped venues have no benchmark cohort — return empty so callers
     // show a neutral label (dateRange falls back), never Café Atlas's figures.
-    getMixCmiSavings: id => { const v = id || currentVenue; if (isCustom(v)) return ''; const L = MIX_CMI_SAVINGS[fusionLang()] || MIX_CMI_SAVINGS.fr; return L[v] || L.cafeAtlas; },
-    getBenchLabels: id => { const v = id || currentVenue; if (isCustom(v)) return undefined; const L = BENCH_LABELS[fusionLang()] || BENCH_LABELS.fr; return L[v] || L.cafeAtlas; },
+    getMixCmiSavings: id => { const v = id || currentVenue; if (isCustom(v) || isRealMerchant()) return ''; const L = MIX_CMI_SAVINGS[fusionLang()] || MIX_CMI_SAVINGS.fr; return L[v] || L.cafeAtlas; },
+    getBenchLabels: id => { const v = id || currentVenue; if (isCustom(v) || isRealMerchant()) return undefined; const L = BENCH_LABELS[fusionLang()] || BENCH_LABELS.fr; return L[v] || L.cafeAtlas; },
     isFusion: () => currentVenue === 'fusion',
     isCustom,
     createVenue,
@@ -8781,6 +8907,6 @@
     /* Menu items for the given venue (or current). Used by the live feed to
      * generate realistic order contents — items, qty, unit prices — that
      * match the venue's actual carte. */
-    getMenuItems: (venue) => miItems(venue || currentVenue),
+    getMenuItems: (venue) => (isRealMerchant() && !isCustom(venue || currentVenue)) ? [] : miItems(venue || currentVenue),
   };
 })();

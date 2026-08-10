@@ -311,6 +311,14 @@
     date: localDate(new Date(NOW + 34 * DAY)), lieu: 'Villa Harris · Malabata',
     menu: ['pastilla', 'tajine_agneau', 'the'], extras: ['service', 'livraison'],
   };
+  const cateringOps = window.KiwiVerticalState?.open?.('traiteur', {
+    schema: 1,
+    snapshot: () => ({ events: EVENTS, evSeq, dvSeq, draft }),
+    restore: (d) => {
+      const events = (d.events || []).map(ev => { ['date', 'sentAt', 'confirmedAt', 'deliveredAt'].forEach(k => { if (ev[k]) ev[k] = new Date(ev[k]); }); (ev.tranches || []).forEach(tr => { if (tr.due) tr.due = new Date(tr.due); if (tr.paid?.at) tr.paid.at = new Date(tr.paid.at); }); return ev; });
+      EVENTS.splice(0, EVENTS.length, ...events); evSeq = Math.max(evSeq, +d.evSeq || 0); dvSeq = Math.max(dvSeq, +d.dvSeq || 0); draft = d.draft || blankDraft();
+    },
+  });
   function draftTotals() {
     const pp = draft.menu.reduce((s, id) => s + DISH[id].price, 0);
     const menuTotal = pp * draft.guests;
@@ -319,6 +327,7 @@
   }
 
   function queueIfOffline(label) {
+    cateringOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -331,9 +340,24 @@
      c'est ici que la trésorerie du mois se joue. Démo : no-op.
      Pas de reprise de compteur : la référence journalisée est la référence
      BANCAIRE de la tranche, pas un numéro de ticket à incrémenter. */
-  function postDay(total, method, label, ref) {
+  function eventSaleLines(ev, received) {
+    const rows = ev.menu.map((id) => ({ itemId: id, name: DISH[id].label, category: DISH[id].course, qty: ev.guests, unit: 'personne', kind: 'service', base: DISH[id].price * ev.guests }));
+    ev.extras.forEach((id) => {
+      const c = EXTRA[id].calc(ev.guests);
+      rows.push({ itemId: id, name: EXTRA[id].label, category: 'extras', qty: c.qty, unit: c.unit, kind: 'service', base: c.qty * c.each });
+    });
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      const { base, ...line } = r;
+      return { ...line, total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('traiteur', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('traiteur', { total, method, label, ref, lines });
     } catch (_) {}
   }
 
@@ -341,6 +365,7 @@
   let root = null;
 
   function mount(rootEl) {
+    cateringOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="tr-rail">
@@ -1307,8 +1332,16 @@
     icons();
     $$('[data-tr-close]', el).forEach((b) => { b.onclick = () => closeVeil('#tr-veil-doc'); });
     $('#tr-doc-print', el).onclick = () => {
-      queueIfOffline('Impression document');
-      toast(kind === 'bon' ? 'Bon de livraison envoyé à l’imprimante, 2 exemplaires (équipe + client)' : `${kind === 'recap' ? 'Récapitulatif' : 'Devis'} envoyé à l’imprimante A4`);
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.tr-doc-wrap .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:titles[kind] || 'Document', paper:'A4', copies:kind === 'bon' ? 2 : 1, lines }).then((r) => {
+        if (r && r.ok) queueIfOffline('Document imprimé');
+        toast(r && r.ok ? `Impression système ouverte${kind === 'bon' ? ' · 2 exemplaires' : ''}` : 'Impression impossible');
+      });
     };
   }
 
@@ -1439,7 +1472,7 @@
       if (wasConfirme) ev.status = 'acompte';
       /* Une tranche encaissée est une recette du jour, pas le total de
          l'événement : le reste rentrera à ses propres échéances. */
-      postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref);
+      postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref, eventSaleLines(ev, t.amount));
       closeVeil('#tr-veil-pay');
       queueIfOffline('Encaissement tranche');
       toast(`Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);

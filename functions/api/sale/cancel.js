@@ -15,6 +15,13 @@ function cleanLines(raw) {
       name: String((l && (l.n ?? l.name)) || 'Article').slice(0, 80),
       qty: Math.max(0, Number(l && (l.q ?? l.qty)) || 0),
       total: Math.max(0, Number(l && (l.t ?? l.total)) || 0),
+      cat: String((l && (l.c ?? l.cat)) || '').slice(0, 40),
+      itemId: String((l && (l.i ?? l.itemId)) || '').slice(0, 80),
+      variantId: String((l && (l.v ?? l.variantId)) || '').slice(0, 80),
+      unit: String((l && (l.u ?? l.unit)) || '').slice(0, 24),
+      kind: String((l && (l.kd ?? l.kind)) || '').slice(0, 24),
+      unitCost: Number.isFinite(Number(l && (l.k ?? l.unitCost))) ? Number(l && (l.k ?? l.unitCost)) : null,
+      recipeVersionId: String((l && (l.r ?? l.recipeVersionId)) || '').slice(0, 80),
     })) : [];
   } catch (_) { return []; }
 }

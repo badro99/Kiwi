@@ -309,7 +309,49 @@
   function freshTicket() { state.ticket = { num: posRef(`T-${ticketSeq}`), lines: [] }; }
   freshTicket();
 
+  const epicerieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'epicerie',
+    snapshot() {
+      return {
+        catalog: CATALOG,
+        carnet: CARNET,
+        day,
+        ticketSeq,
+        ticket: state.ticket,
+        reassort: state.reassort,
+        scanCycleIdx: state.scanCycleIdx,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+      Object.keys(BY_EAN).forEach((ean) => delete BY_EAN[ean]);
+      CATALOG.forEach((c) => c.items.forEach((it) => {
+        it.cat = c.id;
+        it.catLabel = c.label;
+        ITEMS[it.id] = it;
+        if (it.ean) BY_EAN[it.ean] = it;
+      }));
+      if (Array.isArray(saved.carnet)) CARNET.splice(0, CARNET.length, ...saved.carnet);
+      CARNET.forEach((customer) => customer.hist.forEach((entry) => {
+        if (entry.at) entry.at = new Date(entry.at);
+      }));
+      Object.keys(CRED).forEach((id) => delete CRED[id]);
+      CARNET.forEach((customer) => { CRED[customer.id] = customer; });
+      if (saved.day && typeof saved.day === 'object') {
+        Object.keys(day).forEach((key) => delete day[key]);
+        Object.assign(day, saved.day);
+      }
+      if (Number.isFinite(saved.ticketSeq)) ticketSeq = saved.ticketSeq;
+      if (saved.ticket) state.ticket = saved.ticket;
+      if (saved.reassort && typeof saved.reassort === 'object') state.reassort = saved.reassort;
+      if (Number.isFinite(saved.scanCycleIdx)) state.scanCycleIdx = saved.scanCycleIdx;
+    },
+  });
+
   function queueIfOffline(label) {
+    if (epicerieOps) epicerieOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -333,6 +375,7 @@
   /* ═══════════════════════ ROOT / MOUNT ═══════════════════════ */
   let root = null;
   function mount(rootEl) {
+    if (epicerieOps) epicerieOps.hydrate();
     root = rootEl;
     root.innerHTML = `
       <aside class="ep-rail">
@@ -368,7 +411,7 @@
                   placeholder="Scannez ou tapez le code-barres…" />
                 <span class="ep-scan-kbd">Entrée</span>
               </div>
-              <button class="ep-scan-btn" id="ep-scan-mock"><i data-lucide="scan-line"></i>Scanner</button>
+              <button class="ep-scan-btn" id="ep-scan-mock"><i data-lucide="scan-line"></i>${pvReal() ? 'Activer la douchette' : 'Scanner (démo)'}</button>
               <button class="ep-scan-btn" id="ep-search-open" style="background:var(--surface);color:var(--ink-2);border:1px solid var(--line);box-shadow:none;"><i data-lucide="search"></i>Chercher</button>
             </div>
             <div class="ep-cats" id="ep-cats"></div>
@@ -403,7 +446,10 @@
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(inp.value); } });
     inp.addEventListener('focus', () => $('#ep-scan-field', root).classList.add('is-hot'));
     inp.addEventListener('blur', () => $('#ep-scan-field', root).classList.remove('is-hot'));
-    $('#ep-scan-mock', root).addEventListener('click', mockScan);
+    $('#ep-scan-mock', root).addEventListener('click', () => {
+      if (pvReal()) { focusScan(); toast('Champ actif · scannez avec la douchette ou tapez le code'); }
+      else mockScan();
+    });
     $('#ep-search-open', root).addEventListener('click', openSearch);
 
     renderAll();
@@ -624,7 +670,7 @@
     icons();
   }
 
-  /* ═══════════════════════ SCAN (field submit + mock cycle) ═══════════════════════ */
+  /* ═══════════════════════ SCAN (USB/HID field + demo-only cycle) ═══════════════════════ */
   function submitScan(raw) {
     const code = (raw || '').replace(/\s/g, '');
     const inp = $('#ep-scan-input', root);
@@ -913,7 +959,16 @@
     /* Journal partagé : le serveur (donc le tableau de bord de la patronne) et
        la reprise après rechargement. Sans ça la recette vivait uniquement dans
        `day` et disparaissait au premier refresh. Démo : no-op. */
-    postDay(total, method, t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} art.)`, t.num);
+    const lines = t.lines.map((ln) => {
+      const it = ITEMS[ln.itemId];
+      return {
+        itemId: ln.itemId, name: it.label, cat: it.cat || '', kind: 'product',
+        qty: ln.weight != null ? ln.weight : ln.qty,
+        unit: ln.weight != null ? (it.weighUnit || 'kg') : 'piece',
+        total: Math.round(lineTotal(ln) * 100) / 100,
+      };
+    });
+    postDay(total, method, t.lines.length === 1 ? ITEMS[t.lines[0].itemId].label : `Courses (${ticketCount(t)} art.)`, t.num, lines);
   }
   /* Deux caisses du même commerce partaient du même compteur local et
      imprimaient toutes les deux le même numéro le même jour. L'étiquette de
@@ -923,9 +978,9 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('epicerie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('epicerie', { total, method, label, ref, lines });
     } catch (_) {}
   }
 
@@ -1288,7 +1343,8 @@
            de bord n'en voyaient la couleur : la journée était sous-comptée de
            tout ce que les voisins venaient rembourser. */
         day.especes += pay;
-        postDay(pay, 'especes', `Ardoise · ${c.name}`, '');
+        postDay(pay, 'especes', `Ardoise · ${c.name}`, '',
+          [{ itemId: 'reglement-ardoise', name: 'Règlement ardoise', kind: 'payment', unit: 'payment', qty: 1, total: pay }]);
         closeVeil('#ep-pay-veil');
         queueIfOffline('Règlement');
         const newBal = balanceOf(c);
@@ -1334,9 +1390,15 @@
     icons();
     $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-wa-veil'); });
     $('#ep-wa-send', el).onclick = () => {
+      const text = $('#ep-wa-text', el)?.value || waMessage(c);
+      const num = String(c.phone || '').replace(/\D/g, '');
+      if (!num) { toast(`Ajoutez un numéro à la fiche de ${c.name}`); return; }
       closeVeil('#ep-wa-veil');
-      queueIfOffline('Rappel WhatsApp');
-      toast(`Rappel envoyé à ${c.name}, tout en douceur`);
+      queueIfOffline('Brouillon WhatsApp ouvert');
+      try {
+        window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+        toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer`);
+      } catch (_) { toast('Impossible d’ouvrir WhatsApp'); }
     };
   }
 
@@ -1379,7 +1441,7 @@
           </div>
           <div class="ep-reassort-foot">
             <div class="ep-reassort-tot"><span>Références</span><b>${reassortCount}</b></div>
-            <button class="ep-btn primary" id="ep-reassort-send" ${reassortCount ? '' : 'disabled'} style="width:100%;flex:none;"><i data-lucide="send"></i>Envoyer au grossiste</button>
+            <button class="ep-btn primary" id="ep-reassort-send" ${reassortCount ? '' : 'disabled'} style="width:100%;flex:none;"><i data-lucide="file-plus-2"></i>Préparer le bon</button>
             ${reassortCount ? `<button class="ep-btn ghost" id="ep-reassort-clear" style="width:100%;">Vider la liste</button>` : ''}
           </div>
         </aside>
@@ -1402,11 +1464,26 @@
     };
     const send = $('#ep-reassort-send', panel);
     if (send) send.onclick = () => {
-      const n = Object.keys(state.reassort).filter((k) => state.reassort[k] > 0).length;
+      const selected = Object.entries(state.reassort).filter(([, qty]) => qty > 0);
+      const n = selected.length;
       if (!n) return;
-      queueIfOffline('Réassort');
-      toast(`Liste de réassort envoyée, ${n} référence${n > 1 ? 's' : ''} pour le grossiste`);
-      state.reassort = {};
+      const lines = selected.map(([id, qty]) => ({ itemId: id, name: ITEMS[id].label, qty, unit: ITEMS[id].unit || 'unité', unitCost: 0 }));
+      const P = window.KiwiProcurement;
+      let message = ['Bonjour,', 'Liste de réassort', ...lines.map((line) => `• ${line.name} — ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
+      let order = null;
+      if (P) {
+        let supplier = P.doc().suppliers.find((row) => row.name === 'Grossiste du Souk');
+        if (!supplier) supplier = P.addSupplier({ name: 'Grossiste du Souk' });
+        if (P.isUltra() && supplier) {
+          order = P.createOrder({ supplierId: supplier.id, lines, note: 'Liste de réassort épicerie à confirmer' });
+          if (order && !order.error) message = P.message(order.id) || message;
+        }
+      }
+      navigator.clipboard?.writeText?.(message).catch(() => {});
+      queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste de réassort');
+      toast(order && !order.error
+        ? `${order.number} créé en brouillon, texte copié · ${n} référence${n > 1 ? 's' : ''}`
+        : `Liste de réassort copiée · ${n} référence${n > 1 ? 's' : ''}`);
       renderStock(); icons();
     };
     const clear = $('#ep-reassort-clear', panel);

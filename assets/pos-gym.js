@@ -274,7 +274,67 @@
   const passagesToday = () => MEMBERS.reduce((s, m) => s + (m.checkedToday ? 1 : 0), 0) + BASE_PASSAGES;
   let BASE_PASSAGES = 23 - MEMBERS.filter((m) => m.checkedToday).length;  /* keep live counter at 23 at boot */
 
+  const gymOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'gym',
+    snapshot() {
+      return {
+        plans: PLANS,
+        shop: SHOP,
+        coaches: COACHES,
+        classes: CLASSES,
+        schedule: SCHEDULE,
+        ptToday: PT_TODAY,
+        club: CLUB,
+        members: MEMBERS,
+        peakSlots: PEAK_SLOTS,
+        basePassages: BASE_PASSAGES,
+        cart: state.cart,
+        dayRevenue: state.dayRevenue,
+        inGym: state.inGym,
+        passesToday: state.passesToday,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.plans)) PLANS.splice(0, PLANS.length, ...saved.plans);
+      Object.keys(PLAN).forEach((id) => delete PLAN[id]);
+      PLANS.forEach((plan) => { PLAN[plan.id] = plan; });
+      if (Array.isArray(saved.shop)) SHOP.splice(0, SHOP.length, ...saved.shop);
+      Object.keys(SHOP_ITEM).forEach((id) => delete SHOP_ITEM[id]);
+      SHOP.forEach((item) => { SHOP_ITEM[item.id] = item; });
+      if (Array.isArray(saved.coaches)) COACHES.splice(0, COACHES.length, ...saved.coaches);
+      Object.keys(COACH).forEach((id) => delete COACH[id]);
+      Object.keys(COACH_BY_NAME).forEach((name) => delete COACH_BY_NAME[name]);
+      COACHES.forEach((coach) => { COACH[coach.id] = coach; COACH_BY_NAME[coach.name] = coach; });
+      if (Array.isArray(saved.classes)) CLASSES.splice(0, CLASSES.length, ...saved.classes);
+      Object.keys(CLASS).forEach((id) => delete CLASS[id]);
+      CLASSES.forEach((klass) => { CLASS[klass.id] = klass; });
+      if (Array.isArray(saved.schedule)) SCHEDULE.splice(0, SCHEDULE.length, ...saved.schedule);
+      if (saved.ptToday && typeof saved.ptToday === 'object') {
+        Object.keys(PT_TODAY).forEach((id) => delete PT_TODAY[id]);
+        Object.assign(PT_TODAY, saved.ptToday);
+      }
+      if (saved.club && typeof saved.club === 'object') {
+        Object.keys(CLUB).forEach((key) => delete CLUB[key]);
+        Object.assign(CLUB, saved.club);
+      }
+      if (Array.isArray(saved.members)) MEMBERS.splice(0, MEMBERS.length, ...saved.members);
+      MEMBERS.forEach((member) => {
+        ['start', 'end', 'frozenUntil'].forEach((key) => { if (member[key]) member[key] = new Date(member[key]); });
+      });
+      Object.keys(MEMBER).forEach((id) => delete MEMBER[id]);
+      MEMBERS.forEach((member) => { MEMBER[member.id] = member; });
+      if (Array.isArray(saved.peakSlots)) PEAK_SLOTS.splice(0, PEAK_SLOTS.length, ...saved.peakSlots);
+      if (Number.isFinite(saved.basePassages)) BASE_PASSAGES = saved.basePassages;
+      if (Array.isArray(saved.cart)) state.cart = saved.cart;
+      if (saved.dayRevenue && typeof saved.dayRevenue === 'object') state.dayRevenue = saved.dayRevenue;
+      if (Number.isFinite(saved.inGym)) state.inGym = saved.inGym;
+      if (Number.isFinite(saved.passesToday)) state.passesToday = saved.passesToday;
+    },
+  });
+
   function queueIfOffline(label) {
+    if (gymOps) gymOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -288,9 +348,9 @@
      shop, coaching, pass), pas par moyen de paiement. Le journal ne retient
      que le moyen de paiement, donc il n'y a rien à recréditer sans inventer
      une ligne — mieux vaut ne rien restaurer que fausser la ventilation. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref, lines });
     } catch (_) {}
   }
   function initials(name) {
@@ -337,6 +397,7 @@
   let root = null;
 
   function mount(rootEl) {
+    if (gymOps) gymOps.hydrate();
     root = rootEl;
     root.innerHTML = `
       <aside class="gy-rail">
@@ -499,7 +560,10 @@
     const ciInput = $('#gy-ci-input', root);
     ciInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doCheckin(ciInput.value); });
     $('#gy-ci-go', root).addEventListener('click', () => doCheckin(ciInput.value));
-    $('#gy-ci-scanbtn', root).addEventListener('click', mockScan);
+    $('#gy-ci-scanbtn', root).addEventListener('click', () => {
+      if (pvReal()) { ciInput.focus(); toast('Lecteur actif · approchez le badge ou saisissez son code'); }
+      else mockScan();
+    });
     $('#gy-ci-quick', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-gy-quick]');
       if (b) { ciInput.value = b.dataset.gyQuick; doCheckin(b.dataset.gyQuick); }
@@ -1027,7 +1091,9 @@
       setTimeout(() => openMember(id), 350);
     }
     addRevenue('abos', price);
-    postDay(price, method, `${sel.renew ? 'Renouvellement' : 'Abonnement'} ${PLAN[sel.plan].label.toLowerCase()}${sel.student ? ' · étudiant' : ''}`, sel.member ? sel.member.code : '');
+    postDay(price, method, `${sel.renew ? 'Renouvellement' : 'Abonnement'} ${PLAN[sel.plan].label.toLowerCase()}${sel.student ? ' · étudiant' : ''}`, sel.member ? sel.member.code : '', [
+      { itemId: `abonnement-${sel.plan}`, variantId: sel.student ? 'etudiant' : 'standard', name: PLAN[sel.plan].label, category: 'abonnements', qty: 1, unit: 'abonnement', kind: 'service', total: price },
+    ]);
     refreshOps();
   }
 
@@ -1143,9 +1209,10 @@
       title: 'Comptoir',
       sub: esc(summary),
       onPaid: (method, rendu) => {
+        const lines = state.cart.map((l) => ({ itemId: l.id, name: SHOP_ITEM[l.id].label, category: 'comptoir', qty: l.qty, unit: 'piece', kind: l.id === 'coach' || l.id === 'serviette' ? 'service' : 'product', total: SHOP_ITEM[l.id].price * l.qty }));
         state.cart = [];
         addRevenue('shop', total);
-        postDay(total, method, `Comptoir · ${summary}`, '');
+        postDay(total, method, `Comptoir · ${summary}`, '', lines);
         renderCart(); renderBadges(); icons();
         if (state.view === 'pilotage') renderPilotage();
         toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1855,7 +1922,9 @@
             sel.member.ptCredits += pk.n;
             if (sel.coach && sel.member.coach === 'Sans coach') sel.member.coach = COACH[sel.coach].name;
             addRevenue('coaching', pk.price);
-            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '');
+            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '', [
+              { itemId: pk.id, variantId: sel.coach || '', name: `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''}`, category: 'coaching', qty: pk.n, unit: 'seance', kind: 'service', total: pk.price },
+            ]);
             queueIfOffline('Vente séances coaching');
             toast(`${firstName(sel.member.name)}, ${pk.n} séance${pk.n > 1 ? 's' : ''} ajoutée${pk.n > 1 ? 's' : ''}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();
@@ -1983,7 +2052,9 @@
             state.passesToday += 1;
             state.inGym += (p.id === 'duo' ? 2 : 1);
             addRevenue('pass', p.price);
-            postDay(p.price, method, `Pass · ${p.label}`, '');
+            postDay(p.price, method, `Pass · ${p.label}`, '', [
+              { itemId: `pass-${p.id}`, name: p.label, category: 'pass', qty: 1, unit: 'pass', kind: 'service', total: p.price },
+            ]);
             queueIfOffline('Séance unique / pass');
             toast(`${p.label} vendu, accès ouvert${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();

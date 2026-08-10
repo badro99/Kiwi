@@ -365,10 +365,21 @@
   let seq = 208;
   let ticking = null;
   const state = { view: 'carte', ticket: null, offline: false, queued: 0 };
+  const pizzeriaOps = window.KiwiVerticalState?.open?.('pizzeria', {
+    schema: 1,
+    snapshot: () => ({ customers: CUSTOMERS, orders: ORDERS, seq, ticket: state.ticket }),
+    restore: (d) => {
+      CUSTOMERS.splice(0, CUSTOMERS.length, ...(d.customers || [])); Object.keys(CUST).forEach(k => delete CUST[k]); CUSTOMERS.forEach(c => { if (c?.id) CUST[c.id] = c; });
+      ORDERS.splice(0, ORDERS.length, ...(d.orders || [])); Object.keys(JOB).forEach(k => delete JOB[k]); oven.splice(0, oven.length, null, null, null, null);
+      ORDERS.forEach(o => (o.jobs || []).forEach(j => { JOB[j.jid] = j; if (j.status === 'four' && j.slot != null) oven[j.slot] = j.jid; }));
+      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || null;
+    },
+  });
   function freshTicket() {
     state.ticket = { num: posRef(`M-${seq}`), mode: 'surplace', table: null, customer: null, zone: null, address: '', lines: [] };
   }
   function queueIfOffline(label) {
+    pizzeriaOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -386,9 +397,31 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(o, received) {
+    const productTotal = o.lines.reduce((s, ln) => s + linePrice(ln), 0);
+    const delivery = o.mode === 'livraison' && o.zone ? ZONE[o.zone].fee : 0;
+    const gross = productTotal + delivery;
+    const raw = o.lines.map((ln) => ({ ln, base: linePrice(ln) }));
+    if (delivery) raw.push({ delivery: true, base: delivery });
+    let allocated = 0;
+    return raw.map((row, i) => {
+      const total = i === raw.length - 1
+        ? Math.max(0, received - allocated)
+        : Math.round((received * row.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${ZONE[o.zone].label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'service', total };
+      const ln = row.ln;
+      if (ln.kind === 'drink') return { itemId: ln.did, name: DRINK[ln.did].label, category: 'boissons', qty: ln.qty, unit: 'piece', kind: 'product', total };
+      return {
+        itemId: ln.pid, variantId: [ln.pidB || '', ln.size || '', ln.pate || ''].join(':'), name: jobLabel(ln),
+        category: 'pizzas', qty: ln.qty, unit: 'piece', kind: 'product', total,
+        options: (ln.supps || []).map((id) => ({ itemId: id, qty: ln.qty })),
+      };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de commande repart AU-DELÀ du dernier encaissé aujourd'hui :
@@ -402,6 +435,7 @@
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
+    pizzeriaOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="pz-rail">
@@ -456,7 +490,7 @@
       v.addEventListener('click', (e) => { if (e.target === v) v.classList.remove('is-open'); });
     });
 
-    freshTicket();
+    if (!state.ticket) freshTicket();
     renderAll();
     if (!ticking) ticking = setInterval(tick, 1000);
   }
@@ -1176,7 +1210,7 @@
         /* Le solde d'un « payer à table / au retrait / à la livraison » rentre
            ICI. remitOrder et deliverOrder passent tous les deux par openPay
            en mode settle, donc cette ligne les couvre tous les deux. */
-        postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
         closeVeil('#pz-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         renderStats();
@@ -1188,7 +1222,7 @@
       /* Le différé (data-defer) sort par commitOrder sans passer ici : il ne
          prend rien au comptoir, ce n'est pas une recette tant que le solde
          n'est pas encaissé. */
-      postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id);
+      postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
       closeVeil('#pz-pay-veil');
       commitOrder(order);
       toast(`Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
