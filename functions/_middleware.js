@@ -158,6 +158,27 @@ async function routeRequest(context) {
    * quinzième script ajouté à kiwi-order.html ne doit pas re-casser la commande
    * client en silence (tools/public-assets-test.js tient cette promesse). */
   if (isRead && path.startsWith('/assets/')) return next();
+  /* Même raisonnement, pour les quatre fichiers que le navigateur va chercher
+   * TOUT SEUL et qui, eux, ne peuvent pas vivre sous /assets.
+   *
+   * Le service worker d'abord : sa portée est celle de son URL, donc contrôler
+   * tout le site impose de le servir depuis la racine. Ici il recevait 401 avec
+   * l'écran de connexion en text/html — `register()` échoue en silence, aucune
+   * console ne s'ouvre, et le SW déjà installé sur le poste du marchand ne se
+   * met JAMAIS à jour : il continue de servir l'ancienne génération de cache
+   * indéfiniment. Toute la mécanique de `?v=` en amont ne sert à rien si le
+   * fichier qui la lit n'est pas joignable.
+   *
+   * Puis les trois manifestes restants. `serveur.webmanifest` était déjà
+   * allow-listé plus bas — les autres ont simplement été oubliés, et un
+   * manifeste en 401 retire l'installation PWA de la caisse et du dashboard.
+   * Leurs icônes pointent toutes vers /assets, déjà ouvert.
+   *
+   * Aucune donnée : ce sont quatre fichiers statiques identiques pour tous les
+   * marchands, déjà publics sur les dépôts GitHub. */
+  if (isRead && (path === '/kiwi-sw.js'
+    || path === '/dashboard.webmanifest' || path === '/manifest.webmanifest'
+    || path === '/cuisine.webmanifest')) return next();
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
   // Employee/service app. The page itself contains no merchant data; its single
   // API independently validates a store PIN and then an httpOnly employee
