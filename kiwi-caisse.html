@@ -1666,7 +1666,10 @@
       position: relative; overflow: hidden;
       display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 11px; align-items: center;
       width: 100%; box-sizing: border-box;
-      background: rgba(255,255,255,.96); color: var(--ink);
+      /* The toast is a light notification plate in both app themes. Its ink
+         must therefore be local, not inherited from dark-mode --ink. */
+      background: rgba(255,255,255,.96); color: #0A0F0D;
+      color-scheme: light;
       -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15);
       padding: 13px 15px;
       border: 1px solid rgba(11,110,79,.18); border-radius: 16px;
@@ -1684,8 +1687,8 @@
     .toast.is-warn::before { content: '!'; background: rgba(188,113,0,.12); color: #9A5C00; }
     .toast.is-danger::before { content: '×'; background: rgba(185,44,44,.11); color: #B92C2C; }
     .toast-copy { min-width: 0; }
-    .toast-title { display:block; }
-    .toast-desc { display:block; margin-top:2px; color:var(--ink-3); font-size:12px; font-weight:450; }
+    .toast-title { display:block; color:#0A0F0D; }
+    .toast-desc { display:block; margin-top:2px; color:#59615D; font-size:12px; font-weight:450; }
     @keyframes toast-in {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
