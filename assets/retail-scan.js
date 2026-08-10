@@ -18,6 +18,9 @@
   var video = null;
   var stream = null;
   var detector = null;
+  var decoderReader = null;
+  var decoderControls = null;
+  var cameraGeneration = 0;
   var raf = 0;
   var stopped = true;
   var torch = false;
@@ -211,49 +214,85 @@
   }
 
   function setCameraStatus(html) { var el = overlay && $('.krs-camera-status', overlay); if (el) el.innerHTML = html; }
-  function cameraAvailable() { try { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.BarcodeDetector); } catch (_) { return false; } }
+  /* Camera access and barcode decoding are different capabilities. iPhone
+     Safari has a perfectly usable rear camera but does not consistently ship
+     BarcodeDetector, so treating the latter as a camera prerequisite disabled
+     scanning before Safari could even show its permission prompt. */
+  function cameraAvailable() { try { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); } catch (_) { return false; } }
+  function nativeDecoderAvailable() { try { return typeof window.BarcodeDetector === 'function'; } catch (_) { return false; } }
+  function fallbackDecoderAvailable() { return !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader); }
+  function cameraErrorCopy(err) {
+    var name = err && err.name;
+    if (name === 'NotAllowedError' || name === 'SecurityError') return '<b>Caméra bloquée</b> · Safari : aA → Réglages du site → Caméra → Autoriser';
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return '<b>Aucune caméra détectée</b> · la saisie manuelle reste disponible';
+    if (name === 'NotReadableError' || name === 'TrackStartError') return '<b>Caméra déjà utilisée</b> · fermez l’autre app puis touchez Relancer';
+    if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') return '<b>Caméra incompatible</b> · touchez Relancer pour réessayer';
+    if (name === 'DecoderUnavailable') return '<b>Lecteur indisponible hors ligne</b> · reconnectez une fois pour mettre Kiwi à jour';
+    return '<b>Caméra indisponible</b> · touchez Relancer ou saisissez le code';
+  }
   async function startCamera() {
     if (!overlay || !overlay.classList.contains('is-open') || !cameraAvailable()) {
-      setCameraStatus('<b>Caméra non disponible</b> · la douchette et la saisie manuelle restent actives');
+      setCameraStatus('<b>Caméra non disponible</b> · ouvrez Kiwi sur https://kiwi-os.com dans Safari, ou saisissez le code');
       if (video) video.classList.add('is-idle');
       return false;
     }
     stopCamera(); stopped = false;
+    var generation = cameraGeneration;
+    var constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+    setCameraStatus('<b>Ouverture de la caméra…</b> · autorisez Safari si une demande apparaît');
     try {
-      var supported = FORMATS;
-      try { var got = await window.BarcodeDetector.getSupportedFormats(); var common = FORMATS.filter(function (x) { return got.indexOf(x) >= 0; }); if (common.length) supported = common; } catch (_) {}
-      detector = new window.BarcodeDetector({ formats: supported });
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-      if (stopped) { stream.getTracks().forEach(function (t) { t.stop(); }); return false; }
-      video.srcObject = stream; video.classList.remove('is-idle'); await video.play();
+      video.setAttribute('autoplay', 'true'); video.setAttribute('muted', 'true'); video.setAttribute('playsinline', 'true'); video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true; video.playsInline = true;
+      if (nativeDecoderAvailable()) {
+        var supported = FORMATS;
+        try { var got = await window.BarcodeDetector.getSupportedFormats(); var common = FORMATS.filter(function (x) { return got.indexOf(x) >= 0; }); if (common.length) supported = common; } catch (_) {}
+        detector = new window.BarcodeDetector({ formats: supported });
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (stopped || generation !== cameraGeneration) { stream.getTracks().forEach(function (t) { t.stop(); }); return false; }
+        video.srcObject = stream; video.classList.remove('is-idle'); await video.play();
+        var last = 0;
+        var tick = async function (ts) {
+          if (stopped || generation !== cameraGeneration) return;
+          if (!state.pending && ts - last > 110 && video.readyState >= 2) {
+            last = ts;
+            try { var hits = await detector.detect(video); if (hits && hits[0] && hits[0].rawValue) scan(hits[0].rawValue); } catch (_) {}
+          }
+          raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      } else {
+        if (!fallbackDecoderAvailable()) { var noDecoder = new Error('decoder unavailable'); noDecoder.name = 'DecoderUnavailable'; throw noDecoder; }
+        decoderReader = new window.ZXingBrowser.BrowserMultiFormatReader(undefined, {
+          delayBetweenScanAttempts: 180, delayBetweenScanSuccess: 900, tryPlayVideoTimeout: 7000,
+        });
+        decoderControls = await decoderReader.decodeFromConstraints(constraints, video, function (result) {
+          if (stopped || generation !== cameraGeneration || state.pending || !result) return;
+          var value = typeof result.getText === 'function' ? result.getText() : result.text;
+          if (value) scan(value);
+        });
+        if (stopped || generation !== cameraGeneration) { try { decoderControls.stop(); } catch (_) {} return false; }
+        stream = video.srcObject || null; video.classList.remove('is-idle');
+      }
+      if (!stream || typeof stream.getVideoTracks !== 'function') { var noStream = new Error('camera stream unavailable'); noStream.name = 'NotReadableError'; throw noStream; }
       torchTrack = stream.getVideoTracks()[0] || null;
       try {
         var caps = torchTrack && torchTrack.getCapabilities ? torchTrack.getCapabilities() : null;
         var tb = $('.krs-torch', overlay); if (tb) tb.hidden = !(caps && caps.torch);
       } catch (_) {}
-      setCameraStatus('<b>Lecture continue active</b> · présentez les produits l’un après l’autre');
-      var last = 0;
-      var tick = async function (ts) {
-        if (stopped) return;
-        if (!state.pending && ts - last > 110 && video.readyState >= 2) {
-          last = ts;
-          try { var hits = await detector.detect(video); if (hits && hits[0] && hits[0].rawValue) scan(hits[0].rawValue); } catch (_) {}
-        }
-        raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
+      setCameraStatus('<b>Scan actif</b> · cadrez le code-barres');
       return true;
     } catch (err) {
-      var denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
-      setCameraStatus(denied ? '<b>Accès caméra refusé</b> · autorisez-le dans le navigateur' : '<b>Caméra indisponible</b> · utilisez la douchette ou le champ');
+      if (generation !== cameraGeneration) return false;
+      setCameraStatus(cameraErrorCopy(err));
       if (video) video.classList.add('is-idle');
       return false;
     }
   }
   function stopCamera() {
-    stopped = true; if (raf) cancelAnimationFrame(raf); raf = 0;
+    stopped = true; cameraGeneration++; if (raf) cancelAnimationFrame(raf); raf = 0;
+    try { if (decoderControls && decoderControls.stop) decoderControls.stop(); } catch (_) {}
     try { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {}
-    stream = null; detector = null; torchTrack = null; torch = false;
+    stream = null; detector = null; decoderReader = null; decoderControls = null; torchTrack = null; torch = false;
     try { if (video) { video.pause(); video.srcObject = null; video.classList.add('is-idle'); } } catch (_) {}
   }
   function toggleTorch() {
@@ -448,7 +487,7 @@
     if (overlay) return;
     overlay = document.createElement('div'); overlay.className = 'krs-overlay'; overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', 'Scan continu et encaissement');
     overlay.innerHTML = '<div class="krs-shell"><header class="krs-head"><span class="krs-head-mark"><i data-lucide="scan-barcode"></i></span><div class="krs-head-copy"><b>Scan continu</b><span>Catalogue, stock, promotions et encaissement dans un seul geste</span></div><span class="krs-net"></span><button class="krs-close" data-krs-close aria-label="Fermer"><i data-lucide="x"></i></button></header>' +
-      '<div class="krs-main"><section class="krs-work"><div class="krs-camera"><video class="krs-video is-idle" playsinline muted></video><div class="krs-frame"></div><div class="krs-manual"><input id="krs-manual" autocomplete="off" inputmode="text" placeholder="Scanner ou saisir un code…" /><button data-krs-manual aria-label="Lire le code"><i data-lucide="arrow-right"></i></button></div><div class="krs-camera-bar"><div class="krs-camera-status"><b>Préparation de la caméra…</b></div><button class="krs-cam-act krs-torch" hidden>Lampe</button><button class="krs-cam-act" data-krs-restart>Relancer</button></div></div><div class="krs-result"></div></section>' +
+      '<div class="krs-main"><section class="krs-work"><div class="krs-camera"><video class="krs-video is-idle" autoplay playsinline webkit-playsinline muted></video><div class="krs-frame"></div><div class="krs-manual"><input id="krs-manual" autocomplete="off" inputmode="text" placeholder="Scanner ou saisir un code…" /><button data-krs-manual aria-label="Lire le code"><i data-lucide="arrow-right"></i></button></div><div class="krs-camera-bar"><div class="krs-camera-status"><b>Préparation de la caméra…</b></div><button class="krs-cam-act krs-torch" hidden>Lampe</button><button class="krs-cam-act" data-krs-restart>Relancer</button></div></div><div class="krs-result"></div></section>' +
       '<aside class="krs-cart"><div class="krs-cart-head"></div><div class="krs-lines"></div><div class="krs-cart-foot"></div></aside></div></div><div class="krs-pay"></div>';
     document.body.appendChild(overlay); video = $('.krs-video', overlay);
     overlay.addEventListener('click', function (e) {
@@ -524,6 +563,6 @@
 
   window.KiwiRetailScan = {
     eligible: function (id) { return !!ELIGIBLE[id]; }, mount: mount, open: open, close: close, scan: scan,
-    _test: { money: money, normalizeCode: normalizeCode, mergeCredits: mergeCredits, due: function (total, parts) { return money(total - (parts || []).reduce(function (s, p) { return s + (+p.amount || 0); }, 0)); } },
+    _test: { money: money, normalizeCode: normalizeCode, mergeCredits: mergeCredits, cameraAvailable: cameraAvailable, nativeDecoderAvailable: nativeDecoderAvailable, fallbackDecoderAvailable: fallbackDecoderAvailable, cameraErrorCopy: cameraErrorCopy, due: function (total, parts) { return money(total - (parts || []).reduce(function (s, p) { return s + (+p.amount || 0); }, 0)); } },
   };
 }());

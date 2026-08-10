@@ -13,6 +13,10 @@ const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const dispatch = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
 const sale = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
 const storeApi = fs.readFileSync(new URL('../functions/api/store.js', import.meta.url), 'utf8');
+const zxing = fs.readFileSync(new URL('../assets/vendor/zxing-browser.min.js', import.meta.url), 'utf8');
+const zxingBrowserLicense = fs.readFileSync(new URL('../assets/vendor/zxing-browser.LICENSE.txt', import.meta.url), 'utf8');
+const zxingLibraryLicense = fs.readFileSync(new URL('../assets/vendor/zxing-library.LICENSE.txt', import.meta.url), 'utf8');
+const browserFixture = fs.readFileSync(new URL('./retail-scan-browser-fixture.html', import.meta.url), 'utf8');
 
 const storage = new Map();
 const window = {};
@@ -52,7 +56,16 @@ const merged = api._test.mergeCredits(
 ok(merged.seq === 4 && merged.entries.length === 2, 'credit ledger merges and de-duplicates');
 ok(merged.entries.find((x) => x.id === 'a').amount === 12, 'newest credit entry wins');
 
-ok(source.includes('new window.BarcodeDetector'), 'uses browser barcode detector');
+ok(!api._test.cameraAvailable(), 'camera reports absent only when media capture is absent');
+context.navigator.mediaDevices = { getUserMedia() {} };
+ok(api._test.cameraAvailable(), 'iPhone camera is accepted without native BarcodeDetector');
+ok(!api._test.nativeDecoderAvailable(), 'native decoder capability is independent');
+window.ZXingBrowser = { BrowserMultiFormatReader() {} };
+ok(api._test.fallbackDecoderAvailable(), 'bundled decoder is detected for Safari');
+ok(api._test.cameraErrorCopy({ name: 'NotAllowedError' }).includes('Safari'), 'permission refusal gives actionable iPhone guidance');
+
+ok(source.includes('new window.BarcodeDetector'), 'uses native browser barcode detector when present');
+ok(source.includes('new window.ZXingBrowser.BrowserMultiFormatReader'), 'falls back to bundled ZXing on iPhone Safari');
 ok(source.includes('navigator.mediaDevices.getUserMedia'), 'uses continuous phone camera');
 ok(source.includes('C.findByBarcode(code)'), 'resolves the shared catalog');
 ok(source.includes('C.addProduct(') && source.includes('C.addVariant(') && source.includes('C.attachBarcode('), 'creates unknown catalog products and barcodes');
@@ -70,9 +83,12 @@ ok(source.includes('parts: state.parts') && source.includes('if (d && Array.isAr
 ok(source.includes("if (state.parts.length && state.cart.length)"), 'reload reopens the outstanding payment balance');
 ok(!/Math\.random\(\).*approved|approved.*Math\.random\(/s.test(source), 'does not invent card approval');
 
-ok(html.includes('assets/retail-scan.css?v=4') && html.includes('assets/retail-scan.js?v=3'), 'caisse loads retail scan assets');
+ok(zxing.length > 400000 && zxing.includes('ZXingBrowser'), 'offline Safari decoder is vendored, not CDN-dependent');
+ok(zxingBrowserLicense.includes('MIT License') && zxingLibraryLicense.includes('Apache License'), 'vendored decoder retains both upstream licenses');
+ok(browserFixture.includes("Object.defineProperty(window, 'BarcodeDetector'") && browserFixture.includes('fallback='), 'browser fixture forces and exposes the Safari decoder path');
+ok(html.includes('assets/retail-scan.css?v=5') && html.includes('assets/vendor/zxing-browser.min.js?v=1') && html.includes('assets/retail-scan.js?v=4'), 'caisse loads decoder before retail scan assets');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
-ok(sw.includes("'kiwi-app-v337'") && sw.includes("'/assets/retail-scan.js?v=3'"), 'offline shell caches the feature');
+ok(sw.includes("'kiwi-app-v338'") && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes("'/assets/retail-scan.js?v=4'"), 'offline shell caches the iPhone scanner');
 ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoint authorizes the credit document shape');
 ok(sale.includes("split: 'split'") && sale.includes("credit: 'credit'"), 'sales ledger preserves split and credit methods');
 ok(sale.includes('entry.parts = sale.parts'), 'sales journal retains sanitized payment parts');

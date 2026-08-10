@@ -43,7 +43,7 @@
 .krs-close svg { width: 20px; height: 20px; }
 
 .krs-main { min-height: 0; display: grid; grid-template-columns: minmax(0,1.55fr) minmax(360px,.75fr); }
-.krs-work { min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(250px,.88fr) minmax(250px,1.12fr); border-right: 1px solid #DADDD9; }
+.krs-work { min-width: 0; min-height: 0; margin: 0; padding: 0; display: grid; grid-template-rows: minmax(250px,.88fr) minmax(250px,1.12fr); border-right: 1px solid #DADDD9; }
 .krs-camera { position: relative; min-height: 0; overflow: hidden; background: #07110D; color: #fff; }
 .krs-video { width: 100%; height: 100%; object-fit: cover; display: block; background: #07110D; }
 .krs-video.is-idle { opacity: .14; }
@@ -140,29 +140,41 @@
   .vx-root.vx-ticket-open .krs-launch {
     opacity: 0; pointer-events: none; transform: translateY(12px);
   }
-  .krs-shell { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+  .krs-overlay.is-open { display: block; }
+  .krs-shell { width: 100vw; height: 100vh; height: 100dvh; border: 0; border-radius: 0; }
   .krs-head { min-height: 62px; padding: 9px 11px 9px 14px; }
   .krs-head-copy span { display: none; }
   .krs-net { font-size: 0; margin-left: auto; }
-  .krs-main { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) minmax(250px,42dvh); }
-  .krs-work { grid-template-rows: minmax(210px,.9fr) minmax(190px,1.1fr); border-right: 0; border-bottom: 1px solid #DADDD9; }
+  .krs-main { height: 100%; grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); overflow: hidden; }
+  .krs-work { min-height: 0; grid-template-rows: clamp(220px,34dvh,300px) auto; border-right: 0; border-bottom: 1px solid #DADDD9; }
   .krs-camera-bar { left: 10px; right: 10px; bottom: 9px; }
   .krs-manual { left: 10px; top: 9px; width: calc(100% - 20px); }
-  .krs-frame { inset: 20% 10%; }
-  .krs-result { padding: 12px; }
+  .krs-frame { inset: 68px 10px 58px; border-radius: 18px; }
+  .krs-result { min-height: 0; padding: 10px 12px; overflow: visible; }
+  .krs-empty { min-height: 64px; height: auto; text-align: left; }
+  .krs-empty > div { width: 100%; display: grid; grid-template-columns: 30px minmax(0,1fr); column-gap: 10px; align-items: center; }
+  .krs-empty svg { grid-row: 1 / span 2; width: 27px; height: 27px; margin: 0; }
+  .krs-empty b { font-size: 13px; }
+  .krs-empty br { display: none; }
+  .krs-empty span { grid-column: 2; margin-top: 2px; font-size: 11px; }
   .krs-card { padding: 13px; }
   .krs-product-name { font-size: 20px; }
   .krs-price-now { font-size: 23px; }
   .krs-form { grid-template-columns: 1fr 1fr; }
   .krs-form .krs-field:first-child { grid-column: 1/-1; }
-  .krs-lines { padding: 5px 10px; }
+  .krs-cart { min-height: 0; }
+  .krs-cart-head { padding: 10px 13px 8px; }
+  .krs-cart-head b { font-size: 15px; }
+  .krs-lines { padding: 4px 10px; }
+  .krs-cart-empty { min-height: 76px; }
   .krs-cart-foot { padding: 10px 13px calc(12px + env(safe-area-inset-bottom)); }
   .krs-checkout { min-height: 52px; }
   /* An unknown code is a focused capture step. Keeping the cart visible here
      left only one input-row for a six-field product form on a phone. The cart
      returns immediately after create/ignore, with its contents untouched. */
   .krs-overlay.is-creating .krs-main { grid-template-rows: minmax(0,1fr); }
-  .krs-overlay.is-creating .krs-work { grid-template-rows: minmax(190px,.62fr) minmax(0,1.38fr); border-bottom: 0; }
+  .krs-overlay.is-creating .krs-work { grid-template-rows: clamp(190px,30dvh,250px) minmax(0,1fr); border-bottom: 0; }
+  .krs-overlay.is-creating .krs-result { overflow: auto; }
   .krs-overlay.is-creating .krs-cart { display: none; }
   .krs-overlay.is-creating .krs-create-actions {
     position: sticky; bottom: -24px; z-index: 2; margin: 12px -2px 0;
@@ -174,15 +186,26 @@
 @media (max-width: 480px) {
   .krs-head-copy b { font-size: 16px; }
   .krs-head-mark { width: 34px; height: 34px; }
-  .krs-main { grid-template-rows: minmax(0,1fr) minmax(238px,43dvh); }
-  .krs-work { grid-template-rows: minmax(190px,.82fr) minmax(185px,1.18fr); }
-  .krs-camera-status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .krs-head { min-height: 58px; }
+  .krs-main { grid-template-rows: auto minmax(0,1fr); }
+  .krs-work { grid-template-rows: clamp(210px,32dvh,260px) auto; }
+  .krs-camera-status { min-height: 42px; box-sizing: border-box; display: flex; align-items: center; white-space: normal; line-height: 1.25; }
   .krs-cam-act { padding: 0 10px; }
   .krs-product-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .krs-methods { gap: 6px; }
   .krs-method { min-height: 64px; padding: 7px 4px; }
   .krs-part { grid-template-columns: 1fr; }
   .krs-part button { min-height: 48px; }
+  .krs-total b { font-size: 23px; }
+  .krs-checkout { min-height: 50px; margin-top: 8px; }
+}
+
+@media (max-width: 480px) and (max-height: 720px) {
+  .krs-head { min-height: 54px; padding-top: 6px; padding-bottom: 6px; }
+  .krs-work { grid-template-rows: 202px auto; }
+  .krs-result { padding-top: 7px; padding-bottom: 7px; }
+  .krs-cart-head { padding-top: 7px; padding-bottom: 6px; }
+  .krs-cart-foot { padding-top: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Kiwi retail scan phone fixture</title>
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/retail-scan.css?fixture=iphone">
+  <style>html,body{margin:0;min-height:100%;background:#F7F5F0}</style>
+</head>
+<body>
+  <main id="fixture"></main>
+  <output id="fixture-runtime"></output>
+  <script>
+    window.KiwiBoutiqueCatalog = {
+      use: function () {}, listCategories: function () { return []; }, findByBarcode: function () { return null; }
+    };
+    /* Force the Safari path in automated browser QA even when Chromium offers
+       a native BarcodeDetector. */
+    Object.defineProperty(window, 'BarcodeDetector', { value: undefined, configurable: true });
+  </script>
+  <script src="../assets/vendor/zxing-browser.min.js?fixture=iphone"></script>
+  <script src="../assets/retail-scan.js?fixture=iphone"></script>
+  <script>
+    document.getElementById('fixture-runtime').textContent =
+      'native=' + (typeof window.BarcodeDetector === 'function') +
+      ' fallback=' + !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader);
+    window.KiwiRetailScan.mount(document.getElementById('fixture'), 'boutique');
+  </script>
+</body>
+</html>

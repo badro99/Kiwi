@@ -32,9 +32,12 @@ ok(js.includes('new MutationObserver(sync).observe(ticket'), 'ticket peek follow
 
 ok(scan.includes('.vx-root .krs-launch') && scan.includes('bottom: calc(74px'), 'continuous scan button clears the resting ticket');
 ok(scan.includes('.vx-root.vx-ticket-open .krs-launch'), 'scanner launcher yields to an open ticket');
+ok(scan.includes('margin: 0; padding: 0; display: grid'), 'global landing-page section spacing cannot push the camera down');
+ok(scan.includes('grid-template-rows: clamp(210px,32dvh,260px) auto'), 'phone scanner camera is compact instead of consuming the viewport');
+ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses to a useful status strip');
 ok(html.includes('@media (max-width: 600px)') && html.includes('white-space: normal'), 'unlock greeting wraps on narrow phones');
 ok(html.includes('assets/pos-mobile.css?v=2') && html.includes('assets/pos-mobile.js?v=2'), 'phone layer is cache-busted');
-ok(html.includes('assets/retail-scan.css?v=4'), 'scanner collision fix is cache-busted');
-ok(sw.includes("'kiwi-app-v337'") && sw.includes("'/assets/pos-mobile.css?v=2'"), 'offline shell ships the phone fix');
+ok(html.includes('assets/retail-scan.css?v=5'), 'scanner iPhone layout is cache-busted');
+ok(sw.includes("'kiwi-app-v338'") && sw.includes("'/assets/pos-mobile.css?v=2'"), 'offline shell ships the phone fix');
 
 console.log(`pos-mobile-test: ${controls} controls`);
