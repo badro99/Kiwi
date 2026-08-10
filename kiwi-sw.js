@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v331';
+var CACHE = 'kiwi-app-v332';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -162,7 +162,7 @@ var SHELL = [
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js',
   '/assets/orderpro-panel.js',
-  '/assets/orderpro-inbox.js',
+  '/assets/orderpro-inbox.js?v=4',
   /* Le relais cuisine — la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

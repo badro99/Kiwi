@@ -4655,7 +4655,7 @@
   <script src="assets/kitchen-relay.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=3" defer></script>
+  <script src="assets/orderpro-inbox.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
@@ -13828,10 +13828,19 @@
     /* Le numéro QUE LE CLIENT CONNAÎT. Toute commande restaurant relayée reçoit
        le compteur simple et hebdomadaire du serveur ; pendant le bref instant
        hors ligne avant sa réponse, on garde le compteur local en repli. */
+    function orderServerInitials(name) {
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '';
+      return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+    }
     function ticketNo(o) {
       if (o && o.opNum != null) {
         const n = String(o.opNum);
-        if (o.opChannel === 'kiwi') return (o.type === 'takeaway' ? 'OPD-' : 'OP-') + n;
+        if (o.opChannel === 'kiwi') {
+          const employeePrefix = orderServerInitials(o.server);
+          if (employeePrefix) return employeePrefix + '-' + n;
+          return (o.type === 'takeaway' ? 'OPD-' : 'OP-') + n;
+        }
         return n;
       }
       return String(o.num);
@@ -14756,7 +14765,10 @@
       if (!o.session && activeSeat && Number(o.created_ts || 0) < Number(activeSeat.since || 0)) return false;
 
       if (o.number != null && !t.orderNo) {
-        t.orderNo = (o.channel || 'kiwi') === 'kiwi' ? 'OP-' + String(o.number) : String(o.number);
+        t.orderNo = ticketNo({
+          opNum: o.number, opChannel: o.channel || 'kiwi',
+          type: o.mode === 'takeout' ? 'takeaway' : 'dineIn', server: o.server || '',
+        });
       }
 
       let changed = false;
