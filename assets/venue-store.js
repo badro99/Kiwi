@@ -71,10 +71,32 @@
     if (m) notify(m[1], m[2]);
   });
 
+  /* La caisse ne charge pas venues.js — délibérément : le moteur de venues pèse
+   * cent mille jetons pour un terminal qui n'en sert qu'une. Sans lui,
+   * currentVenue() rendait null : TOUT magasin par venue y lisait un document
+   * vide sous `kiwi:<feature>:v1:null` et abandonnait ses écritures. Les
+   * recettes saisies au tableau de bord n'existaient donc pas à la caisse, et
+   * une vente sortait l'argent sans sortir la marchandise.
+   * L'appairage porte déjà l'identité du magasin ; on la prend, le slug
+   * commerçant d'abord — le seul identifiant que deux appareils du même
+   * commerçant calculent pareil, et celui sous lequel cloud-doc.js range la
+   * copie serveur, si bien que le document rejoint celui du tableau de bord dès
+   * le premier bind. assets/vertical-state.js portait déjà ce contournement
+   * pour son seul enregistrement ; il vaut pour tous. */
+  function pairedId() {
+    try {
+      const P = window.KiwiCaissePairing;
+      const p = (P && P.pairedVenue && P.pairedVenue())
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      const id = p && (p.merchant || p.venueId || p.id);
+      return id ? String(id) : null;
+    } catch (e) { return null; }
+  }
+
   // The active store id — the one identifier that lines dashboard ↔ caisse up.
   function currentVenue() {
     const KV = window.KiwiVenue;
-    if (!KV) return null;
+    if (!KV) return pairedId();
     const d = KV.getCurrentVenueData && KV.getCurrentVenueData();
     return (d && d.id) || (KV.getVenue && KV.getVenue()) || null;
   }

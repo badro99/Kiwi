@@ -326,9 +326,9 @@ const MENU = [
     /handlers\['margin-export'\][\s\S]{0,600}?isCustom[\s\S]{0,200}?return;/.test(dx));
 
   const sw = R('kiwi-sw.js');
-  ok('service worker : cost.js est dans la coquille', sw.includes("'/assets/cost.js'"));
+  ok('service worker : cost.js est dans la coquille', /'\/assets\/cost\.js(\?v=\d+)?'/.test(sw));
   const dash = R('dashboard.html');
-  ok('dashboard : cost.js est chargé', /<script src="assets\/cost\.js"/.test(dash));
+  ok('dashboard : cost.js est chargé', /<script src="assets\/cost\.js(\?v=\d+)?"/.test(dash));
   ok('dashboard : cost.js après venue-store.js',
     dash.indexOf('assets/cost.js') > dash.indexOf('assets/venue-store.js'));
   ok('dashboard : cost.js avant menu-catalog.js',
