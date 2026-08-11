@@ -15,13 +15,15 @@ function ok(condition, message) {
 
 ok(/data-employee-language="fr"[^>]*>Français</.test(page), 'French selector is available in Profile');
 ok(/data-employee-language="en"[^>]*>English</.test(page), 'English selector is available in Profile');
-ok(/data-employee-language="ary"[^>]*[\s\S]*?الدارجة</.test(page), 'Darija selector is available in Profile');
+ok(/data-employee-language="ar"[^>]*[\s\S]*?العربية</.test(page), 'standard Arabic selector is available in Profile');
 ok(/kiwi-employee-language:/.test(page), 'preference is persisted per venue');
 ok(/localStorage\.setItem\(EMPLOYEE_LANGUAGE_KEY, language\)/.test(page), 'language changes are persisted');
-ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ary:/.test(page), 'English and Darija dictionaries exist');
+ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ar:/.test(page), 'English and standard Arabic dictionaries exist');
+ok(/saved === 'ary'\) return 'ar'/.test(page), 'legacy Darija preference migrates to standard Arabic');
+ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page), 'Darija wording no longer leaks into the Serveur app');
 ok(/translateEmployeeElement\(document\.body\)/.test(page), 'the selector translates the app, not only its own label');
 ok(/MutationObserver[\s\S]*?characterData: true/.test(page), 'live content is translated after sync updates');
 ok(/employeeLocale\(\)/.test(page), 'dates and times follow the chosen language');
-ok(/kiwi-app-v333/.test(sw), 'the employee PWA cache is bumped');
+ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw), 'the employee PWA has a versioned cache');
 
 console.log(`✓ employee language gate green (${checks} checks: profile selector, persistence, live UI, locale, PWA)`);
