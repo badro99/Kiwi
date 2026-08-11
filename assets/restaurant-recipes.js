@@ -8,6 +8,8 @@
   const norm = (v) => clean(v).toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const number = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
   const round = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  /* Two decimals is money. A pinch of salt against a 25 kg sack is not. */
+  const fine = (n) => Math.round((Number(n) || 0) * 1e6) / 1e6;
   const venue = (id) => id || window.KiwiVenue?.getCurrentVenueData?.()?.id || window.KiwiVenue?.getVenue?.() || null;
   const store = window.KiwiStore.define('recipes', {
     blank: () => ({ items: {} }), cloud: true,
@@ -49,7 +51,8 @@
   }
   function inventory(id) {
     try {
-      const rows = window.KiwiRestaurantStock?.items?.(venue(id));
+      const bridge = window.KiwiRestaurantStock;
+      const rows = bridge?.rows ? bridge.rows(venue(id)) : null;
       return Array.isArray(rows) ? rows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit })) : [];
     } catch (_) { return []; }
   }
@@ -122,14 +125,24 @@
       let complete = !!r.ingredients.length;
       r.ingredients.forEach((line, index) => {
         const info = ingredientInfo(line, vid);
-        const ingId = line.stockId ? `stock:${line.stockId}` : `recipe:${itemId}:${index}`;
+        /* An ingredient named without an explicit article still resolves to one
+         * by name. Carry that article's id, or the stock movement it should
+         * produce would land on an identifier no ledger knows. */
+        const stockId = line.stockId || clean(info.stock?.id);
+        const ingId = stockId ? `stock:${stockId}` : `recipe:${itemId}:${index}`;
         const pos = d.ingredients.findIndex((x) => String(x.id) === ingId);
         const lineUnit = units()?.normalize?.(line.unit || info.stockUnit, '') || line.unit || info.stockUnit || '';
         const useCost = info.cost == null ? null : (units()?.unitCost ? units().unitCost(info.cost, info.stockUnit, lineUnit) : (lineUnit === info.stockUnit ? info.cost : null));
-        const ingredient = { id: ingId, name: line.name || info.stock?.name || '', unit: lineUnit, useCost, stockId: line.stockId || '', at: Date.now() };
+        const ingredient = { id: ingId, name: line.name || info.stock?.name || '', unit: lineUnit, useCost, stockId, at: Date.now() };
         if (pos >= 0) d.ingredients[pos] = ingredient; else d.ingredients.push(ingredient);
         if (!(line.qty > 0) || info.cost == null) complete = false;
-        lines.push({ ing: ingId, qty: number(line.qty) });
+        /* The till holds no unit table. Bake the article-unit quantity here so a
+         * 350 g line never leaves the books 350 kg lighter. */
+        lines.push({
+          ing: ingId, qty: number(line.qty), stock: stockId,
+          stockQty: info.quantityInStockUnit == null ? null : fine(info.quantityInStockUnit),
+          stockUnit: info.stockUnit || '',
+        });
       });
       d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', yield: r.portions, lines, notes: r.note, at: Date.now() };
       return d;
@@ -155,9 +168,9 @@
   }
   function theoreticalUsage(stockId, id, days) {
     if (!stockId) return 0;
+    const stock = inventory(id).find((row) => String(row.id) === String(stockId));
     return round(all(id).reduce((sum, recipe) => {
       const sold = salesFor(recipe.itemId, recipe.itemName, id, days || 7);
-      const stock = inventory(id).find((row) => String(row.id) === String(stockId));
       const perPortion = recipe.ingredients.filter((line) => line.stockId === String(stockId)).reduce((n, line) => {
         const from = line.unit || stock?.unit, converted = units()?.convert
           ? units().convert(number(line.qty), from, stock?.unit)

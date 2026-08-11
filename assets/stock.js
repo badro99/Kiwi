@@ -979,12 +979,17 @@
   /* A real restaurant's recipe is the source of theoretical ingredient usage.
    * Demo venues keep their historic fixture values; real venues never inherit
    * those figures and only receive a number once sales + recipes exist. */
+  let stTheoUsageBusy = false;
   const theoreticalUsageFor = (it) => {
+    /* The recipe engine reads this same inventory back to resolve units and
+     * costs. Without this guard the two call each other until the tab dies. */
+    if (stTheoUsageBusy) return Number(it.theoreticalUsage) || 0;
     try {
+      stTheoUsageBusy = true;
       const measured = window.KiwiRestaurantRecipes?.theoreticalUsage?.(it.id, currentVenueId(), 7);
       if (stShowReal()) return Number(measured) || 0;
       if (Number(measured) > 0) return Number(measured);
-    } catch (_) {}
+    } catch (_) {} finally { stTheoUsageBusy = false; }
     return Number(it.theoreticalUsage) || 0;
   };
   const statusOf = (it) => {
@@ -3217,6 +3222,13 @@
     items: () => {
       stEnsureOverlay();
       return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it), theoreticalUsage: theoreticalUsageFor(it) }));
+    },
+    /* Same rows without the recipe-derived usage. The recipe engine reads the
+     * inventory to resolve units and costs, and it is what computes that usage
+     * in the first place: enriching the rows it consumes would recurse. */
+    rows: () => {
+      stEnsureOverlay();
+      return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it) }));
     },
     theoreticalUsage: (stockId) => {
       stEnsureOverlay();

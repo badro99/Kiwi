@@ -12,6 +12,18 @@
   function n(v) { v = +v; return Number.isFinite(v) ? v : 0; }
   function doc() { try { return window.KiwiCost?.doc?.() || {}; } catch (_) { return {}; } }
 
+  /* A recipe line names its ingredient in the costing namespace ("stock:usr-a1"),
+   * the ledger keys movements on the bare article id. Left unresolved, every
+   * consumed gram lands on a phantom article and the real one never moves. */
+  function articleId(ln, d) {
+    if (!ln) return '';
+    if (ln.stock) return String(ln.stock);
+    var id = String(ln.ing || '');
+    var known = (d.ingredients || []).find(function (x) { return String(x.id) === id; });
+    if (known && known.stockId) return String(known.stockId);
+    return id.indexOf('stock:') === 0 ? id.slice(6) : '';
+  }
+
   function recipeLines(productId, qty, d, depth, trail) {
     if (!productId || depth > 5) return null;
     var rec = d.recipes && d.recipes[String(productId)];
@@ -20,14 +32,22 @@
     var yieldQty = n(rec.yield) > 0 ? n(rec.yield) : 1;
     for (var i = 0; i < rec.lines.length; i++) {
       var ln = rec.lines[i]; if (!ln) return null;
-      var used = n(ln.qty) * qty / yieldQty;
+      /* Prefer the quantity already expressed in the article's own unit: the
+       * till carries no unit table, so 350 g of chicken can only be booked
+       * against a stock kept in kilos if the dashboard did the sum. */
+      var per = ln.stockQty != null ? n(ln.stockQty) : n(ln.qty);
+      var used = per * qty / yieldQty;
       if (!(used > 0)) continue;
       if (ln.sub) {
         var nested = recipeLines(String(ln.sub), used, d, depth + 1, trail.concat(String(productId)));
         if (!nested) return null;
         out = out.concat(nested);
       } else if (ln.ing) {
-        out.push({ itemId: String(ln.ing), qty: used, recipe: String(productId), trail: trail });
+        var article = articleId(ln, d);
+        /* An ingredient with no article behind it (a note, a garnish nobody
+         * counts) simply does not move stock. It must not sink the recipe and
+         * send the dish's own identity to the ledger instead. */
+        if (article) out.push({ itemId: article, qty: used, recipe: String(productId), trail: trail });
       }
     }
     return out;
