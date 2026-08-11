@@ -1792,6 +1792,17 @@ em, i, cite, dfn, var { font-style: normal; }
       display: grid; grid-template-columns: repeat(3, 1fr);
       gap: 8px; margin-top: 12px;
     }
+    .kg-rec-grid[hidden], .kg-rec-empty[hidden] { display: none; }
+    .kg-rec-empty {
+      margin-top: 12px;
+      padding: 16px;
+      border: 1px dashed var(--line);
+      border-radius: var(--r-lg);
+      color: var(--ink-3);
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+    }
     .kg-rec-tile {
       background: var(--surface);
       border: 1px solid var(--line-soft);
@@ -1806,6 +1817,13 @@ em, i, cite, dfn, var { font-style: normal; }
       font-feature-settings: "tnum" 1; letter-spacing: -0.02em;
     }
     .kg-rec-num small { font-size: 11px; color: var(--ink-4); font-weight: 400; }
+    .kg-rec-pending {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-4);
+      letter-spacing: 0;
+    }
     .kg-rec-label {
       font-size: 9.5px; color: var(--ink-4);
       text-transform: uppercase; letter-spacing: 0.05em;
@@ -3065,7 +3083,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="refresh-cw"></i>
         </button>
         <div class="pin-top">
-          <div class="pin-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
+          <div class="pin-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /></div>
           <div class="pin-tagline">— Équipe</div>
         </div>
 
@@ -3112,7 +3130,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="refresh-cw"></i>
         </button>
         <div class="ci-top">
-          <div class="ci-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
+          <div class="ci-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /></div>
           <div class="ci-tagline">— Équipe</div>
         </div>
 
@@ -3314,18 +3332,19 @@ em, i, cite, dfn, var { font-style: normal; }
 
             <div class="kg-card kg-rec" id="kg-rec-card">
               <div class="kg-eyebrow">Records personnels</div>
-              <div class="kg-rec-grid">
+              <div class="kg-rec-empty" id="kg-rec-empty">Vos records apparaîtront après votre première table réglée.</div>
+              <div class="kg-rec-grid" id="kg-rec-grid" hidden>
                 <div class="kg-rec-tile" id="kg-rec-night">
-                  <div class="kg-rec-num" id="kg-rec-night-num">—</div>
+                  <div class="kg-rec-num" id="kg-rec-night-num"><span class="kg-rec-pending">À établir</span></div>
                   <div class="kg-rec-label">Meilleur soir</div>
                   <div class="kg-rec-flag">+ Nouveau record</div>
                 </div>
                 <div class="kg-rec-tile" id="kg-rec-streak">
-                  <div class="kg-rec-num" id="kg-rec-streak-num">—</div>
+                  <div class="kg-rec-num" id="kg-rec-streak-num"><span class="kg-rec-pending">À établir</span></div>
                   <div class="kg-rec-label">Tables en série</div>
                 </div>
                 <div class="kg-rec-tile" id="kg-rec-speed">
-                  <div class="kg-rec-num" id="kg-rec-speed-num">—</div>
+                  <div class="kg-rec-num" id="kg-rec-speed-num"><span class="kg-rec-pending">À établir</span></div>
                   <div class="kg-rec-label">Vitesse moyenne</div>
                   <div class="kg-rec-flag">+ Nouveau record</div>
                 </div>
@@ -3748,8 +3767,8 @@ em, i, cite, dfn, var { font-style: normal; }
        which roles work the floor and which only clock in. Missing ⇒ old rule. -->
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
-  <script src="assets/pwa-update.js?v=354" defer></script>
-  <script src="assets/employee-live.js?v=354" defer></script>
+  <script src="assets/pwa-update.js?v=355" defer></script>
+  <script src="assets/employee-live.js?v=355" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, le serveur relit dès qu'une table change en caisse, au lieu
        d'attendre son prochain tour. Absent → sondage d'origine, inchangé. -->
@@ -3841,6 +3860,8 @@ em, i, cite, dfn, var { font-style: normal; }
         'Aucun grade': 'No rank yet',
         'XP totale': 'Total XP',
         'Records personnels': 'Personal records',
+        'Vos records apparaîtront après votre première table réglée.': 'Your records will appear after your first paid table.',
+        'À établir': 'Pending',
         'Meilleur soir': 'Best evening',
         'Tables en série': 'Tables in a row',
         'Vitesse moyenne': 'Average speed',
@@ -3919,6 +3940,8 @@ em, i, cite, dfn, var { font-style: normal; }
         'Aucun grade': 'لا يوجد مستوى بعد',
         'XP totale': 'إجمالي نقاط الخبرة',
         'Records personnels': 'الأرقام القياسية الشخصية',
+        'Vos records apparaîtront après votre première table réglée.': 'ستظهر أرقامك القياسية بعد تسديد أول طاولة.',
+        'À établir': 'قيد الاحتساب',
         'Meilleur soir': 'أفضل وردية مسائية',
         'Tables en série': 'الطاولات المتتالية',
         'Vitesse moyenne': 'متوسط السرعة',
@@ -8132,7 +8155,9 @@ em, i, cite, dfn, var { font-style: normal; }
         const tile = document.getElementById('kg-rec-' + key);
         const num  = document.getElementById('kg-rec-' + key + '-num');
         if (!tile || !num) return;
-        num.innerHTML = value == null ? '—' : (unit ? (value + '<small>' + unit + '</small>') : String(value));
+        num.innerHTML = value == null
+          ? '<span class="kg-rec-pending">' + employeeTranslation('À établir') + '</span>'
+          : (unit ? (value + '<small>' + unit + '</small>') : String(value));
         const flagKey = key === 'night' ? 'bestNight' : (key === 'speed' ? 'bestSpeed' : null);
         if (isRecord) {
           tile.classList.add('is-record');
@@ -8167,6 +8192,14 @@ em, i, cite, dfn, var { font-style: normal; }
         }
 
         /* b) Records personnels */
+        const hasRecords = snap.paid > 0
+          || kgState.records.bestNight > 0
+          || kgState.records.streak > 0
+          || kgState.records.bestSpeed != null;
+        const recGrid = document.getElementById('kg-rec-grid');
+        const recEmpty = document.getElementById('kg-rec-empty');
+        if (recGrid) recGrid.hidden = !hasRecords;
+        if (recEmpty) recEmpty.hidden = hasRecords;
         const nightBeat = snap.paid > kgState.records.bestNight;
         const speedBeat = snap.speed != null && snap.speed > 0 && (kgState.records.bestSpeed == null || snap.speed < kgState.records.bestSpeed);
         kgSetRecTile('night',  Math.max(kgState.records.bestNight, snap.paid) || null, '', nightBeat);

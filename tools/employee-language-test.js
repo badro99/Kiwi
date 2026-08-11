@@ -24,6 +24,10 @@ ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|ا
 ok(/translateEmployeeElement\(document\.body\)/.test(page), 'the selector translates the app, not only its own label');
 ok(/MutationObserver[\s\S]*?characterData: true/.test(page), 'live content is translated after sync updates');
 ok(/employeeLocale\(\)/.test(page), 'dates and times follow the chosen language');
+ok(/id="kg-rec-empty"[^>]*>Vos records apparaîtront après votre première table réglée\.</.test(page), 'first-shift records use an explicit empty state');
+ok(!/id="kg-rec-(?:night|streak|speed)-num">—</.test(page), 'first-shift record tiles never render bare em-dashes');
+ok(/const hasRecords = snap\.paid > 0[\s\S]*?recGrid\.hidden = !hasRecords[\s\S]*?recEmpty\.hidden = hasRecords/.test(page), 'the record grid replaces the empty state after the first settlement');
+ok(/kiwi-newlogo\.svg\?v=2/.test(page), 'the current Serveur logo has a cache-busted asset URL');
 ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw), 'the employee PWA has a versioned cache');
 
 console.log(`✓ employee language gate green (${checks} checks: profile selector, persistence, live UI, locale, PWA)`);
