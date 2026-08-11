@@ -621,6 +621,16 @@
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
+    authorizeTill: function (code) {
+      code = String(code || '');
+      if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;
+      var roles = window.KiwiRoles;
+      if (!roles || typeof roles.opensTill !== 'function') return false;
+      return pinList.some(function (p) {
+        var same = String((p && (p.pin || p.code)) || '') === code;
+        return same && roles.opensTill((p && p.role) || '');
+      });
+    },
     authorizeManager: function (code) {
       code = String(code || '');
       if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;

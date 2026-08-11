@@ -11664,7 +11664,7 @@
       if (!r) { toast('Rapport indisponible'); return; }
       doPrintDayReport(r, 'AVANT CLÔTURE');
     });
-    $('#clo-close').addEventListener('click', () => requireManager('Fermeture de caisse', closeRegister));
+    $('#clo-close').addEventListener('click', () => requireTillOperator('Fermeture de caisse', closeRegister));
     $('#clo-continue').addEventListener('click', () => $('#cloture-modal').classList.remove('is-open'));
 
     /* ---- L'écran d'après-clôture : imprimer · réimprimer · continuer ---- */
@@ -12294,6 +12294,7 @@
     let   mgrBuffer  = '';
     let   mgrOnApprove = null;
     let   mgrBusy    = false;    // true during the success beat
+    let   mgrAccess  = 'manager';
 
     function renderMgrDots() {
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
@@ -12310,9 +12311,19 @@
     }
 
     function requireManager(actionLabel, onApprove) {
+      openAuthorization(actionLabel, onApprove, 'manager');
+    }
+
+    function requireTillOperator(actionLabel, onApprove) {
+      openAuthorization(actionLabel, onApprove, 'till');
+    }
+
+    function openAuthorization(actionLabel, onApprove, access) {
       mgrBuffer = '';
       mgrBusy = false;
+      mgrAccess = access === 'till' ? 'till' : 'manager';
       mgrOnApprove = typeof onApprove === 'function' ? onApprove : null;
+      $('#manager-modal-title').textContent = mgrAccess === 'till' ? 'Autorisation caisse' : 'Autorisation manager';
       $('#manager-modal-sub').textContent = actionLabel || 'Action à autoriser';
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
       mgrModal.classList.add('is-open');
@@ -12320,7 +12331,9 @@
       if (hint) {
         let demo = true;
         try { demo = !(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
-        hint.textContent = demo ? 'Démo locale · n’importe quel code' : 'Code manager ou propriétaire requis';
+        hint.textContent = demo ? 'Démo locale · n’importe quel code' : (mgrAccess === 'till'
+          ? 'Code caissier, manager ou propriétaire requis'
+          : 'Code manager ou propriétaire requis');
       }
       if (window.lucide) lucide.createIcons();
     }
@@ -12329,6 +12342,9 @@
       let protectedTill = false;
       try { protectedTill = !!(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
       if (!protectedTill) return true;
+      if (mgrAccess === 'till') {
+        try { return window.KiwiCaissePairing?.authorizeTill?.(code) === true; } catch (_) { return false; }
+      }
       try { return window.KiwiCaissePairing?.authorizeManager?.(code) === true; } catch (_) { return false; }
     }
 
@@ -12340,7 +12356,7 @@
         if (!managerCodeValid(mgrBuffer)) {
           mgrBusy = true;
           mgrModal.classList.add('is-error');
-          toast('Code manager incorrect ou impossible à vérifier');
+          toast((mgrAccess === 'till' ? 'Code caisse' : 'Code manager') + ' incorrect ou impossible à vérifier');
           setTimeout(() => {
             mgrModal.classList.remove('is-error');
             mgrBuffer = ''; mgrBusy = false; renderMgrDots();
@@ -12355,7 +12371,7 @@
           setTimeout(() => d.classList.add('is-success'), i * 70);
         });
         setTimeout(() => {
-          authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
+          if (mgrAccess === 'manager') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
           closeManagerModal();
           if (approve) approve();
         }, 520);
