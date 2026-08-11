@@ -1,134 +1,182 @@
 /* ============================================================================
-   « LE RELEVÉ » — la peau de l'assistant financier
+   ASSISTANT — la peau, refaite au standard de la page d'accueil
    ----------------------------------------------------------------------------
-   L'écran d'avant était une interface de chat : un avatar, une bulle, des
-   cartes blanches. Ça dit « Kiwi bavarde ». Kiwi n'est pas un bavard, c'est un
-   instrument. Alors la forme est celle d'un relevé bancaire : la question
-   devient une mention en marge, la réponse un folio numéroté tenu par un filet
-   de reliure, le chiffre principal passe en serif d'affichage, les autres
-   descendent dans un tableau réglé, et la provenance signe le pied de page.
+   La version précédente (« le relevé ») empilait Instrument Serif pour les
+   titres, JetBrains Mono en capitales pour chaque étiquette, et une troisième
+   voix — Inter Tight, héritée par défaut — pour le corps des réponses. Trois
+   familles, aucune parenté, un rythme improvisé (9,5 / 10 / 11,5 / 12 / 12,5 /
+   13,5 / 14,5 / 15,5 / 17 / 21 / 25 / 34 / 58 px). C'est exactement la signature
+   « fintech éditoriale » que produit une machine à qui l'on demande du luxe.
 
-   Ce fichier est une COUCHE. Il ne touche à aucune logique. Il est piloté par
-   `<html data-kiwi-ai="releve">` que pose `assets/agent-skin.js` ; retirer le
-   <link> et le <script> de dashboard.html suffit à revenir à `agent.js` nu.
+   Ce fichier repart de la seule référence qui fasse autorité ici : la page
+   d'accueil en production. Sa discipline tient en quatre points, et ce sont
+   les quatre règles de cette feuille.
+
+     1. UNE SEULE VOIX. La page d'accueil est en DM Sans, du 12 px au 48 px,
+        titres compris. On ne peut pas l'importer : le tableau de bord ne charge
+        que quatre familles (Inter Tight, Instrument Serif, IBM Plex Sans
+        Arabic, JetBrains Mono) et la charte les verrouille. L'équivalent
+        interne de « une seule voix » est donc Inter Tight — `var(--sans)`,
+        déjà le corps de tout le tableau de bord. L'héritage ne suffit
+        pourtant pas : `agent.js` injecte son propre `<style id="fa-css">`
+        au moment de l'exécution, donc APRÈS ce `<link>`, et y déclare
+        'Instrument Serif' sur deux titres et `var(--mono)` sur le pavé
+        numérique. Une feuille sans aucune `font-family` les laisse passer.
+        Le §0bis ci-dessous les nomme un par un et les ramène à `--sans` :
+        ce sont les SEULES déclarations de famille du fichier, et elles ne
+        servent qu'à imposer la voix unique, jamais à en ajouter une.
+
+     2. LES CHIFFRES SONT TABULAIRES, PAS MONOSPACÉS. On voulait la chasse fixe
+        pour aligner les colonnes ; on a pris une deuxième famille pour ça.
+        Inter Tight a des chiffres tabulaires — `font-variant-numeric` fait le
+        travail sans changer de voix.
+
+     3. PAS DE CAPITALES INTERLETTRÉES. Treize règles en mono, douze en
+        capitales, entre 9,5 et 11,5 px avec 0,09 à 0,18 em d'interlettrage :
+        illisible et bruyant. Les étiquettes sont en 12 px, casse de phrase.
+
+     4. UNE ÉCHELLE, PAS DES VALEURS. Type : 12 / 14 / 16 / 20 / 24 / 32 / 48.
+        Espace : 4 / 8 / 12 / 16 / 24 / 32 / 48. Rien entre les deux.
+
+   ── La surface : le verre, comme sur la page d'accueil ────────────────────
+   `.kiwi-glass` y vaut : rayon 14 px, filet `#ffffff1a`, ombre
+   `0 26px 64px -28px #0520188c`, `backdrop-filter` flou + saturation. On le
+   reprend au flou simple plutôt qu'au filtre SVG `url(#kiwi-lg)` : si le
+   filtre n'est pas dans le document, l'`url()` invalide TOUTE la déclaration
+   `backdrop-filter` et la carte perd son verre en silence. Le flou natif rend
+   la même chose sans cette dépendance.
 
    ── Spécificité : pourquoi `html:root[…]` et pas `html[…]` ────────────────
    `agent.js` injecte sa feuille (`<style id="fa-css">`) à l'exécution, donc
-   APRÈS ce <link>. À spécificité égale c'est lui qui gagne. Ses règles claires
-   (`.fa-thread`) valent (0,1,0) et perdaient déjà — mais son bloc sombre
+   APRÈS ce <link>. À spécificité égale c'est lui qui gagne. Son bloc sombre
    (`html[data-theme="dark"] .fa-thread`, ligne 4452 et suivantes) vaut (0,2,1),
-   exactement comme `html[data-kiwi-ai="releve"] .fa-thread`. Égalité, ordre
-   source, `agent.js` l'emportait : c'est pour ça que le mode sombre rendait à
-   plat, sans filets, sans rail, sans tableau réglé. Le `:root` ajoute un point
-   de spécificité (0,3,1) et rend cette peau autoritaire dans les deux climats,
-   sans dupliquer quinze règles. Ne le retirez pas.
+   exactement comme `html[data-kiwi-ai="releve"] .fa-thread` : égalité, ordre
+   source, `agent.js` l'emportait — c'est pour ça que le mode sombre rendait à
+   plat. Le `:root` ajoute un point (0,3,1) et rend cette peau autoritaire dans
+   les deux climats sans dupliquer quinze règles. Ne le retirez pas.
 
    ── Jetons : pourquoi chaque `--vx-*` porte un repli ──────────────────────
    Les jetons Vexel sont déclarés sur `body.design-vexel[data-vexel-mode=…]`.
    Hors Vexel ils n'existent pas — et une déclaration qui référence une custom
    property indéfinie devient invalide À LA SUBSTITUTION, c'est-à-dire APRÈS
    avoir gagné la cascade : rien en dessous ne reprend la main, la surface perd
-   sa bordure en silence. D'où la règle : jamais de `var(--vx-…)` sans repli.
-   Et comme la substitution est paresseuse, le bloc sombre ne redéfinit que les
-   noms `--rlv-*-fb` : Vexel garde la main quand il est là, le repli sert quand
-   il ne l'est pas.
+   sa bordure en silence. Jamais de `var(--vx-…)` sans repli.
+
+   ── Couleur ───────────────────────────────────────────────────────────────
+   Aucune valeur hors charte. L'ancienne peau introduisait #8a6200, #b3392f,
+   #e0a63a et #ff8a7a en dur ; `--warning` et `--danger` existent déjà dans
+   `tokens.css` ET sont redéfinis par climat dans `design-vexel.css`. On les
+   consomme. Le mint ne sert qu'à trois choses : une variation positive, un
+   état actif, l'action primaire. Nulle part ailleurs.
+
+   L'attribut `<html data-kiwi-ai="releve">` reste l'unique interrupteur, posé
+   par `assets/agent-skin.js` ; ce fichier ne touche à aucune logique.
    ========================================================================= */
 
 html:root[data-kiwi-ai="releve"] .fa-drawer {
-  /* Replis — la valeur quand Vexel n'est pas là. Le bloc §13 les redéclare
+  /* Replis — la valeur quand Vexel n'est pas là. Le bloc §12 les redéclare
      pour le climat sombre ; les noms sans `-fb` n'ont pas à être touchés. */
-  --rlv-page-fb: var(--paper);
-  --rlv-sheet-fb: color-mix(in srgb, var(--surface) 76%, var(--paper));
-  --rlv-rule-fb: color-mix(in srgb, var(--ink) 11%, transparent);
-  --rlv-rule-soft-fb: color-mix(in srgb, var(--ink) 6%, transparent);
-  --rlv-lit-fb: color-mix(in srgb, var(--ink) 18%, transparent);
-  --rlv-wash-fb: color-mix(in srgb, var(--atlas) 6%, transparent);
-  --rlv-bloom-fb: color-mix(in srgb, var(--atlas) 22%, transparent);
-  --rlv-shadow-fb: color-mix(in srgb, var(--riad) 62%, transparent);
-  --rlv-on-accent-fb: var(--paper);
-  --rlv-figure-fb: var(--riad);
-  --rlv-underline-fb: color-mix(in srgb, var(--mint) 34%, transparent);
-  --rlv-cite-bg-fb: color-mix(in srgb, var(--mint) 42%, transparent);
-  --rlv-cite-ink-fb: var(--riad);
-  --rlv-lit-bg-fb: color-mix(in srgb, var(--mint) 26%, transparent);
-  --rlv-warn-fb: #8a6200;
-  --rlv-bad-fb: #b3392f;
+  --ai-page-fb: var(--paper);
+  --ai-sheet-fb: color-mix(in srgb, var(--surface) 72%, transparent);
+  --ai-glass-fb: color-mix(in srgb, var(--surface) 80%, transparent);
+  --ai-line-fb: color-mix(in srgb, var(--ink) 10%, transparent);
+  --ai-line-soft-fb: color-mix(in srgb, var(--ink) 6%, transparent);
+  --ai-line-lit-fb: color-mix(in srgb, var(--ink) 20%, transparent);
+  --ai-wash-fb: color-mix(in srgb, var(--atlas) 6%, transparent);
+  --ai-bloom-fb: color-mix(in srgb, var(--atlas) 22%, transparent);
+  --ai-shadow-fb: color-mix(in srgb, var(--riad) 55%, transparent);
+  --ai-on-accent-fb: var(--paper);
+  --ai-figure-fb: var(--riad);
+  --ai-cite-fb: color-mix(in srgb, var(--mint) 40%, transparent);
+  --ai-lit-bg-fb: color-mix(in srgb, var(--mint) 22%, transparent);
 
   /* Surfaces et filets — Vexel pilote quand il est présent. */
-  --rlv-page: var(--vx-overlay-bg, var(--rlv-page-fb));
-  --rlv-sheet: var(--vx-ai-bg, var(--rlv-sheet-fb));
-  --rlv-rule: var(--vx-track, var(--rlv-rule-fb));
-  --rlv-rule-soft: var(--rlv-rule-soft-fb);
-  --rlv-lit: var(--vx-card-hover-border, var(--rlv-lit-fb));
-  --rlv-wash: var(--vx-hover-bg, var(--rlv-wash-fb));
-  --rlv-bloom: var(--vx-accent-22, var(--rlv-bloom-fb));
-  --rlv-accent: var(--vx-accent, var(--atlas));
-  --rlv-on-accent: var(--vx-primary-ink, var(--rlv-on-accent-fb));
-  --rlv-shadow: var(--vx-shadow-heavy, var(--rlv-shadow-fb));
+  --ai-page: var(--vx-overlay-bg, var(--ai-page-fb));
+  --ai-sheet: var(--vx-ai-bg, var(--ai-sheet-fb));
+  --ai-glass: var(--ai-glass-fb);
+  --ai-line: var(--vx-track, var(--ai-line-fb));
+  --ai-line-soft: var(--ai-line-soft-fb);
+  --ai-line-lit: var(--vx-card-hover-border, var(--ai-line-lit-fb));
+  --ai-wash: var(--vx-hover-bg, var(--ai-wash-fb));
+  --ai-bloom: var(--vx-accent-22, var(--ai-bloom-fb));
+  --ai-accent: var(--vx-accent, var(--atlas));
+  --ai-on-accent: var(--vx-primary-ink, var(--ai-on-accent-fb));
+  --ai-shadow: var(--vx-shadow-heavy, var(--ai-shadow-fb));
+  --ai-figure: var(--ai-figure-fb);
+  --ai-cite: var(--ai-cite-fb);
+  --ai-lit-bg: var(--ai-lit-bg-fb);
 
-  /* Encre — pas d'équivalent Vexel, le climat suffit. */
-  --rlv-figure: var(--rlv-figure-fb);
-  --rlv-underline: var(--rlv-underline-fb);
-  --rlv-cite-bg: var(--rlv-cite-bg-fb);
-  --rlv-cite-ink: var(--rlv-cite-ink-fb);
-  --rlv-lit-bg: var(--rlv-lit-bg-fb);
-  --rlv-warn: var(--rlv-warn-fb);
-  --rlv-bad: var(--rlv-bad-fb);
-
-  --rlv-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --rlv-serif: 'Instrument Serif', Georgia, serif;
-  --rlv-ease: cubic-bezier(0.34, 1.45, 0.5, 1);
+  /* Forme et durée — les deux valeurs de la page d'accueil, telles quelles. */
+  --ai-r: 14px;
+  --ai-drop: 0 26px 64px -28px var(--ai-shadow);
+  --ai-ease: cubic-bezier(0, 0, .2, 1);
+  --ai-dur: .15s;
 }
 
 /* ─── §0 · le verre ───────────────────────────────────────────────────────
    `agent.js` peint `.fa`, `.fa-thread`, `.fa-dock`, `.fa-context` et l'en-tête
    en `--paper` opaque : une feuille pleine posée DANS une coquille que Vexel
-   floute déjà (`body.design-vexel .kiwi-drawer` — backdrop-filter: blur(20px)).
-   On rend l'intérieur transparent et on ne peint la coquille qu'une fois : le
-   verre traverse enfin tout l'assistant. `--rlv-page` reprend la valeur exacte
-   que Vexel poserait, donc rien ne change hors Vexel non plus.               */
-html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer { background: var(--rlv-page); }
+   floute déjà. On rend l'intérieur transparent et on ne peint la coquille
+   qu'une fois. `--ai-page` reprend la valeur exacte que Vexel poserait, donc
+   rien ne change hors Vexel non plus.                                        */
+html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer { background: var(--ai-page); }
 html:root[data-kiwi-ai="releve"] .fa,
 html:root[data-kiwi-ai="releve"] .fa-thread,
 html:root[data-kiwi-ai="releve"] .fa-dock,
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head { background: none; }
 
+/* ─── §0bis · la voix unique ──────────────────────────────────────────────
+   Les cinq seules `font-family` du fichier. Elles n'ajoutent pas de voix,
+   elles en retirent : `agent.js` déclare 'Instrument Serif' sur les deux
+   titres et `var(--mono)` sur les trois surfaces de la calculatrice, dans
+   un `<style>` injecté après ce `<link>` — à égalité de spécificité c'est
+   lui qui gagne. Il faut donc les nommer. `--sans` = Inter Tight, le corps
+   de tout le tableau de bord ; les chiffres restent alignés par
+   `font-variant-numeric`, pas par une chasse fixe.                         */
+html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head h3,
+html:root[data-kiwi-ai="releve"] .fa-hero-h,
+html:root[data-kiwi-ai="releve"] .fa-kpdisplay,
+html:root[data-kiwi-ai="releve"] .fa-kpgrid button,
+html:root[data-kiwi-ai="releve"] .fa-keypad-card {
+  font-family: var(--sans);
+}
+html:root[data-kiwi-ai="releve"] .fa-kpdisplay,
+html:root[data-kiwi-ai="releve"] .fa-kpgrid button {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0;
+}
+
 /* ─── §1 · le bandeau ─────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
-  border-bottom: 1px solid var(--rlv-rule);
-  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ai-line);
+  padding-bottom: 16px;
 }
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head h3 {
-  font-family: var(--rlv-serif);
-  font-size: clamp(26px, 2.4vw, 34px);
-  font-weight: 400;
-  letter-spacing: -0.012em;
-  line-height: 1.02;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 24px;
 }
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head p {
-  font-family: var(--rlv-mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--n-500);
-  margin-top: 7px;
+  margin-top: 4px;
 }
 /* Dégagé du bouton de fermeture, qui occupe le coin avec sa zone de clic. */
 html:root[data-kiwi-ai="releve"] .rlv-status {
   position: absolute; inset-inline-end: 122px; top: 50%; transform: translateY(-50%);
   display: flex; align-items: center; gap: 8px;
-  font-family: var(--rlv-mono); font-size: 10px; letter-spacing: 0.13em;
-  text-transform: uppercase; color: var(--n-500); pointer-events: none;
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500); pointer-events: none;
 }
+/* Point d'état, pas balise clignotante : il dit « en direct » une fois pour
+   toutes. L'ancienne pulsation de 3,4 s était du décor qui bougeait tout
+   seul dans le coin de l'œil du commerçant. */
 html:root[data-kiwi-ai="releve"] .rlv-status i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--rlv-accent); flex: none;
-}
-@media (prefers-reduced-motion: no-preference) {
-  html:root[data-kiwi-ai="releve"] .rlv-status i { animation: rlvPulse 3.4s ease-in-out infinite; }
-  @keyframes rlvPulse {
-    0%, 100% { box-shadow: 0 0 0 0 var(--rlv-bloom); }
-    50%      { box-shadow: 0 0 0 7px transparent; }
-  }
+  width: 6px; height: 6px; border-radius: 50%; background: var(--ai-accent); flex: none;
 }
 @media (max-width: 900px) {
   html:root[data-kiwi-ai="releve"] .rlv-status { display: none; }
@@ -137,434 +185,415 @@ html:root[data-kiwi-ai="releve"] .rlv-status i {
 /* ─── §2 · le champ ───────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-thread {
   position: relative;
-  padding: 0 clamp(20px, 7%, 96px) 40px;
-}
-/* La coupole : le même vocabulaire que les dômes Vexel du tableau de bord. */
-html:root[data-kiwi-ai="releve"] .fa-thread::before {
-  content: ""; position: absolute; inset: 0 0 auto; height: 340px;
-  pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(120% 100% at 16% -18%,
-      var(--vx-dome-main, color-mix(in srgb, var(--atlas) 13%, transparent)), transparent 60%),
-    radial-gradient(95% 85% at 86% -26%,
-      var(--vx-dome-side, color-mix(in srgb, var(--mint) 20%, transparent)), transparent 56%);
-  opacity: .62;
-}
-@media (prefers-reduced-motion: no-preference) {
-  html:root[data-kiwi-ai="releve"] .fa-thread::before {
-    animation: rlvDawn 34s ease-in-out infinite alternate;
-  }
-  @keyframes rlvDawn {
-    from { transform: translate3d(-3%, -2%, 0) scale(1.04); opacity: .38; }
-    to   { transform: translate3d( 3%,  2%, 0) scale(1.12); opacity: .62; }
-  }
+  padding: 0 32px 48px;
 }
 html:root[data-kiwi-ai="releve"] .fa-thread-in {
   position: relative; z-index: 1;
-  max-width: 780px; gap: 0; padding-top: 30px;
+  max-width: 720px; gap: 0; padding-top: 24px;
 }
 
-/* ─── §3 · la question ────────────────────────────────────────────────── */
-html:root[data-kiwi-ai="releve"] .fa-msg.user { display: block; margin: 42px 0 0; }
+/* ─── §3 · la question ────────────────────────────────────────────────────
+   Une question posée reste une phrase. En capitales monospacées interlettrées
+   elle devenait un intitulé de formulaire administratif — et c'était la
+   première chose que l'œil rencontrait à chaque tour.                        */
+html:root[data-kiwi-ai="releve"] .fa-msg.user { display: block; margin: 32px 0 0; }
 html:root[data-kiwi-ai="releve"] .fa-msg.user:first-child { margin-top: 0; }
 html:root[data-kiwi-ai="releve"] .fa-msg.user .fa-bubble {
-  max-width: none; background: none; border: none; border-radius: 0;
-  padding: 0 0 0 20px; box-shadow: none;
-  border-inline-start: 2px solid var(--rlv-accent);
-  font-family: var(--rlv-mono); font-size: 11.5px; line-height: 1.6;
-  letter-spacing: 0.055em; text-transform: uppercase;
-  color: var(--n-600); font-weight: 500;
+  max-width: 90%;
+  background: var(--ai-wash);
+  border: 1px solid var(--ai-line-soft);
+  border-radius: var(--ai-r);
+  padding: 12px 16px;
+  box-shadow: none;
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  letter-spacing: 0; text-transform: none;
+  color: var(--n-600);
 }
 
-/* ─── §4 · la réponse ─────────────────────────────────────────────────── */
+/* ─── §4 · la réponse ─────────────────────────────────────────────────────
+   Une réponse, une surface. L'ancienne version la découpait en quatre zones
+   réglées par des filets — la mise en page d'un extrait de compte, appliquée
+   à une phrase.                                                              */
 html:root[data-kiwi-ai="releve"] .fa-msg.agent {
   display: block; position: relative;
-  margin: 20px 0 0; padding: 26px 0 30px 20px;
-  border-inline-start: 1px solid var(--rlv-rule);
-}
-/* Le folio se tient DANS la marge, à gauche du filet de reliure — jamais par
-   dessus. La version précédente le centrait sur le filet et perçait un trou en
-   `--rlv-page` pour l'interrompre ; ça supposait que la coquille était peinte
-   avec ce token. Elle ne l'est pas : `assets/liquid-glass.js` peint
-   `.kiwi-drawer` au runtime (verre réel, `backdrop-filter`), donc aucune
-   couleur opaque ne peut coïncider avec le fond — le trou se voyait comme une
-   tache sombre. Un folio dans la marge est de toute façon la forme juste :
-   c'est là que les registres numérotent leurs feuillets. */
-html:root[data-kiwi-ai="releve"] .fa-msg.agent[data-rlv-turn]::before {
-  content: attr(data-rlv-turn);
-  position: absolute; inset-inline-start: 0; top: 26px;
-  transform: translateX(calc(-100% - 9px));
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.08em;
-  color: var(--n-400); background: none;
-  padding: 3px 0; line-height: 1; text-align: end;
-}
-html:root[data-kiwi-ai="releve"] [dir="rtl"] .fa-msg.agent[data-rlv-turn]::before {
-  transform: translateX(calc(100% + 9px));
+  margin: 16px 0 0; padding: 0; border: none;
 }
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-avatar { display: none; }
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble {
-  max-width: none; padding: 0; background: none; border: none; box-shadow: none;
+  max-width: none;
+  padding: 24px;
+  background: var(--ai-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  backdrop-filter: blur(14px) saturate(1.7);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-r);
+  box-shadow: var(--ai-drop);
+  isolation: isolate;
 }
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child {
-  font-size: 15.5px; line-height: 1.66; color: var(--ink-soft); max-width: 62ch;
+  font-size: 16px; line-height: 26px; color: var(--ink-soft); max-width: 64ch;
 }
+/* Le gras porte l'emphase à lui seul. Le marqueur `inset 0 -0.42em` soulignait
+   chaque nombre d'un aplat mint : sur trois chiffres dans un paragraphe, la
+   phrase devenait un texte surligné au feutre. */
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child b {
-  font-weight: 500; color: var(--rlv-figure);
-  box-shadow: inset 0 -0.42em 0 var(--rlv-underline);
+  font-weight: 600; color: var(--ai-figure); box-shadow: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble {
+    animation: aiRise 180ms var(--ai-ease) both;
+  }
+  @keyframes aiRise {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
 }
 
-/* ─── §5 · les chiffres ───────────────────────────────────────────────── */
+/* ─── §5 · les chiffres ───────────────────────────────────────────────────
+   Le chiffre de tête à 48 px, les autres à 20 px, les intitulés à 12 px : une
+   hiérarchie à trois marches au lieu d'une échelle de douze valeurs. Tabulaire
+   partout, pour que deux montants superposés s'alignent sur la virgule.      */
 html:root[data-kiwi-ai="releve"] .fa-stats {
-  display: block; margin-top: 26px; border-top: 1px solid var(--rlv-rule);
+  display: block; margin-top: 24px; padding-top: 16px;
+  border-top: 1px solid var(--ai-line-soft);
 }
 html:root[data-kiwi-ai="releve"] .fa-stat {
   display: grid; grid-template-columns: 1fr auto; align-items: baseline;
-  gap: 4px 22px; padding: 13px 2px;
+  gap: 4px 24px; padding: 8px 0;
   background: none; border: none; border-radius: 0;
-  border-bottom: 1px solid var(--rlv-rule-soft);
 }
 html:root[data-kiwi-ai="releve"] .fa-stat .l {
-  grid-column: 1; font-family: var(--rlv-mono); font-size: 9.5px;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-500);
+  grid-column: 1; font-size: 12px; line-height: 16px;
+  letter-spacing: 0; text-transform: none; color: var(--n-500);
 }
 html:root[data-kiwi-ai="releve"] .fa-stat .v {
-  grid-column: 2; grid-row: 1; font-size: 17px; font-weight: 550; color: var(--ink);
-  font-variant-numeric: tabular-nums; letter-spacing: -0.005em;
+  grid-column: 2; grid-row: 1;
+  font-size: 20px; line-height: 26px; font-weight: 500; color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.02em;
   text-align: end; white-space: nowrap;
 }
 html:root[data-kiwi-ai="releve"] .fa-stat .h {
-  grid-column: 1 / -1; font-size: 11.5px; color: var(--n-500); line-height: 1.5;
+  grid-column: 1 / -1; font-size: 12px; line-height: 16px; color: var(--n-500);
 }
 html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead {
-  display: block; padding: 22px 2px 20px; border-bottom: 1px solid var(--rlv-rule);
+  display: block; padding: 0 0 16px; border-bottom: 1px solid var(--ai-line-soft);
+  margin-bottom: 8px;
 }
 html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v {
   display: block; text-align: start;
-  font-family: var(--rlv-serif); font-weight: 400;
-  font-size: clamp(38px, 5.6vw, 58px); line-height: 0.98;
-  letter-spacing: -0.022em; color: var(--rlv-figure); margin-top: 9px;
+  font-size: 48px; line-height: 48px; font-weight: 500;
+  letter-spacing: -0.04em; color: var(--ai-figure); margin-top: 8px;
 }
-html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .h { margin-top: 11px; font-size: 12px; }
+html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .h { margin-top: 12px; }
 
-/* ─── §6 · le jugement ────────────────────────────────────────────────── */
+/* ─── §6 · le jugement ────────────────────────────────────────────────────
+   `--warning` et `--danger` viennent de `tokens.css` et sont redéfinis par
+   climat dans `design-vexel.css` : pas une couleur en dur ici.               */
 html:root[data-kiwi-ai="releve"] .fa-verdict {
-  background: none; border-radius: 0; padding: 0 0 0 17px; margin-top: 22px;
-  font-size: 14px; line-height: 1.6;
+  background: none; border-radius: 0; padding: 0 0 0 12px; margin-top: 16px;
+  font-size: 14px; line-height: 20px;
   border-inline-start: 2px solid currentColor;
 }
-html:root[data-kiwi-ai="releve"] .fa-verdict.good { color: var(--rlv-accent); }
-html:root[data-kiwi-ai="releve"] .fa-verdict.warn { color: var(--rlv-warn); }
-html:root[data-kiwi-ai="releve"] .fa-verdict.bad  { color: var(--rlv-bad); }
+html:root[data-kiwi-ai="releve"] .fa-verdict.good { color: var(--ai-accent); }
+html:root[data-kiwi-ai="releve"] .fa-verdict.warn { color: var(--warning, #D99A2B); }
+html:root[data-kiwi-ai="releve"] .fa-verdict.bad  { color: var(--danger, #C94A3A); }
 
 /* ─── §7 · la réserve, puis la signature ──────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-note {
-  margin-top: 18px; font-size: 12px; line-height: 1.62; color: var(--n-500); max-width: 64ch;
+  margin-top: 16px; font-size: 14px; line-height: 20px; color: var(--n-500); max-width: 64ch;
 }
 html:root[data-kiwi-ai="releve"] .fa-meta {
-  margin-top: 20px; padding-top: 11px; border-top: 1px solid var(--rlv-rule-soft);
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--n-400); opacity: 1;
-  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
-}
-html:root[data-kiwi-ai="releve"] .fa-meta::before {
-  content: ""; width: 5px; height: 5px; border-radius: 50%; flex: none;
-  background: var(--rlv-accent); opacity: .6; transform: translateY(-1px);
+  margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--ai-line-soft);
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500); opacity: 1;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
 }
 
 /* ─── §8 · les relances ───────────────────────────────────────────────── */
-html:root[data-kiwi-ai="releve"] .fa-follow { gap: 7px; margin-top: 22px; }
+html:root[data-kiwi-ai="releve"] .fa-follow { gap: 8px; margin-top: 16px; }
 html:root[data-kiwi-ai="releve"] .fa-follow button {
-  background: none; border: 1px solid var(--rlv-rule); color: var(--n-600);
-  font-size: 12px; font-weight: 450; padding: 9px 15px; border-radius: 999px;
-  transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .24s ease;
+  background: none; border: 1px solid var(--ai-line); color: var(--n-600);
+  font-size: 14px; line-height: 20px; font-weight: 500; padding: 8px 16px;
+  border-radius: 999px;
+  transition: color var(--ai-dur) var(--ai-ease),
+              border-color var(--ai-dur) var(--ai-ease),
+              background var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-follow button:hover {
   transform: none;
-  border-color: var(--rlv-accent); color: var(--rlv-accent);
-  background: var(--rlv-wash);
-  box-shadow: 0 0 26px -14px var(--rlv-bloom);
+  border-color: var(--ai-line-lit); color: var(--ink); background: var(--ai-wash);
+  box-shadow: none;
 }
-/* Le bouton « demander au modèle » est la seule action primaire de l'écran.
-   Il était peint en `--riad` sur `--paper` : sous Vexel sombre `--riad` vaut
-   rgba(0,0,0,.42) et `--paper` vaut #000 — un bouton noir, texte noir, sur
-   fond noir. Il passe sur l'accent du climat, qui est lisible dans les deux. */
-html:root[data-kiwi-ai="releve"] .fa-follow .fa-llm-btn {
-  background: var(--rlv-accent); border-color: var(--rlv-accent); color: var(--rlv-on-accent);
-}
+/* Le bouton « demander au modèle » est la seule action primaire de l'écran —
+   donc le seul endroit du fil où le mint est plein. Il était peint en `--riad`
+   sur `--paper` : sous Vexel sombre `--riad` vaut rgba(0,0,0,.42) et `--paper`
+   vaut #000 — un bouton noir, texte noir, sur fond noir. */
+html:root[data-kiwi-ai="releve"] .fa-follow .fa-llm-btn,
 html:root[data-kiwi-ai="releve"] .fa-follow .fa-llm-btn:hover {
-  background: var(--rlv-accent); border-color: var(--rlv-accent); color: var(--rlv-on-accent);
-  box-shadow: 0 0 34px -12px var(--rlv-bloom);
+  background: var(--ai-accent); border-color: var(--ai-accent); color: var(--ai-on-accent);
+  box-shadow: none;
 }
 
 /* ─── §9 · l'ancrage visible ──────────────────────────────────────────────
    Un chiffre cité dans la réponse et présent dans le rail est souligné ; le
    survol de l'un allume l'autre. C'est un rapprochement de chaînes, pas un
    graphe de dépendances : une interface qui prétend montrer la provenance et
-   se trompe est pire que pas d'interface du tout.                            */
+   se trompe est pire que pas d'interface du tout. Au repos le lien ne coûte
+   qu'un filet sous le chiffre — il ne se peint qu'au survol.                 */
 html:root[data-kiwi-ai="releve"] .rlv-cite {
   background: none; color: inherit; cursor: help;
-  border-bottom: 1px solid color-mix(in srgb, var(--rlv-accent) 40%, transparent);
-  transition: background .22s ease, color .22s ease;
+  border-bottom: 1px solid var(--ai-line-lit);
+  transition: background var(--ai-dur) var(--ai-ease),
+              border-color var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .rlv-cite.is-lit,
 html:root[data-kiwi-ai="releve"] .rlv-cite:hover {
-  background: var(--rlv-cite-bg);
-  border-bottom-color: var(--rlv-accent);
-  color: var(--rlv-cite-ink);
+  background: var(--ai-cite);
+  border-bottom-color: var(--ai-accent);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.is-cited,
 html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-cited { position: relative; }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.is-cited::after,
 html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-cited::after {
-  content: ""; position: absolute; inset-inline-start: -13px; top: 50%;
-  width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%;
-  background: var(--rlv-accent);
+  content: ""; position: absolute; inset-inline-start: -12px; top: 50%;
+  width: 4px; height: 4px; margin-top: -2px; border-radius: 50%;
+  background: var(--ai-accent);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.is-lit,
-html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-lit { background: var(--rlv-lit-bg); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-lit { background: var(--ai-lit-bg); }
 
 /* ─── §10 · le volet ──────────────────────────────────────────────────────
    `--vx-ai-bg` existe dans les deux climats Vexel et n'avait aucun
    consommateur : c'était un crochet réservé à cette surface, jamais branché.  */
 html:root[data-kiwi-ai="releve"] .fa-context {
-  background: var(--rlv-sheet);
-  border-inline-start: 1px solid var(--rlv-rule);
+  background: var(--ai-sheet);
+  border-inline-start: 1px solid var(--ai-line);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-eyebrow {
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--n-400);
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-biz {
-  font-family: var(--rlv-serif); font-weight: 400; font-size: 25px;
-  letter-spacing: -0.012em; line-height: 1.06; margin-top: 9px; color: var(--ink);
+  font-size: 20px; line-height: 26px; font-weight: 500;
+  letter-spacing: -0.02em; margin-top: 4px; color: var(--ink);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-sub {
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--n-400); margin-top: 8px;
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500); margin-top: 4px;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpis {
-  margin-top: 22px; border-top: 1px solid var(--rlv-rule);
+  margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--ai-line-soft);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi {
   display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 16px;
-  padding: 13px 4px; border: none; border-bottom: 1px solid var(--rlv-rule-soft);
-  border-radius: 0; background: none;
-  transition: background .2s ease, border-color .2s ease;
+  padding: 12px 8px; border: none; border-radius: 8px; background: none;
+  transition: background var(--ai-dur) var(--ai-ease);
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-kpi .k { font-size: 12.5px; color: var(--n-600); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-kpi .k {
+  font-size: 14px; line-height: 20px; color: var(--n-600);
+}
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi .v {
-  font-size: 14.5px; font-weight: 550; color: var(--ink);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: 14px; line-height: 20px; font-weight: 500; color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.hl .v { color: var(--rlv-accent); }
-/* Le survol lève par la lumière, pas par un aplat : c'est la doctrine Vexel.
-   L'ancien remplissage `--mint 16%` produisait le bloc vert plein du rail. */
+html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.hl .v { color: var(--ai-accent); }
+/* Le survol lève par la lumière, pas par un aplat : c'est la doctrine Vexel. */
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi:hover,
-html:root[data-kiwi-ai="releve"] .fa-ctx-item:hover {
-  background: var(--rlv-wash);
-  border-bottom-color: var(--rlv-lit);
-}
+html:root[data-kiwi-ai="releve"] .fa-ctx-item:hover { background: var(--ai-wash); }
 html:root[data-kiwi-ai="releve"] .fa-ctx-viz-h,
 html:root[data-kiwi-ai="releve"] .fa-ctx-gh {
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--n-500);
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500);
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-bar { border-radius: 2px; overflow: hidden; height: 5px; }
+html:root[data-kiwi-ai="releve"] .fa-ctx-bar { border-radius: 2px; overflow: hidden; height: 4px; }
 /* Le bouton « trésorerie nette » était un dégradé atlas→riad : sous Vexel
-   sombre il fond vers rgba(0,0,0,.42), donc il s'éteint par le bas. Il devient
-   une ligne de relevé comme les autres, avec son chiffre à l'accent. */
+   sombre il fond vers rgba(0,0,0,.42), donc il s'éteint par le bas. C'est le
+   chiffre le plus important du volet — il devient la seule carte de verre du
+   rail, et le chiffre porte seul l'emphase. */
 html:root[data-kiwi-ai="releve"] .fa-ctx-net {
-  background: none; color: var(--ink);
-  border: none; border-top: 1px solid var(--rlv-rule);
-  border-bottom: 1px solid var(--rlv-rule-soft);
-  border-radius: 0; box-shadow: none;
-  margin-top: 20px; padding: 16px 4px;
-  transition: background .2s ease;
+  background: var(--ai-glass);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  color: var(--ink);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-r);
+  box-shadow: none;
+  margin-top: 24px; padding: 16px;
+  transition: border-color var(--ai-dur) var(--ai-ease);
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-net:hover { transform: none; background: var(--rlv-wash); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-net:hover {
+  transform: none; border-color: var(--ai-line-lit);
+}
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .k {
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--n-500); opacity: 1;
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500); opacity: 1;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .v {
-  font-family: var(--rlv-serif); font-weight: 400; font-size: 34px;
-  line-height: 1; letter-spacing: -0.02em; color: var(--rlv-figure); margin-top: 8px;
+  font-size: 32px; line-height: 32px; font-weight: 500;
+  letter-spacing: -0.04em; color: var(--ai-figure); margin-top: 8px;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .s {
-  font-size: 11.5px; color: var(--n-500); opacity: 1; margin-top: 6px;
+  font-size: 12px; line-height: 16px; color: var(--n-500); opacity: 1; margin-top: 8px;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-more {
-  border: 1px solid var(--rlv-rule); background: none; border-radius: 999px;
-  font-family: var(--rlv-mono); font-size: 10px; letter-spacing: 0.11em;
-  text-transform: uppercase;
-  transition: color .2s ease, border-color .2s ease, background .2s ease;
+  border: 1px solid var(--ai-line); background: none; border-radius: 999px;
+  font-size: 12px; line-height: 16px; letter-spacing: 0; text-transform: none;
+  transition: color var(--ai-dur) var(--ai-ease),
+              border-color var(--ai-dur) var(--ai-ease),
+              background var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-more:hover {
-  border-color: var(--rlv-accent); color: var(--rlv-accent); background: var(--rlv-wash);
+  border-color: var(--ai-line-lit); color: var(--ink); background: var(--ai-wash);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-trust {
-  border-top: 1px solid var(--rlv-rule-soft); padding-top: 14px; margin-top: 20px;
-  font-size: 11px; line-height: 1.5;
+  border-top: 1px solid var(--ai-line-soft); padding-top: 16px; margin-top: 24px;
+  font-size: 12px; line-height: 16px;
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-trust svg { color: var(--rlv-accent); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-trust svg { color: var(--ai-accent); }
 
 /* ─── §11 · la saisie ─────────────────────────────────────────────────── */
-html:root[data-kiwi-ai="releve"] .fa-dock { border-top: none; padding-bottom: 22px; }
-html:root[data-kiwi-ai="releve"] .fa-dock-in { max-width: 780px; }
+html:root[data-kiwi-ai="releve"] .fa-dock { border-top: none; padding-bottom: 24px; }
+html:root[data-kiwi-ai="releve"] .fa-dock-in { max-width: 720px; }
 html:root[data-kiwi-ai="releve"] .fa-inputwrap {
-  --lg-radius: 26px;
-  --lg-blur: 16px;
-  --lg-tint: color-mix(in srgb, var(--surface) 82%, transparent);
-  --lg-rim: var(--rlv-lit);
-  border: 1px solid var(--rlv-rule);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5);
-  backdrop-filter: blur(16px) saturate(1.5);
-  border-radius: 26px; padding: 6px 6px 6px 20px;
-  box-shadow: 0 22px 48px -30px var(--rlv-shadow);
-  transition: border-color .24s ease, box-shadow .24s ease, transform .24s var(--rlv-ease);
+  border: 1px solid var(--ai-line);
+  background: var(--ai-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  backdrop-filter: blur(14px) saturate(1.7);
+  border-radius: var(--ai-r); padding: 6px 6px 6px 16px;
+  box-shadow: var(--ai-drop);
+  transition: border-color var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-inputwrap:focus-within {
-  border-color: color-mix(in srgb, var(--rlv-accent) 55%, transparent);
-  box-shadow: 0 26px 56px -28px var(--rlv-shadow), 0 0 38px -18px var(--rlv-bloom);
-  transform: translateY(-1px);
+  transform: none;
+  border-color: var(--ai-accent);
+  box-shadow: var(--ai-drop);
 }
-html:root[data-kiwi-ai="releve"] .fa-input { font-size: 15px; }
-html:root[data-kiwi-ai="releve"] .fa-input::placeholder { color: var(--n-400); font-size: 14.5px; }
+html:root[data-kiwi-ai="releve"] .fa-input { font-size: 16px; line-height: 26px; }
+html:root[data-kiwi-ai="releve"] .fa-input::placeholder { color: var(--n-500); font-size: 16px; }
 html:root[data-kiwi-ai="releve"] .fa-send {
-  background: var(--rlv-accent); color: var(--rlv-on-accent);
+  background: var(--ai-accent); color: var(--ai-on-accent);
 }
-html:root[data-kiwi-ai="releve"] .fa-toolbar { margin-top: 11px; }
+html:root[data-kiwi-ai="releve"] .fa-toolbar { margin-top: 12px; }
 html:root[data-kiwi-ai="releve"] .fa-tool,
 html:root[data-kiwi-ai="releve"] .fa-hint {
-  font-family: var(--rlv-mono); font-size: 9.5px;
-  letter-spacing: 0.12em; text-transform: uppercase;
+  font-size: 12px; line-height: 16px; letter-spacing: 0; text-transform: none;
 }
 html:root[data-kiwi-ai="releve"] .fa-tool {
-  border-radius: 999px; border: 1px solid var(--rlv-rule); background: none;
+  border-radius: 999px; border: 1px solid var(--ai-line); background: none;
+  transition: color var(--ai-dur) var(--ai-ease),
+              border-color var(--ai-dur) var(--ai-ease),
+              background var(--ai-dur) var(--ai-ease);
 }
-html:root[data-kiwi-ai="releve"] .fa-tool:hover,
+html:root[data-kiwi-ai="releve"] .fa-tool:hover { border-color: var(--ai-line-lit); color: var(--ink); }
+/* L'état actif est l'un des trois usages autorisés du mint. */
 html:root[data-kiwi-ai="releve"] .fa-tool.on {
-  border-color: var(--rlv-accent); color: var(--rlv-accent); background: var(--rlv-wash);
+  border-color: var(--ai-accent); color: var(--ai-accent); background: var(--ai-wash);
 }
 html:root[data-kiwi-ai="releve"] .fa-keypad-card {
-  border-radius: 24px; border: 1px solid var(--rlv-rule);
-  box-shadow: 0 26px 56px -32px var(--rlv-shadow);
+  border-radius: var(--ai-r); border: 1px solid var(--ai-line);
+  box-shadow: var(--ai-drop);
 }
 
-/* ─── §12 · l'écran vide ──────────────────────────────────────────────── */
+/* ─── §12 · l'écran vide ──────────────────────────────────────────────────
+   Titre 32 px, phrase 16 px, trois cartes de suggestion. Le « Bonjour. » en
+   serif de 62 px était un titre de magazine posé sur un outil de travail.    */
 html:root[data-kiwi-ai="releve"] .fa-hero { padding-top: 8px; }
-/* La pastille dégradée disait « application ». Le relevé n'en a pas besoin. */
 html:root[data-kiwi-ai="releve"] .fa-hero-mark {
   width: 0; height: 0; overflow: hidden; margin: 0; box-shadow: none; background: none;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-h {
-  font-size: clamp(38px, 5.2vw, 62px); line-height: 0.98; letter-spacing: -0.024em;
-  margin-top: 0; color: var(--ink); max-width: 15ch;
+  font-size: 32px; line-height: 32px; font-weight: 500; letter-spacing: -0.04em;
+  margin-top: 0; color: var(--ink); max-width: 18ch;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-p {
-  font-size: 15px; line-height: 1.68; margin-top: 18px; max-width: 56ch; color: var(--n-600);
+  font-size: 16px; line-height: 26px; margin-top: 16px; max-width: 56ch; color: var(--n-600);
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-cards {
-  margin-top: 34px; gap: 0; grid-template-columns: 1fr;
-  border-top: 1px solid var(--rlv-rule);
+  margin-top: 32px; gap: 8px; grid-template-columns: 1fr; border-top: none;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card {
-  flex-direction: row; align-items: baseline; gap: 18px;
-  background: none; border: none; border-bottom: 1px solid var(--rlv-rule-soft);
-  border-radius: 0; padding: 17px 4px; box-shadow: none;
-  transition: padding-inline-start .28s var(--rlv-ease), background .22s ease,
-              border-color .22s ease, box-shadow .28s ease;
+  flex-direction: row; align-items: center; gap: 12px;
+  background: var(--ai-glass);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  border: 1px solid var(--ai-line); border-radius: var(--ai-r);
+  padding: 16px; box-shadow: none;
+  transition: border-color var(--ai-dur) var(--ai-ease),
+              background var(--ai-dur) var(--ai-ease);
 }
-/* Le survol allume l'arête, il ne remplit pas la ligne. L'aplat `--mint 13%`
-   d'avant devenait un bloc vert plein — néon sous Vexel sombre, sauge en
-   clair — et c'était l'élément le plus grossier de l'écran. Le liseré
-   `inset 2px 0 0` est l'idiome Vexel des lignes actionnables. */
+/* Le survol allume l'arête, il ne remplit pas la ligne, et il ne déplace pas
+   la carte : un aplat mint plein virait au néon sous Vexel sombre. */
 html:root[data-kiwi-ai="releve"] .fa-hero-card:hover {
   transform: none;
-  background: var(--rlv-wash);
-  border-bottom-color: var(--rlv-lit);
-  box-shadow: inset 2px 0 0 var(--rlv-accent), 0 0 34px -18px var(--rlv-bloom);
-  padding-inline-start: 14px;
-}
-html:root[data-kiwi-ai="releve"] [dir="rtl"] .fa-hero-card:hover {
-  box-shadow: inset -2px 0 0 var(--rlv-accent), 0 0 34px -18px var(--rlv-bloom);
+  background: var(--ai-wash);
+  border-color: var(--ai-line-lit);
+  box-shadow: none;
+  padding-inline-start: 16px;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .ic {
-  width: 26px; height: 26px; border-radius: 8px; flex: none;
-  background: none; color: var(--rlv-accent);
+  width: 24px; height: 24px; border-radius: 8px; flex: none;
+  background: none; color: var(--ai-accent);
   display: flex; align-items: center; justify-content: center; margin: 0;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .t {
-  font-family: var(--rlv-serif); font-size: 21px; font-weight: 400;
-  letter-spacing: -0.01em; flex: 1; margin: 0;
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  letter-spacing: 0; flex: 1; margin: 0; color: var(--ink);
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .s {
-  font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--n-400); margin: 0; text-align: end;
-}
-/* Les trois lignes se posent l'une après l'autre — le relevé s'imprime. */
-@media (prefers-reduced-motion: no-preference) {
-  html:root[data-kiwi-ai="releve"] .fa-hero-card {
-    animation: rlvSettle 620ms var(--rlv-ease) both;
-  }
-  html:root[data-kiwi-ai="releve"] .fa-hero-card:nth-child(2) { animation-delay: 70ms; }
-  html:root[data-kiwi-ai="releve"] .fa-hero-card:nth-child(3) { animation-delay: 140ms; }
-  html:root[data-kiwi-ai="releve"] .fa-hero-card:nth-child(4) { animation-delay: 210ms; }
-  @keyframes rlvSettle {
-    from { opacity: 0; transform: translateY(9px); }
-    to   { opacity: 1; transform: none; }
-  }
+  font-size: 12px; line-height: 16px; letter-spacing: 0;
+  text-transform: none; color: var(--n-500); margin: 0; text-align: end;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-insight {
-  margin-top: 30px; background: none; border: none; border-radius: 0;
-  padding: 0 0 0 17px; border-inline-start: 2px solid var(--rlv-accent);
-  font-size: 13.5px; line-height: 1.62; color: var(--n-600);
+  margin-top: 24px; background: none; border: none; border-radius: 0;
+  padding: 0 0 0 12px; border-inline-start: 2px solid var(--ai-accent);
+  font-size: 14px; line-height: 20px; color: var(--n-600);
 }
-html:root[data-kiwi-ai="releve"] .fa-hero-insight svg { color: var(--rlv-accent); }
+html:root[data-kiwi-ai="releve"] .fa-hero-insight svg { color: var(--ai-accent); }
 /* « État du jour · » vit dans ce <b>. Il était figé sur `--riad`, qui sous
    Vexel sombre vaut rgba(0,0,0,.42) : l'intitulé disparaissait purement et
    simplement du bandeau, alors qu'il se lisait en clair. */
-html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--rlv-figure); font-weight: 550; }
+html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--ai-figure); font-weight: 600; }
 
 /* ─── §13 · mode sombre ───────────────────────────────────────────────────
    Le thème sombre est gratuit pour tous les commerçants depuis le 08/08/2026.
    Ce bloc ne redéclare que les REPLIS : quand Vexel est là, ses jetons ont
    déjà donné la bonne valeur et rien ici ne les écrase (substitution
-   paresseuse) ; quand Vexel est absent, c'est ce bloc qui tient le climat.   */
+   paresseuse) ; quand Vexel est absent, c'est ce bloc qui tient le climat.
+   Le blanc pur n'entre pas dans l'encre — seulement dans les filets, où il
+   n'est qu'une transparence.                                                 */
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
-  --rlv-sheet-fb: color-mix(in srgb, #fff 4%, transparent);
-  --rlv-rule-fb: color-mix(in srgb, #fff 13%, transparent);
-  --rlv-rule-soft-fb: color-mix(in srgb, #fff 7%, transparent);
-  --rlv-lit-fb: color-mix(in srgb, #fff 22%, transparent);
-  --rlv-wash-fb: color-mix(in srgb, #fff 5%, transparent);
-  --rlv-bloom-fb: color-mix(in srgb, var(--mint) 26%, transparent);
-  --rlv-shadow-fb: rgba(0, 0, 0, .85);
-  --rlv-on-accent-fb: var(--ink);
+  --ai-sheet-fb: color-mix(in srgb, #fff 4%, transparent);
+  --ai-glass-fb: color-mix(in srgb, #fff 6%, transparent);
+  --ai-line-fb: color-mix(in srgb, #fff 12%, transparent);
+  --ai-line-soft-fb: color-mix(in srgb, #fff 7%, transparent);
+  --ai-line-lit-fb: color-mix(in srgb, #fff 22%, transparent);
+  --ai-wash-fb: color-mix(in srgb, #fff 5%, transparent);
+  --ai-bloom-fb: color-mix(in srgb, var(--mint) 26%, transparent);
+  --ai-shadow-fb: rgba(0, 0, 0, .85);
+  --ai-on-accent-fb: var(--ink);
 
-  /* L'encre bascule : `--riad` (#053B2C) tient 1,4:1 sur du noir. */
-  --rlv-figure: var(--mint);
-  --rlv-underline: color-mix(in srgb, var(--rlv-accent) 16%, transparent);
-  --rlv-cite-bg: color-mix(in srgb, var(--rlv-accent) 20%, transparent);
-  --rlv-cite-ink: var(--rlv-accent);
-  --rlv-lit-bg: color-mix(in srgb, var(--rlv-accent) 13%, transparent);
-  --rlv-warn: #e0a63a;
-  --rlv-bad: #ff8a7a;
+  /* L'encre bascule : `--riad` (#053B2C) tient 1,4:1 sur du noir. Et hors
+     Vexel, `--atlas` reste le vert de plein jour — le mint prend le relais. */
+  --ai-accent: var(--vx-accent, var(--mint));
+  --ai-figure: var(--mint);
+  --ai-cite: color-mix(in srgb, var(--ai-accent) 20%, transparent);
+  --ai-lit-bg: color-mix(in srgb, var(--ai-accent) 13%, transparent);
 }
 
 /* ─── §14 · le téléphone ──────────────────────────────────────────────── */
 @media (max-width: 860px) {
-  html:root[data-kiwi-ai="releve"] .fa-thread { padding-inline: 18px; }
+  html:root[data-kiwi-ai="releve"] .fa-thread { padding-inline: 24px; }
   /* La question d'amorce passe sur deux lignes à cette largeur : le champ doit
      les montrer. Un textarea rows="1" les coupait, et le commerçant lisait
      « posez une question, embauche, prix, » sans la fin de sa propre invite. */
   html:root[data-kiwi-ai="releve"] .fa-inputwrap {
-    align-items: center; padding: 11px 6px 11px 17px; border-radius: 24px;
+    align-items: center; padding: 8px 8px 8px 16px;
   }
-  html:root[data-kiwi-ai="releve"] .fa-input { min-height: 56px; font-size: 14.5px; line-height: 1.35; }
-  html:root[data-kiwi-ai="releve"] .fa-input::placeholder { font-size: 13px; }
-  html:root[data-kiwi-ai="releve"] .fa-msg.agent { padding-inline-start: 15px; }
-  html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v { font-size: clamp(32px, 11vw, 44px); }
+  html:root[data-kiwi-ai="releve"] .fa-input { min-height: 56px; font-size: 16px; line-height: 20px; }
+  html:root[data-kiwi-ai="releve"] .fa-input::placeholder { font-size: 14px; }
+  html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble { padding: 16px; }
+  html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v { font-size: 32px; line-height: 32px; }
   html:root[data-kiwi-ai="releve"] .fa-stat { grid-template-columns: 1fr; }
   html:root[data-kiwi-ai="releve"] .fa-stat .v { grid-column: 1; grid-row: auto; text-align: start; }
 }

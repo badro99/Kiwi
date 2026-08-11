@@ -51,7 +51,7 @@ var SHELL = [
   '/assets/design-vitrine.js',
   '/assets/liquid-glass.css',
   '/assets/liquid-glass.js',
-  '/assets/agent-skin.css?v=3',
+  '/assets/agent-skin.css?v=5',
   '/assets/agent-skin.js',
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js',
