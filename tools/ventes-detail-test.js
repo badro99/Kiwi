@@ -17,6 +17,11 @@ const checks = [
   ['current.length >= 2', 'choosing a third payment type resets the filter'],
   ['selectedMethods.includes(salesMethodKey(s))', 'sale rows are filtered by payment type'],
   ['inWindow.reduce((a, s) => a + (s.amount || 0), 0)', 'the displayed total uses the filtered rows'],
+  ['String(s.ref || s.label || \'\')', 'each sale resolves its caisse/order reference'],
+  ["origin === 'employee'", 'employee-origin sales are labelled separately'],
+  ["origin === 'orderpro'", 'OrderPro-origin sales are labelled separately'],
+  ["origin === 'caisse'", 'caisse-origin sales are labelled separately'],
+  ['s.server', 'the server name is rendered for employee orders'],
 ];
 
 for (const [needle, message] of checks) {

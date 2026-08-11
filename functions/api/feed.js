@@ -245,6 +245,43 @@ export async function onRequestGet({ request, env }) {
     return r;
   });
 
+  /* Restaurant sales use the visit id as their durable payment identity. Join
+   * that identity back to the canonical order queue so the owner sees the same
+   * reference as caisse, plus who took the order and through which surface. No
+   * extra sales columns or migration are needed: old rows become richer too. */
+  const visitIds = Array.from(new Set(rows.map((r) => {
+    const id = String(r && r.id || '');
+    return id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
+  }).filter(Boolean)));
+  const orderByVisit = new Map();
+  for (let offset = 0; offset < visitIds.length; offset += 75) {
+    const batch = visitIds.slice(offset, offset + 75);
+    try {
+      const marks = batch.map(() => '?').join(',');
+      const rs = await env.DB.prepare(
+        `SELECT session_id, number, channel, server_name, created_ts FROM orders
+          WHERE merchant IN (?, ?) AND session_id IN (${marks})
+          ORDER BY created_ts ASC`
+      ).bind(merchant, legacy || merchant, ...batch).all();
+      (rs.results || []).forEach((order) => {
+        if (order && order.session_id && !orderByVisit.has(String(order.session_id))) {
+          orderByVisit.set(String(order.session_id), order);
+        }
+      });
+    } catch (_) { /* Optional order metadata never hides the financial feed. */ }
+  }
+  rows.forEach((sale) => {
+    if (!sale) return;
+    const id = String(sale.id || '');
+    const visit = id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
+    const order = visit ? orderByVisit.get(visit) : null;
+    sale.orderRef = String((visit ? sale.label : sale.ref) || sale.label || sale.ref
+      || (order && order.number != null ? order.number : '')).slice(0, 80);
+    sale.receiptRef = String(sale.ref || '').slice(0, 80);
+    sale.server = String(order && order.server_name || '').slice(0, 80);
+    sale.origin = sale.server ? 'employee' : (order && order.channel === 'kiwi' ? 'orderpro' : 'caisse');
+  });
+
   /* `merchant` is the tenant actually SERVED, which is not always the one asked
    * for — an unclaimed store still snaps back to the account slug. Reporting it
    * makes a mis-scoped feed visible from the outside instead of something you

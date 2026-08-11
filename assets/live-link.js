@@ -629,14 +629,27 @@
       if (row.tenant !== tenant) return;             // another store's money — never this one's
       var s = row.s;
       var cur = Number(s.cursor) || 0;
-      if (!cur || have[cur]) return;                // no cursor, or already stored → skip
+      if (!cur) return;
+      if (have[cur]) {
+        try {
+          if (window.KiwiSales.annotate) window.KiwiSales.annotate(vid, cur, {
+            ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
+            origin: s.origin || '', server: s.server || '',
+          });
+        } catch (_) {}
+        return;
+      }
       var amt = Math.round(s.amount) || 0;
       if (amt <= 0) return;
       /* `lines` travels the last leg. Without it the dashboard's store held
          the money and the ticket summary only, so assets/agent-data.js fell back
          to its honest refusal on "quel est mon produit le plus vendu" for every
          merchant whose caisse is not in this same browser. */
-      try { window.KiwiSales.add(vid, { amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts, label: s.label, lines: s.lines }); have[cur] = 1; } catch (_) {}
+      try { window.KiwiSales.add(vid, {
+        amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts,
+        label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
+        server: s.server || '', lines: s.lines,
+      }); have[cur] = 1; } catch (_) {}
     });
     /* Fail closed once the full entitled history is known. Any server-backed
        local row absent from it is foreign (or voided), including rows copied by

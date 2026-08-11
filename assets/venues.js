@@ -7847,6 +7847,14 @@
     // Capped to match the server's own 80-char column.
     const lbl = String((sale && sale.label) || '').trim().slice(0, 80);
     if (lbl) entry.label = lbl;
+    const ref = String((sale && sale.ref) || '').trim().slice(0, 80);
+    const receiptRef = String((sale && sale.receiptRef) || '').trim().slice(0, 80);
+    const origin = String((sale && sale.origin) || '').trim().slice(0, 16);
+    const server = String((sale && sale.server) || '').trim().slice(0, 80);
+    if (ref) entry.ref = ref;
+    if (receiptRef) entry.receiptRef = receiptRef;
+    if (origin) entry.origin = origin;
+    if (server) entry.server = server;
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;
@@ -7886,6 +7894,23 @@
     try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) {}
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return entry;
+  }
+  function salesAnnotate(id, cursor, meta) {
+    id = id || currentVenue;
+    cursor = Number(cursor) || 0;
+    if (!cursor) return false;
+    const list = salesList(id);
+    const entry = list.find((sale) => Number(sale && sale.cursor) === cursor);
+    if (!entry) return false;
+    let changed = false;
+    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80]].forEach(([key, limit]) => {
+      const value = String(meta && meta[key] || '').trim().slice(0, limit);
+      if (value && entry[key] !== value) { entry[key] = value; changed = true; }
+    });
+    if (!changed) return false;
+    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) { return false; }
+    salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    return true;
   }
   /* ═══ RETIRER UNE VENTE DU MAGASIN LOCAL ═══
    * Une vente de test sortie des livres par la console opérateur cesse d'être
@@ -8054,6 +8079,7 @@
 
   window.KiwiSales = {
     add: salesAdd,
+    annotate: salesAnnotate,
     list: salesList,
     remove: salesRemove,
     retainCursors: salesRetainCursors,
