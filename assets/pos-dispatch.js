@@ -280,6 +280,9 @@
      * #xx-lock, et c'est tout ce dont le bouton a besoin pour se ranger au bon
      * endroit et au bon format (assets/caisse-refresh.js). */
     try { if (window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(root); } catch (e) {}
+    /* Kiwi Équipe serves every trade; expose its tenant-bound clocking code in
+       every paired specialist caisse, beside the other shared rail actions. */
+    try { if (window.KiwiCaisseAttendanceCode) window.KiwiCaisseAttendanceCode.mount(root); } catch (e) {}
     /* « Réimprimer » se pose au même endroit et pour la même raison : le rouleau
      * bourre sur les seize métiers, pas seulement au restaurant. Il connaît le
      * métier ouvert — c'est ce qui lui dit quel journal lire
