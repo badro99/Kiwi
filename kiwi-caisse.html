@@ -10574,6 +10574,11 @@
         if (visit) {
           entry.table = String(settlementTable);
           entry.session = String(visit);
+          /* Match the server's visit-derived id before writing the local
+             journal. The employee feed then recognizes this caisse payment as
+             already present, while employee payments carry the same -emp id
+             and are imported exactly once. */
+          entry.id = 'visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp';
         }
       }
       if (Array.isArray(lines) && lines.length) {

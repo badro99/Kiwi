@@ -370,7 +370,7 @@ export async function onRequestGet(context) {
       `SELECT id, mode, table_no, closed_ts, closed_by FROM table_sessions
         WHERE merchant = ? AND status = 'closed' AND closed_ts > ?
         ORDER BY closed_ts LIMIT 200`
-    ).bind(merchant, since).all();
+    ).bind(merchant, now - 12 * 60 * 60 * 1000).all();
     closedSessions = (closed.results || []).map((s) => ({
       id: s.id, mode: s.mode || 'table', table: s.table_no || '',
       closed_ts: s.closed_ts, closed_by: s.closed_by || '',

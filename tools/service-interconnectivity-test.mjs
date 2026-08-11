@@ -362,7 +362,7 @@ ok(settledSession.status === 'closed'
   && db.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant=? AND table_no='1' AND paid_ts IS NULL").get(merchant).n === 0,
   "le même acquittement libère la table, ferme OrderPro et solde ses tickets avant de répondre");
 paid = await employeeSale(saraCookie, employeePayment);
-const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id='visit-sess-payment-table-1'").all(merchant);
+const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id='visit-sess-payment-table-1-emp'").all(merchant);
 const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
 ok(paid.response.status === 200 && savedPayments.length === 1 && savedPayments[0].amount === 180
   && savedLines[0].n === 'Tajine' && savedLines[0].q === 2,
