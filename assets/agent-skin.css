@@ -275,6 +275,19 @@ html:root[data-kiwi-ai="releve"] .fa-stat .v {
 html:root[data-kiwi-ai="releve"] .fa-stat .h {
   grid-column: 1 / -1; font-size: 12px; line-height: 16px; color: var(--n-500);
 }
+/* Une ligne qui ne porte pas un montant — une question du parcours de
+   configuration, une mention. `nowrap` et l'alignement à droite sont faits
+   pour une colonne de chiffres ; sur une phrase ils forcent une piste de
+   grille plus large que la carte, et le texte sort par le côté. La prose
+   reprend donc toute la largeur, se coupe, et se lit à la taille du corps. */
+html:root[data-kiwi-ai="releve"] .fa-stat.rlv-prose { display: block; }
+html:root[data-kiwi-ai="releve"] .fa-stat.rlv-prose .v {
+  display: block; margin-top: 2px; min-width: 0;
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  letter-spacing: -0.01em; text-align: start;
+  white-space: normal; overflow-wrap: anywhere;
+  font-variant-numeric: normal;
+}
 html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead {
   display: block; padding: 0 0 16px; border-bottom: 1px solid var(--ai-line-soft);
   margin-bottom: 8px;
@@ -283,6 +296,9 @@ html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v {
   display: block; text-align: start;
   font-size: 48px; line-height: 48px; font-weight: 500;
   letter-spacing: -0.04em; color: var(--ai-figure); margin-top: 8px;
+  /* `nowrap` descend de la règle générale `.v` : à 48 px, un montant long
+     sur un volet étroit sortirait de la carte sans jamais se couper. */
+  white-space: normal; overflow-wrap: anywhere;
 }
 html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .h { margin-top: 12px; }
 

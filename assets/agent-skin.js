@@ -54,12 +54,30 @@
   }
 
   /* ─── 1 · les feuillets et le chiffre de tête ─────────────────────────── */
+
+  /* Le canal `stats` d'agent.js ne transporte pas que des montants : le
+     parcours de configuration y fait passer ses questions
+     (`{ l:'Question de configuration 1/3', v:'Vos catégories, traitements et
+     tarifs sont-ils prêts ?' }`). Promue au rang de chiffre de tête, une
+     phrase s'affichait en 48 px vert d'atlas et traversait la carte.
+     On ne promeut donc que ce qui se lit comme un nombre : un chiffre
+     présent, et une longueur de montant — « 842 300 MAD », « 69,0 % »,
+     « 134 ». Tout le reste est de la prose, et se compose comme telle. */
+  function isFigure(s) {
+    var t = norm(s);
+    return !!t && t.length <= 24 && /\d/.test(t);
+  }
+
   function dressAnswer(msg, index) {
     if (!msg || msg.dataset.rlvDone === '1') return;
     msg.dataset.rlvDone = '1';
     msg.setAttribute('data-rlv-turn', ROMAN[index] || String(index));
-    var lead = msg.querySelector('.fa-stats > .fa-stat');
-    if (lead) lead.classList.add('rlv-lead');
+    var stats = msg.querySelectorAll('.fa-stats > .fa-stat');
+    for (var i = 0; i < stats.length; i++) {
+      var v = stats[i].querySelector('.v');
+      if (!isFigure(v ? v.textContent : '')) { stats[i].classList.add('rlv-prose'); continue; }
+      if (i === 0) stats[i].classList.add('rlv-lead');
+    }
   }
 
   /* ─── 2 · l'ancrage visible ───────────────────────────────────────────── */
@@ -249,7 +267,9 @@
     document.querySelectorAll('[data-rlv-turn]').forEach(function (m) {
       m.removeAttribute('data-rlv-turn'); delete m.dataset.rlvDone;
     });
-    document.querySelectorAll('.rlv-lead').forEach(function (m) { m.classList.remove('rlv-lead'); });
+    document.querySelectorAll('.rlv-lead, .rlv-prose').forEach(function (m) {
+      m.classList.remove('rlv-lead'); m.classList.remove('rlv-prose');
+    });
     document.querySelectorAll('.is-cited').forEach(function (m) { m.classList.remove('is-cited'); });
     document.querySelectorAll('.rlv-status').forEach(function (m) { m.remove(); });
   }
