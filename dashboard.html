@@ -6080,7 +6080,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
-<script src="assets/inventory-ledger.js" defer fetchpriority="low"></script>
+<script src="assets/inventory-ledger.js?v=1" defer fetchpriority="low"></script>
 <!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
      l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
@@ -6103,8 +6103,8 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      APRÈS venue-store.js (il s'y déclare) et receipt.js (il y lit la base TVA
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
      rendu par dateRange.js pour les tuiles Marge brute / Bénéfice / Coût matière. -->
-<script src="assets/cost.js" defer fetchpriority="low"></script>
-<script src="assets/inventory-consumption.js" defer fetchpriority="low"></script>
+<script src="assets/cost.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/inventory-consumption.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/procurement.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js" defer fetchpriority="low"></script>
@@ -6126,7 +6126,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js" defer fetchpriority="low"></script>
-<script src="assets/restaurant-recipes.js" defer fetchpriority="low"></script>
+<script src="assets/restaurant-recipes.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/restaurant-menu-workspace.js" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js" defer fetchpriority="low"></script>
@@ -6134,7 +6134,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js" defer fetchpriority="low"></script>
-<script src="assets/stock.js" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/team.js?v=260" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
