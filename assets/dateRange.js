@@ -490,6 +490,8 @@
     en: { aujourdhui: 'DAILY GOAL', hier: 'DAILY GOAL', septJours: 'WEEKLY GOAL', trenteJours: 'MONTHLY GOAL', moisDernier: 'LAST MONTH GOAL', trimestre: 'QUARTERLY GOAL', annee: 'YEARLY GOAL', personnalise: 'PERIOD GOAL' },
     ar: { aujourdhui: 'هدف اليوم', hier: 'هدف اليوم', septJours: 'هدف الأسبوع', trenteJours: 'هدف الشهر', moisDernier: 'هدف الشهر الماضي', trimestre: 'هدف الربع', annee: 'هدف السنة', personnalise: 'هدف الفترة' },
   };
+  // Objectif non saisi : on le dit, on n'écrit pas « 0 MAD ».
+  const GOAL_UNSET = { fr: 'à définir', en: 'not set', ar: 'غير محدد' };
 
   const HH_HOURS = ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'];
   const HH_RAW_BY_VENUE = {
@@ -2014,18 +2016,35 @@
       } catch (_) {}
     }
 
+    /* Objectif jamais saisi. Un commerçant qui n'a rien fixé lisait
+     * « OBJECTIF JOUR · 0 MAD » puis « 0 % atteint » le jour où il avait fait
+     * 2 254 MAD : la division par un objectif nul retombait sur 0, ce qui se
+     * lit comme un échec au lieu d'une case vide. On dit ce qui est — aucun
+     * objectif — et on ne calcule pas un pourcentage qui n'existe pas. Le
+     * drapeau sur le libellé sert à la carte Vexel, qui recopie ce DOM. */
+    const unset = !(data.goal > 0);
     const labelTxt = GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange];
     const labelEl = document.querySelector('[data-goal-label]');
-    if (labelEl) labelEl.textContent = `${labelTxt} · ${frInt(data.goal)} MAD`;
+    if (labelEl) {
+      labelEl.textContent = unset
+        ? `${labelTxt} · ${GOAL_UNSET[lang] || GOAL_UNSET.fr}`
+        : `${labelTxt} · ${frInt(data.goal)} MAD`;
+      if (unset) labelEl.dataset.goalUnset = '1';
+      else delete labelEl.dataset.goalUnset;
+    }
 
-    const ratio = data.goal > 0 ? data.current / data.goal : 0;
+    const ratio = unset ? 0 : data.current / data.goal;
     const pctRound = Math.round(ratio * 100);
     const widthPct = Math.min(100, ratio * 100);
 
     const pctEl = document.querySelector('[data-goal-pct]');
     if (pctEl) {
-      const from = parseInt((pctEl.textContent || '').replace(/\D/g, ''), 10) || 0;
-      animateNumber(pctEl, from, pctRound, { duration: 700, format: v => `${Math.round(v)} %` });
+      if (unset) {
+        pctEl.textContent = '—';
+      } else {
+        const from = parseInt((pctEl.textContent || '').replace(/\D/g, ''), 10) || 0;
+        animateNumber(pctEl, from, pctRound, { duration: 700, format: v => `${Math.round(v)} %` });
+      }
     }
     const fillEl = document.querySelector('[data-goal-fill]');
     if (fillEl) fillEl.style.width = `${widthPct.toFixed(1)}%`;
@@ -2478,15 +2497,69 @@
     // vertical default. Derived KPIs are merged into `data` so the tile
     // builder and value loop below keep working unchanged.
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
-    const layout = getKpiLayout(venueType) || defaultKpiKeys(venueType);
+    const savedLayout = getKpiLayout(venueType);
+    let layout = savedLayout || defaultKpiKeys(venueType);
     const ctx = { venueType, range: effRange(), nbDays: RANGE_DAYS[effRange()] || 1 };
+    const deriveTile = (k) => {
+      const c = KPI_CATALOG[k];
+      return c ? c.derive(data, ctx) : (data[k] || null);
+    };
     const derived = {};
     layout.forEach((k) => {
-      const c = KPI_CATALOG[k];
-      const t = c ? c.derive(data, ctx) : (data[k] || null);
+      const t = deriveTile(k);
       if (t) derived[k] = t;
     });
     data = { ...data, ...derived };
+
+    /* Une tuile qui ne PEUT rien afficher n'a pas sa place dans la bande.
+     *
+     * Chez un vrai commerçant, trois indicateurs de la grille par défaut n'ont
+     * aucune source : le taux de succès (Kiwi n'enregistre pas les refus de
+     * paiement), les clients réguliers (pas de carnet), et la marge tant que le
+     * catalogue n'est pas costé. Le tiret reste la bonne réponse — inventer un
+     * 0 mentirait — mais trois tirets alignés dans la bande donnent à lire
+     * « le tableau de bord est cassé » alors que les ventes, elles, sont là.
+     *
+     * On remplace donc les cases mortes par un indicateur qui, lui, a une
+     * valeur, et à défaut on rétrécit la bande. Deux garde-fous :
+     *   · seulement si la grille est celle par défaut (savedLayout === null) —
+     *     un commerçant qui a choisi ses six tuiles garde les siennes, tirets
+     *     compris, c'est sa décision ;
+     *   · le vivier est court. « CA/jour » et « ventes/jour » valent
+     *     exactement « CA » et « ventes » sur une journée : on ne les propose
+     *     que sur une plage multi-jours, sinon la bande afficherait deux fois
+     *     le même nombre sous deux titres. Pourboires (estimation), marge et
+     *     coût (marge inconnue), rétention et nouveaux clients (dérivés des
+     *     réguliers, donc de 0) sont exclus par construction.
+     *
+     * Auto-réparateur : le jour où le commerçant saisit ses coûts, `marge` a
+     * une valeur, n'est plus morte, et reprend sa place. */
+    const isDeadTile = (k) => {
+      const t = data[k];
+      return !t || (t.text != null && String(t.text).replace(/\s/g, '') === '—');
+    };
+    if (ownData() && !savedLayout && layout.some(isDeadTile)) {
+      const pool = (ctx.nbDays > 1 ? ['revenue', 'revPerDay', 'txPerDay'] : ['revenue'])
+        .filter((k) => !layout.includes(k));
+      const ready = [];
+      pool.forEach((k) => {
+        const t = deriveTile(k);
+        if (!t) return;
+        data[k] = t;
+        if (!isDeadTile(k)) ready.push(k);
+      });
+      const shrunk = layout
+        .map((k) => (isDeadTile(k) && ready.length ? ready.shift() : k))
+        .filter((k) => !isDeadTile(k));
+      if (shrunk.length) layout = shrunk;
+    }
+    /* La grille est figée à six colonnes (dashboard.html) : une bande plus
+     * courte laisserait des pistes vides à droite. On lui passe le compte
+     * réel — repeat() n'accepte pas min(), le clamp se fait donc ici. */
+    const nCols = Math.max(1, layout.length);
+    wrap.style.setProperty('--kpi-cols', String(nCols));
+    wrap.style.setProperty('--kpi-cols-md', String(Math.min(3, nCols)));
+    wrap.style.setProperty('--kpi-cols-sm', String(Math.min(2, nCols)));
     // A custom venue with a subtype profile speaks its trade's vocabulary:
     // getKpiSpec returns {key,label} pairs (no i18n field) already resolved
     // for the current language. Those labels win over the generic catalog,
@@ -2563,13 +2636,15 @@
       }
       if (deltaEl) {
         const d = tileSpec.delta;
-        /* Pas de période précédente = pas de comparaison. On écrit le tiret
-         * plutôt qu'un « 0 % » qui affirmerait que rien n'a bougé, alors que
-         * c'est le premier jour du commerçant. Pas de flèche non plus : elle
-         * pointerait dans une direction inventée. */
+        /* Pas de période précédente = pas de comparaison. Ni « 0 % » (qui
+         * affirmerait que rien n'a bougé au premier jour du commerçant), ni
+         * flèche (elle pointerait dans une direction inventée) — et pas non
+         * plus « — vs hier », qui n'apprend rien et fait lire la tuile comme
+         * une panne. On laisse la ligne vide ; le CSS en réserve la hauteur
+         * (.kpi-m .d:empty) pour que les tuiles restent alignées. */
         if (d == null) {
           deltaEl.className = 'd neutral';
-          deltaEl.innerHTML = `— ${suffix}`;
+          deltaEl.innerHTML = '';
         } else {
           deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
           deltaEl.innerHTML = `${arrowSvg(d >= 0)}${fmtPct(d)} ${suffix}`;

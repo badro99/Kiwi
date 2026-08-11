@@ -571,9 +571,13 @@
     .kpi-pick { transition: border-color 150ms ease, background 160ms ease !important; }
     .kpi-pick:hover, .kpi-pick:active { transform: none; }
   }
-  .kpi-band { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
-  @media (max-width: 1400px) { .kpi-band { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 720px) { .kpi-band { grid-template-columns: repeat(2, 1fr); } }
+  /* Le nombre de colonnes suit le nombre de tuiles réellement rendues
+     (dateRange.js pose --kpi-cols*) : chez un commerçant dont un indicateur
+     n'a aucune source, la bande se raccourcit au lieu de laisser des pistes
+     vides. repeat() n'accepte pas min(), le clamp est donc calculé en JS. */
+  .kpi-band { display: grid; grid-template-columns: repeat(var(--kpi-cols, 6), minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 1400px) { .kpi-band { grid-template-columns: repeat(var(--kpi-cols-md, 3), minmax(0, 1fr)); } }
+  @media (max-width: 720px) { .kpi-band { grid-template-columns: repeat(var(--kpi-cols-sm, 2), minmax(0, 1fr)); } }
   .kpi-m { background: var(--paper-elev); border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 13px; padding: 16px 18px; box-shadow: var(--elev-1); transition: border-color 150ms; cursor: pointer; position: relative; }
   .kpi-m:hover { border-color: color-mix(in srgb, var(--atlas) 24%, var(--n-200)); }
   /* Keyboard focus ring for the div-based interactive tiles/rows */
@@ -596,6 +600,9 @@
   .kpi-m .v { font-size: 32px; font-weight: 600; letter-spacing: -0.035em; margin-top: 11px; font-feature-settings: "tnum" 1; line-height: 1; }
   .kpi-m .v .u { font-size: 12px; color: var(--n-500); margin-left: 4px; font-weight: 500; }
   .kpi-m .d { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11.5px; font-weight: 500; color: var(--success); }
+  /* Sans période de comparaison la ligne reste vide (dateRange.js) — on en
+     réserve la hauteur pour que les tuiles de la bande restent alignées. */
+  .kpi-m .d:empty::after { content: "\00a0"; }
   .kpi-m .d.dn { color: var(--danger); }
   .kpi-m .d.neutral { color: var(--n-500); }
   .kpi-m .sp { height: 22px; margin-top: 8px; margin-left: -2px; }
@@ -6008,7 +6015,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/pressing-catalog.js?v=3" defer></script>
 <script src="assets/pressing-dashboard.js?v=7" defer></script>
 <script src="assets/demoClock.js" defer></script>
-<script src="assets/dateRange.js?v=3" defer></script>
+<script src="assets/dateRange.js?v=4" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=357"></script>
 <script defer src="assets/dashboard-pwa.js?v=357"></script>
@@ -6140,7 +6147,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/account.js" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel-layout.js?v=2070" defer fetchpriority="low"></script>
+<script src="assets/design-vexel-layout.js?v=2071" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) — powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio

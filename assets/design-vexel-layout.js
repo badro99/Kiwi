@@ -145,9 +145,9 @@
    * salle atteint » à un commerçant qui n'en a jamais fixé. Une part de
    * chiffre d'affaires, elle, se déduit honnêtement du total de la période. */
   var SERVICE_STR = {
-    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', noData: 'Donnée indisponible' },
-    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', noData: 'Data unavailable' },
-    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', noData: 'البيانات غير متاحة' }
+    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', goalUnset: 'Aucun objectif défini', noData: 'Donnée indisponible' },
+    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
+    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
   };
   var RANGE_STR = {
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
@@ -810,7 +810,10 @@
     card.insertBefore(baseline, card.querySelector(':scope > .sp'));
 
     var compareNode = el('div', 'vexel-kpi-comparison');
-    setText(compareNode, comparison || 'par rapport à la période précédente');
+    /* Delta vide = aucune période de comparaison (dateRange.js laisse la ligne
+     * blanche). La légende par défaut annoncerait alors une comparaison qui n'a
+     * pas eu lieu, sous une valeur absente. */
+    setText(compareNode, text ? (comparison || 'par rapport à la période précédente') : '');
     card.insertBefore(compareNode, card.querySelector(':scope > .sp'));
   }
 
@@ -928,15 +931,21 @@
     var amountText = amountSource ? amountSource.textContent.replace(/MAD/i, '').trim() : '—';
     var targetText = goalLabel ? goalLabel.textContent.split('·').pop().trim() : '';
     var pctText = goalPct ? goalPct.textContent.trim() : '—';
+    /* Aucun objectif saisi : la source pose le drapeau et écrit « à définir »
+     * au lieu d'un montant. Sans ce test la carte recopiait « à définir » dans
+     * la cible, « — atteint » dans le pourcentage et un « Reste NaN MAD ». */
+    var goalUnset = !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalUnset);
     setText(currentTarget, amountText);
-    setText(targetTarget, targetText ? '/ ' + targetText : '');
-    setText(pctTarget, pctText + ' atteint');
+    setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
+    setText(pctTarget, goalUnset
+      ? (SERVICE_STR[lang()] || SERVICE_STR.fr).goalUnset
+      : pctText + ' atteint');
     if (fillTarget) {
-      var width = goalFill ? goalFill.style.width : pctText;
+      var width = goalUnset ? '0%' : (goalFill ? goalFill.style.width : pctText);
       if (fillTarget.style.width !== width) fillTarget.style.width = width;
     }
     if (restTarget) {
-      var remaining = Math.max(0, numberFrom(targetText) - numberFrom(amountText));
+      var remaining = goalUnset ? 0 : Math.max(0, numberFrom(targetText) - numberFrom(amountText));
       setText(restTarget, remaining ? 'Reste ' + Math.round(remaining).toLocaleString('fr-FR') + ' MAD' : '');
     }
 
