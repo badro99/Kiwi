@@ -21,6 +21,11 @@ ok(/localStorage\.setItem\(EMPLOYEE_LANGUAGE_KEY, language\)/.test(page), 'langu
 ok(/EMPLOYEE_TRANSLATIONS[\s\S]*?en:[\s\S]*?ar:/.test(page), 'English and standard Arabic dictionaries exist');
 ok(/saved === 'ary'\) return 'ar'/.test(page), 'legacy Darija preference migrates to standard Arabic');
 ok(!/(?:الدارجة|ديالك|دابا|السيمانة|كاع|خاوية|المينيو|كارط|كاش|البوز|كاتسير|شحال|الماكلة|غيبانو|نتا|نتي)/.test(page), 'Darija wording no longer leaks into the Serveur app');
+ok(!/\b(?:Slm|mesa|Ltn|Tlt|Lrb|Lkh|Ljm|Sbt|Lhd)\b/.test(page), 'Latin Darija and Spanish labels no longer leak into French UI');
+ok(/document\.documentElement\.dir = employeeLanguage === 'ar' \? 'rtl' : 'ltr'/.test(page), 'standard Arabic uses the correct reading direction');
+ok(/function setEmployeeLanguage[\s\S]*?renderSchedule\(\)[\s\S]*?renderHours\(\)/.test(page), 'changing language immediately redraws schedule and hours');
+ok(/function kgRankName[\s\S]*?متدرّب[\s\S]*?مدير القاعة/.test(page), 'employee ranks have standard Arabic names');
+ok(/function kgChallengeText[\s\S]*?خلال هذه الوردية/.test(page), 'shift challenges are generated in standard Arabic');
 ok(/translateEmployeeElement\(document\.body\)/.test(page), 'the selector translates the app, not only its own label');
 ok(/MutationObserver[\s\S]*?characterData: true/.test(page), 'live content is translated after sync updates');
 ok(/employeeLocale\(\)/.test(page), 'dates and times follow the chosen language');

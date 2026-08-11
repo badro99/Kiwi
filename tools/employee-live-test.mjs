@@ -275,6 +275,21 @@ const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
+ok(serviceSource.includes('id="table-filters"')
+  && serviceSource.includes("activeFilter = btn.dataset.filter")
+  && serviceSource.includes('filterMatches(tables[id])'),
+  'les filtres de statut servent vraiment à réduire la liste des tables');
+ok(serviceSource.includes('function zoneDisplayLabel(table)')
+  && serviceSource.includes("terrasse:'Terrasse'")
+  && serviceSource.includes("etage:'Étage'"),
+  'les zones sans libellé ne se transforment plus toutes en Salle');
+ok(serviceSource.includes('s.setAttribute(\'aria-hidden\', active ? \'false\' : \'true\')')
+  && serviceSource.includes('s.inert = !active'),
+  "un lecteur d'écran ne parcourt plus les écrans inactifs");
+ok(serviceSource.includes("const isEditable = (t.status === 'a-commander' || t.status === 'ka-yaklo')")
+  && serviceSource.includes('Envoyez d’abord les modifications')
+  && serviceSource.includes('disabled aria-disabled="true"'),
+  "une addition demandée ne peut plus être modifiée puis encaissée avant l'envoi en cuisine");
 ok(serviceSource.includes('tableServerIds(t).includes(currentUser)')
   && serviceSource.includes('tableServerIds(tables[id]).includes(sid)'),
   'chaque employé retrouve une table dès que son identifiant figure parmi les trois affectés');

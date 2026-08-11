@@ -166,6 +166,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       overflow: hidden;
     }
+    .screen[aria-hidden="true"] { visibility: hidden; }
     .screen.is-active { display: flex; }
     .screen-table {
       transform: translateX(100%);
@@ -729,6 +730,34 @@ em, i, cite, dfn, var { font-style: normal; }
     .filter-chip .count { opacity: .6; margin-left: 5px; font-feature-settings: "tnum" 1; }
     .filter-chip.is-active .count { opacity: .7; }
 
+    .tables-empty {
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      min-height: 180px;
+      padding: 28px;
+      border: 1px dashed var(--line);
+      border-radius: var(--r-lg);
+      color: var(--ink-3);
+      text-align: center;
+      background: var(--paper-mute);
+    }
+    .tables-empty strong { color: var(--ink); font-size: 15px; }
+
+    /* The update notice is useful during a shift, but it must never cover the
+       four primary actions. Move it above the floating navigation only while
+       the main app is visible. */
+    body.is-main-screen #kiwi-update-ready {
+      bottom: calc(var(--safe-bottom) + 84px) !important;
+      padding: 10px 14px !important;
+      font-size: 12px !important;
+    }
+
+    html[dir="rtl"] .tc-right { align-items: flex-start; }
+    html[dir="rtl"] .td-back svg,
+    html[dir="rtl"] .tc-arrow svg,
+    html[dir="rtl"] .colleague-alert-chev { transform: rotate(180deg); }
+
     .zone-block { margin-bottom: 16px; }
     .zone-block .section-title-row { margin-bottom: 10px; }
 
@@ -736,6 +765,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .table-card {
       display: flex; align-items: center; gap: 12px;
+      width: 100%;
+      text-align: left;
       padding: 12px 14px;
       border-radius: var(--r-lg);
       background: var(--paper-mute);
@@ -991,6 +1022,7 @@ em, i, cite, dfn, var { font-style: normal; }
       letter-spacing: -0.005em;
     }
     .td-btn:active { transform: scale(0.98); }
+    .td-btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
     .td-btn svg { width: 18px; height: 18px; }
     .td-btn.primary { background: var(--gradient); color: #fff; }
     .td-btn.dark    { background: var(--ink);   color: #fff; }
@@ -2758,6 +2790,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; justify-content: center;
       background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
       opacity: 0; pointer-events: none;
+      visibility: hidden;
       transition: opacity 600ms cubic-bezier(0.32, 0.72, 0, 1);
       will-change: opacity;
     }
@@ -2768,7 +2801,7 @@ em, i, cite, dfn, var { font-style: normal; }
         radial-gradient(50% 45% at 85% 80%, rgba(125,242,176,0.10), transparent 60%);
       pointer-events: none;
     }
-    .kiwi-greet.is-visible { opacity: 1; }
+    .kiwi-greet.is-visible { opacity: 1; visibility: visible; }
     .kiwi-greet-inner {
       position: relative; z-index: 1;
       padding: 0 22px;
@@ -3072,13 +3105,13 @@ em, i, cite, dfn, var { font-style: normal; }
       <!-- ============ GREETING FLASH (post clock-in, pre main) ============ -->
       <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
         <div class="kiwi-greet-inner">
-          <h1><span id="greet-line1">Slm Yassir,</span> <em id="greet-em">bon service.</em></h1>
-          <div class="kiwi-greet-sub" id="greet-sub">7 tables ce soir · bonne soirée</div>
+          <h1><span id="greet-line1">Bonjour Yassir,</span> <em id="greet-em">bon service.</em></h1>
+          <div class="kiwi-greet-sub" id="greet-sub">7 tables ce soir · bon service</div>
         </div>
       </div>
 
       <!-- ============ PIN LOGIN SCREEN ============ -->
-      <section class="screen screen-pin is-active" id="screen-pin" aria-label="Connexion PIN">
+      <section class="screen screen-pin is-active" id="screen-pin" aria-label="Connexion PIN" aria-hidden="false">
         <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -3088,7 +3121,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
 
         <div class="pin-mid">
-          <div class="pin-greeting">Slm Yassir</div>
+          <div class="pin-greeting">Bonjour Yassir</div>
           <div class="pin-hint">Entrez votre code</div>
           <div class="pin-dots" id="pin-dots" aria-hidden="true">
             <span class="pin-dot"></span>
@@ -3125,7 +3158,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </section>
 
       <!-- ============ CLOCK-IN SCREEN ============ -->
-      <section class="screen screen-clockin" id="screen-clockin" aria-label="Pointer l'arrivée">
+      <section class="screen screen-clockin" id="screen-clockin" aria-label="Pointer l'arrivée" aria-hidden="true" inert>
         <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -3149,7 +3182,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
 
         <div class="ci-mid">
-          <div class="ci-greeting">Slm <em>Yassir</em></div>
+          <div class="ci-greeting">Bonjour <em>Yassir</em></div>
           <div class="ci-role">Serveur · Café Atlas</div>
           <div class="ci-clock-time" id="ci-time">14:32</div>
           <div class="ci-clock-date" id="ci-date">Vendredi 24 avril</div>
@@ -3173,7 +3206,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </section>
 
       <!-- ============ MAIN APP ============ -->
-      <section class="screen screen-main" id="screen-main" aria-label="Application équipe">
+      <section class="screen screen-main" id="screen-main" aria-label="Application équipe" aria-hidden="true" inert>
 
         <header class="topbar">
           <div class="tb-avatar">YK</div>
@@ -3196,6 +3229,13 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="scope-toggle" id="scope-toggle">
               <button class="scope-btn is-active" data-scope="mine">Mes tables<span class="scope-count" id="scope-mine-count">5</span></button>
               <button class="scope-btn" data-scope="all">Toutes les tables<span class="scope-count" id="scope-all-count">21</span></button>
+            </div>
+
+            <div class="filter-chips" id="table-filters" role="group" aria-label="Filtrer les tables">
+              <button class="filter-chip is-active" type="button" data-filter="all">Toutes <span class="count" data-filter-count="all">0</span></button>
+              <button class="filter-chip" type="button" data-filter="occupied">Occupées <span class="count" data-filter-count="occupied">0</span></button>
+              <button class="filter-chip" type="button" data-filter="bgha">Addition <span class="count" data-filter-count="bgha">0</span></button>
+              <button class="filter-chip" type="button" data-filter="khawya">Libres <span class="count" data-filter-count="khawya">0</span></button>
             </div>
 
             <div id="tables-zones"></div>
@@ -3429,7 +3469,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </section>
 
       <!-- ============ TABLE DETAIL SCREEN ============ -->
-      <section class="screen screen-table" id="screen-table" aria-label="Détail mesa">
+      <section class="screen screen-table" id="screen-table" aria-label="Détail de la table" aria-hidden="true" inert>
         <header class="td-header">
           <button class="td-back" id="td-back" aria-label="Retour">
             <i data-lucide="arrow-left"></i>
@@ -3454,7 +3494,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="modal-veil" id="new-table-modal" role="dialog" aria-modal="true">
         <div class="modal">
           <div class="modal-handle"></div>
-          <div class="split-badge">Nouvelle mesa</div>
+          <div class="split-badge">Nouvelle table</div>
           <h3 class="modal-title">Ouvrir <span id="nt-table-id">T3</span></h3>
           <p class="modal-subtle">Combien de couverts?</p>
           <div class="nt-chips" id="nt-covers-chips"></div>
@@ -3816,9 +3856,9 @@ em, i, cite, dfn, var { font-style: normal; }
       var rest = document.querySelector('.ci-restaurant'); if (rest) rest.textContent = city || '';
       var sc = document.getElementById('kg-sc-meta'); if (sc) sc.textContent = nm || '';
       // Static demo staff-name nodes rendered before the role/clock-in JS runs.
-      var g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Slm,';
-      document.querySelectorAll('.pin-greeting').forEach(function (el) { el.textContent = 'Slm'; });
-      var cg = document.querySelector('.ci-greeting'); if (cg) cg.innerHTML = 'Slm <em>bon service</em>';
+      var g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Bonjour,';
+      document.querySelectorAll('.pin-greeting').forEach(function (el) { el.textContent = 'Bonjour'; });
+      var cg = document.querySelector('.ci-greeting'); if (cg) cg.innerHTML = 'Bonjour <em>bon service</em>';
       var tb = document.querySelector('.tb-name'); if (tb) tb.textContent = 'Serveur';
       var pn = document.querySelector('.profil-name'); if (pn) pn.textContent = 'Serveur';
       var tbAv = document.querySelector('.tb-avatar'); if (tbAv) tbAv.textContent = 'S';
@@ -3840,6 +3880,8 @@ em, i, cite, dfn, var { font-style: normal; }
     const EMPLOYEE_TRANSLATIONS = {
       en: {
         'Notifications': 'Notifications',
+        'Tables': 'Tables',
+        "Rafraîchir l'application": 'Refresh app',
         'Votre service en direct': 'Your shift live',
         "Vous n'êtes pas en service": 'You are not on shift',
         'Consultation seulement · pointez votre arrivée pour commencer.': 'View only · clock in to start.',
@@ -3916,10 +3958,20 @@ em, i, cite, dfn, var { font-style: normal; }
         'Espèces confirmées': 'Cash confirmed',
         'Nom ou téléphone': 'Name or phone',
         'Retour': 'Back',
-        'Repos': 'Off'
+        'Repos': 'Off',
+        'Toutes': 'All',
+        'Occupées': 'Occupied',
+        'Libres': 'Available',
+        'Filtrer les tables': 'Filter tables',
+        'Aucune table ici': 'No tables here',
+        'Modifiez le filtre pour retrouver vos tables.': 'Change the filter to find your tables.',
+        'En service': 'On shift',
+        'Hors service': 'Off shift'
       },
       ar: {
         'Notifications': 'الإشعارات',
+        'Tables': 'الطاولات',
+        "Rafraîchir l'application": 'تحديث التطبيق',
         'Votre service en direct': 'حالة ورديتك مباشرة',
         "Vous n'êtes pas en service": 'لست في وردية عمل الآن',
         'Consultation seulement · pointez votre arrivée pour commencer.': 'العرض فقط · سجّل حضورك للبدء.',
@@ -3996,7 +4048,15 @@ em, i, cite, dfn, var { font-style: normal; }
         'Espèces confirmées': 'تم تأكيد الدفع النقدي',
         'Nom ou téléphone': 'الاسم أو رقم الهاتف',
         'Retour': 'رجوع',
-        'Repos': 'عطلة'
+        'Repos': 'عطلة',
+        'Toutes': 'الكل',
+        'Occupées': 'المشغولة',
+        'Libres': 'الشاغرة',
+        'Filtrer les tables': 'تصفية الطاولات',
+        'Aucune table ici': 'لا توجد طاولات هنا',
+        'Modifiez le filtre pour retrouver vos tables.': 'غيّر عامل التصفية لعرض الطاولات.',
+        'En service': 'في الوردية',
+        'Hors service': 'خارج الوردية'
       }
     };
     let employeeLanguage = (() => {
@@ -4015,6 +4075,13 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function employeeLocale() {
       return employeeLanguage === 'en' ? 'en-GB' : employeeLanguage === 'ar' ? 'ar-MA' : 'fr-FR';
+    }
+    function employeeHello(name) {
+      const greeting = employeeLanguage === 'en' ? 'Hello' : employeeLanguage === 'ar' ? 'مرحباً' : 'Bonjour';
+      return name ? `${greeting} ${name}` : greeting;
+    }
+    function employeeShiftWish() {
+      return employeeLanguage === 'en' ? 'have a good shift' : employeeLanguage === 'ar' ? 'نتمنى لك وردية موفقة' : 'bon service';
     }
     function translateEmployeeTextNode(node) {
       if (!node || !node.parentElement || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(node.parentElement.tagName)) return;
@@ -4052,22 +4119,27 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function renderEmployeeLanguage() {
       document.documentElement.lang = employeeLanguage;
-      document.documentElement.dir = 'ltr';
+      document.documentElement.dir = employeeLanguage === 'ar' ? 'rtl' : 'ltr';
       $$('.profil-language-option').forEach((button) => {
         const active = button.dataset.employeeLanguage === employeeLanguage;
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
       translateEmployeeElement(document.body);
+      try { if (typeof updateWelcomeCopy === 'function') updateWelcomeCopy(); } catch (_) {}
     }
     function setEmployeeLanguage(language) {
       if (!['fr', 'en', 'ar'].includes(language)) return;
       employeeLanguage = language;
       try { localStorage.setItem(EMPLOYEE_LANGUAGE_KEY, language); } catch (_) {}
       renderEmployeeLanguage();
+      renderSchedule();
+      renderHours();
       if (currentTab === 'tables') renderTables();
       if (currentTab === 'notifications') renderNotifications();
       if (currentTab === 'profil') renderProfil();
+      try { if (typeof window.kgRenderProfil === 'function') window.kgRenderProfil(); } catch (_) {}
+      updateShiftMeta();
       translateEmployeeElement(document.body);
     }
     document.addEventListener('DOMContentLoaded', () => {
@@ -4081,7 +4153,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     });
 
-    /* ---------- DAfr days ---------- */
+    /* ---------- Calendar ---------- */
     const dafrDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const monthsEn = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
@@ -4139,11 +4211,37 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ---------- Time-of-day greeting helper ---------- */
     function timeOfDay() {
       const h = new Date().getHours();
-      if (h >= 5  && h < 11) return 'ce matin';
-      if (h >= 11 && h < 15) return 'ce midi';
-      if (h >= 15 && h < 18) return 'cet après-midi';
-      if (h >= 18 && h < 23) return 'ce soir';
-      return 'cette nuit';
+      const period = h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 15 ? 'lunch' : h >= 15 && h < 18 ? 'afternoon' : h >= 18 && h < 23 ? 'evening' : 'night';
+      const copy = {
+        fr: { morning:'ce matin', lunch:'ce midi', afternoon:'cet après-midi', evening:'ce soir', night:'cette nuit' },
+        en: { morning:'this morning', lunch:'at lunch', afternoon:'this afternoon', evening:'tonight', night:'tonight' },
+        ar: { morning:'هذا الصباح', lunch:'وقت الظهيرة', afternoon:'بعد الظهر', evening:'هذا المساء', night:'هذه الليلة' }
+      };
+      return copy[employeeLanguage][period];
+    }
+    function ownTablesTitle() {
+      const tod = timeOfDay();
+      return employeeLanguage === 'en' ? `Your tables ${tod}` : employeeLanguage === 'ar' ? `طاولاتك ${tod}` : `Vos tables ${tod}`;
+    }
+    function employeeTableCount(count) {
+      if (employeeLanguage === 'ar') return `${count} ${count === 1 ? 'طاولة' : 'طاولات'}`;
+      if (employeeLanguage === 'en') return `${count} ${count === 1 ? 'table' : 'tables'}`;
+      return `${count} table${count > 1 ? 's' : ''}`;
+    }
+    function employeeCoverCount(count) {
+      if (employeeLanguage === 'ar') return `${count} ${count === 1 ? 'ضيف' : 'ضيوف'}`;
+      if (employeeLanguage === 'en') return `${count} ${count === 1 ? 'guest' : 'guests'}`;
+      return `${count} couvert${count > 1 ? 's' : ''}`;
+    }
+    function employeeMinuteCount(count) {
+      return employeeLanguage === 'ar' ? `${count} د` : employeeLanguage === 'en' ? `${count} min` : `${count} mn`;
+    }
+    function employeeRoleName(role) {
+      const roleNames = {
+        en: { Serveur:'Server', Manager:'Manager', Caissier:'Cashier', Cuisinier:'Kitchen', Plongeur:'Dishwasher' },
+        ar: { Serveur:'مقدّم خدمة', Manager:'مدير', Caissier:'أمين الصندوق', Cuisinier:'طاقم المطبخ', Plongeur:'عامل نظافة الأواني' }
+      };
+      return ((roleNames[employeeLanguage] || {})[role]) || role;
     }
     const tableServerIds = (t) => t && Array.isArray(t.servers) && t.servers.length ? t.servers : (t && t.server ? [t.server] : []);
     const isMineTable = (t) => !!t && (!tableServerIds(t).length || tableServerIds(t).includes(currentUser));
@@ -4628,8 +4726,13 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ---------- Screens ---------- */
     function showScreen(id) {
-      $$('.screen').forEach(s => s.classList.remove('is-active'));
-      $('#' + id).classList.add('is-active');
+      $$('.screen').forEach(s => {
+        const active = s.id === id;
+        s.classList.toggle('is-active', active);
+        s.setAttribute('aria-hidden', active ? 'false' : 'true');
+        s.inert = !active;
+      });
+      document.body.classList.toggle('is-main-screen', id === 'screen-main');
       if (id === 'screen-main') requestAnimationFrame(() => moveBtPill(true));
       // The cart bar lives inside screen-main; hide it when leaving Main
       if (id !== 'screen-main') {
@@ -4730,6 +4833,7 @@ em, i, cite, dfn, var { font-style: normal; }
         applyRoleToMain();
         renderSchedule();
         renderHours();
+        updateShiftMeta();
         setTab(activeRole.defaultTab);
         renderAll();
         showScreen('screen-main');
@@ -4976,8 +5080,8 @@ em, i, cite, dfn, var { font-style: normal; }
       const r = activeRole;
       const greetEl = $('.ci-greeting');
       const roleEl  = $('.ci-role');
-      if (greetEl) greetEl.innerHTML = `Slm <em>${esc(r.name)}</em>`;
-      if (roleEl)  roleEl.textContent = svName('Café Atlas') ? `${r.role} · ${svName('Café Atlas')}` : `${r.role}`;
+      if (greetEl) greetEl.innerHTML = `${esc(employeeHello(''))} <em>${esc(r.name)}</em>`;
+      if (roleEl)  roleEl.textContent = svName('Café Atlas') ? `${employeeRoleName(r.role)} · ${svName('Café Atlas')}` : employeeRoleName(r.role);
     }
 
     function applyRoleToMain() {
@@ -4991,7 +5095,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (nm)  nm.textContent  = r.fullName;
       if (pAv) pAv.textContent = r.initials;
       if (pNm) pNm.textContent = r.fullName;
-      if (pRl) pRl.textContent = svName('Café Atlas') ? `${r.role} · ${svName('Café Atlas')}` : `${r.role}`;
+      if (pRl) pRl.textContent = svName('Café Atlas') ? `${employeeRoleName(r.role)} · ${svName('Café Atlas')}` : employeeRoleName(r.role);
       document.body.classList.toggle('is-role-restricted', r.restricted);
       $$('.bt-btn').forEach(btn => {
         btn.hidden = !r.tabs.includes(btn.dataset.tab);
@@ -5496,14 +5600,16 @@ em, i, cite, dfn, var { font-style: normal; }
         setTimeout(() => {
           shiftStart = cloudStart || new Date();
           startServiceSync();
-          $$('.screen').forEach(s => s.classList.remove('is-active', 'is-leaving'));
+          $$('.screen').forEach(s => s.classList.remove('is-leaving'));
+          showScreen('screen-main');
           const main = $('#screen-main');
-          main.classList.add('is-active', 'is-pre-hidden');
+          main.classList.add('is-pre-hidden');
           btn.classList.remove('is-loading');
           // Wire identity + role-restricted tabs BEFORE first paint
           applyRoleToMain();
           renderSchedule();
           renderHours();
+          updateShiftMeta();
           // Pre-render so the dive-in shows real data, not empty bones.
           // Restricted roles land straight in the profil tab.
           setTab(activeRole.defaultTab);
@@ -5531,9 +5637,9 @@ em, i, cite, dfn, var { font-style: normal; }
       // Hard guarantee: no shift in flight when consulting from home.
       shiftStart = null;
 
-      $$('.screen').forEach(s => s.classList.remove('is-active', 'is-leaving'));
+      $$('.screen').forEach(s => s.classList.remove('is-leaving'));
+      showScreen('screen-main');
       const main = $('#screen-main');
-      main.classList.add('is-active');
       main.classList.remove('is-pre-hidden', 'is-entering');
 
       applyRoleToMain();
@@ -5592,17 +5698,17 @@ em, i, cite, dfn, var { font-style: normal; }
       // --- Dynamic copy — picks per role ---
       const line1El = $('#greet-line1');
       const subEl   = $('#greet-sub');
-      if (line1El) line1El.textContent = `Slm ${activeRole.name},`;
+      if (line1El) line1El.textContent = `${employeeHello(activeRole.name)},`;
       if (subEl) {
         if (activeRole.restricted) {
           // Non-server staff — generic welcome, no table-counting.
-          subEl.textContent = `${svName('Café Atlas') || 'Service'} · ${activeRole.role.toLowerCase()} · bon service`;
+          subEl.textContent = `${svName('Café Atlas') || 'Service'} · ${employeeRoleName(activeRole.role).toLocaleLowerCase(employeeLocale())} · ${employeeShiftWish()}`;
         } else {
           const myCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
           const tod = (typeof timeOfDay === 'function') ? timeOfDay() : 'ce soir';
           const paused = Object.entries(servers).filter(([id, s]) => id !== currentUser && s.status === 'on-pause');
-          let sub = `${myCount} table${myCount > 1 ? 's' : ''} ${tod} · bon service`;
-          if (paused.length > 0) sub = `${myCount} table${myCount > 1 ? 's' : ''} ${tod} · ${paused[0][1].name.split(' ')[0]} en pause`;
+          let sub = `${employeeTableCount(myCount)} ${tod} · ${employeeShiftWish()}`;
+          if (paused.length > 0) sub = `${employeeTableCount(myCount)} ${tod} · ${paused[0][1].name.split(' ')[0]} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
           subEl.textContent = sub;
         }
       }
@@ -5653,16 +5759,20 @@ em, i, cite, dfn, var { font-style: normal; }
       }, 2280);
     }
 
-    function showWelcomeBanner() {
+    function updateWelcomeCopy() {
       const myCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
       const paused = Object.entries(servers).filter(([id, s]) => id !== currentUser && s.status === 'on-pause');
-      $('#wb-line1').textContent = `Bonjour ${activeRole.name}!`;
+      $('#wb-line1').textContent = `${employeeHello(activeRole.name)}!`;
       const tod = timeOfDay();
-      let line2 = `${myCount} tables ${tod} · bon service`;
+      let line2 = `${employeeTableCount(myCount)} ${tod} · ${employeeShiftWish()}`;
       if (paused.length > 0) {
-        line2 = `${myCount} tables ${tod} · ${paused[0][1].name.split(' ')[0]} en pause`;
+        line2 = `${employeeTableCount(myCount)} ${tod} · ${paused[0][1].name.split(' ')[0]} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}`;
       }
       $('#wb-line2').textContent = line2;
+    }
+
+    function showWelcomeBanner() {
+      updateWelcomeCopy();
       const banner = $('#welcome-banner');
       // restart animation
       banner.classList.remove('is-visible');
@@ -5700,7 +5810,7 @@ em, i, cite, dfn, var { font-style: normal; }
         consumeAttendanceCode();
         await window.KiwiEmployeeLive.logout();
       }
-      resetToEmployeePortal('À l3afya · fin de service');
+      resetToEmployeePortal(employeeLanguage === 'en' ? 'Shift closed' : employeeLanguage === 'ar' ? 'تم إنهاء الوردية' : 'Fin de service enregistrée');
     }
 
     function clockOut() {
@@ -5746,6 +5856,8 @@ em, i, cite, dfn, var { font-style: normal; }
     window.addEventListener('resize', () => moveBtPill(true));
 
     function setTab(name) {
+      const content = $('#main-content');
+      if (content && name !== currentTab) content.scrollTop = 0;
       currentTab = name;
       $$('.bt-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === name ? 'true' : 'false'));
       moveBtPill();
@@ -5804,14 +5916,14 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function tableCardHTML(id, t, opts = {}) {
       const total = (t.status === 'khawya' || t.status === 'khlass') ? 0 : getTableTotal(id);
-      const statusTxt = statusLabel[t.status];
+      const statusTxt = employeeTranslation(statusLabel[t.status]);
       const split = tableSplits.get(id);
       let line2 = '';
       if (split) {
         line2 = `Split en cours · ${split.paidCount}/${split.parts.length} réglées`;
-      } else if (t.status === 'khawya')      line2 = 'Disponible';
-      else if (t.status === 'khlass')        line2 = 'Réglée';
-      else                                    line2 = `${statusTxt} · ${t.elapsed} mn`;
+      } else if (t.status === 'khawya')      line2 = employeeTranslation('Disponible');
+      else if (t.status === 'khlass')        line2 = employeeTranslation('Réglée');
+      else                                    line2 = `${statusTxt} · ${employeeMinuteCount(t.elapsed)}`;
 
       const showAmount = total > 0;
       const urgentDot = t.status === 'bgha-ykhlass' ? '<span class="tc-pulse-dot"></span>' : '';
@@ -5821,29 +5933,57 @@ em, i, cite, dfn, var { font-style: normal; }
         : '';
 
       return `
-        <div class="table-card" data-status="${esc(t.status)}" data-table="${esc(id)}" role="button" tabindex="0">
+        <button type="button" class="table-card" data-status="${esc(t.status)}" data-table="${esc(id)}">
           <div class="tc-num">${esc(id)}</div>
           <div class="tc-info">
-            <div class="tc-line1">${esc(id)} · ${t.covers} couvert${t.covers > 1 ? 's' : ''} ${serverChip} ${urgentDot}</div>
+            <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers)} ${serverChip} ${urgentDot}</div>
             <div class="tc-line2">${line2}</div>
           </div>
           <div class="tc-right">
             ${showAmount ? `<div class="tc-amount">${fmtMAD(total)}</div>` : ''}
           </div>
           <div class="tc-arrow"><i data-lucide="chevron-right"></i></div>
-        </div>
+        </button>
       `;
+    }
+
+    function zoneDisplayLabel(table) {
+      const key = String(table && table.zone || 'salle').toLowerCase();
+      const labels = employeeLanguage === 'ar'
+        ? { salle:'القاعة', terrasse:'الشرفة', etage:'الطابق', étage:'الطابق', comptoir:'المنضدة', patio:'الفناء', jardin:'الحديقة' }
+        : employeeLanguage === 'en'
+          ? { salle:'Dining room', terrasse:'Terrace', etage:'Upper floor', étage:'Upper floor', comptoir:'Counter', patio:'Patio', jardin:'Garden' }
+          : { salle:'Salle', terrasse:'Terrasse', etage:'Étage', étage:'Étage', comptoir:'Comptoir', patio:'Patio', jardin:'Jardin' };
+      const supplied = String(table && table.zoneLabel || '').trim();
+      return supplied && !(supplied === 'Salle' && (key !== 'salle' || employeeLanguage !== 'fr')) ? supplied : (labels[key] || supplied || labels.salle);
     }
 
     function renderTables() {
       updateFilterCounts();
-      $$('.scope-btn').forEach(b => b.classList.toggle('is-active', b.dataset.scope === currentScope));
+      $$('.scope-btn').forEach(b => {
+        const active = b.dataset.scope === currentScope;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      $$('.filter-chip').forEach(b => {
+        const active = b.dataset.filter === activeFilter;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
 
       // Scope counts (always reflect totals)
       const mineCount = Object.keys(tables).filter(id => isMineTable(tables[id])).length;
       const allCount = Object.keys(tables).length;
       $('#scope-mine-count').textContent = mineCount;
       $('#scope-all-count').textContent = allCount;
+      const scoped = Object.keys(tables).filter(id => currentScope === 'all' || isMineTable(tables[id])).map(id => tables[id]);
+      const counts = {
+        all: scoped.length,
+        occupied: scoped.filter(t => ['a-commander','ka-yaklo','bgha-ykhlass','ka-tkhdam'].includes(t.status)).length,
+        bgha: scoped.filter(t => t.status === 'bgha-ykhlass').length,
+        khawya: scoped.filter(t => t.status === 'khawya').length,
+      };
+      Object.keys(counts).forEach(key => { const el = document.querySelector(`[data-filter-count="${key}"]`); if (el) el.textContent = counts[key]; });
 
       const wrap = $('#tables-zones');
       wrap.innerHTML = currentScope === 'mine' ? renderOwnTables() : renderAllTables();
@@ -5851,7 +5991,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     function renderOwnTables() {
-      const myIds = Object.keys(tables).filter(id => isMineTable(tables[id]));
+      const myIds = Object.keys(tables).filter(id => isMineTable(tables[id]) && filterMatches(tables[id]));
 
       // Pause-alert banner if any colleague on pause
       const paused = Object.entries(servers)
@@ -5864,8 +6004,8 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="colleague-alert" data-go-all="${id}">
               <div class="colleague-alert-icon"><i data-lucide="coffee"></i></div>
               <div class="colleague-alert-text">
-                <div class="colleague-alert-title">${esc(s.name)} en pause</div>
-                <div class="colleague-alert-sub">${n} table${n > 1 ? 's' : ''} à couvrir · tapez pour voir</div>
+                <div class="colleague-alert-title">${esc(s.name)} ${employeeLanguage === 'ar' ? 'في استراحة' : employeeLanguage === 'en' ? 'on break' : 'en pause'}</div>
+                <div class="colleague-alert-sub">${employeeLanguage === 'ar' ? `${employeeTableCount(n)} للتغطية · اضغط للعرض` : employeeLanguage === 'en' ? `${employeeTableCount(n)} to cover · tap to view` : `${employeeTableCount(n)} à couvrir · tapez pour voir`}</div>
               </div>
               <i data-lucide="chevron-right" class="colleague-alert-chev"></i>
             </div>`;
@@ -5874,13 +6014,13 @@ em, i, cite, dfn, var { font-style: normal; }
 
       const titleHTML = `
         <div class="scope-title">
-          <span>Vos tables ${timeOfDay()}</span>
+          <span>${ownTablesTitle()}</span>
           <span class="scope-count-pill">${myIds.length}</span>
         </div>`;
 
       const zoneSeen = Object.create(null);
       const zones = myIds
-        .map((id) => ({ key: tables[id].zone || 'salle', label: tables[id].zoneLabel || 'Salle' }))
+        .map((id) => ({ key: tables[id].zone || 'salle', label: zoneDisplayLabel(tables[id]) }))
         .filter((z) => { if (zoneSeen[z.key]) return false; zoneSeen[z.key] = 1; return true; });
       const zonesHTML = zones.map(z => {
         const ids = myIds.filter(id => tables[id].zone === z.key);
@@ -5889,7 +6029,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="zone-block">
             <div class="section-title-row">
               <span class="section-title">${z.label}</span>
-              <span class="section-count">${ids.length} table${ids.length > 1 ? 's' : ''}</span>
+              <span class="section-count">${employeeTableCount(ids.length)}</span>
             </div>
             <div class="table-list">
               ${ids.map(id => tableCardHTML(id, tables[id])).join('')}
@@ -5897,16 +6037,18 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>`;
       }).join('');
 
-      return alertHTML + titleHTML + zonesHTML;
+      const empty = myIds.length ? '' : '<div class="tables-empty"><strong>Aucune table ici</strong><span>Modifiez le filtre pour retrouver vos tables.</span></div>';
+      return alertHTML + titleHTML + zonesHTML + empty;
     }
 
     function renderAllTables() {
       // All 21 tables grouped by server. Order: current user first,
       // then on-pause colleagues (urgent coverage), then other colleagues.
+      const filteredCount = Object.keys(tables).filter(id => filterMatches(tables[id])).length;
       const titleHTML = `
         <div class="scope-title">
           <span>Toutes les tables</span>
-          <span class="scope-count-pill">${Object.keys(tables).length}</span>
+          <span class="scope-count-pill">${filteredCount}</span>
         </div>`;
 
       const orderedIds = Object.keys(servers).sort((a, b) => {
@@ -5918,12 +6060,14 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       const sectionsHTML = orderedIds.map(sid => {
-        const ids = Object.keys(tables).filter(id => sid === currentUser ? isMineTable(tables[id]) : tableServerIds(tables[id]).includes(sid));
+        const ids = Object.keys(tables).filter(id => (sid === currentUser ? isMineTable(tables[id]) : tableServerIds(tables[id]).includes(sid)) && filterMatches(tables[id]));
         if (ids.length === 0) return '';
         const s = servers[sid];
         const isMe = sid === currentUser;
         const isOnPause = s.status === 'on-pause';
-        const statusText = isOnPause ? 'En pause · à couvrir' : 'En service';
+        const statusText = isOnPause
+          ? (employeeLanguage === 'ar' ? 'في استراحة · يحتاج إلى تغطية' : employeeLanguage === 'en' ? 'On break · needs cover' : 'En pause · à couvrir')
+          : employeeTranslation('En service');
         return `
           <div class="zone-block">
             <div class="colleague-header">
@@ -5932,7 +6076,7 @@ em, i, cite, dfn, var { font-style: normal; }
                 <div class="colleague-name">${esc(s.name)}${isMe ? ' <span class="colleague-you">· vous</span>' : ''}</div>
                 <div class="colleague-status ${isOnPause ? 'on-pause' : ''}">${statusText}</div>
               </div>
-              <span class="colleague-count">${ids.length} table${ids.length > 1 ? 's' : ''}</span>
+              <span class="colleague-count">${employeeTableCount(ids.length)}</span>
             </div>
             <div class="table-list">
               ${ids.map(id => tableCardHTML(id, tables[id], { showServer: !isMe })).join('')}
@@ -5940,13 +6084,21 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>`;
       }).join('');
 
-      return titleHTML + sectionsHTML;
+      const empty = sectionsHTML ? '' : '<div class="tables-empty"><strong>Aucune table ici</strong><span>Modifiez le filtre pour retrouver vos tables.</span></div>';
+      return titleHTML + sectionsHTML + empty;
     }
 
     $('#scope-toggle').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-scope]');
       if (!btn) return;
       currentScope = btn.dataset.scope;
+      renderTables();
+    });
+
+    $('#table-filters').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      activeFilter = btn.dataset.filter;
       renderTables();
     });
 
@@ -6001,13 +6153,13 @@ em, i, cite, dfn, var { font-style: normal; }
       const total = order.reduce((s, l) => s + l.price * l.qty, 0);
       const isDirty = dirtyOrders.has(id);
 
-      $('#td-table-name').textContent = `${id} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
+      $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
       $('#td-table-meta').textContent = (t.status === 'khawya' || t.status === 'khlass')
-        ? statusLabel[t.status]
-        : `${statusLabel[t.status]} · ${t.elapsed} mn`;
+        ? employeeTranslation(statusLabel[t.status])
+        : `${employeeTranslation(statusLabel[t.status])} · ${employeeMinuteCount(t.elapsed)}`;
       const pill = $('#td-status-pill');
       pill.dataset.status = t.status;
-      pill.textContent = statusLabel[t.status];
+      pill.textContent = employeeTranslation(statusLabel[t.status]);
 
       // Body
       const body = $('#td-body');
@@ -6019,7 +6171,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
         `;
       } else {
-        const isEditable = (t.status === 'a-commander' || t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass');
+        /* Once the guest asks for the bill, the priced lines become a receipt,
+           not an editable cart. Extra items still go through "Ajouter", then
+           must be sent before payment can resume. */
+        const isEditable = (t.status === 'a-commander' || t.status === 'ka-yaklo');
         const itemsHTML = order.map(l => {
           const noteTxt = (l.note || '').trim();
           const optTxt = optsSummary(l.opts);
@@ -6084,7 +6239,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <i data-lucide="book-open"></i> Prendre la commande
             </button>
             <button class="td-btn danger sm" data-action="cancel-table">
-              <i data-lucide="x"></i> Fermer la mesa
+              <i data-lucide="x"></i> Fermer la table
             </button>
           `;
         } else {
@@ -6104,8 +6259,8 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       } else if (t.status === 'bgha-ykhlass') {
         fHTML = lancerHTML + `
-          <button class="td-btn ${isDirty ? 'dark' : 'primary'}" data-action="pay">
-            <i data-lucide="credit-card"></i> Encaisser ${fmtMAD(total)}
+          <button class="td-btn ${isDirty ? 'ghost' : 'primary'}" data-action="pay" ${isDirty ? 'disabled aria-disabled="true"' : ''}>
+            <i data-lucide="credit-card"></i> ${isDirty ? 'Envoyez d’abord les modifications' : 'Encaisser ' + fmtMAD(total)}
           </button>
           <div class="td-btn-row">
             <button class="td-btn ghost row-pair" data-action="print-bill">
@@ -6839,7 +6994,7 @@ em, i, cite, dfn, var { font-style: normal; }
         ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         : employeeLanguage === 'ar'
           ? ['إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت', 'أحد']
-          : ['Ltn', 'Tlt', 'Lrb', 'Lkh', 'Ljm', 'Sbt', 'Lhd'];
+          : ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
 
       week.innerHTML = sched.week.map((s, i) => {
         const d = new Date(monday);
@@ -7015,7 +7170,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const totalMin = Math.floor(elapsed / 60000);
       const h = Math.floor(totalMin / 60);
       const m = totalMin % 60;
-      $('#tb-shift-meta').textContent = `En service · ${h}h ${String(m).padStart(2,'0')}`;
+      $('#tb-shift-meta').textContent = `${employeeTranslation('En service')} · ${h}h ${String(m).padStart(2,'0')}`;
       if (currentTab === 'profil') renderProfil();
       else                          renderHours();
     }
@@ -8097,10 +8252,29 @@ em, i, cite, dfn, var { font-style: normal; }
       const kgBroke      = { bestNight: false, bestSpeed: false };
 
       /* --- helpers --- */
-      const kgNum = n => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n || 0));
+      const kgNum = n => new Intl.NumberFormat(employeeLocale(), { useGrouping: true }).format(Math.round(n || 0));
       function kgFmtDur(min) {
         const h = Math.floor(min / 60), m = min % 60;
+        if (employeeLanguage === 'ar') return h > 0 ? (h + ' س ' + String(m).padStart(2, '0') + ' د') : (m + ' د');
+        if (employeeLanguage === 'en') return h > 0 ? (h + 'h ' + String(m).padStart(2, '0') + 'm') : (m + ' min');
         return h > 0 ? (h + 'h ' + String(m).padStart(2, '0')) : (m + ' mn');
+      }
+      function kgRankName(rank) {
+        if (!rank) return employeeTranslation('Aucun grade');
+        const names = {
+          en: { 'Apprenti': 'Apprentice', 'Garçon': 'Waiter', 'Serveur': 'Server', 'Serveur Confirmé': 'Senior server', 'Maître': 'Head waiter', "Maître d'Hôtel": "Maître d'" },
+          ar: { 'Apprenti': 'متدرّب', 'Garçon': 'نادل', 'Serveur': 'مقدّم خدمة', 'Serveur Confirmé': 'مقدّم خدمة متمرس', 'Maître': 'رئيس القاعة', "Maître d'Hôtel": 'مدير القاعة' }
+        };
+        return ((names[employeeLanguage] || {})[rank.name]) || rank.name;
+      }
+      function kgChallengeText(defi) {
+        if (employeeLanguage === 'ar') return defi.metric === 'tables'
+          ? `سدّد ${defi.target} طاولات خلال هذه الوردية`
+          : `حصّل ${kgNum(defi.target)} MAD خلال هذه الوردية`;
+        if (employeeLanguage === 'en') return defi.metric === 'tables'
+          ? `Settle ${defi.target} tables during this shift`
+          : `Collect ${kgNum(defi.target)} MAD during this shift`;
+        return defi.text;
       }
       function kgRankIdxFor(xp) {
         let idx = -1;
@@ -8176,7 +8350,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         /* a) Niveau / Grade */
         const nameEl = document.getElementById('kg-rank-name');
-        if (nameEl) nameEl.textContent = snap.rank ? snap.rank.name : 'Aucun grade';
+        if (nameEl) nameEl.textContent = kgRankName(snap.rank);
         const xpEl = document.getElementById('kg-rank-xp');
         if (xpEl) xpEl.textContent = kgNum(snap.totalXP);
         const fillEl = document.getElementById('kg-rank-fill');
@@ -8184,10 +8358,10 @@ em, i, cite, dfn, var { font-style: normal; }
         const nextEl = document.getElementById('kg-rank-next');
         const gapEl  = document.getElementById('kg-rank-gap');
         if (snap.next) {
-          if (nextEl) nextEl.innerHTML = 'Prochain · <em>' + snap.next.name + '</em>';
+          if (nextEl) nextEl.innerHTML = (employeeLanguage === 'ar' ? 'التالي · ' : employeeLanguage === 'en' ? 'Next · ' : 'Prochain · ') + '<em>' + kgRankName(snap.next) + '</em>';
           if (gapEl)  gapEl.textContent = '+' + kgNum(snap.next.xp - snap.totalXP) + ' XP';
         } else {
-          if (nextEl) nextEl.innerHTML = '<em>Grade maximal atteint</em>';
+          if (nextEl) nextEl.innerHTML = '<em>' + (employeeLanguage === 'ar' ? 'بلغت أعلى مستوى' : employeeLanguage === 'en' ? 'Highest rank reached' : 'Grade maximal atteint') + '</em>';
           if (gapEl)  gapEl.textContent = '';
         }
 
@@ -8209,13 +8383,18 @@ em, i, cite, dfn, var { font-style: normal; }
         /* c) Défi du soir */
         const dp = kgDefiProgress();
         const defiText = document.getElementById('kg-defi-text');
-        if (defiText) defiText.textContent = dp.done ? 'Défi accompli' : kgDefi.text;
+        if (defiText) defiText.textContent = dp.done
+          ? (employeeLanguage === 'ar' ? 'اكتمل التحدي' : employeeLanguage === 'en' ? 'Challenge complete' : 'Défi accompli')
+          : kgChallengeText(kgDefi);
         const defiFill = document.getElementById('kg-defi-fill');
         if (defiFill) defiFill.style.width = Math.round(dp.frac * 100) + '%';
         const defiMeta = document.getElementById('kg-defi-meta');
-        if (defiMeta) defiMeta.textContent = kgDefi.metric === 'tables'
-          ? (dp.val + ' / ' + dp.target + ' tables')
-          : (kgNum(dp.val) + ' / ' + kgNum(dp.target) + ' MAD');
+        if (defiMeta) {
+          const tableUnit = employeeLanguage === 'ar' ? 'طاولات' : employeeLanguage === 'en' ? 'tables' : 'tables';
+          defiMeta.textContent = kgDefi.metric === 'tables'
+            ? (kgNum(dp.val) + ' / ' + kgNum(dp.target) + ' ' + tableUnit)
+            : (kgNum(dp.val) + ' / ' + kgNum(dp.target) + ' MAD');
+        }
         const defiCard = document.getElementById('kg-defi-card');
         if (defiCard) defiCard.classList.toggle('is-done', dp.done);
 
@@ -8226,7 +8405,7 @@ em, i, cite, dfn, var { font-style: normal; }
       function kgUpdateRankChip() {
         const roleEl = document.getElementById('kg-card-rank-role');
         const rank = kgSnapshot().rank;
-        if (roleEl) roleEl.textContent = rank ? rank.name.toLowerCase() : 'aucun grade';
+        if (roleEl) roleEl.textContent = kgRankName(rank).toLocaleLowerCase(employeeLocale());
       }
 
       /* --- Carte du soir : pick the best thing about tonight --- */
@@ -8408,6 +8587,7 @@ em, i, cite, dfn, var { font-style: normal; }
       /* expose for the share button + console inspection */
       window.shareShiftCard = shareShiftCard;
       window.kgSnapshot = kgSnapshot;
+      window.kgRenderProfil = kgRenderProfil;
     })();
 
     /* The employee portal owns its authentication. Restore an existing session;
