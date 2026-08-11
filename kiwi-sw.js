@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v343';
+var CACHE = 'kiwi-app-v344';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -51,14 +51,14 @@ var SHELL = [
   '/assets/design-vitrine.js',
   '/assets/liquid-glass.css',
   '/assets/liquid-glass.js',
-  '/assets/agent-skin.css?v=2',
+  '/assets/agent-skin.css?v=3',
   '/assets/agent-skin.js',
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js',
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
-  '/assets/agent-features.js?v=1',
-  '/assets/agent-truth.js?v=1',
+  '/assets/agent-features.js?v=2',
+  '/assets/agent-truth.js?v=2',
   '/assets/i18n.js',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */

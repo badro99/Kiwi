@@ -54,6 +54,7 @@
       setup: 'Aide-moi à configurer mon établissement', all: 'Quelles fonctions Kiwi ai-je ?', details: 'Comment fonctionne cette fonction ?',
       safe: 'Je vous guide jusqu’au bon écran ; Kiwi ne change jamais un réglage sensible sans votre validation sur cette page.',
       purpose: 'À quoi ça sert', steps: 'Mise en place', availability: 'Disponibilité', active: 'Incluse pour votre métier',
+      readiness: 'État réel', ready: 'Prête', attention: 'À compléter', validation: 'À valider', gaps: 'Points manquants', checked: 'Vérifié sur cet établissement',
     },
     en: {
       list: function (n) { return 'Kiwi adapts its tools to your business. These are the capabilities actually available for <b>' + n + '</b>.'; },
@@ -66,6 +67,7 @@
       setup: 'Help me configure my business', all: 'Which Kiwi features do I have?', details: 'How does this feature work?',
       safe: 'I guide you to the right screen; Kiwi never changes a sensitive setting without confirmation on that page.',
       purpose: 'What it does', steps: 'Setup', availability: 'Availability', active: 'Included for your trade',
+      readiness: 'Live readiness', ready: 'Ready', attention: 'Needs completion', validation: 'Needs validation', gaps: 'Missing points', checked: 'Checked for this location',
     },
     ar: {
       list: function (n) { return 'يكيّف Kiwi أدواته مع نشاطك. هذه هي الوظائف المتاحة فعلاً لـ <b>' + n + '</b>.'; },
@@ -78,6 +80,7 @@
       setup: 'ساعدني في إعداد مؤسستي', all: 'ما هي وظائف Kiwi المتاحة؟', details: 'كيف تعمل هذه الوظيفة؟',
       safe: 'أرشدك إلى الشاشة الصحيحة، ولا يغيّر Kiwi أي إعداد حساس دون تأكيدك داخل الصفحة.',
       purpose: 'الفائدة', steps: 'الإعداد', availability: 'التوفر', active: 'متاح لنشاطك',
+      readiness: 'الحالة الفعلية', ready: 'جاهزة', attention: 'تحتاج الإكمال', validation: 'تحتاج التحقق', gaps: 'النقاط الناقصة', checked: 'تم التحقق لهذه المؤسسة',
     },
   };
 
@@ -204,6 +207,26 @@
     return [{ label: (COPY[l] || COPY.fr).open + ' · ' + pick(f.label, l), handler: h }];
   }
 
+  function readiness(f) {
+    try {
+      if (window.KiwiFeatureTruth && typeof window.KiwiFeatureTruth.readiness === 'function') return window.KiwiFeatureTruth.readiness(f.key, f.nav);
+    } catch (_) {}
+    return { key: f.key, status: 'needs-validation', ready: false, gaps: ['page-validation'], source: 'merchant-navigation' };
+  }
+  function readinessText(r, l) {
+    var c = COPY[l] || COPY.fr;
+    return r && r.status === 'ready' ? c.ready : r && r.status === 'needs-attention' ? c.attention : c.validation;
+  }
+  var GAP_COPY = {
+    fr: { 'inventory-source': 'source inventaire', 'opening-stock': 'stock initial', 'receipt-engine': 'moteur de reçu', 'receipt-template': 'modèle de reçu', 'printer-configuration': 'configuration imprimante', 'printer-connection': 'connexion imprimante', floorplan: 'plan de salle', 'floorplan-only': 'réservations du plan uniquement', 'production-relay': 'relais de production', 'pressing-operations': 'flux pressing', 'scanner-module': 'module scanner', 'secure-context': 'connexion HTTPS', 'page-validation': 'test réel de la page' },
+    en: { 'inventory-source': 'inventory source', 'opening-stock': 'opening stock', 'receipt-engine': 'receipt engine', 'receipt-template': 'receipt template', 'printer-configuration': 'printer setup', 'printer-connection': 'printer connection', floorplan: 'floor plan', 'floorplan-only': 'floor-plan bookings only', 'production-relay': 'production relay', 'pressing-operations': 'pressing workflow', 'scanner-module': 'scanner module', 'secure-context': 'HTTPS connection', 'page-validation': 'real page test' },
+    ar: { 'inventory-source': 'مصدر المخزون', 'opening-stock': 'المخزون الأولي', 'receipt-engine': 'محرك الوصل', 'receipt-template': 'نموذج الوصل', 'printer-configuration': 'إعداد الطابعة', 'printer-connection': 'اتصال الطابعة', floorplan: 'خريطة القاعة', 'floorplan-only': 'حجوزات الخريطة فقط', 'production-relay': 'مسار الإنتاج', 'pressing-operations': 'مسار المصبنة', 'scanner-module': 'وحدة المسح', 'secure-context': 'اتصال HTTPS', 'page-validation': 'اختبار الصفحة فعلياً' },
+  };
+  function gapText(gaps, l) {
+    var map = GAP_COPY[l] || GAP_COPY.fr;
+    return (gaps || []).map(function (g) { return /^legal:/.test(g) ? (l === 'ar' ? 'بيانات قانونية: ' : l === 'en' ? 'legal field: ' : 'mention légale : ') + g.slice(6) : (map[g] || g); }).join(' · ');
+  }
+
   function scoreFeature(f, q) {
     var hay = norm([f.key, f.nav, f.keywords, pick(f.label, 'fr'), pick(f.label, 'en'), pick(f.label, 'ar')].join(' '));
     var words = norm(q).split(/[^a-z0-9\u0600-\u06ff]+/).filter(function (x) { return x.length > 2; });
@@ -314,14 +337,18 @@
     var stats = [];
     if (vert.length) stats.push({ l: c.vertical, v: vert.slice(0, 7).map(function (f) { return pick(f.label, l); }).join(' · '), h: vert.length > 7 ? '+ ' + (vert.length - 7) : '' });
     stats.push({ l: c.common, v: core.slice(0, 8).map(function (f) { return pick(f.label, l); }).join(' · '), h: core.length > 8 ? '+ ' + (core.length - 8) : '' });
+    var live = fs.map(function (f) { return readiness(f); });
+    stats.push({ l: c.readiness, v: c.ready + ' ' + live.filter(function (r) { return r.ready; }).length + '/' + fs.length,
+      h: live.some(function (r) { return !r.ready; }) ? c.attention + ' ' + live.filter(function (r) { return !r.ready; }).length : c.checked });
     return { text: c.list(tradeLabel(t, l)), stats: stats, note: c.safe, follow: [c.setup] };
   }
   function detailReply(f, l) {
-    var c = COPY[l] || COPY.fr;
+    var c = COPY[l] || COPY.fr, r = readiness(f);
     return { text: '<b>' + pick(f.label, l) + '</b> — ' + pick(f.summary, l), stats: [
       { l: c.purpose, v: pick(f.summary, l), h: '' },
       { l: c.steps, v: pick(f.steps, l), h: '' },
       { l: c.availability, v: c.active, h: tradeLabel(trade(), l) },
+      { l: c.readiness, v: readinessText(r, l), h: r.gaps && r.gaps.length ? c.gaps + ' · ' + gapText(r.gaps, l) : c.checked },
     ], note: c.safe, follow: [c.setup, c.all], open: openFor(f, l) };
   }
   function setupReply(raw, t, l) {
@@ -339,9 +366,16 @@
     fs.forEach(function (f) { byKey[f.key] = f; byKey[f.nav] = byKey[f.nav] || f; });
     var paths = setupPaths(t), ordered = [], used = {};
     function recommend(key) { var f = byKey[key]; if (f && !used[f.key]) { used[f.key] = true; ordered.push(f); } }
+    /* A stated missing trade prerequisite is the first job. Product state then
+     * catches gaps the interview missed (empty opening stock, disconnected
+     * printer, incomplete legal fields), with vertical modules before shared
+     * administration so the roadmap still feels native to the merchant. */
     state.pending.answers.forEach(function (answer, i) {
       if (incompleteAnswer(answer)) (paths[i] || []).forEach(recommend);
     });
+    fs.filter(function (f) { return f.vertical && readiness(f).status === 'needs-attention'; }).forEach(function (f) { recommend(f.key); });
+    fs.filter(function (f) { return !f.vertical && readiness(f).status === 'needs-attention'; }).forEach(function (f) { recommend(f.key); });
+    fs.filter(function (f) { return readiness(f).status === 'needs-validation'; }).forEach(function (f) { recommend(f.key); });
     /* Completed answers still get a verification page after missing work. */
     state.pending.answers.forEach(function (answer, i) {
       if (!incompleteAnswer(answer)) (paths[i] || []).forEach(recommend);

@@ -182,18 +182,24 @@ html:root[data-kiwi-ai="releve"] .fa-msg.agent {
   margin: 20px 0 0; padding: 26px 0 30px 20px;
   border-inline-start: 1px solid var(--rlv-rule);
 }
-/* Le folio chevauche le filet de reliure : son fond perce le filet. C'est la
-   raison d'être de `--rlv-page` — même valeur que la coquille, donc le trou
-   reste invisible quel que soit le climat. */
+/* Le folio se tient DANS la marge, à gauche du filet de reliure — jamais par
+   dessus. La version précédente le centrait sur le filet et perçait un trou en
+   `--rlv-page` pour l'interrompre ; ça supposait que la coquille était peinte
+   avec ce token. Elle ne l'est pas : `assets/liquid-glass.js` peint
+   `.kiwi-drawer` au runtime (verre réel, `backdrop-filter`), donc aucune
+   couleur opaque ne peut coïncider avec le fond — le trou se voyait comme une
+   tache sombre. Un folio dans la marge est de toute façon la forme juste :
+   c'est là que les registres numérotent leurs feuillets. */
 html:root[data-kiwi-ai="releve"] .fa-msg.agent[data-rlv-turn]::before {
   content: attr(data-rlv-turn);
-  position: absolute; inset-inline-start: 0; top: 26px; transform: translateX(-50%);
+  position: absolute; inset-inline-start: 0; top: 26px;
+  transform: translateX(calc(-100% - 9px));
   font-family: var(--rlv-mono); font-size: 9.5px; letter-spacing: 0.08em;
-  color: var(--n-400); background: var(--rlv-page);
-  padding: 3px 0; line-height: 1; min-width: 22px; text-align: center;
+  color: var(--n-400); background: none;
+  padding: 3px 0; line-height: 1; text-align: end;
 }
 html:root[data-kiwi-ai="releve"] [dir="rtl"] .fa-msg.agent[data-rlv-turn]::before {
-  transform: translateX(50%);
+  transform: translateX(calc(100% + 9px));
 }
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-avatar { display: none; }
 html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble {

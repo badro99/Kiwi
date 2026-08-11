@@ -355,6 +355,22 @@ for (const script of ['agent-features-test.mjs', 'agent-ops-simulations.mjs']) {
   }
 }
 
+/* Ten user-facing ratings, ten executable contracts. A release cannot call
+ * the copilot “10/10” because the screen looks convincing; it earns the score
+ * through merchant isolation, live adapters, multilingual output, guarded
+ * actions and honest failure behaviour. */
+section('Assistant 10/10 scorecard');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'agent-scorecard.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok('all 10 assistant categories earned 10/10');
+  else {
+    out.split('\n').filter((l) => /[✗·]/.test(l)).forEach((l) => fail(l.trim().replace(/^✗\s*/, '')));
+    if (!/[✗·]/.test(out)) fail(`agent-scorecard.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 6 · qui a le droit de lire le stock d'une AUTRE boutique ───────────────
  * /api/stock/lookup est le seul endpoint qui franchit volontairement la
  * frontière entre deux magasins. Une erreur de tenancy n'y produit aucun

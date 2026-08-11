@@ -9,7 +9,8 @@
   'use strict';
 
   var norm = function (s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').trim(); };
-  var money = function (n) { return (Math.round((+n || 0) * 100) / 100).toLocaleString('fr-FR') + ' MAD'; };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+  var money = function (n, l) { return (Math.round((+n || 0) * 100) / 100).toLocaleString(LOCALE[l] || LOCALE.fr) + ' MAD'; };
   function storage(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function venue() { try { return window.KiwiVenue && window.KiwiVenue.getCurrentVenueData ? (window.KiwiVenue.getCurrentVenueData() || {}) : {}; } catch (_) { return {}; } }
   function trade() { try { return (window.KiwiFeatureGuide && window.KiwiFeatureGuide.trade && window.KiwiFeatureGuide.trade()) || venue().subtype || venue().trade || venue().type || 'autre'; } catch (_) { return 'autre'; } }
@@ -62,8 +63,13 @@
   function canConfigure(key, r) {
     r = r || role();
     if (r === 'owner') return true;
-    if (r === 'staff') return !/^(team|payments|receipts|pressing-services)$/.test(key);
-    return key !== 'team';
+    if (r === 'manager') return !/^(team|payments|receipts)$/.test(key);
+    return false;
+  }
+  function featurePermission(key, r) {
+    if (canConfigure(key, r)) return 'configure';
+    if (r === 'staff' && /^(team|payments|reporting)$/.test(key)) return 'restricted';
+    return 'view-only';
   }
   function context(opts) {
     opts = opts || {}; var t = trade(), r = opts.role || role();
@@ -74,8 +80,10 @@
       aiMode: aiMode(), assistantAccess: 'read-only',
       features: fs.map(function (f) {
         var probe = PROBES[f.key]; var live = probe ? !!probe() : false; var page = pageExists(f.nav);
-        return { key: f.key, nav: f.nav || '', label: f.label, enabled: live || page, live: live,
-          readable: !!probe && live, configurable: canConfigure(f.key, r), permission: canConfigure(f.key, r) ? 'allowed' : 'read-only' };
+        var enabled = live || page;
+        return { key: f.key, nav: f.nav || '', label: f.label, enabled: enabled, entitled: enabled, live: live,
+          readable: !!probe && live, configurable: canConfigure(f.key, r), permission: featurePermission(f.key, r),
+          source: live ? 'live-module' : page ? 'merchant-navigation' : 'not-installed', readiness: readiness(f.key, f.nav).status };
       }),
     };
   }
@@ -91,12 +99,49 @@
     }
     return null;
   }
-  function inventoryRead() {
-    var K = window.KiwiInventory;
-    if (!K || typeof K.snapshot !== 'function') return { available: false, source: 'inventory-ledger' };
+  function inventoryCatalog() {
+    var rows = [];
     try {
-      var s = K.snapshot() || {}, vals = Object.keys(s).map(function (k) { return +s[k] || 0; });
-      return { available: true, source: 'inventory-ledger', data: { positions: vals.length, units: vals.reduce(function (a, b) { return a + b; }, 0), zero: vals.filter(function (x) { return x === 0; }).length, negative: vals.filter(function (x) { return x < 0; }).length, pending: K.pending ? K.pending() : 0 } };
+      if (window.KiwiRestaurantStock && typeof window.KiwiRestaurantStock.items === 'function') {
+        rows = (window.KiwiRestaurantStock.items() || []).map(function (x) { return {
+          id: String(x.id || ''), name: String(x.name || x.label || x.id || ''), stock: +x.currentStock || 0,
+          threshold: Math.max(0, +x.reorderLevel || 0), theoreticalUsage: Math.max(0, +x.theoreticalUsage || 0)
+        }; });
+        if (rows.length) return { source: 'restaurant-stock', rows: rows };
+      }
+    } catch (_) {}
+    try {
+      var C = window.KiwiBoutiqueCatalog;
+      if (C && typeof C.listProducts === 'function') {
+        rows = (C.listProducts() || []).map(function (x) { return {
+          id: String(x.id || ''), name: String(x.name || x.label || x.id || ''),
+          stock: typeof C.productStock === 'function' ? (+C.productStock(x.id) || 0) : 0,
+          threshold: Math.max(0, +x.lowStock || +x.reorderLevel || +x.stockMin || 0)
+        }; });
+        if (rows.length) return { source: 'retail-catalog', rows: rows };
+      }
+    } catch (_) {}
+    return { source: '', rows: [] };
+  }
+  function inventoryRead() {
+    var K = window.KiwiInventory, cat = inventoryCatalog();
+    if ((!K || typeof K.snapshot !== 'function') && !cat.rows.length) return { available: false, source: 'inventory-ledger' };
+    try {
+      var s = K && K.snapshot ? (K.snapshot() || {}) : {}, sums = Object.create(null);
+      Object.keys(s).forEach(function (k) { var id = String(k).split('||')[0]; sums[id] = (sums[id] || 0) + (+s[k] || 0); });
+      var rows = cat.rows.length ? cat.rows.map(function (x) {
+        var stock = Object.prototype.hasOwnProperty.call(sums, x.id) ? sums[x.id] : x.stock;
+        return { id: x.id, name: x.name, stock: stock, threshold: x.threshold, theoreticalUsage: x.theoreticalUsage || 0 };
+      }) : Object.keys(sums).map(function (id) { return { id: id, name: id, stock: sums[id], threshold: 0, theoreticalUsage: 0 }; });
+      var out = rows.filter(function (x) { return x.stock <= 0; });
+      var low = rows.filter(function (x) { return x.stock > 0 && x.threshold > 0 && x.stock < x.threshold; });
+      var neg = rows.filter(function (x) { return x.stock < 0; });
+      var nameList = function (a) { return a.slice().sort(function (a, b) { return a.stock - b.stock; }).slice(0, 5).map(function (x) { return x.name; }); };
+      return { available: true, source: cat.source || 'inventory-ledger', data: {
+        positions: rows.length, units: rows.reduce(function (a, x) { return a + x.stock; }, 0), zero: rows.filter(function (x) { return x.stock === 0; }).length,
+        out: out.length, low: low.length, negative: neg.length, pending: K && K.pending ? K.pending() : 0,
+        outNames: nameList(out), lowNames: nameList(low), negativeNames: nameList(neg), catalogCoverage: cat.rows.length ? 'named' : 'ledger-ids'
+      } };
     } catch (_) { return { available: false, source: 'inventory-ledger' }; }
   }
   function pressingRead() {
@@ -119,7 +164,13 @@
   function reservationsRead() {
     var t = tablesRead(); if (!t.available) return { available: false, source: 'floorplan-reservations' };
     var rows = (t.rows || []).filter(function (x) { return !!(x.reservationName || /reserv/.test(norm(x.status))); });
-    return { available: true, source: 'floorplan-reservations', limited: true, data: { reservations: rows.length, tables: rows.map(function (x) { return x.num || x.id || ''; }).filter(Boolean) } };
+    var today = new Date().toISOString().slice(0, 10);
+    var upcoming = rows.filter(function (x) { return !x.reservationDate || x.reservationDate >= today; });
+    return { available: true, source: 'floorplan-reservations', limited: true, coverage: 'floorplan-only', data: {
+      reservations: rows.length, upcoming: upcoming.length,
+      tables: rows.map(function (x) { return x.num || x.id || ''; }).filter(Boolean),
+      nextTimes: upcoming.map(function (x) { return [x.reservationDate || today, x.reservationTime || ''].filter(Boolean).join(' '); }).filter(function (x) { return x.trim() !== today; }).sort().slice(0, 3)
+    } };
   }
   function kdsRead() {
     try {
@@ -159,24 +210,50 @@
     return '';
   }
   var C = {
-    fr: { unavailable: 'Je n’ai pas de source active pour cette donnée dans cet établissement. Je ne vais pas remplacer son absence par une estimation.', read: 'Lecture seule · aucune donnée ni aucun statut n’a été modifié.', limited: 'Cette lecture couvre uniquement les données réellement reliées à cet écran.' },
-    en: { unavailable: 'No active source provides this fact for this location. I will not replace it with an estimate.', read: 'Read-only · no data or status was changed.', limited: 'This read covers only data genuinely connected to this screen.' },
-    ar: { unavailable: 'لا يوجد مصدر نشط لهذه المعلومة في هذه المؤسسة، ولن أستبدلها بتقدير.', read: 'قراءة فقط · لم تتغير أي بيانات أو حالة.', limited: 'تشمل هذه القراءة فقط البيانات المرتبطة فعلياً بهذه الشاشة.' },
+    fr: { unavailable: 'Je n’ai pas de source active pour cette donnée dans cet établissement. Je ne vais pas remplacer son absence par une estimation.', read: 'Lecture seule · aucune donnée ni aucun statut n’a été modifié.', limited: 'Cette lecture couvre uniquement les données réellement reliées à cet écran.', source: 'Source', yes: 'Oui', no: 'Non', unknown: 'Inconnu', current: 'À jour', none: '—',
+      text: { inventory: 'Voici l’état réel du stock.', pressing: 'Voici la charge pressing en direct.', tables: 'État réel du plan de salle.', reservations: 'Réservations visibles sur le plan de salle.', kds: 'État réel du relais de production.', receipt: 'État réel de la configuration des reçus.', printer: 'État réel de l’impression sur cet appareil.' },
+      labels: { positions: 'Articles suivis', units: 'Unités nettes', out: 'Ruptures', low: 'Stock faible', names: 'À traiter', pending: 'À synchroniser', active: 'Actives', received: 'Reçues', treating: 'En traitement', ready: 'Prêtes', late: 'En retard', due: 'Solde restant', free: 'Libres', occupied: 'Occupées', reserved: 'Réservées', bill: 'Addition', total: 'Total', bookings: 'Réservations liées aux tables', upcoming: 'À venir', tables: 'Tables', queue: 'En attente', accepted: 'Acceptées', served: 'Servies', offline: 'Actions hors ligne', reachable: 'Relais joignable', configured: 'Configuré', legal: 'Mentions légales complètes', sync: 'Synchronisation', connected: 'Connectée', transport: 'Transport' } },
+    en: { unavailable: 'No active source provides this fact for this location. I will not replace it with an estimate.', read: 'Read-only · no data or status was changed.', limited: 'This read covers only data genuinely connected to this screen.', source: 'Source', yes: 'Yes', no: 'No', unknown: 'Unknown', current: 'Up to date', none: '—',
+      text: { inventory: 'Here is the live inventory state.', pressing: 'Here is the live pressing workload.', tables: 'Here is the live floor-plan state.', reservations: 'These are the reservations connected to the floor plan.', kds: 'Here is the live production relay state.', receipt: 'Here is the live receipt configuration state.', printer: 'Here is the live printing state on this device.' },
+      labels: { positions: 'Tracked items', units: 'Net units', out: 'Out of stock', low: 'Low stock', names: 'Needs attention', pending: 'Pending sync', active: 'Active', received: 'Received', treating: 'In treatment', ready: 'Ready', late: 'Late', due: 'Outstanding balance', free: 'Free', occupied: 'Occupied', reserved: 'Reserved', bill: 'Bill requested', total: 'Total', bookings: 'Table-linked bookings', upcoming: 'Upcoming', tables: 'Tables', queue: 'Pending', accepted: 'Accepted', served: 'Served', offline: 'Offline actions', reachable: 'Relay reachable', configured: 'Configured', legal: 'Legal details complete', sync: 'Synchronisation', connected: 'Connected', transport: 'Transport' } },
+    ar: { unavailable: 'لا يوجد مصدر نشط لهذه المعلومة في هذه المؤسسة، ولن أستبدلها بتقدير.', read: 'قراءة فقط · لم تتغير أي بيانات أو حالة.', limited: 'تشمل هذه القراءة فقط البيانات المرتبطة فعلياً بهذه الشاشة.', source: 'المصدر', yes: 'نعم', no: 'لا', unknown: 'غير معروف', current: 'محدّث', none: '—',
+      text: { inventory: 'هذه حالة المخزون المباشرة.', pressing: 'هذه حالة عمل المصبنة الآن.', tables: 'هذه حالة خريطة القاعة الآن.', reservations: 'هذه الحجوزات المرتبطة بخريطة القاعة.', kds: 'هذه حالة مسار الإنتاج الآن.', receipt: 'هذه حالة إعداد الوصل الآن.', printer: 'هذه حالة الطباعة على هذا الجهاز.' },
+      labels: { positions: 'المنتجات المتابعة', units: 'صافي الوحدات', out: 'نفد المخزون', low: 'مخزون منخفض', names: 'يتطلب الانتباه', pending: 'بانتظار المزامنة', active: 'نشطة', received: 'مستلمة', treating: 'قيد المعالجة', ready: 'جاهزة', late: 'متأخرة', due: 'الرصيد المتبقي', free: 'حرة', occupied: 'مشغولة', reserved: 'محجوزة', bill: 'طلب الحساب', total: 'المجموع', bookings: 'حجوزات مرتبطة بالطاولات', upcoming: 'قادمة', tables: 'الطاولات', queue: 'قيد الانتظار', accepted: 'مقبولة', served: 'مسلّمة', offline: 'عمليات دون اتصال', reachable: 'المسار متصل', configured: 'مضبوط', legal: 'البيانات القانونية مكتملة', sync: 'المزامنة', connected: 'متصلة', transport: 'طريقة الربط' } },
   };
   function reply(raw, opts) {
     var kind = intent(raw); if (!kind) return null;
     var l = opts && opts.lang; if (l !== 'en' && l !== 'ar') l = /[\u0600-\u06ff]/.test(raw) ? 'ar' : 'fr';
     var c = C[l], r = read(kind);
-    if (!r.available) return { text: c.unavailable, note: c.read, meta: 'Source · ' + r.source };
-    var d = r.data || {}, stats = [], text = '';
-    if (kind === 'inventory') { text = l === 'en' ? 'Here is the live inventory-ledger state.' : l === 'ar' ? 'هذه حالة سجل المخزون المباشرة.' : 'Voici l’état réel du registre de stock.'; stats = [{ l: 'Positions', v: String(d.positions) }, { l: 'Unités nettes', v: String(d.units) }, { l: 'À synchroniser', v: String(d.pending) }]; }
-    if (kind === 'pressing') { text = l === 'en' ? 'Here is the live pressing workload.' : l === 'ar' ? 'هذه حالة عمل المصبنة الآن.' : 'Voici la charge pressing en direct.'; stats = [{ l: 'Actives', v: String(d.active) }, { l: 'Prêtes', v: String(d.ready) }, { l: 'En retard', v: String(d.late) }, { l: 'Solde restant', v: money(d.due) }]; }
-    if (kind === 'tables') { text = 'État réel du plan de salle.'; stats = [{ l: 'Libres', v: String(d.free) }, { l: 'Occupées', v: String(d.occupied) }, { l: 'Réservées', v: String(d.reserved) }, { l: 'Total', v: String(d.total) }]; }
-    if (kind === 'reservations') { text = 'Réservations visibles sur le plan de salle.'; stats = [{ l: 'Réservations liées aux tables', v: String(d.reservations) }, { l: 'Tables', v: d.tables.join(', ') || '—' }]; }
-    if (kind === 'kds') { text = 'État réel du relais de production.'; stats = r.source === 'order-inbox' ? [{ l: 'En attente', v: String(d.pending) }, { l: 'Acceptées', v: String(d.accepted) }, { l: 'Prêtes', v: String(d.ready) }] : [{ l: 'Actions hors ligne', v: String(d.queuedOffline) }, { l: 'Relais joignable', v: d.reachable === true ? 'Oui' : d.reachable === false ? 'Non' : 'Inconnu' }]; }
-    if (kind === 'receipt') { text = 'État réel de la configuration des reçus.'; stats = [{ l: 'Modèle configuré', v: d.configured ? 'Oui' : 'Non' }, { l: 'Mentions légales complètes', v: d.legalComplete ? 'Oui' : 'Non' }, { l: 'Synchronisation', v: d.syncIssue || 'À jour' }]; }
-    if (kind === 'printer') { text = 'État réel de l’impression sur cet appareil.'; stats = [{ l: 'Configurée', v: d.configured ? 'Oui' : 'Non' }, { l: 'Connectée', v: d.connected ? 'Oui' : 'Non' }, { l: 'Transport', v: d.transport }]; }
-    return { text: text, stats: stats, note: c.read + (r.limited ? ' ' + c.limited : ''), meta: 'Source · ' + r.source };
+    if (!r.available) return { text: c.unavailable, note: c.read, meta: c.source + ' · ' + r.source };
+    var d = r.data || {}, stats = [], text = c.text[kind] || '';
+    var yesNo = function (v) { return v === true ? c.yes : v === false ? c.no : c.unknown; };
+    if (kind === 'inventory') {
+      stats = [{ l: c.labels.positions, v: String(d.positions) }, { l: c.labels.out, v: String(d.out || 0) }, { l: c.labels.low, v: String(d.low || 0) }, { l: c.labels.pending, v: String(d.pending || 0) }];
+      var attention = (d.negativeNames || []).concat(d.outNames || [], d.lowNames || []).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).slice(0, 5);
+      if (attention.length) stats.push({ l: c.labels.names, v: attention.join(' · ') });
+    }
+    if (kind === 'pressing') stats = [{ l: c.labels.active, v: String(d.active || 0) }, { l: c.labels.received, v: String(d.received || 0) }, { l: c.labels.treating, v: String(d.treating || 0) }, { l: c.labels.ready, v: String(d.ready || 0) }, { l: c.labels.late, v: String(d.late || 0) }, { l: c.labels.due, v: money(d.due, l) }];
+    if (kind === 'tables') stats = [{ l: c.labels.free, v: String(d.free || 0) }, { l: c.labels.occupied, v: String(d.occupied || 0) }, { l: c.labels.reserved, v: String(d.reserved || 0) }, { l: c.labels.bill, v: String(d.bill || 0) }, { l: c.labels.total, v: String(d.total || 0) }];
+    if (kind === 'reservations') stats = [{ l: c.labels.bookings, v: String(d.reservations || 0) }, { l: c.labels.upcoming, v: String(d.upcoming || 0) }, { l: c.labels.tables, v: (d.tables || []).join(', ') || c.none }];
+    if (kind === 'kds') stats = r.source === 'order-inbox' ? [{ l: c.labels.queue, v: String(d.pending || 0) }, { l: c.labels.accepted, v: String(d.accepted || 0) }, { l: c.labels.ready, v: String(d.ready || 0) }, { l: c.labels.served, v: String(d.served || 0) }] : [{ l: c.labels.offline, v: String(d.queuedOffline || 0) }, { l: c.labels.reachable, v: yesNo(d.reachable) }];
+    if (kind === 'receipt') stats = [{ l: c.labels.configured, v: yesNo(d.configured) }, { l: c.labels.legal, v: yesNo(d.legalComplete) }, { l: c.labels.sync, v: d.syncIssue || c.current }];
+    if (kind === 'printer') stats = [{ l: c.labels.configured, v: yesNo(d.configured) }, { l: c.labels.connected, v: yesNo(d.connected) }, { l: c.labels.transport, v: d.transport || c.none }];
+    return { text: text, stats: stats, note: c.read + (r.limited ? ' ' + c.limited : ''), meta: c.source + ' · ' + r.source };
+  }
+
+  function readiness(key, nav) {
+    var r, gaps = [], status = 'ready', source = 'merchant-navigation';
+    if (key === 'inventory') { r = inventoryRead(); source = r.source; if (!r.available) gaps.push('inventory-source'); else if (!(r.data && r.data.positions)) gaps.push('opening-stock'); }
+    else if (key === 'receipts') { r = receiptRead(); source = r.source; if (!r.available) gaps.push('receipt-engine'); else { if (!r.data.configured) gaps.push('receipt-template'); if (!r.data.legalComplete) gaps = gaps.concat((r.data.missing || []).map(function (x) { return 'legal:' + x; })); } }
+    else if (key === 'printer') { r = printerRead(); source = r.source; if (!r.available || !r.data.configured) gaps.push('printer-configuration'); else if (!r.data.connected) gaps.push('printer-connection'); }
+    else if (key === 'tables') { r = tablesRead(); source = r.source; if (!r.available || !(r.data && r.data.total)) gaps.push('floorplan'); }
+    else if (key === 'reservations') { r = reservationsRead(); source = r.source; if (!r.available) gaps.push('floorplan'); else gaps.push('floorplan-only'); }
+    else if (key === 'kds') { r = kdsRead(); source = r.source; if (!r.available) gaps.push('production-relay'); }
+    else if (/^pressing-/.test(key)) { r = pressingRead(); source = r.source; if (!r.available) gaps.push('pressing-operations'); }
+    else if (key === 'scanner') { source = 'retail-scan'; if (!window.KiwiRetailScan) gaps.push('scanner-module'); if (!(window.isSecureContext || (typeof location !== 'undefined' && /^https:/.test(String(location.protocol || ''))))) gaps.push('secure-context'); }
+    else if (!pageExists(nav || key)) gaps.push('page-validation');
+    if (gaps.length) status = gaps.every(function (x) { return x === 'floorplan-only' || x === 'page-validation'; }) ? 'needs-validation' : 'needs-attention';
+    return { key: key, status: status, ready: status === 'ready', gaps: gaps, source: source };
   }
 
   /* Mutation tools are deny-by-default. Only append-only stock movements have
@@ -198,11 +275,27 @@
     } else if (name === 'order-status') {
       if (!window.KiwiOrderInbox || typeof window.KiwiOrderInbox.setStatus !== 'function' || (r !== 'owner' && r !== 'manager')) return { ok: false, reason: 'read-only' };
       if (!/^ord-[a-z0-9-]{6,48}$/i.test(String(args.orderId || '')) || !/^(accepted|rejected|ready|served)$/.test(String(args.status || ''))) return { ok: false, reason: 'invalid' };
+    } else if (name === 'reprint') {
+      if (r !== 'owner' && r !== 'manager') return { ok: false, reason: 'read-only' };
+      if (!window.KiwiPosReprint || typeof window.KiwiPosReprint.rows !== 'function' || typeof window.KiwiPosReprint.reprint !== 'function') return { ok: false, reason: 'unavailable' };
+      var vertical = String(args.vertical || trade()).replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
+      if (vertical !== trade()) return { ok: false, reason: 'tenant-mismatch' };
+      var ref = String(args.ref || '').trim().slice(0, 80);
+      var row = (window.KiwiPosReprint.rows(vertical) || []).find(function (x) { return x && String(x.ref) === ref; });
+      if (!vertical || !ref || !row) return { ok: false, reason: 'receipt-not-found' };
+      args = { vertical: vertical, ref: ref };
+    } else if (name === 'customer-message-draft') {
+      if (r !== 'owner' && r !== 'manager') return { ok: false, reason: 'read-only' };
+      var digits = String(args.phone || '').replace(/[^0-9+]/g, '');
+      if (digits.indexOf('00') === 0) digits = '+' + digits.slice(2);
+      if (!/^\+?[1-9][0-9]{7,14}$/.test(digits) || !String(args.text || '').trim()) return { ok: false, reason: 'invalid' };
+      args = { phone: digits, text: String(args.text).trim().slice(0, 1500) };
     } else return { ok: false, reason: 'read-only' };
     var token = 'confirm-' + Math.random().toString(36).slice(2, 12);
     confirmations[token] = { name: name, commandId: commandId, args: name === 'stock-adjust'
       ? { itemId: String(args.itemId).slice(0, 80), qty: +args.qty, reason: String(args.reason || 'manual').slice(0, 32), note: String(args.note || '').slice(0, 300) }
-      : { orderId: String(args.orderId), status: String(args.status), station: String(args.station || '').slice(0, 40) }, expires: Date.now() + 120000 };
+      : name === 'order-status' ? { orderId: String(args.orderId), status: String(args.status), station: String(args.station || '').slice(0, 40) }
+      : args, expires: Date.now() + 120000 };
     return { ok: true, confirmationRequired: true, token: token, summary: confirmations[token].args };
   }
   function confirmAction(token) {
@@ -213,18 +306,37 @@
       var m = window.KiwiInventory.add({ id: 'ai-stock-' + venueId().replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + c.commandId, itemId: c.args.itemId, qty: c.args.qty, reason: c.args.reason, note: c.args.note, refType: 'assistant-confirmed', refId: c.commandId });
       return (results[token] = rememberAction(c.commandId, m ? { ok: true, id: m.id } : { ok: false, reason: 'write-refused' }));
     }
+    if (c.name === 'reprint') {
+      var receipt = (window.KiwiPosReprint.rows(c.args.vertical) || []).find(function (x) { return x && String(x.ref) === c.args.ref; });
+      if (!receipt) return { ok: false, reason: 'receipt-not-found' };
+      var printPromise = Promise.resolve(window.KiwiPosReprint.reprint(c.args.vertical, receipt)).then(function (j) {
+        var out = j && j.ok ? { ok: true, ref: c.args.ref, physicalVerified: true } : { ok: false, reason: 'print-not-confirmed' };
+        if (out.ok) rememberAction(c.commandId, out);
+        return out;
+      }).catch(function () { return { ok: false, reason: 'print-failed' }; });
+      results[token] = printPromise; return printPromise;
+    }
+    if (c.name === 'customer-message-draft') {
+      var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
+      var opened = null;
+      try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
+      var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
+        : { ok: false, reason: 'popup-blocked' };
+      if (draft.ok) rememberAction(c.commandId, draft);
+      return (results[token] = draft);
+    }
     var promise = window.KiwiOrderInbox.setStatus(c.args.orderId, c.args.status, c.args.station ? { station: c.args.station } : {})
       .then(function (j) { return rememberAction(c.commandId, j && (j.ok || j.status === c.args.status) ? { ok: true, id: c.args.orderId, status: c.args.status } : { ok: false, reason: (j && (j.error || j.reason)) || 'write-refused' }); })
       .catch(function () { return { ok: false, reason: 'network' }; });
     results[token] = promise; return promise;
   }
 
-  window.KiwiFeatureTruth = { context: context, role: role, plan: plan, aiMode: aiMode, read: read, intent: intent };
+  window.KiwiFeatureTruth = { context: context, role: role, plan: plan, aiMode: aiMode, read: read, intent: intent, readiness: readiness };
   window.KiwiAgentOps = { canHandle: function (q) { return !!intent(q); }, reply: reply, read: read };
   window.KiwiAgentActions = { request: requestAction, confirm: confirmAction, availability: function () { return {
     stockAdjust: { available: !!window.KiwiInventory && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true },
     orderStatus: { available: !!(window.KiwiOrderInbox && typeof window.KiwiOrderInbox.setStatus === 'function') && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true },
-    reprint: { available: false, reason: 'physical-print-exactly-once-not-guaranteed' },
-    customerMessage: { available: false, reason: 'no-confirmed-message-transport' },
+    reprint: { available: !!(window.KiwiPosReprint && window.KiwiReceipt) && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true, physicalResultRequired: true },
+    customerMessage: { available: typeof window.open === 'function' && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true, outcome: 'draft-only', deliveryVerified: false },
   }; } };
 }());

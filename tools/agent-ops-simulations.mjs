@@ -36,7 +36,7 @@ vm.runInContext(source, context, { filename: 'agent-truth.js' });
 const Ops = window.KiwiAgentOps, Truth = window.KiwiFeatureTruth;
 let failed = 0;
 function check(name, ok, detail = '') { if (!ok) { failed++; console.log('  ✗ ' + name + (detail ? ' — ' + detail : '')); } else console.log('  ✓ ' + name); }
-function run(name, q, sourceName) { const r = Ops.reply(q, { lang: /[\u0600-\u06ff]/.test(q) ? 'ar' : /\b(?:how|is|status|today|ready|connected)\b/i.test(q) ? 'en' : 'fr' }); check(name, !!r && r.meta === 'Source · ' + sourceName && /Lecture seule|Read-only|قراءة فقط/.test(r.note || ''), r && JSON.stringify(r)); }
+function run(name, q, sourceName) { const r = Ops.reply(q, { lang: /[\u0600-\u06ff]/.test(q) ? 'ar' : /\b(?:how|is|status|today|ready|connected)\b/i.test(q) ? 'en' : 'fr' }); check(name, !!r && String(r.meta || '').endsWith(' · ' + sourceName) && /Lecture seule|Read-only|قراءة فقط/.test(r.note || ''), r && JSON.stringify(r)); }
 
 console.log('\n■ Inventory · 5');
 run('FR inventory status', 'Quel est l’état du stock maintenant ?', 'inventory-ledger');
