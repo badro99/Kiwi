@@ -6,6 +6,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const page = fs.readFileSync(path.join(root, 'kiwi-serveur.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'kiwi-sw.js'), 'utf8');
+const manifest = fs.readFileSync(path.join(root, 'serveur.webmanifest'), 'utf8');
 let checks = 0;
 
 function ok(condition, message) {
@@ -33,6 +34,11 @@ ok(/id="kg-rec-empty"[^>]*>Vos records apparaîtront après votre première tabl
 ok(!/id="kg-rec-(?:night|streak|speed)-num">—</.test(page), 'first-shift record tiles never render bare em-dashes');
 ok(/const hasRecords = snap\.paid > 0[\s\S]*?recGrid\.hidden = !hasRecords[\s\S]*?recEmpty\.hidden = hasRecords/.test(page), 'the record grid replaces the empty state after the first settlement');
 ok(/kiwi-newlogo\.svg\?v=2/.test(page), 'the current Serveur logo has a cache-busted asset URL');
+ok(/rel="icon" href="assets\/kiwi-favicon-new\.svg\?v=2"/.test(page), 'the browser tab uses the current Kiwi favicon');
+ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(page), 'the iPhone home-screen card uses the current Kiwi mark');
+ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest)
+  && !/kiwi-mark-app-icon|kiwi-employee-k/.test(manifest), 'the install manifest cannot fall back to a legacy k icon');
 ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw), 'the employee PWA has a versioned cache');
+ok(/kiwi-app-v360/.test(sw) && !/kiwi-employee-k-/.test(sw), 'the shared PWA cache evicts every legacy employee icon');
 
 console.log(`✓ employee language gate green (${checks} checks: profile selector, persistence, live UI, locale, PWA)`);
