@@ -5350,7 +5350,9 @@ em, i, cite, dfn, var { font-style: normal; }
       svPendingRef.clear();
       Object.keys(tableOrders).forEach((id) => delete tableOrders[id]);
       tableClients.clear();
-      employeePaymentRefs.clear();
+      /* Effacé AUSSI du stockage : un identifiant de paiement laissé derrière
+         soi appartiendrait à l'employé suivant qui ouvre la même table. */
+      employeePaymentRefsForgetAll();
       serviceBillAwaiting.clear();
       activeTableId = null;
       menuContextId = null;
@@ -6953,9 +6955,47 @@ em, i, cite, dfn, var { font-style: normal; }
        stable while a payment is being retried, then a newly opened bill gets a
        new id. */
     const employeePaymentRefs = new Map();
+    /* ── L'IDENTIFIANT DE PAIEMENT DOIT SURVIVRE À UN RECHARGEMENT ───────────
+     * C'est la clé d'idempotence de /api/sale : le même identifiant rejoué ne
+     * crée pas de deuxième vente (INSERT OR IGNORE). Il ne vivait qu'en
+     * mémoire, donc il ne survivait pas à un F5, à un onglet que iOS recycle en
+     * arrière-plan, ni à une déconnexion.
+     *
+     * Le scénario coûteux : le règlement échoue APRÈS que la vente est
+     * enregistrée, le serveur recharge l'application — le geste naturel devant
+     * une erreur — et repaie la table. Identifiant neuf, donc deuxième vente :
+     * la recette du soir compte le couvert deux fois. Le serveur ne peut pas le
+     * voir, et le patron le découvre au rapport Z.
+     *
+     * On l'écrit donc à côté de la table qu'il solde. Il est effacé au
+     * paiement confirmé et à la déconnexion — jamais à l'échec, qui est
+     * exactement le moment où il faut le garder. */
+    const EMP_PAY_REFS_KEY = 'kiwiEmployeePaymentRefs';
+    function empPayRefsRead() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(EMP_PAY_REFS_KEY) || '{}');
+        return raw && typeof raw === 'object' ? raw : {};
+      } catch (_) { return {}; }
+    }
+    function empPayRefsWrite(map) {
+      try { localStorage.setItem(EMP_PAY_REFS_KEY, JSON.stringify(map)); } catch (_) {}
+    }
+    /* Une clé par établissement : un serveur qui change de boutique ne doit pas
+       rejouer l'identifiant d'une table portant le même numéro ailleurs. */
+    function empPayRefKey(tableId) {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+      return merchant + '::' + String(tableId);
+    }
     function employeePaymentId(tableId) {
       let id = employeePaymentRefs.get(tableId);
       if (!id) {
+        const stored = empPayRefsRead();
+        const saved = stored[empPayRefKey(tableId)];
+        if (saved && typeof saved === 'string') {
+          id = saved;
+          employeePaymentRefs.set(tableId, id);
+          return id;
+        }
         const random = (window.crypto && window.crypto.randomUUID)
           ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
         /* The -emp suffix survives Live Link's bounded stable-id encoding and
@@ -6963,8 +7003,21 @@ em, i, cite, dfn, var { font-style: normal; }
            sales back into its local journal. */
         id = 'employee-' + String(random).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24) + '-emp';
         employeePaymentRefs.set(tableId, id);
+        stored[empPayRefKey(tableId)] = id;
+        empPayRefsWrite(stored);
       }
       return id;
+    }
+    function employeePaymentRefForget(tableId) {
+      employeePaymentRefs.delete(tableId);
+      const stored = empPayRefsRead();
+      if (stored[empPayRefKey(tableId)] == null) return;
+      delete stored[empPayRefKey(tableId)];
+      empPayRefsWrite(stored);
+    }
+    function employeePaymentRefsForgetAll() {
+      employeePaymentRefs.clear();
+      try { localStorage.removeItem(EMP_PAY_REFS_KEY); } catch (_) {}
     }
     let serviceClientRows = [];
     function renderPayClient() {
@@ -7306,7 +7359,15 @@ em, i, cite, dfn, var { font-style: normal; }
       delete tableOrders[id];
       dirtyOrders.delete(id);
       tableSplits.delete(id);
-      employeePaymentRefs.delete(id);
+      /* La vente est enregistrée mais l'état du plan de salle n'a pas pu
+         s'écrire (verrou optimiste perdu sous charge). L'argent est en sécurité
+         — c'est pour ça que le serveur répond désormais 200 — et il ne reste
+         qu'à rattraper l'affichage : on repousse l'état libre de la table, ce
+         que le document partagé accepte comme n'importe quel autre battement. */
+      if (saved && saved.settlementPending) {
+        publishServiceTableState(id, 'khawya', 0, true);
+      }
+      employeePaymentRefForget(id);
       employeePaymentsInFlight.delete(id);
       tablesPaid++;
       // Update views
