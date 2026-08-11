@@ -4690,7 +4690,7 @@
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=1" defer></script>
-  <script src="assets/inventory-consumption.js?v=1" defer></script>
+  <script src="assets/inventory-consumption.js?v=2" defer></script>
   <script src="assets/procurement.js" defer></script>
   <script src="assets/clients-store.js" defer></script>
   <script src="assets/clients-book.js" defer></script>
@@ -8560,13 +8560,17 @@
       const m = menuItems.find(x => (id && x.id === id) || (name && x.name === name));
       return (m && catLabels[m.cat]) || '';
     }
+    /* L'identifiant du plat voyage avec la ligne. Sans lui, le moteur de
+       recettes ne sait pas quoi chercher : il reçoit "Tajine poulet citron"
+       et n'a qu'une table indexée par it_3. Toute vente était donc muette
+       pour le stock — aucun gramme de poulet ne sortait jamais des livres. */
     function currentSaleLines() {
       if (mode === 'vrap') {
-        return cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
+        return cart.map(c => ({ itemId: c.id || '', name: lineLabel(c), qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
       }
       if (selectedId && tables[selectedId]) {
         return generateOrder(selectedId, tables[selectedId])
-          .map(l => ({ name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name) }));
+          .map(l => ({ itemId: l.id || '', name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name) }));
       }
       return [];
     }
@@ -10583,7 +10587,9 @@
         }
       }
       if (Array.isArray(lines) && lines.length) {
-        entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: money(l.total), cat: l.cat || '' }));
+        entry.lines = lines.map(l => Object.assign(
+          { name: l.name, qty: l.qty, total: money(l.total), cat: l.cat || '' },
+          l.itemId ? { itemId: l.itemId } : null));
       }
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets

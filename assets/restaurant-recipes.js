@@ -144,7 +144,10 @@
           stockUnit: info.stockUnit || '',
         });
       });
-      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', yield: r.portions, lines, notes: r.note, at: Date.now() };
+      /* Le nom du plat voyage avec la recette : une part d'addition partagée
+         arrive à la caisse sans identifiant, et c'est le seul crochet qui reste
+         pour retrouver quoi décompter du stock. */
+      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', name: r.itemName, yield: r.portions, lines, notes: r.note, at: Date.now() };
       return d;
     }, vid);
   }

@@ -11,6 +11,20 @@
   }
   function n(v) { v = +v; return Number.isFinite(v) ? v : 0; }
   function doc() { try { return window.KiwiCost?.doc?.() || {}; } catch (_) { return {}; } }
+  function norm(v) { return String(v == null ? '' : v).trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+  /* Une part d'addition partagée ne porte que le libellé du plat : le partage
+   * est indexé par nom, jamais par identifiant. Sans ce repêchage, un ticket
+   * partagé en deux sortait l'argent sans sortir la marchandise. */
+  function recipeByName(name, d) {
+    var want = norm(name);
+    if (!want) return '';
+    var ids = Object.keys(d.recipes || {});
+    for (var i = 0; i < ids.length; i++) {
+      if (norm(d.recipes[ids[i]] && d.recipes[ids[i]].name) === want) return ids[i];
+    }
+    return '';
+  }
 
   /* A recipe line names its ingredient in the costing namespace ("stock:usr-a1"),
    * the ledger keys movements on the bare article id. Left unresolved, every
@@ -69,8 +83,17 @@
       if (['service', 'tip', 'tax', 'payment', 'class', 'pt'].indexOf(kind) >= 0) { skipped++; return; }
       var itemId = String(line.itemId || line.id || '');
       var qty = Math.max(0, n(line.qty || line.quantity));
-      if (!itemId || !(qty > 0)) { skipped++; return; }
-      var ingredients = recipeLines(itemId, qty, d, 0, []);
+      if (!(qty > 0)) { skipped++; return; }
+      var ingredients = itemId ? recipeLines(itemId, qty, d, 0, []) : null;
+      if (!itemId) {
+        /* Ligne sans identifiant : on n'accepte que le repêchage par nom, et
+         * seulement s'il aboutit à une vraie recette. Consommer l'article
+         * "Tajine poulet citron" lui-même ne voudrait rien dire. */
+        var alias = recipeByName(line.name, d);
+        ingredients = alias ? recipeLines(alias, qty, d, 0, []) : null;
+        if (!ingredients) { skipped++; return; }
+        itemId = alias;
+      }
       var targets = ingredients || [{ itemId: itemId, qty: qty, direct: true }];
       targets.forEach(function (x, part) {
         var m = I.add({
