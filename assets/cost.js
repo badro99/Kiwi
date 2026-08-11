@@ -114,6 +114,26 @@
         recipes[id] = (!y || (+x.at || 0) >= (+y.at || 0)) ? x : y;
       });
       out.recipes = recipes;
+      /* `ingredients` — le prix d'achat de chaque matière — était le seul bloc
+       * que ce fusionneur ne protégeait pas : l'Object.assign du début le
+       * remplaçait en bloc par celui de CE navigateur. Or la caisse ne charge
+       * pas restaurant-recipes.js, donc son document porte toujours
+       * `ingredients: []` ; le premier envoi du terminal effaçait sur le serveur
+       * les prix saisis au tableau de bord, et toutes les fiches techniques
+       * retombaient à un coût matière nul — sans rien signaler, puisqu'une
+       * fiche sans prix rend `null`, jamais une erreur. Même règle que pour les
+       * articles et les fiches : on garde les deux jeux, et pour un ingrédient
+       * touché des deux côtés, la saisie la plus récente. */
+      const ga = Array.isArray(mine && mine.ingredients) ? mine.ingredients : [];
+      const gb = Array.isArray(theirs && theirs.ingredients) ? theirs.ingredients : [];
+      const ing = new Map();
+      gb.forEach((x) => { if (x && x.id) ing.set(String(x.id), x); });
+      ga.forEach((x) => {
+        if (!x || !x.id) return;
+        const y = ing.get(String(x.id));
+        if (!y || (+x.at || 0) >= (+y.at || 0)) ing.set(String(x.id), x);
+      });
+      out.ingredients = Array.from(ing.values());
       return out;
     },
   });
