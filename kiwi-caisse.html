@@ -6725,6 +6725,9 @@
     }
     /* Phone-order state must exist before the first floor render: tableHTML()
        asks phoneBadgeHTML() for each table during this initial paint. */
+    /* Les tables qu'une commande nomme sans que le plan de salle les connaisse.
+       Mémorisées pour n'avertir qu'une fois par table, pas à chaque sondage. */
+    const opUnmatchedTables = new Set();
     const phoneSeats = new Map();     // clé table → { session, since }
     const phonePending = new Map();   // clé table → nombre de commandes en attente
     if (!storeIsReal()) initDemoPlanes();
@@ -15166,6 +15169,58 @@
         const seatsChanged = !sameMap(seats, phoneSeats, (a, b) => a.session === b.session);
         phoneSeats.clear(); seats.forEach((v, k) => phoneSeats.set(k, v));
         (delta || []).forEach(o => { opIngest(o); touched = true; });
+
+        /* ── LA SECONDE CHANCE ────────────────────────────────────────────
+         * `delta` ne présente une commande qu'UNE fois : c'est le curseur
+         * `since` qui le décide. Or attachOrderProTable a le droit de refuser
+         * — table absente du plan, session qui ne correspond pas, commande
+         * antérieure à l'occupation. Un refus valait donc PERTE DÉFINITIVE :
+         * la commande ne revenait jamais, et ses lignes n'entraient jamais
+         * dans l'addition. Le client partait en ayant payé moins qu'il n'a
+         * mangé, et rien ne le signalait.
+         *
+         * Le refus le plus fréquent n'est même pas un cas tordu : au tout
+         * premier sondage après l'ouverture de la caisse, le plan de salle
+         * n'est pas encore chargé, donc AUCUNE table ne résout — et tout ce
+         * que ce tour-là présentait était perdu pour le service entier.
+         *
+         * On repasse donc sur `all` (ce que la caisse connaît encore, pas
+         * seulement ce qui vient de changer) et on retente ce qui n'est pas
+         * attaché. C'est sûr parce que l'attachement est idempotent : chaque
+         * ligne porte le marqueur `<id de commande>:<rang>`, et une ligne déjà
+         * présente est reconnue puis ignorée. Une commande refusée pour une
+         * bonne raison sera refusée à nouveau, sans effet ; une commande
+         * refusée pour une raison passagère rentre au tour suivant. */
+        const attachedOrders = new Set();
+        Object.keys(tableOrders).forEach(tid => {
+          (tableOrders[tid] || []).forEach(line => {
+            const marker = String(line.orderProLine || '');
+            const cut = marker.lastIndexOf(':');
+            if (cut > 0) attachedOrders.add(marker.slice(0, cut));
+          });
+        });
+        (all || []).forEach(o => {
+          if (!o || o.mode !== 'table' || !o.table) return;
+          if (o.channel === 'caisse') return;          // même règle que opIngest
+          if (o.paid || o.status === 'rejected') return;
+          if (attachedOrders.has(String(o.id))) return;
+          /* Le plan de salle ne connaît pas cette table : renommée en plein
+             service, ou pas encore chargée. On le DIT une fois — sans quoi
+             c'est exactement le genre de perte qui ne se voit qu'au moment de
+             l'addition — et on retentera au prochain tour. */
+          if (!caisseTableId(o.table)) {
+            const key = tableKey(o.table);
+            if (!opUnmatchedTables.has(key)) {
+              opUnmatchedTables.add(key);
+              try { console.warn('[kiwi] commande sans table au plan de salle :', o.table, o.id); } catch (_) {}
+              try { toast(`Table « ${o.table} » absente du plan de salle · commande non rattachée`, 6000); } catch (_) {}
+            }
+            return;
+          }
+          opUnmatchedTables.delete(tableKey(o.table));
+          if (attachOrderProTable(o)) touched = true;
+        });
+
         const pend = new Map();
         (all || []).forEach(o => {
           if (o.mode !== 'table' || o.status !== 'pending' || !o.table) return;
