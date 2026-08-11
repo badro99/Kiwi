@@ -135,6 +135,7 @@
   .venue-row:active { background: var(--paper-soft); }
   .venue-row.active { background: var(--n-100); }
   .venue-row-icon { color: var(--atlas); display: flex; align-items: center; justify-content: center; }
+  .venue-row-icon svg { width: 20px; height: 20px; display: block; }
   .venue-row-body { min-width: 0; }
   .venue-row-name { font-size: 13px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .venue-row-type { font-size: 11px; color: var(--n-500); margin-top: 2px; }
@@ -2625,6 +2626,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
+  .fs-venue-icon svg { width: 18px; height: 18px; display: block; }
   body.fusion-mode .fs-venue-icon {
     background: rgba(125,242,176,0.10);
     color: var(--mint);
@@ -5998,7 +6000,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=6" defer></script>
+<script src="assets/venues.js?v=7" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=2" defer></script>
 <script src="assets/pressing-garment-icons.js?v=1" defer></script>
