@@ -67,6 +67,10 @@ function bootCost(opts) {
       define(feature, opts) {
         const key = () => 'kiwi:' + feature + ':v1:' + window.__v;
         const subs = new Set();
+        /* Le fusionneur de conflits, tel que cloud-doc.js le recevra. C'est du
+           code qui ne tourne QUE quand deux appareils ont écrit — donc jamais
+           sur le poste de celui qui le modifie. On le sort ici pour l'appeler. */
+        window.__merge = opts.merge;
         const read = () => { const r = localStorage.getItem(key()); return r ? JSON.parse(r) : opts.blank(); };
         const write = (d) => { localStorage.setItem(key(), JSON.stringify(d)); subs.forEach(f => f()); return d; };
         return { get: read, set: write,
@@ -89,6 +93,7 @@ function bootCost(opts) {
     `, ctx);
   }
   vm.runInContext(R('assets/cost.js'), ctx, { filename: 'cost.js' });
+  if (win.KiwiCost) win.KiwiCost.__merge = win.__merge;   // cf. le stub de define()
   return win.KiwiCost;
 }
 
@@ -410,6 +415,47 @@ function renderFinance(real) {
     /DEFAULT_MARGIN = \{ restaurant: 69/.test(src));
   const int = R('assets/interactive.js');
   ok('démo : le tiroir rédigé existe toujours', /'marge': \{/.test(int));
+}
+
+/* ══════════════ 17 · une synchro depuis la caisse n'efface aucun prix ══════════════
+ * Mesuré en production sur amira-cafe : le tableau de bord portait 42 matières
+ * chiffrées, le serveur n'en portait plus aucune, et toutes les fiches
+ * techniques rendaient `null`. La caisse ne charge pas restaurant-recipes.js —
+ * son document de coûts porte donc TOUJOURS `ingredients: []`. Le fusionneur
+ * réconciliait `items` et `recipes` identifiant par identifiant, mais laissait
+ * `ingredients` au Object.assign d'ouverture : le premier envoi du terminal
+ * écrasait la soirée de saisie du commerçant. Sans erreur, sans trace — une
+ * fiche dont un ingrédient n'a pas de prix rend `null`, jamais une exception. */
+{
+  const C = bootCost({ menu: MENU });
+  const merge = C.__merge;
+  ok('le document de coûts fournit un fusionneur', typeof merge === 'function');
+
+  const serveur = {
+    items: {}, recipes: { it_1: { lines: [{ ing: 'stock:a', qty: 1 }], status: 'complete', at: 10 } },
+    ingredients: [
+      { id: 'stock:a', name: 'Farine', unit: 'kg', useCost: 12, at: 100 },
+      { id: 'stock:b', name: 'Beurre', unit: 'kg', useCost: 60, at: 100 },
+    ],
+    charges: [], targets: {}, seq: 0,
+  };
+  const caisse = { items: {}, recipes: {}, ingredients: [], charges: [], targets: {}, seq: 0 };
+
+  const apres = merge(caisse, serveur);   // (le mien, le sien) — la caisse envoie
+  ok('caisse → serveur : les prix des matières survivent',
+    (apres.ingredients || []).length === 2, JSON.stringify(apres.ingredients));
+  ok('caisse → serveur : le prix lui-même est intact',
+    (apres.ingredients.find((x) => x.id === 'stock:a') || {}).useCost === 12);
+
+  /* Et une VRAIE correction de prix passe quand même : plus récente, elle gagne. */
+  const bureau = Object.assign({}, caisse, {
+    ingredients: [{ id: 'stock:a', name: 'Farine', unit: 'kg', useCost: 14, at: 200 }],
+  });
+  const apres2 = merge(bureau, serveur);
+  ok('la saisie la plus récente gagne', (apres2.ingredients.find((x) => x.id === 'stock:a') || {}).useCost === 14);
+  ok('… sans perdre celle que l\'autre appareil était seul à porter',
+    (apres2.ingredients.find((x) => x.id === 'stock:b') || {}).useCost === 60);
+  ok('une fiche technique du serveur n\'est pas perdue non plus', !!apres.recipes.it_1);
 }
 
 /* ─────────────────────────── verdict ─────────────────────────── */
