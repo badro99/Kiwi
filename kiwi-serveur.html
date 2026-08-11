@@ -178,8 +178,12 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ===========================================================
        PIN LOGIN SCREEN
        =========================================================== */
+    /* L'écran d'accueil est le premier Kiwi que voit un serveur, et il était en
+       #FFFFFF pur — ce que la charte interdit explicitement pour un fond. Le
+       papier chaud remplace le blanc clinique ; le reste de l'app garde
+       --surface tant que ses écrans n'ont pas été revus un par un. */
     .screen-pin {
-      background: var(--surface);
+      background: var(--paper);
       color: var(--ink);
       align-items: center;
       justify-content: space-between;
@@ -207,11 +211,13 @@ em, i, cite, dfn, var { font-style: normal; }
       letter-spacing: -0.015em;
       text-align: center;
     }
+    /* « ENTREZ VOTRE CODE » en capitales espacées, c'était du bruit visuel :
+       à 12px l'interlettrage casse la forme des mots et rien dans la hiérarchie
+       ne justifiait de crier. Une seule voix, casse normale. */
     .pin-hint {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--ink-3);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+      letter-spacing: -0.005em;
     }
     .pin-dots {
       display: flex;
@@ -255,26 +261,41 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 100%;
       max-width: 280px;
     }
+    /* Les touches étaient des disques #F4F4F2 sur fond blanc : gris sur blanc,
+       aucune matière, le clavier de verrouillage générique. Sur le papier chaud
+       elles deviennent des pastilles claires posées dessus — filet + ombre
+       courte — et l'appui prend enfin la couleur de la marque. */
     .pin-key {
       aspect-ratio: 1;
       border-radius: 50%;
-      background: var(--paper-mute);
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
+      box-shadow: 0 1px 2px rgba(10, 15, 13, 0.05);
       color: var(--ink);
-      font-size: 26px; font-weight: 500;
+      font-size: 24px; font-weight: 500;
+      font-variant-numeric: tabular-nums lining-nums;
       display: flex; align-items: center; justify-content: center;
-      transition: background 120ms ease, transform 80ms ease;
+      transition: background 120ms ease, border-color 120ms ease,
+                  color 120ms ease, transform 80ms ease;
       letter-spacing: -0.01em;
     }
     .pin-key:active {
-      background: var(--mint-tint);
+      background: var(--forest);
+      border-color: var(--forest);
+      color: var(--mint-tint);
+      box-shadow: none;
       transform: scale(0.95);
     }
     .pin-key.pin-key-empty {
       background: transparent;
+      border-color: transparent;
+      box-shadow: none;
       pointer-events: none;
     }
     .pin-key.pin-key-back {
       background: transparent;
+      border-color: transparent;
+      box-shadow: none;
       color: var(--ink-3);
     }
     .pin-key.pin-key-back svg {
@@ -282,16 +303,19 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-key.pin-key-back:active {
       background: var(--paper-mute);
+      border-color: var(--line-soft);
       color: var(--ink);
     }
+    /* Le pied de page était en JetBrains Mono 10px capitales à 0.14em : une
+       phrase en français, pas une chaîne machine. Elle se lit en Inter Tight. */
     .pin-foot {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      font-size: 12px;
+      line-height: 1.45;
+      letter-spacing: -0.005em;
       color: var(--ink-4);
       text-align: center;
       margin-top: 14px;
+      max-width: 30ch;
     }
     .employee-login {
       display: none;
@@ -303,10 +327,9 @@ em, i, cite, dfn, var { font-style: normal; }
     .employee-login label { display: grid; gap: 6px; }
     .employee-login label span {
       color: var(--ink-3);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
     }
     .employee-login input {
       width: 100%;
@@ -324,10 +347,11 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 13px;
       padding: 15px;
       background: var(--forest);
-      color: #fff;
+      color: #EAFFF4;
       font-size: 16px;
-      font-weight: 750;
+      font-weight: 600;
     }
+    .employee-login button:hover:not(:disabled) { background: var(--forest-deep); }
     .employee-login button:disabled { opacity: .55; cursor: wait; }
     .employee-login-error {
       min-height: 18px;
