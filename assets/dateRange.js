@@ -283,6 +283,15 @@
     ar: { aujourdhui: 'مقابل أمس', hier: 'مقابل أول أمس', septJours: 'مقابل 7 أيام', trenteJours: 'مقابل 30 يومًا', moisDernier: 'مقابل الشهر', trimestre: 'مقابل الربع', annee: 'مقابل السنة', personnalise: 'مقابل السابق' },
   };
 
+  // Why « Comparer » is greyed out: this merchant has no takings in the window
+  // before the one on screen, so there is no second line to draw.
+  const CMP_EMPTY_TITLE = {
+    'Aucune période précédente à comparer': {
+      en: 'No previous period to compare against',
+      ar: 'لا توجد فترة سابقة للمقارنة',
+    },
+  };
+
   const HH_SUB = {
     // moisDernier/trimestre/annee reuse the 30-day hourly profile (buildHeatmap
     // maps them onto trenteJours), so their labels say "typical profile" rather
@@ -1754,49 +1763,89 @@
     return step * mag;
   }
   const DAY_ABBR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  /* One day, bucketed by hour and accumulated — 24 running totals. Shared by
+   * the plotted day and the day it is compared against so both curves are
+   * built by the same code and are readable point-for-point. */
+  function hourlyCumul(list, base) {
+    const end = base + 864e5;
+    const per = new Array(24).fill(0);
+    list.forEach(e => { const ts = +e.ts || 0; if (ts >= base && ts < end) per[new Date(ts).getHours()] += Math.max(0, +e.amount || 0); });
+    const out = [];
+    let acc = 0;
+    for (let h = 0; h < 24; h++) { acc += per[h]; out.push(acc); }
+    return out;
+  }
+  // Same idea over N whole days: one total per day from `start`.
+  function dailyTotals(list, start, days) {
+    const out = new Array(days).fill(0);
+    list.forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) out[idx] += Math.max(0, +e.amount || 0); }
+    });
+    return out;
+  }
   // Build a REAL revenue-chart series for the active range from KiwiSales — the
   // custom-venue replacement for the zeroed demo clone (which plots a flat line
   // and leaks the demo legend total). Hourly-cumulative on day ranges, daily
   // totals on 7/30-day ranges; axis + legend computed from the real numbers.
+  //
+  // `revPrev` is the window immediately before this one, bucketed identically —
+  // this is what « Comparer » draws. It used to be `rev.map(() => 0)`, so on a
+  // real merchant the button faded in a flat line pinned to the axis with an
+  // empty legend: indistinguishable from a dead control. A window with no sale
+  // at all returns null, not zeros — same rule realDeltaPct states above: a
+  // fabricated baseline claims a comparison that was never possible.
   function realRevSeries(range) {
     range = range || effRange();
     const list = realSalesList();
     const hourly = (range === 'aujourdhui' || range === 'hier');
-    let rev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', total = 0;
+    let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
 
     if (hourly) {
       const base = (range === 'hier') ? dayStartMs(Date.now()) - 864e5 : dayStartMs(Date.now());
-      const end = base + 864e5;
-      const per = new Array(24).fill(0);
-      list.forEach(e => { const ts = +e.ts || 0; if (ts >= base && ts < end) per[new Date(ts).getHours()] += Math.max(0, +e.amount || 0); });
-      let acc = 0;
-      for (let h = 0; h < 24; h++) { acc += per[h]; rev.push(acc); xLabels.push((h < 10 ? '0' : '') + h + 'h'); }
+      rev = hourlyCumul(list, base);
+      prev = hourlyCumul(list, base - 864e5);
+      total = rev[23];
+      prevTotal = prev[23];
+      for (let h = 0; h < 24; h++) xLabels.push((h < 10 ? '0' : '') + h + 'h');
       visibleXIdx = [0, 3, 6, 9, 12, 15, 18, 21];
-      total = acc;
+      // Today is unfinished. Carrying the running total flat to midnight draws
+      // a shop that stopped selling at the current hour, and lays a part-day
+      // over a whole one. null ends the line where the day actually is —
+      // smoothPath skips null points.
+      if (range === 'aujourdhui') {
+        const nowH = new Date().getHours();
+        for (let i = nowH + 1; i < 24; i++) rev[i] = null;
+      }
       rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
       sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
+      cmpPrefix = (range === 'hier') ? 'Cumul avant-hier' : 'Cumul hier';
     } else {
       const days = RANGE_DAYS[range] || 7;
       const start = dayStartMs(Date.now()) - (days - 1) * 864e5;
-      const buckets = new Array(days).fill(0);
-      list.forEach(e => {
-        const ts = +e.ts || 0;
-        if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) buckets[idx] += Math.max(0, +e.amount || 0); }
-      });
-      rev = buckets;
+      rev = dailyTotals(list, start, days);
+      prev = dailyTotals(list, start - days * 864e5, days);
       for (let i = 0; i < days; i++) { const d = new Date(start + i * 864e5); xLabels.push(DAY_ABBR[d.getDay()] + ' ' + d.getDate()); }
       const step = Math.max(1, Math.round(days / 6));
       for (let i = 0; i < days; i += step) visibleXIdx.push(i);
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
-      total = buckets.reduce((s, x) => s + x, 0);
+      total = rev.reduce((s, x) => s + x, 0);
+      prevTotal = prev.reduce((s, x) => s + x, 0);
       rangeBadge = days + ' DERNIERS JOURS';
       sub = 'Total journalier · ' + days + ' derniers jours';
+      cmpPrefix = days + ' jours précédents';
     }
 
-    const top = niceCeil(Math.max(1, ...rev));
+    const hasPrev = prevTotal > 0;
+    // The ceiling has to clear BOTH curves, or a stronger previous period gets
+    // clipped off the top of the box the moment the comparison is switched on.
+    const top = niceCeil(Math.max(1, ...rev.filter(v => v != null), ...(hasPrev ? prev : [])));
     const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
     const legendPrimary = (hourly ? 'Cumul' : ('Total ' + (RANGE_DAYS[range] || rev.length) + ' jours')) + ' · ' + frInt(total) + ' MAD';
-    return { rev, revPrev: rev.map(() => 0), yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary, legendCompare: '' };
+    return {
+      rev, revPrev: hasPrev ? prev : null, yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
+      legendCompare: hasPrev ? (cmpPrefix + ' · ' + frInt(prevTotal) + ' MAD') : '',
+    };
   }
 
   /* ═══════════════ RENDER: HERO ═══════════════ */
@@ -3277,6 +3326,18 @@
     if (badge) badge.textContent = trStr(data.rangeBadge, REV_BADGE);
     const sub = document.querySelector('[data-rev-sub]');
     if (sub) sub.textContent = trStr(data.sub, REV_SUB);
+
+    /* No previous period, no comparison to make. Left enabled the button reads
+     * as broken — you press it and the chart doesn't move. Disabled, with the
+     * reason on the tooltip, it reads as what it is: there is nothing yet to
+     * compare this period against. */
+    const cmpBtn = document.querySelector('[data-rev-compare-btn]');
+    if (cmpBtn) {
+      const canCompare = Array.isArray(data.revPrev) && data.revPrev.length > 0;
+      cmpBtn.disabled = !canCompare;
+      if (canCompare) cmpBtn.removeAttribute('title');
+      else cmpBtn.setAttribute('title', trStr('Aucune période précédente à comparer', CMP_EMPTY_TITLE));
+    }
 
     // Legend (revenue lines only — transactions count moved to KPI band)
     const legend = document.querySelector('[data-rev-legend]');

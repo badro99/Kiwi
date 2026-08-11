@@ -506,7 +506,10 @@
       livraison: 'delivery', delivery: 'delivery', glovo: 'delivery', yassir: 'delivery',
       boutique: 'store', store: 'store', cabine: 'cabin', cabin: 'cabin', domicile: 'home', home: 'home',
       produit: 'products', products: 'products', club: 'club', distance: 'remote', remote: 'remote',
-      direct: 'direct', online: 'online', evenement: 'catering', catering: 'catering'
+      direct: 'direct', online: 'online', evenement: 'catering', catering: 'catering',
+      // Les commandes relayées par OrderPro arrivent estampillées « kiwi »
+      // côté serveur (voir orders.channel dans schema.sql).
+      orderpro: 'orderpro', kiwi: 'orderpro'
     };
     var resolved = direct[key] || key;
     return channelIds.indexOf(resolved) >= 0 ? resolved : '';
@@ -545,7 +548,8 @@
   var DEMO_CHANNEL_WEIGHT = {
     dining: 100, terrace: 52, counter: 74, takeaway: 38, delivery: 27,
     catering: 30, pickup: 22, store: 88, cabin: 96, home: 27,
-    products: 19, club: 92, remote: 24, direct: 40, online: 26, onsite: 88
+    products: 19, club: 92, remote: 24, direct: 40, online: 26, onsite: 88,
+    orderpro: 34
   };
 
   /* Le total de la période, lu là où le tableau de bord l'affiche déjà. */

@@ -98,9 +98,11 @@
     direct:    { fr: 'Réservation directe',   en: 'Direct booking',       ar: 'حجز مباشر' },
     online:    { fr: 'Réservation en ligne',  en: 'Online booking',       ar: 'حجز عبر الإنترنت' },
     onsite:    { fr: 'Sur place',             en: 'On site',              ar: 'في المكان' },
+    // Nom de marque : jamais traduit, dans aucune langue.
+    orderpro:  { fr: 'OrderPro',              en: 'OrderPro',             ar: 'OrderPro' },
   };
   var CHANNELS_BY_BASE = {
-    restaurant: ['dining', 'terrace', 'takeaway', 'delivery'],
+    restaurant: ['dining', 'takeaway', 'delivery', 'orderpro'],
     boutique:   ['counter', 'pickup', 'delivery'],
     spa:        ['cabin', 'home', 'products'],
     hotel:      ['onsite', 'direct', 'online'],
