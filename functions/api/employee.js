@@ -50,8 +50,12 @@ function memberFor(team, pinRow) {
   const want = String(pinRow.name || '').trim().toLocaleLowerCase('fr');
   return want ? members.find((m) => fullName(m).toLocaleLowerCase('fr') === want) || null : null;
 }
-function planningState(team, memberId) {
+function planningState(team, memberId, currentRole) {
   const raw = team && team.planning && typeof team.planning === 'object' ? team.planning : {};
+  const ownRole = roleKey(currentRole);
+  const today = dateKey(Date.now());
+  const members = Array.isArray(team && team.members) ? team.members : [];
+  const roles = new Map(members.map((member) => [String(member.id || ''), roleKey(member.function || member.department || member.role)]));
   const requests = (Array.isArray(raw.requests) ? raw.requests : [])
     .filter((request) => request && String(request.memberId || '') === String(memberId || ''))
     .map((request) => ({
@@ -62,10 +66,20 @@ function planningState(team, memberId) {
       reason:String(request.reason || '').slice(0, 240), createdAt:String(request.createdAt || ''), updatedAt:String(request.updatedAt || ''),
     }));
   const source = raw.publishingEnabled ? raw.publishedShifts : team && team.shifts;
-  return { publishingEnabled:Boolean(raw.publishingEnabled), schedule:(source && source[memberId]) || {}, requests };
+  const openShifts = (Array.isArray(raw.openShifts) ? raw.openShifts : [])
+    .filter((shift) => shift && String(shift.day || '') >= today && (String(shift.claimantId || '') === String(memberId || '') || String(shift.memberId || '') === String(memberId || '') || (shift.status === 'open' && (!shift.role || !ownRole || roleKey(shift.role) === ownRole))))
+    .map((shift) => ({ id:String(shift.id || ''), day:String(shift.day || ''), start:String(shift.start || ''), end:String(shift.end || ''), role:String(shift.role || '').slice(0,80), note:String(shift.note || '').slice(0,160), status:String(shift.status || 'open'), mine:String(shift.claimantId || shift.memberId || '') === String(memberId || '') }));
+  const swapRequests = (Array.isArray(raw.swapRequests) ? raw.swapRequests : [])
+    .filter((request) => request && String(request.day || '') >= today && (String(request.memberId || '') === String(memberId || '') || String(request.claimantId || '') === String(memberId || '') || (request.status === 'open' && (!ownRole || !roles.get(String(request.memberId || '')) || roles.get(String(request.memberId || '')) === ownRole))))
+    .map((request) => ({ id:String(request.id || ''), memberId:String(request.memberId || ''), day:String(request.day || ''), shift:request.shift && typeof request.shift === 'object' ? { start:String(request.shift.start || ''), end:String(request.shift.end || '') } : {}, status:String(request.status || 'open'), claimantId:String(request.claimantId || '') === String(memberId || '') ? String(memberId || '') : '', offeredDay:String(request.claimantId || '') === String(memberId || '') ? String(request.offeredDay || '') : '', mine:String(request.memberId || '') === String(memberId || '') }));
+  const notices = (Array.isArray(raw.notices) ? raw.notices : [])
+    .filter((notice) => notice && String(notice.memberId || '') === String(memberId || ''))
+    .slice(-20).map((notice) => ({ id:String(notice.id || ''), type:String(notice.type || ''), day:String(notice.day || ''), otherDay:String(notice.otherDay || ''), periodKey:String(notice.periodKey || ''), createdAt:String(notice.createdAt || '') }));
+  return { publishingEnabled:Boolean(raw.publishingEnabled), schedule:(source && source[memberId]) || {}, requests, openShifts, swapRequests, notices };
 }
 function validISODate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) && !Number.isNaN(Date.parse(String(value) + 'T12:00:00Z')); }
 function validTime(value) { return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')); }
+function roleKey(value) { return String(value || '').trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 async function readDoc(env, merchant, feature, fallback) {
   try {
     const row = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?')
@@ -198,7 +212,7 @@ async function payloadFor(request, env) {
   if (cfg && String(cfg.status || '') === 'suspended') return { suspended: true };
   const member = memberFor(teamRow.data, auth.pin);
   const me = safeMember(member, auth.pin);
-  const planning = planningState(teamRow.data, me.id);
+  const planning = planningState(teamRow.data, me.id, me.role || me.department);
   const members = Array.isArray(teamRow.data.members) ? teamRow.data.members : [];
   const entries = Array.isArray(attendanceRow.data.entries) ? attendanceRow.data.entries : [];
   const openEntries = new Map(entries.filter((e) => e && !e.outTs)
@@ -216,7 +230,13 @@ async function payloadFor(request, env) {
     ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || '') },
     employee: me,
     schedule: planning.schedule,
-    planning: { publishingEnabled:planning.publishingEnabled, requests:planning.requests },
+    planning: {
+      publishingEnabled:planning.publishingEnabled,
+      requests:planning.requests,
+      openShifts:planning.openShifts,
+      swapRequests:planning.swapRequests,
+      notices:planning.notices,
+    },
     hours: (teamRow.data.hours && teamRow.data.hours[me.id]) || {},
     pointedHours: pointedHours(attendanceRow.data, me.id, auth.pin.id),
     progress: safeProgress(progressRow.data.members && progressRow.data.members[me.id]),
@@ -344,6 +364,69 @@ export async function onRequestPost({ request, env }) {
       if (!updated) return json({ error:'planning-write-failed' }, 503);
     }
     return json({ ok:true, action, requestId });
+  }
+  if (['planning-open-shift-claim', 'planning-swap-request', 'planning-swap-claim', 'planning-opportunity-cancel'].includes(action)) {
+    const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
+    const member = memberFor(teamRow.data, auth.pin);
+    const memberId = String((member && member.id) || auth.pin.id);
+    const memberRole = roleKey((member && (member.function || member.department)) || auth.pin.role);
+    const now = new Date().toISOString();
+    let resultId = '';
+    let operationError = '';
+    const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
+      doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
+      const planning = doc.planning;
+      planning.openShifts = Array.isArray(planning.openShifts) ? planning.openShifts : [];
+      planning.swapRequests = Array.isArray(planning.swapRequests) ? planning.swapRequests : [];
+      planning.publishedShifts = planning.publishedShifts && typeof planning.publishedShifts === 'object' ? planning.publishedShifts : {};
+      if (action === 'planning-open-shift-claim') {
+        resultId = String(body.shiftId || '');
+        const shift = planning.openShifts.find((item) => item && item.id === resultId);
+        if (!shift || shift.status !== 'open') { operationError = 'open-shift-unavailable'; return doc; }
+        if (!validISODate(shift.day) || !validTime(shift.start) || !validTime(shift.end) || shift.start === shift.end) { operationError = 'open-shift-invalid'; return doc; }
+        if (shift.day < dateKey(Date.now())) { operationError = 'open-shift-past'; return doc; }
+        if (shift.role && memberRole && roleKey(shift.role) !== memberRole) { operationError = 'open-shift-role-mismatch'; return doc; }
+        if (planning.publishedShifts[memberId] && planning.publishedShifts[memberId][shift.day]) { operationError = 'open-shift-schedule-conflict'; return doc; }
+        const activeClaims = planning.openShifts.filter((item) => item && item.claimantId === memberId && item.status === 'claimed').length;
+        if (activeClaims >= 20) { operationError = 'planning-opportunity-limit'; return doc; }
+        shift.status = 'claimed'; shift.claimantId = memberId; shift.updatedAt = now;
+      } else if (action === 'planning-swap-request') {
+        const day = String(body.day || '');
+        const ownShift = planning.publishedShifts[memberId] && planning.publishedShifts[memberId][day];
+        if (!validISODate(day) || !ownShift || !validTime(ownShift.start) || !validTime(ownShift.end)) { operationError = 'swap-shift-invalid'; return doc; }
+        if (day < dateKey(Date.now())) { operationError = 'swap-shift-past'; return doc; }
+        const activeMine = planning.swapRequests.filter((item) => item && item.memberId === memberId && ['open','claimed'].includes(item.status)).length;
+        if (activeMine >= 20) { operationError = 'planning-opportunity-limit'; return doc; }
+        if (planning.swapRequests.some((item) => item && item.memberId === memberId && item.day === day && ['open','claimed'].includes(item.status))) { operationError = 'swap-already-open'; return doc; }
+        resultId = crypto.randomUUID();
+        planning.swapRequests.push({ id:resultId, memberId, day, shift:{ start:String(ownShift.start), end:String(ownShift.end) }, status:'open', claimantId:'', offeredDay:'', createdAt:now, updatedAt:now });
+      } else if (action === 'planning-swap-claim') {
+        resultId = String(body.requestId || '');
+        const offeredDay = String(body.offeredDay || '');
+        const request = planning.swapRequests.find((item) => item && item.id === resultId);
+        const offeredShift = planning.publishedShifts[memberId] && planning.publishedShifts[memberId][offeredDay];
+        if (!request || request.status !== 'open' || request.memberId === memberId) { operationError = 'swap-unavailable'; return doc; }
+        if (!validISODate(offeredDay) || !offeredShift || !validTime(offeredShift.start) || !validTime(offeredShift.end)) { operationError = 'swap-offer-invalid'; return doc; }
+        if (request.day < dateKey(Date.now()) || offeredDay < dateKey(Date.now())) { operationError = 'swap-shift-past'; return doc; }
+        const owner = (Array.isArray(doc.members) ? doc.members : []).find((item) => item && String(item.id || '') === String(request.memberId || ''));
+        const ownerRole = roleKey(owner && (owner.function || owner.department || owner.role));
+        if (ownerRole && memberRole && ownerRole !== memberRole) { operationError = 'swap-role-mismatch'; return doc; }
+        request.status = 'claimed'; request.claimantId = memberId; request.offeredDay = offeredDay;
+        request.offeredShift = { start:String(offeredShift.start), end:String(offeredShift.end) }; request.updatedAt = now;
+      } else {
+        resultId = String(body.requestId || body.shiftId || '');
+        const open = planning.openShifts.find((item) => item && item.id === resultId && item.status === 'claimed' && item.claimantId === memberId);
+        const swap = planning.swapRequests.find((item) => item && item.id === resultId);
+        if (open) { open.status = 'open'; open.claimantId = ''; open.updatedAt = now; }
+        else if (swap && swap.memberId === memberId && ['open','claimed'].includes(swap.status)) { swap.status = 'cancelled'; swap.updatedAt = now; }
+        else if (swap && swap.claimantId === memberId && swap.status === 'claimed') { swap.status = 'open'; swap.claimantId = ''; swap.offeredDay = ''; delete swap.offeredShift; swap.updatedAt = now; }
+        else operationError = 'planning-opportunity-not-cancellable';
+      }
+      return doc;
+    });
+    if (!updated) return json({ error:'planning-write-failed' }, 503);
+    if (operationError) return json({ error:operationError }, 409);
+    return json({ ok:true, action, id:resultId });
   }
   if (action === 'pause' || action === 'resume') return json({ error: 'pause-managed-by-caisse' }, 403);
   if (!['clock-in', 'clock-out'].includes(action)) return json({ error: 'bad-action' }, 400);

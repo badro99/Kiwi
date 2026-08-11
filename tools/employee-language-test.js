@@ -39,6 +39,6 @@ ok(/apple-touch-icon[^>]*kiwi-employee-180\.png\?v=2/.test(page), 'the iPhone ho
 ok(/kiwi-employee-192\.png\?v=2/.test(manifest) && /kiwi-employee-512\.png\?v=2/.test(manifest)
   && !/kiwi-mark-app-icon|kiwi-employee-k/.test(manifest), 'the install manifest cannot fall back to a legacy k icon');
 ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw), 'the employee PWA has a versioned cache');
-ok(/kiwi-app-v363/.test(sw) && !/kiwi-employee-k-/.test(sw), 'the shared PWA cache evicts every legacy employee icon');
+ok(/kiwi-app-v366/.test(sw) && !/kiwi-employee-k-/.test(sw), 'the shared PWA cache evicts every legacy employee icon');
 
 console.log(`✓ employee language gate green (${checks} checks: profile selector, persistence, live UI, locale, PWA)`);

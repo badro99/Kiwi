@@ -1680,22 +1680,76 @@
     saveCustomTeams(); render(); toast(planningCopy().publishDone, { type:'success' });
   };
 
+  function planningRoleOptions(ctx, selected) {
+    const copy = planningCopy();
+    const roles = Array.from(new Set(ctx.members.map((member)=>String(member.function || member.department || '').trim()).filter(Boolean))).sort();
+    return `<option value="">${esc(copy.allRoles)}</option>${roles.map((role)=>`<option value="${esc(role)}"${role===selected?' selected':''}>${esc(role)}</option>`).join('')}`;
+  }
+  function planningDaysInput(selected) {
+    const labels=trLang()==='ar'?['ح','ن','ث','ر','خ','ج','س']:trLang()==='en'?['S','M','T','W','T','F','S']:['D','L','M','M','J','V','S'];
+    const values=new Set((selected||[1,2,3,4,5]).map(Number));
+    return `<div class="kt-plan-weekdays">${labels.map((label,day)=>`<label><input type="checkbox" value="${day}" data-kt-coverage-day${values.has(day)?' checked':''}><span>${esc(label)}</span></label>`).join('')}</div>`;
+  }
+  handlers['kt-plan-coverage'] = () => {
+    const ctx=planningContext(), copy=planningCopy(), rules=(ctx.planning.coverageRules||[]).filter((rule)=>rule&&rule.active!==false);
+    const rulesHtml=rules.length?`<div class="kt-coverage-list">${rules.map((rule)=>`<div class="kt-coverage-rule"><div><strong>${esc(rule.label||rule.role||copy.coverage)}</strong><span>${esc(rule.start)}–${esc(rule.end)} · ${esc(rule.role||copy.allRoles)} · ${esc(copy.minimum)} ${Number(rule.minimum)||1}</span></div><button class="kb ghost" data-action="kt-plan-coverage-delete" data-rule-id="${esc(rule.id)}">${esc(copy.delete)}</button></div>`).join('')}</div>`:'';
+    const body=`${rulesHtml}<div class="kt-plan-form-grid"><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-coverage-label maxlength="80" value="${esc(copy.coverage)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-coverage-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.minimum)}</label><input data-kt-coverage-min type="number" min="1" max="99" value="1"></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-coverage-start type="time" value="11:30"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-coverage-end type="time" value="14:30"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.weekdays)}</label>${planningDaysInput()}</div></div>`;
+    const mdl=modal({title:copy.coverage,width:680,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-coverage-save">${esc(copy.addRule)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningCoverage=mdl;
+  };
+  handlers['kt-plan-coverage-save'] = () => {
+    const mdl=window.__kiwiPlanningCoverage, ctx=planningContext(), copy=planningCopy(); if(!mdl?.el)return;
+    const start=mdl.el.querySelector('[data-kt-coverage-start]')?.value,end=mdl.el.querySelector('[data-kt-coverage-end]')?.value;
+    const weekdays=Array.from(mdl.el.querySelectorAll('[data-kt-coverage-day]:checked')).map((input)=>Number(input.value));
+    if(!start||!end||start===end||!weekdays.length){toast(copy.decisionFailed,{type:'error'});return;}
+    const now=new Date().toISOString();
+    ctx.planning.coverageRules.push({id:`cov-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,label:mdl.el.querySelector('[data-kt-coverage-label]')?.value.trim().slice(0,80)||copy.coverage,role:mdl.el.querySelector('[data-kt-coverage-role]')?.value||'',minimum:Math.max(1,Math.min(99,Number(mdl.el.querySelector('[data-kt-coverage-min]')?.value)||1)),start,end,weekdays,active:true,createdAt:now,updatedAt:now});
+    saveCustomTeams();mdl.close();window.__kiwiPlanningCoverage=null;render();toast(copy.ruleSaved,{type:'success'});
+  };
+  handlers['kt-plan-coverage-delete'] = (el) => {
+    const ctx=planningContext(),rule=(ctx.planning.coverageRules||[]).find((item)=>item.id===el.dataset.ruleId);if(!rule)return;
+    rule.active=false;rule.updatedAt=new Date().toISOString();saveCustomTeams();window.__kiwiPlanningCoverage?.close?.();window.__kiwiPlanningCoverage=null;render();
+  };
+  handlers['kt-plan-open'] = () => {
+    const ctx=planningContext(),copy=planningCopy(),day=visibleDays()[0]||toISO(new Date());
+    const today=toISO(new Date());
+    const body=`<div class="kt-plan-form-grid"><div class="kt-plan-modal-field"><label>${esc(copy.date)}</label><input data-kt-open-day type="date" min="${esc(today)}" value="${esc(day<today?today:day)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-open-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-open-start type="time" value="09:00"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-open-end type="time" value="17:00"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-open-note maxlength="160"></div></div>`;
+    const mdl=modal({title:copy.openShift,width:620,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-open-save">${esc(copy.openShift)}</button>`});mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOpen=mdl;
+  };
+  handlers['kt-plan-open-save'] = () => {
+    const mdl=window.__kiwiPlanningOpen,ctx=planningContext(),P=window.KiwiPlanningCore,copy=planningCopy();if(!mdl?.el||!P)return;
+    const result=P.createOpenShift(ctx.planning,{day:mdl.el.querySelector('[data-kt-open-day]')?.value,start:mdl.el.querySelector('[data-kt-open-start]')?.value,end:mdl.el.querySelector('[data-kt-open-end]')?.value,role:mdl.el.querySelector('[data-kt-open-role]')?.value||'',note:mdl.el.querySelector('[data-kt-open-note]')?.value||''});if(!result.ok){toast(copy.decisionFailed,{type:'error'});return;}
+    ctx.root.planningByVenue[ctx.key]=result.planning;saveCustomTeams();mdl.close();window.__kiwiPlanningOpen=null;render();toast(copy.openSaved,{type:'success'});
+  };
+
   handlers['kt-plan-requests'] = () => {
     const copy = planningCopy();
     const ctx = planningContext();
     const pending = (ctx.planning.requests || []).filter((request) => request.status === 'pending');
+    const openClaims=(ctx.planning.openShifts||[]).filter((shift)=>shift.status==='claimed');
+    const swapClaims=(ctx.planning.swapRequests||[]).filter((request)=>request.status==='claimed');
     const byId = new Map(ctx.members.map((member) => [member.id, member]));
-    const body = pending.length ? `<div class="kt-plan-request-list">${pending.map((request) => {
+    const standard=pending.map((request) => {
       const member = byId.get(request.memberId);
       const range = request.type === 'leave' ? `${request.startDate} → ${request.endDate}` : `${(request.weekdays || []).join(', ')} · ${request.start || '—'} → ${request.end || '—'}`;
-      return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(member ? memberFullName(member) : request.memberId)}</strong><div>${esc(request.type === 'leave' ? copy.leave : copy.availability)} · ${esc(range)}</div></div></div>${request.reason ? `<p>${esc(request.reason)}</p>` : ''}<div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;
-    }).join('')}</div>` : `<p>${esc(copy.empty)}</p>`;
+      return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(member ? memberFullName(member) : request.memberId)}</strong><div>${esc(request.type === 'leave' ? copy.leave : copy.availability)} · ${esc(range)}</div></div></div>${request.reason ? `<p>${esc(request.reason)}</p>` : ''}<div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;
+    });
+    const opportunities=openClaims.map((shift)=>{const member=byId.get(shift.claimantId);return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(copy.openClaim)} · ${esc(member?memberFullName(member):shift.claimantId)}</strong><div>${esc(shift.day)} · ${esc(shift.start)}–${esc(shift.end)} · ${esc(shift.role||copy.allRoles)}</div></div></div><div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;})
+      .concat(swapClaims.map((request)=>{const owner=byId.get(request.memberId),claimant=byId.get(request.claimantId);return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(copy.swap)} · ${esc(owner?memberFullName(owner):request.memberId)} ↔ ${esc(claimant?memberFullName(claimant):request.claimantId)}</strong><div>${esc(request.day)} ↔ ${esc(request.offeredDay)}</div></div></div><div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="swap" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="swap" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;}));
+    const all=standard.concat(opportunities);
+    const body = all.length ? `<div class="kt-plan-request-list">${all.join('')}</div>` : `<p>${esc(copy.empty)}</p>`;
     const mdl = modal({ title:copy.review, width:620, body, foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button>` });
     mdl.el.addEventListener('click', (event) => { if (event.target.closest('[data-dismiss]')) mdl.close(); });
     window.__kiwiPlanningRequests = mdl;
   };
   handlers['kt-plan-request-decision'] = (el) => {
     const ctx = planningContext();
+    const kind=el.dataset.kind||'request';
+    if(kind==='open'||kind==='swap'){
+      const result=kind==='open'?window.KiwiPlanningCore.decideOpenShift(ctx.planning,ctx.shifts,el.dataset.rid,el.dataset.decision,ctx.members):window.KiwiPlanningCore.decideSwap(ctx.planning,ctx.shifts,el.dataset.rid,el.dataset.decision,ctx.members);
+      if(!result.ok){toast(planningCopy().decisionFailed,{type:'error'});return;}
+      ctx.root.planningByVenue[ctx.key]=result.planning;ctx.root.shiftsByVenue[ctx.key]=result.shifts;saveCustomTeams();window.__kiwiPlanningRequests?.close?.();window.__kiwiPlanningRequests=null;render();toast(el.dataset.decision==='approved'?planningCopy().approved:planningCopy().rejected,{type:'success'});return;
+    }
     const request = (ctx.planning.requests || []).find((item) => item.id === el.dataset.rid);
     if (!request || request.status !== 'pending') return;
     request.status = el.dataset.decision === 'approved' ? 'approved' : 'rejected';
@@ -2656,17 +2710,17 @@
 
   function planningCopy() {
     const lang = trLang();
-    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.' };
-    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', blocked:(n)=>`${n} تعارضات يجب حلها`, pending:(n)=>`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.' };
-    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.' };
+    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.', coverage:'Coverage rules', openShift:'Open shift', planned:'Planned', worked:'Worked', gaps:'Coverage gaps', opportunities:'Open opportunities', warnings:'Warnings', addRule:'Add a coverage rule', minimum:'Minimum team', role:'Role', allRoles:'All roles', weekdays:'Days', start:'Start', end:'End', date:'Date', label:'Label', delete:'Delete', ruleSaved:'Coverage rule saved.', openSaved:'Open shift shared with employees.', openClaim:'Open shift claim', swap:'Shift exchange', decisionFailed:'The change cannot be approved because it conflicts with the current schedule.' };
+    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', blocked:(n)=>`${n} تعارضات يجب حلها`, pending:(n)=>`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.', coverage:'قواعد التغطية', openShift:'وردية شاغرة', planned:'مخطط', worked:'منجز', gaps:'نقص التغطية', opportunities:'فرص مفتوحة', warnings:'تنبيهات', addRule:'إضافة قاعدة تغطية', minimum:'الحد الأدنى للفريق', role:'الوظيفة', allRoles:'كل الوظائف', weekdays:'الأيام', start:'البداية', end:'النهاية', date:'التاريخ', label:'التسمية', delete:'حذف', ruleSaved:'تم حفظ قاعدة التغطية.', openSaved:'تم نشر الوردية الشاغرة للموظفين.', openClaim:'طلب وردية شاغرة', swap:'تبادل وردية', decisionFailed:'لا يمكن اعتماد التغيير لأنه يتعارض مع الجدول الحالي.' };
+    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.', coverage:'Règles de couverture', openShift:'Service à pourvoir', planned:'Planifié', worked:'Réalisé', gaps:'Manques de couverture', opportunities:'Opportunités ouvertes', warnings:'Alertes', addRule:'Ajouter une règle de couverture', minimum:'Équipe minimum', role:'Fonction', allRoles:'Toutes les fonctions', weekdays:'Jours', start:'Début', end:'Fin', date:'Date', label:'Libellé', delete:'Supprimer', ruleSaved:'Règle de couverture enregistrée.', openSaved:'Service partagé avec les employés.', openClaim:'Candidature à un service', swap:'Échange de service', decisionFailed:'Ce changement ne peut pas être approuvé car il entre en conflit avec le planning actuel.' };
   }
   function issueLabel(issue) {
     const who = issue.memberName || issue.memberId;
     const labels = trLang() === 'en'
-      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered' }
+      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered', 'coverage-gap':`coverage is short by ${issue.gap}`, 'long-shift':'has a long shift', 'weekly-hours':'exceeds the weekly-hour alert', 'short-rest':'has too little rest', 'open-shift':'still has an open shift' }
       : trLang() === 'ar'
-        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة' }
-        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi' };
+        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة', 'coverage-gap':`يوجد نقص في التغطية بمقدار ${issue.gap}`, 'long-shift':'لديه وردية طويلة', 'weekly-hours':'تجاوز حد الساعات الأسبوعية', 'short-rest':'فترة الراحة غير كافية', 'open-shift':'لديه وردية شاغرة' }
+        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi', 'coverage-gap':`couverture insuffisante de ${issue.gap}`, 'long-shift':'a un service long', 'weekly-hours':'dépasse l’alerte hebdomadaire', 'short-rest':'a trop peu de repos', 'open-shift':'a encore un service à pourvoir' };
     return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
   }
 
@@ -2680,8 +2734,17 @@
     const copy = planningCopy();
     const lifecycle = P?.status?.(planning, shifts, period.days) || { state:'draft' };
     const issues = P?.validate?.({ planning, shifts, days:period.days, members }) || [];
+    const blockers=issues.filter((issue)=>issue.severity==='blocker');
+    const warnings=issues.filter((issue)=>issue.severity!=='blocker');
     const pending = (planning.requests || []).filter((request) => request.status === 'pending');
+    const opportunityClaims=(planning.openShifts||[]).filter((item)=>item.status==='claimed').length+(planning.swapRequests||[]).filter((item)=>item.status==='claimed').length;
+    const coverage=P?.coverageSummary?.({planning,shifts,days:period.days,members})||[];
+    const coverageGaps=coverage.reduce((sum,row)=>sum+(Number(row.gap)||0),0);
+    const openOpportunities=(planning.openShifts||[]).filter((item)=>['open','claimed'].includes(item.status)).length+(planning.swapRequests||[]).filter((item)=>['open','claimed'].includes(item.status)).length;
     let grandH = 0, grandCost = 0;
+    let workedH=0;
+    const realised=root.hoursByVenue[venueType]||{};
+    members.forEach((member)=>period.days.forEach((day)=>{workedH+=Number(realised[member.id]&&realised[member.id][day])||0;}));
 
     const chunks = weekChunks(period.days);
     if (planWeekIdx >= chunks.length) planWeekIdx = chunks.length - 1;
@@ -2735,23 +2798,26 @@
       </div>` : '';
 
     const stateText = lifecycle.state === 'published' ? copy.published : lifecycle.state === 'changed' ? copy.changed : copy.draft;
-    const qualityText = issues.length ? copy.blocked(issues.length) : copy.healthy;
+    const qualityText = blockers.length ? copy.blocked(blockers.length) : copy.healthy;
     const templates = planning.templates || [];
     const planningCommand = `
       <div class="kt-planning-command">
         <div class="kt-planning-health">
           <span class="kt-plan-state ${esc(lifecycle.state)}"><i></i>${esc(stateText)}</span>
-          <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length))}</p></div>
+          <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length+opportunityClaims))}</p></div>
         </div>
         <div class="kt-planning-actions">
           <button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button>
           <select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select>
           <button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button>
-          <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length ? ` · ${pending.length}` : ''}</button>
+          <button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button>
+          <button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button>
+          <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length+opportunityClaims ? ` · ${pending.length+opportunityClaims}` : ''}</button>
           <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
         </div>
       </div>
-      ${issues.slice(0,4).map((issue)=>`<div class="kt-plan-issue"><b>!</b><span>${esc(issueLabel(issue))}</span></div>`).join('')}`;
+      <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${coverage.length} ${esc(copy.coverage).toLocaleLowerCase()}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${opportunityClaims} ${esc(copy.pending(0).replace(/^0\s*/,''))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${warnings.length}</strong><span>${blockers.length} ${esc(copy.blocked(0).replace(/^0\s*/,''))}</span></div></div>
+      ${issues.slice(0,6).map((issue)=>`<div class="kt-plan-issue ${issue.severity==='blocker'?'is-blocker':'is-warning'}"><b>${issue.severity==='blocker'?'!':'i'}</b><span>${esc(issueLabel(issue))}</span></div>`).join('')}`;
 
     return `
       <div class="eq-section">

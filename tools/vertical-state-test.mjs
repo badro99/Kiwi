@@ -73,7 +73,7 @@ function register(runtime, stateRef) {
 
 const local = storage([['kiwiPairedVenue', JSON.stringify({ merchant: 'pressing-amira', venueId: 'device-only-id' })]]);
 const first = verticalRuntime(local);
-assert.equal(first.context.window.KiwiStore.currentVenue(), null, 'specialist caisse has no implicit KiwiVenue');
+assert.equal(first.context.window.KiwiStore.currentVenue(), 'pressing-amira', 'specialist caisse resolves the paired merchant without KiwiVenue');
 const firstState = { value: { orders: [], seq: 0 } };
 const firstHandle = register(first, firstState);
 assert.equal(firstHandle.venue(), 'pressing-amira', 'paired merchant slug is the explicit venue key');

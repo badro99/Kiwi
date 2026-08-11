@@ -137,13 +137,50 @@ ok(planningDoc.planning.requests.length === 2 && planningDoc.planning.requests.e
   'les demandes sont signées par la session et restent attachées au bon employé');
 planningDoc.planning.requests[0].status = 'approved';
 planningDoc.planning.publishingEnabled = true;
-planningDoc.planning.publishedShifts = { 'mem-sara': { '2026-08-12': { start:'10:00', end:'18:00' } } };
+planningDoc.planning.publishedShifts = {
+  'mem-sara': { '2026-08-12': { start:'10:00', end:'18:00' } },
+  'mem-nora': { '2026-08-14': { start:'12:00', end:'20:00' } },
+};
+planningDoc.planning.openShifts = [
+  { id:'open-1', day:'2026-08-13', start:'10:00', end:'18:00', role:'Serveur', note:'Renfort terrasse', status:'open', claimantId:'' },
+  { id:'open-cuisine', day:'2026-08-13', start:'10:00', end:'18:00', role:'Cuisine', note:'Préparation', status:'open', claimantId:'' },
+  { id:'open-past', day:'2026-08-01', start:'10:00', end:'18:00', role:'Serveur', status:'open', claimantId:'' },
+];
+planningDoc.planning.swapRequests = [];
+planningDoc.planning.notices = [{ id:'notice-1', memberId:'mem-sara', type:'schedule-published', periodKey:'2026-08-10..2026-08-16', createdAt:'2026-08-01T10:00:00Z' }];
 put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='amira-cafe' AND feature='team'", JSON.stringify(planningDoc));
 const publishedStateRes = await get(cookie); const publishedState = await publishedStateRes.json();
 ok(publishedState.schedule['2026-08-12'].start === '10:00' && !publishedState.schedule['2026-08-05'],
   "après la première publication, l'app employé ne voit que le planning publié");
 ok(publishedState.planning.requests.length === 2 && publishedState.planning.requests[0].status === 'approved',
   "l'employé voit la décision du responsable sans accéder aux demandes des autres");
+ok(publishedState.planning.openShifts.length === 1 && publishedState.planning.notices.length === 1,
+  "l'app expose seulement les services futurs correspondant à la fonction de l'employé");
+const wrongRoleClaim = await post({ action:'planning-open-shift-claim', shiftId:'open-cuisine' }, cookie);
+ok(wrongRoleClaim.status === 409, "un service d'une autre fonction ne peut pas être réclamé par appel direct");
+const pastClaim = await post({ action:'planning-open-shift-claim', shiftId:'open-past' }, cookie);
+ok(pastClaim.status === 409, "un ancien service ne peut pas être réclamé après sa date");
+const claimOpen = await post({ action:'planning-open-shift-claim', shiftId:'open-1', memberId:'mem-nora' }, cookie);
+ok(claimOpen.status === 200, "un employé peut candidater à un service ouvert correspondant à sa fonction");
+let afterClaim = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
+ok(afterClaim.planning.openShifts[0].claimantId === 'mem-sara', "la candidature est signée par la session, jamais par un identifiant fourni");
+const cancelOpen = await post({ action:'planning-opportunity-cancel', shiftId:'open-1' }, cookie);
+afterClaim = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
+ok(cancelOpen.status === 200 && afterClaim.planning.openShifts[0].status === 'open', "la candidature peut être retirée avant décision");
+const swapRequest = await post({ action:'planning-swap-request', day:'2026-08-12' }, cookie);
+const swapResult = await swapRequest.json();
+ok(swapRequest.status === 200 && swapResult.id, "un employé peut proposer l'échange d'un service réellement publié");
+const fakeSwap = await post({ action:'planning-swap-request', day:'2026-08-19' }, cookie);
+ok(fakeSwap.status === 409, "un service absent du planning publié ne peut pas être proposé");
+const noraLogin = await post({ action:'login', email:'nora@amira.test', pin:'1357' });
+const noraCookie = String(noraLogin.headers.get('set-cookie') || '').split(';')[0];
+const claimSwap = await post({ action:'planning-swap-claim', requestId:swapResult.id, offeredDay:'2026-08-14', offeredMemberId:'mem-sara' }, noraCookie);
+ok(claimSwap.status === 200, "un collègue peut proposer l'un de ses propres services en échange");
+const afterSwap = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
+const swapStored = afterSwap.planning.swapRequests.find((item)=>item.id===swapResult.id);
+ok(swapStored.claimantId === 'mem-nora' && swapStored.offeredDay === '2026-08-14', "l'offre d'échange reste attachée au collègue authentifié");
+const secondClaim = await post({ action:'planning-swap-claim', requestId:swapResult.id, offeredDay:'2026-08-12' }, cookie);
+ok(secondClaim.status === 409, "une offre déjà prise ne peut pas recevoir une seconde candidature concurrente");
 
 // A PIN roster can reach the cloud before the larger Team document. The small
 // access mirror must be sufficient for login, and its exact replacement must
@@ -323,8 +360,8 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
-ok(serviceSource.includes('assets/employee-live.js?v=357')
-  && serviceSource.includes('assets/employee-planning.js?v=1')
+ok(serviceSource.includes('assets/employee-live.js?v=359')
+  && serviceSource.includes('assets/employee-planning.js?v=3')
   && serviceSource.includes('assets/pwa-update.js?v=358'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");
 ok(employeePlanningSource.includes("requestPlanning(body)")

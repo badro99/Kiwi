@@ -49,4 +49,58 @@ assert.equal(merged.requests[0].status, "approved");
 const mergedWeeks = P.merge({ publishedShifts:{ a:{ "2026-08-10":{ start:"09:00", end:"17:00" } } } }, { publishedShifts:{ a:{ "2026-08-17":{ start:"10:00", end:"18:00" } } } }, members);
 assert.equal(Object.keys(mergedWeeks.publishedShifts.a).length, 2);
 
-console.log("planning-core-test: 20 controls passed");
+const covered = P.blank();
+covered.coverageRules.push({ id:'cov-1', label:'Ouverture', role:'', weekdays:[1], start:'10:00', end:'16:00', minimum:1 });
+let coverage = P.coverageSummary({ planning:covered, members, days, shifts });
+assert.equal(coverage[0].gap, 0);
+covered.coverageRules[0].minimum = 2;
+coverage = P.coverageSummary({ planning:covered, members, days, shifts });
+assert.equal(coverage[0].gap, 1);
+assert.equal(P.validate({ planning:covered, members, days, shifts }).some((issue)=>issue.code === 'coverage-gap' && issue.severity === 'blocker'), true);
+const overnightCoverage = P.blank();
+overnightCoverage.coverageRules.push({ id:'cov-night', weekdays:[3], start:'00:30', end:'01:30', minimum:1 });
+assert.equal(P.coverageSummary({ planning:overnightCoverage, members, days, shifts })[0].gap, 0);
+
+const long = P.blank(); long.settings.maxDailyHours = 7; long.settings.maxWeeklyHours = 7;
+const longIssues = P.validate({ planning:long, members, days, shifts });
+assert.equal(longIssues.some((issue)=>issue.code === 'long-shift' && issue.severity === 'warning'), true);
+assert.equal(longIssues.some((issue)=>issue.code === 'weekly-hours'), true);
+const shortRest = { a:{ '2026-08-10':{start:'14:00',end:'23:00'}, '2026-08-11':{start:'06:00',end:'12:00'} } };
+assert.equal(P.validate({ planning:P.blank(), members, days, shifts:shortRest }).some((issue)=>issue.code === 'short-rest'), true);
+
+const opened = P.createOpenShift(P.blank(), { day:'2026-08-13', start:'12:00', end:'20:00', role:'Serveur' }, '2026-08-01T10:00:00Z');
+assert.equal(opened.ok, true);
+assert.equal(opened.item.status, 'open');
+const claimed = P.claimOpenShift(opened.planning, opened.item.id, 'b', '2026-08-01T11:00:00Z');
+assert.equal(claimed.ok, true);
+const assigned = P.decideOpenShift(claimed.planning, shifts, opened.item.id, 'approved', members, '2026-08-01T12:00:00Z');
+assert.equal(assigned.ok, true);
+assert.equal(assigned.shifts.b['2026-08-13'].end, '20:00');
+assert.equal(assigned.planning.notices.at(-1).memberId, 'b');
+assert.equal(P.createOpenShift(P.blank(), { day:'bad', start:'12:00', end:'20:00' }).ok, false);
+assert.equal(P.createOpenShift(P.blank(), { day:'2026-07-31', start:'12:00', end:'20:00' }, '2026-08-01T10:00:00Z').error, 'open-shift-past');
+
+const swapBase = P.publish(P.blank(), {
+  a:{ '2026-08-10':{start:'09:00',end:'17:00'} },
+  b:{ '2026-08-11':{start:'12:00',end:'20:00'} }
+}, days, members, '2026-08-01T10:00:00Z').planning;
+const swapOpen = P.requestSwap(swapBase, 'a', '2026-08-10', '2026-08-02T10:00:00Z');
+assert.equal(swapOpen.ok, true);
+assert.equal(P.requestSwap(swapOpen.planning, 'a', '2026-08-10', '2026-08-02T10:05:00Z').error, 'swap-already-open');
+const swapClaim = P.claimSwap(swapOpen.planning, swapOpen.item.id, 'b', '2026-08-11', '2026-08-02T11:00:00Z');
+assert.equal(swapClaim.ok, true);
+const swapDone = P.decideSwap(swapClaim.planning, {
+  a:{ '2026-08-10':{start:'09:00',end:'17:00'} }, b:{ '2026-08-11':{start:'12:00',end:'20:00'} }
+}, swapOpen.item.id, 'approved', members, '2026-08-02T12:00:00Z');
+assert.equal(swapDone.ok, true);
+assert.equal(swapDone.shifts.b['2026-08-10'].start, '09:00');
+assert.equal(swapDone.shifts.a['2026-08-11'].start, '12:00');
+assert.equal(swapDone.planning.notices.filter((notice)=>notice.type === 'swap-approved').length, 2);
+const changedDraft = P.decideSwap(swapClaim.planning, {
+  a:{ '2026-08-10':{start:'10:00',end:'17:00'} }, b:{ '2026-08-11':{start:'12:00',end:'20:00'} }
+}, swapOpen.item.id, 'approved', members, '2026-08-02T12:00:00Z');
+assert.equal(changedDraft.error, 'swap-source-changed');
+assert.equal(P.requestSwap(swapBase, 'a', '2026-08-10', '2026-08-11T10:00:00Z').error, 'swap-shift-past');
+assert.equal(P.publish(P.blank(), shifts, days, members).planning.notices.some((notice)=>notice.type === 'schedule-published'), true);
+
+console.log("planning-core-test: 44 controls passed");

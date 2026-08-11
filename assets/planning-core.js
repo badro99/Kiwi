@@ -13,11 +13,16 @@
 
   function blank() {
     return {
-      schema: 1,
+      schema: 2,
       publishingEnabled: false,
       availability: {},
       requests: [],
       templates: [],
+      coverageRules: [],
+      openShifts: [],
+      swapRequests: [],
+      notices: [],
+      settings: { minRestHours: 10, maxDailyHours: 12, maxWeeklyHours: 48 },
       publishedShifts: {},
       publications: {}
     };
@@ -55,6 +60,11 @@
     };
   }
 
+  function offsetDay(day, amount) {
+    const value = Date.parse(String(day || "") + "T12:00:00Z");
+    return Number.isNaN(value) ? "" : new Date(value + amount * DAY_MS).toISOString().slice(0, 10);
+  }
+
   function memberIds(members) {
     return new Set((members || []).map((member) => String(member.id || "")).filter(Boolean));
   }
@@ -62,17 +72,25 @@
   function normalize(raw, members) {
     const out = Object.assign(blank(), clone(raw || {}));
     const alive = members && members.length ? memberIds(members) : null;
-    out.schema = 1;
+    out.schema = 2;
     out.publishingEnabled = Boolean(out.publishingEnabled);
     out.availability = out.availability && typeof out.availability === "object" ? out.availability : {};
     out.requests = Array.isArray(out.requests) ? out.requests : [];
     out.templates = Array.isArray(out.templates) ? out.templates : [];
+    out.coverageRules = Array.isArray(out.coverageRules) ? out.coverageRules : [];
+    out.openShifts = Array.isArray(out.openShifts) ? out.openShifts : [];
+    out.swapRequests = Array.isArray(out.swapRequests) ? out.swapRequests : [];
+    out.notices = Array.isArray(out.notices) ? out.notices.slice(-200) : [];
+    out.settings = Object.assign({ minRestHours: 10, maxDailyHours: 12, maxWeeklyHours: 48 }, out.settings || {});
     out.publishedShifts = out.publishedShifts && typeof out.publishedShifts === "object" ? out.publishedShifts : {};
     out.publications = out.publications && typeof out.publications === "object" ? out.publications : {};
     if (alive) {
       Object.keys(out.availability).forEach((id) => { if (!alive.has(String(id))) delete out.availability[id]; });
       Object.keys(out.publishedShifts).forEach((id) => { if (!alive.has(String(id))) delete out.publishedShifts[id]; });
       out.requests = out.requests.filter((request) => alive.has(String(request.memberId || "")));
+      out.openShifts = out.openShifts.filter((shift) => !shift.memberId || alive.has(String(shift.memberId)));
+      out.swapRequests = out.swapRequests.filter((request) => alive.has(String(request.memberId || "")) && (!request.claimantId || alive.has(String(request.claimantId))));
+      out.notices = out.notices.filter((notice) => !notice.memberId || alive.has(String(notice.memberId)));
     }
     return out;
   }
@@ -97,6 +115,11 @@
     out.availability = Object.assign({}, theirs.availability, mine.availability);
     out.requests = latestById(theirs.requests, mine.requests);
     out.templates = latestById(theirs.templates, mine.templates);
+    out.coverageRules = latestById(theirs.coverageRules, mine.coverageRules);
+    out.openShifts = latestById(theirs.openShifts, mine.openShifts);
+    out.swapRequests = latestById(theirs.swapRequests, mine.swapRequests);
+    out.notices = latestById(theirs.notices, mine.notices).slice(-200);
+    out.settings = Object.assign({}, theirs.settings || {}, mine.settings || {});
     out.publishedShifts = clone(theirs.publishedShifts || {});
     Object.keys(mine.publishedShifts || {}).forEach((memberId) => {
       out.publishedShifts[memberId] = Object.assign({}, out.publishedShifts[memberId] || {}, mine.publishedShifts[memberId] || {});
@@ -166,6 +189,62 @@
     return planning.requests.find((request) => request.memberId === memberId && request.type === "leave" && request.status === "approved" && day >= request.startDate && day <= request.endDate);
   }
 
+  function roleKey(value) {
+    return String(value || "").trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function memberRole(member) {
+    return roleKey(member && (member.function || member.department || member.role));
+  }
+
+  function shiftHours(day, shift) {
+    const interval = shiftInterval(day, shift);
+    return interval ? (interval.end - interval.start) / 3600000 : 0;
+  }
+
+  function coverageSummary(input) {
+    const members = input.members || [];
+    const shifts = input.shifts || {};
+    const planning = normalize(input.planning, members);
+    const days = periodDays(input.days);
+    const byId = new Map(members.map((member) => [String(member.id || ""), member]));
+    const rows = [];
+    (planning.coverageRules || []).forEach((rule) => {
+      if (!rule || rule.active === false) return;
+      const weekdays = Array.isArray(rule.weekdays) ? rule.weekdays.map(Number) : [];
+      const required = Math.max(1, Math.min(99, Math.floor(Number(rule.minimum) || 1)));
+      const ruleRole = roleKey(rule.role);
+      days.forEach((day) => {
+        if (weekdays.length && !weekdays.includes(dayNumber(day))) return;
+        const interval = shiftInterval(day, { start: rule.start, end: rule.end });
+        if (!interval) return;
+        const events = [{ at: interval.start, delta: 0 }, { at: interval.end, delta: 0 }];
+        Object.keys(shifts).forEach((memberId) => {
+          const member = byId.get(String(memberId));
+          if (!member || (ruleRole && ruleRole !== "*" && memberRole(member) !== ruleRole)) return;
+          [offsetDay(day, -1), day].forEach((shiftDay) => {
+            const assigned = shiftInterval(shiftDay, shifts[memberId] && shifts[memberId][shiftDay]);
+            if (!assigned) return;
+            const start = Math.max(interval.start, assigned.start);
+            const end = Math.min(interval.end, assigned.end);
+            if (end <= start) return;
+            events.push({ at: start, delta: 1 }, { at: end, delta: -1 });
+          });
+        });
+        events.sort((a, b) => a.at - b.at || b.delta - a.delta);
+        let count = 0;
+        let minimum = Infinity;
+        for (let index = 0; index < events.length - 1; index += 1) {
+          count += events[index].delta;
+          if (events[index + 1].at > events[index].at) minimum = Math.min(minimum, count);
+        }
+        if (!Number.isFinite(minimum)) minimum = 0;
+        rows.push({ ruleId: String(rule.id || ""), label: String(rule.label || rule.role || "Équipe"), role: String(rule.role || ""), day, start: String(rule.start || ""), end: String(rule.end || ""), required, scheduled: minimum, gap: Math.max(0, required - minimum) });
+      });
+    });
+    return rows;
+  }
+
   function validate(input) {
     const members = input.members || [];
     const shifts = input.shifts || {};
@@ -174,6 +253,10 @@
     const issues = [];
     let decided = 0;
     const byId = new Map(members.map((member) => [String(member.id), member]));
+    const settings = planning.settings || {};
+    const maxDaily = Math.max(0, Number(settings.maxDailyHours) || 0);
+    const maxWeekly = Math.max(0, Number(settings.maxWeeklyHours) || 0);
+    const minRest = Math.max(0, Number(settings.minRestHours) || 0);
 
     Object.keys(shifts).forEach((memberId) => {
       const member = byId.get(String(memberId));
@@ -193,6 +276,9 @@
         }
         if (approvedLeave(planning, memberId, day)) {
           issues.push(Object.assign({}, base, { code: "approved-leave" }));
+        }
+        if (maxDaily && shiftHours(day, shift) > maxDaily) {
+          issues.push(Object.assign({}, base, { severity: "warning", code: "long-shift", hours: shiftHours(day, shift) }));
         }
         const weekly = planning.availability[memberId] && planning.availability[memberId].weekdays;
         const available = weekly && weekly[String(dayNumber(day))];
@@ -219,6 +305,10 @@
         const interval = shiftInterval(day, shifts[memberId][day]);
         return interval && { day, interval };
       }).filter(Boolean).sort((a, b) => a.interval.start - b.interval.start);
+      const periodHours = intervals.reduce((sum, item) => (!days.length || days.includes(item.day)) ? sum + (item.interval.end - item.interval.start) / 3600000 : sum, 0);
+      if (maxWeekly && periodHours > maxWeekly) {
+        issues.push({ severity: "warning", code: "weekly-hours", memberId, memberName: member && (member.name || [member.firstName, member.lastName].filter(Boolean).join(" ")) || memberId, day: days[0] || "", hours: periodHours, limit: maxWeekly });
+      }
       for (let index = 1; index < intervals.length; index += 1) {
         if (intervals[index].interval.start < intervals[index - 1].interval.end) {
           const day = intervals[index].day;
@@ -226,7 +316,20 @@
             issues.push({ severity: "blocker", code: "overlap", memberId, memberName: member && member.name || memberId, day, otherDay: intervals[index - 1].day });
           }
         }
+        const restHours = (intervals[index].interval.start - intervals[index - 1].interval.end) / 3600000;
+        if (minRest && restHours >= 0 && restHours < minRest) {
+          const day = intervals[index].day;
+          if (!days.length || days.includes(day) || days.includes(intervals[index - 1].day)) {
+            issues.push({ severity: "warning", code: "short-rest", memberId, memberName: member && (member.name || [member.firstName, member.lastName].filter(Boolean).join(" ")) || memberId, day, hours: restHours, limit: minRest });
+          }
+        }
       }
+    });
+    coverageSummary({ planning, shifts, days, members }).filter((row) => row.gap > 0).forEach((row) => {
+      issues.push({ severity: "blocker", code: "coverage-gap", day: row.day, role: row.role, label: row.label, required: row.required, scheduled: row.scheduled, gap: row.gap });
+    });
+    (planning.openShifts || []).filter((shift) => shift && shift.status === "open" && (!days.length || days.includes(shift.day))).forEach((shift) => {
+      issues.push({ severity: "warning", code: "open-shift", day: shift.day, role: shift.role || "", shiftId: shift.id });
     });
     if (members.length && decided === 0) issues.unshift({ severity:"blocker", code:"empty-schedule", memberId:"", memberName:"", day:days[0] || "" });
     return issues;
@@ -263,6 +366,114 @@
     return out;
   }
 
+  function addNotice(planning, notice) {
+    const clean = normalize(planning);
+    const item = Object.assign({ id: "notice-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7), createdAt: new Date().toISOString(), readAt: "" }, clone(notice || {}));
+    clean.notices = latestById(clean.notices, [item]).slice(-200);
+    return clean;
+  }
+
+  function createOpenShift(planning, data, now) {
+    const clean = normalize(planning);
+    const day = isoDay(data && data.day);
+    const interval = shiftInterval(day, data || {});
+    const at = now || new Date().toISOString();
+    if (!day || !interval) return { ok: false, error: "open-shift-invalid", planning: clean };
+    if (day < isoDay(at)) return { ok: false, error: "open-shift-past", planning: clean };
+    const item = {
+      id: "open-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7),
+      day, start: String(data.start), end: String(data.end), role: String(data.role || "").trim().slice(0, 80),
+      note: String(data.note || "").trim().slice(0, 160), status: "open", claimantId: "", memberId: "",
+      createdAt: at, updatedAt: at
+    };
+    clean.openShifts.push(item);
+    return { ok: true, planning: clean, item };
+  }
+
+  function claimOpenShift(planning, shiftId, memberId, now) {
+    const clean = normalize(planning);
+    const item = clean.openShifts.find((shift) => shift.id === shiftId);
+    if (!item || item.status !== "open" || !memberId) return { ok: false, error: "open-shift-unavailable", planning: clean };
+    item.status = "claimed"; item.claimantId = String(memberId); item.updatedAt = now || new Date().toISOString();
+    return { ok: true, planning: clean, item };
+  }
+
+  function requestSwap(planning, memberId, day, now) {
+    const clean = normalize(planning);
+    day = isoDay(day);
+    const at = now || new Date().toISOString();
+    const source = clean.publishedShifts && clean.publishedShifts[memberId] && clean.publishedShifts[memberId][day];
+    if (!memberId || !day || !shiftInterval(day, source)) return { ok: false, error: "swap-shift-invalid", planning: clean };
+    if (day < isoDay(at)) return { ok: false, error: "swap-shift-past", planning: clean };
+    if (clean.swapRequests.some((request) => request.memberId === memberId && request.day === day && ["open", "claimed"].includes(request.status))) return { ok: false, error: "swap-already-open", planning: clean };
+    const item = { id: "swap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7), memberId:String(memberId), day, shift:clone(source), status:"open", claimantId:"", offeredDay:"", createdAt:at, updatedAt:at };
+    clean.swapRequests.push(item);
+    return { ok:true, planning:clean, item };
+  }
+
+  function claimSwap(planning, requestId, claimantId, offeredDay, now) {
+    const clean = normalize(planning);
+    offeredDay = isoDay(offeredDay);
+    const at = now || new Date().toISOString();
+    const item = clean.swapRequests.find((request) => request.id === requestId);
+    const offered = clean.publishedShifts && clean.publishedShifts[claimantId] && clean.publishedShifts[claimantId][offeredDay];
+    if (!item || item.status !== "open" || item.memberId === claimantId || !offeredDay || !shiftInterval(offeredDay, offered)) return { ok:false, error:"swap-offer-invalid", planning:clean };
+    if (item.day < isoDay(at) || offeredDay < isoDay(at)) return { ok:false, error:"swap-shift-past", planning:clean };
+    item.status = "claimed"; item.claimantId = String(claimantId); item.offeredDay = offeredDay; item.offeredShift = clone(offered); item.updatedAt = at;
+    return { ok:true, planning:clean, item };
+  }
+
+  function decideOpenShift(planning, shifts, shiftId, decision, members, now) {
+    const clean = normalize(planning, members);
+    const out = clone(shifts || {});
+    const item = clean.openShifts.find((shift) => shift.id === shiftId);
+    if (!item || item.status !== "claimed") return { ok:false, error:"open-shift-not-claimed", planning:clean, shifts:out };
+    const at = now || new Date().toISOString();
+    if (decision !== "approved") {
+      item.status = "open"; item.claimantId = ""; item.updatedAt = at;
+      return { ok:true, planning:clean, shifts:out, item };
+    }
+    const memberId = String(item.claimantId || "");
+    if (!memberId || (out[memberId] && shiftInterval(item.day, out[memberId][item.day]))) return { ok:false, error:"open-shift-conflict", planning:clean, shifts:out };
+    if (!out[memberId]) out[memberId] = {};
+    out[memberId][item.day] = { start:item.start, end:item.end };
+    item.status = "assigned"; item.memberId = memberId; item.updatedAt = at;
+    const noticed = addNotice(clean, { memberId, type:"open-shift-approved", day:item.day, start:item.start, end:item.end, createdAt:at });
+    return { ok:true, planning:noticed, shifts:out, item };
+  }
+
+  function decideSwap(planning, shifts, requestId, decision, members, now) {
+    const clean = normalize(planning, members);
+    const out = clone(shifts || {});
+    const item = clean.swapRequests.find((request) => request.id === requestId);
+    if (!item || item.status !== "claimed") return { ok:false, error:"swap-not-claimed", planning:clean, shifts:out };
+    const at = now || new Date().toISOString();
+    if (decision !== "approved") { item.status = "rejected"; item.updatedAt = at; return { ok:true, planning:clean, shifts:out, item }; }
+    const owner = String(item.memberId || ""), claimant = String(item.claimantId || "");
+    const ownerShift = clean.publishedShifts[owner] && clean.publishedShifts[owner][item.day];
+    const claimantShift = clean.publishedShifts[claimant] && clean.publishedShifts[claimant][item.offeredDay];
+    const draftOwner = out[owner] && out[owner][item.day];
+    const draftClaimant = out[claimant] && out[claimant][item.offeredDay];
+    if (!shiftInterval(item.day, ownerShift) || !shiftInterval(item.offeredDay, claimantShift)
+      || hash(ownerShift) !== hash(item.shift) || hash(claimantShift) !== hash(item.offeredShift)
+      || hash(draftOwner) !== hash(ownerShift) || hash(draftClaimant) !== hash(claimantShift)) {
+      return { ok:false, error:"swap-source-changed", planning:clean, shifts:out };
+    }
+    if (!out[owner]) out[owner] = {}; if (!out[claimant]) out[claimant] = {};
+    if (item.day === item.offeredDay) {
+      out[claimant][item.day] = clone(ownerShift);
+      out[owner][item.day] = clone(claimantShift);
+    } else {
+      delete out[owner][item.day]; delete out[claimant][item.offeredDay];
+      out[claimant][item.day] = clone(ownerShift);
+      out[owner][item.offeredDay] = clone(claimantShift);
+    }
+    item.status = "approved"; item.updatedAt = at;
+    let noticed = addNotice(clean, { memberId:owner, type:"swap-approved", day:item.day, otherDay:item.offeredDay, createdAt:at });
+    noticed = addNotice(noticed, { memberId:claimant, type:"swap-approved", day:item.offeredDay, otherDay:item.day, createdAt:at });
+    return { ok:true, planning:noticed, shifts:out, item };
+  }
+
   function publish(planning, shifts, days, members, now) {
     const clean = normalize(planning, members);
     const issues = validate({ planning: clean, shifts, days, members });
@@ -289,6 +500,10 @@
       publishedAt: now || new Date().toISOString(),
       hash: hash(selected)
     };
+    Object.keys(selected).forEach((memberId) => {
+      const notice = { id:`schedule-${key}-${clean.publications[key].revision}-${memberId}`, memberId, type:"schedule-published", periodKey:key, revision:clean.publications[key].revision, createdAt:clean.publications[key].publishedAt, readAt:"" };
+      clean.notices = latestById(clean.notices, [notice]).slice(-200);
+    });
     return { ok: true, planning: clean, issues: [] };
   }
 
@@ -298,5 +513,5 @@
     return clone(source && source[memberId] || {});
   }
 
-  return { blank, normalize, merge, validate, periodKey, periodShifts, status, templateFromWeek, applyTemplate, publish, employeeSchedule, hash, minutes, isoDay };
+  return { blank, normalize, merge, validate, coverageSummary, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
 });

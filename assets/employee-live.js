@@ -24,11 +24,15 @@
     clockOut: function (progress, attendanceCode) { return call('POST', { action: 'clock-out', progress: progress || null, attendanceCode: attendanceCode || '' }); },
     requestPlanning: function (request) { return call('POST', Object.assign({ action: 'planning-request' }, request || {})); },
     cancelPlanningRequest: function (requestId) { return call('POST', { action: 'planning-request-cancel', requestId: requestId }); },
+    claimOpenShift: function (shiftId) { return call('POST', { action: 'planning-open-shift-claim', shiftId: shiftId }); },
+    requestShiftSwap: function (day) { return call('POST', { action: 'planning-swap-request', day: day }); },
+    claimShiftSwap: function (requestId, offeredDay) { return call('POST', { action: 'planning-swap-claim', requestId: requestId, offeredDay: offeredDay }); },
+    cancelPlanningOpportunity: function (id) { return call('POST', { action: 'planning-opportunity-cancel', requestId: id, shiftId: id }); },
     logout: function () { return call('POST', { action: 'logout' }); },
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=363').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=366').then(function (reg) {
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });
