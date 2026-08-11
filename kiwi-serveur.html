@@ -4399,12 +4399,13 @@ em, i, cite, dfn, var { font-style: normal; }
          employee with no slug, so /api/menu was never requested at all. */
       try { return localStorage.getItem('kiwiEmployeeMerchant') || localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
     }
-    function svRebuildCarte() {
-      if (SV_DEMO) return false;
-      const slug = svSlug();
-      if (!slug) return false;
-      let d = null;
-      try { const raw = localStorage.getItem(SV_CARTE_MIRROR + slug); d = raw ? JSON.parse(raw) : null; } catch (_) {}
+    /* Apply a menu document directly to the screen. The network response must
+       remain the source of truth even when Web Storage is unavailable (private
+       browsing, an installed iOS app after eviction, or a restrictive browser
+       policy). Previously svFetchCarte() wrote to localStorage and then asked
+       svRebuildCarte() to read it back; a failed write silently discarded a
+       perfectly valid live menu and left the Menu tab empty. */
+    function svApplyCarte(d) {
       if (!d || !Array.isArray(d.items)) return false;
       const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
       const labels = { all: 'Tout' };
@@ -4457,6 +4458,14 @@ em, i, cite, dfn, var { font-style: normal; }
       try { renderCatPills(); renderMenu(); } catch (_) {}
       return true;
     }
+    function svRebuildCarte() {
+      if (SV_DEMO) return false;
+      const slug = svSlug();
+      if (!slug) return false;
+      let d = null;
+      try { const raw = localStorage.getItem(SV_CARTE_MIRROR + slug); d = raw ? JSON.parse(raw) : null; } catch (_) {}
+      return svApplyCarte(d);
+    }
     /* Où part cette commande, dit avec les mots du patron.
      *
      * Avant : « cuisine » / « bar », déduits d'une catégorie nommée `boissons`.
@@ -4489,11 +4498,13 @@ em, i, cite, dfn, var { font-style: normal; }
         .then(r => (r.ok ? r.json() : null))
         .then((j) => {
           const m = j && j.menu;
-          if (!m || !Array.isArray(m.items) || !m.items.length) return;
+          if (!m || !Array.isArray(m.items) || !m.items.length) return false;
           try { localStorage.setItem(SV_CARTE_MIRROR + slug, JSON.stringify(m)); } catch (_) {}
-          svRebuildCarte();
+          /* Paint from the response itself. The mirror is a best-effort offline
+             copy, never a prerequisite for showing today's catalogue. */
+          return svApplyCarte(m);
         })
-        .catch(() => {});
+        .catch(() => false);
     }
 
     /* ── Envoyer la commande en cuisine — pour de vrai ────────────────────────
