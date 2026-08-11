@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v360';
+var CACHE = 'kiwi-app-v361';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -153,12 +153,12 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js',
+  '/assets/cost.js?v=1',
   '/assets/clients-store.js',
   '/assets/clients-book.js',
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=2',
-  '/assets/restaurant-recipes.js',
+  '/assets/restaurant-recipes.js?v=1',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=355',
   '/assets/restaurant-menu-workspace.js',
