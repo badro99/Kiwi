@@ -3809,7 +3809,8 @@ em, i, cite, dfn, var { font-style: normal; }
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=356" defer></script>
+  <script src="assets/employee-live.js?v=357" defer></script>
+  <script src="assets/employee-planning.js?v=1" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, le serveur relit dès qu'une table change en caisse, au lieu
        d'attendre son prochain tour. Absent → sondage d'origine, inchangé. -->
@@ -3968,6 +3969,25 @@ em, i, cite, dfn, var { font-style: normal; }
         'Modifiez le filtre pour retrouver vos tables.': 'Change the filter to find your tables.',
         'En service': 'On shift',
         'Hors service': 'Off shift'
+        ,'Mon planning':'My schedule'
+        ,'Disponibilités & congés':'Availability & leave'
+        ,'Envoyez une demande au responsable sans message séparé.':'Send a request to your manager without a separate message.'
+        ,'Mes disponibilités':'My availability'
+        ,'Demander un congé':'Request leave'
+        ,'Aucune demande envoyée.':'No request sent.'
+        ,'Indiquer mes disponibilités':'Set my availability'
+        ,'Date de début':'Start date'
+        ,'Date de fin':'End date'
+        ,'Jours concernés':'Days concerned'
+        ,'Je suis disponible ces jours':'I am available on these days'
+        ,'À partir de':'From'
+        ,'Jusqu’à':'Until'
+        ,'Note au responsable (facultatif)':'Note to manager (optional)'
+        ,'Envoyer la demande':'Send request'
+        ,'En attente':'Pending'
+        ,'Approuvée':'Approved'
+        ,'Refusée':'Rejected'
+        ,'Annulée':'Cancelled'
       },
       ar: {
         'Notifications': 'الإشعارات',
@@ -4058,6 +4078,25 @@ em, i, cite, dfn, var { font-style: normal; }
         'Modifiez le filtre pour retrouver vos tables.': 'غيّر عامل التصفية لعرض الطاولات.',
         'En service': 'في الوردية',
         'Hors service': 'خارج الوردية'
+        ,'Mon planning':'جدولي'
+        ,'Disponibilités & congés':'أوقات التوفر والإجازات'
+        ,'Envoyez une demande au responsable sans message séparé.':'أرسل طلبك إلى المسؤول مباشرة من التطبيق.'
+        ,'Mes disponibilités':'أوقات توفري'
+        ,'Demander un congé':'طلب إجازة'
+        ,'Aucune demande envoyée.':'لم يتم إرسال أي طلب.'
+        ,'Indiquer mes disponibilités':'تحديد أوقات التوفر'
+        ,'Date de début':'تاريخ البداية'
+        ,'Date de fin':'تاريخ النهاية'
+        ,'Jours concernés':'الأيام المعنية'
+        ,'Je suis disponible ces jours':'أنا متاح في هذه الأيام'
+        ,'À partir de':'من الساعة'
+        ,'Jusqu’à':'إلى الساعة'
+        ,'Note au responsable (facultatif)':'ملاحظة للمسؤول (اختيارية)'
+        ,'Envoyer la demande':'إرسال الطلب'
+        ,'En attente':'قيد المراجعة'
+        ,'Approuvée':'تمت الموافقة'
+        ,'Refusée':'مرفوضة'
+        ,'Annulée':'ملغاة'
       }
     };
     let employeeLanguage = (() => {

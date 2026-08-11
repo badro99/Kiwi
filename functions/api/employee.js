@@ -50,6 +50,22 @@ function memberFor(team, pinRow) {
   const want = String(pinRow.name || '').trim().toLocaleLowerCase('fr');
   return want ? members.find((m) => fullName(m).toLocaleLowerCase('fr') === want) || null : null;
 }
+function planningState(team, memberId) {
+  const raw = team && team.planning && typeof team.planning === 'object' ? team.planning : {};
+  const requests = (Array.isArray(raw.requests) ? raw.requests : [])
+    .filter((request) => request && String(request.memberId || '') === String(memberId || ''))
+    .map((request) => ({
+      id:String(request.id || ''), type:String(request.type || ''), status:String(request.status || 'pending'),
+      startDate:String(request.startDate || ''), endDate:String(request.endDate || ''),
+      weekdays:Array.isArray(request.weekdays) ? request.weekdays.map(Number).filter((day) => day >= 0 && day <= 6) : [],
+      start:String(request.start || ''), end:String(request.end || ''), available:request.available !== false,
+      reason:String(request.reason || '').slice(0, 240), createdAt:String(request.createdAt || ''), updatedAt:String(request.updatedAt || ''),
+    }));
+  const source = raw.publishingEnabled ? raw.publishedShifts : team && team.shifts;
+  return { publishingEnabled:Boolean(raw.publishingEnabled), schedule:(source && source[memberId]) || {}, requests };
+}
+function validISODate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) && !Number.isNaN(Date.parse(String(value) + 'T12:00:00Z')); }
+function validTime(value) { return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')); }
 async function readDoc(env, merchant, feature, fallback) {
   try {
     const row = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?')
@@ -182,6 +198,7 @@ async function payloadFor(request, env) {
   if (cfg && String(cfg.status || '') === 'suspended') return { suspended: true };
   const member = memberFor(teamRow.data, auth.pin);
   const me = safeMember(member, auth.pin);
+  const planning = planningState(teamRow.data, me.id);
   const members = Array.isArray(teamRow.data.members) ? teamRow.data.members : [];
   const entries = Array.isArray(attendanceRow.data.entries) ? attendanceRow.data.entries : [];
   const openEntries = new Map(entries.filter((e) => e && !e.outTs)
@@ -198,7 +215,8 @@ async function payloadFor(request, env) {
   return {
     ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || '') },
     employee: me,
-    schedule: (teamRow.data.shifts && teamRow.data.shifts[me.id]) || {},
+    schedule: planning.schedule,
+    planning: { publishingEnabled:planning.publishingEnabled, requests:planning.requests },
     hours: (teamRow.data.hours && teamRow.data.hours[me.id]) || {},
     pointedHours: pointedHours(attendanceRow.data, me.id, auth.pin.id),
     progress: safeProgress(progressRow.data.members && progressRow.data.members[me.id]),
@@ -279,9 +297,56 @@ export async function onRequestPost({ request, env }) {
   // Attendance starts/ends on the employee device. Breaks are a manager action
   // owned by the paired caisse through /api/team/live; an employee cannot grant
   // or end their own pause by crafting this request.
+  const merchant = auth.session.merchant;
+  if (action === 'planning-request' || action === 'planning-request-cancel') {
+    const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
+    const member = memberFor(teamRow.data, auth.pin);
+    const memberId = String((member && member.id) || auth.pin.id);
+    let requestId = '';
+    const now = new Date().toISOString();
+    if (action === 'planning-request') {
+      const type = String(body.type || '');
+      if (type !== 'leave' && type !== 'availability') return json({ error:'planning-request-type-invalid' }, 400);
+      const reason = String(body.reason || '').trim().slice(0, 240);
+      const request = { id:crypto.randomUUID(), memberId, type, reason, status:'pending', createdAt:now, updatedAt:now };
+      if (type === 'leave') {
+        const startDate = String(body.startDate || ''), endDate = String(body.endDate || '');
+        if (!validISODate(startDate) || !validISODate(endDate) || startDate > endDate) return json({ error:'planning-date-invalid' }, 400);
+        const length = Math.round((Date.parse(endDate + 'T12:00:00Z') - Date.parse(startDate + 'T12:00:00Z')) / 86400000);
+        if (length > 366) return json({ error:'planning-date-range-too-long' }, 400);
+        request.startDate = startDate; request.endDate = endDate;
+      } else {
+        const weekdays = Array.from(new Set((Array.isArray(body.weekdays) ? body.weekdays : []).map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort();
+        const available = body.available !== false;
+        const start = String(body.start || ''), end = String(body.end || '');
+        if (!weekdays.length || (available && (!validTime(start) || !validTime(end) || start === end))) return json({ error:'planning-availability-invalid' }, 400);
+        request.weekdays = weekdays; request.available = available; request.start = available ? start : ''; request.end = available ? end : '';
+      }
+      requestId = request.id;
+      const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
+        doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
+        doc.planning.requests = Array.isArray(doc.planning.requests) ? doc.planning.requests : [];
+        const duplicate = doc.planning.requests.some((item) => item && item.memberId === memberId && item.type === request.type && item.status === 'pending' && (request.type === 'leave' ? item.startDate === request.startDate && item.endDate === request.endDate : JSON.stringify(item.weekdays || []) === JSON.stringify(request.weekdays || [])));
+        if (!duplicate) doc.planning.requests.push(request);
+        return doc;
+      });
+      if (!updated) return json({ error:'planning-write-failed' }, 503);
+    } else {
+      requestId = String(body.requestId || '');
+      if (!requestId) return json({ error:'planning-request-id-required' }, 400);
+      const updated = await mutateDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} }, (doc) => {
+        doc.planning = doc.planning && typeof doc.planning === 'object' ? doc.planning : {};
+        doc.planning.requests = Array.isArray(doc.planning.requests) ? doc.planning.requests : [];
+        const request = doc.planning.requests.find((item) => item && item.id === requestId && item.memberId === memberId && item.status === 'pending');
+        if (request) { request.status = 'cancelled'; request.updatedAt = now; }
+        return doc;
+      });
+      if (!updated) return json({ error:'planning-write-failed' }, 503);
+    }
+    return json({ ok:true, action, requestId });
+  }
   if (action === 'pause' || action === 'resume') return json({ error: 'pause-managed-by-caisse' }, 403);
   if (!['clock-in', 'clock-out'].includes(action)) return json({ error: 'bad-action' }, 400);
-  const merchant = auth.session.merchant;
   // Credentials prove who is pointing. The short-lived code generated by the
   // paired caisse proves the employee is physically present at this store.
   const attendanceCode = String(body.attendanceCode || '').replace(/\D/g, '').slice(0, 6);

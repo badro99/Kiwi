@@ -730,8 +730,9 @@
   }
 
   /* ═══════════════ ROOT STATE ═══════════════ */
-  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, periodKind: 'week', periodLocked: false };
+  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, periodKind: 'week', periodLocked: false };
   if (!window.__kiwiTeamV2.shiftsByVenue) window.__kiwiTeamV2.shiftsByVenue = {};
+  if (!window.__kiwiTeamV2.planningByVenue) window.__kiwiTeamV2.planningByVenue = {};
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -849,6 +850,7 @@
           root.byVenue[k] = raw.byVenue[k];
           root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
           root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
+          root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
         }
       });
     } catch (_) {}
@@ -859,12 +861,13 @@
   function persistTeams() {
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {} };
+      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = root.byVenue[k];
           out.hoursByVenue[k] = root.hoursByVenue[k] || {};
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
+          out.planningByVenue[k] = root.planningByVenue[k] || {};
         }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
@@ -955,6 +958,7 @@
       members,
       hours: mergeByDay(src.hours, null, alive),
       shifts: mergeByDay(src.shifts, null, alive),
+      planning: window.KiwiPlanningCore?.normalize?.(src.planning, members) || src.planning || {},
     };
   }
 
@@ -990,6 +994,7 @@
       members,
       hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
       shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
+      planning: window.KiwiPlanningCore?.merge?.(mine && mine.planning, theirs && theirs.planning, members) || mine.planning || theirs.planning || {},
     };
   }
 
@@ -1002,11 +1007,12 @@
       read: () => {
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
-        if (!k) return { members: [], hours: {}, shifts: {} };
+        if (!k) return { members: [], hours: {}, shifts: {}, planning: {} };
         return scopeTeamDoc({
           members: root.byVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
+          planning: root.planningByVenue[k] || {},
         }, teamSlug());
       },
       write: (doc) => {
@@ -1017,6 +1023,7 @@
         root.byVenue[k] = clean.members;
         root.hoursByVenue[k] = clean.hours;
         root.shiftsByVenue[k] = clean.shifts;
+        root.planningByVenue[k] = clean.planning;
         persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
@@ -1067,6 +1074,8 @@
         ? {}
         : seedHours(root.byVenue[key], buildPeriod(root.periodKind).days);
     }
+    if (!root.planningByVenue[key]) root.planningByVenue[key] = window.KiwiPlanningCore?.blank?.() || {};
+    root.planningByVenue[key] = window.KiwiPlanningCore?.normalize?.(root.planningByVenue[key], root.byVenue[key]) || root.planningByVenue[key];
     return root;
   }
   function getMembers(venueType) { return window.__kiwiTeamV2.byVenue[venueType] || []; }
@@ -1612,6 +1621,94 @@
     saveCustomTeams();
     render();
     Kiwi.toast(t().plCleared, { type: 'info' });
+  };
+
+  function planningContext() {
+    const root = window.__kiwiTeamV2;
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type:'restaurant' };
+    const key = teamKey(venue);
+    const members = getMembers(key);
+    const period = buildPeriod(root.periodKind || 'week');
+    const planning = root.planningByVenue[key] || (root.planningByVenue[key] = window.KiwiPlanningCore?.blank?.() || {});
+    const shifts = root.shiftsByVenue[key] || (root.shiftsByVenue[key] = {});
+    return { root, venue, key, members, period, planning, shifts };
+  }
+
+  handlers['kt-plan-template-save'] = () => {
+    const copy = planningCopy();
+    const mdl = modal({
+      title: copy.templateTitle,
+      width: 440,
+      body: `<div class="kt-plan-modal-field"><label for="kt-template-name">${esc(copy.templateName)}</label><input id="kt-template-name" data-kt-template-name maxlength="80" value="${esc(copy.templateTitle)}" /></div>`,
+      foot: `<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-template-confirm">${esc(copy.saveNow)}</button>`
+    });
+    mdl.el.addEventListener('click', (event) => { if (event.target.closest('[data-dismiss]')) mdl.close(); });
+    window.__kiwiPlanningModal = mdl;
+    setTimeout(() => mdl.el.querySelector('[data-kt-template-name]')?.select(), 20);
+  };
+  handlers['kt-plan-template-confirm'] = () => {
+    const mdl = window.__kiwiPlanningModal;
+    if (!mdl?.el) return;
+    const name = mdl.el.querySelector('[data-kt-template-name]')?.value.trim();
+    if (!name) return;
+    const ctx = planningContext();
+    const template = window.KiwiPlanningCore.templateFromWeek(name, ctx.members, ctx.shifts, visibleDays());
+    ctx.planning.templates.push(template);
+    saveCustomTeams();
+    mdl.close(); window.__kiwiPlanningModal = null;
+    render(); toast(planningCopy().templateDone, { type:'success' });
+  };
+  handlers['kt-plan-template-apply'] = (el) => {
+    const host = el.closest('.eq-section');
+    const id = host?.querySelector('[data-kt-template-select]')?.value;
+    if (!id) return;
+    const ctx = planningContext();
+    const template = (ctx.planning.templates || []).find((item) => item.id === id);
+    if (!template) return;
+    ctx.root.shiftsByVenue[ctx.key] = window.KiwiPlanningCore.applyTemplate(template, visibleDays(), ctx.shifts, ctx.members);
+    saveCustomTeams(); render(); toast(planningCopy().applyDone, { type:'success' });
+  };
+  handlers['kt-plan-publish'] = () => {
+    const ctx = planningContext();
+    const result = window.KiwiPlanningCore.publish(ctx.planning, ctx.shifts, ctx.period.days, ctx.members);
+    if (!result.ok) {
+      toast(planningCopy().publishBlocked, { type:'error' });
+      render();
+      return;
+    }
+    ctx.root.planningByVenue[ctx.key] = result.planning;
+    saveCustomTeams(); render(); toast(planningCopy().publishDone, { type:'success' });
+  };
+
+  handlers['kt-plan-requests'] = () => {
+    const copy = planningCopy();
+    const ctx = planningContext();
+    const pending = (ctx.planning.requests || []).filter((request) => request.status === 'pending');
+    const byId = new Map(ctx.members.map((member) => [member.id, member]));
+    const body = pending.length ? `<div class="kt-plan-request-list">${pending.map((request) => {
+      const member = byId.get(request.memberId);
+      const range = request.type === 'leave' ? `${request.startDate} → ${request.endDate}` : `${(request.weekdays || []).join(', ')} · ${request.start || '—'} → ${request.end || '—'}`;
+      return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(member ? memberFullName(member) : request.memberId)}</strong><div>${esc(request.type === 'leave' ? copy.leave : copy.availability)} · ${esc(range)}</div></div></div>${request.reason ? `<p>${esc(request.reason)}</p>` : ''}<div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;
+    }).join('')}</div>` : `<p>${esc(copy.empty)}</p>`;
+    const mdl = modal({ title:copy.review, width:620, body, foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button>` });
+    mdl.el.addEventListener('click', (event) => { if (event.target.closest('[data-dismiss]')) mdl.close(); });
+    window.__kiwiPlanningRequests = mdl;
+  };
+  handlers['kt-plan-request-decision'] = (el) => {
+    const ctx = planningContext();
+    const request = (ctx.planning.requests || []).find((item) => item.id === el.dataset.rid);
+    if (!request || request.status !== 'pending') return;
+    request.status = el.dataset.decision === 'approved' ? 'approved' : 'rejected';
+    request.updatedAt = new Date().toISOString();
+    if (request.status === 'approved' && request.type === 'availability') {
+      const current = ctx.planning.availability[request.memberId] || { weekdays:{} };
+      (request.weekdays || []).forEach((weekday) => { current.weekdays[String(weekday)] = { available:request.available !== false, start:request.start || '', end:request.end || '' }; });
+      current.updatedAt = request.updatedAt;
+      ctx.planning.availability[request.memberId] = current;
+    }
+    saveCustomTeams();
+    window.__kiwiPlanningRequests?.close?.(); window.__kiwiPlanningRequests = null;
+    render(); toast(request.status === 'approved' ? planningCopy().approved : planningCopy().rejected, { type:'success' });
   };
 
   handlers['kt-plan-week'] = (_el, dir) => {
@@ -2557,11 +2654,33 @@
     return i < 0 ? 0 : Math.floor(i / 7);
   }
 
+  function planningCopy() {
+    const lang = trLang();
+    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.' };
+    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', blocked:(n)=>`${n} تعارضات يجب حلها`, pending:(n)=>`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.' };
+    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.' };
+  }
+  function issueLabel(issue) {
+    const who = issue.memberName || issue.memberId;
+    const labels = trLang() === 'en'
+      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered' }
+      : trLang() === 'ar'
+        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة' }
+        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi' };
+    return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
+  }
+
   function renderPlanningPane(T, venue, venueType, members) {
     const root = window.__kiwiTeamV2;
     const period = buildPeriod(root.periodKind || 'week');
     const shifts = root.shiftsByVenue[venueType] || (root.shiftsByVenue[venueType] = {});
     const locked = root.periodLocked;
+    const P = window.KiwiPlanningCore;
+    const planning = root.planningByVenue[venueType] || (root.planningByVenue[venueType] = P?.blank?.() || {});
+    const copy = planningCopy();
+    const lifecycle = P?.status?.(planning, shifts, period.days) || { state:'draft' };
+    const issues = P?.validate?.({ planning, shifts, days:period.days, members }) || [];
+    const pending = (planning.requests || []).filter((request) => request.status === 'pending');
     let grandH = 0, grandCost = 0;
 
     const chunks = weekChunks(period.days);
@@ -2615,6 +2734,25 @@
           aria-label="${esc(T.plNextWeek)}" ${planWeekIdx >= chunks.length - 1 ? 'disabled' : ''}>›</button>
       </div>` : '';
 
+    const stateText = lifecycle.state === 'published' ? copy.published : lifecycle.state === 'changed' ? copy.changed : copy.draft;
+    const qualityText = issues.length ? copy.blocked(issues.length) : copy.healthy;
+    const templates = planning.templates || [];
+    const planningCommand = `
+      <div class="kt-planning-command">
+        <div class="kt-planning-health">
+          <span class="kt-plan-state ${esc(lifecycle.state)}"><i></i>${esc(stateText)}</span>
+          <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length))}</p></div>
+        </div>
+        <div class="kt-planning-actions">
+          <button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button>
+          <select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select>
+          <button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button>
+          <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length ? ` · ${pending.length}` : ''}</button>
+          <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+        </div>
+      </div>
+      ${issues.slice(0,4).map((issue)=>`<div class="kt-plan-issue"><b>!</b><span>${esc(issueLabel(issue))}</span></div>`).join('')}`;
+
     return `
       <div class="eq-section">
         <div class="eq-section-head">
@@ -2629,6 +2767,7 @@
           </div>
         </div>
         <p class="kt-plan-hint">${esc(T.plHint)}</p>
+        ${planningCommand}
         ${stepper}
         <div class="kt-plan-wrap">
           <table class="kt-h-table kt-plan-table">

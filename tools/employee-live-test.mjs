@@ -122,6 +122,29 @@ ok(reassignedRes.status === 200
   "une nouvelle affectation du dashboard remplace l'ancienne au prochain rafraîchissement employé");
 ok(!JSON.stringify(state).includes('Yassir'), 'aucune donnée de démonstration ne fuit dans la réponse live');
 
+const leaveRequest = await post({ action:'planning-request', type:'leave', startDate:'2026-08-20', endDate:'2026-08-22', reason:'Voyage familial' }, cookie);
+ok(leaveRequest.status === 200, "l'employé peut demander un congé depuis son application");
+const availabilityRequest = await post({ action:'planning-request', type:'availability', weekdays:[1,3,5], available:true, start:'10:00', end:'18:00' }, cookie);
+ok(availabilityRequest.status === 200, "l'employé peut envoyer ses disponibilités récurrentes");
+const availabilityResult = await availabilityRequest.json();
+const cancelPlanning = await post({ action:'planning-request-cancel', requestId:availabilityResult.requestId }, cookie);
+ok(cancelPlanning.status === 200, "l'employé peut annuler sa demande tant qu'elle est en attente");
+const forgedRequest = await post({ action:'planning-request', type:'leave', memberId:'mem-nora', startDate:'bad', endDate:'2026-08-22' }, cookie);
+ok(forgedRequest.status === 400, "une demande invalide ne peut ni viser un collègue ni écrire une fausse date");
+let planningDoc = JSON.parse(sqlite.prepare("SELECT data FROM store_docs WHERE merchant='amira-cafe' AND feature='team'").get().data);
+ok(planningDoc.planning.requests.length === 2 && planningDoc.planning.requests.every((request) => request.memberId === 'mem-sara')
+  && planningDoc.planning.requests[1].status === 'cancelled',
+  'les demandes sont signées par la session et restent attachées au bon employé');
+planningDoc.planning.requests[0].status = 'approved';
+planningDoc.planning.publishingEnabled = true;
+planningDoc.planning.publishedShifts = { 'mem-sara': { '2026-08-12': { start:'10:00', end:'18:00' } } };
+put("UPDATE store_docs SET data=?, rev=rev+1 WHERE merchant='amira-cafe' AND feature='team'", JSON.stringify(planningDoc));
+const publishedStateRes = await get(cookie); const publishedState = await publishedStateRes.json();
+ok(publishedState.schedule['2026-08-12'].start === '10:00' && !publishedState.schedule['2026-08-05'],
+  "après la première publication, l'app employé ne voit que le planning publié");
+ok(publishedState.planning.requests.length === 2 && publishedState.planning.requests[0].status === 'approved',
+  "l'employé voit la décision du responsable sans accéder aux demandes des autres");
+
 // A PIN roster can reach the cloud before the larger Team document. The small
 // access mirror must be sufficient for login, and its exact replacement must
 // revoke an existing session without accepting a stale Team fallback.
@@ -272,6 +295,7 @@ ok(configClientSource.includes('scopeConfirmed = true')
   && configClientSource.includes('v.slug === urlScope'),
   "God Mode publie l'employé vers le slug confirmé du client, jamais vers un simple paramètre URL");
 const serviceSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const employeePlanningSource = fs.readFileSync(path.join(ROOT, 'assets/employee-planning.js'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(ROOT, 'functions/api/service/events.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
 ok(serviceSource.includes('Mes tables') && serviceSource.includes('Toutes les tables'), 'les deux vues de couverture restent visibles');
@@ -299,9 +323,14 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
-ok(serviceSource.includes('assets/employee-live.js?v=356')
+ok(serviceSource.includes('assets/employee-live.js?v=357')
+  && serviceSource.includes('assets/employee-planning.js?v=1')
   && serviceSource.includes('assets/pwa-update.js?v=358'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");
+ok(employeePlanningSource.includes("requestPlanning(body)")
+  && employeePlanningSource.includes("cancelPlanningRequest")
+  && employeePlanningSource.includes("@media(max-width:600px)"),
+  "le portail employé propose les demandes et leur annulation dans une feuille adaptée au téléphone");
 ok(serviceSource.includes('id="attendance-code"')
   && serviceSource.includes("prepareAttendanceGate('clock-out')")
   && serviceSource.includes('attendance-code-invalid'),
