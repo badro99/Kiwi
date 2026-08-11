@@ -52,12 +52,7 @@ CREATE TABLE IF NOT EXISTS sales (
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
 -- applies. See LIVE_LINK.md.
---   ALTER TABLE sales ADD COLUMN lines TEXT;
---   ALTER TABLE sales ADD COLUMN void_ts INTEGER;
---   ALTER TABLE sales ADD COLUMN void_reason TEXT;
---   ALTER TABLE sales ADD COLUMN void_note TEXT;
---   ALTER TABLE sales ADD COLUMN void_actor TEXT;
---   ALTER TABLE sales ADD COLUMN void_actor_id TEXT;
+-- `node tools/d1-schema.mjs` les nomme, `--apply --yes` les pose.
 -- Tant que ces colonnes manquent, tout continue de fonctionner : /api/feed
 -- retombe sur sa requête d'origine et la console refuse l'annulation en le
 -- disant, plutôt que d'échouer en silence.
@@ -110,10 +105,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   contact_email TEXT,                -- l'adresse à laquelle Kiwi écrit au commerce
   billing_email TEXT                 -- facturation / comptabilité, quand elle diffère
 );
--- Existing databases (table already created): add the column once —
---   ALTER TABLE accounts ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
---   ALTER TABLE accounts ADD COLUMN contact_email TEXT;
---   ALTER TABLE accounts ADD COLUMN billing_email TEXT;
+-- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.
 
@@ -208,13 +200,7 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   mrr        INTEGER,
   updated_ts INTEGER NOT NULL
 );
--- Existing databases (table already created): add the columns once —
---   ALTER TABLE merchant_config ADD COLUMN type TEXT;
---   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
---   ALTER TABLE merchant_config ADD COLUMN name TEXT;
---   ALTER TABLE merchant_config ADD COLUMN status TEXT;
---   ALTER TABLE merchant_config ADD COLUMN city TEXT;
---   ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;
+-- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- Tant que city/mrr manquent, la console reste utilisable : /api/admin/overview
 -- retombe sur une requête sans elles et répond `columns:{city:false,mrr:false}`,
 -- que la vue d'ensemble affiche telle quelle au lieu de montrer « 0 ville ».
@@ -316,16 +302,24 @@ CREATE TABLE IF NOT EXISTS orders (
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   -- ── OrderPro · session de table (voir table_sessions, plus bas) ───────────
-  -- Déclarées ICI pour qu'une base neuve les ait d'emblée, et répétées en ALTER
-  -- commenté plus bas pour la base DÉJÀ déployée, que « CREATE TABLE IF NOT
-  -- EXISTS » ne touchera jamais. Toute lecture qui les nomme doit garder son
-  -- repli (queue.js) : les deux formes de base coexistent en ce moment.
+  -- Toute lecture qui les nomme garde son repli (queue.js) tant que la base
+  -- déployée ne les a pas reçues : `node tools/d1-schema.mjs` dit lesquelles
+  -- lui manquent, et `--apply --yes` les pose.
   session_id  TEXT,               -- table_sessions.id qui a passé la commande
   server_name TEXT,               -- le serveur affecté à la table, posé à l'acceptation
   menu_rev    INTEGER,            -- menus.updated_ts ayant servi à tarifer
   priced_ts   INTEGER,            -- NULL = prix jamais recalculés côté serveur
   client_ref  TEXT,               -- clé d'idempotence du téléphone
-  paid_ts     INTEGER             -- encaissée (au comptoir, ou avec l'addition de la table)
+  paid_ts     INTEGER,            -- encaissée (au comptoir, ou avec l'addition de la table)
+  -- ── Canaux extérieurs (voir le commentaire sous la table) ────────────────
+  -- Elles n'étaient déclarées QUE dans un ALTER commenté : une base neuve ne
+  -- les recevait donc jamais, et le repli en cascade de queue.js masquait leur
+  -- absence en rendant `channel = 'kiwi'` et `ext_ref = ''` pour tout le monde.
+  -- Une commande Glovo y perdait le numéro du prestataire — le seul mot commun
+  -- entre son écran et le nôtre pour traiter une réclamation.
+  channel     TEXT,               -- NULL/'kiwi' = relais OrderPro · 'glovo', 'shopify', 'generic'…
+  ext_ref     TEXT,               -- le numéro que le prestataire imprime sur son bordereau
+  customer    TEXT                -- JSON {name, phone, address, note} — le client, pas le coursier
 );
 -- The caisse polls "WHERE merchant = ? AND updated_ts > ?" — this index covers
 -- both that and the per-merchant daily number lookup.
@@ -353,9 +347,11 @@ CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders (merchant, updated_ts);
 --             client : un ticket de livraison sans adresse ni téléphone oblige
 --             à retourner voir la tablette du prestataire, ce qui annule tout
 --             le bénéfice.
---   ALTER TABLE orders ADD COLUMN channel TEXT;
---   ALTER TABLE orders ADD COLUMN ext_ref TEXT;
---   ALTER TABLE orders ADD COLUMN customer TEXT;
+--
+-- Les trois colonnes sont déclarées dans le CREATE TABLE ci-dessus. Elles ne
+-- l'étaient PAS avant le 2026-08-11 — seul un ALTER commenté les portait, donc
+-- aucune base neuve ne les recevait, et le repli de queue.js rendait l'absence
+-- invisible. Base déjà déployée : `node tools/d1-schema.mjs`.
 
 -- Le jeton qu'un prestataire présente pour déposer une commande.
 --
@@ -745,24 +741,36 @@ CREATE TABLE IF NOT EXISTS order_desk (
   seen_ts  INTEGER NOT NULL      -- dernier sondage authentifié de /api/order/queue
 );
 
--- ── Colonnes additives sur `orders` ────────────────────────────────────────
--- Elles sont DÉJÀ dans le CREATE TABLE plus haut, ce qui suffit à une base
--- neuve. Voici les six ALTER à passer sur la base DÉJÀ DÉPLOYÉE, que
--- « CREATE TABLE IF NOT EXISTS » laisse par définition intacte :
+-- ── LA BASE DÉJÀ DÉPLOYÉE ──────────────────────────────────────────────────
+-- « CREATE TABLE IF NOT EXISTS » ne touche jamais une table qui existe : tout
+-- ce que ce fichier ajoute après le premier déploiement n'atteint la production
+-- que si quelqu'un le pose à la main. Cette consigne a été portée pendant un an
+-- par des ALTER en commentaire, et elle a échoué trois fois — toujours en
+-- silence, parce que chaque lecture qui nomme une colonne absente échoue à
+-- l'intérieur d'un `catch` qui la traduit en réponse vide ou en refus :
 --
---   ALTER TABLE orders ADD COLUMN session_id  TEXT;
---   ALTER TABLE orders ADD COLUMN server_name TEXT;
---   ALTER TABLE orders ADD COLUMN menu_rev    INTEGER;
---   ALTER TABLE orders ADD COLUMN priced_ts   INTEGER;
---   ALTER TABLE orders ADD COLUMN client_ref  TEXT;
---   ALTER TABLE orders ADD COLUMN paid_ts     INTEGER;
+--   · 2026-07-28  merchant_config.status absente → /api/config a rendu
+--     `{features:{}, pins:[]}` à TOUS les commerçants pendant 45 minutes.
+--   · 2026-08-08  la même → /api/employee refusait chaque employé, bon code en
+--     main, avec « Email ou code personnel incorrect. »
+--   · 2026-08-11  orders.channel/ext_ref/customer n'ont JAMAIS été déclarées
+--     dans le CREATE TABLE : aucune base neuve ne les avait, et le repli en
+--     cascade de queue.js rendait l'absence invisible.
 --
--- Chacune est NULL pour toute commande écrite avant elle, et toute lecture qui
--- les nomme garde le repli en cascade de queue.js — sans quoi une base pas
--- encore migrée renverrait une file VIDE au lieu d'une erreur, et le comptoir
--- ne verrait plus rien sans que personne ne le signale. Tant que les ALTER ne
--- sont pas passés, la session de table est simplement inerte : les commandes
--- arrivent comme avant, et rien ne casse.
+-- La consigne n'est donc plus écrite ici. Elle se lit :
+--
+--   node tools/d1-schema.mjs              # ce qui manque à la base déployée
+--   node tools/d1-schema.mjs --apply --yes  # le poser
+--
+-- L'outil DÉDUIT l'écart de ce fichier — il n'a pas de liste à tenir à jour, et
+-- ne peut donc pas dériver de lui. `tools/d1-schema-test.mjs` verrouille cette
+-- propriété : ajouter une colonne ici sans que l'outil sache la lire fait
+-- échouer le test, tout de suite, au lieu de la production dans trois semaines.
+--
+-- Chaque colonne additive est NULL pour toute ligne écrite avant elle, et toute
+-- lecture qui les nomme garde son repli — sans quoi une base pas encore migrée
+-- renverrait une file VIDE au lieu d'une erreur, et le comptoir ne verrait plus
+-- rien sans que personne ne le signale.
 CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- Un double-tap sur « Commander », ou un réseau qui repasse, ne doit pas
 -- imprimer deux tickets. Index PARTIEL : les commandes sans client_ref (toutes
