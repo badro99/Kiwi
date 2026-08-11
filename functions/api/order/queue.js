@@ -186,6 +186,20 @@ const COL_SETS = [
   BASE + ', session_id, server_name, paid_ts',
   BASE,
 ];
+/* Ce que la base N'A PAS quand c'est cette forme-là qui a répondu.
+ *
+ * Le repli est volontaire — mieux vaut une file dégradée qu'une file vide —
+ * mais il était MUET, et c'est ce qui coûtait cher : une base sans
+ * `session_id` sert des commandes que l'app employé n'affichera jamais, une
+ * base sans `client_ref` n'a plus aucune protection contre le doublon, et dans
+ * les deux cas tout paraît sain. On le dit donc, dans la réponse, à chaque
+ * sondage : c'est la différence entre « ça marche » et « ça marche encore ». */
+const COL_SET_MISSING = [
+  [],
+  ['session_id', 'server_name', 'paid_ts'],
+  ['channel', 'ext_ref', 'customer'],
+  ['channel', 'ext_ref', 'customer', 'session_id', 'server_name', 'paid_ts'],
+];
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -284,10 +298,12 @@ export async function onRequestGet(context) {
         LIMIT ?`;
 
   let rows = null;
-  for (const cols of COL_SETS) {
+  let degraded = [];
+  for (let i = 0; i < COL_SETS.length; i++) {
     try {
-      rows = await env.DB.prepare(`SELECT ${cols} ${WHERE}`)
+      rows = await env.DB.prepare(`SELECT ${COL_SETS[i]} ${WHERE}`)
         .bind(merchant, since, kitchenCutoff, today, MAX_ROWS).all();
+      degraded = COL_SET_MISSING[i];
       break;
     } catch (_) { rows = null; }
   }
@@ -393,6 +409,9 @@ export async function onRequestGet(context) {
        une commande écrite entre la prise de l'heure et la lecture n'est jamais
        présentée (voir pollCursor). */
     ok: true, orders, sessions, now: pollCursor(now), ordersAvailable: true,
+    /* Colonnes absentes de la base déployée. Vide = tout est là.
+       `node tools/d1-schema.mjs` les pose. */
+    degraded: degraded.length ? degraded : undefined,
     service: service ? {
       mineTables: Array.from(service.tables),
       allTables: Array.from(service.allTables),
@@ -918,6 +937,21 @@ async function createTicket(env, merchant, c, now) {
   const mode = c.mode === 'takeout' ? 'takeout' : 'table';
   const table = mode === 'table' ? normTable(c.table) : '';
   const server = String(c.server || '').trim().slice(0, 40);
+
+  /* ── LE BON DE CAISSE APPARTIENT À LA VISITE, LUI AUSSI ────────────────────
+   * Il partait sans `session_id`. Trois conséquences, toutes silencieuses :
+   * l'app employé ne le voyait JAMAIS (son filtre exige une visite ouverte),
+   * l'encaissement ne le soldait que par un rattrapage sur le numéro de table,
+   * et rien ne l'empêchait de survivre au départ de la tablée.
+   *
+   * Tant que l'addition avait une seconde vérité — les lignes recopiées dans le
+   * document d'occupation — le trou ne se voyait pas : le serveur voyait quand
+   * même les articles du comptoir, par l'autre chemin. En supprimant ce chemin,
+   * il fallait réparer celui-ci. Un bon de caisse est une commande de la table
+   * comme une autre ; il rejoint donc la même visite. */
+  const ticketSession = mode === 'table' && table
+    ? await ensureServiceTableSession(env, merchant, table, now) : null;
+  const sessionId = ticketSession && ticketSession.id ? ticketSession.id : null;
   const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const linesJson = JSON.stringify(lines);
   const week = startOfWeek(now);
@@ -951,6 +985,12 @@ async function createTicket(env, merchant, c, now) {
    * qui, la 7 ? », la question que ce champ existe pour supprimer).
    * Du plus riche au plus pauvre, on s'arrête au premier qui répond. */
   const SHAPES = [
+    ...(sessionId ? [
+      { cols: BASE_COLS + ', server_name, channel, priced_ts, session_id',
+        vals: BASE_VALS + `, ?, 'caisse', ?, ?`, mid: [server, now, sessionId] },
+      { cols: BASE_COLS + ', server_name, session_id',
+        vals: BASE_VALS + ', ?, ?', mid: [server, sessionId] },
+    ] : []),
     { cols: BASE_COLS + ', server_name, channel, priced_ts',
       vals: BASE_VALS + `, ?, 'caisse', ?`, mid: [server, now] },
     { cols: BASE_COLS + ', server_name', vals: BASE_VALS + ', ?', mid: [server] },

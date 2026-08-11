@@ -1,5 +1,21 @@
 // Store-scoped, assigned-server event stream for front-of-house facts that are
 // not orders (today: a party seated from the cashier waitlist).
+//
+// ── CE DOCUMENT PORTE L'OCCUPATION, JAMAIS L'ADDITION ───────────────────────
+// Il a transporté les LIGNES d'une addition, en parallèle de la table `orders`.
+// Deux représentations vivantes de la même addition, et rien qui dise laquelle
+// gagne : la réconciliation était donc un empilement d'arbitrages écrits chacun
+// contre un symptôme observé — « garder les lignes de l'employé tant que la
+// caisse ne les a pas répétées », « une addition libre attend l'accusé de
+// réception », un garde de version pour les factures empoisonnées. Chacun juste,
+// aucun ne fondant une règle. C'est ce qui a fait revenir la même panne sous
+// sept noms différents en cinq jours : additions dupliquées, tables fantômes,
+// lignes qui reviennent après paiement.
+//
+// L'addition a désormais UNE source, la file des commandes (`orders`), à qui la
+// session de table donne ses frontières. Ce document ne garde que ce qu'il est
+// seul à savoir : quelle table est occupée, par combien de couverts, et depuis
+// quand. Un client qui envoie encore `lines` ne casse rien — c'est ignoré.
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
 import { poke } from '../_live.js';
@@ -56,27 +72,6 @@ async function append(env, merchant, event, statePatch) {
 function tableKey(value) {
   return String(value || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
 }
-function cleanLines(raw) {
-  if (!Array.isArray(raw)) return null;
-  return raw.slice(0, 80).map((line, index) => {
-    const qty = Math.max(1, Math.min(99, Number(line && line.qty) || 1));
-    return {
-      key: String(line && (line.key || line.uid || line.id) || index).slice(0, 80),
-      id: String(line && line.id || '').slice(0, 96),
-      name: String(line && line.name || '').slice(0, 140),
-      price: Math.max(0, Math.min(200000, Number(line && line.price) || 0)),
-      qty,
-      sentQty: Math.max(0, Math.min(qty, Number(line && line.sentQty) || 0)),
-      note: String(line && line.note || '').slice(0, 280),
-      opts: (Array.isArray(line && line.opts) ? line.opts : []).slice(0, 20).map((opt) => ({
-        group: String(opt && opt.group || '').slice(0, 80),
-        label: String(opt && (opt.label || opt.name) || '').slice(0, 100),
-        p: Math.max(0, Math.min(200000, Number(opt && (opt.p != null ? opt.p : opt.price)) || 0)),
-        emoji: String(opt && opt.emoji || '').slice(0, 16),
-      })),
-    };
-  }).filter((line) => line.name);
-}
 async function floorTargets(env, merchant) {
   const out = Object.create(null);
   try {
@@ -116,13 +111,11 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const table = tableKey(src && src.table);
     const status = String(src && src.status || '');
     if (!table || !TABLE_STATUSES.has(status)) return;
-    const lines = cleanLines(src && src.lines);
     incoming[table] = {
       table, status,
       covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
       syncVersion: Math.max(0, Math.min(99, Number(src && src.syncVersion) || 0)),
     };
-    if (lines) incoming[table].lines = lines;
   });
   if (!Object.keys(incoming).length) return { ok: false, events: [] };
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -144,24 +137,9 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
         && (before.status === 'khawya' || before.status === 'khlass')
         && next.status !== 'khawya' && next.status !== 'khlass';
       if (employeeCloseAwaitingAck) return;
-      if (before && !Object.prototype.hasOwnProperty.call(next, 'lines') && Array.isArray(before.lines)) next.lines = before.lines;
-      /* The caisse publishes its whole floor every four seconds. It can race
-       * the employee's just-sent bill with an older local view of the same
-       * open table containing zero lines. That heartbeat is not a cancellation:
-       * only a paid/free status may clear a bill. Keep the employee lines until
-       * the caisse has actually consumed and echoes them. */
-      if (source === 'caisse' && before && before.source === 'employee'
-        && next.status !== 'khawya' && next.status !== 'khlass'
-        && Array.isArray(before.lines) && before.lines.length
-        && Array.isArray(next.lines) && !next.lines.length) {
-        next.lines = before.lines;
-        next.syncVersion = Math.max(Number(next.syncVersion || 0), Number(before.syncVersion || 0));
-      }
-      if (next.status === 'khawya' || next.status === 'khlass') next.lines = [];
       const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
-      const linesChanged = !before || JSON.stringify(before.lines || []) !== JSON.stringify(next.lines || []);
       const versionChanged = !before || Number(before.syncVersion || 0) !== Number(next.syncVersion || 0);
-      const changed = stateChanged || linesChanged || versionChanged;
+      const changed = stateChanged || versionChanged;
       if (!changed) return;
       const changedAt = Date.now();
       states[table] = { ...next, ts: changedAt, source: source || 'caisse' };
@@ -202,7 +180,7 @@ export async function settleServiceTable(env, merchant, rawTable) {
   const targets = await floorTargets(env, merchant);
   if (!table || !targets[table]) return { ok: false, error: 'floor-table-required' };
   const result = await syncTableSnapshot(env, merchant, [{
-    table, status: 'khawya', covers: 0, lines: [], syncVersion: 4,
+    table, status: 'khawya', covers: 0, syncVersion: 4,
   }], 'employee');
   if (!result.ok) return { ok: false, error: 'state-write-failed' };
   await poke(env, merchant, FEATURE);
@@ -281,7 +259,11 @@ export async function onRequestPost({ request, env }) {
     if (!table || !targets[table] || !TABLE_STATUSES.has(status)) return json({ error: 'floor-table-required' }, 403);
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
     const result = await syncTableSnapshot(env, merchant, [{
-      table, status, covers: body.state.covers, lines: body.state.lines,
+      /* `lines` n'est plus lu. Ce document porte l'OCCUPATION — qui est assis,
+         combien de couverts — et rien d'autre. L'addition a une seule source,
+         la file des commandes ; un client peut continuer à envoyer `lines`,
+         c'est simplement ignoré. */
+      table, status, covers: body.state.covers,
       syncVersion: body.state.syncVersion,
     }], 'employee');
     if (!result.ok) return json({ error: 'state-write-failed' }, 503);

@@ -15491,7 +15491,28 @@
           posteOpeningFloat: posteOpeningFloat,
           handovers: handovers,
           tables: tables,
-          tableOrders: tableOrders,
+          /* ── ON N'ENREGISTRE PAS CE QUE LA FILE SAIT DÉJÀ ──────────────────
+           * Les lignes venues du relais portent le marqueur `orderProLine`.
+           * Les garder dans l'instantané du service en faisait une DEUXIÈME
+           * mémoire de l'addition, à côté de la file — et un instantané ne
+           * périme pas. C'est de là que venaient les additions fantômes au
+           * démarrage : on ouvrait la caisse et une table portait déjà une
+           * note que personne n'avait passée, ou une note déjà encaissée.
+           *
+           * Elles se reconstruisent seules au premier sondage : la file les
+           * rend, et le rattrapage de `ingest` les rattache par leur marqueur.
+           * Ce qu'on garde ici, c'est ce que la file NE connaît pas — les
+           * lignes tapées au comptoir et pas encore envoyées en cuisine. Un
+           * brouillon mérite de survivre à un F5 ; une addition déjà écrite
+           * ailleurs n'a pas à être recopiée. */
+          tableOrders: (function () {
+            const kept = {};
+            Object.keys(tableOrders).forEach(function (tid) {
+              const local = (tableOrders[tid] || []).filter(function (l) { return !l.orderProLine; });
+              if (local.length) kept[tid] = local;
+            });
+            return kept;
+          })(),
           orders: orders,
           /* Une part déjà payée est de l'argent réel. Le flux de split vivait
              seulement dans une Map en mémoire : F5 l'oubliait et remettait la

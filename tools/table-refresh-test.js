@@ -7,7 +7,12 @@ let pass = 0; const failures = [];
 function ok(name, yes) { if (yes) pass++; else failures.push(name); }
 
 ok('the shift snapshot persists tables', /tables:\s*tables,/.test(src));
-ok('the shift snapshot persists table orders', /tableOrders:\s*tableOrders,/.test(src));
+/* L'instantané ne garde plus QUE le brouillon local. Les lignes venues du
+   relais portent `orderProLine` et se reconstruisent depuis la file : les
+   recopier dans l'instantané en faisait une seconde mémoire de l'addition, qui
+   ne périme pas — d'où les additions fantômes au démarrage. */
+ok('the shift snapshot persists only unsent local table lines',
+  /tableOrders: \(function \(\) \{[\s\S]{0,400}filter\(function \(l\) \{ return !l\.orderProLine; \}\)/.test(src));
 ok('restore reapplies table state', /if \(d\.tables\)[\s\S]{0,180}Object\.assign\(tables\[id\], d\.tables\[id\]\)/.test(src));
 ok('restore reapplies table order lines', /if \(d\.tableOrders\)[\s\S]{0,180}Object\.assign\(tableOrders, d\.tableOrders\)/.test(src));
 ok('an empty real sales journal is not discarded by itself',

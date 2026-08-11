@@ -26,7 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
+import { employeeToken, EMPLOYEE_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
 import { CURSOR_LAG_MS } from '../functions/api/order/_lib.js';
 
@@ -234,6 +234,74 @@ async function main() {
   world.caisseTableId = (v) => (String(v) === '3' ? 'T3' : (String(v) === '9' ? 'T9' : ''));
   runReconciliation(block, world);
   check('la table revenue au plan récupère sa commande', attached.includes('ord-nowhere'));
+
+  /* ── 4. Une seule source pour l'addition ──────────────────────────────── */
+  console.log('\n4 · Le document d\'occupation ne porte plus d\'addition');
+
+  const events = await import('../functions/api/service/events.js');
+  const evPost = async (body) => {
+    const request = new Request('https://kiwi.test/api/service/events', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify(body),
+    });
+    const r = await events.onRequestPost({ request, env });
+    return { status: r.status, body: await r.json().catch(() => null) };
+  };
+  /* Un client d'une version antérieure envoie encore ses lignes. Le serveur doit
+     les ignorer sans se plaindre — et surtout ne pas les stocker, sinon la
+     deuxième vérité revient par la porte de derrière. */
+  const pushed = await evPost({ merchant: MERCHANT, state: {
+    table: '3', status: 'ka-yaklo', covers: 2, syncVersion: 4,
+    lines: [{ key: 'k1', id: 'i1', name: 'Fantôme', price: 999, qty: 3 }],
+  } });
+  check('un état d\'occupation est accepté', pushed.status === 200 && pushed.body.ok,
+    JSON.stringify(pushed.body));
+  const stored = JSON.parse(raw(
+    "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'service-events'", MERCHANT)[0].data);
+  check('aucune ligne d\'addition n\'est stockée',
+    !JSON.stringify(stored.states || {}).includes('Fantôme'),
+    JSON.stringify(stored.states));
+  check('l\'occupation, elle, est bien gardée',
+    stored.states && stored.states['3'] && stored.states['3'].status === 'ka-yaklo'
+    && stored.states['3'].covers === 2, JSON.stringify(stored.states));
+
+  /* Le bon saisi AU COMPTOIR doit atteindre le serveur. C'est ce que les lignes
+     recopiées faisaient avant ; il passe maintenant par la file, parce que le
+     bon de caisse rejoint la visite de la table au lieu de flotter sans
+     session — sans quoi le filtre de l'app employé ne l'aurait jamais montré. */
+  const tillCookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
+  const fromTill = await post({ merchant: MERCHANT, create: {
+    id: 'ord-comptoir-1', mode: 'table', table: '3', server: 'Caissier',
+    lines: [{ name: 'Thé', qty: 2, unitPrice: 15 }],
+  } }, tillCookie);
+  check('la caisse dépose son bon', fromTill.status === 200 && fromTill.body.ok,
+    JSON.stringify(fromTill.body));
+  check('le bon de caisse est rattaché à la visite de la table',
+    !!raw("SELECT session_id FROM orders WHERE id = 'ord-comptoir-1'")[0].session_id,
+    'sans session, l\'app employé ne le verra jamais');
+  const serviceSees = await poll(0, 'service', cookie);
+  check('le serveur voit l\'article saisi au comptoir',
+    (serviceSees.body.orders || []).some((o) => o.id === 'ord-comptoir-1'),
+    `vu : ${JSON.stringify((serviceSees.body.orders || []).map((o) => o.id))}`);
+
+  /* ── 5. Le mode dégradé s'annonce ─────────────────────────────────────── */
+  console.log('\n5 · Une base incomplète le DIT');
+
+  const healthy = await poll(0, '', cookie);
+  check('base complète : rien à signaler', healthy.body.degraded === undefined,
+    JSON.stringify(healthy.body.degraded));
+
+  /* L'index qui la nomme part d'abord — SQLite refuse de laisser un index
+     pendre sur une colonne disparue. Une base qui n'a jamais reçu la
+     migration n'a ni l'un ni l'autre, ce qui est bien l'état simulé. */
+  exec('DROP INDEX IF EXISTS idx_orders_session');
+  exec('DROP INDEX IF EXISTS orders_client_ref');
+  exec('ALTER TABLE orders DROP COLUMN session_id');
+  const hurt = await poll(0, '', cookie);
+  check('colonne absente : la réponse la nomme',
+    Array.isArray(hurt.body.degraded) && hurt.body.degraded.includes('session_id'),
+    `reçu : ${JSON.stringify(hurt.body.degraded)}`);
+  check('…et la file continue de répondre', hurt.status === 200 && hurt.body.ok === true);
 
   console.log(failures ? `\n${failures} échec(s)\n` : '\nTout passe.\n');
   process.exitCode = failures ? 1 : 0;

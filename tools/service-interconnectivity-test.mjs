@@ -217,10 +217,14 @@ request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}
 response = await eventsGet({ request, env }); const openedState = await json(response);
 ok(openedState.states['1'] && openedState.states['1'].status === 'ka-yaklo',
   "la table ouverte en caisse remplace l'état vide du téléphone serveur");
-ok(openedState.states['1'].lines.length === 1 && openedState.states['1'].lines[0].qty === 2
-  && openedState.states['1'].lines[0].note === 'sans oignon'
-  && openedState.states['1'].lines[0].opts[0].emoji === '🔴',
-  "l'addition saisie en caisse atteint le détail de table du téléphone");
+/* L'addition ne voyage PLUS par ce document. Elle avait ici une seconde
+   représentation vivante, à côté de la table `orders`, et rien ne disait
+   laquelle gagne : c'est cette rivalité qui produisait les additions
+   dupliquées et ressuscitées. Le document ne garde que l'occupation ; les
+   articles saisis au comptoir atteignent le serveur par la file, à laquelle
+   le bon de caisse est désormais rattaché (voir order-delivery-test). */
+ok(openedState.states['1'].lines === undefined,
+  "le document d'occupation ne transporte plus d'addition");
 ok(openedState.events.some((event) => event.type === 'table-state' && event.table === '1' && event.status === 'ka-yaklo'),
   'le serveur affecté garde la notification de table ouverte dans son historique');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
@@ -232,10 +236,19 @@ response = await eventsPost({ request, env });
 ok(response.status === 200, "l'app employé sauvegarde l'addition complète avant même un rechargement");
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
 response = await eventsGet({ request, env }); const employeeBillState = await json(response);
-ok(employeeBillState.states['1'].source === 'employee'
-  && employeeBillState.states['1'].lines[0].qty === 3
-  && employeeBillState.states['1'].lines[0].sentQty === 2,
-  "la caisse reçoit l'addition et la quantité déjà envoyée par le téléphone");
+/* L'occupation traverse, l'addition non. Ce que le serveur a ENVOYÉ en cuisine
+   atteint la caisse par la file (attachOrderProTable) ; ce qu'il a seulement
+   saisi sans l'envoyer reste sur son appareil, où un brouillon a sa place. La
+   partager entretenait une addition sans identité ni cycle de vie sur deux
+   appareils à la fois — la mécanique même des doublons. */
+/* `source` n'est plus vérifié ici : l'envoi du serveur ne porte que
+   l'occupation, identique à celle que la caisse venait de publier, donc il ne
+   change rien — et un état inchangé garde légitimement sa provenance. C'est
+   l'ancienne recopie des lignes qui rendait chaque envoi « différent ». */
+ok(employeeBillState.states['1'].status === 'ka-yaklo'
+  && employeeBillState.states['1'].covers === 4
+  && employeeBillState.states['1'].lines === undefined,
+  "la caisse reçoit l'occupation de la table, jamais son addition");
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, syncVersion: 3, lines: [] }] },
 }) });
@@ -243,9 +256,14 @@ response = await eventsPost({ request, env });
 ok(response.status === 200, "le heartbeat vide et en retard de la caisse est accepté sans effacer l'addition");
 request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&since=0`, { headers: { Cookie: saraCookie } });
 response = await eventsGet({ request, env }); const billAfterEmptyHeartbeat = await json(response);
-ok(billAfterEmptyHeartbeat.states['1'].lines.length === 1
-  && billAfterEmptyHeartbeat.states['1'].lines[0].qty === 3,
-  "un heartbeat caisse vide ne fait plus disparaître la commande envoyée par l'employé");
+/* Ce contrôle gardait un arbitrage — « garder les lignes de l'employé tant que
+   la caisse ne les a pas répétées » — écrit contre un symptôme : un battement
+   de caisse en retard effaçait l'addition du serveur. L'arbitrage a disparu
+   avec sa cause. Le document ne portant plus d'addition, un battement vide n'a
+   plus rien à effacer ; il ne peut agir que sur l'occupation. */
+ok(billAfterEmptyHeartbeat.states['1'].lines === undefined
+  && billAfterEmptyHeartbeat.states['1'].status === 'ka-yaklo',
+  "un battement de caisse vide ne peut plus toucher à une addition qu'il ne porte pas");
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
   merchant, state: { table: '1', status: 'khawya', covers: 0 },
 }) });
@@ -286,7 +304,7 @@ ok(nextVisit.states['1'].status === 'ka-yaklo' && nextVisit.states['1'].source =
   "après acquittement, une nouvelle visite ouvre une addition vraiment neuve");
 ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
   && closeAfterStaleHeartbeat.states['1'].source === 'employee'
-  && Array.isArray(closeAfterStaleHeartbeat.states['1'].lines) && closeAfterStaleHeartbeat.states['1'].lines.length === 0,
+  && closeAfterStaleHeartbeat.states['1'].lines === undefined,
   'la caisse reçoit immédiatement la fermeture et aucune ancienne ligne ne survit');
 result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
