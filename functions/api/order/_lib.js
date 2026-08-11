@@ -198,15 +198,23 @@ export async function priceOrder(env, merchant, rawLines) {
     try {
       const parsed = JSON.parse(menuRow.data);
       const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
+      /* Preparation routing belongs to the category, not the item. Keep it
+       * on the canonical priced line so every source (OrderPro, employee
+       * app and caisse) reaches KDS with the same frozen station decision.
+       *
+       * Résolu AVANT le choix de la forme de catalogue, parce que les deux en
+       * ont besoin : une boutique repartait avec `station: ''`, et la caisse
+       * retombait alors sur une recherche PAR NOM. Un article renommé depuis
+       * l'envoi ne se rapprochait plus de rien et le bon partait au poste par
+       * défaut. Le poste doit être figé sur la ligne à l'instant de l'envoi,
+       * comme sur un ticket papier — c'est la règle, et elle ne dépend pas du
+       * métier du commerçant. */
+      const stationIds = (Array.isArray(parsed && parsed.stations) ? parsed.stations : [])
+        .map((station) => String((station && station.id) || '')).filter(Boolean);
+      const configuredKitchen = String((parsed && parsed.kitchenId) || '');
+      const fallbackStation = stationIds.includes(configuredKitchen)
+        ? configuredKitchen : (stationIds[0] || '');
       if (items.length) {
-        /* Preparation routing belongs to the category, not the item. Keep it
-         * on the canonical priced line so every source (OrderPro, employee
-         * app and caisse) reaches KDS with the same frozen station decision. */
-        const stationIds = (Array.isArray(parsed && parsed.stations) ? parsed.stations : [])
-          .map((station) => String((station && station.id) || '')).filter(Boolean);
-        const configuredKitchen = String((parsed && parsed.kitchenId) || '');
-        const fallbackStation = stationIds.includes(configuredKitchen)
-          ? configuredKitchen : (stationIds[0] || '');
         const categoryStations = new Map();
         for (const category of (Array.isArray(parsed && parsed.cats) ? parsed.cats : [])) {
           if (!category || !category.id) continue;
@@ -266,6 +274,9 @@ export async function priceOrder(env, merchant, rawLines) {
               name: String(p.name || ''),
               price: Math.max(0, Math.round(Number(p.priceMAD) || 0)),
               avail: stock.has(k) ? stock.get(k) > 0 : true,
+              /* Une boutique n'a pas de catégories de préparation ; elle a
+                 néanmoins un poste par défaut dès qu'un écran existe. */
+              station: fallbackStation,
             });
           }
           menuRev = menuRow.updated_ts || null;

@@ -5051,6 +5051,15 @@ em, i, cite, dfn, var { font-style: normal; }
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service' }),
+        }).then((r) => (r.ok ? r.json() : null)).then((data) => {
+          /* Fermer une table ne la solde pas — et c'est délibéré, sans quoi le
+             rapport Z inventerait une recette que personne n'a encaissée. Mais
+             une addition laissée impayée derrière soi ne doit pas partir sans
+             un mot : c'est le seul instant où quelqu'un peut encore la
+             rattraper. Le serveur répond ce qu'il restait dû. */
+          if (data && data.unpaid) {
+            toast(`Table ${id} · libérée avec ${data.unpaid} commande${data.unpaid > 1 ? 's' : ''} non réglée${data.unpaid > 1 ? 's' : ''}`, 7000);
+          }
         }).catch(() => {});
       }
       return stateWrite;

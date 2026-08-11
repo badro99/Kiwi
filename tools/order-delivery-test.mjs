@@ -284,6 +284,25 @@ async function main() {
     (serviceSees.body.orders || []).some((o) => o.id === 'ord-comptoir-1'),
     `vu : ${JSON.stringify((serviceSees.body.orders || []).map((o) => o.id))}`);
 
+  /* ── 4b. Fermer une table le dit, et laisse une trace ─────────────────── */
+  console.log('\n4b · Libérer une table ne perd plus une addition en silence');
+
+  const openOrder = await post({ merchant: MERCHANT, create: true, mode: 'table', table: '7',
+    lines: [{ id: 'i1', qty: 1 }] }, cookie);
+  check('une commande est en cours sur la table 7', openOrder.status === 200 && openOrder.body.ok,
+    JSON.stringify(openOrder.body));
+  const closing = await post({ merchant: MERCHANT, closeTable: '7', closedBy: 'service' }, cookie);
+  check('la table se libère', closing.status === 200 && closing.body.ok);
+  check('…et la réponse annonce ce qui restait impayé',
+    Number(closing.body.unpaid) >= 1, JSON.stringify(closing.body));
+  check('fermer n\'invente pas une recette (rien n\'est soldé)',
+    raw("SELECT paid_ts FROM orders WHERE id = ?", openOrder.body.id)[0].paid_ts === null);
+  const closedBy = raw(
+    "SELECT closed_by FROM table_sessions WHERE merchant = ? AND table_no = '7' AND status = 'closed' ORDER BY closed_ts DESC LIMIT 1",
+    MERCHANT)[0];
+  check('on sait QUI a fermé la table',
+    String(closedBy.closed_by).startsWith('service:'), JSON.stringify(closedBy));
+
   /* ── 5. Le mode dégradé s'annonce ─────────────────────────────────────── */
   console.log('\n5 · Une base incomplète le DIT');
 

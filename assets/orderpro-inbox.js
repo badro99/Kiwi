@@ -217,6 +217,14 @@
     fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+    /* `since = 0` REDEMANDE TOUT, volontairement. Fermer une table change des
+       lignes que le curseur n'aurait pas rapportées — une commande soldée ne
+       « change » pas au sens de updated_ts pour tout le monde — et la caisse
+       doit repartir d'une image complète plutôt que d'un delta qui la
+       laisserait avec une table éteinte d'un côté et vivante de l'autre.
+       C'est sûr parce que tout est idempotent : les tickets se reconnaissent
+       par `opId`, les lignes d'addition par leur marqueur `<id>:<rang>`. Ce
+       n'est donc pas une optimisation ratée, c'est une resynchronisation. */
     }).then(function () { state.since = 0; return pull(); }).catch(function () {});
   }
 
@@ -438,6 +446,9 @@
   else start();
   // Pairing can happen after load (the pad is redeemed live) — pick it up.
   window.addEventListener('storage', function (e) {
+    /* Changement d'établissement : le curseur d'AVANT ne veut plus rien dire,
+       et le garder ferait manquer tout l'historique du nouveau commerce. On
+       repart de zéro — même resynchronisation volontaire que ci-dessus. */
     if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant') { state.since = 0; chip(); pull(); }
   });
   // La config arrive après le premier passage : c'est elle qui décide si cette

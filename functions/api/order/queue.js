@@ -622,8 +622,40 @@ export async function onRequestPost(context) {
   const closeTable = (b && b.closeTable) != null ? normTable(b.closeTable) : '';
   if (closeSession || closeTable) {
     if (closeSession && !SESSION_ID.test(closeSession)) return json({ error: 'bad-session' }, 400);
-    const why = String((b && b.closedBy) || 'settle').slice(0, 16);
+    /* ── QUI A FERMÉ, ET CE QUI RESTAIT DÛ ─────────────────────────────────
+     * N'importe quel serveur en service peut fermer n'importe quelle table de
+     * la salle, et c'est VOULU : la couverture entre collègues est le
+     * fonctionnement normal d'un service — celui qui passe débarrasse la table
+     * de celui qui est en pause. Restreindre casserait le métier.
+     *
+     * Mais fermer ne solde pas (voir l'asymétrie plus bas), donc fermer la
+     * table d'un collègue par erreur laissait une addition impayée derrière
+     * soi, sans trace de l'auteur ni signal à l'écran. La couverture reste
+     * libre ; elle cesse d'être anonyme et silencieuse. On note QUI ferme, et
+     * on RÉPOND ce qui restait impayé pour que l'app puisse le dire tout de
+     * suite — au moment où quelqu'un peut encore rattraper. */
+    const closer = employee
+      ? ('service:' + String(employee.member.id || employee.session.staffId || '')).slice(0, 48)
+      : String((b && b.closedBy) || 'settle').slice(0, 48);
+    const why = closer;
     let closed = 0;
+    /* Compté AVANT la fermeture : après, les sessions ne sont plus ouvertes et
+     * la question ne peut plus être posée. */
+    let unpaid = 0;
+    try {
+      const pending = closeSession
+        ? await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM orders
+              WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+          ).bind(merchant, closeSession).first()
+        : await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM orders o
+               JOIN table_sessions s ON s.id = o.session_id
+              WHERE o.merchant = ? AND s.table_no = ? AND s.status = 'open'
+                AND o.paid_ts IS NULL`
+          ).bind(merchant, closeTable).first();
+      unpaid = Number((pending && pending.n) || 0);
+    } catch (_) { unpaid = 0; }   // colonnes absentes ⇒ on ne prétend pas savoir
     try {
       const res = closeSession
         ? await env.DB.prepare(
@@ -662,7 +694,7 @@ export async function onRequestPost(context) {
         ).bind(now, now, merchant, closeSession).run();
       }
     } catch (_) {}
-    return json({ ok: true, closed });
+    return json({ ok: true, closed, unpaid: unpaid || undefined });
   }
 
   /* ── Déposer un bon venu de la caisse ─────────────────────────────────────
