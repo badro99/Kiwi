@@ -5,12 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Console opérateur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+/* ══ LA VOIX DE LA CONSOLE ════════════════════════════════════════════════════
+   Quatre règles, les mêmes que la page d'accueil.
+
+   1. UNE SEULE VOIX — Inter Tight, partout.
+      La console ne chargeait aucune fonte et ouvrait sa pile par
+      -apple-system : sur un Mac elle s'affichait donc en San Francisco, et
+      ses chiffres en Menlo. Deux faces non choisies sur le même écran, plus
+      une troisième pour les libellés : c'est la première chose qu'on voit.
+
+   2. LES CHIFFRES SONT TABULAIRES, PAS MONOSPACÉS.
+      Une colonne de montants s'aligne avec font-variant-numeric, sans
+      changer de voix pour le dire. --mono ne sert plus qu'à ce qui est
+      vraiment une chaîne machine — le slug d'un marchand, un code.
+
+   3. PAS DE CAPITALES INTERLETTRÉES.
+      Vingt-sept micro-libellés étaient en capitales monospacées de 9,5 à
+      11 px avec .04 à .11em d'interlettrage. À cette taille ce n'est plus du
+      texte, c'est du grain. Bas de casse, 12 px, poids 600, --muted.
+
+   4. UNE ÉCHELLE, PAS DES VALEURS.
+      Type 12 / 13 / 15 / 17 / 20 / 32. Espace 4 / 8 / 12 / 16 / 22.
+      Rayon 10 pour un objet, 14 pour une section, 999 pour une pastille.
+      Un seul mouvement : --dur --ease. Aucune animation d'ambiance.
+
+   Les couleurs ne sont plus posées en dur. Tout passe par un jeton, ce qui
+   fait tenir le mode sombre en un bloc de jetons au lieu de quarante
+   surcharges — c'est ce bloc-là qui laissait passer, une fois sur deux, une
+   carte restée claire sous un titre devenu blanc.
+   ─────────────────────────────────────────────────────────────────────────── */
   :root{
+    /* la marque — verrouillée (assets/tokens.css) */
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
-    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e4e0d7; --muted:#5d6b63; --surface:#FFFDFA;
-    --warn:#b0402f; --ok:#0B6E4F;
+    --paper:#F7F5F0; --ink:#0A0F0D; --surface:#FFFDFA;
+    --line:#E4E0D7; --muted:#5D6B63;
+
+    /* l'accent qui doit se voir SUR la surface courante. En clair c'est
+       --atlas ; de nuit --atlas descend à 2,6:1 sur nos fonds sombres, donc
+       il s'éclaircit ici et nulle part ailleurs — la lentille de sélection,
+       elle, garde le dégradé de marque. */
+    --accent-lit:var(--atlas);
+
+    /* surfaces sourdes — survol de ligne, carte posée dans une carte,
+       ligne choisie, filet teinté */
+    --wash:#F1EFE9; --wash-2:#FAF8F3; --sel:#EEF7F1; --line-2:#DFE9E2;
+    --on-accent:#EAFFF4;
+
+    /* sémantique. L'ocre dit « il reste du travail », le rouge dit « c'est
+       cassé ». Les deux étaient écrits huit fois chacun en valeurs libres. */
+    --ok:#0B6E4F;
+    --ochre:#7A5200; --ochre-bg:#FDF6E6; --ochre-line:#E8D9B0;
+    --warn:#B0402F; --warn-bg:#FBEEEB; --warn-line:#E7CCC6;
+
+    --sans:"Inter Tight",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     --mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,monospace;
+    --r:10px; --r-lg:14px;
+    --dur:.15s; --ease:cubic-bezier(0,0,.2,1);
   }
 
 /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
@@ -24,25 +78,37 @@ em, i, cite, dfn, var { font-style: normal; }
   html,body{margin:0}
   body{
     background:var(--paper); color:var(--ink);
-    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Inter Tight",Inter,"Segoe UI",sans-serif;
+    font:400 15px/1.55 var(--sans);
+    -webkit-font-smoothing:antialiased;
     padding:0 0 60px;
+  }
+  /* Tout chiffre de cette console est une quantité comparée à une autre :
+     un CA à côté d'un CA, un compteur sous un compteur. Les tabulaires les
+     alignent sans changer de fonte. */
+  .num, td.num, .ov-v, .ov-axis, .ov-row .amt, .ov-top .city,
+  .tsrow .ts-amt, .tsrow .ts-when, .imp .fig .v, .sec-head .count,
+  .biz-row .inp.n, .addrow input.pin, .aud-row .at, .ts-detail .l .q{
+    font-variant-numeric:tabular-nums lining-nums;
   }
   a{color:var(--atlas)}
   .top{
     position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px;
-    padding:14px 22px; background:var(--riad); color:#eafff4;
+    padding:14px 22px; background:var(--riad); color:var(--on-accent);
     box-shadow:0 2px 12px -4px rgba(5,59,44,.5);
   }
-  .top h1{font-size:1.02rem; margin:0; font-weight:640; letter-spacing:-.01em}
-  .top .dot{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(125,242,176,.5);animation:pulse 2.2s infinite}
-  @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(125,242,176,0)}100%{box-shadow:0 0 0 0 rgba(125,242,176,0)}}
-  .badge{font:600 11px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.14)}
-  .badge.mock{background:rgba(255,196,120,.22); color:#ffd9a1}
+  .top h1{font-size:17px; margin:0; font-weight:600; letter-spacing:-.015em}
+  /* La pastille dit « la console parle à la base ». Elle le disait en
+     pulsant toutes les 2,2 s : un mouvement permanent, sans information,
+     dans le coin de l'œil pendant qu'on lit un tableau. Elle le dit
+     maintenant en étant allumée. */
+  .top .dot{width:7px;height:7px;border-radius:50%;background:var(--mint)}
+  .badge{font:600 12px/1 var(--sans); letter-spacing:0; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.14)}
+  .badge.mock{background:rgba(255,196,120,.22); color:#FFD9A1}
   .spacer{margin-left:auto}
-  .top button{font:inherit; font-size:.82rem; font-weight:600; border:0; border-radius:9px; padding:8px 13px; cursor:pointer; background:rgba(255,255,255,.16); color:#eafff4}
+  .top button{font:600 13px/1 var(--sans); border:0; border-radius:var(--r); padding:8px 13px; cursor:pointer; background:rgba(255,255,255,.16); color:var(--on-accent); transition:background var(--dur) var(--ease)}
   .top button:hover{background:rgba(255,255,255,.26)}
   .wrap{max-width:1120px; margin:0 auto; padding:22px}
-  section{background:var(--surface); border:1px solid var(--line); border-radius:14px; margin:0 0 20px; overflow:hidden}
+  section{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); margin:0 0 20px; overflow:hidden}
   .sec-head{padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
   /* Everything in the management panel — trade, modules, staff codes — belongs to
      exactly ONE établissement, so when a client has several the panel has to say
@@ -55,12 +121,12 @@ em, i, cite, dfn, var { font-style: normal; }
      masqué d'un client à une seule boutique laissait quand même sa pastille vide
      — et la lentille de sélection avec elle — flotter dans l'en-tête. */
   .store-switch[hidden]{display:none}
-  .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:#eef2ee; max-width:100%; overflow-x:auto}
-  .store-switch button{font:inherit; font-size:.78rem; font-weight:600; border:0; border-radius:999px; padding:6px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color .2s}
-  .store-switch button:hover{color:var(--riad)}
-  .store-switch button.on{color:#eafff4}
-  .sec-head h2{font-size:.86rem; margin:0; text-transform:uppercase; letter-spacing:.06em; color:var(--riad)}
-  .sec-head .count{font:600 11px/1 var(--mono); color:var(--muted)}
+  .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:var(--wash); max-width:100%; overflow-x:auto}
+  .store-switch button{font:600 13px/1 var(--sans); border:0; border-radius:999px; padding:7px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color var(--dur) var(--ease)}
+  .store-switch button:hover{color:var(--ink)}
+  .store-switch button.on{color:var(--on-accent)}
+  .sec-head h2{font-size:15px; margin:0; font-weight:600; letter-spacing:-.01em; color:var(--ink)}
+  .sec-head .count{font:500 13px/1 var(--sans); color:var(--muted)}
   /* Refermer le panneau de gestion. Le titre pousse tout le reste à droite, ce
      qui garde la croix collée au bord que le sélecteur d'établissement soit
      affiché ou non — sans lui, un client à une seule boutique verrait la croix
@@ -68,54 +134,56 @@ em, i, cite, dfn, var { font-style: normal; }
   #manage .sec-head h2{margin-right:auto}
   .sec-close{flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; padding:0;
     border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--muted);
-    font-family:inherit; font-size:1.05rem; font-weight:400; line-height:1;
-    cursor:pointer; transition:background .15s, color .15s}
-  .sec-close:hover{background:#eef2ee; color:var(--riad)}
-  .sec-close:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
-  table{width:100%; border-collapse:collapse; font-size:.9rem}
+    font-family:inherit; font-size:17px; font-weight:400; line-height:1;
+    cursor:pointer; transition:background var(--dur) var(--ease), color var(--dur) var(--ease)}
+  .sec-close:hover{background:var(--wash); color:var(--ink)}
+  .sec-close:focus-visible{outline:2px solid var(--accent-lit); outline-offset:2px}
+  table{width:100%; border-collapse:collapse; font-size:14px}
   th,td{text-align:left; padding:11px 18px; border-bottom:1px solid var(--line)}
-  th{font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:640}
+  th{font-size:12px; letter-spacing:0; color:var(--muted); font-weight:600}
   tr:last-child td{border-bottom:0}
-  tbody tr{cursor:pointer; transition:background .12s}
-  tbody tr:hover{background:#f4f1ea}
-  tbody tr.sel{background:#eef7f1}
-  td.num{font-family:var(--mono); text-align:right; white-space:nowrap}
-  .plan{font:600 10.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; padding:3px 7px; border-radius:6px; background:#eef2ee; color:var(--riad)}
-  .plan.basic{background:#eef2ee} .plan.pro{background:#e3f3ea} .plan.ultra{background:var(--riad); color:#bff5d6} .plan.ultimate{background:var(--ok); color:#eafff4}
-  .online{display:inline-flex; align-items:center; gap:6px; font-size:.8rem; color:var(--muted)}
-  .online .d{width:7px;height:7px;border-radius:50%;background:#c7cec9}
-  .online.live .d{background:#28c76f}
-  .mini{font:inherit; font-size:.78rem; font-weight:600; border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; background:var(--surface); color:var(--riad)}
-  .mini:hover{border-color:var(--atlas)}
+  tbody tr{cursor:pointer; transition:background var(--dur) var(--ease)}
+  tbody tr:hover{background:var(--wash)}
+  tbody tr.sel{background:var(--sel)}
+  td.num{text-align:right; white-space:nowrap}
+  .plan{font:600 12px/1 var(--sans); letter-spacing:0; padding:3px 8px; border-radius:6px; background:var(--wash); color:var(--ink)}
+  .plan.basic{background:var(--wash)} .plan.pro{background:var(--sel)} .plan.ultra{background:var(--riad); color:#BFF5D6} .plan.ultimate{background:var(--ok); color:var(--on-accent)}
+  .online{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted)}
+  .online .d{width:7px;height:7px;border-radius:50%;background:var(--line-2)}
+  .online.live .d{background:var(--accent-lit)}
+  .mini{font:600 13px/1.2 var(--sans); border:1px solid var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; background:var(--surface); color:var(--ink);
+        transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease)}
+  .mini:hover{border-color:var(--accent-lit)}
   .mini.ghost{border-style:dashed}
-  .mini.danger{color:var(--warn); border-color:#e7ccc6}
-  .mini.danger:hover{background:#fbeeeb}
+  .mini.danger{color:var(--warn); border-color:var(--warn-line)}
+  .mini.danger:hover{background:var(--warn-bg)}
   /* Boîte de dialogue — voir modal(). Sombre par défaut comme le reste de la
      console : cet écran n'est pas fait pour être lisible par-dessus l'épaule. */
   .md-back{position:fixed; inset:0; background:rgba(8,12,10,.62); display:flex;
     align-items:center; justify-content:center; padding:20px; z-index:60}
   .md-card{position:relative; background:var(--surface); border:1px solid var(--line);
-    border-radius:14px; padding:20px 22px; width:min(460px,100%); box-shadow:0 24px 60px rgba(0,0,0,.34)}
-  .md-title{font-weight:640; font-size:1rem; margin:0 26px 6px 0}
-  .md-desc{color:var(--muted); font-size:.84rem; line-height:1.5}
-  .md-x{position:absolute; top:10px; right:12px; font:inherit; font-size:1.1rem; line-height:1;
+    border-radius:var(--r-lg); padding:20px 22px; width:min(460px,100%); box-shadow:0 26px 64px -28px rgba(5,32,24,.55)}
+  .md-title{font-weight:600; font-size:17px; letter-spacing:-.01em; margin:0 26px 6px 0}
+  .md-desc{color:var(--muted); font-size:14px; line-height:1.5}
+  .md-x{position:absolute; top:10px; right:12px; font:inherit; font-size:18px; line-height:1;
     border:0; background:transparent; color:var(--muted); cursor:pointer; padding:4px 6px}
-  .inp{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line);
-    border-radius:9px; background:var(--surface); color:var(--ink); box-sizing:border-box}
-  .inp:focus{outline:none; border-color:var(--riad)}
-  .mini.warn{color:#8a5a00; border-color:#e8d9b0; background:#fdf6e6}
-  .mini.warn:hover{background:#f6e8c2}
-  .sus-badge{display:inline-block; margin-left:8px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:#8a5a00; background:#fbeecb; border:1px solid #e8d9b0; padding:3px 6px; border-radius:5px; vertical-align:middle}
+  .inp{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line);
+    border-radius:var(--r); background:var(--surface); color:var(--ink); box-sizing:border-box;
+    transition:border-color var(--dur) var(--ease)}
+  .inp:focus{outline:none; border-color:var(--accent-lit)}
+  .mini.warn{color:var(--ochre); border-color:var(--ochre-line); background:var(--ochre-bg)}
+  .mini.warn:hover{background:#F6E8C2}
+  .sus-badge{display:inline-block; margin-left:8px; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ochre); background:var(--ochre-bg); border:1px solid var(--ochre-line); padding:2px 7px; border-radius:6px; vertical-align:middle}
   tr.suspended{background:rgba(180,140,0,.06)}
   /* One client, several établissements. The band names the PERSON and totals the
      whole account; the rows under it are their individual shops, each with its
      own trade, its own key and its own money. A client with a single shop gets no
      band at all — the grouping only appears when there is something to tell apart. */
-  .owner-row td, .owner-row:hover td{background:#f1f5f2; cursor:default}
-  .owner-row .who{font-weight:640; color:var(--riad)}
-  .owner-row .mail{color:var(--muted); font-size:.78rem; margin-top:2px}
-  .count-chip{display:inline-block; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:4px 7px; white-space:nowrap}
-  tr.store-row td:first-child{padding-left:30px; border-left:3px solid #dfe9e2}
+  .owner-row td, .owner-row:hover td{background:var(--wash); cursor:default}
+  .owner-row .who{font-weight:600; color:var(--ink)}
+  .owner-row .mail{color:var(--muted); font-size:13px; margin-top:2px}
+  .count-chip{display:inline-block; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ink); background:var(--sel); border-radius:6px; padding:4px 8px; white-space:nowrap}
+  tr.store-row td:first-child{padding-left:30px; border-left:3px solid var(--line-2)}
 
   /* ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════════
      Le premier écran de la console. Il ne parle pas d'UN client : il parle de
@@ -123,62 +191,63 @@ em, i, cite, dfn, var { font-style: normal; }
      ils sont. Chaque carte porte sa base de calcul juste dessous, parce qu'un
      grand chiffre sans période ni périmètre n'est pas un chiffre : « 1,2 M »
      ne veut rien dire tant qu'on ne sait pas sur combien de jours et sur
-     combien d'établissements. Les chiffres sont en chasse fixe pour qu'une
-     colonne de montants s'aligne à l'œil, et romains : aucune italique. */
+     combien d'établissements. Les chiffres sont tabulaires pour qu'une colonne
+     de montants s'aligne à l'œil, et romains : aucune italique. */
   .ov-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line)}
-  .ov-card{background:var(--surface); padding:16px 18px 15px; min-width:0}
-  .ov-k{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em; color:var(--muted)}
-  .ov-v{font-family:var(--mono); font-size:1.85rem; font-weight:500; letter-spacing:-.025em;
-        color:var(--riad); margin-top:10px; line-height:1.04; overflow-wrap:anywhere}
-  .ov-v .u{font-size:.72rem; font-weight:600; color:var(--muted); letter-spacing:.02em; margin-left:5px}
-  .ov-sub{font-size:.76rem; color:var(--muted); margin-top:7px; line-height:1.45}
-  .ov-sub b{font-weight:600; color:var(--riad)}
+  .ov-card{background:var(--surface); padding:18px 18px 16px; min-width:0}
+  .ov-k{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted)}
+  .ov-v{font-size:32px; font-weight:500; letter-spacing:-.025em;
+        color:var(--ink); margin-top:10px; line-height:1.04; overflow-wrap:anywhere}
+  .ov-v .u{font-size:13px; font-weight:500; color:var(--muted); letter-spacing:0; margin-left:6px}
+  .ov-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.45}
+  .ov-sub b{font-weight:600; color:var(--ink)}
   /* Ce qui manque se dit en ocre — la couleur des « à renseigner » de la
      marque — et jamais en rouge : une ville pas encore saisie n'est pas une
      panne, c'est du travail qui reste. */
-  .ov-todo{color:#8a5a00}
-  .ov-body{padding:16px 18px 18px; border-top:1px solid var(--line)}
+  .ov-todo{color:var(--ochre)}
+  .ov-body{padding:18px; border-top:1px solid var(--line)}
   .ov-split{display:grid; grid-template-columns:1fr 1fr; gap:26px}
-  .ov-h{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em;
-        color:var(--muted); margin:0 0 12px}
+  .ov-h{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); margin:0 0 12px}
   /* La courbe des trente jours. Des barres, pas une ligne : on lit « quel jour »
      et « combien » sur une barre, alors qu'une ligne lissée invente les jours
      creux qu'elle traverse. */
   .ov-spark{display:flex; align-items:flex-end; gap:2px; height:74px}
-  .ov-spark i{flex:1 1 0; min-width:0; background:#dfe9e2; border-radius:2px 2px 0 0;
-              min-height:2px; transition:background .15s}
-  .ov-spark i.on{background:var(--atlas)}
-  .ov-spark i:hover{background:var(--riad)}
-  .ov-axis{display:flex; justify-content:space-between; font:500 10.5px/1 var(--mono);
+  .ov-spark i{flex:1 1 0; min-width:0; border-radius:2px 2px 0 0; min-height:2px;
+              background:color-mix(in srgb, var(--accent-lit) 26%, var(--wash));
+              transition:background var(--dur) var(--ease)}
+  .ov-spark i.on{background:var(--accent-lit)}
+  .ov-spark i:hover{background:var(--ink)}
+  .ov-axis{display:flex; justify-content:space-between; font:500 12px/1 var(--sans);
            color:var(--muted); margin-top:8px}
   .ov-rows{display:flex; flex-direction:column; gap:9px}
   .ov-row{display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:baseline}
-  .ov-row .nm{font-size:.86rem; color:var(--ink); min-width:0; overflow-wrap:anywhere}
-  .ov-row .amt{font-family:var(--mono); font-size:.8rem; color:var(--muted); white-space:nowrap}
-  .ov-bar{grid-column:1 / -1; height:5px; border-radius:3px; background:#eef2ee; overflow:hidden}
-  .ov-bar span{display:block; height:100%; background:var(--atlas); border-radius:3px}
-  .ov-empty{font-size:.82rem; color:var(--muted); line-height:1.5}
+  .ov-row .nm{font-size:14px; color:var(--ink); min-width:0; overflow-wrap:anywhere}
+  .ov-row .amt{font-size:13px; color:var(--muted); white-space:nowrap}
+  .ov-bar{grid-column:1 / -1; height:5px; border-radius:3px; background:var(--wash); overflow:hidden}
+  .ov-bar span{display:block; height:100%; background:var(--accent-lit); border-radius:3px}
+  .ov-empty{font-size:13px; color:var(--muted); line-height:1.5}
   .ov-top{margin-top:22px}
   .ov-top .ov-row{grid-template-columns:1fr auto auto; gap:8px 14px}
-  .ov-top .city{font:500 11px/1 var(--mono); color:var(--muted); white-space:nowrap}
-  .ov-note{font-size:.76rem; color:var(--muted); line-height:1.5; margin:16px 0 0;
+  .ov-top .city{font:500 13px/1 var(--sans); color:var(--muted); white-space:nowrap}
+  .ov-note{font-size:13px; color:var(--muted); line-height:1.5; margin:16px 0 0;
            padding-top:13px; border-top:1px solid var(--line)}
   /* Recherche du roster. Un back-office qui tient dix-huit clients se lit ; à
      cent, on cherche quelqu'un par son nom, sa ville ou son adresse. */
   .cli-search{margin-left:auto; display:flex; align-items:center; gap:8px}
-  .cli-search input{font:inherit; font-size:.82rem; padding:7px 11px; width:220px;
-    border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
-  .cli-search input:focus{outline:none; border-color:var(--riad)}
-  .cli-search .clr{font:inherit; font-size:.78rem; border:0; background:transparent;
+  .cli-search input{font:400 13px/1.4 var(--sans); padding:8px 11px; width:220px;
+    border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink);
+    transition:border-color var(--dur) var(--ease)}
+  .cli-search input:focus{outline:none; border-color:var(--accent-lit)}
+  .cli-search .clr{font:400 13px/1.4 var(--sans); border:0; background:transparent;
     color:var(--muted); cursor:pointer; padding:4px 2px}
-  .cli-search .clr:hover{color:var(--riad)}
+  .cli-search .clr:hover{color:var(--ink)}
   /* La fiche commerciale d'un établissement : sa ville et ce qu'il nous verse.
      Deux champs d'opérateur, à côté des modules qu'ils financent. */
   .biz-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
-  .biz-row label{display:flex; flex-direction:column; gap:5px; font:600 10px/1 var(--mono);
-    text-transform:uppercase; letter-spacing:.09em; color:var(--muted)}
+  .biz-row label{display:flex; flex-direction:column; gap:6px; font:600 12px/1.2 var(--sans);
+    letter-spacing:0; color:var(--muted)}
   .biz-row .inp{width:170px}
-  .biz-row .inp.n{width:120px; font-family:var(--mono)}
+  .biz-row .inp.n{width:120px}
   @media (max-width:880px){
     .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ov-split{grid-template-columns:1fr; gap:24px}
@@ -187,88 +256,92 @@ em, i, cite, dfn, var { font-style: normal; }
   }
   @media (max-width:460px){
     .ov-grid{grid-template-columns:minmax(0,1fr)}
-    .ov-v{font-size:1.6rem}
+    .ov-v{font-size:28px}
     .top{padding:11px 12px; gap:8px; flex-wrap:wrap}
     .top .dot{display:none}
-    .top h1{flex:1; min-width:150px; font-size:.94rem}
+    .top h1{flex:1; min-width:150px; font-size:15px}
     .top .spacer{display:none}
     .top button{flex:1 1 calc(50% - 4px); min-height:44px}
   }
-  .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:#eafff4; padding:11px 18px; border-radius:11px; font-size:.86rem; font-weight:560; box-shadow:0 10px 30px rgba(5,59,44,.35); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
+  .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:var(--on-accent); padding:11px 18px; border-radius:var(--r); font-size:14px; font-weight:500; box-shadow:0 26px 64px -28px rgba(5,32,24,.7); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s var(--ease), transform .2s var(--ease)}
   .op-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
-  .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px dashed var(--line)}
-  .type-lbl{font:600 .72rem/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); white-space:nowrap}
-  .type-select{flex:1; font:inherit; font-size:.86rem; font-weight:560; padding:8px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); cursor:pointer}
-  .type-select:focus{outline:none; border-color:var(--atlas)}
-  .type-chip{display:inline-block; margin-top:2px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:3px 6px}
+  .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px solid var(--line)}
+  .type-lbl{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); white-space:nowrap}
+  .type-select{flex:1; font:500 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); cursor:pointer; transition:border-color var(--dur) var(--ease)}
+  .type-select:focus{outline:none; border-color:var(--accent-lit)}
+  .type-chip{display:inline-block; margin-top:2px; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ink); background:var(--sel); border-radius:6px; padding:3px 7px}
   /* La ville, à côté du métier. Sans fond : le métier est une catégorie fermée,
      la ville est une saisie libre — deux pastilles pleines côte à côte se
      liraient comme deux étiquettes de même nature. */
-  .city-chip{display:inline-block; margin:2px 0 0 6px; font:500 10px/1 var(--mono); letter-spacing:.03em; color:var(--muted)}
+  .city-chip{display:inline-block; margin:2px 0 0 6px; font:500 12px/1 var(--sans); letter-spacing:0; color:var(--muted)}
   .mini:disabled{opacity:.45; cursor:default}
   .mini:disabled:hover{background:var(--surface); border-color:var(--line)}
   .danger-zone{margin-top:22px; padding-top:18px; border-top:1px solid var(--line)}
-  .danger-zone .dz-desc{font-size:.85rem; color:var(--muted); margin:0 0 12px; max-width:660px}
-  .danger-zone .dz-desc b{color:var(--riad)}
-  .danger-zone .dz-input{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); min-width:260px}
+  .danger-zone .dz-desc{font-size:14px; color:var(--muted); margin:0 0 12px; max-width:660px}
+  .danger-zone .dz-desc b{color:var(--ink)}
+  .danger-zone .dz-input{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); min-width:260px; transition:border-color var(--dur) var(--ease)}
   .danger-zone .dz-input:focus{outline:none; border-color:var(--warn)}
   .row-actions{display:flex; gap:8px; justify-content:flex-end}
   .panel{padding:18px}
   .panel .grid2{display:grid; grid-template-columns:1fr 1fr; gap:20px}
   @media(max-width:720px){.panel .grid2{grid-template-columns:1fr}}
-  .sub{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; font-weight:640}
+  .sub{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); margin:0 0 10px}
   .pin-list, .op-list{display:flex; flex-direction:column; gap:8px; margin:0 0 12px}
-  .pin, .op-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#faf8f3}
-  .pin b, .op-item b{font-family:var(--mono); font-size:.92rem}
+  .pin, .op-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:var(--r); background:var(--wash-2)}
+  .pin b, .op-item b{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums lining-nums; letter-spacing:.04em}
   /* Trade roles can be two words ("Pharmacien titulaire"), so the chip holds its
      line and the name beside it gives way instead of the badge breaking. */
-  .pin .role{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#eef2ee; padding:2px 7px; border-radius:5px; white-space:nowrap; flex:none}
+  .pin .role{font:500 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); background:var(--wash); padding:3px 8px; border-radius:6px; white-space:nowrap; flex:none}
   .pin .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .pin .nm, .op-item .nm{color:var(--muted); font-size:.85rem}
+  .pin .nm, .op-item .nm{color:var(--muted); font-size:14px}
   .pin .spacer, .op-item .spacer{margin-left:auto}
   .addrow{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-  .addrow input, .addrow select{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
-  .addrow input:focus, .addrow select:focus{outline:none; border-color:var(--atlas)}
-  .addrow input.pin{width:88px; font-family:var(--mono); letter-spacing:.14em}
+  .addrow input, .addrow select{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); transition:border-color var(--dur) var(--ease)}
+  .addrow input:focus, .addrow select:focus{outline:none; border-color:var(--accent-lit)}
+  .addrow input.pin{width:88px; letter-spacing:.14em}
   .addrow input.nm{width:130px}
-  .add{font:inherit; font-size:.84rem; font-weight:640; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; background:linear-gradient(135deg,var(--atlas),var(--riad)); color:#eafff4}
+  /* Le bouton d'ajout. Il était en dégradé 135° atlas→riad : deux verts de la
+     marque cousus l'un à l'autre pour faire « bouton important ». Un aplat
+     dit la même chose et ne se dégrade pas de travers sur 15 px de haut. */
+  .add{font:600 14px/1.2 var(--sans); border:0; border-radius:var(--r); padding:10px 16px; cursor:pointer; background:var(--atlas); color:var(--on-accent); transition:background var(--dur) var(--ease)}
+  .add:hover:not(:disabled){background:var(--riad)}
   .add:disabled{opacity:.5;cursor:default}
-  .feat{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
+  .feat{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--line)}
   .feat:last-child{border-bottom:0}
-  .feat .fl{font-size:.9rem}
+  .feat .fl{font-size:14px}
   /* L'état écrit en toutes lettres à côté de l'interrupteur. Un curseur seul se
      lit mal quand la liste fait quinze lignes : on cherche « est-ce que la
      Conformité est coupée chez ce client » et on compte des pastilles. */
-  .fst{font-family:var(--mono); font-size:.66rem; letter-spacing:.07em; text-transform:uppercase;
-       white-space:nowrap; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
-  .fst.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent);
-          background:color-mix(in srgb, var(--atlas) 8%, transparent)}
+  .fst{font:600 12px/1.2 var(--sans); letter-spacing:0;
+       white-space:nowrap; padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+  .fst.on{color:var(--accent-lit); border-color:color-mix(in srgb, var(--accent-lit) 38%, transparent);
+          background:color-mix(in srgb, var(--accent-lit) 8%, transparent)}
   /* D'où vient la valeur : une décision prise pour CE client ne se lit pas comme
      un défaut hérité de la création de l'établissement. */
-  .fsrc{display:block; font-size:.72rem; color:var(--muted); margin-top:3px; font-weight:400}
+  .fsrc{display:block; font-size:12px; color:var(--muted); margin-top:3px; font-weight:400}
   /* Band header — "Modules communs" / the trade / "Options payantes". Keeps a
      15-row switch list readable instead of one undifferentiated column. */
   .featgrp{margin:18px 0 4px}
   .featgrp:first-child{margin-top:2px}
-  .feat .fl .fh{display:block; font-size:.74rem; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
-  .sw{position:relative; width:44px; height:26px; border-radius:999px; background:#cfd6d1; border:0; cursor:pointer; transition:background .2s; flex:none}
-  .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
-  .sw[aria-checked="true"]{background:var(--atlas)}
+  .feat .fl .fh{display:block; font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
+  .sw{position:relative; width:44px; height:26px; border-radius:999px; background:var(--line-2); border:0; cursor:pointer; transition:background .2s var(--ease); flex:none}
+  .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s var(--ease); box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .sw[aria-checked="true"]{background:var(--accent-lit)}
   .sw[aria-checked="true"]::after{transform:translateX(18px)}
   /* Journal des modules — qui a coupé quoi, où, quand. Compact : c'est une
      référence qu'on consulte quand un client rappelle, pas un tableau de bord. */
   .audit{margin-top:16px; border-top:1px solid var(--line); padding-top:12px}
-  .aud-row{display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:10px; padding:6px 0; font-size:.8rem}
-  .aud-row .ab{font-family:var(--mono); font-size:.66rem; letter-spacing:.06em; text-transform:uppercase;
-                padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
-  .aud-row .ab.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent)}
+  .aud-row{display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:10px; padding:6px 0; font-size:13px}
+  .aud-row .ab{font:600 12px/1.2 var(--sans); letter-spacing:0;
+                padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+  .aud-row .ab.on{color:var(--accent-lit); border-color:color-mix(in srgb, var(--accent-lit) 38%, transparent)}
   .aud-row .aw{color:var(--muted)}
   .aud-row .aw b{color:var(--ink); font-weight:600}
-  .aud-row .at{font-family:var(--mono); font-size:.7rem; color:var(--muted); white-space:nowrap}
-  .empty{color:var(--muted); font-size:.85rem; padding:6px 0}
-  .err{color:var(--warn); font-size:.8rem; min-height:1em; margin:4px 0 0}
-  .hint{color:var(--muted); font-size:.78rem; margin:10px 0 0}
-  .selname{font-weight:640; color:var(--riad)}
+  .aud-row .at{font-size:12px; color:var(--muted); white-space:nowrap}
+  .empty{color:var(--muted); font-size:14px; padding:6px 0}
+  .err{color:var(--warn); font-size:13px; min-height:1em; margin:4px 0 0}
+  .hint{color:var(--muted); font-size:13px; margin:10px 0 0}
+  .selname{font-weight:600; color:var(--ink)}
 
   /* ── Un bloc pleine largeur sous la grille à deux colonnes ─────────────────
      Les ventes de test et les adresses e-mail ne sont pas des réglages à côté
@@ -279,159 +352,137 @@ em, i, cite, dfn, var { font-style: normal; }
   .blk-head .sub{margin:0}
   .blk-head .spacer{margin-left:auto}
   .health-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:9px}
-  .health-card{border:1px solid var(--line); border-radius:10px; padding:10px 11px; background:#faf8f3}
-  .health-card b{display:block; font:650 .84rem/1.25 var(--sans); margin-bottom:4px}
-  .health-card span{display:block; color:var(--muted); font-size:.76rem; line-height:1.4}
-  .health-card.warn{border-color:#e1bd76; background:#fff8e9}
-  .health-card.bad{border-color:#d9a09a; background:#fff2f0}
+  .health-card{border:1px solid var(--line); border-radius:var(--r); padding:11px 12px; background:var(--wash-2)}
+  /* --sans n'était pas défini dans ce fichier : le raccourci `font:` entier
+     devenait invalide et le titre de la carte retombait sur la fonte du
+     corps, sans son poids. Le jeton existe maintenant. */
+  .health-card b{display:block; font:600 14px/1.25 var(--sans); margin-bottom:4px}
+  .health-card span{display:block; color:var(--muted); font-size:13px; line-height:1.4}
+  .health-card.warn{border-color:var(--ochre-line); background:var(--ochre-bg)}
+  .health-card.warn b{color:var(--ochre)}
+  .health-card.bad{border-color:var(--warn-line); background:var(--warn-bg)}
+  .health-card.bad b{color:var(--warn)}
 
   /* Le bandeau « vous pouvez regarder, pas agir ». Affiché quand la console est
      ouverte par le laissez-passer d'équipe : le geste demande un code opérateur
      nommé (functions/auth/_lib.js › isSeniorOperator). Dire pourquoi vaut mieux
      que griser un bouton et laisser chercher. */
-  .lock-note{display:flex; gap:9px; align-items:flex-start; font-size:.82rem; color:#8a5a00;
-             background:#fdf6e6; border:1px solid #e8d9b0; border-radius:10px; padding:10px 12px; margin:0 0 14px}
-  .lock-note b{color:#6b4600}
+  .lock-note{display:flex; gap:9px; align-items:flex-start; font-size:14px; color:var(--ochre);
+             background:var(--ochre-bg); border:1px solid var(--ochre-line); border-radius:var(--r); padding:11px 13px; margin:0 0 14px}
+  .lock-note b{color:var(--ochre)}
 
   /* Recherche de ventes — les critères d'un opérateur au téléphone : un montant
      lu sur un reçu, une plage de dates, un numéro de ticket. */
   .filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px}
-  .filters input, .filters select{font:inherit; font-size:.84rem; padding:8px 10px; border:1.5px solid var(--line);
-                                  border-radius:9px; background:var(--surface); color:var(--ink)}
-  .filters input:focus, .filters select:focus{outline:none; border-color:var(--atlas)}
+  .filters input, .filters select{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line);
+                                  border-radius:var(--r); background:var(--surface); color:var(--ink);
+                                  transition:border-color var(--dur) var(--ease)}
+  .filters input:focus, .filters select:focus{outline:none; border-color:var(--accent-lit)}
   .filters input.q{flex:1; min-width:170px}
   .filters input.d{width:150px} .filters input.n{width:96px}
-  .filters .fl-lbl{font:600 .68rem/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  .filters .fl-lbl{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted)}
 
-  .tslist{border:1px solid var(--line); border-radius:11px; overflow:hidden}
+  .tslist{border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
   .tsrow{display:grid; grid-template-columns:auto 128px 96px 78px 1fr auto; align-items:center; gap:10px;
-         padding:9px 12px; border-bottom:1px solid var(--line); font-size:.85rem; cursor:pointer}
+         padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; cursor:pointer;
+         transition:background var(--dur) var(--ease)}
   .tsrow:last-of-type{border-bottom:0}
-  .tsrow:hover{background:#f4f1ea}
-  .tsrow.on{background:#eef7f1}
+  .tsrow:hover{background:var(--wash)}
+  .tsrow.on{background:var(--sel)}
   .tsrow.void{opacity:.62}
-  .tsrow .ts-when{font-family:var(--mono); font-size:.76rem; color:var(--muted); white-space:nowrap}
-  .tsrow .ts-amt{font-family:var(--mono); text-align:right; font-weight:640; white-space:nowrap}
+  .tsrow .ts-when{font-size:13px; color:var(--muted); white-space:nowrap}
+  .tsrow .ts-amt{text-align:right; font-weight:600; white-space:nowrap}
   .tsrow .ts-lbl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .tsrow .ts-ref{font-family:var(--mono); font-size:.72rem; color:var(--muted)}
-  .tsrow input[type=checkbox]{width:16px; height:16px; accent-color:var(--atlas); cursor:pointer}
+  .tsrow .ts-ref{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .tsrow input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent-lit); cursor:pointer}
   /* Le ticket complet, ouvert sous sa ligne. « Ouvrir la transaction avant
      d'agir » n'est pas une politesse : c'est ce qui distingue la vente d'essai
      à 1 MAD du vrai panier de 940 MAD passé la même minute. */
-  .ts-detail{padding:10px 14px 14px 44px; background:#faf8f3; border-bottom:1px solid var(--line); font-size:.82rem}
+  .ts-detail{padding:10px 14px 14px 44px; background:var(--wash-2); border-bottom:1px solid var(--line); font-size:14px}
   .ts-detail .l{display:flex; gap:10px; padding:3px 0; color:var(--muted)}
   .ts-detail .l b{color:var(--ink); font-weight:600; min-width:0; flex:1}
-  .ts-detail .l .q{font-family:var(--mono)}
-  .ts-detail .meta{font-family:var(--mono); font-size:.72rem; color:var(--muted); margin-top:8px}
+  .ts-detail .meta{font-size:12px; color:var(--muted); margin-top:8px}
   .ts-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0}
-  .ts-bar .n{font-weight:640; color:var(--riad); font-size:.86rem}
-  .vpill{font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; padding:3px 6px;
-         border-radius:5px; background:#fbeecb; color:#8a5a00; border:1px solid #e8d9b0; white-space:nowrap}
+  .ts-bar .n{font-weight:600; color:var(--ink); font-size:14px}
+  .vpill{font:600 12px/1 var(--sans); letter-spacing:0; padding:3px 8px;
+         border-radius:6px; background:var(--ochre-bg); color:var(--ochre); border:1px solid var(--ochre-line); white-space:nowrap}
 
   /* L'écran de conséquences. Il n'est pas décoratif : c'est la seule chose qui
      sépare « je sors une vente d'essai » de « je viens de trouer un Z clôturé ». */
-  .imp{margin-top:14px; border:1.5px solid var(--atlas); border-radius:12px; padding:15px; background:#f3faf6}
-  .imp h4{margin:0 0 4px; font-size:.92rem; color:var(--riad)}
+  .imp{margin-top:14px; border:1px solid var(--accent-lit); border-radius:var(--r-lg); padding:16px; background:var(--sel)}
+  .imp h4{margin:0 0 4px; font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink)}
   .imp .figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:12px 0}
-  .imp .fig{background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:9px 11px}
-  .imp .fig .v{font-family:var(--mono); font-weight:660; font-size:1.02rem; color:var(--riad)}
-  .imp .fig .k{font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:2px}
-  .imp .lst{margin:0 0 10px; font-size:.83rem; color:var(--muted)}
+  .imp .fig{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px}
+  .imp .fig .v{font-weight:600; font-size:17px; color:var(--ink)}
+  .imp .fig .k{font-size:12px; font-weight:600; color:var(--muted); margin-top:3px}
+  .imp .lst{margin:0 0 10px; font-size:14px; color:var(--muted)}
   .imp .lst b{color:var(--ink)}
-  .imp .box{border-radius:9px; padding:10px 12px; margin:0 0 10px; font-size:.83rem}
-  .imp .box.warn{background:#fdf6e6; border:1px solid #e8d9b0; color:#7a5200}
-  .imp .box.stop{background:#fbeeeb; border:1px solid #e7ccc6; color:#8e3324}
+  .imp .box{border-radius:var(--r); padding:11px 13px; margin:0 0 10px; font-size:14px}
+  .imp .box.warn{background:var(--ochre-bg); border:1px solid var(--ochre-line); color:var(--ochre)}
+  .imp .box.stop{background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn)}
   .imp .box p{margin:0 0 5px} .imp .box p:last-child{margin:0}
-  .imp .box b{font-weight:660}
+  .imp .box b{font-weight:600}
   .imp .reason{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0 0}
-  .imp .reason select, .imp .reason input{font:inherit; font-size:.85rem; padding:9px 11px;
-        border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
+  .imp .reason select, .imp .reason input{font:400 14px/1.4 var(--sans); padding:9px 11px;
+        border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink);
+        transition:border-color var(--dur) var(--ease)}
   .imp .reason input{flex:1; min-width:180px}
-  .imp .reason select:focus, .imp .reason input:focus{outline:none; border-color:var(--atlas)}
+  .imp .reason select:focus, .imp .reason input:focus{outline:none; border-color:var(--accent-lit)}
   .imp .acts{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 0}
 
   /* Comptes & adresses. Une ligne par rôle, parce que les rôles ne se corrigent
      pas dans le même esprit — la clé de connexion n'est pas l'adresse du comptable. */
   .mailrow{display:grid; grid-template-columns:150px 1fr auto; align-items:center; gap:10px;
-           padding:10px 0; border-bottom:1px solid var(--line); font-size:.87rem}
+           padding:10px 0; border-bottom:1px solid var(--line); font-size:14px}
   .mailrow:last-of-type{border-bottom:0}
-  .mailrow .k{font:600 .7rem/1.3 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
-  .mailrow .v{font-family:var(--mono); font-size:.84rem; overflow:hidden; text-overflow:ellipsis}
-  .mailrow .v.none{font-family:inherit; color:var(--muted); font-style:normal}
+  .mailrow .k{font:600 12px/1.3 var(--sans); letter-spacing:0; color:var(--muted)}
+  .mailrow .v{font-size:14px; overflow:hidden; text-overflow:ellipsis}
+  .mailrow .v.none{color:var(--muted); font-style:normal}
   .teamlist{margin-top:10px}
-  .teamlist .tm{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:.82rem; color:var(--muted)}
+  .teamlist .tm{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:14px; color:var(--muted)}
   .teamlist .tm b{color:var(--ink); font-weight:600}
-  .teamlist .tm .em{font-family:var(--mono); font-size:.78rem}
+  .teamlist .tm .em{font-size:13px}
   .rst{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px}
-  .rst .state{font-size:.82rem; color:var(--muted)}
+  .rst .state{font-size:14px; color:var(--muted)}
 
   /* Le journal, désormais commun aux trois panneaux : modules, ventes, comptes. */
-  .aud-row .ab.cut{color:var(--warn); border-color:#e7ccc6}
-  .aud-row .ab.acct{color:var(--riad); border-color:color-mix(in srgb, var(--riad) 34%, transparent)}
-  .aud-why{grid-column:2 / -1; font-size:.76rem; color:var(--muted); padding:0 0 4px}
+  .aud-row .ab.cut{color:var(--warn); border-color:var(--warn-line)}
+  .aud-row .ab.acct{color:var(--ink); border-color:color-mix(in srgb, var(--ink) 24%, transparent)}
+  .aud-why{grid-column:2 / -1; font-size:12px; color:var(--muted); padding:0 0 4px}
   @media(max-width:720px){
     .tsrow{grid-template-columns:auto 1fr auto; row-gap:2px}
     .tsrow .ts-ref, .tsrow .ts-when{grid-column:2 / -1}
     .mailrow{grid-template-columns:1fr; gap:4px}
   }
+
+  /* ══ MODE SOMBRE ══════════════════════════════════════════════════════════
+     La console est un outil d'opérateur : elle suit la préférence du système,
+     et c'est de nuit qu'elle sert le plus souvent. Tout ce bloc n'est plus
+     qu'un jeu de jetons — chaque surface, chaque filet, chaque encre ocre ou
+     rouge a déjà son nom au-dessus. Ne restent en bas que les quatre cas où
+     la nuit demande vraiment autre chose qu'une valeur permutée. */
   @media (prefers-color-scheme:dark){
-    :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
-    tbody tr:hover{background:#1a221e} tbody tr.sel{background:#17241d}
-    .pin,.op-item{background:#111713}
-    .plan.basic,.plan.pro{background:#1c2420;color:#bfe8cf}
-    .mini{background:#151b18;color:#cfeeda} .plan{background:#1c2420;color:#bfe8cf}
-    .mini.warn{color:#f0cf8a; border-color:#3a3320; background:#211d10}
-    .mini.warn:hover{background:#2b2513}
-    /* La vue d'ensemble. Les jetons de :root suivent tout seuls ; ne restent
-       que les valeurs posées en dur, dont --riad, qui est un vert PROFOND :
-       posé sur une surface de nuit il donnait un chiffre noir sur noir — le
-       titre invisible qu'on avait déjà corrigé sur les cartes de diagnostic. */
-    .ov-v, .ov-sub b, .sec-head h2{color:#cfeeda}
-    .ov-spark i{background:#1c2420}
-    .ov-bar{background:#1c2420}
-    .ov-todo{color:#f0cf8a}
-    .sus-badge{color:#f0cf8a; background:#241f10; border-color:#3a3320}
+    :root{
+      --paper:#0B100E; --ink:#E9F0EA; --surface:#121815;
+      --line:#242E29; --muted:#93A89C;
+      --wash:#1A221E; --wash-2:#151C18; --sel:#152720; --line-2:#2A3630;
+      --accent-lit:#3CE0A0;
+      --ochre:#F0CF8A; --ochre-bg:#211D10; --ochre-line:#3A3320;
+      --warn:#F0B3A4; --warn-bg:#241412; --warn-line:#4A2A24;
+    }
+    /* --riad reste le vert PROFOND de la marque : c'est un fond (le bandeau,
+       le toast, la lentille), jamais une encre. Les titres et les chiffres
+       prennent --ink, qui a déjà basculé. */
+    .plan.ultra{background:var(--riad); color:#BFF5D6}
+    .plan.ultimate{background:var(--atlas); color:var(--on-accent)}
     tr.suspended{background:rgba(200,160,40,.08)}
-    .type-select{background:#151b18; color:#cfeeda}
-    .md-card{background:#151b18} .inp{background:#111713; color:#cfeeda; border-color:#26302b}
-    .type-chip{color:#bfe8cf; background:#1c2420}
-    .owner-row td, .owner-row:hover td{background:#141a17}
-    .owner-row .who{color:#cfeeda}
-    .count-chip{color:#bfe8cf; background:#1c2420}
-    tr.store-row td:first-child{border-left-color:#26302b}
-    .store-switch{background:#1c2420}
-    .store-switch button:hover{color:#cfeeda}
-    .sec-close{border-color:#26302b}
-    .sec-close:hover{background:#1c2420; color:#cfeeda}
-    .filters input, .filters select{background:#151b18; color:#cfeeda}
-    .tsrow:hover{background:#1a221e} .tsrow.on{background:#17241d}
-    .ts-detail{background:#111713}
-    .imp{background:#111a15; border-color:color-mix(in srgb, var(--atlas) 60%, transparent)}
-    .imp .fig{background:#151b18}
-    .imp .fig .v{color:#bfe8cf}
-    .imp h4{color:#cfeeda}
-    .imp .reason select, .imp .reason input{background:#151b18; color:#cfeeda}
-    .imp .box.warn{background:#211d10; border-color:#3a3320; color:#f0cf8a}
-    .imp .box.stop{background:#241412; border-color:#4a2a24; color:#f0b3a4}
-    .lock-note{background:#211d10; border-color:#3a3320; color:#f0cf8a}
-    .lock-note b{color:#ffe6b0}
-    .vpill{background:#241f10; color:#f0cf8a; border-color:#3a3320}
-    .tslist{border-color:#26302b}
-    /* Le diagnostic. Ces cartes n'avaient aucune version sombre : elles gardaient
-       le fond clair du mode jour pendant que le titre, lui, prenait la couleur du
-       texte de nuit — un en-tête presque blanc sur un fond presque blanc. La
-       console est un outil d'opérateur, elle reste sombre de bout en bout. */
-    .health-card{background:#111713}
-    .health-card b{color:#cfeeda}
-    .health-card.warn{background:#211d10; border-color:#3a3320}
-    .health-card.warn b{color:#f0cf8a}
-    .health-card.bad{background:#241412; border-color:#4a2a24}
-    .health-card.bad b{color:#f0b3a4}
-    /* Même oubli, en plus discret : la pastille de rôle d'un PIN et le survol du
-       bouton Supprimer viraient au blanc au milieu d'une ligne sombre. */
-    .pin .role{background:#1c2420; color:#bfe8cf}
-    .mini.danger{color:#f0b3a4; border-color:#4a2a24; background:#1a1210}
-    .mini.danger:hover{background:#241412}
+    /* Un aplat vert profond sur une surface de nuit ne se voit plus ; le
+       bouton d'ajout prend l'accent éclairci et une encre sombre dessus. */
+    .add{background:var(--accent-lit); color:#04241A}
+    .add:hover:not(:disabled){background:#5CEDB4}
+    .mini.danger{background:var(--warn-bg)}
+    .mini.danger:hover{background:#2E1A16}
+    .mini.warn:hover{background:#2B2513}
   }
 
 /* ── Focus ──────────────────────────────────────────────────────────────────
@@ -449,29 +500,21 @@ em, i, cite, dfn, var { font-style: normal; }
 
    This is the operator console — it revokes accounts and rotates merchant
    PINs. It is exactly the surface where "which control am I about to press"
-   should never be a guess. */
+   should never be a guess.
+
+   Une seule règle depuis que --accent-lit existe : le jeton s'éclaircit déjà
+   de nuit (--atlas mesurait 2,6:1 sur nos fonds sombres, sous le plancher de
+   3:1 d'un indicateur non textuel ; l'accent éclairci passe à 8:1), donc
+   l'anneau n'a plus besoin de sa surcharge nocturne. */
 :is(button, a, input, select, textarea, [tabindex]):focus-visible{
-  outline:2px solid var(--atlas);
+  outline:2px solid var(--accent-lit);
   outline-offset:2px;
 }
 
-/* The ring has to change colour with the theme, which the existing .sec-close
-   rule above does not do. Measured against this page's own dark surfaces
-   (#1c2420, #151b18), --atlas comes out at 2.6:1 and 2.9:1 — under the 3:1
-   floor for a non-text indicator, i.e. a focus ring you cannot see in dark
-   mode, which is the mode this console actually ships in. --mint on the same
-   surfaces measures 11.5:1 and 13.3:1. Light mode keeps --atlas, which is
-   5.7:1 on --paper. */
-@media (prefers-color-scheme:dark){
-  :is(button, a, input, select, textarea, [tabindex]):focus-visible,
-  .sec-close:focus-visible{
-    outline-color:var(--mint);
-  }
-}
-
 /* ── Reduced motion ─────────────────────────────────────────────────────────
-   Eight animated rules, none carrying information the layout does not already
-   state. */
+   Les animations d'ambiance sont parties (la pastille qui pulsait, le dégradé
+   du bouton d'ajout) ; ne restent que des transitions d'état, qui portent une
+   information. Ce bloc les coupe quand le système le demande. */
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{
     animation-duration:0.01ms !important;
