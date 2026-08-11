@@ -22,6 +22,8 @@
    * off this object. opex keys are stable IDs — labels come from T.opex. */
   const ATLAS = {
     name: 'Café Atlas · Maarif',
+    trade: 'restaurant',
+    tradeLabel: 'Café · Restaurant',
     revenue: 842300,
     cogs: 261000,
     grossProfit: 581300,
@@ -82,9 +84,24 @@
     // "Café Atlas"; prefer the real session name, else neutral.
     if (real && !custom) nm = (window.KiwiMe && (window.KiwiMe.business || window.KiwiMe.name)) || 'Votre établissement';
     if (!nm) nm = 'Votre établissement';
+    const tradeRaw = vd.subtype || vd.trade || vd.type || (window.KiwiMe && window.KiwiMe.type) || 'autre';
+    let trade = String(tradeRaw || 'autre');
+    try {
+      if (window.KiwiTrades && typeof window.KiwiTrades.resolve === 'function') {
+        trade = window.KiwiTrades.resolve(tradeRaw) || trade;
+      }
+    } catch (_) {}
+    let tradeLabel = trade;
+    try {
+      if (window.KiwiTrades && typeof window.KiwiTrades.label === 'function') {
+        tradeLabel = window.KiwiTrades.label(trade) || trade;
+      }
+    } catch (_) {}
     return {
       partial: true,
       name: nm,
+      trade,
+      tradeLabel,
       revenue: tot.revenue,
       ordersPerMonth: tot.count,
       ordersPerDay: 0,
@@ -1289,28 +1306,64 @@
     },
   };
   const HL = () => HERO_L[L] || HERO_L.fr;
+  const PRODUCT_HERO = {
+    fr: { c1t: 'Mes fonctions Kiwi', c1s: 'Selon mon métier', c2t: 'Configurer mon activité', c2s: 'Parcours guidé en 3 questions' },
+    en: { c1t: 'My Kiwi features', c1s: 'Matched to my trade', c2t: 'Configure my business', c2s: '3-question guided setup' },
+    ar: { c1t: 'وظائف Kiwi لدي', c1s: 'حسب نشاطي', c2t: 'إعداد نشاطي', c2s: 'مسار موجه في 3 أسئلة' },
+  };
+  const OPS_HERO = {
+    fr: { pressing: ['État de l’atelier', 'Prêtes, retards et soldes', 'Combien de commandes pressing sont prêtes ou en retard ?'], restaurant: ['État de la salle', 'Tables libres et occupées', 'Combien de tables sont libres ou occupées maintenant ?'], boutique: ['État du stock', 'Positions et synchronisation', 'Quel est l’état du stock maintenant ?'], other: ['État des opérations', 'Données reliées en direct', 'Quelles données opérationnelles sont disponibles maintenant ?'] },
+    en: { pressing: ['Workshop status', 'Ready, late and balances', 'How many pressing orders are ready or late?'], restaurant: ['Floor status', 'Free and occupied tables', 'How many tables are free or occupied now?'], boutique: ['Inventory status', 'Positions and synchronisation', 'What is the inventory status now?'], other: ['Operations status', 'Live connected data', 'Which operational data is available now?'] },
+    ar: { pressing: ['حالة الورشة', 'الجاهز والمتأخر والأرصدة', 'كم طلب مصبنة جاهز أو متأخر؟'], restaurant: ['حالة القاعة', 'الطاولات الحرة والمشغولة', 'كم طاولة حرة أو مشغولة الآن؟'], boutique: ['حالة المخزون', 'الأرصدة والمزامنة', 'ما حالة المخزون الآن؟'], other: ['حالة التشغيل', 'البيانات المتصلة مباشرة', 'ما بيانات التشغيل المتاحة الآن؟'] },
+  };
+  function operationalHero() {
+    const t = String(B.trade || '');
+    const family = t === 'pressing' ? 'pressing' : t === 'restaurant' || t === 'cafe' ? 'restaurant'
+      : ['boutique', 'epicerie', 'pharmacie', 'librairie', 'fleuriste'].includes(t) ? 'boutique' : 'other';
+    return (OPS_HERO[L] || OPS_HERO.fr)[family];
+  }
+  function assistantUiCopy() {
+    let c = null;
+    try { c = window.KiwiFeatureTruth && window.KiwiFeatureTruth.context ? window.KiwiFeatureTruth.context({ role: accessTier() }) : null; } catch (_) {}
+    const label = (B.tradeLabel || B.trade || (L === 'en' ? 'business' : L === 'ar' ? 'النشاط' : 'activité'));
+    const mode = c && c.aiMode || 'local';
+    const title = L === 'en' ? `Kiwi copilot · ${label}` : L === 'ar' ? `مساعد Kiwi · ${label}` : `Copilote Kiwi · ${label}`;
+    const privacy = mode === 'cloud'
+      ? (L === 'en' ? 'Cloud AI enabled: the question and only the required business context are sent securely. The assistant remains read-only.' : L === 'ar' ? 'وضع السحابة مفعل: يُرسل السؤال والسياق الضروري فقط بأمان. يبقى المساعد للقراءة فقط.' : 'IA cloud activée : la question et le seul contexte nécessaire sont envoyés de façon sécurisée. Le copilote reste en lecture seule.')
+      : mode === 'deterministic'
+        ? (L === 'en' ? 'Private deterministic mode: no question leaves this device. Read-only.' : L === 'ar' ? 'وضع خاص حتمي: لا يغادر أي سؤال هذا الجهاز. قراءة فقط.' : 'Mode privé déterministe : aucune question ne quitte cet appareil. Lecture seule.')
+        : (L === 'en' ? 'Local AI mode: processing stays on this device. Read-only.' : L === 'ar' ? 'وضع الذكاء المحلي: المعالجة على هذا الجهاز فقط. قراءة فقط.' : 'IA locale : le traitement reste sur cet appareil. Lecture seule.');
+    return { title, privacy };
+  }
 
   function renderHero() {
     const h = HL();
     const safety = (B.revenue - B.breakEvenRev) / B.revenue * 100;
     const icHire = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.6"/><path d="M5 21v-1a6 6 0 016-6h2a6 6 0 016 6v1"/></svg>';
     const icPct  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.4"/><circle cx="17" cy="17" r="2.4"/></svg>';
+    const icFeatures = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="m15 18 2 2 4-5"/></svg>';
+    const icSetup = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
     const icBook = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4a2 2 0 012-2h12v20H7a2 2 0 01-2-2z"/><path d="M9 2v20"/></svg>';
     const icIns  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6l2.55 6.86 6.85 2.54-6.85 2.55L12 22.4l-2.55-6.85L2.6 13l6.85-2.54z"/></svg>';
     const heroH   = B.partial ? nv().heroGreet        : h.greet;
     const heroP   = B.partial ? nv().heroLead(escHtml(B.name)) : h.lead;
     const heroIns = B.partial ? nv().heroIns          : h.ins(fmt1(B.netMargin), fmt1(safety));
+    const ph = PRODUCT_HERO[L] || PRODUCT_HERO.fr;
+    const firstQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Which Kiwi features do I have?' : L === 'ar' ? 'ما هي وظائف Kiwi المتاحة؟' : 'Quelles fonctions Kiwi ai-je ?') : tr().chips.hire;
+    const secondQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Help me configure my business' : L === 'ar' ? 'ساعدني في إعداد مؤسستي' : 'Aide-moi à configurer mon établissement') : tr().chips.price5;
+    const op = operationalHero();
     return `<div class="fa-hero" data-fa-hero>
       <div class="fa-hero-mark">${ICON.avatar}</div>
       <div class="fa-hero-h">${heroH}</div>
       <div class="fa-hero-p">${heroP}</div>
       <div class="fa-hero-cards">
-        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(tr().chips.hire)}">
-          <span class="ic">${icHire}</span><span class="t">${h.c1t}</span><span class="s">${h.c1s}</span></button>
-        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(tr().chips.price5)}">
-          <span class="ic">${icPct}</span><span class="t">${h.c2t}</span><span class="s">${h.c2s}</span></button>
-        <button class="fa-hero-card" type="button" data-fa-open="open-comptabilite">
-          <span class="ic">${icBook}</span><span class="t">${h.c3t}</span><span class="s">${h.c3s}</span></button>
+        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(firstQuery)}">
+          <span class="ic">${B.partial ? icFeatures : icHire}</span><span class="t">${B.partial ? ph.c1t : h.c1t}</span><span class="s">${B.partial ? ph.c1s : h.c1s}</span></button>
+        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(secondQuery)}">
+          <span class="ic">${B.partial ? icSetup : icPct}</span><span class="t">${B.partial ? ph.c2t : h.c2t}</span><span class="s">${B.partial ? ph.c2s : h.c2s}</span></button>
+        ${B.partial ? `<button class="fa-hero-card" type="button" data-fa-follow="${escAttr(op[2])}">
+          <span class="ic">${icBook}</span><span class="t">${op[0]}</span><span class="s">${op[1]}</span></button>` : `<button class="fa-hero-card" type="button" data-fa-open="open-comptabilite">
+          <span class="ic">${icBook}</span><span class="t">${h.c3t}</span><span class="s">${h.c3s}</span></button>`}
       </div>
       <div class="fa-hero-insight">${icIns}<div><b>${h.insT}</b> ${heroIns}</div></div>
     </div>`;
@@ -3214,9 +3267,54 @@
   /* Which scenario answered the last question — read by the telemetry hook in
    * ask(). Kept out of the reply object so nothing renders it by accident. */
   let lastRouteKind = null;
+  function featureCanTake(raw, decided) {
+    try {
+      const guide = window.KiwiFeatureGuide;
+      if (!guide || !guide.canHandle(raw)) return false;
+      if (guide.isPending && guide.isPending()) return !decided || decided.kind !== 'illicit';
+      if (!decided || decided.kind === null) return true;
+      if (decided.kind === 'help' || decided.kind === 'greet') return true;
+      if (decided.kind === 'price') {
+        const priceQ = norm(fixDigits(raw));
+        return !/[\d%]/.test(priceQ) && (/(?:ou|where).{0,24}(?:modifier|change|edit|renomm)/.test(priceQ)
+          || /(?:configur|parametr|setup).{0,24}(?:service|tarif|price|prix)/.test(priceQ));
+      }
+      /* Stock/client words are also data intents. "How many customers?" must
+       * return the ledger count; "how do I configure loyalty?" needs the
+       * product guide. No feature explainer may outrank finance, permissions,
+       * action routing or the integrity refusal. */
+      if (decided.kind !== 'stock' && decided.kind !== 'clients') return false;
+      const q = norm(fixDigits(raw));
+      if (/\b(?:combien|how many|how much|total|nombre|aujourd|today|this month|ce mois|right now|maintenant)\b/.test(q)) return false;
+      return /\b(?:configur|parametr|activer|utiliser|integr|comment fonctionne|how (?:does|to)|ou (?:modifier|regler)|where (?:to|can))\b/.test(q);
+    } catch (_) { return false; }
+  }
   function respond(rawIn) {
     syncProfile();  // reason off whatever venue is active right now
     const d = decideRoute(rawIn);
+    /* Operational state has its own deterministic lane. It runs before the
+     * feature explainer and the finance model, but never before integrity or a
+     * restricted-books route. Thus “combien de commandes pressing sont en
+     * retard ?” cannot become a finance question, and “comment fonctionne le
+     * pressing ?” remains a product explanation rather than a fake live read. */
+    try {
+      const ops = window.KiwiAgentOps;
+      if (ops && d.kind !== 'illicit' && !BOOKS_ROUTES[d.kind] && ops.canHandle(rawIn)) {
+        const operational = ops.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+        if (operational) { lastRouteKind = 'ops-' + (window.KiwiFeatureTruth && window.KiwiFeatureTruth.intent ? window.KiwiFeatureTruth.intent(rawIn) : 'live'); return operational; }
+      }
+    } catch (_) {}
+    /* Product questions must not fall through to the generic finance model.
+     * The guide reads the same trade/workspace registries as the dashboard, so
+     * it explains only features this merchant actually owns and hands setup
+     * back to the real validated page. */
+    try {
+      const guide = window.KiwiFeatureGuide;
+      if (guide && featureCanTake(rawIn, d)) {
+        const guided = guide.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+        if (guided) { lastRouteKind = 'feature'; return guided; }
+      }
+    } catch (_) {}
     lastRouteKind = d.kind === null ? 'llm' : d.kind;
     /* Permission is checked BEFORE the scenario runs — a refusal must never be
      * computed from figures this reader is not allowed to see, or the numbers
@@ -3474,7 +3572,11 @@
     ['quels terminaux sont actifs', 'nodata'],
     ['où sont mes règlements', 'nodata'],
   ];
-  function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
+  function routeLabel(s) {
+    const d = decideRoute(s);
+    if (featureCanTake(s, d)) return 'feature';
+    return d.kind === null ? 'llm' : d.kind;
+  }
   function runEval() {
     lastScenario = null;  // stateless harness — never inherit conversation context
     /* tools/agent-corpus.js carries 830 more merchant questions in fr / en / ar
@@ -4024,6 +4126,20 @@
 
   function buildSystemPrompt(lang) {
     const dir = SP_DIR[lang] || SP_DIR.fr;
+    let featureContext = '';
+    try {
+      if (window.KiwiFeatureGuide && typeof window.KiwiFeatureGuide.promptContext === 'function') {
+        featureContext = window.KiwiFeatureGuide.promptContext(B.trade, lang);
+      }
+    } catch (_) {}
+    let capabilityContext = '';
+    try {
+      if (window.KiwiFeatureTruth && window.KiwiFeatureTruth.context) {
+        const c = window.KiwiFeatureTruth.context({ role: accessTier() });
+        capabilityContext = JSON.stringify({ venue: c.venue, plan: c.plan, role: c.role, aiMode: c.aiMode,
+          access: c.assistantAccess, features: c.features.map((f) => ({ key: f.key, nav: f.nav, enabled: f.enabled, live: f.live, permission: f.permission })) });
+      }
+    } catch (_) {}
     /* The books never enter the context of a reader who may not see them.
      * Gating the deterministic answers alone would have been theatre: every
      * unmatched question goes to the model, and the model was handed the full
@@ -4038,11 +4154,15 @@
       ];
       if (liveR) outR.push('', 'Activité en direct, enregistrée par la caisse depuis l’ouverture aujourd’hui :', liveR);
       if (menuR) outR.push('', 'La carte, avec les ventes du mois par article :', menuR);
+      if (featureContext) outR.push('', `Fonctions Kiwi disponibles pour le métier « ${B.tradeLabel || B.trade || 'établissement'} » :`, featureContext);
+      if (capabilityContext) outR.push('', 'Contexte de capacité vérifié (source produit) :', capabilityContext);
       outR.push(
         '',
         'Règles :',
         `- Tu ne connais PAS et tu ne donnes JAMAIS : les marges, le coût matière, les charges, le loyer, les salaires, la masse salariale, le bénéfice, la trésorerie, le seuil de rentabilité, la valorisation. Si on te les demande, réponds que ces chiffres sont réservés au propriétaire du compte, en une phrase, sans t'excuser et sans en deviner un seul.`,
         `- Tu aides sur la caisse, les ventes, la carte, le stock, le service, les clients et les opérations.`,
+        `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes, puis guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
+        `- Tu es en LECTURE SEULE. Tu peux lire uniquement les adaptateurs explicitement marqués live. Tu ne modifies jamais stock, commande, reçu, imprimante, client ou réglage depuis une réponse.`,
         `- N'invente JAMAIS un chiffre, un plat ou une statistique.`,
         `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
         INTEGRITY_RULE,
@@ -4052,23 +4172,30 @@
       return outR.join('\n');
     }
     if (B.partial) {
-      return [
+      const partialPrompt = [
         dir, '',
         `Tu es l'assistant financier de "${B.name}", un établissement qui vient de démarrer sur Kiwi, au Maroc.`,
+        `Type d'activité : ${B.tradeLabel || B.trade || 'non renseigné'}.`,
         B.revenue > 0
           ? `Seules données réelles disponibles : ${fmt(B.revenue)} MAD de ventes sur ${fmt(B.ordersPerMonth)} vente(s), panier moyen ${fmt(B.avgBasket)} MAD.`
           : `Aucune vente n'a encore été enregistrée pour cet établissement.`,
         `Tu n'as PAS sa structure de coûts (loyer, salaires, coût matière, marge, trésorerie, effectif) ni le détail de sa carte.`,
-        '',
+      ];
+      if (featureContext) partialPrompt.push('', 'Fonctions Kiwi réellement disponibles pour ce métier :', featureContext);
+      if (capabilityContext) partialPrompt.push('', 'Contexte de capacité vérifié (source produit) :', capabilityContext);
+      partialPrompt.push('',
         'Règles :',
         `- N'invente JAMAIS un chiffre, un plat ou une statistique. Si on te demande une marge, un bénéfice, un seuil de rentabilité, des charges, ou les articles du menu, explique que le commerçant doit d'abord renseigner ces données dans Kiwi, ne donne ni nombre ni liste inventée.`,
         `- Tu peux donner des conseils de gestion généraux et qualitatifs, sans chiffrer ce que tu ne connais pas.`,
+        `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes et guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
+        `- Tu es en LECTURE SEULE. Un adaptateur live peut te donner un état, jamais l'autorisation de le changer.`,
         `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
         `- Ne donne jamais de conseil d'investissement boursier. Ne réponds pas aux questions sans lien avec l'activité.`,
         INTEGRITY_RULE,
         '',
-        dir,
-      ].join('\n');
+        dir
+      );
+      return partialPrompt.join('\n');
     }
     const o = B.opex;
     const menu = menuContextLines();
@@ -4101,11 +4228,13 @@
     } else {
       lines.push('', `Tu n'as pas le détail de sa carte : pour une question sur les plats, invite-le à ouvrir la page Menu, ne cite aucun plat de mémoire.`);
     }
+    if (featureContext) lines.push('', 'Fonctions Kiwi réellement disponibles pour ce métier :', featureContext);
     lines.push(
       '',
       'Règles :',
       `- Sois concis, concret et chiffré quand c'est utile.`,
       `- Tu peux parler de tout ce qui touche la gestion du café : finances, RH, marketing, opérations, fournisseurs, stratégie, menu.`,
+      `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes et guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
       `- N'invente JAMAIS un chiffre, un plat ou une statistique : appuie-toi uniquement sur les données ci-dessus. Si une information manque, dis-le simplement.`,
       `- Tu NE réponds PAS aux questions sans lien avec l'activité (sport, célébrités, actualité). Décline poliment en une phrase.`,
       `- Tu n'as pas accès à Internet ni à des données en temps réel ; ne donne jamais de conseil d'investissement boursier.`,
@@ -4437,6 +4566,7 @@
     injectCss();
     syncProfile();  // build the profile for whatever venue is active
     const u = tr().ui;
+    const dynamicUi = assistantUiCopy();
 
     // Every fact the agent knows — grouped, each row click-to-insert.
     const ctxItem = (k, v) =>
@@ -4460,7 +4590,7 @@
               `<button class="fa-ctx-kpi" type="button" data-fa-fact="${escAttr(k + ' : ' + v)}"><span class="k">${k}</span><span class="v">${v}</span></button>`).join('')}</div>`
           : '') +
         `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${p.railEmpty}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${u.ctxTrust}</span></div>`;
+        `<div class="fa-ctx-trust">${ICON.lock}<span>${dynamicUi.privacy}</span></div>`;
     } else {
       const f = tr().facts;
       const opexItems = Object.entries(B.opex).sort((a, b) => b[1] - a[1])
@@ -4509,7 +4639,7 @@
         `</div>` +
         `<button class="fa-ctx-more" type="button" data-fa-ctx-more>${HL().more}</button>` +
         `<div class="fa-ctx-detail" data-fa-detail hidden>${ctxRail}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${u.ctxTrust}</span></div>`;
+        `<div class="fa-ctx-trust">${ICON.lock}<span>${dynamicUi.privacy}</span></div>`;
     }
 
     const body = `
@@ -4547,8 +4677,14 @@
       </div>`;
 
     const res = window.Kiwi.drawer({
-      title: u.title,
-      subtitle: u.subtitle,
+      title: dynamicUi.title,
+      subtitle: (() => {
+        try {
+          return window.KiwiFeatureGuide && window.KiwiFeatureGuide.assistantSubtitle
+            ? window.KiwiFeatureGuide.assistantSubtitle(L, B.trade)
+            : u.subtitle;
+        } catch (_) { return u.subtitle; }
+      })(),
       body,
       fullpage: true,
     });

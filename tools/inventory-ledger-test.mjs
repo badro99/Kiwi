@@ -20,7 +20,9 @@ const localStorage = {
 const window = {
   localStorage,
   KiwiEnv: { isReal: () => true },
-  KiwiStore: { slugFor: () => 'audit-shop' },
+  /* Production inventory follows CloudDoc's current establishment identity;
+   * KiwiStore.slugFor was retired because it merged sibling venues. */
+  KiwiCloudDoc: { currentSlug: () => 'audit-shop' },
   addEventListener() {},
 };
 window.window = window;

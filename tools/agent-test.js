@@ -29,6 +29,8 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const AGENT = path.join(ROOT, 'assets', 'agent.js');
 const DATA = path.join(ROOT, 'assets', 'agent-data.js');
+const FEATURES = path.join(ROOT, 'assets', 'agent-features.js');
+const TRUTH = path.join(ROOT, 'assets', 'agent-truth.js');
 
 /* ── DOM shim ─────────────────────────────────────────────────────────────
  * Enough of a browser for agent.js to define itself. It never opens the UI
@@ -87,6 +89,8 @@ function load(opts) {
    * automatically when it is there. */
   if (fs.existsSync(CORPUS)) vm.runInContext(fs.readFileSync(CORPUS, 'utf8'), ctx, { filename: 'agent-corpus.js' });
   vm.runInContext(fs.readFileSync(DATA, 'utf8'), ctx, { filename: 'agent-data.js' });
+  vm.runInContext(fs.readFileSync(FEATURES, 'utf8'), ctx, { filename: 'agent-features.js' });
+  vm.runInContext(fs.readFileSync(TRUTH, 'utf8'), ctx, { filename: 'agent-truth.js' });
   vm.runInContext(fs.readFileSync(AGENT, 'utf8'), ctx, { filename: 'agent.js' });
   return ctx.window;
 }
@@ -569,7 +573,57 @@ section('Production acceptance (re-audit, July 2026)');
   }
 }
 
-/* ── 9 · typos must not change the decision ────────────────────────────────
+/* ── 9 · merchant product knowledge & guided setup ─────────────────────────
+ * The financial engine is also the front door to Kiwi's product. A pressing
+ * must receive pressing operations, a shop must receive retail scanning, and
+ * the assistant must ask before proposing an implementation path. */
+section('Merchant-aware product guide');
+{
+  const mk = (subtype) => load({
+    lang: 'fr', role: 'owner',
+    env: { isReal: () => true },
+    venue: {
+      isCustom: () => true,
+      getVenue: () => 'merchant-' + subtype,
+      getCurrentVenueData: () => ({ name: 'Audit ' + subtype, subtype }),
+      getSubtypeProfile: () => ({ items: [] }),
+    },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+  });
+  const pressing = mk('pressing');
+  t('feature-list question uses the deterministic product guide',
+    pressing.KiwiAgentRoute('Quelles fonctions Kiwi ai-je ?') === 'feature');
+  const list = flatten(pressing.KiwiAgentAsk('Quelles fonctions Kiwi ai-je ?'));
+  t('pressing explanation contains its service-pricing workflow', /Services et tarifs/.test(list), list);
+  t('pressing explanation does not advertise the retail EAN scanner', !/Scan continu mobile/.test(list), list);
+  const price = flatten(pressing.KiwiAgentAsk('Où modifier les noms et les prix des chemises ?'));
+  t('pressing price question opens the real service configuration', /Services et tarifs/.test(price), price);
+
+  const boutique = mk('boutique');
+  const shop = flatten(boutique.KiwiAgentAsk('Quelles fonctions Kiwi ai-je ?'));
+  const scan = flatten(boutique.KiwiAgentAsk('Comment fonctionne le scan continu mobile ?'));
+  t('boutique explanation includes continuous mobile scanning', /Scan continu mobile/.test(scan), scan);
+  t('boutique explanation excludes pressing workshop flow', !/Atelier et flux/.test(shop), shop);
+
+  const setup = mk('pressing');
+  const q1 = setup.KiwiAgentAsk('Aide-moi à configurer mon établissement');
+  const q2 = setup.KiwiAgentAsk('Non, pas encore');
+  const q3 = setup.KiwiAgentAsk('Partiellement');
+  const done = setup.KiwiAgentAsk('Oui, nous livrons');
+  t('guided setup asks three questions before its roadmap',
+    /1\/3/.test(flatten(q1)) && /2\/3/.test(flatten(q2)) && /3\/3/.test(flatten(q3)) && done && done.open && done.open.length > 0);
+  t('guided setup prioritises missing pressing pricing', /Services et tarifs/.test(flatten(done)), flatten(done));
+
+  const focused = mk('pressing');
+  const fq1 = focused.KiwiAgentAsk('Aide-moi à configurer les services et tarifs');
+  focused.KiwiAgentAsk('Oui, dans un fichier Excel');
+  focused.KiwiAgentAsk('Urgence et détachage');
+  const fd = focused.KiwiAgentAsk('Une chemise à sec');
+  t('named-feature integration asks before opening configuration',
+    /grille actuelle/.test(flatten(fq1)) && fd && fd.open && fd.open.some((x) => /pressing-services/.test(x.handler)));
+}
+
+/* ── 10 · typos must not change the decision ───────────────────────────────
  * The re-audit ran a mutation suite: 450 of 10 151 variants changed the route,
  * and it named the three that matter — a hiring question read as generic
  * affordability, a layoff read as an employee lookup, Ramadan read as generic

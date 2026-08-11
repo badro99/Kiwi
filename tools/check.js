@@ -338,6 +338,23 @@ section('Assistant behaviour (tools/agent-test.js)');
   }
 }
 
+/* The assistant's product knowledge must ship with the product. These gates
+ * compare all 18 merchant profiles with the feature registry and exercise 40
+ * live operational questions against their real adapter contracts. */
+section('Assistant feature truth + 40 operational simulations');
+for (const script of ['agent-features-test.mjs', 'agent-ops-simulations.mjs']) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', script)], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    const passed = (out.match(/✓/g) || []).length;
+    ok(`${script} green (${passed} checks)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${script} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 6 · qui a le droit de lire le stock d'une AUTRE boutique ───────────────
  * /api/stock/lookup est le seul endpoint qui franchit volontairement la
  * frontière entre deux magasins. Une erreur de tenancy n'y produit aucun

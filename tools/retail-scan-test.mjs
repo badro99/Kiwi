@@ -88,7 +88,7 @@ ok(zxingBrowserLicense.includes('MIT License') && zxingLibraryLicense.includes('
 ok(browserFixture.includes("Object.defineProperty(window, 'BarcodeDetector'") && browserFixture.includes('fallback='), 'browser fixture forces and exposes the Safari decoder path');
 ok(html.includes('assets/retail-scan.css?v=6') && html.includes('assets/vendor/zxing-browser.min.js?v=1') && html.includes('assets/retail-scan.js?v=5'), 'caisse loads decoder before retail scan assets');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
-ok(sw.includes("'kiwi-app-v340'") && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes("'/assets/retail-scan.js?v=5'") && sw.includes("'/assets/retail-scan.css?v=6'"), 'offline shell caches the iPhone scanner');
+ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw) && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes("'/assets/retail-scan.js?v=5'") && sw.includes("'/assets/retail-scan.css?v=6'"), 'offline shell caches the iPhone scanner');
 ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoint authorizes the credit document shape');
 ok(sale.includes("split: 'split'") && sale.includes("credit: 'credit'"), 'sales ledger preserves split and credit methods');
 ok(sale.includes('entry.parts = sale.parts'), 'sales journal retains sanitized payment parts');
