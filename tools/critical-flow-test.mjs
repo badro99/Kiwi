@@ -24,6 +24,11 @@ const caissePwa = read('assets/caisse-pwa.js');
 ok('PIN roster network errors fail closed', pairing.includes("showPinLoadError(venue)") && !pairing.includes(".catch(function () { return []; })"));
 ok('pairing redemption is single-flight', pairing.includes('if (pairSubmitting) return;') && pairing.includes('pairSubmitting = true;'));
 ok('manager authorization uses a manager-level paired roster role', pairing.includes('authorizeManager: function (code)') && caisse.includes('managerCodeValid(mgrBuffer)'));
+ok('cashier PIN can close the register without widening manager-only actions',
+  pairing.includes('authorizeTill: function (code)')
+  && pairing.includes("roles.opensTill((p && p.role) || '')")
+  && caisse.includes("requireTillOperator('Fermeture de caisse', closeRegister)")
+  && caisse.includes("requireManager('Remboursement'"));
 ok('specialist PINs wait for their dispatcher', caisse.includes('verticalDemoPins') && caisse.includes('tryVertical(30)'));
 ok('card and cash commit before the success modal closes', caisse.includes('finalizeTender(cardTenderMethod)') && caisse.includes("finalizeTender('cash')"));
 ok('team composer uses a real transport or labels copy-only behavior honestly',
