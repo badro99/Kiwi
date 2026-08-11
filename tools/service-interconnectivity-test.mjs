@@ -264,8 +264,49 @@ response = await eventsGet({ request, env }); const billAfterEmptyHeartbeat = aw
 ok(billAfterEmptyHeartbeat.states['1'].lines === undefined
   && billAfterEmptyHeartbeat.states['1'].status === 'ka-yaklo',
   "un battement de caisse vide ne peut plus toucher à une addition qu'il ne porte pas");
+/* An Addition request is an employee transition, not a cosmetic local flag.
+   Until the till has echoed the same state, its older occupied heartbeat must
+   not erase the pink request before the till's reader sees it. */
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
-  merchant, state: { table: '1', status: 'khawya', covers: 0 },
+  merchant, state: { table: '1', status: 'bgha-ykhlass', covers: 4, syncVersion: 4 },
+}) });
+response = await eventsPost({ request, env });
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'ka-yaklo', covers: 4, syncVersion: 4 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const billRequestBeforeAck = await json(response);
+ok(billRequestBeforeAck.states['1'].status === 'bgha-ykhlass'
+  && billRequestBeforeAck.states['1'].source === 'employee',
+  "le heartbeat occupé de la caisse n'efface jamais une demande d'addition serveur");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '1', status: 'bgha-ykhlass', covers: 4, syncVersion: 4 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const billRequestAcknowledged = await json(response);
+ok(billRequestAcknowledged.states['1'].status === 'bgha-ykhlass'
+  && billRequestAcknowledged.states['1'].source === 'caisse',
+  "la caisse acquitte l'addition en répétant exactement l'état reçu");
+/* Closing must still carry an employee intent when the cloud document already
+   says free: the caisse can have an occupied local bill that the document does
+   not know about yet. */
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, snapshot: { tables: [{ table: '3', status: 'khawya', covers: 0, syncVersion: 4 }] },
+}) });
+response = await eventsPost({ request, env });
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, state: { table: '3', status: 'khawya', covers: 0, syncVersion: 4 },
+}) });
+response = await eventsPost({ request, env });
+request = new Request(`https://kiwi.test/api/service/events?merchant=${merchant}&role=caisse&since=0`, { headers: { Cookie: ownerCookie } });
+response = await eventsGet({ request, env }); const sameStateCloseIntent = await json(response);
+ok(sameStateCloseIntent.states['3'].status === 'khawya'
+  && sameStateCloseIntent.states['3'].source === 'employee',
+  "fermer une table déjà libre dans le cloud transmet quand même l'intention à la caisse");
+request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({
+  merchant, state: { table: '1', status: 'khawya', covers: 0, syncVersion: 4 },
 }) });
 response = await eventsPost({ request, env });
 ok(response.status === 200, 'le serveur libère la table dans le même état cloud que la caisse');

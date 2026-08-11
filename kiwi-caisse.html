@@ -15420,16 +15420,15 @@
           if (Array.isArray(state.lines) && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION) return;
           const id = caisseTableId(state.table || key);
           if (!id || !tables[id] || !state.status) return;
-          /* Payment is terminal. The caisse may have published its older open
-             copy a few milliseconds after the employee began settlement, so
-             its local timestamp can be newer than the cloud close. That must
-             never keep a paid table occupied. Non-terminal employee changes
-             still obey last-writer-wins; a confirmed free/paid state always
-             clears the stale local bill. */
+          /* Compare only server timestamps with server timestamps. The old
+             non-terminal guard compared `state.ts` (Cloudflare's clock) with
+             `serviceFloorLocalVersion` (this iPad's clock). An iPad even a few
+             seconds ahead rejected Addition forever. The API now keeps every
+             employee transition authoritative until this caisse echoes the
+             exact state, so no client-clock arbitration belongs here. */
           const terminalEmployeeState = state.status === 'khawya' || state.status === 'khlass';
           const lastRemoteTs = Number(serviceFloorRemoteVersion[String(id)] || 0);
           if (stateTs && stateTs <= lastRemoteTs) return;
-          if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;
           const statusChanged = tables[id].status !== state.status;
           const terminalHadLocalBill = terminalEmployeeState
             && (!!orders[id] || Array.isArray(tableOrders[id]) && tableOrders[id].length > 0);

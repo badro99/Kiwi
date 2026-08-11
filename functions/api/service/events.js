@@ -126,20 +126,26 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     const emitted = [];
     Object.keys(incoming).forEach((table) => {
       const next = incoming[table], before = previous[table];
-      /* A paid/free employee state is a settlement boundary, not a short-lived
-         hint. Keep it until the caisse explicitly echoes the SAME terminal
-         state. A time-based grace period let an old occupied heartbeat win 15s
-         later, resurrecting the paid bill and then merging it into the next
-         party seated at that physical table. Once the caisse acknowledges the
-         close, its source becomes `caisse` and either device may open a fresh
-         visit normally. */
-      const employeeCloseAwaitingAck = source === 'caisse' && before && before.source === 'employee'
-        && (before.status === 'khawya' || before.status === 'khlass')
-        && next.status !== 'khawya' && next.status !== 'khlass';
-      if (employeeCloseAwaitingAck) return;
       const stateChanged = !before || before.status !== next.status || Number(before.covers || 0) !== next.covers;
       const versionChanged = !before || Number(before.syncVersion || 0) !== Number(next.syncVersion || 0);
-      const changed = stateChanged || versionChanged;
+      /* Every employee tap is an operational transition, including the case
+         where the shared document already happens to show the same status.
+         Preserve its employee source/timestamp until the caisse echoes that
+         exact state. Without this source hand-off, two failures were possible:
+
+           - the caisse's next four-second "still occupied" snapshot erased an
+             Addition request before its one-second reader had seen it;
+           - closing a table whose cloud snapshot was already `khawya` made no
+             write at all, so a locally occupied caisse ignored the close.
+
+         A caisse snapshot that DIFFERS while an employee transition awaits
+         acknowledgement is stale and is ignored. The first matching snapshot
+         is the acknowledgement: it flips the source back to `caisse`, after
+         which the next legitimate visit may change the table normally. */
+      const employeeAwaitingAck = source === 'caisse' && before && before.source === 'employee';
+      if (employeeAwaitingAck && stateChanged) return;
+      const sourceChanged = !!before && before.source !== (source || 'caisse');
+      const changed = stateChanged || versionChanged || sourceChanged;
       if (!changed) return;
       const changedAt = Date.now();
       states[table] = { ...next, ts: changedAt, source: source || 'caisse' };

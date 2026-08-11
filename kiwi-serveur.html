@@ -5032,38 +5032,50 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!serviceHistoryKey) return;
       try { localStorage.setItem(serviceHistoryKey, JSON.stringify(serviceNotifications.slice(0, 100))); } catch (_) {}
     }
-    function publishServiceTableState(id, status, covers, closeSession) {
+    async function publishServiceTableState(id, status, covers, closeSession) {
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
-      if (!merchant || SV_DEMO) return Promise.resolve(false);
-      const stateWrite = fetch('/api/service/events', {
-        method: 'POST', credentials: 'same-origin', cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant, state: {
-          table: id, status, covers: Math.max(0, Number(covers) || 0),
-          syncVersion: SERVICE_BILL_SYNC_VERSION,
-          /* Plus de `lines`. Ce document dit qui est assis, pas ce qu'il a
-             commandé — l'addition vient de la file. Les envoyer entretenait une
-             seconde vérité vivante, et c'est cette rivalité qui produisait les
-             doublons et les additions ressuscitées, pas un bug isolé. */
-        } }),
-      }).then((r) => r.ok).catch(() => false);
+      if (!merchant || SV_DEMO) return { ok: !!SV_DEMO, demo: !!SV_DEMO };
+      let closeData = null;
       if (closeSession) {
-        fetch('/api/order/queue', {
+        try {
+          /* Close the canonical visit FIRST. Publishing "free" while its
+             OrderPro session is still open lets the next queue poll reopen the
+             table. The two requests used to race and the UI announced success
+             without checking either one. */
+          const response = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service' }),
+          });
+          closeData = await response.json().catch(() => null);
+          if (!response.ok || !closeData || !closeData.ok) {
+            return { ok: false, error: (closeData && closeData.error) || ('close-' + response.status) };
+          }
+        } catch (_) { return { ok: false, error: 'offline' }; }
+      }
+      try {
+        const response = await fetch('/api/service/events', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service' }),
-        }).then((r) => (r.ok ? r.json() : null)).then((data) => {
-          /* Fermer une table ne la solde pas — et c'est délibéré, sans quoi le
-             rapport Z inventerait une recette que personne n'a encaissée. Mais
-             une addition laissée impayée derrière soi ne doit pas partir sans
-             un mot : c'est le seul instant où quelqu'un peut encore la
-             rattraper. Le serveur répond ce qu'il restait dû. */
-          if (data && data.unpaid) {
-            toast(`Table ${id} · libérée avec ${data.unpaid} commande${data.unpaid > 1 ? 's' : ''} non réglée${data.unpaid > 1 ? 's' : ''}`, 7000);
-          }
-        }).catch(() => {});
+          body: JSON.stringify({ merchant, state: {
+            table: id, status, covers: Math.max(0, Number(covers) || 0),
+            syncVersion: SERVICE_BILL_SYNC_VERSION,
+            /* Plus de `lines`. Ce document dit qui est assis, pas ce qu'il a
+               commandé — l'addition vient de la file. Les envoyer entretenait
+               une seconde vérité vivante. */
+          } }),
+        });
+        const data = await response.json().catch(() => null);
+        return {
+          ok: !!(response.ok && data && data.ok),
+          error: response.ok ? (data && data.error) : ('state-' + response.status),
+          unpaid: Number(closeData && closeData.unpaid) || 0,
+          sessionClosed: !!closeData,
+        };
+      } catch (_) {
+        return { ok: false, error: 'offline', sessionClosed: !!closeData,
+          unpaid: Number(closeData && closeData.unpaid) || 0 };
       }
-      return stateWrite;
     }
     function serviceNotify(title, body, meta) {
       const noticeId = (meta && meta.id) || ('notice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
@@ -6171,7 +6183,7 @@ em, i, cite, dfn, var { font-style: normal; }
     $('#td-back').addEventListener('click', returnToFloor);
 
     /* ---- footer actions ---- */
-    $('#td-footer').addEventListener('click', (e) => {
+    $('#td-footer').addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const action = btn.dataset.action;
@@ -6228,11 +6240,21 @@ em, i, cite, dfn, var { font-style: normal; }
         });
       } else if (action === 'ask-bill') {
         const t = tables[activeTableId];
+        const id = activeTableId;
+        const previousStatus = t.status;
         t.status = 'bgha-ykhlass';
         t.elapsed = 0;
-        publishServiceTableState(activeTableId, t.status, t.covers, false);
         renderTableDetail();
-        toast(`Addition demandée pour ${activeTableId}`);
+        btn.disabled = true;
+        const result = await publishServiceTableState(id, t.status, t.covers, false);
+        btn.disabled = false;
+        if (!result.ok) {
+          t.status = previousStatus;
+          renderTableDetail();
+          toast(`Table ${id} · addition non transmise, réessayez`, 5200);
+          return;
+        }
+        toast(`Addition demandée pour ${id}`);
       } else if (action === 'pay') {
         const pending = (tableOrders[activeTableId] || []).some((line) =>
           Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
@@ -6245,15 +6267,24 @@ em, i, cite, dfn, var { font-style: normal; }
         toast('Impression de l\'addition…');
       } else if (action === 'cancel-table') {
         const id = activeTableId;
+        btn.disabled = true;
+        const result = await publishServiceTableState(id, 'khawya', 0, true);
+        btn.disabled = false;
+        if (!result.ok && !result.sessionClosed) {
+          toast(`Table ${id} · fermeture non transmise, réessayez`, 5200);
+          return;
+        }
         tables[id].status = 'khawya';
+        tables[id].covers = 0;
         tables[id].elapsed = 0;
         delete tableOrders[id];
         delete tables[id].orderNo;
         dirtyOrders.delete(id);
         tableSplits.delete(id);
-        publishServiceTableState(id, 'khawya', 0, true);
         returnToFloor();
-        toast(`Table ${id} fermée`);
+        if (!result.ok) toast(`Table ${id} fermée · plan en cours de synchronisation`, 5200);
+        else if (result.unpaid) toast(`Table ${id} · libérée avec ${result.unpaid} commande${result.unpaid > 1 ? 's' : ''} non réglée${result.unpaid > 1 ? 's' : ''}`, 7000);
+        else toast(`Table ${id} fermée`);
       } else if (action === 'resume-split') {
         // Reopen the split modal directly on the flow screen
         openSplitModal(activeTableId);
