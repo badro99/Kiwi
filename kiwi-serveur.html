@@ -4986,6 +4986,7 @@ em, i, cite, dfn, var { font-style: normal; }
        are transport/cache only; once this map has answered, they may never add
        a sent item that does not exist in /api/order/queue. */
     const serviceCanonicalOrders = new Map();
+    const serviceTableSessions = new Map();
     let serviceCanonicalReady = false;
     const serviceEventSeen = new Set();
     const serviceStateVersion = new Map();
@@ -5096,9 +5097,11 @@ em, i, cite, dfn, var { font-style: normal; }
       servicePausedTables.clear();
       ((data.service && data.service.mineTables) || []).forEach((id) => serviceMineTables.add(serviceTableId(id) || String(id)));
       ((data.service && data.service.pausedTables) || []).forEach((id) => servicePausedTables.add(serviceTableId(id) || String(id)));
+      serviceTableSessions.clear();
       (data.sessions || []).forEach((session) => {
         if (!session || session.mode !== 'table') return;
         const id = serviceTableId(session.table);
+        if (id && session.id) serviceTableSessions.set(id, String(session.id));
         const canonical = serviceStateVersion.get(id);
         if (id && tables[id] && tables[id].status === 'khawya' && !(canonical && canonical.status === 'khawya')) {
           tables[id].status = 'ka-yaklo';
@@ -6231,6 +6234,12 @@ em, i, cite, dfn, var { font-style: normal; }
         renderTableDetail();
         toast(`Addition demandée pour ${activeTableId}`);
       } else if (action === 'pay') {
+        const pending = (tableOrders[activeTableId] || []).some((line) =>
+          Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
+        if (pending || dirtyOrders.has(activeTableId)) {
+          toast(`Table ${activeTableId} · envoyez d'abord la commande en cuisine`, 4800);
+          return;
+        }
         openPayChoice(activeTableId);
       } else if (action === 'print-bill') {
         toast('Impression de l\'addition…');
@@ -6315,10 +6324,28 @@ em, i, cite, dfn, var { font-style: normal; }
         `<button class="nt-chip ${n === newTableCovers ? 'is-active' : ''}" data-nt-covers="${n}">${n}</button>`
       ).join('');
     }
-    function confirmNewTable() {
+    async function confirmNewTable() {
       if (!newTableId) return;
-      $('#new-table-modal').classList.remove('is-open');
       const id = newTableId;
+      const confirm = $('#nt-confirm');
+      if (confirm) confirm.disabled = true;
+      if (!SV_DEMO) {
+        try {
+          const response = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: svSlug(), openTable: id, covers: newTableCovers }),
+          });
+          const saved = await response.json().catch(() => null);
+          if (!response.ok || !saved || !saved.ok || !saved.session) throw new Error('open-failed');
+          serviceTableSessions.set(id, String(saved.session));
+        } catch (_) {
+          if (confirm) confirm.disabled = false;
+          toast(`Table ${id} · ouverture non enregistrée, réessayez`, 4800);
+          return;
+        }
+      }
+      $('#new-table-modal').classList.remove('is-open');
       const t = tables[id];
       t.covers = newTableCovers;
       t.status = 'ka-yaklo';
@@ -6333,6 +6360,7 @@ em, i, cite, dfn, var { font-style: normal; }
       publishServiceTableState(id, t.status, t.covers, false);
       activeTableId = id;
       newTableId = null;
+      if (confirm) confirm.disabled = false;
       renderTableDetail();
       showScreen('screen-table');
       lucide.createIcons();
@@ -7294,6 +7322,12 @@ em, i, cite, dfn, var { font-style: normal; }
     async function markTablePaid(id, method) {
       const t = tables[id];
       if (!t || employeePaymentsInFlight.has(id)) return false;
+      const hasUnsent = (tableOrders[id] || []).some((line) =>
+        Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
+      if (hasUnsent || dirtyOrders.has(id)) {
+        toast(`Table ${id} · envoyez d'abord la commande en cuisine`, 4800);
+        return false;
+      }
       const paidAmount = getTableTotal(id);
       const paidClient = tableClients.get(id);
       const paidLines = (tableOrders[id] || []).map((line) => {
@@ -7307,7 +7341,10 @@ em, i, cite, dfn, var { font-style: normal; }
       const paymentId = employeePaymentId(id);
       const orderRef = serviceTableOrderRef(id);
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
-      if (!merchant || paidAmount <= 0) {
+      const canonical = Array.from(serviceCanonicalOrders.values()).find((order) => order && !order.paid
+        && String(order.table) === String(id) && order.session);
+      const session = serviceTableSessions.get(id) || (canonical && String(canonical.session)) || '';
+      if (!merchant || !session || paidAmount <= 0) {
         toast(`Table ${id} · paiement impossible`, 4200);
         return false;
       }
@@ -7328,7 +7365,7 @@ em, i, cite, dfn, var { font-style: normal; }
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: paymentId, merchant, table: id, amount: paidAmount,
+            id: paymentId, merchant, table: id, session, amount: paidAmount,
             method: method || 'card', ts: Date.now(),
             label: orderRef,
             ref: orderRef, lines: paidLines,
@@ -7359,6 +7396,7 @@ em, i, cite, dfn, var { font-style: normal; }
       t.covers = 0;
       t.elapsed = 0;
       delete t.orderNo;
+      serviceTableSessions.delete(id);
       delete tableOrders[id];
       dirtyOrders.delete(id);
       tableSplits.delete(id);

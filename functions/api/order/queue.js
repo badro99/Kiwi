@@ -352,6 +352,7 @@ export async function onRequestGet(context) {
    * des six heures dans session.js. */
   const PRESENCE_MS = 2 * 60 * 60 * 1000;
   let sessions = [];
+  let closedSessions = [];
   const duplicateVisits = [];
   try {
     const live = await env.DB.prepare(
@@ -364,7 +365,19 @@ export async function onRequestGet(context) {
       opened_ts: s.opened_ts, seen_ts: s.seen_ts,
     }));
   } catch (_) { sessions = []; }
+  try {
+    const closed = await env.DB.prepare(
+      `SELECT id, mode, table_no, closed_ts, closed_by FROM table_sessions
+        WHERE merchant = ? AND status = 'closed' AND closed_ts > ?
+        ORDER BY closed_ts LIMIT 200`
+    ).bind(merchant, since).all();
+    closedSessions = (closed.results || []).map((s) => ({
+      id: s.id, mode: s.mode || 'table', table: s.table_no || '',
+      closed_ts: s.closed_ts, closed_by: s.closed_by || '',
+    }));
+  } catch (_) { closedSessions = []; }
   if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
+  if (service) closedSessions = closedSessions.filter((session) => service.allTables.has(normTable(session.table)));
 
   if (service) {
     /* The table number is furniture, not a bill id. Only expose orders that
@@ -408,7 +421,7 @@ export async function onRequestGet(context) {
     /* `now` EST le curseur du prochain sondage : il recule légèrement, sinon
        une commande écrite entre la prise de l'heure et la lecture n'est jamais
        présentée (voir pollCursor). */
-    ok: true, orders, sessions, now: pollCursor(now), ordersAvailable: true,
+    ok: true, orders, sessions, closedSessions, now: pollCursor(now), ordersAvailable: true,
     /* Colonnes absentes de la base déployée. Vide = tout est là.
        `node tools/d1-schema.mjs` les pose. */
     degraded: degraded.length ? degraded : undefined,
@@ -446,17 +459,29 @@ export async function onRequestPost(context) {
   if (employee) {
     const scope = await serviceScope(request, env, merchant);
     const employeeTable = b && b.create === true && b.mode !== 'takeout' ? normTable(b.table) : '';
+    const employeeOpenTable = b && b.openTable != null ? normTable(b.openTable) : '';
     const employeeCloseTable = b && b.closeTable != null ? normTable(b.closeTable) : '';
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
     const validCreate = b && b.create === true && employeeTable && scope && scope.allTables.has(employeeTable);
+    const validOpen = employeeOpenTable && scope && scope.allTables.has(employeeOpenTable);
     const validClose = employeeCloseTable && scope && scope.allTables.has(employeeCloseTable);
-    if (!validCreate && !validClose) {
+    if (!validCreate && !validOpen && !validClose) {
       return json({ error: 'floor-table-required' }, 403);
     }
     if (validCreate) b.server = employeeName(employee.member);
   }
 
   const now = Date.now();
+
+  /* Seating is the beginning of the visit, not the first kitchen ticket.
+   * Persist the visit as soon as the employee confirms the covers so caisse,
+   * OrderPro and later orders all share one durable session identity. */
+  const openTable = b && b.openTable != null ? normTable(b.openTable) : '';
+  if (openTable) {
+    const session = await ensureServiceTableSession(env, merchant, openTable, now);
+    if (!session) return json({ error: 'service-session-unavailable' }, 503);
+    return json({ ok: true, table: openTable, session: session.id, opened_ts: session.opened_ts });
+  }
 
   /* ── La commande prise EN SALLE ────────────────────────────────────────────
    * Le troisième chemin d'entrée de la file, à côté du téléphone du client

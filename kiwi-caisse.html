@@ -8804,7 +8804,8 @@
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
-      if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines);
+      if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
+        mode !== 'vrap' ? selectedId : '');
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
@@ -10103,7 +10104,10 @@
       const p = splitState.flow.parts[partIdx];
       const tip = money(p.tip || 0);
       const base = money(p.base != null ? p.base : (p.amount - tip));
-      recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines);
+      const completesTable = !splitState.isVrap && splitState.tableId
+        && splitState.flow.paidCount + 1 >= splitState.flow.parts.length;
+      recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
+        completesTable ? splitState.tableId : '');
       p.paid = true;
       p.payMethod = method;
       splitState.flow.paidCount++;
@@ -10553,7 +10557,7 @@
       shift.discounts = money(shift.discounts + cut);
       shift.discountsCount++;
     }
-    function recordSale(amount, method, label, tip, lines) {
+    function recordSale(amount, method, label, tip, lines, settlementTable) {
       amount = money(amount);
       if (amount <= 0) return;
       accountActiveDiscount();
@@ -10565,6 +10569,13 @@
         tip: money(tip),
         cashier: currentCashier.name,
       };
+      if (settlementTable) {
+        const visit = phoneSessionOf(settlementTable);
+        if (visit) {
+          entry.table = String(settlementTable);
+          entry.session = String(visit);
+        }
+      }
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.map(l => ({ name: l.name, qty: l.qty, total: money(l.total), cat: l.cat || '' }));
       }
@@ -15142,7 +15153,7 @@
          table aurait clignoté six secondes puis se serait tue, avec la commande
          toujours en attente. Les sessions, elles, arrivent en instantané
          complet et se relisent telles quelles. */
-      ingest(delta, all, sessions) {
+      ingest(delta, all, sessions, closedSessions) {
         let touched = false;
         /* Qui est assis, et où une commande attend. Les deux viennent de la
            même réponse, donc le plan de salle ne se contredit jamais avec la
@@ -15168,6 +15179,24 @@
            visit to the same physical table. */
         const seatsChanged = !sameMap(seats, phoneSeats, (a, b) => a.session === b.session);
         phoneSeats.clear(); seats.forEach((v, k) => phoneSeats.set(k, v));
+        /* Session closure is the durable settlement fact. It wins even when
+           the shared floor document is busy and misses its best-effort close. */
+        (closedSessions || []).forEach((closed) => {
+          if (!closed || closed.mode !== 'table' || !closed.table) return;
+          const id = caisseTableId(closed.table);
+          if (!id || !tables[id]) return;
+          const current = seats.get(tableKey(closed.table));
+          if (current && String(current.session) !== String(closed.id)) return;
+          tables[id].status = 'khawya';
+          tables[id].covers = 0;
+          tables[id].elapsed = 0;
+          delete orders[id];
+          delete tableOrders[id];
+          delete tables[id].orderNo;
+          if (selectedId === id) closeRightPanel();
+          refreshTableNode(id);
+          touched = true;
+        });
         (delta || []).forEach(o => { opIngest(o); touched = true; });
 
         /* ── LA SECONDE CHANCE ────────────────────────────────────────────

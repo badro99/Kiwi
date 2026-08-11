@@ -376,6 +376,7 @@
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
+    if (entry.session) body.session = String(entry.session).slice(0, 64);
     /* The same completed receipt can be observed by two local persistence
        paths. Stable IDs plus this local check prevent it entering the queue
        twice; INSERT OR IGNORE remains the server-side second lock. */

@@ -141,12 +141,20 @@ async function main() {
   /* ── 1. La coupure de deux heures ─────────────────────────────────────── */
   console.log('\n1 · La table qui cesse d\'être facturée après deux heures');
 
+  const opened = await post(queue.onRequestPost,
+    { merchant: MERCHANT, openTable: '3', covers: 2 }, cookie);
+  check('confirmer les couverts ouvre immédiatement la visite',
+    opened.status === 200 && opened.body && opened.body.session, JSON.stringify(opened.body));
+  const visit = opened.body && opened.body.session;
+  const premature = await post(sale.onRequestPost,
+    { merchant: MERCHANT, table: '3', session: visit, amount: 10, method: 'cash' }, cookie);
+  check('une table sans commande envoyée ne peut pas être encaissée',
+    premature.status === 409 && premature.body.error === 'send-order-before-payment', JSON.stringify(premature.body));
   const first = await post(queue.onRequestPost,
     { merchant: MERCHANT, create: true, mode: 'table', table: '3', lines: [{ id: 'i1', qty: 2 }] }, cookie);
   check('le serveur peut lancer une commande', first.status === 200 && first.body && first.body.ok,
     JSON.stringify(first.body));
-  const visit = first.body && first.body.session;
-  check('la commande ouvre une session de table', !!visit);
+  check('la commande rejoint la visite ouverte aux couverts', first.body && first.body.session === visit);
 
   /* On vieillit la session de trois heures — le dîner qui dure. */
   exec('UPDATE table_sessions SET seen_ts = ?, opened_ts = ? WHERE id = ?',
@@ -216,6 +224,10 @@ async function main() {
     JSON.stringify(visitRows));
   check('la session de la table est fermée',
     sessionsOf('3').filter((s) => s.status === 'open').length === 0);
+  const closureFeed = await get(queue.onRequestGet,
+    `https://kiwi.test/api/order/queue?merchant=${MERCHANT}&since=0`, cookie);
+  check('la caisse reçoit la fermeture durable de la visite',
+    (closureFeed.body.closedSessions || []).some((s) => s.id === visit && s.table === '3'));
 
   /* ── 3. Une commande sans session, née pendant la visite, est soldée ──── */
   console.log('\n3 · Le bon déposé par la caisse suit l\'addition');
@@ -237,24 +249,29 @@ async function main() {
   /* ── 4. L'argent enregistré n'est jamais rapporté comme un échec ──────── */
   console.log('\n4 · Une vente durable ne se rapporte pas comme un échec');
 
+  const visit5 = 'tsx-settlevisitfive00001';
+  exec(`INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+        VALUES (?, ?, 'table', '5', 'open', ?, ?)`, visit5, MERCHANT, Date.now(), Date.now());
+  exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+        created_ts, updated_ts, session_id) VALUES ('ord-pay-five', ?, 105, 'table', '5', 90, '[]', 'served', ?, ?, ?)`,
+    MERCHANT, Date.now(), Date.now(), visit5);
   const before = raw('SELECT COUNT(*) AS n FROM sales')[0].n;
   const replay = await post(sale.onRequestPost,
-    { merchant: MERCHANT, table: '5', amount: 90, method: 'cash', id: 'employee-pay5-emp', lines: [] }, cookie);
+    { merchant: MERCHANT, table: '5', session: visit5, amount: 90, method: 'cash', id: 'employee-pay5-emp', lines: [] }, cookie);
   check('le premier règlement répond 200', replay.status === 200 && replay.body.ok);
   const again = await post(sale.onRequestPost,
-    { merchant: MERCHANT, table: '5', amount: 90, method: 'cash', id: 'employee-pay5-emp', lines: [] }, cookie);
+    { merchant: MERCHANT, table: '5', session: visit5, amount: 90, method: 'cash', id: 'employee-pay5-emp', lines: [] }, cookie);
   check('le rejeu du MÊME identifiant répond encore 200', again.status === 200 && again.body.ok);
   check('…et n\'a créé qu\'UNE vente',
     raw('SELECT COUNT(*) AS n FROM sales')[0].n === before + 1,
     `${raw('SELECT COUNT(*) AS n FROM sales')[0].n - before} ligne(s) créée(s)`);
 
-  /* Un identifiant DIFFÉRENT pour le même geste crée bien deux ventes : c'est
-     précisément ce que la persistance de l'identifiant côté employé empêche,
-     et ce que le 503 provoquait à chaque rechargement. */
+  /* Un identifiant DIFFÉRENT ne peut plus doubler la même visite : l'identité
+     financière vient de la session, partagée par caisse et employé. */
   await post(sale.onRequestPost,
-    { merchant: MERCHANT, table: '5', amount: 90, method: 'cash', id: 'employee-pay5bis-emp', lines: [] }, cookie);
-  check('un identifiant neuf crée bien une deuxième vente (le risque évité)',
-    raw('SELECT COUNT(*) AS n FROM sales')[0].n === before + 2);
+    { merchant: MERCHANT, table: '5', session: visit5, amount: 90, method: 'cash', id: 'employee-pay5bis-emp', lines: [] }, cookie);
+  check('un identifiant neuf ne peut plus doubler la même visite',
+    raw('SELECT COUNT(*) AS n FROM sales')[0].n === before + 1);
 
   /* Le cœur du problème : un règlement dont l'écriture du plan de salle
      ÉCHOUE. On le provoque proprement — settleServiceTable refuse une table
@@ -262,8 +279,14 @@ async function main() {
      rapportée comme un succès. Avant, cette réponse était un 503 : le serveur
      lisait « paiement non enregistré », rechargeait, repayait. */
   const beforeFail = raw('SELECT COUNT(*) AS n FROM sales')[0].n;
+  const visit9 = 'tsx-settlevisitnine00001';
+  exec(`INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+        VALUES (?, ?, 'table', '9', 'open', ?, ?)`, visit9, MERCHANT, Date.now(), Date.now());
+  exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+        created_ts, updated_ts, session_id) VALUES ('ord-pay-nine', ?, 109, 'table', '9', 120, '[]', 'served', ?, ?, ?)`,
+    MERCHANT, Date.now(), Date.now(), visit9);
   const pending = await post(sale.onRequestPost,
-    { merchant: MERCHANT, table: '9', amount: 120, method: 'cash', id: 'employee-pay9-emp', lines: [] }, cookie);
+    { merchant: MERCHANT, table: '9', session: visit9, amount: 120, method: 'cash', id: 'employee-pay9-emp', lines: [] }, cookie);
   check('un règlement dont le plan de salle échoue répond 200, pas 503',
     pending.status === 200 && pending.body && pending.body.ok === true,
     `reçu ${pending.status} · ${JSON.stringify(pending.body)}`);
@@ -273,7 +296,7 @@ async function main() {
     raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeFail + 1);
   check('…et un rejeu ne double toujours pas la recette', await (async () => {
     await post(sale.onRequestPost,
-      { merchant: MERCHANT, table: '9', amount: 120, method: 'cash', id: 'employee-pay9-emp', lines: [] }, cookie);
+      { merchant: MERCHANT, table: '9', session: visit9, amount: 120, method: 'cash', id: 'employee-pay9-emp', lines: [] }, cookie);
     return raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeFail + 1;
   })());
 

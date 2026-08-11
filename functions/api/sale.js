@@ -66,6 +66,43 @@ export async function onRequestPost({ request, env }) {
     if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
   }
 
+  /* A restaurant payment settles a VISIT, never a reusable table number.
+   * Both caisse and employee surfaces pass the same session id; deriving the
+   * ledger id from it makes a cross-device retry hit the same primary key. */
+  const requestedSession = String((b && b.session) || '').trim().slice(0, 64);
+  let serviceSession = null;
+  if (requestedSession || employeeTable) {
+    try {
+      serviceSession = requestedSession
+        ? await env.DB.prepare(
+            `SELECT id, table_no, status, opened_ts FROM table_sessions
+              WHERE id = ? AND merchant = ? AND mode = 'table' LIMIT 1`
+          ).bind(requestedSession, merchant).first()
+        : await env.DB.prepare(
+            `SELECT id, table_no, status, opened_ts FROM table_sessions
+              WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+              ORDER BY opened_ts DESC LIMIT 1`
+          ).bind(merchant, employeeTable).first();
+    } catch (_) { serviceSession = null; }
+    if (!serviceSession || !serviceSession.id) return json({ error: 'open-service-session-required' }, 409);
+    if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
+      return json({ error: 'service-session-table-mismatch' }, 409);
+    }
+    /* Caisse persists its local receipt and closes the visit in parallel. The
+       close request may arrive first; a closed visit must therefore still be
+       allowed to write its deterministic sale row. INSERT OR IGNORE below is
+       the arbiter, so a later replay remains one row. */
+    if (employee && serviceSession.status === 'open') {
+      let sent = null;
+      try {
+        sent = await env.DB.prepare(
+          `SELECT id FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL LIMIT 1`
+        ).bind(merchant, serviceSession.id).first();
+      } catch (_) { sent = null; }
+      if (!sent || !sent.id) return json({ error: 'send-order-before-payment' }, 409);
+    }
+  }
+
   /* Un établissement suspendu n'encaisse plus. C'est le seul endroit où la
    * suspension doit vraiment mordre : tout le reste est confort, ceci est la
    * caisse. La caisse garde sa file locale et retentera — rien n'est perdu, la
@@ -89,7 +126,9 @@ export async function onRequestPost({ request, env }) {
   // takings twice. The client now sends a stable id per sale (see the queue in
   // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
   // that send no id keep the old behaviour: a fresh row every time.
-  const id = String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8));
+  const id = serviceSession
+    ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 56))
+    : (String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
 
   /* The basket. Validated and re-serialised here rather than trusted: this is
    * client-supplied JSON going into a column the dashboard and the assistant
@@ -197,7 +236,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   let settlementPending = false;
-  if (employeeTable) {
+  if (employeeTable || serviceSession) {
+    const settledTable = employeeTable || String(serviceSession.table_no || '');
     /* ── ON SOLDE UNE VISITE, PAS UN NUMÉRO DE TABLE ─────────────────────────
      * Cette requête disait `WHERE table_no = ? AND created_ts >= startOfDay`.
      * Une table est réutilisée dix fois par jour : ce filtre soldait donc TOUTE
@@ -212,20 +252,24 @@ export async function onRequestPost({ request, env }) {
      * (la caisse en dépose par createTicket, qui n'en pose pas) mais seulement
      * celles nées PENDANT cette visite — sinon on rouvrirait exactement le trou
      * qu'on vient de fermer. */
-    let visits = [];
-    try {
-      const rows = await env.DB.prepare(
-        `SELECT id, opened_ts FROM table_sessions
-          WHERE merchant = ? AND table_no = ? AND status = 'open'`
-      ).bind(merchant, employeeTable).all();
-      visits = (rows.results || []).filter((r) => r && r.id);
-    } catch (_) { visits = []; }
+    let visits = serviceSession && serviceSession.id
+      ? [{ id: serviceSession.id, opened_ts: serviceSession.opened_ts }]
+      : [];
+    if (!visits.length) {
+      try {
+        const rows = await env.DB.prepare(
+          `SELECT id, opened_ts FROM table_sessions
+            WHERE merchant = ? AND table_no = ? AND status = 'open'`
+        ).bind(merchant, settledTable).all();
+        visits = (rows.results || []).filter((r) => r && r.id);
+      } catch (_) { visits = []; }
+    }
 
     try {
       await env.DB.prepare(
         `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment'
           WHERE merchant = ? AND table_no = ? AND status = 'open'`
-      ).bind(now, merchant, employeeTable).run();
+      ).bind(now, merchant, settledTable).run();
     } catch (_) {}
 
     /* Le début de la visite : la plus ancienne session encore ouverte. Aucune
@@ -254,12 +298,12 @@ export async function onRequestPost({ request, env }) {
             WHERE merchant = ? AND paid_ts IS NULL
               AND ( session_id IN (${marks})
                  OR (table_no = ? AND created_ts >= ?) )`
-        ).bind(now, now, merchant, ...ids, employeeTable, visitStart).run();
+        ).bind(now, now, merchant, ...ids, settledTable, visitStart).run();
       } else {
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
             WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, employeeTable, visitStart).run();
+        ).bind(now, now, merchant, settledTable, visitStart).run();
       }
     } catch (_) {
       /* `session_id` pas encore migrée : la colonne nommée fait échouer
@@ -270,7 +314,7 @@ export async function onRequestPost({ request, env }) {
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
             WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, employeeTable, visitStart).run();
+        ).bind(now, now, merchant, settledTable, visitStart).run();
       } catch (_) {}
     }
 
@@ -285,12 +329,12 @@ export async function onRequestPost({ request, env }) {
      * caisse réécrit toutes les quatre secondes ; elle échoue sous charge, et
      * c'est précisément pendant un coup de feu. Un plan de salle en retard se
      * rattrape au battement suivant. Une vente comptée deux fois, non. */
-    const settled = await settleServiceTable(env, merchant, employeeTable);
+    const settled = await settleServiceTable(env, merchant, settledTable);
     settlementPending = !settled.ok;
   }
   await poke(env, merchant, 'sales');
   return json({
-    ok: true, id, lines: linesMode, table: employeeTable || undefined,
+    ok: true, id, lines: linesMode, table: employeeTable || (serviceSession && serviceSession.table_no) || undefined,
     settlementPending: settlementPending || undefined,
   });
 }

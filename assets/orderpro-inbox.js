@@ -20,7 +20,7 @@
   'use strict';
 
   var POLL_MS = 6000;
-  var state = { orders: {}, sessions: [], since: 0, open: false, timer: null, seen: {} };
+  var state = { orders: {}, sessions: [], closedSessions: [], since: 0, open: false, timer: null, seen: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
@@ -124,6 +124,7 @@
           state.orders[o.id] = o;
         });
         state.sessions = j.sessions || [];
+        state.closedSessions = j.closedSessions || [];
         bridge(delta);
         if (fresh) announce(fresh);
         paint();
@@ -145,7 +146,7 @@
     try {
       if (!window.KiwiCaisseKitchen) return;
       var all = Object.keys(state.orders).map(function (k) { return state.orders[k]; });
-      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions);
+      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions, state.closedSessions);
     } catch (_) {}
   }
 

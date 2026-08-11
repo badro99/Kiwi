@@ -330,7 +330,7 @@ result = await qpost(saraCookie, { merchant, create: true, mode: 'table', table:
 ok(result.response.status === 200, 'un collègue pointé couvre la table pendant la pause');
 
 const employeePayment = {
-  id: 'employee-sale-bill-1-emp', table: '1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
+  id: 'employee-sale-bill-1-emp', table: '1', session: 'sess-payment-table-1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
   lines: [{ name: 'Tajine', qty: 2, total: 180, cat: 'Plats' }],
 };
 /* La visite commence AVANT les commandes qu'elle porte — sans quoi la scène
@@ -342,6 +342,8 @@ const employeePayment = {
    n'en tolère qu'une), et c'est voulu : on force la scène du paiement. */
 put(`INSERT OR REPLACE INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
      VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now - 3600000, now);
+put(`UPDATE orders SET session_id=? WHERE merchant=? AND table_no='1' AND paid_ts IS NULL`,
+  'sess-payment-table-1', merchant);
 request = new Request('https://kiwi.test/api/sale', {
   method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' },
   body: JSON.stringify({ merchant, ...employeePayment }),
@@ -360,7 +362,7 @@ ok(settledSession.status === 'closed'
   && db.prepare("SELECT COUNT(*) AS n FROM orders WHERE merchant=? AND table_no='1' AND paid_ts IS NULL").get(merchant).n === 0,
   "le même acquittement libère la table, ferme OrderPro et solde ses tickets avant de répondre");
 paid = await employeeSale(saraCookie, employeePayment);
-const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id LIKE 'employee-sale-%'").all(merchant);
+const savedPayments = db.prepare("SELECT id, amount, lines FROM sales WHERE merchant=? AND id='visit-sess-payment-table-1'").all(merchant);
 const savedLines = JSON.parse(savedPayments[0] && savedPayments[0].lines || '[]');
 ok(paid.response.status === 200 && savedPayments.length === 1 && savedPayments[0].amount === 180
   && savedLines[0].n === 'Tajine' && savedLines[0].q === 2,
