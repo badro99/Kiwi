@@ -15161,6 +15161,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-t{font-family:var(--mono);font-size:12.5px;color:var(--n-500)}' +
       '.rtx-m{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);white-space:nowrap}' +
       '.rtx-products{display:flex;flex-direction:column;gap:5px;min-width:0}.rtx-product{display:flex;justify-content:space-between;gap:14px;font-size:14px;color:var(--ink)}' +
+      '.rtx-identity{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}.rtx-ref{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink)}.rtx-source{font-size:11px;color:var(--n-500)}' +
       '.rtx-product-name{overflow:hidden;text-overflow:ellipsis}.rtx-product-amount{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--n-500)}' +
       '.rtx-products-missing{font-size:13px;color:var(--n-500)}' +
       '.rtx-a{font-family:var(--mono);font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap}' +
@@ -15269,6 +15270,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       const when = hh;
       const m = L[salesMethodKey(s)] || L.unknown;
+      const ref = String(s.ref || s.label || '').trim();
+      const origin = String(s.origin || (ref ? 'caisse' : '')).toLowerCase();
+      const source = origin === 'employee'
+        ? (s.server ? `${s.server} · ${T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' })}` : T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' }))
+        : origin === 'orderpro' ? 'OrderPro'
+        : origin === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : '';
+      const identity = ref || source
+        ? `<div class="rtx-identity">${ref ? `<span class="rtx-ref">${escS(ref)}</span>` : ''}${source ? `<span class="rtx-source">${escS(source)}</span>` : ''}</div>`
+        : '';
       const lines = Array.isArray(s.lines) ? s.lines.filter((l) => l && l.name) : [];
       const products = lines.length ? lines.map((l) => {
         const qty = Math.max(1, Number(l.qty) || 1);
@@ -15278,7 +15288,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return `<div class="rtx-row${i === 0 ? ' is-new' : ''}">` +
         `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
-        `<span class="rtx-products">${products}</span>` +
+        `<span class="rtx-products">${identity}${products}</span>` +
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
         `</div>`;
     }).join('');
