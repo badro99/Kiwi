@@ -71,31 +71,65 @@
        la signature la plus lisible d'une page fabriquée à la va-vite. */
     em, i, cite { font-style: normal; }
 
-    /* ── L'appareil n'est encore lié à aucun commerce ───────────────────────── */
+    /* ── L'appareil n'est encore lié à aucun commerce ─────────────────────────
+       Cet écran était un dégradé vert boueux : un « Cuisine » en serif de
+       34 px posé contre un logo d'une tout autre graisse, et des touches
+       molles à 18 px de rayon. Il ne ressemblait ni à la page d'accueil ni au
+       reste du produit.
+
+       Il reprend maintenant la langue de la page d'accueil : un aplat sombre
+       (aucun dégradé), des filets à 10 % de blanc, un rayon de 14 px, une
+       seule voix typographique, le vert de marque réservé au strict minimum —
+       les pastilles saisies et la touche de validation. Rien d'autre ne
+       brille. ───────────────────────────────────────────────────────────── */
     #pair {
       position: fixed; inset: 0; z-index: 60;
-      background: linear-gradient(160deg, var(--forest-deep) 0%, #06231A 100%);
+      background: #07130F;
       color: #fff; display: none; flex-direction: column;
-      align-items: center; justify-content: center; gap: 6px; padding: 30px;
+      align-items: center; justify-content: center; gap: 0; padding: 30px;
     }
     #pair.on { display: flex; }
-    #pair .kw { display:flex; align-items:center; gap:10px; font-family: var(--serif); font-size: 34px; letter-spacing: -0.01em; }
-    #pair .kw img { display:block; width:auto; height:36px; }
-    #pair .kw span { color: var(--mint, #7DF2B0); }
-    #pair .sub { font-size: 14.5px; color: rgba(255,255,255,.62); margin-bottom: 22px; text-align: center; line-height: 1.55; max-width: 380px; }
-    .dots { display: flex; gap: 12px; margin-bottom: 26px; }
-    .dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.34); }
-    .dot.on { background: var(--mint, #7DF2B0); border-color: var(--mint, #7DF2B0); }
-    .pad { display: grid; grid-template-columns: repeat(3, 84px); gap: 13px; }
-    .pad button {
-      height: 72px; border-radius: 18px; background: rgba(255,255,255,.08);
-      color: #fff; font-size: 25px; font-weight: 500;
-      border: 1px solid rgba(255,255,255,.1);
-      transition: background 120ms, transform 120ms;
+    #pair .kw {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 19px; font-weight: 500; letter-spacing: -0.01em;
+      color: rgba(255,255,255,.88);
     }
-    .pad button:active { background: rgba(255,255,255,.2); transform: scale(.95); }
-    .pad button.wide { grid-column: span 1; font-size: 15px; font-weight: 600; }
-    #pair-msg { min-height: 22px; margin-top: 20px; font-size: 14px; color: #FFB4A8; }
+    #pair .kw img { display: block; width: auto; height: 26px; }
+    #pair .kw span {
+      padding-left: 12px;
+      border-left: 1px solid rgba(255,255,255,.16);
+      color: rgba(255,255,255,.62);
+    }
+    #pair .sub {
+      font-size: 14px; color: rgba(255,255,255,.5);
+      margin: 14px 0 30px; text-align: center; line-height: 1.55;
+      max-width: 34ch; letter-spacing: -0.005em;
+    }
+    .dots { display: flex; gap: 12px; margin-bottom: 30px; }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255,255,255,.16);
+      transition: background 150ms cubic-bezier(0,0,.2,1);
+    }
+    .dot.on { background: var(--mint, #7DF2B0); }
+    .pad { display: grid; grid-template-columns: repeat(3, 84px); gap: 10px; }
+    .pad button {
+      height: 66px; border-radius: 14px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      color: #fff; font-size: 22px; font-weight: 500;
+      font-variant-numeric: tabular-nums lining-nums;
+      letter-spacing: -0.01em;
+      transition: background 150ms cubic-bezier(0,0,.2,1),
+                  border-color 150ms cubic-bezier(0,0,.2,1);
+    }
+    .pad button:active { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.2); }
+    /* Effacer / Valider : du texte, pas des chiffres — ils descendent d'un cran
+       dans la hiérarchie, et seule la validation porte le vert. */
+    .pad button.wide { grid-column: span 1; font-size: 14px; font-weight: 500; color: rgba(255,255,255,.6); }
+    .pad button.wide.ok { background: var(--forest); border-color: var(--forest); color: #EAFFF4; font-weight: 600; }
+    .pad button.wide.ok:active { background: #0E845E; border-color: #0E845E; }
+    #pair-msg { min-height: 22px; margin-top: 22px; font-size: 13.5px; color: #F0B3A4; letter-spacing: -0.005em; }
     #pair.err { animation: shake .4s; }
     @keyframes shake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(5px)} 50%{transform:translateX(-8px)} }
 
@@ -407,7 +441,7 @@
       $('pair-pad').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) {
         return '<button data-k="' + n + '">' + n + '</button>';
       }).join('') + '<button class="wide" data-k="del">Effacer</button>'
-        + '<button data-k="0">0</button><button class="wide" data-k="ok">OK</button>';
+        + '<button data-k="0">0</button><button class="wide ok" data-k="ok">Valider</button>';
     }
   }
   function padFail(msg) {
