@@ -124,4 +124,26 @@ ok(bookingSource.includes("document.documentElement.lang||'fr'"), 'public bookin
 ok(bookingSource.includes('data-closed-lang'), 'closed booking state keeps FR, EN and Arabic language controls');
 ok(bookingSource.includes("partySize:isDining()?state.partySize:1") && bookingSource.includes("partySize='+encodeURIComponent"), 'public dining flow carries party size through availability and booking');
 
+const templates = R.restaurantTemplates();
+ok(templates.length === 3, 'restaurant onboarding provides three practical starter templates');
+ok(templates.every(x => x.services.length && x.resources.length), 'every restaurant template has usable services and tables');
+ok(templates.every(x => x.resources.every(r => r.kind === 'table' && r.capacity >= 2)), 'template resources are reservable tables with real guest capacity');
+ok(templates.find(x => x.id === 'classic').services.some(s => s.duration === 90) && templates.find(x => x.id === 'classic').services.some(s => s.duration === 120), 'classic template separates lunch and dinner duration');
+ok(templates.find(x => x.id === 'groups').settings.confirmation === 'request', 'group template requires staff confirmation');
+ok(R.templateSeats(templates.find(x => x.id === 'classic')) === 36, 'classic template advertises its true 36-seat capacity');
+ok(new Set(templates.flatMap(x => [...x.services, ...x.resources].map(r => r.id))).size === templates.flatMap(x => [...x.services, ...x.resources]).length, 'template record identifiers are globally unique and repeat-safe');
+ok(source.includes('Vos services et vos tables actuels restent intacts') && source.includes('data-kr-template'), 'setup explains preservation and exposes template actions');
+const floorTemplate = R.floorPlanTemplateFrom({ tables: [{ id:'t1', num:'A1', type:'round2' }, { id:'t2', num:'B4', type:'rect6' }] });
+ok(floorTemplate.resources.length === 2 && floorTemplate.resources[0].capacity === 2 && floorTemplate.resources[1].capacity === 6, 'floor-plan template imports real table names and capacities');
+ok(floorTemplate.resources[0].name.includes('A1'), 'floor-plan template preserves the merchant table number');
+
+doc = base(); doc.settings.staffingEnabled = true; doc.settings.tablesPerStaff = 1;
+ctx.KiwiTeam = { bookingCoverage: () => ({ configured:true, members:[] }) };
+result = R.validate({ customer:{name:'Team test'}, serviceId:'svc-cut', startAt:future },doc);
+ok(!result.ok && result.error === 'conflict', 'configured service with no floor staff blocks a booking');
+ctx.KiwiTeam.bookingCoverage = () => ({ configured:true, members:[{id:'staff-1'}] });
+result = R.validate({ customer:{name:'Team test'}, serviceId:'svc-cut', startAt:future },doc);
+ok(result.ok, 'a covered team shift makes the booking available');
+delete ctx.KiwiTeam;
+
 console.log(`reservations-test: ${controls} controls passed`);

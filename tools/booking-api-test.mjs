@@ -25,13 +25,14 @@ class Statement {
   }
 }
 class MockDB {
-  constructor(doc) { this.merchant = 'test-shop'; this.doc = doc; this.rev = 1; }
+  constructor(doc) { this.merchant = 'test-shop'; this.doc = doc; this.rev = 1; this.team = { members: [], shifts: {} }; this.hours = { week: {}, exceptions: [] }; }
   prepare(sql) { return new Statement(this, sql); }
   async batch() {
     return [
       { results: [{ data: JSON.stringify(this.doc), rev: this.rev }] },
-      { results: [{ data: JSON.stringify({ week: {}, exceptions: [] }) }] },
+      { results: [{ data: JSON.stringify(this.hours) }] },
       { results: [{ name: 'Test Shop', type: 'boutique' }] },
+      { results: [{ data: JSON.stringify(this.team) }] },
     ];
   }
 }
@@ -67,6 +68,11 @@ body = await response.json();
 check(response.status === 200 && body.slots.length > 0, 'availability is calculated from real resources and hours');
 const slot = body.slots[Math.floor(body.slots.length / 2)];
 check(slot.resourceIds.length === 1 && slot.endAt > slot.startAt, 'slot contains assignable capacity and duration');
+const ownWeek = db.doc.resources[0].week;
+db.doc.resources[0].week = null; db.hours = { week, exceptions:[] };
+response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}`); body = await response.json();
+check(response.status === 200 && body.slots.length > 0, 'template tables inherit the venue opening hours automatically');
+db.doc.resources[0].week = ownWeek; db.hours = { week:{}, exceptions:[] };
 
 response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=2`);
 body = await response.json();
@@ -75,6 +81,16 @@ db.doc.resources[0].capacity = 4;
 response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=4`);
 body = await response.json();
 check(response.status === 200 && body.slots.length > 0, 'availability keeps resources large enough for the party');
+
+db.doc.settings.staffingEnabled = true;
+db.doc.settings.tablesPerStaff = 1;
+db.team = { members: [{ id:'staff-1', role:'serveur', function:'Serveur' }], shifts: { 'staff-1': { [date]: { off:true } } } };
+response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=4`); body = await response.json();
+check(response.status === 200 && body.slots.length === 0, 'a configured day with no floor staff exposes no public slots');
+db.team.shifts['staff-1'][date] = { start:'09:00', end:'18:00' };
+response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=4`); body = await response.json();
+check(response.status === 200 && body.slots.length > 0, 'a scheduled floor shift restores covered slots');
+db.doc.settings.staffingEnabled = false;
 
 const request = { merchant:'test-shop', ref:'public-ref-0001', serviceId:'svc-cut', startAt:slot.startAt, partySize:4, customer:{ name:'Nora', phone:'0612345678', email:'' } };
 response = await callPost(request); body = await response.json();

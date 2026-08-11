@@ -12,14 +12,14 @@ const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v, min, max, fallback) => Number.isFinite(+v) ? Math.max(min, Math.min(max, +v)) : fallback;
 
 function blank() {
-  return { v: 1, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15 }, services: [], resources: [], blocked: [], bookings: [] };
+  return { v: 1, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, staffingEnabled: false, tablesPerStaff: 4 }, services: [], resources: [], blocked: [], bookings: [] };
 }
 function safeDoc(raw) {
   let d = raw;
   if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
   if (!d || typeof d !== 'object') return blank();
   const out = blank(), s = d.settings || {};
-  out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: num(s.minNoticeMinutes, 0, 10080, 60), windowDays: num(s.windowDays, 1, 365, 60), cancellationHours: num(s.cancellationHours, 0, 720, 12), slotStep: [5,10,15,20,30,60].includes(+s.slotStep) ? +s.slotStep : 15, updatedAt: +s.updatedAt || 0 };
+  out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: num(s.minNoticeMinutes, 0, 10080, 60), windowDays: num(s.windowDays, 1, 365, 60), cancellationHours: num(s.cancellationHours, 0, 720, 12), slotStep: [5,10,15,20,30,60].includes(+s.slotStep) ? +s.slotStep : 15, staffingEnabled: !!s.staffingEnabled, tablesPerStaff: num(s.tablesPerStaff, 1, 12, 4), updatedAt: +s.updatedAt || 0 };
   out.services = (Array.isArray(d.services) ? d.services : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), duration: num(x?.duration, 5, 1440, 30), price: num(x?.price, 0, 1000000, 0), deposit: num(x?.deposit, 0, 1000000, 0), capacity: num(x?.capacity, 1, 999, 1), resourceIds: (Array.isArray(x?.resourceIds) ? x.resourceIds : []).slice(0, 60).map((z) => str(z, 64)).filter(Boolean), active: x?.active !== false, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
@@ -60,7 +60,30 @@ function candidates(doc, svc, asked, partySize) {
   const allowed = svc.resourceIds.length ? new Set(svc.resourceIds) : null;
   return doc.resources.filter((r) => r.active && r.capacity >= partySize && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
 }
-function slotsFor(doc, svc, date, hours, asked, partySize = 1) {
+function safeTeam(raw) {
+  let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
+  return { members: Array.isArray(d?.members) ? d.members.slice(0,500) : [], shifts: d?.shifts && typeof d.shifts === 'object' ? d.shifts : {} };
+}
+function roleText(m) { return str([m?.role,m?.function,m?.department].filter(Boolean).join(' '),180).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function floorMember(m) { return /serveur|server|waiter|service|salle|rang|maitre|barista|barman|accueil|host|manager|proprietaire|owner|staff|equipier/.test(roleText(m)); }
+function teamCoverage(team, startAt, endAt) {
+  const p = dateParts(startAt,TZ), day = `${p.year}-${p.month}-${p.day}`, days = [addDays(day,-1),day];
+  const members = team?.members || [], shifts = team?.shifts || {};
+  const configuredToday = members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m?.id] || {},day));
+  const active = members.filter(floorMember).filter((m) => days.some((d) => {
+    const s=(shifts[m?.id]||{})[d]; if(!s||s.off||!HHMM.test(s.start)||!HHMM.test(s.end))return false;
+    const a=zonedEpoch(d,s.start,TZ),from=timeMin(s.start),to=timeMin(s.end),duration=to>from?to-from:1440-from+to,z=a+duration*60000;
+    return a<=startAt&&z>=endAt;
+  }));
+  return { configured:configuredToday||active.length>0, count:active.length };
+}
+function staffAllows(doc, team, startAt, endAt) {
+  if(!doc.settings.staffingEnabled)return true;
+  const coverage=teamCoverage(team,startAt,endAt);if(!coverage.configured)return true;
+  const concurrent=doc.bookings.filter((b)=>ACTIVE.has(b.status)&&overlaps(startAt,endAt,b.startAt,b.endAt)).length;
+  return coverage.count>0&&concurrent<coverage.count*doc.settings.tablesPerStaff;
+}
+function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(null)) {
   partySize = num(partySize, 1, 999, 1);
   const step = doc.settings.slotStep, now = Date.now(), earliest = now + doc.settings.minNoticeMinutes * 60000;
   const last = now + doc.settings.windowDays * 86400000, out = new Map();
@@ -70,7 +93,7 @@ function slotsFor(doc, svc, date, hours, asked, partySize = 1) {
       for (let m = a; m + svc.duration <= z; m += step) {
         const hh = String(Math.floor((m % 1440) / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
         const startAt = zonedEpoch(addDays(date, Math.floor(m / 1440)), hh), endAt = startAt + svc.duration * 60000;
-        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt)) continue;
+        if (startAt < earliest || startAt > last || !free(doc, r.id, startAt, endAt) || !staffAllows(doc,team,startAt,endAt)) continue;
         const old = out.get(startAt); if (!old) out.set(startAt, { startAt, endAt, resourceIds:[r.id] }); else old.resourceIds.push(r.id);
       }
     }
@@ -82,9 +105,10 @@ async function readRows(env, merchant) {
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'hours'").bind(merchant),
     env.DB.prepare('SELECT name, type FROM merchant_config WHERE merchant = ?').bind(merchant),
+    env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").bind(merchant),
   ]);
   const first = (r) => r?.results?.[0] || null;
-  return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]) };
+  return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data) };
 }
 function publicConfig(merchant, meta, doc, slots) {
   return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity})), slots:slots || [] };
@@ -98,7 +122,7 @@ export async function onRequestGet({ request, env }) {
   if (!rows.merchant || !doc.settings.published) return json({ error:'booking-closed' },404);
   const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
-  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize); }
+  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
   return json(publicConfig(merchant, rows.merchant, doc, slots),200,{ 'Cache-Control':'no-store' });
 }
 export async function onRequestPost({ request, env }) {
@@ -119,7 +143,7 @@ export async function onRequestPost({ request, env }) {
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);
     const endAt=startAt+svc.duration*60000, date=dateParts(startAt,TZ), ymd=`${date.year}-${date.month}-${date.day}`;
-    const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked,partySize).find((x)=>x.startAt===startAt);
+    const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked,partySize,rows.team).find((x)=>x.startAt===startAt);
     if(!validSlot)return json({error:'slot-unavailable'},409);
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');

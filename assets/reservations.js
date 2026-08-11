@@ -53,8 +53,51 @@
     }
   };
 
+  var TEMPLATE_COPY = {
+    fr: {
+      title: 'Démarrer avec un modèle restaurant', body: 'Ajoutez une base prête à adapter. Vos services et vos tables actuels restent intacts.',
+      use: 'Ajouter ce modèle', added: 'Modèle ajouté. Vérifiez les détails puis enregistrez.', already: 'Ce modèle est déjà dans votre configuration.',
+      services: 'services', tables: 'tables', seats: 'couverts',
+      floorTitle: 'Mon plan de salle', floorBody: 'Reprend automatiquement les tables et capacités déjà dessinées.',
+      hoursReady: 'Horaires d’ouverture reliés', hoursMissing: 'Horaires à configurer', teamReady: 'Équipe reliée', teamMissing: 'Planning équipe à compléter',
+      staffing: "Adapter les créneaux au planning de l’équipe", tablesPerStaff: 'Tables par membre en salle',
+      cafeTitle: 'Café & petite salle', cafeBody: 'Réservation simple et service rapide pour une petite équipe.',
+      classicTitle: 'Restaurant classique', classicBody: 'Déjeuner et dîner, avec tables de 2 à 6 couverts.',
+      groupsTitle: 'Groupes & privatisation', groupsBody: 'Grandes tables, salon privé et demandes à confirmer.',
+      tableBooking: 'Réserver une table', lunch: 'Déjeuner', dinner: 'Dîner', groupMeal: 'Repas de groupe', privateEvent: 'Privatisation',
+      table: 'Table', privateRoom: 'Salon privé', groupTerrace: 'Terrasse groupe'
+    },
+    en: {
+      title: 'Start with a restaurant template', body: 'Add a ready-to-edit foundation. Your current services and tables stay intact.',
+      use: 'Add this template', added: 'Template added. Review the details, then save.', already: 'This template is already in your configuration.',
+      services: 'services', tables: 'tables', seats: 'seats',
+      floorTitle: 'My floor plan', floorBody: 'Automatically uses the tables and capacities already drawn.',
+      hoursReady: 'Opening hours connected', hoursMissing: 'Opening hours to configure', teamReady: 'Team connected', teamMissing: 'Team schedule to complete',
+      staffing: 'Adapt slots to the team schedule', tablesPerStaff: 'Tables per floor team member',
+      cafeTitle: 'Cafe & small dining room', cafeBody: 'Simple bookings and fast service for a small team.',
+      classicTitle: 'Classic restaurant', classicBody: 'Lunch and dinner, with tables seating 2 to 6 guests.',
+      groupsTitle: 'Groups & private events', groupsBody: 'Large tables, a private room and requests to confirm.',
+      tableBooking: 'Book a table', lunch: 'Lunch', dinner: 'Dinner', groupMeal: 'Group meal', privateEvent: 'Private event',
+      table: 'Table', privateRoom: 'Private room', groupTerrace: 'Group terrace'
+    },
+    ar: {
+      title: 'ابدأ بنموذج جاهز للمطعم', body: 'أضف إعداداً جاهزاً للتعديل. لن يتم حذف خدماتك أو طاولاتك الحالية.',
+      use: 'إضافة هذا النموذج', added: 'تمت إضافة النموذج. راجع التفاصيل ثم احفظ.', already: 'هذا النموذج موجود بالفعل في إعداداتك.',
+      services: 'خدمات', tables: 'طاولات', seats: 'مقاعد',
+      floorTitle: 'مخطط القاعة الخاص بي', floorBody: 'يستخدم تلقائياً الطاولات والسعات المرسومة مسبقاً.',
+      hoursReady: 'ساعات العمل مرتبطة', hoursMissing: 'ساعات العمل تحتاج إلى إعداد', teamReady: 'الفريق مرتبط', teamMissing: 'جدول الفريق يحتاج إلى استكمال',
+      staffing: 'تكييف المواعيد مع جدول الفريق', tablesPerStaff: 'عدد الطاولات لكل عضو في القاعة',
+      cafeTitle: 'مقهى وقاعة صغيرة', cafeBody: 'حجز بسيط وخدمة سريعة لفريق صغير.',
+      classicTitle: 'مطعم كلاسيكي', classicBody: 'الغداء والعشاء مع طاولات من مقعدين إلى ستة مقاعد.',
+      groupsTitle: 'المجموعات والحجوزات الخاصة', groupsBody: 'طاولات كبيرة وقاعة خاصة وطلبات تحتاج إلى تأكيد.',
+      tableBooking: 'حجز طاولة', lunch: 'الغداء', dinner: 'العشاء', groupMeal: 'وجبة جماعية', privateEvent: 'حجز خاص',
+      table: 'طاولة', privateRoom: 'قاعة خاصة', groupTerrace: 'تراس للمجموعات'
+    }
+  };
+
   function lang() { try { var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang(); return COPY[l] ? l : 'fr'; } catch (_) { return 'fr'; } }
   function t(k) { return (COPY[lang()] || COPY.fr)[k] || COPY.fr[k] || k; }
+  function tt(k) { return (TEMPLATE_COPY[lang()] || TEMPLATE_COPY.fr)[k] || TEMPLATE_COPY.fr[k] || k; }
   function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function clone(v) { try { return JSON.parse(JSON.stringify(v)); } catch (_) { return v; } }
   function id(prefix) { return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
@@ -63,14 +106,68 @@
   function slug() { try { return window.KiwiStore && window.KiwiStore.slugFor && window.KiwiStore.slugFor(venueId()) || ''; } catch (_) { return ''; } }
   function trade() { var v = venue(); return String(v.trade || v.type || window.KiwiTrade || '').toLowerCase(); }
   function blank() {
-    return { v: VERSION, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, updatedAt: 0 }, services: [], resources: [], blocked: [], bookings: [] };
+    return { v: VERSION, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, staffingEnabled: false, tablesPerStaff: 4, updatedAt: 0 }, services: [], resources: [], blocked: [], bookings: [] };
+  }
+  function diningTrade() { return /restaurant|cafe|café|food|pizzeria|boulanger/.test(trade()); }
+  function restaurantTemplates() {
+    function svc(id, name, duration) { return { id: 'tpl-' + id, name: name, duration: duration, price: 0, deposit: 0, capacity: 1, resourceIds: [], active: true, updatedAt: 0 }; }
+    function tables(prefix, specs) {
+      var out = [], n = 0;
+      specs.forEach(function (spec) {
+        for (var i = 0; i < spec.count; i += 1) {
+          n += 1;
+          out.push({ id: 'tpl-' + prefix + '-table-' + n, name: tt('table') + ' ' + n, kind: 'table', capacity: spec.capacity, active: true, week: null, updatedAt: 0 });
+        }
+      });
+      return out;
+    }
+    var presets = [
+      { id: 'cafe', icon: 'local_cafe', title: tt('cafeTitle'), body: tt('cafeBody'), settings: { confirmation: 'instant', minNoticeMinutes: 30, windowDays: 30, cancellationHours: 2, staffingEnabled: true, tablesPerStaff: 5 }, services: [svc('cafe-table', tt('tableBooking'), 60)], resources: tables('cafe', [{ count: 4, capacity: 2 }, { count: 2, capacity: 4 }]) },
+      { id: 'classic', icon: 'restaurant', title: tt('classicTitle'), body: tt('classicBody'), settings: { confirmation: 'instant', minNoticeMinutes: 120, windowDays: 60, cancellationHours: 12, staffingEnabled: true, tablesPerStaff: 4 }, services: [svc('classic-lunch', tt('lunch'), 90), svc('classic-dinner', tt('dinner'), 120)], resources: tables('classic', [{ count: 4, capacity: 2 }, { count: 4, capacity: 4 }, { count: 2, capacity: 6 }]) },
+      { id: 'groups', icon: 'room_service', title: tt('groupsTitle'), body: tt('groupsBody'), settings: { confirmation: 'request', minNoticeMinutes: 1440, windowDays: 90, cancellationHours: 48, staffingEnabled: true, tablesPerStaff: 2 }, services: [svc('groups-meal', tt('groupMeal'), 180), svc('groups-private', tt('privateEvent'), 240)], resources: [
+        { id: 'tpl-groups-table-1', name: tt('table') + ' 1', kind: 'table', capacity: 8, active: true, week: null, updatedAt: 0 },
+        { id: 'tpl-groups-table-2', name: tt('table') + ' 2', kind: 'table', capacity: 10, active: true, week: null, updatedAt: 0 },
+        { id: 'tpl-groups-private-room', name: tt('privateRoom'), kind: 'table', capacity: 12, active: true, week: null, updatedAt: 0 },
+        { id: 'tpl-groups-terrace', name: tt('groupTerrace'), kind: 'table', capacity: 16, active: true, week: null, updatedAt: 0 }
+      ] }
+    ];
+    var floor = floorPlanTemplate();
+    return floor ? [floor].concat(presets) : presets;
+  }
+  function floorPlanTemplateFrom(raw) {
+    var plan = raw;
+    if (typeof plan === 'string') { try { plan = JSON.parse(plan); } catch (_) { plan = null; } }
+    var rows = plan && Array.isArray(plan.tables) ? plan.tables : [];
+    if (!rows.length) return null;
+    var resources = rows.slice(0, 120).map(function (x, i) {
+      var match = String(x && x.type || '').match(/(2|4|6|8|10|12)$/), cap = number(x && (x.capacity || x.seats), 1, 999, match ? +match[1] : 4);
+      var rawId = cleanText(x && x.id, 40).replace(/[^a-zA-Z0-9_-]/g, '-') || String(i + 1);
+      var label = cleanText(x && (x.num || x.name), 40) || String(i + 1);
+      return { id: 'tpl-floor-' + rawId, name: tt('table') + ' ' + label, kind: 'table', capacity: cap, active: true, week: null, updatedAt: 0 };
+    });
+    return { id: 'floorplan', icon: 'restaurant', title: tt('floorTitle'), body: tt('floorBody'), settings: { confirmation: 'instant', minNoticeMinutes: 120, windowDays: 60, cancellationHours: 12, staffingEnabled: true, tablesPerStaff: 4 }, services: [{ id:'tpl-floorplan-table', name:tt('tableBooking'), duration:90, price:0, deposit:0, capacity:1, resourceIds:[], active:true, updatedAt:0 }], resources: resources };
+  }
+  function floorPlanTemplate() {
+    try {
+      var keys = ['kiwiPlanDeSalle:' + venueId(), 'kiwiPlanDeSalle:slug:' + slug()];
+      for (var i = 0; i < keys.length; i += 1) { var raw = localStorage.getItem(keys[i]); if (raw) { var tpl = floorPlanTemplateFrom(raw); if (tpl) return tpl; } }
+    } catch (_) {}
+    return null;
+  }
+  function templateSeats(tpl) { return (tpl.resources || []).reduce(function (sum, r) { return sum + (+r.capacity || 0); }, 0); }
+  function templatePanel() {
+    if (!diningTrade()) return '';
+    var hoursReady=false,teamCount=0;try{hoursReady=!!(window.KiwiHours&&window.KiwiHours.isConfigured&&window.KiwiHours.isConfigured(venueId()));}catch(_){}try{teamCount=(window.KiwiTeam&&window.KiwiTeam.roster?window.KiwiTeam.roster():[]).length;}catch(_){}
+    return '<section class="kr-template-section"><div class="kr-template-intro"><span>'+esc(tt('title'))+'</span><p>'+esc(tt('body'))+'</p></div><div class="kr-template-smart"><span>'+icon('calendar')+esc(hoursReady?tt('hoursReady'):tt('hoursMissing'))+'</span><span>'+icon('person')+esc(teamCount?tt('teamReady')+' · '+teamCount:tt('teamMissing'))+'</span></div><div class="kr-template-grid">'+restaurantTemplates().map(function (tpl) {
+      return '<article class="kr-template-card"><div class="kr-template-icon"><img src="assets/icons/material/'+tpl.icon+'.svg" alt="" aria-hidden="true"></div><div class="kr-template-copy"><h3>'+esc(tpl.title)+'</h3><p>'+esc(tpl.body)+'</p><div class="kr-template-meta"><span>'+tpl.services.length+' '+esc(tt('services'))+'</span><span>'+tpl.resources.length+' '+esc(tt('tables'))+'</span><span>'+templateSeats(tpl)+' '+esc(tt('seats'))+'</span></div></div><button type="button" class="kr-btn ghost" data-kr-template="'+esc(tpl.id)+'" aria-label="'+esc(tt('use')+' — '+tpl.title)+'">'+esc(tt('use'))+'</button></article>';
+    }).join('')+'</div></section>';
   }
   function cleanText(v, max) { return String(v == null ? '' : v).trim().slice(0, max); }
   function number(v, min, max, fallback) { v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback; }
   function normalize(raw) {
     var out = blank(), r = raw && typeof raw === 'object' ? raw : {};
     var s = r.settings || {};
-    out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: number(s.minNoticeMinutes, 0, 10080, 60), windowDays: number(s.windowDays, 1, 365, 60), cancellationHours: number(s.cancellationHours, 0, 720, 12), slotStep: [5, 10, 15, 20, 30, 60].indexOf(+s.slotStep) >= 0 ? +s.slotStep : 15, updatedAt: +s.updatedAt || 0 };
+    out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: number(s.minNoticeMinutes, 0, 10080, 60), windowDays: number(s.windowDays, 1, 365, 60), cancellationHours: number(s.cancellationHours, 0, 720, 12), slotStep: [5, 10, 15, 20, 30, 60].indexOf(+s.slotStep) >= 0 ? +s.slotStep : 15, staffingEnabled: !!s.staffingEnabled, tablesPerStaff: number(s.tablesPerStaff, 1, 12, 4), updatedAt: +s.updatedAt || 0 };
     out.services = (Array.isArray(r.services) ? r.services : []).slice(0, 120).map(function (x) { return { id: cleanText(x && x.id, 64) || id('svc'), name: cleanText(x && x.name, 100), duration: number(x && x.duration, 5, 1440, 30), price: number(x && x.price, 0, 1000000, 0), deposit: number(x && x.deposit, 0, 1000000, 0), capacity: number(x && x.capacity, 1, 999, 1), resourceIds: (Array.isArray(x && x.resourceIds) ? x.resourceIds : []).slice(0, 60).map(function (z) { return cleanText(z, 64); }).filter(Boolean), active: x && x.active !== false, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
     out.resources = (Array.isArray(r.resources) ? r.resources : []).slice(0, 120).map(function (x) { var kind = ['person', 'room', 'table'].indexOf(x && x.kind) >= 0 ? x.kind : 'person'; return { id: cleanText(x && x.id, 64) || id('res'), name: cleanText(x && x.name, 100), kind: kind, capacity: number(x && x.capacity, 1, 999, 1), active: x && x.active !== false, week: x && typeof x.week === 'object' ? clone(x.week) : null, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
     out.blocked = (Array.isArray(r.blocked) ? r.blocked : []).slice(-500).map(function (x) { return { id: cleanText(x && x.id, 64) || id('blk'), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, reason: cleanText(x && x.reason, 120), updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.startAt && x.endAt > x.startAt; });
@@ -115,13 +212,20 @@
     return periods.some(function (p) { var a = window.KiwiHours ? window.KiwiHours.toMin(p.from) : null, z = window.KiwiHours ? window.KiwiHours.toMin(p.to) : null; if (a == null || z == null) return false; if (z <= a) z += 1440; return mins >= a && end <= z; });
   }
   function chooseResource(doc, svc, rid, startAt, endAt, ignoreId, partySize) { return resourceCandidates(doc, svc, rid, partySize).find(function (r) { return withinHours(r, startAt, endAt) && resourceFree(doc, r.id, startAt, endAt, ignoreId); }) || null; }
+  function staffingAllows(doc, startAt, endAt, ignoreId) {
+    if (!doc.settings.staffingEnabled || !window.KiwiTeam || !window.KiwiTeam.bookingCoverage) return true;
+    var coverage = window.KiwiTeam.bookingCoverage(startAt, endAt);
+    if (!coverage || !coverage.configured) return true;
+    var concurrent = doc.bookings.filter(function (b) { return b.id !== ignoreId && ACTIVE[b.status] && overlaps(startAt, endAt, b.startAt, b.endAt); }).length;
+    return coverage.members.length > 0 && concurrent < coverage.members.length * doc.settings.tablesPerStaff;
+  }
   function validate(input, doc, ignoreId) {
     doc = normalize(doc); input = input || {};
     var svc = service(doc, input.serviceId), startAt = +input.startAt || 0;
     if (!cleanText(input.customer && input.customer.name, 100) || !svc || !startAt) return { ok: false, error: 'invalid' };
     var endAt = startAt + svc.duration * 60000;
     var res = chooseResource(doc, svc, input.resourceId, startAt, endAt, ignoreId, input.partySize);
-    if (!res) return { ok: false, error: 'conflict' };
+    if (!res || !staffingAllows(doc, startAt, endAt, ignoreId)) return { ok: false, error: 'conflict' };
     var now = Date.now();
     if (!ignoreId && startAt < now + doc.settings.minNoticeMinutes * 60000) return { ok: false, error: 'invalid' };
     if (startAt > now + doc.settings.windowDays * 86400000) return { ok: false, error: 'invalid' };
@@ -184,13 +288,23 @@
   function wireLifecycle(m,b){ if(!b)return;m.el.querySelectorAll('[data-kr-status]').forEach(function(btn){btn.onclick=function(){var d=get();d.bookings=d.bookings.map(function(x){return x.id===b.id?Object.assign({},x,{status:btn.dataset.krStatus,updatedAt:Date.now()}):x;});set(d);m.close();render();};}); }
   function setupModal() {
     var doc=get(), s=doc.settings;
-    var m=window.Kiwi.modal({title:t('setupTitle'),width:820,body:'<form class="kr-settings" data-kr-settings><div class="kr-setting-hero"><label><input type="checkbox" name="published" '+(s.published?'checked':'')+'><span></span><strong>'+esc(t('publicLabel'))+'</strong></label><p>'+esc(t('businessHours'))+'</p></div><div class="kr-setting-grid">'+formField(t('notice'),'<div class="kr-unit"><input type="number" name="minNotice" min="0" max="10080" value="'+s.minNoticeMinutes+'"><span>'+esc(t('minutes'))+'</span></div>')+formField(t('window'),'<div class="kr-unit"><input type="number" name="windowDays" min="1" max="365" value="'+s.windowDays+'"><span>'+esc(t('days'))+'</span></div>')+formField(t('cancelDelay'),'<div class="kr-unit"><input type="number" name="cancelHours" min="0" max="720" value="'+s.cancellationHours+'"><span>'+esc(t('hours'))+'</span></div>')+formField(t('direct'),'<select name="confirmation"><option value="instant"'+(s.confirmation==='instant'?' selected':'')+'>'+esc(t('direct'))+'</option><option value="request"'+(s.confirmation==='request'?' selected':'')+'>'+esc(t('requested'))+'</option></select>')+'</div><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('services'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-service>'+esc(t('addService'))+'</button></div><div class="kr-config-list" data-kr-services>'+doc.services.map(serviceRow).join('')+'</div></section><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('resources'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-resource>'+esc(t('addResource'))+'</button></div><div class="kr-config-list" data-kr-resources>'+doc.resources.map(resourceRow).join('')+'</div></section><div class="kr-form-actions"><span></span><button type="button" class="kr-btn ghost" data-kr-close>'+esc(t('cancel'))+'</button><button class="kr-btn primary" type="submit">'+esc(t('save'))+'</button></div></form>'});
+    var m=window.Kiwi.modal({title:t('setupTitle'),width:980,body:'<form class="kr-settings" data-kr-settings>'+templatePanel()+'<div class="kr-setting-hero"><label><input type="checkbox" name="published" '+(s.published?'checked':'')+'><span></span><strong>'+esc(t('publicLabel'))+'</strong></label><p>'+esc(t('businessHours'))+'</p></div><div class="kr-setting-grid">'+formField(t('notice'),'<div class="kr-unit"><input type="number" name="minNotice" min="0" max="10080" value="'+s.minNoticeMinutes+'"><span>'+esc(t('minutes'))+'</span></div>')+formField(t('window'),'<div class="kr-unit"><input type="number" name="windowDays" min="1" max="365" value="'+s.windowDays+'"><span>'+esc(t('days'))+'</span></div>')+formField(t('cancelDelay'),'<div class="kr-unit"><input type="number" name="cancelHours" min="0" max="720" value="'+s.cancellationHours+'"><span>'+esc(t('hours'))+'</span></div>')+formField(t('direct'),'<select name="confirmation"><option value="instant"'+(s.confirmation==='instant'?' selected':'')+'>'+esc(t('direct'))+'</option><option value="request"'+(s.confirmation==='request'?' selected':'')+'>'+esc(t('requested'))+'</option></select>')+formField(tt('staffing'),'<label class="kr-staffing-toggle"><input type="checkbox" name="staffingEnabled" '+(s.staffingEnabled?'checked':'')+'><span>'+esc(tt('staffing'))+'</span></label>')+formField(tt('tablesPerStaff'),'<input type="number" name="tablesPerStaff" min="1" max="12" value="'+s.tablesPerStaff+'">')+'</div><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('services'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-service>'+esc(t('addService'))+'</button></div><div class="kr-config-list" data-kr-services>'+doc.services.map(serviceRow).join('')+'</div></section><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('resources'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-resource>'+esc(t('addResource'))+'</button></div><div class="kr-config-list" data-kr-resources>'+doc.resources.map(resourceRow).join('')+'</div></section><div class="kr-form-actions"><span></span><button type="button" class="kr-btn ghost" data-kr-close>'+esc(t('cancel'))+'</button><button class="kr-btn primary" type="submit">'+esc(t('save'))+'</button></div></form>'});
     var form=m.el.querySelector('[data-kr-settings]');
+    var pristine=!doc.services.length&&!doc.resources.length;
     m.el.querySelector('[data-kr-close]').onclick=function(){m.close();};
     m.el.querySelector('[data-kr-add-service]').onclick=function(){form.querySelector('[data-kr-services]').insertAdjacentHTML('beforeend',serviceRow({id:id('svc'),name:'',duration:30,price:0,deposit:0,capacity:1,active:true,resourceIds:[],updatedAt:0}));};
     m.el.querySelector('[data-kr-add-resource]').onclick=function(){form.querySelector('[data-kr-resources]').insertAdjacentHTML('beforeend',resourceRow({id:id('res'),name:'',kind:kindForTrade(),capacity:1,active:true,updatedAt:0}));};
+    m.el.querySelectorAll('[data-kr-template]').forEach(function(btn){btn.onclick=function(){
+      var tpl=restaurantTemplates().find(function(x){return x.id===btn.dataset.krTemplate;});
+      if(!tpl)return;
+      var added=0,serviceHost=form.querySelector('[data-kr-services]'),resourceHost=form.querySelector('[data-kr-resources]');
+      tpl.services.forEach(function(x){if(!serviceHost.querySelector('[data-id="'+x.id+'"]')){serviceHost.insertAdjacentHTML('beforeend',serviceRow(x));added+=1;}});
+      tpl.resources.forEach(function(x){if(!resourceHost.querySelector('[data-id="'+x.id+'"]')){resourceHost.insertAdjacentHTML('beforeend',resourceRow(x));added+=1;}});
+      if(pristine&&tpl.settings){form.elements.confirmation.value=tpl.settings.confirmation;form.elements.minNotice.value=tpl.settings.minNoticeMinutes;form.elements.windowDays.value=tpl.settings.windowDays;form.elements.cancelHours.value=tpl.settings.cancellationHours;form.elements.staffingEnabled.checked=!!tpl.settings.staffingEnabled;form.elements.tablesPerStaff.value=tpl.settings.tablesPerStaff||4;pristine=false;}
+      window.Kiwi.toast(added?tt('added'):tt('already'),{type:added?'success':'info'});
+    };});
     form.addEventListener('click',function(e){var b=e.target.closest('[data-kr-remove-row]');if(b)b.closest('.kr-config-row').remove();});
-    form.onsubmit=function(e){e.preventDefault();var now=Date.now(),d=get(),fd=new FormData(form);d.settings={published:!!form.elements.published.checked,confirmation:fd.get('confirmation')==='request'?'request':'instant',minNoticeMinutes:number(fd.get('minNotice'),0,10080,60),windowDays:number(fd.get('windowDays'),1,365,60),cancellationHours:number(fd.get('cancelHours'),0,720,12),slotStep:15,updatedAt:now};d.services=[].slice.call(form.querySelectorAll('[data-service-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),duration:number(row.querySelector('[name=duration]').value,5,1440,30),price:number(row.querySelector('[name=price]').value,0,1000000,0),deposit:number(row.querySelector('[name=deposit]').value,0,1000000,0),capacity:1,resourceIds:[],active:row.querySelector('[name=active]').checked,updatedAt:now};}).filter(function(x){return x.name;});d.resources=[].slice.call(form.querySelectorAll('[data-resource-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),kind:row.querySelector('[name=kind]').value,capacity:number(row.querySelector('[name=capacity]').value,1,999,1),active:row.querySelector('[name=active]').checked,week:null,updatedAt:now};}).filter(function(x){return x.name;});set(d);m.close();window.Kiwi.toast(t('settingsSaved'),{type:'success'});render();};
+    form.onsubmit=function(e){e.preventDefault();var now=Date.now(),d=get(),fd=new FormData(form);d.settings={published:!!form.elements.published.checked,confirmation:fd.get('confirmation')==='request'?'request':'instant',minNoticeMinutes:number(fd.get('minNotice'),0,10080,60),windowDays:number(fd.get('windowDays'),1,365,60),cancellationHours:number(fd.get('cancelHours'),0,720,12),slotStep:15,staffingEnabled:!!form.elements.staffingEnabled.checked,tablesPerStaff:number(fd.get('tablesPerStaff'),1,12,4),updatedAt:now};d.services=[].slice.call(form.querySelectorAll('[data-service-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),duration:number(row.querySelector('[name=duration]').value,5,1440,30),price:number(row.querySelector('[name=price]').value,0,1000000,0),deposit:number(row.querySelector('[name=deposit]').value,0,1000000,0),capacity:1,resourceIds:[],active:row.querySelector('[name=active]').checked,updatedAt:now};}).filter(function(x){return x.name;});d.resources=[].slice.call(form.querySelectorAll('[data-resource-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),kind:row.querySelector('[name=kind]').value,capacity:number(row.querySelector('[name=capacity]').value,1,999,1),active:row.querySelector('[name=active]').checked,week:null,updatedAt:now};}).filter(function(x){return x.name;});set(d);m.close();window.Kiwi.toast(t('settingsSaved'),{type:'success'});render();};
   }
   function serviceRow(x){return '<div class="kr-config-row" data-service-row data-id="'+esc(x.id)+'"><input name="name" placeholder="'+esc(t('name'))+'" value="'+esc(x.name)+'"><label><span>'+esc(t('duration'))+'</span><input name="duration" type="number" min="5" max="1440" value="'+esc(x.duration)+'"></label><label><span>'+esc(t('price'))+'</span><input name="price" type="number" min="0" value="'+esc(x.price)+'"></label><label><span>'+esc(t('deposit'))+'</span><input name="deposit" type="number" min="0" value="'+esc(x.deposit)+'"></label><label class="kr-check"><input name="active" type="checkbox" '+(x.active?'checked':'')+'><span>'+esc(t('active'))+'</span></label><button type="button" class="kr-row-remove" data-kr-remove-row aria-label="'+esc(t('delete'))+'">×</button></div>';}
   function resourceRow(x){return '<div class="kr-config-row resource" data-resource-row data-id="'+esc(x.id)+'"><input name="name" placeholder="'+esc(t('name'))+'" value="'+esc(x.name)+'"><select name="kind"><option value="person"'+(x.kind==='person'?' selected':'')+'>'+esc(t('person'))+'</option><option value="room"'+(x.kind==='room'?' selected':'')+'>'+esc(t('room'))+'</option><option value="table"'+(x.kind==='table'?' selected':'')+'>'+esc(t('table'))+'</option></select><label><span>'+esc(t('capacity'))+'</span><input name="capacity" type="number" min="1" max="999" value="'+esc(x.capacity||1)+'"></label><label class="kr-check"><input name="active" type="checkbox" '+(x.active?'checked':'')+'><span>'+esc(t('active'))+'</span></label><button type="button" class="kr-row-remove" data-kr-remove-row aria-label="'+esc(t('delete'))+'">×</button></div>';}
@@ -200,5 +314,5 @@
   function install(){if(!window.Kiwi||!window.Kiwi.handlers)return setTimeout(install,80);var fn=function(){render();};fn.__kiwiReservations=true;window.Kiwi.handlers['nav-reservations']=fn;}
   document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.sidebar a[data-nav="reservations"]');if(!a)return;e.preventDefault();e.stopImmediatePropagation();render();},true);
   window.addEventListener('load',function(){setTimeout(function(){S();install();},420);window.KiwiVenue&&window.KiwiVenue.subscribe&&window.KiwiVenue.subscribe(function(){store=null;open=false;setTimeout(install,0);});window.addEventListener('kiwi:langchange',function(){if(open)render();});});
-  window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,get:get,set:set,render:render};
+  window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,staffingAllows:staffingAllows,restaurantTemplates:restaurantTemplates,floorPlanTemplateFrom:floorPlanTemplateFrom,templateSeats:templateSeats,get:get,set:set,render:render};
 }());
