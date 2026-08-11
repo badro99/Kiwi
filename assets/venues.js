@@ -1848,17 +1848,22 @@
 
   /* ═══════════════ RENDER: SIDEBAR DROPDOWN ═══════════════ */
 
-  // Type-icon SVG used inside each dropdown row
-  // Lucide glyphs, round caps/joins baked in so they stay crisp at 16px.
-  const TYPE_ICONS = {
-    // utensils-crossed — reads as "dining venue" (was a plain fork + awkward hook).
-    restaurant: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 2-2.3 2.3a3 3 0 000 4.2l1.8 1.8a3 3 0 004.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 000 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/><path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/></svg>',
-    // shopping-bag — proper retail bag (was a rounded-rect box).
-    boutique:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>',
-    // leaf — wellness/natural (was a star, which reads as "favourite").
-    spa:        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>',
-    hotel:      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7a2 2 0 012-2h10a2 2 0 012 2v14"/><path d="M9 9h2M13 9h2M9 13h2M13 13h2"/><path d="M10 21v-3h4v3"/></svg>',
-  };
+  /* One icon truth for every surface. The old switcher had a second, family-
+   * level Lucide table, so a pressing inherited Boutique's shopping bag and a
+   * café inherited Restaurant's cutlery. KiwiTrades already owns the precise
+   * Material Symbol for every trade; resolve the subtype first and use the
+   * broad family only as a fallback for older venue records. */
+  const MATERIAL_VENUE_FALLBACK = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m260-520 220-360 220 360H260ZM700-80q-75 0-127.5-52.5T520-260q0-75 52.5-127.5T700-440q75 0 127.5 52.5T880-260q0 75-52.5 127.5T700-80Zm-580-20v-320h320v320H120Z"/></svg>';
+  function typeIconOf(v) {
+    const trades = window.KiwiTrades;
+    if (trades?.get) {
+      const exact = trades.get(v?.subtype || '');
+      if (exact?.icon) return exact.icon;
+      const family = trades.get(v?.type || '');
+      if (family?.icon) return family.icon;
+    }
+    return MATERIAL_VENUE_FALLBACK;
+  }
 
   const DROPDOWN_CTA = {
     fr: { exitT: 'Revenir à la vue simple', exitS: 'Repasser sur un seul emplacement', enterT: 'Go Ultra', enterS: 'Vue consolidée · données multi-sites', addT: 'Ajouter un établissement', addS: 'Une autre activité, un autre lieu' },
@@ -1901,7 +1906,7 @@
       const isActive = !inFusion && id === currentVenue;
       return `
         <button type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
-          <div class="venue-row-icon">${TYPE_ICONS[v.type] || TYPE_ICONS.restaurant}</div>
+          <div class="venue-row-icon">${typeIconOf(v)}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(v.name)}${v.location ? ' · ' + escD(v.location) : ''}</div>
             <div class="venue-row-type">${escD(typeLabelOf(v))}</div>
@@ -1954,7 +1959,7 @@
      * un basculement à chaud en laisserait la moitié sur le magasin précédent. */
     const scopeRows = scopedActive ? scopedSiblings.map(s => `
         <button type="button" class="venue-row" data-action="venue-scope" data-scope-slug="${escD(s.slug)}">
-          <div class="venue-row-icon">${TYPE_ICONS[s.type] || TYPE_ICONS.restaurant}</div>
+          <div class="venue-row-icon">${typeIconOf(s)}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(s.name)}${s.location ? ' · ' + escD(s.location) : ''}</div>
             <div class="venue-row-type">${escD(typeLabelOf({ type: s.type, subtype: s.subtype || '' }))}</div>
@@ -2773,13 +2778,6 @@
     return r === 'personnalise' ? 'aujourdhui' : r;
   }
 
-  // ── Type-icon SVG inline (24×24, stroke 2 — matches existing style) ──
-  const FUSION_TYPE_ICONS = {
-    restaurant: '<path d="m16 2-2.3 2.3a3 3 0 000 4.2l1.8 1.8a3 3 0 004.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 000 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/><path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>', // UtensilsCrossed — matches the switcher mark
-    boutique:   '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>', // ShoppingBag
-    spa:        '<path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>', // Leaf — matches the switcher mark
-    fusion:     '<circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8 8l3.5 7M16 8l-3.5 7"/>',
-  };
   const FUSION_INTEL_ICONS = {
     users:     '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
     pie:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
@@ -2787,7 +2785,8 @@
     alert:     '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
   };
   const fusionIcon = (key) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${FUSION_INTEL_ICONS[key] || ''}</svg>`;
-  const fusionTypeIcon = (type) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${FUSION_TYPE_ICONS[type] || FUSION_TYPE_ICONS.fusion}</svg>`;
+  /* Portfolio rows use the same Material trade truth as the switcher. */
+  const fusionTypeIcon = (type) => typeIconOf({ type });
 
   // ── SVG sparkline (80×32) — line stroke only, no axes ──
   function fusionSparkPath(values) {
