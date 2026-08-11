@@ -64,6 +64,11 @@ const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_LINES = 60;              // une commande, généreusement
+/* Au-delà de cet âge, le sondage d'un serveur en service ré-estampille les
+ * sessions de ses tables. Cinq minutes : très en dessous des deux heures de
+ * PRESENCE_MS, donc la table ne peut pas s'éteindre sous les pieds du serveur,
+ * et assez espacé pour qu'un sondage toutes les six secondes n'écrive pas. */
+const SERVICE_TOUCH_MS = 5 * 60 * 1000;
 const MAX_TOTAL = 200000;          // 200 000 MAD — un garde-fou, pas une règle
 
 function serviceNorm(value) {
@@ -81,7 +86,19 @@ async function ensureServiceTableSession(env, merchant, table, now) {
         WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
         ORDER BY opened_ts DESC LIMIT 1`
     ).bind(merchant, table).first();
-    if (row && row.id) return row;
+    if (row && row.id) {
+      /* Une commande de plus sur cette table EST un signe de vie. Sans cette
+       * ligne, `seen_ts` restait figé à l'ouverture de la session : la fenêtre
+       * de présence du GET (PRESENCE_MS) la laissait tomber au bout de deux
+       * heures, et la caisse cessait alors d'attacher les tournées suivantes à
+       * l'addition — le dessert et la deuxième bouteille n'étaient jamais
+       * facturés. Voir aussi le pointage du service dans le GET. */
+      try {
+        await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?')
+          .bind(now, row.id).run();
+      } catch (_) {}
+      return row;
+    }
     const id = newSessionId();
     await env.DB.prepare(
       `INSERT OR IGNORE INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
@@ -210,6 +227,36 @@ export async function onRequestGet(context) {
   const now = Date.now();
   const today = startOfDay(now);
   const kitchenCutoff = now - KITCHEN_TTL_MS;
+
+  /* ── LE SONDAGE DU SERVEUR EST UN BATTEMENT DE CŒUR ────────────────────────
+   * `seen_ts` décide, plus bas, si une table compte encore comme occupée
+   * (PRESENCE_MS). Pour une session ouverte depuis un TÉLÉPHONE, c'est le
+   * téléphone qui le rafraîchit (order/session.js). Pour une session ouverte
+   * par un SERVEUR, personne ne le faisait : elle était estampillée une fois à
+   * l'ouverture, puis plus jamais.
+   *
+   * Au bout de deux heures, la session disparaissait donc de `sessions`, la
+   * caisse perdait la table de `phoneSeats`, et `attachOrderProTable` refusait
+   * chaque commande suivante — définitivement, puisque le curseur `since` ne
+   * représente jamais deux fois la même. Un dîner qui dure, et le dessert
+   * n'est pas sur l'addition. Rien ne le signalait.
+   *
+   * Un serveur EN SERVICE qui sonde est l'équivalent exact du battement du
+   * téléphone : la preuve régulière et authentifiée que quelqu'un s'occupe de
+   * ces tables. On l'écrit donc, mais pas à chaque tour — seulement quand la
+   * marque a vieilli, sinon chaque sondage de chaque serveur deviendrait une
+   * écriture. */
+  if (service && service.allTables.size) {
+    const tables = Array.from(service.allTables).slice(0, 200);
+    const marks = tables.map(() => '?').join(',');
+    try {
+      await env.DB.prepare(
+        `UPDATE table_sessions SET seen_ts = ?
+          WHERE merchant = ? AND status = 'open' AND mode = 'table'
+            AND seen_ts < ? AND table_no IN (${marks})`
+      ).bind(now, merchant, now - SERVICE_TOUCH_MS, ...tables).run();
+    } catch (_) { /* table absente → la présence reste ce qu'elle était */ }
+  }
 
   /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
    * abandoned carts and customers who walked away used to return after every
@@ -547,7 +594,20 @@ export async function onRequestPost(context) {
     /* Les commandes de cette session sont soldées avec elle. `paid_ts` n'est pas
      * un état : une commande peut être servie et payée, ou payée puis servie
      * (le retrait au comptoir), et confondre les deux aurait obligé la cuisine
-     * à connaître la caisse. */
+     * à connaître la caisse.
+     *
+     * ── L'ASYMÉTRIE AVEC `closeTable` EST VOULUE ────────────────────────────
+     * `closeSession` vient de markPaid() : l'addition VIENT d'être encaissée,
+     * donc solder est la vérité. `closeTable` ne dit que « cette table est
+     * libre » — un départ sans payer, une table nettoyée à la main, une remise
+     * à zéro. Y ajouter `paid_ts` INVENTERAIT une recette : le rapport Z
+     * compterait une addition que personne n'a réglée.
+     *
+     * Ce qui rendait l'asymétrie dangereuse a été corrigé ailleurs : le
+     * règlement de /api/sale ne balaie plus « toutes les impayées de cette
+     * table depuis minuit », il ne solde que la visite en cours. Une commande
+     * laissée impayée par un `closeTable` reste donc impayée — visible comme
+     * telle — au lieu d'être ramassée par le paiement de la tablée suivante. */
     try {
       if (closeSession) {
         await env.DB.prepare(

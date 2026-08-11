@@ -315,8 +315,15 @@ const employeePayment = {
   id: 'employee-sale-bill-1-emp', table: '1', amount: 180, method: 'cash', label: 'Table 1 · Sara', ref: '1',
   lines: [{ name: 'Tajine', qty: 2, total: 180, cat: 'Plats' }],
 };
+/* La visite commence AVANT les commandes qu'elle porte — sans quoi la scène
+   décrit une addition ouverte après ses propres tickets, ce qui n'arrive pas.
+   Le détail compte depuis que /api/sale solde la VISITE et non « tout ce qui
+   traîne sur cette table depuis minuit » : une tablée ne doit plus pouvoir
+   payer l'addition de la précédente. `INSERT OR REPLACE` remplace ici la
+   session vivante ouverte par les commandes ci-dessus (l'index unique partiel
+   n'en tolère qu'une), et c'est voulu : on force la scène du paiement. */
 put(`INSERT OR REPLACE INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
-     VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now, now);
+     VALUES (?,?,?,?,?,?,?)`, 'sess-payment-table-1', merchant, 'table', '1', 'open', now - 3600000, now);
 request = new Request('https://kiwi.test/api/sale', {
   method: 'POST', headers: { Cookie: saraCookie, 'Content-Type': 'application/json' },
   body: JSON.stringify({ merchant, ...employeePayment }),

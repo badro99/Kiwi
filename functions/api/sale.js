@@ -196,27 +196,103 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  let settlementPending = false;
   if (employeeTable) {
-    /* Close every live client session for this physical table and mark its
-       current-day kitchen tickets paid. These writes are idempotent, so a Wi-Fi
-       retry with the same sale id completes any step whose response was lost. */
+    /* ── ON SOLDE UNE VISITE, PAS UN NUMÉRO DE TABLE ─────────────────────────
+     * Cette requête disait `WHERE table_no = ? AND created_ts >= startOfDay`.
+     * Une table est réutilisée dix fois par jour : ce filtre soldait donc TOUTE
+     * commande impayée passée à cette table depuis minuit, quelle que soit la
+     * tablée. Tout le travail d'isolement par session — la raison d'être de
+     * `table_sessions` — était défait à l'instant précis où il compte, et une
+     * commande orpheline d'un service précédent se retrouvait « payée » sans
+     * avoir jamais été encaissée.
+     *
+     * On lit donc les sessions VIVANTES de cette table AVANT de les fermer, et
+     * on solde ce qui leur appartient. On y ajoute les commandes sans session
+     * (la caisse en dépose par createTicket, qui n'en pose pas) mais seulement
+     * celles nées PENDANT cette visite — sinon on rouvrirait exactement le trou
+     * qu'on vient de fermer. */
+    let visits = [];
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT id, opened_ts FROM table_sessions
+          WHERE merchant = ? AND table_no = ? AND status = 'open'`
+      ).bind(merchant, employeeTable).all();
+      visits = (rows.results || []).filter((r) => r && r.id);
+    } catch (_) { visits = []; }
+
     try {
       await env.DB.prepare(
         `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment'
           WHERE merchant = ? AND table_no = ? AND status = 'open'`
       ).bind(now, merchant, employeeTable).run();
     } catch (_) {}
+
+    /* Le début de la visite : la plus ancienne session encore ouverte. Aucune
+     * session connue (base sans `table_sessions`, ou table jamais ouverte
+     * proprement) ⇒ on retombe sur la journée, l'ancien comportement, parce
+     * qu'un service qui n'encaisse rien serait pire qu'un filtre trop large. */
+    const visitStart = visits.length
+      ? Math.min(...visits.map((v) => Number(v.opened_ts) || now))
+      : startOfDay(now);
+    const ids = visits.map((v) => String(v.id));
     try {
-      await env.DB.prepare(
-        `UPDATE orders SET paid_ts = ?, updated_ts = ?
-          WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
-      ).bind(now, now, merchant, employeeTable, startOfDay(now)).run();
-    } catch (_) {}
+      if (ids.length) {
+        const marks = ids.map(() => '?').join(',');
+        /* Deux façons d'appartenir à cette addition, et il faut les deux :
+         *  · porter l'identifiant d'une des sessions qu'on vient de fermer ;
+         *  · ou être né sur cette table PENDANT la visite. Ce second membre
+         *    rattrape les bons que la caisse dépose sans session (createTicket
+         *    n'en pose pas) et, surtout, la commande partie juste avant
+         *    l'encaissement : sa session était déjà close quand elle a atterri,
+         *    donc le premier membre la manquait, et elle serait restée servie
+         *    mais impayable à jamais.
+         * Ce qui reste dehors est ce qu'on veut dehors : une commande d'une
+         * tablée précédente, née avant le début de cette visite. */
+        await env.DB.prepare(
+          `UPDATE orders SET paid_ts = ?, updated_ts = ?
+            WHERE merchant = ? AND paid_ts IS NULL
+              AND ( session_id IN (${marks})
+                 OR (table_no = ? AND created_ts >= ?) )`
+        ).bind(now, now, merchant, ...ids, employeeTable, visitStart).run();
+      } else {
+        await env.DB.prepare(
+          `UPDATE orders SET paid_ts = ?, updated_ts = ?
+            WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
+        ).bind(now, now, merchant, employeeTable, visitStart).run();
+      }
+    } catch (_) {
+      /* `session_id` pas encore migrée : la colonne nommée fait échouer
+       * l'énoncé entier. On solde alors comme avant — trop large, mais une
+       * addition non soldée coûte plus cher qu'un filtre imprécis, et le
+       * diagnostic est à un `node tools/d1-schema.mjs` de distance. */
+      try {
+        await env.DB.prepare(
+          `UPDATE orders SET paid_ts = ?, updated_ts = ?
+            WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
+        ).bind(now, now, merchant, employeeTable, visitStart).run();
+      } catch (_) {}
+    }
+
+    /* ── L'ARGENT EST ENREGISTRÉ : CE N'EST PLUS UN ÉCHEC DE PAIEMENT ────────
+     * Ici, la vente est DURABLE. Répondre 503 parce que l'état du plan de salle
+     * n'a pas pu s'écrire faisait afficher « paiement non enregistré,
+     * réessayez » sur un paiement bel et bien encaissé — et un serveur qui
+     * recharge alors l'application repayait la table, cette fois avec un
+     * identifiant neuf, donc une SECONDE vente en caisse.
+     *
+     * L'écriture qui échoue ici est un verrou optimiste sur un document que la
+     * caisse réécrit toutes les quatre secondes ; elle échoue sous charge, et
+     * c'est précisément pendant un coup de feu. Un plan de salle en retard se
+     * rattrape au battement suivant. Une vente comptée deux fois, non. */
     const settled = await settleServiceTable(env, merchant, employeeTable);
-    if (!settled.ok) return json({ error: settled.error || 'table-settlement-failed', saleSaved: true, id }, 503);
+    settlementPending = !settled.ok;
   }
   await poke(env, merchant, 'sales');
-  return json({ ok: true, id, lines: linesMode, table: employeeTable || undefined });
+  return json({
+    ok: true, id, lines: linesMode, table: employeeTable || undefined,
+    settlementPending: settlementPending || undefined,
+  });
 }
 
 // A stray GET shouldn't 405-noise the console — just report health.
