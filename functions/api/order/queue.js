@@ -42,7 +42,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
-import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID } from './_lib.js';
+import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -293,7 +293,7 @@ export async function onRequestGet(context) {
   }
   // Table pas migrée du tout → une file vide, jamais une erreur que la caisse
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
-  if (!rows) return json({ ok: true, orders: [], sessions: [], now, ordersAvailable: false });
+  if (!rows) return json({ ok: true, orders: [], sessions: [], now: pollCursor(now), ordersAvailable: false });
 
   let orders = (rows.results || []).map((r) => {
     let lines = [];
@@ -336,6 +336,7 @@ export async function onRequestGet(context) {
    * des six heures dans session.js. */
   const PRESENCE_MS = 2 * 60 * 60 * 1000;
   let sessions = [];
+  const duplicateVisits = [];
   try {
     const live = await env.DB.prepare(
       `SELECT id, mode, table_no, opened_ts, seen_ts FROM table_sessions
@@ -355,23 +356,49 @@ export async function onRequestGet(context) {
        even on a production DB where the optional paid_ts migration is missing:
        closing the visit alone is enough to prevent its old rows from being
        reattached to the next clients. */
-    const openVisitByTable = new Map();
+    /* Une TABLE peut porter plusieurs sessions ouvertes. Elle ne le devrait
+     * pas — l'index unique partiel `table_sessions_live` l'interdit — mais cet
+     * index fait partie des objets qu'une base déployée n'a peut-être jamais
+     * reçus (`node tools/d1-schema.mjs` le dit). Sans lui, deux serveurs qui
+     * ouvrent la même table dans la même seconde en créent deux.
+     *
+     * Ce code gardait UN identifiant par table dans une Map : le dernier écrit
+     * écrasait l'autre, et toutes les commandes de la session perdante
+     * disparaissaient de l'application du serveur qui les avait saisies. Le
+     * serveur voyait sa table se vider en plein service, sans erreur.
+     *
+     * On accepte donc TOUTES les sessions ouvertes de la table. Un doublon
+     * dégrade alors en « les deux serveurs voient les deux commandes » — ce qui
+     * est le comportement souhaitable — au lieu d'en effacer la moitié. */
+    const openVisitsByTable = new Map();
     sessions.forEach((session) => {
-      if (session && session.table && session.id) openVisitByTable.set(normTable(session.table), String(session.id));
+      if (!session || !session.table || !session.id) return;
+      const key = normTable(session.table);
+      if (!openVisitsByTable.has(key)) openVisitsByTable.set(key, new Set());
+      openVisitsByTable.get(key).add(String(session.id));
     });
     orders = orders.filter((order) => {
-      const visit = openVisitByTable.get(normTable(order.table));
-      return !!visit && !!order.session && String(order.session) === visit && !order.paid;
+      const visits = openVisitsByTable.get(normTable(order.table));
+      return !!visits && !!order.session && visits.has(String(order.session)) && !order.paid;
     });
+    /* Et on le DIT, au lieu de le rattraper en silence : un doublon signale un
+     * index manquant, c'est-à-dire une réparation de schéma à faire. */
+    for (const [table, visits] of openVisitsByTable) {
+      if (visits.size > 1) duplicateVisits.push({ table, sessions: Array.from(visits) });
+    }
   }
 
   return json({
-    ok: true, orders, sessions, now, ordersAvailable: true,
+    /* `now` EST le curseur du prochain sondage : il recule légèrement, sinon
+       une commande écrite entre la prise de l'heure et la lecture n'est jamais
+       présentée (voir pollCursor). */
+    ok: true, orders, sessions, now: pollCursor(now), ordersAvailable: true,
     service: service ? {
       mineTables: Array.from(service.tables),
       allTables: Array.from(service.allTables),
       pausedTables: Array.from(service.pausedTables),
       pausedServers: service.pausedServers,
+      duplicateVisits: duplicateVisits.length ? duplicateVisits : undefined,
       paused: !!(service.employee.attendance && service.employee.attendance.pauseTs),
     } : undefined,
   });

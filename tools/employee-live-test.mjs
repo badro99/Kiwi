@@ -395,8 +395,13 @@ ok(serviceSource.includes('function reconcileCanonicalServiceBill(table)')
   "la file des commandes est l'unique source des articles; les snapshots ne peuvent plus fabriquer une addition");
 ok(queueSource.includes('ensureServiceTableSession')
   && queueSource.includes('client_ref, session_id')
-  && queueSource.includes('openVisitByTable')
-  && queueSource.includes('String(order.session) === visit')
+  /* Une table peut porter DEUX visites ouvertes quand l'index unique partiel
+     manque à la base déployée. Le filtre garde donc un ensemble par table, au
+     lieu d'un seul identifiant qui écrasait l'autre et effaçait de l'écran les
+     commandes du serveur perdant. La règle vérifiée ici ne change pas : une
+     commande n'appartient qu'aux visites OUVERTES de sa table. */
+  && queueSource.includes('openVisitsByTable')
+  && queueSource.includes('visits.has(String(order.session))')
   && caisseSource.includes('ORDER_BRIDGE_SYNC_VERSION = 2')
   && caisseSource.includes('orderSession: String(o.session')
   && caisseSource.includes('String(activeSeat.session) !== String(o.session)'),

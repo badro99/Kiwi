@@ -68,6 +68,34 @@ export function tableKey(v) {
   return normTable(v).toUpperCase().replace(/\s+/g, '');
 }
 
+/* ── LE CURSEUR REGARDE LÉGÈREMENT EN ARRIÈRE ──────────────────────────────
+ * Les sondages avancent avec `since` : le client renvoie le `now` de la réponse
+ * précédente, et le serveur ne rend que ce qui a changé DEPUIS. Le piège est
+ * d'une milliseconde, et il perd des commandes pour de bon.
+ *
+ * `now` est pris AVANT la lecture — il faut bien le prendre quelque part — et
+ * plusieurs écritures peuvent s'intercaler entre les deux (l'expiration des
+ * `pending`, le pointage des sessions). Une commande écrite dans cet intervalle
+ * porte un `updated_ts` inférieur ou égal à `now` : la lecture de CE tour ne la
+ * voit pas encore, et le tour SUIVANT l'exclut, puisqu'il ne demande que
+ * `updated_ts > now`. Elle n'est jamais présentée. Comme la caisse n'attache
+ * une commande à l'addition qu'au moment où on la lui présente, elle est perdue
+ * pour l'addition — silencieusement.
+ *
+ * On recule donc le curseur de deux secondes. Le chevauchement re-présente
+ * quelques commandes déjà connues, ce qui ne coûte rien : les trois clients
+ * sont idempotents (marqueurs de ligne côté caisse, `opId` côté cuisine, `id`
+ * côté salle). Un client qui perd une commande coûte de l'argent ; un client
+ * qui la revoit ne coûte rien.
+ *
+ * Reculer le CURSEUR plutôt que corriger chaque client a une conséquence utile :
+ * les navigateurs qui tournent encore sur une version en cache reçoivent le
+ * correctif sans rien réinstaller. */
+export const CURSOR_LAG_MS = 2000;
+export function pollCursor(now) {
+  return Math.max(0, Number(now) - CURSOR_LAG_MS);
+}
+
 /* ── L'identifiant de session ──────────────────────────────────────────────
  * Il EST la capacité : le téléphone n'a pas de compte, pas de mot de passe et
  * pas de cookie garanti (navigation privée, cookies coupés). C'est donc 132

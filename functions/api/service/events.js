@@ -3,6 +3,7 @@
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
 import { poke } from '../_live.js';
+import { pollCursor } from '../order/_lib.js';
 
 const FEATURE = 'service-events';
 const MAX_EVENTS = 200;
@@ -221,7 +222,7 @@ export async function onRequestGet({ request, env }) {
     return json({
       ok: true,
       events: (Array.isArray(row.data.events) ? row.data.events : []).filter((event) => event && Number(event.ts) > since).slice(-MAX_EVENTS),
-      states: row.data.states || {}, now: Date.now(),
+      states: row.data.states || {}, now: pollCursor(Date.now()),
     });
   }
   const employee = await activeServiceEmployee(request, env, asked);
@@ -262,7 +263,7 @@ export async function onRequestGet({ request, env }) {
       return direct || coverage || unassigned;
     })
     .slice(-MAX_EVENTS);
-  return json({ ok: true, events, states: row.data.states || {}, now: Date.now() });
+  return json({ ok: true, events, states: row.data.states || {}, now: pollCursor(Date.now()) });
 }
 
 export async function onRequestPost({ request, env }) {
