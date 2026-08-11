@@ -322,6 +322,8 @@ ok(serviceSource.includes("lifetimeXP: 0")
   && !serviceSource.includes("lifetimeXP: 2400"),
   'un nouveau compte commence sans grade ni records de démonstration');
 const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const dispatchSource = fs.readFileSync(path.join(ROOT, 'assets/pos-dispatch.js'), 'utf8');
+const attendanceCodeSource = fs.readFileSync(path.join(ROOT, 'assets/caisse-attendance-code.js'), 'utf8');
 ok(caisseSource.includes('function publishServiceFloor()')
   && caisseSource.includes("snapshot: { tables: live }")
   && serviceSource.includes('Object.keys(data.states || {})'),
@@ -369,6 +371,13 @@ ok(caisseSource.includes('id="open-attendance-code"')
   && caisseSource.includes("action: 'generate-attendance-code'")
   && caisseSource.includes('Valide encore'),
   'la caisse possède un bouton séparé qui régénère et chronomètre le code de pointage');
+ok(caisseSource.includes('assets/caisse-attendance-code.js?v=1')
+  && dispatchSource.includes('window.KiwiCaisseAttendanceCode.mount(root)')
+  && attendanceCodeSource.includes("action: 'generate-attendance-code'")
+  && attendanceCodeSource.includes('button[id$="-lock"]')
+  && attendanceCodeSource.includes("localStorage.getItem('kiwiPairedVenue')")
+  && attendanceCodeSource.includes('data.merchant === id'),
+  'toutes les caisses métier génèrent le même code de pointage, isolé sur leur magasin appairé');
 ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(pollLiveTeam, 1000)'),
   'Équipe et Paie & planning reçoivent les heures de pointage du cloud sans rechargement');
 ok(serviceSource.includes('serviceStateVersion.has(id)')
