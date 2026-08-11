@@ -5,23 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Kiwi · Équipe</title>
   <meta name="description" content="Application mobile Kiwi pour le service, le planning et le pointage de l'équipe" />
-  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Kiwi Équipe" />
-  <link rel="manifest" href="serveur.webmanifest?v=5" />
+  <link rel="manifest" href="serveur.webmanifest?v=7" />
   <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
 
-  <!-- Fonts -->
+  <!-- Fonts — la même paire que la page d'accueil (DM Sans + IBM Plex Sans
+       Arabic). L'app tirait Inter Tight / Instrument Serif / JetBrains Mono :
+       trois familles qu'aucune autre surface Kiwi ne charge, d'où l'impression
+       de changer de produit en ouvrant le téléphone. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Lucide icons -->
-  <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
-       chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
-       terminal de paiement du commerçant et sur le téléphone du client, sans
-       relecture. Le fichier était déjà vendu dans assets/. -->
+  <!-- Icônes : Material Symbols (assets/material-icons.js), servies depuis le
+       dépôt, plus aucun paquet tiers. Lucide (402 ko, traits arrondis) a été
+       retiré — la charte n'autorise qu'un seul jeu d'icônes et ce n'était pas
+       celui-là ; l'app lançait en prime un ReferenceError à chaque rendu
+       déclenché avant le chargement différé du script. -->
   <!-- Sans defer et AVANT tout le reste : KiwiEnv.isReal() est le verrou qui
        décide si les additions réglées ici remontent vers /api/sale. Il était
        absent de cette page seule — la caisse et le tableau de bord le chargent
@@ -29,7 +32,7 @@
        indéfini et se croyait en démonstration. Une table encaissée au sol ne
        quittait pas le téléphone du serveur. -->
   <script src="assets/kiwi-env.js"></script>
-  <script src="assets/lucide.min.js" defer></script>
+  <script src="assets/material-icons.js"></script>
 
   <style>
     /* =========================================================
@@ -37,55 +40,80 @@
        Same brand system as Kiwi Caisse.
        ========================================================= */
 
-    /* Icon normalization — round caps/joins on icon-sized inline SVGs so any
-       hand-rolled glyphs match the Lucide set (which rounds both). Scoped to
-       icon widths; charts/logos untouched. Mirrors the rule in tokens.css,
-       which this single-file app does not load. */
-    svg[width="14"], svg[width="15"], svg[width="16"], svg[width="17"],
-    svg[width="18"], svg[width="19"], svg[width="20"], svg[width="21"],
-    svg[width="22"], svg[width="23"], svg[width="24"] {
-      stroke-linecap: round; stroke-linejoin: round;
-    }
+    /* Material Symbols sont des formes PLEINES (viewBox 0 -960 960 960) : elles
+       se colorent par `fill: currentColor` et n'ont aucun tracé à arrondir. La
+       règle stroke-linecap qui vivait ici servait à faire passer des glyphes
+       maison pour du Lucide ; les deux sont partis. */
+    svg { fill: currentColor; }
 
+    /* `[hidden]` du navigateur vaut `display:none` — sans `!important`, donc
+       n'importe quelle règle de classe le bat. `.cash-grid { display:flex }`
+       gagnait, et l'étape « Espèces confirmées » s'affichait AVANT qu'on
+       confirme quoi que ce soit. Les deux étapes du modal espèces se pilotent
+       par cet attribut : il doit gagner. */
+    [hidden] { display: none !important; }
+
+    /* =========================================================
+       Jetons — repris de la page d'accueil (_next/…/*.css) :
+       coque noire, texte blanc, accent #00FFAE, filets #ffffff1a,
+       verre rgba(20,20,20,…) + backdrop-blur, pilules 999px.
+       Les noms des jetons ne changent pas : 581 var() dans cette
+       feuille les consomment déjà, c'est la couche qui porte tout
+       le reskin. Ce qui change, c'est ce qu'ils valent.
+       ========================================================= */
     :root {
-      --forest:        #0B6E4F;  /* brand --atlas (primary) */
-      --forest-deep:   #053B2C;  /* brand --riad (deep) */
-      --emerald:       #3FB67A;  /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
-      --mint-tint:     #EBF5F0;
-      --mint-edge:     #C5E0D3;
+      --forest:        #0E7A58;  /* vert PEINTURE : du blanc se pose dessus */
+      --forest-deep:   #04231A;
+      --emerald:       #00E8A0;  /* succès/encaissé — encre SOMBRE par-dessus */
+      --mint-tint:     rgba(0,255,174,.10);
+      --mint-edge:     rgba(0,255,174,.26);
 
-      --paper:         #F7F5F0;  /* brand warm paper */
-      --paper-cream:   #F7F5F0;
-      --paper-soft:    #F7F7F5;
-      --paper-mute:    #F4F4F2;
-      --surface:       #FFFFFF;
-      --mint:          #7DF2B0;
-      --ink-bg:        #0A0F0D;
-      --line:          #E5E5E5;
-      --line-soft:     #EEEEEE;
+      --paper:         #0A0A0A;
+      --paper-cream:   #101010;
+      --paper-soft:    #000000;
+      --paper-mute:    #141414;
+      --surface:       #0A0A0A;
+      --mint:          #00FFAE;  /* --color-accent de la page d'accueil */
+      --ink-bg:        #141414;
+      --line:          rgba(255,255,255,.10);   /* --color-line */
+      --line-soft:     rgba(255,255,255,.06);
 
-      --ink:           #0A0F0D;  /* brand ink */
-      --ink-2:         #4A4A4A;
-      --ink-3:         #6B6B6B;
-      --ink-4:         #9A9A9A;
+      --ink:           #FFFFFF;  /* --color-fg */
+      --ink-2:         rgba(255,255,255,.72);
+      --ink-3:         rgba(255,255,255,.52);
+      --ink-4:         rgba(255,255,255,.38);
 
-      --danger-mute:   #B85245;
+      --danger-mute:   #FF6F5B;
 
-      --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
-      --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+      /* Un jeton qui peint et un jeton qui encre ne sont pas le même jeton.
+         --ink est passé de l'encre noire au texte blanc : tout ce qui s'en
+         servait comme FOND (pastille active, toast, bouton sombre) doit tirer
+         d'ici, sinon c'est blanc sur blanc. */
+      --elev:          #1C1C1C;  /* pastille sombre surélevée */
+      --on-accent:     #04140E;  /* encre posée sur la menthe */
+      --on-danger:     #2B0A05;  /* encre posée sur le corail */
+      --glass:         rgba(20,20,20,.55);
+      --glass-nav:     rgba(20,20,20,.72);
 
-      --r-sm: 6px;
-      --r-md: 10px;
-      --r-lg: 12px;
-      --r-xl: 16px;
-      --r-2xl: 20px;
+      --sans:  "DM Sans", "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      /* La voix éditoriale de la page d'accueil n'est pas un serif : c'est DM
+         Sans en 300 avec un interlettrage très négatif. Le jeton reste pour ne
+         pas toucher aux 13 règles qui l'appellent. */
+      --serif: "DM Sans", "IBM Plex Sans Arabic", system-ui, sans-serif;
+      --mono:  "DM Sans", ui-monospace, "SF Mono", monospace;
 
-      --shadow-1: 0 1px 2px rgba(17,17,17,.04), 0 4px 10px rgba(17,17,17,.05);
-      --shadow-2: 0 8px 28px rgba(17,17,17,.12), 0 2px 6px rgba(17,17,17,.06);
-      --shadow-3: 0 30px 60px rgba(0,0,0,.5);
+      /* Tout est pilule ou presque, comme sur la page d'accueil. */
+      --r-sm: 8px;
+      --r-md: 12px;
+      --r-lg: 16px;
+      --r-xl: 20px;
+      --r-2xl: 26px;
 
-      --gradient: linear-gradient(135deg, var(--forest) 0%, #3FB67A 100%);
+      --shadow-1: 0 1px 2px rgba(0,0,0,.36), 0 4px 14px rgba(0,0,0,.30);
+      --shadow-2: 0 10px 34px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.38);
+      --shadow-3: 0 30px 60px rgba(0,0,0,.7);
+
+      --gradient: linear-gradient(135deg, #00FFAE 0%, #22C98A 100%);
 
       --topbar-h: 56px;
       --bottom-h: 64px;
@@ -107,6 +135,7 @@
 em, i, cite, dfn, var { font-style: normal; }
 
     *, *::before, *::after { box-sizing: border-box; }
+    html { color-scheme: dark; }
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: var(--app-height);
@@ -114,9 +143,16 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
-      letter-spacing: -0.005em;
+      /* L'interlettrage serré de la page d'accueil (-0.02em sur la nav et le
+         chapô). JetBrains Mono partait avec l'ancienne palette : les chiffres
+         restent alignés par tabular-nums, pas par une famille à chasse fixe. */
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
       background: var(--paper-soft);
     }
+    /* Les poids lourds (700/800 × 55 règles) sont un tell : la page d'accueil
+       ne dépasse jamais 500, et 600 seulement sur les micro-libellés. */
+    h1, h2, h3, h4 { font-weight: 500; letter-spacing: -0.04em; }
     body { overflow: hidden; }
     button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
     input { font-family: inherit; }
@@ -136,8 +172,8 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 880px;
       max-height: calc(var(--app-height) - 48px);
       background: var(--surface);
-      border-radius: 36px;
-      border: 6px solid #E3E3DF;
+      border-radius: 44px;
+      border: 6px solid #1A1A1A;
       box-shadow: var(--shadow-3);
       position: relative;
       overflow: hidden;
@@ -404,7 +440,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .ci-clock-time {
       font-feature-settings: "tnum" 1;
-      font-size: 64px; font-weight: 800;
+      font-size: 64px; font-weight: 600;
       letter-spacing: -0.04em;
       line-height: 1;
       margin-top: 16px;
@@ -421,7 +457,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 64px;
       border-radius: 18px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 17px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       box-shadow: 0 8px 24px rgba(63,182,122,0.25);
@@ -550,9 +586,9 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 36px; height: 36px;
       border-radius: 50%;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700;
+      font-size: 14px; font-weight: 600;
       letter-spacing: -0.01em;
       flex: 0 0 36px;
     }
@@ -621,7 +657,7 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 2px;
       padding: 7px 9px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.94);
+      background: var(--glass-nav);
       -webkit-backdrop-filter: blur(28px) saturate(1.8);
       backdrop-filter: blur(28px) saturate(1.8);
       box-shadow:
@@ -678,11 +714,11 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 0 4px;
       border-radius: 999px;
       background: var(--danger-mute);
-      color: #fff;
-      font-size: 9px; font-weight: 700;
+      color: var(--on-danger);
+      font-size: 9px; font-weight: 600;
       display: flex; align-items: center; justify-content: center;
       line-height: 1;
-      box-shadow: 0 0 0 2px #fff;
+      box-shadow: 0 0 0 2px var(--surface);
       z-index: 2;
     }
 
@@ -725,7 +761,11 @@ em, i, cite, dfn, var { font-style: normal; }
       white-space: nowrap;
       transition: background 150ms, color 150ms;
     }
-    .filter-chip.is-active { background: var(--ink); color: #fff; }
+    /* Pilule active : menthe pleine + encre sombre — l'écho de la CTA
+       blanche à texte noir de la page d'accueil. `var(--ink)` valait
+       autrefois le noir d'encre ; il vaut maintenant le blanc du texte,
+       et l'aurait rendue invisible. */
+    .filter-chip.is-active { background: var(--mint); color: var(--on-accent); border-color: transparent; }
     .filter-chip .count { opacity: .6; margin-left: 5px; font-feature-settings: "tnum" 1; }
     .filter-chip.is-active .count { opacity: .7; }
 
@@ -760,24 +800,24 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .table-card[data-status="ka-tkhdam"] {
       background: var(--emerald);
-      color: #fff;
+      color: var(--on-accent);
     }
     .table-card[data-status="khlass"] {
       background: var(--surface);
       border: 2px solid var(--emerald);
     }
     @keyframes urgent-pulse {
-      0%, 100% { background-color: #1F5D3C; }
-      50%      { background-color: #2A6F4A; }
+      0%, 100% { background-color: #0E7A58; }
+      50%      { background-color: #14926C; }
     }
 
     .tc-num {
       flex: 0 0 44px;
       width: 44px; height: 44px;
-      background: rgba(0,0,0,0.06);
+      background: rgba(255,255,255,0.08);
       border-radius: var(--r-md);
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 700;
+      font-size: 16px; font-weight: 600;
       letter-spacing: -0.01em;
     }
     .table-card[data-status="bgha-ykhlass"] .tc-num,
@@ -808,7 +848,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 auto;
     }
     .tc-amount {
-      font-size: 14px; font-weight: 700;
+      font-size: 14px; font-weight: 600;
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }
@@ -855,7 +895,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-back svg { width: 22px; height: 22px; color: var(--ink); }
 
     .td-title { flex: 1; }
-    .td-table-name { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.15; }
+    .td-table-name { font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.15; }
     .td-table-meta { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; font-feature-settings: "tnum" 1; }
     .td-status-pill {
       padding: 5px 10px;
@@ -867,7 +907,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-status-pill[data-status="khawya"] { background: var(--paper-mute); color: var(--ink-3); }
     .td-status-pill[data-status="ka-yaklo"] { background: var(--mint-tint); color: var(--forest); }
     .td-status-pill[data-status="bgha-ykhlass"] { background: var(--forest); color: #fff; }
-    .td-status-pill[data-status="ka-tkhdam"] { background: var(--emerald); color: #fff; }
+    .td-status-pill[data-status="ka-tkhdam"] { background: var(--emerald); color: var(--on-accent); }
     .td-status-pill[data-status="khlass"] { background: var(--mint-tint); color: var(--forest); border: 1px solid var(--mint-edge); }
 
     .td-body {
@@ -894,17 +934,17 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 28px; height: 28px;
       border-radius: 50%;
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 700;
+      font-size: 16px; font-weight: 600;
       transition: background 150ms;
       flex: 0 0 28px;
     }
     .td-qty-btn.minus { color: var(--danger-mute); background: rgba(184,82,69,0.1); }
-    .td-qty-btn.plus { color: #fff; background: var(--emerald); }
+    .td-qty-btn.plus { color: var(--on-accent); background: var(--emerald); }
     .td-qty-btn:active { transform: scale(0.94); }
     .td-qty-num {
       min-width: 22px;
       text-align: center;
-      font-size: 13px; font-weight: 700;
+      font-size: 13px; font-weight: 600;
       padding: 0 6px;
       font-feature-settings: "tnum" 1;
     }
@@ -948,7 +988,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-family: var(--serif); font-size: 15px; color: var(--ink-2);
     }
     .td-total-row .val {
-      font-size: 22px; font-weight: 800; color: var(--ink);
+      font-size: 22px; font-weight: 600; color: var(--ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.02em;
     }
@@ -964,7 +1004,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .td-item-note::placeholder { color: var(--ink-4); }
     .td-item-note:focus { outline: none; border-color: var(--forest); }
-    .td-item-note.has-note { border-color: var(--forest); background: rgba(31,93,60,.07); color: var(--forest); font-weight: 500; }
+    .td-item-note.has-note { border-color: var(--mint-edge); background: var(--mint-tint); color: var(--mint); font-weight: 500; }
     /* read-only note sub-line under a sent order item */
     .td-item-noteline {
       flex: 1 0 100%;
@@ -992,8 +1032,8 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .td-btn:active { transform: scale(0.98); }
     .td-btn svg { width: 18px; height: 18px; }
-    .td-btn.primary { background: var(--gradient); color: #fff; }
-    .td-btn.dark    { background: var(--ink);   color: #fff; }
+    .td-btn.primary { background: var(--gradient); color: var(--on-accent); }
+    .td-btn.dark    { background: var(--elev);  color: var(--ink); }
     .td-btn.ghost   { background: var(--paper-mute); color: var(--ink-2); }
     .td-btn.warn    { background: var(--forest); color: #fff; }
     .td-btn.danger  { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
@@ -1004,7 +1044,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Split-in-progress banner */
     .td-split-banner {
-      background: linear-gradient(135deg, var(--mint-tint) 0%, #DEF2E5 100%);
+      background: linear-gradient(135deg, var(--mint-tint) 0%, rgba(0,255,174,.03) 100%);
       border: 1px solid var(--mint-edge);
       border-radius: 14px;
       padding: 14px 16px;
@@ -1014,7 +1054,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-split-banner-icon {
       width: 40px; height: 40px; border-radius: 50%;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 40px;
       box-shadow: 0 4px 12px rgba(31,93,60,0.25);
@@ -1022,7 +1062,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-split-banner-icon svg { width: 18px; height: 18px; }
     .td-split-banner-text { flex: 1; min-width: 0; }
     .td-split-banner-title {
-      font-size: 13.5px; font-weight: 700;
+      font-size: 13.5px; font-weight: 600;
       color: var(--forest-deep);
       letter-spacing: -0.005em;
     }
@@ -1033,7 +1073,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .td-split-progress {
       height: 6px;
-      background: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.12);
       border-radius: 999px;
       overflow: hidden;
     }
@@ -1073,7 +1113,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--forest);
       color: #fff;
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700;
+      font-size: 13px; font-weight: 600;
       flex: 0 0 32px;
     }
     .menu-context-text { flex: 1; min-width: 0; }
@@ -1086,7 +1126,7 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink-3);
     }
     .menu-context-close svg { width: 16px; height: 16px; }
-    .menu-context-close:active { background: rgba(0,0,0,0.05); }
+    .menu-context-close:active { background: rgba(255,255,255,0.08); }
 
     .menu-banner {
       background: var(--paper-mute);
@@ -1117,7 +1157,7 @@ em, i, cite, dfn, var { font-style: normal; }
       white-space: nowrap;
       transition: background 150ms, color 150ms;
     }
-    .cat-pill.is-active { background: var(--ink); color: #fff; }
+    .cat-pill.is-active { background: var(--mint); color: var(--on-accent); }
     .cat-pill .count { font-size: 10.5px; opacity: .55; margin-left: 5px; font-feature-settings: "tnum" 1; }
 
     .menu-grid {
@@ -1165,7 +1205,7 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 8px;
     }
     .menu-item-price {
-      font-size: 13.5px; font-weight: 700;
+      font-size: 13.5px; font-weight: 600;
       color: var(--forest);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
@@ -1173,8 +1213,8 @@ em, i, cite, dfn, var { font-style: normal; }
     .menu-item-add {
       width: 28px; height: 28px;
       border-radius: 50%;
-      background: var(--ink);
-      color: #fff;
+      background: var(--mint);
+      color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 17px; font-weight: 600;
       flex: 0 0 28px;
@@ -1194,11 +1234,11 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 26px;
     }
     .step-btn.step-minus { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
-    .step-btn.step-plus  { background: var(--emerald); color: #fff; }
+    .step-btn.step-plus  { background: var(--emerald); color: var(--on-accent); }
     .step-num {
       min-width: 22px;
       text-align: center;
-      font-size: 12.5px; font-weight: 700;
+      font-size: 12.5px; font-weight: 600;
       color: var(--ink);
       padding: 0 5px;
       font-feature-settings: "tnum" 1;
@@ -1214,7 +1254,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .menu-item-optflag {
       position: absolute; top: 9px; right: 9px;
       display: inline-flex; align-items: center; gap: 3px;
-      font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
       color: var(--forest);
       background: var(--mint-tint);
       border: 1px solid var(--mint-edge);
@@ -1230,9 +1270,9 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: baseline; justify-content: space-between;
       margin-bottom: 9px; gap: 10px;
     }
-    .opt-group-name { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+    .opt-group-name { font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
     .opt-group-tag {
-      font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+      font-size: 9px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
       flex: 0 0 auto;
     }
     .opt-group-tag.req { color: var(--forest); }
@@ -1274,7 +1314,7 @@ em, i, cite, dfn, var { font-style: normal; }
       left: 16px; right: 16px;
       bottom: var(--nav-clearance);
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       border-radius: 16px;
       padding: 14px 18px;
       align-items: center; justify-content: space-between;
@@ -1294,7 +1334,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 50%;
       background: rgba(255,255,255,0.22);
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 12.5px; font-weight: 700;
+      font-size: 12.5px; font-weight: 600;
       font-feature-settings: "tnum" 1;
     }
     .menu-cart-text {
@@ -1331,7 +1371,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .notification-card.is-unread .notification-icon { background: var(--surface); }
     .notification-icon svg { width: 18px; height: 18px; }
     .notification-copy { flex: 1; min-width: 0; }
-    .notification-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+    .notification-title { font-size: 14px; font-weight: 600; color: var(--ink); }
     .notification-body { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
     .notification-time { margin-top: 5px; font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); }
 
@@ -1368,8 +1408,8 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 50%;
       background: var(--gradient);
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 22px; font-weight: 700;
-      color: #fff;
+      font-size: 22px; font-weight: 600;
+      color: var(--on-accent);
       flex: 0 0 56px;
     }
     .profil-info { flex: 1; }
@@ -1392,7 +1432,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .shift-label { font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em; }
     .shift-value {
-      font-size: 16px; font-weight: 700;
+      font-size: 16px; font-weight: 600;
       color: var(--ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
@@ -1435,7 +1475,7 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 9px;
       color: var(--ink);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
     }
     .profil-language-head svg { width: 17px; height: 17px; color: var(--forest); }
     .profil-language-options {
@@ -1500,7 +1540,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; justify-content: space-between;
       margin: 12px 0 16px;
     }
-    .kg-month-title { font-size: 16px; font-weight: 700; text-transform: capitalize; }
+    .kg-month-title { font-size: 16px; font-weight: 600; text-transform: capitalize; }
     .kg-month-arrow {
       width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
       border: 1px solid var(--line); border-radius: 50%; background: var(--surface);
@@ -1519,12 +1559,12 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-month-day.is-blank { visibility: hidden; }
     .kg-month-day.is-today { border-color: var(--mint); background: var(--mint-tint); }
-    .kg-month-day-num { font-size: 13px; font-weight: 700; }
+    .kg-month-day-num { font-size: 13px; font-weight: 600; }
     .kg-month-day-shift { margin-top: 6px; font-family: var(--mono); font-size: 8px; line-height: 1.35; color: var(--forest); }
     .kg-month-day-rest { margin-top: 8px; font-size: 9px; color: var(--ink-4); }
     .kg-month-close {
       width: 100%; height: 46px; margin-top: 18px; border-radius: 12px;
-      background: var(--ink-bg); color: #fff; font-size: 14px; font-weight: 600;
+      background: var(--elev); color: var(--ink); font-size: 14px; font-weight: 600;
     }
     .kg-day {
       display: flex; flex-direction: column;
@@ -1553,7 +1593,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-day-num {
       font-size: 17px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink);
       line-height: 1;
       margin-top: 1px;
@@ -1639,7 +1679,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-hours-num {
       font-family: var(--mono);
-      font-size: 16px; font-weight: 700;
+      font-size: 16px; font-weight: 600;
       color: var(--ink);
       line-height: 1;
       font-feature-settings: "tnum" 1;
@@ -1687,8 +1727,8 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Off-shift banner — explains they're consulting, not on-shift,
        with a primary CTA to clock in for real and a secondary logout. */
     .offshift-banner {
-      background: linear-gradient(135deg, rgba(11,110,79,0.06), rgba(11,110,79,0.02));
-      border: 1px solid rgba(11,110,79,0.18);
+      background: linear-gradient(135deg, rgba(0,255,174,0.07), rgba(0,255,174,0.02));
+      border: 1px solid var(--mint-edge);
       border-radius: 16px;
       padding: 18px 18px 16px;
       display: flex; flex-direction: column; gap: 14px;
@@ -1699,7 +1739,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .offshift-banner-icon {
       flex: 0 0 36px; width: 36px; height: 36px;
       border-radius: 50%;
-      background: rgba(11,110,79,0.1);
+      background: var(--mint-tint);
       color: var(--forest-deep);
       display: inline-flex; align-items: center; justify-content: center;
     }
@@ -1723,7 +1763,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 42px;
       border-radius: 12px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 14px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       box-shadow: 0 6px 16px rgba(63,182,122,0.20);
@@ -1834,7 +1874,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-defi-check {
       width: 22px; height: 22px; border-radius: 50%;
-      background: var(--emerald); color: #fff;
+      background: var(--emerald); color: var(--on-accent);
       display: none; align-items: center; justify-content: center;
       flex: 0 0 22px;
     }
@@ -1920,7 +1960,7 @@ em, i, cite, dfn, var { font-style: normal; }
     @keyframes kg-sc-row-in { to { opacity: 1; transform: translateY(0); } }
     .kg-sc-row-label { font-size: 13px; color: var(--ink-3); }
     .kg-sc-row-value {
-      font-size: 17px; font-weight: 700; color: var(--ink);
+      font-size: 17px; font-weight: 600; color: var(--ink);
       font-feature-settings: "tnum" 1; letter-spacing: -0.01em;
     }
     .kg-sc-row-value.kg-mono { font-family: var(--mono); font-weight: 500; }
@@ -1936,7 +1976,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-sc-hl-icon {
       width: 34px; height: 34px; border-radius: 50%;
-      background: var(--emerald); color: #fff;
+      background: var(--emerald); color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
       flex: 0 0 34px;
     }
@@ -2004,7 +2044,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 999px;
       margin: 0 auto 14px;
     }
-    .modal-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.01em; }
+    .modal-title { font-size: 18px; font-weight: 600; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.01em; }
     .modal-subtle { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
 
     /* New table modal */
@@ -2019,7 +2059,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: var(--r-lg);
       background: var(--paper-mute);
       color: var(--ink);
-      font-size: 20px; font-weight: 700;
+      font-size: 20px; font-weight: 600;
       display: flex; align-items: center; justify-content: center;
       transition: background 120ms, color 120ms, transform 80ms;
     }
@@ -2030,7 +2070,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Card / cash modals */
     .modal-amount {
-      font-size: 40px; font-weight: 800; color: var(--forest);
+      font-size: 40px; font-weight: 600; color: var(--forest);
       letter-spacing: -0.03em;
       font-feature-settings: "tnum" 1;
       text-align: center;
@@ -2074,7 +2114,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: center;
     }
     .reader-status.is-success {
-      font-size: 15px; font-weight: 700; color: var(--emerald);
+      font-size: 15px; font-weight: 600; color: var(--emerald);
     }
     .reader-method {
       font-size: 11px; color: var(--ink-4);
@@ -2116,7 +2156,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     }
     .ma-btn svg { width: 15px; height: 15px; }
-    .ma-btn.primary { background: var(--gradient); color: #fff; }
+    .ma-btn.primary { background: var(--gradient); color: var(--on-accent); }
     .ma-btn.secondary { background: var(--paper-mute); color: var(--ink); }
     .modal-foot {
       text-align: center;
@@ -2134,7 +2174,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .cash-input {
       width: 100%;
       padding: 14px 16px;
-      font-size: 22px; font-weight: 700; color: var(--ink);
+      font-size: 22px; font-weight: 600; color: var(--ink);
       border: 1px solid var(--line); border-radius: var(--r-lg);
       background: var(--surface);
       font-family: var(--mono);
@@ -2144,7 +2184,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .cash-input:focus {
       outline: none;
       border-color: var(--forest);
-      box-shadow: 0 0 0 3px rgba(31,93,60,.12);
+      box-shadow: 0 0 0 3px var(--mint-tint);
     }
     .cash-presets { display: flex; gap: 6px; flex-wrap: wrap; }
     .cash-preset {
@@ -2154,7 +2194,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 12px; font-weight: 600;
       color: var(--ink-2);
     }
-    .cash-preset:active { background: #ECEAE5; }
+    .cash-preset:active { background: rgba(255,255,255,.08); }
     .cash-rendu {
       padding: 14px 16px;
       border-radius: var(--r-lg);
@@ -2162,7 +2202,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; justify-content: space-between; align-items: baseline;
     }
     .cash-rendu .lbl { font-size: 13px; color: var(--ink-3); }
-    .cash-rendu .val { font-size: 20px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; }
+    .cash-rendu .val { font-size: 20px; font-weight: 600; color: var(--ink); font-feature-settings: "tnum" 1; }
     .cash-rendu.is-positive .val { color: var(--emerald); }
     .cash-rendu.is-short .val { color: var(--danger-mute); font-size: 13px; font-weight: 600; }
     .cash-confirm {
@@ -2170,12 +2210,12 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 52px;
       border-radius: var(--r-lg);
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 15px; font-weight: 600;
     }
     .cash-confirm[disabled] { opacity: .35; }
     .cash-success-rendu {
-      font-size: 32px; font-weight: 800; color: var(--emerald);
+      font-size: 32px; font-weight: 600; color: var(--emerald);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.02em;
       text-align: center;
@@ -2193,7 +2233,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex; align-items: center;
       padding: 4px 10px; border-radius: 999px;
       background: var(--mint-tint); color: var(--forest);
-      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
       text-transform: uppercase; margin-bottom: 10px;
     }
     .split-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
@@ -2210,7 +2250,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--paper-mute);
       display: flex; align-items: center; justify-content: center; flex: 0 0 36px;
     }
-    .split-tab.is-active .split-tab-icon { background: rgba(31,93,60,.14); }
+    .split-tab.is-active .split-tab-icon { background: var(--mint-tint); }
     .split-tab-icon svg { width: 17px; height: 17px; color: var(--ink-3); }
     .split-tab.is-active .split-tab-icon svg { color: var(--forest); }
     .split-tab-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.2; }
@@ -2236,7 +2276,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
       font-family: var(--mono);
     }
-    .split-tip-input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(31,93,60,.1); }
+    .split-tip-input:focus { outline: none; border-color: var(--mint-edge); box-shadow: 0 0 0 3px var(--mint-tint); }
 
     .split-summary {
       background: var(--paper-soft); border-radius: var(--r-lg);
@@ -2253,7 +2293,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-per-person .lbl { font-size: 14px; font-weight: 600; color: var(--ink); }
     .split-per-person .val {
-      font-size: 22px; font-weight: 800; color: var(--forest);
+      font-size: 22px; font-weight: 600; color: var(--forest);
       font-feature-settings: "tnum" 1; letter-spacing: -0.02em;
     }
 
@@ -2280,12 +2320,12 @@ em, i, cite, dfn, var { font-style: normal; }
       line-height: 1.5;
     }
     .split-help-text strong {
-      font-weight: 700;
+      font-weight: 600;
       color: var(--forest);
     }
     .split-step-label {
       font-size: 12.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink);
       margin-bottom: 10px;
       margin-top: 18px;
@@ -2298,7 +2338,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 50%;
       background: var(--forest);
       color: #fff;
-      font-size: 11px; font-weight: 700;
+      font-size: 11px; font-weight: 600;
       flex: 0 0 20px;
     }
     .split-items-cards {
@@ -2348,7 +2388,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-conv-tab.is-active .split-conv-tab-label { color: rgba(255,255,255,0.75); }
     .split-conv-tab-total {
       font-size: 13.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
@@ -2373,7 +2413,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: left;
     }
     .split-pool-item:not(.is-empty):active { transform: scale(0.99); }
-    .split-pool-item:not(.is-empty):hover { background: #ECEAE5; }
+    .split-pool-item:not(.is-empty):hover { background: rgba(255,255,255,.06); }
     .split-pool-item.is-empty {
       opacity: 0.45;
       pointer-events: none;
@@ -2393,7 +2433,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-pool-item-meta .remaining {
       color: var(--forest);
-      font-weight: 700;
+      font-weight: 600;
     }
     .split-pool-item.is-empty .remaining { color: var(--ink-4); font-weight: 500; }
     .split-pool-item-add {
@@ -2423,7 +2463,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-convive-cart-title {
       font-size: 10.5px;
       color: var(--forest-deep);
-      font-weight: 700;
+      font-weight: 600;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       margin-bottom: 8px;
@@ -2431,7 +2471,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-convive-cart-total {
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--forest);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
@@ -2439,7 +2479,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-convive-cart-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 7px 0;
-      border-bottom: 1px solid rgba(31,93,60,0.1);
+      border-bottom: 1px solid var(--line);
       font-size: 13px;
     }
     .split-convive-cart-row:last-child { border-bottom: 0; }
@@ -2491,7 +2531,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 1; min-width: 0;
     }
     .split-item-card-price {
-      font-size: 13px; font-weight: 700;
+      font-size: 13px; font-weight: 600;
       color: var(--ink);
       font-feature-settings: "tnum" 1;
       white-space: nowrap;
@@ -2518,7 +2558,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       border: 1.5px solid var(--line);
       color: var(--ink-3);
-      font-size: 13px; font-weight: 700;
+      font-size: 13px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center;
       transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 100ms ease, box-shadow 150ms ease;
     }
@@ -2546,7 +2586,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-convive-chip {
       width: 24px; height: 24px; border-radius: 50%;
       background: var(--paper-mute); color: var(--ink-3);
-      font-size: 10.5px; font-weight: 700;
+      font-size: 10.5px; font-weight: 600;
       display: flex; align-items: center; justify-content: center;
     }
     .split-convive-chip.is-assigned { background: var(--forest); color: #fff; }
@@ -2557,13 +2597,13 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: var(--r-lg); padding: 8px 10px; text-align: center;
     }
     .split-convive-total .lbl { font-size: 9.5px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.06em; }
-    .split-convive-total .val { font-size: 13.5px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; margin-top: 2px; }
+    .split-convive-total .val { font-size: 13.5px; font-weight: 600; color: var(--ink); font-feature-settings: "tnum" 1; margin-top: 2px; }
     .split-convive-total.is-unassigned .lbl { color: var(--danger-mute); }
     .split-convive-total.is-unassigned .val { color: var(--danger-mute); }
 
     .split-launch {
       width: 100%; height: 52px; border-radius: var(--r-lg);
-      background: var(--gradient); color: #fff;
+      background: var(--gradient); color: var(--on-accent);
       font-size: 15px; font-weight: 600;
     }
     .split-cancel-link {
@@ -2572,7 +2612,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     .split-flow-header { display: flex; align-items: center; margin-bottom: 16px; gap: 8px; }
-    .split-flow-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+    .split-flow-title { font-size: 17px; font-weight: 600; color: var(--ink); }
     .split-flow-progress { font-size: 12px; color: var(--ink-4); margin-left: auto; font-feature-settings: "tnum" 1; }
     .split-flow-close {
       width: 32px; height: 32px; border-radius: 50%;
@@ -2582,7 +2622,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 32px;
       transition: background 150ms ease;
     }
-    .split-flow-close:active { background: #ECEAE5; }
+    .split-flow-close:active { background: rgba(255,255,255,.08); }
     .split-flow-close svg { width: 16px; height: 16px; }
 
     .split-parts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; transition: opacity 300ms; }
@@ -2594,13 +2634,13 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-part-num {
       width: 28px; height: 28px; border-radius: 50%;
       background: var(--paper-mute); color: var(--ink);
-      font-size: 12.5px; font-weight: 700;
+      font-size: 12.5px; font-weight: 600;
       display: flex; align-items: center; justify-content: center; flex: 0 0 28px;
     }
     .split-part-num svg { width: 14px; height: 14px; }
-    .split-part-card.is-paid .split-part-num { background: var(--emerald); color: #fff; }
+    .split-part-card.is-paid .split-part-num { background: var(--emerald); color: var(--on-accent); }
     .split-part-info { flex: 1; min-width: 0; }
-    .split-part-amount { font-size: 16px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
+    .split-part-amount { font-size: 16px; font-weight: 600; color: var(--ink); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
     .split-part-card.is-paid .split-part-amount { color: var(--forest); }
     .split-part-label { font-size: 10.5px; color: var(--ink-4); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
     .split-part-paid-label { font-size: 11.5px; font-weight: 600; color: var(--forest); margin-top: 2px; }
@@ -2611,8 +2651,8 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; gap: 4px;
     }
     .split-part-btn svg { width: 12px; height: 12px; }
-    .split-part-btn.carte { background: var(--gradient); color: #fff; }
-    .split-part-btn.cash-dark { background: var(--ink); color: #fff; }
+    .split-part-btn.carte { background: var(--gradient); color: var(--on-accent); }
+    .split-part-btn.cash-dark { background: var(--elev); color: var(--ink); }
 
     .split-all-done { text-align: center; padding: 16px 0 4px; }
     .split-done-icon {
@@ -2621,7 +2661,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
     }
     .split-done-icon svg { width: 28px; height: 28px; color: var(--emerald); }
-    .split-all-done h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--ink); }
+    .split-all-done h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; color: var(--ink); }
     .split-all-done p { margin: 0 0 16px; font-size: 13px; color: var(--ink-3); }
     .split-close-btn {
       width: 100%; height: 46px; border-radius: var(--r-lg);
@@ -2632,21 +2672,29 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Payment-choice sheet shown when serveur taps "Encaisser" */
     .pay-choice { display: flex; flex-direction: column; gap: 10px; }
     .pay-choice .td-btn { width: 100%; }
-    /* card + cash share one row as icon-only buttons (mirrors caisse) */
+    /* Carte + espèces partagent une rangée. Elles étaient muettes : deux
+       pastilles d'icône avec un `aria-label` que personne ne voit. Un serveur
+       qui encaisse dans le bruit ne joue pas aux devinettes — le mot est
+       écrit sous le glyphe. */
     .pay-row { display: flex; gap: 8px; }
     .pay-icon {
       flex: 1;
-      height: 56px;
+      min-height: 62px;
+      padding: 9px 6px;
       border-radius: var(--r-lg);
-      display: inline-flex; align-items: center; justify-content: center;
-      color: #fff;
+      display: inline-flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      color: var(--ink);
       box-shadow: var(--shadow-1);
       transition: transform 150ms ease, filter 150ms ease;
     }
     .pay-icon:active { transform: scale(0.98); }
     .pay-icon svg { width: 23px; height: 23px; }
-    .pay-icon.card { background: var(--ink); }
-    .pay-icon.cash { background: var(--gradient); }
+    .pay-icon .pay-label {
+      font-size: 11.5px; font-weight: 600; letter-spacing: -0.01em;
+    }
+    .pay-icon.card { background: var(--elev); }
+    .pay-icon.cash { background: var(--gradient); color: var(--on-accent); }
 
     /* ---------- Toast ---------- */
     #toast-stack {
@@ -2655,14 +2703,18 @@ em, i, cite, dfn, var { font-style: normal; }
       left: 50%;
       transform: translateX(-50%);
       display: flex; flex-direction: column; gap: 8px;
-      z-index: 90;
+      /* Au-dessus des voiles de modal (100) et des tiroirs (200) : un toast
+         levé pendant qu'une feuille est ouverte — « Ticket en impression… »,
+         « Table réglée ✓ » — passait derrière le voile et ne se voyait pas. */
+      z-index: 300;
       pointer-events: none;
       width: calc(100% - 32px);
       max-width: 360px;
     }
     .toast {
-      background: var(--ink);
-      color: #fff;
+      background: var(--elev);
+      color: var(--ink);
+      border: 1px solid var(--line);
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 12.5px;
@@ -2688,7 +2740,9 @@ em, i, cite, dfn, var { font-style: normal; }
       opacity: 0; transform: scale(0.4);
       pointer-events: none;
     }
-    .ci-btn-check svg { width: 28px; height: 28px; color: #fff; stroke-width: 3; }
+    /* Material dessine des tracés pleins : stroke-width n'a plus de prise,
+       et l'encre doit être sombre puisque le bouton vire à la menthe. */
+    .ci-btn-check svg { width: 28px; height: 28px; color: var(--on-accent); }
     .ci-btn.is-loading {
       background: var(--emerald);
       box-shadow: 0 8px 32px rgba(63,182,122,0.45), 0 0 0 6px rgba(63,182,122,0.18);
@@ -2738,7 +2792,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .kiwi-greet {
       position: absolute; inset: 0; z-index: 200;
       display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
+      background: linear-gradient(160deg, #0A0A0A 0%, #060606 55%, #000000 100%);
       opacity: 0; pointer-events: none;
       transition: opacity 600ms cubic-bezier(0.32, 0.72, 0, 1);
       will-change: opacity;
@@ -2746,8 +2800,8 @@ em, i, cite, dfn, var { font-style: normal; }
     .kiwi-greet::before {
       content: ""; position: absolute; inset: 0; z-index: 0;
       background:
-        radial-gradient(60% 50% at 15% 30%, rgba(31,93,60,0.10), transparent 60%),
-        radial-gradient(50% 45% at 85% 80%, rgba(125,242,176,0.10), transparent 60%);
+        radial-gradient(60% 50% at 15% 30%, rgba(0,255,174,0.10), transparent 60%),
+        radial-gradient(50% 45% at 85% 80%, rgba(0,232,160,0.07), transparent 60%);
       pointer-events: none;
     }
     .kiwi-greet.is-visible { opacity: 1; }
@@ -2767,12 +2821,12 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 0; line-height: 1.15;
       font-size: 38px; font-weight: 600; letter-spacing: -0.030em;
       color: var(--ink);
-      text-shadow: 0 2px 6px rgba(10,15,13,0.05);
+      text-shadow: 0 2px 18px rgba(0,0,0,0.6);
       white-space: nowrap;
     }
     .kiwi-greet h1 em {
       font-family: var(--serif); font-weight: 400;
-      color: var(--forest);
+      color: var(--mint);
       display: inline;
     }
     .kiwi-greet h1 .em-clip {
@@ -2837,7 +2891,7 @@ em, i, cite, dfn, var { font-style: normal; }
       top: calc(var(--topbar-h) + max(env(safe-area-inset-top), 14px) + 14px);
       left: 16px; right: 16px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       border-radius: 16px;
       padding: 14px 16px;
       display: flex; align-items: center; gap: 12px;
@@ -2864,7 +2918,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .wb-icon svg { width: 18px; height: 18px; }
     .wb-text { flex: 1; min-width: 0; }
-    .wb-line1 { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+    .wb-line1 { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
     .wb-line2 { font-size: 11.5px; margin-top: 2px; opacity: 0.9; }
 
     /* ===========================================================
@@ -2914,7 +2968,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .scope-title .scope-count-pill {
       font-family: var(--sans);
       font-style: normal;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 13px;
       padding: 4px 10px;
       border-radius: 999px;
@@ -2925,9 +2979,9 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Colleague pause alert (shown in "Mes tables" view) */
     .colleague-alert {
-      background: #FFF8ED;
+      background: rgba(199,117,38,0.10);
       color: var(--ink);
-      border: 1px solid rgba(199,117,38,0.24);
+      border: 1px solid rgba(226,152,74,0.30);
       border-radius: 11px;
       padding: 8px 10px;
       display: flex; align-items: center; gap: 12px;
@@ -2938,13 +2992,13 @@ em, i, cite, dfn, var { font-style: normal; }
     .colleague-alert:active { transform: scale(0.99); }
     .colleague-alert-icon {
       width: 28px; height: 28px; border-radius: 50%;
-      background: rgba(199,117,38,0.12); color: #9A5A1B;
+      background: rgba(226,152,74,0.16); color: #F0B36B;
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 28px;
     }
     .colleague-alert-icon svg { width: 15px; height: 15px; }
     .colleague-alert-text { flex: 1; min-width: 0; }
-    .colleague-alert-title { font-size: 12.5px; font-weight: 700; letter-spacing: -0.005em; }
+    .colleague-alert-title { font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em; }
     .colleague-alert-sub { font-size: 11px; margin-top: 1px; color: var(--ink-3); }
     .colleague-alert-chev { width: 18px; height: 18px; opacity: 0.7; flex: 0 0 18px; }
 
@@ -2955,9 +3009,9 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .colleague-avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: var(--ink-bg);
-      color: var(--paper-cream);
-      font-size: 11px; font-weight: 700;
+      background: var(--elev);
+      color: var(--ink);
+      font-size: 11px; font-weight: 600;
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 32px;
       letter-spacing: -0.01em;
@@ -2993,9 +3047,9 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Server initials badge on table cards (collègues view only) */
     .tc-server-chip {
       font-size: 9.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-3);
-      background: rgba(0,0,0,0.06);
+      background: rgba(255,255,255,0.08);
       padding: 1px 6px;
       border-radius: 999px;
       letter-spacing: 0.03em;
@@ -3062,10 +3116,10 @@ em, i, cite, dfn, var { font-style: normal; }
       <!-- ============ PIN LOGIN SCREEN ============ -->
       <section class="screen screen-pin is-active" id="screen-pin" aria-label="Connexion PIN">
         <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
-          <i data-lucide="refresh-cw"></i>
+          <i data-icon="refresh-cw"></i>
         </button>
         <div class="pin-top">
-          <div class="pin-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
+          <div class="pin-brand" data-kiwi-logo><img src="images/kiwi-logo.svg" alt="Kiwi" /></div>
           <div class="pin-tagline">— Équipe</div>
         </div>
 
@@ -3093,7 +3147,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <span class="pin-key pin-key-empty" aria-hidden="true"></span>
           <button class="pin-key" data-key="0">0</button>
           <button class="pin-key pin-key-back" data-key="back" aria-label="Effacer">
-            <i data-lucide="delete"></i>
+            <i data-icon="delete"></i>
           </button>
         </div>
         <form class="employee-login" id="employee-login" novalidate>
@@ -3109,16 +3163,16 @@ em, i, cite, dfn, var { font-style: normal; }
       <!-- ============ CLOCK-IN SCREEN ============ -->
       <section class="screen screen-clockin" id="screen-clockin" aria-label="Pointer l'arrivée">
         <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
-          <i data-lucide="refresh-cw"></i>
+          <i data-icon="refresh-cw"></i>
         </button>
         <div class="ci-top">
-          <div class="ci-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></div>
+          <div class="ci-brand" data-kiwi-logo><img src="images/kiwi-logo.svg" alt="Kiwi" /></div>
           <div class="ci-tagline">— Équipe</div>
         </div>
 
         <div class="nfc-zone" id="nfc-zone">
           <div class="nfc-disc">
-            <i data-lucide="key-round" class="nfc-svg"></i>
+            <i data-icon="key-round" class="nfc-svg"></i>
             <svg class="nfc-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="20 6 9 17 4 12"/>
@@ -3139,15 +3193,15 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <div class="ci-bottom">
           <button class="ci-btn" id="ci-button" disabled>
-            <i data-lucide="log-in"></i>
+            <i data-icon="log-in"></i>
             <span>Pointer l'arrivée</span>
             <span class="ci-btn-check" aria-hidden="true">
-              <i data-lucide="check"></i>
+              <i data-icon="check"></i>
             </span>
           </button>
           <button class="ci-secondary" id="ci-browse-link" type="button"
                   aria-label="Consulter l'application sans pointer">
-            <i data-lucide="eye"></i>
+            <i data-icon="eye"></i>
             <span>Consulter sans pointer</span>
           </button>
           <div class="ci-restaurant">Maarif · Casablanca</div>
@@ -3167,7 +3221,7 @@ em, i, cite, dfn, var { font-style: normal; }
             </div>
           </div>
           <button class="app-reload" type="button" data-app-reload aria-label="Rafraîchir l'application" title="Rafraîchir">
-            <i data-lucide="refresh-cw"></i>
+            <i data-icon="refresh-cw"></i>
           </button>
         </header>
 
@@ -3212,7 +3266,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="offshift-banner" id="offshift-banner">
               <div class="offshift-banner-head">
                 <div class="offshift-banner-icon" aria-hidden="true">
-                  <i data-lucide="moon"></i>
+                  <i data-icon="moon"></i>
                 </div>
                 <div class="offshift-banner-text">
                   <div class="offshift-banner-title">Vous n'êtes pas en service</div>
@@ -3221,7 +3275,7 @@ em, i, cite, dfn, var { font-style: normal; }
               </div>
               <div class="offshift-banner-actions">
                 <button class="offshift-cta" id="offshift-clockin" type="button">
-                  <i data-lucide="log-in"></i>
+                  <i data-icon="log-in"></i>
                   <span>Pointer mon arrivée</span>
                 </button>
                 <button class="offshift-logout" id="offshift-logout" type="button">
@@ -3254,7 +3308,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="kg-sched-head">
                 <div class="kg-eyebrow">Cette semaine</div>
                 <button class="kg-month-open" id="kg-month-open" type="button">
-                  <i data-lucide="calendar-days"></i><span>Voir le mois</span>
+                  <i data-icon="calendar-days"></i><span>Voir le mois</span>
                 </button>
               </div>
               <div class="kg-week" id="kg-week">
@@ -3274,7 +3328,7 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="kg-hours-head">
                 <div class="kg-eyebrow">Heures travaillées</div>
                 <button class="kg-hours-open" id="kg-hours-open" type="button">
-                  <i data-lucide="history"></i><span>Historique</span>
+                  <i data-icon="history"></i><span>Historique</span>
                 </button>
               </div>
               <div class="kg-hours-grid">
@@ -3335,7 +3389,7 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="kg-card kg-defi" id="kg-defi-card">
               <div class="kg-defi-head">
                 <div class="kg-eyebrow">Défi du soir</div>
-                <div class="kg-defi-check"><i data-lucide="check"></i></div>
+                <div class="kg-defi-check"><i data-icon="check"></i></div>
               </div>
               <div class="kg-defi-text" id="kg-defi-text">Réglez 12 tables ce soir</div>
               <div class="kg-defi-bar"><div class="kg-defi-bar-fill" id="kg-defi-fill"></div></div>
@@ -3344,13 +3398,13 @@ em, i, cite, dfn, var { font-style: normal; }
             <!-- === /Gamification profil cards === -->
 
             <div class="profil-pause" id="profil-pause" role="status">
-              <i data-lucide="coffee"></i>
+              <i data-icon="coffee"></i>
               <span>Pause gérée depuis la caisse</span>
             </div>
 
             <section class="profil-language" aria-labelledby="profil-language-title">
               <div class="profil-language-head" id="profil-language-title">
-                <i data-lucide="languages"></i>
+                <i data-icon="languages"></i>
                 <span>Langue de l'application</span>
               </div>
               <div class="profil-language-options" role="group" aria-label="Langue de l'application">
@@ -3361,7 +3415,7 @@ em, i, cite, dfn, var { font-style: normal; }
             </section>
 
             <button class="profil-clockout" id="profil-clockout">
-              <i data-lucide="log-out"></i>
+              <i data-icon="log-out"></i>
               <span>Pointer le départ</span>
             </button>
           </div>
@@ -3370,7 +3424,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <!-- Welcome banner (shown briefly after clock-in) -->
         <div class="welcome-banner" id="welcome-banner" aria-hidden="true">
-          <div class="wb-icon"><i data-lucide="party-popper"></i></div>
+          <div class="wb-icon"><i data-icon="party-popper"></i></div>
           <div class="wb-text">
             <div class="wb-line1" id="wb-line1">Bonjour Yassir!</div>
             <div class="wb-line2" id="wb-line2">7 tables ce soir · bon service</div>
@@ -3386,24 +3440,24 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="menu-cart-total" id="mcb-total">0 MAD</div>
             </div>
           </div>
-          <div class="menu-cart-arrow"><i data-lucide="arrow-right"></i></div>
+          <div class="menu-cart-arrow"><i data-icon="arrow-right"></i></div>
         </div>
 
         <nav class="bottom-tabs">
           <div class="bt-capsule" id="bt-capsule">
             <span class="bt-pill" id="bt-pill" aria-hidden="true"></span>
             <button class="bt-btn" data-tab="tables" aria-pressed="true" aria-label="Tables">
-              <i data-lucide="utensils-crossed"></i>
+              <i data-icon="utensils-crossed"></i>
             </button>
             <button class="bt-btn" data-tab="menu" aria-pressed="false" aria-label="Menu">
-              <i data-lucide="book-open"></i>
+              <i data-icon="book-open"></i>
             </button>
             <button class="bt-btn" data-tab="notifications" aria-pressed="false" aria-label="Notifications">
-              <i data-lucide="bell"></i>
+              <i data-icon="bell"></i>
               <span class="bt-badge" id="bt-notification-badge" hidden>0</span>
             </button>
             <button class="bt-btn" data-tab="profil" aria-pressed="false" aria-label="Profil">
-              <i data-lucide="user"></i>
+              <i data-icon="user"></i>
             </button>
           </div>
         </nav>
@@ -3413,7 +3467,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <section class="screen screen-table" id="screen-table" aria-label="Détail mesa">
         <header class="td-header">
           <button class="td-back" id="td-back" aria-label="Retour">
-            <i data-lucide="arrow-left"></i>
+            <i data-icon="arrow-left"></i>
           </button>
           <div class="td-title">
             <div class="td-table-name" id="td-table-name">T2 · 2 couverts</div>
@@ -3442,7 +3496,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="nt-actions">
             <button class="td-btn ghost" id="nt-cancel">Annuler</button>
             <button class="td-btn primary" id="nt-confirm">
-              <i data-lucide="door-open"></i> Ouvrir
+              <i data-icon="door-open"></i> Ouvrir
             </button>
           </div>
         </div>
@@ -3454,9 +3508,9 @@ em, i, cite, dfn, var { font-style: normal; }
           <h3 class="modal-title" id="month-schedule-title">Planning du mois</h3>
           <p class="modal-subtle">Vos services planifiés par votre responsable.</p>
           <div class="kg-month-nav">
-            <button class="kg-month-arrow" id="kg-month-prev" type="button" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
+            <button class="kg-month-arrow" id="kg-month-prev" type="button" aria-label="Mois précédent"><i data-icon="chevron-left"></i></button>
             <div class="kg-month-title" id="kg-month-title"></div>
-            <button class="kg-month-arrow" id="kg-month-next" type="button" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button>
+            <button class="kg-month-arrow" id="kg-month-next" type="button" aria-label="Mois suivant"><i data-icon="chevron-right"></i></button>
           </div>
           <div class="kg-month-grid" id="kg-month-grid"></div>
           <button class="kg-month-close" id="kg-month-close" type="button">Fermer</button>
@@ -3469,9 +3523,9 @@ em, i, cite, dfn, var { font-style: normal; }
           <h3 class="modal-title" id="hours-history-title">Historique des heures</h3>
           <p class="modal-subtle">Heures issues de vos pointages Kiwi, conservées séparément et partagées avec le tableau de bord.</p>
           <div class="kg-month-nav">
-            <button class="kg-month-arrow" id="hours-history-prev" type="button" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
+            <button class="kg-month-arrow" id="hours-history-prev" type="button" aria-label="Mois précédent"><i data-icon="chevron-left"></i></button>
             <div class="kg-month-title" id="hours-history-month"></div>
-            <button class="kg-month-arrow" id="hours-history-next" type="button" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button>
+            <button class="kg-month-arrow" id="hours-history-next" type="button" aria-label="Mois suivant"><i data-icon="chevron-right"></i></button>
           </div>
           <div class="hours-history-summary"><span>Total du mois</span><strong id="hours-history-total">0h 00</strong></div>
           <div class="hours-history-list" id="hours-history-list"></div>
@@ -3494,19 +3548,19 @@ em, i, cite, dfn, var { font-style: normal; }
           <h3 class="modal-title">Encaisser <span id="pc-table-id">T2</span></h3>
           <p class="modal-subtle">Total: <span id="pc-total" class="mono">530 MAD</span></p>
           <button class="td-btn ghost sm" id="pc-client" type="button" style="margin-bottom:10px;">
-            <i data-lucide="user-plus"></i> <span id="pc-client-label">Client &amp; fidélité</span>
+            <i data-icon="user-plus"></i> <span id="pc-client-label">Client &amp; fidélité</span>
           </button>
           <div class="pay-choice">
             <div class="pay-row">
               <button class="pay-icon card" data-pay="card" aria-label="Payer par carte">
-                <i data-lucide="credit-card"></i>
+                <i data-icon="credit-card"></i><span class="pay-label">Carte</span>
               </button>
               <button class="pay-icon cash" data-pay="cash" aria-label="Payer en espèces">
-                <i data-lucide="banknote"></i>
+                <i data-icon="banknote"></i><span class="pay-label">Espèces</span>
               </button>
             </div>
             <button class="td-btn ghost" data-pay="split">
-              <i data-lucide="divide"></i> Partager l'addition
+              <i data-icon="divide"></i> Partager l'addition
             </button>
             <button class="td-btn ghost sm" id="pc-cancel" style="margin-top:4px;">Annuler</button>
           </div>
@@ -3519,7 +3573,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <h3 class="modal-title">Client &amp; fidélité</h3>
           <p class="modal-subtle">Attachez un client existant à cette addition.</p>
           <input id="service-client-search" type="search" placeholder="Nom ou téléphone"
-            style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;" />
+            style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:var(--paper-mute);color:var(--ink);" />
           <div id="service-client-list" style="display:grid;gap:8px;max-height:42vh;overflow:auto;margin:12px 0;"></div>
           <button class="td-btn ghost sm" id="service-client-none" type="button">Client de passage</button>
           <button class="td-btn ghost sm" id="service-client-close" type="button">Fermer</button>
@@ -3535,7 +3589,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="modal-amount" id="card-amount">530,00 MAD</div>
           <div class="reader-stage">
             <div class="reader-disc is-pulsing" id="reader-disc">
-              <i data-lucide="credit-card"></i>
+              <i data-icon="credit-card"></i>
             </div>
             <div class="reader-status" id="reader-status">Approchez la carte ou le téléphone<span class="ellipsis"></span></div>
             <div class="reader-method" id="reader-method">Kiwi Tap · NFC · QR</div>
@@ -3550,10 +3604,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
           <div class="modal-actions" id="card-actions">
             <button class="ma-btn primary" data-modal-action="print">
-              <i data-lucide="printer"></i><span>Ticket</span>
+              <i data-icon="printer"></i><span>Ticket</span>
             </button>
             <button class="ma-btn secondary" data-modal-action="send">
-              <i data-lucide="message-square"></i><span>SMS / WA</span>
+              <i data-icon="message-square"></i><span>SMS / WA</span>
             </button>
           </div>
           <div class="modal-foot" id="card-foot">
@@ -3591,7 +3645,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="cash-grid" id="cash-step-success" hidden>
             <div class="reader-stage" style="min-height:120px;">
               <div class="reader-disc is-success">
-                <i data-lucide="check"></i>
+                <i data-icon="check"></i>
               </div>
               <div class="reader-status is-success">Espèces confirmées</div>
             </div>
@@ -3599,10 +3653,10 @@ em, i, cite, dfn, var { font-style: normal; }
             <div class="cash-success-rendu" id="cash-success-rendu">0,00 MAD</div>
             <div class="modal-actions is-visible">
               <button class="ma-btn primary" data-modal-action="print">
-                <i data-lucide="printer"></i><span>Ticket</span>
+                <i data-icon="printer"></i><span>Ticket</span>
               </button>
               <button class="ma-btn secondary" data-modal-action="send">
-                <i data-lucide="message-square"></i><span>SMS / WA</span>
+                <i data-icon="message-square"></i><span>SMS / WA</span>
               </button>
             </div>
             <div class="modal-foot is-visible">
@@ -3624,14 +3678,14 @@ em, i, cite, dfn, var { font-style: normal; }
 
             <div class="split-tabs">
               <button class="split-tab is-active" data-split-tab="egal">
-                <div class="split-tab-icon"><i data-lucide="equal"></i></div>
+                <div class="split-tab-icon"><i data-icon="equal"></i></div>
                 <div>
                   <div class="split-tab-title">Parts égales</div>
                   <div class="split-tab-desc" id="split-egal-desc">2 parts ·, chacun</div>
                 </div>
               </button>
               <button class="split-tab" data-split-tab="article">
-                <div class="split-tab-icon"><i data-lucide="list"></i></div>
+                <div class="split-tab-icon"><i data-icon="list"></i></div>
                 <div>
                   <div class="split-tab-title">Par article</div>
                   <div class="split-tab-desc">Assignez à un convive</div>
@@ -3667,7 +3721,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
             <div id="split-article-content" hidden>
               <div class="split-help-box">
-                <i data-lucide="lightbulb"></i>
+                <i data-icon="lightbulb"></i>
                 <div class="split-help-text">
                   Choisissez un convive, puis tapez sur les articles qu'il a consommés.
                 </div>
@@ -3694,12 +3748,12 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="split-flow-title">Encaisser les parts</div>
               <div class="split-flow-progress" id="split-flow-progress">0 / 0</div>
               <button class="split-flow-close" id="split-flow-close" aria-label="Plus tard">
-                <i data-lucide="x"></i>
+                <i data-icon="x"></i>
               </button>
             </div>
             <div class="split-parts-list" id="split-parts-list"></div>
             <div class="split-all-done" id="split-all-done" hidden>
-              <div class="split-done-icon"><i data-lucide="check-circle-2"></i></div>
+              <div class="split-done-icon"><i data-icon="check-circle-2"></i></div>
               <h3>Tout khlass!</h3>
               <p>L'addition est soldée · choukran</p>
               <button class="split-close-btn" id="split-done-close">Fermer</button>
@@ -3716,7 +3770,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="kg-sc-meta" id="kg-sc-meta">Café Atlas</div>
           <div class="kg-sc-rows" id="kg-sc-rows"><!-- stat rows injected --></div>
           <div class="kg-sc-highlight" id="kg-sc-highlight" style="display:none;">
-            <div class="kg-sc-hl-icon"><i data-lucide="sparkles"></i></div>
+            <div class="kg-sc-hl-icon"><i data-icon="sparkles"></i></div>
             <div>
               <div class="kg-sc-hl-label" id="kg-sc-hl-label">Ce soir</div>
               <div class="kg-sc-hl-text" id="kg-sc-hl-text"></div>
@@ -3724,10 +3778,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
           <div class="kg-sc-actions">
             <button class="kg-sc-btn kg-primary" id="kg-sc-share">
-              <i data-lucide="share-2"></i><span>Partager</span>
+              <i data-icon="share-2"></i><span>Partager</span>
             </button>
             <button class="kg-sc-btn kg-secondary" id="kg-sc-clockout">
-              <i data-lucide="log-out"></i><span>Pointer le départ</span>
+              <i data-icon="log-out"></i><span>Pointer le départ</span>
             </button>
           </div>
         </div>
@@ -3887,6 +3941,8 @@ em, i, cite, dfn, var { font-style: normal; }
         'Client de passage': 'Walk-in customer',
         'Payer par carte': 'Pay by card',
         'Payer en espèces': 'Pay cash',
+        'Carte': 'Card',
+        'Espèces': 'Cash',
         "Partager l'addition": 'Split bill',
         'Confirmer': 'Confirm',
         'Rendu': 'Change',
@@ -3963,6 +4019,8 @@ em, i, cite, dfn, var { font-style: normal; }
         'Combien de couverts?': 'شحال ديال الناس؟',
         'Client & fidélité': 'الزبون والوفاء',
         'Client de passage': 'زبون عابر',
+        'Carte': 'كارط',
+        'Espèces': 'كاش',
         'Payer par carte': 'يخلص بالكارط',
         'Payer en espèces': 'يخلص بالكاش',
         "Partager l'addition": 'نقسم الحساب',
@@ -4216,8 +4274,10 @@ em, i, cite, dfn, var { font-style: normal; }
       return parts.join(' · ');
     }
     const optsSig = opts => opts.map(o => o.group + ':' + o.label).sort().join('|');
-    /* small inline sliders glyph (no lucide dep, renders immediately) */
-    const SLIDERS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
+    /* Glyphe « options » posé en une fois dans une chaîne, sans passer
+       par data-icon : il apparaît dans du HTML reconstruit à chaque
+       frappe et n'a pas besoin d'attendre un appel à render(). */
+    const SLIDERS_SVG = KiwiIcons.markup('tune');
 
     let menuItems = SV_DEMO ? [
       { id: 'm-001', cat: 'entrees',    name: 'Salade marocaine',     price: 45  },
@@ -4669,7 +4729,7 @@ em, i, cite, dfn, var { font-style: normal; }
           applyRoleToClockin();
           resetNfc();
           showScreen('screen-clockin');
-          lucide.createIcons();
+          KiwiIcons.render();
         }, 560);
       }
     }
@@ -4713,7 +4773,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prepareAttendanceGate('clock-in');
       }
       try { document.dispatchEvent(new CustomEvent('kiwi-employee-authenticated')); } catch (_) {}
-      if (window.lucide) lucide.createIcons();
+      if (window.KiwiIcons) KiwiIcons.render();
     }
 
     const employeeLogin = $('#employee-login');
@@ -5465,7 +5525,7 @@ em, i, cite, dfn, var { font-style: normal; }
           // Restricted roles land straight in the profil tab.
           setTab(activeRole.defaultTab);
           renderAll();
-          lucide.createIcons();
+          KiwiIcons.render();
 
           runGreetingFlash(main);
         }, 380);
@@ -5503,7 +5563,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // Topbar shift-meta: replace "En service · 0h 00" with "Hors service"
       const tbMeta = $('#tb-shift-meta');
       if (tbMeta) tbMeta.textContent = 'Hors service';
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     function exitBrowseMode() {
@@ -5523,7 +5583,7 @@ em, i, cite, dfn, var { font-style: normal; }
     $('#offshift-clockin').addEventListener('click', () => {
       exitBrowseMode();
       prepareAttendanceGate('clock-in');
-      lucide.createIcons();
+      KiwiIcons.render();
     });
 
     // "Se déconnecter" — full logout back to PIN screen.
@@ -5625,7 +5685,7 @@ em, i, cite, dfn, var { font-style: normal; }
       banner.classList.remove('is-visible');
       void banner.offsetWidth;
       banner.classList.add('is-visible');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     function resetToEmployeePortal(message) {
@@ -5723,7 +5783,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (name === 'profil')   renderProfil();
       // Always update cart bar visibility on tab switch
       renderCartBar();
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     $$('.bt-btn').forEach(btn => {
@@ -5787,7 +5847,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="tc-right">
             ${showAmount ? `<div class="tc-amount">${fmtMAD(total)}</div>` : ''}
           </div>
-          <div class="tc-arrow"><i data-lucide="chevron-right"></i></div>
+          <div class="tc-arrow"><i data-icon="chevron-right"></i></div>
         </div>
       `;
     }
@@ -5804,7 +5864,19 @@ em, i, cite, dfn, var { font-style: normal; }
 
       const wrap = $('#tables-zones');
       wrap.innerHTML = currentScope === 'mine' ? renderOwnTables() : renderAllTables();
-      lucide.createIcons();
+      KiwiIcons.render();
+    }
+
+    /* Les tables de démo ne portent qu'une clé de zone (`salle`, `terrasse`,
+       `etage`) : `zoneLabel` n'est écrit que par la salle réelle. Le repli
+       « Salle » s'appliquait donc à TOUTES les zones, et on lisait deux
+       en-têtes « SALLE » l'un sous l'autre — la terrasse et l'étage sous le
+       nom du rez-de-chaussée. */
+    const ZONE_LABELS = { salle: 'Salle', terrasse: 'Terrasse', etage: 'Étage', bar: 'Bar', vip: 'Salon VIP' };
+    function zoneLabelFor(t) {
+      if (t && t.zoneLabel) return t.zoneLabel;
+      const key = (t && t.zone) || 'salle';
+      return ZONE_LABELS[key] || (key.charAt(0).toUpperCase() + key.slice(1));
     }
 
     function renderOwnTables() {
@@ -5819,12 +5891,12 @@ em, i, cite, dfn, var { font-style: normal; }
           const n = Object.keys(tables).filter(tid => tableServerIds(tables[tid]).includes(id)).length;
           return `
             <div class="colleague-alert" data-go-all="${id}">
-              <div class="colleague-alert-icon"><i data-lucide="coffee"></i></div>
+              <div class="colleague-alert-icon"><i data-icon="coffee"></i></div>
               <div class="colleague-alert-text">
                 <div class="colleague-alert-title">${esc(s.name)} en pause</div>
                 <div class="colleague-alert-sub">${n} table${n > 1 ? 's' : ''} à couvrir · tapez pour voir</div>
               </div>
-              <i data-lucide="chevron-right" class="colleague-alert-chev"></i>
+              <i data-icon="chevron-right" class="colleague-alert-chev"></i>
             </div>`;
         }).join('');
       }
@@ -5837,7 +5909,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
       const zoneSeen = Object.create(null);
       const zones = myIds
-        .map((id) => ({ key: tables[id].zone || 'salle', label: tables[id].zoneLabel || 'Salle' }))
+        .map((id) => ({ key: tables[id].zone || 'salle', label: zoneLabelFor(tables[id]) }))
         .filter((z) => { if (zoneSeen[z.key]) return false; zoneSeen[z.key] = 1; return true; });
       const zonesHTML = zones.map(z => {
         const ids = myIds.filter(id => tables[id].zone === z.key);
@@ -5942,7 +6014,7 @@ em, i, cite, dfn, var { font-style: normal; }
       ensureTableOrder(id);
       renderTableDetail();
       showScreen('screen-table');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     function renderTableDetail() {
@@ -5971,7 +6043,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (order.length === 0) {
         body.innerHTML = `
           <div class="td-empty">
-            <i data-lucide="utensils"></i>
+            <i data-icon="utensils"></i>
             <p>Aucun article, appuyez sur <strong>Prendre la commande</strong> pour ouvrir le menu.</p>
           </div>
         `;
@@ -5999,7 +6071,7 @@ em, i, cite, dfn, var { font-style: normal; }
           } else {
             return `
               <div class="td-item">
-                <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
+                <span style="font-weight:600;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
                 <span class="td-item-name">${esc(l.name)}</span>
                 <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
                 ${optLine}
@@ -6031,30 +6103,30 @@ em, i, cite, dfn, var { font-style: normal; }
       const footer = $('#td-footer');
       const lancerHTML = isDirty ? `
         <button class="td-btn primary lancer-btn" data-action="lancer">
-          <i data-lucide="send-horizontal"></i> Lancer la commande
+          <i data-icon="send-horizontal"></i> Lancer la commande
         </button>` : '';
       let fHTML = '';
       if (t.status === 'a-commander' || t.status === 'ka-yaklo') {
         if (order.length === 0) {
           fHTML = `
             <button class="td-btn primary" data-action="take-order">
-              <i data-lucide="book-open"></i> Prendre la commande
+              <i data-icon="book-open"></i> Prendre la commande
             </button>
             <button class="td-btn danger sm" data-action="cancel-table">
-              <i data-lucide="x"></i> Fermer la mesa
+              <i data-icon="x"></i> Fermer la mesa
             </button>
           `;
         } else {
           fHTML = lancerHTML + `
             <button class="td-btn ${isDirty ? 'ghost' : 'primary'}" data-action="take-order">
-              <i data-lucide="plus"></i> ${isDirty ? 'Ajouter encore' : 'Ajouter articles'}
+              <i data-icon="plus"></i> ${isDirty ? 'Ajouter encore' : 'Ajouter articles'}
             </button>
             <div class="td-btn-row">
               <button class="td-btn warn row-pair" data-action="ask-bill">
-                <i data-lucide="receipt"></i> Addition
+                <i data-icon="receipt"></i> Addition
               </button>
               <button class="td-btn dark row-pair" data-action="pay">
-                <i data-lucide="credit-card"></i> Encaisser
+                <i data-icon="credit-card"></i> Encaisser
               </button>
             </div>
           `;
@@ -6062,32 +6134,32 @@ em, i, cite, dfn, var { font-style: normal; }
       } else if (t.status === 'bgha-ykhlass') {
         fHTML = lancerHTML + `
           <button class="td-btn ${isDirty ? 'dark' : 'primary'}" data-action="pay">
-            <i data-lucide="credit-card"></i> Encaisser ${fmtMAD(total)}
+            <i data-icon="credit-card"></i> Encaisser ${fmtMAD(total)}
           </button>
           <div class="td-btn-row">
             <button class="td-btn ghost row-pair" data-action="print-bill">
-              <i data-lucide="printer"></i> Imprimer
+              <i data-icon="printer"></i> Imprimer
             </button>
             <button class="td-btn ghost row-pair" data-action="take-order">
-              <i data-lucide="plus"></i> Ajouter
+              <i data-icon="plus"></i> Ajouter
             </button>
           </div>
         `;
       } else if (t.status === 'ka-tkhdam') {
         fHTML = `
           <button class="td-btn ghost" disabled style="opacity:.6">
-            <i data-lucide="loader"></i> Paiement en cours…
+            <i data-icon="loader"></i> Paiement en cours…
           </button>
         `;
       } else if (t.status === 'khlass') {
         fHTML = `
           <button class="td-btn ghost" disabled>
-            <i data-lucide="check-circle-2"></i> Table réglée
+            <i data-icon="check-circle-2"></i> Table réglée
           </button>
         `;
       }
       footer.innerHTML = fHTML;
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     /* Special table detail view when a split is in progress */
@@ -6111,7 +6183,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const optTxt = optsSummary(l.opts);
         return `
         <div class="td-item" style="opacity:0.55">
-          <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
+          <span style="font-weight:600;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
           <span class="td-item-name">${esc(l.name)}</span>
           <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
           ${optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : ''}
@@ -6121,7 +6193,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#td-body').innerHTML = `
         <div class="td-split-banner">
           <div class="td-split-banner-row">
-            <div class="td-split-banner-icon"><i data-lucide="split"></i></div>
+            <div class="td-split-banner-icon"><i data-icon="split"></i></div>
             <div class="td-split-banner-text">
               <div class="td-split-banner-title">Split en cours · ${split.paidCount}/${split.parts.length}</div>
               <div class="td-split-banner-sub">${fmtMAD(paidTotal)} réglés / ${fmtMAD(split.total)} · reste ${fmtMAD(remainingAmt)}</div>
@@ -6137,13 +6209,13 @@ em, i, cite, dfn, var { font-style: normal; }
       // Footer: primary Continuer + cancel
       $('#td-footer').innerHTML = `
         <button class="td-btn primary lancer-btn" data-action="resume-split">
-          <i data-lucide="play"></i> Continuer le split · ${remaining} part${remaining > 1 ? 's' : ''}
+          <i data-icon="play"></i> Continuer le split · ${remaining} part${remaining > 1 ? 's' : ''}
         </button>
         <button class="td-btn danger sm" data-action="cancel-split">
-          <i data-lucide="x"></i> Annuler le split
+          <i data-icon="x"></i> Annuler le split
         </button>
       `;
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     /* Leave the table-detail screen and land cleanly on the FLOOR.
@@ -6158,7 +6230,7 @@ em, i, cite, dfn, var { font-style: normal; }
       menuContextId = null;
       showScreen('screen-main');
       setTab('tables');  // setTab renders the tables panel + hides the cart bar
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     /* ---- back button ---- */
@@ -6305,7 +6377,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#nt-table-id').textContent = tableId;
       renderNewTableChips();
       $('#new-table-modal').classList.add('is-open');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     function renderNewTableChips() {
       $('#nt-covers-chips').innerHTML = [1,2,3,4,5,6,7,8].map(n =>
@@ -6332,7 +6404,7 @@ em, i, cite, dfn, var { font-style: normal; }
       newTableId = null;
       renderTableDetail();
       showScreen('screen-table');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     $('#new-table-modal').addEventListener('click', (e) => {
       const chip = e.target.closest('[data-nt-covers]');
@@ -6355,19 +6427,19 @@ em, i, cite, dfn, var { font-style: normal; }
               <div class="menu-context-line2">${t.covers} couvert${t.covers > 1 ? 's' : ''} · ajoutez des articles ci-dessous</div>
             </div>
             <button class="menu-context-close" id="menu-context-close" aria-label="Fermer">
-              <i data-lucide="x"></i>
+              <i data-icon="x"></i>
             </button>
           </div>
         `;
       } else {
         block.innerHTML = `
           <div class="menu-banner">
-            <i data-lucide="info"></i>
+            <i data-icon="info"></i>
             <div class="menu-banner-text">Sélectionnez une table d'abord pour ajouter des articles. Vous pouvez parcourir le menu pour information.</div>
           </div>
         `;
       }
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     function renderCatPills() {
@@ -6600,7 +6672,7 @@ em, i, cite, dfn, var { font-style: normal; }
       activeTableId = menuContextId;
       showScreen('screen-table');
       renderTableDetail();
-      lucide.createIcons();
+      KiwiIcons.render();
     });
 
     /* ---------- Notifications tab ---------- */
@@ -6623,14 +6695,14 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!serviceNotifications.length) {
         list.innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon"><i data-lucide="bell"></i></div>
+            <div class="empty-state-icon"><i data-icon="bell"></i></div>
             <h3>Aucune notification</h3>
             <p>Tables installées, commandes OrderPro, plats prêts et additions apparaîtront ici.</p>
           </div>`;
       } else {
         list.innerHTML = serviceNotifications.map((item) => `
           <button class="notification-card${item.unread ? ' is-unread' : ''}" type="button" data-notification-table="${esc(item.table)}">
-            <span class="notification-icon"><i data-lucide="${notificationIcon(item.type)}"></i></span>
+            <span class="notification-icon"><i data-icon="${notificationIcon(item.type)}"></i></span>
             <span class="notification-copy">
               <span class="notification-title">${esc(item.title)}</span>
               <span class="notification-body">${esc(item.body)}</span>
@@ -6645,7 +6717,7 @@ em, i, cite, dfn, var { font-style: normal; }
           });
         });
       }
-      if (window.lucide) lucide.createIcons();
+      if (window.KiwiIcons) KiwiIcons.render();
     }
 
     /* ---------- Profil tab ---------- */
@@ -6664,7 +6736,12 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Tables stats — only meaningful for the serveur.
       if (!activeRole.restricted) {
-        const all = Object.values(tables);
+        /* « Mon service » : ces deux lignes comptaient TOUTE la salle, y compris
+           les tables des collègues. On lisait « Tables réglées 1 » sur son
+           propre profil pendant que le défi du soir affichait « 0 / 7 » —
+           deux chiffres justes pour deux périmètres différents, illisibles
+           côte à côte. Le profil est personnel : on ne compte que ses tables. */
+        const all = Object.values(tables).filter(isMineTable);
         const active = all.filter(t => t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'ka-tkhdam').length;
         const paid = all.filter(t => t.status === 'khlass').length + tablesPaid;
         $('#profil-tables-active').textContent = `${active} / ${all.length}`;
@@ -6685,7 +6762,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const label = btn.querySelector('span');
       if (label) label.textContent = paused ? 'En pause · gérée depuis la caisse' : 'Pause gérée depuis la caisse';
       const icon = btn.querySelector('i');
-      if (icon) icon.setAttribute('data-lucide', 'coffee');
+      if (icon) icon.setAttribute('data-icon', 'coffee');
     }
 
     /* ===========================================================
@@ -6831,7 +6908,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>`;
       }
       grid.innerHTML = html;
-      if (window.lucide) lucide.createIcons();
+      if (window.KiwiIcons) KiwiIcons.render();
     }
     function closeMonthSchedule() { $('#month-schedule-modal').classList.remove('is-open'); }
     $('#kg-month-open').addEventListener('click', () => {
@@ -7050,7 +7127,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#pc-total').textContent = fmtMAD(getTableTotal(tableId));
       renderPayClient();
       $('#pay-choice-modal').classList.add('is-open');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     function closePayChoice() {
       $('#pay-choice-modal').classList.remove('is-open');
@@ -7112,7 +7189,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // Reset reader state
       reader.disc.classList.remove('is-success', 'flash');
       reader.disc.classList.add('is-pulsing');
-      reader.disc.innerHTML = '<i data-lucide="credit-card"></i>';
+      reader.disc.innerHTML = '<i data-icon="credit-card"></i>';
       reader.status.classList.remove('is-success');
       reader.status.innerHTML = 'Approchez la carte ou le téléphone<span class="ellipsis"></span>';
       reader.method.style.display = '';
@@ -7131,21 +7208,21 @@ em, i, cite, dfn, var { font-style: normal; }
       }
 
       cardModal.classList.add('is-open');
-      lucide.createIcons();
+      KiwiIcons.render();
       cardSuccessTimer = setTimeout(() => triggerCardSuccess(tableId), 2000);
     }
 
     function triggerCardSuccess(tableId) {
       reader.disc.classList.remove('is-pulsing');
       reader.disc.classList.add('flash', 'is-success');
-      reader.disc.innerHTML = '<i data-lucide="check"></i>';
+      reader.disc.innerHTML = '<i data-icon="check"></i>';
       reader.status.classList.add('is-success');
       reader.status.textContent = 'Carte approuvée';
       reader.method.style.display = 'none';
       reader.txn.textContent = 'TXN #KW-' + (28000 + Math.floor(Math.random()*999));
       reader.txn.hidden = false;
       reader.actions.classList.add('is-visible');
-      lucide.createIcons();
+      KiwiIcons.render();
       setTimeout(() => reader.disc.classList.remove('flash'), 600);
       cardFootTimer = setTimeout(() => reader.foot.classList.add('is-visible'), 1000);
     }
@@ -7235,7 +7312,7 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       }
       cashModal.classList.add('is-open');
-      lucide.createIcons();
+      KiwiIcons.render();
       setTimeout(() => cashInput.focus(), 60);
     }
     function closeCashModal({ paid = false, tableId = null } = {}) {
@@ -7275,7 +7352,7 @@ em, i, cite, dfn, var { font-style: normal; }
       cashStepInput.hidden = true;
       cashStepSuccess.hidden = false;
       cashSuccessRendu.textContent = fmtMADcents(got - total);
-      lucide.createIcons();
+      KiwiIcons.render();
     });
     cashModal.addEventListener('click', (e) => {
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
@@ -7304,7 +7381,16 @@ em, i, cite, dfn, var { font-style: normal; }
       const paymentId = employeePaymentId(id);
       const orderRef = serviceTableOrderRef(id);
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
-      if (!merchant || paidAmount <= 0) {
+      if (paidAmount <= 0) {
+        toast(`Table ${id} · addition vide`, 3600);
+        return false;
+      }
+      /* En démo il n'y a pas de restaurant derrière : `svSlug()` rend une
+         chaîne vide, et la garde ci-dessous refusait TOUT encaissement — la
+         table restait verte à 530 MAD, bloquée sur « Paiement… ». La démo
+         règle localement ; seule une vraie session exige un slug et un
+         accusé de réception du serveur. */
+      if (!SV_DEMO && !merchant) {
         toast(`Table ${id} · paiement impossible`, 4200);
         return false;
       }
@@ -7320,7 +7406,7 @@ em, i, cite, dfn, var { font-style: normal; }
          `/api/sale` now returns success only after the ledger and table are in
          agreement. Never free a table locally before that acknowledgement. */
       let saved = null;
-      try {
+      if (!SV_DEMO) try {
         const response = await fetch('/api/sale', {
           method: 'POST', credentials: 'same-origin', cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
@@ -7442,7 +7528,7 @@ em, i, cite, dfn, var { font-style: normal; }
         // Keep ka-tkhdam status (it's already ka-tkhdam from when split was launched)
         renderSplitFlow();
         $('#split-modal').classList.add('is-open');
-        lucide.createIcons();
+        KiwiIcons.render();
         return;
       }
 
@@ -7476,7 +7562,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       renderSplitSetup();
       $('#split-modal').classList.add('is-open');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     function closeSplitModal({ skipRevert = false } = {}) {
       // If a flow exists and isn't fully paid, persist it so the server
@@ -7511,7 +7597,7 @@ em, i, cite, dfn, var { font-style: normal; }
       } else {
         renderArticleMode();
       }
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     /* ---- Par article helpers ---- */
@@ -7551,7 +7637,7 @@ em, i, cite, dfn, var { font-style: normal; }
       renderConvivesTabs();
       renderPool();
       renderConviveCart();
-      lucide.createIcons();
+      KiwiIcons.render();
     }
 
     function renderConvivesTabs() {
@@ -7743,7 +7829,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#split-setup').hidden = true;
       $('#split-flow').hidden = false;
       renderSplitFlow();
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     function renderSplitFlow() {
       const { parts, paidCount } = splitState.flow;
@@ -7751,7 +7837,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#split-parts-list').innerHTML = parts.map((p, idx) => {
         if (p.paid) {
           return `<div class="split-part-card is-paid">
-            <div class="split-part-num"><i data-lucide="check"></i></div>
+            <div class="split-part-num"><i data-icon="check"></i></div>
             <div class="split-part-info">
               <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
               <div class="split-part-paid-label">Réglé · ${p.payMethod === 'carte' ? 'Carte' : 'Espèces'}</div>
@@ -7766,15 +7852,15 @@ em, i, cite, dfn, var { font-style: normal; }
           </div>
           <div class="split-part-btns">
             <button class="split-part-btn carte" data-pay-part="${idx}" data-pay-method="carte">
-              <i data-lucide="credit-card"></i> Carte
+              <i data-icon="credit-card"></i> Carte
             </button>
             <button class="split-part-btn cash-dark" data-pay-part="${idx}" data-pay-method="cash">
-              <i data-lucide="banknote"></i> Cash
+              <i data-icon="banknote"></i> Cash
             </button>
           </div>
         </div>`;
       }).join('');
-      lucide.createIcons();
+      KiwiIcons.render();
     }
     function paySplitPart(partIdx, method) {
       const part = splitState.flow.parts[partIdx];
@@ -7794,7 +7880,7 @@ em, i, cite, dfn, var { font-style: normal; }
         };
         reader.disc.classList.remove('is-success', 'flash');
         reader.disc.classList.add('is-pulsing');
-        reader.disc.innerHTML = '<i data-lucide="credit-card"></i>';
+        reader.disc.innerHTML = '<i data-icon="credit-card"></i>';
         reader.status.classList.remove('is-success');
         reader.status.innerHTML = 'Approchez la carte<span class="ellipsis"></span>';
         reader.method.style.display = '';
@@ -7802,7 +7888,7 @@ em, i, cite, dfn, var { font-style: normal; }
         reader.actions.classList.remove('is-visible');
         reader.foot.classList.remove('is-visible');
         cardModal.classList.add('is-open');
-        lucide.createIcons();
+        KiwiIcons.render();
         cardSuccessTimer = setTimeout(() => triggerCardSuccess(payTableId), 2000);
       } else {
         cashAmountOverride = part.amount;
@@ -7817,7 +7903,7 @@ em, i, cite, dfn, var { font-style: normal; }
         $('#cash-amount').textContent = fmtMADcents(part.amount);
         updateRendu();
         cashModal.classList.add('is-open');
-        lucide.createIcons();
+        KiwiIcons.render();
         setTimeout(() => cashInput.focus(), 60);
       }
     }
@@ -7840,7 +7926,7 @@ em, i, cite, dfn, var { font-style: normal; }
           tableSplits.delete(splitState.tableId);
           markTablePaid(splitState.tableId, 'split');
         }
-        lucide.createIcons();
+        KiwiIcons.render();
       }
     }
     $('#split-modal').addEventListener('click', (e) => {
@@ -7916,10 +8002,10 @@ em, i, cite, dfn, var { font-style: normal; }
     });
     document.addEventListener('kiwi-paired', () => { try { svFetchCarte(); } catch (_) {} });
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) lucide.createIcons();
+      if (window.KiwiIcons) KiwiIcons.render();
     });
     window.addEventListener('load', () => {
-      if (window.lucide) lucide.createIcons();
+      if (window.KiwiIcons) KiwiIcons.render();
     });
 
     /* =========================================================
@@ -8112,7 +8198,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const defiCard = document.getElementById('kg-defi-card');
         if (defiCard) defiCard.classList.toggle('is-done', dp.done);
 
-        if (window.lucide) lucide.createIcons();
+        if (window.KiwiIcons) KiwiIcons.render();
       }
 
       /* --- rank chip on the card payment screen --- */
@@ -8189,7 +8275,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const hlIcon  = veil.querySelector('.kg-sc-hl-icon');
         const hlLabel = document.getElementById('kg-sc-hl-label');
         const hlText  = document.getElementById('kg-sc-hl-text');
-        if (hlIcon)  hlIcon.innerHTML = '<i data-lucide="' + hl.icon + '"></i>';
+        if (hlIcon)  hlIcon.innerHTML = '<i data-icon="' + hl.icon + '"></i>';
         if (hlLabel) hlLabel.textContent = hl.label;
         if (hlText)  hlText.innerHTML = hl.text;
         if (hlEl) {
@@ -8201,7 +8287,7 @@ em, i, cite, dfn, var { font-style: normal; }
         }
 
         veil.classList.add('is-open');
-        if (window.lucide) lucide.createIcons();
+        if (window.KiwiIcons) KiwiIcons.render();
       }
 
       /* --- bank the shift into lifetime progress at clock-out --- */
