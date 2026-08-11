@@ -98,6 +98,13 @@ result = R.validate({ customer: { name: 'Nora' }, serviceId: 'svc-cut', startAt:
 ok(result.ok && result.resource.id === 'res-a', 'editing ignores the booking itself');
 
 doc = base();
+result = R.validate({ customer: { name: 'Family' }, serviceId: 'svc-cut', startAt: future, partySize: 4 }, doc);
+ok(!result.ok && result.error === 'conflict', 'party size cannot be assigned to an undersized resource');
+doc.resources[0].capacity = 4;
+result = R.validate({ customer: { name: 'Family' }, serviceId: 'svc-cut', startAt: future, partySize: 4 }, doc);
+ok(result.ok && result.resource.capacity === 4, 'party size selects a resource with sufficient capacity');
+
+doc = base();
 doc.settings.minNoticeMinutes = 180;
 result = R.validate({ customer: { name: 'Late' }, serviceId: 'svc-cut', startAt: Date.now() + 30 * 60000 }, doc);
 ok(!result.ok && result.error === 'invalid', 'minimum notice is enforced');
@@ -115,5 +122,6 @@ ok(configClientSource.includes("key !== 'reservations'"), 'legacy reservations:f
 ok(!/reservations:\s*false/.test(configApiSource), 'new stores no longer seed reservations as disabled');
 ok(bookingSource.includes("document.documentElement.lang||'fr'"), 'public booking defaults to French instead of browser-dependent English');
 ok(bookingSource.includes('data-closed-lang'), 'closed booking state keeps FR, EN and Arabic language controls');
+ok(bookingSource.includes("partySize:isDining()?state.partySize:1") && bookingSource.includes("partySize='+encodeURIComponent"), 'public dining flow carries party size through availability and booking');
 
 console.log(`reservations-test: ${controls} controls passed`);

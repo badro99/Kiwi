@@ -68,7 +68,15 @@ check(response.status === 200 && body.slots.length > 0, 'availability is calcula
 const slot = body.slots[Math.floor(body.slots.length / 2)];
 check(slot.resourceIds.length === 1 && slot.endAt > slot.startAt, 'slot contains assignable capacity and duration');
 
-const request = { merchant:'test-shop', ref:'public-ref-0001', serviceId:'svc-cut', startAt:slot.startAt, partySize:1, customer:{ name:'Nora', phone:'0612345678', email:'' } };
+response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=2`);
+body = await response.json();
+check(response.status === 200 && body.slots.length === 0, 'availability excludes resources that are too small for the party');
+db.doc.resources[0].capacity = 4;
+response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partySize=4`);
+body = await response.json();
+check(response.status === 200 && body.slots.length > 0, 'availability keeps resources large enough for the party');
+
+const request = { merchant:'test-shop', ref:'public-ref-0001', serviceId:'svc-cut', startAt:slot.startAt, partySize:4, customer:{ name:'Nora', phone:'0612345678', email:'' } };
 response = await callPost(request); body = await response.json();
 check(response.status === 200 && body.ok && body.status === 'confirmed', 'valid public booking is committed');
 check(/^R-[A-Z0-9]{8}$/.test(body.code), 'booking receives a customer-safe reference');

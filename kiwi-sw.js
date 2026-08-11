@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/venues.js?v=7',
   '/assets/trade-workspace-schema.js?v=3',
   '/assets/trade-workspaces.js?v=3',
-  '/assets/reservations.js?v=4',
+  '/assets/reservations.js?v=5',
   '/assets/pressing-ops.js?v=2',
   '/assets/pressing-garment-icons.js?v=1',
   '/assets/pressing-catalog.js?v=3',
@@ -97,13 +97,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=357',
+  '/assets/dashboard-pwa.js?v=358',
   '/assets/dashboard-native.js',
-  '/assets/pwa-update.js?v=357',
+  '/assets/pwa-update.js?v=358',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=357',
+  '/assets/caisse-pwa.js?v=358',
   '/assets/live-link.js',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois

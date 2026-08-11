@@ -56,14 +56,15 @@ function free(doc, rid, startAt, endAt) {
   if (doc.bookings.some((b) => ACTIVE.has(b.status) && b.resourceId === rid && overlaps(startAt, endAt, b.startAt, b.endAt))) return false;
   return !doc.blocked.some((b) => (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt));
 }
-function candidates(doc, svc, asked) {
+function candidates(doc, svc, asked, partySize) {
   const allowed = svc.resourceIds.length ? new Set(svc.resourceIds) : null;
-  return doc.resources.filter((r) => r.active && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
+  return doc.resources.filter((r) => r.active && r.capacity >= partySize && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
 }
-function slotsFor(doc, svc, date, hours, asked) {
+function slotsFor(doc, svc, date, hours, asked, partySize = 1) {
+  partySize = num(partySize, 1, 999, 1);
   const step = doc.settings.slotStep, now = Date.now(), earliest = now + doc.settings.minNoticeMinutes * 60000;
   const last = now + doc.settings.windowDays * 86400000, out = new Map();
-  for (const r of candidates(doc, svc, asked)) {
+  for (const r of candidates(doc, svc, asked, partySize)) {
     for (const p of periodsFor(date, r, hours)) {
       let a = timeMin(p.from), z = timeMin(p.to); if (a == null || z == null) continue; if (z <= a) z += 1440;
       for (let m = a; m + svc.duration <= z; m += step) {
@@ -95,9 +96,9 @@ export async function onRequestGet({ request, env }) {
   let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' },503); }
   const doc = safeDoc(rows.reservation?.data);
   if (!rows.merchant || !doc.settings.published) return json({ error:'booking-closed' },404);
-  const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64);
+  const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
-  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid); }
+  if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize); }
   return json(publicConfig(merchant, rows.merchant, doc, slots),200,{ 'Cache-Control':'no-store' });
 }
 export async function onRequestPost({ request, env }) {
@@ -118,7 +119,7 @@ export async function onRequestPost({ request, env }) {
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);
     const endAt=startAt+svc.duration*60000, date=dateParts(startAt,TZ), ymd=`${date.year}-${date.month}-${date.day}`;
-    const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked).find((x)=>x.startAt===startAt);
+    const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked,partySize).find((x)=>x.startAt===startAt);
     if(!validSlot)return json({error:'slot-unavailable'},409);
     const rid=asked&&validSlot.resourceIds.includes(asked)?asked:validSlot.resourceIds[0];
     const code='R-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(), token=crypto.randomUUID().replace(/-/g,'');

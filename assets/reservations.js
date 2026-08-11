@@ -93,9 +93,10 @@
   function get() { var s = S(); return normalize(s ? s.get(venueId()) : blank()); }
   function set(doc) { doc = normalize(doc); if (S()) S().set(doc, venueId()); return doc; }
   function service(doc, sid) { return doc.services.find(function (x) { return x.id === sid && x.active; }); }
-  function resourceCandidates(doc, svc, rid) {
+  function resourceCandidates(doc, svc, rid, partySize) {
     var allowed = svc && svc.resourceIds && svc.resourceIds.length ? svc.resourceIds : null;
-    return doc.resources.filter(function (r) { return r.active && (!rid || r.id === rid) && (!allowed || allowed.indexOf(r.id) >= 0); });
+    partySize = number(partySize, 1, 999, 1);
+    return doc.resources.filter(function (r) { return r.active && (+r.capacity || 1) >= partySize && (!rid || r.id === rid) && (!allowed || allowed.indexOf(r.id) >= 0); });
   }
   function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
   function resourceFree(doc, rid, startAt, endAt, ignoreId) {
@@ -113,13 +114,13 @@
     var mins = d.getHours() * 60 + d.getMinutes(), end = mins + Math.round((endAt - startAt) / 60000);
     return periods.some(function (p) { var a = window.KiwiHours ? window.KiwiHours.toMin(p.from) : null, z = window.KiwiHours ? window.KiwiHours.toMin(p.to) : null; if (a == null || z == null) return false; if (z <= a) z += 1440; return mins >= a && end <= z; });
   }
-  function chooseResource(doc, svc, rid, startAt, endAt, ignoreId) { return resourceCandidates(doc, svc, rid).find(function (r) { return withinHours(r, startAt, endAt) && resourceFree(doc, r.id, startAt, endAt, ignoreId); }) || null; }
+  function chooseResource(doc, svc, rid, startAt, endAt, ignoreId, partySize) { return resourceCandidates(doc, svc, rid, partySize).find(function (r) { return withinHours(r, startAt, endAt) && resourceFree(doc, r.id, startAt, endAt, ignoreId); }) || null; }
   function validate(input, doc, ignoreId) {
     doc = normalize(doc); input = input || {};
     var svc = service(doc, input.serviceId), startAt = +input.startAt || 0;
     if (!cleanText(input.customer && input.customer.name, 100) || !svc || !startAt) return { ok: false, error: 'invalid' };
     var endAt = startAt + svc.duration * 60000;
-    var res = chooseResource(doc, svc, input.resourceId, startAt, endAt, ignoreId);
+    var res = chooseResource(doc, svc, input.resourceId, startAt, endAt, ignoreId, input.partySize);
     if (!res) return { ok: false, error: 'conflict' };
     var now = Date.now();
     if (!ignoreId && startAt < now + doc.settings.minNoticeMinutes * 60000) return { ok: false, error: 'invalid' };
