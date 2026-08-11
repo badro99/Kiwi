@@ -285,7 +285,7 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
 ok(serviceSource.includes('assets/employee-live.js?v=355')
-  && serviceSource.includes('assets/pwa-update.js?v=356'),
+  && serviceSource.includes('assets/pwa-update.js?v=357'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");
 ok(serviceSource.includes('id="attendance-code"')
   && serviceSource.includes("prepareAttendanceGate('clock-out')")

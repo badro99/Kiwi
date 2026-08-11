@@ -89,7 +89,12 @@
    * absente veut dire ALLUMÉ (c'est ce qui laisse les clients d'avant
    * intacts), et une config jamais reçue — pas de backend, hors ligne — ne
    * doit fermer aucune porte. */
-  function featureOff(key) { return cfg.features[key] === false; }
+  /* Reservations became part of Kiwi's core operating layer in v1. The public
+   * page remains closed until the merchant explicitly configures and publishes
+   * it, but the configuration door itself must never be hidden: old merchant
+   * rows were seeded with `reservations:false`, creating an impossible loop
+   * where the owner could not reach the page needed to turn bookings on. */
+  function featureOff(key) { return key !== 'reservations' && cfg.features[key] === false; }
 
   var pinSeen = Object.create(null);
   function rememberPins(list) {
@@ -283,14 +288,14 @@
     // switcher moves between shops that don't buy the same modules, so a hide
     // left over from the boutique would blank a section the restaurant pays for.
     appliedOff.forEach(function (key) {
-      if (features[key] === false) return;                 // still off — leave it
+      if (featureOff(key)) return;                         // still off — leave it
       document.body.classList.remove('feat-off-' + key);
       var was = document.querySelectorAll('[data-feature="' + key + '"]');
       for (var j = 0; j < was.length; j++) { was[j].removeAttribute('hidden'); was[j].style.display = ''; }
     });
     appliedOff = [];
     Object.keys(features).forEach(function (key) {
-      if (features[key] === false) {
+      if (featureOff(key)) {
         appliedOff.push(key);
         document.body.classList.add('feat-off-' + key);
         var nodes = document.querySelectorAll('[data-feature="' + key + '"]');

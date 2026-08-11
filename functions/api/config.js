@@ -16,9 +16,9 @@ import {
 const VALID_PIN = /^\d{4}$/;
 
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
- * Cinq modules qui ne servent qu'à une partie des clients : un snack de quartier
- * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni carnet de
- * réservations, ni cartes de dépenses, et Order Pro ouvre la carte au téléphone
+ * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
+ * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni cartes de
+ * dépenses, et Order Pro ouvre la carte au téléphone
  * des passants. Les laisser allumés d'office, c'est livrer un labyrinthe et
  * quatre pages vides ; l'opérateur les rallume module par module quand le client
  * en a réellement besoin (kiwi-admin.html › Fonctionnalités).
@@ -32,7 +32,6 @@ const VALID_PIN = /^\d{4}$/;
 const NEW_STORE_FEATURES = {
   terminaux: false,
   conformite: false,
-  reservations: false,
   depenses: false,
   orderpro: false,
 };

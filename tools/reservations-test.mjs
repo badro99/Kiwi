@@ -3,6 +3,10 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../assets/reservations.js', import.meta.url), 'utf8');
+const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+const configClientSource = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
+const configApiSource = fs.readFileSync(new URL('../functions/api/config.js', import.meta.url), 'utf8');
+const bookingSource = fs.readFileSync(new URL('../assets/booking.js', import.meta.url), 'utf8');
 const listeners = {};
 const ctx = {
   console,
@@ -105,5 +109,11 @@ result = R.validate({ customer: { name: '' }, serviceId: 'svc-cut', startAt: fut
 ok(!result.ok && result.error === 'invalid', 'customer name is required');
 result = R.validate({ customer: { name: 'Nora' }, serviceId: 'missing', startAt: future }, base());
 ok(!result.ok && result.error === 'invalid', 'unknown services are rejected');
+
+ok(/data-nav="reservations"(?![^>]*data-feature)/.test(dashboardSource), 'core reservations navigation is never hidden by legacy entitlements');
+ok(configClientSource.includes("key !== 'reservations'"), 'legacy reservations:false rows cannot lock owners out of setup');
+ok(!/reservations:\s*false/.test(configApiSource), 'new stores no longer seed reservations as disabled');
+ok(bookingSource.includes("document.documentElement.lang||'fr'"), 'public booking defaults to French instead of browser-dependent English');
+ok(bookingSource.includes('data-closed-lang'), 'closed booking state keeps FR, EN and Arabic language controls');
 
 console.log(`reservations-test: ${controls} controls passed`);
