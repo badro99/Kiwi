@@ -11,7 +11,16 @@
      donc pas servir à savoir si une adresse est cliente de Kiwi.
 
      Autonome, sans dépendance : elle doit fonctionner pour quelqu'un qui n'a pas
-     de session, donc avant tout ce que le reste de l'app charge. -->
+     de session, donc avant tout ce que le reste de l'app charge.
+
+     La police est la SEULE dépendance externe, et elle est volontaire : la pile
+     commençait par -apple-system, donc « Inter Tight » n'était jamais atteinte et
+     la page rendait en San Francisco — la voix d'iOS, pas la nôtre. Le lien est
+     posé avant la feuille de style, et la pile système reste derrière : si
+     Google Fonts ne répond pas, la page s'affiche, en système, tout de suite. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
@@ -20,36 +29,55 @@
   }
   em,i,cite,dfn,var{font-style:normal}
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%}
+  html,body{margin:0}
   body{
     background:var(--paper); color:var(--ink);
-    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Inter Tight",Inter,"Segoe UI",sans-serif;
+    font:16px/1.55 "Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    letter-spacing:-.005em;
+    /* min-height:100% ne centrait rien : un pourcentage se mesure sur la
+       hauteur du parent, et <html> est en hauteur auto. La carte restait donc
+       collée en haut, avec un vide sous elle. 100dvh mesure le viewport
+       réellement visible (barre d'adresse mobile comprise), avec 100vh en
+       repli pour les navigateurs qui ne connaissent pas l'unité. */
+    min-height:100vh; min-height:100dvh;
     display:flex; align-items:center; justify-content:center; padding:24px;
   }
   .card{width:100%; max-width:420px; background:var(--surface); border:1px solid var(--line);
-        border-radius:18px; padding:30px 28px; box-shadow:0 18px 50px -30px rgba(5,59,44,.5)}
+        border-radius:14px; padding:30px 28px; box-shadow:0 1px 2px rgba(10,15,13,.05)}
   .mark{display:block; margin:0 0 8px}
   .mark img{display:block; width:auto; height:28px}
-  h1{font-size:1.04rem; font-weight:620; margin:0 0 6px; letter-spacing:-.01em}
-  p{margin:0 0 18px; color:var(--muted); font-size:.9rem}
-  label{display:block; font-size:.78rem; font-weight:640; text-transform:uppercase;
-        letter-spacing:.05em; color:var(--muted); margin:0 0 6px}
-  input{width:100%; font:inherit; font-size:.95rem; padding:11px 13px; border:1.5px solid var(--line);
-        border-radius:11px; background:var(--paper); color:var(--ink); margin:0 0 14px}
-  input:focus{outline:none; border-color:var(--atlas)}
-  button{width:100%; font:inherit; font-size:.94rem; font-weight:640; border:0; border-radius:11px;
-         padding:12px 16px; cursor:pointer; background:linear-gradient(135deg,var(--atlas),var(--riad));
-         color:#eafff4}
+  h1{font-size:17px; font-weight:600; margin:0 0 6px; letter-spacing:-.015em; line-height:1.25}
+  p{margin:0 0 18px; color:var(--muted); font-size:13.5px}
+  label{display:block; font-size:11px; font-weight:500; letter-spacing:0;
+        color:var(--muted); margin:0 0 6px}
+  input{width:100%; font:inherit; font-size:15px; padding:11px 13px; border:1px solid var(--line);
+        border-radius:10px; background:var(--paper); color:var(--ink); margin:0 0 14px;
+        transition:border-color .15s cubic-bezier(0,0,.2,1)}
+  input:focus{outline:none; border-color:var(--atlas); box-shadow:0 0 0 3px rgba(11,110,79,.12)}
+  button{width:100%; font:inherit; font-size:15px; font-weight:600; border:0; border-radius:10px;
+         padding:12px 16px; cursor:pointer; background:var(--atlas); color:#eafff4;
+         transition:background .15s cubic-bezier(0,0,.2,1)}
+  button:hover:not(:disabled){background:#0e8560}
+  button:focus-visible,.back:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
   button:disabled{opacity:.5; cursor:default}
-  .msg{font-size:.85rem; margin:12px 0 0; min-height:1.2em}
+  .msg{font-size:13px; margin:12px 0 0; min-height:1.2em}
   .msg.bad{color:var(--warn)}
   .msg.ok{color:var(--atlas)}
-  .back{display:inline-flex; align-items:center; min-height:44px; margin-top:8px; color:var(--atlas); font-size:.86rem; text-decoration:none; font-weight:600}
-  .hint{font-size:.78rem; color:var(--muted); margin:10px 0 0}
+  .back{display:inline-flex; align-items:center; min-height:44px; margin-top:8px; color:var(--atlas); font-size:13.5px; text-decoration:none; font-weight:500}
+  .hint{font-size:12px; color:var(--muted); margin:10px 0 0}
   @media (prefers-color-scheme:dark){
     :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
     .mark{color:#cfeeda}
     .back{color:var(--mint)}
+    /* --atlas sur un fond sombre, c'est du vert sur du noir : illisible en
+       texte, correct en surface. On ne touche pas au jeton de marque, on
+       n'éclaircit que les rôles d'encre. */
+    button{background:var(--atlas)}
+    button:hover:not(:disabled){background:#0e8560}
+    input:focus{border-color:var(--mint); box-shadow:0 0 0 3px rgba(125,242,176,.14)}
+    .msg.ok{color:var(--mint)}
+    .msg.bad{color:#ff9d8a}
+    button:focus-visible,.back:focus-visible{outline-color:var(--mint)}
   }
 </style>
 </head>
