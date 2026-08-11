@@ -179,7 +179,12 @@ async function routeRequest(context) {
   if (isRead && (path === '/kiwi-sw.js'
     || path === '/dashboard.webmanifest' || path === '/manifest.webmanifest'
     || path === '/cuisine.webmanifest')) return next();
-  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
+  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu'
+    || path === '/booking.html' || path === '/booking' || path === '/api/booking')) return next();
+  // A guest may create one booking against the merchant's published services.
+  // The handler performs its own availability, rate, tenancy and conflict checks;
+  // no private list or customer record is exposed through this exception.
+  if (method === 'POST' && path === '/api/booking') return next();
   // Employee/service app. The page itself contains no merchant data; its single
   // API independently validates a store PIN and then an httpOnly employee
   // session. Exact paths only — no other private API is opened by this exception.

@@ -16,8 +16,9 @@ assert.match(toastRule, /color-scheme:\s*light/, 'toast form controls and UA pai
 assert.doesNotMatch(toastRule, /color:\s*var\(--ink\)/, 'toast must not inherit dark-mode ink');
 assert.match(titleRule, /color:\s*#0A0F0D/, 'toast title remains visible');
 assert.match(descRule, /color:\s*#59615D/, 'toast description remains visible');
-assert.match(sw, /kiwi-app-v340/, 'offline shell generation advanced');
-assert.match(caissePwa, /kiwi-sw\.js\?v=340/, 'caisse requests the new worker');
-assert.match(dashboardPwa, /kiwi-sw\.js\?v=340/, 'dashboard requests the new worker');
+const shellVersion = sw.match(/var CACHE = 'kiwi-app-v(\d+)'/)?.[1];
+assert.ok(shellVersion && Number(shellVersion) >= 340, 'offline shell generation advanced');
+assert.match(caissePwa, new RegExp(`kiwi-sw\\.js\\?v=${shellVersion}`), 'caisse requests the current worker');
+assert.match(dashboardPwa, new RegExp(`kiwi-sw\\.js\\?v=${shellVersion}`), 'dashboard requests the current worker');
 
 console.log('caisse-theme-contrast-test: 9 controls passed');

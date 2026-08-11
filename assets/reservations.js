@@ -1,0 +1,203 @@
+/* Kiwi Reservations — one tenant-safe booking truth for dashboard and public page. */
+(function () {
+  'use strict';
+
+  var VERSION = 1;
+  var ACTIVE = { requested: 1, confirmed: 1, checked_in: 1 };
+  var DONE = { completed: 1, cancelled: 1, no_show: 1 };
+  var store = null;
+  var open = false;
+
+  var COPY = {
+    fr: {
+      title: 'Réservations', subtitle: 'Un agenda clair, relié au travail réel de votre établissement.',
+      today: "Aujourd'hui", upcoming: 'À venir', needs: 'À confirmer', occupancy: 'Occupation',
+      add: 'Nouvelle réservation', share: 'Lien de réservation', settings: 'Configurer',
+      all: 'Toutes', confirmed: 'Confirmées', requested: 'À confirmer', completed: 'Terminées',
+      emptyTitle: 'Votre agenda est prêt', emptyBody: 'Ajoutez un service et une ressource, puis ouvrez les réservations en ligne.',
+      setup: 'Configurer les réservations', noService: 'Aucun service actif', noResource: 'Aucune ressource active',
+      client: 'Client', phone: 'Téléphone', email: 'E-mail', service: 'Service', resource: 'Ressource',
+      anyResource: 'Première disponibilité', start: 'Date et heure', guests: 'Personnes', note: 'Note interne',
+      save: 'Enregistrer', cancel: 'Annuler', edit: 'Modifier', confirm: 'Confirmer', checkin: 'Arrivé',
+      complete: 'Terminer', noShow: 'Absent', cancelled: 'Annulée', conflict: 'Ce créneau vient d’être pris. Choisissez une autre heure.',
+      invalid: 'Vérifiez les champs obligatoires.', saved: 'Réservation enregistrée',
+      setupTitle: 'Paramètres de réservation', publicLabel: 'Accepter les réservations en ligne',
+      notice: 'Préavis minimum', window: 'Réservable sur', cancelDelay: "Délai d'annulation", direct: 'Confirmation immédiate',
+      minutes: 'minutes', days: 'jours', hours: 'heures', businessHours: "Les disponibilités suivent les horaires de l’établissement.",
+      services: 'Services', resources: 'Équipe & ressources', addService: 'Ajouter un service', addResource: 'Ajouter une ressource',
+      name: 'Nom', duration: 'Durée', price: 'Prix', deposit: 'Acompte', kind: 'Type', active: 'Visible en ligne',
+      person: 'Membre de l’équipe', room: 'Espace / cabine', table: 'Table', capacity: 'Capacité',
+      linkCopied: 'Lien copié', linkOff: 'Activez les réservations en ligne avant de partager le lien.',
+      linkTitle: 'Votre lien de réservation', linkBody: 'Ce lien utilise les mêmes disponibilités et réservations que ce tableau.',
+      copy: 'Copier le lien', openLink: 'Ouvrir', settingsSaved: 'Paramètres enregistrés',
+      overview: 'Vue agenda', configuration: 'Configuration', past: 'Passées', status: 'Statut',
+      unavailable: 'Configurez au moins un service et une ressource actifs.', delete: 'Supprimer',
+      requestedStatus: 'À confirmer', confirmedStatus: 'Confirmée', checked_inStatus: 'Client arrivé',
+      completedStatus: 'Terminée', cancelledStatus: 'Annulée', no_showStatus: 'Absent',
+      sourcePublic: 'En ligne', sourceStaff: 'Équipe', sourceImport: 'Importée',
+      todayEmpty: "Aucune réservation aujourd'hui", onlineOff: 'Réservation en ligne fermée', onlineOn: 'Réservation en ligne ouverte'
+    },
+    en: {
+      title: 'Bookings', subtitle: 'A clear diary connected to the real work of your venue.', today: 'Today', upcoming: 'Upcoming', needs: 'To confirm', occupancy: 'Occupancy',
+      add: 'New booking', share: 'Booking link', settings: 'Configure', all: 'All', confirmed: 'Confirmed', requested: 'To confirm', completed: 'Completed',
+      emptyTitle: 'Your diary is ready', emptyBody: 'Add a service and a resource, then open online booking.', setup: 'Set up bookings', noService: 'No active service', noResource: 'No active resource',
+      client: 'Customer', phone: 'Phone', email: 'Email', service: 'Service', resource: 'Resource', anyResource: 'First available', start: 'Date and time', guests: 'Guests', note: 'Internal note',
+      save: 'Save', cancel: 'Cancel', edit: 'Edit', confirm: 'Confirm', checkin: 'Check in', complete: 'Complete', noShow: 'No-show', cancelled: 'Cancelled', conflict: 'That slot was just taken. Choose another time.', invalid: 'Check the required fields.', saved: 'Booking saved',
+      setupTitle: 'Booking settings', publicLabel: 'Accept online bookings', notice: 'Minimum notice', window: 'Bookable for', cancelDelay: 'Cancellation deadline', direct: 'Instant confirmation', minutes: 'minutes', days: 'days', hours: 'hours', businessHours: 'Availability follows the venue opening hours.',
+      services: 'Services', resources: 'Team & resources', addService: 'Add service', addResource: 'Add resource', name: 'Name', duration: 'Duration', price: 'Price', deposit: 'Deposit', kind: 'Type', active: 'Visible online', person: 'Team member', room: 'Room / space', table: 'Table', capacity: 'Capacity',
+      linkCopied: 'Link copied', linkOff: 'Turn on online booking before sharing the link.', linkTitle: 'Your booking link', linkBody: 'This link uses the same availability and bookings as this dashboard.', copy: 'Copy link', openLink: 'Open', settingsSaved: 'Settings saved', overview: 'Diary', configuration: 'Configuration', past: 'Past', status: 'Status', unavailable: 'Configure at least one active service and resource.', delete: 'Delete',
+      requestedStatus: 'To confirm', confirmedStatus: 'Confirmed', checked_inStatus: 'Checked in', completedStatus: 'Completed', cancelledStatus: 'Cancelled', no_showStatus: 'No-show', sourcePublic: 'Online', sourceStaff: 'Team', sourceImport: 'Imported', todayEmpty: 'No bookings today', onlineOff: 'Online booking closed', onlineOn: 'Online booking open'
+    },
+    ar: {
+      title: 'الحجوزات', subtitle: 'جدول واضح مرتبط بالعمل الفعلي للمؤسسة.', today: 'اليوم', upcoming: 'القادمة', needs: 'بانتظار التأكيد', occupancy: 'نسبة الإشغال', add: 'حجز جديد', share: 'رابط الحجز', settings: 'الإعدادات', all: 'الكل', confirmed: 'المؤكدة', requested: 'بانتظار التأكيد', completed: 'المنتهية', emptyTitle: 'جدول الحجوزات جاهز', emptyBody: 'أضف خدمة ومورداً ثم فعّل الحجز عبر الإنترنت.', setup: 'إعداد الحجوزات', noService: 'لا توجد خدمة مفعّلة', noResource: 'لا يوجد مورد مفعّل', client: 'العميل', phone: 'الهاتف', email: 'البريد الإلكتروني', service: 'الخدمة', resource: 'المورد', anyResource: 'أول موعد متاح', start: 'التاريخ والوقت', guests: 'عدد الأشخاص', note: 'ملاحظة داخلية', save: 'حفظ', cancel: 'إلغاء', edit: 'تعديل', confirm: 'تأكيد', checkin: 'وصل العميل', complete: 'إنهاء', noShow: 'لم يحضر', cancelled: 'ملغى', conflict: 'تم حجز هذا الموعد للتو. اختر وقتاً آخر.', invalid: 'تحقق من الحقول المطلوبة.', saved: 'تم حفظ الحجز', setupTitle: 'إعدادات الحجز', publicLabel: 'قبول الحجوزات عبر الإنترنت', notice: 'الحد الأدنى للإشعار', window: 'فترة الحجز المتاحة', cancelDelay: 'مهلة الإلغاء', direct: 'تأكيد فوري', minutes: 'دقيقة', days: 'يوماً', hours: 'ساعات', businessHours: 'تتبع المواعيد ساعات عمل المؤسسة.', services: 'الخدمات', resources: 'الفريق والموارد', addService: 'إضافة خدمة', addResource: 'إضافة مورد', name: 'الاسم', duration: 'المدة', price: 'السعر', deposit: 'العربون', kind: 'النوع', active: 'ظاهر على الإنترنت', person: 'عضو من الفريق', room: 'قاعة أو غرفة', table: 'طاولة', capacity: 'السعة', linkCopied: 'تم نسخ الرابط', linkOff: 'فعّل الحجز عبر الإنترنت قبل مشاركة الرابط.', linkTitle: 'رابط الحجز الخاص بك', linkBody: 'يستخدم هذا الرابط نفس المواعيد والحجوزات الموجودة في لوحة التحكم.', copy: 'نسخ الرابط', openLink: 'فتح', settingsSaved: 'تم حفظ الإعدادات', overview: 'الجدول', configuration: 'الإعدادات', past: 'السابقة', status: 'الحالة', unavailable: 'أضف خدمة ومورداً مفعّلين على الأقل.', delete: 'حذف', requestedStatus: 'بانتظار التأكيد', confirmedStatus: 'مؤكد', checked_inStatus: 'وصل العميل', completedStatus: 'منتهٍ', cancelledStatus: 'ملغى', no_showStatus: 'لم يحضر', sourcePublic: 'عبر الإنترنت', sourceStaff: 'الفريق', sourceImport: 'مستوردة', todayEmpty: 'لا توجد حجوزات اليوم', onlineOff: 'الحجز عبر الإنترنت مغلق', onlineOn: 'الحجز عبر الإنترنت مفتوح'
+    }
+  };
+
+  function lang() { try { var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang(); return COPY[l] ? l : 'fr'; } catch (_) { return 'fr'; } }
+  function t(k) { return (COPY[lang()] || COPY.fr)[k] || COPY.fr[k] || k; }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function clone(v) { try { return JSON.parse(JSON.stringify(v)); } catch (_) { return v; } }
+  function id(prefix) { return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
+  function venueId() { try { return window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue(); } catch (_) { return ''; } }
+  function venue() { try { return window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData() || {}; } catch (_) { return {}; } }
+  function slug() { try { return window.KiwiStore && window.KiwiStore.slugFor && window.KiwiStore.slugFor(venueId()) || ''; } catch (_) { return ''; } }
+  function trade() { var v = venue(); return String(v.trade || v.type || window.KiwiTrade || '').toLowerCase(); }
+  function blank() {
+    return { v: VERSION, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, updatedAt: 0 }, services: [], resources: [], blocked: [], bookings: [] };
+  }
+  function cleanText(v, max) { return String(v == null ? '' : v).trim().slice(0, max); }
+  function number(v, min, max, fallback) { v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback; }
+  function normalize(raw) {
+    var out = blank(), r = raw && typeof raw === 'object' ? raw : {};
+    var s = r.settings || {};
+    out.settings = { published: !!s.published, confirmation: s.confirmation === 'request' ? 'request' : 'instant', minNoticeMinutes: number(s.minNoticeMinutes, 0, 10080, 60), windowDays: number(s.windowDays, 1, 365, 60), cancellationHours: number(s.cancellationHours, 0, 720, 12), slotStep: [5, 10, 15, 20, 30, 60].indexOf(+s.slotStep) >= 0 ? +s.slotStep : 15, updatedAt: +s.updatedAt || 0 };
+    out.services = (Array.isArray(r.services) ? r.services : []).slice(0, 120).map(function (x) { return { id: cleanText(x && x.id, 64) || id('svc'), name: cleanText(x && x.name, 100), duration: number(x && x.duration, 5, 1440, 30), price: number(x && x.price, 0, 1000000, 0), deposit: number(x && x.deposit, 0, 1000000, 0), capacity: number(x && x.capacity, 1, 999, 1), resourceIds: (Array.isArray(x && x.resourceIds) ? x.resourceIds : []).slice(0, 60).map(function (z) { return cleanText(z, 64); }).filter(Boolean), active: x && x.active !== false, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
+    out.resources = (Array.isArray(r.resources) ? r.resources : []).slice(0, 120).map(function (x) { var kind = ['person', 'room', 'table'].indexOf(x && x.kind) >= 0 ? x.kind : 'person'; return { id: cleanText(x && x.id, 64) || id('res'), name: cleanText(x && x.name, 100), kind: kind, capacity: number(x && x.capacity, 1, 999, 1), active: x && x.active !== false, week: x && typeof x.week === 'object' ? clone(x.week) : null, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.name; });
+    out.blocked = (Array.isArray(r.blocked) ? r.blocked : []).slice(-500).map(function (x) { return { id: cleanText(x && x.id, 64) || id('blk'), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, reason: cleanText(x && x.reason, 120), updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.startAt && x.endAt > x.startAt; });
+    out.bookings = (Array.isArray(r.bookings) ? r.bookings : []).slice(-4000).map(function (x) { var status = ['requested','confirmed','checked_in','completed','cancelled','no_show'].indexOf(x && x.status) >= 0 ? x.status : 'requested'; return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 }; }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });
+    return out;
+  }
+  function byId(rows) { var out = Object.create(null); (rows || []).forEach(function (x) { if (x && x.id) out[x.id] = x; }); return out; }
+  function merge(a, b) {
+    a = normalize(a); b = normalize(b);
+    function records(aa, bb, cap) { var all = byId(aa); (bb || []).forEach(function (x) { var p = all[x.id]; if (!p || (+x.updatedAt || 0) > (+p.updatedAt || 0)) all[x.id] = x; }); return Object.keys(all).map(function (k) { return all[k]; }).sort(function (x, y) { return (+x.updatedAt || 0) - (+y.updatedAt || 0); }).slice(-cap); }
+    return { v: VERSION, settings: (+a.settings.updatedAt || 0) >= (+b.settings.updatedAt || 0) ? a.settings : b.settings, services: records(a.services, b.services, 120), resources: records(a.resources, b.resources, 120), blocked: records(a.blocked, b.blocked, 500), bookings: records(a.bookings, b.bookings, 4000) };
+  }
+  function S() {
+    if (store) return store;
+    if (!window.KiwiStore || !window.KiwiStore.define) return null;
+    store = window.KiwiStore.define('reservations', { blank: blank, cloud: true, merge: merge, isEmpty: function (d) { d = normalize(d); return !d.services.length && !d.resources.length && !d.bookings.length; } });
+    store.subscribe(function (vid) { if (open && (!vid || vid === venueId())) render(); });
+    return store;
+  }
+  function get() { var s = S(); return normalize(s ? s.get(venueId()) : blank()); }
+  function set(doc) { doc = normalize(doc); if (S()) S().set(doc, venueId()); return doc; }
+  function service(doc, sid) { return doc.services.find(function (x) { return x.id === sid && x.active; }); }
+  function resourceCandidates(doc, svc, rid) {
+    var allowed = svc && svc.resourceIds && svc.resourceIds.length ? svc.resourceIds : null;
+    return doc.resources.filter(function (r) { return r.active && (!rid || r.id === rid) && (!allowed || allowed.indexOf(r.id) >= 0); });
+  }
+  function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+  function resourceFree(doc, rid, startAt, endAt, ignoreId) {
+    var busy = doc.bookings.some(function (b) { return b.id !== ignoreId && b.resourceId === rid && ACTIVE[b.status] && overlaps(startAt, endAt, b.startAt, b.endAt); });
+    if (busy) return false;
+    return !doc.blocked.some(function (b) { return (!b.resourceId || b.resourceId === rid) && overlaps(startAt, endAt, b.startAt, b.endAt); });
+  }
+  function withinHours(resource, startAt, endAt) {
+    var d = new Date(startAt), periods = [];
+    if (resource && resource.week) {
+      var keys = ['sun','mon','tue','wed','thu','fri','sat'], day = resource.week[keys[d.getDay()]] || {};
+      periods = day.open === false ? [] : (day.periods || []);
+    } else if (window.KiwiHours && window.KiwiHours.periodsOn) periods = window.KiwiHours.periodsOn(d, venueId()) || [];
+    if (!periods.length) return !(window.KiwiHours && window.KiwiHours.isConfigured && window.KiwiHours.isConfigured(venueId()));
+    var mins = d.getHours() * 60 + d.getMinutes(), end = mins + Math.round((endAt - startAt) / 60000);
+    return periods.some(function (p) { var a = window.KiwiHours ? window.KiwiHours.toMin(p.from) : null, z = window.KiwiHours ? window.KiwiHours.toMin(p.to) : null; if (a == null || z == null) return false; if (z <= a) z += 1440; return mins >= a && end <= z; });
+  }
+  function chooseResource(doc, svc, rid, startAt, endAt, ignoreId) { return resourceCandidates(doc, svc, rid).find(function (r) { return withinHours(r, startAt, endAt) && resourceFree(doc, r.id, startAt, endAt, ignoreId); }) || null; }
+  function validate(input, doc, ignoreId) {
+    doc = normalize(doc); input = input || {};
+    var svc = service(doc, input.serviceId), startAt = +input.startAt || 0;
+    if (!cleanText(input.customer && input.customer.name, 100) || !svc || !startAt) return { ok: false, error: 'invalid' };
+    var endAt = startAt + svc.duration * 60000;
+    var res = chooseResource(doc, svc, input.resourceId, startAt, endAt, ignoreId);
+    if (!res) return { ok: false, error: 'conflict' };
+    var now = Date.now();
+    if (!ignoreId && startAt < now + doc.settings.minNoticeMinutes * 60000) return { ok: false, error: 'invalid' };
+    if (startAt > now + doc.settings.windowDays * 86400000) return { ok: false, error: 'invalid' };
+    return { ok: true, service: svc, resource: res, startAt: startAt, endAt: endAt };
+  }
+  function statusLabel(s) { return t(s + 'Status'); }
+  function dateLabel(ts, withDate) { try { return new Date(ts).toLocaleString(lang() === 'ar' ? 'ar-MA' : lang(), withDate ? { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' } : { hour:'2-digit', minute:'2-digit' }); } catch (_) { return ''; } }
+  function money(n) { try { return Number(n || 0).toLocaleString(lang() === 'ar' ? 'ar-MA' : 'fr-FR') + ' MAD'; } catch (_) { return n + ' MAD'; } }
+  function dayStart(ts) { var d = new Date(ts || Date.now()); d.setHours(0,0,0,0); return d.getTime(); }
+  function icon(name) { var safe = { calendar:'today', add:'today', link:'phonelink', settings:'schedule', person:'schedule', room:'room_service', table:'restaurant', service:'redeem' }[name] || 'today'; return '<img src="assets/icons/material/' + safe + '.svg" alt="" aria-hidden="true">'; }
+  function render() {
+    if (!window.Kiwi || !window.Kiwi.appPage) return;
+    open = true;
+    var doc = get(), now = Date.now(), today = dayStart(now), tomorrow = today + 86400000;
+    var active = doc.bookings.filter(function (b) { return !DONE[b.status] && b.endAt >= today; }).sort(function (a,b){ return a.startAt-b.startAt; });
+    var todayRows = active.filter(function (b) { return b.startAt >= today && b.startAt < tomorrow; });
+    var upcoming = active.filter(function (b) { return b.startAt >= tomorrow; });
+    var requested = active.filter(function (b) { return b.status === 'requested'; });
+    var configured = doc.services.some(function (x) { return x.active; }) && doc.resources.some(function (x) { return x.active; });
+    var capacity = doc.resources.filter(function (x) { return x.active; }).reduce(function (n,x){ return n + (+x.capacity || 1); },0);
+    var occupancy = capacity ? Math.min(100, Math.round(todayRows.length / Math.max(1, capacity * 4) * 100)) : 0;
+    var body = '<section class="kr-shell" data-kr-root>' +
+      '<header class="kr-command"><div><span class="kr-kicker">KIWI RESERVATIONS</span><h2>' + esc(t('title')) + '</h2><p>' + esc(t('subtitle')) + '</p></div>' +
+      '<div class="kr-command-actions"><button type="button" class="kr-btn ghost" data-kr-share>' + icon('link') + esc(t('share')) + '</button><button type="button" class="kr-btn ghost" data-kr-setup>' + icon('settings') + esc(t('settings')) + '</button><button type="button" class="kr-btn primary" data-kr-new>' + icon('add') + esc(t('add')) + '</button></div></header>' +
+      '<div class="kr-live"><span class="kr-live-dot"></span><span>' + esc(doc.settings.published ? t('onlineOn') : t('onlineOff')) + '</span><strong>' + esc(venue().name || '') + '</strong></div>' +
+      '<div class="kr-stats"><article><span>' + esc(t('today')) + '</span><strong>' + todayRows.length + '</strong><small>' + esc(todayRows.length ? dateLabel(todayRows[0].startAt, false) : t('todayEmpty')) + '</small></article><article><span>' + esc(t('upcoming')) + '</span><strong>' + upcoming.length + '</strong><small>' + esc(upcoming.length ? dateLabel(upcoming[0].startAt, true) : '—') + '</small></article><article><span>' + esc(t('needs')) + '</span><strong>' + requested.length + '</strong><small>' + esc(requested.length ? requested[0].customer.name : '—') + '</small></article><article><span>' + esc(t('occupancy')) + '</span><strong>' + occupancy + '%</strong><small>' + esc(doc.resources.filter(function(x){return x.active;}).length + ' ' + t('resources').toLowerCase()) + '</small></article></div>' +
+      (!configured ? '<div class="kr-empty"><div class="kr-empty-mark">' + icon('calendar') + '</div><div><h3>' + esc(t('emptyTitle')) + '</h3><p>' + esc(t('emptyBody')) + '</p></div><button type="button" class="kr-btn primary" data-kr-setup>' + esc(t('setup')) + '</button></div>' : agenda(doc, todayRows, upcoming)) + '</section>';
+    var host = window.Kiwi.appPage('reservations', { title: t('title'), subtitle: (venue().name || '') + ' · ' + (doc.settings.published ? t('onlineOn') : t('onlineOff')), body: body });
+    if (host && host.el) host.el.classList.add('kr-page');
+    wire(host && host.el);
+  }
+  function agenda(doc, todayRows, upcoming) {
+    var services = byId(doc.services), resources = byId(doc.resources);
+    function card(b) { var svc = services[b.serviceId] || {}, res = resources[b.resourceId] || {}; return '<article class="kr-booking status-' + esc(b.status) + '" data-kr-booking="' + esc(b.id) + '"><div class="kr-time"><strong>' + esc(dateLabel(b.startAt, false)) + '</strong><span>' + esc(svc.duration || '') + ' min</span></div><div class="kr-booking-main"><div class="kr-booking-title"><h3>' + esc(b.customer.name) + '</h3><span class="kr-status">' + esc(statusLabel(b.status)) + '</span></div><p>' + esc(svc.name || '') + ' · ' + esc(res.name || '') + (b.partySize > 1 ? ' · ' + esc(b.partySize) : '') + '</p><small>' + esc((b.customer.phone || b.customer.email || '') + (b.source ? ' · ' + t('source' + b.source.charAt(0).toUpperCase() + b.source.slice(1)) : '')) + '</small></div><button type="button" class="kr-more" data-kr-edit="' + esc(b.id) + '" aria-label="' + esc(t('edit')) + '">•••</button></article>'; }
+    return '<div class="kr-agenda"><section class="kr-day"><div class="kr-section-head"><div><span>' + esc(new Date().toLocaleDateString(lang()==='ar'?'ar-MA':lang(),{weekday:'long',day:'numeric',month:'long'})) + '</span><h3>' + esc(t('today')) + '</h3></div><span class="kr-count">' + todayRows.length + '</span></div><div class="kr-list">' + (todayRows.length ? todayRows.map(card).join('') : '<div class="kr-list-empty">' + esc(t('todayEmpty')) + '</div>') + '</div></section><aside class="kr-next"><div class="kr-section-head"><div><span>' + esc(t('overview')) + '</span><h3>' + esc(t('upcoming')) + '</h3></div><span class="kr-count">' + upcoming.length + '</span></div><div class="kr-list compact">' + (upcoming.length ? upcoming.slice(0,12).map(function(b){ var svc=services[b.serviceId]||{}; return '<button type="button" class="kr-mini" data-kr-edit="'+esc(b.id)+'"><span>'+esc(dateLabel(b.startAt,true))+'</span><strong>'+esc(b.customer.name)+'</strong><small>'+esc(svc.name||'')+'</small></button>'; }).join('') : '<div class="kr-list-empty">—</div>') + '</div></aside></div>';
+  }
+  function formField(label, control, full) { return '<label class="kr-field' + (full ? ' full' : '') + '"><span>' + esc(label) + '</span>' + control + '</label>'; }
+  function bookingModal(existing) {
+    var doc = get(), b = existing || {}, services = doc.services.filter(function(x){return x.active;}), resources=doc.resources.filter(function(x){return x.active;});
+    if (!services.length || !resources.length) { window.Kiwi.toast(t('unavailable'), { type:'warning' }); return setupModal(); }
+    var start = b.startAt ? new Date(b.startAt) : new Date(Date.now() + Math.max(60, doc.settings.minNoticeMinutes) * 60000); start.setMinutes(Math.ceil(start.getMinutes()/15)*15,0,0);
+    var val = function(d){ var z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,16); };
+    var m = window.Kiwi.modal({ title: existing ? t('edit') : t('add'), width: 700, body:'<form class="kr-form" data-kr-form>' +
+      formField(t('client'), '<input name="name" maxlength="100" required autocomplete="name" value="'+esc(b.customer&&b.customer.name||'')+'">') +
+      formField(t('phone'), '<input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" value="'+esc(b.customer&&b.customer.phone||'')+'">') +
+      formField(t('email'), '<input name="email" maxlength="160" type="email" autocomplete="email" value="'+esc(b.customer&&b.customer.email||'')+'">') +
+      formField(t('guests'), '<input name="partySize" type="number" min="1" max="999" value="'+esc(b.partySize||1)+'">') +
+      formField(t('service'), '<select name="serviceId" required><option value="">—</option>'+services.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.serviceId?' selected':'')+'>'+esc(x.name)+' · '+esc(x.duration)+' min · '+esc(money(x.price))+'</option>';}).join('')+'</select>') +
+      formField(t('resource'), '<select name="resourceId"><option value="">'+esc(t('anyResource'))+'</option>'+resources.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.resourceId?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select>') +
+      formField(t('start'), '<input name="startAt" type="datetime-local" required value="'+esc(val(start))+'">') +
+      formField(t('note'), '<textarea name="note" maxlength="600">'+esc(b.note||'')+'</textarea>', true) +
+      '<div class="kr-form-error full" data-kr-error></div><div class="kr-form-actions full">'+(existing?'<button type="button" class="kr-btn danger" data-kr-delete>'+esc(t('delete'))+'</button>':'')+'<span></span><button type="button" class="kr-btn ghost" data-kr-close>'+esc(t('cancel'))+'</button><button type="submit" class="kr-btn primary">'+esc(t('save'))+'</button></div></form>' + (existing ? lifecycle(existing) : '') });
+    var form=m.el.querySelector('[data-kr-form]');
+    m.el.querySelector('[data-kr-close]').onclick=function(){m.close();};
+    var del=m.el.querySelector('[data-kr-delete]'); if(del) del.onclick=function(){ var d=get(); d.bookings=d.bookings.map(function(x){return x.id===existing.id?Object.assign({},x,{status:'cancelled',updatedAt:Date.now()}):x;}); set(d); m.close(); render(); };
+    form.onsubmit=function(e){ e.preventDefault(); var fd=new FormData(form), startAt=new Date(fd.get('startAt')).getTime(), input={customer:{name:fd.get('name'),phone:fd.get('phone'),email:fd.get('email')},serviceId:fd.get('serviceId'),resourceId:fd.get('resourceId'),startAt:startAt,partySize:fd.get('partySize'),note:fd.get('note')}; var d=get(), check=validate(input,d,existing&&existing.id); if(!check.ok){form.querySelector('[data-kr-error]').textContent=t(check.error);return;} var now=Date.now(), rec={ id:existing&&existing.id||id('bk'), code:existing&&existing.code||('K'+Math.random().toString(36).slice(2,8).toUpperCase()), customer:{name:cleanText(input.customer.name,100),phone:cleanText(input.customer.phone,32),email:cleanText(input.customer.email,160)}, serviceId:check.service.id,resourceId:check.resource.id,startAt:check.startAt,endAt:check.endAt,partySize:number(input.partySize,1,999,1),status:existing&&existing.status||'confirmed',source:existing&&existing.source||'staff',note:cleanText(input.note,600),manageToken:existing&&existing.manageToken||'',createdAt:existing&&existing.createdAt||now,updatedAt:now}; var i=d.bookings.findIndex(function(x){return x.id===rec.id;}); if(i<0)d.bookings.push(rec);else d.bookings[i]=rec;set(d);m.close();window.Kiwi.toast(t('saved'),{type:'success'});render(); };
+    wireLifecycle(m, existing);
+  }
+  function lifecycle(b){ if(DONE[b.status])return''; var buttons=[]; if(b.status==='requested')buttons.push(['confirmed',t('confirm')]); if(b.status==='confirmed')buttons.push(['checked_in',t('checkin')]); if(b.status==='checked_in')buttons.push(['completed',t('complete')]); buttons.push(['no_show',t('noShow')]); buttons.push(['cancelled',t('cancel')]); return '<div class="kr-lifecycle">'+buttons.map(function(x){return '<button type="button" data-kr-status="'+x[0]+'">'+esc(x[1])+'</button>';}).join('')+'</div>'; }
+  function wireLifecycle(m,b){ if(!b)return;m.el.querySelectorAll('[data-kr-status]').forEach(function(btn){btn.onclick=function(){var d=get();d.bookings=d.bookings.map(function(x){return x.id===b.id?Object.assign({},x,{status:btn.dataset.krStatus,updatedAt:Date.now()}):x;});set(d);m.close();render();};}); }
+  function setupModal() {
+    var doc=get(), s=doc.settings;
+    var m=window.Kiwi.modal({title:t('setupTitle'),width:820,body:'<form class="kr-settings" data-kr-settings><div class="kr-setting-hero"><label><input type="checkbox" name="published" '+(s.published?'checked':'')+'><span></span><strong>'+esc(t('publicLabel'))+'</strong></label><p>'+esc(t('businessHours'))+'</p></div><div class="kr-setting-grid">'+formField(t('notice'),'<div class="kr-unit"><input type="number" name="minNotice" min="0" max="10080" value="'+s.minNoticeMinutes+'"><span>'+esc(t('minutes'))+'</span></div>')+formField(t('window'),'<div class="kr-unit"><input type="number" name="windowDays" min="1" max="365" value="'+s.windowDays+'"><span>'+esc(t('days'))+'</span></div>')+formField(t('cancelDelay'),'<div class="kr-unit"><input type="number" name="cancelHours" min="0" max="720" value="'+s.cancellationHours+'"><span>'+esc(t('hours'))+'</span></div>')+formField(t('direct'),'<select name="confirmation"><option value="instant"'+(s.confirmation==='instant'?' selected':'')+'>'+esc(t('direct'))+'</option><option value="request"'+(s.confirmation==='request'?' selected':'')+'>'+esc(t('requested'))+'</option></select>')+'</div><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('services'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-service>'+esc(t('addService'))+'</button></div><div class="kr-config-list" data-kr-services>'+doc.services.map(serviceRow).join('')+'</div></section><section class="kr-config-section"><div class="kr-config-head"><h3>'+esc(t('resources'))+'</h3><button class="kr-btn ghost" type="button" data-kr-add-resource>'+esc(t('addResource'))+'</button></div><div class="kr-config-list" data-kr-resources>'+doc.resources.map(resourceRow).join('')+'</div></section><div class="kr-form-actions"><span></span><button type="button" class="kr-btn ghost" data-kr-close>'+esc(t('cancel'))+'</button><button class="kr-btn primary" type="submit">'+esc(t('save'))+'</button></div></form>'});
+    var form=m.el.querySelector('[data-kr-settings]');
+    m.el.querySelector('[data-kr-close]').onclick=function(){m.close();};
+    m.el.querySelector('[data-kr-add-service]').onclick=function(){form.querySelector('[data-kr-services]').insertAdjacentHTML('beforeend',serviceRow({id:id('svc'),name:'',duration:30,price:0,deposit:0,capacity:1,active:true,resourceIds:[],updatedAt:0}));};
+    m.el.querySelector('[data-kr-add-resource]').onclick=function(){form.querySelector('[data-kr-resources]').insertAdjacentHTML('beforeend',resourceRow({id:id('res'),name:'',kind:kindForTrade(),capacity:1,active:true,updatedAt:0}));};
+    form.addEventListener('click',function(e){var b=e.target.closest('[data-kr-remove-row]');if(b)b.closest('.kr-config-row').remove();});
+    form.onsubmit=function(e){e.preventDefault();var now=Date.now(),d=get(),fd=new FormData(form);d.settings={published:!!form.elements.published.checked,confirmation:fd.get('confirmation')==='request'?'request':'instant',minNoticeMinutes:number(fd.get('minNotice'),0,10080,60),windowDays:number(fd.get('windowDays'),1,365,60),cancellationHours:number(fd.get('cancelHours'),0,720,12),slotStep:15,updatedAt:now};d.services=[].slice.call(form.querySelectorAll('[data-service-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),duration:number(row.querySelector('[name=duration]').value,5,1440,30),price:number(row.querySelector('[name=price]').value,0,1000000,0),deposit:number(row.querySelector('[name=deposit]').value,0,1000000,0),capacity:1,resourceIds:[],active:row.querySelector('[name=active]').checked,updatedAt:now};}).filter(function(x){return x.name;});d.resources=[].slice.call(form.querySelectorAll('[data-resource-row]')).map(function(row){return{id:row.dataset.id,name:cleanText(row.querySelector('[name=name]').value,100),kind:row.querySelector('[name=kind]').value,capacity:number(row.querySelector('[name=capacity]').value,1,999,1),active:row.querySelector('[name=active]').checked,week:null,updatedAt:now};}).filter(function(x){return x.name;});set(d);m.close();window.Kiwi.toast(t('settingsSaved'),{type:'success'});render();};
+  }
+  function serviceRow(x){return '<div class="kr-config-row" data-service-row data-id="'+esc(x.id)+'"><input name="name" placeholder="'+esc(t('name'))+'" value="'+esc(x.name)+'"><label><span>'+esc(t('duration'))+'</span><input name="duration" type="number" min="5" max="1440" value="'+esc(x.duration)+'"></label><label><span>'+esc(t('price'))+'</span><input name="price" type="number" min="0" value="'+esc(x.price)+'"></label><label><span>'+esc(t('deposit'))+'</span><input name="deposit" type="number" min="0" value="'+esc(x.deposit)+'"></label><label class="kr-check"><input name="active" type="checkbox" '+(x.active?'checked':'')+'><span>'+esc(t('active'))+'</span></label><button type="button" class="kr-row-remove" data-kr-remove-row aria-label="'+esc(t('delete'))+'">×</button></div>';}
+  function resourceRow(x){return '<div class="kr-config-row resource" data-resource-row data-id="'+esc(x.id)+'"><input name="name" placeholder="'+esc(t('name'))+'" value="'+esc(x.name)+'"><select name="kind"><option value="person"'+(x.kind==='person'?' selected':'')+'>'+esc(t('person'))+'</option><option value="room"'+(x.kind==='room'?' selected':'')+'>'+esc(t('room'))+'</option><option value="table"'+(x.kind==='table'?' selected':'')+'>'+esc(t('table'))+'</option></select><label><span>'+esc(t('capacity'))+'</span><input name="capacity" type="number" min="1" max="999" value="'+esc(x.capacity||1)+'"></label><label class="kr-check"><input name="active" type="checkbox" '+(x.active?'checked':'')+'><span>'+esc(t('active'))+'</span></label><button type="button" class="kr-row-remove" data-kr-remove-row aria-label="'+esc(t('delete'))+'">×</button></div>';}
+  function kindForTrade(){var x=trade();if(/restaurant|cafe|food|pizzeria|boulanger/.test(x))return'table';if(/spa|hotel|riad/.test(x))return'room';return'person';}
+  function shareModal(){var d=get();if(!d.settings.published){window.Kiwi.toast(t('linkOff'),{type:'warning'});return setupModal();}var link=location.origin+'/booking?merchant='+encodeURIComponent(slug());var m=window.Kiwi.modal({title:t('linkTitle'),desc:esc(t('linkBody')),width:580,body:'<div class="kr-share"><div class="kr-share-url">'+esc(link)+'</div><div><button type="button" class="kr-btn ghost" data-kr-copy>'+esc(t('copy'))+'</button><a class="kr-btn primary" href="'+esc(link)+'" target="_blank" rel="noopener">'+esc(t('openLink'))+'</a></div></div>'});m.el.querySelector('[data-kr-copy]').onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(link);window.Kiwi.toast(t('linkCopied'),{type:'success'});};}
+  function wire(host){if(!host)return;host.onclick=function(e){if(e.target.closest('[data-kr-new]'))return bookingModal();if(e.target.closest('[data-kr-setup]'))return setupModal();if(e.target.closest('[data-kr-share]'))return shareModal();var edit=e.target.closest('[data-kr-edit]');if(edit){var b=get().bookings.find(function(x){return x.id===edit.dataset.krEdit;});if(b)return bookingModal(b);}};}
+  function install(){if(!window.Kiwi||!window.Kiwi.handlers)return setTimeout(install,80);var fn=function(){render();};fn.__kiwiReservations=true;window.Kiwi.handlers['nav-reservations']=fn;}
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.sidebar a[data-nav="reservations"]');if(!a)return;e.preventDefault();e.stopImmediatePropagation();render();},true);
+  window.addEventListener('load',function(){setTimeout(function(){S();install();},420);window.KiwiVenue&&window.KiwiVenue.subscribe&&window.KiwiVenue.subscribe(function(){store=null;open=false;setTimeout(install,0);});window.addEventListener('kiwi:langchange',function(){if(open)render();});});
+  window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,get:get,set:set,render:render};
+}());

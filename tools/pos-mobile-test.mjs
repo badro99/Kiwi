@@ -45,6 +45,7 @@ ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses 
 ok(html.includes('@media (max-width: 600px)') && html.includes('white-space: normal'), 'unlock greeting wraps on narrow phones');
 ok(html.includes('assets/caisse-skin.css?v=3') && html.includes('assets/pos-mobile.css?v=3') && html.includes('assets/pos-mobile.js?v=3'), 'phone layers are cache-busted');
 ok(html.includes('assets/retail-scan.css?v=6'), 'scanner iPhone layout is cache-busted');
-ok(sw.includes("'kiwi-app-v340'") && sw.includes("'/assets/caisse-skin.css?v=3'") && sw.includes("'/assets/pos-mobile.css?v=3'") && sw.includes("'/assets/retail-scan.css?v=6'"), 'offline shell ships the phone and landscape fixes');
+const shellVersion = Number(sw.match(/var CACHE = 'kiwi-app-v(\d+)'/)?.[1] || 0);
+ok(shellVersion >= 340 && sw.includes("'/assets/caisse-skin.css?v=3'") && sw.includes("'/assets/pos-mobile.css?v=3'") && sw.includes("'/assets/retail-scan.css?v=6'"), 'offline shell ships the phone and landscape fixes');
 
 console.log(`pos-mobile-test: ${controls} controls`);
