@@ -25,6 +25,10 @@
     logout: function () { return call('POST', { action: 'logout' }); },
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('/kiwi-sw.js').catch(function () {}); });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=354').then(function (reg) {
+        if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
+      }).catch(function () {});
+    });
   }
 })();

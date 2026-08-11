@@ -284,7 +284,8 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
-ok(serviceSource.includes('assets/employee-live.js?v=2'),
+ok(serviceSource.includes('assets/employee-live.js?v=354')
+  && serviceSource.includes('assets/pwa-update.js?v=354'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");
 ok(serviceSource.includes('id="attendance-code"')
   && serviceSource.includes("prepareAttendanceGate('clock-out')")
@@ -342,13 +343,14 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   && caisseSource.includes('if (serviceFloorPolling) { serviceFloorPollQueued = true; return; }')
   && caisseSource.includes('if (serviceFloorPollQueued)')
   && caisseSource.includes('if (stateTs && stateTs <= lastRemoteTs) return;')
-  && caisseSource.includes('if (!terminalEmployeeState && stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)) return;'),
+  && caisseSource.includes("if (state.source !== 'employee') return;")
+  && !caisseSource.includes('stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(caisseSource.includes('terminalHadLocalBill')
   && caisseSource.includes('if (!statusChanged && !terminalHadLocalBill) return;')
   && caisseSource.includes("serviceFloorSignature = ''")
   && caisseSource.includes('setTimeout(publishServiceFloor, 0)')
-  && eventsSource.includes('employeeCloseAwaitingAck')
+  && eventsSource.includes('employeeAwaitingAck')
   && !eventsSource.includes('EMPLOYEE_CLOSE_GRACE_MS'),
   "le paiement efface aussi une ancienne addition locale et reste terminal jusqu'à l'acquittement caisse");
 const liveSocketSource = fs.readFileSync(path.join(ROOT, 'assets/live-socket.js'), 'utf8');

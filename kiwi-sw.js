@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v353';
+var CACHE = 'kiwi-app-v354';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -95,13 +95,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=341',
+  '/assets/dashboard-pwa.js?v=354',
   '/assets/dashboard-native.js',
-  '/assets/pwa-update.js',
+  '/assets/pwa-update.js?v=354',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=341',
+  '/assets/caisse-pwa.js?v=354',
   '/assets/live-link.js',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -158,7 +158,7 @@ var SHELL = [
   '/assets/menu-catalog.js?v=2',
   '/assets/restaurant-recipes.js',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=2',
+  '/assets/employee-live.js?v=354',
   '/assets/restaurant-menu-workspace.js',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
