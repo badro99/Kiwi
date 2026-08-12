@@ -684,10 +684,20 @@ body.design-vexel .vexel-compose .kpi-m > .l .ico,
 body.design-vexel .vexel-compose .kpi-m > .sp { display: none; }
 body.design-vexel .vexel-kpi-baseline {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
+  row-gap: 7px;
   margin-top: 12px;
   min-width: 0;
+}
+/* A comparison can legitimately be much wider than usual (for example when
+ * a newly opened venue is compared with a very small first period). Keep the
+ * money indivisible and let the comparison fall onto its own line when the two
+ * no longer fit; shrinking the value used to paint the delta over the amount. */
+body.design-vexel .vexel-kpi-baseline > .v {
+  flex: 0 0 auto;
+  max-width: 100%;
 }
 body.design-vexel .vexel-compose .kpi-m .v {
   min-width: 0;
@@ -718,6 +728,7 @@ body.design-vexel .vexel-kpi-delta {
   line-height: 1;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 body.design-vexel .vexel-kpi-delta.down { color: var(--danger); }
 body.design-vexel .vexel-kpi-comparison {
