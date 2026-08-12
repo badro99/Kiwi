@@ -4078,16 +4078,16 @@
     .kit-stationbar::-webkit-scrollbar { display: none; }
     .kit-station { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--ink-2); letter-spacing: -0.005em; white-space: nowrap; transition: background 130ms, border-color 130ms, color 130ms; }
     .kit-station:hover { border-color: var(--ink-4); color: var(--ink); }
-    .kit-station.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .kit-station.on { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--inverse-ink); }
     .kit-station i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     .kit-station-ct { font-family: var(--mono); font-size: 11.5px; font-weight: 600; line-height: 1; padding: 2px 6px; border-radius: 999px; background: var(--paper-soft); color: var(--ink-2); }
-    .kit-station.on .kit-station-ct { background: rgba(255,255,255,0.18); color: #fff; }
+    .kit-station.on .kit-station-ct { background: rgba(255,255,255,0.18); color: var(--inverse-ink); }
     .kit-history-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--ink-2); white-space: nowrap; flex-shrink: 0; transition: background 130ms, border-color 130ms, color 130ms; }
     .kit-history-toggle:hover { border-color: var(--ink-4); color: var(--ink); }
-    .kit-history-toggle.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .kit-history-toggle.on { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--inverse-ink); }
     .kit-history-toggle svg { width: 16px; height: 16px; }
     .kit-htg-ct { font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1; padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--ink-2); }
-    .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: #fff; }
+    .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: var(--inverse-ink); }
     .kit-cols { display: flex; gap: 14px; align-items: flex-start; }
     .kit-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
     .kit-col-new { width: 300px; flex-shrink: 0; }
@@ -4139,10 +4139,15 @@
     .kit-item-off { opacity: 0.32; }
     .kit-act { width: 100%; border: 0; margin: 0; padding: 15px; cursor: pointer; font-family: var(--sans); font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 130ms, filter 120ms; }
     .kit-act svg { width: 17px; height: 17px; }
-    .kit-act-accept { background: var(--ink); color: #fff; }
-    .kit-act-accept:hover { background: #1c2723; }
-    .kit-act-ready { background: var(--forest); color: #fff; }
-    .kit-act-ready:hover { background: var(--forest-deep); }
+    /* These are inverse controls, not foreground-colour controls. `--ink`
+       intentionally flips to a light foreground in dark mode; using it as a
+       fill made Accepter white-on-white. The inverse pair remains a dark,
+       branded slab with legible paper text in both caisse themes. */
+    .kit-act-accept { background: var(--brand-deep); color: var(--inverse-ink); }
+    .kit-act-accept:hover { background: var(--atlas); }
+    .kit-act-ready { background: var(--atlas); color: var(--inverse-ink); }
+    .kit-act-ready:hover { background: var(--brand-deep); }
+    .kit-act:focus-visible { outline: 3px solid var(--mint); outline-offset: -4px; }
     .kit-act:active { filter: brightness(0.93); }
     .kit-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 40px 20px; text-align: center; background: var(--paper-soft); border: 1px dashed var(--line); border-radius: 13px; }
     .kit-empty svg { width: 26px; height: 26px; color: var(--ink-4); }
@@ -4642,7 +4647,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=360" defer></script>
+  <script src="assets/caisse-pwa.js?v=361" defer></script>
   <script src="assets/live-link.js" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->

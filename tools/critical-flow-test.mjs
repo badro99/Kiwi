@@ -31,6 +31,12 @@ ok('cashier PIN can close the register without widening manager-only actions',
   && caisse.includes("requireManager('Remboursement'"));
 ok('specialist PINs wait for their dispatcher', caisse.includes('verticalDemoPins') && caisse.includes('tryVertical(30)'));
 ok('card and cash commit before the success modal closes', caisse.includes('finalizeTender(cardTenderMethod)') && caisse.includes("finalizeTender('cash')"));
+ok('KDS action buttons keep a theme-stable, high-contrast label',
+  caisse.includes('.kit-act-accept { background: var(--brand-deep); color: var(--inverse-ink); }')
+  && caisse.includes('.kit-act-ready { background: var(--atlas); color: var(--inverse-ink); }')
+  && caisse.includes('.kit-station.on { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--inverse-ink); }')
+  && caisse.includes('.kit-history-toggle.on { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--inverse-ink); }')
+  && !caisse.includes('.kit-act-accept { background: var(--ink)'));
 ok('team composer uses a real transport or labels copy-only behavior honestly',
   (caisse.includes("fetch('/api/team/live'") && caisse.includes("if (!response.ok) throw"))
   || (caisse.includes('Copier le message') && !caisse.includes('Message envoyé à ${target}')));
