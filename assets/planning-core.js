@@ -255,6 +255,16 @@
     return (Array.isArray(periods) ? periods : []).map((period) => shiftInterval(day, { start:period && (period.start || period.from), end:period && (period.end || period.to) })).filter(Boolean);
   }
 
+  /* Une fiche employé porte firstName/lastName — jamais `name`. Le repli sur
+   * l'identifiant technique n'était donc pas un repli : il s'affichait toujours,
+   * et le patron lisait « mem-am3teot est en congé approuvé ». */
+  function memberLabel(member, memberId) {
+    const fallback = String(memberId || "");
+    if (!member) return fallback;
+    const full = String(member.name || [member.firstName, member.lastName].filter(Boolean).join(" ") || "").trim();
+    return full || fallback;
+  }
+
   /* Opening hours are operational context, not a hard prohibition. A closed
    * restaurant may still schedule cleaning, prep or stock-taking. We surface
    * those decisions as warnings so managers review them before publishing. */
@@ -282,29 +292,46 @@
       const ruleRole = roleKey(rule.role);
       days.forEach((day) => {
         if (weekdays.length && !weekdays.includes(dayNumber(day))) return;
-        if (periodsByDay && Object.prototype.hasOwnProperty.call(periodsByDay, day) && !openingIntervals(day, periodsByDay[day]).length) return;
         const interval = shiftInterval(day, { start: rule.start, end: rule.end });
         if (!interval) return;
-        const events = [{ at: interval.start, delta: 0 }, { at: interval.end, delta: 0 }];
+        /* La fenêtre de la règle se rabote sur l'ouverture du jour. Sans ça, une
+         * règle « service du midi 11:30–14:30 » posée sur un établissement qui
+         * ouvre à 12:00 déclarait un manque à 11:30 — un manque que personne ne
+         * peut combler, qui bloque la publication et que l'optimiseur refuse
+         * (à juste titre) de résoudre. On n'est pas en sous-effectif pendant
+         * qu'on est fermé. */
+        let windows = [interval];
+        if (periodsByDay && Object.prototype.hasOwnProperty.call(periodsByDay, day)) {
+          windows = openingIntervals(day, periodsByDay[day])
+            .map((opening) => ({ start: Math.max(interval.start, opening.start), end: Math.min(interval.end, opening.end) }))
+            .filter((window) => window.end > window.start);
+        }
+        if (!windows.length) return;
+        const assigned = [];
         Object.keys(shifts).forEach((memberId) => {
           const member = byId.get(String(memberId));
           if (!member || (ruleRole && ruleRole !== "*" && memberRole(member) !== ruleRole)) return;
           [offsetDay(day, -1), day].forEach((shiftDay) => {
-            const assigned = shiftInterval(shiftDay, shifts[memberId] && shifts[memberId][shiftDay]);
-            if (!assigned) return;
-            const start = Math.max(interval.start, assigned.start);
-            const end = Math.min(interval.end, assigned.end);
+            const span = shiftInterval(shiftDay, shifts[memberId] && shifts[memberId][shiftDay]);
+            if (span) assigned.push(span);
+          });
+        });
+        let minimum = Infinity;
+        windows.forEach((window) => {
+          const events = [{ at: window.start, delta: 0 }, { at: window.end, delta: 0 }];
+          assigned.forEach((span) => {
+            const start = Math.max(window.start, span.start);
+            const end = Math.min(window.end, span.end);
             if (end <= start) return;
             events.push({ at: start, delta: 1 }, { at: end, delta: -1 });
           });
+          events.sort((a, b) => a.at - b.at || b.delta - a.delta);
+          let count = 0;
+          for (let index = 0; index < events.length - 1; index += 1) {
+            count += events[index].delta;
+            if (events[index + 1].at > events[index].at) minimum = Math.min(minimum, count);
+          }
         });
-        events.sort((a, b) => a.at - b.at || b.delta - a.delta);
-        let count = 0;
-        let minimum = Infinity;
-        for (let index = 0; index < events.length - 1; index += 1) {
-          count += events[index].delta;
-          if (events[index + 1].at > events[index].at) minimum = Math.min(minimum, count);
-        }
         if (!Number.isFinite(minimum)) minimum = 0;
         rows.push({ ruleId: String(rule.id || ""), label: String(rule.label || rule.role || "Équipe"), role: String(rule.role || ""), day, start: String(rule.start || ""), end: String(rule.end || ""), required, scheduled: minimum, gap: Math.max(0, required - minimum) });
       });
@@ -335,7 +362,7 @@
         if (shift && typeof shift === "object") decided += 1;
         const interval = shiftInterval(day, shift);
         if (!interval) return;
-        const base = { severity: "blocker", memberId, memberName: member && member.name || memberId, day };
+        const base = { severity: "blocker", memberId, memberName: memberLabel(member, memberId), day };
         if (!member) {
           issues.push(Object.assign({}, base, { code: "unknown-member" }));
           return;
@@ -383,20 +410,20 @@
       }).filter(Boolean).sort((a, b) => a.interval.start - b.interval.start);
       const periodHours = intervals.reduce((sum, item) => (!days.length || days.includes(item.day)) ? sum + (item.interval.end - item.interval.start) / 3600000 : sum, 0);
       if (maxWeekly && periodHours > maxWeekly) {
-        issues.push({ severity: "warning", code: "weekly-hours", memberId, memberName: member && (member.name || [member.firstName, member.lastName].filter(Boolean).join(" ")) || memberId, day: days[0] || "", hours: periodHours, limit: maxWeekly });
+        issues.push({ severity: "warning", code: "weekly-hours", memberId, memberName: memberLabel(member, memberId), day: days[0] || "", hours: periodHours, limit: maxWeekly });
       }
       for (let index = 1; index < intervals.length; index += 1) {
         if (intervals[index].interval.start < intervals[index - 1].interval.end) {
           const day = intervals[index].day;
           if (!days.length || days.includes(day) || days.includes(intervals[index - 1].day)) {
-            issues.push({ severity: "blocker", code: "overlap", memberId, memberName: member && member.name || memberId, day, otherDay: intervals[index - 1].day });
+            issues.push({ severity: "blocker", code: "overlap", memberId, memberName: memberLabel(member, memberId), day, otherDay: intervals[index - 1].day });
           }
         }
         const restHours = (intervals[index].interval.start - intervals[index - 1].interval.end) / 3600000;
         if (minRest && restHours >= 0 && restHours < minRest) {
           const day = intervals[index].day;
           if (!days.length || days.includes(day) || days.includes(intervals[index - 1].day)) {
-            issues.push({ severity: "warning", code: "short-rest", memberId, memberName: member && (member.name || [member.firstName, member.lastName].filter(Boolean).join(" ")) || memberId, day, hours: restHours, limit: minRest });
+            issues.push({ severity: "warning", code: "short-rest", memberId, memberName: memberLabel(member, memberId), day, hours: restHours, limit: minRest });
           }
         }
       }

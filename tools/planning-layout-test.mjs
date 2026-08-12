@@ -23,14 +23,20 @@ assert.match(css, /\.kt-planning-command\{[^}]*container-type:inline-size/, 'too
 assert.match(css, /@container\(max-width:1050px\)/, 'advanced tools respond to the card width');
 assert.match(css, /@media\(max-width:680px\)[\s\S]*\.kt-plan-primary-row[^}]*flex-direction:column/, 'phone primary actions stack cleanly');
 assert.match(css, /@media\(max-width:420px\)[^{]*\{[^}]*kt-plan-intelligence/, 'narrow phone breakpoint exists');
-assert.match(dashboard, /assets\/morocco-holidays\.js\?v=1/);
-assert.match(dashboard, /assets\/planning-ui\.css\?v=8/);
-assert.match(dashboard, /assets\/planning-core\.js\?v=6/);
-assert.match(dashboard, /assets\/team\.js\?v=268/);
-assert.match(sw, /assets\/morocco-holidays\.js\?v=1/);
-assert.match(sw, /assets\/planning-ui\.css\?v=8/);
-assert.match(sw, /assets\/planning-core\.js\?v=6/);
-assert.match(sw, /assets\/team\.js\?v=268/);
+/* Ce contrôle porte sur la cohérence, pas sur un numéro. Épingler `?v=8`
+ * faisait échouer le test à chaque incrément légitime — c'est-à-dire à
+ * chaque fois qu'on livrait le fichier qu'il est censé protéger. Le vrai
+ * défaut à attraper, c'est un tampon avancé dans dashboard.html mais oublié
+ * dans le précache du service worker : le navigateur télécharge alors la
+ * nouvelle version pendant que le SW ressert l'ancienne. */
+['assets/morocco-holidays.js', 'assets/planning-ui.css', 'assets/planning-core.js', 'assets/team.js', 'assets/merchant-config.js'].forEach((asset) => {
+  const stamp = new RegExp(`${asset.replace(/[./]/g, '\\$&')}\\?v=(\\d+)`);
+  const inDashboard = dashboard.match(stamp);
+  const inSw = sw.match(stamp);
+  assert.ok(inDashboard, `${asset} est chargé avec un tampon de version dans dashboard.html`);
+  assert.ok(inSw, `${asset} est précaché avec un tampon de version dans kiwi-sw.js`);
+  assert.equal(inSw[1], inDashboard[1], `${asset} : le précache du service worker suit le tampon du dashboard`);
+});
 assert.doesNotMatch(dashboard, /body\.role-manager \.sidebar a\[data-nav="payroll"\]/, 'manager keeps the planning doorway');
 assert.match(dashboard, /body\.role-staff \.sidebar a\[data-nav="payroll"\]/, 'staff still cannot enter planning or payroll');
 assert.match(team, /return role === 'staff' \? 'none' : role === 'manager' \|\| !payrollEnabled \? 'planning' : 'full'/, 'role access separates planning from payroll');
@@ -38,7 +44,5 @@ assert.match(team, /renderPlanningPane\(T, venue, venueType, members, \{ showCos
 assert.match(team, /if \(access === 'none'\)[\s\S]{0,220}return;/, 'staff access is blocked in the owned handler');
 assert.match(merchantConfig, /key !== 'reservations' && key !== 'payroll'/, 'legacy payroll-off config cannot remove core planning');
 assert.match(team, /payrollEnabled = window\.KiwiConfig\?\.features\?\.payroll !== false/, 'payroll flag controls financial rendering instead');
-assert.match(dashboard, /assets\/merchant-config\.js\?v=262/);
-assert.match(sw, /assets\/merchant-config\.js\?v=262/);
 
 console.log('planning-layout-test: 37 controls passed');

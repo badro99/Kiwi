@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v382';
+var CACHE = 'kiwi-app-v383';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -173,9 +173,9 @@ var SHELL = [
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=371',
   '/assets/employee-planning.js?v=3',
-  '/assets/planning-core.js?v=6',
-  '/assets/planning-ui.css?v=8',
-  '/assets/team.js?v=268',
+  '/assets/planning-core.js?v=7',
+  '/assets/planning-ui.css?v=9',
+  '/assets/team.js?v=269',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
