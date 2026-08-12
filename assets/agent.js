@@ -1964,9 +1964,27 @@
     ledger().forEach((e) => { const ts = +((e && e.ts) || 0); if (ts && ts < min) min = ts; });
     return isFinite(min) ? min : null;
   }
+  /* MINUIT N'EST PAS LA FIN DU SERVICE. Un restaurant qui encaisse jusqu'à
+   * 2 h du matin voyait sa soirée coupée en deux : le rapport Z la gardait
+   * entière — il groupe sur la journée COMMERCIALE, bascule à 5 h par défaut
+   * (day-report.js) — pendant que l'assistant, lui, comptait sur minuit civil.
+   * Les deux surfaces décrivaient le même service avec deux chiffres, et le
+   * patron n'avait aucun moyen de savoir laquelle mentait. Aucune ne mentait :
+   * elles ne parlaient pas de la même journée.
+   * La borne du rapport fait foi ; minuit civil ne reste qu'un filet quand
+   * day-report.js n'est pas chargé sur cette page. */
+  function dayStart(ts) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R && R.dayBounds && R.businessDay) {
+        const b = R.dayBounds(R.businessDay(ts));
+        if (b && isFinite(b.from)) return b.from;
+      }
+    } catch (_) {}
+    const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
   function midnight(offset) {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    return d.getTime() - (offset || 0) * DAY_MS;
+    return dayStart(Date.now()) - (offset || 0) * DAY_MS;
   }
   const DATE_LOC = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
   function dateLabel(ts) {
@@ -2072,7 +2090,7 @@
     const first = firstSaleTs();
     if (first == null) return { text: t.dayNoSales(escHtml(B.name)) };
     if (to <= first) return { text: t.dayBeforeFirst(label, dateLabel(first)) };
-    const firstDay = midnight(0) - Math.round((midnight(0) - new Date(first).setHours(0, 0, 0, 0)) / DAY_MS) * DAY_MS;
+    const firstDay = midnight(0) - Math.round((midnight(0) - dayStart(first)) / DAY_MS) * DAY_MS;
     const spanDays = Math.max(1, Math.round((midnight(0) - firstDay) / DAY_MS) + 1);
     const avg = windowStats(firstDay, Infinity).revenue / spanDays;
     const cur = windowStats(from, to);
