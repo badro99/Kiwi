@@ -127,6 +127,7 @@ var SHELL = [
      un contrôle qui ne peut pas se faire doit laisser passer — donc autant
      qu'il puisse se faire. */
   '/assets/hours.js',
+  '/assets/morocco-holidays.js?v=1',
   '/assets/hours-ui.js',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
@@ -172,10 +173,10 @@ var SHELL = [
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=371',
   '/assets/employee-planning.js?v=3',
-  '/assets/planning-core.js?v=5',
-  '/assets/planning-ui.css?v=7',
-  '/assets/team.js?v=266',
-  '/assets/restaurant-menu-workspace.js',
+  '/assets/planning-core.js?v=6',
+  '/assets/planning-ui.css?v=8',
+  '/assets/team.js?v=267',
+  '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).

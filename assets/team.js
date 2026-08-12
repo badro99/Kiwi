@@ -1638,6 +1638,26 @@
     if(venue.id==='scoped'&&venue.slug)return venue.slug;
     return venue.id||venue.slug||(ctx&&ctx.key)||'';
   }
+  function planningDayMeta(day, ctx) {
+    const KH=window.KiwiHours,calendar=window.KiwiMoroccoCalendar,lang=trLang(),key=planningHoursKey(ctx);
+    const configured=!!(KH?.isConfigured?.(key));
+    const resolved=configured&&KH?.periodsOn?.(day,key);
+    const periods=Array.isArray(resolved)?resolved:(resolved?.periods||[]);
+    const exception=(resolved&&!Array.isArray(resolved)&&resolved.exception)||KH?.exceptionOn?.(day,key)||null;
+    const holiday=calendar?.info?.(day,lang)||null;
+    return { day, configured, periods, exception, holiday, closed:configured&&!periods.length };
+  }
+  function planningPeriodMeta(days, ctx) {
+    return Object.fromEntries((days||[]).map((day)=>[day,planningDayMeta(day,ctx)]));
+  }
+  function planningHolidaysByDay(days) {
+    const calendar=window.KiwiMoroccoCalendar,lang=trLang();
+    return Object.fromEntries((days||[]).map((day)=>[day,calendar?.info?.(day,lang)?.label||'']).filter((entry)=>entry[1]));
+  }
+  function compactPeriods(periods) {
+    const short=(value)=>String(value||'').replace(':00','h').replace(':30','h30');
+    return (periods||[]).map((period)=>`${short(period.from)}–${short(period.to)}`).join(' / ');
+  }
 
   handlers['kt-plan-template-save'] = () => {
     const copy = planningCopy();
@@ -1675,7 +1695,10 @@
   };
   handlers['kt-plan-publish'] = () => {
     const ctx = planningContext();
-    const result = window.KiwiPlanningCore.publish(ctx.planning, ctx.shifts, ctx.period.days, ctx.members);
+    const KH=window.KiwiHours,hoursKey=planningHoursKey(ctx),configured=!!KH?.isConfigured?.(hoursKey);
+    const periodsByDay=configured?Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];})):null;
+    const holidaysByDay=planningHolidaysByDay(ctx.period.days);
+    const result = window.KiwiPlanningCore.publish(ctx.planning, ctx.shifts, ctx.period.days, ctx.members, undefined, { periodsByDay, holidaysByDay });
     if (!result.ok) {
       toast(planningCopy().publishBlocked, { type:'error' });
       render();
@@ -1686,7 +1709,9 @@
   };
   handlers['kt-plan-optimize'] = () => {
     const ctx=planningContext(),P=window.KiwiPlanningCore,copy=Object.assign({},planningCopy(),optimizationCopy());if(!P?.optimize)return;
-    const result=P.optimize({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members});
+    const KH=window.KiwiHours,hoursKey=planningHoursKey(ctx),configured=!!KH?.isConfigured?.(hoursKey),periodsByDay=configured?Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];})):null;
+    const holidaysByDay=planningHolidaysByDay(ctx.period.days);
+    const result=P.optimize({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,periodsByDay,holidaysByDay});
     if(!result.assignments.length){toast(result.unresolved.length?copy.optimizeBlocked:copy.optimizeNothing,{type:result.unresolved.length?'error':'info'});return;}
     const mdl=modal({title:copy.optimizeTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.optimizeCount(result.assignments.length))}</strong><p>${esc(copy.optimizeReview)}</p></div>${result.assignments.slice(0,30).map((row)=>{const member=ctx.members.find((m)=>String(m.id)===String(row.memberId));return `<div class="kt-opt-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${esc(row.day)} · ${esc(row.start)}–${esc(row.end)}</span></div>`;}).join('')}${result.unresolved.length?`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.optimizeUnresolved(result.unresolved.length))}</span></div>`:''}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-optimize-confirm">${esc(copy.optimizeApply)}</button>`});
     mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOptimize={mdl,result,key:ctx.key};
@@ -1704,22 +1729,23 @@
     const ctx=planningContext(),copy=fairScheduleCopy(),KH=window.KiwiHours;
     const hoursKey=planningHoursKey(ctx),configured=!!(KH&&KH.isConfigured&&KH.isConfigured(hoursKey));
     const suggested=Math.max(1,Math.min(ctx.members.length,Math.ceil(ctx.members.length/2)||1));
-    const body=`<p class="kt-fair-intro">${esc(copy.intro)}</p><div class="kt-fair-fields"><div class="kt-plan-modal-field"><label for="kt-fair-people">${esc(copy.people)}</label><input id="kt-fair-people" data-kt-fair-people type="number" inputmode="numeric" min="1" max="${ctx.members.length||1}" value="${suggested}"><small>${esc(copy.peopleHint)}</small></div><div class="kt-plan-modal-field"><label for="kt-fair-shifts">${esc(copy.shifts)}</label><input id="kt-fair-shifts" data-kt-fair-shifts type="number" inputmode="numeric" min="1" max="6" value="2"><small>${esc(copy.shiftsHint)}</small></div></div><div class="kt-fair-hours ${configured?'is-ready':'is-missing'}"><strong>${esc(copy.hours)}</strong><span>${esc(configured?copy.hoursReady:copy.hoursMissing)}</span>${configured?'':`<button class="kb ghost" type="button" data-action="kt-plan-hours">${esc(copy.configure)}</button>`}</div>`;
+    const suggestedShifts=Math.max(1,Math.min(2,suggested));
+    const body=`<p class="kt-fair-intro">${esc(copy.intro)}</p><div class="kt-fair-fields"><div class="kt-plan-modal-field"><label for="kt-fair-people">${esc(copy.people)}</label><input id="kt-fair-people" data-kt-fair-people type="number" inputmode="numeric" min="1" max="${ctx.members.length||1}" value="${suggested}"><small>${esc(copy.peopleHint)}</small></div><div class="kt-plan-modal-field"><label for="kt-fair-shifts">${esc(copy.shifts)}</label><input id="kt-fair-shifts" data-kt-fair-shifts type="number" inputmode="numeric" min="1" max="6" value="${suggestedShifts}"><small>${esc(copy.shiftsHint)}</small></div></div><div class="kt-fair-hours ${configured?'is-ready':'is-missing'}"><strong>${esc(copy.hours)}</strong><span>${esc(configured?copy.hoursReady:copy.hoursMissing)}</span>${configured?'':`<button class="kb ghost" type="button" data-action="kt-plan-hours">${esc(copy.configure)}</button>`}</div>`;
     const mdl=modal({title:copy.title,width:600,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-build"${configured?'':' disabled'}>${esc(copy.build)}</button>`});
     mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,hoursKey};
   };
   handlers['kt-plan-hours'] = () => {
     const pending=window.__kiwiPlanningFair,ctx=planningContext();
     pending?.mdl?.close?.();window.__kiwiPlanningFair=null;
-    if(window.KiwiHoursUI?.open)window.KiwiHoursUI.open({venueId:planningHoursKey(ctx),title:ctx.venue?.name||'',onSave:()=>setTimeout(()=>handlers['kt-plan-fair'](),100)});
+    if(window.KiwiHoursUI?.open)window.KiwiHoursUI.open({venueId:planningHoursKey(ctx),title:ctx.venue?.name||'',onSave:()=>setTimeout(()=>pending?handlers['kt-plan-fair']():render(),100)});
   };
   handlers['kt-plan-fair-build'] = () => {
     const pending=window.__kiwiPlanningFair,ctx=planningContext(),P=window.KiwiPlanningCore,KH=window.KiwiHours,copy=fairScheduleCopy();if(!pending?.mdl?.el||!P?.fairSchedule||!KH)return;
     const people=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-people]')?.value)||1));
     const shiftCount=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-shifts]')?.value)||1));
     if(people<shiftCount){toast(copy.invalid,{type:'error'});return;}
-    const hoursKey=pending.hoursKey||planningHoursKey(ctx),periodsByDay=Object.fromEntries(ctx.period.days.map((day)=>[day,KH.periodsOn(day,hoursKey)||[]]));
-    const result=P.fairSchedule({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,dailyPeople:people,shiftsPerDay:shiftCount,periodsByDay,seed:`${ctx.key}|${ctx.period.start}`});
+    const hoursKey=pending.hoursKey||planningHoursKey(ctx),periodsByDay=Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];}));
+    const result=P.fairSchedule({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,dailyPeople:people,shiftsPerDay:shiftCount,periodsByDay,holidaysByDay:planningHolidaysByDay(ctx.period.days),seed:`${ctx.key}|${ctx.period.start}`});
     const hours=result.hoursByMember.map((row)=>row.hours);const low=hours.length?Math.min(...hours):0,high=hours.length?Math.max(...hours):0;
     const openDays=ctx.period.days.length-result.closedDays.length;
     const issues=[];if(result.unresolved.length)issues.push(`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.shortage(result.unresolved.length))}</span></div>`);if(result.closedDays.length)issues.push(`<div class="kt-plan-issue is-warning"><b>i</b><span>${esc(copy.closed(result.closedDays.length))}</span></div>`);
@@ -2728,11 +2754,11 @@
   }
   const dateLocale = () => (trLang() === 'en' ? 'en-US' : trLang() === 'ar' ? 'ar-MA' : 'fr-FR');
 
-  function planCellHtml(T, m, d, cur, locked) {
+  function planCellHtml(T, m, d, cur, locked, dayMeta) {
     const s = normShift(cur);
     const isToday = (d === toISO(new Date()));
     const title = shiftCellTitle(T, cur, d);
-    return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}"
+    return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}${dayMeta?.closed?' is-closed':''}${dayMeta?.holiday?' is-holiday':''}"
       data-kt-cell="${esc(m.id)}|${esc(d)}">
       <button class="kt-sh" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}"
         ${locked ? 'disabled' : ''}${title ? ` title="${esc(title)}"` : ''}>${shiftCellInner(T, cur, locked)}</button>
@@ -2768,10 +2794,10 @@
   function issueLabel(issue) {
     const who = issue.memberName || issue.memberId;
     const labels = trLang() === 'en'
-      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered', 'coverage-gap':`coverage is short by ${issue.gap}`, 'long-shift':'has a long shift', 'weekly-hours':'exceeds the weekly-hour alert', 'short-rest':'has too little rest', 'open-shift':'still has an open shift' }
+      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered', 'coverage-gap':`coverage is short by ${issue.gap}`, 'long-shift':'has a long shift', 'weekly-hours':'exceeds the weekly-hour alert', 'short-rest':'has too little rest', 'open-shift':'still has an open shift', 'closed-day':'is scheduled while the venue is closed', 'outside-opening-hours':'is scheduled outside opening hours', 'public-holiday':`is scheduled on ${issue.holiday}; review compensation` }
       : trLang() === 'ar'
-        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة', 'coverage-gap':`يوجد نقص في التغطية بمقدار ${issue.gap}`, 'long-shift':'لديه وردية طويلة', 'weekly-hours':'تجاوز حد الساعات الأسبوعية', 'short-rest':'فترة الراحة غير كافية', 'open-shift':'لديه وردية شاغرة' }
-        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi', 'coverage-gap':`couverture insuffisante de ${issue.gap}`, 'long-shift':'a un service long', 'weekly-hours':'dépasse l’alerte hebdomadaire', 'short-rest':'a trop peu de repos', 'open-shift':'a encore un service à pourvoir' };
+        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة', 'coverage-gap':`يوجد نقص في التغطية بمقدار ${issue.gap}`, 'long-shift':'لديه وردية طويلة', 'weekly-hours':'تجاوز حد الساعات الأسبوعية', 'short-rest':'فترة الراحة غير كافية', 'open-shift':'لديه وردية شاغرة', 'closed-day':'مجدول في يوم تكون فيه المؤسسة مغلقة', 'outside-opening-hours':'مجدول خارج ساعات فتح المؤسسة', 'public-holiday':`مجدول خلال ${issue.holiday}؛ راجع التعويض` }
+        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi', 'coverage-gap':`couverture insuffisante de ${issue.gap}`, 'long-shift':'a un service long', 'weekly-hours':'dépasse l’alerte hebdomadaire', 'short-rest':'a trop peu de repos', 'open-shift':'a encore un service à pourvoir', 'closed-day':'est planifié alors que l’établissement est fermé', 'outside-opening-hours':'est planifié hors horaires d’ouverture', 'public-holiday':`est planifié pendant ${issue.holiday} ; vérifiez la compensation` };
     return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
   }
 
@@ -2786,12 +2812,17 @@
     const optimizeCopy = optimizationCopy();
     const fairCopy = fairScheduleCopy();
     const lifecycle = P?.status?.(planning, shifts, period.days) || { state:'draft' };
-    const issues = P?.validate?.({ planning, shifts, days:period.days, members }) || [];
+    const ctx={venue,key:venueType};
+    const calendarMeta=planningPeriodMeta(period.days,ctx);
+    const periodsByDay=Object.fromEntries(period.days.map((day)=>[day,calendarMeta[day]?.periods||[]]));
+    const holidaysByDay=planningHolidaysByDay(period.days);
+    const hoursConfigured=Object.values(calendarMeta).some((meta)=>meta.configured);
+    const issues = P?.validate?.({ planning, shifts, days:period.days, members, periodsByDay:hoursConfigured?periodsByDay:null, holidaysByDay }) || [];
     const blockers=issues.filter((issue)=>issue.severity==='blocker');
     const warnings=issues.filter((issue)=>issue.severity!=='blocker');
     const pending = (planning.requests || []).filter((request) => request.status === 'pending');
     const opportunityClaims=(planning.openShifts||[]).filter((item)=>item.status==='claimed').length+(planning.swapRequests||[]).filter((item)=>item.status==='claimed').length;
-    const coverage=P?.coverageSummary?.({planning,shifts,days:period.days,members})||[];
+    const coverage=P?.coverageSummary?.({planning,shifts,days:period.days,members,periodsByDay:hoursConfigured?periodsByDay:null})||[];
     const coverageGaps=coverage.reduce((sum,row)=>sum+(Number(row.gap)||0),0);
     const openOpportunities=(planning.openShifts||[]).filter((item)=>['open','claimed'].includes(item.status)).length+(planning.swapRequests||[]).filter((item)=>['open','claimed'].includes(item.status)).length;
     let grandH = 0, grandCost = 0;
@@ -2808,7 +2839,9 @@
     const headDays = view.map((d) => {
       const dt = fromISO(d);
       const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-      return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
+      const meta=calendarMeta[d],hours=!meta.configured?'À configurer':meta.closed?'Fermé':compactPeriods(meta.periods);
+      const special=meta.exception?.label||meta.holiday?.label||'';
+      return `<th class="kt-day-head${meta.closed?' is-closed':''}${meta.holiday?' is-holiday':''}" title="${esc([special,hours].filter(Boolean).join(' · '))}"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span><span class="kt-day-hours">${esc(hours)}</span>${special?`<span class="kt-day-special">${esc(special)}</span>`:''}</th>`;
     }).join('');
 
     let anyNextDay = false;
@@ -2820,7 +2853,7 @@
       period.days.forEach((d) => { h += shiftHours(row[d]); });
       const cells = view.map((d) => {
         if (shiftIsNextDay(row[d])) anyNextDay = true;
-        return planCellHtml(T, m, d, row[d], locked);
+        return planCellHtml(T, m, d, row[d], locked, calendarMeta[d]);
       }).join('');
       const cost = h * (+m.hourlyRate || 0);
       grandH += h; grandCost += cost;
@@ -2853,7 +2886,15 @@
     const stateText = lifecycle.state === 'published' ? copy.published : lifecycle.state === 'changed' ? copy.changed : copy.draft;
     const qualityText = blockers.length ? copy.blocked(blockers.length) : copy.healthy;
     const templates = planning.templates || [];
+    const specialDays=period.days.map((day)=>calendarMeta[day]).filter((meta)=>meta.exception||meta.holiday);
+    const calendarCopy=trLang()==='en'
+      ? {title:'Business calendar',ready:'Weekly opening hours, exceptions and public holidays are reflected below.',missing:'Set opening days before building the team schedule.',edit:'Edit hours',holiday:'Public holiday',review:'Review compensation policy'}
+      : trLang()==='ar'
+        ? {title:'تقويم المؤسسة',ready:'تظهر ساعات الفتح والاستثناءات والعطل الرسمية في الجدول.',missing:'حدد أيام وساعات العمل قبل إعداد جدول الفريق.',edit:'تعديل الساعات',holiday:'عطلة رسمية',review:'راجع سياسة التعويض'}
+        : {title:'Calendrier de l’établissement',ready:'Horaires, fermetures exceptionnelles et jours fériés sont intégrés au planning.',missing:'Renseignez les jours d’ouverture avant de composer le planning.',edit:'Modifier les horaires',holiday:'Jour férié',review:'Vérifier la compensation'};
+    const calendarBridge=`<div class="kt-calendar-bridge ${hoursConfigured?'is-ready':'is-missing'}"><i></i><div><strong>${esc(calendarCopy.title)}</strong><span>${esc(hoursConfigured?calendarCopy.ready:calendarCopy.missing)}</span>${specialDays.length?`<small>${specialDays.slice(0,3).map((meta)=>`${esc(fromISO(meta.day).toLocaleDateString(dateLocale(),{weekday:'short',day:'numeric',month:'short'}))} · ${esc(meta.exception?.label||meta.holiday?.label||calendarCopy.holiday)}${meta.holiday&&!meta.exception?' · '+esc(calendarCopy.review):''}`).join('<br>')}</small>`:''}</div><button class="btn-slim" type="button" data-action="kt-plan-hours">${esc(calendarCopy.edit)}</button></div>`;
     const planningCommand = `
+      ${calendarBridge}
       <div class="kt-planning-command">
         <div class="kt-planning-health">
           <span class="kt-plan-state ${esc(lifecycle.state)}"><i></i>${esc(stateText)}</span>
@@ -3148,6 +3189,10 @@
     .dash-equipe .kt-h-table .kt-day-head { text-align: center; min-width: 54px; }
     .dash-equipe .kt-h-table .kt-day-head .d { display: block; font-size: 12.5px; color: var(--ink); font-weight: 600; }
     .dash-equipe .kt-h-table .kt-day-head .m { display: block; font-size: 9.5px; color: var(--n-500); text-transform: lowercase; letter-spacing: 0.04em; margin-top: 2px; }
+    .dash-equipe .kt-h-table .kt-day-head .kt-day-hours { display: block; overflow: hidden; margin-top: 5px; color: var(--n-700); font: 600 8px/1.25 var(--mono); letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+    .dash-equipe .kt-h-table .kt-day-head .kt-day-special { display: block; overflow: hidden; margin-top: 4px; padding: 3px 4px; border-radius: 999px; background: color-mix(in srgb, var(--atlas) 10%, var(--surface)); color: var(--atlas); font: 700 7px/1.2 var(--mono); letter-spacing: .03em; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+    .dash-equipe .kt-h-table .kt-day-head.is-closed { background: color-mix(in srgb, var(--n-200) 45%, var(--paper-soft)); }
+    .dash-equipe .kt-h-table .kt-day-head.is-closed .kt-day-hours { color: var(--n-500); }
     .dash-equipe .kt-h-table tbody td { border-top: 1px solid var(--n-200); padding: 9px 9px; vertical-align: middle; }
     .dash-equipe .kt-h-table .kt-h-member { display: flex; align-items: center; gap: 10px; min-width: 200px; }
     .dash-equipe .kt-h-table .kt-h-member .n { font-weight: 600; font-size: 12.5px; color: var(--ink); }
@@ -3157,6 +3202,8 @@
     .dash-equipe .kt-h-table .kt-day-cell input::-webkit-outer-spin-button, .dash-equipe .kt-h-table .kt-day-cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .dash-equipe .kt-h-table .kt-day-cell input:focus { border-color: var(--atlas); box-shadow: 0 0 0 2px rgba(11,110,79,0.12); }
     .dash-equipe .kt-h-table .kt-day-cell.today { background: rgba(125, 242, 176, 0.10); }
+    .dash-equipe .kt-h-table .kt-day-cell.is-closed { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--n-200) 42%, transparent) 7px 8px); }
+    .dash-equipe .kt-h-table .kt-day-cell.is-holiday .kt-sh { border-color: color-mix(in srgb, var(--atlas) 30%, var(--n-200)); }
     .dash-equipe .kt-h-table .kt-day-cell.locked input { background: var(--paper-soft); color: var(--n-500); cursor: not-allowed; }
     .dash-equipe .kt-h-table .kt-h-total, .dash-equipe .kt-h-table .kt-h-pay { text-align: right; min-width: 82px; padding-right: 14px; }
     .dash-equipe .kt-h-table .kt-h-total b, .dash-equipe .kt-h-table .kt-h-pay b { font-size: 13px; color: var(--ink); }

@@ -251,6 +251,22 @@
     return { slots, error:"" };
   }
 
+  function openingIntervals(day, periods) {
+    return (Array.isArray(periods) ? periods : []).map((period) => shiftInterval(day, { start:period && (period.start || period.from), end:period && (period.end || period.to) })).filter(Boolean);
+  }
+
+  /* Opening hours are operational context, not a hard prohibition. A closed
+   * restaurant may still schedule cleaning, prep or stock-taking. We surface
+   * those decisions as warnings so managers review them before publishing. */
+  function openingIssue(day, shift, periods) {
+    const actual = shiftInterval(day, shift);
+    if (!actual) return null;
+    const allowed = openingIntervals(day, periods);
+    if (!allowed.length) return { code:"closed-day", severity:"warning" };
+    const inside = allowed.some((interval) => actual.start >= interval.start && actual.end <= interval.end);
+    return inside ? null : { code:"outside-opening-hours", severity:"warning" };
+  }
+
   function coverageSummary(input) {
     const members = input.members || [];
     const shifts = input.shifts || {};
@@ -258,6 +274,7 @@
     const days = periodDays(input.days);
     const byId = new Map(members.map((member) => [String(member.id || ""), member]));
     const rows = [];
+    const periodsByDay = input.periodsByDay && typeof input.periodsByDay === "object" ? input.periodsByDay : null;
     (planning.coverageRules || []).forEach((rule) => {
       if (!rule || rule.active === false) return;
       const weekdays = Array.isArray(rule.weekdays) ? rule.weekdays.map(Number) : [];
@@ -265,6 +282,7 @@
       const ruleRole = roleKey(rule.role);
       days.forEach((day) => {
         if (weekdays.length && !weekdays.includes(dayNumber(day))) return;
+        if (periodsByDay && Object.prototype.hasOwnProperty.call(periodsByDay, day) && !openingIntervals(day, periodsByDay[day]).length) return;
         const interval = shiftInterval(day, { start: rule.start, end: rule.end });
         if (!interval) return;
         const events = [{ at: interval.start, delta: 0 }, { at: interval.end, delta: 0 }];
@@ -306,6 +324,8 @@
     const maxDaily = Math.max(0, Number(settings.maxDailyHours) || 0);
     const maxWeekly = Math.max(0, Number(settings.maxWeeklyHours) || 0);
     const minRest = Math.max(0, Number(settings.minRestHours) || 0);
+    const periodsByDay = input.periodsByDay && typeof input.periodsByDay === "object" ? input.periodsByDay : null;
+    const holidaysByDay = input.holidaysByDay && typeof input.holidaysByDay === "object" ? input.holidaysByDay : null;
 
     Object.keys(shifts).forEach((memberId) => {
       const member = byId.get(String(memberId));
@@ -328,6 +348,13 @@
         }
         if (maxDaily && shiftHours(day, shift) > maxDaily) {
           issues.push(Object.assign({}, base, { severity: "warning", code: "long-shift", hours: shiftHours(day, shift) }));
+        }
+        if (periodsByDay && Object.prototype.hasOwnProperty.call(periodsByDay, day)) {
+          const opening = openingIssue(day, shift, periodsByDay[day]);
+          if (opening) issues.push(Object.assign({}, base, opening));
+        }
+        if (holidaysByDay && holidaysByDay[day]) {
+          issues.push(Object.assign({}, base, { severity:"warning", code:"public-holiday", holiday:holidaysByDay[day] }));
         }
         const weekly = planning.availability[memberId] && planning.availability[memberId].weekdays;
         const available = weekly && weekly[String(dayNumber(day))];
@@ -374,7 +401,7 @@
         }
       }
     });
-    coverageSummary({ planning, shifts, days, members }).filter((row) => row.gap > 0).forEach((row) => {
+    coverageSummary({ planning, shifts, days, members, periodsByDay }).filter((row) => row.gap > 0).forEach((row) => {
       issues.push({ severity: "blocker", code: "coverage-gap", day: row.day, role: row.role, label: row.label, required: row.required, scheduled: row.scheduled, gap: row.gap });
     });
     (planning.openShifts || []).filter((shift) => shift && shift.status === "open" && (!days.length || days.includes(shift.day))).forEach((shift) => {
@@ -523,9 +550,9 @@
     return { ok:true, planning:noticed, shifts:out, item };
   }
 
-  function publish(planning, shifts, days, members, now) {
+  function publish(planning, shifts, days, members, now, options) {
     const clean = normalize(planning, members);
-    const issues = validate({ planning: clean, shifts, days, members });
+    const issues = validate({ planning: clean, shifts, days, members, periodsByDay:options && options.periodsByDay, holidaysByDay:options && options.holidaysByDay });
     const blockers = issues.filter((issue) => issue.severity === "blocker");
     if (blockers.length) return { ok: false, planning: clean, issues };
     const key = periodKey(days);
@@ -656,7 +683,7 @@
 
     const hoursByMember = members.map((member) => ({ memberId:String(member.id), hours:totalFor(String(member.id)) }))
       .sort((a, b) => a.hours - b.hours || a.memberId.localeCompare(b.memberId));
-    const issues = validate({ planning, shifts, days, members });
+    const issues = validate({ planning, shifts, days, members, periodsByDay, holidaysByDay:input.holidaysByDay });
     return {
       ok: assignments.length > 0 && unresolved.length === 0 && !issues.some((issue) => issue.severity === "blocker"),
       shifts, assignments, unresolved, closedDays, hoursByMember,
@@ -677,6 +704,7 @@
     let shifts = clone(input.shifts || {});
     const replace = !!input.replace;
     const candidates = [];
+    const periodsByDay = input.periodsByDay && typeof input.periodsByDay === 'object' ? input.periodsByDay : null;
     const role = (value) => roleKey(value);
     const availabilityAllows = (memberId, day, start, end) => {
       if (approvedLeave(planning, memberId, day)) return false;
@@ -696,6 +724,10 @@
       const weekdays = Array.isArray(rule.weekdays) ? rule.weekdays.map(Number) : [];
       days.forEach((day) => {
         if (weekdays.length && !weekdays.includes(dayNumber(day))) return;
+        if (periodsByDay && Object.prototype.hasOwnProperty.call(periodsByDay, day)) {
+          const opening=openingIssue(day,{start:rule.start,end:rule.end},periodsByDay[day]);
+          if (opening) { candidates.push({ ruleId:rule.id, day, required:Math.max(1,Math.min(99,Math.floor(Number(rule.minimum)||1))), assigned:0, unresolved:true, reason:opening.code }); return; }
+        }
         const required = Math.max(1, Math.min(99, Math.floor(Number(rule.minimum) || 1)));
         let assigned = members.filter((member) => {
           const shift = shifts[member.id] && shifts[member.id][day];
@@ -726,9 +758,9 @@
         }
       });
     });
-    const issues = validate({ planning, shifts, days, members });
+    const issues = validate({ planning, shifts, days, members, periodsByDay, holidaysByDay:input.holidaysByDay });
     return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, openingSlots, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
+  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
 });

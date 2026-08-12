@@ -143,4 +143,12 @@ assert.equal(shortage.unresolved.some((row)=>row.code==='staff-shortage'),true);
 assert.equal(P.fairSchedule({planning:P.blank(),shifts:{},days:[days[0]],members:fairMembers,dailyPeople:1,shiftsPerDay:2,periodsByDay:{[days[0]]:[{from:'09:00',to:'17:00'}]}}).unresolved[0].code,'people-below-shifts');
 assert.equal(P.fairSchedule({planning:P.blank(),shifts:{},days:[days[0]],members:fairMembers,dailyPeople:2,shiftsPerDay:1,periodsByDay:{[days[0]]:[]}}).closedDays[0],days[0]);
 
-console.log("planning-core-test: 61 controls passed");
+const openingWarnings=P.validate({planning:P.blank(),members,days:[days[0]],shifts:{a:{[days[0]]:{start:'08:00',end:'18:00'}}},periodsByDay:{[days[0]]:[{from:'09:00',to:'17:00'}]}});
+assert.equal(openingWarnings.some((issue)=>issue.code==='outside-opening-hours'&&issue.severity==='warning'),true);
+const closedWarning=P.validate({planning:P.blank(),members,days:[days[0]],shifts:{a:{[days[0]]:{start:'09:00',end:'12:00'}}},periodsByDay:{[days[0]]:[]}});
+assert.equal(closedWarning.some((issue)=>issue.code==='closed-day'&&issue.severity==='warning'),true);
+const holidayWarning=P.validate({planning:P.blank(),members,days:['2026-08-14'],shifts:{a:{'2026-08-14':{start:'09:00',end:'12:00'}}},holidaysByDay:{'2026-08-14':'Récupération de Oued Eddahab'}});
+assert.equal(holidayWarning.some((issue)=>issue.code==='public-holiday'&&issue.severity==='warning'&&issue.holiday==='Récupération de Oued Eddahab'),true);
+assert.equal(P.openingIssue(days[0],{start:'09:00',end:'17:00'},[{from:'09:00',to:'17:00'}]),null);
+
+console.log("planning-core-test: 65 controls passed");
