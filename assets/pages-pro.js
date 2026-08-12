@@ -2264,7 +2264,7 @@ handlers['nav-equipe'] = () => {
             border-color: var(--atlas);
             box-shadow: 0 0 0 3px rgba(11,110,79,0.12);
           }
-          [data-eq-form] input::placeholder { color: var(--n-400); }
+          [data-eq-form] input::placeholder { color: var(--n-500); }
           [data-eq-form] .eq-section-label {
             font-family: var(--mono);
             font-size: 10px;
@@ -2322,7 +2322,7 @@ handlers['nav-equipe'] = () => {
           <!-- Téléphone (optionnel) -->
           <div>
             <div class="eq-section-label" style="margin-bottom: 9px;">
-              Téléphone <span style="color: var(--n-400); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">— optionnel, pour l'invitation SMS</span>
+              Téléphone <span style="color: var(--n-500); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">— optionnel, pour l'invitation SMS</span>
             </div>
             <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px;">
               <div style="display: flex; align-items: center; justify-content: center; padding: 11px 8px; border: 1px solid var(--n-300); border-radius: 9px; background: var(--paper-soft); font-family: var(--mono); font-size: 13px; color: var(--n-600); gap: 5px; box-sizing: border-box;">
@@ -5868,7 +5868,7 @@ function pdsRenderTable(t, state, T) {
   const serverBadge = assignedServers.length
     ? `<span class="pds-tbl-servers">${assignedServers.map(server => {
         const initials = server.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
-        return `<span class="pds-tbl-server" style="background:${server.color};" title="${pdsEsc(server.name)}">${initials}</span>`;
+        return `<span class="pds-tbl-server" style="background:${server.color};color:${pdsInk(server.color)};" title="${pdsEsc(server.name)}">${initials}</span>`;
       }).join('')}</span>`
     : '';
   /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
@@ -8124,7 +8124,7 @@ const PDS_INLINE_CSS = `
     cursor:pointer; color:var(--n-600); transition:.16s;
     flex-shrink:0;
   }
-  .pds-inspect-close:hover { background:var(--paper); color:var(--ink); border-color:var(--n-400); }
+  .pds-inspect-close:hover { background:var(--paper); color:var(--ink); border-color: var(--n-400); }
   .pds-inspect-close:active { transform:translateY(1px); }
   .pds-inspect-close svg { display:block; }
   .pds-form-row { margin-bottom:10px; }
@@ -8443,7 +8443,7 @@ const PDS_INLINE_CSS = `
     letter-spacing:0.08em; text-transform:uppercase; color:var(--n-500);
   }
   .pds-num-grid input { width:100%; padding:5px 6px; font-size:12px; text-align:center; }
-  .pds-unit { font:400 9.5px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; text-transform:none; }
+  .pds-unit { font:400 9.5px/1 var(--mono, monospace); color: var(--n-500); letter-spacing:0.06em; text-transform:none; }
   .pds-step { display:flex; align-items:center; gap:5px; }
   .pds-step-val { flex:1; text-align:center; padding:5px 4px; }
   .pds-step-btn {
@@ -8467,7 +8467,7 @@ const PDS_INLINE_CSS = `
     background:var(--surface); color:var(--n-600); cursor:pointer;
   }
   .pds-tool:hover { background:var(--paper-muted); color:var(--atlas); border-color:var(--atlas); }
-  .pds-plan-dims { font:400 10px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; }
+  .pds-plan-dims { font:400 10px/1 var(--mono, monospace); color: var(--n-500); letter-spacing:0.06em; }
   .pds-plan-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 
   /* Palette thumbnails are the fixture's own drawing, so the button always
@@ -12000,7 +12000,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 <td class="mono right">${fmt(s.price)} MAD</td>
                 <td><span class="s-room-pill">${s.room}</span></td>
                 <td><span class="s-skill ${s.skill}">${s.skill}</span></td>
-                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color:var(--n-400);">—</span>'}</td>
+                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color: var(--n-500);">—</span>'}</td>
                 <td class="mono right"><b>#${s.sales + 1}</b></td>
                 <td><button class="kb ghost" style="padding:4px 8px; font-size:11px;" data-action="svc-edit" data-arg="${SERVICES.indexOf(s)}">${ICN.edit}</button></td>
               </tr>
@@ -12886,7 +12886,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       <tr data-spa-row data-spa-id="${c.id}" data-spa-tier="${c.tier}" data-spa-new="${isNew(c) ? 1 : 0}" data-spa-fid="${isFidele(c) ? 1 : 0}" data-spa-vip="${isVIP(c) ? 1 : 0}" data-spa-bday="${c.bday ? 1 : 0}">
         <td><span class="sc-flag ${c.flag}"></span><b>${c.fn} ${c.ln}</b>${bdayChip}</td>
         <td style="color:var(--n-600);">${c.last}</td>
-        <td class="mono right">${fmtMAD(c.ltv)} <span style="color:var(--n-400); font-size:11px;">MAD</span></td>
+        <td class="mono right">${fmtMAD(c.ltv)} <span style="color: var(--n-500); font-size:11px;">MAD</span></td>
         <td>${c.fav}</td>
         <td><span class="sc-tier ${c.tier}">${tierLabel[c.tier]}</span></td>
       </tr>
@@ -14266,7 +14266,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-act-ready:hover { background: var(--atlas-700); }
       .kit-act:active { filter: brightness(0.93); }
       .kit-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 40px 20px; text-align: center; background: var(--paper-soft); border: 1px dashed var(--n-300); border-radius: 13px; }
-      .kit-empty svg { width: 26px; height: 26px; color: var(--n-400); }
+      .kit-empty svg { width: 26px; height: 26px; color: var(--n-500); }
       .kit-empty span { font-size: 12.5px; color: var(--n-500); }
       .kit-history { position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 86vw; z-index: 40; background: var(--paper); border-left: 1px solid var(--n-200); box-shadow: -24px 0 55px -30px rgba(10,15,13,0.5); transform: translateX(100%); transition: transform 300ms cubic-bezier(0.4,0,0.2,1); overflow-y: auto; padding: 18px; }
       .kit-history.open { transform: translateX(0); }
@@ -14280,7 +14280,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-hrow-num { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; flex-shrink: 0; }
       .kit-hrow-time { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--atlas); flex-shrink: 0; }
       .kit-hrow-time svg { width: 13px; height: 13px; }
-      .kit-hrow-eye { width: 16px; height: 16px; color: var(--n-400); flex-shrink: 0; }
+      .kit-hrow-eye { width: 16px; height: 16px; color: var(--n-500); flex-shrink: 0; }
       .kit-served-at { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 15px; font-weight: 600; padding: 5px 9px; border-radius: 8px; line-height: 1; color: var(--atlas); background: rgba(11,110,79,0.10); flex-shrink: 0; }
       .kit-served-at svg { width: 13px; height: 13px; }
       .kit-zoom-backdrop { position: fixed; inset: 0; z-index: 9995; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,15,13,0.46); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); opacity: 0; transition: opacity 220ms ease; }
@@ -14303,7 +14303,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       /* ── Recipe popup · cuisinier taps a dish on a ticket → ingredients + prep ─ */
       .kit-item.has-recipe { cursor: pointer; transition: background 120ms; border-radius: 6px; padding: 2px 4px; margin: -2px -4px; }
       .kit-item.has-recipe:hover { background: var(--paper-soft); }
-      .kit-recipe-ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--n-400); margin-left: auto; opacity: 0; transition: opacity 140ms, color 140ms; align-self: center; }
+      .kit-recipe-ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--n-500); margin-left: auto; opacity: 0; transition: opacity 140ms, color 140ms; align-self: center; }
       .kit-item.has-recipe:hover .kit-recipe-ico { opacity: 1; color: var(--atlas); }
       /* Fire-schedule badge on each ticket item — shows when a sync-enabled
          station is being delayed so the plate finishes with the slowest one,

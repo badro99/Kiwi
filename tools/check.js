@@ -781,6 +781,22 @@ section('Whole-project regressions');
   });
 }
 
+/* ── 14 · text contrast tokens ────────────────────────────────────────────
+ * Low-contrast neutrals are valid borders and decoration, never body copy.
+ * Keep the semantic distinction enforceable after the rendered theme audit. */
+section('Text contrast (tools/text-contrast-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'text-contrast-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok('operational labels use readable neutrals');
+  else {
+    const lines = out.split('\n').filter((l) => l.includes('·'));
+    if (lines.length) lines.forEach((l) => fail(l.trim()));
+    else fail(`text-contrast-test.js exited ${r.status} — ${out.trim()}`);
+  }
+}
+
 /* ── summary ────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }

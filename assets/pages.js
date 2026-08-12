@@ -1074,7 +1074,7 @@
   .rcal-track { position: relative; height: 28px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 8px; }
   html[data-theme="dark"] .rcal-track { background: var(--paper-soft); }
   .rcal-block { position: absolute; top: 3px; bottom: 3px; border-radius: 6px; padding: 0 8px; font-size: 10.5px; color: var(--paper); display: flex; align-items: center; font-weight: 500; white-space: nowrap; overflow: hidden; cursor: pointer; }
-  .rcal-axis { display: flex; justify-content: space-between; padding-left: 152px; padding-right: 4px; font-family: var(--mono); font-size: 10px; color: var(--n-400); margin-top: 6px; letter-spacing: 0.04em; }
+  .rcal-axis { display: flex; justify-content: space-between; padding-left: 152px; padding-right: 4px; font-family: var(--mono); font-size: 10px; color: var(--n-500); margin-top: 6px; letter-spacing: 0.04em; }
   .resv-walkin { display: flex; flex-direction: column; gap: 6px; }
   .wk { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--n-200); font-size: 12.5px; }
   html[data-theme="dark"] .wk { background: var(--paper-soft); }
@@ -1136,7 +1136,7 @@
   .sh-week .cell.morning { background: var(--mint-soft); border-color: rgba(11,110,79,0.18); color: var(--ink); }
   .sh-week .cell.evening { background: rgba(11,110,79,0.12); border-color: rgba(11,110,79,0.22); color: var(--atlas); }
   .sh-week .cell.day { background: rgba(217,154,43,0.16); border-color: rgba(217,154,43,0.3); color: var(--warn-ink); }
-  .sh-week .cell.off { background: var(--n-100); color: var(--n-400); border-color: transparent; }
+  .sh-week .cell.off { background: var(--n-100); color: var(--n-500); border-color: transparent; }
   .sh-week .cell .h { font-weight: 600; font-size: 12px; font-family: var(--mono); letter-spacing: -0.01em; }
   .sh-week .cell .d { font-size: 9px; opacity: 0.78; margin-top: 3px; letter-spacing: 0.06em; font-family: var(--mono); }
 

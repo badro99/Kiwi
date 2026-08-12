@@ -6823,7 +6823,7 @@
           <div class="info">
             <div class="n">${eqEsc(g.name)}</div>
             <div class="meta">${meta}</div>
-            <div class="opts-line">${optsLine || '<em style="color:var(--n-400);">Aucune option</em>'}</div>
+            <div class="opts-line">${optsLine || '<em style="color: var(--n-500);">Aucune option</em>'}</div>
             ${inheritBadge}
           </div>
           <div class="actions">

@@ -702,7 +702,7 @@ body.design-vexel .vexel-compose .kpi-m .v {
 }
 body.design-vexel .vexel-compose .kpi-m .v .u {
   margin-inline-start: 5px;
-  color: var(--n-400);
+  color: var(--n-500);
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0;
@@ -895,7 +895,7 @@ body.design-vexel .vexel-goal-values strong {
 }
 body.design-vexel .vexel-goal-values span {
   overflow: hidden;
-  color: var(--n-400);
+  color: var(--n-500);
   font-size: 13px;
   text-overflow: ellipsis;
 }
@@ -3782,7 +3782,7 @@ body.design-vexel[data-vexel-mode="light"] .vexel-revenue-row .rev-hero-val {
 
 body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-cur {
   margin-inline-start: 9px;
-  color: var(--n-400);
+  color: var(--n-500);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -3821,7 +3821,7 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta .lbl {
 body.design-vexel[data-vexel-mode] .vexel-revenue-row [data-rev-sub] {
   display: block !important;
   margin-top: 8px;
-  color: var(--n-400);
+  color: var(--n-500);
   font-size: 11.5px;
 }
 

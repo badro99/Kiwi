@@ -4347,7 +4347,7 @@
     .fa-inputwrap:focus-within { border-color:var(--atlas); box-shadow:0 10px 30px -16px rgba(11,110,79,.4); }
     .fa-input { flex:1; resize:none; border:none; outline:none; background:transparent; font:inherit;
       font-size:14px; line-height:1.5; padding:10px 0; max-height:144px; color:var(--ink); }
-    .fa-input::placeholder { color:var(--n-400); }
+    .fa-input::placeholder { color: var(--n-500); }
     .fa-send { width:39px; height:39px; border-radius:50%; border:none; flex-shrink:0; cursor:pointer;
       background:var(--atlas); color:#fff; display:flex; align-items:center; justify-content:center;
       transition:transform 150ms var(--fa-ease), background 150ms; }
@@ -4358,10 +4358,10 @@
     .fa-tool { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:500;
       color:var(--n-600); background:var(--surface); border:1px solid var(--n-200); border-radius:999px;
       padding:7px 14px; cursor:pointer; transition: transform 150ms var(--fa-ease), opacity 150ms var(--fa-ease), background-color 150ms var(--fa-ease), border-color 150ms var(--fa-ease), color 150ms var(--fa-ease), box-shadow 150ms var(--fa-ease); }
-    .fa-tool:hover { border-color:var(--n-400); color:var(--ink); transform:translateY(-1px); }
+    .fa-tool:hover { border-color: var(--n-400); color:var(--ink); transform:translateY(-1px); }
     .fa-tool.on { background:var(--atlas); border-color:var(--atlas); color:#fff; }
     .fa-tool svg { width:14px; height:14px; }
-    .fa-hint { font-size:11px; color:var(--n-400); }
+    .fa-hint { font-size:11px; color: var(--n-500); }
 
     /* calculator — hidden until toggled */
     .fa-keypad { display:none; }
@@ -4477,7 +4477,7 @@
     .fa-ctx-more { width:100%; margin-top:18px; font:inherit; font-size:12px; font-weight:500;
       color:var(--n-600); background:transparent; border:1px solid var(--n-200); border-radius:11px;
       padding:10px; cursor:pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; }
-    .fa-ctx-more:hover { border-color:var(--n-400); color:var(--ink); }
+    .fa-ctx-more:hover { border-color: var(--n-400); color:var(--ink); }
     .fa-ctx-detail[hidden] { display:none; }
 
     /* in-browser LLM */

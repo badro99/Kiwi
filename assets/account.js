@@ -111,7 +111,7 @@
       .acc-act-v { font-size:12px; color:var(--n-600); margin-top:3px; display:flex; align-items:center; gap:6px; }
       .acc-act-v .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
       .acc-act-sub { font-size:11px; color:var(--n-500); margin-top:3px; line-height:1.45; }
-      .acc-act-go { flex-shrink:0; color:var(--n-400); display:grid; place-items:center; }
+      .acc-act-go { flex-shrink:0; color: var(--n-500); display:grid; place-items:center; }
       .acc-act:hover .acc-act-go { color:var(--atlas); }
       [dir="rtl"] .acc-act-go { transform:scaleX(-1); }
       /* Le formulaire établissement. Un seul ascenseur : la fenêtre elle-même

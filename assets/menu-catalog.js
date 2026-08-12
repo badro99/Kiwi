@@ -538,7 +538,7 @@
       .mx-cat-head .nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mx-cat-head .ct { font-family: var(--mono); font-size: 10.5px; color: var(--n-500); background: var(--paper-soft); padding: 2px 7px; border-radius: 999px; }
       .mx-cat.on .mx-cat-head .ct { color: var(--atlas); background: var(--surface); }
-      .mx-cat-head .ed { display: inline-flex; color: var(--n-400); padding: 2px; border-radius: 6px; }
+      .mx-cat-head .ed { display: inline-flex; color: var(--n-500); padding: 2px; border-radius: 6px; }
       .mx-cat-head .ed:hover { color: var(--ink); background: var(--surface); }
       .mx-subs { padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 4px; }
       .mx-sub { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--n-600); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
@@ -559,12 +559,12 @@
       /* La marge se lit sous le prix, jamais à sa place : c'est le prix qui est
          l'information principale de cette ligne. Roman, comme tout le reste. */
       .mx-item .pr .mg { display: block; font-size: 10.5px; font-weight: 500; font-style: normal; letter-spacing: .01em; color: var(--atlas); margin-top: 2px; }
-      .mx-item .pr .mg.none { color: var(--n-400); }
+      .mx-item .pr .mg.none { color: var(--n-500); }
       .mx-item .pr .mg.bad { color: var(--danger); }
       .mx-cost-live { min-height: 16px; margin-top: 7px; font-size: 12px; color: var(--atlas); font-weight: 500; }
       .mx-cost-live.bad { color: var(--danger); }
       .mx-cost-live i { font-style: normal; color: var(--n-500); font-weight: 400; }
-      .mx-opt-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-400); margin-left: 6px; }
+      .mx-opt-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-500); margin-left: 6px; }
       .mx-item .sw { width: 34px; height: 20px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; transition: background 160ms; flex-shrink: 0; }
       .mx-item .sw.on { background: var(--atlas); }
       .mx-item .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform 160ms; }
@@ -606,7 +606,7 @@
       .mx-og-nm { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit;
         font-size: 14px; font-weight: 600; color: var(--ink); padding: 2px 0; }
       .mx-og-nm:focus { box-shadow: 0 1px 0 0 var(--atlas); }
-      .mx-og-head .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+      .mx-og-head .del { display: inline-flex; color: var(--n-500); padding: 4px; border-radius: 7px;
         border: 0; background: none; cursor: pointer; }
       .mx-og-head .del:hover { color: var(--danger); background: var(--paper-soft); }
       .mx-og-rules { display: flex; align-items: center; gap: 12px; margin: 9px 0 11px; flex-wrap: wrap; }
@@ -644,7 +644,7 @@
         font: inherit; font-size: 13px; font-family: var(--mono); text-align: right; color: var(--ink);
         background: var(--paper-soft); outline: none; }
       .mx-og-ch .pr span { font-family: var(--mono); font-size: 10px; color: var(--n-500); }
-      .mx-og-ch .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+      .mx-og-ch .del { display: inline-flex; color: var(--n-500); padding: 4px; border-radius: 7px;
         border: 0; background: none; cursor: pointer; }
       .mx-og-ch .del:hover { color: var(--danger); background: var(--paper-soft); }
       .mx-og-empty { font-size: 12px; color: var(--n-500); padding: 4px 0 2px; }
@@ -696,7 +696,7 @@
       .mx-filter-pair.on { border-color: var(--atlas); background: var(--atlas); }
       .mx-filter-pair.on .mx-filter-pill { color: var(--inverse-ink); }
       .mx-filter-pair.on .mx-filter-pill:hover { background: transparent; }
-      .mx-filter-edit { display: inline-flex; align-items: center; justify-content: center; width: 34px; border: 0; border-inline-start: 1px solid var(--mx-line); background: transparent; color: var(--n-400); cursor: pointer; }
+      .mx-filter-edit { display: inline-flex; align-items: center; justify-content: center; width: 34px; border: 0; border-inline-start: 1px solid var(--mx-line); background: transparent; color: var(--n-500); cursor: pointer; }
       .mx-filter-edit:hover { color: var(--ink); background: var(--paper-soft); }
       .mx-filter-pair.on .mx-filter-edit { color: var(--inverse-ink); border-inline-start-color: color-mix(in srgb, var(--inverse-ink) 24%, transparent); }
       .mx-filter-count { margin-inline-start: 6px; font-family: var(--mono); font-size: 10px; opacity: .66; }
@@ -712,7 +712,7 @@
       .mx-product-card .name { margin-top: 14px; color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
       .mx-product-card .desc { min-height: 18px; margin-top: 4px; color: var(--n-500); font-size: 11.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mx-product-card .price { margin-top: 10px; color: var(--atlas); font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -.035em; }
-      .mx-product-card .price .mg { display: inline; margin-inline-start: 7px; color: var(--n-400); font-size: 10px; font-style: normal; font-weight: 500; letter-spacing: 0; }
+      .mx-product-card .price .mg { display: inline; margin-inline-start: 7px; color: var(--n-500); font-size: 10px; font-style: normal; font-weight: 500; letter-spacing: 0; }
       .mx-product-card .price .mg.bad { color: var(--danger); }
       .mx-product-card .foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--mx-line); color: var(--n-500); font-size: 11.5px; }
       .mx-product-card .foot .meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

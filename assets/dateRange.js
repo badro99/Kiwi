@@ -4427,8 +4427,8 @@
             <div class="n">${escTxt(s.name)}</div>
             <div class="role">${escTxt(s.role)}</div>
           </div>
-          <div class="shift"${on ? '' : ' style="color: var(--n-400);"'}>${on ? fmtHeures(s.hoursToday) : '—'}</div>
-          <div class="tx-n" style="color: var(--n-400);">—</div>
+          <div class="shift"${on ? '' : ' style="color: var(--n-500);"'}>${on ? fmtHeures(s.hoursToday) : '—'}</div>
+          <div class="tx-n" style="color: var(--n-500);">—</div>
         </div>`;
       }).join('');
     } else if (list && isCustom) {
@@ -4441,8 +4441,8 @@
             <div class="n">${s.name}</div>
             <div class="role">${s.role}</div>
           </div>
-          <div class="shift"${s.shift === '—' ? ' style="color: var(--n-400);"' : ''}>${s.shift}</div>
-          <div class="tx-n"${s.amt === '—' ? ' style="color: var(--n-400);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
+          <div class="shift"${s.shift === '—' ? ' style="color: var(--n-500);"' : ''}>${s.shift}</div>
+          <div class="tx-n"${s.amt === '—' ? ' style="color: var(--n-500);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
         </div>
       `).join('');
     }

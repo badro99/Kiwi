@@ -180,7 +180,7 @@
         background: none; border: 0; padding: 6px 0 2px; cursor: pointer; font-family: inherit; }
       .oppo-cta:hover { text-decoration: underline; text-underline-offset: 3px; }
       .oppo-x { position: absolute; top: 10px; inset-inline-end: 10px; width: 26px; height: 26px; border-radius: 8px;
-        border: 0; background: none; color: var(--n-400); cursor: pointer; display: flex; align-items: center;
+        border: 0; background: none; color: var(--n-500); cursor: pointer; display: flex; align-items: center;
         justify-content: center; opacity: 0.6; transition: opacity 160ms ease, background 160ms ease, color 160ms ease; }
       .oppo-card:hover .oppo-x, .oppo-x:focus-visible { opacity: 1; }
       .oppo-x:hover { background: var(--paper-soft); color: var(--ink); }

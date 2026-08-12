@@ -1227,7 +1227,7 @@
             font-family:var(--sans);font-size:12px;font-weight:500;color:var(--n-600);text-align:center;
             transition:border-color 140ms,background 140ms,color 140ms;}
           .ob-type svg{width:24px;height:24px;}
-          .ob-type:hover{border-color:var(--n-400);}
+          .ob-type:hover{border-color: var(--n-400);}
           .ob-type.sel{border-color:var(--atlas);background:rgba(11,110,79,0.05);color:var(--atlas);}
           .ob-type.ob-more{display:none;}
           .ob-morebtn{margin-top:8px;width:100%;padding:9px;border:1px dashed var(--n-300);
@@ -1245,7 +1245,7 @@
         <input class="ob-field" data-ob-name placeholder="Ex. Café des Oudayas" style="${fld}" maxlength="40"/>
         <label style="${lbl}">Ville</label>
         <input class="ob-field" data-ob-city placeholder="Ex. Rabat" style="${fld}" maxlength="30"/>
-        <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· optionnel</span></label>
+        <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· optionnel</span></label>
         <input class="ob-field" data-ob-goal type="number" inputmode="numeric" placeholder="Ex. 5000 MAD" style="${fld}" min="0"/>
       `,
       foot: `<button class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">Créer mon tableau de bord →</button>`,
@@ -1315,7 +1315,7 @@
           <div style="font-size:17px;font-weight:600;letter-spacing:-0.01em;">${trL({fr:'Parlez-nous de votre activité', en:'Tell us about your business', ar:'حدثنا عن نشاطك'})} · ${def.label}</div>
           <p style="font-size:13px;color:var(--n-500);margin:6px 0 2px;line-height:1.5;">${trL({fr:'30 secondes, Kiwi personnalise vos indicateurs et vos modules. Modifiable plus tard dans Paramètres.', en:'30 seconds, Kiwi tailors your indicators and modules. Editable later in Settings.', ar:'30 ثانية, يخصص كيوي مؤشراتك ووحداتك. قابل للتعديل لاحقًا في الإعدادات.'})}</p>
           ${prof.questions.map((q) => `
-            <label style="${lbl}">${trL(q.label)} <span style="color:var(--n-400);font-weight:400;">· ${optWord}</span></label>
+            <label style="${lbl}">${trL(q.label)} <span style="color: var(--n-500);font-weight:400;">· ${optWord}</span></label>
             <input class="ob-field" data-ob-q="${q.k}" ${q.type === 'number' ? 'type="number" inputmode="numeric" min="0"' : 'maxlength="60"'} placeholder="${q.ph}" style="${fld}"/>
           `).join('')}`;
         const foot = m.el.querySelector('.kiwi-modal-foot');

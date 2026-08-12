@@ -391,7 +391,7 @@ ar: {
   .kiwi-toast .tm { font-size: 14px; font-weight: 650; line-height: 1.35; letter-spacing: -0.008em; }
   .kiwi-toast .ts { font-size: 12.5px; color: var(--n-500); margin-top: 3px; line-height: 1.4; }
   .kiwi-toast .ta { margin-top: 8px; font-size: 12.5px; color: var(--atlas); font-weight: 500; cursor: pointer; background: none; border: 0; padding: 0; }
-  .kiwi-toast .tx { width: 28px; height: 28px; border-radius: 8px; background: transparent; border: 0; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin: -1px -3px 0 4px; display:flex; align-items:center; justify-content:center; }
+  .kiwi-toast .tx { width: 28px; height: 28px; border-radius: 8px; background: transparent; border: 0; color: var(--n-500); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin: -1px -3px 0 4px; display:flex; align-items:center; justify-content:center; }
   .kiwi-toast .tx:hover { color: var(--ink); }
   .kiwi-toast .tp { position:absolute; left:0; right:0; bottom:0; height:3px; background:color-mix(in srgb,var(--atlas) 70%,var(--mint)); transform-origin:left; animation:kiwi-toast-life var(--toast-duration,3600ms) linear forwards; }
   .kiwi-toast.info .tp { background:var(--info); }
@@ -504,12 +504,12 @@ ar: {
   .kp.in { opacity: 1; transform: translateX(-50%) scale(1); }
   .kp-head { padding: 16px 20px; border-bottom: 1px solid var(--n-200); display: flex; align-items: center; gap: 12px; }
   .kp-head input { flex: 1; border: 0; outline: 0; background: none; font-size: 16px; color: var(--ink); font-family: var(--sans); letter-spacing: -0.005em; }
-  .kp-head input::placeholder { color: var(--n-400); }
+  .kp-head input::placeholder { color: var(--n-500); }
   .kp-list { padding: 8px 0; max-height: 420px; overflow-y: auto; }
   .kp-head .kp-esc { font-family: var(--mono); font-size: 10.5px; background: var(--n-100); padding: 3px 8px; border-radius: 5px; color: var(--n-500); border: 1px solid var(--n-200); flex-shrink: 0; }
   .kp-sect { padding: 12px 20px 6px; font-size: 10.5px; font-weight: 500; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono);
              display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .kp-sect .n { text-transform: none; letter-spacing: 0; color: var(--n-400); }
+  .kp-sect .n { text-transform: none; letter-spacing: 0; color: var(--n-500); }
   .kp-item { margin: 1px 8px; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; gap: 14px; cursor: pointer; font-size: 13.5px; color: var(--ink); transition: background 160ms cubic-bezier(0.32,0.72,0,1); }
   .kp-item:hover, .kp-item.active { background: var(--mint-soft); }
   .kp-item:active { transform: scale(0.99); }
@@ -529,10 +529,10 @@ ar: {
   .kp-empty-t { font-size: 14px; font-weight: 500; color: var(--ink); }
   .kp-empty-s { margin-top: 6px; font-size: 12.5px; color: var(--n-500); max-width: 340px; margin-inline: auto; line-height: 1.5; }
   .kp-foot { padding: 10px 20px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; align-items: center; background: var(--surface); font-size: 11px; color: var(--n-500); }
-  .kp-foot .kp-count { color: var(--n-400); font-variant-numeric: tabular-nums; }
+  .kp-foot .kp-count { color: var(--n-500); font-variant-numeric: tabular-nums; }
   /* « ⌘ » n'existe pas dans JetBrains Mono : sans repli système le navigateur
      dessine un tofu, et le raccourci se lit comme une croix. */
-  .kp-foot .kp-sc { font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif; color: var(--n-400); }
+  .kp-foot .kp-sc { font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif; color: var(--n-500); }
   .kp-foot span { display: inline-flex; align-items: center; gap: 6px; }
   .kp-foot kbd { font-family: var(--mono); background: var(--n-100); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--n-200); font-size: 10px; }
 
@@ -545,7 +545,7 @@ ar: {
   .notif .n-body { flex: 1; min-width: 0; }
   .notif .n-title { font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em; }
   .notif .n-desc { font-size: 12.5px; color: var(--n-500); margin-top: 3px; line-height: 1.45; }
-  .notif .n-time { font-size: 11px; color: var(--n-400); font-family: var(--mono); margin-top: 6px; }
+  .notif .n-time { font-size: 11px; color: var(--n-500); font-family: var(--mono); margin-top: 6px; }
 
   /* Form input */
   .kf-label { display: block; font-size: 12px; font-weight: 500; color: var(--n-600); margin-bottom: 6px; letter-spacing: 0.02em; }
@@ -2242,7 +2242,7 @@ ar: {
             ar: 'يحدّد شاشات هذا النشاط.' })}</p>` : ''}
           <label style="${lbl}">Ville</label>
           <input class="ev-field" data-ev-city style="${fld}" maxlength="30"/>
-          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· MAD</span></label>
+          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· MAD</span></label>
           <input class="ev-field" data-ev-goal type="number" inputmode="numeric" style="${fld}" min="0"/>
         `,
         foot: `<button class="kb atlas" data-ev-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">Enregistrer</button>`,
@@ -2318,7 +2318,7 @@ ar: {
               font-family:var(--sans);font-size:12px;font-weight:500;color:var(--n-600);text-align:center;
               transition:border-color 140ms,background 140ms,color 140ms;}
             .ob-type svg{width:24px;height:24px;}
-            .ob-type:hover{border-color:var(--n-400);}
+            .ob-type:hover{border-color: var(--n-400);}
             .ob-type.sel{border-color:var(--atlas);background:rgba(11,110,79,0.05);color:var(--atlas);}
             .ob-type.ob-more{display:none;}
             .ob-morebtn{margin-top:8px;width:100%;padding:9px;border:1px dashed var(--n-300);
@@ -2336,7 +2336,7 @@ ar: {
           <input class="ob-field" data-ob-name placeholder="Ex. Café des Oudayas" style="${fld}" maxlength="40"/>
           <label style="${lbl}">Ville</label>
           <input class="ob-field" data-ob-city placeholder="Ex. Rabat" style="${fld}" maxlength="30"/>
-          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· optionnel</span></label>
+          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· optionnel</span></label>
           <input class="ob-field" data-ob-goal type="number" inputmode="numeric" placeholder="Ex. 5000 MAD" style="${fld}" min="0"/>
         `,
         foot: `<button class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">Créer mon tableau de bord →</button>`,
@@ -2407,7 +2407,7 @@ ar: {
             <div style="font-size:17px;font-weight:600;letter-spacing:-0.01em;">${tr({fr:'Parlez-nous de votre activité', en:'Tell us about your business', ar:'حدثنا عن نشاطك'})} · ${def.label}</div>
             <p style="font-size:13px;color:var(--n-500);margin:6px 0 2px;line-height:1.5;">${tr({fr:'30 secondes, Kiwi personnalise vos indicateurs et vos modules. Modifiable plus tard dans Paramètres.', en:'30 seconds, Kiwi tailors your indicators and modules. Editable later in Settings.', ar:'30 ثانية, يخصص كيوي مؤشراتك ووحداتك. قابل للتعديل لاحقًا في الإعدادات.'})}</p>
             ${prof.questions.map((q) => `
-              <label style="${lbl}">${tr(q.label)} <span style="color:var(--n-400);font-weight:400;">· ${optWord}</span></label>
+              <label style="${lbl}">${tr(q.label)} <span style="color: var(--n-500);font-weight:400;">· ${optWord}</span></label>
               <input class="ob-field" data-ob-q="${q.k}" ${q.type === 'number' ? 'type="number" inputmode="numeric" min="0"' : 'maxlength="60"'} placeholder="${q.ph}" style="${fld}"/>
             `).join('')}`;
           const foot = m.el.querySelector('.kiwi-modal-foot');
@@ -2439,7 +2439,7 @@ ar: {
         body: `
           <div style="text-align:center; padding:20px 0 28px;">
             <div style="font-size:14px; color:var(--n-500); margin-bottom:6px;">MONTANT</div>
-            <div style="font-size:64px; font-weight:600; letter-spacing:-0.045em; font-feature-settings:'tnum' 1; line-height:1;" data-amt>0<span style="font-size:22px; color:var(--n-400); margin-left:6px;">MAD</span></div>
+            <div style="font-size:64px; font-weight:600; letter-spacing:-0.045em; font-feature-settings:'tnum' 1; line-height:1;" data-amt>0<span style="font-size:22px; color: var(--n-500); margin-left:6px;">MAD</span></div>
           </div>
           <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
             ${[1,2,3,4,5,6,7,8,9,',',0,'⌫'].map(n => `<button class="kb ghost" style="padding:18px; font-size:19px; font-weight:500; justify-content:center;" data-key="${n}">${n}</button>`).join('')}
@@ -2458,7 +2458,7 @@ ar: {
           if (v === '⌫') amount = amount.slice(0, -1);
           else if (v === ',' && !amount.includes(',')) amount += ',';
           else if (v !== ',') amount += v;
-          m.el.querySelector('[data-amt]').innerHTML = `${amount || '0'}<span style="font-size:22px; color:var(--n-400); margin-left:6px;">MAD</span>`;
+          m.el.querySelector('[data-amt]').innerHTML = `${amount || '0'}<span style="font-size:22px; color: var(--n-500); margin-left:6px;">MAD</span>`;
         }
         const met = e.target.closest('[data-method]');
         if (met) {

@@ -201,7 +201,7 @@ html[data-theme="dark"] .health-check li { border-color: var(--n-200); }
 html[data-theme="dark"] .btn-primary { background: var(--paper); color: var(--ink-soft); }
 html[data-theme="dark"] .btn-primary:hover { background: var(--atlas); color: var(--paper); }
 html[data-theme="dark"] .btn-ghost { background: transparent; color: var(--ink); border-color: var(--n-300); }
-html[data-theme="dark"] .btn-ghost:hover { border-color: var(--n-500); }
+html[data-theme="dark"] .btn-ghost:hover { border-color: var(--n-400); }
 
 /* Chip backgrounds */
 html[data-theme="dark"] .chip.ok { background: rgba(31,181,116,0.15); color: var(--mint); }
@@ -266,7 +266,7 @@ html[data-theme="dark"] .sidebar .upsell { background: linear-gradient(145deg, r
 /* Wallet */
 html[data-theme="dark"] .f-card { background: var(--paper-soft); border-color: var(--n-200); }
 html[data-theme="dark"] .f-card.dark { background: var(--ink-soft); color: var(--paper); border-color: var(--ink-soft); }
-html[data-theme="dark"] .f-card.dark p { color: var(--n-400); }
+html[data-theme="dark"] .f-card.dark p { color: var(--n-500); }
 html[data-theme="dark"] .rmap-card { background: var(--paper-soft); border-color: var(--n-200); }
 html[data-theme="dark"] .final-w { background: linear-gradient(180deg, var(--paper) 0%, rgba(125,242,176,0.1) 100%); }
 

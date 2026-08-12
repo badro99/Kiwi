@@ -94,7 +94,7 @@ html[data-mode="simple"] body { background: var(--surface); }
 /* Big amount pad for new sale */
 .amount-pad { padding: 24px 0; }
 .amount-pad .display { font-size: 64px; font-weight: 700; text-align: center; letter-spacing: -0.035em; padding: 30px 0; border-bottom: 2px solid #E8E6E0; margin-bottom: 24px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
-.amount-pad .display .placeholder { color: #A8A49A; font-weight: 500; }
+.amount-pad .display .placeholder { color: #6F6C65; font-weight: 500; }
 .amount-pad .display .unit { font-size: 22px; color: #6F6C65; margin-left: 8px; font-weight: 500; }
 .amount-pad .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
 .amount-pad .key { min-height: 68px; border: 2px solid #E8E6E0; border-radius: 14px; font-size: 22px; font-weight: 600; background: var(--surface); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
@@ -149,7 +149,7 @@ html[data-mode="simple"] body { background: var(--surface); }
 .help-card .body { flex: 1; }
 .help-card .n { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .help-card .d { font-size: 15px; color: #4B4944; margin-top: 4px; line-height: 1.4; }
-.help-card .chev { color: #A8A49A; flex-shrink: 0; }
+.help-card .chev { color: #6F6C65; flex-shrink: 0; }
 
 /* ─── 3-TAB BOTTOM NAV ─── */
 .simple-tabs {
@@ -246,7 +246,7 @@ html[data-mode="simple"] .mode-tg { top: 14px; right: 14px; }
 }
 .help-bubble .icn { flex-shrink: 0; color: var(--mint); }
 .help-bubble .msg { font-size: 14px; line-height: 1.5; flex: 1; }
-.help-bubble .close { background: transparent; border: 0; color: #A8A49A; cursor: pointer; flex-shrink: 0; }
+.help-bubble .close { background: transparent; border: 0; color: #6F6C65; cursor: pointer; flex-shrink: 0; }
 
 /* Large readable chip */
 .simple-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }

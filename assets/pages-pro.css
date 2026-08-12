@@ -128,7 +128,7 @@ html[data-theme="dark"] .srv-load-row .b { background: var(--paper-muted); }
 .occ-timeline .bar:hover { opacity: 1; }
 .occ-timeline .bar.now { background: linear-gradient(180deg, var(--mint) 0%, var(--atlas) 100%); box-shadow: 0 0 8px rgba(125,242,176,0.4); }
 .occ-timeline .bar.future { background: var(--n-200); opacity: 0.6; }
-.occ-axis { display: flex; justify-content: space-between; padding: 0 4px; font-family: var(--mono); font-size: 10px; color: var(--n-400); margin-top: 4px; letter-spacing: 0.04em; }
+.occ-axis { display: flex; justify-content: space-between; padding: 0 4px; font-family: var(--mono); font-size: 10px; color: var(--n-500); margin-top: 4px; letter-spacing: 0.04em; }
 
 /* ─── Menu — pill-cats + AI banner + items ─── */
 .menu-pill-cats { display: flex; gap: 6px; padding: 4px; background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 999px; margin-bottom: 14px; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
@@ -164,7 +164,7 @@ html[data-theme="dark"] .menu-row .nm .tg { background: var(--paper-muted); }
 .menu-row .av.ok { color: var(--success); }
 .menu-row .av.low { color: var(--warning); }
 .menu-row .av.out { color: var(--danger); }
-.menu-row .more { color: var(--n-400); text-align: center; cursor: pointer; transition: color 120ms; }
+.menu-row .more { color: var(--n-500); text-align: center; cursor: pointer; transition: color 120ms; }
 .menu-row .more:hover { color: var(--ink); }
 
 .menu-row.is-86 { opacity: 0.55; }
@@ -892,7 +892,7 @@ html[data-theme="dark"] .b-promo-seg { background: var(--paper-soft); }
 .b-ret-body { min-width: 0; }
 .b-ret-body .n { font-weight: 500; font-size: 13.5px; letter-spacing: -0.005em; }
 .b-ret-body .reason { font-size: 11.5px; color: var(--n-500); margin-top: 2px; line-height: 1.4; }
-.b-ret-body .who { font-size: 11px; color: var(--n-400); margin-top: 4px; font-family: var(--mono); }
+.b-ret-body .who { font-size: 11px; color: var(--n-500); margin-top: 4px; font-family: var(--mono); }
 
 .b-ret-amt { font-family: var(--mono); font-weight: 600; font-feature-settings: "tnum" 1; font-size: 13px; }
 
@@ -1259,7 +1259,7 @@ html[data-theme="dark"] .s-appt-row { background: var(--paper-soft); }
   text-align: right;
 }
 .s-svc-row .more {
-  color: var(--n-400);
+  color: var(--n-500);
   text-align: right;
   cursor: pointer;
 }
@@ -1352,7 +1352,7 @@ html[data-theme="dark"] .s-combo .pc { background: var(--paper); }
   padding-top: 10px;
   border-top: 1px solid var(--n-200);
 }
-.s-combo .strike { color: var(--n-400); text-decoration: line-through; font-family: var(--mono); font-size: 12px; }
+.s-combo .strike { color: var(--n-500); text-decoration: line-through; font-family: var(--mono); font-size: 12px; }
 .s-combo .now { font-family: var(--mono); font-weight: 600; font-feature-settings: "tnum" 1; font-size: 18px; color: var(--atlas); letter-spacing: -0.015em; }
 
 /* ═══════════════ 8 · SPA · PRACTITIONERS ═══════════════ */
@@ -1508,7 +1508,7 @@ html[data-theme="dark"] .s-prac-week .day { background: var(--paper); }
 .s-prac-week .day.busy .n { color: var(--atlas); }
 .s-prac-week .day.full { background: var(--atlas); border-color: var(--atlas); }
 .s-prac-week .day.full .d, .s-prac-week .day.full .n { color: var(--paper); }
-.s-prac-week .day.off { background: var(--n-100); color: var(--n-400); }
+.s-prac-week .day.off { background: var(--n-100); color: var(--n-500); }
 
 /* ═══════════════ 9 · SPA · CLIENT CRM ═══════════════ */
 
@@ -2207,7 +2207,7 @@ html[data-theme="dark"] .kx-tree-line.lv-0 { background: var(--paper-muted); }
   display: flex;
   flex-direction: column;
   gap: 1px;
-  color: var(--n-400);
+  color: var(--n-500);
 }
 .kx-tree-handle svg { display: block; transition: color 140ms; }
 .kx-tree-handle svg:hover { color: var(--ink); }
@@ -2522,7 +2522,7 @@ html[data-theme="dark"] .kw-menu-tabs { background: var(--paper-muted); }
   color: var(--danger);
 }
 .kw-cat-card .chev {
-  color: var(--n-400);
+  color: var(--n-500);
   transition: transform 140ms, color 140ms;
   display: inline-flex;
 }
@@ -2863,7 +2863,7 @@ html[data-theme="dark"] .kw-item .thumb { background: var(--paper-muted); }
 /* ── Week calendar grid ── */
 .s-cal-shell { display: flex; gap: 0; background: var(--surface); border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 16px; padding: 14px 12px 16px; overflow-x: auto; }
 .s-cal-rail { display: flex; flex-direction: column; justify-content: space-between; padding: 34px 8px 0 2px; flex: none; }
-.s-cal-rail-h { font-family: var(--mono); font-size: 9.5px; color: var(--n-400); line-height: 1; }
+.s-cal-rail-h { font-family: var(--mono); font-size: 9.5px; color: var(--n-500); line-height: 1; }
 .s-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; flex: 1; min-width: 640px; }
 .s-cal-day { min-width: 0; }
 .s-cal-day-head { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--n-600); text-align: center; padding: 4px 0 8px; white-space: nowrap; }
@@ -3006,7 +3006,7 @@ html[data-theme="dark"] .kw-item .thumb { background: var(--paper-muted); }
 .pr-day.busy .h { color: var(--atlas); }
 .pr-day.full { background: color-mix(in srgb, var(--atlas) 30%, var(--surface)); }
 .pr-day.full .h { color: var(--riad); }
-.pr-day.off .h { color: var(--n-400); }
+.pr-day.off .h { color: var(--n-500); }
 .pr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .pr-cert { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent); font-size: 12.5px; }
 .pr-calc-out { background: var(--paper-soft); border-radius: 12px; padding: 13px 15px; font-size: 13px; margin-top: 12px; }
@@ -3040,7 +3040,7 @@ html[data-theme="dark"] .kw-item .thumb { background: var(--paper-muted); }
 .sc-gift { color: var(--atlas); }
 .sc-wa-preview { background: var(--paper-soft); border-radius: 14px; padding: 16px; }
 .sc-wa-bubble { background: var(--surface); border-radius: 12px 12px 12px 4px; padding: 11px 13px; font-size: 12.5px; line-height: 1.5; max-width: 340px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
-.sc-wa-time { font-size: 10px; color: var(--n-400); text-align: right; margin-top: 5px; font-family: var(--mono); }
+.sc-wa-time { font-size: 10px; color: var(--n-500); text-align: right; margin-top: 5px; font-family: var(--mono); }
 
 /* ── Starter state · custom venues ──
  * A fresh venue has no history: destination pages open as an honest
@@ -3062,13 +3062,13 @@ html[data-theme="dark"] .kw-item .thumb { background: var(--paper-muted); }
 .gp-starter-prep .gp-prep-row { display: flex; gap: 10px; align-items: center; padding: 11px 0; font-size: 13px; color: var(--n-700); }
 .gp-starter-prep .gp-prep-row + .gp-prep-row { border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent); }
 .gp-starter-prep .gp-prep-row svg { color: var(--atlas); flex: none; }
-.gp-starter-prep .gp-prep-row .x { margin-inline-start: auto; color: var(--n-400); cursor: pointer; font-size: 17px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.gp-starter-prep .gp-prep-row .x { margin-inline-start: auto; color: var(--n-500); cursor: pointer; font-size: 17px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
 .gp-starter-prep .gp-prep-row .x:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
 /* Generic guided "add" modal — chips of what the client has entered so far. */
 .gp-add-list { display: flex; flex-direction: column; gap: 7px; margin: 14px 0 4px; }
 .gp-add-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 11px; font-size: 13.5px; color: var(--ink); }
 .gp-add-item svg { color: var(--atlas); flex: none; }
-.gp-add-item .x { margin-inline-start: auto; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
+.gp-add-item .x { margin-inline-start: auto; color: var(--n-500); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .gp-add-item .x:hover { color: var(--danger); }
 .gp-add-empty { font-size: 12.5px; color: var(--n-500); text-align: center; padding: 14px 0 4px; }
 

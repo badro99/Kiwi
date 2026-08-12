@@ -584,7 +584,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-tags-grid { display: grid; grid-template-columns: 264px 1fr; gap: 18px; align-items: start; margin-top: 14px; max-height: 56vh; overflow-y: auto; }
 .px-receipt {
   /* A customer document is physical paper, independent from caisse dark mode. */
-  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #7a827e;
+  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #666d69;
   --line: #d7dcd9; --paper: #fff; --paper-elev: #fff;
   background: #fff;
   border: 1px solid #d7dcd9;
@@ -607,7 +607,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 
 .px-tags-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(218px, 1fr)); gap: 10px; }
 .px-tag {
-  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #7a827e;
+  --ink: #0a0f0d; --ink-2: #303733; --ink-3: #59615d; --ink-4: #666d69;
   --line: #d7dcd9; --paper: #fff; --paper-elev: #fff;
   color-scheme: light;
   color: #0a0f0d;

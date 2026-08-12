@@ -157,7 +157,10 @@
       --ink:           #0A0F0D;  /* brand ink */
       --ink-2:         #4A4A4A;
       --ink-3:         #6B6B6B;
-      --ink-4:         #9A9A9A;
+      /* Secondary copy still has to be readable. #9A9A9A was a decorative
+         neutral (2.8:1 on paper), yet it was used for real labels and empty
+         states throughout the till. */
+      --ink-4:         #6F6C65;
 
       --danger-mute:   #B85245;
 
@@ -228,7 +231,7 @@
       --ink:           #F2F5F3;
       --ink-2:         rgba(242,245,243,0.78);
       --ink-3:         rgba(242,245,243,0.55);
-      --ink-4:         rgba(242,245,243,0.35);
+      --ink-4:         rgba(242,245,243,0.62);
 
       --danger-mute:   #E0685A;
 
@@ -828,7 +831,7 @@
     .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(255,255,255,0.35); }
     .tbl-cell.is-designed .tbl-status { font: 500 11px/1 "Inter Tight", system-ui; color: rgba(255,255,255,0.4); }
     .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-status { color: rgba(255,255,255,0.4); }
-    .tbl-cell.is-designed .tbl-server { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 600 9px/1 "Inter Tight", system-ui; color: #fff; }
+    .tbl-cell.is-designed .tbl-server { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 9px/1 "Inter Tight", system-ui; color: var(--server-badge-ink, #fff); }
 
     /* Équipe drawer — empty roster nudge */
     .team-empty { padding: 22px 14px; text-align: center; }
@@ -2796,7 +2799,7 @@
       position: absolute;
       top: -10px; right: -10px;
       width: 26px; height: 26px; border-radius: 50%;
-      font-size: 11px; font-weight: 700; color: #fff;
+      font-size: 11px; font-weight: 700; color: var(--server-badge-ink, #fff);
       display: inline-flex; align-items: center; justify-content: center;
       border: 2.5px solid #fff;
       box-shadow:
@@ -4496,14 +4499,14 @@
     box-shadow: 0 24px 52px -42px rgba(10,15,13,0.30);
   }
   html:not([data-caisse-theme="dark"]) .plan-room-label { color: rgba(10,15,13,0.62); }
-  html:not([data-caisse-theme="dark"]) .plan-room-label em { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .plan-room-label em { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .plan-zone-terrasse {
     border-color: rgba(11,110,79,0.32);
     background: #FCFBF8;
     box-shadow: 0 20px 44px -38px rgba(10,15,13,0.28);
   }
   html:not([data-caisse-theme="dark"]) .terrasse-label { color: rgba(11,110,79,0.78); }
-  html:not([data-caisse-theme="dark"]) .terrasse-label em { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .terrasse-label em { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .cplan-room {
     border-color: rgba(10,15,13,0.11);
     background: #FCFBF8;
@@ -4524,7 +4527,7 @@
   html:not([data-caisse-theme="dark"]) .plan-empty-sub { color: rgba(10,15,13,0.52); }
   html:not([data-caisse-theme="dark"]) .plan-empty-sub b { color: #0B6E4F; }
   html:not([data-caisse-theme="dark"]) .plan-real-zone-h { color: rgba(10,15,13,0.55); }
-  html:not([data-caisse-theme="dark"]) .plan-real-zone-h em { color: rgba(10,15,13,0.35); }
+  html:not([data-caisse-theme="dark"]) .plan-real-zone-h em { color: var(--ink-3); }
   /* La grille-cartes du plan réel — carte papier, trait d'état en encre. */
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl {
     border-color: rgba(10,15,13,0.12);
@@ -4540,7 +4543,7 @@
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] { background: rgba(194,69,111,0.10); border-color: #C2456F; }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="khlass"]       { background: #FFFFFF; border: 1.25px dotted rgba(10,15,13,0.35); }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-covers,
-  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: rgba(10,15,13,0.40); }
+  html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-covers { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl-status,
   html:not([data-caisse-theme="dark"]) .tbl-cell.is-designed .tbl[data-status="bgha-ykhlass"] .tbl-status { color: rgba(10,15,13,0.45); }
   /* Le survol en jour s'assombrit — un gain de lumière sur du papier ne se
@@ -4557,7 +4560,7 @@
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="a-commander"]  .cplan-num { color: rgba(160,113,33,0.90); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="ka-yaklo"]     .cplan-num { color: rgba(11,110,79,0.95); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="bgha-ykhlass"] .cplan-num { color: rgba(194,69,111,0.95); }
-  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="khlass"]       .cplan-num { color: rgba(10,15,13,0.30); }
+  html:not([data-caisse-theme="dark"]) .cplan-tbl[data-status="khlass"]       .cplan-num { color: var(--ink-3); }
   html:not([data-caisse-theme="dark"]) .cplan-tbl:hover .cplan-num,
   html:not([data-caisse-theme="dark"]) .cplan-tbl.is-selected .cplan-num { color: rgba(10,15,13,0.80); }
   html:not([data-caisse-theme="dark"]) .cplan-since {
@@ -4654,7 +4657,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=370" defer></script>
+  <script src="assets/caisse-pwa.js?v=371" defer></script>
   <script src="assets/live-link.js?v=4" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -6131,6 +6134,19 @@
       HA: { id: 'HA', name: 'Hamza T.',   color: '#B85245', status: 'off',   breakStart: null, since: '—' },
     };
     function serverInitials(s) { return String(s.name || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase(); }
+    /* Staff colours are merchant-configurable. White initials disappear on
+       amber, mint and other light badges, so derive ink from the actual fill
+       instead of assuming every avatar is dark. */
+    function serverBadgeInk(color) {
+      const h = String(color || '').trim().replace('#', '');
+      if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(h)) return '#F7F5F0';
+      const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+      const rgb = [0, 2, 4].map(i => {
+        const s = parseInt(n.slice(i, i + 2), 16) / 255;
+        return s <= .04045 ? s / 12.92 : Math.pow((s + .055) / 1.055, 2.4);
+      });
+      return (.2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2]) > .34 ? '#0A0F0D' : '#F7F5F0';
+    }
 
     /* Escape merchant-entered strings (staff names, zone labels) before they go
        into innerHTML — a real store's roster comes from the owner's dashboard. */
@@ -6701,7 +6717,7 @@
           isOff   ? 'is-off'   : '',
         ].filter(Boolean).join(' ');
         const why = isPause ? ' (en pause)' : isOff ? ' (hors service)' : '';
-        serverBadge = `<span class="tbl-server ${cls}" style="background:${s.color};" title="Section de ${s.name}${why}">${serverInitials(s)}</span>`;
+        serverBadge = `<span class="tbl-server ${cls}" style="background:${s.color};--server-badge-ink:${serverBadgeInk(s.color)};" title="Section de ${s.name}${why}">${serverInitials(s)}</span>`;
       }
       return caisseNoirCellHTML({
         id, status: t.status, x, y, w, h,
@@ -6801,7 +6817,7 @@
       let sb = '';
       if (t.server && servers[t.server]) {
         const s = servers[t.server];
-        sb = `<span class="tbl-server" style="background:${s.color};" title="Section de ${escTeam(s.name)}">${serverInitials(s)}</span>`;
+        sb = `<span class="tbl-server" style="background:${s.color};--server-badge-ink:${serverBadgeInk(s.color)};" title="Section de ${escTeam(s.name)}">${serverInitials(s)}</span>`;
       }
       return `<div class="tbl-cell is-designed" data-table="${escTeam(id)}" role="button" tabindex="0" aria-label="Table ${escTeam(id)}, ${label}, ${t.covers} couverts">` +
         `<div class="tbl" data-status="${t.status}">${dot}` +
@@ -6938,7 +6954,7 @@
       const covers = live.covers != null ? live.covers : g.seats;
       const sv = live.server && servers[live.server];
       const badge = sv
-        ? `<span class="tbl-server" style="background:${sv.color};">${serverInitials(sv)}</span>` : '';
+        ? `<span class="tbl-server" style="background:${sv.color};--server-badge-ink:${serverBadgeInk(sv.color)};">${serverInitials(sv)}</span>` : '';
       const hot = live.status === 'ka-yaklo' || live.status === 'bgha-ykhlass' || live.status === 'a-commander';
       const elapsed = hot && live.elapsed != null
         ? `<div class="tbl-elapsed cplan-since">${live.elapsed} mn</div>` : '';
@@ -9347,7 +9363,7 @@
       if (order.length === 0) {
         $('#rp-items').innerHTML = `
           <div class="rp-order-empty">
-            <i data-lucide="shopping-cart" style="width:34px;height:34px;color:#9A9A9A;display:block;margin:0 auto 10px;"></i>
+            <i data-lucide="shopping-cart" style="width:34px;height:34px;color:var(--ink-3);display:block;margin:0 auto 10px;"></i>
             <p>Sélectionnez des articles dans le menu à gauche</p>
           </div>`;
       } else {

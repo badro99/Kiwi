@@ -566,7 +566,7 @@
     .ac-todo .tx { flex:1; min-width:0; }
     .ac-todo .tx .l { font-size:13px; font-weight:500; color:var(--ink); }
     .ac-todo .tx .s { font-size:11.5px; color:var(--n-500); margin-top:1px; }
-    .ac-todo .go { color:var(--n-400); flex-shrink:0; }
+    .ac-todo .go { color: var(--n-500); flex-shrink:0; }
     [dir="rtl"] .ac-todo .go svg { transform:scaleX(-1); }
 
     /* staff rows */
@@ -589,7 +589,7 @@
     .ac-acts { display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
     .ac-btn { font-size:12.5px; font-weight:600; padding:11px 16px; border-radius:11px; cursor:pointer;
       border:1px solid var(--n-300); background:var(--surface); color:var(--ink); transition: transform 140ms var(--ac-ease), opacity 140ms var(--ac-ease), background-color 140ms var(--ac-ease), border-color 140ms var(--ac-ease), color 140ms var(--ac-ease), box-shadow 140ms var(--ac-ease); }
-    .ac-btn:hover { border-color:var(--n-400); }
+    .ac-btn:hover { border-color: var(--n-400); }
     .ac-btn:active { transform:scale(.97); }
     .ac-btn.primary { background:var(--atlas); border-color:var(--atlas); color:#fff; }
     .ac-btn.primary:hover { background:var(--riad); }

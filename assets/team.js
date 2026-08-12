@@ -3008,7 +3008,7 @@
     .dash-equipe .kt-sh:hover:not(:disabled) { border-color: var(--atlas); }
     .dash-equipe .kt-sh:focus-visible { outline: none; border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
     .dash-equipe .kt-sh:disabled { opacity: 0.55; cursor: default; }
-    .dash-equipe .kt-sh-empty { color: var(--n-400); font-size: 13px; }
+    .dash-equipe .kt-sh-empty { color: var(--n-500); font-size: 13px; }
     .dash-equipe .kt-sh-rest { font-family: var(--sans); font-size: 11px; color: var(--n-500); }
     .dash-equipe .kt-sh-t { display: block; white-space: nowrap; }
     .dash-equipe .kt-sh-t.end { color: var(--n-600); }
@@ -3079,7 +3079,7 @@
 
     /* Search bar */
     .dash-equipe .kt-searchbar { position: relative; }
-    .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-400); pointer-events: none; }
+    .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-500); pointer-events: none; }
     .dash-equipe .kt-searchbar input { width: 100%; padding: 11px 12px 11px 36px; border: 1px solid var(--n-200); border-radius: 10px; font-family: var(--sans); font-size: 13px; background: var(--surface); color: var(--ink); outline: none; box-sizing: border-box; transition: border-color 140ms, box-shadow 140ms; }
     .dash-equipe .kt-searchbar input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
 
@@ -3131,10 +3131,10 @@
     body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell input { background: #0F0F0F !important; color: var(--paper); border-color: rgba(125,242,176,0.18) !important; }
     body.fusion-mode .kt-shpop-b.primary { background: var(--atlas) !important; border-color: var(--atlas) !important; }
     body.fusion-mode .dash-equipe .kt-sh-t.end,
-    body.fusion-mode .dash-equipe .kt-sh-rest { color: var(--n-400); }
+    body.fusion-mode .dash-equipe .kt-sh-rest { color: var(--n-500); }
     body.fusion-mode .dash-equipe .kt-h-table thead th,
     body.fusion-mode .dash-equipe .kt-h-table tfoot td { background: rgba(255,255,255,0.04) !important; color: var(--paper); }
-    body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-400); }
+    body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-500); }
     body.fusion-mode .dash-equipe .kt-tag-neutral { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
     body.fusion-mode .dash-equipe .kt-langchip { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
   `;
