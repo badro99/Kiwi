@@ -2817,14 +2817,20 @@
           <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length+opportunityClaims))}</p></div>
         </div>
         <div class="kt-planning-actions">
-          <button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(optimizeCopy.optimize)}</button>
-          <button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button>
-          <select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select>
-          <button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button>
-          <button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button>
-          <button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button>
-          <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length+opportunityClaims ? ` · ${pending.length+opportunityClaims}` : ''}</button>
-          <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+          <div class="kt-plan-action-group is-build">
+            <button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(optimizeCopy.optimize)}</button>
+            <button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button>
+            <button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button>
+          </div>
+          <div class="kt-plan-action-group is-template">
+            <button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button>
+            <select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select>
+            <button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button>
+          </div>
+          <div class="kt-plan-action-group is-publish">
+            <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length+opportunityClaims ? ` · ${pending.length+opportunityClaims}` : ''}</button>
+            <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+          </div>
         </div>
       </div>
       <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${coverage.length} ${esc(copy.coverage).toLocaleLowerCase()}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${opportunityClaims} ${esc(copy.pending(0).replace(/^0\s*/,''))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${warnings.length}</strong><span>${blockers.length} ${esc(copy.blocked(0).replace(/^0\s*/,''))}</span></div></div>

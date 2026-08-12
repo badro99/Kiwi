@@ -294,6 +294,7 @@ for (const test of [
   'd1-schema-test.mjs',
   'order-delivery-test.mjs',
   'planning-core-test.mjs',
+  'planning-layout-test.mjs',
   'reservations-test.mjs',
   'serveur-menu-live-test.mjs',
   'service-settlement-test.mjs',

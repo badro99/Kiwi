@@ -172,8 +172,8 @@ var SHELL = [
   '/assets/employee-live.js?v=371',
   '/assets/employee-planning.js?v=3',
   '/assets/planning-core.js?v=4',
-  '/assets/planning-ui.css?v=5',
-  '/assets/team.js?v=264',
+  '/assets/planning-ui.css?v=6',
+  '/assets/team.js?v=265',
   '/assets/restaurant-menu-workspace.js',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
