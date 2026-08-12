@@ -26,8 +26,8 @@ assert.match(
   /var splitLabel = hasAmounts \? copy\.share : copy\.unavailable/,
   'the subtitle still distinguishes measured shares from unavailable breakdowns'
 );
-assert.match(dashboard, /assets\/channel-sales\.js\?v=1/);
-assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2074/);
+assert.match(dashboard, /assets\/channel-sales\.js\?v=2/);
+assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2075/);
 
 assert.equal(truth.key({ channel: 'salle' }, ids, restaurant, 'restaurant'), 'dining');
 assert.equal(truth.key({ session: 'visit-12' }, ids, restaurant, 'restaurant'), 'dining');
