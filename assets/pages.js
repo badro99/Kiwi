@@ -284,7 +284,7 @@
       stockHistory: "Historique commandes",
       stockOrderAll: "Valider commande groupée",
       // Payroll
-      payrollTitle: "Paie & planning",
+      payrollTitle: "Planning",
       payrollSubtitle: "Pointage POS · pourboires partagés · ratio main d'œuvre",
       payrollHeroLabel: (date) => `${date} · MAIN D'ŒUVRE`,
       payrollHeroBig: (present, total) => `${present} / ${total}`,
@@ -528,7 +528,7 @@
       stockHistory: "Order history",
       stockOrderAll: "Confirm group order",
        // Payroll
-      payrollTitle: "Payroll & Scheduling",
+      payrollTitle: "Planning",
       payrollSubtitle: "POS clock-in · shared tips · labor ratio",
       payrollHeroLabel: (date) => `${date} · LABOR`,
       payrollHeroBig: (present, total) => `${present} / ${total}`,
@@ -768,7 +768,7 @@
       stockHistory: "سجل الطلبات",
       stockOrderAll: "تأكيد الطلب المجمع",
       // Payroll
-      payrollTitle: "الرواتب والتخطيط",
+      payrollTitle: "التخطيط",
       payrollSubtitle: "تسجيل الحضور عبر نقاط البيع · الإكراميات المشتركة · نسبة العمالة",
       payrollHeroLabel: (date) => `${date} · اليد العاملة`,
       payrollHeroBig: (present, total) => `${present} / ${total}`,

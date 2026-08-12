@@ -5,6 +5,7 @@ const scan=fs.readFileSync(new URL('../assets/retail-scan.js',import.meta.url),'
 const publish=fs.readFileSync(new URL('../assets/orderpro-publish.js',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../kiwi-sw.js',import.meta.url),'utf8');
 const pages=['dashboard.html','kiwi-caisse.html','kiwi-serveur.html'].map(x=>fs.readFileSync(new URL('../'+x,import.meta.url),'utf8'));
+const bootstraps=['assets/dashboard-pwa.js','assets/caisse-pwa.js','assets/employee-live.js'].map(x=>fs.readFileSync(new URL('../'+x,import.meta.url),'utf8'));
 let n=0;const ok=(c,m)=>{assert.ok(c,m);n++;console.log('  ✓ '+m);};
 ['products','uploads','routes','collaboration','analytics'].forEach(name=>ok(ops.includes(`K.register('${name}'`),`${name} adapter is registered`));
 ok(/world\.openfoodfacts\.org\/api\/v2\/product/.test(ops),'product enrichment uses the official v2 product endpoint');
@@ -19,7 +20,8 @@ ok(/KiwiPlatformOps\s*&&\s*window\.KiwiPlatformOps\.uploads/.test(publish),'cata
  * redescend jamais sous la version livrée quand ce contrôle a été écrit. */
 const swCache=+(sw.match(/kiwi-app-v(\d+)/)||[])[1];
 ok(Number.isFinite(swCache)&&swCache>=373,`service worker cache was advanced (kiwi-app-v${swCache} ≥ v373)`);
-ok(/dashboard-pwa\.js\?v=371/.test(pages[0])&&/caisse-pwa\.js\?v=371/.test(pages[1])&&/employee-live\.js\?v=371/.test(pages[2]),'all shells request the current service-worker bootstrap');
+ok(/dashboard-pwa\.js\?v=\d+/.test(pages[0])&&/caisse-pwa\.js\?v=\d+/.test(pages[1])&&/employee-live\.js\?v=\d+/.test(pages[2]),'all shells request a versioned service-worker bootstrap');
+bootstraps.forEach((bootstrap,i)=>ok(bootstrap.includes(`/kiwi-sw.js?v=${swCache}`),`service-worker bootstrap ${i+1} requests the active cache generation`));
 ['platform-kernel.js?v=1','platform-ops.js?v=1','platform-ops.css?v=1'].forEach(asset=>ok(sw.includes(asset),`${asset} is available offline`));
 pages.forEach((page,i)=>ok(page.includes('platform-kernel.js?v=1')&&page.includes('platform-ops.js?v=1'),`operational shell ${i+1} loads the platform adapters`));
 console.log(`\n✓ Platform adapters — ${n} controls`);

@@ -109,7 +109,7 @@
       vDuplicateCode: 'Ce code est déjà utilisé par un autre membre',
       vEndAfterStart: "La date de fin doit être après la date de début",
       vCode: "Le code personnel doit faire 4 chiffres",
-      payTitle: 'Paie & planning',
+      payTitle: 'Planning',
       paySub: 'planning, heures et paie de la période',
       payEmptyH: 'Ajoutez votre équipe pour commencer',
       payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici — les totaux et le coût de la période se calculent tout seuls.",
@@ -181,7 +181,7 @@
       tImport:    'Import CSV',
       tImportDesc:'Glissez votre fichier · vérification automatique des en-têtes.',
       tValidated: (start, end) => `Période verrouillée · du ${start} au ${end}`,
-      tValidatedDesc: 'Heures envoyées à Paie & Planning · masse salariale recalculée.',
+      tValidatedDesc: 'Heures envoyées au planning · masse salariale recalculée.',
       tUnlocked:  (start, end) => `Période déverrouillée · du ${start} au ${end}`,
       tUnlockedDesc: 'Les heures et le planning peuvent à nouveau être modifiés.',
       placeholderPwd: '····',
@@ -264,7 +264,7 @@
       vDuplicateCode: 'Another member already uses this code',
       vEndAfterStart: 'End date must be after the start date',
       vCode: 'The personal code must be 4 digits',
-      payTitle: 'Payroll & scheduling',
+      payTitle: 'Planning',
       paySub: 'schedule, hours and pay for the period',
       payEmptyH: 'Add your team to get started',
       payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here — period totals and cost work themselves out.',
@@ -335,7 +335,7 @@
       tImport:    'CSV import',
       tImportDesc:'Drop your file · headers checked automatically.',
       tValidated: (start, end) => `Period locked · from ${start} to ${end}`,
-      tValidatedDesc: 'Hours sent to Payroll & Planning · wage cost recomputed.',
+      tValidatedDesc: 'Hours sent to Planning · wage cost recomputed.',
       tUnlocked:  (start, end) => `Period unlocked · from ${start} to ${end}`,
       tUnlockedDesc: 'Hours and planning can be edited again.',
       placeholderPwd: '····',
@@ -418,7 +418,7 @@
       vDuplicateCode: 'هذا الرمز مستعمل من طرف موظف آخر',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
       vCode: 'يجب أن يكون الرمز الشخصي من 4 أرقام',
-      payTitle: 'الأجور والتخطيط',
+      payTitle: 'التخطيط',
       paySub: 'التخطيط والساعات وأجور الفترة',
       payEmptyH: 'أضف فريقك للبدء',
       payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا — تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
@@ -489,7 +489,7 @@
       tImport:    'استيراد CSV',
       tImportDesc:'أفلت ملفك · يتم التحقق من الرؤوس تلقائيًا.',
       tValidated: (start, end) => `الفترة مقفلة · من ${start} إلى ${end}`,
-      tValidatedDesc: 'تم إرسال الساعات إلى الرواتب والتخطيط · أعيد حساب كتلة الأجور.',
+      tValidatedDesc: 'تم إرسال الساعات إلى التخطيط · أعيد حساب كتلة الأجور.',
       tUnlocked:  (start, end) => `تم فتح الفترة · من ${start} إلى ${end}`,
       tUnlockedDesc: 'يمكن تعديل الساعات والتخطيط من جديد.',
       placeholderPwd: '····',
@@ -3073,10 +3073,10 @@
     pageActive = true;
     pageMode = 'payroll';
     const managerCopy = trLang() === 'en'
-      ? { title: 'Team planning', sub: 'shifts, availability and coverage' }
+      ? { title: 'Planning', sub: 'shifts, availability and coverage' }
       : trLang() === 'ar'
-        ? { title: 'جدول الفريق', sub: 'الورديات والتوفر والتغطية' }
-        : { title: 'Planning équipe', sub: 'services, disponibilités et couverture' };
+        ? { title: 'التخطيط', sub: 'الورديات والتوفر والتغطية' }
+        : { title: 'Planning', sub: 'services, disponibilités et couverture' };
     window.Kiwi.appPage('payroll', {
       title: access === 'planning' ? managerCopy.title : T.payTitle,
       subtitle: `${venue.name || 'Votre établissement'} · ${access === 'planning' ? managerCopy.sub : T.paySub}`,

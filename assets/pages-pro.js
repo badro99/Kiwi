@@ -14863,7 +14863,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                      b: ['Registres générés à partir de votre activité réelle', 'Alertes avant chaque échéance', 'Dossier prêt en cas de contrôle'] },
     equipe:        { t: 'Équipe',             d: 'Vos employés, leurs rôles et leurs codes PIN.',
                      b: ['Un code PIN par personne sur la caisse', 'Rôles et permissions par poste', 'Performance individuelle dès les premières ventes'] },
-    payroll:       { t: 'Paie & planning',    d: 'Plannings, pointage et préparation de la paie.',
+    payroll:       { t: 'Planning',           d: 'Plannings, pointage et préparation de la paie.',
                      b: ['Plannings hebdomadaires par personne', 'Pointage directement sur la caisse', 'Heures cumulées prêtes pour la paie'] },
     reservations:  { t: 'Réservations & RDV', d: 'Votre agenda client, connecté à la caisse.',
                      b: ['Réservations et rendez-vous au même endroit', 'Rappels automatiques WhatsApp', 'No-shows suivis et acomptes possibles'] },

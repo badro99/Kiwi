@@ -6,6 +6,11 @@ const css = fs.readFileSync(new URL('../assets/planning-ui.css', import.meta.url
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const merchantConfig = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
+const i18n = fs.readFileSync(new URL('../assets/i18n.js', import.meta.url), 'utf8');
+const pages = fs.readFileSync(new URL('../assets/pages.js', import.meta.url), 'utf8');
+const pagesPro = fs.readFileSync(new URL('../assets/pages-pro.js', import.meta.url), 'utf8');
+const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
+const pitch = fs.readFileSync(new URL('../pitch.html', import.meta.url), 'utf8');
 
 for (const action of ['fair', 'optimize', 'template-save', 'template-apply', 'coverage', 'open', 'publish']) {
   assert.equal((team.match(new RegExp(`data-action="kt-plan-${action}"`, 'g')) || []).length, 1, `${action} stays wired exactly once`);
@@ -53,5 +58,15 @@ assert.match(team, /renderPlanningPane\(T, venue, venueType, members, \{ showCos
 assert.match(team, /if \(access === 'none'\)[\s\S]{0,220}return;/, 'staff access is blocked in the owned handler');
 assert.match(merchantConfig, /key !== 'reservations' && key !== 'payroll'/, 'legacy payroll-off config cannot remove core planning');
 assert.match(team, /payrollEnabled = window\.KiwiConfig\?\.features\?\.payroll !== false/, 'payroll flag controls financial rendering instead');
+assert.match(dashboard, /data-i18n="dash\.sidebar\.payroll">Planning<\/span>/, 'the shared sidebar calls the feature Planning');
+assert.match(i18n, /'dash\.sidebar\.payroll': 'Planning'/, 'the English sidebar translation says Planning');
+assert.match(i18n, /'dash\.sidebar\.payroll': 'التخطيط'/, 'the Arabic sidebar translation says Planning');
+assert.equal((team.match(/payTitle: 'Planning'/g) || []).length, 2, 'owner page titles say Planning in French and English');
+assert.match(team, /payTitle: 'التخطيط'/, 'the owner page title says Planning in Arabic');
+assert.match(team, /\? \{ title: 'Planning', sub: 'shifts, availability and coverage' \}/, 'manager page title says Planning');
+assert.match(pages, /payrollTitle: "Planning"/, 'the fallback page title says Planning');
+assert.match(pagesPro, /payroll:\s+\{ t: 'Planning'/, 'the starter card says Planning');
+assert.match(admin, /key:'payroll',\s+label:'Planning'/, 'the admin module list says Planning');
+assert.match(pitch, />PLANNING<\/div>/, 'the commercial pitch says Planning');
 
-console.log('planning-layout-test: 37 controls passed');
+console.log('planning-layout-test: 47 controls passed');
