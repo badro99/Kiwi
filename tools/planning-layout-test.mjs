@@ -19,6 +19,15 @@ assert.match(team, /kt-calendar-bridge/, 'planning exposes opening hours and spe
 assert.match(team, /suggestedShifts=Math\.max\(1,Math\.min\(2,suggested\)\)/, 'fair scheduling never starts with more shifts than available people');
 assert.match(team, /coverageSummary\?\.\(\{planning,shifts,days:period\.days,members,periodsByDay:hoursConfigured\?periodsByDay:null\}\)/, 'coverage intelligence ignores closed hours and days');
 assert.match(team, /'public-holiday'/, 'public-holiday shifts raise a compensation review warning');
+/* Le sondage d'équipe tourne toutes les secondes et render() commence par
+ * closeShiftPop() : sans ce garde-fou, l'éditeur de service se referme sous les
+ * doigts du gérant dès qu'un employé est pointé (pointedHours est un temps
+ * écoulé, donc la signature du serveur change toute seule). */
+assert.doesNotMatch(team, /liveTeamSignature = signature;\s*if \(pageActive\) render\(\);/, 'the live poll never repaints straight from the network callback');
+assert.match(team, /function teamIsBeingEdited\(\)[\s\S]{0,200}if \(shiftPop\) return true;/, 'an open shift editor counts as editing');
+assert.match(team, /function applyLiveTeam\(\)\s*\{\s*if \(teamIsBeingEdited\(\)\) \{ liveTeamPendingRender = true; return; \}/, 'a live update lands only once the merchant has stopped typing');
+assert.match(team, /if \(liveTeamPendingRender\) applyLiveTeam\(\);/, 'the deferred repaint is flushed when the editor closes');
+assert.match(team, /if \(touched\) persistTeams\(\);/, 'unchanged pointed hours do not write to localStorage every second');
 assert.match(css, /\.kt-planning-command\{[^}]*container-type:inline-size/, 'toolbar reacts to its actual content width');
 assert.match(css, /@container\(max-width:1050px\)/, 'advanced tools respond to the card width');
 assert.match(css, /@media\(max-width:680px\)[\s\S]*\.kt-plan-primary-row[^}]*flex-direction:column/, 'phone primary actions stack cleanly');

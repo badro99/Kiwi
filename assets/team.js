@@ -1131,9 +1131,30 @@
   let liveTeam = { merchant: '', members: [] };
   let liveTeamSignature = '';
   let liveTeamBusy = false;
+  let liveTeamPendingRender = false;
 
   function liveMember(memberId) {
     return (liveTeam.members || []).find((member) => String(member.id || '') === String(memberId || '')) || null;
+  }
+  /* Le sondage ci-dessous tourne toutes les secondes et `pointedHours` est un
+   * temps écoulé : dès qu'un employé est pointé, la réponse du serveur change
+   * toute seule (27,43 h → 27,44 h). Repeindre à ce moment-là arrachait
+   * l'éditeur de service des mains du gérant — render() commence par
+   * closeShiftPop() — et lui volait le focus au milieu de la saisie d'un
+   * horaire. Tant qu'il édite, on garde la donnée et on remet la peinture à la
+   * fin de la saisie. */
+  function teamIsBeingEdited() {
+    if (shiftPop) return true;
+    const el = document.activeElement;
+    if (!el || el === document.body) return false;
+    if (el.isContentEditable) return true;
+    return /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName || '');
+  }
+  function applyLiveTeam() {
+    if (teamIsBeingEdited()) { liveTeamPendingRender = true; return; }
+    liveTeamPendingRender = false;
+    if (pageActive) render();
+    try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
   function pollLiveTeam() {
     if (liveTeamBusy || !isCustomVenue()) return;
@@ -1150,15 +1171,23 @@
       if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
         const root = window.__kiwiTeamV2;
         const venueHours = root.hoursByVenue[venueKey] || (root.hoursByVenue[venueKey] = {});
+        /* Une écriture localStorage par seconde pour des heures inchangées :
+         * on ne persiste que ce qui a réellement bougé. */
+        let touched = false;
         Object.keys(data.pointedHours).forEach((memberId) => {
-          venueHours[memberId] = Object.assign({}, venueHours[memberId] || {}, data.pointedHours[memberId] || {});
+          const before = JSON.stringify(venueHours[memberId] || {});
+          const merged = Object.assign({}, venueHours[memberId] || {}, data.pointedHours[memberId] || {});
+          if (JSON.stringify(merged) === before) return;
+          venueHours[memberId] = merged;
+          touched = true;
         });
-        persistTeams();
+        if (touched) persistTeams();
       }
       if (signature !== liveTeamSignature) {
         liveTeamSignature = signature;
-        if (pageActive) render();
-        try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
+        applyLiveTeam();
+      } else if (liveTeamPendingRender) {
+        applyLiveTeam();
       }
     }).catch(() => {}).finally(() => { liveTeamBusy = false; });
   }
@@ -1912,6 +1941,10 @@
     window.removeEventListener('scroll', placeShiftPop, true);
     shiftPop.el.remove();
     shiftPop = null;
+    /* La saisie est finie : on rattrape le rafraîchissement mis de côté par
+     * applyLiveTeam(). Le drapeau est remis à zéro avant render(), qui rappelle
+     * closeShiftPop() — sans quoi les deux se relanceraient l'un l'autre. */
+    if (liveTeamPendingRender) applyLiveTeam();
   }
   function onPopDown(e) {
     if (!shiftPop) return;
