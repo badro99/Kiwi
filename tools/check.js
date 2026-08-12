@@ -706,6 +706,7 @@ section('Whole-project regressions');
     'restaurant-units-test.js',
     'employee-live-test.mjs',
     'void-stock-test.js',
+    'caisse-stock-test.mjs',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
     'api-boundaries-test.mjs',

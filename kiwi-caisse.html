@@ -10461,6 +10461,16 @@
         const out = !!(hit && hit(e.ref));
         if (out === !!e.voided) return;
         e.voided = out;
+        /* La vente a sorti sa marchandise en entrant (recordSale plus bas). La
+           sortir des livres sans rendre les articles laisse l'inventaire plus
+           bas que le réel, définitivement. Le contre-mouvement dérive son
+           identifiant du mouvement d'origine : rejouer l'annulation ne rend pas
+           deux fois. Même geste que assets/pos-sale.js (dropRefs).
+           Le rétablissement d'une vente annulée ne re-sort PAS la marchandise —
+           les identifiants de mouvement sont déterministes, donc un second
+           record() est ignoré. C'est le comportement des quatorze métiers ;
+           un aller-retour annulation→rétablissement laisse le stock haut. */
+        if (out) { try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {} }
         touched++;
       });
       if (!touched) return 0;
@@ -10607,6 +10617,21 @@
          autosave. The offline server queue is durable too, but the till's own
          journal must survive an immediate reload on its own. */
       try { persistShift(); } catch (_) {}
+      /* ── LA MARCHANDISE SORT AVEC L'ARGENT ────────────────────────────────
+       * Les quatorze métiers en pos-*.js encaissent par KiwiPosSale.record(),
+       * qui sort le stock au passage (assets/pos-sale.js). Le service à table
+       * est le flux NATIF de cette caisse : il ne passe pas par là, et rien
+       * d'autre n'appelait le moteur de consommation. Un restaurant pouvait
+       * donc servir un service entier — dix-neuf tables réglées — sans qu'un
+       * gramme de poulet ne quitte l'inventaire. La fiche technique, le coût
+       * matière et la valeur de stock disaient tous la vérité séparément ; le
+       * pont entre la vente et la matière n'existait pas.
+       *
+       * Les lignes portent déjà leur itemId (currentSaleLines), donc la
+       * recette se résout directement. Les identifiants de mouvement dérivent
+       * de la référence du ticket : un rechargement ne consomme jamais deux
+       * fois. Le moteur ignore de lui-même services, pourboires et taxes. */
+      try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
       /* Fidélité. Le carnet du commerçant vivait déjà sur ce comptoir mais rien
          ne l'appelait ici : on pouvait inscrire un client, jamais lui compter
          un passage. Une note = un passage, même réglée en quatre parts — d'où
@@ -10657,6 +10682,13 @@
           }
           attachReceipt(entry);
           journal.push(entry);
+          /* Une addition réglée sur le téléphone d'un serveur est une vente du
+             même commerce, sur le même stock. Ces lignes-là arrivent du serveur
+             sans itemId — le moteur les repêche par nom de plat. L'identifiant
+             de mouvement dérive de la référence du ticket : que la vente entre
+             par le comptoir ou par le miroir, elle ne sort la marchandise
+             qu'une fois. */
+          try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
           shift.tablesPaid++;
           changed = true;
         });
