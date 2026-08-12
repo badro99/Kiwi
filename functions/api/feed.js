@@ -160,12 +160,12 @@ export async function onRequestGet({ request, env }) {
     if (!voidsOnly) {
       const rs = byDay
         ? await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
+          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
           `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
         ).bind(merchant, legacy || merchant, from).all()
         : await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
+          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
@@ -185,13 +185,15 @@ export async function onRequestGet({ request, env }) {
     /* Base sans `lines` : on sert les ventes sans le panier plutôt que rien —
      * ne pas savoir classer les produits vaut mieux que ne pas voir sa recette. */
     const noLines = msg.includes('lines');
-    if (!noVoid && !noLines) {
+    const noChannel = msg.includes('channel');
+    if (!noVoid && !noLines && !noChannel) {
       return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
     }
     /* La caisse ne demandait que les retraits : sans la colonne, il n'y en a
        aucun à annoncer, et il n'y a rien d'autre à servir. */
     if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
-    const cols = 'rowid AS cursor, id, amount, method, label, ref, ts' + (noLines ? '' : ', lines');
+    const cols = 'rowid AS cursor, id, amount, method, label, ref, ts'
+      + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
     /* Les mêmes replis, dans la forme demandée. Servir le curseur à qui a
        demandé une journée renverrait les toutes premières ventes du commerce
        sous le titre « aujourd'hui » — une erreur plus coûteuse qu'une liste
@@ -280,6 +282,17 @@ export async function onRequestGet({ request, env }) {
     sale.receiptRef = String(sale.ref || '').slice(0, 80);
     sale.server = String(order && order.server_name || '').slice(0, 80);
     sale.origin = sale.server ? 'employee' : (order && order.channel === 'kiwi' ? 'orderpro' : 'caisse');
+    /* Channel truth for ledgers created before sales.channel existed. A visit
+     * is a table sale; OrderPro and explicit external order channels retain
+     * their source. Takeaway receipts are self-identifying in their frozen
+     * label. This enriches old rows without rewriting financial history. */
+    const storedChannel = String(sale.channel || '').toLowerCase();
+    const orderChannel = String(order && order.channel || '').toLowerCase();
+    const saleLabel = String(sale.label || '').toLowerCase();
+    sale.channel = storedChannel || (visit
+      ? (orderChannel === 'terrace' ? 'terrace' : 'dining')
+      : (/à emporter|a emporter|takeaway/.test(saleLabel) ? 'takeaway'
+        : (orderChannel === 'kiwi' ? 'orderpro' : (orderChannel || ''))));
   });
 
   /* `merchant` is the tenant actually SERVED, which is not always the one asked

@@ -145,9 +145,9 @@
    * salle atteint » à un commerçant qui n'en a jamais fixé. Une part de
    * chiffre d'affaires, elle, se déduit honnêtement du total de la période. */
   var SERVICE_STR = {
-    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', goalUnavailable: 'Objectif indisponible', goalUnset: 'Aucun objectif défini', noData: 'Donnée indisponible' },
-    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
-    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
+    fr: { title: 'Ventes par canal', share: 'Part du chiffre d’affaires', unavailable: 'Ventilation par canal indisponible', unclassified: 'non classé', goalUnavailable: 'Objectif indisponible', goalUnset: 'Aucun objectif défini', noData: 'Donnée indisponible' },
+    en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', unclassified: 'unclassified', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
+    ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', unclassified: 'غير مصنف', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
   };
   var RANGE_STR = {
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
@@ -497,45 +497,20 @@
     } catch (_) { return false; }
   }
 
-  function channelKey(raw, channelIds) {
-    var key = String(raw || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-    var direct = {
-      salle: 'dining', dining: 'dining', surplace: channelIds.indexOf('dining') >= 0 ? 'dining' : (channelIds.indexOf('cabin') >= 0 ? 'cabin' : (channelIds.indexOf('counter') >= 0 ? 'counter' : 'onsite')),
-      terrasse: 'terrace', terrace: 'terrace', comptoir: 'counter', counter: 'counter',
-      emporter: 'takeaway', takeaway: 'takeaway', retrait: 'pickup', pickup: 'pickup', clickcollect: 'pickup',
-      livraison: 'delivery', delivery: 'delivery', glovo: 'delivery', yassir: 'delivery',
-      boutique: 'store', store: 'store', cabine: 'cabin', cabin: 'cabin', domicile: 'home', home: 'home',
-      produit: 'products', products: 'products', club: 'club', distance: 'remote', remote: 'remote',
-      direct: 'direct', online: 'online', evenement: 'catering', catering: 'catering',
-      // Les commandes relayées par OrderPro arrivent estampillées « kiwi »
-      // côté serveur (voir orders.channel dans schema.sql).
-      orderpro: 'orderpro', kiwi: 'orderpro'
-    };
-    var resolved = direct[key] || key;
-    return channelIds.indexOf(resolved) >= 0 ? resolved : '';
-  }
-
-  /* Le journal de ventes ne porte actuellement pas de canal. Cette lecture est
-   * prête pour le jour où il en portera un, mais ne déduit jamais un canal du
-   * moyen de paiement ou du libellé du ticket. */
+  /* Return the amounts AND the complete sales total. An unclassified receipt
+   * remains in the denominator; otherwise one known 10 MAD dining sale beside
+   * 90 MAD of unknown sales would be displayed as "Salle 100 %". */
   function channelAmounts(channels) {
-    var out = Object.create(null);
-    if (!realSession() || !window.KiwiSales || !window.KiwiSales.list) return out;
+    var empty = { amounts: Object.create(null), total: 0, classified: 0, unknown: 0 };
+    if (!realSession() || !window.KiwiSales || !window.KiwiSales.list || !window.KiwiChannelSales) return empty;
     var venue = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
     var rows = [];
-    try { rows = window.KiwiSales.list(venue) || []; } catch (_) { return out; }
+    try { rows = window.KiwiSales.list(venue) || []; } catch (_) { return empty; }
     var bounds = window.KiwiDateRange && window.KiwiDateRange.bounds && window.KiwiDateRange.bounds();
     var from = bounds ? bounds[0] : -Infinity;
     var to = bounds && bounds[1] !== Infinity ? bounds[1] : Date.now() + 1;
     var ids = channels.map(function (c) { return c.id; });
-    rows.forEach(function (sale) {
-      var ts = +(sale && sale.ts) || 0;
-      if (ts < from || ts >= to) return;
-      var key = channelKey(sale && sale.channel, ids);
-      if (!key) return;
-      out[key] = (out[key] || 0) + Math.max(0, +(sale && sale.amount || 0));
-    });
-    return out;
+    return window.KiwiChannelSales.breakdown(rows, ids, from, to, window.KiwiTrades, activeTrade());
   }
 
   /* Poids de démonstration, un par canal du registre métier. Ils ne sont pas
@@ -624,17 +599,20 @@
     var copy = SERVICE_STR[l] || SERVICE_STR.fr;
     var clientCopy = CLIENT_STR[l] || CLIENT_STR.fr;
     var channels = currentChannels();
-    var amounts = channelAmounts(channels);
-    if (!Object.keys(amounts).length) amounts = demoChannelAmounts(channels);
+    var split = channelAmounts(channels);
+    var amounts = split.amounts;
+    if (!Object.keys(amounts).length && !split.total) amounts = demoChannelAmounts(channels);
     var hasAmounts = Object.keys(amounts).length > 0;
     var period = servicePeriodLabel(range, l);
-    var total = channels.reduce(function (sum, channel) {
+    var classifiedTotal = channels.reduce(function (sum, channel) {
       return sum + (amounts[channel.id] > 0 ? amounts[channel.id] : 0);
     }, 0);
+    var total = split.total > 0 ? split.total : classifiedTotal;
 
     /* Le rendu est relancé à chaque mutation du tableau de bord ; réécrire les
      * anneaux à l'identique casserait leur animation d'arc en boucle. */
-    var signature = [l, range, total.toFixed(0), channels.map(function (c) { return c.id; }).join(',')].join('|');
+    var distribution = channels.map(function (c) { return c.id + ':' + Math.round((amounts[c.id] || 0) * 100); }).join(',');
+    var signature = [l, range, total.toFixed(0), Math.round((split.unknown || 0) * 100), distribution].join('|');
     if (state.goalSignature === signature) return;
     state.goalSignature = signature;
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
@@ -642,7 +620,11 @@
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
     setText(document.querySelector('[data-vexel-client-period]'), period);
     setText(card.querySelector('h2'), copy.title);
-    setText(card.querySelector('[data-vexel-service-sub]'), (hasAmounts ? copy.share : copy.unavailable) + ' · ' + period);
+    var splitLabel = hasAmounts ? copy.share : copy.unavailable;
+    if (hasAmounts && split.total > 0 && split.unknown > 0) {
+      splitLabel += ' · ' + Math.round(split.unknown / split.total * 100) + ' % ' + copy.unclassified;
+    }
+    setText(card.querySelector('[data-vexel-service-sub]'), splitLabel + ' · ' + period);
     /* Dégradé monochrome, du canal le plus fort au plus faible. L'ambre est la
      * couleur d'alerte du tableau de bord : l'employer ici ferait lire « à
      * emporter » comme un problème alors que c'est une part comme une autre. */

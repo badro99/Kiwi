@@ -82,7 +82,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=7',
+  '/assets/venues.js?v=8',
   '/assets/trade-workspace-schema.js?v=3',
   '/assets/trade-workspaces.js?v=3',
   '/assets/reservations.js?v=6',
@@ -113,7 +113,8 @@ var SHELL = [
   '/assets/platform-kernel.js?v=1',
   '/assets/platform-ops.js?v=1',
   '/assets/platform-ops.css?v=1',
-  '/assets/live-link.js?v=4',
+  '/assets/live-link.js?v=5',
+  '/assets/channel-sales.js?v=1',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
@@ -185,7 +186,7 @@ var SHELL = [
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
   '/assets/kitchen-relay.js',
-  '/assets/pos-sale.js',
+  '/assets/pos-sale.js?v=2',
   '/assets/pos-dispatch.js?v=14',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',

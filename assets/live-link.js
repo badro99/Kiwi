@@ -479,6 +479,7 @@
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
+    if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.session) body.session = String(entry.session).slice(0, 64);
     /* The same completed receipt can be observed by two local persistence
        paths. Stable IDs plus this local check prevent it entering the queue
@@ -757,7 +758,7 @@
         try {
           if (window.KiwiSales.annotate) window.KiwiSales.annotate(vid, cur, {
             ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
-            origin: s.origin || '', server: s.server || '',
+            origin: s.origin || '', server: s.server || '', channel: s.channel || '',
           });
         } catch (_) {}
         return;
@@ -771,7 +772,7 @@
       try { window.KiwiSales.add(vid, {
         amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
-        server: s.server || '', lines: s.lines,
+        server: s.server || '', channel: s.channel || '', lines: s.lines,
       }); have[cur] = 1; } catch (_) {}
     });
     /* Fail closed once the full entitled history is known. Any server-backed

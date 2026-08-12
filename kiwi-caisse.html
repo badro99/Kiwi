@@ -93,7 +93,7 @@
   <!-- Journal de vente partagé — DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js" defer></script>
+  <script src="assets/pos-sale.js?v=2" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=3" />
   <script src="assets/pressing-ops.js?v=2" defer></script>
@@ -4658,7 +4658,7 @@
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js?v=358" defer></script>
   <script src="assets/caisse-pwa.js?v=371" defer></script>
-  <script src="assets/live-link.js?v=4" defer></script>
+  <script src="assets/live-link.js?v=5" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js" defer></script>
@@ -10623,6 +10623,9 @@
              and are imported exactly once. */
           entry.id = 'visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp';
         }
+        entry.channel = tables[settlementTable] && tables[settlementTable].zone === 'terrasse' ? 'terrace' : 'dining';
+      } else if (mode === 'vrap') {
+        entry.channel = 'takeaway';
       }
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.map(l => Object.assign(

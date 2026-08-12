@@ -240,6 +240,8 @@
          ones and prevents two tills' ticket #42 sharing one server id. */
       ref: stamp(String(sale.ref || '').slice(0, 32)),
     };
+    var saleChannel = String(sale.channel || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
+    if (saleChannel) entry.channel = saleChannel;
     if (Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(cleanLine);
     }
@@ -264,7 +266,7 @@
       if (window.KiwiLive && window.KiwiLive.isOn && window.KiwiLive.isOn()) {
         window.KiwiLive.postSale({
           amount: total, method: entry.method, label: entry.label,
-          ref: entry.ref, time: at,
+          ref: entry.ref, time: at, channel: entry.channel || '',
           /* Le détail du panier suit la vente. Il était construit juste
              au-dessus et restait sur ce terminal : le serveur ne recevait que
              {montant, moyen, libellé}, et le libellé est un RÉSUMÉ de ticket

@@ -391,7 +391,11 @@
      Démo : no-op. */
   function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines });
+      if (window.KiwiPosSale) {
+        const channel = state.ticket && state.ticket.channel === 'glovo' ? 'delivery'
+          : (state.ticket && state.ticket.channel === 'surplace' ? 'counter' : 'takeaway');
+        window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines, channel });
+      }
     } catch (_) {}
   }
   /* Reprise du service en cours : un rechargement (mise à jour PWA, onglet tué,

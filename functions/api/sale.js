@@ -113,6 +113,7 @@ export async function onRequestPost({ request, env }) {
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
+  const channel = String((b && b.channel) || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
   const rawTs = Number(b && b.ts);
   // A broken device clock must not create a sale dated years in the future,
   // which would poison daily reports indefinitely. Old offline sales remain
@@ -210,14 +211,26 @@ export async function onRequestPost({ request, env }) {
   let linesMode = 'stored';
   try {
     await env.DB.prepare(
-      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
+      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null).run();
   } catch (e) {
-    /* A database that predates the `lines` column rejects the 8-column insert.
-     * Write the sale without the basket rather than lose the sale — the money
-     * is the part that must not be dropped, and the migration in schema.sql
-     * brings the detail back for everything recorded after it runs. */
-    if (String((e && e.message) || e).includes('lines')) {
+    const missing = String((e && e.message) || e);
+    /* `channel` is newer than `lines`. During a rolling deploy, keep the basket
+     * on databases that have lines but not channel; dropping both would make a
+     * harmless reporting migration damage product and stock truth. */
+    if (missing.includes('channel')) {
+      try {
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
+        linesMode = 'stored-channel-unmigrated';
+      } catch (legacyError) {
+        if (!String((legacyError && legacyError.message) || legacyError).includes('lines')) {
+          return json({ error: 'db', detail: String(legacyError && legacyError.message || legacyError) }, 500);
+        }
+      }
+    }
+    if (missing.includes('lines') || (missing.includes('channel') && linesMode === 'stored')) {
       try {
         await env.DB.prepare(
           'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -230,7 +243,7 @@ export async function onRequestPost({ request, env }) {
       } else {
         return json({ error: 'db', detail: String(e && e.message || e) }, 500);
       }
-    } else {
+    } else if (linesMode !== 'stored-channel-unmigrated') {
       return json({ error: 'db', detail: String(e && e.message || e) }, 500);
     }
   }
