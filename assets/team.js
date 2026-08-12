@@ -140,6 +140,7 @@
       plSameTime: "L'heure de fin doit être différente de l'heure de début.",
       plWeekOf: (a, b) => `Semaine du ${a} au ${b}`,
       plPrevWeek: 'Semaine précédente', plNextWeek: 'Semaine suivante',
+      plPrevPeriod: 'Période précédente', plNextPeriod: 'Période suivante', plCurrentPeriod: 'Aujourd’hui',
       plPlannedPeriod: 'Planifié · période',
       plWeekApplied: (n) => `Service appliqué sur ${n} jour${n > 1 ? 's' : ''}.`,
       submitAdd:  'Ajouter le membre',
@@ -155,9 +156,9 @@
       tPwdCopied:'Code caisse copié',
       tPwdGen:   'Nouveau code caisse généré',
       // Hours pane
-      hPeriodWeek: 'Cette semaine',
+      hPeriodWeek: 'Semaine',
       hPeriodFort: 'Quinzaine',
-      hPeriodMonth:'Ce mois',
+      hPeriodMonth:'Mois',
       hQuickEntry:'Saisie rapide',
       hExport:    'Exporter CSV',
       hImport:    'Importer CSV',
@@ -295,6 +296,7 @@
       plSameTime: 'The end time must differ from the start time.',
       plWeekOf: (a, b) => `Week of ${a} to ${b}`,
       plPrevWeek: 'Previous week', plNextWeek: 'Next week',
+      plPrevPeriod: 'Previous period', plNextPeriod: 'Next period', plCurrentPeriod: 'Today',
       plPlannedPeriod: 'Scheduled · period',
       plWeekApplied: (n) => `Shift applied to ${n} day${n > 1 ? 's' : ''}.`,
       submitAdd:  'Add member',
@@ -309,9 +311,9 @@
       tDeleted:  (n) => `${n} has been removed from the team`,
       tPwdCopied:'Till code copied',
       tPwdGen:   'New till code generated',
-      hPeriodWeek: 'This week',
+      hPeriodWeek: 'Week',
       hPeriodFort: 'Fortnight',
-      hPeriodMonth:'This month',
+      hPeriodMonth:'Month',
       hQuickEntry:'Quick entry',
       hExport:    'Export CSV',
       hImport:    'Import CSV',
@@ -449,6 +451,7 @@
       plSameTime: 'يجب أن تختلف ساعة النهاية عن ساعة البداية.',
       plWeekOf: (a, b) => `أسبوع من ${a} إلى ${b}`,
       plPrevWeek: 'الأسبوع السابق', plNextWeek: 'الأسبوع التالي',
+      plPrevPeriod: 'الفترة السابقة', plNextPeriod: 'الفترة التالية', plCurrentPeriod: 'اليوم',
       plPlannedPeriod: 'مُجدول · الفترة',
       plWeekApplied: (n) => `تم تطبيق الوردية على ${n} يوم.`,
       submitAdd:  'إضافة العضو',
@@ -463,9 +466,9 @@
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
       tPwdCopied:'تم نسخ رمز الصندوق',
       tPwdGen:   'تم إنشاء رمز صندوق جديد',
-      hPeriodWeek: 'هذا الأسبوع',
+      hPeriodWeek: 'أسبوع',
       hPeriodFort: 'نصف شهر',
-      hPeriodMonth:'هذا الشهر',
+      hPeriodMonth:'شهر',
       hQuickEntry:'إدخال سريع',
       hExport:    'تصدير CSV',
       hImport:    'استيراد CSV',
@@ -733,6 +736,10 @@
   if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, periodKind: 'week', periodLocked: false };
   if (!window.__kiwiTeamV2.shiftsByVenue) window.__kiwiTeamV2.shiftsByVenue = {};
   if (!window.__kiwiTeamV2.planningByVenue) window.__kiwiTeamV2.planningByVenue = {};
+  /* Period navigation is intentionally UI state: it never changes or copies
+   * the saved shifts until the manager edits the newly displayed dates. */
+  const periodOffsets = { week:0, fortnight:0, month:0 };
+  const periodLocks = {};
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -1087,23 +1094,43 @@
   function toISO(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
   function buildPeriod(kind) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    let start, end;
-    if (kind === 'fortnight') {
-      const day = today.getDay();
-      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7) - 7);
-      end = new Date(start); end.setDate(start.getDate() + 13);
-    } else if (kind === 'month') {
-      start = new Date(today.getFullYear(), today.getMonth(), 1);
-      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    } else {
-      const day = today.getDay();
-      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7));
-      end = new Date(start); end.setDate(start.getDate() + 6);
+    kind = ['week', 'fortnight', 'month'].includes(kind) ? kind : 'week';
+    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, toISO(today), periodOffsets[kind] || 0);
+    if (core) {
+      const start = fromISO(core.start), end = fromISO(core.end);
+      return { start:core.start, end:core.end, startFr:fmtFr(start), endFr:fmtFr(end), days:core.days };
     }
-    const days = [];
-    const cur = new Date(start);
+    /* Fail-soft fallback for a partially cached shell. */
+    let start, end;
+    if (kind === 'month') {
+      start = new Date(today.getFullYear(), today.getMonth() + (periodOffsets.month || 0), 1);
+      end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    } else {
+      const day = today.getDay(), span = kind === 'fortnight' ? 14 : 7;
+      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7) + (periodOffsets[kind] || 0) * span);
+      end = new Date(start); end.setDate(start.getDate() + span - 1);
+    }
+    const days = [], cur = new Date(start);
     while (cur <= end) { days.push(toISO(cur)); cur.setDate(cur.getDate() + 1); }
     return { start: toISO(start), end: toISO(end), startFr: fmtFr(start), endFr: fmtFr(end), days };
+  }
+
+  function periodNavigatorHtml(T, period) {
+    const kind = window.__kiwiTeamV2.periodKind || 'week';
+    const shifted = (periodOffsets[kind] || 0) !== 0;
+    return `<nav class="kt-period-nav" aria-label="${esc(T.hPeriodLabel(period.startFr, period.endFr))}">
+      <button class="kt-period-arrow" type="button" data-action="kt-period-nav" data-arg="prev" aria-label="${esc(T.plPrevPeriod)}" title="${esc(T.plPrevPeriod)}">‹</button>
+      <strong>${esc(T.hPeriodLabel(period.startFr, period.endFr))}</strong>
+      <button class="kt-period-arrow" type="button" data-action="kt-period-nav" data-arg="next" aria-label="${esc(T.plNextPeriod)}" title="${esc(T.plNextPeriod)}">›</button>
+      ${shifted ? `<button class="kt-period-current" type="button" data-action="kt-period-nav" data-arg="current">${esc(T.plCurrentPeriod)}</button>` : ''}
+    </nav>`;
+  }
+
+  function rememberPeriodLock(root, kind, period) {
+    periodLocks[`${kind}:${period.start}:${period.end}`] = !!root.periodLocked;
+  }
+  function restorePeriodLock(root, kind, period) {
+    root.periodLocked = !!periodLocks[`${kind}:${period.start}:${period.end}`];
   }
 
   function todayLongLabel() {
@@ -1572,6 +1599,7 @@
             </button>
           </div>
         </div>
+        ${periodNavigatorHtml(T, period)}
 
         <div class="kt-h-tablewrap">
           <table class="kt-h-table">
@@ -1876,6 +1904,20 @@
     const next = planWeekIdx + (dir === 'next' ? 1 : -1);
     if (next < 0 || next >= chunks.length) return;
     planWeekIdx = next;
+    render();
+  };
+
+  handlers['kt-period-nav'] = (_el, dir) => {
+    closeShiftPop();
+    const root = window.__kiwiTeamV2;
+    const kind = root.periodKind || 'week';
+    if (!Object.prototype.hasOwnProperty.call(periodOffsets, kind)) return;
+    rememberPeriodLock(root, kind, buildPeriod(kind));
+    if (dir === 'current') periodOffsets[kind] = 0;
+    else periodOffsets[kind] += dir === 'next' ? 1 : -1;
+    const period = buildPeriod(kind);
+    restorePeriodLock(root, kind, period);
+    planWeekIdx = periodOffsets[kind] === 0 ? weekIdxForToday(period.days) : 0;
     render();
   };
 
@@ -2623,9 +2665,13 @@
   handlers['kt-period'] = (_el, kind) => {
     if (!['week', 'fortnight', 'month'].includes(kind)) return;
     const root = window.__kiwiTeamV2;
+    const previousKind = root.periodKind || 'week';
+    rememberPeriodLock(root, previousKind, buildPeriod(previousKind));
     root.periodKind = kind;
-    root.periodLocked = false;
-    planWeekIdx = weekIdxForToday(buildPeriod(kind).days);   // nouvelle période ⇒ on retombe sur la semaine en cours
+    periodOffsets[kind] = 0;
+    const targetPeriod = buildPeriod(kind);
+    restorePeriodLock(root, kind, targetPeriod);
+    planWeekIdx = weekIdxForToday(targetPeriod.days);   // nouvelle période ⇒ on retombe sur la semaine en cours
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const vt = teamKey(venue);
     const period = buildPeriod(kind);
@@ -2981,6 +3027,7 @@
         <div class="kt-hbar">
           <div class="eq-pill-row">${periodPillsHtml(T)}</div>
         </div>
+        ${periodNavigatorHtml(T, period)}
         <p class="kt-plan-hint">${esc(T.plHint)}</p>
         ${planningCommand}
         ${stepper}

@@ -10,6 +10,13 @@ const members = [{ id: "a", name: "Amira", startDate: "2026-01-01" }, { id: "b",
 const days = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15", "2026-08-16"];
 const shifts = { a: { "2026-08-10": { start: "09:00", end: "17:00" } }, b: { "2026-08-11": { start: "18:00", end: "02:00" } } };
 
+assert.deepEqual(Array.from(P.calendarPeriod("week", "2026-08-12", 0).days), days, "current week runs Monday through Sunday");
+assert.equal(P.calendarPeriod("week", "2026-08-12", 1).start, "2026-08-17", "week navigation reaches next week");
+assert.deepEqual([P.calendarPeriod("fortnight", "2026-08-12", 0).start, P.calendarPeriod("fortnight", "2026-08-12", 0).end], ["2026-08-10", "2026-08-23"], "fortnight defaults to this week plus next week");
+assert.deepEqual([P.calendarPeriod("fortnight", "2026-08-12", 1).start, P.calendarPeriod("fortnight", "2026-08-12", 1).end], ["2026-08-24", "2026-09-06"], "fortnight navigation advances the whole planning period");
+assert.deepEqual([P.calendarPeriod("month", "2026-08-12", 1).start, P.calendarPeriod("month", "2026-08-12", 1).end], ["2026-09-01", "2026-09-30"], "month navigation reaches the full next month");
+assert.deepEqual([P.calendarPeriod("month", "2026-01-12", -1).start, P.calendarPeriod("month", "2026-01-12", -1).end], ["2025-12-01", "2025-12-31"], "month navigation crosses years safely");
+
 assert.equal(P.status(P.blank(), shifts, days).state, "draft");
 assert.equal(P.publish(P.blank(), {}, days, members).issues[0].code, "empty-schedule");
 const published = P.publish(P.blank(), shifts, days, members, "2026-08-01T10:00:00Z");

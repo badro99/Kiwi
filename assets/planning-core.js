@@ -65,6 +65,30 @@
     return Number.isNaN(value) ? "" : new Date(value + amount * DAY_MS).toISOString().slice(0, 10);
   }
 
+  /* Calendar ranges are product logic, not a rendering detail. Keeping them
+   * here makes coverage, fair allocation, templates and publishing agree on
+   * the exact dates being viewed. A fortnight starts this Monday and includes
+   * the NEXT week; the old UI started one week in the past. */
+  function calendarPeriod(kind, anchor, offset) {
+    kind = kind === "fortnight" || kind === "month" ? kind : "week";
+    const anchorDay = isoDay(anchor) || new Date().toISOString().slice(0, 10);
+    const shift = Number.isFinite(Number(offset)) ? Math.trunc(Number(offset)) : 0;
+    const anchorDate = new Date(anchorDay + "T12:00:00Z");
+    let start;
+    let length;
+    if (kind === "month") {
+      start = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + shift, 1, 12));
+      length = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0, 12)).getUTCDate();
+    } else {
+      const mondayOffset = (anchorDate.getUTCDay() + 6) % 7;
+      start = new Date(anchorDate.getTime() - mondayOffset * DAY_MS + shift * (kind === "fortnight" ? 14 : 7) * DAY_MS);
+      length = kind === "fortnight" ? 14 : 7;
+    }
+    const startDay = start.toISOString().slice(0, 10);
+    const days = Array.from({ length }, (_, index) => offsetDay(startDay, index));
+    return { kind, offset:shift, start:startDay, end:days[days.length - 1], days };
+  }
+
   function memberIds(members) {
     return new Set((members || []).map((member) => String(member.id || "")).filter(Boolean));
   }
@@ -789,5 +813,5 @@
     return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
+  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, calendarPeriod, openingSlots, openingIssue, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
 });

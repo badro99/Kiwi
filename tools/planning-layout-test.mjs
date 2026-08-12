@@ -21,6 +21,12 @@ assert.match(team, /data-action="kt-plan-clear"[\s\S]*data-action="kt-plan-apply
 assert.match(team, /KiwiHours\.periodsOn|KH\.periodsOn/, 'fair scheduler reads shared venue opening hours');
 assert.match(team, /KiwiMoroccoCalendar/, 'planning reads the shared Morocco holiday calendar');
 assert.match(team, /kt-calendar-bridge/, 'planning exposes opening hours and special days in one compact bridge');
+assert.match(team, /data-action="kt-period-nav" data-arg="prev"/, 'every planning period exposes previous navigation');
+assert.match(team, /data-action="kt-period-nav" data-arg="next"/, 'every planning period exposes next navigation');
+assert.match(team, /handlers\['kt-period-nav'\]/, 'period navigation changes the actual planning range');
+assert.match(team, /periodOffsets\[kind\] = 0/, 'switching view returns to the current week, fortnight or month');
+assert.match(team, /rememberPeriodLock\(root, kind, buildPeriod\(kind\)\)[\s\S]{0,260}restorePeriodLock\(root, kind, period\)/, 'moving between periods preserves each period lock independently');
+assert.match(css, /\.kt-period-nav\{[^}]*display:flex/, 'period navigation is a compact, visible control');
 assert.match(team, /suggestedShifts=Math\.max\(1,Math\.min\(2,suggested\)\)/, 'fair scheduling never starts with more shifts than available people');
 assert.match(team, /coverageSummary\?\.\(\{planning,shifts,days:period\.days,members,periodsByDay:hoursConfigured\?periodsByDay:null\}\)/, 'coverage intelligence ignores closed hours and days');
 assert.match(team, /'public-holiday'/, 'public-holiday shifts raise a compensation review warning');
@@ -69,4 +75,4 @@ assert.match(pagesPro, /payroll:\s+\{ t: 'Planning'/, 'the starter card says Pla
 assert.match(admin, /key:'payroll',\s+label:'Planning'/, 'the admin module list says Planning');
 assert.match(pitch, />PLANNING<\/div>/, 'the commercial pitch says Planning');
 
-console.log('planning-layout-test: 47 controls passed');
+console.log('planning-layout-test: 53 controls passed');
