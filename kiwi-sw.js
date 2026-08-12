@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v380';
+var CACHE = 'kiwi-app-v381';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -134,7 +134,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
-  '/assets/merchant-config.js',
+  '/assets/merchant-config.js?v=262',
   '/assets/staff-roles.js',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
@@ -175,7 +175,7 @@ var SHELL = [
   '/assets/employee-planning.js?v=3',
   '/assets/planning-core.js?v=6',
   '/assets/planning-ui.css?v=8',
-  '/assets/team.js?v=267',
+  '/assets/team.js?v=268',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',

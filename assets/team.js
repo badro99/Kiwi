@@ -2801,7 +2801,11 @@
     return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
   }
 
-  function renderPlanningPane(T, venue, venueType, members) {
+  function renderPlanningPane(T, venue, venueType, members, options = {}) {
+    /* Managers build and publish shifts, but salary rates and projected labour
+     * cost remain owner-only. One renderer keeps the operational plan identical
+     * while removing the financial column at the source (not merely with CSS). */
+    const showCosts = options.showCosts !== false;
     const root = window.__kiwiTeamV2;
     const period = buildPeriod(root.periodKind || 'week');
     const shifts = root.shiftsByVenue[venueType] || (root.shiftsByVenue[venueType] = {});
@@ -2869,11 +2873,11 @@
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
-          <td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+          ${showCosts ? `<td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
         </tr>`;
     }).join('');
 
-    const cols = `<colgroup><col class="kt-plan-col-mem">${view.map(() => '<col>').join('')}<col class="kt-plan-col-tot"><col class="kt-plan-col-tot"></colgroup>`;
+    const cols = `<colgroup><col class="kt-plan-col-mem">${view.map(() => '<col>').join('')}<col class="kt-plan-col-tot">${showCosts ? '<col class="kt-plan-col-tot">' : ''}</colgroup>`;
     const stepper = multiWeek ? `
       <div class="kt-plan-step">
         <button class="kt-plan-arrow" type="button" data-action="kt-plan-week" data-arg="prev"
@@ -2942,7 +2946,7 @@
                 <th class="kt-h-memberhead">${esc(T.plMember)}</th>
                 ${headDays}
                 <th class="kt-h-totalhead">${esc(multiWeek ? T.plPlannedPeriod : T.plPlanned)}</th>
-                <th class="kt-h-totalhead">${esc(T.plCost)}</th>
+                ${showCosts ? `<th class="kt-h-totalhead">${esc(T.plCost)}</th>` : ''}
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -2951,7 +2955,7 @@
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
-                <td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+                ${showCosts ? `<td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
               </tr>
             </tfoot>
           </table>
@@ -2960,7 +2964,13 @@
       </div>`;
   }
 
-  function renderPayrollBody(T, venue, venueType, members) {
+  function payrollAccess() {
+    const role = window.__kiwiRole || 'owner';
+    const payrollEnabled = window.KiwiConfig?.features?.payroll !== false;
+    return role === 'staff' ? 'none' : role === 'manager' || !payrollEnabled ? 'planning' : 'full';
+  }
+
+  function renderPayrollBody(T, venue, venueType, members, access = payrollAccess()) {
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     if (!members.length) {
       return `
@@ -2971,6 +2981,9 @@
             <button class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
           </div>
         </div>`;
+    }
+    if (access === 'planning') {
+      return `<div class="dash-equipe">${renderPlanningPane(T, venue, venueType, members, { showCosts: false })}</div>`;
     }
     const f = payrollFigures(members, venueType, period);
     const tile = (label, value, sub) => `
@@ -2994,13 +3007,18 @@
           </div>
         </div>
         ${payTab === 'planning'
-          ? renderPlanningPane(T, venue, venueType, members)
+          ? renderPlanningPane(T, venue, venueType, members, { showCosts: true })
           : renderHoursPane(T, venue, venueType, members)}
       </div>`;
   }
 
   function showPayroll() {
     if (!window.Kiwi || !window.Kiwi.appPage) return;
+    const access = payrollAccess();
+    if (access === 'none') {
+      window.Kiwi.toast?.('Accès réservé au gérant ou au propriétaire', { type: 'info' });
+      return;
+    }
     const T = t();
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
@@ -3008,10 +3026,15 @@
     const members = getMembers(venueType);
     pageActive = true;
     pageMode = 'payroll';
+    const managerCopy = trLang() === 'en'
+      ? { title: 'Team planning', sub: 'shifts, availability and coverage' }
+      : trLang() === 'ar'
+        ? { title: 'جدول الفريق', sub: 'الورديات والتوفر والتغطية' }
+        : { title: 'Planning équipe', sub: 'services, disponibilités et couverture' };
     window.Kiwi.appPage('payroll', {
-      title: T.payTitle,
-      subtitle: `${venue.name || 'Votre établissement'} · ${T.paySub}`,
-      body: renderPayrollBody(T, venue, venueType, members),
+      title: access === 'planning' ? managerCopy.title : T.payTitle,
+      subtitle: `${venue.name || 'Votre établissement'} · ${access === 'planning' ? managerCopy.sub : T.paySub}`,
+      body: renderPayrollBody(T, venue, venueType, members, access),
     });
     // The venue/language subscriptions live on showPage(); mirror the venue one so
     // switching store while on Paie repaints instead of showing the old roster.

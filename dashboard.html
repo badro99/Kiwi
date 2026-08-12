@@ -360,7 +360,7 @@
    *
    * Manager (PIN 0909) cannot see:
    *   – Marges & budget        (full P&L, TVA, pricing recs)
-   *   – Paie & planning        (salaries, hours, payroll)
+   *   – Salary/payroll figures (the planning workspace stays available)
    * The role badge "Vue gérant" appears in the topbar so the demo
    * viewer always knows which role is active.
    * ════════════════════════════════════════════════════════════ */
@@ -369,8 +369,7 @@
   body.role-manager .role-badge { display: inline-flex; }
   body.role-manager .sidebar a[data-nav="finance"],
   body.role-manager .sidebar a[data-nav="depenses"],
-  body.role-manager .sidebar a[data-nav="promos"],
-  body.role-manager .sidebar a[data-nav="payroll"] { display: none !important; }
+  body.role-manager .sidebar a[data-nav="promos"] { display: none !important; }
   /* Staff (an onboarding-created team code) — operational surfaces only:
    * caisse, commandes, salle, KDS, stock. No money, no admin, no compliance. */
   body.role-staff .role-badge { display: inline-flex; }
@@ -5034,8 +5033,8 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
  *  Roles by PIN:
  *    0000   reserved · "configure new restaurant" onboarding
  *    0505   reserved · marketing-suite preview tease (runs as owner)
- *    0909   gérant · restricted sidebar (no Marges, no Paie & planning,
- *                                         no salary columns in Équipe)
+ *    0909   gérant · restricted finances (planning available, no Marges,
+ *                                         salaries or payroll amounts)
  *    other  propriétaire · full access (default)
  *
  *  No PIN entered yet → defaults to owner so refreshing inside the demo
@@ -6031,7 +6030,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script defer src="assets/channel-sales.js?v=2"></script>
 <!-- Operator feature flags — hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=261"></script>
+<script defer src="assets/merchant-config.js?v=262"></script>
 <!-- Real logged-in identity — swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
 <script defer src="assets/tenant-purge.js"></script>
@@ -6146,7 +6145,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/stock.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=6" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=8">
-<script src="assets/team.js?v=267" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=268" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
@@ -6174,22 +6173,19 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/reservations.js?v=6" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
- *  ROLE GUARD — wraps nav-payroll so a manager can't reach the payroll
- *  page even via console / leftover keyboard shortcut. nav-finance is
+ *  ROLE GUARD — salary figures remain owner-only, while a manager may open
+ *  the safe planning-only rendering of this workspace. nav-finance is
  *  wrapped inside finance.js itself. Defers until Kiwi.handlers is up.
  *  ═══════════════════════════════════════════════════════════════════ -->
 <script>
 (function gate() {
   if (!window.Kiwi || !window.Kiwi.handlers) return setTimeout(gate, 80);
-  const wrap = (key) => {
+  const wrap = (key, allowedRoles) => {
     const prev = window.Kiwi.handlers[key];
     if (!prev || prev.__kiwiRoleGated) return;
     const guarded = (...args) => {
-      /* `!== 'owner'`, not `=== 'manager'`. The CSS above hides Paie from a
-       * manager AND from a staff badge, but this gate only ever checked for
-       * the manager — so the more restricted of the two tiers was the one that
-       * walked through it. A hidden link is a suggestion; this is the lock. */
-      if ((window.__kiwiRole || 'owner') !== 'owner') {
+      const role = window.__kiwiRole || 'owner';
+      if (!allowedRoles.includes(role)) {
         window.Kiwi.toast?.('Accès propriétaire uniquement', { type: 'info' });
         return;
       }
@@ -6198,14 +6194,13 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
     guarded.__kiwiRoleGated = true;
     window.Kiwi.handlers[key] = guarded;
   };
-  /* Everything the CSS hides from a non-owner badge. Hiding a sidebar link
-   * removes the doorway, not the room: these handlers are reachable from a
-   * data-action anywhere in the DOM, from a leftover shortcut, and from the
-   * console. Only nav-payroll was ever wrapped — Dépenses was open. */
-  ['nav-payroll', 'nav-depenses', 'nav-promos'].forEach(wrap);
+  /* Manager can operate the schedule; assets/team.js removes every salary,
+   * cost and realised-pay view for that role. Staff cannot enter at all. */
+  wrap('nav-payroll', ['owner', 'manager']);
+  ['nav-depenses', 'nav-promos'].forEach((key) => wrap(key, ['owner']));
   /* Staff-only exclusions: the badge that cannot see Équipe cannot see the
    * team's contracts or the compliance file either. */
-  if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach(wrap);
+  if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach((key) => wrap(key, ['owner', 'manager']));
 })();
 </script>
 <!-- "Introducing Kiwi Marketing Suite" tease — fired by PIN 0505 after the

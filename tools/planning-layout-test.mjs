@@ -5,6 +5,7 @@ const team = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf
 const css = fs.readFileSync(new URL('../assets/planning-ui.css', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
+const merchantConfig = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 
 for (const action of ['fair', 'optimize', 'template-save', 'template-apply', 'coverage', 'open', 'publish']) {
   assert.equal((team.match(new RegExp(`data-action="kt-plan-${action}"`, 'g')) || []).length, 1, `${action} stays wired exactly once`);
@@ -25,10 +26,19 @@ assert.match(css, /@media\(max-width:420px\)[^{]*\{[^}]*kt-plan-intelligence/, '
 assert.match(dashboard, /assets\/morocco-holidays\.js\?v=1/);
 assert.match(dashboard, /assets\/planning-ui\.css\?v=8/);
 assert.match(dashboard, /assets\/planning-core\.js\?v=6/);
-assert.match(dashboard, /assets\/team\.js\?v=267/);
+assert.match(dashboard, /assets\/team\.js\?v=268/);
 assert.match(sw, /assets\/morocco-holidays\.js\?v=1/);
 assert.match(sw, /assets\/planning-ui\.css\?v=8/);
 assert.match(sw, /assets\/planning-core\.js\?v=6/);
-assert.match(sw, /assets\/team\.js\?v=267/);
+assert.match(sw, /assets\/team\.js\?v=268/);
+assert.doesNotMatch(dashboard, /body\.role-manager \.sidebar a\[data-nav="payroll"\]/, 'manager keeps the planning doorway');
+assert.match(dashboard, /body\.role-staff \.sidebar a\[data-nav="payroll"\]/, 'staff still cannot enter planning or payroll');
+assert.match(team, /return role === 'staff' \? 'none' : role === 'manager' \|\| !payrollEnabled \? 'planning' : 'full'/, 'role access separates planning from payroll');
+assert.match(team, /renderPlanningPane\(T, venue, venueType, members, \{ showCosts: false \}\)/, 'manager planning omits labour cost at the renderer');
+assert.match(team, /if \(access === 'none'\)[\s\S]{0,220}return;/, 'staff access is blocked in the owned handler');
+assert.match(merchantConfig, /key !== 'reservations' && key !== 'payroll'/, 'legacy payroll-off config cannot remove core planning');
+assert.match(team, /payrollEnabled = window\.KiwiConfig\?\.features\?\.payroll !== false/, 'payroll flag controls financial rendering instead');
+assert.match(dashboard, /assets\/merchant-config\.js\?v=262/);
+assert.match(sw, /assets\/merchant-config\.js\?v=262/);
 
-console.log('planning-layout-test: 28 controls passed');
+console.log('planning-layout-test: 37 controls passed');

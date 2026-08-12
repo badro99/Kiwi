@@ -90,12 +90,13 @@
    * absente veut dire ALLUMÉ (c'est ce qui laisse les clients d'avant
    * intacts), et une config jamais reçue — pas de backend, hors ligne — ne
    * doit fermer aucune porte. */
-  /* Reservations became part of Kiwi's core operating layer in v1. The public
-   * page remains closed until the merchant explicitly configures and publishes
-   * it, but the configuration door itself must never be hidden: old merchant
-   * rows were seeded with `reservations:false`, creating an impossible loop
-   * where the owner could not reach the page needed to turn bookings on. */
-  function featureOff(key) { return key !== 'reservations' && cfg.features[key] === false; }
+  /* Reservations and team planning became part of Kiwi's core operating layer
+   * in v1. Their public/financial capabilities can remain disabled, but their
+   * configuration doors must never disappear: old merchant rows were seeded
+   * with `reservations:false` and `payroll:false`, creating an impossible loop.
+   * assets/team.js still reads `payroll:false` to withhold pay figures; it no
+   * longer means "remove scheduling". */
+  function featureOff(key) { return key !== 'reservations' && key !== 'payroll' && cfg.features[key] === false; }
 
   var pinSeen = Object.create(null);
   function ownerRole(role) {
