@@ -1793,8 +1793,19 @@
         store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '', opts: theirs.opts || [] })
                         : mergeMenus(mine, theirs), vid);
         /* Ne repeindre que si on est TOUJOURS sur ce magasin, sinon la carte du
-         * café s'afficherait par-dessus la page de la boutique. */
-        try { if (isCustom() && storeSlug() === slug) render(); } catch (_) {}
+         * café s'afficherait par-dessus la page de la boutique — ET seulement si
+         * le patron regarde DÉJÀ la page Menu. render() passe par
+         * KiwiVenue.showMenu(), qui n'est pas un rafraîchissement mais une
+         * NAVIGATION : elle pose page-menu, éteint l'Accueil et déplace le
+         * curseur de la barre latérale. Or pull() part 1,2 s après le
+         * chargement, à chaque retour sur l'onglet et à chaque changement
+         * d'établissement : la carte surgissait donc par-dessus l'Accueil à
+         * chaque connexion. Quand la page Menu est ouverte, le repaint est
+         * déjà assuré par store.subscribe → refreshMenu() dans boot(). */
+        try {
+          if (isCustom() && storeSlug() === slug &&
+              document.body.classList.contains('page-menu')) render();
+        } catch (_) {}
         return true;
       })
       .catch(() => { c.pulling = false; return false; });   // hors ligne → local reste la vérité

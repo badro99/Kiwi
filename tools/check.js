@@ -759,6 +759,7 @@ section('Whole-project regressions');
     'order-mode-exit-test.js',
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
+    'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
     'restaurant-menu-peak-hours-test.js',
     'restaurant-units-test.js',
