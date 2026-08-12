@@ -88,7 +88,16 @@ const R = {
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
-const now = Date.now();
+/* L'HORLOGE DU BANC. Les ventes « du jour » sont posées jusqu'à cinq heures
+   avant `now`, et la journée CLÔTURÉE est celle de now-24 h. Entre minuit et
+   six heures UTC ces deux fenêtres se recouvrent : la vente d'onboarding tombe
+   dans la journée déjà close, sa sortie est LÉGITIMEMENT bloquée, et onze
+   contrôles tombaient — chaque nuit, sans qu'aucun défaut n'existe. On recule
+   l'horloge jusqu'à dix-huit heures la veille ; elle reste dans le passé, donc
+   rien de ce qui se compare à l'heure réelle ne change. */
+const wall = Date.now();
+const wallHour = new Date(wall).getUTCHours();
+const now = wallHour >= 6 ? wall : wall - (wallHour + 6) * 3600000;
 const acc = (id, email, business, ts) =>
   db.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
     .bind(id, email, email.split('@')[0], business, 'ff', 'ff', ts).run();
