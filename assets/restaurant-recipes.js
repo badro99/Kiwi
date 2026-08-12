@@ -113,6 +113,17 @@
       theoreticalProfit: price > 0 && costComplete ? round(price - theoreticalCost) : null,
     };
   }
+  /* Le prix ramené à l'unité de la ligne de recette — 12 MAD/kg devient
+   * 0,012 MAD/g. Sorti de mirrorCost() parce que heal() doit pouvoir prédire
+   * exactement ce que mirrorCost() écrirait : un ingrédient dont les unités ne
+   * se convertissent pas rend null des deux côtés, et le rattrapage doit alors
+   * s'abstenir plutôt que de réécrire le même null à chaque notification. */
+  function lineCosting(line, info) {
+    const lineUnit = units()?.normalize?.(line.unit || info.stockUnit, '') || line.unit || info.stockUnit || '';
+    const useCost = info.cost == null ? null
+      : (units()?.unitCost ? units().unitCost(info.cost, info.stockUnit, lineUnit) : (lineUnit === info.stockUnit ? info.cost : null));
+    return { lineUnit, useCost };
+  }
   function mirrorCost(itemId, recipe, id) {
     const costStore = window.KiwiCost?.store;
     if (!costStore?.update) return;
@@ -131,9 +142,8 @@
         const stockId = line.stockId || clean(info.stock?.id);
         const ingId = stockId ? `stock:${stockId}` : `recipe:${itemId}:${index}`;
         const pos = d.ingredients.findIndex((x) => String(x.id) === ingId);
-        const lineUnit = units()?.normalize?.(line.unit || info.stockUnit, '') || line.unit || info.stockUnit || '';
-        const useCost = info.cost == null ? null : (units()?.unitCost ? units().unitCost(info.cost, info.stockUnit, lineUnit) : (lineUnit === info.stockUnit ? info.cost : null));
-        const ingredient = { id: ingId, name: line.name || info.stock?.name || '', unit: lineUnit, useCost, stockId, at: Date.now() };
+        const { lineUnit, useCost } = lineCosting(line, info);
+        const ingredient ={ id: ingId, name: line.name || info.stock?.name || '', unit: lineUnit, useCost, stockId, at: Date.now() };
         if (pos >= 0) d.ingredients[pos] = ingredient; else d.ingredients.push(ingredient);
         if (!(line.qty > 0) || info.cost == null) complete = false;
         /* The till holds no unit table. Bake the article-unit quantity here so a
@@ -169,6 +179,51 @@
     costStore?.update?.((d) => { d.recipes = d.recipes || {}; delete d.recipes[itemId]; return d; }, vid);
     return result;
   }
+  /* ── LE RATTRAPAGE DES PRIX ────────────────────────────────────────────────
+   * mirrorCost() ne tourne qu'à l'enregistrement d'une fiche. Un document de
+   * coûts qui a perdu ses prix — le fusionneur les écrasait avant la v365, mais
+   * un appareil vidé ou une copie serveur arrivée amputée font pareil — restait
+   * donc muet jusqu'à la prochaine saisie du commerçant : chaque plat sortait à
+   * coût matière nul, sans rien signaler, puisqu'une fiche sans prix rend null
+   * et jamais une erreur. Les deux sources restent pourtant intactes de leur
+   * côté : la recette porte ses lignes, l'article son costPerUnit. On les
+   * recroise ici. Réparation seule — mirrorCost() remplace par identifiant et
+   * n'efface rien — et strictement quand un prix connu de l'inventaire manque
+   * au document : sans écart, aucune écriture, donc pas de va-et-vient entre
+   * deux appareils. */
+  function heal(id) {
+    const costStore = window.KiwiCost?.store;
+    if (!costStore?.get) return 0;
+    const vid = venue(id);
+    if (!vid) return 0;
+    const d = costStore.get(vid) || {};
+    const priced = new Map();
+    (Array.isArray(d.ingredients) ? d.ingredients : []).forEach((x) => { if (x && x.id) priced.set(String(x.id), x); });
+    let healed = 0;
+    all(vid).forEach((recipe) => {
+      const gap = recipe.ingredients.some((line) => {
+        const info = ingredientInfo(line, vid);
+        if (info.cost == null) return false;      // l'inventaire ne connaît pas ce prix : rien à rattraper
+        if (lineCosting(line, info).useCost == null) return false;  // réécrire null ne rattrape rien
+        const stockId = line.stockId || clean(info.stock?.id);
+        const known = stockId ? priced.get('stock:' + stockId) : null;
+        return !known || known.useCost == null;
+      });
+      if (!gap) return;
+      mirrorCost(recipe.itemId, recipe, vid);
+      healed += 1;
+    });
+    return healed;
+  }
+  let healPending = false;
+  function healSoon(id) {
+    if (healPending) return;
+    healPending = true;
+    /* Les trois documents arrivent du serveur chacun à son tour ; on laisse la
+     * volée se poser avant de recroiser, et mirrorCost() re-notifie. */
+    setTimeout(() => { healPending = false; try { heal(id); } catch (_) {} }, 0);
+  }
+
   function theoreticalUsage(stockId, id, days) {
     if (!stockId) return 0;
     const stock = inventory(id).find((row) => String(row.id) === String(stockId));
@@ -185,7 +240,15 @@
   }
 
   window.KiwiRestaurantRecipes = {
-    all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, theoreticalUsage,
+    all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, theoreticalUsage, heal,
     subscribe: (fn) => store.subscribe(fn), _store: store,
   };
+
+  /* Les trois pièces du rattrapage — recettes, coûts, inventaire — hydratent
+   * chacune à son rythme depuis le serveur. On repasse à chaque arrivée : sans
+   * écart, heal() ne touche à rien. */
+  store.subscribe(healSoon);
+  window.KiwiStore.subscribe?.('costs', healSoon);
+  window.KiwiStore.subscribe?.('stock', healSoon);
+  healSoon();
 })();
