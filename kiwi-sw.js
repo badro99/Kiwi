@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v389';
+var CACHE = 'kiwi-app-v390';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -187,6 +187,10 @@ var SHELL = [
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
   '/assets/kitchen-relay.js',
+  /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
+     ligne, une commande prise pendant une coupure pourrait atteindre la
+     cuisine à l'écran sans jamais sortir sur la thermique. */
+  '/assets/kitchen-print-queue.js?v=1',
   '/assets/pos-sale.js?v=2',
   '/assets/pos-dispatch.js?v=14',
   '/assets/retail-scan.css?v=6',

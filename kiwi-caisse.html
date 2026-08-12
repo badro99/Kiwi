@@ -4716,6 +4716,7 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=2" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=1" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=4" defer></script>
@@ -4995,6 +4996,12 @@
           <i data-lucide="chef-hat"></i>
           <span>Écran cuisine</span>
           <span class="count" id="kds-count">0</span>
+        </button>
+
+        <button class="team-trigger" id="open-kitchen-print" data-action="printer-connect" aria-label="Impression cuisine">
+          <i data-lucide="printer"></i>
+          <span>Impression cuisine</span>
+          <span class="count" id="kitchen-print-count" aria-label="État de l’impression">—</span>
         </button>
 
         <button class="team-trigger" id="open-stock" aria-label="Stock et approvisionnement">
@@ -9460,8 +9467,11 @@
       lines.forEach((l) => { l.sent = true; });
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
-      printKitchenTickets(order, items);
+      /* Le relais donne immédiatement au bon son identifiant canonique. La file
+         papier l'utilise ensuite comme clé d'idempotence : l'écho du serveur ou
+         un rechargement ne peut donc pas réimprimer le même plat. */
       relayToKitchen(order);
+      printKitchenTickets(order, items);
       try { persistShift(); } catch (_) {}
       return order;
     }
@@ -14636,12 +14646,12 @@
      *
      * Silencieux sans imprimante : l'écran cuisine reste le chemin nominal, le
      * papier est un plus, jamais une condition d'envoi. */
-    function printKitchenTickets(order, items) {
+    function printKitchenTickets(order, items, options) {
       try {
         const KP = window.KiwiPrinter;
-        if (!KP || !KP.printKitchen) return;
-        if (!(KP.isConnected ? KP.isConnected() : (KP.isConfigured && KP.isConfigured()))) return;
-        const time = pad2HO(order.sentAt.getHours()) + ':' + pad2HO(order.sentAt.getMinutes());
+        const sentAt = order.sentAt instanceof Date ? order.sentAt : new Date(order.sentAt || Date.now());
+        const jobAt = new Date((options && options.createdAt) || sentAt);
+        const time = pad2HO(sentAt.getHours()) + ':' + pad2HO(sentAt.getMinutes());
         const fallback = kdsStationFor(null);
         const byStation = new Map();
         (items || []).forEach((it) => {
@@ -14655,13 +14665,27 @@
         const names = {};
         list.forEach((s) => { names[s.id] = s.name; });
         const rank = (id) => { const i = list.findIndex(s => s.id === id); return i < 0 ? 999 : i; };
-        // L'ordre des bons suit celui des postes du patron, pas celui du panier.
-        Array.from(byStation.keys()).sort((a, b) => rank(a) - rank(b))
-          .reduce((chain, sid) => chain.then(() => Promise.resolve(KP.printKitchen({
+        const sourceId = String((options && options.sourceId) || order.opId
+          || `local-${order.num}-${sentAt.getTime()}`);
+        const plan = Array.from(byStation.keys()).sort((a, b) => rank(a) - rank(b)).map((sid) => ({
+          id: `${sourceId}:${sid}`,
+          createdAt: jobAt.getTime(),
+          payload: {
             title: String(names[sid] || 'Cuisine').toUpperCase(),
-            order: '#' + order.num, time: time,
+            order: '#' + (order.opNum != null ? order.opNum : order.num), time: time,
             items: byStation.get(sid),
-          })).catch(() => {})), Promise.resolve());
+          },
+        }));
+        /* Le chemin normal est durable, réessayable et dédupliqué. Le repli
+           garde les anciennes caisses fonctionnelles si le nouveau module ne
+           s'est pas chargé, mais il ne ment plus sur un échec d'impression. */
+        if (window.KiwiKitchenPrint && KiwiKitchenPrint.enqueue) {
+          return KiwiKitchenPrint.enqueue(plan, { remote: !!(options && options.remote) });
+        }
+        if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
+        return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload)).then((result) => {
+          if (!result || !result.ok) toast('Ticket cuisine non imprimé', 5200, 'warn', 'Vérifiez l’imprimante puis réimprimez le bon.');
+        })), Promise.resolve());
       } catch (_) {}
     }
 
@@ -14680,9 +14704,12 @@
         paid: false, pickedUp: false, pickedUpAt: null, total: total,
       };
       kdsOrders.push(order);
-      printKitchenTickets(order, items);
-      // …et sur la tablette de la cuisine, qui n'a pas d'imprimante.
       relayToKitchen(order);
+      printKitchenTickets(order, items);
+      /* Même garantie que pour une table : si le navigateur redémarre juste
+         après l'envoi, le board À emporter et la clé d'impression restent. */
+      try { persistShift(); } catch (_) {}
+      // …et sur la tablette de la cuisine, qui n'a pas d'imprimante.
       const count = cart.reduce((s, l) => s + l.qty, 0);
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -15172,6 +15199,13 @@
         };
         kdsOrders.push(t);
         opTickets.set(o.id, t);
+        /* Un seul poste, choisi comme hub d'impression, reçoit les bons saisis
+           sur le téléphone serveur, une autre caisse ou OrderPro. Les bons en
+           attente ne passent jamais ici ; les prêts/servis retrouvés après un
+           redémarrage ne ressortent pas non plus. */
+        if (o.status === 'accepted') printKitchenTickets(t, t.items, {
+          remote: true, sourceId: o.id, createdAt: o.updated_ts || o.created_ts,
+        });
         return;
       } else {
         /* Après un rechargement, un ancien instantané peut ne pas avoir gardé
@@ -15211,7 +15245,15 @@
       if (o.status === 'served' && !known.pickedUp) {
         known.pickedUp = true; known.pickedUpAt = known.pickedUpAt || kdsNowHM();
       }
-      if (o.status === 'accepted' && known.status === 'held') known.status = 'new';
+      if (o.status === 'accepted' && known.status === 'held') {
+        known.status = 'new';
+        /* Une commande OrderPro à emporter existe localement en `held` pendant
+           l'attente du paiement. Son passage à accepted ne recrée donc pas le
+           ticket dans la branche !known : il faut lancer le papier ici. */
+        printKitchenTickets(known, known.items, {
+          remote: true, sourceId: o.id, createdAt: o.updated_ts || Date.now(),
+        });
+      }
       if (o.paid && !known.paid) known.paid = true;
       if (o.server && !known.server) known.server = o.server;
     }

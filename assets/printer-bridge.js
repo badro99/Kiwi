@@ -160,7 +160,10 @@
     var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 20 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
-  function setConfig(cfg) { set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {}))); }
+  function setConfig(cfg) {
+    set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {})));
+    try { window.dispatchEvent(new CustomEvent('kiwi:printer-config')); } catch (_) {}
+  }
   function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter); }
 
   // ── bridge transport ───────────────────────────────────────────────────────
@@ -769,6 +772,9 @@
       '.kpr-bt{border:1.5px solid rgba(11,110,79,.25);border-radius:14px;padding:15px 16px;margin:0 0 14px;background:rgba(11,110,79,.045);}' +
       '.kpr-bt h3{margin:0 0 3px;font-size:1rem;}' +
       '.kpr-bt>p{margin:0 0 12px;font-size:.82rem;opacity:.7;line-height:1.45;}' +
+      '.kpr-hub{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1px solid rgba(11,110,79,.22);border-radius:12px;background:var(--surface,#fff);cursor:pointer;}' +
+      '.kpr-hub input{width:19px;height:19px;margin:1px 0 0;accent-color:var(--atlas,#0B6E4F);flex:none;}' +
+      '.kpr-hub span{display:grid;gap:3px;line-height:1.35;}.kpr-hub b{font-size:.88rem;}.kpr-hub small{font-size:.76rem;opacity:.68;}' +
       '.kpr-btc{width:100%;font:inherit;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;border:0;background:var(--atlas,#0B6E4F);color:#fff;}' +
       '.kpr-btc:hover{filter:brightness(1.06);}.kpr-btc:disabled{opacity:.5;cursor:default;}' +
       '.kpr-adv{margin-top:8px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px;}' +
@@ -832,6 +838,12 @@
           '<button class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
+        (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
+          '<h3>Tickets cuisine automatiques</h3>' +
+          '<p>Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app serveur et les autres terminaux. Activez cette option sur un seul ordinateur par restaurant.</p>' +
+          '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
+            '<span><b>Faire de ce poste le hub d’impression</b><small id="kpr-hub-status"></small></span></label>' +
+        '</div>' : '') +
         /* Printers the till already has. Hidden until the bridge answers with a
          * non-empty list — on a tablet, or with no bridge, an empty box that
          * never fills is worse than no box. Populated in the ping handler. */
@@ -884,6 +896,21 @@
     }
     function close() { ov.remove(); }
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
+    function paintHubStatus() {
+      var el = $('#kpr-hub-status');
+      if (!el || !window.KiwiKitchenPrint) return;
+      var s = KiwiKitchenPrint.status();
+      el.textContent = s.pending
+        ? s.pending + ' ticket' + (s.pending > 1 ? 's' : '') + ' en attente · nouvelle tentative automatique'
+        : (s.hub ? (s.printerReady ? 'Prêt · aucune impression en attente' : 'Hub actif · connectez une imprimante') : 'Les commandes de ce poste continuent à s’imprimer localement.');
+    }
+    var hub = $('#kpr-hub');
+    if (hub) hub.addEventListener('change', function () {
+      KiwiKitchenPrint.setHub(this.checked);
+      paintHubStatus();
+      toast(this.checked ? 'Hub d’impression cuisine activé' : 'Hub d’impression désactivé');
+    });
+    paintHubStatus();
 
     /* Fill the "already installed" picker from the bridge. Older bridges (< 1.2)
      * have no /kiwi/printers and 404 — the section simply stays hidden, so an
