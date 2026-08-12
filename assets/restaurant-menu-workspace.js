@@ -16,16 +16,30 @@
   const ic=(n)=>svg(icons[n]||icons.menu);
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
   function tabs(){const n=D().items.filter(x=>x.avail===false).length;return [['menu','Menu & modificateurs','menu'],['stations','Postes de préparation','station'],['recipes','Recettes','book'],['performance','Performance','chart'],['hours','Heures de pointe','clock'],['alerts','Alertes 86','alert'],['nfc','Tags NFC','tag']].map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${l}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');}
-  let readyTimer=0;
+  let readyTimer=0,readyTries=0;
   function show(forceRestaurantRoute=false){
     if(!forceRestaurantRoute&&!isRestaurant())return false;
     window.Kiwi?.pageShell?.('menu');document.body.classList.add('page-menu');$$('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.nav==='menu'));const bc=$('.breadcrumb');if(bc)bc.innerHTML='Accueil <span class="sep">/</span> <b>Menu &amp; modificateurs</b>';
     const root=$('[data-menu-root]');if(root)root.hidden=false;
     if(!S()||!isRestaurant()){
       if(root)root.innerHTML='<div class="mi-head"><div><div class="mi-title">Menu &amp; modificateurs</div><div class="mi-sub">Chargement du menu…</div></div></div>';
-      clearTimeout(readyTimer);readyTimer=setTimeout(()=>show(true),50);return true;
+      clearTimeout(readyTimer);
+      /* On retry we pass forceRestaurantRoute, which skips the guard at the top —
+       * so this tick repaints the whole page shell. Two conditions, both
+       * load-bearing, keep that from becoming a hijack:
+       *   · abort if the shell is no longer 'menu'. Without it, a merchant who
+       *     clicks Accueil while the store is still hydrating gets dragged back
+       *     to the menu 50 ms later, and again, and again.
+       *   · give up after ~5 s. isRestaurant() is a four-value whitelist, so a
+       *     boutique or a pressing never satisfies it and the loop would run for
+       *     the life of the tab.
+       * Giving up is safe: boot() keeps retrying until the store lands and then
+       * re-calls show() if we're still on the menu. */
+      if(readyTries++>100){readyTries=0;if(!isRestaurant()&&legacyMenuHandler){legacyMenuHandler();}return true;}
+      readyTimer=setTimeout(()=>{if(document.body.classList.contains('page-menu'))show(true);},50);
+      return true;
     }
-    clearTimeout(readyTimer);render();return true;
+    clearTimeout(readyTimer);readyTries=0;render();return true;
   }
   function render(){if(!isRestaurant())return;const root=$('[data-menu-root]');if(!root)return;const d=D(),v=window.KiwiVenue?.getCurrentVenueData?.()||{};root.hidden=false;root.innerHTML=`<div class="mi-head"><div><div class="mi-title">Menu &amp; modificateurs</div><div class="mi-sub">${d.items.length} article${d.items.length!==1?'s':''} · ${d.cats.length} section${d.cats.length!==1?'s':''} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="mx-import">Importer Excel</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));}
   function panel(){return ({stations:stationsPanel,recipes:recipesPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
