@@ -752,6 +752,7 @@ section('Whole-project regressions');
 {
   const { spawnSync } = require('child_process');
   const suites = [
+    'channel-percentage-test.mjs',
     'check-godmode.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',

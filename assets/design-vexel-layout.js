@@ -599,7 +599,11 @@
     /* L'arc porte la part du canal dans le total de la période. Sans part
      * connue il reste vide — un anneau plein par défaut mentirait. */
     var dash = empty ? 0 : Math.max(0, Math.min(1, share)) * circumference;
-    var pct = empty ? '—' : Math.round(share * 100) + ' %';
+    /* A channel ring is always a percentage scale. Even before a breakdown is
+     * available, showing 0 % is more legible than changing the unit into a
+     * dash. The subtitle still states that the breakdown is unavailable, so
+     * zero never masquerades as measured channel data. */
+    var pct = Math.round((empty ? 0 : share) * 100) + ' %';
     return '<div class="vexel-ring-item' + (empty ? ' is-empty' : '') + '">' +
       '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true"><circle class="track" cx="55" cy="55" r="' + radius + '"/>' +
       '<circle class="value ' + tone + '" cx="55" cy="55" r="' + radius + '" data-dash="' + dash.toFixed(1) + '" stroke-dasharray="0 ' + circumference.toFixed(1) + '" transform="rotate(-90 55 55)"/>' +
