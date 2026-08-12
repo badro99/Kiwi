@@ -754,6 +754,7 @@ section('Whole-project regressions');
   const suites = [
     'dashboard-analytics-toggle-test.mjs',
     'channel-percentage-test.mjs',
+    'dashboard-card-truth-test.mjs',
     'check-godmode.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',

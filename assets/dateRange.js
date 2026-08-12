@@ -1683,6 +1683,22 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
+  /* Keep tender attribution deliberately conservative. A value the ledger does
+   * not identify is "other", never a bank card; customer credit and delivery
+   * receivables are not collected money and therefore stay out of the payment
+   * donut entirely. */
+  function tenderBucket(method) {
+    const m = String(method || '').trim().toLowerCase();
+    if (['cash', 'especes', 'espèces'].includes(m)) return 'cash';
+    if (['card', 'carte', 'visa', 'mc', 'mastercard'].includes(m)) return 'card';
+    if (m === 'tap') return 'tap';
+    if (['qr', 'wallet'].includes(m)) return 'qr';
+    if (m === 'link') return 'link';
+    if (['virement', 'transfer', 'bank_transfer'].includes(m)) return 'transfer';
+    if (['split', 'partage', 'partagé'].includes(m)) return 'split';
+    if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(m)) return null;
+    return 'other';
+  }
   /* Same numbers over an EXPLICIT window, plus the tender split. Every
    * real-venue comparison below is built on this one primitive so the KPI
    * band, the hero deltas and the card/cash tile can never disagree. */
@@ -1693,7 +1709,9 @@
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       revenue += amt; count++;
-      if (String(e.method || 'card') === 'cash') cash += amt; else card += amt;
+      const tender = tenderBucket(e.method);
+      if (tender === 'cash') cash += amt;
+      if (tender === 'card' || tender === 'tap') card += amt;
     });
     return { revenue, count, basket: count ? revenue / count : 0, card, cash };
   }
@@ -3377,6 +3395,9 @@
     { key: 'tap',  color: '#7DF2B0', fr: 'Kiwi Tap',         en: 'Kiwi Tap',     ar: 'Kiwi Tap' },
     { key: 'qr',   color: '#D99A2B', fr: 'QR / Wallet',      en: 'QR / Wallet',  ar: 'QR / محفظة' },
     { key: 'link', color: '#B08CC8', fr: 'Lien de paiement', en: 'Payment link', ar: 'رابط الدفع' },
+    { key: 'transfer', color: 'var(--n-500)', fr: 'Virement', en: 'Bank transfer', ar: 'تحويل بنكي' },
+    { key: 'split', color: 'var(--n-700)', fr: 'Paiement partagé', en: 'Split payment', ar: 'دفع مقسّم' },
+    { key: 'other', color: 'var(--n-300)', fr: 'Autre mode', en: 'Other tender', ar: 'طريقة أخرى' },
   ];
   const MIX_EMPTY = {
     fr: 'Aucun encaissement sur la période',
@@ -3400,9 +3421,8 @@
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       if (!amt) return;
-      let k = String((e && e.method) || 'card');
-      if (k === 'wallet') k = 'qr';                             // même rail côté client
-      if (!REAL_MIX.some((m) => m.key === k)) k = 'card';       // mode inconnu → carte, jamais une tranche fantôme
+      const k = tenderBucket(e && e.method);
+      if (!k) return; // crédit client / créance livraison ≠ argent encaissé
       by[k] = (by[k] || 0) + amt;
       total += amt;
     });
@@ -3982,10 +4002,24 @@
     en: { sub: 'No sales recorded', msg: 'Your best sellers will appear here after the first order.' },
     ar: { sub: 'لا مبيعات مسجّلة', msg: 'ستظهر أفضل مبيعاتك هنا بعد أوّل طلب.' },
   };
-  /* ── Stock à recommander · boutique réelle ──────────────────────────────
-   * Le seuil reprend celui de boutique-catalog.stats() (0 = rupture, ≤ 5 = bas).
-   * Les deux doivent bouger ensemble : sinon l'Inventaire annonce « 1 stock bas »
-   * pendant que l'accueil jure n'avoir rien à recommander. */
+  const PRODUCTS_COVERAGE = {
+    fr: (items, covered, total) => `${items} article${items > 1 ? 's' : ''} · détail disponible sur ${covered}/${total} vente${total > 1 ? 's' : ''}`,
+    en: (items, covered, total) => `${items} item${items > 1 ? 's' : ''} · line detail available for ${covered}/${total} sale${total > 1 ? 's' : ''}`,
+    ar: (items, covered, total) => `${items} منتج · تفاصيل ${covered}/${total} عملية بيع متاحة`,
+  };
+  const PRODUCTS_NO_LINES = {
+    fr: (n) => `Aucune ligne article enregistrée dans ${n} vente${n > 1 ? 's' : ''}. Les totaux restent exacts, mais Kiwi ne peut pas classer les produits.`,
+    en: (n) => `No item lines were recorded in ${n} sale${n > 1 ? 's' : ''}. Totals remain accurate, but Kiwi cannot rank products.`,
+    ar: (n) => `لا توجد تفاصيل منتجات في ${n} عملية بيع. الإجماليات صحيحة، لكن لا يمكن ترتيب المنتجات.`,
+  };
+  const PRODUCT_SOLD = {
+    fr: (n) => `${n} vendu${n > 1 ? 's' : ''}`,
+    en: (n) => `${n} sold`,
+    ar: (n) => `${n} مبيع`,
+  };
+  /* ── Stock à recommander · inventaire réel ───────────────────────────────
+   * Boutique and restaurant use different stores and different thresholds;
+   * both adapters return the same small, auditable shape to the card. */
   const LOW_STOCK_SEUIL = 5;
   const STOCK_TITLE_STR = { fr: 'Stock à recommander', en: 'Stock to reorder', ar: 'مخزون لإعادة الطلب' };
   const RUPTURE_STR = { fr: 'Rupture · à racheter', en: 'Out of stock · reorder', ar: 'نفد المخزون · أعد الطلب' };
@@ -4000,37 +4034,72 @@
     ar: (n) => `${n} منتج تحت العتبة`,
   };
   const STOCK_OK_STR = {
-    fr: (n, s) => `Rien à racheter : vos ${n} article${n > 1 ? 's sont tous' : ' est'} au-dessus de ${s} unités.`,
-    en: (n, s) => `Nothing to reorder: all ${n} item${n > 1 ? 's are' : ' is'} above ${s} units.`,
-    ar: (n, s) => `لا شيء لإعادة طلبه: ${n} منتج فوق ${s} وحدة.`,
+    fr: (n) => `Rien à recommander : ${n} article${n > 1 ? 's sont' : ' est'} au-dessus de son seuil configuré.`,
+    en: (n) => `Nothing to reorder: ${n} item${n > 1 ? 's are' : ' is'} above its configured threshold.`,
+    ar: (n) => `لا شيء لإعادة طلبه: ${n} منتج فوق العتبة المحددة.`,
+  };
+  const STOCK_NO_THRESHOLDS = {
+    fr: (n) => `${n} article${n > 1 ? 's sont suivis' : ' est suivi'}, mais aucun seuil de réapprovisionnement n’est configuré.`,
+    en: (n) => `${n} item${n > 1 ? 's are' : ' is'} tracked, but no reorder threshold is configured.`,
+    ar: (n) => `يتم تتبع ${n} منتج، لكن لم يتم تحديد عتبة إعادة الطلب.`,
   };
   /* Les noms d'articles sont saisis par le commerçant : ils passent par du HTML,
    * donc ils s'échappent. dateRange.js n'avait pas d'esc() — les autres listes
    * n'affichent que des libellés de démo. */
   const escTxt = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  /* Une vraie boutique a un catalogue, donc la carte peut dire quoi racheter.
-   * Avant, renderProducts faisait `isCustom ? []` et TOUT commerçant tombait sur
-   * « dès que vous suivez vos articles » — y compris celui qui en suivait un, à
-   * 5 unités, déjà sous le seuil. null = catalogue vide ou absent : le message
-   * d'origine redevient le bon. Le catalogue démarre sur la venue de démo, d'où
-   * le bind sur la clé canonique (même chemin que le coût matière). */
   function realLowStock() {
     try {
-      if (window.KiwiVenue?.getVenueType?.() !== 'boutique') return null;
-      const cat = window.KiwiBoutiqueCatalog;
-      if (!cat) return null;
-      const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
-      if (key) cat.use(key);
-      const prods = cat.listProducts() || [];
-      if (!prods.length) return null;
-      const rows = prods
-        .map((p) => ({ name: p.name, stock: cat.productStock(p.id) }))
-        .filter((r) => r.stock <= LOW_STOCK_SEUIL)
-        .sort((a, b) => a.stock - b.stock)
-        .slice(0, 5);
-      return { rows, tracked: prods.length };
+      const type = window.KiwiVenue?.getVenueType?.();
+      if (type === 'restaurant' && window.KiwiRestaurantStock?.items) {
+        const items = window.KiwiRestaurantStock.items() || [];
+        if (!items.length) return null;
+        const configured = items.filter((it) => Number(it.reorderLevel) > 0);
+        const rows = configured.map((it) => {
+          const stock = Math.max(0, Number(it.currentStock) || 0);
+          const threshold = Math.max(0, Number(it.reorderLevel) || 0);
+          const par = Math.max(threshold, Number(it.parLevel) || threshold);
+          const suggested = Math.max(0, Math.round((par * 1.2 - stock) * 10) / 10);
+          return { id: it.id, name: it.name, stock, threshold, par, suggested,
+            unit: it.unit || 'unité', cost: Math.max(0, Number(it.costPerUnit) || 0) };
+        }).filter((r) => r.stock < r.threshold)
+          .sort((a, b) => (a.stock / a.threshold) - (b.stock / b.threshold))
+          .slice(0, 5);
+        return { rows, tracked: items.length, configured: configured.length, source: 'restaurant' };
+      }
+      if (type === 'boutique') {
+        const cat = window.KiwiBoutiqueCatalog;
+        if (!cat) return null;
+        const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
+        if (key) cat.use(key);
+        const prods = cat.listProducts() || [];
+        if (!prods.length) return null;
+        const rows = prods.map((p) => ({ id: p.id, name: p.name, stock: cat.productStock(p.id), threshold: LOW_STOCK_SEUIL }))
+          .filter((r) => r.stock <= LOW_STOCK_SEUIL).sort((a, b) => a.stock - b.stock).slice(0, 5);
+        return { rows, tracked: prods.length, configured: prods.length, source: 'boutique' };
+      }
     } catch (_) { return null; }
+    return null;
+  }
+
+  function realTopProducts(range) {
+    const [from, to] = rangeBounds(range || effRange());
+    const sales = realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
+    const by = new Map(); let covered = 0;
+    sales.forEach((sale) => {
+      const lines = Array.isArray(sale.lines) ? sale.lines.filter((l) => l && l.name && (+l.qty || 0) > 0) : [];
+      if (!lines.length) return;
+      covered++;
+      lines.forEach((line) => {
+        const key = String(line.itemId || line.variantId || line.name).trim().toLowerCase();
+        const qty = Math.max(0, Number(line.qty) || 0);
+        const revenue = Math.max(0, Number(line.total) || ((Number(line.price) || 0) * qty));
+        const row = by.get(key) || { name: line.name, qty: 0, revenue: 0 };
+        row.qty += qty; row.revenue += revenue; by.set(key, row);
+      });
+    });
+    const rows = [...by.values()].sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 5);
+    return { rows, sales: sales.length, covered };
   }
 
   const STAFF_ONDUTY_STR = {
@@ -4154,13 +4223,48 @@
     if (!el) return;
     if (_eveningOrig == null) _eveningOrig = el['inner' + 'HTML'];
     if (ownData()) {
-      const t = tradeStr('eveningEmpty', EVENING_EMPTY[getLang()] || EVENING_EMPTY.fr);
-      el['inner' + 'HTML'] =
-        `<div class="lbl">${t.lbl}</div>` +
-        `<div style="padding:28px 4px 8px;text-align:center;">` +
-        `<div style="font-size:14px;font-weight:600;color:var(--ink);">${t.head}</div>` +
-        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${t.msg}</div>` +
-        `</div>`;
+      const lang = getLang();
+      const t = tradeStr('eveningEmpty', EVENING_EMPTY[lang] || EVENING_EMPTY.fr);
+      let doc = null;
+      try { doc = window.KiwiReservations?.get?.(); } catch (_) {}
+      const now = Date.now(), start = dayStartMs(now), end = start + 864e5;
+      const active = doc && Array.isArray(doc.bookings) ? doc.bookings.filter((b) =>
+        ['requested', 'confirmed', 'checked_in'].includes(b.status) && +b.startAt >= start && +b.startAt < end && +b.endAt >= now
+      ).sort((a, b) => +a.startAt - +b.startAt) : [];
+      if (active.length) {
+        const covers = active.reduce((n, b) => n + Math.max(1, +b.partySize || 1), 0);
+        const resource = new Map((doc.resources || []).map((r) => [String(r.id), r.name]));
+        const labels = {
+          fr: { lbl: 'RÉSERVATIONS À VENIR · AUJOURD’HUI', unit: 'couverts', sub: (n) => `${n} réservation${n > 1 ? 's actives' : ' active'}`, pending: 'À confirmer', confirmed: 'Confirmée', checked_in: 'Arrivé', open: 'Ouvrir Réservations', more: (n) => `+${n} autre${n > 1 ? 's' : ''}` },
+          en: { lbl: 'UPCOMING BOOKINGS · TODAY', unit: 'guests', sub: (n) => `${n} active booking${n > 1 ? 's' : ''}`, pending: 'Pending', confirmed: 'Confirmed', checked_in: 'Checked in', open: 'Open Reservations', more: (n) => `+${n} more` },
+          ar: { lbl: 'الحجوزات القادمة · اليوم', unit: 'ضيف', sub: (n) => `${n} حجوزات نشطة`, pending: 'في انتظار التأكيد', confirmed: 'مؤكد', checked_in: 'وصل', open: 'فتح الحجوزات', more: (n) => `+${n} أخرى` },
+        }[lang] || null;
+        const L = labels || { lbl: 'RÉSERVATIONS À VENIR · AUJOURD’HUI', unit: 'couverts', sub: (n) => `${n} réservations actives`, pending: 'À confirmer', confirmed: 'Confirmée', checked_in: 'Arrivé', open: 'Ouvrir Réservations', more: (n) => `+${n} autres` };
+        el['inner' + 'HTML'] = `<div class="lbl">${L.lbl}</div>` +
+          `<div class="big">${covers} <span style="font-size:.42em;opacity:.72;">${L.unit}</span></div>` +
+          `<div class="sub">${L.sub(active.length)}</div>` +
+          `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--inverse-line);display:flex;flex-direction:column;gap:9px;">` +
+          active.slice(0, 3).map((b) => {
+            const status = b.status === 'requested' ? L.pending : (L[b.status] || L.confirmed);
+            const at = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(+b.startAt));
+            const place = resource.get(String(b.resourceId));
+            return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:center;font-size:12px;">` +
+              `<span style="font-family:var(--mono);color:var(--mint);font-weight:600;">${escTxt(at)}</span>` +
+              `<div style="min-width:0;"><div style="font-weight:600;color:var(--inverse-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escTxt(b.customer?.name)}</div>` +
+              `<div style="color:var(--n-300);margin-top:1px;">${Math.max(1, +b.partySize || 1)} ${L.unit}${place ? ` · ${escTxt(place)}` : ''}</div></div>` +
+              `<span style="font-size:10px;color:var(--n-300);">${status}</span></div>`;
+          }).join('') + `</div>` +
+          `<div class="instant" data-action="nav-reservations"><div class="ico"><img src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" style="width:16px;height:16px;filter:brightness(0) invert(1);"></div>` +
+          `<div style="font-weight:500;">${L.open}</div><div class="cost">${active.length > 3 ? L.more(active.length - 3) : ''}</div></div>`;
+      } else {
+        const configured = !!(doc && doc.settings && doc.services?.length && doc.resources?.length);
+        const head = configured ? t.head : ({ fr: 'Réservations non configurées', en: 'Bookings not configured', ar: 'الحجوزات غير مهيأة' }[lang]);
+        const msg = configured ? t.msg : ({ fr: 'Ajoutez vos tables et vos horaires pour recevoir des réservations.', en: 'Add tables and opening hours to accept bookings.', ar: 'أضف الطاولات وساعات العمل لاستقبال الحجوزات.' }[lang]);
+        el['inner' + 'HTML'] = `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
+          `<div style="font-size:14px;font-weight:600;color:var(--inverse-ink);">${head}</div>` +
+          `<div style="font-size:12px;color:var(--n-300);margin-top:6px;line-height:1.5;">${msg}</div></div>` +
+          `<div class="instant" data-action="nav-reservations"><div style="font-weight:500;">${lang === 'en' ? 'Open Reservations' : lang === 'ar' ? 'فتح الحجوزات' : 'Ouvrir Réservations'}</div></div>`;
+      }
     } else if (el['inner' + 'HTML'] !== _eveningOrig) {
       el['inner' + 'HTML'] = _eveningOrig;
     }
@@ -4193,12 +4297,14 @@
               `<div style="font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;` +
               `text-overflow:ellipsis;white-space:nowrap;">${escTxt(r.name)}</div>` +
               `<div style="font-size:11.5px;margin-top:2px;color:${dead ? 'var(--danger)' : 'var(--n-500)'};">` +
-              `${dead ? (RUPTURE_STR[lang] || RUPTURE_STR.fr) : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>` +
+              `${dead ? (RUPTURE_STR[lang] || RUPTURE_STR.fr) : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(r.threshold)}</div>` +
               `</div>` +
-              `<div style="font-family:var(--mono);font-size:15px;font-weight:600;` +
-              `color:${dead ? 'var(--danger)' : 'var(--ink)'};">${r.stock}</div>` +
+              `<div style="text-align:right;font-family:var(--mono);color:${dead ? 'var(--danger)' : 'var(--ink)'};">` +
+              `<div style="font-size:14px;font-weight:600;">${r.stock} ${escTxt(r.unit || '')}</div>` +
+              `${r.suggested ? `<div style="font-size:10.5px;color:var(--n-500);">+${r.suggested} ${escTxt(r.unit)}${r.cost ? ` · ${frInt(r.suggested * r.cost)} MAD` : ''}</div>` : ''}</div>` +
               `</div>`;
           }).join('');
+        el['inner' + 'HTML'] += `<a href="#" data-action="nav-stock" style="display:block;margin-top:12px;text-align:center;font-size:12.5px;color:var(--atlas);font-weight:600;">${lang === 'en' ? 'Open inventory & purchasing →' : lang === 'ar' ? 'فتح المخزون والمشتريات ←' : 'Ouvrir Stock & approvisionnement →'}</a>`;
         return;
       }
       el['inner' + 'HTML'] =
@@ -4206,7 +4312,7 @@
         `<div class="t">${t.title}</div></div></div>` +
         `<div style="padding:20px 4px 8px;text-align:center;">` +
         `<div style="font-size:13.5px;font-weight:600;color:var(--ink);">${t.head}</div>` +
-        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${t.msg}</div>` +
+        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${low && !low.configured ? (STOCK_NO_THRESHOLDS[lang] || STOCK_NO_THRESHOLDS.fr)(low.tracked) : low ? (STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked) : t.msg}</div>` +
         `</div>`;
     } else if (el['inner' + 'HTML'] !== _stockOrig) {
       el['inner' + 'HTML'] = _stockOrig;
@@ -4341,41 +4447,29 @@
     const isCustom = ownData();
     const data = isCustom ? [] : vData(productsByVenue, currentRange);
     const pe = tradeStr('productsEmpty', PRODUCTS_EMPTY[lang] || PRODUCTS_EMPTY.fr);
-    const lowEarly = isCustom ? realLowStock() : null;
+    const real = isCustom ? realTopProducts(effective) : null;
     const titleEl = document.querySelector('[data-products-title]');
-    /* Quand la carte liste ce qu'il faut racheter, elle doit le DIRE. Le titre
-     * retombait sur « Top articles » — l'en-tête des meilleures ventes — au-dessus
-     * d'une liste de stocks bas, soit exactement le contraire : une barre courte
-     * y veut dire « à racheter », pas « se vend mal ». */
-    if (titleEl) titleEl.textContent = (lowEarly && lowEarly.rows.length)
-      ? (STOCK_TITLE_STR[lang] || STOCK_TITLE_STR.fr)
-      : ((isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr);
+    if (titleEl) titleEl.textContent = (isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr;
     const manageEl = document.querySelector('[data-products-manage]');
     if (manageEl) manageEl.textContent = (isCustom && pe.manage) || PRODUCTS_MANAGE[lang] || PRODUCTS_MANAGE.fr;
     const list = document.querySelector('[data-products-list]');
     const card = list?.closest('.block');
-    const low = lowEarly;
-    if (list && low && low.rows.length) {
-      /* Le rang est le degré d'urgence : rupture d'abord, puis le stock le plus
-       * faible. La barre se lit « ce qu'il reste sur le seuil », donc une barre
-       * courte = à racheter — l'inverse des meilleures ventes, où longue = bien. */
-      const cap = Math.max(LOW_STOCK_SEUIL, ...low.rows.map((r) => r.stock));
-      list.innerHTML = low.rows.map((r, i) => `
+    if (list && real && real.rows.length) {
+      const cap = Math.max(1, ...real.rows.map((r) => r.qty));
+      list.innerHTML = real.rows.map((r, i) => `
         <div class="prod-row" style="--i:${i};">
-          <div class="rank${r.stock === 0 ? ' top' : ''}">${i + 1}</div>
+          <div class="rank${i === 0 ? ' top' : ''}">${i + 1}</div>
           <div class="info">
             <div class="n">${escTxt(r.name)}</div>
-            <div class="r">${r.stock === 0 ? RUPTURE_STR[lang] || RUPTURE_STR.fr : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>
+            <div class="r">${frInt(r.revenue)} MAD</div>
           </div>
-          <div class="mini-bar"><div style="width: 0%;" data-grow="${Math.round((r.stock / cap) * 100)}%"></div></div>
-          <div class="sales">${r.stock}</div>
+          <div class="mini-bar"><div style="width: 0%;" data-grow="${Math.round((r.qty / cap) * 100)}%"></div></div>
+          <div class="sales">${(PRODUCT_SOLD[lang] || PRODUCT_SOLD.fr)(r.qty)}</div>
         </div>
       `).join('');
       growBars(list);
-    } else if (list && low) {
-      list.innerHTML = emptyListBody((STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked, LOW_STOCK_SEUIL));
     } else if (list && isCustom) {
-      list.innerHTML = emptyListBody(pe.msg);
+      list.innerHTML = emptyListBody(real && real.sales ? (PRODUCTS_NO_LINES[lang] || PRODUCTS_NO_LINES.fr)(real.sales) : pe.msg);
     } else if (list && data) {
       list.innerHTML = data.map((p, i) => `
         <div class="prod-row" style="--i:${i};">
@@ -4392,11 +4486,9 @@
     }
     if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.prod-row'));
     const sub = document.querySelector('[data-products-sub]');
-    if (sub) sub.textContent = (low && low.rows.length)
-      ? (STOCK_SUB_STR[lang] || STOCK_SUB_STR.fr)(low.rows.length)
-      : (isCustom
-        ? pe.sub
-        : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]));
+    if (sub) sub.textContent = isCustom
+      ? (real && real.rows.length ? (PRODUCTS_COVERAGE[lang] || PRODUCTS_COVERAGE.fr)(real.rows.length, real.covered, real.sales) : pe.sub)
+      : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]);
   }
 
   /* ═══════════════ RENDER: STAFF ═══════════════ */
@@ -4960,12 +5052,32 @@
           renderRevChart();
           renderFeed();
           renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
+          renderProducts();
         });
         return;
       }
       setTimeout(subSales, 30);
     };
     subSales();
+
+    /* Operational cards repaint from their own domain stores. Previously they
+     * only refreshed after a page reload, which made a truthful source look
+     * stale immediately after a booking or stock count. */
+    window.addEventListener('kiwi-reservations-changed', renderEvening);
+    window.addEventListener('kiwi-reservations-ready', renderEvening);
+    window.addEventListener('kiwi-stock-changed', renderStock);
+    window.addEventListener('kiwi-stock-ready', renderStock);
+    const subInventory = () => {
+      if (window.KiwiInventory?.subscribe) window.KiwiInventory.subscribe(() => renderStock());
+      else setTimeout(subInventory, 80);
+    };
+    subInventory();
+    const subCatalog = () => {
+      if (window.KiwiBoutiqueCatalog?.subscribe) {
+        window.KiwiBoutiqueCatalog.subscribe(() => { renderStock(); renderProducts(); });
+      } else setTimeout(subCatalog, 80);
+    };
+    subCatalog();
 
     // Re-fit hero amount + re-flow chart on viewport resize
     let resizeTimer = null;
@@ -5084,5 +5196,8 @@
     getDateRange, setDateRange, subscribe, tickLiveRevenue,
     getShowComparison, setShowComparison,
     bounds: (range) => rangeBounds(range || effRange()),
+    /* Small read-only surface for regression simulations. Production rendering
+     * uses these exact functions, so tests cannot pass against a parallel mock. */
+    _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock },
   };
 })();

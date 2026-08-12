@@ -184,11 +184,19 @@
     if (store) return store;
     if (!window.KiwiStore || !window.KiwiStore.define) return null;
     store = window.KiwiStore.define('reservations', { blank: blank, cloud: true, merge: merge, isEmpty: function (d) { d = normalize(d); return !d.services.length && !d.resources.length && !d.bookings.length; } });
-    store.subscribe(function (vid) { if (open && (!vid || vid === venueId())) render(); });
+    store.subscribe(function (vid) {
+      try { window.dispatchEvent(new CustomEvent('kiwi-reservations-changed', { detail: { venue: vid || venueId() } })); } catch (_) {}
+      if (open && (!vid || vid === venueId())) render();
+    });
     return store;
   }
   function get() { var s = S(); return normalize(s ? s.get(venueId()) : blank()); }
-  function set(doc) { doc = normalize(doc); if (S()) S().set(doc, venueId()); return doc; }
+  function set(doc) {
+    doc = normalize(doc);
+    if (S()) S().set(doc, venueId());
+    try { window.dispatchEvent(new CustomEvent('kiwi-reservations-changed', { detail: { venue: venueId() } })); } catch (_) {}
+    return doc;
+  }
   function service(doc, sid) { return doc.services.find(function (x) { return x.id === sid && x.active; }); }
   function resourceCandidates(doc, svc, rid, partySize) {
     var allowed = svc && svc.resourceIds && svc.resourceIds.length ? svc.resourceIds : null;
@@ -315,4 +323,5 @@
   document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.sidebar a[data-nav="reservations"]');if(!a)return;e.preventDefault();e.stopImmediatePropagation();render();},true);
   window.addEventListener('load',function(){setTimeout(function(){S();install();},420);window.KiwiVenue&&window.KiwiVenue.subscribe&&window.KiwiVenue.subscribe(function(){store=null;open=false;setTimeout(install,0);});window.addEventListener('kiwi:langchange',function(){if(open)render();});});
   window.KiwiReservations={blank:blank,normalize:normalize,merge:merge,validate:validate,resourceFree:resourceFree,chooseResource:chooseResource,staffingAllows:staffingAllows,restaurantTemplates:restaurantTemplates,floorPlanTemplateFrom:floorPlanTemplateFrom,templateSeats:templateSeats,get:get,set:set,render:render};
+  try { window.dispatchEvent(new CustomEvent('kiwi-reservations-ready')); } catch (_) {}
 }());

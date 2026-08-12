@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v384';
+var CACHE = 'kiwi-app-v385';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -85,13 +85,13 @@ var SHELL = [
   '/assets/venues.js?v=8',
   '/assets/trade-workspace-schema.js?v=3',
   '/assets/trade-workspaces.js?v=3',
-  '/assets/reservations.js?v=6',
+  '/assets/reservations.js?v=7',
   '/assets/pressing-ops.js?v=2',
   '/assets/pressing-garment-icons.js?v=1',
   '/assets/pressing-catalog.js?v=3',
   '/assets/pressing-dashboard.js?v=7',
   '/assets/demoClock.js',
-  '/assets/dateRange.js?v=5',
+  '/assets/dateRange.js?v=6',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',

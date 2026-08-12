@@ -685,6 +685,7 @@
         cats: stUserCategories, stockOv: stStockOverrides,
       }));
     } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
+    try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
     const c = stCloud();
     if (c) c.push();
   }
@@ -742,6 +743,7 @@
         stOverlayLoadedFor = null;
         try { stEnsureOverlay(); } catch (_) {}
         if (stPageActive) { try { render(); } catch (_) {} }
+        try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
       },
       merge: stMergeOverlay,
       /* Un commerçant qui n'a rien saisi porte quand même les huit champs
@@ -3236,6 +3238,7 @@
       return it ? theoreticalUsageFor(it) : 0;
     },
   };
+  try { window.dispatchEvent(new CustomEvent('kiwi-stock-ready')); } catch (_) {}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerHandlers);
