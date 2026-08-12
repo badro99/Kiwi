@@ -213,6 +213,39 @@
     return { byId, byName };
   }
 
+  /* ─────────────────────── le carnet des fiches ─────────────────────── */
+  function recipeNameIndex(d) {
+    const by = new Map();
+    Object.keys((d && d.recipes) || {}).forEach((id) => {
+      const n = norm(d.recipes[id] && d.recipes[id].name);
+      if (n && !by.has(n)) by.set(n, String(id));
+    });
+    return by;
+  }
+
+  /* IDENTITÉ RETROUVÉE POUR UNE LIGNE QUI N'EN A PAS.
+   * Une part d'addition partagée, une vente d'avant la phase 5, une ligne
+   * saisie au libellé libre : le ticket ne porte que le nom du plat. Le grand
+   * livre repêche déjà exactement ce cas (inventory-consumption.js ·
+   * recipeByName) et sort la marchandise ; sans le même repêchage ici, le
+   * stock bougeait mais la marge restait vide — chez un restaurant dont toute
+   * la carte est chiffrée en fiches techniques, 94 % du chiffre d'affaires
+   * ressortait « non chiffré ».
+   * Ce repli ne se déclenche QUE quand l'identifiant est absent : quand une
+   * identité stable existe, elle reste souveraine (deux produits peuvent
+   * porter le même nom, et un renommage ne doit pas réécrire la marge passée). */
+  function aliasOf(name, d, ctx) {
+    const n = norm(name);
+    if (!n) return '';
+    const menu = (ctx && ctx.menu) || menuIndex();
+    const hit = menu.byName.get(n);
+    if (hit && hit.id) return String(hit.id);
+    const rx = ctx
+      ? (ctx.recipeByName || (ctx.recipeByName = recipeNameIndex(d)))
+      : recipeNameIndex(d);
+    return rx.get(n) || '';
+  }
+
   /* ═════════════════════════════ of() ═════════════════════════════
    * ref = { kind:'menu'|'shop'|'', id, name }
    * Rend { mad, src, at } — `mad` null quand rien n'est connu. */
@@ -220,9 +253,10 @@
     const r = ref || {};
     const d = ctx && ctx.doc ? ctx.doc : store.get();
     const id = r.id ? String(r.id) : '';
+    const key = id || aliasOf(r.name, d, ctx);
 
     // 1 · fiche technique (phase 6 — le crochet existe, le moteur viendra)
-    const rec = id && d.recipes ? d.recipes[id] : null;
+    const rec = key && d.recipes ? d.recipes[key] : null;
     if (rec && rec.status === 'complete') {
       const c = recipeCost(rec, d);
       if (c != null) return { mad: r2(c), src: 'recipe', at: +rec.at || 0 };
@@ -237,7 +271,7 @@
     }
 
     // 3 · le coût forfaitaire, tapé par le patron dans sa carte
-    let flat = id && d.items ? d.items[id] : null;
+    let flat = key && d.items ? d.items[key] : null;
     if (!flat && r.name) {
       /* Repli par NOM. Une vente d'avant la phase 5 ne porte pas l'identifiant
        * de l'article — seulement son libellé. Sans ce repli, un commerçant qui

@@ -13,7 +13,12 @@ ok(/offline-wait-required/.test(ops),'uploads refuse false offline success');
 ok(/KIWI_OSRM_ENDPOINT/.test(ops),'routing endpoint is configurable for production hosting');
 ok(/enrichUnknown\(code\)/.test(scan)&&/KiwiPlatformOps/.test(scan),'unknown scans request product truth');
 ok(/KiwiPlatformOps\s*&&\s*window\.KiwiPlatformOps\.uploads/.test(publish),'catalog media uses the resilient upload adapter');
-ok(/kiwi-app-v373/.test(sw),'service worker cache was advanced');
+/* Un plancher, pas une épingle. Épingler le numéro exact fait échouer le
+ * prochain correctif légitime pour la seule raison qu'il a fait son travail —
+ * bumper le cache. On garde la garantie qui compte : le cache existe et ne
+ * redescend jamais sous la version livrée quand ce contrôle a été écrit. */
+const swCache=+(sw.match(/kiwi-app-v(\d+)/)||[])[1];
+ok(Number.isFinite(swCache)&&swCache>=373,`service worker cache was advanced (kiwi-app-v${swCache} ≥ v373)`);
 ok(/dashboard-pwa\.js\?v=371/.test(pages[0])&&/caisse-pwa\.js\?v=371/.test(pages[1])&&/employee-live\.js\?v=371/.test(pages[2]),'all shells request the current service-worker bootstrap');
 ['platform-kernel.js?v=1','platform-ops.js?v=1','platform-ops.css?v=1'].forEach(asset=>ok(sw.includes(asset),`${asset} is available offline`));
 pages.forEach((page,i)=>ok(page.includes('platform-kernel.js?v=1')&&page.includes('platform-ops.js?v=1'),`operational shell ${i+1} loads the platform adapters`));
