@@ -202,6 +202,55 @@
     return interval ? (interval.end - interval.start) / 3600000 : 0;
   }
 
+  function clockFromMinutes(value) {
+    value = ((Math.round(value) % 1440) + 1440) % 1440;
+    return String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
+  }
+
+  function weekKey(day) {
+    const stamp = Date.parse(String(day || "") + "T12:00:00Z");
+    if (Number.isNaN(stamp)) return "";
+    const date = new Date(stamp);
+    const mondayOffset = (date.getUTCDay() + 6) % 7;
+    return new Date(stamp - mondayOffset * DAY_MS).toISOString().slice(0, 10);
+  }
+
+  /* Split the venue's real opening periods into a requested number of shifts.
+   * A lunch closure is never turned into paid time: every generated shift
+   * remains inside one recorded opening period. */
+  function openingSlots(periods, count) {
+    const spans = (Array.isArray(periods) ? periods : []).map((period) => {
+      const start = minutes(period && period.from);
+      let end = minutes(period && period.to);
+      if (start == null || end == null || start === end) return null;
+      if (end <= start) end += 1440;
+      return { start, end, duration:end - start };
+    }).filter(Boolean);
+    count = Math.max(1, Math.floor(Number(count) || 1));
+    if (!spans.length) return { slots:[], error:"closed" };
+    if (count < spans.length) return { slots:[], error:"shifts-below-periods", minimum:spans.length };
+    const allocations = spans.map(() => 1);
+    for (let left = count - spans.length; left > 0; left -= 1) {
+      let best = 0;
+      for (let index = 1; index < spans.length; index += 1) {
+        if (spans[index].duration / allocations[index] > spans[best].duration / allocations[best]) best = index;
+      }
+      allocations[best] += 1;
+    }
+    const slots = [];
+    spans.forEach((span, spanIndex) => {
+      const parts = allocations[spanIndex];
+      for (let index = 0; index < parts; index += 1) {
+        const rawStart = span.start + span.duration * index / parts;
+        const rawEnd = span.start + span.duration * (index + 1) / parts;
+        const start = index ? Math.round(rawStart / 5) * 5 : span.start;
+        const end = index === parts - 1 ? span.end : Math.round(rawEnd / 5) * 5;
+        if (end > start) slots.push({ start:clockFromMinutes(start), end:clockFromMinutes(end), minutes:end - start });
+      }
+    });
+    return { slots, error:"" };
+  }
+
   function coverageSummary(input) {
     const members = input.members || [];
     const shifts = input.shifts || {};
@@ -513,6 +562,108 @@
     return clone(source && source[memberId] || {});
   }
 
+  /* Fair draft builder. The merchant supplies only a daily headcount and a
+   * number of shifts; opening times come from KiwiHours and eligibility comes
+   * from the same availability, leave, contract and rest rules as Publish.
+   * The result is a proposal: callers must show it and explicitly apply it. */
+  function fairSchedule(input) {
+    input = input || {};
+    const members = (Array.isArray(input.members) ? input.members : []).filter((member) => member && String(member.id || ""));
+    const planning = normalize(input.planning, members);
+    const days = periodDays(input.days);
+    const dailyPeople = Math.max(1, Math.floor(Number(input.dailyPeople) || 1));
+    const shiftsPerDay = Math.max(1, Math.floor(Number(input.shiftsPerDay) || 1));
+    const periodsByDay = input.periodsByDay && typeof input.periodsByDay === "object" ? input.periodsByDay : {};
+    const seed = String(input.seed || periodKey(days) || "kiwi");
+    const shifts = clone(input.shifts || {});
+    const assignments = [];
+    const unresolved = [];
+    const closedDays = [];
+    const settings = planning.settings || {};
+    const maxWeekly = Math.max(0, Number(settings.maxWeeklyHours) || 0);
+    const maxDaily = Math.max(0, Number(settings.maxDailyHours) || 0);
+
+    members.forEach((member) => {
+      const id = String(member.id);
+      if (!shifts[id]) shifts[id] = {};
+      days.forEach((day) => { delete shifts[id][day]; });
+    });
+
+    const hoursFor = (memberId, week) => Object.keys(shifts[memberId] || {}).reduce((sum, day) => {
+      return weekKey(day) === week ? sum + shiftHours(day, shifts[memberId][day]) : sum;
+    }, 0);
+    const selectedDays = new Set(days);
+    const totalFor = (memberId) => Object.keys(shifts[memberId] || {}).reduce((sum, day) => selectedDays.has(day) ? sum + shiftHours(day, shifts[memberId][day]) : sum, 0);
+    const availableFor = (member, day, slot) => {
+      const id = String(member.id);
+      if ((member.startDate && day < isoDay(member.startDate)) || (member.endDate && day > isoDay(member.endDate))) return false;
+      if (approvedLeave(planning, id, day)) return false;
+      const rule = planning.availability[id] && planning.availability[id].weekdays && planning.availability[id].weekdays[String(dayNumber(day))];
+      if (rule && rule.available === false) return false;
+      if (rule) {
+        const rs = minutes(rule.start), re0 = minutes(rule.end), ss = minutes(slot.start), se0 = minutes(slot.end);
+        if ([rs,re0,ss,se0].every((value) => value != null)) {
+          const re = re0 <= rs ? re0 + 1440 : re0;
+          const se = se0 <= ss ? se0 + 1440 : se0;
+          if (ss < rs || se > re) return false;
+        }
+      }
+      if (maxDaily && slot.minutes / 60 > maxDaily + 0.001) return false;
+      if (maxWeekly && hoursFor(id, weekKey(day)) + slot.minutes / 60 > maxWeekly + 0.001) return false;
+      return true;
+    };
+    const tie = (memberId, day, slotIndex) => parseInt(hash(seed + "|" + memberId + "|" + day + "|" + slotIndex), 36) || 0;
+
+    days.forEach((day) => {
+      const built = openingSlots(periodsByDay[day], shiftsPerDay);
+      if (built.error === "closed") { closedDays.push(day); return; }
+      if (built.error) {
+        unresolved.push({ day, code:built.error, minimum:built.minimum || 1, needed:dailyPeople });
+        return;
+      }
+      if (dailyPeople < built.slots.length) {
+        unresolved.push({ day, code:"people-below-shifts", minimum:built.slots.length, needed:dailyPeople });
+        return;
+      }
+      const used = new Set();
+      const base = Math.floor(dailyPeople / built.slots.length);
+      const extra = dailyPeople % built.slots.length;
+      built.slots.forEach((slot, slotIndex) => {
+        const required = base + (slotIndex < extra ? 1 : 0);
+        let assigned = 0;
+        while (assigned < required) {
+          const pool = members.filter((member) => !used.has(String(member.id)) && availableFor(member, day, slot))
+            .map((member) => ({ member, total:totalFor(String(member.id)), weekly:hoursFor(String(member.id), weekKey(day)), tie:tie(String(member.id), day, slotIndex) }))
+            .sort((a, b) => a.total - b.total || a.weekly - b.weekly || a.tie - b.tie || String(a.member.id).localeCompare(String(b.member.id)));
+          let chosen = null;
+          for (const candidate of pool) {
+            const id = String(candidate.member.id);
+            const trial = clone(shifts);
+            trial[id][day] = { start:slot.start, end:slot.end, generated:true, generator:"fair" };
+            const unsafe = validate({ planning, shifts:trial, days, members }).some((issue) => issue.memberId === id && issue.day === day && (issue.severity === "blocker" || issue.code === "short-rest"));
+            if (!unsafe) { chosen = candidate.member; break; }
+          }
+          if (!chosen) break;
+          const id = String(chosen.id);
+          shifts[id][day] = { start:slot.start, end:slot.end, generated:true, generator:"fair" };
+          used.add(id);
+          assignments.push({ day, memberId:id, start:slot.start, end:slot.end, slot:slotIndex + 1 });
+          assigned += 1;
+        }
+        if (assigned < required) unresolved.push({ day, code:"staff-shortage", shift:slotIndex + 1, start:slot.start, end:slot.end, required, assigned, needed:required - assigned });
+      });
+    });
+
+    const hoursByMember = members.map((member) => ({ memberId:String(member.id), hours:totalFor(String(member.id)) }))
+      .sort((a, b) => a.hours - b.hours || a.memberId.localeCompare(b.memberId));
+    const issues = validate({ planning, shifts, days, members });
+    return {
+      ok: assignments.length > 0 && unresolved.length === 0 && !issues.some((issue) => issue.severity === "blocker"),
+      shifts, assignments, unresolved, closedDays, hoursByMember,
+      dailyPeople, shiftsPerDay, issues
+    };
+  }
+
   /* OR-Tools-inspired deterministic scheduler. It does not pretend to solve an
    * impossible roster: it fills only genuine coverage gaps, respects approved
    * leave, availability, rest and weekly limits through the same validator used
@@ -579,5 +730,5 @@
     return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, optimize, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
+  return { blank, normalize, merge, validate, coverageSummary, optimize, fairSchedule, openingSlots, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
 });

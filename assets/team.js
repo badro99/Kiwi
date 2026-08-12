@@ -124,7 +124,7 @@
       codeKeep: 'Inchangé — 4 chiffres pour le modifier',
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
       plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
-      plApply: 'Reporter sur les heures', plClear: 'Vider le planning',
+      plApply: 'Valider en heures réalisées', plClear: 'Effacer cette période',
       plFooter: 'Total planifié',
       plHint: 'Cliquez une case pour saisir les heures exactes du service, ou marquer un jour de repos.',
       plApplied: (n) => `${n} journée${n > 1 ? 's' : ''} reportée${n > 1 ? 's' : ''} sur les heures.`,
@@ -279,7 +279,7 @@
       codeKeep: 'Unchanged — enter 4 digits to change it',
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
       plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
-      plApply: 'Copy onto hours', plClear: 'Clear schedule',
+      plApply: 'Confirm as hours worked', plClear: 'Clear this period',
       plFooter: 'Total scheduled',
       plHint: 'Click a cell to set the exact shift hours, or mark the day as time off.',
       plApplied: (n) => `${n} day${n > 1 ? 's' : ''} copied onto hours.`,
@@ -433,7 +433,7 @@
       codeKeep: 'دون تغيير — أدخل 4 أرقام لتغييره',
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
       plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
-      plApply: 'نقل إلى الساعات', plClear: 'مسح الجدول',
+      plApply: 'اعتمادها كساعات منجزة', plClear: 'مسح هذه الفترة',
       plFooter: 'إجمالي المجدول',
       plHint: 'انقر على خانة لإدخال ساعات الوردية بالضبط، أو لتحديد يوم راحة.',
       plApplied: (n) => `تم نقل ${n} يوم إلى الساعات.`,
@@ -1633,6 +1633,11 @@
     const shifts = root.shiftsByVenue[key] || (root.shiftsByVenue[key] = {});
     return { root, venue, key, members, period, planning, shifts };
   }
+  function planningHoursKey(ctx) {
+    const venue=ctx&&ctx.venue||{};
+    if(venue.id==='scoped'&&venue.slug)return venue.slug;
+    return venue.id||venue.slug||(ctx&&ctx.key)||'';
+  }
 
   handlers['kt-plan-template-save'] = () => {
     const copy = planningCopy();
@@ -1687,6 +1692,43 @@
     mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOptimize={mdl,result,key:ctx.key};
   };
   handlers['kt-plan-optimize-confirm'] = () => {const p=window.__kiwiPlanningOptimize;if(!p?.mdl?.el)return;window.__kiwiTeamV2.shiftsByVenue[p.key]=p.result.shifts;saveCustomTeams();p.mdl.close();window.__kiwiPlanningOptimize=null;render();toast(optimizationCopy().optimizeDone,{type:'success'});};
+
+  function fairScheduleCopy() {
+    const lang=trLang();
+    if(lang==='en')return{action:'Auto-schedule fairly',title:'Fair auto-schedule',intro:'Kiwi uses this venue’s opening hours, approved leave and each person’s availability. It balances hours and prepares a draft only.',people:'People needed each day',peopleHint:'Unique team members scheduled across the day.',shifts:'Shifts per day',shiftsHint:'The opening day is divided into consecutive shifts.',hours:'Opening hours',hoursReady:'The venue’s saved opening hours will be used.',hoursMissing:'Opening hours must be configured before Kiwi can build a truthful schedule.',configure:'Configure opening hours',reviewTitle:'Review the proposal',review:(a,d)=>`${a} assignments across ${d} open day${d===1?'':'s'}`,balance:(a,b)=>`Hours per person: ${a}–${b} h`,reviewNote:'Applying replaces the current draft for this period. It does not publish the schedule.',build:'Create proposal',apply:'Replace draft',done:'The fair proposal is now in the draft.',invalid:'People per day must be at least the number of shifts.',shortage:(n)=>`${n} staffing gap${n===1?'':'s'} could not be filled safely.`,closed:(n)=>`${n} closed day${n===1?' was':'s were'} skipped.`,tools:'Planning tools',toolsHint:'Coverage rules, open shifts, templates and period maintenance.',coverageGroup:'Demand rules',coverageDesc:'Describe role-specific minimum coverage, then build from those rules.',openGroup:'Staff opportunities',openDesc:'Share an unassigned shift for employees to claim.',templateGroup:'Reusable weeks',templateDesc:'Save or apply a reviewed weekly pattern.',maintenance:'Period maintenance',maintenanceDesc:'Clear the draft or transfer it into recorded hours.',fromRules:'Build from rules'};
+    if(lang==='ar')return{action:'توزيع عادل تلقائياً',title:'توزيع عادل للورديات',intro:'يعتمد Kiwi على ساعات فتح المؤسسة والإجازات المقبولة وتوفر كل موظف، ثم يوازن الساعات ويُنشئ مسودة فقط.',people:'عدد الأشخاص المطلوب يومياً',peopleHint:'أعضاء مختلفون موزعون على اليوم.',shifts:'عدد الورديات يومياً',shiftsHint:'يتم تقسيم فترة الفتح إلى ورديات متتالية.',hours:'ساعات الفتح',hoursReady:'سيتم استعمال ساعات فتح المؤسسة المسجلة.',hoursMissing:'يجب ضبط ساعات الفتح قبل إنشاء جدول واقعي.',configure:'ضبط ساعات الفتح',reviewTitle:'مراجعة الاقتراح',review:(a,d)=>`${a} تعيينات خلال ${d} أيام مفتوحة`,balance:(a,b)=>`ساعات كل شخص: ${a}–${b}`,reviewNote:'سيستبدل التطبيق مسودة هذه الفترة فقط، ولن ينشر الجدول.',build:'إنشاء الاقتراح',apply:'استبدال المسودة',done:'تمت إضافة الاقتراح العادل إلى المسودة.',invalid:'يجب ألا يقل عدد الأشخاص عن عدد الورديات.',shortage:(n)=>`تعذر ملء ${n} مناصب بأمان.`,closed:(n)=>`تم تجاوز ${n} أيام مغلقة.`,tools:'أدوات التخطيط',toolsHint:'قواعد التغطية والورديات الشاغرة والنماذج وصيانة الفترة.',coverageGroup:'قواعد الحاجة',coverageDesc:'حدد الحد الأدنى حسب الوظيفة، ثم أنشئ الجدول وفقاً للقواعد.',openGroup:'فرص الفريق',openDesc:'انشر وردية غير معينة ليطلبها الموظفون.',templateGroup:'أسابيع قابلة لإعادة الاستخدام',templateDesc:'احفظ أو طبق أسبوعاً نموذجياً تمت مراجعته.',maintenance:'صيانة الفترة',maintenanceDesc:'امسح المسودة أو انقلها إلى الساعات المنجزة.',fromRules:'إنشاء من القواعد'};
+    return{action:'Répartir équitablement',title:'Répartition automatique',intro:'Kiwi lit les horaires d’ouverture, les congés approuvés et les disponibilités. Il équilibre les heures et prépare uniquement un brouillon.',people:'Personnes nécessaires par jour',peopleHint:'Des membres différents, répartis sur la journée.',shifts:'Nombre de shifts par jour',shiftsHint:'La journée d’ouverture est découpée en services successifs.',hours:'Horaires d’ouverture',hoursReady:'Les horaires enregistrés de l’établissement seront utilisés.',hoursMissing:'Renseignez les horaires d’ouverture pour que Kiwi construise un planning réel.',configure:'Configurer les horaires',reviewTitle:'Vérifier la proposition',review:(a,d)=>`${a} affectation${a===1?'':'s'} sur ${d} jour${d===1?'':'s'} ouvert${d===1?'':'s'}`,balance:(a,b)=>`Heures par personne : ${a}–${b} h`,reviewNote:'Appliquer remplace le brouillon de cette période. Le planning ne sera pas publié.',build:'Créer la proposition',apply:'Remplacer le brouillon',done:'La proposition équitable est dans le brouillon.',invalid:'Le nombre de personnes doit être au moins égal au nombre de shifts.',shortage:(n)=>`${n} besoin${n===1?'':'s'} n’ont pas pu être couvert${n===1?'':'s'} sans conflit.`,closed:(n)=>`${n} jour${n===1?' fermé a':'s fermés ont'} été ignoré${n===1?'':'s'}.`,tools:'Outils de planning',toolsHint:'Couverture détaillée, services ouverts, modèles et entretien de la période.',coverageGroup:'Besoins précis',coverageDesc:'Définissez un minimum par fonction et horaire, puis composez depuis ces règles.',openGroup:'Opportunités équipe',openDesc:'Partagez un service non attribué auquel les employés peuvent candidater.',templateGroup:'Semaines réutilisables',templateDesc:'Enregistrez ou appliquez une semaine type déjà vérifiée.',maintenance:'Entretien de la période',maintenanceDesc:'Effacez le brouillon ou validez-le comme heures réalisées.',fromRules:'Composer depuis les règles'};
+  }
+
+  handlers['kt-plan-fair'] = () => {
+    const ctx=planningContext(),copy=fairScheduleCopy(),KH=window.KiwiHours;
+    const hoursKey=planningHoursKey(ctx),configured=!!(KH&&KH.isConfigured&&KH.isConfigured(hoursKey));
+    const suggested=Math.max(1,Math.min(ctx.members.length,Math.ceil(ctx.members.length/2)||1));
+    const body=`<p class="kt-fair-intro">${esc(copy.intro)}</p><div class="kt-fair-fields"><div class="kt-plan-modal-field"><label for="kt-fair-people">${esc(copy.people)}</label><input id="kt-fair-people" data-kt-fair-people type="number" inputmode="numeric" min="1" max="${ctx.members.length||1}" value="${suggested}"><small>${esc(copy.peopleHint)}</small></div><div class="kt-plan-modal-field"><label for="kt-fair-shifts">${esc(copy.shifts)}</label><input id="kt-fair-shifts" data-kt-fair-shifts type="number" inputmode="numeric" min="1" max="6" value="2"><small>${esc(copy.shiftsHint)}</small></div></div><div class="kt-fair-hours ${configured?'is-ready':'is-missing'}"><strong>${esc(copy.hours)}</strong><span>${esc(configured?copy.hoursReady:copy.hoursMissing)}</span>${configured?'':`<button class="kb ghost" type="button" data-action="kt-plan-hours">${esc(copy.configure)}</button>`}</div>`;
+    const mdl=modal({title:copy.title,width:600,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-build"${configured?'':' disabled'}>${esc(copy.build)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,hoursKey};
+  };
+  handlers['kt-plan-hours'] = () => {
+    const pending=window.__kiwiPlanningFair,ctx=planningContext();
+    pending?.mdl?.close?.();window.__kiwiPlanningFair=null;
+    if(window.KiwiHoursUI?.open)window.KiwiHoursUI.open({venueId:planningHoursKey(ctx),title:ctx.venue?.name||'',onSave:()=>setTimeout(()=>handlers['kt-plan-fair'](),100)});
+  };
+  handlers['kt-plan-fair-build'] = () => {
+    const pending=window.__kiwiPlanningFair,ctx=planningContext(),P=window.KiwiPlanningCore,KH=window.KiwiHours,copy=fairScheduleCopy();if(!pending?.mdl?.el||!P?.fairSchedule||!KH)return;
+    const people=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-people]')?.value)||1));
+    const shiftCount=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-shifts]')?.value)||1));
+    if(people<shiftCount){toast(copy.invalid,{type:'error'});return;}
+    const hoursKey=pending.hoursKey||planningHoursKey(ctx),periodsByDay=Object.fromEntries(ctx.period.days.map((day)=>[day,KH.periodsOn(day,hoursKey)||[]]));
+    const result=P.fairSchedule({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,dailyPeople:people,shiftsPerDay:shiftCount,periodsByDay,seed:`${ctx.key}|${ctx.period.start}`});
+    const hours=result.hoursByMember.map((row)=>row.hours);const low=hours.length?Math.min(...hours):0,high=hours.length?Math.max(...hours):0;
+    const openDays=ctx.period.days.length-result.closedDays.length;
+    const issues=[];if(result.unresolved.length)issues.push(`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.shortage(result.unresolved.length))}</span></div>`);if(result.closedDays.length)issues.push(`<div class="kt-plan-issue is-warning"><b>i</b><span>${esc(copy.closed(result.closedDays.length))}</span></div>`);
+    const rows=result.hoursByMember.filter((row)=>row.hours>0).map((row)=>{const member=ctx.members.find((item)=>String(item.id)===row.memberId);return `<div class="kt-fair-review-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${row.hours.toLocaleString('fr-FR',{maximumFractionDigits:1})} h</span></div>`;}).join('');
+    pending.mdl.close();
+    const mdl=modal({title:copy.reviewTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.review(result.assignments.length,openDays))}</strong><p>${esc(copy.balance(low.toLocaleString('fr-FR',{maximumFractionDigits:1}),high.toLocaleString('fr-FR',{maximumFractionDigits:1})))}</p><p>${esc(copy.reviewNote)}</p></div><div class="kt-fair-review">${rows}</div>${issues.join('')}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-confirm"${result.assignments.length?'':' disabled'}>${esc(copy.apply)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,result};
+  };
+  handlers['kt-plan-fair-confirm'] = () => {const pending=window.__kiwiPlanningFair;if(!pending?.mdl?.el||!pending.result)return;window.__kiwiTeamV2.shiftsByVenue[pending.key]=pending.result.shifts;saveCustomTeams();pending.mdl.close();window.__kiwiPlanningFair=null;render();toast(fairScheduleCopy().done,{type:'success'});};
 
   function planningRoleOptions(ctx, selected) {
     const copy = planningCopy();
@@ -2742,6 +2784,7 @@
     const planning = root.planningByVenue[venueType] || (root.planningByVenue[venueType] = P?.blank?.() || {});
     const copy = planningCopy();
     const optimizeCopy = optimizationCopy();
+    const fairCopy = fairScheduleCopy();
     const lifecycle = P?.status?.(planning, shifts, period.days) || { state:'draft' };
     const issues = P?.validate?.({ planning, shifts, days:period.days, members }) || [];
     const blockers=issues.filter((issue)=>issue.severity==='blocker');
@@ -2817,20 +2860,22 @@
           <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length+opportunityClaims))}</p></div>
         </div>
         <div class="kt-planning-actions">
-          <div class="kt-plan-action-group is-build">
-            <button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(optimizeCopy.optimize)}</button>
-            <button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button>
-            <button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button>
+          <div class="kt-plan-primary-row">
+            <button class="btn-slim kt-plan-fair-action" type="button" data-action="kt-plan-fair">${esc(fairCopy.action)}</button>
+            <div class="kt-plan-action-group is-publish">
+              ${pending.length+opportunityClaims ? `<button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)} · ${pending.length+opportunityClaims}</button>` : ''}
+              <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+            </div>
           </div>
-          <div class="kt-plan-action-group is-template">
-            <button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button>
-            <select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select>
-            <button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button>
-          </div>
-          <div class="kt-plan-action-group is-publish">
-            <button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)}${pending.length+opportunityClaims ? ` · ${pending.length+opportunityClaims}` : ''}</button>
-            <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
-          </div>
+          <details class="kt-plan-tools">
+            <summary><span>${esc(fairCopy.tools)}</span><small>${esc(fairCopy.toolsHint)}</small></summary>
+            <div class="kt-plan-tools-panel">
+              <section><div><strong>${esc(fairCopy.coverageGroup)}</strong><p>${esc(fairCopy.coverageDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button><button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(fairCopy.fromRules)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.openGroup)}</strong><p>${esc(fairCopy.openDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.templateGroup)}</strong><p>${esc(fairCopy.templateDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button><select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select><button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.maintenance)}</strong><p>${esc(fairCopy.maintenanceDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked?'disabled':''}>${esc(T.plClear)}</button><button class="btn-slim" type="button" data-action="kt-plan-apply" ${locked?'disabled':''}>${svgIcon(IC.check,13)}<span>${esc(T.plApply)}</span></button></div></section>
+            </div>
+          </details>
         </div>
       </div>
       <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${coverage.length} ${esc(copy.coverage).toLocaleLowerCase()}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${opportunityClaims} ${esc(copy.pending(0).replace(/^0\s*/,''))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${warnings.length}</strong><span>${blockers.length} ${esc(copy.blocked(0).replace(/^0\s*/,''))}</span></div></div>
@@ -2844,10 +2889,6 @@
         </div>
         <div class="kt-hbar">
           <div class="eq-pill-row">${periodPillsHtml(T)}</div>
-          <div class="kt-hbar-right">
-            <button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked ? 'disabled' : ''}>${esc(T.plClear)}</button>
-            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-plan-apply" ${locked ? 'disabled' : ''}>${svgIcon(IC.check, 13)}<span>${esc(T.plApply)}</span></button>
-          </div>
         </div>
         <p class="kt-plan-hint">${esc(T.plHint)}</p>
         ${planningCommand}
@@ -2947,14 +2988,14 @@
     if (!window.Kiwi || !window.Kiwi.handlers) return;
     const H = window.Kiwi.handlers;
     H['nav-equipe'] = () => showPage();
-    // Paie & planning: ours for a REAL store, venues.js's demo payroll otherwise,
-    // so the pitch demo (Café Atlas & co.) is untouched. Captured on each install
-    // so venues.js's late 'load' re-assertion becomes the fallback, not the winner.
+    // Paie & planning is one product surface in demo and production. Keeping the
+    // old pitch-only drawer as a demo fallback meant every new planning feature
+    // (availability, publishing and fair allocation) disappeared exactly where
+    // merchants try it first.
     const prevPayroll = H['nav-payroll'];
     if (!prevPayroll || !prevPayroll.__ktOwned) {
       const wrapped = function () {
-        if (isCustomVenue()) { showPayroll(); return; }
-        if (prevPayroll) { try { return prevPayroll.apply(this, arguments); } catch (_) {} }
+        showPayroll();
       };
       wrapped.__ktOwned = true;
       H['nav-payroll'] = wrapped;

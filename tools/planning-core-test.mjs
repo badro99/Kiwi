@@ -116,4 +116,31 @@ const impossible=P.optimize({planning:optimizedPlanning,shifts:{},days,members:o
 assert.equal(impossible.assignments.length,0);
 assert.equal(impossible.unresolved.length,1);
 
-console.log("planning-core-test: 49 controls passed");
+const fairMembers=[
+  {id:'f1',name:'Fatima'}, {id:'f2',name:'Omar'}, {id:'f3',name:'Nadia'}, {id:'f4',name:'Youssef'}
+];
+const fairPeriods=Object.fromEntries(days.map((day)=>[day,[{from:'09:00',to:'17:00'}]]));
+const fair=P.fairSchedule({planning:P.blank(),shifts:{},days,members:fairMembers,dailyPeople:4,shiftsPerDay:2,periodsByDay:fairPeriods,seed:'test'});
+assert.equal(fair.unresolved.length,0);
+assert.equal(fair.assignments.length,28);
+assert.equal(JSON.stringify(P.openingSlots([{from:'09:00',to:'17:00'}],2).slots.map((slot)=>[slot.start,slot.end])),JSON.stringify([['09:00','13:00'],['13:00','17:00']]));
+assert.equal(Math.max(...fair.hoursByMember.map((row)=>row.hours))-Math.min(...fair.hoursByMember.map((row)=>row.hours))<=4,true);
+assert.equal(P.fairSchedule({planning:P.blank(),shifts:{},days,members:fairMembers,dailyPeople:4,shiftsPerDay:2,periodsByDay:fairPeriods,seed:'test'}).shifts.f1['2026-08-10']?.start,fair.shifts.f1['2026-08-10']?.start);
+
+const fairRules=P.blank();
+fairRules.requests.push({id:'leave-f1',memberId:'f1',type:'leave',startDate:days[0],endDate:days[0],status:'approved'});
+fairRules.availability.f2={weekdays:{'1':{available:false}}};
+const constrained=P.fairSchedule({planning:fairRules,shifts:{},days:[days[0]],members:fairMembers,dailyPeople:2,shiftsPerDay:1,periodsByDay:{[days[0]]:[{from:'09:00',to:'17:00'}]}});
+assert.equal(Boolean(constrained.shifts.f1[days[0]]),false);
+assert.equal(Boolean(constrained.shifts.f2[days[0]]),false);
+assert.equal(constrained.assignments.length,2);
+
+const split=P.openingSlots([{from:'09:00',to:'13:00'},{from:'18:00',to:'22:00'}],2);
+assert.equal(JSON.stringify(split.slots.map((slot)=>[slot.start,slot.end])),JSON.stringify([['09:00','13:00'],['18:00','22:00']]));
+assert.equal(P.openingSlots([{from:'09:00',to:'13:00'},{from:'18:00',to:'22:00'}],1).error,'shifts-below-periods');
+const shortage=P.fairSchedule({planning:P.blank(),shifts:{},days:[days[0]],members:fairMembers.slice(0,2),dailyPeople:4,shiftsPerDay:2,periodsByDay:{[days[0]]:[{from:'09:00',to:'17:00'}]}});
+assert.equal(shortage.unresolved.some((row)=>row.code==='staff-shortage'),true);
+assert.equal(P.fairSchedule({planning:P.blank(),shifts:{},days:[days[0]],members:fairMembers,dailyPeople:1,shiftsPerDay:2,periodsByDay:{[days[0]]:[{from:'09:00',to:'17:00'}]}}).unresolved[0].code,'people-below-shifts');
+assert.equal(P.fairSchedule({planning:P.blank(),shifts:{},days:[days[0]],members:fairMembers,dailyPeople:2,shiftsPerDay:1,periodsByDay:{[days[0]]:[]}}).closedDays[0],days[0]);
+
+console.log("planning-core-test: 61 controls passed");
