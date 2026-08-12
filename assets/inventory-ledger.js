@@ -87,7 +87,10 @@
       variantId: String(raw.variantId || '').slice(0, 80),
       locationId: String(raw.locationId || 'principal').slice(0, 80),
       qty: qty, reason: String(raw.reason || 'manual').slice(0, 32),
-      unitCost: raw.unitCost == null || !Number.isFinite(+raw.unitCost) ? null : Math.max(0, Math.round(+raw.unitCost * 100) / 100),
+      /* Un coût unitaire est un taux, pas un montant : arrondi au centime, un
+       * ingrédient tenu au gramme (0,008 MAD) devient 0,01 — 25 % d'écart sur
+       * tout le coût matière. Les montants, eux, s'arrondissent en aval. */
+      unitCost: raw.unitCost == null || !Number.isFinite(+raw.unitCost) ? null : Math.max(0, Math.round(+raw.unitCost * 10000) / 10000),
       currency: String(raw.currency || 'MAD').slice(0, 3),
       refType: String(raw.refType || 'manual').slice(0, 32),
       refId: String(raw.refId || '').slice(0, 100),

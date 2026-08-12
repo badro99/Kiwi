@@ -38,6 +38,24 @@
     return id.indexOf('stock:') === 0 ? id.slice(6) : '';
   }
 
+  /* Le coût d'usage est porté par l'ingrédient dans son unité de recette
+   * (0,008 MAD le gramme), la sortie de stock est écrite dans l'unité du stock
+   * (le kilo). Le rapport qty/stockQty de la ligne fait la conversion sans
+   * qu'aucune table d'unités soit nécessaire : 0,008 × 1000 g ÷ 1 kg = 8 MAD/kg.
+   * Sans cette valeur, le grand livre compte les quantités mais jamais l'argent,
+   * et le coût matière réel n'est plus dérivable d'une seule vente. */
+  function lineUnitCost(ln, d) {
+    if (!ln) return null;
+    var id = String(ln.ing || '');
+    var ing = (d.ingredients || []).find(function (x) { return String(x.id) === id; });
+    var use = ing && ing.useCost != null ? n(ing.useCost) : null;
+    if (use == null || !(use > 0)) return null;
+    var recipeQty = n(ln.qty);
+    var stockQty = ln.stockQty != null ? n(ln.stockQty) : recipeQty;
+    if (!(recipeQty > 0) || !(stockQty > 0)) return null;
+    return use * recipeQty / stockQty;
+  }
+
   function recipeLines(productId, qty, d, depth, trail) {
     if (!productId || depth > 5) return null;
     var rec = d.recipes && d.recipes[String(productId)];
@@ -61,7 +79,7 @@
         /* An ingredient with no article behind it (a note, a garnish nobody
          * counts) simply does not move stock. It must not sink the recipe and
          * send the dish's own identity to the ledger instead. */
-        if (article) out.push({ itemId: article, qty: used, recipe: String(productId), trail: trail });
+        if (article) out.push({ itemId: article, qty: used, unitCost: lineUnitCost(ln, d), recipe: String(productId), trail: trail });
       }
     }
     return out;
@@ -100,7 +118,9 @@
           id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
           variantId: x.direct ? String(line.variantId || '') : '', qty: -x.qty,
           reason: 'sale', refType: 'sale', refId: ref,
-          unitCost: x.direct && line.unitCost != null ? n(line.unitCost) : null,
+          unitCost: x.direct
+            ? (line.unitCost != null ? n(line.unitCost) : null)
+            : (x.unitCost != null ? n(x.unitCost) : null),
           occurredTs: n(sale.ts || sale.time) || Date.now(),
           note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
           meta: { sourceItemId: itemId, recipe: x.recipe || '', line: idx },

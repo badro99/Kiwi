@@ -360,7 +360,12 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
-ok(serviceSource.includes('assets/employee-live.js?v=371')
+/* Le contrôle porte sur l'accord entre la coquille et le service worker, pas sur
+   un numéro figé : épinglé, il retombait en rouge à chaque génération de cache
+   alors que le pont était juste. La coquille et le précache doivent demander le
+   même fichier, sinon un ancien cache NFC ressert l'ancien pont. */
+const SW_LIVE = (fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8').match(/employee-live\.js\?v=(\d+)/) || [])[1] || '';
+ok(!!SW_LIVE && serviceSource.includes(`assets/employee-live.js?v=${SW_LIVE}`)
   && serviceSource.includes('assets/employee-planning.js?v=3')
   && serviceSource.includes('assets/pwa-update.js?v=358'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");

@@ -90,6 +90,8 @@ win.KiwiCost = { doc: () => ({
     { id: 'stock:usr-am01', stockId: 'usr-am01', name: 'Poulet fermier', useCost: 0.062 },
     { id: 'stock:usr-am05', stockId: 'usr-am05', name: 'Tomates', useCost: 0.009 },
     { id: 'stock:usr-am0d', stockId: 'usr-am0d', name: 'Menthe fraîche', useCost: 0.02 },
+    /* Une épice tenue au gramme : son taux vaut moins d'un centime. */
+    { id: 'stock:usr-am0z', stockId: 'usr-am0z', name: 'Cumin', useCost: 0.008 },
   ],
   recipes: {
     it_3: { status: 'complete', name: 'Tajine poulet citron', yield: 1, lines: [
@@ -98,6 +100,11 @@ win.KiwiCost = { doc: () => ({
     ] },
     it_6: { status: 'complete', name: 'Thé à la menthe', yield: 1, lines: [
       { ing: 'stock:usr-am0d', stock: 'usr-am0d', qty: 20, stockQty: 0.02 },
+    ] },
+    /* Recette dont l'article est tenu dans la même unité que la fiche : le taux
+       reste sous le centime et ne doit pas être arrondi à l'entrée du journal. */
+    it_5: { status: 'complete', name: 'Brochettes mixtes', yield: 1, lines: [
+      { ing: 'stock:usr-am0z', stock: 'usr-am0z', qty: 5, stockQty: 5 },
     ] },
   },
 }) };
@@ -126,6 +133,28 @@ ok('deux tajines et deux thés sortent leur matière',
   near(I.balance('usr-am01'), 17.48) && near(I.balance('usr-am05'), 24.7) && near(I.balance('usr-am0d'), 39.96),
   `poulet=${I.balance('usr-am01')} tomates=${I.balance('usr-am05')} menthe=${I.balance('usr-am0d')}`);
 ok('le plat lui-même n\'est jamais consommé comme un article de stock', I.balance('it_3') === 0);
+
+/* Une sortie de recette doit porter sa VALEUR, pas seulement sa quantité. Sans
+   elle le journal comptait juste les grammes : le coût matière réel n'était
+   dérivable d'aucune vente, et le compte de résultat retombait sur une moyenne
+   théorique non pondérée. Le coût d'usage est donné dans l'unité de la recette
+   (0,062 MAD le gramme), le mouvement est écrit dans l'unité du stock (le kilo) :
+   c'est le rapport qty/stockQty de la ligne qui fait la conversion. */
+const sold = (ref) => I.history().filter((r) => r.refType === 'sale' && r.refId === ref);
+const valued = sold('KW-0001');
+ok('chaque sortie de recette porte un coût unitaire',
+  valued.length === 3 && valued.every((r) => r.unitCost != null && r.unitCost > 0),
+  valued.map((r) => `${r.itemId}=${r.unitCost}`).join(' '));
+ok('le coût unitaire est converti dans l\'unité du stock',
+  near(valued.find((r) => r.itemId === 'usr-am01').unitCost, 62)
+  && near(valued.find((r) => r.itemId === 'usr-am05').unitCost, 9)
+  && near(valued.find((r) => r.itemId === 'usr-am0d').unitCost, 20),
+  valued.map((r) => `${r.itemId}=${r.unitCost}`).join(' '));
+/* Deux tajines et deux thés : 0,52 kg de poulet à 62, 0,30 kg de tomates à 9,
+   0,04 kg de menthe à 20 — le coût matière du ticket se relit au centime. */
+ok('le coût matière du ticket se recalcule depuis le journal',
+  near(valued.reduce((s, r) => s + Math.abs(r.qty) * r.unitCost, 0), 35.74),
+  String(valued.reduce((s, r) => s + Math.abs(r.qty) * r.unitCost, 0)));
 
 /* Un rechargement de la caisse rejoue le journal : les identifiants de
    mouvement dérivent de la référence du ticket, donc rien ne bouge. */
@@ -180,6 +209,15 @@ const moves = I.history().filter((r) => r.reason === 'sale');
 ok('chaque sortie porte la référence de son ticket',
   moves.length > 0 && moves.every((r) => r.refType === 'sale' && /^KW-\d+$/.test(String(r.refId))),
   `mouvements=${moves.length}`);
+
+/* Un taux inférieur au centime doit survivre au nettoyage du registre : arrondi
+   à deux décimales, 0,008 MAD le gramme devient 0,01 — un quart de coût matière
+   inventé sur toute épice, tout levure, tout colorant tenu au gramme. */
+I.ensureOpening('usr-am0z', 500, { unitCost: 0.008 });
+C.record(ticket('KW-0004', [{ itemId: 'it_5', name: 'Brochettes mixtes', qty: 1, total: 90, cat: 'Plats' }]));
+const spice = sold('KW-0004')[0];
+ok('un coût unitaire sous le centime n\'est pas arrondi à zéro virgule un',
+  !!spice && near(spice.unitCost, 0.008), spice ? String(spice.unitCost) : 'aucun mouvement');
 
 /* ── verdict ────────────────────────────────────────────────────────────── */
 if (fails.length) {
