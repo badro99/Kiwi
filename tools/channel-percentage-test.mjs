@@ -27,7 +27,8 @@ assert.match(
   'the subtitle still distinguishes measured shares from unavailable breakdowns'
 );
 assert.match(dashboard, /assets\/channel-sales\.js\?v=3/);
-assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2075/);
+assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2076/);
+assert.match(layout, /rawBase !== authoritative/, 'the active venue family overrides stale venue metadata');
 
 assert.equal(truth.key({ channel: 'salle' }, ids, restaurant, 'restaurant'), 'dining');
 assert.equal(truth.key({ session: 'visit-12' }, ids, restaurant, 'restaurant'), 'dining');

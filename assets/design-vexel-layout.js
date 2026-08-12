@@ -195,6 +195,17 @@
       var data = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
       raw = data && (data.subtype || data.type) || '';
     } catch (_) {}
+    /* In an operator-scoped or freshly switched session, the safe venue object
+     * can briefly be the previous establishment while getVenueType() already
+     * carries the server-authoritative family. Keep a legitimate subtype only
+     * when it belongs to that family; otherwise the active family wins. This
+     * prevents Amira Boutique from rendering Restaurant's Salle/À emporter
+     * channels after a switch. */
+    try {
+      var authoritative = window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType() || '';
+      var rawBase = raw && window.KiwiTrades && window.KiwiTrades.base ? window.KiwiTrades.base(raw) : raw;
+      if (authoritative && (!raw || rawBase !== authoritative)) raw = authoritative;
+    } catch (_) {}
     if (!raw) try { raw = localStorage.getItem('kiwiBizType') || ''; } catch (_) {}
     if (!raw) {
       try { raw = window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType() || ''; } catch (_) {}
