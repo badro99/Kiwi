@@ -3097,6 +3097,7 @@
                     id: rec.syncId,
                     amount: cashIn,
                     method,
+                    channel: isDelivery ? 'delivery' : 'counter',
                     label: `Différence échange ${sale.id}`,
                     ref: rec.id,
                     time: rec.at,
@@ -3362,7 +3363,16 @@
               unit: 'piece',
               kind: 'product',
             }));
-            window.KiwiLive.postSale({ id: sale.syncId, amount: cashIn, method: method, label: label, ref: sale.id, time: sale.at, lines: basket });
+            window.KiwiLive.postSale({
+              id: sale.syncId,
+              amount: cashIn,
+              method: method,
+              channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
+              label: label,
+              ref: sale.id,
+              time: sale.at,
+              lines: basket,
+            });
           }
         } catch (_) {}
         let ptsLine = '';

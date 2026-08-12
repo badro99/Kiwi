@@ -1,10 +1,11 @@
 /* Kiwi · sales-channel truth.
  *
- * The financial ledger predates its channel field. Older restaurant receipts
- * still carry enough operational evidence to classify them safely: a table
- * session is dining-room revenue, an "À emporter" receipt is takeaway, and an
- * OrderPro order keeps its origin. Unknown rows stay unknown and remain in the
- * denominator — known channels are never re-normalised around missing money.
+ * The financial ledger predates its channel field. Older receipts still carry
+ * enough operational evidence to classify them safely: a restaurant table is
+ * dining-room revenue, a boutique caisse receipt is counter revenue, an
+ * "À emporter" receipt is takeaway, and an OrderPro order keeps its origin.
+ * Unknown rows stay unknown and remain in the denominator — known channels are
+ * never re-normalised around missing money.
  */
 (function (root) {
   'use strict';
@@ -40,8 +41,10 @@
     }
 
     var label = text(sale.label || sale.orderRef || sale.ref);
+    var tender = text(sale.method || sale.raw || sale.methods);
     if (/aemporter|takeaway/.test(label) && allowed('takeaway', ids)) return 'takeaway';
-    if (/livraison|delivery|glovo|yassir/.test(label) && allowed('delivery', ids)) return 'delivery';
+    if (/livraison|delivery|glovo|yassir/.test(label + tender) && allowed('delivery', ids)) return 'delivery';
+    if (/reservationretrait|clickcollect|pickup/.test(label) && allowed('pickup', ids)) return 'pickup';
     if (/orderpro/.test(label) && allowed('orderpro', ids)) return 'orderpro';
     if (text(sale.origin) === 'orderpro' && allowed('orderpro', ids)) return 'orderpro';
 
@@ -52,13 +55,15 @@
       if (allowed('dining', ids)) return 'dining';
     }
 
-    /* Older restaurant till rows were written without table/session metadata.
-     * Once takeaway/delivery/OrderPro have been excluded, `origin=caisse` is
-     * the restaurant's table checkout path. Restrict this fallback to the
-     * restaurant family and to registries that actually expose Dining. */
+    /* Older till rows were written without a channel. Once explicit fulfilment
+     * evidence has been excluded, the remaining path is deterministic for the
+     * two established tills: restaurant caisse = dining, boutique caisse =
+     * counter. Keep both fallbacks tied to their trade family and registry so a
+     * foreign/imported receipt can never be silently relabelled. */
     var base = '';
     try { base = tradeRegistry && tradeRegistry.base ? tradeRegistry.base(tradeId) : ''; } catch (_) {}
     if (base === 'restaurant' && text(sale.origin) === 'caisse' && allowed('dining', ids)) return 'dining';
+    if (base === 'boutique' && text(sale.origin) === 'caisse' && allowed('counter', ids)) return 'counter';
     return '';
   }
 

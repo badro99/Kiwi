@@ -135,7 +135,7 @@ const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
 ok('la caisse réserve une plage dédiée', boutique.includes("fetch('/api/ticket-sequence'") && boutique.includes('TICKET_LEASE_KEY'));
 ok('le ticket attend son numéro avant encaissement', boutique.includes('t.lines.length && t.num') && boutique.includes('assignTicketNumber(t)'));
 ok('la vente envoie un UUID distinct de sa référence',
-  boutique.includes('syncId: t.syncId || newSaleId()') && boutique.includes('postSale({ id: sale.syncId'));
+  boutique.includes('syncId: t.syncId || newSaleId()') && /postSale\(\{[\s\S]{0,120}id:\s*sale\.syncId/.test(boutique));
 ok('la nouvelle caisse ne demande plus un maximum au flux de ventes', !boutique.includes('/api/feed?seq=1'));
 ok('la compatibilité de déploiement réserve elle aussi une vraie plage',
   feed.includes('reserveTicketRange(env, merchant, 500, 1000,'));

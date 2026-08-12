@@ -472,7 +472,7 @@
     var total = cartTotal(), ref = nextRef(), parts = state.parts.slice();
     var lines = state.cart.map(function (l) { return { name: l.name, qty: l.qty, total: money(l.unitPrice * l.qty), itemId: l.productId, variantId: l.variantId, unit: 'unité', kind: 'product', unitCost: l.unitCost }; });
     var rawMethod = parts.length > 1 ? 'split' : (parts[0] && parts[0].method) || 'cash';
-    var sale = { total: total, method: rawMethod, label: (LABELS[current] || 'Vente') + ' · ' + cartQty() + ' art.', ref: ref, lines: lines, parts: parts };
+    var sale = { total: total, method: rawMethod, channel: 'counter', label: (LABELS[current] || 'Vente') + ' · ' + cartQty() + ' art.', ref: ref, lines: lines, parts: parts };
     var journalled = null;
     try { if (window.KiwiPosSale) journalled = window.KiwiPosSale.record(current, sale); } catch (_) {}
     if (!journalled) {

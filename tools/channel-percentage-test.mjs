@@ -26,7 +26,7 @@ assert.match(
   /var splitLabel = hasAmounts \? copy\.share : copy\.unavailable/,
   'the subtitle still distinguishes measured shares from unavailable breakdowns'
 );
-assert.match(dashboard, /assets\/channel-sales\.js\?v=2/);
+assert.match(dashboard, /assets\/channel-sales\.js\?v=3/);
 assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2075/);
 
 assert.equal(truth.key({ channel: 'salle' }, ids, restaurant, 'restaurant'), 'dining');
@@ -35,7 +35,13 @@ assert.equal(truth.key({ id: 'visit-12-emp' }, ids, restaurant, 'restaurant'), '
 assert.equal(truth.key({ label: 'À emporter #12', origin: 'caisse' }, ids, restaurant, 'restaurant'), 'takeaway');
 assert.equal(truth.key({ origin: 'orderpro' }, ids, restaurant, 'restaurant'), 'orderpro');
 assert.equal(truth.key({ origin: 'caisse', label: 'SB-27' }, ids, restaurant, 'restaurant'), 'dining');
-assert.equal(truth.key({ origin: 'caisse' }, ['counter', 'delivery'], { base: () => 'boutique' }, 'boutique'), '');
+const boutique = { base: () => 'boutique' };
+const boutiqueIds = ['counter', 'pickup', 'delivery'];
+assert.equal(truth.key({ origin: 'caisse' }, boutiqueIds, boutique, 'boutique'), 'counter');
+assert.equal(truth.key({ origin: 'caisse', method: 'delivery' }, boutiqueIds, boutique, 'boutique'), 'delivery');
+assert.equal(truth.key({ origin: 'caisse', raw: 'livraison' }, boutiqueIds, boutique, 'boutique'), 'delivery');
+assert.equal(truth.key({ origin: 'caisse', label: 'Réservation-retrait #17' }, boutiqueIds, boutique, 'boutique'), 'pickup');
+assert.equal(truth.key({ origin: 'shopify' }, boutiqueIds, boutique, 'boutique'), '');
 
 const yesterday = truth.breakdown([
   { ts: 110, amount: 180, origin: 'caisse', label: 'SB-24' },
@@ -44,6 +50,25 @@ const yesterday = truth.breakdown([
 assert.equal(yesterday.total, 277);
 assert.equal(yesterday.amounts.dining, 277);
 assert.equal(yesterday.amounts.dining / yesterday.total, 1, 'all dining-room takings render Salle 100 %');
+
+const boutiqueYesterday = truth.breakdown([
+  { ts: 110, amount: 180, origin: 'caisse', label: 'Caftan +2 art.' },
+  { ts: 120, amount: 97, origin: 'caisse', label: 'Jean noir' },
+], boutiqueIds, 100, 200, boutique, 'boutique');
+assert.equal(boutiqueYesterday.total, 277);
+assert.equal(boutiqueYesterday.amounts.counter, 277);
+assert.equal(boutiqueYesterday.unknown, 0);
+assert.equal(boutiqueYesterday.amounts.counter / boutiqueYesterday.total, 1, 'legacy boutique caisse takings render Comptoir 100 %');
+
+const boutiqueMixed = truth.breakdown([
+  { ts: 110, amount: 50, origin: 'caisse' },
+  { ts: 120, amount: 30, origin: 'caisse', method: 'delivery' },
+  { ts: 130, amount: 20, origin: 'caisse', label: 'Réservation-retrait #17' },
+], boutiqueIds, 100, 200, boutique, 'boutique');
+assert.equal(boutiqueMixed.amounts.counter, 50);
+assert.equal(boutiqueMixed.amounts.delivery, 30);
+assert.equal(boutiqueMixed.amounts.pickup, 20);
+assert.equal(boutiqueMixed.unknown, 0);
 
 const partial = truth.breakdown([
   { ts: 110, amount: 10, channel: 'dining' },
@@ -55,4 +80,4 @@ assert.equal(partial.unknown, 90);
 assert.match(layout, /distribution = channels\.map/);
 assert.match(layout, /split\.unknown \/ split\.total/);
 
-console.log('channel-percentage-test: 18 controls passed');
+console.log('channel-percentage-test: 32 controls passed');
