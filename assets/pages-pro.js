@@ -4207,10 +4207,15 @@ function pdsSetServerIds(table, ids) {
   return clean;
 }
 function pdsHasServer(table, sid) { return pdsServerIds(table).includes(String(sid || '')); }
+function pdsIsFloorRole(role) {
+  const plain = String(role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return /(^|\b)(serveur|serveuse|server|waiter|waitress|chef de rang|maitre d[' ]hotel|responsable de salle|floor manager)(\b|$)/.test(plain)
+    || /(?:نادل|نادلة|رئيس القاعة|مشرف القاعة)/.test(String(role || ''));
+}
 function pdsTeamStaff() {
   try {
     const roster = (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : [];
-    return (roster || []).filter(m => m && m.id).map(m => ({
+    return (roster || []).filter(m => m && m.id && pdsIsFloorRole(m.role)).map(m => ({
       id: 'tm-' + m.id,
       name: (m.name && m.name !== '—') ? m.name : String(m.role || '').trim() || '—',
       color: pdsStaffColor(m.id),
@@ -4239,7 +4244,7 @@ function pdsSyncStaff(state) {
   const demo = new Set(PDS_DEFAULT_STAFF.map(s => s.id));
   const team = pdsTeamStaff();
   const byId = new Map(team.map(s => [s.id, s]));
-  const kept = state.staff.filter(s => s && s.id && !demo.has(s.id)).map(s => {
+  const kept = state.staff.filter(s => s && s.id && !demo.has(s.id) && (s.from !== 'team' || byId.has(s.id))).map(s => {
     const t = byId.get(s.id);
     return t ? Object.assign({}, s, { name: t.name, role: t.role, color: s.color || t.color }) : s;
   });
@@ -4424,6 +4429,24 @@ function pdsSave(state) {
 var pdsLive = null;    // l'état actuellement ouvert à l'écran, s'il y en a un
 var pdsDoc = null;
 
+function pdsRefreshLiveStaff() {
+  if (!pdsLive || !pdsIsRealStore()) return;
+  const before = JSON.stringify({
+    staff: (pdsLive.staff || []).map(s => [s.id, s.name, s.role]),
+    tables: (pdsLive.tables || []).map(t => [t.id, pdsServerIds(t)]),
+  });
+  pdsSyncStaff(pdsLive);
+  const after = JSON.stringify({
+    staff: (pdsLive.staff || []).map(s => [s.id, s.name, s.role]),
+    tables: (pdsLive.tables || []).map(t => [t.id, pdsServerIds(t)]),
+  });
+  if (before === after) return;
+  pdsWriteLocal(pdsLive);
+  if (pdsLive._refresh) pdsLive._refresh();
+}
+window.addEventListener('kiwi-team-ready', pdsRefreshLiveStaff);
+window.addEventListener('kiwi-team-changed', pdsRefreshLiveStaff);
+
 function pdsRawState() {
   try {
     var raw = localStorage.getItem(pdsKey());
@@ -4477,6 +4500,7 @@ function pdsCloud() {
     localKey: pdsKey,
     read: pdsRawState,
     write: function (d) {
+      d = pdsSyncStaff(d);
       pdsWriteLocal(d);
       /* La page est ouverte : on remplace le contenu de l'état VIVANT (les
        * gestionnaires de glisser-déposer tiennent cette référence) plutôt que

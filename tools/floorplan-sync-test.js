@@ -227,6 +227,16 @@ function run(opts) {
     /\$\{\[0,1,2\]\.map\(slot =>/.test(PAGES));
   ok('glisser un serveur ajoute une affectation sans écraser les précédentes',
     /pdsSetServerIds\(t, current\.concat\(sid\)\)/.test(PAGES));
+  ok('le plan ne propose que les rôles capables de prendre une section',
+    /function pdsIsFloorRole\(role\)/.test(PAGES)
+    && /filter\(m => m && m\.id && pdsIsFloorRole\(m\.role\)\)/.test(PAGES));
+  ok("un ancien membre Équipe qui n'est plus éligible disparaît du plan",
+    /s\.from !== 'team' \|\| byId\.has\(s\.id\)/.test(PAGES));
+  ok("le plan se resynchronise quand l'équipe distante finit de charger",
+    /addEventListener\('kiwi-team-ready', pdsRefreshLiveStaff\)/.test(PAGES)
+    && /addEventListener\('kiwi-team-changed', pdsRefreshLiveStaff\)/.test(PAGES));
+  ok('une copie serveur tardive est rapprochée du roster courant avant affichage',
+    /write: function \(d\) \{\s*d = pdsSyncStaff\(d\);/.test(PAGES));
   ok('la caisse préfère la copie serveur au miroir local',
     CAISSE.indexOf('window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)')
     < CAISSE.indexOf("localStorage.getItem('kiwiPlanDeSalle:slug:' + slug)"));
