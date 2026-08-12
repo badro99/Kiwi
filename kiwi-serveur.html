@@ -3801,7 +3801,9 @@ em, i, cite, dfn, var { font-style: normal; }
 
   <!-- Live Link — optional $0 backend bridge. OFF by default; ?live=1 turns it on,
        then each settled table POSTs to /api/sale and shows on the owner's dashboard. -->
-  <script src="assets/live-link.js" defer></script>
+  <script src="assets/vendor/dexie.min.js" defer></script>
+  <script src="assets/offline-db.js?v=3" defer></script>
+  <script src="assets/live-link.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -3809,7 +3811,7 @@ em, i, cite, dfn, var { font-style: normal; }
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=360" defer></script>
+  <script src="assets/employee-live.js?v=361" defer></script>
   <script src="assets/employee-planning.js?v=3" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, le serveur relit dès qu'une table change en caisse, au lieu

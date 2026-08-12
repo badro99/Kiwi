@@ -3,7 +3,7 @@
   'use strict';
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=368').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=369').then(function (reg) {
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });
@@ -58,17 +58,27 @@
   });
 
   // Offline/online + real server queue reflection — visible enough to act on.
+  var refreshingStatus = false;
   function status() {
+    try {
+      if (!refreshingStatus && window.KiwiLive?.refreshQueue) {
+        refreshingStatus = true;
+        Promise.resolve(window.KiwiLive.refreshQueue()).finally(function () { refreshingStatus = false; });
+      }
+    } catch (_) { refreshingStatus = false; }
     var d = document.getElementById('kiwi-net') || (function () {
-      var s = document.createElement('div'); s.id = 'kiwi-net';
+      var s = document.createElement('button'); s.id = 'kiwi-net'; s.type = 'button';
+      s.setAttribute('aria-live', 'polite');
       var host = railFoot();
       if (host) {
         /* Dernière ligne du pied, sous « Sortir » : une ligne d'état, pas une
            pastille posée par-dessus. Pastille de couleur + libellé. */
-        s.style.cssText = 'display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:12px;' +
-          'font:600 12px/1.2 "Inter Tight",system-ui;transition:background .2s,opacity .2s';
+        s.style.cssText = 'width:100%;display:grid;grid-template-columns:8px minmax(0,1fr);align-items:center;' +
+          'gap:10px;padding:10px 12px;border:1px solid transparent;border-radius:14px;text-align:left;' +
+          'font-family:"Inter Tight",system-ui;background:transparent;transition:background .24s,border-color .24s,opacity .2s;cursor:pointer';
         s.innerHTML = '<i class="kn-dot" style="width:8px;height:8px;flex:0 0 8px;border-radius:50%"></i>' +
-          '<span class="kn-txt"></span>';
+          '<span style="min-width:0"><b class="kn-txt" style="display:block;font-size:12px;line-height:1.2"></b>' +
+          '<small class="kn-detail" style="display:block;margin-top:3px;font-size:10px;line-height:1.25;font-weight:500;opacity:.7"></small></span>';
         host.appendChild(s);
       } else {
         s.style.cssText = 'position:fixed;right:18px;bottom:210px;z-index:9998;padding:7px 10px;border-radius:999px;' +
@@ -79,39 +89,50 @@
     })();
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
-    var tone, label;
+    var tone, label, detail;
     if (q.storageError || q.blocked) {
       tone = '#9F3028';
-      label = q.storageError ? 'Stockage ventes saturé · support requis' : q.blocked + ' vente bloquée · support requis';
+      label = q.storageError ? 'Protection locale à vérifier' : q.blocked + ' vente' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
+      detail = 'Touchez pour relancer · rien n’est supprimé';
     } else if (!navigator.onLine) {
       tone = '#B85245';
-      label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' vente(s) en attente' : '');
+      label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
+      detail = q.pending ? 'Ventes protégées sur cet appareil' : 'La caisse continue normalement';
     } else if (q.pending) {
       tone = '#A56A16';
-      label = q.pending + ' vente(s) à synchroniser';
+      label = q.pending + ' vente' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
+      detail = q.sending ? 'Envoi sécurisé en cours' : 'Touchez pour envoyer maintenant';
     } else {
       tone = '#287B55';
-      label = 'En ligne · synchronisé';
+      label = 'Synchronisé';
+      detail = q.engine === 'indexeddb' ? 'Ventes protégées hors ligne' : 'En ligne';
     }
-    var dot = d.querySelector('.kn-dot'), txt = d.querySelector('.kn-txt');
+    var dot = d.querySelector('.kn-dot'), txt = d.querySelector('.kn-txt'), sub = d.querySelector('.kn-detail');
     if (dot && txt) {
       /* Nominal : le pied reste calme — pastille verte, libellé discret. Les
          trois états anormaux réclament une action, donc la ligne se peint. */
       var nominal = tone === '#287B55';
       dot.style.background = tone;
       d.style.background = nominal ? 'transparent' : tone;
+      d.style.borderColor = nominal ? 'transparent' : 'rgba(255,255,255,.14)';
       d.style.color = nominal ? '#6a6e6c' : '#F7F5F0';
       d.style.opacity = nominal ? '.78' : '1';
       txt.textContent = label;
+      if (sub) sub.textContent = detail;
     } else {
       d.style.background = tone;
       d.textContent = label;
     }
-    d.title = label;
+    d.title = label + ' — ' + detail;
+    d.onclick = function () {
+      try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
+      status();
+    };
   }
   window.addEventListener('online', status);
   window.addEventListener('offline', status);
   window.addEventListener('kiwi:sale-queue', status);
+  window.addEventListener('kiwi:outbox', status);
   window.setInterval(status, 5000);
 
   /* The 14 vertical POS screens originally shipped a clickable "simulate

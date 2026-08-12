@@ -6018,9 +6018,13 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/dateRange.js?v=5" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=358"></script>
-<script defer src="assets/dashboard-pwa.js?v=361"></script>
+<script defer src="assets/dashboard-pwa.js?v=362"></script>
 <script defer src="assets/dashboard-native.js"></script>
-<script defer src="assets/live-link.js"></script>
+<!-- Same durable outbox as the tills. It also lets this surface report the
+     real device sync state instead of inferring it from navigator.onLine. -->
+<script defer src="assets/vendor/dexie.min.js"></script>
+<script defer src="assets/offline-db.js?v=3"></script>
+<script defer src="assets/live-link.js?v=4"></script>
 <!-- Operator feature flags — hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
 <script defer src="assets/merchant-config.js?v=261"></script>

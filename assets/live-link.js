@@ -204,11 +204,15 @@
    * WiFi in a boutique drops. A sale that failed to reach D1 used to be lost for
    * good ("best-effort; offline queue is a later phase") and the owner's
    * dashboard silently under-counted the day. Every sale now carries a stable id
-   * and waits in localStorage until the server confirms it, then retries on
-   * reconnect and on every feed poll. That id is the row's PRIMARY KEY and
+   * and waits in the IndexedDB outbox until the server confirms it, then retries
+   * on reconnect and on every feed poll. Legacy browsers retain the original
+   * localStorage fallback. That id is the row's PRIMARY KEY and
    * /api/sale does INSERT OR IGNORE, so retrying after a lost response can never
    * write the same sale twice. */
   var Q_KEY = 'kiwiSaleQueue';
+  var OUTBOX_CHANNEL = 'sale';
+  var outboxUsing = false;
+  var outboxStatus = { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false };
   function qRead() {
     try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
@@ -234,6 +238,17 @@
     }
   }
   function queueStatus() {
+    if (outboxUsing) {
+      return {
+        pending: outboxStatus.pending,
+        blocked: outboxStatus.blocked,
+        sending: outboxStatus.sending,
+        foreign: 0,
+        total: outboxStatus.total,
+        storageError: !!outboxStatus.storageError,
+        engine: 'indexeddb',
+      };
+    }
     var q = qRead();
     var active = merchant();
     var current = active ? q.filter(function (x) { return x && x.merchant === active; }) : q;
@@ -243,7 +258,51 @@
       foreign: q.length - current.length,
       total: q.length,
       storageError: !!queueStorageError,
+      engine: 'localstorage',
     };
+  }
+
+  function refreshOutboxStatus() {
+    var O = window.KiwiOffline;
+    var active = merchant();
+    if (!O || !O.available() || !active) return Promise.resolve(outboxStatus);
+    return O.stats(OUTBOX_CHANNEL, active).then(function (status) {
+      outboxStatus = status;
+      outboxUsing = true;
+      queueSignal();
+      return status;
+    });
+  }
+
+  /* Move the old synchronous queue only after Dexie's transaction commits.
+     Until then qRead/qWrite remain the fully working fallback, so an IndexedDB
+     denial (private mode, storage policy, damaged profile) never loses a sale. */
+  function initOutbox() {
+    var O = window.KiwiOffline;
+    if (!O) return Promise.resolve(false);
+    try {
+      O.subscribe(function (event) {
+        if (!event || !event.channel || event.channel === OUTBOX_CHANNEL) refreshOutboxStatus();
+      });
+    } catch (_) {}
+    return O.migrateLegacy(Q_KEY, OUTBOX_CHANNEL, function (row) {
+      if (!row || !row.id || !row.merchant) return null;
+      return {
+        id: row.id,
+        tenant: row.merchant,
+        payload: row,
+        blocked: !!row._blocked,
+        status: row._status,
+        createdAt: row.ts,
+      };
+    }).then(function () {
+      outboxUsing = true;
+      queueStorageError = false;
+      return refreshOutboxStatus().then(function () { return true; });
+    }).catch(function () {
+      outboxUsing = false;
+      return false;
+    });
   }
   function uid() {
     try {
@@ -263,7 +322,7 @@
   }
 
   var flushing = false, queueStorageError = false;
-  function flushQueue() {
+  function flushLegacyQueue() {
     if (flushing) return;
     var q = qRead();
     if (!q.length) return;
@@ -283,7 +342,7 @@
         var rest = current.filter(function (x) { return x && x.id !== body.id; });
         qWrite(rest);
         pingLocal();                           // the row exists now — tell the dashboards
-        if (rest.some(function (x) { return x && !x._blocked; })) flushQueue();
+        if (rest.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
         return;
       }
       if (blocked) {
@@ -291,7 +350,7 @@
           if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
         });
         qWrite(current);                       // retained, visible, skipped on the next send
-        if (current.some(function (x) { return x && !x._blocked; })) flushQueue();
+        if (current.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
       } else queueSignal();                    // offline/transient → unchanged and retryable
     }
     try {
@@ -310,6 +369,50 @@
     } catch (_) { done(false, false, 0); }
   }
 
+  function flushOutbox(force) {
+    if (flushing || !navigator.onLine) return;
+    var O = window.KiwiOffline;
+    var active = merchant();
+    if (!O || !active) { queueSignal(); return; }
+    flushing = true;
+    O.claim(OUTBOX_CHANNEL, active, { force: !!force }).then(function (row) {
+      if (!row) { flushing = false; return refreshOutboxStatus(); }
+      var body = row.payload;
+      function settle(ok, permanent, status, error) {
+        var action = ok
+          ? O.acknowledge(row.id, row.leaseToken)
+          : O.reject(row.id, row.leaseToken, { permanent: permanent, status: status, error: error });
+        return action.then(function () {
+          flushing = false;
+          if (ok) pingLocal();
+          return refreshOutboxStatus();
+        }).then(function (state) {
+          if (state.pending > 0 && navigator.onLine) flushOutbox();
+        });
+      }
+      return fetch('/api/sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        keepalive: true,
+      }).then(function (response) {
+        var BLOCK = { 400: 1, 409: 1, 422: 1 };
+        return settle(!!response.ok, !!BLOCK[response.status], response.status, response.ok ? '' : 'HTTP ' + response.status);
+      }).catch(function (err) {
+        return settle(false, false, 0, err && err.message || 'network');
+      });
+    }).catch(function () {
+      flushing = false;
+      outboxStatus.storageError = true;
+      queueSignal();
+    });
+  }
+
+  function flushQueue(force) {
+    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) return flushOutbox(force === true);
+    return flushLegacyQueue();
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var amt = Math.round(entry.amount || 0);
@@ -319,11 +422,11 @@
     // this just skips a guaranteed 400 rather than changing behaviour.
     var m = merchant();
     if (!m) return;
-    var q = qRead();
+    var q = outboxUsing ? [] : qRead();
     /* The basket, compacted. {n,q,t} rather than {name,qty,total} because this
-     * queue lives in localStorage and is replayed after an outage — a busy
-     * lunch service can hold a few hundred queued sales, and the short keys are
-     * roughly a third of the bytes for the same information. Capped at 40 lines
+     * payload is replayed after an outage and also has to fit the emergency
+     * localStorage fallback — a busy lunch service can hold a few hundred queued
+     * sales, and the short keys are roughly a third of the bytes. Capped at 40 lines
      * and 60 chars per name, the same limits the till itself applies. */
     var lines = null;
     try {
@@ -380,6 +483,26 @@
     /* The same completed receipt can be observed by two local persistence
        paths. Stable IDs plus this local check prevent it entering the queue
        twice; INSERT OR IGNORE remains the server-side second lock. */
+    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
+      /* The checkout stays synchronous from the caller's perspective, while
+         persistence and transport complete in this durable promise chain. Any
+         IndexedDB failure immediately falls back to the old queue and paints a
+         visible storage warning instead of discarding the taking. */
+      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, { id: body.id, createdAt: body.ts }).then(function () {
+        return refreshOutboxStatus();
+      }).then(function () {
+        pingLocal();
+        flushQueue();
+      }).catch(function () {
+        var fallback = qRead();
+        if (!fallback.some(function (x) { return x && x.id === body.id; })) fallback.push(body);
+        qWrite(fallback);
+        outboxStatus.storageError = true;
+        queueSignal();
+        flushLegacyQueue();
+      });
+      return { ok: true, queued: true, durable: 'indexeddb', id: body.id };
+    }
     if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
     q.push(body);
     if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
@@ -778,8 +901,12 @@
     else watchVoids();
     // Retry the queue whenever the network comes back, on every page (a till is
     // where the sales are, and it is the device most likely to be offline).
-    try { window.addEventListener('online', flushQueue); } catch (_) {}
-    flushQueue();
+    try { window.addEventListener('online', function () { flushQueue(true); }); } catch (_) {}
+    /* Opening IndexedDB and atomically importing the legacy queue is async.
+       Flush only after that choice has settled, otherwise the old array and
+       the new outbox could race to submit the same sale (the server would
+       dedupe it, but the terminal would briefly report two debts). */
+    initOutbox().then(flushQueue);
     initOperatorBanner();
     opSkipLock();
   }
@@ -788,8 +915,8 @@
 
   window.KiwiLive = {
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
-    flush: flushQueue, pending: function () { return qRead().length; },
-    queueStatus: queueStatus,
+    flush: flushQueue, pending: function () { return queueStatus().total; },
+    queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
        enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */
     confirmScope: function (slug) {
@@ -809,7 +936,7 @@
     status: function () {
       return {
         on: on(), merchant: merchant(), lastSync: lastSync,
-        bridged: feedSales.length, queued: qRead().length,
+        bridged: feedSales.length, queued: queueStatus().total,
         queue: queueStatus(),
       };
     },

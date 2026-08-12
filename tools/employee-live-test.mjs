@@ -360,7 +360,7 @@ ok(serviceSource.includes('Pause gérée depuis la caisse')
   "le profil employé affiche la pause sans permettre de se l'accorder");
 ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('KiwiEmployeeLive.login(email, pin)'),
   'le portail employé possède sa propre connexion email + PIN');
-ok(serviceSource.includes('assets/employee-live.js?v=360')
+ok(serviceSource.includes('assets/employee-live.js?v=361')
   && serviceSource.includes('assets/employee-planning.js?v=3')
   && serviceSource.includes('assets/pwa-update.js?v=358'),
   "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");

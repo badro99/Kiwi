@@ -97,14 +97,16 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=361',
+  '/assets/dashboard-pwa.js?v=362',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js?v=358',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=361',
-  '/assets/live-link.js',
+  '/assets/caisse-pwa.js?v=362',
+  '/assets/vendor/dexie.min.js',
+  '/assets/offline-db.js?v=3',
+  '/assets/live-link.js?v=4',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
@@ -160,7 +162,7 @@ var SHELL = [
   '/assets/menu-catalog.js?v=2',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=360',
+  '/assets/employee-live.js?v=361',
   '/assets/employee-planning.js?v=3',
   '/assets/planning-core.js?v=3',
   '/assets/planning-ui.css?v=4',

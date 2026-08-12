@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Kiwi live-link IndexedDB browser test</title>
+<button id="run" type="button">Run live-link outbox tests</button>
+<pre id="result">Not run</pre>
+<script>
+  window.KiwiEnv = { isReal: function () { return true; } };
+  localStorage.setItem('kiwiLive', '1');
+  window.__testTenant = 'browser-outbox-test-' + (new URLSearchParams(location.search).get('run') || Date.now());
+  localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: window.__testTenant }));
+  window.__fetchMode = 'fail';
+  window.__posts = [];
+  window.fetch = function (url, opts) {
+    if (url === '/api/sale') {
+      window.__posts.push(JSON.parse(opts.body));
+      if (window.__fetchMode === 'ok') return Promise.resolve({ ok: true, status: 201 });
+      if (window.__fetchMode === 'blocked') return Promise.resolve({ ok: false, status: 422 });
+      return Promise.reject(new Error('offline test'));
+    }
+    return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ sales: [], voided: [] }); } });
+  };
+</script>
+<script src="../assets/vendor/dexie.min.js"></script>
+<script src="../assets/offline-db.js?v=3"></script>
+<script src="../assets/live-link.js?v=4"></script>
+<script>
+(function () {
+  'use strict';
+  var output = document.getElementById('result');
+  var run = document.getElementById('run');
+  function assert(value, message) { if (!value) throw new Error(message); }
+  function line(message) { output.textContent += '\n✓ ' + message; }
+  function waitFor(fn, timeout) {
+    var start = Date.now();
+    return new Promise(function (resolve, reject) {
+      (function tick() {
+        Promise.resolve(fn()).then(function (value) {
+          if (value) return resolve(value);
+          if (Date.now() - start > timeout) return reject(new Error('timeout'));
+          setTimeout(tick, 25);
+        }, reject);
+      })();
+    });
+  }
+  run.addEventListener('click', async function () {
+    run.disabled = true;
+    output.textContent = 'Running';
+    var ref = 'BROWSER-' + Date.now();
+    try {
+      await KiwiOffline.ready();
+      await new Promise(function (resolve) { setTimeout(resolve, 80); });
+      window.__fetchMode = 'fail';
+      var accepted = KiwiLive.postSale({ amount: 123, method: 'cash', label: 'Offline test', ref: ref });
+      assert(accepted && accepted.ok && accepted.durable === 'indexeddb', 'uses IndexedDB');
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).pending === 1; }, 3000);
+      line('a failed POST remains durable in IndexedDB');
+
+      window.__fetchMode = 'ok';
+      KiwiLive.flush(true);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 3000);
+      assert(window.__posts.length >= 2 && window.__posts[0].id === window.__posts[1].id, 'stable replay id');
+      line('reconnect replays the same id and acknowledges it');
+
+      window.__fetchMode = 'blocked';
+      KiwiLive.postSale({ amount: 44, method: 'card', label: 'Invalid test', ref: ref + '-blocked' });
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).blocked === 1; }, 3000);
+      assert(KiwiLive.queueStatus().blocked === 1, 'blocked status visible');
+      line('a 422 response is retained and visible to the cashier');
+
+      output.dataset.status = 'passed';
+      output.textContent += '\n\nPASSED';
+    } catch (err) {
+      output.dataset.status = 'failed';
+      output.textContent += '\n\nFAILED: ' + (err && err.message || err);
+    } finally { run.disabled = false; }
+  });
+})();
+</script>
+</html>

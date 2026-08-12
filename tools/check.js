@@ -254,6 +254,22 @@ section('Live sale resilience (tools/live-link-test.js)');
   }
 }
 
+/* ── 4e · durable browser outbox wiring ────────────────────────────────────
+ * The behavioral fixtures run in a real browser; this zero-dependency gate
+ * locks their tested engine into every operational shell and the PWA cache. */
+section('Offline transaction foundation (tools/offline-foundation-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'offline-foundation-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    ok(`offline foundation green (${(out.match(/✓/g) || []).length - 1} wiring and durability checks)`);
+  } else {
+    out.split('\n').filter((l) => l.includes('✗')).forEach((l) => fail(l.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`offline-foundation-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── Receipt numbers are allocated, not inferred from the sales ledger. ─── */
 section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
 {

@@ -63,6 +63,10 @@
        https://unpkg.com/lucide@latest/dist/umd/lucide.min.js into assets/. -->
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
   <script src="assets/kiwi-env.js"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
+       boot and bank transactions with no CDN and no build step. -->
+  <script src="assets/vendor/dexie.min.js" defer></script>
+  <script src="assets/offline-db.js?v=3" defer></script>
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
@@ -4647,8 +4651,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=361" defer></script>
-  <script src="assets/live-link.js" defer></script>
+  <script src="assets/caisse-pwa.js?v=362" defer></script>
+  <script src="assets/live-link.js?v=4" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js" defer></script>
