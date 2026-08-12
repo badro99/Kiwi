@@ -770,6 +770,7 @@
     push: push, pull: pull, flush: flush,
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
   };
+  try { window.dispatchEvent(new CustomEvent('kiwi-day-report-ready')); } catch (_) {}
 
   /* Hydrate au chargement : sans ça, un navigateur neuf a un classeur vide et
      le premier `push()` effacerait les rapports du serveur (règle 3 de

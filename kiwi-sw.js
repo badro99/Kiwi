@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v385';
+var CACHE = 'kiwi-app-v386';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -82,7 +82,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=8',
+  '/assets/venues.js?v=9',
   '/assets/trade-workspace-schema.js?v=3',
   '/assets/trade-workspaces.js?v=3',
   '/assets/reservations.js?v=7',
@@ -91,7 +91,7 @@ var SHELL = [
   '/assets/pressing-catalog.js?v=3',
   '/assets/pressing-dashboard.js?v=7',
   '/assets/demoClock.js',
-  '/assets/dateRange.js?v=6',
+  '/assets/dateRange.js?v=7',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
@@ -119,7 +119,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js',
+  '/assets/day-report.js?v=2',
   '/assets/day-report-dash.js',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

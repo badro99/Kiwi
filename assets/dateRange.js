@@ -1667,6 +1667,17 @@
   }
   // Window bounds [from, to) in ms for a range, relative to now.
   function rangeBounds(range) {
+    /* A merchant-picked range is exact. Demo tables may use a presentation
+     * bucket, but live ledgers must never turn "3–5 August" into "last 7
+     * days" while keeping the precise dates on screen. */
+    if ((range === 'personnalise' || (range == null && currentRange === 'personnalise')) && customRange) {
+      const h = dayCutoffH();
+      const start = new Date(customRange.start);
+      const end = new Date(customRange.end);
+      start.setHours(h, 0, 0, 0);
+      end.setHours(h, 0, 0, 0);
+      return [start.getTime(), end.getTime() + 864e5];
+    }
     const today = dayStartMs(Date.now());
     if (range === 'aujourdhui') return [today, Infinity];
     if (range === 'hier')       return [today - 864e5, today];
@@ -1675,7 +1686,7 @@
   }
   // Windowed revenue / count / basket from the merchant's real sales.
   function realSalesTotals(range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     let revenue = 0, count = 0;
     realSalesList().forEach(e => {
       const ts = +e.ts || 0;
@@ -1715,6 +1726,86 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0, card, cash };
   }
+
+  /* One read model for every headline and insight sentence. Nothing falls back
+   * to older rows when the selected period is empty: zero today means zero
+   * today, even when the venue sold yesterday. */
+  function realInsightSummary(range) {
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    const rows = realSalesList().filter((e) => {
+      const ts = +e.ts || 0;
+      return ts >= from && ts < to;
+    });
+    let revenue = 0, collected = 0;
+    const byHour = {}, byTender = {};
+    rows.forEach((e) => {
+      const amount = Math.max(0, +e.amount || 0);
+      revenue += amount;
+      if (amount) {
+        const hour = new Date(+e.ts || 0).getHours();
+        byHour[hour] = (byHour[hour] || 0) + amount;
+      }
+      const tender = tenderBucket(e && e.method);
+      if (tender && amount) {
+        byTender[tender] = (byTender[tender] || 0) + amount;
+        collected += amount;
+      }
+    });
+    const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
+      best == null || obj[key] > obj[best] ? key : best, null);
+    const peakHour = topKey(byHour);
+    const topTender = topKey(byTender);
+    return {
+      from, to, count: rows.length, revenue,
+      basket: rows.length ? revenue / rows.length : 0,
+      peakHour: peakHour == null ? null : +peakHour,
+      peakRevenue: peakHour == null ? 0 : byHour[peakHour],
+      activeHours: Object.keys(byHour).length,
+      topTender,
+      tenderAmount: topTender == null ? 0 : byTender[topTender],
+      collected,
+    };
+  }
+
+  const TENDER_NAME = {
+    fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'lien de paiement', transfer: 'virement', split: 'paiement partagé', other: 'autre mode' },
+    en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'payment link', transfer: 'bank transfer', split: 'split payment', other: 'other tender' },
+    ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR / محفظة', link: 'رابط دفع', transfer: 'تحويل بنكي', split: 'دفع مقسّم', other: 'طريقة أخرى' },
+  };
+  function buildRealHeroRec() {
+    const s = realInsightSummary();
+    if (!s.count || !s.revenue) return null;
+    const lang = getLang();
+    const today = currentRange === 'aujourdhui';
+    const num = (n) => frInt(Math.round(n));
+    const tender = s.topTender && s.collected ? Math.round((s.tenderAmount / s.collected) * 100) : null;
+    const tenderName = s.topTender ? (TENDER_NAME[lang] || TENDER_NAME.fr)[s.topTender] : '';
+    const peakFr = s.peakHour == null ? '' : ` Votre meilleure heure : ${s.peakHour}h.`;
+    const payFr = tender == null ? '' : ` ${tender} % des encaissements identifiés sont en ${tenderName}.`;
+    const peakEn = s.peakHour == null ? '' : ` Your best hour: ${s.peakHour}:00.`;
+    const payEn = tender == null ? '' : ` ${tender}% of identified payments are ${tenderName}.`;
+    const peakAr = s.peakHour == null ? '' : ` أفضل ساعة: ${s.peakHour}.`;
+    const payAr = tender == null ? '' : ` ${tender}٪ من المدفوعات المحددة عبر ${tenderName}.`;
+    const W = {
+      fr: { title: today ? 'Votre journée en cours' : 'La période sélectionnée', obs: `${s.count} vente${s.count > 1 ? 's' : ''} ${today ? "aujourd'hui" : 'sur la période'} pour ${num(s.revenue)} MAD, panier moyen ${num(s.basket)} MAD.${peakFr}${payFr}`, act: '→ Calculé à partir des ventes affichées sur cette période.', basisLabel: 'mesuré' },
+      en: { title: today ? 'Your day so far' : 'Selected period', obs: `${s.count} sale${s.count > 1 ? 's' : ''} ${today ? 'today' : 'in this period'} for ${num(s.revenue)} MAD, average basket ${num(s.basket)} MAD.${peakEn}${payEn}`, act: '→ Calculated from the sales shown for this period.', basisLabel: 'measured' },
+      ar: { title: today ? 'يومك حتى الآن' : 'الفترة المحددة', obs: `${s.count} عملية بيع ${today ? 'اليوم' : 'خلال هذه الفترة'} بقيمة ${num(s.revenue)} درهم، ومتوسط السلة ${num(s.basket)} درهم.${peakAr}${payAr}`, act: '← محسوب من المبيعات المعروضة لهذه الفترة.', basisLabel: 'مقاس' },
+    };
+    return W[lang] || W.fr;
+  }
+  function buildRealHeatmapRec() {
+    const s = realInsightSummary();
+    if (!s.count || !s.revenue || s.peakHour == null) return null;
+    const lang = getLang();
+    const share = Math.round((s.peakRevenue / s.revenue) * 100);
+    const num = (n) => frInt(Math.round(n));
+    const W = {
+      fr: { title: `Votre pic : ${s.peakHour}h`, obs: `${num(s.peakRevenue)} MAD encaissés à ${s.peakHour}h, soit ${share} % de la période, répartie sur ${s.activeHours} heure${s.activeHours > 1 ? 's' : ''} d’activité.`, cta: '' },
+      en: { title: `Your peak: ${s.peakHour}:00`, obs: `${num(s.peakRevenue)} MAD taken at ${s.peakHour}:00, ${share}% of the period across ${s.activeHours} active hour${s.activeHours > 1 ? 's' : ''}.`, cta: '' },
+      ar: { title: `ذروتك: ${s.peakHour}`, obs: `${num(s.peakRevenue)} درهم عند الساعة ${s.peakHour}، أي ${share}٪ من الفترة موزعة على ${s.activeHours} ساعة نشاط.`, cta: '' },
+    };
+    return W[lang] || W.fr;
+  }
   /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
    * désormais le seul endroit de l'application qui sache répondre « combien me
    * coûte ce produit ».
@@ -1752,7 +1843,7 @@
   /* rangeBounds leaves `to` open at Infinity for live ranges; a comparison
    * needs a closed window it can shift backwards, so pin the open end to now. */
   function closedBounds(range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     return [from, to === Infinity ? Date.now() + 1 : to];
   }
   /* A percentage change needs something to change FROM. A merchant on their
@@ -1814,7 +1905,7 @@
   // at all returns null, not zeros — same rule realDeltaPct states above: a
   // fabricated baseline claims a comparison that was never possible.
   function realRevSeries(range) {
-    range = range || effRange();
+    range = range == null ? currentRange : range;
     const list = realSalesList();
     const hourly = (range === 'aujourdhui' || range === 'hier');
     let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
@@ -1839,8 +1930,8 @@
       sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
       cmpPrefix = (range === 'hier') ? 'Cumul avant-hier' : 'Cumul hier';
     } else {
-      const days = RANGE_DAYS[range] || 7;
-      const start = dayStartMs(Date.now()) - (days - 1) * 864e5;
+      const [start, end] = closedBounds(range);
+      const days = Math.max(1, Math.ceil((end - start) / 864e5));
       rev = dailyTotals(list, start, days);
       prev = dailyTotals(list, start - days * 864e5, days);
       for (let i = 0; i < days; i++) { const d = new Date(start + i * 864e5); xLabels.push(DAY_ABBR[d.getDay()] + ' ' + d.getDate()); }
@@ -1849,8 +1940,8 @@
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
       total = rev.reduce((s, x) => s + x, 0);
       prevTotal = prev.reduce((s, x) => s + x, 0);
-      rangeBadge = days + ' DERNIERS JOURS';
-      sub = 'Total journalier · ' + days + ' derniers jours';
+      rangeBadge = range === 'personnalise' ? 'PÉRIODE PERSONNALISÉE' : days + ' DERNIERS JOURS';
+      sub = range === 'personnalise' ? 'Total journalier · période sélectionnée' : 'Total journalier · ' + days + ' derniers jours';
       cmpPrefix = days + ' jours précédents';
     }
 
@@ -1897,9 +1988,9 @@
         ...data,
         amount: t.revenue,
         netAfterKiwi: Math.round(t.revenue * 0.839),
-        deltaHier:    realDeltaPct(effRange(), rev),
-        deltaSemaine: realDeltaPct(effRange(), rev, 7),
-        deltaMois:    realDeltaPct(effRange(), rev, 28),
+        deltaHier:    realDeltaPct(currentRange, rev),
+        deltaSemaine: realDeltaPct(currentRange, rev, 7),
+        deltaMois:    realDeltaPct(currentRange, rev, 28),
       };
     }
 
@@ -2000,7 +2091,7 @@
       });
     }
 
-    const rec = window.KiwiVenue?.getHeroAiRec?.();
+    const rec = ownData() ? buildRealHeroRec() : window.KiwiVenue?.getHeroAiRec?.();
     const titleEl = document.querySelector('.hai-rec-title');
     const obsEl   = document.querySelector('.hai-rec-obs');
     const actEl   = document.querySelector('.hai-rec-act');
@@ -2031,7 +2122,7 @@
   /* ═══════════════ RENDER: HEATMAP AI HINT (per venue) ═══════════════ */
 
   function renderHeatmapAi() {
-    const rec = window.KiwiVenue?.getHeatmapAiRec?.();
+    const rec = ownData() ? buildRealHeatmapRec() : window.KiwiVenue?.getHeatmapAiRec?.();
     const titleEl = document.querySelector('.hh-ai-title');
     const obsEl   = document.querySelector('.hh-ai-obs');
     const ctaEl   = document.querySelector('.hh-ai-cta');
@@ -2068,7 +2159,7 @@
     // from their recorded sales.
     if (ownData() && window.KiwiSales) {
       const vd = window.KiwiVenue.getCurrentVenueData?.() || {};
-      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals().revenue };
+      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals(currentRange).revenue };
     }
 
     // Settings → "Objectif journalier" override for the default demo venue: the
@@ -2127,9 +2218,6 @@
     return 'i4';
   }
   function buildHeatmap(rng) {
-    // The hourly heatmap only carries the 4 base ranges; map the rest onto
-    // the closest one so it never crashes on moisDernier/trimestre/annee.
-    rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
     const v = getCurrentVenue();
     /* A real merchant's peak hours come from their OWN tickets: every sale
      * carries a `ts`, so bucket the active window by hour of day. Before the
@@ -2188,6 +2276,8 @@
         hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
       }));
     }
+    // Demo fixtures only carry base ranges; mapping is confined to that path.
+    rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
     const rev = HH_RAW_BY_VENUE[v]?.[rng] || HH_RAW_BY_VENUE.cafeAtlas[rng]
       || HH_RAW_BY_VENUE.cafeAtlas.trenteJours || HH_RAW_BY_VENUE.cafeAtlas.aujourdhui;
     const cov = HH_COVERS_BY_VENUE[v]?.[rng] || HH_COVERS_BY_VENUE.cafeAtlas[rng]
@@ -2200,7 +2290,7 @@
   }
   function renderHeatmap() {
     const lang = getLang();
-    const data = buildHeatmap(effRange());
+    const data = buildHeatmap(ownData() ? currentRange : effRange());
     // Determine sim cursor for past/current/future state on aujourdhui
     let simIdx = -1;
     if (isLiveDemo()) {
@@ -2461,7 +2551,7 @@
     // come from the merchant's recorded sales.
     if (ownData() && window.KiwiSales) {
       const t = realSalesTotals();
-      const rng = effRange();
+      const rng = currentRange;
       const [wFrom, wTo] = closedBounds(rng);
       const w = realWindowStats(wFrom, wTo);
       /* Le ratio se lit « card / cash ». Les deux parts sortent des ventes
@@ -2845,7 +2935,7 @@
     // (bucketed from KiwiSales), replacing the zeroed demo clone that draws a
     // flat line AND leaks the demo legend total. Matches the hero / KPI window.
     if (ownData() && window.KiwiSales) {
-      data = { ...data, ...realRevSeries(effRange()) };
+      data = { ...data, ...realRevSeries(currentRange) };
     }
 
     // ─── Live-demo override on aujourdhui ────────────────────────────────
@@ -3413,7 +3503,7 @@
   const MIX_CENTER_ALL = { fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' };
 
   function realMixRows(lang, range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     const by = {};
     let total = 0;
     realSalesList().forEach((e) => {
@@ -3445,7 +3535,8 @@
      * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
      * `rows`, donc les deux chemins partagent le même rendu. */
     const custom = !!(ownData() && window.KiwiSales);
-    const real = custom ? realMixRows(lang, effective) : null;
+    renderMixPlan(custom, lang);
+    const real = custom ? realMixRows(lang, currentRange) : null;
     const rows = custom ? real.rows : [
       { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
       { color: '#46A878', label: 'Mastercard', pct: data.mc   },
@@ -3578,6 +3669,29 @@
         animateNumber(el, from, r.pct, { duration: 600, format: v => `${Math.round(v)} %` });
       });
     }
+  }
+
+  const PLAN_NAME = { basic: 'Basic', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate' };
+  const PLAN_ACTIVE = { fr: 'Plan en cours', en: 'Current plan', ar: 'الخطة الحالية' };
+  const PLAN_PENDING = { fr: 'Plan en cours de vérification', en: 'Plan being verified', ar: 'جارٍ التحقق من الخطة' };
+  function renderMixPlan(custom, lang) {
+    const label = document.querySelector('[data-mix-plan-name]');
+    const status = document.querySelector('[data-mix-plan-status]');
+    if (!label || !status) return;
+    if (!custom) {
+      label.setAttribute('data-i18n', 'dash.mix.subscription');
+      status.setAttribute('data-i18n', 'dash.mix.subscription.price');
+      label.textContent = 'Abonnement Kiwi Pro';
+      status.textContent = '399 MAD/mois · tout inclus';
+      return;
+    }
+    label.removeAttribute('data-i18n');
+    status.removeAttribute('data-i18n');
+    const raw = String(window.KiwiConfig?.plan || '').toLowerCase();
+    label.textContent = PLAN_NAME[raw] ? `Kiwi ${PLAN_NAME[raw]}` : 'Abonnement Kiwi';
+    status.textContent = PLAN_NAME[raw]
+      ? (PLAN_ACTIVE[lang] || PLAN_ACTIVE.fr)
+      : (PLAN_PENDING[lang] || PLAN_PENDING.fr);
   }
 
   /* ═══════════════ RENDER: LIVE FEED ═══════════════
@@ -3752,7 +3866,7 @@
      * comme les lignes ne portent que l'heure, rien ne trahissait leur date. Le
      * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
      * direct, ni du jour. */
-    const [lo, hi] = rangeBounds(effRange());
+    const [lo, hi] = rangeBounds(currentRange);
     const sales = (window.KiwiSales?.list?.(venue) || [])
       .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
       .slice(-8).reverse();
@@ -4083,7 +4197,7 @@
   }
 
   function realTopProducts(range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     const sales = realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
     const by = new Map(); let covered = 0;
     sales.forEach((sale) => {
@@ -4121,11 +4235,11 @@
     en: { sub: 'No team members', msg: 'Add your team to track performance per person.' },
     ar: { sub: 'لا أعضاء فريق', msg: 'أضِف فريقك لتتبّع الأداء لكل شخص.' },
   };
-  const INTEG_TITLE = { fr: 'Intégrations actives', en: 'Active integrations', ar: 'عمليات الدمج النشطة' };
+  const INTEG_TITLE = { fr: 'Intégrations', en: 'Integrations', ar: 'عمليات الدمج' };
   const INTEG_SUB = {
-    fr: 'Connectez vos outils pour synchroniser ventes et paiements',
-    en: 'Connect your tools to sync sales and payments',
-    ar: 'اربط أدواتك لمزامنة المبيعات والمدفوعات',
+    fr: 'Aucune connexion active · choisissez un outil à connecter',
+    en: 'No active connection · choose a tool to connect',
+    ar: 'لا يوجد اتصال نشط · اختر أداة لربطها',
   };
   const INTEG_NOTCONN = { fr: 'Non connecté', en: 'Not connected', ar: 'غير متّصل' };
   const INTEG_LIST = [
@@ -4331,7 +4445,7 @@
      * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
      * propres ventes ; le tilde disparaît, ce total-là est exact. */
     if (ownData() && window.KiwiSales) {
-      totalEl.textContent = `${frInt(realSalesTotals(effective).revenue)} MAD`;
+      totalEl.textContent = `${frInt(realSalesTotals(currentRange).revenue)} MAD`;
       return;
     }
     const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
@@ -4447,7 +4561,7 @@
     const isCustom = ownData();
     const data = isCustom ? [] : vData(productsByVenue, currentRange);
     const pe = tradeStr('productsEmpty', PRODUCTS_EMPTY[lang] || PRODUCTS_EMPTY.fr);
-    const real = isCustom ? realTopProducts(effective) : null;
+    const real = isCustom ? realTopProducts(currentRange) : null;
     const titleEl = document.querySelector('[data-products-title]');
     if (titleEl) titleEl.textContent = (isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr;
     const manageEl = document.querySelector('[data-products-manage]');
@@ -5047,9 +5161,12 @@
       if (window.KiwiSales?.subscribe) {
         window.KiwiSales.subscribe(() => {
           renderHero();
+          renderHeroAi();
           renderGoal();
           renderKpiBand();
           renderRevChart();
+          renderHeatmap();
+          renderHeatmapAi();
           renderFeed();
           renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
           renderProducts();
@@ -5078,6 +5195,16 @@
       } else setTimeout(subCatalog, 80);
     };
     subCatalog();
+
+    /* day-report.js loads later because it depends on CloudDoc. Until it
+     * publishes the venue's business-day cutoff, midnight is only a temporary
+     * fallback. Repaint every time-sensitive card when that cutoff arrives. */
+    window.addEventListener('kiwi-day-report-ready', () => {
+      renderHero(); renderHeroAi(); renderGoal(); renderKpiBand();
+      renderRevChart(); renderHeatmap(); renderHeatmapAi(); renderMix();
+      renderFeed(); renderEvening(); renderProducts();
+    });
+    document.addEventListener('kiwi-config', () => renderMix());
 
     // Re-fit hero amount + re-flow chart on viewport resize
     let resizeTimer = null;
@@ -5117,6 +5244,16 @@
     renderProducts();
     renderStaff();
   }
+
+  /* Publish before init. The truth reader remains available even if an optional
+   * dashboard renderer fails during first paint. */
+  window.KiwiDateRange = {
+    getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    getShowComparison, setShowComparison,
+    bounds: (range) => rangeBounds(range == null ? currentRange : range),
+    insights: { summary: realInsightSummary, hero: buildRealHeroRec, heatmap: buildRealHeatmapRec },
+    _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec },
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
@@ -5192,12 +5329,4 @@
    *
    * Exporter la fonction plutôt que recopier ses quatre lignes : une borne
    * recopiée est une borne qu'on corrigera à un seul endroit sur trois. */
-  window.KiwiDateRange = {
-    getDateRange, setDateRange, subscribe, tickLiveRevenue,
-    getShowComparison, setShowComparison,
-    bounds: (range) => rangeBounds(range || effRange()),
-    /* Small read-only surface for regression simulations. Production rendering
-     * uses these exact functions, so tests cannot pass against a parallel mock. */
-    _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock },
-  };
 })();

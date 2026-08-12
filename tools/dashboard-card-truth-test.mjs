@@ -14,10 +14,11 @@ const window = {
   KiwiSales: { list: () => sales },
   KiwiRestaurantStock: { items: () => stock },
 };
+const storage = new Map();
 const context = {
   window,
   document: { readyState: 'loading', addEventListener() {}, querySelector() { return null; } },
-  localStorage: { getItem() { return null; }, setItem() {} },
+  localStorage: { getItem(k) { return storage.get(k) ?? null; }, setItem(k, v) { storage.set(k, String(v)); } },
   CustomEvent: class CustomEvent {},
   Date, Map, Set, Intl, Math, Number, String, Array, Object, Infinity,
   requestAnimationFrame() {}, setTimeout() {}, clearTimeout() {}, console,
@@ -70,8 +71,34 @@ assert.equal(low.rows.length, 1);
 assert.equal(low.rows[0].name, 'Lait');
 assert.equal(low.rows[0].suggested, 10);
 
+sales = [
+  { ts: now - 864e5, amount: 592, method: 'card' },
+];
+let insight = truth.realInsightSummary('aujourdhui');
+assert.equal(insight.count, 0, 'today never falls back to older sales');
+assert.equal(truth.buildRealHeroRec(), null, 'an empty active period produces an honest empty insight');
+sales = [
+  { ts: now, amount: 100, method: 'cash' },
+  { ts: now, amount: 50, method: 'compte' },
+];
+insight = truth.realInsightSummary('aujourdhui');
+assert.equal(insight.count, 2);
+assert.equal(insight.revenue, 150);
+assert.equal(insight.collected, 100, 'credit is excluded from collected tender claims');
+assert.match(truth.buildRealHeroRec().obs, /2 ventes aujourd'hui pour 150 MAD/);
+
 assert.match(source, /window\.KiwiReservations\?\.get\?\.\(\)/, 'reservation card reads the booking store');
 assert.match(source, /PRODUCTS_NO_LINES/, 'product ranking has an explicit missing-line coverage state');
 assert.doesNotMatch(source, /mode inconnu → carte/, 'unknown tenders are no longer attributed to card');
+assert.match(source, /renderHeroAi\(\);[\s\S]*renderHeatmapAi\(\);[\s\S]*renderMix\(\)/, 'sales repaint every sales-derived insight');
+assert.match(source, /kiwi-day-report-ready/, 'business-day cutoff repaints time-windowed cards');
 
-console.log('dashboard-card-truth-test: 28 controls passed');
+const venueSource = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
+assert.doesNotMatch(venueSource, /function miCustomHeroRec/, 'the obsolete all-time insight calculator is removed');
+assert.doesNotMatch(venueSource, /function miCustomHeatmapRec/, 'the duplicate calendar-midnight heatmap is removed');
+
+const html = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+assert.match(html, /data-mix-plan-name>Abonnement Kiwi</, 'first paint does not claim an unverified paid plan');
+assert.doesNotMatch(html, /data-mix-plan-name[^>]*>Abonnement Kiwi Pro</, 'Pro is never the live default');
+
+console.log('dashboard-card-truth-test: 41 controls passed');

@@ -7979,104 +7979,9 @@
     });
     return { revenue, count, basket: count ? revenue / count : 0 };
   }
-  /* Le pendant de miCustomHeroRec pour la bande sous la heatmap. Renvoie null
-   * seulement si la boutique n'a vraiment aucune vente — sinon on lit ses
-   * heures réelles. Annoncer « vos heures de pointe apparaîtront ici » au-dessus
-   * d'une heatmap qui affiche déjà trois barres, c'est apprendre au commerçant
-   * à ne plus croire la carte. */
-  function miCustomHeatmapRec(venueId) {
-    let list = [];
-    try { list = salesList(venueId) || []; } catch (_) { return null; }
-    if (!list.length) return null;
-    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-    const today = list.filter((s) => (+s.ts || 0) >= t0);
-    const src = today.length ? today : list;
-    const isToday = today.length > 0;
-    const byHour = {};
-    let rev = 0;
-    src.forEach((s) => {
-      const amt = Math.max(0, +s.amount || 0);
-      if (!amt) return;
-      rev += amt;
-      const h = new Date(+s.ts || 0).getHours();
-      byHour[h] = (byHour[h] || 0) + amt;
-    });
-    const keys = Object.keys(byHour);
-    if (!keys.length || !rev) return null;
-    const peak = keys.reduce((b, k) => (byHour[k] > byHour[b] ? k : b), keys[0]);
-    const share = Math.round((byHour[peak] / rev) * 100);
-    const n = keys.length;
-    const num = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const W = {
-      fr: { title: `Votre pic : ${peak}h`,
-            obs: `${num(byHour[peak])} MAD encaissés à ${peak}h, soit ${share} % ${isToday ? 'de la journée' : 'du total'}, réparti sur ${n} heure${n > 1 ? 's' : ''} d'activité.`, cta: '' },
-      en: { title: `Your peak: ${peak}h`,
-            obs: `${num(byHour[peak])} MAD taken at ${peak}h — ${share} % of ${isToday ? 'the day' : 'the total'}, spread over ${n} active hour${n > 1 ? 's' : ''}.`, cta: '' },
-      ar: { title: `ذروتك: ${peak}h`,
-            obs: `${num(byHour[peak])} درهم عند الساعة ${peak}، أي ${share} % ${isToday ? 'من اليوم' : 'من المجموع'}، موزّعة على ${n} ساعة نشاط.`, cta: '' },
-    };
-    return W[fusionLang()] || W.fr;
-  }
-
-  /* A real, data-derived hero recommendation for a merchant-created venue.
-   * Returns null when the store genuinely has no sales — the caller then keeps
-   * its welcome copy. Everything here is read off the merchant's OWN sales, so
-   * it can never contradict the hero figure sitting next to it. */
-  function miCustomHeroRec(venueId) {
-    let list = [];
-    try { list = salesList(venueId) || []; } catch (_) { return null; }
-    if (!list.length) return null;
-    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-    const today = list.filter((s) => (+s.ts || 0) >= t0);
-    const src = today.length ? today : list;
-    const isToday = today.length > 0;
-
-    let rev = 0;
-    const byHour = {}, byMethod = {};
-    src.forEach((s) => {
-      const amt = Math.max(0, +s.amount || 0);
-      rev += amt;
-      const h = new Date(+s.ts || 0).getHours();
-      byHour[h] = (byHour[h] || 0) + amt;
-      const m = String((s && s.method) || 'card');
-      byMethod[m] = (byMethod[m] || 0) + amt;
-    });
-    if (!rev) return null;
-    const basket = Math.round(rev / src.length);
-    const top = (o) => Object.keys(o).reduce((b, k) => (o[k] > (o[b] === undefined ? -1 : o[b]) ? k : b), Object.keys(o)[0]);
-    const peakH = +top(byHour);
-    const topM = top(byMethod);
-    const share = Math.round((byMethod[topM] / rev) * 100);
-
-    const num = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const M = {
-      fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'lien de paiement' },
-      en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'payment link' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR', wallet: 'محفظة', link: 'رابط الدفع' },
-    };
-    const lang = fusionLang();
-    const mName = (M[lang] || M.fr)[topM] || (M[lang] || M.fr).card;
-    const n = src.length;
-
-    const W = {
-      fr: {
-        title: isToday ? 'Votre journée en cours' : 'Vos premières tendances',
-        obs: `${n} vente${n > 1 ? 's' : ''} ${isToday ? "aujourd'hui" : 'enregistrée' + (n > 1 ? 's' : '')} pour ${num(rev)} MAD, panier moyen ${num(basket)} MAD. Votre meilleure heure : ${peakH}h. ${share} % encaissé en ${mName}.`,
-        act: '→ Kiwi AI affine ses repères à chaque vente encaissée.',
-      },
-      en: {
-        title: isToday ? 'Your day so far' : 'Your first trends',
-        obs: `${n} sale${n > 1 ? 's' : ''} ${isToday ? 'today' : 'recorded'} for ${num(rev)} MAD, average basket ${num(basket)} MAD. Your best hour: ${peakH}:00. ${share}% taken by ${mName}.`,
-        act: '→ Kiwi AI sharpens its read with every sale you take.',
-      },
-      ar: {
-        title: isToday ? 'يومك حتى الآن' : 'اتجاهاتك الأولى',
-        obs: `${n} عملية بيع ${isToday ? 'اليوم' : 'مسجّلة'} بقيمة ${num(rev)} درهم, متوسط السلة ${num(basket)} درهم. أفضل ساعة: ${peakH}. ${share} % عبر ${mName}.`,
-        act: '→ يزداد تحليل Kiwi AI دقة مع كل عملية بيع.',
-      },
-    };
-    return W[lang] || W.fr;
-  }
+  /* Live dashboard recommendations are owned by KiwiDateRange. Keeping a
+   * second calculator here previously let the insight fall back to all-time
+   * sales while the KPI band showed today. */
 
   window.KiwiSales = {
     add: salesAdd,
@@ -8860,7 +8765,7 @@
          * exist stops trusting every other number on the page. So: once there ARE
          * sales, read them and say something true; only a genuinely empty store
          * gets the welcome copy. */
-        const real = miCustomHeroRec(v);
+        const real = window.KiwiDateRange?.insights?.hero?.();
         if (real) return real;
         const W = {
           /* This used to promise margins. It cannot: a margin needs the cost of
@@ -8894,7 +8799,7 @@
       if (isCustom(v)) {
         // Des ventes existent ⇒ on dit quelque chose de vrai. Seule une boutique
         // réellement vide garde le message d'accueil.
-        const real = miCustomHeatmapRec(v);
+        const real = window.KiwiDateRange?.insights?.heatmap?.();
         if (real) return real;
         const W = {
           /* "Kiwi AI" on what is an hour-by-hour count of the merchant's own
