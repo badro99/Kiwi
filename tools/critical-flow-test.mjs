@@ -20,6 +20,8 @@ const vertical = read('assets/vertical-state.js');
 const sw = read('kiwi-sw.js');
 const dashPwa = read('assets/dashboard-pwa.js');
 const caissePwa = read('assets/caisse-pwa.js');
+const dashboard = read('dashboard.html');
+const merchantConfig = read('assets/merchant-config.js');
 
 ok('PIN roster network errors fail closed', pairing.includes("showPinLoadError(venue)") && !pairing.includes(".catch(function () { return []; })"));
 ok('pairing redemption is single-flight', pairing.includes('if (pairSubmitting) return;') && pairing.includes('pairSubmitting = true;'));
@@ -29,6 +31,12 @@ ok('cashier PIN can close the register without widening manager-only actions',
   && pairing.includes("roles.opensTill((p && p.role) || '')")
   && caisse.includes("requireTillOperator('Fermeture de caisse', closeRegister)")
   && caisse.includes("requireManager('Remboursement'"));
+ok('owner dashboard PIN spans all stores while manager PIN stays store-scoped',
+  merchantConfig.includes('accountPinsReady: false')
+  && merchantConfig.includes("if (!ownerRole(x && x.role)")
+  && merchantConfig.includes("document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready'))")
+  && dashboard.includes("window.KiwiConfig.accountPinsReady === false")
+  && dashboard.includes("accessTier(x && x.role) === 'owner'"));
 ok('specialist PINs wait for their dispatcher', caisse.includes('verticalDemoPins') && caisse.includes('tryVertical(30)'));
 ok('card and cash commit before the success modal closes', caisse.includes('finalizeTender(cardTenderMethod)') && caisse.includes("finalizeTender('cash')"));
 ok('KDS action buttons keep a theme-stable, high-contrast label',

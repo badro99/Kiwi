@@ -6293,7 +6293,12 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
     if (!scopedView()) {
       try {
         const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
-        if (Array.isArray(p)) p.forEach(add);
+        if (Array.isArray(p)) p.forEach((x) => {
+          /* Once the server roster is available, browser-local codes may only
+           * contribute the account owner. Managers are scoped by cfg.pins to
+           * the store currently selected. Keep the old full fallback offline. */
+          if (!window.KiwiConfig || !window.KiwiConfig.loaded || accessTier(x && x.role) === 'owner') add(x);
+        });
       } catch (_) {}
     }
     return out;
@@ -6443,6 +6448,13 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
       c.textContent = filled ? '•' : '';
     });
     if (val.length === 4) {
+      /* The owner's PIN may live under a different establishment. Do not judge
+       * four digits against the active store while that account-wide owner list
+       * is still loading; retry this same entry when the list is complete. */
+      if (!demosOn() && window.KiwiConfig && window.KiwiConfig.accountPinsReady === false) {
+        document.addEventListener('kiwi-account-pins-ready', paintCells, { once: true });
+        return;
+      }
       /* Hosted product gate — reject any code that isn't one this account may
        * open the dashboard with. A fresh, never-configured session (no codes at
        * all) is never rejected: it still has to reach setup. Only an already-

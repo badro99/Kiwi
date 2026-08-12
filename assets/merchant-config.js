@@ -69,6 +69,7 @@
    * whose code was filed under their first shop could no longer open the
    * dashboard from their second, while that second shop's cashier could. */
   var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', loaded: false,
+    accountPinsReady: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
     newStore: registerNewStore, off: featureOff,
     /* Le slug serveur du magasin à l'écran. menu-catalog.js le demandait déjà
@@ -97,11 +98,18 @@
   function featureOff(key) { return key !== 'reservations' && cfg.features[key] === false; }
 
   var pinSeen = Object.create(null);
+  function ownerRole(role) {
+    var r = String(role || '').trim().toLowerCase();
+    try { r = r.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    return /^(owner|proprietaire|direction|patron)$/.test(r);
+  }
   function rememberPins(list) {
     if (!Array.isArray(list)) return;
     list.forEach(function (x) {
       var code = String((x && (x.code || x.pin)) || '').trim();
-      if (!/^\d{4}$/.test(code) || pinSeen[code]) return;
+      /* `seenPins` crosses store boundaries, so it must contain account owners
+       * only. Managers remain in cfg.pins, the active store's roster. */
+      if (!ownerRole(x && x.role) || !/^\d{4}$/.test(code) || pinSeen[code]) return;
       pinSeen[code] = 1;
       cfg.seenPins.push({ code: code, name: (x && x.name) || '', role: (x && x.role) || '' });
     });
@@ -542,13 +550,18 @@
    * encore migrée, ou identity.js absent ⇒ la lecture nue d'avant, à l'identique.
    * Jamais sur une vue portée : là, l'opérateur entre par son propre code. */
   function readPinsFrom(url) {
-    fetch(url, { headers: { Accept: 'application/json' } })
+    return fetch(url, { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (d) { if (d && Array.isArray(d.pins)) rememberPins(d.pins); })
       .catch(function () {});
   }
   function fetchAccountPins() {
-    if (isScoped() || !onDashboard()) return;
+    if (isScoped() || !onDashboard()) { cfg.accountPinsReady = true; return; }
+    cfg.accountPinsReady = false;
+    function ready() {
+      cfg.accountPinsReady = true;
+      try { document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready')); } catch (_) {}
+    }
     /* On attend le portillon d'identité au lieu de le lire tout de suite : ce
      * fichier est chargé AVANT identity.js dans dashboard.html, et deux scripts
      * `defer` s'exécutent à la suite avant DOMContentLoaded — donc au moment où
@@ -561,7 +574,7 @@
       var gate = null;
       try { gate = window.KiwiIdentity && window.KiwiIdentity.ready; } catch (_) {}
       if (!gate || typeof gate.then !== 'function') {
-        if (++tries > 20) { readPinsFrom('/api/config'); return; }
+        if (++tries > 20) { readPinsFrom('/api/config').then(ready); return; }
         setTimeout(waitForIdentity, 50);
         return;
       }
@@ -569,15 +582,17 @@
         var stores = (st && Array.isArray(st.stores)) ? st.stores : [];
         // Compte d'un seul magasin, base pas encore migrée, ou rechargement en
         // cours après un changement de compte ⇒ la lecture nue d'avant.
-        if (!stores.length) { readPinsFrom('/api/config'); return; }
+        if (!stores.length) { readPinsFrom('/api/config').then(ready); return; }
         var asked = Object.create(null);
+        var reads = [];
         stores.forEach(function (s) {
           var m = String((s && s.merchant) || '').trim();
           if (!m || asked[m]) return;
           asked[m] = 1;
-          readPinsFrom('/api/config?merchant=' + encodeURIComponent(m));
+          reads.push(readPinsFrom('/api/config?merchant=' + encodeURIComponent(m)));
         });
-      }).catch(function () { readPinsFrom('/api/config'); });
+        Promise.all(reads).then(ready, ready);
+      }).catch(function () { readPinsFrom('/api/config').then(ready); });
     })();
   }
 
