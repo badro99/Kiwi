@@ -21,7 +21,11 @@ const recipeStore = {
 const window = {
   KiwiVenue: { getCurrentVenueData: () => ({ id: 'resto' }) },
   KiwiStore: { define: () => recipeStore },
-  KiwiRestaurantStock: { items: () => [{ id: 'tomate', name: 'Tomates', unit: 'kilo', costPerUnit: 20, usageThisWeek: 1 }] },
+  /* Le pont vers l'inventaire s'appelle rows() ; items() n'est qu'un alias
+     hérité, et les recettes ne lisent plus que rows(). Un banc qui ne posait
+     que items() voyait un inventaire vide — donc un coût matière nul — sans
+     qu'aucune matière ne manque vraiment. */
+  KiwiRestaurantStock: { rows: () => [{ id: 'tomate', name: 'Tomates', unit: 'kilo', costPerUnit: 20, usageThisWeek: 1 }] },
   KiwiSales: { list: () => [{ ts: Date.now(), lines: [{ id: 'plat', name: 'Salade', qty: 2, total: 100 }] }] },
 };
 const context = { window, console, Date, Math, Number, String, Array, Object, Map, Set, JSON };

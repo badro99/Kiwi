@@ -218,6 +218,11 @@
   let healPending = false;
   function healSoon(id) {
     if (healPending) return;
+    /* Un banc d'essai peut monter ce module dans un bac à sable sans minuterie ;
+       l'appel de fin de fichier faisait alors échouer le CHARGEMENT entier, et
+       deux suites tombaient sur un module absent plutôt que sur un défaut réel.
+       Aucun navigateur n'est dans ce cas : sans minuterie, on ne planifie rien. */
+    if (typeof setTimeout !== 'function') return;
     healPending = true;
     /* Les trois documents arrivent du serveur chacun à son tour ; on laisse la
      * volée se poser avant de recroiser, et mirrorCost() re-notifie. */
