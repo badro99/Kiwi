@@ -288,6 +288,52 @@
     return /\b(?:non|no|not|pas encore|partiel|partial|un peu|jamais|لا|ليس|جزئ)\b/.test(norm(s));
   }
 
+  /* Shortcut answers must describe the question being asked.  The old global
+   * Oui / Non / Partiellement trio was acceptable for readiness checks, but it
+   * became absurd for questions such as “Which channels do you use?” or “How
+   * many practitioners?”.  Free text remains available; these are simply the
+   * useful one-tap answers shown under each question. */
+  function answerOptions(question, l) {
+    var q = norm(question);
+    var sets = {
+      fr: {
+        yes: ['Oui', 'Pas encore', 'Partiellement'],
+        channels: ['Sur place', 'À emporter', 'Livraison', 'Plusieurs canaux'],
+        booking: ['Direct', 'Site web', 'OTA / plateformes', 'Plusieurs canaux'],
+        people: ['1 personne', '2 à 5', '6 ou plus'],
+        who: ['Moi seul', 'Responsables', 'Toute l’équipe'],
+        devices: ['iPhone', 'Tablette', 'Ordinateur', 'Plusieurs appareils'],
+        format: ['Ticket 80 mm', 'Étiquette', 'A4', 'À définir'],
+      },
+      en: {
+        yes: ['Yes', 'Not yet', 'Partly'],
+        channels: ['On premises', 'Takeaway', 'Delivery', 'Several channels'],
+        booking: ['Direct', 'Website', 'OTA / platforms', 'Several channels'],
+        people: ['1 person', '2 to 5', '6 or more'],
+        who: ['Only me', 'Managers', 'The whole team'],
+        devices: ['iPhone', 'Tablet', 'Computer', 'Several devices'],
+        format: ['80 mm receipt', 'Label', 'A4', 'To be decided'],
+      },
+      ar: {
+        yes: ['نعم', 'ليس بعد', 'جزئياً'],
+        channels: ['داخل المحل', 'سفري', 'توصيل', 'عدة قنوات'],
+        booking: ['مباشر', 'الموقع', 'منصات الحجز', 'عدة قنوات'],
+        people: ['شخص واحد', 'من 2 إلى 5', '6 أو أكثر'],
+        who: ['أنا فقط', 'المسؤولون', 'كل الفريق'],
+        devices: ['iPhone', 'لوحة', 'حاسوب', 'عدة أجهزة'],
+        format: ['وصل 80 مم', 'ملصق', 'A4', 'نحدده لاحقاً'],
+      },
+    };
+    var s = sets[l] || sets.fr;
+    if (/canaux de reservation|booking channels|قنوات الحجز/.test(q)) return s.booking;
+    if (/quels canaux|which channels|ما القنوات/.test(q)) return s.channels;
+    if (/combien de (?:praticiens|personnes)|how many (?:practitioners|people)|كم (?:ممارس|شخص)/.test(q)) return s.people;
+    if (/qui utilisera|who will use|من سيستخدم/.test(q)) return s.who;
+    if (/quels? (?:iphone|appareils|ecrans)|which (?:iphones|devices|screens)|ما (?:اجهزة|شاشات)/.test(q)) return s.devices;
+    if (/quel format|which format|ما تنسيق/.test(q)) return s.format;
+    return s.yes;
+  }
+
   function featureQuestions(f, l) {
     var generic = L([
       'Avez-vous déjà les données de départ à importer ou saisir ?',
@@ -318,12 +364,12 @@
     var c = COPY[l] || COPY.fr;
     if (!state.pending || state.pending.kind !== 'feature' || state.pending.trade !== t || state.pending.featureKey !== feature.key) {
       state.pending = { kind: 'feature', trade: t, featureKey: feature.key, i: 0, answers: [], questions: featureQuestions(feature, l) };
-      return { text: c.featureLead(pick(feature.label, l)), stats: [{ l: c.q + ' 1/3', v: state.pending.questions[0], h: '' }], follow: ['Oui', 'Non', 'Partiellement'] };
+      return { text: c.featureLead(pick(feature.label, l)), stats: [{ l: c.q + ' 1/3', v: state.pending.questions[0], h: '' }], follow: answerOptions(state.pending.questions[0], l) };
     }
     if (CANCEL_RX.test(norm(raw))) { state.pending = null; return { text: c.cancel, follow: [c.all] }; }
     state.pending.answers.push(String(raw || '').slice(0, 240)); state.pending.i++;
     if (state.pending.i < state.pending.questions.length) {
-      return { text: c.saved + '.', stats: [{ l: c.q + ' ' + (state.pending.i + 1) + '/3', v: state.pending.questions[state.pending.i], h: '' }], follow: ['Oui', 'Non', 'Partiellement'] };
+      return { text: c.saved + '.', stats: [{ l: c.q + ' ' + (state.pending.i + 1) + '/3', v: state.pending.questions[state.pending.i], h: '' }], follow: answerOptions(state.pending.questions[state.pending.i], l) };
     }
     var detail = detailReply(feature, l);
     detail.text = c.featureDone(pick(feature.label, l));
@@ -355,12 +401,12 @@
     var c = COPY[l] || COPY.fr;
     if (!state.pending || state.pending.trade !== t) {
       state.pending = { kind: 'trade', trade: t, i: 0, answers: [], questions: setupQuestions(t, l) };
-      return { text: c.setupLead(tradeLabel(t, l)), stats: [{ l: c.q + ' 1/3', v: state.pending.questions[0], h: '' }], follow: ['Oui', 'Non', 'Partiellement'] };
+      return { text: c.setupLead(tradeLabel(t, l)), stats: [{ l: c.q + ' 1/3', v: state.pending.questions[0], h: '' }], follow: answerOptions(state.pending.questions[0], l) };
     }
     if (CANCEL_RX.test(norm(raw))) { state.pending = null; return { text: c.cancel, follow: [c.all] }; }
     state.pending.answers.push(String(raw || '').slice(0, 240)); state.pending.i++;
     if (state.pending.i < state.pending.questions.length) {
-      return { text: c.saved + '.', stats: [{ l: c.q + ' ' + (state.pending.i + 1) + '/3', v: state.pending.questions[state.pending.i], h: '' }], follow: ['Oui', 'Non', 'Partiellement'] };
+      return { text: c.saved + '.', stats: [{ l: c.q + ' ' + (state.pending.i + 1) + '/3', v: state.pending.questions[state.pending.i], h: '' }], follow: answerOptions(state.pending.questions[state.pending.i], l) };
     }
     var fs = features(t), byKey = {};
     fs.forEach(function (f) { byKey[f.key] = f; byKey[f.nav] = byKey[f.nav] || f; });

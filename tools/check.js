@@ -397,7 +397,7 @@ section('Assistant behaviour (tools/agent-test.js)');
  * compare all 18 merchant profiles with the feature registry and exercise 40
  * live operational questions against their real adapter contracts. */
 section('Assistant feature truth + 40 operational simulations');
-for (const script of ['agent-features-test.mjs', 'agent-ops-simulations.mjs']) {
+for (const script of ['agent-features-test.mjs', 'agent-ops-simulations.mjs', 'agent-shell-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', script)], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');

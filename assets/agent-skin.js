@@ -222,12 +222,27 @@
     Array.prototype.forEach.call(msgs, function (m, i) { dressAnswer(m, i + 1); });
     ground(fa);
   }
+  function syncShellOffset(fa) {
+    var shell = fa && fa.closest('.kiwi-drawer-backdrop');
+    if (!shell) return;
+    var banner = document.getElementById('kiwi-op-banner');
+    var bottom = 0;
+    if (banner) {
+      var style = getComputedStyle(banner);
+      if (style.display !== 'none' && style.visibility !== 'hidden') {
+        var rect = banner.getBoundingClientRect();
+        bottom = Math.max(0, Math.ceil(rect.bottom));
+      }
+    }
+    shell.style.setProperty('--ai-top-offset', bottom + 'px');
+  }
   function attach() {
     var fa = document.querySelector('.fa-drawer .fa');
     if (!fa) return false;
     wireHover(fa);
     var head = document.querySelector('.fa-drawer .kiwi-drawer-head');
     if (head) { head.style.position = head.style.position || 'relative'; stamp(head); }
+    syncShellOffset(fa);
     refresh(fa);
     if (observer) observer.disconnect();
     observer = new MutationObserver(function () { refresh(fa); });
@@ -247,6 +262,10 @@
       if (fa && fa.dataset.rlvHover !== '1') attach();
     });
     docWatcher.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', function () {
+      var fa = document.querySelector('.fa-drawer .fa');
+      if (fa) syncShellOffset(fa);
+    }, { passive: true });
   }
 
   function enable() {

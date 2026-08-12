@@ -93,7 +93,10 @@ check('feature inventory separates trade-specific tools', r.stats.some((x) => x.
 check('feature inventory includes common tools', r.stats.some((x) => x.l === 'Commun à votre établissement'));
 
 console.log('\n■ Question-led setup');
-G._test.reset();
+active = 'restaurant'; G._test.reset();
+r = G.reply('Aide-moi à configurer mon établissement', { lang: 'fr' });
+check('channel question offers channel answers, not yes/no', r.follow.includes('Sur place') && r.follow.includes('Livraison') && !r.follow.includes('Oui'), r.follow.join(', '));
+active = 'pressing'; G._test.reset();
 r = G.reply('Aide-moi à configurer mon établissement', { lang: 'fr' });
 check('setup starts with question 1/3', /1\/3/.test(r.stats[0].l));
 r = G.reply('Oui, nos tarifs sont prêts', { lang: 'fr' });

@@ -5018,7 +5018,7 @@
 <!-- Assistant · « Le relevé ». Refonte visuelle complète de l'assistant, posée en
      COUCHE au-dessus de assets/agent.js — aucune logique touchée. Pilotée par
      <html data-kiwi-ai="releve"> ; KiwiAiSkin.disable() rend l'écran d'origine. -->
-<link rel="stylesheet" href="assets/agent-skin.css?v=6" />
+<link rel="stylesheet" href="assets/agent-skin.css?v=7" />
 <!-- Physical documents never inherit the dashboard's dark palette. -->
 <link rel="stylesheet" href="assets/print-paper.css?v=1" />
 </head>
@@ -6052,13 +6052,13 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/agent-data.js" defer fetchpriority="low"></script>
 <!-- Product truth for Kiwi AI: derives the active merchant's capabilities
      from the same trade/profile/workspace registries as the dashboard. -->
-<script src="assets/agent-features.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/agent-features.js?v=3" defer fetchpriority="low"></script>
 <!-- Verified capability registry + live read-only operational adapters. It is
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/agent.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/agent-skin.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/agent-skin.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
 <script src="assets/pages.js" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
