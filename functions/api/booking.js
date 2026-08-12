@@ -60,6 +60,14 @@ function candidates(doc, svc, asked, partySize) {
   const allowed = svc.resourceIds.length ? new Set(svc.resourceIds) : null;
   return doc.resources.filter((r) => r.active && r.capacity >= partySize && (!asked || r.id === asked) && (!allowed || allowed.has(r.id)));
 }
+/* The largest party this service can actually seat — the public page needs a
+ * real number to draw its guest stepper. Reading it off the resources is the
+ * only honest source: the seats live on the table, not on the service. */
+function maxParty(doc, svc) {
+  let top = 0;
+  for (const r of candidates(doc, svc, '', 1)) if (r.capacity > top) top = r.capacity;
+  return top || 1;
+}
 function safeTeam(raw) {
   let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
   return { members: Array.isArray(d?.members) ? d.members.slice(0,500) : [], shifts: d?.shifts && typeof d.shifts === 'object' ? d.shifts : {} };
@@ -111,7 +119,7 @@ async function readRows(env, merchant) {
   return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data) };
 }
 function publicConfig(merchant, meta, doc, slots) {
-  return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity})), slots:slots || [] };
+  return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
 }
 export async function onRequestGet({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);

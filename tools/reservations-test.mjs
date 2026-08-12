@@ -7,6 +7,7 @@ const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta
 const configClientSource = fs.readFileSync(new URL('../assets/merchant-config.js', import.meta.url), 'utf8');
 const configApiSource = fs.readFileSync(new URL('../functions/api/config.js', import.meta.url), 'utf8');
 const bookingSource = fs.readFileSync(new URL('../assets/booking.js', import.meta.url), 'utf8');
+const bookingApiSource = fs.readFileSync(new URL('../functions/api/booking.js', import.meta.url), 'utf8');
 const listeners = {};
 const ctx = {
   console,
@@ -122,7 +123,10 @@ ok(configClientSource.includes("key !== 'reservations'"), 'legacy reservations:f
 ok(!/reservations:\s*false/.test(configApiSource), 'new stores no longer seed reservations as disabled');
 ok(bookingSource.includes("document.documentElement.lang||'fr'"), 'public booking defaults to French instead of browser-dependent English');
 ok(bookingSource.includes('data-closed-lang'), 'closed booking state keeps FR, EN and Arabic language controls');
-ok(bookingSource.includes("partySize:isDining()?state.partySize:1") && bookingSource.includes("partySize='+encodeURIComponent"), 'public dining flow carries party size through availability and booking');
+ok(bookingSource.includes('partySize:party()') && bookingSource.includes("partySize='+encodeURIComponent(party())"), 'public dining flow carries the real party size through availability and booking');
+ok(!/isDining/.test(bookingSource), 'the guest stepper is no longer gated on the free-text trade label');
+ok(bookingSource.includes('Number(s&&s.maxParty||0)'), 'guest ceiling is read from the seats published per service');
+ok(bookingApiSource.includes('function maxParty(') && /maxParty:maxParty\(doc,x\)/.test(bookingApiSource), 'the public booking config publishes each service seating ceiling');
 
 const templates = R.restaurantTemplates();
 ok(templates.length === 3, 'restaurant onboarding provides three practical starter templates');
