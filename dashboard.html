@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/tokens.css?v=2050" />
+<link rel="stylesheet" href="assets/platform-ops.css?v=1" />
 <link rel="stylesheet" href="assets/theme.css" />
 <link rel="stylesheet" href="assets/polish.css" />
 <link rel="stylesheet" href="assets/simple.css" />
@@ -6018,12 +6019,14 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/dateRange.js?v=5" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=358"></script>
-<script defer src="assets/dashboard-pwa.js?v=362"></script>
+<script defer src="assets/dashboard-pwa.js?v=370"></script>
 <script defer src="assets/dashboard-native.js"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
 <script defer src="assets/vendor/dexie.min.js"></script>
 <script defer src="assets/offline-db.js?v=3"></script>
+<script defer src="assets/platform-kernel.js?v=1"></script>
+<script defer src="assets/platform-ops.js?v=1"></script>
 <script defer src="assets/live-link.js?v=4"></script>
 <!-- Operator feature flags — hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -6121,7 +6124,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/catalog-import.js" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
-<script src="assets/orderpro-publish.js" defer fetchpriority="low"></script>
+<script src="assets/orderpro-publish.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/orderpro-panel.js" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
@@ -6139,9 +6142,9 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/day-report.js" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/planning-core.js?v=3" defer fetchpriority="low"></script>
-<link rel="stylesheet" href="assets/planning-ui.css?v=4">
-<script src="assets/team.js?v=263" defer fetchpriority="low"></script>
+<script src="assets/planning-core.js?v=4" defer fetchpriority="low"></script>
+<link rel="stylesheet" href="assets/planning-ui.css?v=5">
+<script src="assets/team.js?v=264" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->

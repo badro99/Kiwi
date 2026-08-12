@@ -513,5 +513,71 @@
     return clone(source && source[memberId] || {});
   }
 
-  return { blank, normalize, merge, validate, coverageSummary, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
+  /* OR-Tools-inspired deterministic scheduler. It does not pretend to solve an
+   * impossible roster: it fills only genuine coverage gaps, respects approved
+   * leave, availability, rest and weekly limits through the same validator used
+   * by Publish, and returns unresolved gaps explicitly. Existing shifts are
+   * immutable unless replace=true is requested. */
+  function optimize(input) {
+    input = input || {};
+    const members = Array.isArray(input.members) ? input.members : [];
+    const planning = normalize(input.planning, members);
+    const days = periodDays(input.days);
+    let shifts = clone(input.shifts || {});
+    const replace = !!input.replace;
+    const candidates = [];
+    const role = (value) => roleKey(value);
+    const availabilityAllows = (memberId, day, start, end) => {
+      if (approvedLeave(planning, memberId, day)) return false;
+      const av = planning.availability && planning.availability[memberId];
+      const rule = av && av.weekdays && av.weekdays[String(dayNumber(day))];
+      if (!rule) return true;
+      if (rule.available === false) return false;
+      const rs = minutes(rule.start), re = minutes(rule.end), ss = minutes(start), se = minutes(end);
+      if ([rs,re,ss,se].some((x) => x == null)) return true;
+      const rend = re <= rs ? re + 1440 : re, send = se <= ss ? se + 1440 : se;
+      return ss >= rs && send <= rend;
+    };
+    const totalHours = (memberId, draft) => days.reduce((sum, day) => sum + shiftHours(day, draft[memberId] && draft[memberId][day]), 0);
+    const desired = Math.max(0, Number(planning.settings && planning.settings.maxWeeklyHours) || 48);
+    const rules = (planning.coverageRules || []).filter((rule) => rule && rule.active !== false);
+    rules.forEach((rule) => {
+      const weekdays = Array.isArray(rule.weekdays) ? rule.weekdays.map(Number) : [];
+      days.forEach((day) => {
+        if (weekdays.length && !weekdays.includes(dayNumber(day))) return;
+        const required = Math.max(1, Math.min(99, Math.floor(Number(rule.minimum) || 1)));
+        let assigned = members.filter((member) => {
+          const shift = shifts[member.id] && shifts[member.id][day];
+          if (!shiftInterval(day, shift)) return false;
+          if (rule.role && role(rule.role) !== role(member.function || member.department || member.role)) return false;
+          const a = shiftInterval(day, shift), b = shiftInterval(day, { start:rule.start, end:rule.end });
+          return a && b && a.start <= b.start && a.end >= b.end;
+        }).length;
+        while (assigned < required) {
+          const pool = members.filter((member) => {
+            const id = String(member.id || ''); if (!id) return false;
+            if (rule.role && role(rule.role) !== role(member.function || member.department || member.role)) return false;
+            if (!replace && shiftInterval(day, shifts[id] && shifts[id][day])) return false;
+            if (!availabilityAllows(id, day, rule.start, rule.end)) return false;
+            const hours = shiftHours(day, { start:rule.start, end:rule.end });
+            return totalHours(id, shifts) + hours <= desired;
+          }).map((member) => ({ member, hours:totalHours(String(member.id), shifts) }))
+            .sort((a,b) => a.hours - b.hours || String(a.member.id).localeCompare(String(b.member.id)));
+          let chosen = null;
+          for (const candidate of pool) {
+            const trial = clone(shifts); const id = String(candidate.member.id);
+            if (!trial[id]) trial[id] = {}; trial[id][day] = { start:rule.start, end:rule.end, generated:true };
+            const blocked = validate({ planning, shifts:trial, days, members }).some((issue) => issue.severity === 'blocker' && issue.memberId === id);
+            if (!blocked) { chosen = candidate.member; shifts = trial; break; }
+          }
+          if (!chosen) { candidates.push({ ruleId:rule.id, day, required, assigned, unresolved:true }); break; }
+          assigned++; candidates.push({ ruleId:rule.id, day, memberId:String(chosen.id), start:rule.start, end:rule.end, unresolved:false });
+        }
+      });
+    });
+    const issues = validate({ planning, shifts, days, members });
+    return { ok: !issues.some((issue) => issue.severity === 'blocker'), shifts, assignments:candidates.filter((x) => !x.unresolved), unresolved:candidates.filter((x) => x.unresolved), issues };
+  }
+
+  return { blank, normalize, merge, validate, coverageSummary, optimize, periodKey, periodShifts, status, templateFromWeek, applyTemplate, createOpenShift, claimOpenShift, requestSwap, claimSwap, decideOpenShift, decideSwap, addNotice, publish, employeeSchedule, hash, minutes, isoDay };
 });

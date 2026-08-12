@@ -237,6 +237,12 @@
    * this: catalogues store what it returns, never the bytes. */
   function uploadMedia(file) {
     if (!file) return Promise.resolve({ ok: false, error: 'no-file' });
+    var resilient = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
+    if (resilient && typeof resilient.upload === 'function') {
+      return resilient.upload(file).catch(function (error) {
+        return { ok: false, error: String(error && error.message || 'upload-failed') };
+      });
+    }
     return fetch('/api/media?name=' + encodeURIComponent(file.name || 'file'), {
       method: 'POST',
       headers: { 'Content-Type': file.type || 'application/octet-stream' },

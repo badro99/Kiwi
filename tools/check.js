@@ -270,6 +270,18 @@ section('Offline transaction foundation (tools/offline-foundation-test.mjs)');
   }
 }
 
+section('Shared platform kernel and adapters');
+for (const test of ['platform-kernel-test.mjs', 'platform-ops-test.mjs']) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding:'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`${test} green (${(out.match(/✓/g) || []).length - 1} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── Receipt numbers are allocated, not inferred from the sales ledger. ─── */
 section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
 {

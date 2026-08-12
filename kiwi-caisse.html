@@ -67,6 +67,8 @@
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js" defer></script>
   <script src="assets/offline-db.js?v=3" defer></script>
+  <script src="assets/platform-kernel.js?v=1" defer></script>
+  <script src="assets/platform-ops.js?v=1" defer></script>
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
@@ -112,6 +114,7 @@
        dès son premier rendu de grille. -->
   <script src="assets/promos.js" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=6" />
+  <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
   <script src="assets/vendor/zxing-browser.min.js?v=1" defer></script>
   <script src="assets/retail-scan.js?v=5" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
@@ -4651,7 +4654,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=362" defer></script>
+  <script src="assets/caisse-pwa.js?v=370" defer></script>
   <script src="assets/live-link.js?v=4" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->

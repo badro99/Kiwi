@@ -28,6 +28,7 @@
   var lastRead = Object.create(null);
   var creditCloud = null;
   var committed = false;
+  var enrichGeneration = 0;
   var state = { cart: [], lookup: null, pending: '', parts: [], method: 'cash', clientId: '', lastReceipt: null };
 
   function $(q, at) { return (at || document).querySelector(q); }
@@ -205,12 +206,24 @@
     if (!hit) {
       state.lookup = null; state.pending = code; renderResult();
       setCameraStatus('<b>Code inconnu</b> · créez sa fiche, la caméra reste prête');
+      enrichUnknown(code);
       return true;
     }
     state.pending = ''; state.lookup = hit;
     addHit(hit, true); renderResult();
     setCameraStatus('<b>' + esc(hit.product.name) + '</b> · ' + esc(fmt(hit.price)) + ' · ' + esc(String(hit.stock)) + ' en stock');
     return true;
+  }
+  async function enrichUnknown(code) {
+    var gen=++enrichGeneration, service=window.KiwiPlatformOps&&window.KiwiPlatformOps.products;
+    if(!service||!service.lookup)return;
+    var target=overlay&&$('.krs-create p',overlay);if(target)target.innerHTML='Code <b>'+esc(code)+'</b> · recherche de la fiche produit…';
+    var result=await service.lookup(code);if(gen!==enrichGeneration||state.pending!==code||!overlay)return;
+    if(!result||!result.found){target=$('.krs-create p',overlay);if(target)target.innerHTML='Code <b>'+esc(code)+'</b> · produit introuvable, créez sa fiche Kiwi.';return;}
+    var name=$('#krs-new-name',overlay),cat=$('#krs-new-catname',overlay),preview=$('.krs-create p',overlay);
+    if(name&&!name.value)name.value=result.name||result.brand||'';
+    if(cat&&!cat.value&&result.categories&&result.categories[0])cat.value=result.categories[0];
+    if(preview)preview.innerHTML='<span class="kpf-truth"><i></i>Fiche trouvée · '+esc(result.brand||'Open Food Facts')+' · vérifiez le prix et le stock</span>';
   }
 
   function setCameraStatus(html) { var el = overlay && $('.krs-camera-status', overlay); if (el) el.innerHTML = html; }

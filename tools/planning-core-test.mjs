@@ -103,4 +103,17 @@ assert.equal(changedDraft.error, 'swap-source-changed');
 assert.equal(P.requestSwap(swapBase, 'a', '2026-08-10', '2026-08-11T10:00:00Z').error, 'swap-shift-past');
 assert.equal(P.publish(P.blank(), shifts, days, members).planning.notices.some((notice)=>notice.type === 'schedule-published'), true);
 
-console.log("planning-core-test: 44 controls passed");
+const optimizedPlanning=P.blank();
+optimizedPlanning.coverageRules.push({id:'lunch',role:'serveur',minimum:1,start:'12:00',end:'16:00',weekdays:[1],active:true});
+const optimizedMembers=[{id:'s1',name:'Sara',function:'Serveur'},{id:'s2',name:'Yassine',function:'Serveur'}];
+const optimized=P.optimize({planning:optimizedPlanning,shifts:{},days,members:optimizedMembers});
+assert.equal(optimized.assignments.length,1);
+assert.equal(optimized.unresolved.length,0);
+assert.equal(optimized.shifts.s1['2026-08-10'].generated,true);
+optimizedPlanning.requests.push({id:'leave',memberId:'s1',type:'leave',startDate:'2026-08-10',endDate:'2026-08-10',status:'approved'});
+optimizedPlanning.availability.s2={weekdays:{'1':{available:false}}};
+const impossible=P.optimize({planning:optimizedPlanning,shifts:{},days,members:optimizedMembers});
+assert.equal(impossible.assignments.length,0);
+assert.equal(impossible.unresolved.length,1);
+
+console.log("planning-core-test: 49 controls passed");
