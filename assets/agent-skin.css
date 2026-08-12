@@ -91,14 +91,9 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
   --ai-lit-bg-fb: color-mix(in srgb, var(--mint) 22%, transparent);
 
   /* Surfaces et filets — Vexel pilote quand il est présent. */
-  /* The assistant is a workspace, not a modal over the dashboard.  Using the
-     overlay/glass tokens here made the whole product underneath remain visible
-     as a grey blur and reduced every foreground contrast.  Keep glass for the
-     small cards only; the page, rail and cards all receive opaque theme-owned
-     surfaces. */
-  --ai-page: var(--paper);
-  --ai-sheet: var(--paper-soft);
-  --ai-glass: var(--surface);
+  --ai-page: var(--vx-overlay-bg, var(--ai-page-fb));
+  --ai-sheet: var(--vx-ai-bg, var(--ai-sheet-fb));
+  --ai-glass: var(--ai-glass-fb);
   --ai-line: var(--vx-track, var(--ai-line-fb));
   --ai-line-soft: var(--ai-line-soft-fb);
   --ai-line-lit: var(--vx-card-hover-border, var(--ai-line-lit-fb));
@@ -124,22 +119,7 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
    floute déjà. On rend l'intérieur transparent et on ne peint la coquille
    qu'une fois. `--ai-page` reprend la valeur exacte que Vexel poserait, donc
    rien ne change hors Vexel non plus.                                        */
-html:root[data-kiwi-ai="releve"] .fa-drawer.kiwi-fullpage {
-  inset: var(--ai-top-offset, 0px) 0 0;
-  background: var(--ai-page) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-html:root[data-kiwi-ai="releve"] .fa-drawer.kiwi-fullpage .kiwi-drawer {
-  inset: var(--ai-top-offset, 0px) 0 0;
-  height: auto; max-height: none;
-  background: var(--ai-page) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
+html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer { background: var(--ai-page); }
 html:root[data-kiwi-ai="releve"] .fa,
 html:root[data-kiwi-ai="releve"] .fa-thread,
 html:root[data-kiwi-ai="releve"] .fa-dock,
